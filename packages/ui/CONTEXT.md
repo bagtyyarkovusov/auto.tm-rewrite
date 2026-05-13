@@ -91,6 +91,16 @@ export * from './components'  // web/admin only — mobile imports from its own 
 - `class-variance-authority`, `clsx`, `tailwind-merge`
 - `lucide-react`
 
+## Tailwind v4 migration note
+
+Sprint 1 uplifted Tailwind from v3 (charter baseline) to **v4.1** per ADR-0011.
+
+What changes:
+- `packages/ui` uses CSS-first configuration: `@import "tailwindcss"` and `@theme` blocks in a CSS file.
+- No `tailwind.config.js` / `tailwind.config.ts` preset file in `packages/ui`.
+- Web and admin apps extend the CSS theme via `@import` rather than a JS preset.
+- NativeWind v4 is used on mobile; its configuration syntax differs from v3 — consult NativeWind v4 docs when wiring `tailwindcss` in `apps/mobile`.
+
 ## Notable decisions
 
 - Charter §12 — Token system structure

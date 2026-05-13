@@ -45,8 +45,6 @@ All — but only at the scaffold level. Each `apps/api/src/modules/<context>/` g
 
 ## Files this sprint creates / touches
 
-See the full plan: [`docs/superpowers/plans/2026-05-13-monorepo-scaffold.md`](../../superpowers/plans/2026-05-13-monorepo-scaffold.md)
-
 Summary of top-level adds:
 
 - `.nvmrc` → `22.11.0`
@@ -68,7 +66,7 @@ Summary of top-level adds:
 
 ## References
 
-- **Plan**: [`../../superpowers/plans/2026-05-13-monorepo-scaffold.md`](../../superpowers/plans/2026-05-13-monorepo-scaffold.md)
+- **Plan**: this sprint doc (`sprint-01-scaffold.md`) is the authoritative plan
 - **Charter sections**: §2 (Stack), §3-§4 (Monorepo apps + packages), §20 (Scaffold sequence)
 - **ADRs**: 0001 (Architecture), 0002 (Stack), 0003 (Monorepo), 0011 (Version uplift, new)
 - **Previous-sprint dependencies**: none (this is the first code sprint; commits 1-3 + 16 of the charter were the doc baseline)

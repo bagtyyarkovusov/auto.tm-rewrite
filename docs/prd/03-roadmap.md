@@ -15,9 +15,9 @@
 | | |
 |---|---|
 | **Sprint** | S1 — Scaffold |
-| **Status** | ⚪ Planned (execution pending user approval) |
+| **Status** | 🟡 In progress |
 | **Phase** | 1 (Marketplace MVP) |
-| **Plan file** | [`docs/superpowers/plans/2026-05-13-monorepo-scaffold.md`](../superpowers/plans/2026-05-13-monorepo-scaffold.md) |
+| **Plan file** | *(see sprint doc below — the detailed plan lives in `sprints/sprint-01-scaffold.md`)* |
 | **Sprint doc** | [`sprints/sprint-01-scaffold.md`](sprints/sprint-01-scaffold.md) |
 | **Milestone** | M1 — Hello stack |
 

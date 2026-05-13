@@ -267,6 +267,22 @@ Critical dashboards from day 1: API latency/error rate, DB connections, Redis op
 
 ## 20. Scaffold sequence (next session)
 
+---
+
+## 21. Revision log
+
+### 2026-05-13 — Latest-stable version uplift (recorded in ADR-0011)
+
+| Component | Charter (locked 2026-05-12) | Now using | Reason |
+|---|---|---|---|
+| Node.js | 20.10.0 | **22.11.0 LTS** | Latest LTS; charter under-pinned |
+| Prisma | 5 | **7.6.0** | Latest stable; config moved to `prisma.config.ts`; driver adapter `@prisma/adapter-pg` required |
+| Next.js | 15 | **16.2.2** | Latest stable; App Router unchanged |
+| Tailwind CSS | (implied v3) | **4.1** | CSS-first config; `@tailwindcss/postcss` replaces `tailwind.config.js`-as-preset |
+| Expo SDK | unspecified | **55** | Latest stable; RN 0.83; New Architecture mandatory |
+
+These are the only locked-decision revisions. Everything else (NestJS 11, Socket.IO 4, Postgres 16, Redis 7, etc.) remains as the charter specified.
+
 Run from `/Users/bagtyyar/Projects/auto.tm-rewrite/`:
 
 ```
