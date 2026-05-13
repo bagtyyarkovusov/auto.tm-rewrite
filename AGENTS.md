@@ -5,9 +5,11 @@ Same policy as `CLAUDE.md` in this repository. AI agents working in this repo sh
 ## Read first
 
 1. `GRILL-OUTCOME.md` — locked design decisions
-2. `CONTEXT-MAP.md` — index of every `CONTEXT.md`
-3. The local `CONTEXT.md` for the area you're working in
-4. Relevant ADRs in `docs/adr/`
+2. `docs/prd/03-roadmap.md` — current sprint + cross-sprint trajectory
+3. `CONTEXT-MAP.md` — index of every `CONTEXT.md`
+4. The local `CONTEXT.md` for the area you're working in
+5. Relevant ADRs in `docs/adr/`
+6. `docs/prd/sprints/sprint-NN-<name>.md` — current sprint's DoD + file list + risks
 
 For the full agent policy (architecture rules, never-do list, verification checklist, documentation system), read `CLAUDE.md`.
 
