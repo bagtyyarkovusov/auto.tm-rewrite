@@ -15,7 +15,11 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "pnpm --filter @auto-tm/db generate",
+    "db:migrate:dev": "pnpm --filter @auto-tm/db migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @auto-tm/db migrate:deploy",
+    "db:seed": "pnpm --filter @auto-tm/db seed"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

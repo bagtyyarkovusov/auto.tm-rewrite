@@ -1,0 +1,493 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma/client"
+}
+
+/// ============================================================
+/// IDENTITY
+/// ============================================================
+
+enum UserRole {
+  buyer
+  seller
+  moderator
+  admin
+}
+
+model User {
+  id                String    @id @default(uuid())
+  phone             String    @unique
+  displayName       String?
+  avatarUrl         String?
+  locale            String    @default("ru")
+  role              UserRole  @default(buyer)
+  refreshTokenHash  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  otpRequests           OtpRequest[]
+  sessions              Session[]
+  dealershipMemberships DealershipMember[]
+  ownedVehicles         OwnedVehicle[]
+  blockedUsers          BlockedUser[]          @relation("Blocker")
+  blockedBy             BlockedUser[]          @relation("Blocked")
+  listings              Listing[]
+  favorites             Favorite[]
+  savedSearches         SavedSearch[]
+  conversationParticipations ConversationParticipant[]
+  fcmDevices            FcmDevice[]
+  notificationHistory   NotificationHistory[]
+  notificationPreferences NotificationPreference?
+  auditLogs             AuditLog[]
+  blogPosts             BlogPost[]
+  conversationsAsBuyer  Conversation[]  @relation("Buyer")
+  conversationsAsSeller Conversation[]  @relation("Seller")
+
+  @@map("users")
+}
+
+model OtpRequest {
+  id         String    @id @default(uuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  attempts   Int       @default(0)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([phone, createdAt])
+  @@map("otp_requests")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("sessions")
+}
+
+model Dealership {
+  id       String  @id @default(uuid())
+  slug     String  @unique
+  name     String
+  logoUrl  String?
+  cityId   String?
+  city     City?   @relation(fields: [cityId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members          DealershipMember[]
+  ownedVehicles    OwnedVehicle[]
+
+  @@map("dealerships")
+}
+
+model DealershipMember {
+  id           String   @id @default(uuid())
+  dealershipId String
+  dealership   Dealership @relation(fields: [dealershipId], references: [id])
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@unique([dealershipId, userId])
+  @@map("dealership_members")
+}
+
+model OwnedVehicle {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  dealershipId String?
+  dealership   Dealership? @relation(fields: [dealershipId], references: [id])
+  brand        String
+  model        String
+  year         Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("owned_vehicles")
+}
+
+model BlockedUser {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@map("blocked_users")
+}
+
+/// ============================================================
+/// CATALOG
+/// ============================================================
+
+model Brand {
+  id     String @id @default(uuid())
+  slug   String @unique
+  nameRu String
+  nameTk String
+  nameEn String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  models Model[]
+  listings Listing[]
+
+  @@map("brands")
+}
+
+model Model {
+  id        String @id @default(uuid())
+  brandId   String
+  brand     Brand  @relation(fields: [brandId], references: [id])
+  slug      String
+  nameRu    String
+  nameTk    String
+  nameEn    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  generations Generation[]
+  listings    Listing[]
+
+  @@unique([brandId, slug])
+  @@map("models")
+}
+
+model Generation {
+  id      String @id @default(uuid())
+  modelId String
+  model   Model  @relation(fields: [modelId], references: [id])
+  nameRu  String
+  nameTk  String
+  nameEn  String
+  yearStart Int?
+  yearEnd   Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("generations")
+}
+
+model Color {
+  id     String @id @default(uuid())
+  nameRu String
+  nameTk String
+  nameEn String
+  hex    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("colors")
+}
+
+model BodyType {
+  id     String @id @default(uuid())
+  nameRu String
+  nameTk String
+  nameEn String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("body_types")
+}
+
+model Region {
+  id     String @id @default(uuid())
+  slug   String @unique
+  nameRu String
+  nameTk String
+  nameEn String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cities City[]
+
+  @@map("regions")
+}
+
+model City {
+  id       String @id @default(uuid())
+  regionId String
+  region   Region @relation(fields: [regionId], references: [id])
+  slug     String
+  nameRu   String
+  nameTk   String
+  nameEn   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dealerships Dealership[]
+  listings    Listing[]
+
+  @@unique([regionId, slug])
+  @@map("cities")
+}
+
+/// ============================================================
+/// LISTINGS
+/// ============================================================
+
+enum ListingStatus {
+  draft
+  pending_review
+  active
+  sold
+  archived
+  rejected
+}
+
+enum Currency {
+  TMT
+  USD
+  AED
+}
+
+model Listing {
+  id             String        @id @default(uuid())
+  sellerId       String
+  seller         User          @relation(fields: [sellerId], references: [id])
+  status         ListingStatus @default(draft)
+  brandId        String
+  brand          Brand         @relation(fields: [brandId], references: [id])
+  modelId        String
+  model          Model         @relation(fields: [modelId], references: [id])
+  generationId   String?
+  colorId        String?
+  bodyTypeId     String?
+  cityId         String
+  city           City          @relation(fields: [cityId], references: [id])
+  year           Int?
+  mileageKm      Int?
+  priceAmount    Float
+  priceCurrency  Currency      @default(TMT)
+  description    String?
+  deletedAt      DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  media         ListingMedia[]
+  favorites     Favorite[]
+  conversations Conversation[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([brandId, modelId, status])
+  @@index([cityId, status])
+  @@map("listings")
+}
+
+enum MediaKind {
+  image
+  video
+}
+
+model ListingMedia {
+  id        String    @id @default(uuid())
+  listingId String
+  listing   Listing   @relation(fields: [listingId], references: [id])
+  kind      MediaKind
+  url       String
+  sortOrder Int
+  createdAt DateTime  @default(now())
+
+  @@index([listingId, sortOrder])
+  @@map("listing_media")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@map("favorites")
+}
+
+/// ============================================================
+/// SUBSCRIPTIONS
+/// ============================================================
+
+model SavedSearch {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  filters       Json
+  pushEnabled   Boolean  @default(true)
+  lastDigestAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@map("saved_searches")
+}
+
+/// ============================================================
+/// CONVERSATIONS
+/// ============================================================
+
+enum MessageKind {
+  text
+  image
+  post_ref
+  system
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  buyerId   String
+  buyer     User     @relation("Buyer", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    User     @relation("Seller", fields: [sellerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@unique([listingId, buyerId])
+  @@index([sellerId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  kind           MessageKind
+  body           String?
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+/// ============================================================
+/// NOTIFICATIONS
+/// ============================================================
+
+enum PushPlatform {
+  android
+  ios
+  web
+}
+
+model FcmDevice {
+  id     String        @id @default(uuid())
+  userId String
+  user   User          @relation(fields: [userId], references: [id])
+  token  String        @unique
+  platform PushPlatform
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+  @@map("fcm_devices")
+}
+
+enum NotificationCategory {
+  direct_messages
+  saved_search_matches
+  listing_activity
+  admin_announcements
+  blog_activity
+  marketing
+}
+
+model NotificationHistory {
+  id        String               @id @default(uuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id])
+  category  NotificationCategory
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notification_history")
+}
+
+model NotificationPreference {
+  id      String               @id @default(uuid())
+  userId  String               @unique
+  user    User                 @relation(fields: [userId], references: [id])
+  optOuts Json
+
+  @@map("notification_preferences")
+}
+
+/// ============================================================
+/// CONTENT
+/// ============================================================
+
+model BlogPost {
+  id        String    @id @default(uuid())
+  slug      String    @unique
+  locale    String
+  title     String
+  body      String
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  publishedAt DateTime?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([locale, publishedAt(sort: Desc)])
+  @@map("blog_posts")
+}
+
+/// ============================================================
+/// ADMIN
+/// ============================================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  targetType String
+  targetId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}

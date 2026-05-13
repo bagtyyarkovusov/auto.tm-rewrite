@@ -63,6 +63,7 @@ images/
 
 # Prisma generated
 packages/db/node_modules/.prisma/
+packages/db/generated/
 packages/db/.env
 
 # Sentry / GlitchTip
