@@ -6,12 +6,11 @@ import { JwtModule } from "@nestjs/jwt";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
 
-import { PrismaModule } from "./common/prisma.module";
+// import { PrismaModule } from "./common/prisma.module";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { GlobalErrorFilter } from "./common/error.filter";
 import { HealthController } from "./common/health.controller";
 import { EnvSchema } from "./env.schema";
-
 import { IdentityModule } from "./modules/identity/identity.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
 import { ListingsModule } from "./modules/listings/listings.module";
@@ -33,13 +32,14 @@ import { AdminModule } from "./modules/admin/admin.module";
         level: process.env["LOG_LEVEL"] ?? "info",
       },
     }),
-    PrismaModule,
+    // PrismaModule,  // TODO(#16): re-enable when API is ESM or db package is compiled
     EventEmitterModule.forRoot(),
     JwtModule.register({
       global: true,
       secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       signOptions: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- JWT lib type
         expiresIn: (process.env["JWT_ACCESS_TTL"] ?? "15m") as any,
       },
     }),

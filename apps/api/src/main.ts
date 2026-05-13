@@ -1,12 +1,13 @@
 import "reflect-metadata";
 
+import { randomUUID } from "node:crypto";
+
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import { Logger } from "nestjs-pino";
-import { randomUUID } from "node:crypto";
 
 import { AppModule } from "./app.module";
 
@@ -21,6 +22,7 @@ async function bootstrap() {
 
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.getInstance().addHook("onRequest", (_req, _reply, done) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify request type
     const req = _req as any;
     if (!req.headers["x-request-id"]) {
       req.headers["x-request-id"] = randomUUID();

@@ -14,13 +14,12 @@
 
 | | |
 |---|---|
-| **Sprint** | S1 — Scaffold |
-| **Status** | 🟡 In progress (issues created, sandcastle running) |
-| **Started** | 2026-05-14 |
+| **Sprint** | S2 — Identity (OTP) |
+| **Status** | ⚪ Pending |
 | **Phase** | 1 (Marketplace MVP) |
-| **Plan file** | *(see sprint doc below — the detailed plan lives in `sprints/sprint-01-scaffold.md`)* |
-| **Sprint doc** | [`sprints/sprint-01-scaffold.md`](sprints/sprint-01-scaffold.md) |
-| **Milestone** | M1 — Hello stack |
+| **Plan file** | TBD (issues will be created when starting S2) |
+| **Sprint doc** | [`sprints/sprint-02-identity.md`](sprints/sprint-02-identity.md) |
+| **Milestone** | M2 — I can log in |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 
@@ -42,7 +41,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals (what we explic
 
 | # | Sprint | Status | Started | Shipped | Milestone | Demo audience |
 |---|---|---|---|---|---|---|
-| S1 | [Scaffold](sprints/sprint-01-scaffold.md) | 🟡 In progress | 2026-05-14 | — | M1 | Nobody — confirms rails |
+| S1 | [Scaffold](sprints/sprint-01-scaffold.md) | 🟢 Shipped | 2026-05-14 | 2026-05-14 | M1 | Nobody — confirms rails |
 | S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | ⚪ Pending | — | — | M2 | Tiny internal group |
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | ⚪ Pending | — | — | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | ⚪ Pending | — | — | M3 | Internal group |
@@ -147,7 +146,7 @@ Once per sprint:
 
 > One-line entries, newest first. Empty until the first sprint closes.
 
-- *(none yet)*
+- 2026-05-14 — S1 Scaffold (M1). Local dev stack runs (`pnpm install && pnpm dev`); CI green; air-gapped bundle path proven via `make -n bundle`.
 
 ---
 

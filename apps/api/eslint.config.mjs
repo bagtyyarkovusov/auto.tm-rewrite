@@ -4,8 +4,13 @@ export default [
   { ignores: ["dist/**"] },
   ...node,
   {
+    files: ["**/*.module.ts"],
     rules: {
-      // ESM requires .js extensions in imports, which ts handles at compile time
+      "@typescript-eslint/no-extraneous-class": "off",
+    },
+  },
+  {
+    rules: {
       "import/no-unresolved": "off",
     },
   },

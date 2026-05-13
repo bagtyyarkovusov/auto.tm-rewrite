@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { ListingStatus, Currency } from "../enums";
 
 export const ListingSummarySchema = z.object({

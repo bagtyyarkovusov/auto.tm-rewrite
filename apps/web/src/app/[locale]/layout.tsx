@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+
 import "./globals.css";
 import { locales } from "@/i18n/locales";
 import { cn } from "@/lib/utils";

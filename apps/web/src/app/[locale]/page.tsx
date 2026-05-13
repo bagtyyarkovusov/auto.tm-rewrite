@@ -1,4 +1,5 @@
 import { Button } from "@auto-tm/ui/components";
+
 import type { Locale } from "@/i18n/locales";
 
 const subtitle: Record<Locale, string> = {

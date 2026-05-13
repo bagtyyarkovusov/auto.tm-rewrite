@@ -5,9 +5,9 @@ Turkmenistan car marketplace. Mobile-first, multilingual (Russian / Turkmen / En
 ## Architecture at a glance
 
 - **Mobile app**: Expo (Android + iOS)
-- **Public web**: Next.js 15 (`auto.tm`) — landing, listings, dealers, blog
-- **Admin web**: Next.js 15 (`admin.auto.tm`) — moderation, user mgmt, push, reports
-- **API**: NestJS 11 + Prisma 5 + Postgres + Redis + Socket.IO
+- **Public web**: Next.js 16 (`auto.tm`) — landing, listings, dealers, blog
+- **Admin web**: Next.js 16 (`admin.auto.tm`) — moderation, user mgmt, push, reports
+- **API**: NestJS 11 + Prisma 7 + Postgres + Redis + Socket.IO
 - **SMS gateway**: Custom Node service + Kotlin Android phone agent (TM has no commercial SMS API)
 - **Object storage**: Self-hosted MinIO
 - **All hosted inside Turkmenistan** (air-gapped, builds shipped via Docker image tarballs)
@@ -44,8 +44,8 @@ infra/
 
 ## Local development
 
-> **Note:** Scaffolding is in progress. Code commits follow the documentation commits.
-> See `docs/adr/0003-monorepo.md` for the development workflow once code lands.
+The scaffold is complete (May 2026). `pnpm install && pnpm dev` starts the full local stack.
+See `docs/adr/0003-monorepo.md` for monorepo conventions.
 
 ```bash
 # Install (once we have package.json deps wired up)
