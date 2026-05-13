@@ -1,5 +1,5 @@
 ---
-description: Pick a GitHub issue from the current sprint and run it end-to-end — branch, implement, test, PR, approve, merge, sync main, unblock dependents. One-shot.
+description: Pick a GitHub issue from the current sprint and run it end-to-end — branch, optional design check (recommends /wireframe and /hifi-design if the screen is non-trivial), implement, test, PR, approve, merge, sync main, unblock dependents. One-shot.
 ---
 
 # AutoTM — Run one issue end-to-end
@@ -90,6 +90,156 @@ Any blocker still `OPEN` means the label state was inconsistent (issue shouldn't
 
 ---
 
+## 3.5. Design check (only if this issue ships UI)
+
+Before writing any code for a UI-shipping issue, check whether design context exists. The hi-fi / wireframe specs in `docs/prd/ui/wireframes/` and `docs/prd/ui/hifi/` are inputs to good implementation — better to pause and run `/wireframe` or `/hifi-design` first than implement something that has to be rebuilt.
+
+### 3.5.1 Does this issue ship UI?
+
+Heuristic — answer "yes" if any of these are true:
+
+- Issue's area labels include `mobile`, `web`, or `admin`
+- `## Files to create / modify` lists any path matching:
+  - `apps/mobile/app/**/*.tsx`
+  - `apps/web/src/app/**/*.tsx`
+  - `apps/admin/src/app/**/*.tsx`
+  - `apps/web/src/components/**/*.tsx` (any non-trivial component)
+  - `apps/admin/src/components/**/*.tsx`
+  - `apps/mobile/components/**/*.tsx`
+- AC items mention "screen", "page", "modal", "sheet", "wizard", "feed", "tab", "card", "list", or specific user-visible verbs ("user sees", "user taps", "displays", "renders")
+
+If **none** of these match → this is a backend-only or pure-config issue. Skip this section entirely and jump to §4.
+
+### 3.5.2 Identify the screen(s) this issue ships
+
+From the file list + AC items, name the screen(s). Examples:
+
+- `apps/mobile/app/(auth)/otp.tsx` → screen `mobile-otp-entry`
+- `apps/web/src/app/[locale]/listings/[id]/page.tsx` → screen `web-listing-detail`
+- `apps/admin/src/app/(admin)/moderation/page.tsx` → screen `admin-moderation-queue`
+- Multiple screens (e.g., a wizard with 6 steps) → list all of them
+
+Slugify each screen name for the design doc lookup.
+
+### 3.5.3 Check for existing design specs
+
+For each screen:
+
+```bash
+test -f docs/prd/ui/wireframes/<slug>.md && echo "WIREFRAME_EXISTS" || echo "WIREFRAME_MISSING"
+test -f docs/prd/ui/hifi/<slug>.md       && echo "HIFI_EXISTS"      || echo "HIFI_MISSING"
+```
+
+### 3.5.4 Classify each screen — "needs design?"
+
+For each screen, apply the decision tree from `docs/prd/ui/70-design-principles.md` (or, if unavailable, the inline heuristic below):
+
+```
+Is this a primary user-facing flow?
+(login, sell, browse, chat, listing detail, dealer page, garage, blog, sell wizard)
+├── YES → needs WIREFRAME + HI-FI before implementation
+└── NO → continues
+
+Has > 3 distinct states (default / loading / empty / error / variants)?
+├── YES → needs WIREFRAME + HI-FI
+└── NO → continues
+
+Has unusual layout or unique interaction patterns?
+(filter sheet, OTP digit input, image carousel with thumbnails, post-card ref in chat)
+├── YES → needs WIREFRAME (hi-fi optional)
+└── NO → continues
+
+Is it stock CRUD / form / settings toggle / table / simple list?
+├── YES → SKIP design step (tokens + agent defaults are enough)
+└── NO → needs WIREFRAME at minimum
+```
+
+### 3.5.5 Build the recommendation block
+
+For every screen where design is needed but missing, compose a recommendation. Example:
+
+```
+==============================================
+Design check — issue #<N>
+==============================================
+
+This issue ships UI:
+  - mobile-otp-entry  (apps/mobile/app/(auth)/otp.tsx)
+
+Design specs:
+  - Wireframe: missing (docs/prd/ui/wireframes/mobile-otp-entry.md not found)
+  - Hi-fi:     missing (docs/prd/ui/hifi/mobile-otp-entry.md not found)
+
+Classification: primary user-facing flow → wireframe + hi-fi recommended before implementation.
+
+Options:
+  (a) Continue without design specs
+      - Agent will implement from issue body + tokens + own defaults
+      - Risk: design may need rework if it diverges from intent
+      - Best when: you've thought through the screen already and trust the agent
+
+  (b) Pause — run /wireframe mobile-otp-entry first, then re-run /run-issue <N>
+      - 5-10 minutes for the wireframe
+      - Saves to docs/prd/ui/wireframes/mobile-otp-entry.md
+      - Agent will read it on re-run
+
+  (c) Pause — run /wireframe + /hifi-design, then re-run /run-issue <N>
+      - 15-25 minutes for both
+      - Tightest implementation guidance; full token + state + a11y coverage
+      - Best when: this is a flagship screen on a milestone path (M2, M3, M5, M8)
+
+Which option? (a / b / c)
+```
+
+### 3.5.6 Handle the user's choice
+
+**Choice (a) — continue without design**:
+- Log this in `/tmp/run-issue-notes.md`: `"Design specs not present; implemented from issue body + tokens + agent defaults."`
+- Include this note in the PR description's `## Architecture notes` section (§6) so the reviewer knows
+- Proceed to §4
+
+**Choice (b) — pause for /wireframe**:
+- Comment on the issue:
+  ```bash
+  gh issue comment $N --body "Paused for design. Run /wireframe <screen-slug> before re-running /run-issue $N."
+  ```
+- Print to the user:
+  ```
+  Paused. Run these commands now:
+    /wireframe <screen-slug>
+  Then re-run /run-issue <N>.
+  ```
+- Stop. Do **not** push the branch. The local `agent/issue-<N>` branch is preserved.
+
+**Choice (c) — pause for /wireframe + /hifi-design**:
+- Comment on the issue:
+  ```bash
+  gh issue comment $N --body "Paused for design. Run /wireframe <screen-slug> + /hifi-design <screen-slug> before re-running /run-issue $N."
+  ```
+- Print to the user:
+  ```
+  Paused. Run these commands now (in order):
+    /wireframe <screen-slug>
+    /hifi-design <screen-slug>
+  Then re-run /run-issue <N>.
+  ```
+- Stop. Same preservation as (b).
+
+### 3.5.7 If design specs already exist (full or partial)
+
+Even if `/wireframe` or `/hifi-design` was run previously and the specs exist, **add them to the read-first list** in §4. Treat them as primary inputs — implement from the hi-fi spec when present, falling back to the wireframe, falling back to the issue body.
+
+If only wireframe exists (no hi-fi) and the screen is classified as "needs hi-fi too," **note the gap** but don't force a pause — let the user decide whether to pause or proceed.
+
+### 3.5.8 Re-runs of /run-issue after design pause
+
+If this is a re-run after the user paused for design (the issue has a comment containing "Paused for design"):
+- Confirm the wireframe / hi-fi files now exist
+- Read them in addition to the issue's `## Read first` list
+- Proceed to §4
+
+---
+
 ## 4. Implement
 
 Walk through `## Files to create / modify` in the order the issue presents them. For each `- [ ]` in `## Acceptance criteria`:
@@ -177,6 +327,11 @@ Closes #<N>
 
 ## Architecture notes (omit if irrelevant)
 - <any deviation from the issue's plan worth flagging>
+
+## Design notes (omit if not a UI issue)
+- Wireframe: <path to wireframe doc, or "not run — see /tmp/run-issue-notes.md">
+- Hi-fi spec: <path to hi-fi doc, or "not run — see /tmp/run-issue-notes.md">
+- If §3.5 chose (a) "continue without design," include the rationale from /tmp/run-issue-notes.md here
 EOF
 )"
 ```
@@ -275,11 +430,17 @@ Branch agent/issue-<N> merged and deleted
 Local main synced to <new SHA>
 Dependents unblocked: #<X>, #<Y>     (or "none")
 
+Design specs used:
+  Wireframe: <path | "none — backend/config issue" | "none — chose continue-without-design">
+  Hi-fi:     <path | "none — backend/config issue" | "none — chose continue-without-design">
+
 AC evidence:
   - <AC 1> → <file:line or test name>
   - <AC 2> → <file:line or test name>
   ...
 ```
+
+If §3.5 paused (chose b or c) and the user later re-ran with design specs in place, mention which specs informed implementation here.
 
 Then stop. Do not pick another issue without being asked.
 
