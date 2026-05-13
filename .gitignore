@@ -72,3 +72,7 @@ packages/db/.env
 .cache/
 tmp/
 .scratch/
+
+
+#Claude Code
+.claude/worktrees/
