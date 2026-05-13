@@ -1,0 +1,11 @@
+{
+  email admin@auto.tm
+}
+
+api.auto.tm   { reverse_proxy api:3000 }
+admin.auto.tm { reverse_proxy admin:3001 }
+auto.tm, www.auto.tm { reverse_proxy web:3002 }
+media.auto.tm {
+  reverse_proxy minio:9000
+  header Cache-Control "public, max-age=31536000, immutable"
+}
