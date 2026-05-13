@@ -1,0 +1,8 @@
+[
+  { "slug": "ahal", "nameRu": "Ахалский велаят", "nameTk": "Ahal welaýaty", "nameEn": "Ahal Region" },
+  { "slug": "balkan", "nameRu": "Балканский велаят", "nameTk": "Balkan welaýaty", "nameEn": "Balkan Region" },
+  { "slug": "dasoguz", "nameRu": "Дашогузский велаят", "nameTk": "Daşoguz welaýaty", "nameEn": "Dasoguz Region" },
+  { "slug": "lebap", "nameRu": "Лебапский велаят", "nameTk": "Lebap welaýaty", "nameEn": "Lebap Region" },
+  { "slug": "mary", "nameRu": "Марыйский велаят", "nameTk": "Mary welaýaty", "nameEn": "Mary Region" },
+  { "slug": "ashgabat", "nameRu": "Ашхабад", "nameTk": "Aşgabat", "nameEn": "Ashgabat" }
+]
