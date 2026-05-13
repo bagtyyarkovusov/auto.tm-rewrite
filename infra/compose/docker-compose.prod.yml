@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: auto_tm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: auto_tm
+    volumes:
+      - /srv/auto-tm/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "auto_tm", "-d", "auto_tm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - /srv/auto-tm/redis:/data
+    restart: unless-stopped
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - /srv/auto-tm/minio:/data
+    restart: unless-stopped
+
+  api:
+    image: auto-tm/api:${TAG}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env.api
+    restart: unless-stopped
+
+  worker:
+    image: auto-tm/worker:${TAG}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env.worker
+    restart: unless-stopped
+
+  admin:
+    image: auto-tm/admin:${TAG}
+    env_file:
+      - .env.admin
+    restart: unless-stopped
+
+  web:
+    image: auto-tm/web:${TAG}
+    env_file:
+      - .env.web
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /srv/auto-tm/caddy/data:/data
+      - /srv/auto-tm/caddy/config:/config
+    restart: unless-stopped

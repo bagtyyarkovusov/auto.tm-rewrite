@@ -1,0 +1,47 @@
+services:
+  sms-gateway:
+    image: auto-tm/sms-gateway:${TAG}
+    env_file:
+      - .env.sms-gateway
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ../docker/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /srv/auto-tm/prometheus:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ../docker/observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - /srv/auto-tm/grafana:/var/lib/grafana
+    ports:
+      - "3030:3000"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - ../docker/observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - /srv/auto-tm/loki:/loki
+    command: "-config.file=/etc/loki/local-config.yaml"
+    restart: unless-stopped
+
+  glitchtip:
+    image: glitchtip/glitchtip:latest
+    env_file:
+      - .env.glitchtip
+    restart: unless-stopped
