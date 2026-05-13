@@ -76,3 +76,8 @@ tmp/
 
 #Claude Code
 .claude/worktrees/
+.claude/skills/
+
+
+#Agents
+.agents/
