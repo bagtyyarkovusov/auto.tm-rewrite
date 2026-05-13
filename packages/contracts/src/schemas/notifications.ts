@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { NotificationCategory } from "../enums";
 
 export const NotificationSummarySchema = z.object({

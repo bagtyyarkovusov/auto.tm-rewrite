@@ -1,14 +1,18 @@
 import nextjs from "@auto-tm/eslint-config/nextjs.mjs";
-import { defineConfig, globalIgnores } from "eslint/config";
 
-const eslintConfig = defineConfig([
+export default [
   ...nextjs,
-  globalIgnores([
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
-
-export default eslintConfig;
+  {
+    ignores: [
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+    ],
+  },
+  {
+    rules: {
+      "import/no-unresolved": "off",
+    },
+  },
+];

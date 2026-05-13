@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { UserRole } from "../enums";
 
 export const UserSummarySchema = z.object({

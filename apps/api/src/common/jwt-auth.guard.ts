@@ -1,12 +1,14 @@
-import {
+import type {
   CanActivate,
-  ExecutionContext,
+  ExecutionContext} from "@nestjs/common";
+import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
-import { JwtService } from "@nestjs/jwt";
+import type { Reflector } from "@nestjs/core";
+import type { JwtService } from "@nestjs/jwt";
 import type { FastifyRequest } from "fastify";
+
 import { IS_PUBLIC_KEY } from "./public.decorator";
 
 @Injectable()
@@ -32,6 +34,7 @@ export class JwtAuthGuard implements CanActivate {
     const token = authHeader.slice(7);
     try {
       const payload = this.jwtService.verify(token);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify req augmentation
       (request as any).user = payload;
       return true;
     } catch {

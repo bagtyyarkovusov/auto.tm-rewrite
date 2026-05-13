@@ -1,4 +1,5 @@
 import { Controller, Get } from "@nestjs/common";
+
 import { Public } from "../../../common/public.decorator";
 
 @Controller("api/v1/conversations")

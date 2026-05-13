@@ -3,6 +3,7 @@ import {
   OpenApiGeneratorV3,
 } from "@asteasolutions/zod-to-openapi";
 import type { z } from "zod";
+
 import { ErrorResponseSchema } from "./errors";
 import {
   OtpRequestRequestSchema,

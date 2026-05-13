@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+
 import { NotificationsController } from "./presentation/notifications.controller";
 
 @Module({ controllers: [NotificationsController] })
