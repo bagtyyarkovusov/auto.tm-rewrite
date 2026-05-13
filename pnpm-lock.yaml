@@ -170,6 +170,82 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)(lightningcss@1.32.0)(msw@2.14.6(@types/node@22.19.19)(typescript@5.9.3))(terser@5.47.1)
 
+  apps/web:
+    dependencies:
+      '@auto-tm/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@auto-tm/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@base-ui/react':
+        specifier: ^1.4.1
+        version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@formatjs/intl-localematcher':
+        specifier: ^0.5.10
+        version: 0.5.10
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^0.469.0
+        version: 0.469.0(react@19.2.6)
+      negotiator:
+        specifier: ^1.0.0
+        version: 1.0.0
+      next:
+        specifier: ^16.2.2
+        version: 16.2.6(@babel/core@7.29.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.6(react@19.2.6)
+      shadcn:
+        specifier: ^4.7.0
+        version: 4.7.0(@types/node@22.19.19)(typescript@5.9.3)
+      tailwind-merge:
+        specifier: ^2.5.4
+        version: 2.6.1
+      tw-animate-css:
+        specifier: ^1.4.0
+        version: 1.4.0
+    devDependencies:
+      '@auto-tm/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
+      '@auto-tm/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@tailwindcss/postcss':
+        specifier: ^4.1.0
+        version: 4.3.0
+      '@types/negotiator':
+        specifier: ^0.6.3
+        version: 0.6.4
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.19
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      postcss:
+        specifier: ^8.4.49
+        version: 8.5.14
+      tailwindcss:
+        specifier: ^4.1.0
+        version: 4.3.0
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/contracts:
     dependencies:
       '@asteasolutions/zod-to-openapi':
@@ -910,6 +986,9 @@ packages:
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+
+  '@formatjs/intl-localematcher@0.5.10':
+    resolution: {integrity: sha512-af3qATX+m4Rnd9+wHcjJ4w2ijq+rAVP3CCinJQvFv1kgSu1W6jypUmvleJxcewdxmutM8dmIRZFxO/IQBZmP2Q==}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -2040,6 +2119,9 @@ packages:
 
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
+
+  '@types/negotiator@0.6.4':
+    resolution: {integrity: sha512-elf6BsTq+AkyNsb2h5cGNst2Mc7dPliVoAPm1fXglC/BM3f2pFA40BaSSv3E5lyHteEawVKLP+8TwiY1DMNb3A==}
 
   '@types/node@18.19.130':
     resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
@@ -6033,6 +6115,10 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
+  '@formatjs/intl-localematcher@0.5.10':
+    dependencies:
+      tslib: 2.8.1
+
   '@grpc/grpc-js@1.14.3':
     dependencies:
       '@grpc/proto-loader': 0.8.1
@@ -7059,6 +7145,8 @@ snapshots:
       '@types/node': 22.19.19
 
   '@types/ms@2.1.0': {}
+
+  '@types/negotiator@0.6.4': {}
 
   '@types/node@18.19.130':
     dependencies:
