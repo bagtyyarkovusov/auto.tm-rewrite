@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "AutoTM",
+    "slug": "auto-tm",
+    "scheme": "autotm",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "tm.auto.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "tm.auto.app",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
