@@ -15,7 +15,8 @@
 | | |
 |---|---|
 | **Sprint** | S1 — Scaffold |
-| **Status** | 🟡 In progress |
+| **Status** | 🟡 In progress (issues created, sandcastle running) |
+| **Started** | 2026-05-14 |
 | **Phase** | 1 (Marketplace MVP) |
 | **Plan file** | *(see sprint doc below — the detailed plan lives in `sprints/sprint-01-scaffold.md`)* |
 | **Sprint doc** | [`sprints/sprint-01-scaffold.md`](sprints/sprint-01-scaffold.md) |
@@ -41,7 +42,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals (what we explic
 
 | # | Sprint | Status | Started | Shipped | Milestone | Demo audience |
 |---|---|---|---|---|---|---|
-| S1 | [Scaffold](sprints/sprint-01-scaffold.md) | ⚪ Planned | — | — | M1 | Nobody — confirms rails |
+| S1 | [Scaffold](sprints/sprint-01-scaffold.md) | 🟡 In progress | 2026-05-14 | — | M1 | Nobody — confirms rails |
 | S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | ⚪ Pending | — | — | M2 | Tiny internal group |
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | ⚪ Pending | — | — | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | ⚪ Pending | — | — | M3 | Internal group |
