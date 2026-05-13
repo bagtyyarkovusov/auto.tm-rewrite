@@ -80,8 +80,14 @@ tmp/
 .claude/skills/
 
 
-# Agents
-.agents/
+# Agents — track only project-specific *-agent-skill/ directories under
+# .agents/skills/. User-local plugin caches (Matt Pocock skills, etc.) are
+# ignored individually. Pattern: ignore everything under .agents/ EXCEPT
+# the .agents/skills/*-agent-skill/ subdirs the project commits.
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/*-agent-skill/
 
 # Sandcastle — ephemeral worktrees, logs, env (config files not tracked)
 .sandcastle/
