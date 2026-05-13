@@ -1,0 +1,202 @@
+# 71 — Design tokens
+
+The single source of truth for visual values. Token files live in `packages/ui/tokens/`. Components reference tokens by name — never raw hex / px.
+
+## Where tokens live in code
+
+```
+packages/ui/tokens/
+├── colors.ts       Palette + semantic mappings
+├── type.ts         Font family, size scale, weights, line-heights, letter-spacing
+├── spacing.ts      4px base grid
+├── radius.ts       Border-radius scale
+├── shadow.ts       Elevation shadows
+├── motion.ts       Durations + easings
+└── index.ts        Re-exports
+```
+
+These tokens are consumed by:
+- `apps/web` and `apps/admin` via Tailwind preset + CSS variables (shadcn/ui)
+- `apps/mobile` via NativeWind (Tailwind classnames in React Native) + runtime theme provider
+
+## Color palette
+
+### Brand
+
+Brand red `#E60000` is kept from the previous Flutter app. The 50-900 ramp gives us hover/active variants + tints for backgrounds + dark-mode adjustments.
+
+```
+red.50    #FFEBEB
+red.100   #FFD1D1
+red.200   #FFA8A8
+red.300   #FF7878
+red.400   #FF4848
+red.500   #E60000   ← brand
+red.600   #C20000
+red.700   #9E0000
+red.800   #7A0000
+red.900   #560000
+```
+
+### Neutrals
+
+Warm gray (slightly warmer than pure gray, reads premium):
+
+```
+neutral.0     #FFFFFF
+neutral.50    #FAFAF9
+neutral.100   #F4F4F2
+neutral.200   #E7E6E3
+neutral.300   #D2D0CB
+neutral.400   #A8A6A0
+neutral.500   #737170
+neutral.600   #525251
+neutral.700   #3A3A39
+neutral.800   #27272A
+neutral.900   #171717
+neutral.950   #0A0A0A
+```
+
+### Status
+
+Distinct hues so error is NOT confused with brand red:
+
+```
+green.500   #10B981   success
+amber.500   #F59E0B   warning
+rose.500    #F43F5E   error  ← intentionally NOT red (distinct from brand)
+blue.500    #3B82F6   info / link
+```
+
+### Semantic mappings
+
+What application code actually references:
+
+```ts
+primary:        red.500
+primaryHover:   red.600
+primaryActive:  red.700
+onPrimary:      neutral.0
+
+background:     { light: neutral.0,   dark: neutral.950 }
+surface:        { light: neutral.50,  dark: neutral.900 }
+surfaceElevated:{ light: neutral.0,   dark: neutral.800 }
+border:         { light: neutral.200, dark: neutral.700 }
+
+textPrimary:    { light: neutral.900, dark: neutral.50 }
+textSecondary:  { light: neutral.600, dark: neutral.300 }
+textTertiary:   { light: neutral.500, dark: neutral.400 }
+
+success: green.500
+warning: amber.500
+error:   rose.500
+info:    blue.500
+
+overlayScrim: rgba(0,0,0,0.5)
+```
+
+## Typography
+
+Font family: **Inter** (already a dependency from the previous Flutter app).
+Mono family: **Menlo** (used for VINs, prices that need to align in columns).
+
+### Size scale
+
+| Token | Value (px) | Use |
+|---|---|---|
+| `xs` | 11 | Tiny labels, badges |
+| `sm` | 13 | Captions, helper text |
+| `base` | 15 | Body text (default) |
+| `lg` | 17 | Larger body, list items |
+| `xl` | 20 | Section headings |
+| `2xl` | 24 | Page headings |
+| `3xl` | 30 | Hero text |
+| `4xl` | 36 | Marketing landing |
+| `5xl` | 44 | Marketing landing big numbers |
+
+### Weights
+
+| Token | Value |
+|---|---|
+| `regular` | 400 |
+| `medium` | 500 |
+| `semibold` | 600 |
+| `bold` | 700 |
+
+### Line-heights
+
+| Token | Value |
+|---|---|
+| `tight` | 1.2 — headlines |
+| `snug` | 1.35 — section headings |
+| `normal` | 1.5 — body |
+| `relaxed` | 1.65 — long-form blog content |
+
+## Spacing
+
+4px base grid:
+
+```
+0  →  0
+1  →  4
+2  →  8
+3  →  12
+4  →  16
+5  →  20
+6  →  24
+8  →  32
+10 →  40
+12 →  48
+16 →  64
+20 →  80
+24 →  96
+```
+
+## Border radius
+
+| Token | Value |
+|---|---|
+| `none` | 0 |
+| `sm` | 4 |
+| `md` | 8 |
+| `lg` | 12 |
+| `xl` | 16 |
+| `2xl` | 24 |
+| `full` | 9999 (pill / circle) |
+
+Default for cards: `lg` (12px).
+Default for buttons: `md` (8px).
+Default for input fields: `md` (8px).
+Avatars: `full`.
+
+## Shadows
+
+Used sparingly. Most surfaces are flat with borders.
+
+| Token | Value | Use |
+|---|---|---|
+| `sm` | `0 1px 2px rgba(0,0,0,0.05)` | Tiny lift on cards |
+| `md` | `0 4px 8px rgba(0,0,0,0.08)` | Floating buttons, dropdowns |
+| `lg` | `0 8px 24px rgba(0,0,0,0.12)` | Modal dialogs |
+
+## Motion
+
+| Duration | ms | Use |
+|---|---|---|
+| `instant` | 0 | (no animation) |
+| `fast` | 150 | Default UI feedback (button press, toggle) |
+| `base` | 250 | List transitions, tab switches |
+| `slow` | 400 | Modal open / route change |
+
+| Easing | Value |
+|---|---|
+| `standard` | `cubic-bezier(0.4, 0, 0.2, 1)` — most cases |
+| `decel` | `cubic-bezier(0.0, 0, 0.2, 1)` — element entering |
+| `accel` | `cubic-bezier(0.4, 0, 1, 1)` — element exiting |
+
+## References
+
+- Token source code: `packages/ui/tokens/*.ts`
+- Tailwind preset: `packages/ui/theme/tailwind.preset.ts`
+- CSS variables: `packages/ui/theme/css-variables.css`
+- [70-design-principles.md](70-design-principles.md)

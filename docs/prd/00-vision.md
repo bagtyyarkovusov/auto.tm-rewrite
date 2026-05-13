@@ -1,0 +1,71 @@
+# 00 — Vision
+
+## What AutoTM is
+
+A **mobile-first, multilingual car marketplace for Turkmenistan**, with a built-in chat that makes buyer ↔ seller communication effortless and a 3-tier trust system (Phase 2) where AutoTM-staffed inspections back each listing's quality claim.
+
+## Why it exists
+
+Turkmenistan's car-buying market has the same friction every emerging market has:
+
+- Listings scattered across Telegram channels and Instagram pages
+- No central place to compare prices
+- Sellers hide history (accident damage, mileage rollback)
+- Communication via phone calls — no chat trail, no scam protection
+- Foreign apps (auto.ru, Otomoto) don't work well in TM due to network restrictions, language, and currency
+
+We build inside Turkmenistan, for Turkmenistan: TM hosting, TM-friendly auth (phone OTP via our own SMS gateway), TM currencies, TM language support, TM regional structure.
+
+## Who it's for
+
+Three primary audiences (full personas in [10-personas.md](10-personas.md)):
+
+- **Private sellers** — listing 1-3 cars in their lifetime
+- **Private buyers** — searching, comparing, messaging sellers
+- **Dealerships** — listing many cars, with verified "PRO" status
+
+Plus internal admins and (Phase 2) inspectors.
+
+## Why now
+
+- Mobile penetration in TM is high; smartphone-first design is finally viable
+- TM Telecom infrastructure supports our self-hosted architecture
+- No competing local product owns this space
+- The previous Flutter prototype proved the concept; the rewrite removes its structural limitations
+
+## Success metrics (12-month targets after launch)
+
+- **10,000 monthly active users** by month 6
+- **1,000 active listings** at any time by month 3
+- **300 messages/day** average (chat-as-core feature working)
+- **30% of buyers** complete their journey from search → contact → meeting in-app (vs. switching to Telegram)
+- **80% week-2 retention** for users who post a listing
+- **<2% scam-report rate** per listing
+
+## Design principles
+
+1. **Mobile-first, anonymous-default.** No login wall on browse. Auth only on action.
+2. **Honest UX.** No fake AI features, no fake "trust" badges, no pay-for-placement.
+3. **Multilingual without forcing translation.** Three locales for UI; content in whatever language the seller wrote.
+4. **Trust is earned, not paid for.** Phase 2 tier system is computed from inspection data, never editable.
+5. **Performance over polish.** Slow TM mobile data → aggressive client-side compression, minimal-payload pages.
+6. **Air-gap by design.** Everything runs inside TM. No "cloud-only" dependencies.
+
+## Anti-goals (things we explicitly will NOT build)
+
+- A bidding / auction system (the market doesn't work this way locally)
+- Escrow / payment processing (Phase ∞ if ever)
+- Test drive scheduling (Phase ∞)
+- Insurance integration (separate product)
+- Cross-border listings (Phase ∞)
+- AI photo enhancement / generative anything
+- Crypto / NFT car ownership (no)
+- Forums / public comments on listings (chat replaces them; less spam surface)
+
+## Phases
+
+Detailed in [02-phases.md](02-phases.md). Headline:
+
+- **Phase 1** — Marketplace MVP with chat + notifications (~8-10 weeks)
+- **Phase 2** — Inspections + tier system + PDF reports (~6-8 weeks)
+- **Phase 3** — 360° photos + comparisons + polish (~4-6 weeks)

@@ -1,0 +1,28 @@
+{
+  "name": "auto-tm-rewrite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AutoTM — Turkmenistan car marketplace (rewrite). Monorepo for API, web, admin, mobile, SMS gateway, phone agent, worker.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

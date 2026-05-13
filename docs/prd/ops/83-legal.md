@@ -1,0 +1,87 @@
+# 83 — Legal documents (Privacy Policy + Terms of Service)
+
+## Why this doc exists
+
+Apple App Store and Google Play Store both require:
+
+- A Privacy Policy URL at submission time
+- Terms of Service for any app that handles user accounts and user-generated content
+
+Plus EU GDPR (if we ever serve EU users — relevant for TM diaspora) and TM data law require disclosures. This PRD page outlines **what content** these legal docs must include. The actual legal text should be reviewed by a Turkmenistan-licensed lawyer before launch.
+
+## Where they live
+
+- Public URLs: `https://auto.tm/<lang>/legal/privacy` and `https://auto.tm/<lang>/legal/terms`
+- Served by `apps/web` as static markdown rendered server-side
+- Linked from mobile app (Settings → About → Privacy / Terms)
+- Linked from admin app (footer)
+- Required versions: RU + TK + EN (trilingual)
+
+## Privacy Policy — required sections
+
+| Section | Content |
+|---|---|
+| **What we collect** | Phone number (auth), name, profile photo (optional), location (region/city) selected by user, listings + content the user posts, chat messages, push token, device info (model, OS, app version), IP address (for rate limiting only), photo / video uploads, VIN (if user enters), garage vehicle data |
+| **What we do NOT collect** | We do NOT track location via GPS in MVP. We do NOT have third-party advertising SDKs. We do NOT sell data. |
+| **Why we collect it** | Account creation, listing display, search functionality, communication between users, fraud prevention, app store policy compliance |
+| **Who can see it** | Public: name, avatar, listings, public garage, public blog posts, response time. Private: phone (masked in public), email, exact location pin (Phase 2 if added), chat messages (except admin moderation) |
+| **Sharing with third parties** | We send push notifications via Firebase Cloud Messaging (Google) and Apple Push Notification Service. These services receive the recipient's device token and the notification payload. We do not share data with advertisers, brokers, or other third parties. |
+| **Data retention** | User data retained while account is active. After account deletion: 30-day grace period, then PII removed. Listings + messages preserved with "Deleted user" attribution for audit trail. |
+| **User rights** | Right to access (export your data), right to delete (account deletion in-app), right to correct (edit profile fields), right to opt out of marketing notifications |
+| **Children's privacy** | App not intended for users under 18 (consistent with auto purchase being adult-only); we do not knowingly collect data from minors |
+| **Cookies (web only)** | Session cookies for admin login. No analytics cookies in MVP. |
+| **Security** | HTTPS in transit; bcrypt-hashed refresh tokens; encrypted-at-rest disk; TM-hosted servers; admin actions audit-logged |
+| **Contact** | Email + physical address for privacy inquiries |
+| **Changes to policy** | Users notified via in-app push when policy changes materially; effective date displayed |
+| **Jurisdiction** | Turkmenistan law applies |
+
+## Terms of Service — required sections
+
+| Section | Content |
+|---|---|
+| **Eligibility** | Must be 18+; must agree to abide by these terms |
+| **Account responsibilities** | User responsible for keeping phone access secure; user responsible for content they post |
+| **Acceptable use** | Listings must be for real cars user owns or represents; no scams, fraud, harassment, illegal content, intellectual property infringement |
+| **Listing accuracy** | Sellers represent their listings accurately; misrepresentation may result in suspension |
+| **Prohibited content** | Spam, duplicate listings, stolen vehicles, vehicles with active liens (without disclosure), illegal modifications |
+| **Communication** | Users agree to receive transactional notifications (OTP, chat messages); marketing notifications are opt-in |
+| **Disclaimer** | AutoTM is a marketplace; we do not own / inspect / warrant listed cars (except where Phase 2 inspection report explicitly applies). Transactions are between users. |
+| **Inspection reports (Phase 2)** | Reports are AutoTM's good-faith assessment; not a warranty; buyers should perform independent verification |
+| **Dealer terms** | Dealer accounts subject to additional verification; PRO badge contingent on verification status; dealers responsible for accuracy of all listings under their account |
+| **Termination** | Users can delete account in-app at any time; AutoTM can suspend accounts that violate these terms |
+| **Liability** | AutoTM not liable for user-to-user disputes, transactions, or content (within legal limits) |
+| **Modifications** | We may update terms; material changes communicated via in-app push |
+| **Governing law** | Turkmenistan |
+| **Contact** | Email + physical address |
+
+## Format
+
+- Plain Markdown rendered server-side by Next.js
+- Versioned (URL: `/legal/privacy/v1`, latest also at `/legal/privacy`)
+- Effective date shown prominently
+- Print-friendly (CSS print stylesheet)
+
+## When to update
+
+- Material changes (new data collection, new third-party integration, expanded liability): publish new version + in-app announcement via admin broadcast
+- Minor typo / clarification fixes: edit in place, increment "Last revised" date
+
+## App Store / Play Store submission checklist
+
+- [ ] Privacy Policy URL: `https://auto.tm/en/legal/privacy`
+- [ ] Privacy nutrition label (Apple) filled in to match what the Privacy Policy says
+- [ ] Data Safety section (Google Play) filled in to match
+- [ ] "Account Deletion" feature: shows `/me/delete` flow (see [Feature 30](../features/30-identity.md))
+- [ ] No third-party SDKs that share data without disclosure
+- [ ] No ATT prompt needed in MVP (no ad SDKs)
+
+## Open questions
+
+- Do we need a Cookies Policy separately, or fold into Privacy Policy? (TM doesn't strictly require; folding into Privacy is fine for MVP)
+- Translation review: should TK + RU versions go through a separate legal review or is translating the EN version enough? (Likely separate review by TM lawyer)
+- DMCA / IP infringement notice mechanism — needed for App Store? (US-style DMCA isn't required in TM; add a generic "report IP violation" flow in Phase 2)
+
+## References
+
+- [Feature 30 — Identity](../features/30-identity.md) — account deletion implementation
+- [GRILL-OUTCOME §19](../../../GRILL-OUTCOME.md) — outstanding action item #7
