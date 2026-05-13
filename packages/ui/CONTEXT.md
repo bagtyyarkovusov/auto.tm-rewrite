@@ -17,8 +17,8 @@ packages/ui/
 │   ├── motion.ts            Durations + easings
 │   └── index.ts             Re-exports
 ├── theme/
-│   ├── tailwind.preset.ts   Tailwind preset built from tokens — extended by web + admin Tailwind configs
-│   └── css-variables.css    CSS variables (consumed by shadcn/ui components via Radix theme)
+│   ├── theme.css            Tailwind v4 @theme directive — imported by web + admin globals.css
+│   └── tailwind.ts          JS token export — consumed by NativeWind v4 (mobile)
 ├── components/              Shared shadcn components (web only)
 │   ├── Button.tsx
 │   ├── Card.tsx
@@ -57,9 +57,9 @@ Error red is rose `#F43F5E` (palette `rose[500]`) — distinct hue from brand, f
 
 | App | Style system | How tokens consumed |
 |---|---|---|
-| `apps/web` (Next.js) | Tailwind + shadcn | `tailwind.config.js` extends `theme/tailwind.preset.ts`; CSS variables from `theme/css-variables.css` |
-| `apps/admin` (Next.js) | Tailwind + shadcn | Same as web |
-| `apps/mobile` (Expo) | NativeWind (Tailwind for RN) | `tailwind.config.js` extends `theme/tailwind.preset.ts`; theme provider supplies mode |
+| `apps/web` (Next.js) | Tailwind v4 + shadcn | `globals.css` imports `theme/theme.css` via `@import`; CSS variables from `@theme` directive |
+| `apps/admin` (Next.js) | Tailwind v4 + shadcn | Same as web |
+| `apps/mobile` (Expo) | NativeWind v4 (Tailwind for RN) | `tailwind.config.js` extends `theme/tailwind.ts`; theme provider supplies mode |
 
 ## Iconography
 
