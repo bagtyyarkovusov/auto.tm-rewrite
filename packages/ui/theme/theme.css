@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand — AutoTM red */
+  --color-brand-50: #FFEBEB;
+  --color-brand-100: #FFD1D1;
+  --color-brand-200: #FFA8A8;
+  --color-brand-300: #FF7878;
+  --color-brand-400: #FF4848;
+  --color-brand-500: #E60000;
+  --color-brand-600: #C20000;
+  --color-brand-700: #9E0000;
+  --color-brand-800: #7A0000;
+  --color-brand-900: #560000;
+
+  /* Neutrals — warm gray */
+  --color-neutral-0: #FFFFFF;
+  --color-neutral-50: #FAFAF9;
+  --color-neutral-100: #F4F4F2;
+  --color-neutral-200: #E7E6E3;
+  --color-neutral-300: #D2D0CB;
+  --color-neutral-400: #A8A6A0;
+  --color-neutral-500: #737170;
+  --color-neutral-600: #525251;
+  --color-neutral-700: #3A3A39;
+  --color-neutral-800: #27272A;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0A0A0A;
+
+  /* Status */
+  --color-success-500: #10B981;
+  --color-warning-500: #F59E0B;
+  --color-error-500: #F43F5E;
+  --color-info-500: #3B82F6;
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Menlo", monospace;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+}
+
+:root {
+  --background: var(--color-neutral-0);
+  --surface: var(--color-neutral-50);
+  --surface-elevated: var(--color-neutral-0);
+  --border: var(--color-neutral-200);
+  --text-primary: var(--color-neutral-900);
+  --text-secondary: var(--color-neutral-600);
+  --text-tertiary: var(--color-neutral-500);
+}
+
+.dark {
+  --background: var(--color-neutral-950);
+  --surface: var(--color-neutral-900);
+  --surface-elevated: var(--color-neutral-800);
+  --border: var(--color-neutral-700);
+  --text-primary: var(--color-neutral-50);
+  --text-secondary: var(--color-neutral-300);
+  --text-tertiary: var(--color-neutral-400);
+}
