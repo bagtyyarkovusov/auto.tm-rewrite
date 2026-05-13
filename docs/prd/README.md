@@ -7,8 +7,28 @@ Read in order if you're new:
 1. [00-vision.md](00-vision.md) — what AutoTM is and why
 2. [01-glossary.md](01-glossary.md) — domain language
 3. [02-phases.md](02-phases.md) — scope per phase
-4. [10-personas.md](10-personas.md) — who uses it
-5. [20-information-architecture.md](20-information-architecture.md) — sitemap + nav
+4. [03-roadmap.md](03-roadmap.md) — **the trajectory** (current sprint + sprint status table + milestones)
+5. [10-personas.md](10-personas.md) — who uses it
+6. [20-information-architecture.md](20-information-architecture.md) — sitemap + nav
+
+## Sprints
+
+Per-sprint detail (DoD, file list, tests, references) lives in [`sprints/`](sprints/):
+
+| # | Sprint | Phase | Milestone |
+|---|---|---|---|
+| [01](sprints/sprint-01-scaffold.md) | Scaffold | 1 | M1 |
+| [02](sprints/sprint-02-identity.md) | Identity (OTP) | 1 | M2 |
+| [03](sprints/sprint-03-catalog.md) | Catalog | 1 | — |
+| [04](sprints/sprint-04-listings-crud.md) | Listings CRUD | 1 | M3 |
+| [05](sprints/sprint-05-listings-ux.md) | Listings UX | 1 | M4 |
+| [06](sprints/sprint-06-garage-dealership.md) | Garage + Dealership | 1 | — |
+| [07](sprints/sprint-07-conversations.md) | Conversations (chat) | 1 | M5 |
+| [08](sprints/sprint-08-notifications.md) | Notifications + match | 1 | M6 |
+| [09](sprints/sprint-09-admin.md) | Admin dashboard | 1 | M7 |
+| [10](sprints/sprint-10-polish.md) | Polish + Blog + app-store | 1 | M8 |
+
+Phase 2 + 3 sprint files get created during the Phase 1 launch retro (see [03-roadmap.md](03-roadmap.md)).
 
 Then pick a feature:
 

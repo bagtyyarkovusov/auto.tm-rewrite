@@ -5,9 +5,11 @@ This file is read at the start of every AI-assisted coding session in this repo.
 ## Read first, every session
 
 1. **`GRILL-OUTCOME.md`** — the design charter. Locked decisions. The spec.
-2. **`CONTEXT-MAP.md`** — index of every `CONTEXT.md` in the tree.
-3. **The `CONTEXT.md` for the workspace you're working in** (e.g., `apps/api/src/modules/conversations/CONTEXT.md`).
-4. Relevant **ADRs** in `docs/adr/` for the decisions that affect this work.
+2. **`docs/prd/03-roadmap.md`** — the trajectory. Tells you which sprint is current and what shipped before it. Points to the per-sprint file under `docs/prd/sprints/`.
+3. **`CONTEXT-MAP.md`** — index of every `CONTEXT.md` in the tree.
+4. **The `CONTEXT.md` for the workspace you're working in** (e.g., `apps/api/src/modules/conversations/CONTEXT.md`).
+5. Relevant **ADRs** in `docs/adr/` for the decisions that affect this work.
+6. **The current sprint file** (`docs/prd/sprints/sprint-NN-<name>.md`) for the DoD, file list, tests required, and open risks of the work you're doing.
 
 ## Architecture in one paragraph
 
@@ -43,7 +45,10 @@ Monorepo (Turborepo + pnpm) with 7 apps and 5 packages. API is NestJS + Prisma +
 |---|---|---|---|
 | ADRs | `docs/adr/`, `apps/*/docs/adr/` | No (immutable after merge) | Every architectural decision |
 | `CONTEXT.md` | Per app + per bounded context | Yes | When domain invariants change |
-| PRD | `docs/prd/` | Yes | Before / during feature implementation |
+| PRD vision/scope | `docs/prd/00-...02-...md` | Rarely | Charter-level changes |
+| **PRD roadmap** | **`docs/prd/03-roadmap.md`** | **Per sprint** | **Start of sprint (set 🟡) and end of sprint (set 🟢 + bump Current)** |
+| **Sprint plans** | **`docs/prd/sprints/sprint-NN-*.md`** | **Per sprint** | **Edit DoD/risks as understanding sharpens; never rewrite history** |
+| PRD features / flows | `docs/prd/features/`, `docs/prd/flows/` | Yes | Before / during feature implementation |
 | Agent skill config | `docs/agents/` | Rarely | Only when changing issue tracker or label vocabulary |
 
 ## Agent skills

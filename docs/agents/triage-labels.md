@@ -14,6 +14,12 @@ The `triage` skill moves issues through a state machine using these labels. The 
 
 An issue should have **exactly one** of these labels at a time.
 
+## Blocked modifier (orthogonal to triage state)
+
+| Label | Meaning |
+|---|---|
+| `blocked` | Applied IN ADDITION to a triage label when the issue body's `## Depends on` section lists at least one open issue. The orchestrator (`sandcastle`) skips `blocked` issues even if they're `ready-for-agent`. Auto-removed by `.github/workflows/unblock.yml` when the last blocker closes; or `gh issue edit <n> --remove-label "blocked"` manually. |
+
 ## Area labels (orthogonal to triage state)
 
 Apply *in addition* to the triage label, to indicate which part of the system:
@@ -86,4 +92,7 @@ gh label create "perf"        --color "FBCA04"
 gh label create "phase-1"     --color "0052CC"
 gh label create "phase-2"     --color "0052CC"
 gh label create "phase-3"     --color "0052CC"
+
+# Blocked modifier
+gh label create "blocked"     --color "E11D21" --description "Open blockers in body's Depends on section"
 ```
