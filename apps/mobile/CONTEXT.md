@@ -34,8 +34,8 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
   services            Profile, garage, settings, blog, etc.
 
 /(auth)/
-  otp                 Phone OTP entry
-  otp/verify          OTP verification
+  phone               Phone entry
+  otp                 OTP verification
   totp                Admin TOTP (admin-flagged users only)
 
 /(public)/

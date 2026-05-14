@@ -20,6 +20,7 @@ Kotlin Android app installed on each AutoTM OTP phone. Maintains a persistent We
 4. Heartbeat every 30s
 5. On receiving `{ type: 'send', requestId, phone, message }`:
    - Use `SmsManager.sendTextMessage()` with the SIM specified
+   - Send `message` unchanged; API / SMS gateway owns OTP body formatting for iOS and Android autofill
    - On dispatch success/failure: reply `{ type: 'sent', requestId, success, error? }`
 6. On disconnect: exponential backoff reconnect
 

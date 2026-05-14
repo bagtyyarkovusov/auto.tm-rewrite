@@ -38,6 +38,23 @@ GET /api/v1/phones/:id/health
 GET /api/v1/metrics  (Prometheus format)
 ```
 
+## OTP SMS body format
+
+The API or SMS gateway owns OTP message formatting. The Android `phone-agent` sends the body it receives unchanged.
+
+SMS bodies must support mobile autofill:
+
+```text
+AutoTM code: 123456
+<android-app-hash>
+@auto.tm #123456
+```
+
+- The visible code line supports humans and basic keyboard suggestions.
+- `<android-app-hash>` is the Android SMS Retriever app hash. Compute the real value after the final mobile package name and signing certificate exist.
+- `@auto.tm #123456` supports iOS domain-bound SMS code AutoFill.
+- Keep the message short enough for one SMS segment when possible.
+
 ## WebSocket protocol (agent ↔ gateway)
 
 - Agent connects via WS, authenticates with `AGENT_AUTH_TOKEN`
