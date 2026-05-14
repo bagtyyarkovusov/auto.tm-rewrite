@@ -283,6 +283,16 @@ Critical dashboards from day 1: API latency/error rate, DB connections, Redis op
 
 These are the only locked-decision revisions. Everything else (NestJS 11, Socket.IO 4, Postgres 16, Redis 7, etc.) remains as the charter specified.
 
+### 2026-05-14 — Identity model refinements ahead of Sprint 2 (ADR-0012, ADR-0013)
+
+Two refinements to §6 (Authentication) and §5 (Bounded contexts), prompted by the Sprint 1 retrospective and a fresh grilling session:
+
+- **Auth is multi-device** (ADR-0012, supersedes ADR-0006 §"Refresh token storage" only). Refresh tokens live on `Session` rows (bcrypt-hashed), not on `User`. Max 10 concurrent sessions per user with FIFO eviction. Refresh updates the session row in-place (sliding 30-day expiry). New `POST /auth/logout-all` endpoint added.
+- **`User.role` and `DealershipMember.role` are separate concerns** (ADR-0013). `User.role ∈ {buyer, seller, moderator, admin}` is marketplace identity. New `DealershipMember.role ∈ {owner, sales}` is membership role within a specific dealership. The contracts' `dealer_owner`, `dealer_member`, and `super_admin` values are dropped.
+- **`TotpEnrollment` deferred to Sprint 9** (admin dashboard). ADR-0006's TOTP-for-admins policy stands; the table and flow ship when admin role is first exercised.
+
+The rest of §6 (phone OTP, JWT access TTL 15 min, refresh TTL 30 days, action-gated browsing) is unchanged.
+
 Run from `/Users/bagtyyar/Projects/auto.tm-rewrite/`:
 
 ```
