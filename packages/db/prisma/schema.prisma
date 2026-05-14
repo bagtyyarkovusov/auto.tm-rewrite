@@ -108,7 +108,7 @@ model DealershipMember {
   dealershipId String
   dealership   Dealership           @relation(fields: [dealershipId], references: [id])
   userId       String               @unique
-  user         User                 @relation(fields: [userId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   role         DealershipMemberRole
   createdAt    DateTime             @default(now())
 
@@ -118,7 +118,7 @@ model DealershipMember {
 model OwnedVehicle {
   id           String   @id @default(uuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   dealershipId String?
   dealership   Dealership? @relation(fields: [dealershipId], references: [id])
   brand        String
@@ -133,9 +133,9 @@ model OwnedVehicle {
 model BlockedUser {
   id        String   @id @default(uuid())
   blockerId String
-  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
   blockedId String
-  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([blockerId, blockedId])
@@ -271,7 +271,7 @@ enum Currency {
 model Listing {
   id             String        @id @default(uuid())
   sellerId       String
-  seller         User          @relation(fields: [sellerId], references: [id])
+  seller         User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   status         ListingStatus @default(draft)
   brandId        String
   brand          Brand         @relation(fields: [brandId], references: [id])
@@ -310,7 +310,7 @@ enum MediaKind {
 model ListingMedia {
   id        String    @id @default(uuid())
   listingId String
-  listing   Listing   @relation(fields: [listingId], references: [id])
+  listing   Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
   kind      MediaKind
   url       String
   sortOrder Int
@@ -323,9 +323,9 @@ model ListingMedia {
 model Favorite {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   listingId String
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([userId, listingId])
@@ -339,7 +339,7 @@ model Favorite {
 model SavedSearch {
   id            String   @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   filters       Json
   pushEnabled   Boolean  @default(true)
   lastDigestAt  DateTime?
@@ -364,11 +364,11 @@ enum MessageKind {
 model Conversation {
   id        String   @id @default(uuid())
   listingId String
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   buyerId   String
-  buyer     User     @relation("Buyer", fields: [buyerId], references: [id])
+  buyer     User     @relation("Buyer", fields: [buyerId], references: [id], onDelete: Cascade)
   sellerId  String
-  seller    User     @relation("Seller", fields: [sellerId], references: [id])
+  seller    User     @relation("Seller", fields: [sellerId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -383,9 +383,9 @@ model Conversation {
 model ConversationParticipant {
   id             String       @id @default(uuid())
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   userId         String
-  user           User         @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
 
   @@unique([conversationId, userId])
@@ -395,7 +395,7 @@ model ConversationParticipant {
 model Message {
   id             String      @id @default(uuid())
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
   kind           MessageKind
   body           String?
@@ -419,7 +419,7 @@ enum PushPlatform {
 model FcmDevice {
   id     String        @id @default(uuid())
   userId String
-  user   User          @relation(fields: [userId], references: [id])
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   token  String        @unique
   platform PushPlatform
   createdAt DateTime   @default(now())
@@ -441,7 +441,7 @@ enum NotificationCategory {
 model NotificationHistory {
   id        String               @id @default(uuid())
   userId    String
-  user      User                 @relation(fields: [userId], references: [id])
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   category  NotificationCategory
   title     String
   body      String
@@ -456,7 +456,7 @@ model NotificationHistory {
 model NotificationPreference {
   id      String               @id @default(uuid())
   userId  String               @unique
-  user    User                 @relation(fields: [userId], references: [id])
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   optOuts Json
 
   @@map("notification_preferences")
@@ -473,7 +473,7 @@ model BlogPost {
   title     String
   body      String
   authorId  String
-  author    User      @relation(fields: [authorId], references: [id])
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   publishedAt DateTime?
   deletedAt DateTime?
   createdAt DateTime  @default(now())
@@ -489,8 +489,8 @@ model BlogPost {
 
 model AuditLog {
   id         String   @id @default(uuid())
-  actorId    String
-  actor      User     @relation(fields: [actorId], references: [id])
+  actorId    String?
+  actor      User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
   action     String
   targetType String
   targetId   String

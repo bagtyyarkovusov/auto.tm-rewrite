@@ -497,3 +497,97 @@ describe("MeController e2e — GET /api/v1/me", () => {
     expect(res.body.role).toBe("buyer");
   });
 });
+
+describe("MeController e2e — DELETE /api/v1/me", () => {
+  let app: NestFastifyApplication;
+  let request: ReturnType<typeof supertest>;
+  let prisma: PrismaService;
+
+  beforeAll(async () => {
+    process.env["OTP_TEST_MODE"] = "true";
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [IdentityModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    const reflector = app.get(Reflector);
+    const jwtService = app.get(JwtService);
+    app.useGlobalGuards(new JwtAuthGuard(reflector, jwtService));
+    app.useGlobalFilters(new GlobalErrorFilter());
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    request = supertest(app.getHttpServer());
+    prisma = app.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    delete process.env["OTP_TEST_MODE"];
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    await prisma.session.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.otpRequest.deleteMany();
+  });
+
+  async function login(phone: string): Promise<{ accessToken: string; userId: string }> {
+    const otpRes = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ phone })
+      .expect(201);
+    const verifyRes = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone, code: otpRes.body.testCode })
+      .expect(201);
+    return {
+      accessToken: verifyRes.body.accessToken,
+      userId: verifyRes.body.user.id,
+    };
+  }
+
+  it("returns 401 when no bearer token is provided", async () => {
+    await request
+      .delete("/api/v1/me")
+      .expect(401);
+  });
+
+  it("returns 401 with an invalid bearer token", async () => {
+    await request
+      .delete("/api/v1/me")
+      .set("Authorization", "Bearer invalid-token")
+      .expect(401);
+  });
+
+  it("returns 204 and deletes the authenticated user", async () => {
+    const { accessToken, userId } = await login("+99361234567");
+
+    await request
+      .delete("/api/v1/me")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .expect(204);
+
+    // Verify user is gone
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    expect(user).toBeNull();
+  });
+
+  it("returns 204 and deletes user sessions via cascade", async () => {
+    const { accessToken, userId } = await login("+99361234567");
+
+    // Verify session exists before deletion
+    const sessionsBefore = await prisma.session.count({ where: { userId } });
+    expect(sessionsBefore).toBeGreaterThan(0);
+
+    await request
+      .delete("/api/v1/me")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .expect(204);
+
+    // Sessions are cascade-deleted with the user
+    const sessionsAfter = await prisma.session.count({ where: { userId } });
+    expect(sessionsAfter).toBe(0);
+  });
+});
