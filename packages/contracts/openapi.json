@@ -195,12 +195,22 @@
                         "displayName": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "buyer",
+                            "seller",
+                            "moderator",
+                            "admin"
+                          ]
                         }
                       },
                       "required": [
                         "id",
                         "phone",
-                        "displayName"
+                        "displayName",
+                        "role"
                       ]
                     }
                   },

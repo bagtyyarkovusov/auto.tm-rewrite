@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { UserRole } from "../enums";
+
 export const PhoneTm = z.string().regex(
   /^\+993[67]\d{7}$/,
   "Phone must be +993[6-7]XXXXXXX (TM mobile)",
@@ -30,6 +32,7 @@ export const OtpVerifyResponseSchema = z.object({
     id: z.string().uuid(),
     phone: PhoneTm,
     displayName: z.string().nullable(),
+    role: z.nativeEnum(UserRole),
   }),
 });
 export type OtpVerifyResponse = z.infer<typeof OtpVerifyResponseSchema>;
@@ -49,3 +52,19 @@ export const LogoutRequestSchema = z.object({
   refreshToken: z.string(),
 });
 export type LogoutRequest = z.infer<typeof LogoutRequestSchema>;
+
+// No request body — uses bearer access token
+export const LogoutAllResponseSchema = z.object({});
+
+export const MeResponseSchema = z.object({
+  id: z.string().uuid(),
+  phone: PhoneTm,
+  displayName: z.string().nullable(),
+  role: z.nativeEnum(UserRole),
+  avatarUrl: z.string().nullable(),
+  createdAt: z.string().datetime(),
+});
+export type MeResponse = z.infer<typeof MeResponseSchema>;
+
+// No request body — uses bearer access token; returns 204
+export const DeleteMeResponseSchema = z.object({});

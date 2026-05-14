@@ -3,18 +3,25 @@
 export const UserRole = {
   Buyer: "buyer",
   Seller: "seller",
-  DealerOwner: "dealer_owner",
-  DealerMember: "dealer_member",
+  Moderator: "moderator",
   Admin: "admin",
-  SuperAdmin: "super_admin",
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
+export const DealershipMemberRole = {
+  Owner: "owner",
+  Sales: "sales",
+} as const;
+export type DealershipMemberRole =
+  (typeof DealershipMemberRole)[keyof typeof DealershipMemberRole];
+
 export const ListingStatus = {
   Draft: "draft",
-  Published: "published",
+  PendingReview: "pending_review",
+  Active: "active",
   Sold: "sold",
   Archived: "archived",
+  Rejected: "rejected",
 } as const;
 export type ListingStatus = (typeof ListingStatus)[keyof typeof ListingStatus];
 
