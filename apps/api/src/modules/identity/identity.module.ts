@@ -4,9 +4,13 @@ import { JwtModule } from "@nestjs/jwt";
 import { PrismaModule } from "../../common/prisma.module";
 import { IdentityController } from "./presentation/identity.controller";
 import { AuthController } from "./presentation/AuthController";
+import { MeController } from "./presentation/MeController";
 import { RequestOtp } from "./application/RequestOtp";
 import { VerifyOtp } from "./application/VerifyOtp";
 import { RefreshSession } from "./application/RefreshSession";
+import { Logout } from "./application/Logout";
+import { LogoutAll } from "./application/LogoutAll";
+import { GetMe } from "./application/GetMe";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -25,7 +29,7 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
       },
     }),
   ],
-  controllers: [IdentityController, AuthController],
+  controllers: [IdentityController, AuthController, MeController],
   providers: [
     PrismaOtpRequestRepository,
     PrismaUserRepository,
@@ -48,6 +52,9 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     RequestOtp,
     VerifyOtp,
     RefreshSession,
+    Logout,
+    LogoutAll,
+    GetMe,
   ],
   exports: [
     // Ports consumed by other bounded contexts will be exported here once implemented.

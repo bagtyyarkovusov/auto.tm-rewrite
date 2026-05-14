@@ -71,6 +71,9 @@ PasswordHasherPort    // bcrypt hash + compare for refresh tokens
 - `RequestOtp` — validates TM phone, enforces rate limits, generates + sends OTP code, stores hashed record. Exposed as `POST /api/v1/auth/otp/request` (public).
 - `VerifyOtp` — validates OTP code against stored hash, creates or loads User, creates a multi-device Session with bcrypt-hashed refresh token, enforces 10-session cap with expired cleanup + FIFO eviction, issues JWT access token (15 min) and random refresh token (30-day sliding expiry). Emits `UserRegistered` on first login. Exposed as `POST /api/v1/auth/otp/verify` (public).
 - `RefreshSession` — locates a session by bcrypt-scanning all session rows against the provided refresh token, validates expiry, rotates the refresh token hash in-place with optimistic locking (old-hash match via `updateMany`), bumps `lastSeenAt` and extends `expiresAt` to `now + 30 days`, and issues a fresh JWT access token. Rejects unknown, expired, and already-used tokens with 401. Exposed as `POST /api/v1/auth/refresh` (public).
+- `Logout` — locates the session matching the supplied refresh token via bcrypt comparison, deletes that single session row. Returns 204 on success; throws "Invalid refresh token" (mapped to 401) when no match is found. Idempotent — second call with the same token returns 401. Exposed as `POST /api/v1/auth/logout` (public).
+- `LogoutAll` — deletes every session for the authenticated user (identified by bearer JWT). No-op when the user has no sessions. Returns 204. Exposed as `POST /api/v1/auth/logout-all` (requires bearer auth).
+- `GetMe` — returns the contract user shape (id, phone, displayName, role, avatarUrl, locale, createdAt) for the authenticated user. Throws "User not found" (mapped to 404) if the user row was deleted after JWT issuance. Exposed as `GET /api/v1/me` (requires bearer auth).
 
 ### Session lookup detail
 

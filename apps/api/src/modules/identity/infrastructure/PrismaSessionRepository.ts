@@ -90,6 +90,17 @@ export class PrismaSessionRepository implements SessionRepository {
     return result.count === 1;
   }
 
+  async delete(id: string): Promise<void> {
+    await this.prisma.session.delete({ where: { id } });
+  }
+
+  async deleteAllByUserId(userId: string): Promise<number> {
+    const result = await this.prisma.session.deleteMany({
+      where: { userId },
+    });
+    return result.count;
+  }
+
   private toDomain(
     row: Awaited<ReturnType<PrismaService["session"]["create"]>>,
   ): Session {
