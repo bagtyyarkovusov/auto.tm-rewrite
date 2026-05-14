@@ -25,8 +25,8 @@ Five tabs. Center button is the visual "do something" CTA.
   services             Profile menu
 
 /(auth)/
-  login                Phone entry
-  login/otp            OTP code entry
+  phone                Phone entry
+  otp                  OTP code entry
   totp                 Admin TOTP (admin-flagged users)
 
 /(public)/
@@ -54,7 +54,7 @@ Five tabs. Center button is the visual "do something" CTA.
 - **Stack navigation** inside each tab via expo-router
 - **Modal sheets** for filter, login, action sheets (cancel-able from anywhere)
 - **Deep linking** opens at the correct nested route (e.g., `/chat/abc-123` lands inside the chat tab stack)
-- **Action-gated auth** — tapping any auth-required action triggers `/login` modal stack with intent state; returns to original screen after success
+- **Action-gated auth** — tapping any auth-required action triggers the `(auth)/phone` modal stack with intent state; returns to original screen after success
 
 ## Admin (Next.js) — at `admin.auto.tm`
 

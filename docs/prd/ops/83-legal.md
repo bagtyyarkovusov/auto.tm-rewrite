@@ -17,6 +17,16 @@ Plus EU GDPR (if we ever serve EU users — relevant for TM diaspora) and TM dat
 - Linked from admin app (footer)
 - Required versions: RU + TK + EN (trilingual)
 
+## Consent UX in auth
+
+S2 phone OTP uses implicit agreement copy on the phone entry screen:
+
+> By continuing, you agree to the Terms and Privacy Policy.
+
+The Terms and Privacy Policy labels link to the canonical public web URLs above, opened from mobile via an in-app browser or custom tab when available. Do not add a checkbox in S2 unless legal review requires explicit recorded acceptance.
+
+If explicit recorded acceptance is required later, record the accepted terms version, privacy version, locale, and timestamp during first account creation or OTP verification. This is a legal-review follow-up, not part of the S2 OTP implementation.
+
 ## Privacy Policy — required sections
 
 | Section | Content |
