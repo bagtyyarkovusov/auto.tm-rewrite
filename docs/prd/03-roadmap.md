@@ -15,9 +15,10 @@
 | | |
 |---|---|
 | **Sprint** | S2 — Identity (OTP) |
-| **Status** | ⚪ Pending |
+| **Status** | 🟡 In progress |
+| **Started** | 2026-05-14 |
 | **Phase** | 1 (Marketplace MVP) |
-| **Plan file** | TBD (issues will be created when starting S2) |
+| **Plan file** | [GitHub issue #33](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/33) |
 | **Sprint doc** | [`sprints/sprint-02-identity.md`](sprints/sprint-02-identity.md) |
 | **Milestone** | M2 — I can log in |
 
@@ -42,7 +43,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals (what we explic
 | # | Sprint | Status | Started | Shipped | Milestone | Demo audience |
 |---|---|---|---|---|---|---|
 | S1 | [Scaffold](sprints/sprint-01-scaffold.md) | 🟢 Shipped | 2026-05-14 | 2026-05-14 | M1 | Nobody — confirms rails |
-| S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | ⚪ Pending | — | — | M2 | Tiny internal group |
+| S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | 🟡 In progress | 2026-05-14 | — | M2 | Tiny internal group |
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | ⚪ Pending | — | — | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | ⚪ Pending | — | — | M3 | Internal group |
 | S5 | [Listings UX](sprints/sprint-05-listings-ux.md) | ⚪ Pending | — | — | M4 | 10-20 beta testers (mocked data) |
