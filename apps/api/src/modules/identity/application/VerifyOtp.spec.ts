@@ -146,6 +146,8 @@ class FakeUserRepository implements UserRepository {
     this.users.push(user);
     return user;
   }
+
+  async delete(_id: string): Promise<void> {}
 }
 
 class FakeSessionRepository implements SessionRepository {

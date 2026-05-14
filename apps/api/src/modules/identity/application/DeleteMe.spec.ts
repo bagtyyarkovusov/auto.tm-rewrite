@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { randomUUID } from "node:crypto";
 import type { User } from "../domain/User";
 import type { UserRepository } from "../domain/ports/UserRepository";
-import { GetMe } from "./GetMe";
+import { DeleteMe } from "./DeleteMe";
 
 function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -20,6 +19,7 @@ function makeUser(overrides: Partial<User> = {}): User {
 
 class FakeUserRepository implements UserRepository {
   users: Map<string, User> = new Map();
+  deletedIds: string[] = [];
 
   async findByPhone(_phone: string): Promise<User | null> { return null; }
   async create(_input: { phone: string }): Promise<User> {
@@ -30,45 +30,35 @@ class FakeUserRepository implements UserRepository {
     return this.users.get(id) ?? null;
   }
 
-  async delete(_id: string): Promise<void> {}
+  async delete(id: string): Promise<void> {
+    if (!this.users.has(id)) {
+      throw new Error("User not found");
+    }
+    this.users.delete(id);
+    this.deletedIds.push(id);
+  }
 }
 
 function makeUseCase(userRepo?: FakeUserRepository) {
-  return new GetMe(userRepo ?? new FakeUserRepository());
+  return new DeleteMe(userRepo ?? new FakeUserRepository());
 }
 
-describe("GetMe", () => {
+describe("DeleteMe", () => {
   let userRepo: FakeUserRepository;
 
   beforeEach(() => {
     userRepo = new FakeUserRepository();
   });
 
-  it("returns the contract user shape for an existing user", async () => {
+  it("deletes an existing user", async () => {
     const user = makeUser();
     userRepo.users.set(user.id, user);
 
     const uc = makeUseCase(userRepo);
-    const result = await uc.execute({ userId: "user-1" });
+    await uc.execute({ userId: "user-1" });
 
-    expect(result.id).toBe("user-1");
-    expect(result.phone).toBe("+99361234567");
-    expect(result.displayName).toBe("Bagtyyar");
-    expect(result.role).toBe("buyer");
-    expect(result.avatarUrl).toBe("https://example.com/avatar.jpg");
-    expect(result.locale).toBe("ru");
-    expect(result.createdAt).toBe("2026-05-14T12:00:00.000Z");
-  });
-
-  it("returns nullable fields as null when not set", async () => {
-    const user = makeUser({ displayName: null, avatarUrl: null });
-    userRepo.users.set(user.id, user);
-
-    const uc = makeUseCase(userRepo);
-    const result = await uc.execute({ userId: "user-1" });
-
-    expect(result.displayName).toBeNull();
-    expect(result.avatarUrl).toBeNull();
+    expect(userRepo.users.has("user-1")).toBe(false);
+    expect(userRepo.deletedIds).toContain("user-1");
   });
 
   it("throws 'User not found' when the user does not exist", async () => {
@@ -79,13 +69,26 @@ describe("GetMe", () => {
     ).rejects.toThrow("User not found");
   });
 
-  it("returns the correct role for non-buyer users", async () => {
+  it("throws 'User not found' when the user has already been deleted", async () => {
+    const user = makeUser();
+    userRepo.users.set(user.id, user);
+
+    const uc = makeUseCase(userRepo);
+    await uc.execute({ userId: "user-1" });
+
+    // Second call on already-deleted user
+    await expect(
+      uc.execute({ userId: "user-1" }),
+    ).rejects.toThrow("User not found");
+  });
+
+  it("does not throw for a user with non-buyer role", async () => {
     const user = makeUser({ id: "admin-1", role: "admin" });
     userRepo.users.set(user.id, user);
 
     const uc = makeUseCase(userRepo);
-    const result = await uc.execute({ userId: "admin-1" });
-
-    expect(result.role).toBe("admin");
+    await expect(
+      uc.execute({ userId: "admin-1" }),
+    ).resolves.toBeUndefined();
   });
 });

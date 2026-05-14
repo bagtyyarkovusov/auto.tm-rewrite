@@ -74,6 +74,30 @@ PasswordHasherPort    // bcrypt hash + compare for refresh tokens
 - `Logout` — locates the session matching the supplied refresh token via bcrypt comparison, deletes that single session row. Returns 204 on success; throws "Invalid refresh token" (mapped to 401) when no match is found. Idempotent — second call with the same token returns 401. Exposed as `POST /api/v1/auth/logout` (public).
 - `LogoutAll` — deletes every session for the authenticated user (identified by bearer JWT). No-op when the user has no sessions. Returns 204. Exposed as `POST /api/v1/auth/logout-all` (requires bearer auth).
 - `GetMe` — returns the contract user shape (id, phone, displayName, role, avatarUrl, locale, createdAt) for the authenticated user. Throws "User not found" (mapped to 404) if the user row was deleted after JWT issuance. Exposed as `GET /api/v1/me` (requires bearer auth).
+- `DeleteMe` — deletes the authenticated user's account and all per-user data via DB cascades. Requires bearer auth. Returns 204. Cascading delete removes: sessions, owned vehicles, blocked-user relationships, dealership memberships, favorites, saved searches, FCM devices, notification history, notification preferences, conversation participants, buyer-side conversations, seller listings, and blog posts. `audit_log` records are preserved via `onDelete: SetNull` (actorId is nullified). Exposed as `DELETE /api/v1/me` (requires bearer auth).
+
+### Account deletion scope
+
+Deleting a user via `DELETE /api/v1/me` cascades to:
+- `Session` — all sessions for the user (onDelete: Cascade)
+- `OwnedVehicle` — all garage entries (onDelete: Cascade)
+- `BlockedUser` — both directions (blocker + blocked) (onDelete: Cascade)
+- `DealershipMember` — dealership membership (onDelete: Cascade)
+- `Favorite` — all favorited listings (onDelete: Cascade)
+- `SavedSearch` — all saved searches (onDelete: Cascade)
+- `FcmDevice` — all push device registrations (onDelete: Cascade)
+- `NotificationHistory` — all notification records (onDelete: Cascade)
+- `NotificationPreference` — user preferences (onDelete: Cascade)
+- `ConversationParticipant` — participation records (onDelete: Cascade)
+- `Conversation` (buyer-side) — conversations where user is buyer (onDelete: Cascade)
+- `Listing` — all listings where user is seller (onDelete: Cascade)
+- `BlogPost` — all blog posts authored by user (onDelete: Cascade)
+
+Preserved (not deleted):
+- `AuditLog` — actorId is set to NULL via onDelete: SetNull. Audit records survive account deletion for legal/audit compliance.
+- `Message.senderId` — no FK constraint; messages survive with a dangling senderId.
+- `Conversation` (seller-side) — conversations where the user is seller are deleted via the Listing cascade, not directly via the seller FK.
+- `OtpRequest` — otp_requests.userId is nullable; OTP records survive for rate-limit audit purposes.
 
 ### Session lookup detail
 
