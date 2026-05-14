@@ -6,6 +6,7 @@ import { IdentityController } from "./presentation/identity.controller";
 import { AuthController } from "./presentation/AuthController";
 import { RequestOtp } from "./application/RequestOtp";
 import { VerifyOtp } from "./application/VerifyOtp";
+import { RefreshSession } from "./application/RefreshSession";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -46,6 +47,7 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     },
     RequestOtp,
     VerifyOtp,
+    RefreshSession,
   ],
   exports: [
     // Ports consumed by other bounded contexts will be exported here once implemented.

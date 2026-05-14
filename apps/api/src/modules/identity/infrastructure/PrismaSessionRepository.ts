@@ -1,11 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 import type { Session } from "../domain/Session";
-import type { SessionRepository } from "../domain/ports/SessionRepository";
+import type { SessionRepository, SessionLookupResult } from "../domain/ports/SessionRepository";
+import type { PasswordHasherPort } from "../domain/ports/PasswordHasherPort";
+import { BcryptHasherAdapter } from "./BcryptHasherAdapter";
 
 @Injectable()
 export class PrismaSessionRepository implements SessionRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(BcryptHasherAdapter) private readonly hasher: PasswordHasherPort,
+  ) {}
 
   async create(input: {
     userId: string;
@@ -49,6 +54,40 @@ export class PrismaSessionRepository implements SessionRepository {
     if (oldest) {
       await this.prisma.session.delete({ where: { id: oldest.id } });
     }
+  }
+
+  async findByRefreshToken(plaintext: string): Promise<SessionLookupResult | null> {
+    const rows = await this.prisma.session.findMany({
+      include: { user: { select: { id: true, phone: true, role: true } } },
+    });
+
+    for (const row of rows) {
+      const match = await this.hasher.compare(plaintext, row.refreshTokenHash);
+      if (match) {
+        return {
+          session: this.toDomain(row),
+          userId: row.user.id,
+          phone: row.user.phone,
+          role: row.user.role as string,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  async rotateRefreshToken(
+    id: string,
+    oldHash: string,
+    newHash: string,
+    lastSeenAt: Date,
+    expiresAt: Date,
+  ): Promise<boolean> {
+    const result = await this.prisma.session.updateMany({
+      where: { id, refreshTokenHash: oldHash },
+      data: { refreshTokenHash: newHash, lastSeenAt, expiresAt },
+    });
+    return result.count === 1;
   }
 
   private toDomain(

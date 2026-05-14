@@ -186,6 +186,29 @@ class FakeSessionRepository implements SessionRepository {
       );
     }
   }
+
+  async findByRefreshToken(_plaintext: string): Promise<import("../domain/ports/SessionRepository").SessionLookupResult | null> {
+    return null;
+  }
+
+  async rotateRefreshToken(
+    id: string,
+    oldHash: string,
+    newHash: string,
+    lastSeenAt: Date,
+    expiresAt: Date,
+  ): Promise<boolean> {
+    const idx = this.sessions.findIndex((s) => s.id === id);
+    if (idx === -1) return false;
+    if (this.sessions[idx]!.refreshTokenHash !== oldHash) return false;
+    this.sessions[idx] = {
+      ...this.sessions[idx]!,
+      refreshTokenHash: newHash,
+      lastSeenAt,
+      expiresAt,
+    };
+    return true;
+  }
 }
 
 class FakePasswordHasher implements PasswordHasherPort {
