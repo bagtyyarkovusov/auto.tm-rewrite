@@ -2,11 +2,13 @@
 
 | | |
 |---|---|
-| **Status** | ⚪ Planned |
+| **Status** | 🟢 Shipped |
+| **Shipped** | 2026-05-14 |
 | **Phase** | 1 |
 | **Milestone** | M1 — Hello stack |
 | **Demo audience** | Nobody — confirms the rails |
 | **Estimated time** | ~1 week |
+| **Retro** | [sprint-01-scaffold-retro.md](sprint-01-scaffold-retro.md) |
 
 ## Goal
 
