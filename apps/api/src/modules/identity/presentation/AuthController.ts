@@ -3,10 +3,14 @@ import { AuthSchemas } from "@auto-tm/contracts";
 import type { FastifyRequest } from "fastify";
 import { Public } from "../../../common/public.decorator";
 import { RequestOtp } from "../application/RequestOtp";
+import { VerifyOtp } from "../application/VerifyOtp";
 
 @Controller("api/v1/auth")
 export class AuthController {
-  constructor(@Inject(RequestOtp) private readonly requestOtp: RequestOtp) {}
+  constructor(
+    @Inject(RequestOtp) private readonly requestOtp: RequestOtp,
+    @Inject(VerifyOtp) private readonly verifyOtp: VerifyOtp,
+  ) {}
 
   @Public()
   @Post("otp/request")
@@ -49,6 +53,67 @@ export class AuthController {
         throw new BadRequestException({
           code: "VALIDATION_FAILED",
           message: err.message,
+        });
+      }
+      throw err;
+    }
+  }
+
+  @Public()
+  @Post("otp/verify")
+  async otpVerify(
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const parsed = AuthSchemas.OtpVerifyRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_FAILED",
+        message: "Invalid OTP verification request",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    try {
+      const userAgent = req.headers["user-agent"] as string | undefined;
+
+      const result = await this.verifyOtp.execute({
+        phone: parsed.data.phone,
+        code: parsed.data.code,
+        ...(parsed.data.deviceLabel !== undefined ? { deviceLabel: parsed.data.deviceLabel } : {}),
+        ...(userAgent !== undefined ? { userAgent } : {}),
+      });
+
+      return result;
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "OTP code has expired") {
+        throw new BadRequestException({
+          code: "OTP_EXPIRED",
+          message: "OTP code has expired. Please request a new one.",
+        });
+      }
+      if (err instanceof Error && err.message === "OTP code has already been used") {
+        throw new BadRequestException({
+          code: "OTP_ALREADY_USED",
+          message: "This code has already been used.",
+        });
+      }
+      if (err instanceof Error && err.message === "Invalid OTP code") {
+        throw new BadRequestException({
+          code: "INVALID_OTP",
+          message: "Invalid OTP code. Please try again.",
+        });
+      }
+      if (err instanceof Error && err.message === "Too many attempts") {
+        throw new BadRequestException({
+          code: "OTP_LOCKED",
+          message: "Too many failed attempts. Please request a new code.",
+        });
+      }
+      if (err instanceof Error && err.message === "No OTP request found for this phone") {
+        throw new BadRequestException({
+          code: "OTP_NOT_FOUND",
+          message: "No OTP request found. Please request a code first.",
         });
       }
       throw err;

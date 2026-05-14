@@ -61,11 +61,15 @@ MailPort      // for admin password reset (future)
 OtpRequestRepository  // persisted OTP request storage
 OtpSenderPort         // abstracts SMS driver (mock / gateway)
 ClockPort             // injectable clock for time-based tests
+UserRepository        // User persistence (findByPhone, create)
+SessionRepository     // Session persistence (create, count, deleteExpired, deleteOldest)
+PasswordHasherPort    // bcrypt hash + compare for refresh tokens
 ```
 
 ## Shipped use-cases
 
 - `RequestOtp` — validates TM phone, enforces rate limits, generates + sends OTP code, stores hashed record. Exposed as `POST /api/v1/auth/otp/request` (public).
+- `VerifyOtp` — validates OTP code against stored hash, creates or loads User, creates a multi-device Session with bcrypt-hashed refresh token, enforces 10-session cap with expired cleanup + FIFO eviction, issues JWT access token (15 min) and random refresh token (30-day sliding expiry). Emits `UserRegistered` on first login. Exposed as `POST /api/v1/auth/otp/verify` (public).
 
 ## Events emitted
 

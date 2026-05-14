@@ -51,6 +51,22 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async markVerified(id: string, userId: string): Promise<OtpRequest> {
+    const row = await this.prisma.otpRequest.update({
+      where: { id },
+      data: { verifiedAt: new Date(), userId },
+    });
+    return this.toDomain(row);
+  }
+
+  async incrementAttempts(id: string): Promise<OtpRequest> {
+    const row = await this.prisma.otpRequest.update({
+      where: { id },
+      data: { attempts: { increment: 1 } },
+    });
+    return this.toDomain(row);
+  }
+
   private toDomain(
     row: Awaited<ReturnType<PrismaService["otpRequest"]["create"]>>,
   ): OtpRequest {

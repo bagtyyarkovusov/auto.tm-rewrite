@@ -101,3 +101,116 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
     expect(res.body.code).toBe("RATE_LIMITED");
   });
 });
+
+describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
+  let app: NestFastifyApplication;
+  let request: ReturnType<typeof supertest>;
+  let prisma: PrismaService;
+
+  beforeAll(async () => {
+    process.env["OTP_TEST_MODE"] = "true";
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [IdentityModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    app.useGlobalFilters(new GlobalErrorFilter());
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    request = supertest(app.getHttpServer());
+    prisma = app.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    delete process.env["OTP_TEST_MODE"];
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    await prisma.session.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.otpRequest.deleteMany();
+  });
+
+  async function requestOtp(phone: string): Promise<string> {
+    const res = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ phone })
+      .expect(201);
+    return res.body.testCode as string;
+  }
+
+  it("verifies a valid OTP and returns tokens + user", async () => {
+    const testCode = await requestOtp("+99361234567");
+
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode, deviceLabel: "Chrome on Mac" })
+      .expect(201);
+
+    expect(res.body.accessToken).toBeDefined();
+    expect(res.body.accessToken).toMatch(/^eyJ/);
+    expect(res.body.refreshToken).toBeDefined();
+    expect(res.body.refreshToken).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.body.user).toBeDefined();
+    expect(res.body.user.phone).toBe("+99361234567");
+    expect(res.body.user.role).toBe("buyer");
+  });
+
+  it("returns 400 OTP_NOT_FOUND when no OTP was requested", async () => {
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: "123456" })
+      .expect(400);
+
+    expect(res.body.code).toBe("OTP_NOT_FOUND");
+  });
+
+  it("returns 400 INVALID_OTP for wrong code", async () => {
+    await requestOtp("+99361234567");
+
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: "000000" })
+      .expect(400);
+
+    expect(res.body.code).toBe("INVALID_OTP");
+  });
+
+  it("returns 400 OTP_ALREADY_USED when code is reused", async () => {
+    const testCode = await requestOtp("+99361234567");
+
+    await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode })
+      .expect(201);
+
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode })
+      .expect(400);
+
+    expect(res.body.code).toBe("OTP_ALREADY_USED");
+  });
+
+  it("creates a new user on first verification and reuses on second", async () => {
+    const testCode1 = await requestOtp("+99361234567");
+    const res1 = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode1 })
+      .expect(201);
+
+    const userId = res1.body.user.id;
+
+    // Request a new OTP and verify again with same phone
+    const testCode2 = await requestOtp("+99361234567");
+    const res2 = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode2 })
+      .expect(201);
+
+    expect(res2.body.user.id).toBe(userId);
+  });
+});

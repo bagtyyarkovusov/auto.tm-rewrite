@@ -52,6 +52,22 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return sorted[0] ?? null;
   }
+
+  async markVerified(id: string, userId: string): Promise<OtpRequest> {
+    const record = this.records.find((r) => r.id === id);
+    if (!record) throw new Error("Not found");
+    const updated: OtpRequest = { ...record, verifiedAt: new Date(), userId };
+    this.records = this.records.map((r) => (r.id === id ? updated : r));
+    return updated;
+  }
+
+  async incrementAttempts(id: string): Promise<OtpRequest> {
+    const record = this.records.find((r) => r.id === id);
+    if (!record) throw new Error("Not found");
+    const updated: OtpRequest = { ...record, attempts: record.attempts + 1 };
+    this.records = this.records.map((r) => (r.id === id ? updated : r));
+    return updated;
+  }
 }
 
 class FakeOtpSender implements OtpSenderPort {
