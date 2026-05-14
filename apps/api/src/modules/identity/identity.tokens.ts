@@ -3,4 +3,7 @@ export const IDENTITY_TOKENS = {
   OtpSenderPort: "IDENTITY_OTP_SENDER_PORT",
   ClockPort: "IDENTITY_CLOCK_PORT",
   OtpTestMode: "IDENTITY_OTP_TEST_MODE",
+  UserRepository: "IDENTITY_USER_REPOSITORY",
+  SessionRepository: "IDENTITY_SESSION_REPOSITORY",
+  PasswordHasherPort: "IDENTITY_PASSWORD_HASHER_PORT",
 } as const;

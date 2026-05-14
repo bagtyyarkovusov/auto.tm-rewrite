@@ -22,6 +22,7 @@ export type OtpRequestResponse = z.infer<typeof OtpRequestResponseSchema>;
 export const OtpVerifyRequestSchema = z.object({
   phone: PhoneTm,
   code: z.string().regex(/^\d{6}$/),
+  deviceLabel: z.string().max(200).optional(),
 });
 export type OtpVerifyRequest = z.infer<typeof OtpVerifyRequestSchema>;
 
