@@ -13,12 +13,13 @@ Every gated action (favorite, chat, sell, save search) needs identity. Anonymous
 ### Sign in flow
 
 1. User taps a gated action (e.g., ♥ on a listing)
-2. Bottom sheet: "Sign in to continue" + "Continue with phone" button
-3. User enters phone number (+993 prefix locked; mobile prefix validated)
-4. Backend issues 6-digit OTP, dispatches via SMS gateway
-5. OTP code screen: 6 pin inputs, paste support, auto-submit on 6th digit
-6. Resend after 60s timer
-7. On success: JWT issued, user returned to the original action they tapped
+2. Bottom sheet uses action-specific copy, for example "Sign in to save listings", plus "Continue with phone"
+3. Full-screen auth route `(auth)/phone`: user enters phone number (+993 prefix locked; mobile prefix validated)
+4. Phone entry shows implicit legal agreement copy with Terms and Privacy links; no checkbox in S2
+5. Backend issues 6-digit OTP, dispatches via SMS gateway
+6. Full-screen auth route `(auth)/otp`: 6 visual pin cells backed by one actual input, paste/SMS autofill support, auto-submit on 6th digit
+7. Resend after 60s timer
+8. On success: JWT issued, user returned to the original action they tapped; if no deferred action exists, route to the tab app
 
 ### Admin TOTP enrollment
 
@@ -64,6 +65,8 @@ Apple App Store policy requires every app with account creation to offer in-app 
 | OTP entry | Empty | Auto-focus on first pin |
 | OTP entry | Wrong code | Shake animation + clear, "Wrong code, try again" |
 | OTP entry | Expired | "Code expired. Request a new one." |
+| OTP entry | Dev test mode | Non-production only: show "Dev code: 123456" if API returns `testCode` |
+| OTP entry | Locked | Inline countdown / request-new-code state; no separate error route |
 | Profile (own) | New user | Prompt to add avatar + name |
 | Profile (own) | Suspended | Banner: "Your account is suspended. Contact support." |
 | Profile (other) | Default | Show public info only |
@@ -77,6 +80,10 @@ Apple App Store policy requires every app with account creation to offer in-app 
 ## Decisions
 
 - [ADR-0006](../../adr/0006-auth.md) — Phone OTP + custom SMS gateway + TOTP for admins
+- Mobile S2 auth routes are `(auth)/phone` and `(auth)/otp`. Historical `login` / `login/otp` route names are superseded for the mobile implementation.
+- Legal agreement in S2 is implicit copy under the phone CTA: "By continuing, you agree to the Terms and Privacy Policy." Add a checkbox only if legal review requires explicit recorded acceptance. Legal pages remain canonical on web.
+- OTP login does not ask for native notification permission. Notification prompts are tied to later user actions that need notifications.
+- OTP SMS bodies must be formatted for iOS and Android autofill. The API/SMS gateway owns formatting; the phone-agent sends the body unchanged.
 
 ## Phase
 
@@ -87,8 +94,9 @@ Apple App Store policy requires every app with account creation to offer in-app 
 - Email-based password recovery (no passwords in MVP)
 - Social login (Google / Apple)
 - Biometric (Face ID / Touch ID) — could add in Phase 1.5 as a session-unlock convenience
-- Multiple active sessions per user — only one allowed (re-login revokes previous)
+- Device management UI for revoking a specific other device — multi-device sessions are allowed per ADR-0012
 - Email verification
+- OTP "Having trouble?" support/help link — revisit after real delivery data; S2 keeps the flow minimal
 
 ## Open questions
 

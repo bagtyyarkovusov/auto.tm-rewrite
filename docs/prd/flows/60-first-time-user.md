@@ -39,7 +39,9 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 - Phone screen with +993 locked prefix
 - Numeric keypad, large pin-style input
 - Helper text: "We'll send a code via SMS"
+- Legal copy under the CTA: "By continuing, you agree to the Terms and Privacy Policy." Links open canonical web legal pages.
 - She enters her number, taps "Get code"
+- No confirm screen before SMS; invalid phone formats are handled inline
 
 ### Step 5 — OTP entry
 
@@ -48,12 +50,15 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 - iOS auto-pastes from SMS via `textContentType="oneTimeCode"`
 - Android: keyboard auto-suggests
 - Auto-submit on 6th digit
+- "Change number" returns to phone entry with the previous number prefilled
+- Wrong code shakes, clears all digits, and refocuses the first cell
 
 ### Step 6 — Profile setup (deferred)
 
 - After OTP success, return to where she was (the listing)
 - ♥ is now filled (the deferred action played)
 - Toast: "Saved to Favorites"
+- OTP itself does not show a separate "Signed in" toast when a deferred action owns the feedback
 - No "complete your profile" interruption — she can edit profile later
 
 ### Step 7 — Profile gentle nudge
@@ -86,5 +91,9 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 
 ## Open questions
 
-- When to ask for notification permission? After first OTP success, or after first save? Probably after first save (now we have a real reason)
 - Should we pre-load the feed cache so step 1 is instant on poor mobile data? Yes — bundled cold-start data for the first page
+
+## Resolved follow-up decisions
+
+- Native notification permission is asked at most once automatically, after a concrete notification-using action such as sending the first chat message or enabling saved-search notifications. It is not part of OTP login.
+- If notification permission was declined, later notification features show an inline System Settings CTA instead of opening the native prompt again.

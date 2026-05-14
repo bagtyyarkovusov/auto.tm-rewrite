@@ -33,6 +33,27 @@ A marketplace chat without push notifications is dead — by the time Maral chec
 - Foreground: in-app banner only (no native notification — user is already looking)
 - Background: native FCM/APNS notification with deep link to the relevant screen
 - App badge count: total unread across DMs + saved-search matches + announcements
+- Native OS permission is requested at most once automatically, only after a user action that clearly benefits from notifications. OTP login never asks for push permission.
+
+### Native permission prompt timing
+
+App-level notification preferences and OS permission are separate:
+
+- Direct messages stay ON by default in app preferences, but lock-screen delivery requires OS permission and a registered device token.
+- Saved-search matches stay ON per saved search, but lock-screen delivery requires OS permission and a registered device token.
+- Blog activity and marketing remain OFF until explicit opt-in.
+
+Ask with an AutoTM rationale prompt before the native dialog:
+
+| User action | Category | Rationale copy |
+|---|---|---|
+| Sends first chat message | Direct messages | "Allow notifications so you know when the seller replies." |
+| Saves a search with notify enabled | Saved-search matches | "Allow notifications when new cars match this search." |
+| Publishes first listing | Listing activity / buyer messages | "Allow notifications when buyers message you or your listing gets updates." |
+| Follows blog activity | Blog activity | Ask only after opt-in intent |
+| Enables marketing | Marketing | Ask only after explicit marketing opt-in |
+
+If the user declines, store `notificationPermissionPrompted=true` locally. Later notification-using actions show: "Notifications are off. Enable them in System Settings." Do not open the native prompt again automatically. Server stores a push token only after permission is granted.
 
 ### In-app feed
 
@@ -59,7 +80,7 @@ A marketplace chat without push notifications is dead — by the time Maral chec
 | Notification feed | Has unread | Bold rows; tap to read |
 | Notification feed | Has old (>30d) | "Showing last 30 days. Tap to load more." |
 | Preferences | Default | Toggles per category; off ones grayed |
-| Permission prompt (first launch) | iOS / Android | Native dialog asks "Allow notifications?" — declining is OK, user can enable later |
+| Permission prompt | iOS / Android | Asked after a concrete notification-using action, not on first launch or OTP login |
 | Permission denied | After settings change | Banner in Preferences: "Notifications are off. Enable in System Settings." |
 
 ## Data references

@@ -17,11 +17,13 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - shadcn-style component library mirrored from `packages/ui/`
 - `expo-image-manipulator` for client-side image compression
 - `react-native-compressor` for client-side video compression (custom dev client required)
+- `react-native-svg` for vector icons and brand SVG rendering; local `.svg` imports use `react-native-svg-transformer` at build time
 - `@aws-sdk/client-s3` for presigned MinIO uploads
 - Socket.IO client for chat WebSocket
 - `expo-notifications` for FCM/APNS device token registration
 - `expo-linking` for Universal Links / App Links handling
 - `react-i18next` for RU + TK + EN
+- `expo-image` is deferred until remote listing/gallery media needs caching, placeholders, and transitions; S2 auth does not add it for the static logo
 
 ## Top-level routes (Phase 1)
 
@@ -34,8 +36,8 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
   services            Profile, garage, settings, blog, etc.
 
 /(auth)/
-  otp                 Phone OTP entry
-  otp/verify          OTP verification
+  phone               Phone entry
+  otp                 OTP verification
   totp                Admin TOTP (admin-flagged users only)
 
 /(public)/
