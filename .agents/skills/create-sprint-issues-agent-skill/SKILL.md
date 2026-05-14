@@ -152,10 +152,13 @@ Use templates from `docs/agents/issue-tracker.md` verbatim — Sprint PRD shape 
 - Read first — paths agent must read
 - Files to create / modify — narrowed from sprint file
 - Implementation notes — code skeletons, type signatures, env vars, Zod schema names (skip if captured by reference)
+- Testing / TDD note — add explicit tests-first guidance when it materially improves the slice: domain rules, application use-cases, security/session behavior, persistence contracts, migrations, and high-risk edge cases. Do **not** force TDD language into pure docs, mechanical scaffold, UI-only, final wiring, or manual-smoke slices unless tests-first genuinely fits.
 - Acceptance criteria (slice-scoped) — SUBSET of sprint DoD covering only this slice
 - Out of scope — sibling slices deferred
 - Depends on — issue numbers from §4.3 (or "None")
 - Completion signal — `<promise>COMPLETE</promise>` + workspace `pnpm` commands
+
+For TDD-suitable slices, be concrete: name the first failing tests the agent should write before implementation (for example value objects, use-case policies, token rotation/reuse, rate limits, deletion scope). Keep this short; the issue should guide the agent, not become a testing essay.
 
 ### 5.2 Create parent first
 
