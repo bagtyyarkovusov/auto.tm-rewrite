@@ -146,7 +146,7 @@ Parent PRD issues get `phase-N` + `feature` only — no triage label, since they
 Each child issue body has a `## Depends on` section listing zero or more issue numbers (or "None").
 
 - At creation: if any blocker is open, the issue is labelled `blocked`.
-- When a blocker closes: the `unblock` workflow (`.github/workflows/unblock.yml`, lands in S1's CI issue) scans open issues whose `## Depends on` mentions the just-closed issue, and removes `blocked` if all blockers are now closed. (Optional automation; humans can do this manually with `gh issue edit <n> --remove-label "blocked"`.)
+- When a blocker closes: a human removes the `blocked` label from dependents with `gh issue edit <n> --remove-label "blocked"`. (An automated `unblock` workflow was discussed during S1 but deferred — manual handling has been fine so far. Revisit if dependency graphs get larger in Phase 2.)
 - The orchestrator's AFK query is `gh issue list --label "ready-for-agent" --search "-label:blocked"`.
 
 ## Sandcastle integration
