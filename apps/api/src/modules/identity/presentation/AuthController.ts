@@ -1,15 +1,17 @@
-import { Body, Controller, Post, BadRequestException, Req, Inject } from "@nestjs/common";
+import { Body, Controller, Post, BadRequestException, UnauthorizedException, Req, Inject } from "@nestjs/common";
 import { AuthSchemas } from "@auto-tm/contracts";
 import type { FastifyRequest } from "fastify";
 import { Public } from "../../../common/public.decorator";
 import { RequestOtp } from "../application/RequestOtp";
 import { VerifyOtp } from "../application/VerifyOtp";
+import { RefreshSession } from "../application/RefreshSession";
 
 @Controller("api/v1/auth")
 export class AuthController {
   constructor(
     @Inject(RequestOtp) private readonly requestOtp: RequestOtp,
     @Inject(VerifyOtp) private readonly verifyOtp: VerifyOtp,
+    @Inject(RefreshSession) private readonly refreshSession: RefreshSession,
   ) {}
 
   @Public()
@@ -114,6 +116,46 @@ export class AuthController {
         throw new BadRequestException({
           code: "OTP_NOT_FOUND",
           message: "No OTP request found. Please request a code first.",
+        });
+      }
+      throw err;
+    }
+  }
+
+  @Public()
+  @Post("refresh")
+  async refresh(@Body() body: unknown) {
+    const parsed = AuthSchemas.RefreshRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_FAILED",
+        message: "Invalid refresh token format",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    try {
+      const result = await this.refreshSession.execute({
+        refreshToken: parsed.data.refreshToken,
+      });
+      return result;
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "Invalid refresh token") {
+        throw new UnauthorizedException({
+          code: "INVALID_REFRESH_TOKEN",
+          message: "The refresh token is invalid or has been revoked.",
+        });
+      }
+      if (err instanceof Error && err.message === "Session expired") {
+        throw new UnauthorizedException({
+          code: "SESSION_EXPIRED",
+          message: "Your session has expired. Please log in again.",
+        });
+      }
+      if (err instanceof Error && err.message === "Token already used") {
+        throw new UnauthorizedException({
+          code: "TOKEN_ALREADY_USED",
+          message: "This refresh token has already been used.",
         });
       }
       throw err;

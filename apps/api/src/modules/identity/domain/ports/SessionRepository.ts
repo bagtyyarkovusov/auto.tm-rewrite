@@ -1,5 +1,12 @@
 import type { Session } from "../Session";
 
+export interface SessionLookupResult {
+  session: Session;
+  userId: string;
+  phone: string;
+  role: string;
+}
+
 export interface SessionRepository {
   create(input: {
     userId: string;
@@ -15,4 +22,24 @@ export interface SessionRepository {
 
   /** Deletes the session with the earliest createdAt for the given user. */
   deleteOldestByUserId(userId: string): Promise<void>;
+
+  /**
+   * Finds a session by scanning all rows and bcrypt-comparing the plaintext
+   * refresh token against each stored hash. Includes user identity for JWT issuance.
+   * Returns null when no match is found or the session has expired.
+   */
+  findByRefreshToken(plaintext: string): Promise<SessionLookupResult | null>;
+
+  /**
+   * Atomically updates the refresh token hash on a session row.
+   * The oldHash acts as an optimistic lock — if the row's current hash
+   * doesn't match, the rotation is rejected (returns false).
+   */
+  rotateRefreshToken(
+    id: string,
+    oldHash: string,
+    newHash: string,
+    lastSeenAt: Date,
+    expiresAt: Date,
+  ): Promise<boolean>;
 }
