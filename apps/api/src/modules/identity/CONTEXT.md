@@ -9,7 +9,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - `User` — id, phone, displayName?, avatarUrl?, locale, role (`buyer` | `seller` | `moderator` | `admin`), createdAt, updatedAt
 - `Dealership` — id, slug, name, logoUrl?, cityId?, createdAt, updatedAt
 - `DealershipMember` — id, dealershipId, userId (unique — at most one dealership per user), role (`owner` | `sales`), createdAt
-- `OtpRequest` — id, phone, codeHash, expiresAt, verifiedAt?, attempts, userId?, createdAt, updatedAt
+- `OtpRequest` — id, phone, codeHash, expiresAt, verifiedAt?, attempts, userId?, ip, createdAt, updatedAt
 - `Session` — id, userId, refreshTokenHash (unique, bcrypt), deviceLabel?, userAgent?, expiresAt, createdAt, lastSeenAt. `onDelete: Cascade` on userId → User.id.
 - `OwnedVehicle` (Garage) — id, userId, dealershipId?, brand (String), model (String), year?, createdAt, updatedAt. Thin schema — full garage fields (vin, mileage, nickname, status, photoUrl, isPublic, linkedListingId) ship in S6.
 - `BlockedUser` — id, blockerId, blockedId, createdAt
@@ -24,8 +24,11 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - `Session.refreshTokenHash` is bcrypt-hashed; plaintext is never stored. Per ADR-0012.
 - **Multi-device sessions** — up to 10 concurrent sessions per user. 11th login evicts oldest active session. Per ADR-0012.
 - Refresh rotates in-place on the same Session row: `refreshTokenHash` overwritten, `lastSeenAt` bumped, `expiresAt` = `lastSeenAt + 30 days` sliding. Per ADR-0012.
-- `OtpRequest.code` is hashed; plaintext never stored.
-- `OtpRequest` expires after 5 minutes; max 5 attempts before invalidation.
+- `OtpRequest.codeHash` is SHA-256; plaintext never stored.
+- `OtpRequest` expires after 5 minutes (TTL = createdAt + 5 min); max 5 attempts before invalidation.
+- Rate limits: 5 OTP requests per phone per 24h; 10 per IP per hour. Exponential backoff: `60 × 2^N` seconds where N is the count of prior requests.
+- `OtpRequest.ip` captures the requester IP for rate-limit enforcement.
+- `SMS_DRIVER=mock` (default) logs the OTP code; `SMS_DRIVER=gateway` sends via SMS gateway. `OTP_TEST_MODE=true` returns the plaintext code in the API response.
 - A user CAN be blocked, in which case all writes (POST/PATCH) fail with 403.
 - A `BlockedUser` relationship is one-way (block by A on B). If both want, both must block.
 - `User.role = 'admin'` MUST have a `TotpEnrollment` (policy — enforced at admin-grant time in S9).
@@ -48,9 +51,21 @@ interface IdentityCheckPort {
 ## Ports consumed
 
 ```ts
-SmsPort       // from apps/sms-gateway — sends OTPs
+SmsPort       // from apps/sms-gateway — sends OTPs (wired via OtpSenderPort)
 MailPort      // for admin password reset (future)
 ```
+
+## Internal ports (within identity context)
+
+```ts
+OtpRequestRepository  // persisted OTP request storage
+OtpSenderPort         // abstracts SMS driver (mock / gateway)
+ClockPort             // injectable clock for time-based tests
+```
+
+## Shipped use-cases
+
+- `RequestOtp` — validates TM phone, enforces rate limits, generates + sends OTP code, stores hashed record. Exposed as `POST /api/v1/auth/otp/request` (public).
 
 ## Events emitted
 

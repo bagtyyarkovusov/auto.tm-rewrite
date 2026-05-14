@@ -58,10 +58,12 @@ model OtpRequest {
   attempts   Int       @default(0)
   userId     String?
   user       User?     @relation(fields: [userId], references: [id])
+  ip         String
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   @@index([phone, createdAt])
+  @@index([ip, createdAt])
   @@map("otp_requests")
 }
 
