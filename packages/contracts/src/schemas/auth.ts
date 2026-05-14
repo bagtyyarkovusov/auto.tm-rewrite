@@ -63,6 +63,7 @@ export const MeResponseSchema = z.object({
   displayName: z.string().nullable(),
   role: z.nativeEnum(UserRole),
   avatarUrl: z.string().nullable(),
+  locale: z.string().nullable(),
   createdAt: z.string().datetime(),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;

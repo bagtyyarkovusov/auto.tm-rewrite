@@ -1,10 +1,21 @@
-import { Body, Controller, Post, BadRequestException, UnauthorizedException, Req, Inject } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  BadRequestException,
+  UnauthorizedException,
+  Req,
+  Inject,
+} from "@nestjs/common";
 import { AuthSchemas } from "@auto-tm/contracts";
 import type { FastifyRequest } from "fastify";
 import { Public } from "../../../common/public.decorator";
 import { RequestOtp } from "../application/RequestOtp";
 import { VerifyOtp } from "../application/VerifyOtp";
 import { RefreshSession } from "../application/RefreshSession";
+import { Logout } from "../application/Logout";
+import { LogoutAll } from "../application/LogoutAll";
 
 @Controller("api/v1/auth")
 export class AuthController {
@@ -12,6 +23,8 @@ export class AuthController {
     @Inject(RequestOtp) private readonly requestOtp: RequestOtp,
     @Inject(VerifyOtp) private readonly verifyOtp: VerifyOtp,
     @Inject(RefreshSession) private readonly refreshSession: RefreshSession,
+    @Inject(Logout) private readonly logoutUseCase: Logout,
+    @Inject(LogoutAll) private readonly logoutAllUseCase: LogoutAll,
   ) {}
 
   @Public()
@@ -160,5 +173,38 @@ export class AuthController {
       }
       throw err;
     }
+  }
+
+  @Public()
+  @HttpCode(204)
+  @Post("logout")
+  async logout(@Body() body: unknown) {
+    const parsed = AuthSchemas.LogoutRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_FAILED",
+        message: "Invalid refresh token format",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    try {
+      await this.logoutUseCase.execute({ refreshToken: parsed.data.refreshToken });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "Invalid refresh token") {
+        throw new UnauthorizedException({
+          code: "INVALID_REFRESH_TOKEN",
+          message: "The refresh token is invalid or has been revoked.",
+        });
+      }
+      throw err;
+    }
+  }
+
+  @HttpCode(204)
+  @Post("logout-all")
+  async logoutAll(@Req() req: FastifyRequest) {
+    const userId = (req as any).user?.sub as string;
+    await this.logoutAllUseCase.execute({ userId });
   }
 }

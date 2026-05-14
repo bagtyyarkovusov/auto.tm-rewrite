@@ -102,6 +102,12 @@ class FakeSessionRepository implements SessionRepository {
     return true;
   }
 
+  async delete(_id: string): Promise<void> {}
+
+  async deleteAllByUserId(_userId: string): Promise<number> {
+    return 0;
+  }
+
   // Helper: register a session that can be found by a specific plaintext token
   registerToken(plaintext: string, session: Session): void {
     this.hashLookup.set(plaintext, session);

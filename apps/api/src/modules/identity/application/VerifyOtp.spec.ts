@@ -128,6 +128,10 @@ class FakeUserRepository implements UserRepository {
     return this.users.find((u) => u.phone === phone) ?? null;
   }
 
+  async findById(id: string): Promise<User | null> {
+    return this.users.find((u) => u.id === id) ?? null;
+  }
+
   async create(input: { phone: string }): Promise<User> {
     const user: User = {
       id: randomUUID(),
@@ -208,6 +212,16 @@ class FakeSessionRepository implements SessionRepository {
       expiresAt,
     };
     return true;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.sessions = this.sessions.filter((s) => s.id !== id);
+  }
+
+  async deleteAllByUserId(userId: string): Promise<number> {
+    const before = this.sessions.length;
+    this.sessions = this.sessions.filter((s) => s.userId !== userId);
+    return before - this.sessions.length;
   }
 }
 

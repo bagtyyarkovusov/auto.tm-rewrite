@@ -42,4 +42,10 @@ export interface SessionRepository {
     lastSeenAt: Date,
     expiresAt: Date,
   ): Promise<boolean>;
+
+  /** Deletes a single session by ID. */
+  delete(id: string): Promise<void>;
+
+  /** Deletes all sessions for the given user. Returns the count of deleted rows. */
+  deleteAllByUserId(userId: string): Promise<number>;
 }
