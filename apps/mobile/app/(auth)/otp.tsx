@@ -10,9 +10,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 
-
 import { OtpCells, type OtpCellsRef } from "../../components/auth/OtpCells";
-import { AuthApiError, requestOtp, verifyOtp } from "../../src/auth/client";
+import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
+import { useVerifyOtp } from "../../src/api/identity/useVerifyOtp";
+import { ApiError } from "../../src/api/client";
 import { authCopy, type Locale, resolveLocale } from "../../src/auth/copy";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
@@ -59,11 +60,14 @@ export default function OtpScreen() {
   const [secondsRemaining, setSecondsRemaining] = useState(
     parseInitialSeconds(firstParam(params.resendInSeconds)),
   );
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isResending, setIsResending] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const lastSubmittedCode = useRef<string | null>(null);
   const copy = authCopy[locale];
+
+  const { mutateAsync: verifyOtpMutate, isPending: isVerifying } =
+    useVerifyOtp();
+  const { mutateAsync: requestOtpMutate, isPending: isResending } =
+    useRequestOtp();
 
   const canonicalPhone = useMemo(
     () => (phone ? normalizeTmPhone(phone) : null),
@@ -124,11 +128,10 @@ export default function OtpScreen() {
       return;
     }
 
-    setIsVerifying(true);
     setOtpError(null);
 
     try {
-      const result = await verifyOtp({
+      const result = await verifyOtpMutate({
         phone: canonicalPhone,
         code: nextCode,
         deviceLabel: Platform.OS === "ios" ? "iOS app" : "Android app",
@@ -142,7 +145,7 @@ export default function OtpScreen() {
       lastSubmittedCode.current = null;
       requestAnimationFrame(() => otpRef.current?.focus());
 
-      if (error instanceof AuthApiError) {
+      if (error instanceof ApiError) {
         if (error.code === "INVALID_OTP" || error.code === "OTP_ALREADY_USED") {
           setOtpError(copy.wrongCode);
         } else if (error.code === "OTP_EXPIRED" || error.code === "OTP_NOT_FOUND") {
@@ -155,8 +158,6 @@ export default function OtpScreen() {
       } else {
         setOtpError(copy.offline);
       }
-    } finally {
-      setIsVerifying(false);
     }
   }
 
@@ -165,24 +166,21 @@ export default function OtpScreen() {
       return;
     }
 
-    setIsResending(true);
     setOtpError(null);
     setCode("");
     lastSubmittedCode.current = null;
 
     try {
-      const result = await requestOtp({ phone: canonicalPhone });
+      const result = await requestOtpMutate({ phone: canonicalPhone });
       setSecondsRemaining(result.resendInSeconds);
       setTestCode(result.testCode);
       requestAnimationFrame(() => otpRef.current?.focus());
     } catch (error) {
-      if (error instanceof AuthApiError) {
+      if (error instanceof ApiError) {
         setOtpError(error.message || copy.verifyFailed);
       } else {
         setOtpError(copy.offline);
       }
-    } finally {
-      setIsResending(false);
     }
   }
 

@@ -4,13 +4,12 @@ import { useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { requestOtp } from "../../src/auth/client";
+import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-
 
 const E2E_TEST_PHONE = "99361234567";
 
@@ -20,6 +19,7 @@ function isDevBuild(): boolean {
 
 export default function FeedScreen() {
   const [e2eLoading, setE2eLoading] = useState(false);
+  const { mutateAsync: requestOtp } = useRequestOtp();
 
   async function runE2EOtpFlow() {
     setE2eLoading(true);
