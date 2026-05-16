@@ -1008,6 +1008,91 @@ Steps to migrate a screen to RNR:
 6. Replace any `useColorScheme()` + `palette.neutral[…]` pattern with `<Icon as={X} className="text-foreground" />`.
 7. Run the verification gate (§9).
 
+### 7.4 Customization decision tree
+
+Not every change to an RNR component requires a new CVA variant. Use the lightest touch that solves the problem.
+
+```
+Need a styling/behavior change vs the RNR default?
+├─ One call site, one-off?                                  → cn() at the call site
+├─ 2 call sites, same change?                               → still cn() — extract only if it grows
+├─ 3+ call sites OR brand-locked?                           → Add a CVA variant to the component file (§7.6)
+├─ Need a structural slot RNR lacks
+│   (leading prefix, trailing button)?                      → Custom composition wrapping RNR (§7.5)
+├─ Visual contract of the whole primitive
+│   changes for AutoTM (rare)?                              → Edit CVA BASE classes — ADR required (§7.6)
+├─ Need a fork due to incompatible variant sets?
+│   (the component must serve two contradictory contracts)  → New sibling file — ADR required (§7.7)
+└─ Primitive doesn't exist in RNR                           → New file in components/ui/ via @rn-primitives or §6.9
+```
+
+Rules of thumb:
+- Default to editing the RNR file in place. RNR components live in your tree; you own them.
+- Prefer `cn()` over new variants — it's discoverable at the call site and doesn't grow the component's public API.
+- A `className` prop on a custom composition is the primary customization API for consumers; `hasError`-style booleans are for state-driven toggling.
+
+### 7.5 Custom composition wrapping an RNR primitive
+
+When an RNR component doesn't have the slot you need (e.g., a leading icon or locked prefix on `Input`), wrap it in a styled container. Do NOT hand-roll a new `Pressable`+`TextInput` stack — still use the RNR primitive inside.
+
+**File location:** `apps/mobile/components/<feature>/<Name>.tsx`. **NOT** `apps/mobile/components/ui/` — that path is reserved for RNR-installed primitives so `npx @react-native-reusables/cli@latest add` doesn't clobber your custom code.
+
+**Rules:**
+- Import the RNR primitive and use it as the core element.
+- Additional chrome (prefix, suffix, divider) lives in styled `<View>` wrappers — semantic tokens only (`bg-card`, `border-input`, `border-border`).
+- **Prop API includes parent-controlled booleans** (e.g., `hasError`) so the call site never ternary-classNames inline.
+- Accept and merge `className` via `cn(...)`.
+- For text: use the RNR `<Text>` inside the composition if it sits inside an RNR composite; raw RN `<Text>` is fine for non-contextual slots (e.g., the locked `+993` prefix).
+
+**Worked example — `PhoneInput`:**
+
+```tsx
+// apps/mobile/components/auth/PhoneInput.tsx
+import { forwardRef } from "react";
+import { TextInput, type TextInputProps, View } from "react-native";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
+
+export interface PhoneInputProps extends TextInputProps {
+  hasError?: boolean;
+  prefix?: string;
+}
+
+export const PhoneInput = forwardRef<TextInput, PhoneInputProps>(
+  ({ hasError, prefix = "+993", className, ...rest }, ref) => {
+    return (
+      <View
+        className={cn(
+          "h-12 flex-row items-center rounded-md bg-card",
+          hasError
+            ? "border-2 border-destructive"
+            : "border border-input",
+          className,
+        )}
+      >
+        <View className="h-full justify-center border-r border-border px-3">
+          <Text className="text-base text-foreground">{prefix}</Text>
+        </View>
+        <Input
+          ref={ref}
+          className="flex-1 border-0 bg-transparent px-3 text-base text-foreground"
+          {...rest}
+        />
+      </View>
+    );
+  },
+);
+
+PhoneInput.displayName = "PhoneInput";
+```
+
+Notes on the above:
+- `border-input` → `border-border` for the divider — both auto-swap in dark mode.
+- `bg-card` on the wrapper, same surface as an RNR `Input`.
+- `hasError` drives the border switch so the call site doesn't ternary-classNames.
+- `ref` is `TextInput` — the consumer can call `.focus()` directly.
+
 ---
 
 ## 8 — Anti-patterns (don't do these)
