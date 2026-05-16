@@ -1093,6 +1093,72 @@ Notes on the above:
 - `hasError` drives the border switch so the call site doesn't ternary-classNames.
 - `ref` is `TextInput` — the consumer can call `.focus()` directly.
 
+### 7.6 Adding a CVA variant vs editing base classes
+
+When a component already uses `cva()` (Class Variance Authority), you have two touch points:
+
+**VARIANTS map** (second argument to `cva()`): visual **states** — `default | outline | brand-outline`. Add a new variant key when ≥3 screens need the same visual state. Variant keys use kebab-case: `"outline-brand"`, `"brand-locked"`.
+
+**BASE classes** (first argument to `cva()`): apply to **all** variants of that component. Change ONLY when the change is universal across every screen — e.g., bumping `rounded-md` → `rounded-lg` for ALL buttons in the app. Universal base-class edits require an **ADR** because they affect every consumer.
+
+**LOCKSTEP rule:** Many RNR components have TWO `cva()` calls — one for the container (`buttonVariants`), one for the text (`buttonTextVariants`). When you add a new variant key, you MUST add it to both. The anti-pattern: adding `"outline-brand"` to `buttonVariants` but skipping `buttonTextVariants` → button text renders white on a white border, invisible. The RNR Button, Badge, and Toggle have this paired-CVA pattern; check each component's file for a second `cva()` call before committing.
+
+**Example — adding `"outline-brand"` to Button:**
+
+```tsx
+// apps/mobile/components/ui/button.tsx
+const buttonVariants = cva(
+  "group flex items-center justify-center rounded-md ...",
+  {
+    variants: {
+      variant: {
+        // ... existing variants ...
+        "outline-brand":
+          "border-2 border-brand-500 bg-background active:bg-brand-50 dark:active:bg-brand-900/20",
+      },
+      size: { /* unchanged */ },
+    },
+    defaultVariants: { variant: "default", size: "default" },
+  },
+);
+
+const buttonTextVariants = cva("text-sm font-medium", {
+  variants: {
+    variant: {
+      // ... existing text variants ...
+      "outline-brand": "text-brand-500",
+    },
+    size: { /* unchanged */ },
+  },
+  defaultVariants: { variant: "default", size: "default" },
+});
+```
+
+### 7.7 Forking a primitive (last resort)
+
+**Default:** edit the RNR file in place under `components/ui/`. The RNR philosophy is "you own the file after `npx @react-native-reusables/cli add` copies it."
+
+**Fork** to a sibling file (e.g., `components/ui/button-brand.tsx`) ONLY when:
+- The semantic contract of the component diverges from RNR's default (e.g., a "BrandButton" that explicitly cannot have a `destructive` variant).
+- Multiple incompatible variant sets are needed for the same primitive and one file would become a CVA megafactory with 20+ variants.
+
+**Cost:** every `npx @react-native-reusables/cli@latest add button` upgrade now requires manual reconciliation against your fork.
+
+**ADR REQUIRED.** No fork lands without one. The ADR must justify why in-place editing or a custom composition wouldn't suffice.
+
+### 7.8 Anti-patterns when customizing
+
+Do not:
+
+- Fork a component when `cn()` at the call site would do. (§7.4, row 1)
+- Add a new CSS variable / token when a bracket utility would do. (`bg-destructive/10` — see §4)
+- Add a new CVA variant for a one-off used on a single screen. (use `cn()`)
+- Hand-roll a `Pressable` + `TextInput` in a custom composition when the RNR primitive could be wrapped instead. (§7.5)
+- Forget the `buttonVariants` / `buttonTextVariants` lockstep when adding a variant. (§7.6 LOCKSTEP rule)
+- Place a custom composition inline in a route file. They belong in `components/<feature>/`. (§7.5 file location)
+- Edit CVA base classes for what should be a variant. (BASE classes affect every consumer; use VARIANTS for visual states)
+- Inline a hex code (`#E60000`) in a custom composition. Everything references tokens — including code you write.
+
 ---
 
 ## 8 — Anti-patterns (don't do these)
