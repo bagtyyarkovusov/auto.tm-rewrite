@@ -197,9 +197,9 @@ import { Text } from "@/components/ui/text";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
+import { PhoneInput } from "@/components/auth/PhoneInput";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
 <KeyboardAvoidingView
@@ -230,26 +230,15 @@ import { Text } from "@/components/ui/text";
         <Text className="text-sm font-medium text-foreground">
           {t("auth.phone.label")}
         </Text>
-        <View
-          className={
-            hasError
-              ? "h-12 flex-row items-center rounded-md border-2 border-destructive bg-card"
-              : "h-12 flex-row items-center rounded-md border border-input bg-card focus-within:border-2 focus-within:border-ring"
-          }
-        >
-          <View className="h-full justify-center border-r border-border px-3">
-            <Text className="text-base text-foreground">+993</Text>
-          </View>
-          <Input
-            className="flex-1 border-0 bg-transparent px-3 text-base text-foreground"
-            keyboardType="phone-pad"
-            value={phoneDisplay}
-            onChangeText={handlePhoneChange}
-            placeholder={t("auth.phone.placeholder")}
-            textContentType="telephoneNumber"
-            accessibilityLabel={t("auth.phone.label")}
-          />
-        </View>
+        <PhoneInput
+          hasError={hasError}
+          value={phoneDisplay}
+          onChangeText={handlePhoneChange}
+          placeholder={t("auth.phone.placeholder")}
+          keyboardType="phone-pad"
+          textContentType="telephoneNumber"
+          accessibilityLabel={t("auth.phone.label")}
+        />
         <Text className={hasError ? "text-sm leading-snug text-destructive" : "text-sm leading-snug text-muted-foreground"}>
           {helperText}
         </Text>
@@ -292,13 +281,19 @@ import { Text } from "@/components/ui/text";
 **OTP route (`apps/mobile/app/(auth)/otp.tsx`):**
 
 ```tsx
-import { Animated, KeyboardAvoidingView, Platform, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, X } from "lucide-react-native";
+import { OtpCells, type OtpCellsHandle } from "@/components/auth/OtpCells";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+
+const otpRef = useRef<OtpCellsHandle>(null);
+
+// On wrong code:
+// otpRef.current?.shake();
 
 <KeyboardAvoidingView
   behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -332,37 +327,7 @@ import { Text } from "@/components/ui/text";
         </Button>
       </View>
 
-      <Animated.View className="flex-row gap-2" style={{ transform: [{ translateX: shake }] }}>
-        {Array.from({ length: 6 }, (_, index) => (
-          <View
-            key={index}
-            pointerEvents="none"
-            className={
-              otpError
-                ? "h-12 flex-1 items-center justify-center rounded-md border-2 border-destructive bg-card"
-                : index === code.length
-                  ? "h-12 flex-1 items-center justify-center rounded-md border-2 border-primary bg-card"
-                  : code[index]
-                    ? "h-12 flex-1 items-center justify-center rounded-md border border-primary bg-muted"
-                    : "h-12 flex-1 items-center justify-center rounded-md border border-border bg-muted"
-            }
-          >
-            <Text className="font-mono text-2xl font-semibold leading-tight text-foreground">
-              {code[index] ?? ""}
-            </Text>
-          </View>
-        ))}
-        <TextInput
-          ref={inputRef}
-          className="absolute inset-0 opacity-0"
-          autoComplete="sms-otp"
-          textContentType="oneTimeCode"
-          keyboardType="number-pad"
-          maxLength={6}
-          value={code}
-          onChangeText={handleCodeChange}
-        />
-      </Animated.View>
+      <OtpCells ref={otpRef} value={code} onChange={setCode} hasError={!!otpError} />
 
       {otpError ? (
         <Text className="text-sm leading-snug text-destructive">{otpError}</Text>
@@ -393,11 +358,11 @@ import { Text } from "@/components/ui/text";
 ```
 
 Notes:
-- RNR imports: install `button`, `input`, `icon`, `text`, `sheet`, `badge` via the RNR CLI. `sheet` depends on `PortalHost` being present.
-- `BrandLogo` remains a local component wrapping `apps/mobile/assets/logos_color_red.svg` (rendered via `react-native-svg-transformer` per `apps/mobile/metro.config.js`). Use the text fallback "AutoTM" if SVG rendering fails.
-- The OTP UI still uses one hidden numeric `TextInput` behind six visual cells. The hidden input owns focus, paste, SMS autofill, and accessibility. RNR's `Input` is for the phone field where its border + size variants help.
-- The phone-field bordered container is a custom composition because RNR `Input` doesn't ship a leading-prefix slot natively; we use the RNR `Input` underneath but wrap it in a styled `View` to host the locked `+993` prefix. This is intentional and documented here so engineers don't try to "fix" it.
-- `Button variant="link"` is used for "Change number", "Resend code", "Terms", "Privacy". Use `self-start px-0` to disable Button's default centered padding when the link should hug content.
+- RNR imports listed above: `button`, `input`, `icon`, `text`, `sheet`, `badge` — installed via RNR CLI. `sheet` requires `PortalHost` in root layout.
+- `PhoneInput` and `OtpCells` are custom compositions (see §Customization plan). Phone route is ~15 lines shorter; OTP route is ~30 lines shorter.
+- `OtpCells` owns the hidden `TextInput`, the 6 visual cells, and the shake animation via `useImperativeHandle`. The route file calls `otpRef.current?.shake()` on wrong code and never instantiates an `Animated.Value`.
+- `Button variant="link"` used for "Change number" and "Resend code" with `className="self-start px-0"` to disable centered padding. This is a `cn()` override (per §7.4 row 1), not a new CVA variant — only 2 call sites.
+- `BrandLogo` remains a local component wrapping `apps/mobile/assets/logos_color_red.svg`. Not an RNR customization — no §Customization plan entry.
 
 ## States
 
