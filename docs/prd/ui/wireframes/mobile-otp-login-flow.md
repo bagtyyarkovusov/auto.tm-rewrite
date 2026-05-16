@@ -138,6 +138,10 @@ Collect a Turkmenistan mobile phone number, validate it locally, and request a s
 - Tapping block 7 with valid phone -> calls `POST /api/v1/auth/otp/request`, then routes to `(auth)/otp`.
 - Tapping Terms or Privacy links in block 8 -> opens `https://auto.tm/<locale>/legal/...` in an in-app browser or custom tab.
 
+## Customization preview
+
+- **Phone input** — needs `PhoneInput` composition (leading `+993` slot over RNR `Input`)
+
 ## States
 
 - **Loading**: Primary CTA shows submitting state; input remains visible.
@@ -217,6 +221,10 @@ Verify the six-digit SMS code, support paste/autofill, and return to the deferre
 - Expired code -> show inline expired message and enable resend if backend allows.
 - Tapping block 9 after countdown -> requests a fresh code for the same phone.
 - Success with deferred action -> close auth and replay the action. Success without deferred action -> route to tab app and show a small "Signed in" toast.
+
+## Customization preview
+
+- **OTP input** — needs `OtpCells` composition (6 visual cells over hidden `TextInput`, owns shake animation)
 
 ## States
 
