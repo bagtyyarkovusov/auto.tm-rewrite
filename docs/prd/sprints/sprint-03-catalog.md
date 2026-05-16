@@ -92,7 +92,8 @@ apps/web/src/components/filter/BrandModelSelect.tsx
 
 ## Previous-sprint dependencies
 
-- S2 — admin role check requires Identity's JWT guard
+- **S2 — `JwtAuthGuard`** ✅ shipped (`apps/api/src/common/jwt-auth.guard.ts`). Validates bearer tokens; sets `request.user` payload.
+- **S2 — `IdentityCheckPort.isAdmin(userId)` + `AdminGuard`** ❌ **NOT shipped**. The port is documented in `apps/api/src/modules/identity/CONTEXT.md` ("Ports exposed → IdentityCheckPort"), but no implementation exists and no admin guard wraps any controller method. **S3's admin write API (Brand / Model `POST`/`PATCH`/`DELETE`) cannot ship behind an admin guard until this lands.** Resolution: a discrete pre-S3 issue ships `IdentityCheckPort.isAdmin` + `AdminGuard` before the catalog admin slices start. Until that issue closes, S3 catalog public read endpoints can ship, but the admin write API is blocked.
 
 ## Open questions / risks
 

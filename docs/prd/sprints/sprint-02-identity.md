@@ -95,7 +95,7 @@ packages/contracts/src/enums.ts + exported contract schemas for identity auth
 - **PRD feature**: [`../features/30-identity.md`](../features/30-identity.md)
 - **End-to-end flow**: [`../flows/60-first-time-user.md`](../flows/60-first-time-user.md)
 - **Charter sections**: §6 (Authentication), §16 (API conventions — rate limits, error shape), §17 (Phone validation)
-- **ADRs**: 0001 (Architecture — port pattern), 0006 (Auth), 0012 (Multi-device sessions), 0013 (User role / dealership membership split)
+- **ADRs**: 0001 (Architecture — port pattern), 0006 (Auth), 0012 (Multi-device sessions), 0013 (User role / dealership membership split), 0014 (Mobile component library — RNR; adopted mid-sprint), 0015 (Mobile data fetching — TanStack Query v5 + apiClient wrapper; locked during closure)
 
 ## Previous-sprint dependencies
 
