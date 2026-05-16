@@ -32,7 +32,7 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  const port = process.env["PORT"] ?? 3000;
+  const port = process.env["PORT"] ?? 3006;
   await app.listen(port, "0.0.0.0");
   app.get(Logger).log(`API listening on port ${port}`, "NestApplication");
 }

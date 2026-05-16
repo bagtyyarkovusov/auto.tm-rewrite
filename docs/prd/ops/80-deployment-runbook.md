@@ -101,7 +101,7 @@ Expected duration: 2-5 minutes from `deploy.sh` to all green.
 ```bash
 # On TM Server A:
 docker ps                                    # all containers up
-curl -s http://localhost:3000/healthz        # api healthy
+curl -s http://localhost:3006/healthz        # api healthy
 curl -s http://localhost:3001/healthz        # admin healthy
 curl -s http://localhost:3002/healthz        # web healthy
 

@@ -81,4 +81,4 @@ Summary of top-level adds:
 
 ## Demo audience
 
-Yourself. Successful demo = `pnpm dev` produces a green stack and `curl localhost:3000/healthz` returns `{"status":"ok"}`.
+Yourself. Successful demo = `pnpm dev` produces a green stack and `curl localhost:3006/healthz` returns `{"status":"ok"}`.

@@ -30,6 +30,6 @@ COPY --from=build /app/packages /app/packages
 RUN groupadd -r auto-tm && useradd -r -g auto-tm -s /bin/false auto-tm && chown -R auto-tm:auto-tm /app
 USER auto-tm
 WORKDIR /app/apps/api
-EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:3000/healthz || exit 1
-CMD ["node", "dist/main.js"]
+EXPOSE 3006
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:3006/healthz || exit 1
+CMD ["node", "dist/src/main.js"]
