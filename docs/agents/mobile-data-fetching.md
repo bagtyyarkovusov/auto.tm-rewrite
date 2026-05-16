@@ -625,6 +625,13 @@ The refresh-dedup `refreshInFlight` is per-module. If you imported the wrapper t
 **"msw doesn't intercept my request in tests."**
 `msw/native` requires polyfilling `Response` / `Request` / `Headers` in the Jest/Vitest setup. The S3 foundations PR includes the polyfill chain; if you removed it, restore it.
 
+**"`@testing-library/react-native` throws 'Unexpected token typeof' in Node tests."**
+`@testing-library/react-native` imports `react-native`, which contains Flow-typed source that Node cannot parse. Two workarounds exist:
+1. Use `@testing-library/react` (web renderer) with `happy-dom` for hook tests that don't touch RN-specific components — this is the pragmatic default for data-hook tests.
+2. If you must use `@testing-library/react-native`, mock `react-native` at the module level in your Vitest config and ensure `react-test-renderer`'s patch version matches React's exactly.
+
+Also note: test files containing JSX must use the `.tsx` extension so Vitest's esbuild transform handles them.
+
 ---
 
 ## 12 — Sprint adoption timeline

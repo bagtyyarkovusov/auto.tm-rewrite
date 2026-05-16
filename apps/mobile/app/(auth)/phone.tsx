@@ -11,9 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 
-
 import { PhoneInput } from "../../components/auth/PhoneInput";
-import { AuthApiError, requestOtp } from "../../src/auth/client";
+import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
+import { ApiError } from "../../src/api/client";
 import { authCopy, type Locale, resolveLocale } from "../../src/auth/copy";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
@@ -57,9 +57,10 @@ export default function PhoneScreen() {
     initialPhone ? displayPhoneFromCanonical(initialPhone) : "",
   );
   const [touched, setTouched] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const copy = authCopy[locale];
+
+  const { mutateAsync: requestOtp, isPending: isSubmitting } = useRequestOtp();
 
   const canonicalPhone = useMemo(
     () => normalizeTmPhone(phoneDisplay),
@@ -94,7 +95,6 @@ export default function PhoneScreen() {
       return;
     }
 
-    setIsSubmitting(true);
     setRequestError(null);
 
     try {
@@ -111,7 +111,7 @@ export default function PhoneScreen() {
         },
       });
     } catch (error) {
-      if (error instanceof AuthApiError) {
+      if (error instanceof ApiError) {
         setRequestError(
           error.code === "VALIDATION_FAILED"
             ? copy.phoneFormatError
@@ -120,8 +120,6 @@ export default function PhoneScreen() {
       } else {
         setRequestError(copy.offline);
       }
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
