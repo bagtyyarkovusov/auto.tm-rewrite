@@ -48,6 +48,9 @@ interface IdentityCheckPort {
 }
 ```
 
+- `IdentityCheckPort` is implemented by `PrismaIdentityCheckAdapter` and exported from `IdentityModule` under DI token `IDENTITY_TOKENS.IdentityCheckPort`.
+- `AdminGuard` (`apps/api/src/common/admin.guard.ts`) composes on top of `JwtAuthGuard` and uses `IdentityCheckPort.isAdmin` to gate controller methods to admin-role users only.
+
 ## Ports consumed
 
 ```ts
@@ -75,6 +78,7 @@ PasswordHasherPort    // bcrypt hash + compare for refresh tokens
 - `LogoutAll` — deletes every session for the authenticated user (identified by bearer JWT). No-op when the user has no sessions. Returns 204. Exposed as `POST /api/v1/auth/logout-all` (requires bearer auth).
 - `GetMe` — returns the contract user shape (id, phone, displayName, role, avatarUrl, locale, createdAt) for the authenticated user. Throws "User not found" (mapped to 404) if the user row was deleted after JWT issuance. Exposed as `GET /api/v1/me` (requires bearer auth).
 - `DeleteMe` — deletes the authenticated user's account and all per-user data via DB cascades. Requires bearer auth. Returns 204. Cascading delete removes: sessions, owned vehicles, blocked-user relationships, dealership memberships, favorites, saved searches, FCM devices, notification history, notification preferences, conversation participants, buyer-side conversations, seller listings, and blog posts. `audit_log` records are preserved via `onDelete: SetNull` (actorId is nullified). Exposed as `DELETE /api/v1/me` (requires bearer auth).
+- `IsAdmin` (query) — thin wrapper over `IdentityCheckPort.isAdmin`. Used by `AdminGuard` and available to other contexts for admin-gating.
 
 ### Account deletion scope
 

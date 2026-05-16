@@ -6,4 +6,5 @@ export const IDENTITY_TOKENS = {
   UserRepository: "IDENTITY_USER_REPOSITORY",
   SessionRepository: "IDENTITY_SESSION_REPOSITORY",
   PasswordHasherPort: "IDENTITY_PASSWORD_HASHER_PORT",
+  IdentityCheckPort: "IDENTITY_CHECK_PORT",
 } as const;
