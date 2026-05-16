@@ -57,6 +57,10 @@ If RNR is **not** initialized and the issue you are working on needs an RNR comp
 - **Brand tokens (`bg-brand-500`) ≠ semantic tokens (`bg-primary`).** Both exist on mobile, both are valid, but they serve different purposes (see §3).
 - **NativeWind classes ≠ web CSS.** A long list of utilities silently no-ops on native (see §5.6).
 
+### 0.5 — Mobile stack ≠ web stack: the boundary rule
+
+Mobile = **NativeWind v4 + Tailwind v3 + React Native Reusables (RNR)** (`@/components/ui/*`). Web/admin = **Tailwind v4 + shadcn/ui** (`@auto-tm/ui/components`). Token **VALUES** are shared via `packages/ui/tokens/`. CSS **syntax** is NOT shared: mobile uses `@tailwind base; @tailwind components; @tailwind utilities;` (Tailwind v3), web uses `@theme inline { … }` (Tailwind v4). Components are NOT shared: RN `<Pressable>` ≠ DOM `<button>` — importing `@auto-tm/ui/components` in mobile will crash at runtime. The full matrix lives in `docs/prd/ui/79-web-vs-mobile.md`; read it for any cross-platform decision.
+
 ---
 
 ## 1 — The contract
