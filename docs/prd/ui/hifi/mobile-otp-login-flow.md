@@ -592,3 +592,7 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 - NO imports from `@auto-tm/ui/components/*` (web-only).
 - Cross-checked against `docs/agents/nativewind-v4.md` §6 (RNR rules) and §8 (anti-patterns).
 - Trilingual copy is present; Turkmen is marked provisional for later review.
+- §Customization plan section present — lists PhoneInput (custom composition) + OtpCells (custom composition) + Button "link" inline pattern (cn() override).
+- Custom compositions live under `apps/mobile/components/auth/`, NOT `apps/mobile/components/ui/` (that path is reserved for RNR-installed primitives).
+- `OtpCells` owns the shake animation via `useImperativeHandle`; route file does NOT redeclare an `Animated.Value`.
+- Button "link" inline pattern uses `cn()` at call site, not a new CVA variant (justification: 2 call sites — promote only when third screen needs it).
