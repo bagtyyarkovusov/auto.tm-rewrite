@@ -7,11 +7,9 @@ import {
 } from "../auth/session";
 import { AuthSchemas } from "@auto-tm/contracts";
 
-const BASE_URL = process.env["EXPO_PUBLIC_API_URL"];
-
-if (!BASE_URL) {
-  throw new Error("EXPO_PUBLIC_API_URL is not set — check apps/mobile/.env");
-}
+const BASE_URL = (
+  process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:3000/api/v1"
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(
@@ -48,7 +46,10 @@ async function refreshOnce(): Promise<void> {
 
     const res = await fetch(`${BASE_URL}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ refreshToken: session.refreshToken }),
     });
 
@@ -83,6 +84,7 @@ async function rawRequest<TResponse>(
   isRetry: boolean,
 ): Promise<TResponse> {
   const headers: Record<string, string> = {
+    Accept: "application/json",
     "Content-Type": "application/json",
   };
 
@@ -108,16 +110,32 @@ async function rawRequest<TResponse>(
     return undefined as TResponse;
   }
 
-  const json = (await res.json().catch(() => null)) as unknown;
+  let json: unknown;
+  let rawText: string | undefined;
+
+  try {
+    json = (await res.json()) as unknown;
+  } catch {
+    rawText = await res.text().catch(() => undefined);
+    json = null;
+  }
 
   if (!res.ok) {
     const errorBody = json as { code?: string; message?: string; details?: unknown } | null;
-    throw new ApiError(
-      errorBody?.code ?? "UNKNOWN_ERROR",
-      res.status,
-      errorBody?.message,
-      errorBody?.details,
-    );
+    const code = errorBody?.code ?? "UNKNOWN_ERROR";
+    const message =
+      errorBody?.message ??
+      (rawText ? `Non-JSON error (${res.status}): ${rawText.slice(0, 200)}` : `HTTP ${res.status}`);
+
+    // eslint-disable-next-line no-console
+    console.error("[apiClient] request failed", {
+      url: `${BASE_URL}${path}`,
+      status: res.status,
+      code,
+      rawText: rawText?.slice(0, 500),
+    });
+
+    throw new ApiError(code, res.status, message, errorBody?.details);
   }
 
   if (opts.schema) {
