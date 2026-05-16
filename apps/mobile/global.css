@@ -1,3 +1,11 @@
+/* AutoTM mobile CSS variables — Tailwind v3 + NativeWind v4
+ * AUTHORITY: This file + apps/mobile/lib/theme.ts are PRIMARY for mobile
+ * semantic tokens (--background, --primary, etc.). HSL values mirror
+ * lib/theme.ts exactly and derive from packages/ui/tokens/colors.ts.
+ * DO NOT copy from apps/web/src/app/[locale]/globals.css or packages/ui/theme/theme.css
+ * — those use Tailwind v4 @theme syntax which breaks Metro on mobile.
+ * Rules: docs/agents/nativewind-v4.md §0.5, §2, §4.
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
