@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ⚪ Pending |
+| **Status** | 🟢 Shipped (2026-05-16) |
 | **Phase** | 1 |
 | **Milestone** | M2 — I can log in |
 | **Demo audience** | Tiny internal group |

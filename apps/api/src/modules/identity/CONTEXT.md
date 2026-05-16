@@ -107,6 +107,13 @@ Refresh-token lookup scans all `Session` rows and bcrypt-compares the plaintext 
 
 `rotateRefreshToken` uses `updateMany` with a `WHERE id = ? AND refreshTokenHash = ?` predicate. If two concurrent refreshes both locate the same session, only one `updateMany` matches the old hash — the second returns `count = 0` and the use-case throws `Token already used` (mapped to 401). No row-level lock or `version` column is needed.
 
+## Test layering
+
+- **Domain** (no Prisma, pure TS): `OtpCode.spec.ts`, `Phone.spec.ts`, `OtpAttemptLedger.spec.ts`.
+- **Application** (no HTTP, fakes for repos / clock / hasher): `RequestOtp.spec.ts`, `VerifyOtp.spec.ts`, `RefreshSession.spec.ts`, `Logout.spec.ts`, `LogoutAll.spec.ts`, `GetMe.spec.ts`, `DeleteMe.spec.ts`. All chaos scenarios live here: code expiry (`VerifyOtp.spec.ts` — "fails with expired code"), code reuse, six-wrong-attempts ("locks the OTP request after 6 wrong attempts"), refresh-token reuse (`RefreshSession.spec.ts` — "Old token reuse returns 401"), 11th-session eviction (`VerifyOtp.spec.ts` — "evicts oldest session when user has 10 active sessions"), and IP rate-limit logic (`OtpAttemptLedger.spec.ts`).
+- **Presentation** (e2e Supertest against the running compose Postgres, not Testcontainers): `AuthController.e2e.spec.ts` covers happy-path OTP request + verify, phone rate-limit response shape, logout / logout-all / GET me / DELETE me. Re-running it requires `pnpm dev` (or at least the `postgres` and `redis` compose services) up locally.
+- **Infrastructure layer** — the Sprint 2 plan called for Testcontainers tests of `PrismaOtpRequestRepository` and `PrismaSessionRepository` against an isolated Postgres. **Deferred.** Rationale: these repositories are thin pass-throughs over `prisma.<model>.{create,findUnique,update,deleteMany}` and are exercised indirectly by `AuthController.e2e.spec.ts` against the real compose Postgres. If a future bug ever surfaces inside an adapter, the right move is to add the Testcontainers test then — not to backfill it now.
+
 ## Events emitted
 
 - `UserRegistered` — first successful OTP verification creates a User

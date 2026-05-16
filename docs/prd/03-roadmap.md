@@ -14,13 +14,13 @@
 
 | | |
 |---|---|
-| **Sprint** | S2 — Identity (OTP) |
-| **Status** | 🟡 In progress |
-| **Started** | 2026-05-14 |
+| **Sprint** | S3 — Catalog |
+| **Status** | ⚪ Pending |
+| **Started** | — |
 | **Phase** | 1 (Marketplace MVP) |
-| **Plan file** | [GitHub issue #33](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/33) |
-| **Sprint doc** | [`sprints/sprint-02-identity.md`](sprints/sprint-02-identity.md) |
-| **Milestone** | M2 — I can log in |
+| **Plan file** | — |
+| **Sprint doc** | [`sprints/sprint-03-catalog.md`](sprints/sprint-03-catalog.md) |
+| **Milestone** | — |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 
@@ -43,7 +43,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals (what we explic
 | # | Sprint | Status | Started | Shipped | Milestone | Demo audience |
 |---|---|---|---|---|---|---|
 | S1 | [Scaffold](sprints/sprint-01-scaffold.md) | 🟢 Shipped | 2026-05-14 | 2026-05-14 | M1 | Nobody — confirms rails |
-| S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | 🟡 In progress | 2026-05-14 | — | M2 | Tiny internal group |
+| S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | 🟢 Shipped | 2026-05-14 | 2026-05-16 | M2 | Tiny internal group |
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | ⚪ Pending | — | — | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | ⚪ Pending | — | — | M3 | Internal group |
 | S5 | [Listings UX](sprints/sprint-05-listings-ux.md) | ⚪ Pending | — | — | M4 | 10-20 beta testers (mocked data) |
@@ -147,6 +147,7 @@ Once per sprint:
 
 > One-line entries, newest first. Empty until the first sprint closes.
 
+- 2026-05-16 — S2 Identity (M2). Phone OTP login works end-to-end on mobile: request OTP → verify → JWT access + per-session bcrypt-hashed refresh (ADR-0012), 10-session cap with FIFO eviction, rate-limited (5/phone/day + 10/IP/hour), full chaos coverage at domain/application layer, e2e for happy path + rate-limit shape + logout/me/delete-me. Public web stayed anonymous-only (#41 retracted); deferred-action replay tracked at #52; mobile data-fetching architecture locked in ADR-0015 with implementation at #53.
 - 2026-05-14 — S1 Scaffold (M1). Local dev stack runs (`pnpm install && pnpm dev`); CI green; air-gapped bundle path proven via `make -n bundle`.
 
 ---
