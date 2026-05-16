@@ -20,6 +20,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0012](0012-multi-device-sessions.md) | Multi-device sessions with per-session refresh tokens (supersedes ADR-0006 §Refresh token storage) | Accepted | 2026-05-14 |
 | [0013](0013-user-role-split.md) | Split `User.role` from `DealershipMember.role` | Accepted | 2026-05-14 |
 | [0014](0014-mobile-component-library.md) | Mobile component library — React Native Reusables on top of NativeWind v4 (complements ADR-0002) | Accepted | 2026-05-16 |
+| [0015](0015-mobile-data-fetching.md) | Mobile data fetching — TanStack Query v5 + custom fetch wrapper (complements ADR-0002, ADR-0012) | Accepted | 2026-05-16 |
 
 ## Per-app ADRs
 
