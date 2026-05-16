@@ -364,6 +364,48 @@ Notes:
 - `Button variant="link"` used for "Change number" and "Resend code" with `className="self-start px-0"` to disable centered padding. This is a `cn()` override (per §7.4 row 1), not a new CVA variant — only 2 call sites.
 - `BrandLogo` remains a local component wrapping `apps/mobile/assets/logos_color_red.svg`. Not an RNR customization — no §Customization plan entry.
 
+## Customization plan
+
+### A. PhoneInput — custom composition wrapping RNR `Input`
+
+- **Path** (per `docs/agents/nativewind-v4.md` §7.5): custom composition
+- **File:** `apps/mobile/components/auth/PhoneInput.tsx`
+- **Why:** RNR `Input` ships without a leading-slot API. We need a locked `+993` prefix with a `border-r border-border` divider, plus error-state border switching.
+- **Prop API:**
+  - `hasError?: boolean` — drives `border-destructive` vs `border-input`
+  - `prefix?: string` — defaults to `"+993"`
+  - All native `TextInput` props via spread (value, onChangeText, placeholder, keyboardType, etc.)
+  - `className?: string` — merged via `cn()`
+  - `forwardRef<TextInput>` — caller can `.focus()` the underlying input
+- **Shape (~30 lines):** The full worked example is in `docs/agents/nativewind-v4.md` §7.5. In brief: wrapper `<View>` with `bg-card` + conditional border; locked-prefix `<View>` with `border-r border-border` + RNR `<Text>`; RNR `<Input>` with `border-0 bg-transparent` filling the remaining space.
+
+### B. OtpCells — custom composition wrapping a hidden RN `TextInput`
+
+- **Path** (per `docs/agents/nativewind-v4.md` §7.5): custom composition (uses raw RN `<TextInput>` because the hidden-input-over-visual-cells pattern doesn't fit RNR `Input`'s className-merging assumptions)
+- **File:** `apps/mobile/components/auth/OtpCells.tsx`
+- **Why:** 6 visual cells sit over one invisible numeric `<TextInput>` that owns focus, paste, SMS autofill, and accessibility. The composition also owns the shake `Animated.Value` so route files don't declare animation state.
+- **Prop API:**
+  - `value: string` — current digit string (0–6 chars)
+  - `onChange: (value: string) => void` — sanitized digit-only callback (max 6)
+  - `hasError?: boolean` — all cells render `border-destructive`
+  - `length?: number` — defaults to 6
+- **Imperative handle** (`useImperativeHandle`):
+  - `focus(): void` — focuses the hidden input
+  - `shake(): void` — plays the 4-step horizontal shake animation, then clears
+- **Cell states** (per-cell, derived from `value`, `hasError`, and focused index):
+  - Empty, not focused: `border border-border bg-muted`
+  - Filled: `border border-primary bg-card`
+  - Focused (next empty cell): `border-2 border-primary bg-card`
+  - Error: `border-2 border-destructive bg-card`
+- **Shape (~50 lines):** `Animated.View` wrapping 6 `<View>` cells + one absolutely-positioned transparent `<TextInput>`. Each cell contains `<Text className="font-mono text-2xl font-semibold leading-tight text-foreground">{digit ?? ""}</Text>`. The `Animated.Value` is internal to the component; `shake()` triggers the sequence and resets to 0.
+
+### C. Button "link" inline pattern — `cn()` override at call site
+
+- **Path** (per §7.4 row 1): `cn()` at the call site
+- **Used for:** "Change number" and "Resend code" on the OTP screen; "Terms" and "Privacy" on the phone screen.
+- **Pattern:** `<Button variant="link" className="self-start px-0">` — `self-start` left-aligns; `px-0` removes Button's default horizontal padding so the link hugs its content.
+- **No new variant needed.** With only 2 current call sites, a new CVA variant is premature. Promote to a variant if a third screen needs the same link pattern.
+
 ## States
 
 ### Default
