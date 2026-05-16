@@ -19,6 +19,7 @@ import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
+import { useAuthIntentStore } from "../../src/auth/intentStore";
 
 import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
@@ -138,7 +139,10 @@ export default function OtpScreen() {
       });
 
       await storeAuthSession(result);
-      router.replace("/(tabs)");
+      router.dismissAll();
+      await useAuthIntentStore
+        .getState()
+        .consumeAndReplay(router as { replace: (path: string) => void });
     } catch (error) {
       otpRef.current?.shake();
       setCode("");
