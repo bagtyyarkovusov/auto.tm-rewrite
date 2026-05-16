@@ -73,7 +73,7 @@ Web-only (open in browser, never in app):
 - `expo-secure-store` for JWT access + refresh tokens (used in `src/auth/session.ts`)
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 
-**Until S3 foundations lands**, the only API call site is `apps/mobile/src/auth/client.ts` (bare `fetch` for OTP request + verify). After S3 foundations, that file is removed and replaced with `apps/mobile/src/api/identity/*` hooks using the wrapper.
+The single API entry point is `apps/mobile/src/api/client.ts` — the wrapper landed in PR #60 (S3 foundations). All HTTP calls go through it (OTP request + verify already migrated; the old `src/auth/client.ts` has been removed). Identity hooks live under `apps/mobile/src/api/identity/*`; catalog hooks land in S3 under `apps/mobile/src/api/catalog/*`.
 
 ## Dependencies
 
