@@ -98,17 +98,21 @@ Expected duration: 2-5 minutes from `deploy.sh` to all green.
 
 ## Step 5 — Verify
 
+The local-host `curl` lines below run **on TM Server A** and hit the docker port-mappings published by `compose/docker-compose.prod.yml` (api → 3006, admin → 3001, web → 3002). These are container-port conventions, not dev-machine ports — they match the dev `.env.template` defaults so the same runbook works in both environments. ADR-0018 covers the API port choice.
+
+If you are anywhere other than TM Server A, use the Caddy-fronted external URLs (`https://api.auto.tm/healthz` etc).
+
 ```bash
 # On TM Server A:
 docker ps                                    # all containers up
-curl -s http://localhost:3006/healthz        # api healthy
-curl -s http://localhost:3001/healthz        # admin healthy
-curl -s http://localhost:3002/healthz        # web healthy
+curl -s http://localhost:3006/healthz        # api healthy (container 3006 → host)
+curl -s http://localhost:3001/healthz        # admin healthy (container 3001 → host)
+curl -s http://localhost:3002/healthz        # web healthy (container 3002 → host)
 
 # Check migrations applied
 docker exec -it auto-tm-api npx prisma migrate status
 
-# Spot-check a real endpoint
+# Spot-check a real endpoint through Caddy (works from anywhere with network access)
 curl -s https://api.auto.tm/api/v1/listings?limit=1 | jq
 ```
 

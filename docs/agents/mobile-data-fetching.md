@@ -634,17 +634,9 @@ Also note: test files containing JSX must use the `.tsx` extension so Vitest's e
 
 ---
 
-## 12 — Sprint adoption timeline
+## 12 — Sprint adoption
 
-- **S3 foundations issue (this guide's birth)** — install, wrapper, QueryClient, migrate S2 auth client, write tests.
-- **S3 Catalog** — first real consumer. Brand list, model list, city list. All `auth: false` reads.
-- **S4 Listings CRUD** — first authed reads (`useMyListings`) and writes (`useCreateListing`, `useUpdateListing`). First real exercise of the refresh interceptor under load.
-- **S5 Listings UX** — favorites + saved searches. First optimistic updates.
-- **S6 Garage + Dealership** — straightforward extension of S4 patterns.
-- **S7 Conversations** — first WebSocket-driven cache invalidation. Pattern: WS event handler calls `queryClient.setQueryData(...)` or `queryClient.invalidateQueries(...)`. No re-design needed; document the WS handler shape in this guide once S7 lands.
-- **S8 Notifications** — push handler updates the conversations cache via the same shape as S7.
-
-Every sprint's `sprint-NN-*.md` file references this guide. Every sprint that ships a new hook updates §12 here with what new pattern (if any) it introduced.
+This guide grew out of the S3 foundations issue (wrapper, QueryClient, migrate S2 auth client, tests — shipped in PR #60). The authoritative per-sprint plan for which hooks land when lives in [`docs/prd/03-roadmap.md`](../prd/03-roadmap.md) and the per-sprint files under [`docs/prd/sprints/`](../prd/sprints/). When a sprint ships a new pattern (e.g., S7 Conversations introduces WebSocket-driven cache invalidation), update the relevant section above with the new shape — don't reproduce a sprint-by-sprint adoption timeline here that will rot as sprints slip or reorder.
 
 ---
 
