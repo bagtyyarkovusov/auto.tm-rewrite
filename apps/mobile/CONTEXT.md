@@ -13,8 +13,8 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 
 - `expo-router` for navigation
 - 5-tab bottom nav: Search (feed) / Favorites / [+] Sell / Chat / Services (implemented as placeholder screens; OTP trigger on feed)
-- NativeWind for styling (Tailwind classnames in RN)
-- shadcn-style component library mirrored from `packages/ui/`
+- NativeWind v4 + React Native Reusables (RNR) for ALL styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md) for the authoritative guide (theme tokens, setup recipe, customization rules, component catalogue)
+- RNR components are CLI-installed into `apps/mobile/components/ui/` and owned by the repo. `packages/ui/components/*` is WEB-ONLY (uses HTML elements) — never import it on mobile. Tokens (`@auto-tm/ui/tokens`, `@auto-tm/ui/theme/tailwind`) ARE shared across web + mobile and are the single source of truth for brand values.
 - `expo-image-manipulator` for client-side image compression
 - `react-native-compressor` for client-side video compression (custom dev client required for that flow; Expo Go is valid for current routing/auth smoke checks)
 - `react-native-svg` for vector icons and brand SVG rendering; local `.svg` imports use `react-native-svg-transformer` at build time

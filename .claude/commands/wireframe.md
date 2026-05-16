@@ -20,6 +20,7 @@ description: Produce a low-fidelity wireframe for an AutoTM screen or flow. Mobi
 ## 0. Hard rules (non-negotiable)
 
 - **Mobile-first by default.** Always start with a phone-sized wireframe (~390 × 844 mental model). If the screen is web-only (per §4 below), say so and produce a desktop wireframe instead. If the screen lives on both, show both — mobile first, web second.
+- **For ANY mobile wireframe, read `docs/agents/nativewind-v4.md` first.** That guide is the single source of truth for the mobile UI stack (NativeWind v4 + React Native Reusables / RNR). Wireframes must name primitives by their RNR component names where one exists (`Button`, `Input`, `Card`, `Dialog`, `Sheet`, `Accordion`, `Tabs`, `Badge`, `Avatar`, `Switch`, `Checkbox`, `Toast`, etc.) so hi-fi and implementation map cleanly. Do NOT invent custom component names when an RNR equivalent exists. Web/admin wireframes still use shadcn/ui vocabulary on the Next.js side — DO NOT mix the two.
 - **No fake content.** Use realistic placeholder strings ("Toyota Camry 2018, 95 000 TMT") not lorem ipsum. Currencies in TMT first. Cities by actual TM name. Years 2010-2025 range. Phone numbers `+99362XXXXXX`.
 - **No emoji in system copy.** Buttons, labels, notifications — no emoji. (Emojis are allowed in user-generated content only, e.g., chat messages.)
 - **No anti-patterns from the brand brief** (see BRAND CONTEXT below).
@@ -33,8 +34,9 @@ If running inside the repo, read for context — otherwise the BRAND CONTEXT blo
 
 1. `docs/prd/ui/70-design-principles.md` — the 5 rules
 2. `docs/prd/ui/79-web-vs-mobile.md` — what lives where (Phase 1)
-3. `docs/prd/features/` (if `$ARGUMENTS` matches a feature) — the feature PRD that contains screen specs
-4. `docs/prd/flows/` (if `$ARGUMENTS` is a flow name) — the end-to-end flow doc
+3. **`docs/agents/nativewind-v4.md` — REQUIRED for mobile wireframes.** Sections 3 (token architecture), 6 (RNR essentials), and 6.7 (component catalogue) give you the component + token vocabulary the wireframe must use.
+4. `docs/prd/features/` (if `$ARGUMENTS` matches a feature) — the feature PRD that contains screen specs
+5. `docs/prd/flows/` (if `$ARGUMENTS` is a flow name) — the end-to-end flow doc
 
 ---
 
@@ -274,6 +276,7 @@ Before showing the user, scan your output for:
 - [ ] Is anonymous-default respected? (no login wall on browse-able screens)
 - [ ] Is the CTA primary action visible above the fold?
 - [ ] Is copy in plain, respectful tone? No exclamation marks for marketing reasons.
+- [ ] **Mobile wireframes only:** Have I named primitives by their RNR component (Button, Input, Card, Dialog, Sheet, etc.) per `docs/agents/nativewind-v4.md` §6.7? Are any "custom Pressable card" blocks actually a `Card` + `Button` combo I could call by name? Did I avoid inventing components RNR already provides (no hand-rolled "modal", say `Dialog` or `Sheet`)?
 
 Fix anything that fails before printing.
 

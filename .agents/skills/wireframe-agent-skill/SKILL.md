@@ -16,6 +16,7 @@ description: Produces a low-fidelity wireframe for an AutoTM screen or flow. Use
 ## 0. Hard rules
 
 - **Mobile-first by default.** Phone (~390 × 844 mental model). Web only if §4 decision tree says so. Both if shared.
+- **For ANY mobile wireframe, read `docs/agents/nativewind-v4.md` first.** That guide is the single source of truth for the mobile UI stack (NativeWind v4 + React Native Reusables / RNR). Mobile wireframes must name primitives by their RNR component (`Button`, `Input`, `Card`, `Dialog`, `Sheet`, `Accordion`, `Tabs`, `Badge`, `Avatar`, `Switch`, `Checkbox`, `Toast`, `Select`, `DropdownMenu`, `Popover`, `Tooltip`, `AlertDialog`, `Separator`, `Skeleton`) where one exists. Do NOT invent custom names when RNR covers the primitive. Web/admin wireframes still use shadcn/ui vocabulary — DO NOT mix the two.
 - **No fake content.** Realistic placeholders ("Toyota Camry 2018, 95 000 TMT"), not lorem ipsum. Currencies TMT first. Cities by actual TM name. Phone numbers `+99362XXXXXX`.
 - **No emoji in system copy.** Buttons, labels, notifications — no emoji. (User-generated content like chat messages exempted.)
 - **No anti-patterns from BRAND CONTEXT below.**
@@ -27,7 +28,8 @@ description: Produces a low-fidelity wireframe for an AutoTM screen or flow. Use
 
 1. `docs/prd/ui/70-design-principles.md` — 5 rules
 2. `docs/prd/ui/79-web-vs-mobile.md` — what lives where (Phase 1)
-3. Feature PRD or flow doc if applicable
+3. **`docs/agents/nativewind-v4.md` — REQUIRED for mobile wireframes.** Sections 3 (token architecture), 6 (RNR essentials), 6.7 (component catalogue) give you the component + token vocabulary the wireframe must use.
+4. Feature PRD or flow doc if applicable
 
 ---
 
@@ -201,6 +203,7 @@ Platform: <mobile | web | admin web>
 - [ ] Anonymous-default respected on browse screens
 - [ ] CTA primary action visible above the fold
 - [ ] Copy in plain, respectful tone
+- [ ] **Mobile wireframes only:** Primitives named by their RNR component (Button, Input, Card, Dialog, Sheet, …) per `docs/agents/nativewind-v4.md` §6.7. No hand-rolled "modal" / "custom card" / "Pressable button" when RNR provides it.
 
 ---
 

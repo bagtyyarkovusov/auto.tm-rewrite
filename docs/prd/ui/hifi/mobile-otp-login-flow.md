@@ -16,6 +16,18 @@ References:
 - `packages/ui/tokens/*.ts`
 - `packages/ui/theme/theme.css`
 - `apps/mobile/assets/logos_color_red.svg`
+- **`docs/agents/nativewind-v4.md`** — authoritative mobile UI stack reference (NativeWind v4 + React Native Reusables). Implementation MUST use RNR components for composite primitives and semantic shadcn-style tokens (`bg-background`, `bg-card`, `bg-primary`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-destructive`) for app chrome. Raw brand utilities (`bg-brand-500`, `text-brand-500`) only for brand identity moments.
+
+## Implementation status note
+
+The S2 OTP screens at `apps/mobile/app/(auth)/phone.tsx` and `apps/mobile/app/(auth)/otp.tsx` ship using raw React Native primitives (`<Pressable>`, `<TextInput>`, `<View>`) plus NativeWind. That was correct for S2 because RNR was not yet adopted. After RNR is adopted per `docs/agents/nativewind-v4.md` §2, these screens are migration candidates per §7.3 of that guide:
+- Replace primary CTA `<Pressable className="… bg-brand-500">` → `<Button variant="default">`.
+- Replace bordered `<View><TextInput/></View>` phone input → custom `Input` composition (or a dedicated `PhoneInput` built on top of RNR `Input`).
+- Replace icon `<X color={iconColor}>` / `<ChevronLeft color={iconColor}>` → `<Icon as={X|ChevronLeft} className="size-5 text-foreground">`.
+- Replace `useColorScheme()` + `palette.neutral[…]` color resolution with semantic-token classes.
+- Replace `bg-neutral-0 dark:bg-neutral-950` pairs with `bg-background` etc. (semantic tokens auto-swap).
+- Wrap the action-gated sign-in sheet in RNR `<Sheet>` (will require `<PortalHost />` to be present in `app/_layout.tsx`).
+Token shapes shown below are the target post-migration state.
 
 ==============================================
 HIGH-FIDELITY DESIGN - Mobile OTP Login Flow
@@ -67,33 +79,36 @@ OTP route: (auth)/otp
 
 ## Token map
 
+All classes below are NativeWind v4 utility names. Semantic tokens (`bg-background`, `bg-card`, `border-border`, etc.) auto-swap between light + dark. Raw status hues (`text-error-500`, `bg-warning-500/10`) do NOT swap — they read identically in both modes by design.
+
 ### Backgrounds + surfaces
 
-- Root background: `bg-[var(--background)]`, light resolves to background token, dark resolves to background token.
-- Bottom sheet surface: `bg-[var(--surface-elevated)]`, light/dark via semantic token.
-- Input surface: `bg-[var(--surface-elevated)]`, light/dark via semantic token.
-- OTP cell surface: default `bg-[var(--surface)]`; focused cell `bg-[var(--surface-elevated)]`.
-- Error banner/tint: `bg-[var(--color-error-500)]/10`, same token in both modes.
-- Warning/offline tint: `bg-[var(--color-warning-500)]/10`, same token in both modes.
+- Root background: `bg-background` (neutral-0 light / neutral-950 dark).
+- Bottom sheet surface: `bg-popover` (neutral-0 light / neutral-900 dark) — the RNR `Sheet` uses this by default.
+- Input field surface: `bg-card` (neutral-0 light / neutral-900 dark) — RNR `Input` default.
+- OTP cell surface: default `bg-muted` (neutral-100 light / neutral-800 dark); filled / focused cell `bg-card`.
+- Error inline tint: `bg-destructive/10` (rose, same hue both modes).
+- Warning / offline banner tint: `bg-warning-500/10` (amber, same hue both modes).
 
 ### Borders + dividers
 
-- Sheet top divider: `border-t border-[var(--border)]`, light/dark via semantic token.
-- Input border: default `border border-[var(--border)]`; focused `border-2 border-[var(--color-brand-500)]`; error `border-2 border-[var(--color-error-500)]`.
-- OTP cell border: default `border border-[var(--border)]`; filled `border-[var(--color-brand-500)]`; error `border-[var(--color-error-500)]`.
+- Sheet top divider: `border-t border-border`.
+- Input border: default `border border-input` (= border-200/700); focused `border-2 border-ring` (brand red); error `border-2 border-destructive` (rose).
+- OTP cell border: default `border border-border`; filled `border-primary` (brand red); error `border-destructive`.
+- Focus ring (keyboard nav on Pressables): `focus-visible:ring-2 focus-visible:ring-ring` — handled by RNR `Button` default styles.
 
 ### Typography
 
-- Screen title: Inter `2xl/snug/semibold`, `text-[var(--text-primary)]`.
-- Body/helper: Inter `base/normal/regular`, `text-[var(--text-secondary)]`.
-- Form label: Inter `sm/snug/medium`, `text-[var(--text-primary)]`.
-- Input text: Inter `base/normal/regular`, `text-[var(--text-primary)]`.
-- OTP digit: Menlo `2xl/tight/semibold`, `text-[var(--text-primary)]`.
-- Error text: Inter `sm/snug/regular`, `text-[var(--color-error-500)]`.
-- Legal text: Inter `xs/normal/regular`, `text-[var(--text-tertiary)]`.
-- Legal links: Inter `xs/normal/medium`, `text-[var(--color-info-500)]`, underline only for links.
-- Button label: Inter `base/tight/medium`, primary `text-[var(--text-on-primary)]`.
-- Language switcher: Inter `sm/tight/medium`, active `text-[var(--text-primary)]`, inactive `text-[var(--text-tertiary)]`.
+- Screen title: Inter `text-2xl leading-snug font-semibold text-foreground`.
+- Body / helper: Inter `text-base leading-normal text-muted-foreground`.
+- Form label: Inter `text-sm leading-snug font-medium text-foreground`.
+- Input text: Inter `text-base leading-normal text-foreground`.
+- OTP digit: Menlo `font-mono text-2xl leading-tight font-semibold text-foreground`.
+- Inline error text: Inter `text-sm leading-snug text-destructive`.
+- Legal disclaimer: Inter `text-xs leading-normal text-muted-foreground`.
+- Legal links: Inter `text-xs leading-normal font-medium text-info-500 underline`.
+- Button label: handled by RNR `Button` + RNR `<Text>` (`text-primary-foreground` for `variant="default"`, `text-foreground` for `variant="ghost"`).
+- Language switcher chip: Inter `text-sm leading-tight font-medium`; active `text-foreground`, inactive `text-muted-foreground`.
 
 ### Spacing
 
@@ -131,112 +146,244 @@ OTP route: (auth)/otp
 
 ## Component shape
 
-### Implementation - mobile, NativeWind v4
+### Implementation — mobile, NativeWind v4 + React Native Reusables
+
+Target shape after RNR adoption (`docs/agents/nativewind-v4.md` §2). All RNR composites live in `apps/mobile/components/ui/`; install with `pnpm --filter @auto-tm/mobile exec npx @react-native-reusables/cli@latest add <name>`.
+
+**Action-gated sign-in (bottom sheet) — requires `<PortalHost />` mounted in `app/_layout.tsx` per §2.8.**
 
 ```tsx
-<View className="flex-1 bg-[var(--background)]">
+import { ChevronLeft, X } from "lucide-react-native";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Text } from "@/components/ui/text";
+
+<Sheet open={open} onOpenChange={setOpen}>
+  <SheetContent side="bottom" className="rounded-t-2xl px-4 pt-6 pb-8 gap-6">
+    <SheetHeader>
+      <SheetTitle>{t(`auth.sheet.${action}Title`)}</SheetTitle>
+      <SheetDescription>{t("auth.sheet.body")}</SheetDescription>
+    </SheetHeader>
+    <Button variant="default" size="lg" onPress={onContinue}>
+      <Text>{t("auth.sheet.cta")}</Text>
+    </Button>
+  </SheetContent>
+</Sheet>
+```
+
+**Phone route (`apps/mobile/app/(auth)/phone.tsx`):**
+
+```tsx
+import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { X } from "lucide-react-native";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
+
+<KeyboardAvoidingView
+  behavior={Platform.OS === "ios" ? "padding" : undefined}
+  className="flex-1 bg-background"
+>
   <SafeAreaView className="flex-1 px-4">
     <View className="flex-row items-center justify-between py-4">
-      <Pressable accessibilityRole="button" accessibilityLabel={t("auth.close")}>
-        <X className="text-[var(--text-primary)]" />
-      </Pressable>
-      <LocaleSwitcher compact />
+      <Button variant="ghost" size="icon" onPress={closeAuth} accessibilityLabel={t("auth.close")}>
+        <Icon as={X} className="size-5 text-foreground" />
+      </Button>
+      <LocaleSwitcher value={locale} onChange={setLocale} />
     </View>
 
     <View className="mt-8 gap-8">
-      <Logo
-        asset={require("../../assets/logos_color_red.svg")}
-        fallbackText="AutoTM"
-        className="h-10 self-start"
-      />
+      <BrandLogo className="h-10 self-start" />
 
       <View className="gap-2">
-        <Text className="text-2xl font-semibold leading-snug text-[var(--text-primary)]">
+        <Text className="text-2xl font-semibold leading-snug text-foreground">
           {t("auth.phone.title")}
         </Text>
-        <Text className="text-base leading-normal text-[var(--text-secondary)]">
+        <Text className="text-base leading-normal text-muted-foreground">
           {t("auth.phone.helper")}
         </Text>
       </View>
 
-      <PhoneInput
-        prefix="+993"
-        value={phoneDisplay}
-        onChangeText={setPhoneDisplay}
-        error={phoneError}
-      />
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canRequestCode || isSubmitting }}
-        className="h-12 items-center justify-center rounded-md bg-[var(--color-brand-500)] disabled:opacity-50"
-        onPress={requestCode}
-      >
-        <Text className="text-base font-medium leading-tight text-[var(--text-on-primary)]">
-          {t("auth.phone.getCode")}
+      <View className="gap-2">
+        <Text className="text-sm font-medium text-foreground">
+          {t("auth.phone.label")}
         </Text>
-      </Pressable>
+        <View
+          className={
+            hasError
+              ? "h-12 flex-row items-center rounded-md border-2 border-destructive bg-card"
+              : "h-12 flex-row items-center rounded-md border border-input bg-card focus-within:border-2 focus-within:border-ring"
+          }
+        >
+          <View className="h-full justify-center border-r border-border px-3">
+            <Text className="text-base text-foreground">+993</Text>
+          </View>
+          <Input
+            className="flex-1 border-0 bg-transparent px-3 text-base text-foreground"
+            keyboardType="phone-pad"
+            value={phoneDisplay}
+            onChangeText={handlePhoneChange}
+            placeholder={t("auth.phone.placeholder")}
+            textContentType="telephoneNumber"
+            accessibilityLabel={t("auth.phone.label")}
+          />
+        </View>
+        <Text className={hasError ? "text-sm leading-snug text-destructive" : "text-sm leading-snug text-muted-foreground"}>
+          {helperText}
+        </Text>
+      </View>
+
+      <Button
+        variant="default"
+        size="lg"
+        disabled={!canSubmit}
+        onPress={handleSubmit}
+        accessibilityState={{ disabled: !canSubmit }}
+      >
+        <Text>{t("auth.phone.getCode")}</Text>
+      </Button>
     </View>
 
-    <Text className="mt-auto pb-6 text-xs leading-normal text-[var(--text-tertiary)]">
-      {t("auth.legal.prefix")} <LegalLink type="terms" /> {t("auth.legal.and")} <LegalLink type="privacy" />.
+    <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
+      {t("auth.legal.prefix")}{" "}
+      <Text
+        className="font-medium text-info-500 underline"
+        onPress={() => openLegalPage("terms")}
+        accessibilityRole="link"
+      >
+        {t("auth.legal.terms")}
+      </Text>{" "}
+      {t("auth.legal.and")}{" "}
+      <Text
+        className="font-medium text-info-500 underline"
+        onPress={() => openLegalPage("privacy")}
+        accessibilityRole="link"
+      >
+        {t("auth.legal.privacy")}
+      </Text>
+      .
     </Text>
   </SafeAreaView>
-</View>
+</KeyboardAvoidingView>
 ```
 
+**OTP route (`apps/mobile/app/(auth)/otp.tsx`):**
+
 ```tsx
-<View className="flex-1 bg-[var(--background)]">
+import { Animated, KeyboardAvoidingView, Platform, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ChevronLeft, X } from "lucide-react-native";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
+
+<KeyboardAvoidingView
+  behavior={Platform.OS === "ios" ? "padding" : undefined}
+  className="flex-1 bg-background"
+>
   <SafeAreaView className="flex-1 px-4">
     <View className="flex-row items-center justify-between py-4">
       <View className="flex-row gap-2">
-        <Pressable accessibilityRole="button" accessibilityLabel={t("auth.backToPhone")}>
-          <ChevronLeft className="text-[var(--text-primary)]" />
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t("auth.close")}>
-          <X className="text-[var(--text-primary)]" />
-        </Pressable>
+        <Button variant="ghost" size="icon" onPress={backToPhone} accessibilityLabel={t("auth.backToPhone")}>
+          <Icon as={ChevronLeft} className="size-5 text-foreground" />
+        </Button>
+        <Button variant="ghost" size="icon" onPress={closeAuth} accessibilityLabel={t("auth.close")}>
+          <Icon as={X} className="size-5 text-foreground" />
+        </Button>
       </View>
-      <LocaleSwitcher compact />
+      <LocaleSwitcher value={locale} onChange={setLocale} />
     </View>
 
     <View className="mt-8 gap-8">
-      <Logo asset={require("../../assets/logos_color_red.svg")} fallbackText="AutoTM" className="h-10 self-start" />
+      <BrandLogo className="h-10 self-start" />
 
       <View className="gap-2">
-        <Text className="text-2xl font-semibold leading-snug text-[var(--text-primary)]">
+        <Text className="text-2xl font-semibold leading-snug text-foreground">
           {t("auth.otp.title")}
         </Text>
-        <Text className="text-base leading-normal text-[var(--text-secondary)]">
+        <Text className="text-base leading-normal text-muted-foreground">
           {t("auth.otp.sent", { phone: maskedPhone })}
         </Text>
-        <Pressable accessibilityRole="button" onPress={changeNumber}>
-          <Text className="text-sm font-medium text-[var(--color-info-500)]">
-            {t("auth.otp.changeNumber")}
-          </Text>
-        </Pressable>
+        <Button variant="link" size="sm" onPress={backToPhone} className="self-start px-0">
+          <Text className="text-sm font-medium text-info-500">{t("auth.otp.changeNumber")}</Text>
+        </Button>
       </View>
 
-      <OtpInput
-        length={6}
-        value={code}
-        onChange={setCode}
-        onComplete={verifyCode}
-        textContentType="oneTimeCode"
-        autoComplete="sms-otp"
-        error={otpError}
-      />
+      <Animated.View className="flex-row gap-2" style={{ transform: [{ translateX: shake }] }}>
+        {Array.from({ length: 6 }, (_, index) => (
+          <View
+            key={index}
+            pointerEvents="none"
+            className={
+              otpError
+                ? "h-12 flex-1 items-center justify-center rounded-md border-2 border-destructive bg-card"
+                : index === code.length
+                  ? "h-12 flex-1 items-center justify-center rounded-md border-2 border-primary bg-card"
+                  : code[index]
+                    ? "h-12 flex-1 items-center justify-center rounded-md border border-primary bg-muted"
+                    : "h-12 flex-1 items-center justify-center rounded-md border border-border bg-muted"
+            }
+          >
+            <Text className="font-mono text-2xl font-semibold leading-tight text-foreground">
+              {code[index] ?? ""}
+            </Text>
+          </View>
+        ))}
+        <TextInput
+          ref={inputRef}
+          className="absolute inset-0 opacity-0"
+          autoComplete="sms-otp"
+          textContentType="oneTimeCode"
+          keyboardType="number-pad"
+          maxLength={6}
+          value={code}
+          onChangeText={handleCodeChange}
+        />
+      </Animated.View>
 
-      <ResendCode secondsRemaining={resendSeconds} onResend={resendCode} />
-      {isDev && testCode ? <DevCode code={testCode} /> : null}
+      {otpError ? (
+        <Text className="text-sm leading-snug text-destructive">{otpError}</Text>
+      ) : null}
+
+      <Button
+        variant="link"
+        size="sm"
+        onPress={resendCode}
+        disabled={secondsRemaining > 0 || isResending}
+        className="self-start px-0"
+      >
+        <Text className={secondsRemaining > 0 ? "text-sm font-medium text-muted-foreground" : "text-sm font-medium text-info-500"}>
+          {secondsRemaining > 0 ? t("auth.otp.resendIn", { seconds: secondsRemaining }) : t("auth.otp.resend")}
+        </Text>
+      </Button>
+
+      {isDev && testCode ? (
+        <Badge variant="secondary" className="self-start">
+          <Text className="text-sm font-medium text-foreground">
+            {t("auth.otp.devCode", { code: testCode })}
+          </Text>
+        </Badge>
+      ) : null}
     </View>
   </SafeAreaView>
-</View>
+</KeyboardAvoidingView>
 ```
 
 Notes:
-- If direct SVG imports are not configured in Expo, wrap the SVG with `react-native-svg` in a `Logo` component or add the transformer intentionally. The visible fallback is the text `AutoTM`.
-- The OTP UI uses one actual numeric `TextInput` behind six visual cells. The hidden input owns focus, paste, SMS autofill, and accessibility.
+- RNR imports: install `button`, `input`, `icon`, `text`, `sheet`, `badge` via the RNR CLI. `sheet` depends on `PortalHost` being present.
+- `BrandLogo` remains a local component wrapping `apps/mobile/assets/logos_color_red.svg` (rendered via `react-native-svg-transformer` per `apps/mobile/metro.config.js`). Use the text fallback "AutoTM" if SVG rendering fails.
+- The OTP UI still uses one hidden numeric `TextInput` behind six visual cells. The hidden input owns focus, paste, SMS autofill, and accessibility. RNR's `Input` is for the phone field where its border + size variants help.
+- The phone-field bordered container is a custom composition because RNR `Input` doesn't ship a leading-prefix slot natively; we use the RNR `Input` underneath but wrap it in a styled `View` to host the locked `+993` prefix. This is intentional and documented here so engineers don't try to "fix" it.
+- `Button variant="link"` is used for "Change number", "Resend code", "Terms", "Privacy". Use `self-start px-0` to disable Button's default centered padding when the link should hug content.
 
 ## States
 
@@ -260,16 +407,17 @@ The user sees a full-screen modal route with the red SVG logo, a direct title, o
 ### Error
 
 - Pattern: inline error below the affected input. No error route.
-- Color: `bg-[var(--color-error-500)]/10 text-[var(--color-error-500)]` for banners, `text-[var(--color-error-500)]` for input helper.
-- Icon: Lucide `AlertCircle` for banner-level errors only.
-- Wrong OTP: cells shake, clear all digits, refocus first cell.
-- Expired OTP: show expired copy, keep Change number, enable resend when backend allows.
-- Rate-limited phone request: keep phone entry in place, disable CTA, show countdown.
+- Color: `bg-destructive/10 text-destructive` for banners, `text-destructive` for input helper text.
+- Icon: `<Icon as={AlertCircle} className="size-5 text-destructive">` for banner-level errors only.
+- Wrong OTP: cells shake (Animated `translateX` sequence), clear all digits, refocus first cell.
+- Expired OTP: show expired copy, keep "Change number" available, enable resend when backend allows.
+- Rate-limited phone request: keep phone entry in place, disable CTA, show countdown using `Button` `disabled` state.
 - Retry behavior: retry in place after countdown or when network returns.
 
 ### Offline
 
-- Banner: `bg-[var(--color-warning-500)]/10 text-[var(--color-warning-500)]`.
+- Banner: `bg-warning-500/10 text-warning-500` (status hue — identical in both modes by design).
+- Icon: `<Icon as={WifiOff} className="size-5 text-warning-500">`.
 - Copy acknowledges that SMS request or verification needs connectivity.
 - Existing typed phone is preserved in memory; OTP code is not persisted.
 
@@ -386,7 +534,9 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 
 ## Implementation notes for the engineer
 
-- Routes: implement `apps/mobile/app/(auth)/phone.tsx` and `apps/mobile/app/(auth)/otp.tsx`.
+- **UI stack:** NativeWind v4 + React Native Reusables per `docs/agents/nativewind-v4.md`. RNR components needed for this flow: `button`, `input`, `icon`, `text`, `sheet`, `badge`. Install via `pnpm --filter @auto-tm/mobile exec npx @react-native-reusables/cli@latest add button input icon text sheet badge`. Bottom-sheet flow requires `<PortalHost />` mounted in `app/_layout.tsx` (§2.8 of the guide).
+- **Token vocabulary:** Use semantic tokens for chrome (`bg-background`, `bg-card`, `bg-popover`, `text-foreground`, `text-muted-foreground`, `border-border`, `border-input`, `bg-primary`, `text-primary-foreground`, `bg-destructive`, `border-destructive`, `text-destructive`). Use raw status hues (`text-info-500`, `bg-warning-500/10`, `text-success-500`) for non-swapping status signals. Use `bg-brand-500` only when intentionally calling out brand identity outside an RNR primitive (e.g., the logo lockup).
+- Routes: implement `apps/mobile/app/(auth)/phone.tsx` and `apps/mobile/app/(auth)/otp.tsx`. (Shipped in S2 with raw RN; migrate to RNR per §7.3 of the guide in a follow-up sprint.)
 - Navigation: bottom sheet opens `(auth)/phone`; phone route pushes `(auth)/otp`; OTP success returns to deferred action or tab app.
 - Contracts: use `@auto-tm/contracts` schemas for `OtpRequestRequest`, `OtpRequestResponse`, `OtpVerifyRequest`, and `OtpVerifyResponse`.
 - Phone formatting: display `+993 6X XX-XX-XX`; submit canonical `+9936XXXXXXX`.
@@ -398,6 +548,7 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 - SVG: use `apps/mobile/assets/logos_color_red.svg`; use text fallback if SVG rendering fails.
 - Legal links: use `expo-linking` or the project-selected in-app browser/custom tab package when it exists. Do not deep-link `/legal/*` into the app.
 - Notifications: leave prompt handling to chat/saved-search/listing flows; do not add notification permission code to OTP.
+- Verification gate: run `pnpm --filter @auto-tm/mobile typecheck`, `CI=1 pnpm --filter @auto-tm/mobile exec expo install --check`, and `pnpm --filter @auto-tm/mobile exec expo export -p ios --clear` before claiming done — per nativewind-v4.md §9.
 
 ## Open questions / decisions deferred to engineer
 
@@ -413,7 +564,10 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 - No legal checkbox in S2.
 - No support/help clutter in S2.
 - No fake urgency or promotional copy.
-- Error color uses error token, not brand token.
+- Error color uses `destructive` semantic token (rose), not the brand red `primary`.
 - Mobile touch targets follow the accessibility minimum.
-- Both light and dark rely on semantic tokens.
+- Both light and dark rely on semantic tokens (`bg-background`, `bg-card`, `text-foreground`, etc.) that auto-swap — no redundant `dark:` pairs needed.
+- Every composite primitive in the Component shape sample is an RNR import (`@/components/ui/*`): `Button`, `Input`, `Icon`, `Text`, `Sheet`, `Badge`. NO `Pressable`-as-button. NO icons via `color`/`size` props. NO `Text` from `react-native` inside RNR composites.
+- NO imports from `@auto-tm/ui/components/*` (web-only).
+- Cross-checked against `docs/agents/nativewind-v4.md` §6 (RNR rules) and §8 (anti-patterns).
 - Trilingual copy is present; Turkmen is marked provisional for later review.

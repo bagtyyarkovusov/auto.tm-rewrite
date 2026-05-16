@@ -9,6 +9,17 @@ References:
 - `docs/prd/ops/83-legal.md`
 - `docs/prd/features/36-notifications.md`
 - `apps/mobile/assets/logos_color_red.svg`
+- **`docs/agents/nativewind-v4.md`** — mobile UI stack guide. The hi-fi spec below maps each named primitive to an RNR component (`Sheet` for the action-gated sign-in, `Button` for CTAs, `Input` for the phone field, `Icon` for X/ChevronLeft, `Text` from `@/components/ui/text` for all text inside RNR composites). Prototype/implementation agents must read it before styling.
+
+> **Primitive-to-RNR map (set in hi-fi, surface-able from wireframe):**
+> - Action-gated sign-in surface → `<Sheet>` (bottom sheet) — requires `<PortalHost />` in root layout.
+> - Phone/OTP screen primary CTA → `<Button variant="default">` (resolves to brand red via `bg-primary`).
+> - "Change number" / "Resend code" / language switcher → `<Button variant="link">` or `<Button variant="ghost">`.
+> - Phone input → `<Input>` with `+993` prefix surface (custom-composed Input + leading View).
+> - OTP cells → custom composition of six bordered `View`s over a hidden numeric `TextInput`; the wrapping primitive is still a tap target with RNR `<Text>` for each digit.
+> - Close `X`, back `ChevronLeft`, alert icons → `<Icon as={X|ChevronLeft|AlertCircle|WifiOff} className="size-5 text-foreground">`.
+> - Inline error banner → custom `<View>` with `bg-destructive/10 text-destructive` (no RNR `Alert` needed for inline form errors).
+> - Dev-only code pill → `<Badge variant="secondary">`.
 
 ==============================================
 WIREFRAME - Action-gated sign-in prompt

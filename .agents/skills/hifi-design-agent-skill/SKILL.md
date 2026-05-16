@@ -16,8 +16,15 @@ description: Produces a high-fidelity design spec for an AutoTM screen or flow. 
 ## 0. Hard rules
 
 - **Mobile-first by default.** Phone first, then web/admin if §3 decision tree says so.
-- **Every visual value references a token.** Never inline hex / px in output. Use `var(--color-brand-500)` / `text-neutral-900` / `gap-4` style. If a value isn't in the token system, flag and propose a new token.
-- **Both modes specified.** Every color lists light AND dark. If same, say "same in both modes."
+- **For ANY mobile hi-fi spec, read `docs/agents/nativewind-v4.md` end to end first.** Mobile UI stack is NativeWind v4 + React Native Reusables (RNR). Mobile output MUST:
+  - Prefer semantic shadcn-style tokens (`bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `text-primary-foreground`, `border-border`, `bg-muted`, `text-muted-foreground`, `bg-destructive`) for app chrome — auto-swap with dark mode.
+  - Use raw brand utilities (`bg-brand-500`, `text-brand-500`) only for brand identity moments. Status hues: `text-success-500`, `bg-warning-500/10`, `text-error-500`, `text-info-500`.
+  - Name composites by their RNR component (`Button`, `Input`, `Card`, `Dialog`, `Sheet`, `Accordion`, `Tabs`, `Badge`, `Avatar`, `Switch`, `Checkbox`, `Toast`, `Select`, `DropdownMenu`, `Popover`, `Tooltip`, `AlertDialog`, `Separator`, `Skeleton`). No hand-rolled Pressable/View when RNR covers it. Catalogue: `docs/agents/nativewind-v4.md` §6.7.
+  - Icons via `<Icon as={LucideIcon} className="size-N text-…">` from `@/components/ui/icon`, NOT `color`/`size` props.
+  - Text inside RNR composites uses the RNR `<Text>` (`@/components/ui/text`), NOT `react-native`'s.
+  - Web/admin specs still use shadcn/ui (Tailwind v4) vocabulary. DO NOT mix RNR and shadcn imports — they share API but differ in import paths and platform contracts.
+- **Every visual value references a token.** Never inline hex / px. Prefer Tailwind classes (`bg-background`, `gap-4`); use `var(--…)` only as fallback for one-off bracket utilities. If a value isn't in the token system, flag it and propose a new token in `packages/ui/tokens/`.
+- **Both modes specified.** Every color lists light AND dark. Semantic tokens auto-swap — call that out (e.g., "`bg-background` resolves to neutral-0 light / neutral-950 dark") instead of redundantly pairing classes.
 - **Every state spelled out.** Default + loading + empty + error + offline. If not applicable: "N/A — reason."
 - **Trilingual copy.** Every user-visible string in RU + TK + EN. If you don't have a translation, mark `[needs translation]` — never invent.
 - **Accessibility checklist on every output.** Contrast (≥4.5:1 body, ≥3:1 large text per WCAG AA), tap targets (≥44×44 mobile, ≥24×24 dense desktop), focus-visible, aria-labels for icon-only buttons.
@@ -30,8 +37,9 @@ description: Produces a high-fidelity design spec for an AutoTM screen or flow. 
 
 1. `docs/prd/ui/70-design-principles.md` through `77-accessibility.md`
 2. `docs/prd/ui/wireframes/<slug>.md` if exists — structural baseline
-3. `packages/ui/tokens/*.ts` and `packages/ui/theme/theme.css` — token names
-4. Relevant feature PRD or flow doc
+3. **`docs/agents/nativewind-v4.md` — REQUIRED for mobile specs.** Sections 3 (token layers), 4 (config), 5 (NativeWind rules), 6 (RNR essentials + component catalogue), 7 (customization patterns), 11 (web vs mobile component map). Without this, the spec will drift from the implementation surface.
+4. `packages/ui/tokens/*.ts` and `packages/ui/theme/theme.css` — verify token names. Shared brand/neutral/status palette flows to both Tailwind configs. Mobile's shadcn semantic layer (`--primary`, `--background`, `--foreground`, `--muted`, etc.) is in `apps/mobile/global.css` + `apps/mobile/lib/theme.ts`.
+5. Relevant feature PRD or flow doc
 
 ---
 
@@ -207,27 +215,56 @@ Mode: light + dark
 
 ## Component shape
 
-### Implementation (mobile — NativeWind v4)
+### Implementation (mobile — NativeWind v4 + RNR)
 
 \`\`\`tsx
-<View className="bg-[var(--background)] flex-1">
-  <View className="px-4 py-3 border-b border-[var(--border)]">
-    <Text className="text-2xl font-semibold text-[var(--text-primary)]">{title}</Text>
+import { View } from "react-native";
+import { Bell } from "lucide-react-native";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
+
+<View className="flex-1 bg-background">
+  <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
+    <Text className="text-2xl font-semibold text-foreground">{title}</Text>
+    <Icon as={Bell} className="size-6 text-muted-foreground" />
   </View>
-  ...
+  <View className="px-4 gap-3 pt-4">
+    <Card>
+      <CardHeader>
+        <CardTitle>{itemTitle}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button variant="default" size="sm" onPress={onPress}>
+          <Text>{cta}</Text>
+        </Button>
+      </CardContent>
+    </Card>
+  </View>
 </View>
 \`\`\`
+
+Mobile rules (per `docs/agents/nativewind-v4.md`):
+- Use RNR components from `@/components/ui/*` for composites.
+- Text inside an RNR component MUST be the RNR `<Text>` (`@/components/ui/text`).
+- Icons MUST be `<Icon as={LucideX} className="…">` — class-based, not props.
+- Semantic tokens (`bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `text-muted-foreground`, `border-border`, `bg-destructive`) for chrome — auto-swap with dark mode.
+- Raw brand utilities (`bg-brand-500`, `text-brand-500`) only for brand identity (logo, brand-locked accents).
+- DO NOT import from `@auto-tm/ui/components/*` (web-only).
 
 ### Implementation (web — Tailwind v4 + shadcn)
 
 \`\`\`tsx
-<main className="bg-[var(--background)] min-h-dvh">
-  <header className="px-8 py-4 border-b border-[var(--border)]">
-    <h1 className="text-2xl font-semibold">{title}</h1>
+<main className="bg-background min-h-dvh">
+  <header className="px-8 py-4 border-b">
+    <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
   </header>
   ...
 </main>
 \`\`\`
+
+Web/admin uses `@auto-tm/ui/components` (shadcn/ui, Tailwind v4) — separate from mobile RNR.
 
 Show the component skeleton for THIS platform.
 
@@ -293,11 +330,12 @@ Reduced motion: <what becomes instant>
 
 ## Implementation notes
 
-- shadcn (web/admin): `<Button>`, `<Card>`, `<Input>`, `<Dialog>` if modal, `<Sheet>` if bottom-sheet, `<Skeleton>` for loading
-- NativeWind (mobile): React Native primitives — `<View>`, `<Text>`, `<TouchableOpacity>`, no shadcn
-- Forms: HTML form + Zod on web; controlled state + Zod on mobile. Schemas from `@auto-tm/contracts`
-- Data: `<Suspense>` on web; SWR or React Query on both
-- Images: `next/image` on web with `sizes`; `expo-image` on mobile
+- shadcn/ui (web/admin, `@auto-tm/ui/components`): `<Button>`, `<Card>`, `<Input>`, `<Dialog>` if modal, `<Sheet>` if bottom-sheet, `<Skeleton>` for loading.
+- RNR (mobile, `apps/mobile/components/ui/*`): `<Button>`, `<Card>`, `<Input>`, `<Dialog>`, `<Sheet>`, `<Tabs>`, `<Accordion>`, `<Badge>`, `<Avatar>`, `<Switch>`, `<Checkbox>`, `<Toast>`, `<Skeleton>` — install via `pnpm --filter @auto-tm/mobile exec npx @react-native-reusables/cli@latest add <name>`. Modal/menu/popover/sheet/toast need `<PortalHost />` in root (already wired). Catalogue: `docs/agents/nativewind-v4.md` §6.7.
+- Forms: HTML form + Zod on web; controlled state + Zod on mobile. Schemas from `@auto-tm/contracts`.
+- Data: `<Suspense>` on web; SWR or React Query on both.
+- Images: `next/image` on web with `sizes`; `expo-image` on mobile only when caching/placeholders are needed.
+- Animations: web CSS/Framer Motion; mobile `react-native-reanimated` (CSS animations don't work on native).
 
 ## Open questions
 
@@ -309,7 +347,7 @@ Reduced motion: <what becomes instant>
 ## 5. Self-check before printing
 
 - [ ] No hex codes or raw px in output (all via tokens)
-- [ ] Both light + dark covered for every color
+- [ ] Both light + dark covered for every color (semantic tokens auto-swap; call that out)
 - [ ] All 5 states present (default + loading + empty + error + offline if applicable)
 - [ ] Motion specifies duration + easing tokens
 - [ ] Reduced-motion behavior stated
@@ -320,6 +358,7 @@ Reduced motion: <what becomes instant>
 - [ ] No emoji, no fake urgency, no fake trust
 - [ ] Anonymous-default respected on browse screens
 - [ ] Anti-pattern scan: nothing from BRAND CONTEXT's never-list
+- [ ] **Mobile specs only:** Every composite in the Component shape sample is an RNR import (`@/components/ui/*`). Every `<Text>` inside an RNR component is the RNR `<Text>`. Every icon is `<Icon as={…}>`. Semantic tokens used for chrome; raw brand tokens only for brand identity. NO imports from `@auto-tm/ui/components/*`. Cross-checked against `docs/agents/nativewind-v4.md` §6 + §8.
 
 ---
 
