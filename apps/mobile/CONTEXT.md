@@ -12,11 +12,11 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 ## What it contains
 
 - `expo-router` for navigation
-- 5-tab bottom nav: Search / Favorites / [+] Sell / Chat / Services
+- 5-tab bottom nav: Search (feed) / Favorites / [+] Sell / Chat / Services (implemented as placeholder screens; OTP trigger on feed)
 - NativeWind for styling (Tailwind classnames in RN)
 - shadcn-style component library mirrored from `packages/ui/`
 - `expo-image-manipulator` for client-side image compression
-- `react-native-compressor` for client-side video compression (custom dev client required)
+- `react-native-compressor` for client-side video compression (custom dev client required for that flow; Expo Go is valid for current routing/auth smoke checks)
 - `react-native-svg` for vector icons and brand SVG rendering; local `.svg` imports use `react-native-svg-transformer` at build time
 - `@aws-sdk/client-s3` for presigned MinIO uploads
 - Socket.IO client for chat WebSocket
@@ -77,6 +77,28 @@ Web-only (open in browser, never in app):
 - `apps/api` (HTTP + WS)
 - `packages/contracts` (typed client)
 - `packages/ui` (tokens — components are duplicated for RN, but tokens shared)
+
+## Known issues
+
+### pnpm + Expo SDK 55 compatibility
+
+**`shamefully-hoist=true` in `.npmrc`** is required. React Native / Expo / Metro expect flat `node_modules` (npm/yarn-style). Without it, dozens of transitive dependencies fail to resolve (e.g., `whatwg-fetch`, `invariant`, `react-native-css-interop`).
+
+### Expo SDK 55 package alignment
+
+Expo Go includes native modules at SDK-specific versions. `expo install --fix` aligned this app to the SDK 55 expected package set, including `expo-router@55.0.14`, `react-native@0.83.6`, `react-native-svg@15.15.3`, and `react-native-reanimated@4.2.1`. After package alignment, run `pnpm install --force` at the repo root; pnpm can otherwise leave stale symlinks in `apps/mobile/node_modules`.
+
+Agents must run the mobile gate in `docs/agents/mobile-expo.md` before claiming SDK/package/runtime fixes. The first command is always:
+
+```bash
+CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
+```
+
+### react-native-screens Fabric source path
+
+`react-native-screens` must keep using its React Native/Fabric source path in SDK 55 / Expo Go. Do not redirect it to `lib/commonjs/`; that bypasses Fabric view-config registration and caused `RNSSafeAreaView` runtime crashes.
+
+Earlier local Codegen/screens patches were only workarounds for the stale `react-native@0.83.0` install. With SDK-aligned `react-native@0.83.6`, unpatched `react-native-screens@4.23.0` parses through `@react-native/codegen@0.83.6`.
 
 ## Notable decisions
 

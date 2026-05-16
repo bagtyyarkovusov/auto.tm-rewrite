@@ -8,6 +8,10 @@
 
 The charter (GRILL-OUTCOME.md, locked 2026-05-12) under-pinned versions for several core dependencies. During Sprint 1 scaffold, we uplifted to latest stable to avoid shipping on versions nearing end-of-life. This ADR records the uplift and supersedes the version-specific portions of earlier ADRs where they conflict.
 
+## Errata
+
+2026-05-16: the original Expo cost note below said "Custom dev client required (Expo Go incompatible with NativeWind v4)." That was too broad. The current SDK 55 app runs in Expo Go after aligning packages to Expo's expected versions (`expo-router@55.0.14`, `react-native@0.83.6`, `react-native-svg@15.15.3`, etc.). A custom dev client is still required when testing native modules that Expo Go does not bundle, such as the `react-native-compressor` video-compression path, or when adding project-native code.
+
 ## Decision
 
 | Component | Charter (locked 2026-05-12) | Now using | Reason |

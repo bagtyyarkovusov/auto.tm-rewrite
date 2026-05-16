@@ -5,8 +5,8 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import type { Reflector } from "@nestjs/core";
-import type { JwtService } from "@nestjs/jwt";
+import { Reflector } from "@nestjs/core";
+import { JwtService } from "@nestjs/jwt";
 import type { FastifyRequest } from "fastify";
 
 import { IS_PUBLIC_KEY } from "./public.decorator";

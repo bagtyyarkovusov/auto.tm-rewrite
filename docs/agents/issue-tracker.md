@@ -95,6 +95,7 @@ The body is read **verbatim** as the prompt by `sandcastle`, so it must be self-
 2. `apps/api/src/modules/<context>/CONTEXT.md` — domain invariants + ports (if API-side)
 3. `docs/adr/<NNNN>-<name>.md` — relevant ADRs
 4. `CLAUDE.md` — architecture rules (no Prisma in domain, ports for cross-context, etc.)
+5. `docs/agents/mobile-expo.md` — required for `mobile` area issues, Expo package work, Metro failures, or Expo Go runtime crashes
 
 ## Files to create / modify
 
@@ -122,6 +123,7 @@ Emit `<promise>COMPLETE</promise>` once:
 1. `pnpm typecheck` passes for every workspace touched
 2. `pnpm test` passes for every workspace touched
 3. The relevant `CONTEXT.md` reflects the new state (if invariants changed)
+4. For mobile / Expo issues, the check gate in `docs/agents/mobile-expo.md` passes, including Expo dependency check and runtime/simulator verification when the issue is a runtime crash
 ```
 
 ## Labels applied at creation

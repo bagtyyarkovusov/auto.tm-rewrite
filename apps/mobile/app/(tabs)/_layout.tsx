@@ -1,48 +1,61 @@
 import { Tabs } from "expo-router";
-import { Car, Home, PlusCircle, Search, User } from "lucide-react-native";
+import {
+  Heart,
+  LayoutGrid,
+  MessageSquare,
+  PlusCircle,
+  Search,
+} from "lucide-react-native";
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#E60000",
+        tabBarInactiveTintColor: "#737373",
+        tabBarStyle: { height: 80 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "500" as const },
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="search"
         options={{
           title: "Search",
           tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
         }}
       />
       <Tabs.Screen
+        name="favorites"
+        options={{
+          title: "Favorites",
+          tabBarIcon: ({ color, size }) => <Heart color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="sell"
         options={{
-          title: "Sell",
+          title: "",
           tabBarIcon: ({ color, size }) => (
             <PlusCircle color={color} size={size} />
           ),
         }}
       />
       <Tabs.Screen
-        name="garage"
+        name="chat"
         options={{
-          title: "Garage",
-          tabBarIcon: ({ color, size }) => <Car color={color} size={size} />,
+          title: "Chat",
+          tabBarIcon: ({ color, size }) => (
+            <MessageSquare color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="services"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          title: "Services",
+          tabBarIcon: ({ color, size }) => (
+            <LayoutGrid color={color} size={size} />
+          ),
         }}
       />
     </Tabs>

@@ -27,6 +27,10 @@ Canonical five-role vocabulary. See `docs/agents/triage-labels.md`.
 
 Multi-context — see `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 
+### Mobile / Expo checks
+
+For any `mobile` issue, SDK/package debugging, Metro failure, or Expo Go runtime crash, read `docs/agents/mobile-expo.md` before changing package versions, Metro config, Codegen, or `node_modules` resolution.
+
 ### Sprint + design skill set (cross-agent SKILL.md format)
 
 Eight project-specific skills live under [`.agents/skills/`](./.agents/skills/) in the [Anthropic Agent Skills open-standard format](https://agentskills.io/specification) (YAML frontmatter + markdown body). Any agent that reads SKILL.md files — Claude Code, OpenAI Codex CLI, Cursor, Windsurf, Cline, Aider, Gemini CLI (via skill discovery), VS Code Copilot Agent Skills — can pick these up by name or by description-matched trigger:
