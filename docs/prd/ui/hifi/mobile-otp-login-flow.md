@@ -20,14 +20,26 @@ References:
 
 ## Implementation status note
 
-The S2 OTP screens at `apps/mobile/app/(auth)/phone.tsx` and `apps/mobile/app/(auth)/otp.tsx` ship using raw React Native primitives (`<Pressable>`, `<TextInput>`, `<View>`) plus NativeWind. That was correct for S2 because RNR was not yet adopted. After RNR is adopted per `docs/agents/nativewind-v4.md` §2, these screens are migration candidates per §7.3 of that guide:
-- Replace primary CTA `<Pressable className="… bg-brand-500">` → `<Button variant="default">`.
-- Replace bordered `<View><TextInput/></View>` phone input → custom `Input` composition (or a dedicated `PhoneInput` built on top of RNR `Input`).
-- Replace icon `<X color={iconColor}>` / `<ChevronLeft color={iconColor}>` → `<Icon as={X|ChevronLeft} className="size-5 text-foreground">`.
-- Replace `useColorScheme()` + `palette.neutral[…]` color resolution with semantic-token classes.
-- Replace `bg-neutral-0 dark:bg-neutral-950` pairs with `bg-background` etc. (semantic tokens auto-swap).
-- Wrap the action-gated sign-in sheet in RNR `<Sheet>` (will require `<PortalHost />` to be present in `app/_layout.tsx`).
-Token shapes shown below are the target post-migration state.
+The S2 OTP screens at `apps/mobile/app/(auth)/phone.tsx` and `apps/mobile/app/(auth)/otp.tsx` ship using raw React Native primitives (`<Pressable>`, `<TextInput>`, `<View>`) plus NativeWind. That was correct for S2 because RNR was not yet adopted.
+
+**Post-RNR migration plan** (6 steps, per `docs/agents/nativewind-v4.md` §7.3):
+
+1. Install RNR components: `pnpm --filter @auto-tm/mobile exec npx @react-native-reusables/cli@latest add button input icon text sheet badge` (one-time; follow `docs/agents/nativewind-v4.md` §2).
+2. Add `PhoneInput` custom composition per §Customization plan below — replaces the hand-rolled `+993` prefix + `TextInput` stack.
+3. Add `OtpCells` custom composition per §Customization plan below — replaces the inline 6-cell `View` + hidden `TextInput` + `Animated.Value`.
+4. Swap every raw palette class for a semantic token:
+   - `bg-neutral-0 dark:bg-neutral-950` → `bg-background`
+   - `text-neutral-900 dark:text-neutral-50` → `text-foreground`
+   - `text-neutral-600 dark:text-neutral-300` → `text-muted-foreground`
+   - `border-neutral-200 dark:border-neutral-700` → `border-border`
+   - `border-error-500` → `border-destructive`
+   - `border-brand-500` → `border-primary`
+   - `bg-neutral-0 dark:bg-neutral-900` (in inputs/cells) → `bg-card`
+   - `bg-neutral-50 dark:bg-neutral-900` (in OTP cells) → `bg-muted`
+5. Drop imperative `palette.neutral[…]` icon color resolution. Use `<Icon as={X|ChevronLeft} className="size-5 text-foreground">`.
+6. Run `docs/agents/nativewind-v4.md` §9 verification gate.
+
+Token shapes shown in this spec are the **target post-migration state**.
 
 ==============================================
 HIGH-FIDELITY DESIGN - Mobile OTP Login Flow
@@ -78,6 +90,8 @@ OTP route: (auth)/otp
 ```
 
 ## Token map
+
+Token-name choice rule per `docs/agents/nativewind-v4.md` §3 decision tree and `docs/prd/ui/79-web-vs-mobile.md` §Naming. Below is the resolved token map for this screen.
 
 All classes below are NativeWind v4 utility names. Semantic tokens (`bg-background`, `bg-card`, `border-border`, etc.) auto-swap between light + dark. Raw status hues (`text-error-500`, `bg-warning-500/10`) do NOT swap — they read identically in both modes by design.
 
