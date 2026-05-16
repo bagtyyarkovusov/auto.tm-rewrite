@@ -26,7 +26,7 @@ Ship the catalog **API surface, contracts, and seed data** so downstream sprints
 
 ## Acceptance criteria (DoD)
 
-- [ ] Seed data ported from `auto.tm-main/backend/cars.brands.json` into trilingual JSON under `packages/db/prisma/seed/` (brand + model only; ~5 names transliterated, the rest are Latin proper nouns shared across locales)
+- [ ] Seed data ported from the legacy snapshot at `packages/db/prisma/seed/_legacy/cars.brands.json` (committed in PR #64 — 131 brands, monolingual) into trilingual JSON under `packages/db/prisma/seed/` (brand + model only; ~5 names transliterated, the rest are Latin proper nouns shared across locales)
 - [ ] `pnpm db:seed` populates **Brand, Model, Color, BodyType, Region, City** idempotently. Generation seed is deferred — table stays empty, FK is nullable.
 - [ ] `GET /api/v1/catalog/brands?locale=ru` (and `tk`/`en`) returns sorted, paginated brands; `Accept-Language` header is honored as fallback when `?locale=` is absent
 - [ ] `GET /api/v1/catalog/brands/{id}/models` returns models for a brand
@@ -104,7 +104,7 @@ apps/mobile/app/dev/catalog.tsx           Dev-only smoke screen (gated __DEV__)
 
 ## Open questions / risks
 
-- **Seed-data quality**: legacy `cars.brands.json` is monolingual ("name": "Toyota"). Most brand/model names are Latin proper nouns that don't translate. A handful (Lada, Waz, Zil, KamAZ, Zaz) need transliteration to Cyrillic for `nameRu`. Flag any row where `nameTk` is just a copy of `nameRu` for a future native-speaker pass.
+- **Seed-data quality**: `packages/db/prisma/seed/_legacy/cars.brands.json` is monolingual ("name": "Toyota"). Most brand/model names are Latin proper nouns that don't translate. A handful (Lada, Waz, Zil, KamAZ, Zaz) need transliteration to Cyrillic for `nameRu`. Flag any row where `nameTk` is just a copy of `nameRu` for a future native-speaker pass.
 - **Generation data missing**: legacy file has no `generations` array — only models. The Prisma `Generation` table exists, but the seed will leave it empty in S3. `Listing.generationId` must remain nullable until a generation-seed sprint runs (TBD — likely a half-day issue before S5).
 - **Locale fallback policy**: if a row has `nameRu` but `nameTk = null`, what do we show on a TK request? Decision: return `nameRu` and tag the response with a `localeFallback: "ru"` field so admin UI (S9) can flag it for translation.
 - **In-test admin JWT**: the e2e test mints an admin JWT against the `User` table's `role = 'admin'` column. There is no admin-login UI in S3; that ships in S9 (Admin dashboard). Document the test-only minting helper in `apps/api/test/helpers/`.
