@@ -157,6 +157,10 @@
                   "code": {
                     "type": "string",
                     "pattern": "^\\d{6}$"
+                  },
+                  "deviceLabel": {
+                    "type": "string",
+                    "maxLength": 200
                   }
                 },
                 "required": [

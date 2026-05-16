@@ -6,7 +6,7 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./test/setup.ts"],
     env: {
-      EXPO_PUBLIC_API_URL: "http://localhost:3000/api/v1",
+      EXPO_PUBLIC_API_URL: "http://localhost:3006/api/v1",
     },
   },
 });

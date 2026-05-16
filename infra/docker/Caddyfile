@@ -2,7 +2,7 @@
   email admin@auto.tm
 }
 
-api.auto.tm   { reverse_proxy api:3000 }
+api.auto.tm   { reverse_proxy api:3006 }
 admin.auto.tm { reverse_proxy admin:3001 }
 auto.tm, www.auto.tm { reverse_proxy web:3002 }
 media.auto.tm {

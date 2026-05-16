@@ -30,6 +30,7 @@ packages/contracts/
 │   ├── pagination.ts           Cursor + Offset pagination schemas
 │   ├── openapi.ts              OpenAPI generator
 │   └── index.ts                Re-exports
+├── tsconfig.build.json         CommonJS runtime build for Node consumers
 ├── package.json
 └── CONTEXT.md
 ```
@@ -49,6 +50,12 @@ pnpm --filter contracts run openapi:generate
 ```
 
 CI runs this on every PR to detect contract drift. The output is checked in (or generated reproducibly and diffed).
+
+## Runtime packaging
+
+`@auto-tm/contracts` is authored in TypeScript/ESM style, but the package exports compiled CommonJS from `dist/` for Node consumers such as the NestJS API. The type surface stays on `src/index.ts`, so app typechecks do not depend on committed build output.
+
+`pnpm --filter @auto-tm/contracts build` compiles `src/**` into `dist/` and writes a nested `dist/package.json` so those emitted `.js` files are treated as CommonJS even though the source package remains `"type": "module"` for scripts such as OpenAPI generation.
 
 ## Versioning
 

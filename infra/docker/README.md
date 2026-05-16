@@ -21,7 +21,7 @@ Note: `apps/mobile` (Expo) and `apps/phone-agent` (Kotlin Android) do NOT have D
 - **Native deps**: install `python3 make g++` only in build stage (for `sharp`, `bcrypt`)
 - **All node_modules bundled** in the final image — never `npm install` at runtime (air-gap)
 - **Postgres client tools** + `curl` in runtime stage (healthchecks)
-- **Healthcheck**: `HEALTHCHECK CMD curl -f http://localhost:3000/healthz || exit 1`
+- **Healthcheck**: `HEALTHCHECK CMD curl -f http://localhost:3006/healthz || exit 1`
 - **Non-root user**: every container runs as a non-root user
 - **Prisma migrate deploy** runs at container start for the API + worker (handles fresh DB and migrations)
 

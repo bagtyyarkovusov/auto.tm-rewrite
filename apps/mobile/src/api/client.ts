@@ -8,7 +8,7 @@ import {
 import { AuthSchemas } from "@auto-tm/contracts";
 
 const BASE_URL = (
-  process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:3000/api/v1"
+  process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:3006/api/v1"
 ).replace(/\/$/, "");
 
 export class ApiError extends Error {

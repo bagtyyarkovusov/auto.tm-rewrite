@@ -26,6 +26,7 @@ packages/db/
 ├── src/
 │   ├── index.ts              Exports PrismaService class + types
 │   └── seed.ts               Seed script (pnpm db:seed)
+├── tsconfig.build.json       CommonJS runtime build for NestJS consumers
 ├── package.json
 └── CONTEXT.md
 ```
@@ -82,6 +83,12 @@ export * as types from './types'
 ```
 
 Consumed by `apps/api`, `apps/worker`, `apps/sms-gateway`.
+
+## Runtime packaging
+
+`@auto-tm/db` is authored in TypeScript, but backend apps consume the compiled CommonJS output in `dist/`. The package `exports` map points runtime consumers at `dist/src/index.js` while the type surface stays on `src/index.ts`.
+
+`pnpm --filter @auto-tm/db build` regenerates the Prisma client and compiles only the runtime surface (`src/index.ts`, `src/prisma.service.ts`, and the generated Prisma client). `src/seed.ts` continues to run directly through `tsx` via `pnpm db:seed`.
 
 ## Dependencies
 

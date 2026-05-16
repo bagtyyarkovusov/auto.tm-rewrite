@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "build:deps": "test -f ../../packages/db/dist/src/index.js && test -f ../../packages/contracts/dist/index.js || (pnpm --filter @auto-tm/db build && pnpm --filter @auto-tm/contracts build)",
+    "prebuild": "pnpm run build:deps",
     "build": "nest build",
+    "predev": "pnpm run build:deps",
     "dev": "nest start --watch",
-    "start": "node dist/main",
+    "start": "node dist/src/main.js",
     "lint": "eslint . --max-warnings 0",
+    "pretest": "pnpm run build:deps",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
