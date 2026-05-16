@@ -1,5 +1,7 @@
 import { useRouter } from "expo-router";
 
+import { useAuthIntentStore } from "../../src/auth/intentStore";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +18,10 @@ interface SignInDialogProps {
   title?: string;
   description?: string;
   actionLabel?: string;
+  /** Route to return to after auth completes */
+  returnPath?: string;
+  /** Optional callback to re-trigger the originally-intended action */
+  replay?: () => Promise<void>;
 }
 
 export function SignInDialog({
@@ -24,8 +30,11 @@ export function SignInDialog({
   title = "Sign in required",
   description = "Sign in to access this feature.",
   actionLabel = "Continue with phone",
+  returnPath,
+  replay,
 }: SignInDialogProps) {
   const router = useRouter();
+  const setIntent = useAuthIntentStore((state) => state.setIntent);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,6 +48,7 @@ export function SignInDialog({
           variant="default"
           onPress={() => {
             onOpenChange(false);
+            setIntent({ returnPath, replay });
             router.push("/(auth)/phone");
           }}
         >

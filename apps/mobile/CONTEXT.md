@@ -68,7 +68,8 @@ Web-only (open in browser, never in app):
 ## State management
 
 - React state for local UI
-- **TanStack Query v5** (formerly React Query) for server cache + mutations, layered on a small custom `apiClient` wrapper. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) for the decision and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md) for the implementation guide. Implementation lands in the S3 foundations issue.
+- **TanStack Query v5** for server cache + mutations, layered on a small custom `apiClient` wrapper. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) for the decision and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md) for the implementation guide.
+- **Zustand** for client state that doesn't belong in TanStack Query — auth intent capture, modal lifecycle, form state. See `src/auth/intentStore.ts`.
 - `expo-secure-store` for JWT access + refresh tokens (used in `src/auth/session.ts`)
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 
@@ -101,15 +102,6 @@ CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
 `react-native-screens` must keep using its React Native/Fabric source path in SDK 55 / Expo Go. Do not redirect it to `lib/commonjs/`; that bypasses Fabric view-config registration and caused `RNSSafeAreaView` runtime crashes.
 
 Earlier local Codegen/screens patches were only workarounds for the stale `react-native@0.83.0` install. With SDK-aligned `react-native@0.83.6`, unpatched `react-native-screens@4.23.0` parses through `@react-native/codegen@0.83.6`.
-
-### Action-gated auth: deferred-action replay not yet implemented
-
-ADR-0006 specifies action-gated auth — when an anonymous user attempts a write action, the app captures the intended action, sends them through OTP login, then replays the action. Sprint 2 shipped the OTP screens but **not** that capture-and-replay infrastructure. Current symptoms:
-
-- `router.replace("/(tabs)")` from `(auth)/otp` does not reliably dismiss the `presentation: "fullScreenModal"` stack opened by `(auth)/phone` / `(auth)/otp`. The user can end up inside the modal stack after a successful login.
-- When `SignInDialog` opens because of an attempted write action, the original action is not captured and is not resumed after auth.
-
-Tracked at issue #52. Must close before S4 (Listings CRUD) starts — seller-create-listing is the first user-facing action-gated path.
 
 ### NativeWind token and lucide interop guardrail
 
