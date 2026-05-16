@@ -18,6 +18,7 @@ import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepositor
 import { HttpOtpSenderAdapter } from "./infrastructure/HttpOtpSenderAdapter";
 import { BcryptHasherAdapter } from "./infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "./infrastructure/SystemClockAdapter";
+import { PrismaIdentityCheckAdapter } from "./infrastructure/PrismaIdentityCheckAdapter";
 import { IDENTITY_TOKENS } from "./identity.tokens";
 
 @Module({
@@ -38,9 +39,14 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     HttpOtpSenderAdapter,
     BcryptHasherAdapter,
     SystemClockAdapter,
+    PrismaIdentityCheckAdapter,
     {
       provide: IDENTITY_TOKENS.OtpTestMode,
       useFactory: () => process.env["OTP_TEST_MODE"] === "true",
+    },
+    {
+      provide: IDENTITY_TOKENS.IdentityCheckPort,
+      useClass: PrismaIdentityCheckAdapter,
     },
     {
       provide: "EventBus",
@@ -59,7 +65,7 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     DeleteMe,
   ],
   exports: [
-    // Ports consumed by other bounded contexts will be exported here once implemented.
+    IDENTITY_TOKENS.IdentityCheckPort,
   ],
 })
 export class IdentityModule {}
