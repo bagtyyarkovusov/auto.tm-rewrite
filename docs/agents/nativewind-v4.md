@@ -507,6 +507,8 @@ These two files are the source of truth for the entire theme. Treat them like a 
 | Change the radius scale | Edit `packages/ui/tokens/radius.ts`. The `--radius` CSS var (used for `rounded-lg`/`md`/`sm` in RNR) should match `radius.md` (8px) at the base. |
 | Change the spacing scale | Edit `packages/ui/tokens/spacing.ts`. The `tailwindTheme.spacing` derives from it. |
 
+**When to add a token vs use a bracket utility:** Add a new token only if it's used in 3+ screens OR represents a brand identity moment (logo, brand-locked accent). Otherwise reach for a bracket utility: `bg-destructive/10`, `text-foreground/60`, `border-primary/40`. Bracket utilities are free, don't burden the four-file cascade, and read at the call site. Adding a token for a single-use tint is an anti-pattern — see §7.8.
+
 Spacing scale (4px grid):
 
 | Tailwind | px | Use for |
