@@ -1165,6 +1165,7 @@ Do not:
 
 | Anti-pattern | Why it's wrong | Do instead |
 |---|---|---|
+| Over-customizing an RNR component (forking, unnecessary variants, one-off tokens) | See the full list at §7.8 for customization-specific anti-patterns | Follow the §7.4 decision tree — lightest touch first |
 | `import { Button } from "@auto-tm/ui/components"` in mobile | That's the WEB Button — uses `<button>` element | `import { Button } from "@/components/ui/button"` (RNR copy) |
 | `style={{ backgroundColor: "#E60000" }}` | Hard-coded hex, no dark mode, no tokens | `className="bg-brand-500"` or `className="bg-primary"` |
 | `<View className="text-foreground">…</View>` | `View` ignores text classes | Apply text classes to `<Text>` |
