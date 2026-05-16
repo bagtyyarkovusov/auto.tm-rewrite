@@ -12,7 +12,8 @@
 
 | Aspect | Web | Mobile | Why different |
 |---|---|---|---|
-| Component implementations | React DOM + Tailwind | React Native + NativeWind | Different rendering primitives |
+| Component implementations | React DOM + shadcn/ui (`@auto-tm/ui/components`) | React Native + React Native Reusables (`apps/mobile/components/ui/`) | Different rendering primitives — web uses HTML elements, mobile uses RN Pressable/View |
+| CSS syntax | Tailwind v4 (`@theme inline { … }` in `globals.css`) | Tailwind v3 (`@tailwind base; @tailwind components; @tailwind utilities;` in `global.css`) | NativeWind v4 + Metro only understand Tailwind v3. Copying v4 `@theme` blocks into mobile `global.css` breaks the build |
 | Navigation | Next.js App Router (file-based, server-rendered) | expo-router (file-based, client-side) | Different runtime models |
 | Forms | HTML `<form>` + native validation | TextInput + manual validation | Different input primitives |
 | Modals | Radix Dialog (overlays page) | react-native-bottom-sheet (slides up) | Mobile expects sheet, web expects modal |
@@ -92,6 +93,24 @@ Is it shareable / SEO-worthy / openable from a link?
 ├── YES → apps/mobile + apps/web (with OG meta)
 └── NO → apps/mobile only
 ```
+
+## Token naming rule: which class to reach for
+
+When styling a mobile screen, pick the right layer first:
+
+```
+Building app chrome (background, card, text, border, button bg)?
+  → SEMANTIC name: bg-background, bg-card, text-foreground, border-border,
+                   bg-primary, bg-destructive, bg-muted
+Status hue that should look identical in both modes (success/warning/error/info)?
+  → STATUS hue: text-success-500, bg-warning-500/10, text-error-500, text-info-500
+Brand identity moment (logo, brand-locked accent, special CTA tint)?
+  → RAW BRAND: bg-brand-500, text-brand-700
+Variant-driven (CVA inside an RNR component)?
+  → Lives inside that component file under variants
+```
+
+**`destructive` vs `error-500` is intentional, not a duplicate.** `bg-destructive` = destructive ACTION semantic (`Button variant="destructive"` — auto-swaps with theme). `text-error-500` = error STATE status (inline validation message — locked hue, identical in both modes). The decision tree above tells you which to use; don't pick at random.
 
 ## References
 
