@@ -16,6 +16,7 @@ description: Produces a high-fidelity design spec for an AutoTM screen or flow. 
 ## 0. Hard rules
 
 - **Mobile-first by default.** Phone first, then web/admin if §3 decision tree says so.
+- **Read `docs/agents/nativewind-v4.md` §0.5 (web/mobile boundary) before any mobile output. Read §7.4–7.8 (customization paths) before specifying any non-default RNR usage.**
 - **For ANY mobile hi-fi spec, read `docs/agents/nativewind-v4.md` end to end first.** Mobile UI stack is NativeWind v4 + React Native Reusables (RNR). Mobile output MUST:
   - Prefer semantic shadcn-style tokens (`bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `text-primary-foreground`, `border-border`, `bg-muted`, `text-muted-foreground`, `bg-destructive`) for app chrome — auto-swap with dark mode.
   - Use raw brand utilities (`bg-brand-500`, `text-brand-500`) only for brand identity moments. Status hues: `text-success-500`, `bg-warning-500/10`, `text-error-500`, `text-info-500`.
@@ -39,7 +40,8 @@ description: Produces a high-fidelity design spec for an AutoTM screen or flow. 
 2. `docs/prd/ui/wireframes/<slug>.md` if exists — structural baseline
 3. **`docs/agents/nativewind-v4.md` — REQUIRED for mobile specs.** Sections 3 (token layers), 4 (config), 5 (NativeWind rules), 6 (RNR essentials + component catalogue), 7 (customization patterns), 11 (web vs mobile component map). Without this, the spec will drift from the implementation surface.
 4. `packages/ui/tokens/*.ts` and `packages/ui/theme/theme.css` — verify token names. Shared brand/neutral/status palette flows to both Tailwind configs. Mobile's shadcn semantic layer (`--primary`, `--background`, `--foreground`, `--muted`, etc.) is in `apps/mobile/global.css` + `apps/mobile/lib/theme.ts`.
-5. Relevant feature PRD or flow doc
+5. **`docs/agents/nativewind-v4.md` §7.4 (decision tree), §7.5 (custom compositions), §7.6 (CVA variants), §7.7 (forking), §7.8 (anti-patterns)** — know every customization path before specifying non-default RNR usage.
+6. Relevant feature PRD or flow doc
 
 ---
 
@@ -268,6 +270,20 @@ Web/admin uses `@auto-tm/ui/components` (shadcn/ui, Tailwind v4) — separate fr
 
 Show the component skeleton for THIS platform.
 
+## Customization plan
+
+For each non-default RNR usage, list:
+- Primitive: <RNR component or "new primitive">
+- Path (per nativewind-v4.md §7.4): <cn at call site | new CVA variant | custom composition wrapping RNR | base-class edit | fork | new primitive>
+- File: <apps/mobile/components/ui/<file>.tsx for variant edits
+       | apps/mobile/components/<feature>/<Name>.tsx for compositions
+       | docs/adr/<NN>-<slug>.md for forks (ADR required)>
+- For variants: name + paired CVA edits (variants + textVariants if applicable)
+- For compositions: prop API summary + ~30-line shape
+- For forks: ADR reference + rationale
+
+If nothing needs customization, write: "None — all RNR primitives used at defaults."
+
 ## States
 
 ### Default
@@ -359,6 +375,9 @@ Reduced motion: <what becomes instant>
 - [ ] Anonymous-default respected on browse screens
 - [ ] Anti-pattern scan: nothing from BRAND CONTEXT's never-list
 - [ ] **Mobile specs only:** Every composite in the Component shape sample is an RNR import (`@/components/ui/*`). Every `<Text>` inside an RNR component is the RNR `<Text>`. Every icon is `<Icon as={…}>`. Semantic tokens used for chrome; raw brand tokens only for brand identity. NO imports from `@auto-tm/ui/components/*`. Cross-checked against `docs/agents/nativewind-v4.md` §6 + §8.
+- [ ] **Mobile specs only:** If any RNR primitive uses a non-default variant OR is wrapped in a custom composition OR is forked, the §Customization plan lists each with path + file.
+- [ ] **Mobile specs only:** Custom compositions live under `apps/mobile/components/<feature>/`, NOT `apps/mobile/components/ui/` (that path is reserved for RNR-installed primitives).
+- [ ] **Mobile specs only:** Paired CVAs (e.g., `buttonVariants` + `buttonTextVariants`) are edited in lockstep.
 
 ---
 
@@ -380,6 +399,7 @@ Stop when:
 - Screen requires Phase 2/3 features without specs
 - On-vibe hi-fi requires inventing tokens (propose extending token system instead)
 - Wireframe is recommended first (complex flow with multiple branches)
+- **Stop if customization needs a fork but no ADR exists.** Suggest `/new-adr` first.
 
 Suggest wireframe-agent-skill first if structure unclear.
 

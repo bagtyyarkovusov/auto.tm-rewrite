@@ -22,6 +22,7 @@ description: Produce a high-fidelity design spec for an AutoTM screen or flow. T
 ## 0. Hard rules (non-negotiable)
 
 - **Mobile-first by default.** Cover phone first, then web/admin if the screen lives on those too (per the platform decision tree in §3).
+- **Read `docs/agents/nativewind-v4.md` §0.5 (web/mobile boundary) before any mobile output. Read §7.4–7.8 (customization paths) before specifying any non-default RNR usage.**
 - **For ANY mobile hi-fi spec, read `docs/agents/nativewind-v4.md` end to end first.** It is the single source of truth for the mobile UI stack: NativeWind v4 + React Native Reusables (RNR). Mobile hi-fi output MUST:
   - Prefer semantic shadcn-style tokens (`bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `text-primary-foreground`, `border-border`, `bg-muted`, `text-muted-foreground`, `bg-destructive`) over raw `var(--…)` references for app chrome and RNR components — these auto-swap with dark mode.
   - Use raw brand utilities (`bg-brand-500`, `text-brand-500`, `bg-neutral-900`) only for explicit brand identity (logo lockup, brand-locked accents). Status hues use `text-success-500`, `bg-warning-500`, `text-error-500`, `text-info-500`.
@@ -47,8 +48,9 @@ If running inside the repo, read for context — otherwise BRAND CONTEXT below i
 2. `docs/prd/ui/wireframes/<slug>.md` (if `/wireframe` ran first) — structural baseline
 3. **`docs/agents/nativewind-v4.md` — REQUIRED for mobile specs.** Authoritative reference for NativeWind v4 + RNR. Read sections 3 (token layers), 4 (config), 5 (NativeWind rules: dark mode, platform diffs, what doesn't work on native), 6 (RNR essentials + component catalogue), 7 (customization patterns), 11 (web vs mobile component map). Without this, your spec WILL drift from the implementation surface.
 4. `packages/ui/tokens/*.ts` and `packages/ui/theme/theme.css` — verify token names. The shared token files surface to both Tailwind configs; brand/neutral/status palette values are the same on web and mobile. The mobile shadcn-style semantic layer (`--primary`, `--background`, `--foreground`, `--muted`, etc.) is defined in `apps/mobile/global.css` and `apps/mobile/lib/theme.ts`.
-5. `docs/prd/features/<NN>-<name>.md` — the feature PRD if `$ARGUMENTS` matches
-6. `docs/prd/flows/<NN>-<name>.md` — the end-to-end flow if `$ARGUMENTS` is a flow
+5. **`docs/agents/nativewind-v4.md` §7.4 (decision tree), §7.5 (custom compositions), §7.6 (CVA variants), §7.7 (forking), §7.8 (anti-patterns)** — know every customization path before specifying non-default RNR usage.
+6. `docs/prd/features/<NN>-<name>.md` — the feature PRD if `$ARGUMENTS` matches
+7. `docs/prd/flows/<NN>-<name>.md` — the end-to-end flow if `$ARGUMENTS` is a flow
 
 ---
 
@@ -314,6 +316,20 @@ Web/admin uses `@auto-tm/ui/components` (shadcn/ui flavor, Tailwind v4) — sepa
 
 Show the component skeleton for THIS platform. Don't fully implement; give the engineer the layout + token bindings + the RNR (mobile) or shadcn (web) component imports.
 
+## Customization plan
+
+For each non-default RNR usage, list:
+- Primitive: <RNR component or "new primitive">
+- Path (per nativewind-v4.md §7.4): <cn at call site | new CVA variant | custom composition wrapping RNR | base-class edit | fork | new primitive>
+- File: <apps/mobile/components/ui/<file>.tsx for variant edits
+       | apps/mobile/components/<feature>/<Name>.tsx for compositions
+       | docs/adr/<NN>-<slug>.md for forks (ADR required)>
+- For variants: name + paired CVA edits (variants + textVariants if applicable)
+- For compositions: prop API summary + ~30-line shape
+- For forks: ADR reference + rationale
+
+If nothing needs customization, write: "None — all RNR primitives used at defaults."
+
 ## States
 
 ### Default
@@ -415,6 +431,9 @@ For dates: short — "1 hour ago", "yesterday", "3 days ago", then absolute date
 - [ ] Anonymous-default respected if this is a browse screen
 - [ ] Anti-pattern scan: nothing from the brand-brief's never-list
 - [ ] **Mobile specs only:** Every composite primitive in the Component shape sample is an RNR import (`@/components/ui/*`), not a hand-rolled `Pressable` / `View` stack. Every `<Text>` inside an RNR component is the RNR `<Text>`. Every icon is `<Icon as={…}>`. Semantic tokens are used for chrome; raw brand tokens only for brand identity moments. NO imports from `@auto-tm/ui/components/*` (web-only). Cross-checked against `docs/agents/nativewind-v4.md` §6 + §8 (anti-patterns).
+- [ ] **Mobile specs only:** If any RNR primitive uses a non-default variant OR is wrapped in a custom composition OR is forked, the §Customization plan lists each with path + file.
+- [ ] **Mobile specs only:** Custom compositions live under `apps/mobile/components/<feature>/`, NOT `apps/mobile/components/ui/` (that path is reserved for RNR-installed primitives).
+- [ ] **Mobile specs only:** Paired CVAs (e.g., `buttonVariants` + `buttonTextVariants`) are edited in lockstep.
 
 Fix anything that fails before printing.
 
@@ -442,6 +461,7 @@ Stop and tell the user when:
 - The screen requires Phase 2 / Phase 3 features the project doesn't have specs for yet
 - Producing on-vibe hi-fi would require inventing tokens that don't exist (propose extending the token system as a separate task)
 - A `/wireframe` is recommended first (e.g., a complex flow with multiple branches — wireframe each step low-fi before going hi-fi on any)
+- **Stop if customization needs a fork but no ADR exists.** Suggest `/new-adr` first.
 
 On bail, suggest:
 - `/wireframe <screen>` first if structure is unclear
