@@ -11,7 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
-const E2E_TEST_PHONE = "99361234567";
+const E2E_TEST_PHONE = "+99361234567";
 
 function isDevBuild(): boolean {
   return process.env.EXPO_PUBLIC_ENV !== "production";
