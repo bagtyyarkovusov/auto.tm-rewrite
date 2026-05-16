@@ -16,6 +16,7 @@ description: Produces a low-fidelity wireframe for an AutoTM screen or flow. Use
 ## 0. Hard rules
 
 - **Mobile-first by default.** Phone (~390 × 844 mental model). Web only if §4 decision tree says so. Both if shared.
+- **Read `docs/agents/nativewind-v4.md` §0.5 (web/mobile boundary) before any mobile output. Read §7.4–7.8 (customization paths) before specifying any non-default RNR usage.**
 - **For ANY mobile wireframe, read `docs/agents/nativewind-v4.md` first.** That guide is the single source of truth for the mobile UI stack (NativeWind v4 + React Native Reusables / RNR). Mobile wireframes must name primitives by their RNR component (`Button`, `Input`, `Card`, `Dialog`, `Sheet`, `Accordion`, `Tabs`, `Badge`, `Avatar`, `Switch`, `Checkbox`, `Toast`, `Select`, `DropdownMenu`, `Popover`, `Tooltip`, `AlertDialog`, `Separator`, `Skeleton`) where one exists. Do NOT invent custom names when RNR covers the primitive. Web/admin wireframes still use shadcn/ui vocabulary — DO NOT mix the two.
 - **No fake content.** Realistic placeholders ("Toyota Camry 2018, 95 000 TMT"), not lorem ipsum. Currencies TMT first. Cities by actual TM name. Phone numbers `+99362XXXXXX`.
 - **No emoji in system copy.** Buttons, labels, notifications — no emoji. (User-generated content like chat messages exempted.)
@@ -30,6 +31,8 @@ description: Produces a low-fidelity wireframe for an AutoTM screen or flow. Use
 2. `docs/prd/ui/79-web-vs-mobile.md` — what lives where (Phase 1)
 3. **`docs/agents/nativewind-v4.md` — REQUIRED for mobile wireframes.** Sections 3 (token architecture), 6 (RNR essentials), 6.7 (component catalogue) give you the component + token vocabulary the wireframe must use.
 4. Feature PRD or flow doc if applicable
+
+5. **`docs/agents/nativewind-v4.md` §7.4 (decision tree), §7.5 (custom compositions), §7.6 (CVA variants), §7.8 (anti-patterns)** — know the customization paths before naming primitives.
 
 ---
 
@@ -145,6 +148,11 @@ Platform: <mobile | web | admin web>
 1. **<block name>** — <what it shows>
 ...
 
+## Customization preview (mobile-only; skip if all primitives use defaults)
+
+- <Primitive name> — <one-liner: "needs leading-slot composition" / "needs brand-outline variant" / "needs hidden-input composition for OTP cells">
+- ...
+
 ## Interactions
 
 - Tapping <block N> → <result>
@@ -204,6 +212,7 @@ Platform: <mobile | web | admin web>
 - [ ] CTA primary action visible above the fold
 - [ ] Copy in plain, respectful tone
 - [ ] **Mobile wireframes only:** Primitives named by their RNR component (Button, Input, Card, Dialog, Sheet, …) per `docs/agents/nativewind-v4.md` §6.7. No hand-rolled "modal" / "custom card" / "Pressable button" when RNR provides it.
+- [ ] **Mobile wireframes only:** If any primitive named won't fit a stock RNR variant, surface it in §Customization preview.
 
 ---
 
@@ -226,6 +235,7 @@ PR title: `docs: wireframe <screen-slug>`.
 Stop when:
 - Screen requested doesn't fit Phase 1 scope
 - Producing wireframe requires inventing data (PRD missing)
+- **Stop if customization needs a fork but no ADR exists.** Suggest `/new-adr` first.
 
 Suggest reading the relevant PRD first.
 
