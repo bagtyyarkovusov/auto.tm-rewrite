@@ -15,6 +15,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
+    "check:runtime-imports": "node scripts/check-runtime-imports.cjs",
     "clean": "turbo run clean && rm -rf node_modules",
     "db:generate": "pnpm --filter @auto-tm/db generate",
     "db:migrate:dev": "pnpm --filter @auto-tm/db migrate:dev",

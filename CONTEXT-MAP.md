@@ -4,6 +4,23 @@ Index of every `CONTEXT.md` in this repo. Each file documents the *current* stat
 
 > `CONTEXT.md` is the *mutable* counterpart to ADRs. ADRs are decisions (immutable, dated). `CONTEXT.md` is "what is true right now."
 
+## Agent policy
+
+Agents working in this repo read these files **before** the per-context `CONTEXT.md` entries below:
+
+| File | Purpose |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | Root agent policy (canonical for Claude Code) — architecture rules, never-do list, verification gate |
+| [`AGENTS.md`](AGENTS.md) | Cross-agent mirror of CLAUDE.md (Cursor, Codex, Windsurf, etc.) |
+| [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md) | Canonical Context7 MCP workflow + pinned library-ID table for the whole stack ([ADR-0017](docs/adr/0017-context7-as-canonical-doc-source.md)) |
+| [`docs/agents/mobile-expo.md`](docs/agents/mobile-expo.md) | Mobile SDK alignment + dependency-check gate |
+| [`docs/agents/nativewind-v4.md`](docs/agents/nativewind-v4.md) | Mobile styling with NativeWind v4 + React Native Reusables ([ADR-0014](docs/adr/0014-mobile-component-library.md)) |
+| [`docs/agents/mobile-data-fetching.md`](docs/agents/mobile-data-fetching.md) | Mobile data fetching with TanStack Query v5 + `apiClient` wrapper ([ADR-0015](docs/adr/0015-mobile-data-fetching.md)) |
+| [`docs/agents/typescript-runtime.md`](docs/agents/typescript-runtime.md) | TypeScript module-resolution boundaries for runtime-shared packages ([ADR-0016](docs/adr/0016-typescript-runtime-boundaries.md)) |
+| [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) | GitHub Issues workflow + label vocabulary |
+| [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) | Five-role label taxonomy |
+| [`docs/agents/domain.md`](docs/agents/domain.md) | How this multi-context CONTEXT.md system works |
+
 ## Apps
 
 | Workspace | File | Owns |

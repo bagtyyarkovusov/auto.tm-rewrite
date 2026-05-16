@@ -31,6 +31,18 @@ Multi-context — see `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 
 For any `mobile` issue, SDK/package debugging, Metro failure, or Expo Go runtime crash, read `docs/agents/mobile-expo.md` before changing package versions, Metro config, Codegen, or `node_modules` resolution.
 
+### TypeScript runtime boundaries
+
+For any TypeScript module-resolution, package `exports`, `.js`/extensionless import, or runtime-shared workspace package issue, read `docs/agents/typescript-runtime.md` first. `@auto-tm/db` and `@auto-tm/contracts` are built packages for runtime consumers; do not point their exports back at raw `src/*.ts`.
+
+### Library documentation lookups (Context7 MCP)
+
+**Use Context7 MCP for every library doc lookup.** Before writing or debugging code that touches an external library, framework, SDK, API, CLI, or cloud service — including well-known ones (React, Next.js, Prisma, Expo, Tailwind, NestJS) — resolve and query it via Context7. Your training data lags; the version we run may have renamed, removed, or changed the API you remember.
+
+The canonical workflow, the pinned library-ID table for this stack (NestJS 11, Prisma 7, Next.js 16, React 19, Expo SDK 55, NativeWind v4, TanStack Query v5, and ~25 others), and recipes for the most-touched libraries live in [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md). Locked in [ADR-0017](docs/adr/0017-context7-as-canonical-doc-source.md).
+
+The verification gate requires that you consulted Context7 for every external library your change touched (or recorded in the PR description why you didn't).
+
 ### Sprint + design skill set (cross-agent SKILL.md format)
 
 Eight project-specific skills live under [`.agents/skills/`](./.agents/skills/) in the [Anthropic Agent Skills open-standard format](https://agentskills.io/specification) (YAML frontmatter + markdown body). Any agent that reads SKILL.md files — Claude Code, OpenAI Codex CLI, Cursor, Windsurf, Cline, Aider, Gemini CLI (via skill discovery), VS Code Copilot Agent Skills — can pick these up by name or by description-matched trigger:

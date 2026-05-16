@@ -26,6 +26,7 @@ packages/db/
 ├── src/
 │   ├── index.ts              Exports PrismaService class + types
 │   └── seed.ts               Seed script (pnpm db:seed)
+├── tsconfig.build.json       CJS runtime build for Node consumers
 ├── package.json
 └── CONTEXT.md
 ```
@@ -81,7 +82,9 @@ export { PrismaService } from './prisma.service'  // NestJS-injectable wrapper
 export * as types from './types'
 ```
 
-Consumed by `apps/api`, `apps/worker`, `apps/sms-gateway`.
+Consumed by `apps/api` and `apps/worker` through the built package export at `dist/src/index.js`. Do not export raw `src/*.ts` from this package; see [ADR-0016](../../docs/adr/0016-typescript-runtime-boundaries.md).
+
+The Prisma generator is pinned to `moduleFormat = "cjs"` because the DB package emits CommonJS for Nest runtime consumers. Do not remove it unless ADR-0016 is superseded.
 
 ## Dependencies
 
@@ -92,3 +95,4 @@ Consumed by `apps/api`, `apps/worker`, `apps/sms-gateway`.
 
 - [ADR-0004](../../docs/adr/0004-migrations.md) — Migration workflow
 - [ADR-0001](../../docs/adr/0001-architecture.md) — FK allowed, joins via ports only
+- [ADR-0016](../../docs/adr/0016-typescript-runtime-boundaries.md) — Built package exports for Node runtime consumers

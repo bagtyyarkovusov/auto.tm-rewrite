@@ -4,6 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
+    "predev": "pnpm --filter @auto-tm/contracts build",
     "dev": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

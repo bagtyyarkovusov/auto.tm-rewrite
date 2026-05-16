@@ -28,11 +28,13 @@ Monorepo (Turborepo + pnpm) with 7 apps and 5 packages. API is NestJS + Prisma +
 - **All times UTC in DB.** Convert at the display layer.
 - **Run `pnpm test` and `pnpm typecheck` before committing.**
 - **`.npmrc` has `shamefully-hoist=true`** — pnpm must flatten `node_modules` for React Native / Expo / Metro compatibility. Never remove this setting without testing Expo bundling end-to-end.
+- **Use Context7 MCP for every library doc lookup.** Before writing or debugging code that touches an external library, framework, SDK, API, CLI, or cloud service, resolve and query it via Context7 (`resolve-library-id` → `query-docs`). This applies even when you "know" the answer — your training data lags. The canonical workflow, the pinned library-ID table for this stack, and recipes for the most-touched libraries live in [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md). Locked in [ADR-0017](docs/adr/0017-context7-as-canonical-doc-source.md). The Expo SDK 55 rule below is a subset of this rule.
 - **Use Context7 for Expo SDK 55 docs.** Always resolve and query `expo-router`, `expo`, `@expo/cli`, and other Expo SDK packages via Context7 MCP before writing code or debugging.
 - **For mobile / Expo work, read `docs/agents/mobile-expo.md` first.** Run Expo's dependency check before changing packages, Metro config, Codegen, or native-module resolution.
 - **For any mobile UI / styling work, read `docs/agents/nativewind-v4.md` end to end.** That guide is the single source of truth for the NativeWind v4 + React Native Reusables (RNR) workflow on `apps/mobile`: theme tokens, dark-mode rules, RNR setup recipe, component catalogue, customization patterns, and the pre-styling research checklist. Never use `StyleSheet.create` for new code, never hand-roll a button/input/dialog (use RNR), never import `@auto-tm/ui/components/*` in mobile (that package is web-only).
 - **For any mobile data-fetching / API-call work, read `docs/agents/mobile-data-fetching.md` end to end.** That guide is the single source of truth for the TanStack Query v5 + custom `apiClient` wrapper pattern on `apps/mobile` (locked in [ADR-0015](docs/adr/0015-mobile-data-fetching.md)). Never call `fetch` directly outside `apps/mobile/src/api/client.ts`, never inline query keys (use the factory), never re-implement 401-refresh in a hook (the wrapper owns it), never skip the `@auto-tm/contracts` Zod schema at the response boundary.
 - **When working with Expo Router typed routes**, check `experiments.typedRoutes` in `app.json` and the `EXPO_USE_TYPED_ROUTES` env var. Route file changes must be followed by mobile typecheck because `.expo/types/router.d.ts` is generated from the file tree.
+- **For any TypeScript module-resolution, package `exports`, `.js`/extensionless import, or runtime-shared workspace package issue, read `docs/agents/typescript-runtime.md` first.** `@auto-tm/db` and `@auto-tm/contracts` are built packages for runtime consumers; do not point their exports back at raw `src/*.ts`.
 
 ## Known issues and workarounds
 
@@ -63,6 +65,10 @@ CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
 ### pnpm shamefully-hoist for React Native
 
 pnpm's strict isolation prevents Metro from resolving transitive dependencies of `react-native`, `expo`, and related packages. `.npmrc` sets `shamefully-hoist=true` to flatten `node_modules`. Without this, you'll see `Unable to resolve module` errors for packages like `whatwg-fetch`, `invariant`, `react-native-css-interop`, etc.
+
+### TypeScript package runtime boundaries
+
+Node runtime packages and bundler-only packages use different rules. API/worker must consume built `@auto-tm/db` and `@auto-tm/contracts` output from `dist/`; mobile also consumes built `@auto-tm/contracts`; `packages/ui` can remain source-exported because it is consumed by web/mobile bundlers. Before changing package exports or relative import extensions, read `docs/agents/typescript-runtime.md` and run `pnpm check:runtime-imports` after building runtime-shared packages.
 
 ### react-native-screens Fabric imports
 
@@ -117,6 +123,7 @@ Before claiming a feature done:
 4. If an architectural choice was made, an ADR exists
 5. The PRD section for this feature is updated with what shipped
 6. Manual verification: actually run the dev stack and try the feature in the UI
+7. You consulted Context7 for every external library your change touched (or recorded in the PR description why you didn't — e.g., trivial dep bump with no API surface change). See [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md).
 
 For any mobile / Expo package, Metro, navigation, or runtime-crash change, also run the mobile gate in `docs/agents/mobile-expo.md`. At minimum this means Expo dependency check, mobile typecheck, iOS export, and an Expo Go simulator launch/log check when the bug was runtime-only.
 
