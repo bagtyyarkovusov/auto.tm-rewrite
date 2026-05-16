@@ -505,7 +505,7 @@ These two files are the source of truth for the entire theme. Treat them like a 
 | Add a new semantic token | Add it to all four: `global.css :root`, `global.css .dark:root`, `tailwind.config.js theme.extend.colors`, `lib/theme.ts`. |
 | Add a new raw palette color | Add it to `packages/ui/tokens/colors.ts` → it flows automatically through `@auto-tm/ui/theme/tailwind`. |
 | Change the radius scale | Edit `packages/ui/tokens/radius.ts`. The `--radius` CSS var (used for `rounded-lg`/`md`/`sm` in RNR) should match `radius.md` (8px) at the base. |
-| Change the spacing scale | Edit `packages/ui/tokens/spacing.ts`. The `tailwindTheme.spacing` derives from it. |
+| Change the spacing scale | Edit `packages/ui/tokens/spacing.ts`. The `tailwindTheme.spacing` derives from it. Spacing tokens are raw px values and must convert to rem with `/ 16` because `apps/mobile/metro.config.js` sets `inlineRem: 16`. |
 
 **When to add a token vs use a bracket utility:** Add a new token only if it's used in 3+ screens OR represents a brand identity moment (logo, brand-locked accent). Otherwise reach for a bracket utility: `bg-destructive/10`, `text-foreground/60`, `border-primary/40`. Bracket utilities are free, don't burden the four-file cascade, and read at the call site. Adding a token for a single-use tint is an anti-pattern — see §7.8.
 
@@ -579,7 +579,7 @@ Inline `style={{ transform: [...] }}` IS allowed when the value depends on a `Re
 <View  className="text-foreground">…</View>  // ❌ no-op
 ```
 
-**`rem` is 14 on native, 16 on web.** Don't try to fix it; NativeWind handles it.
+**This app's rem baseline is 16.** NativeWind can default differently on native, but `apps/mobile/metro.config.js` pins `inlineRem: 16`. Shared px spacing tokens must therefore be emitted as `px / 16` rem values. If `spacing[10] = 40`, Tailwind must receive `2.5rem`, not `10rem`.
 
 **Children don't inherit text styles.** Setting `className="text-foreground"` on a parent `View` does nothing for a child `<Text>` unless you go through `TextClassContext` (which is exactly what RNR's `Button`/`Card`/etc. do — see §6.3).
 
@@ -787,6 +787,8 @@ import { Heart, Search, X } from "lucide-react-native";
 ```
 
 Never pass `color={…}` or `size={…}` when you can pass a class. The class form respects dark mode automatically; the prop form does not.
+
+Lucide icons must stay outline-only by default. The wrapper should preserve `fill="none"` unless a caller explicitly supplies a fill class/prop; passing `fill={undefined}` through to `react-native-svg` can override Lucide's default and make icons render as black filled shapes.
 
 The deprecated `lib/icons/iconWithClassName` pattern from RNR's pre-August-2025 rewrite is gone — do not reintroduce it.
 

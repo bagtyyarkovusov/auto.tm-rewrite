@@ -1,27 +1,28 @@
-import { palette } from "@auto-tm/ui/tokens";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft, X } from "lucide-react-native";
+import { AlertCircle, ChevronLeft } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  useColorScheme,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme } from "nativewind";
 
+
+import { OtpCells, type OtpCellsRef } from "../../components/auth/OtpCells";
 import { AuthApiError, requestOtp, verifyOtp } from "../../src/auth/client";
 import { authCopy, type Locale, resolveLocale } from "../../src/auth/copy";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
+
+import { THEME } from "@/lib/theme";
+import { Text } from "@/components/ui/text";
+import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 
 const OTP_LENGTH = 6;
 
@@ -38,10 +39,6 @@ function isDevBuild(): boolean {
   return process.env.EXPO_PUBLIC_ENV !== "production";
 }
 
-function closeAuth() {
-  router.replace("/(tabs)");
-}
-
 export default function OtpScreen() {
   const params = useLocalSearchParams<{
     phone?: string;
@@ -49,9 +46,9 @@ export default function OtpScreen() {
     testCode?: string;
     locale?: Locale;
   }>();
-  const inputRef = useRef<TextInput>(null);
-  const shake = useRef(new Animated.Value(0)).current;
-  const colorScheme = useColorScheme();
+  const otpRef = useRef<OtpCellsRef>(null);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const phone = firstParam(params.phone);
   const [locale, setLocale] = useState<Locale>(
@@ -73,8 +70,6 @@ export default function OtpScreen() {
     [phone],
   );
   const maskedPhone = canonicalPhone ? maskTmPhone(canonicalPhone) : "";
-  const iconColor =
-    colorScheme === "dark" ? palette.neutral[50] : palette.neutral[900];
 
   useEffect(() => {
     if (!canonicalPhone) {
@@ -83,7 +78,7 @@ export default function OtpScreen() {
   }, [canonicalPhone]);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    otpRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -109,36 +104,9 @@ export default function OtpScreen() {
     }
   }, [code, isVerifying]);
 
-  function runErrorMotion() {
-    shake.setValue(0);
-    Animated.sequence([
-      Animated.timing(shake, {
-        duration: 50,
-        toValue: -8,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shake, {
-        duration: 50,
-        toValue: 8,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shake, {
-        duration: 50,
-        toValue: -6,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shake, {
-        duration: 50,
-        toValue: 0,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }
-
   function handleCodeChange(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH);
     setOtpError(null);
-    setCode(digits);
+    setCode(value);
   }
 
   function backToPhone() {
@@ -169,10 +137,10 @@ export default function OtpScreen() {
       await storeAuthSession(result);
       router.replace("/(tabs)");
     } catch (error) {
-      runErrorMotion();
+      otpRef.current?.shake();
       setCode("");
       lastSubmittedCode.current = null;
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => otpRef.current?.focus());
 
       if (error instanceof AuthApiError) {
         if (error.code === "INVALID_OTP" || error.code === "OTP_ALREADY_USED") {
@@ -206,7 +174,7 @@ export default function OtpScreen() {
       const result = await requestOtp({ phone: canonicalPhone });
       setSecondsRemaining(result.resendInSeconds);
       setTestCode(result.testCode);
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => otpRef.current?.focus());
     } catch (error) {
       if (error instanceof AuthApiError) {
         setOtpError(error.message || copy.verifyFailed);
@@ -221,146 +189,96 @@ export default function OtpScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-neutral-0 dark:bg-neutral-950"
+      className="flex-1 bg-background"
     >
       <SafeAreaView className="flex-1 px-4">
         <View className="flex-row items-center justify-between py-4">
-          <View className="flex-row gap-2">
-            <Pressable
-              accessibilityLabel={copy.back}
-              accessibilityRole="button"
-              className="h-10 w-10 items-center justify-center rounded-md"
-              onPress={backToPhone}
-            >
-              <ChevronLeft color={iconColor} size={22} />
-            </Pressable>
-            <Pressable
-              accessibilityLabel={copy.close}
-              accessibilityRole="button"
-              className="h-10 w-10 items-center justify-center rounded-md"
-              onPress={closeAuth}
-            >
-              <X color={iconColor} size={22} />
-            </Pressable>
-          </View>
+          <Button
+            accessibilityLabel={copy.back}
+            size="icon"
+            variant="ghost"
+            onPress={backToPhone}
+          >
+            <Icon as={ChevronLeft} className="size-5 text-foreground" />
+          </Button>
           <LocaleSwitcher onChange={setLocale} value={locale} />
         </View>
 
-        <View className="mt-8 gap-8">
+        <View className="mt-6 gap-6">
           <BrandLogo />
 
           <View className="gap-2">
-            <Text className="text-2xl font-semibold leading-snug text-neutral-900 dark:text-neutral-50">
+            <Text className="text-2xl font-semibold leading-snug text-foreground">
               {copy.otpTitle}
             </Text>
-            <Text className="text-base leading-normal text-neutral-600 dark:text-neutral-300">
+            <Text className="text-base leading-normal text-muted-foreground">
               {copy.otpSent(maskedPhone)}
             </Text>
-            <Pressable accessibilityRole="button" onPress={backToPhone}>
-              <Text className="text-sm font-medium text-info-500">
-                {copy.changeNumber}
-              </Text>
-            </Pressable>
+            <Button
+              variant="link"
+              className="self-start px-0"
+              onPress={backToPhone}
+            >
+              <Text>{copy.changeNumber}</Text>
+            </Button>
           </View>
 
-          <Pressable accessibilityRole="button" onPress={() => inputRef.current?.focus()}>
-            <Animated.View
-              className="flex-row gap-2"
-              style={{ transform: [{ translateX: shake }] }}
-            >
-              {Array.from({ length: OTP_LENGTH }, (_, index) => {
-                const digit = code[index];
-                const focused = index === code.length && !isVerifying;
-                const errored = otpError !== null;
-
-                return (
-                  <View
-                    className={
-                      errored
-                        ? "h-12 flex-1 items-center justify-center rounded-md border-2 border-error-500 bg-neutral-0 dark:bg-neutral-900"
-                        : focused
-                          ? "h-12 flex-1 items-center justify-center rounded-md border-2 border-brand-500 bg-neutral-0 dark:bg-neutral-900"
-                          : digit
-                            ? "h-12 flex-1 items-center justify-center rounded-md border border-brand-500 bg-neutral-50 dark:bg-neutral-900"
-                            : "h-12 flex-1 items-center justify-center rounded-md border border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900"
-                    }
-                    key={index}
-                    pointerEvents="none"
-                  >
-                    <Text className="font-mono text-2xl font-semibold leading-tight text-neutral-900 dark:text-neutral-50">
-                      {digit ?? ""}
-                    </Text>
-                  </View>
-                );
-              })}
-            </Animated.View>
-
-            <TextInput
-              accessibilityLabel={copy.otpTitle}
-              autoComplete="sms-otp"
-              caretHidden
-              className="absolute inset-0"
-              contextMenuHidden={false}
-              inputMode="numeric"
-              keyboardType="number-pad"
-              maxLength={OTP_LENGTH}
-              onChangeText={handleCodeChange}
-              ref={inputRef}
-              style={styles.hiddenInput}
-              textContentType="oneTimeCode"
-              value={code}
-            />
-          </Pressable>
+          <OtpCells
+            ref={otpRef}
+            hasError={otpError !== null}
+            length={OTP_LENGTH}
+            onChange={handleCodeChange}
+            value={code}
+          />
 
           {otpError ? (
-            <Text className="text-sm leading-snug text-error-500">{otpError}</Text>
+            <View className="flex-row items-center gap-1.5">
+              <Icon as={AlertCircle} className="size-4 text-destructive" />
+              <Text className="text-sm leading-snug text-destructive">
+                {otpError}
+              </Text>
+            </View>
           ) : null}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{
-              disabled: secondsRemaining > 0 || isResending,
-            }}
+          <Button
             disabled={secondsRemaining > 0 || isResending}
+            variant="link"
+            className="self-start px-0"
             onPress={resendCode}
           >
-            <Text
-              className={
-                secondsRemaining > 0 || isResending
-                  ? "text-sm font-medium text-neutral-500 dark:text-neutral-400"
-                  : "text-sm font-medium text-info-500"
-              }
-            >
+            <Text>
               {secondsRemaining > 0
                 ? copy.resendIn(secondsRemaining)
                 : copy.resendCode}
             </Text>
-          </Pressable>
+          </Button>
 
           {isVerifying ? (
             <View className="flex-row items-center gap-2">
-              <ActivityIndicator color={palette.red[500]} />
-              <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+              <ActivityIndicator
+                color={`hsl(${THEME[isDark ? "dark" : "light"].primary})`}
+              />
+              <Text className="text-sm text-muted-foreground">
                 {copy.loading}
               </Text>
             </View>
           ) : null}
 
           {isDevBuild() && testCode ? (
-            <View className="self-start rounded-md bg-neutral-100 px-3 py-2 dark:bg-neutral-900">
-              <Text className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                {copy.devCode(testCode)}
-              </Text>
-            </View>
+            <Button
+              className="self-start h-auto rounded-full px-3 py-1"
+              size="sm"
+              variant="secondary"
+              onPress={() => {
+                setCode(testCode);
+                setOtpError(null);
+              }}
+            >
+              <Text>{copy.devCode(testCode)}</Text>
+            </Button>
           ) : null}
         </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  hiddenInput: {
-    opacity: 0,
-  },
-});

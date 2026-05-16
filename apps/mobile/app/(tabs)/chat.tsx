@@ -1,10 +1,25 @@
-import { Text, View } from "react-native";
+import { MessageSquare } from "lucide-react-native";
+import { View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
 
 export default function ChatScreen() {
   return (
-    <View className="flex-1 items-center justify-center bg-white dark:bg-neutral-950">
-      <Text className="text-2xl font-bold text-[#E60000]">AutoTM</Text>
-      <Text className="mt-2 text-neutral-500">Chat (placeholder)</Text>
-    </View>
+    <SafeAreaView className="flex-1 bg-background">
+      <View className="px-4 pt-6 pb-3">
+        <Text className="text-2xl font-semibold text-foreground">Messages</Text>
+      </View>
+      <View className="flex-1 items-center justify-center px-4">
+        <Icon as={MessageSquare} className="size-8 text-muted-foreground" />
+        <Text className="mt-3 text-base text-muted-foreground">
+          No messages yet
+        </Text>
+        <Text className="mt-1 text-sm text-muted-foreground">
+          Your conversations will appear here
+        </Text>
+      </View>
+    </SafeAreaView>
   );
 }

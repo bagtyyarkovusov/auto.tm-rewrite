@@ -100,6 +100,12 @@ CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
 
 Earlier local Codegen/screens patches were only workarounds for the stale `react-native@0.83.0` install. With SDK-aligned `react-native@0.83.6`, unpatched `react-native-screens@4.23.0` parses through `@react-native/codegen@0.83.6`.
 
+### NativeWind token and lucide interop guardrail
+
+`apps/mobile/metro.config.js` pins NativeWind `inlineRem: 16`, so shared spacing tokens from `packages/ui/tokens/spacing.ts` must be converted to rem with `px / 16` in `@auto-tm/ui/theme/tailwind`. Do not divide by the 4px grid step; that turns `h-10` into `160px` on native.
+
+Lucide icons must render through `@/components/ui/icon`. The wrapper maps NativeWind class styles into lucide props and must preserve `fill="none"` by default; passing an undefined fill prop through `react-native-svg` makes outline icons render as black filled shapes.
+
 ## Notable decisions
 
 - [ADR-0002](../../docs/adr/0002-stack.md) — Expo

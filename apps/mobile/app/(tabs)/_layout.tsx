@@ -6,37 +6,67 @@ import {
   PlusCircle,
   Search,
 } from "lucide-react-native";
+import { useColorScheme } from "nativewind";
+
+import { THEME } from "../../lib/theme";
+
+import { Icon } from "@/components/ui/icon";
+
 
 export default function TabLayout() {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const colors = THEME[isDark ? "dark" : "light"];
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#E60000",
-        tabBarInactiveTintColor: "#737373",
-        tabBarStyle: { height: 80 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "500" as const },
+        tabBarActiveTintColor: `hsl(${colors.primary})`,
+        tabBarInactiveTintColor: `hsl(${colors.mutedForeground})`,
+        tabBarStyle: {
+          backgroundColor: `hsl(${colors.background})`,
+          borderTopColor: `hsl(${colors.border})`,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "500" as const, marginBottom: 4 },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Search",
-          tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
+          tabBarIcon: ({ focused, size }) => (
+            <Icon
+              as={Search}
+              className={focused ? "text-primary" : "text-muted-foreground"}
+              size={size}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="favorites"
         options={{
           title: "Favorites",
-          tabBarIcon: ({ color, size }) => <Heart color={color} size={size} />,
+          tabBarIcon: ({ focused, size }) => (
+            <Icon
+              as={Heart}
+              className={focused ? "text-primary" : "text-muted-foreground"}
+              size={size}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="sell"
         options={{
           title: "",
-          tabBarIcon: ({ color, size }) => (
-            <PlusCircle color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Icon
+              as={PlusCircle}
+              className={focused ? "text-primary" : "text-muted-foreground"}
+              size={size}
+            />
           ),
         }}
       />
@@ -44,8 +74,12 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: "Chat",
-          tabBarIcon: ({ color, size }) => (
-            <MessageSquare color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Icon
+              as={MessageSquare}
+              className={focused ? "text-primary" : "text-muted-foreground"}
+              size={size}
+            />
           ),
         }}
       />
@@ -53,8 +87,12 @@ export default function TabLayout() {
         name="services"
         options={{
           title: "Services",
-          tabBarIcon: ({ color, size }) => (
-            <LayoutGrid color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Icon
+              as={LayoutGrid}
+              className={focused ? "text-primary" : "text-muted-foreground"}
+              size={size}
+            />
           ),
         }}
       />

@@ -1,0 +1,103 @@
+import type { LucideIcon, LucideProps } from 'lucide-react-native';
+import { cssInterop } from 'nativewind';
+import * as React from 'react';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+
+import { cn } from '@/lib/utils';
+import { TextClassContext } from '@/components/ui/text';
+
+type IconProps = LucideProps & {
+  as: LucideIcon;
+  className?: string;
+} & React.RefAttributes<LucideIcon>;
+
+type IconStyle = ViewStyle & {
+  color?: string;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number | string;
+};
+
+type IconImplProps = Omit<IconProps, 'style' | 'fill' | 'stroke'> & {
+  style?: StyleProp<IconStyle>;
+  fill?: LucideProps['fill'];
+  stroke?: LucideProps['stroke'];
+};
+
+function numberStyle(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function stringStyle(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function IconImpl({
+  as: IconComponent,
+  color,
+  fill,
+  size,
+  stroke,
+  strokeWidth,
+  style,
+  ...props
+}: IconImplProps) {
+  const flattenedStyle = StyleSheet.flatten(style);
+  const styleSize =
+    numberStyle(flattenedStyle?.width) ?? numberStyle(flattenedStyle?.height);
+  const styleColor = stringStyle(flattenedStyle?.color);
+  const styleFill = stringStyle(flattenedStyle?.fill);
+  const styleStroke = stringStyle(flattenedStyle?.stroke);
+  const styleStrokeWidth =
+    numberStyle(flattenedStyle?.strokeWidth) ??
+    stringStyle(flattenedStyle?.strokeWidth);
+
+  return (
+    <IconComponent
+      color={stroke ?? styleStroke ?? color ?? styleColor}
+      fill={fill ?? styleFill ?? 'none'}
+      size={styleSize ?? size ?? 14}
+      strokeWidth={strokeWidth ?? styleStrokeWidth}
+      {...props}
+    />
+  );
+}
+
+cssInterop(IconImpl, {
+  className: 'style',
+});
+
+/**
+ * A wrapper component for Lucide icons with NativeWind `className` support via `cssInterop`.
+ *
+ * This component allows you to render any Lucide icon while applying utility classes
+ * using `nativewind`. It avoids the need to wrap or configure each icon individually.
+ *
+ * @component
+ * @example
+ * ```tsx
+ * import { ArrowRight } from 'lucide-react-native';
+ * import { Icon } from '@/components/ui/icon';
+ *
+ * <Icon as={ArrowRight} className="text-red-500" size={16} />
+ * ```
+ *
+ * @param {LucideIcon} as - The Lucide icon component to render.
+ * @param {string} className - Utility classes to style the icon using Nativewind.
+ * @param {number} size - Icon size (defaults to 14).
+ * @param {...LucideProps} ...props - Additional Lucide icon props passed to the "as" icon.
+ */
+function Icon({ as: IconComponent, className, size, ...props }: IconProps) {
+  const textClass = React.useContext(TextClassContext);
+
+  return (
+    <IconImpl
+      as={IconComponent}
+      className={cn('text-foreground', textClass, className)}
+      size={size}
+      {...props}
+    />
+  );
+}
+
+export { Icon };

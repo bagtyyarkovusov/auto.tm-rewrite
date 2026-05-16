@@ -15,7 +15,7 @@ export const tailwindTheme = {
     primary: palette.red[500],
   },
   spacing: Object.fromEntries(
-    Object.entries(spacing).map(([k, v]) => [k, `${v / 4}rem`]),
+    Object.entries(spacing).map(([k, v]) => [k, `${v / 16}rem`]),
   ),
   borderRadius: Object.fromEntries(
     Object.entries(radius).map(([k, v]) => [

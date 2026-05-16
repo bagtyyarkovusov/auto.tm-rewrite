@@ -1,0 +1,73 @@
+import { DefaultTheme, DarkTheme, type Theme } from "@react-navigation/native";
+
+export const THEME = {
+  light: {
+    background: "0 0% 100%",
+    foreground: "0 0% 9%",
+    card: "0 0% 100%",
+    cardForeground: "0 0% 9%",
+    popover: "0 0% 100%",
+    popoverForeground: "0 0% 9%",
+    primary: "0 100% 45%",
+    primaryForeground: "0 0% 100%",
+    secondary: "60 8% 95%",
+    secondaryForeground: "0 0% 9%",
+    muted: "60 8% 95%",
+    mutedForeground: "0 0% 45%",
+    accent: "60 8% 95%",
+    accentForeground: "0 0% 9%",
+    destructive: "351 89% 60%",
+    destructiveForeground: "0 0% 100%",
+    border: "45 8% 90%",
+    input: "45 8% 90%",
+    ring: "0 100% 45%",
+  },
+  dark: {
+    background: "0 0% 4%",
+    foreground: "60 10% 98%",
+    card: "0 0% 9%",
+    cardForeground: "60 10% 98%",
+    popover: "240 4% 16%",
+    popoverForeground: "60 10% 98%",
+    primary: "0 100% 50%",
+    primaryForeground: "0 0% 100%",
+    secondary: "0 0% 23%",
+    secondaryForeground: "60 10% 98%",
+    muted: "240 4% 16%",
+    mutedForeground: "45 4% 64%",
+    accent: "240 4% 16%",
+    accentForeground: "60 10% 98%",
+    destructive: "351 89% 55%",
+    destructiveForeground: "0 0% 100%",
+    border: "0 0% 23%",
+    input: "0 0% 23%",
+    ring: "0 100% 50%",
+  },
+} as const;
+
+export const NAV_THEME: Record<"light" | "dark", Theme> = {
+  light: {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: `hsl(${THEME.light.background})`,
+      border: `hsl(${THEME.light.border})`,
+      card: `hsl(${THEME.light.card})`,
+      primary: `hsl(${THEME.light.primary})`,
+      text: `hsl(${THEME.light.foreground})`,
+      notification: `hsl(${THEME.light.destructive})`,
+    },
+  },
+  dark: {
+    ...DarkTheme,
+    colors: {
+      ...DarkTheme.colors,
+      background: `hsl(${THEME.dark.background})`,
+      border: `hsl(${THEME.dark.border})`,
+      card: `hsl(${THEME.dark.card})`,
+      primary: `hsl(${THEME.dark.primary})`,
+      text: `hsl(${THEME.dark.foreground})`,
+      notification: `hsl(${THEME.dark.destructive})`,
+    },
+  },
+};

@@ -10,7 +10,7 @@
 
 ## Goal
 
-Make phone-OTP login work end-to-end on mobile and public web. Issue JWTs, rotate per-session refresh tokens, expose logout / logout-all, and expose `DELETE /api/v1/me` (Apple App Store requirement).
+Make phone-OTP login work end-to-end on mobile. Issue JWTs, rotate per-session refresh tokens, expose logout / logout-all, and expose `DELETE /api/v1/me` (Apple App Store requirement). Public web stays anonymous-only per `apps/web/CONTEXT.md`.
 
 ## User capability (the demo line)
 
@@ -19,7 +19,7 @@ Make phone-OTP login work end-to-end on mobile and public web. Issue JWTs, rotat
 ## Bounded contexts touched
 
 - **Primary**: `identity/` — full four-layer flow (`domain` + `application` + `infrastructure` + `presentation`)
-- **Supporting**: `packages/db` + `packages/contracts` (S1 schema/contract drift fixed in foundations); `apps/sms-gateway` (mock driver wired to API); `apps/mobile/(auth)/otp.tsx`; `apps/web/[locale]/login`
+- **Supporting**: `packages/db` + `packages/contracts` (S1 schema/contract drift fixed in foundations); `apps/sms-gateway` (mock driver wired to API); `apps/mobile/(auth)/otp.tsx`
 
 ## Acceptance criteria (DoD)
 
@@ -32,7 +32,6 @@ Make phone-OTP login work end-to-end on mobile and public web. Issue JWTs, rotat
 - [ ] `POST /api/v1/auth/logout-all` deletes all sessions for the authenticated user
 - [ ] `DELETE /api/v1/me` wipes per-user state (sessions, owned vehicles, blocked-users, favorites, saved searches, notifications, conversations as buyer)
 - [ ] Mobile flow: phone screen → OTP screen → tab nav (logged in); resend timer respected; wrong-code error inline
-- [ ] Web flow: same shape, with the route `/{locale}/login`
 - [ ] `OTP_TEST_MODE=true` returns the code in the API response (CI + dev only)
 - [ ] `SMS_DRIVER=mock` succeeds silently; `SMS_DRIVER=gateway` calls the SMS gateway (only used in staging once phones are sourced)
 - [ ] `identity/CONTEXT.md` reflects what now exists (use-cases + ports)
@@ -85,7 +84,6 @@ apps/api/src/modules/identity/
 └── identity.module.ts
 
 apps/mobile/app/(auth)/{phone,otp}.tsx
-apps/web/src/app/[locale]/login/page.tsx
 apps/sms-gateway/src/adapters/OtpSenderMock.ts   (already scaffolded in S1; verified working)
 
 packages/db/prisma/schema.prisma + migration for ADR-0012 / ADR-0013

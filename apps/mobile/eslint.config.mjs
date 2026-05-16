@@ -18,6 +18,10 @@ const eslintConfig = defineConfig([
     settings: {
       "import/ignore": ["react-native", "eslint/config"],
     },
+    rules: {
+      "import/no-unresolved": "off",
+      "import/namespace": "off",
+    },
   },
 ]);
 

@@ -1,6 +1,9 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import { type Locale, locales } from "./copy";
+
+import { Text } from "@/components/ui/text";
+
 
 type LocaleSwitcherProps = {
   value: Locale;
@@ -11,7 +14,7 @@ export function LocaleSwitcher({ value, onChange }: LocaleSwitcherProps) {
   return (
     <View
       accessibilityLabel="Language"
-      className="flex-row rounded-md bg-neutral-100 p-1 dark:bg-neutral-900"
+      className="flex-row rounded-md bg-muted p-1"
     >
       {locales.map((locale) => {
         const active = locale === value;
@@ -22,8 +25,8 @@ export function LocaleSwitcher({ value, onChange }: LocaleSwitcherProps) {
             accessibilityState={{ selected: active }}
             className={
               active
-                ? "rounded-md bg-neutral-0 px-2 py-1 dark:bg-neutral-800"
-                : "rounded-md px-2 py-1"
+                ? "items-center justify-center rounded-md bg-background px-2 py-1"
+                : "items-center justify-center rounded-md px-2 py-1"
             }
             key={locale}
             onPress={() => onChange(locale)}
@@ -31,8 +34,8 @@ export function LocaleSwitcher({ value, onChange }: LocaleSwitcherProps) {
             <Text
               className={
                 active
-                  ? "text-sm font-medium uppercase text-neutral-900 dark:text-neutral-50"
-                  : "text-sm font-medium uppercase text-neutral-500 dark:text-neutral-400"
+                  ? "text-sm font-medium uppercase text-foreground"
+                  : "text-sm font-medium uppercase text-muted-foreground"
               }
             >
               {locale}
