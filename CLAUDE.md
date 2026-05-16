@@ -30,6 +30,7 @@ Monorepo (Turborepo + pnpm) with 7 apps and 5 packages. API is NestJS + Prisma +
 - **`.npmrc` has `shamefully-hoist=true`** — pnpm must flatten `node_modules` for React Native / Expo / Metro compatibility. Never remove this setting without testing Expo bundling end-to-end.
 - **Use Context7 for Expo SDK 55 docs.** Always resolve and query `expo-router`, `expo`, `@expo/cli`, and other Expo SDK packages via Context7 MCP before writing code or debugging.
 - **For mobile / Expo work, read `docs/agents/mobile-expo.md` first.** Run Expo's dependency check before changing packages, Metro config, Codegen, or native-module resolution.
+- **For any mobile UI / styling work, read `docs/agents/nativewind-v4.md` end to end.** That guide is the single source of truth for the NativeWind v4 + React Native Reusables (RNR) workflow on `apps/mobile`: theme tokens, dark-mode rules, RNR setup recipe, component catalogue, customization patterns, and the pre-styling research checklist. Never use `StyleSheet.create` for new code, never hand-roll a button/input/dialog (use RNR), never import `@auto-tm/ui/components/*` in mobile (that package is web-only).
 - **When working with Expo Router typed routes**, check `experiments.typedRoutes` in `app.json` and the `EXPO_USE_TYPED_ROUTES` env var. Route file changes must be followed by mobile typecheck because `.expo/types/router.d.ts` is generated from the file tree.
 
 ## Known issues and workarounds
