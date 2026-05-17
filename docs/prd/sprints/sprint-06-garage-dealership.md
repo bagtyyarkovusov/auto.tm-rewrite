@@ -28,6 +28,14 @@ Two distinct features that both build on `identity/` but feel different to users
 
 ## Acceptance criteria (DoD)
 
+### Schema additions (Prisma migration)
+
+S6 broadens the skinny `OwnedVehicle` model (see `apps/api/src/modules/identity/CONTEXT.md` Planned section) into the full garage entity:
+
+- [ ] `OwnedVehicle` adds: `vin?` (String), `mileage?` (Int), `nickname?` (String), `status` (`OwnedVehicleStatus` enum: owned | dream | sold), `photoUrl?`, `isPublic: Boolean @default(false)`, `linkedListingId?` (FK → Listing, SetNull) for "this is the car I'm selling" linkage.
+- [ ] `Dealership.verifiedAt?` (DateTime) for PRO badge state (used by `POST /api/v1/admin/dealerships/{id}/verify-pro`).
+- [ ] Prisma migration is reversible.
+
 ### Garage
 - [ ] `POST /api/v1/me/garage` adds an `OwnedVehicle` with `status=owned | dream | sold`
 - [ ] `GET /api/v1/me/garage` lists the user's vehicles

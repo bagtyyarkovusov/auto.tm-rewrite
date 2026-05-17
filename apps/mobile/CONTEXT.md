@@ -1,5 +1,7 @@
 # apps/mobile — CONTEXT
 
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in the relevant sprint files under `docs/prd/sprints/`.
+
 ## Purpose
 
 The primary user surface. Expo (React Native) app for Android + iOS. Anonymous browsing + auth-on-action for buyers and sellers.
@@ -9,79 +11,76 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - TM-based buyers and sellers
 - Private users (most) and dealership reps (few but high-value)
 
-## What it contains
+## What it contains (today)
 
-- `expo-router` for navigation
-- 5-tab bottom nav: Search (feed) / Favorites / [+] Sell / Chat / Services (implemented as placeholder screens; OTP trigger on feed)
-- NativeWind v4 + React Native Reusables (RNR) for ALL styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md) for the authoritative guide (theme tokens, setup recipe, customization rules, component catalogue)
-- RNR components are CLI-installed into `apps/mobile/components/ui/` and owned by the repo. `packages/ui/components/*` is WEB-ONLY (uses HTML elements) — never import it on mobile. Tokens (`@auto-tm/ui/tokens`, `@auto-tm/ui/theme/tailwind`) ARE shared across web + mobile and are the single source of truth for brand values.
-- `expo-image-manipulator` for client-side image compression
-- `react-native-compressor` for client-side video compression (custom dev client required for that flow; Expo Go is valid for current routing/auth smoke checks)
-- `react-native-svg` for vector icons and brand SVG rendering; local `.svg` imports use `react-native-svg-transformer` at build time
-- `@aws-sdk/client-s3` for presigned MinIO uploads
-- Socket.IO client for chat WebSocket
-- `expo-notifications` for FCM/APNS device token registration
-- `expo-linking` for Universal Links / App Links handling
-- `react-i18next` for RU + TK + EN
-- `expo-image` is deferred until remote listing/gallery media needs caching, placeholders, and transitions; S2 auth does not add it for the static logo
+### Stack
 
-## Top-level routes (Phase 1)
+- **`expo`** SDK 55, **`expo-router`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
+- **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 11 RNR components installed at `apps/mobile/components/ui/` (avatar, badge, button, card, dialog, icon, input, native-only-animated-view, separator, skeleton, text). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{avatar, dialog, portal, separator, slot}` v1.4.0 wired.
+- **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (includes `catalog.*` keys ready for S3).
+- **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
+- **`expo-secure-store`** for JWT access + refresh tokens (`src/auth/session.ts`).
+- **`expo-image-manipulator`** for client-side image compression.
+- **`react-native-compressor`** for client-side video compression (custom dev client required for that flow; Expo Go is valid for current routing/auth smoke checks).
+- **`react-native-svg`** (+ `react-native-svg-transformer` at build time) for vector icons and brand SVG rendering.
+- **`expo-linking`** installed (Universal Links / App Links handling will be wired in S4).
+- **`lucide-react-native`** for icons, rendered through the `@/components/ui/icon` wrapper.
+
+### Routes (Phase 1, today)
 
 ```
 /(tabs)/
-  index               Feed (personalized listings)
-  favorites           Favorites + saved searches + comparisons
-  sell                Sell / listing wizard entry
-  chat                Conversation list
-  services            Profile, garage, settings, blog, etc.
+  index               Feed (personalized listings)        — stub, no real feed
+  favorites           Favorites + saved searches          — stub
+  sell                Sell / listing wizard entry         — stub
+  chat                Conversation list                   — stub
+  services            Profile, garage, settings, blog     — stub
 
 /(auth)/
-  phone               Phone entry
-  otp                 OTP verification
-  totp                Admin TOTP (admin-flagged users only)
-
-/(public)/
-  listings/[id]       Listing detail (works for anon + auth)
-  dealers/[slug]      Dealer showroom
-  blog/[id]           Blog post
-
-/chat/[conversationId]    Chat thread
-/sell/wizard              Create listing wizard (7 steps)
-/me                       Profile
-/me/garage                My Garage
-/me/listings              My listings
-/me/saved-searches        My saved searches
+  phone               Phone entry                         — wired (S2)
+  otp                 OTP verification                    — wired (S2)
 ```
 
-## Deep link manifest
+No `/(public)/*`, no `/sell/wizard`, no `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
 
-Paths that open the app via Universal Link / App Link:
-- `/listings/*`
-- `/dealers/*`
-- `/blog/*`
-- `/chat/*` (auth-gated; falls back to login flow)
-
-Web-only (open in browser, never in app):
-- `/admin/*`
-- `/legal/*`
-
-## State management
+## State management (today)
 
 - React state for local UI
-- **TanStack Query v5** for server cache + mutations, layered on a small custom `apiClient` wrapper. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) for the decision and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md) for the implementation guide.
-- **Zustand** for client state that doesn't belong in TanStack Query — auth intent capture, modal lifecycle, form state. See `src/auth/intentStore.ts`.
-- `expo-secure-store` for JWT access + refresh tokens (used in `src/auth/session.ts`)
+- TanStack Query v5 + custom `apiClient` wrapper at `src/api/client.ts` (single API entry point)
+- Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay)
+- `expo-secure-store` for JWT access + refresh tokens
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 
-The single API entry point is `apps/mobile/src/api/client.ts` — the wrapper landed in PR #60 (S3 foundations). All HTTP calls go through it (OTP request + verify already migrated; the old `src/auth/client.ts` has been removed). Identity hooks live under `apps/mobile/src/api/identity/*`; catalog hooks land in S3 under `apps/mobile/src/api/catalog/*`.
+Identity hooks live at `src/api/identity/*`. Catalog hooks ship in S3 at `src/api/catalog/*`.
 
 ## Dependencies
 
-- `apps/api` (HTTP + WS)
-- `packages/contracts` (typed client)
-- `packages/ui` (tokens — components are duplicated for RN, but tokens shared)
+- `apps/api` (HTTP)
+- `packages/contracts` (typed client via Zod)
+- `@auto-tm/ui` workspace package (tokens — components are duplicated for RN, but tokens shared)
 
-## Known issues
+## Planned additions (future sprints)
+
+Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the deps + routes + state below are NOT in code today. Tracked in the named sprint files.
+
+- **S3 (Catalog)** — `src/api/catalog/*` hooks; dev-only `/dev/catalog` route gated `__DEV__`.
+- **S4 (Listings CRUD)** —
+  - **`@aws-sdk/client-s3`** dep for presigned MinIO uploads (current package.json does NOT include this; S4 adds it)
+  - Routes: `/(public)/listings/[id]`, `/sell/wizard` (7-step create-listing wizard)
+  - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
+- **S5 (Listings UX)** — saved-search UI, filter sheet; mobile picker modals (brand-picker, model-picker)
+- **S6 (Garage + Dealership)** — `/me/garage`, `/me/listings`; `/(public)/dealers/[slug]`
+- **S7 (Conversations)** —
+  - **`socket.io-client`** dep (not in package.json today; S7 adds it)
+  - Routes: `/chat/[conversationId]`
+- **S8 (Notifications)** —
+  - **`expo-notifications`** dep (not in package.json today; S8 adds it for FCM/APNS device token registration)
+- **S9 (Admin)** — `/(auth)/totp` route for admin TOTP enrollment (admin-flagged users only)
+- **i18n** —
+  - **`react-i18next`** dep (not in package.json today; sprint TBD — likely S5 alongside locale switcher UX)
+- **App-wide locale store + query-key invalidation on locale change** — S5 picker UX consumes; locale store ships then.
+
+## Known issues / workarounds
 
 ### pnpm + Expo SDK 55 compatibility
 
@@ -89,7 +88,7 @@ The single API entry point is `apps/mobile/src/api/client.ts` — the wrapper la
 
 ### Expo SDK 55 package alignment
 
-Expo Go includes native modules at SDK-specific versions. `expo install --fix` aligned this app to the SDK 55 expected package set, including `expo-router@55.0.14`, `react-native@0.83.6`, `react-native-svg@15.15.3`, and `react-native-reanimated@4.2.1`. After package alignment, run `pnpm install --force` at the repo root; pnpm can otherwise leave stale symlinks in `apps/mobile/node_modules`.
+Expo Go includes native modules at SDK-specific versions. `expo install --fix` aligned this app to the SDK 55 expected package set (`expo-router@55.0.14`, `react-native@0.83.6`, `react-native-svg@15.15.3`, `react-native-reanimated@4.2.1`). After package alignment, run `pnpm install --force` at the repo root; pnpm can otherwise leave stale symlinks in `apps/mobile/node_modules`.
 
 Agents must run the mobile gate in `docs/agents/mobile-expo.md` before claiming SDK/package/runtime fixes. The first command is always:
 
@@ -100,8 +99,6 @@ CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
 ### react-native-screens Fabric source path
 
 `react-native-screens` must keep using its React Native/Fabric source path in SDK 55 / Expo Go. Do not redirect it to `lib/commonjs/`; that bypasses Fabric view-config registration and caused `RNSSafeAreaView` runtime crashes.
-
-Earlier local Codegen/screens patches were only workarounds for the stale `react-native@0.83.0` install. With SDK-aligned `react-native@0.83.6`, unpatched `react-native-screens@4.23.0` parses through `@react-native/codegen@0.83.6`.
 
 ### NativeWind token and lucide interop guardrail
 
@@ -114,3 +111,6 @@ Lucide icons must render through `@/components/ui/icon`. The wrapper maps Native
 - [ADR-0002](../../docs/adr/0002-stack.md) — Expo
 - [ADR-0006](../../docs/adr/0006-auth.md) — OTP + action-gated auth
 - [ADR-0008](../../docs/adr/0008-media.md) — Client-side compression mandatory
+- [ADR-0014](../../docs/adr/0014-mobile-component-library.md) — NativeWind v4 + RNR
+- [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) — TanStack Query v5 + apiClient wrapper
+- [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state

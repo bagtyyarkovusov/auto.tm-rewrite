@@ -27,6 +27,17 @@ Two intertwined deliverables:
 
 ## Acceptance criteria (DoD)
 
+### Schema additions (Prisma migration)
+
+S8 broadens the schemas in `apps/api/src/modules/notifications/CONTEXT.md` + `subscriptions/CONTEXT.md` (Planned sections):
+
+- [ ] `FcmDevice` adds: `deviceId` (String), `registeredAt`, `lastUsedAt`, `invalidatedAt?` — on FCM/APNS "token invalid" response, set `invalidatedAt` and skip future sends. (Optional rename to `PushToken`.)
+- [ ] `NotificationHistory` adds broadcast-tracking fields: `recipientGroup?` (e.g., `"all-admins"`), `sentByUserId?` (admin-initiated), `deliveryDetails` (JSON of per-token success/fail), `totalRecipients` (Int), `successfulDeliveries` (Int), `failedDeliveries` (Int).
+- [ ] New `SavedSearchMatchHistory` entity (in subscriptions): id, savedSearchId (FK → SavedSearch, Cascade), listingId (FK → Listing, Cascade), notifiedAt. Prevents duplicate alerts when the same listing matches the same search.
+- [ ] `apps/mobile` adds `expo-notifications` dep (not in package.json today) for FCM/APNS device token registration.
+- [ ] `apps/worker` adds `firebase-admin` dep + a new `push.processor.ts` BullMQ consumer + `sharp` dep for image variants + ffmpeg toolchain for video transcoding.
+- [ ] Prisma migration is reversible.
+
 ### Notifications transport
 - [ ] `PushPort` interface (charter §8) with three implementations: FCM, APNS, test
 - [ ] `POST /api/v1/me/fcm-devices` registers a device token; `DELETE` unregisters

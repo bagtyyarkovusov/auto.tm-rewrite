@@ -23,6 +23,18 @@ Seller creates a listing with photos (≤20) and one short video (≤60 s). Anon
 
 ## Acceptance criteria (DoD)
 
+### Schema additions (Prisma migration)
+
+S4 broadens the skeletal `Listing` model (see `apps/api/src/modules/listings/CONTEXT.md` Planned section) to match what the wizard + detail page need. Per [ADR-0019](../../adr/0019-context-md-describes-current-state.md), the CONTEXT.md gets updated at the end of this sprint to describe what shipped.
+
+- [ ] `Listing` adds: `dealershipId?` (FK → Dealership), `publishedAsDealership: Boolean @default(false)`, `vin?` (String), `condition` enum (`new` | `used`), `engineType` Prisma enum (gasoline | diesel | lpg | hybrid | electric), `transmission` Prisma enum (manual | automatic | cvt | semi_automatic), `driveType` Prisma enum (fwd | rwd | awd | four_wd), `enginePower?` (Int — kW or hp), `regionId` (FK → Region; redundant given cityId but indexes regional filter queries), `locationText?` (free-form), `soldAt?` (DateTime), `viewCount @default(0)`, `favoriteCount @default(0)`, `originalPrice?` (Float) + `originalCurrency?` (Currency enum) for foreign-currency seller pricing. Per Decision 3 in the pre-S3 grill: engine/transmission/drive are Prisma enums on Listing, not catalog FKs.
+- [ ] `Listing.status` enum may add `reported` and `banned` (moderation states). Coordinate with S9 if status flow needs them earlier.
+- [ ] New `ListingDraft` entity: id, userId (FK → User, Cascade), payload (JSON of in-flight wizard state), updatedAt. Index on userId.
+- [ ] `ListingMedia` adds: `key` (MinIO object key — rename or add alongside existing `url`), `position` (rename `sortOrder` if S4 prefers — or keep `sortOrder` and align contract), `width?`, `height?`, `durationMs?`, `posterKey?` (videos), `uploadedByUserId`, `uploadedByStaff: Boolean @default(false)`. `kind` enum stays (image | video); `orbit` is Phase 3 (S17).
+- [ ] Prisma migration is reversible; existing rows survive (test locally with seeded data before merging).
+
+### Endpoints + behavior
+
 - [ ] `POST /api/v1/listings` creates a draft; `POST /api/v1/listings/{id}/publish` activates it
 - [ ] `GET /api/v1/listings/{id}` returns full detail; **public — no auth required**
 - [ ] `GET /api/v1/listings` returns paginated cursor feed; **public**
@@ -36,8 +48,14 @@ Seller creates a listing with photos (≤20) and one short video (≤60 s). Anon
 - [ ] Mobile create-listing wizard: 6 steps (brand-model → year → details → price → photos → review)
 - [ ] Web listing detail page renders with OG metadata (preview-ready for share-in-chat in S7)
 - [ ] Anonymous browsing works without auth headers
-- [ ] `listings/CONTEXT.md` updated
+- [ ] `listings/CONTEXT.md` updated to describe everything shipped (per ADR-0019: CONTEXT mirrors current state)
 - [ ] `docs/prd/03-roadmap.md` updated (S4 🟢, S5 🟡)
+
+### Ports + events
+
+- [ ] `ListingsReadPort` (`getListingSummary`, `getListingsForOwner`, `matchesFilters`) — for cross-context summary reads (consumed by conversations, subscriptions, admin)
+- [ ] Events emitted: `ListingCreated` (on `status → active`), `ListingUpdated` (on description/price changes), `ListingSold` (on mark-sold), `ListingDeleted` (on soft-delete)
+- [ ] **Note**: `ListingReported` event + `reported`/`banned` status fold-in deferred to S9 admin moderation; S4 does NOT need to emit them.
 
 ## Tests required (TDD mandatory)
 
@@ -86,8 +104,9 @@ apps/web/src/app/[locale]/listings/page.tsx       (feed)
 
 - **PRD feature**: [`../features/32-listings.md`](../features/32-listings.md)
 - **End-to-end flow**: [`../flows/61-create-listing.md`](../flows/61-create-listing.md)
+- **CONTEXT spec source** (current-state mirror, target for end-of-sprint update): [`apps/api/src/modules/listings/CONTEXT.md`](../../../apps/api/src/modules/listings/CONTEXT.md)
 - **Charter sections**: §11 (Media handling), §16 (Pagination, soft-delete), §17 (Currency)
-- **ADRs**: 0008 (Media), 0001 (Architecture — soft-delete only on Listing + BlogPost)
+- **ADRs**: 0008 (Media), 0001 (Architecture — soft-delete only on Listing + BlogPost), [0019](../../adr/0019-context-md-describes-current-state.md) (CONTEXT.md describes current state — listings/CONTEXT.md gets updated at end of S4)
 
 ## Previous-sprint dependencies
 

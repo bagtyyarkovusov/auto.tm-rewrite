@@ -1,85 +1,104 @@
 # notifications — CONTEXT
 
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in `docs/prd/sprints/sprint-08-notifications.md`. Push delivery + match algorithm + admin broadcast tooling all ship in S8.
+
 ## Purpose
 
-All push delivery + in-app notification feed + admin broadcast tooling. Responds to events from across the system and fans out via FCM/APNS (or the fallback transport).
+All push delivery + in-app notification feed + admin broadcast tooling. Schema-only today; the dispatch + transport layer ships in S8.
 
 ## Owns (entities + tables)
 
-- `PushToken` — id, userId, platform (`android` / `ios` / `web`), token, deviceId, registeredAt, lastUsedAt, invalidatedAt?
-- `NotificationHistory` — id, recipientUserId?, recipientGroup?, category (enum), title, body, payload (JSON), sentByUserId? (admin-initiated), sentAt, deliveryDetails (JSON: per-token success/fail), totalRecipients, successfulDeliveries, failedDeliveries
-- `NotificationPreference` — { userId, category, enabled, channel (`push` / `digest` / `none`) } — per-category opt-out config
+- `FcmDevice` — id, userId (FK → User, Cascade), token (unique), platform (`PushPlatform` enum: android | ios | web), createdAt, updatedAt. Index on `userId`.
+- `NotificationHistory` — id, userId (FK → User, Cascade), category (`NotificationCategory` enum: direct_messages | saved_search_matches | listing_activity | admin_announcements | blog_activity | marketing), title, body, data? (JSON), readAt?, createdAt. Index on `(userId, createdAt DESC)`.
+- `NotificationPreference` — id, userId (FK → User, Cascade, unique), optOuts (JSON). One row per user.
 
-## Categories (6 in MVP)
+## Invariants (enforced today)
 
-```ts
-enum NotificationCategory {
-  DIRECT_MESSAGE      // can only mute per-conversation, not globally
-  SAVED_SEARCH_MATCH  // per-search opt-out
-  LISTING_ACTIVITY    // favorites, views — digestable
-  ADMIN_ANNOUNCEMENT  // per-announcement opt-out; "important" flag bypasses
-  BLOG_ACTIVITY       // opt-in (default off)
-  MARKETING           // opt-in (required by app store policy)
-}
-```
+- `FcmDevice.token` is globally unique (a token can be registered to at most one device row).
+- `FcmDevice.userId` references an existing User (FK; deletes cascade).
+- `NotificationHistory.userId` references an existing User (FK; deletes cascade).
+- `NotificationPreference.userId` is unique (one preference row per user).
 
-## Invariants
+## Module shape (today)
 
-- A user MUST have at least one valid `PushToken` to receive push (otherwise notification goes to in-app feed only)
-- `PushToken.invalidatedAt` set when FCM/APNS returns "token invalid"; token is then ignored
-- `NotificationHistory` is append-only (never deleted; admin can hide from feed but row persists for audit)
-- `NotificationPreference.channel = 'none'` means user gets neither push nor in-app entry for this category
-- `DIRECT_MESSAGE` cannot be set to `enabled=false` — only per-conversation mute is allowed (UI enforces)
+- `apps/api/src/modules/notifications/`:
+  - `domain/`, `application/`, `infrastructure/` — empty
+  - `presentation/` — empty
+  - `notifications.module.ts` — empty module
+- No dispatch layer, no transport adapters, no event consumers.
 
 ## Ports exposed
 
-```ts
-interface NotificationsDispatchPort {
-  send(input: {
-    recipientUserId: string
-    category: NotificationCategory
-    title: string
-    body: string
-    payload?: Record<string, unknown>
-    deepLink?: string
-  }): Promise<void>
-}
-
-interface PushPort {  // The transport abstraction (FCM, APNS, ntfy, test)
-  send(deviceToken, payload): Promise<PushResult>
-}
-```
+- (none today — S8 adds `NotificationsDispatchPort` and `PushPort`)
 
 ## Ports consumed
 
-```ts
-IdentityReadPort       // resolve user + check role (admin) for broadcasts
-ListingsReadPort       // hydrate notification body for saved-search matches
-```
+- (none today)
+
+## Shipped use-cases
+
+- (none today)
 
 ## Events emitted
 
-- `NotificationDelivered` (analytics)
-- `NotificationFailed` (analytics + retry decisions)
+- (none today)
 
 ## Events consumed
 
-- `MessageSent` (from `conversations/`) — fires push to offline recipient
-- `SavedSearchMatched` (from `subscriptions/`) — fires push (debounced)
-- `ListingFavorited` (from `listings/`) — digestable activity push
-- `ListingReported` — admin notification
-- `DealershipVerified` — congrats push to dealership members
+- (none today)
 
-## Push transport selection
+## Planned additions (S8 — Notifications + match)
 
-Env var `PUSH_TRANSPORT` selects the `PushPort` implementation:
-- `fcm-apns` (default production) — both platforms via firebase-admin and APNS HTTP/2
-- `ntfy` (fallback) — self-hosted, only triggers a limited foreground-style notification
-- `test` (CI / dev) — in-memory, no real delivery
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in `docs/prd/sprints/sprint-08-notifications.md`:
 
-If FCM/APNS returns "token invalid" → mark `PushToken.invalidatedAt` and skip future sends.
+- **Schema additions to `FcmDevice`** (rename to `PushToken` may be considered): `deviceId`, `registeredAt`, `lastUsedAt`, `invalidatedAt?` for token-invalidation handling
+- **Schema additions to `NotificationHistory`** for broadcast support: `recipientGroup?` (e.g., "all-admins"), `sentByUserId?` (admin-initiated), `deliveryDetails` (JSON per-token success/fail), `totalRecipients`, `successfulDeliveries`, `failedDeliveries` (broadcast metrics)
+- **`NotificationsDispatchPort`** interface:
+
+  ```ts
+  interface NotificationsDispatchPort {
+    send(input: {
+      recipientUserId: string
+      category: NotificationCategory
+      title: string
+      body: string
+      payload?: Record<string, unknown>
+      deepLink?: string
+    }): Promise<void>
+  }
+  ```
+
+- **`PushPort`** transport abstraction (FCM, APNS, ntfy, test):
+
+  ```ts
+  interface PushPort {
+    send(deviceToken: string, payload: PushPayload): Promise<PushResult>
+  }
+  ```
+
+- **Push transport selection** via `PUSH_TRANSPORT` env var:
+  - `fcm-apns` (default production) — both platforms via firebase-admin + APNS HTTP/2
+  - `ntfy` (fallback) — self-hosted, limited foreground-style notifications
+  - `test` (CI / dev) — in-memory, no real delivery
+  - On "token invalid" response → mark `FcmDevice.invalidatedAt` (after schema addition) and skip future sends
+
+- **Invariants** to enforce at application layer:
+  - User MUST have at least one valid `FcmDevice` to receive push (else notification stays in-app feed only)
+  - `NotificationHistory` is append-only (admin can hide from feed but row persists for audit)
+  - `direct_messages` category cannot be globally disabled — only per-conversation mute (UI-enforced)
+  - `NotificationPreference.optOuts` JSON shape: `{ [category]: 'push' | 'digest' | 'none' }`
+
+- **Events emitted**: `NotificationDelivered` (analytics), `NotificationFailed` (analytics + retry)
+- **Events consumed**:
+  - `MessageSent` (from `conversations/`) — fires push to offline recipient
+  - `SavedSearchMatched` (from `subscriptions/`) — fires push (debounced)
+  - `ListingFavorited` (from `listings/`) — digestable activity push
+  - `ListingReported` (from `listings/`) — admin notification
+  - `DealershipVerified` (from `identity/` or `admin/`) — congrats push to dealership members
+- **Ports consumed**: `IdentityReadPort` (resolve user + admin check for broadcasts), `ListingsReadPort` (hydrate match notification body)
 
 ## Notable decisions
 
-- [ADR-0009](../../../../docs/adr/0009-notifications.md) — Dual-stack transport, 6 categories
-- [ADR-0001](../../../../docs/adr/0001-architecture.md) — Notifications is its own context
+- [ADR-0009](../../../../../docs/adr/0009-notifications.md) — Dual-stack transport, 6 categories
+- [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Notifications is its own context
+- [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state

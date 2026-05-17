@@ -1,5 +1,7 @@
 # packages/ui — CONTEXT
 
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md).
+
 ## Purpose
 
 Design tokens (the single source of truth) + shared shadcn/ui components for `apps/admin` and `apps/web`. Mobile (`apps/mobile`) consumes the tokens but has its own React Native component implementations because the rendering primitives differ.
@@ -19,12 +21,13 @@ packages/ui/
 ├── theme/
 │   ├── theme.css            Tailwind v4 @theme directive — imported by web + admin globals.css
 │   └── tailwind.ts          JS token export — consumed by NativeWind v4 (mobile)
-├── components/              Shared shadcn components (web only)
-│   ├── Button.tsx
-│   ├── Card.tsx
-│   ├── Input.tsx
-│   ├── ...
-│   └── index.ts
+├── components/              Shared shadcn components (web + admin only — mobile has its own RNR-based set at apps/mobile/components/ui/)
+│   ├── Button.tsx           Installed
+│   ├── Card.tsx             Installed
+│   ├── Input.tsx            Installed
+│   ├── cn.ts                clsx + tailwind-merge helper
+│   └── index.ts             Re-exports the 3 installed components
+│   (Additional shadcn components install via the shadcn CLI as web/admin sprints need them — S4+ will add more)
 ├── package.json
 └── CONTEXT.md
 ```
@@ -106,3 +109,6 @@ What changes:
 - Charter §12 — Token system structure
 - shadcn/ui chosen for web (code copied into repo, no `node_modules` dependency for components)
 - NativeWind chosen for mobile (Tailwind classnames in React Native, consistent DX)
+- [ADR-0011](../../docs/adr/0011-version-deltas.md) — Tailwind v4 uplift from charter v3
+- [ADR-0014](../../docs/adr/0014-mobile-component-library.md) — Mobile uses RNR; mobile/RNR components live in `apps/mobile/components/ui/`, NOT here
+- [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state

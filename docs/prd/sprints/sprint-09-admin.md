@@ -23,6 +23,24 @@ A non-technical admin runs the marketplace day-to-day: moderates content, manage
 
 ## Acceptance criteria (DoD)
 
+### Schema additions (Prisma migration)
+
+S9 broadens the schemas in `apps/api/src/modules/admin/CONTEXT.md` + `identity/CONTEXT.md` (Planned sections) to support the admin dashboard end-to-end:
+
+- [ ] `AuditLog.action` evolves from `String` to a typed Prisma enum `AuditAction` (`LISTING_BAN` | `LISTING_UNBAN` | `USER_SUSPEND` | `USER_UNSUSPEND` | `DEALERSHIP_VERIFY` | `DEALERSHIP_UNVERIFY` | `NOTIFICATION_BROADCAST` | `LISTING_PIN` | `CATALOG_EDIT` | `CONTENT_REPORT_RESOLVE`). Migration backfills existing String rows.
+- [ ] `AuditLog` adds: `beforeJson?` (state before action), `afterJson?` (state after), `reason?` (free-form admin note). `details` JSON column may stay alongside for complex cases.
+- [ ] New `ContentReport` entity: id, reporterUserId (FK → User), targetType (`listing` | `blog_post` | `user` | `message`), targetId, reason, details?, status (`pending` | `actioned` | `dismissed`), reviewedById? (FK → User), reviewedAt?, createdAt.
+- [ ] New `TotpEnrollment` entity (per ADR-0006 / ADR-0012 deferral): id, userId (FK → User, unique), encryptedSecret (the TOTP shared secret), confirmedAt?, createdAt. Admin login enforces this on first elevation.
+- [ ] `Dealership` adds `verifiedAt?` (DateTime) for PRO badge state.
+- [ ] `Listing.status` enum adds `reported` and `banned` if not added in S4 (coordinate with S4 outcome).
+- [ ] Prisma migration is reversible.
+
+### Identity ports + events (the dependencies the rest of S9 needs)
+
+- [ ] `IdentityReadPort` interface lands in `apps/api/src/modules/identity/domain/ports/`: `getUserSummary(userId)`, `getDealershipSummary(dealershipId)` (returns `verifiedAt?` after the migration), `isUserBlockedBy(userId, possibleBlockerId)`.
+- [ ] `UserSuspended`, `UserUnsuspended`, `DealershipVerified`, `SessionRevoked` event emissions wired to admin moderation actions.
+- [ ] `AuditEntryRecorded` event emitted on every audit-log write (consumed by Loki + analytics).
+
 ### Auth
 - [ ] Admin login enforces TOTP 2FA (charter §6)
 - [ ] `super_admin` distinct from `admin`; certain actions (e.g., delete user, push important override) gated on super

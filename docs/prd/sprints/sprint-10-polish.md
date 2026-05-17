@@ -28,6 +28,17 @@ Cross the finish line of Phase 1:
 
 ## Acceptance criteria (DoD)
 
+### Schema additions (Prisma migration — Bortzhurnal)
+
+S10 broadens the `BlogPost` model and adds the supporting blog entities (see `apps/api/src/modules/content/CONTEXT.md` Planned section). Note: full Bortzhurnal was previously framed as Phase 2; S10 ships a "Phase 1.5" subset focused on read + basic author CRUD + follow:
+
+- [ ] `BlogPost` adds: `visibility` enum (`public` | `followers_only` | `unlisted`), `taggedVehicleId?` (FK → OwnedVehicle), `taggedBrandId?` (FK → Brand), `taggedModelId?` (FK → Model), `viewCount @default(0)`, `likeCount @default(0)`.
+- [ ] New `BlogMedia` entity: id, blogPostId (FK → BlogPost, Cascade), kind (`photo` | `video`), key (MinIO), position. Max 30 photos / 1 video per post (application-layer).
+- [ ] New `BlogLike` junction: id, userId (FK → User, Cascade), blogPostId (FK → BlogPost, Cascade), createdAt. Unique on `(userId, blogPostId)`.
+- [ ] New `BlogFollow` junction: id, followerUserId (FK → User, Cascade), followedUserId (FK → User, Cascade), createdAt. Unique on `(followerUserId, followedUserId)`. Application-layer: cannot follow yourself.
+- [ ] **Deferred to Phase 2**: `BlogTag` + `BlogPostTag` (tag taxonomy with trilingual names) — S10 ships untagged blog posts; tag UI lands later.
+- [ ] Prisma migration is reversible.
+
 ### Public web (`apps/web`)
 - [ ] Landing page (`/{locale}`) — hero, search-as-CTA, top brands carousel, featured dealerships, blog teaser, footer with legal links
 - [ ] Listing detail SSR with full OG meta (`og:title`, `og:image` from largest variant, `og:description` from listing description); structured data (`schema.org/Vehicle`)
