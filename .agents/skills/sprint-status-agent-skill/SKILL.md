@@ -83,6 +83,27 @@ From (b): filter open + `ready-for-agent` + NOT `blocked`. Sort by issue number 
 - **Roadmap drift** — all children closed but row still 🟡
 - **No unblocked work** — open > 0 but unblocked == 0
 
+### 5.1 Doc-hierarchy drift checks (per ADR-0020)
+
+Run three fast, read-only checks that surface drift early — between full `/close-sprint` runs:
+
+**Check A — CONTEXT.md ↔ Prisma drift** (per [ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md))
+
+For each bounded context the current sprint touches (extract from the sprint file's `## Bounded contexts touched`), diff entity names listed in CONTEXT.md's `## Owns` section against `packages/db/prisma/schema.prisma` `model X` lines. Both directions are violations under ADR-0019:
+
+- Entity in CONTEXT.md but missing from Prisma → aspirational-leak drift
+- Model in Prisma but missing from CONTEXT.md → missing-update drift
+
+**Check B — Sprint DoD ↔ shipped PR % sanity**
+
+Count `[x]` checkboxes in the sprint file vs `[ ]` checkboxes. Compare with the fraction of closed children. If closed ≥ 70% but DoD-ticked ≤ 30%, flag: "Sprint DoD lag: progress markers are drifting."
+
+**Check C — Roadmap status ↔ child-issue reality**
+
+If roadmap row says 🟡 In progress but every child issue is CLOSED and no open PRs against this sprint, flag: roadmap should be 🟢.
+
+Each of these contributes one line to the **Drift check** block in §6 (either "pass" or a single-sentence description of the drift).
+
 ---
 
 ## 6. Print the summary
@@ -119,6 +140,11 @@ Unblocked queue (next 5):
 Flagged conditions:
   - <each flag from §5, one line>
   (or: none)
+
+Drift check (per ADR-0020):
+  - CONTEXT.md ↔ Prisma:  <pass / drift in <ctx>: <details>>
+  - Sprint DoD ↔ shipped:  <pass / lag: <X>% closed but <Y>% DoD ticked>
+  - Roadmap ↔ children:    <pass / row 🟡 but all children CLOSED>
 
 Suggested next:
   <one-line recommendation — see §7>

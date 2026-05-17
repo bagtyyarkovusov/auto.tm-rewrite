@@ -8,7 +8,7 @@ This file is read at the start of every AI-assisted coding session in this repo.
 2. **`docs/prd/03-roadmap.md`** — the trajectory. Tells you which sprint is current and what shipped before it. Points to the per-sprint file under `docs/prd/sprints/`.
 3. **`CONTEXT-MAP.md`** — index of every `CONTEXT.md` in the tree.
 4. **The `CONTEXT.md` for the workspace you're working in** (e.g., `apps/api/src/modules/conversations/CONTEXT.md`).
-5. Relevant **ADRs** in `docs/adr/` for the decisions that affect this work.
+5. Relevant **ADRs** in `docs/adr/` for the decisions that affect this work. **Always include [ADR-0019](docs/adr/0019-context-md-describes-current-state.md) (CONTEXT.md = current state) and [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) (doc hierarchy + mutability rules) — these govern every artifact in the repo.**
 6. **The current sprint file** (`docs/prd/sprints/sprint-NN-<name>.md`) for the DoD, file list, tests required, and open risks of the work you're doing.
 
 ## Architecture in one paragraph
@@ -89,14 +89,17 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 
 ## Documentation systems (don't mix)
 
+> **The full doc hierarchy + mutability rules are locked in [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md).** Read it before adding a new PRD, revising a sprint file mid-flight, or editing any merged ADR. The table below is a quick reference; ADR-0020 is the source of truth + has the workflow for adding new PRDs and the rules for when a PRD revision requires its own ADR.
+
 | System | Where | Mutable? | When to write |
 |---|---|---|---|
-| ADRs | `docs/adr/`, `apps/*/docs/adr/` | No (immutable after merge) | Every architectural decision |
-| `CONTEXT.md` | Per app + per bounded context | Yes | **Current state only** (not aspirational) — updated in the same PR that changes domain invariants. Locked in [ADR-0019](docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in PRD features / sprint files. |
+| ADRs | `docs/adr/`, `apps/*/docs/adr/` | **No** (immutable after merge — supersede with new ADRs) | Every architectural decision; every material PRD-feature revision (per ADR-0020) |
+| `CONTEXT.md` | Per app + per bounded context | Yes — per PR | **Current state only** (not aspirational) — updated in the same PR that changes domain invariants. Locked in [ADR-0019](docs/adr/0019-context-md-describes-current-state.md). |
 | PRD vision/scope | `docs/prd/00-...02-...md` | Rarely | Charter-level changes |
 | **PRD roadmap** | **`docs/prd/03-roadmap.md`** | **Per sprint** | **Start of sprint (set 🟡) and end of sprint (set 🟢 + bump Current)** |
-| **Sprint plans** | **`docs/prd/sprints/sprint-NN-*.md`** | **Per sprint** | **Edit DoD/risks as understanding sharpens; never rewrite history** |
-| PRD features / flows | `docs/prd/features/`, `docs/prd/flows/` | Yes | Before / during feature implementation |
+| **Sprint plans** | **`docs/prd/sprints/sprint-NN-*.md`** | **Mutable until sprint starts; locked when roadmap → 🟡** (per ADR-0020) | Edit freely before 🟡; after, scope changes go in the retro doc |
+| PRD features / flows | `docs/prd/features/`, `docs/prd/flows/` | Yes — but material capability changes require a new ADR (per ADR-0020) | Target capability spec; never aspirational content for code |
+| Sprint retros | `docs/prd/sprints/sprint-NN-*-retro.md` | **Append-only** | End of each sprint or when post-🟡 scope shifts |
 | Agent skill config | `docs/agents/` | Rarely | Only when changing issue tracker or label vocabulary |
 
 ## Agent skills

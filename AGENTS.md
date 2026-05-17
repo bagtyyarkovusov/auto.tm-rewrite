@@ -6,18 +6,33 @@ Same policy as `CLAUDE.md` in this repository. AI agents working in this repo sh
 
 1. `GRILL-OUTCOME.md` — locked design decisions
 2. `docs/prd/03-roadmap.md` — current sprint + cross-sprint trajectory
-3. `CONTEXT-MAP.md` — index of every `CONTEXT.md`
+3. `CONTEXT-MAP.md` — index of every `CONTEXT.md` (mirrors current code, per ADR-0019)
 4. The local `CONTEXT.md` for the area you're working in
-5. Relevant ADRs in `docs/adr/`
+5. Relevant ADRs in `docs/adr/`. **Always include [ADR-0019](docs/adr/0019-context-md-describes-current-state.md) (CONTEXT.md = current state) and [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) (doc hierarchy + mutability rules).** These two ADRs govern every artifact in the repo.
 6. `docs/prd/sprints/sprint-NN-<name>.md` — current sprint's DoD + file list + risks
 
 For the full agent policy (architecture rules, never-do list, verification checklist, documentation system), read `CLAUDE.md`.
 
-## CONTEXT.md rule (load-bearing)
+## Documentation hierarchy + CONTEXT.md rule (load-bearing)
 
-Per [ADR-0019](docs/adr/0019-context-md-describes-current-state.md), every `CONTEXT.md` file in this repo describes **current implemented state**, not aspirational spec. Code and schema catch up to CONTEXT.md; we never edit CONTEXT.md to match a skinny implementation. **Any PR that changes domain invariants (Prisma field, port, use-case, event, route, app/package structure) must update the relevant CONTEXT.md in the same PR.** This is enforced by item 3 of the verification gate in `CLAUDE.md` and by the `/run-issue` flow's CONTEXT.md verification step.
+Two ADRs lock how docs work in this repo. Read both before editing any artifact:
 
-Aspirational state (what's planned but not yet shipped) lives in `docs/prd/features/*.md` (product capability spec) and `docs/prd/sprints/sprint-NN-*.md` (per-sprint scope).
+- **[ADR-0019](docs/adr/0019-context-md-describes-current-state.md) — CONTEXT.md describes current state.** Every `CONTEXT.md` file mirrors current implemented code, not aspirational spec. **Any PR that changes domain invariants (Prisma field, port, use-case, event, route, app/package structure) must update the relevant CONTEXT.md in the same PR.** Enforced by item 3 of the verification gate in `CLAUDE.md` and by `/run-issue` §5.5.
+
+- **[ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) — Document hierarchy and mutability rules.** Each artifact has exactly one job + one mutability rule. PRD features describe target capability (mutable; material revisions get an ADR). Sprint files describe per-sprint DoD (mutable until the sprint starts; locked at 🟡). Retros are append-only. ADRs are immutable after merge. ADR-0020 contains the full table, the workflow for adding a new PRD, and the rules for when a PRD revision requires its own ADR.
+
+Where each kind of state lives:
+
+| Question | Answer artifact |
+|---|---|
+| "What does this feature DO when complete?" | `docs/prd/features/*.md` |
+| "What does this sprint ADD?" | `docs/prd/sprints/sprint-NN-*.md` |
+| "Why did we decide this approach?" | `docs/adr/*.md` |
+| "What's in code today?" | `CONTEXT.md` |
+| "Where are we in the trajectory?" | `docs/prd/03-roadmap.md` |
+| "What did we agree at the charter level?" | `GRILL-OUTCOME.md` |
+
+If two artifacts try to answer the same question → that's drift. Pick the canonical one (per ADR-0020) and prune the other.
 
 ## Agent skills
 

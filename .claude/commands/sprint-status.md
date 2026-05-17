@@ -91,6 +91,45 @@ Flag any of these in the output:
 - **Roadmap drift** — if all children of sprint N are closed but the roadmap row is still 🟡, flag it (the sprint-final issue should have flipped it)
 - **No unblocked work** — if open issues > 0 but unblocked = 0, all open work is waiting on something; suggest checking which blockers are real
 
+### 5.1 Doc-hierarchy drift checks (per ADR-0020)
+
+Quick, cheap checks that surface drift early — between full `/close-sprint` runs. Each must be fast (one `grep` or one `gh` call); skip silently if data is unclear rather than guess.
+
+**Check A — CONTEXT.md ↔ Prisma drift** (per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md))
+
+From the current sprint file's `## Bounded contexts touched` section, extract each context name (e.g., `catalog`, `identity`). For each:
+
+```bash
+# Entities listed in CONTEXT.md's "Owns" section
+CTX_ENTITIES=$(awk '/^## Owns/,/^## /' apps/api/src/modules/<ctx>/CONTEXT.md | grep -oE '^- `[A-Z][A-Za-z]+`' | tr -d '`-' | tr -d ' ' | sort -u)
+
+# Entities that exist in Prisma (filtered by name list above)
+PRISMA_ENTITIES=$(grep -oE '^model [A-Z][A-Za-z]+' packages/db/prisma/schema.prisma | awk '{print $2}' | sort -u)
+
+# Diff both directions
+comm -23 <(echo "$CTX_ENTITIES") <(echo "$PRISMA_ENTITIES")  # CONTEXT-only — aspirational leak
+comm -13 <(echo "$CTX_ENTITIES") <(echo "$PRISMA_ENTITIES")  # Prisma-only — missing CONTEXT update
+```
+
+Flag the result inline as `CONTEXT drift: <ctx> claims <X> not in Prisma` or `CONTEXT drift: <ctx> missing <Y> from Prisma`. **Both directions are violations under ADR-0019.**
+
+**Check B — Sprint DoD ↔ shipped PR % sanity**
+
+```bash
+TOTAL_DOD=$(grep -cE '^- \[[ x]\]' docs/prd/sprints/sprint-<NN>-<name>.md)
+TICKED_DOD=$(grep -cE '^- \[x\]' docs/prd/sprints/sprint-<NN>-<name>.md)
+CLOSED_FRAC=$(echo "scale=2; $CLOSED_CHILDREN / $TOTAL_CHILDREN" | bc)
+TICKED_FRAC=$(echo "scale=2; $TICKED_DOD / $TOTAL_DOD" | bc)
+```
+
+If `CLOSED_FRAC` ≥ 0.7 (sprint is ~70%+ shipped) AND `TICKED_FRAC` ≤ 0.3 (only ~30% of DoD ticked), flag: `Sprint DoD lag: <X>% of children closed but <Y>% of DoD boxes ticked — the sprint file's progress markers are drifting`. The sprint-final wiring issue + each /run-issue should be updating these.
+
+**Check C — Roadmap status ↔ child-issue reality**
+
+Already partly covered by the "Roadmap drift" bullet above. Make it explicit: if `state == 🟡 In progress` AND every child issue is `state == "CLOSED"` AND no open PRs against this sprint, the roadmap should be 🟢. Flag: `Roadmap drift: every S<N> child is CLOSED but row still 🟡 — run /run-issue <sprint-final-num> or check parent issue`.
+
+Each of the three checks should output one line in the **Flagged conditions** block, or contribute "no drift detected" to a separate `Drift check:` block. Don't bury the result.
+
 ---
 
 ## 6. Print the summary
@@ -129,6 +168,12 @@ Unblocked queue (next 5):
 Flagged conditions:
   - <each flag from §5, one line each>
   (or: none)
+
+Drift check (per ADR-0020):
+  - CONTEXT.md ↔ Prisma:  <pass / drift in <ctx>: <details>>
+  - Sprint DoD ↔ shipped:  <pass / lag: <X>% closed but <Y>% DoD ticked>
+  - Roadmap ↔ children:    <pass / row 🟡 but all children CLOSED>
+  (Each check is a one-liner. "pass" if no drift, otherwise a single sentence.)
 
 Suggested next:
   <one-line recommendation — see §7>

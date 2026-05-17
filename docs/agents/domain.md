@@ -1,16 +1,21 @@
 # Domain docs — multi-context layout
 
+> **Two foundational ADRs govern every doc artifact in this repo:**
+> - [ADR-0019](../adr/0019-context-md-describes-current-state.md) — `CONTEXT.md` describes **current implemented state** (mirrors code; updated in the same PR that changes invariants). Aspirational content lives in PRD features / sprint files.
+> - [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md) — full doc hierarchy + mutability rules (PRD features, sprint files, retros, ADRs, CONTEXT.md). Read this before adding a new PRD, revising a sprint file mid-flight, or editing any merged ADR.
+
 This repo uses a **multi-context** layout. There is no single top-level `CONTEXT.md`. Instead:
 
 - `CONTEXT-MAP.md` at the repo root is the **index** — it points to every `CONTEXT.md` in the tree
-- Each app has its own `CONTEXT.md` describing what that workspace owns
-- Each bounded context under `apps/api/src/modules/<context>/` has its own `CONTEXT.md` describing its domain language, invariants, ports, and events
+- Each app has its own `CONTEXT.md` describing what that workspace owns **today**
+- Each bounded context under `apps/api/src/modules/<context>/` has its own `CONTEXT.md` describing its **current** domain language, invariants, ports, and events
 
 Skills that read these files (`improve-codebase-architecture`, `diagnose`, `tdd`) must:
 
 1. **Start at `CONTEXT-MAP.md`** to find the right context file for the area they're working in
-2. **Read the relevant `CONTEXT.md`** for domain language and current invariants
+2. **Read the relevant `CONTEXT.md`** for **current** domain language and invariants (per ADR-0019, this describes shipped code, not what's planned)
 3. **Cross-reference ADRs** in `docs/adr/` and `apps/*/docs/adr/` for the "why" behind decisions
+4. **For "what's planned but not yet shipped"**, read the relevant PRD feature file in `docs/prd/features/` or sprint file in `docs/prd/sprints/` — never CONTEXT.md (per ADR-0020)
 
 ## File locations
 
