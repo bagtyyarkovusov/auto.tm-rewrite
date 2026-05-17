@@ -15,12 +15,12 @@
 | | |
 |---|---|
 | **Sprint** | S3 — Catalog |
-| **Status** | ⚪ Pending |
-| **Started** | — |
+| **Status** | 🟡 In progress |
+| **Started** | 2026-05-17 |
 | **Phase** | 1 (Marketplace MVP) |
-| **Plan file** | — |
+| **Plan file** | Parent issue [#66](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/66) |
 | **Sprint doc** | [`sprints/sprint-03-catalog.md`](sprints/sprint-03-catalog.md) |
-| **Milestone** | — |
+| **Milestone** | — (incremental) |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 
@@ -44,7 +44,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals (what we explic
 |---|---|---|---|---|---|---|
 | S1 | [Scaffold](sprints/sprint-01-scaffold.md) | 🟢 Shipped | 2026-05-14 | 2026-05-14 | M1 | Nobody — confirms rails |
 | S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | 🟢 Shipped | 2026-05-14 | 2026-05-16 | M2 | Tiny internal group |
-| S3 | [Catalog](sprints/sprint-03-catalog.md) | ⚪ Pending | — | — | — | Internal |
+| S3 | [Catalog](sprints/sprint-03-catalog.md) | 🟡 In progress | 2026-05-17 | — | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | ⚪ Pending | — | — | M3 | Internal group |
 | S5 | [Listings UX](sprints/sprint-05-listings-ux.md) | ⚪ Pending | — | — | M4 | 10-20 beta testers (mocked data) |
 | S6 | [Garage + Dealership](sprints/sprint-06-garage-dealership.md) | ⚪ Pending | — | — | — | Beta testers |
