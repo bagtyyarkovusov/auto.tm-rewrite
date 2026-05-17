@@ -22,6 +22,17 @@ A marketplace without listings is empty. This is the central feature; everything
 
 Drafts auto-saved on every step. Resume on next visit. Cancel discards (with confirm).
 
+### Media upload + refresh behavior
+
+- Selected photos/videos are compressed into an app-owned local staging area before upload.
+- Upload starts as early as possible and runs in the background relative to the wizard UI. The user can continue later steps while media uploads.
+- Background upload is best-effort only. If the app is backgrounded, killed, or the network drops, uploads may pause/fail; on reopen/reconnect the app retries from the staged compressed file as a whole-file retry.
+- Publish is blocked until required media is either attached successfully or removed from the draft.
+- Phase 1 does not promise byte-level resumable/multipart uploads, full offline listing creation, or guaranteed OS-level background upload.
+- Listing/feed screens use last-seen data while reconnecting, then refresh on app foreground/reconnect. This is not an offline browsing mode promise.
+- Remote listing images are displayed through a native image cache (`expo-image` in mobile) using immutable media URLs. TanStack Query caches listing JSON, not image/video bytes.
+- Listing videos are streamed in Phase 1. We do not promise offline video playback or persistent video caching.
+
 ### View listing
 
 - Photo gallery (swipe through; pinch zoom; tap to fullscreen)

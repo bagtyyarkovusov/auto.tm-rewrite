@@ -53,8 +53,13 @@ S7 broadens the skinny chat schema (see `apps/api/src/modules/conversations/CONT
 
 ### Mobile + web
 - [ ] Mobile chat list + chat detail with optimistic-send + retry-on-fail
+- [ ] Mobile conversation list + message history use TanStack Query; Socket.IO events patch/invalidate query data; socket reconnect triggers a REST reconciliation refetch.
+- [ ] Mobile app uses the shared connectivity layer: if clearly offline, new sends are disabled; failed in-flight sends remain as local outbox items with retry.
+- [ ] Outbox scope is intentionally small: pending/failed messages and staged image attachments only. Phase 1 does not persist full chat history for offline browsing.
+- [ ] Typing and presence are ephemeral socket/local state, not TanStack Query cache and not persisted.
 - [ ] Web chat embedded in the listing detail page (collapsible panel)
 - [ ] Image messages: same upload path as listing photos (presigned URL); inline display with lightbox
+- [ ] Image-message staging: selected image is compressed locally, uploaded to `chat-attachments`, then sent as an image message; failed upload/send can retry from the staged file.
 - [ ] Post-card messages: tap → opens that listing
 - [ ] Quick replies on empty conversation: 3 pre-defined RU/TK/EN strings ("Is it still available?", "What's your best price?", "When can I see it?")
 
@@ -71,6 +76,7 @@ S7 broadens the skinny chat schema (see `apps/api/src/modules/conversations/CONT
 - **Application**: `OpenConversation`, `SendMessage` (per kind), `MarkAsRead`, `MuteConversation`, `BlockUser`, `ReportUser`
 - **Infrastructure** (Testcontainers): repositories; Socket.IO event ordering (use `socket.io-client` in tests)
 - **Presentation**: e2e covering REST + WS round-trip; reject when not a participant; reject when blocked
+- **Mobile**: query-cache patching on socket events, reconnect reconciliation refetch, pending/failed outbox retry, image-message staging retry, offline banner/new-send gating
 
 ## Files this sprint creates / touches
 
@@ -96,6 +102,8 @@ apps/api/src/modules/conversations/
 apps/api/src/modules/identity/application/{BlockUser,UnblockUser,ReportUser}.ts
 
 apps/mobile/app/conversations/index.tsx, [id].tsx
+apps/mobile/src/chat/socket*                     Socket.IO client + event-to-query-cache bridge
+apps/mobile/src/chat/outbox*                     Pending/failed message + image attachment queue
 apps/web/src/components/chat/{ChatPanel,MessageList,Composer}.tsx
 ```
 
@@ -117,4 +125,4 @@ apps/web/src/components/chat/{ChatPanel,MessageList,Composer}.tsx
 - **Presence TTL**: 5 min "online" window per charter. Use Redis with `EXPIRE` per user. If Redis hiccups, presence shows offline — acceptable degradation.
 - **Image-message storage**: charter §11 says `chat-attachments` bucket separate from listing-photos. Respect this in MinIO bucket policies (different ACL).
 - **Notifications coupling**: S7 wires the bare minimum push (one per message when offline). S8 layers categories, preferences, digests on top. Make sure the S7 emit point uses the same `notifications/PushPort` so S8 can interpose.
-- **Socket reconnect under TM mobile data**: aggressive reconnect with backoff; test on real TM SIM in staging if available.
+- **Socket reconnect under TM mobile data**: aggressive reconnect with backoff plus REST reconciliation refetch; test on real TM SIM in staging if available.
