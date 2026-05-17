@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ⚪ Pending |
+| **Status** | 🟡 In progress |
 | **Phase** | 1 |
 | **Milestone** | — (incremental) |
 | **Demo audience** | Internal |

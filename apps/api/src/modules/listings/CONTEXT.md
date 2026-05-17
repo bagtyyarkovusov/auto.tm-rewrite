@@ -60,9 +60,9 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
   - `dealershipId?` (FK → Dealership) + `publishedAsDealership: Boolean` (dealer posting flag)
   - `vin?` (String, masked-display capable)
   - `condition` enum (`new` | `used`)
-  - `engineTypeId?` (FK → EngineType) — see catalog/CONTEXT.md for the enum-vs-catalog decision; current direction is Prisma enums per Decision 3
-  - `transmissionId?` (FK → Transmission) — same enum-vs-catalog note
-  - `driveTypeId?` (FK → DriveType) — same enum-vs-catalog note
+  - `engineTypeId?` (FK → catalog-owned `EngineType`; trilingual lookup label)
+  - `transmissionId?` (FK → catalog-owned `Transmission`; trilingual lookup label)
+  - `driveTypeId?` (FK → catalog-owned `DriveType`; trilingual lookup label)
   - `enginePower?` (Int — kW or hp)
   - `regionId` (FK → Region; redundant given cityId → region.id but indexes the common "filter by region" query)
   - `locationText?` (free-form location detail beyond city)

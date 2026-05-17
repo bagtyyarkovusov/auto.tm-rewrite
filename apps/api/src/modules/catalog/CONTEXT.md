@@ -30,7 +30,7 @@ Curated reference data that listings, garage entries, and saved searches referen
 
 ## Ports exposed
 
-> The catalog module's `domain/ports/` directory does not yet have port files committed. The shape below is what S3 (Sprint 3 — Catalog, currently ⚪ Pending) will ship per `docs/prd/sprints/sprint-03-catalog.md`. After S3 closes, this section gets updated to reflect the actual interface shipped.
+> The catalog module's `domain/ports/` directory does not yet have port files committed. The shape below is what S3 (Sprint 3 — Catalog, currently 🟡 In progress) will ship per `docs/prd/sprints/sprint-03-catalog.md`. After S3 closes, this section gets updated to reflect the actual interface shipped.
 
 (none today — S3 adds `BrandRepository`, `ModelRepository`, `GenerationRepository`, `ColorRepository`, `BodyTypeRepository`, `RegionRepository`, `CityRepository`, plus a read-side `CatalogReadPort` summarizing entity reads for cross-context use.)
 
@@ -49,20 +49,21 @@ Curated reference data that listings, garage entries, and saved searches referen
 ## Seed data
 
 `packages/db/prisma/seed/` contains today:
-- `_legacy/cars.brands.json` — monolingual snapshot from the legacy auto.tm backend (~130 brands + ~5000 models); port source for S3
-- `catalog-stub.json` — regions stub (loaded by `packages/db/src/seed.ts`)
+- `_legacy/cars.brands.json` — monolingual snapshot from the legacy auto.tm backend; historical port source
+- `brands.json`, `models.json` — trilingual brand/model seed data ported from the legacy snapshot
+- `colors.json`, `body-types.json`, `regions.json`, `cities.json` — fresh trilingual fixed lists
+- `catalog-stub.json` — legacy regions stub kept in-tree, no longer read by `packages/db/src/seed.ts`
 
-After S3 ships (per `docs/prd/sprints/sprint-03-catalog.md`), this section is updated to add `brands.json`, `models.json`, `colors.json`, `body-types.json`, and a folded-in `cities.json`.
+No Generation seed has shipped yet; the `Generation` table exists, but S3 intentionally leaves it empty.
 
 ## Planned additions (future sprints)
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today — they're tracked here only as a pointer so future agents and reviewers can find the sprint that owns each future addition. The authoritative spec for each lives in the named sprint file or PRD feature.
 
-- **S3 (catalog API + seed + admin write)** — `sprint-03-catalog.md`
+- **S3 (catalog API + seed + admin write)** — `sprint-03-catalog.md`. Seed files have landed; API repositories/controllers/admin write flow are still in progress until the sprint closes.
+- **S4 (Listings CRUD)** — add `EngineType`, `Transmission`, and `DriveType` as catalog-owned trilingual lookup entities. Listings reference them by `engineTypeId`, `transmissionId`, and `driveTypeId` FKs. These labels are localized by the catalog API, not by frontend enum translation files.
 - **S5 (Listings UX)** — may add `Brand.logoUrl`, `Brand.isActive`, `Brand.displayOrder`, `Generation.photoUrl`, `BodyType.slug`, `BodyType.iconKey` to support picker UX with logos and icons. Decide in S5 if these land then or earlier.
 - **S9 (Admin dashboard)** — admin app for catalog management (CRUD UI for Brand/Model/Color/BodyType/etc.); brand-logo upload UX to MinIO.
-
-EngineType / Transmission / DriveType are NOT catalog entities — they are modeled as Prisma enums on `Listing` (planned in S4, same pattern as `ListingStatus` and `Currency`). UI translation strings for these enums live in `apps/mobile` / `apps/web` per-app translations.
 
 ## Notable decisions
 

@@ -37,7 +37,7 @@ Make the marketplace useful for discovery. Search by brand+model+price+city+year
 - [ ] Realistic filter combo returns results in <200 ms p95 (seed data with 10k listings for testing)
 - [ ] **Mobile picker UI**: `apps/mobile/app/(modals)/brand-picker.tsx` + `model-picker.tsx` composed from existing RNR primitives (Dialog, Card, Input, Button) — consumes S3 catalog API via `apiClient` (deferred from S3 per the pre-S3 grill)
 - [ ] **App-wide locale store** (Zustand) + query-key invalidation hook: when locale changes, `catalog.*` queries refetch with new `?locale=` and visible labels flip without re-mount (deferred from S3)
-- [ ] **`react-i18next`** installed in `apps/mobile` for translation strings — engine type / transmission / drive type Prisma enum labels live in JSON translation files here (per Decision 3 in pre-S3 grill)
+- [ ] **`react-i18next`** installed in `apps/mobile` for app chrome / static UI translation strings. Catalog-backed labels (engine type, transmission, drive type, body type, color, etc.) come from localized catalog API responses, not hard-coded frontend enum JSON.
 - [ ] **Web filter component**: `apps/web/src/components/filter/BrandModelSelect.tsx`
 - [ ] `listings/CONTEXT.md` + `subscriptions/CONTEXT.md` updated (per [ADR-0019](../../adr/0019-context-md-describes-current-state.md) — describe what shipped)
 - [ ] `docs/prd/03-roadmap.md` updated (S5 🟢, S6 🟡)
