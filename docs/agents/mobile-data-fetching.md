@@ -322,6 +322,58 @@ queryClient.getQueryCache().subscribe((event) => {
 
 (In practice, this lives in a `useEffect` inside the root layout; full pattern in the S3 foundations PR.)
 
+### 2.4.1 Wire network online/offline state
+
+`AppState` tells TanStack Query whether the app is foregrounded. It does **not** tell it whether the device can reach the internet. Before any screen claims reconnect/offline behavior, wire Expo network state into TanStack's `onlineManager`.
+
+Install when the first mobile flow depends on offline/reconnect behavior:
+
+```bash
+pnpm --filter @auto-tm/mobile exec expo install expo-network
+CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
+```
+
+Root-layout shape:
+
+```tsx
+import * as Network from "expo-network";
+import {
+  focusManager,
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+
+function isOnline(state: Network.NetworkState) {
+  if (state.isConnected === false || state.isInternetReachable === false) {
+    return false;
+  }
+
+  // `isInternetReachable` can be null while the OS is still deciding.
+  // Do not pause all queries during that unknown window; let request errors
+  // prove the outage and render normal retry UI.
+  return true;
+}
+
+export default function RootLayout() {
+  useEffect(() => {
+    void Network.getNetworkStateAsync().then((state) => {
+      onlineManager.setOnline(isOnline(state));
+    });
+
+    const sub = Network.addNetworkStateListener((state) => {
+      onlineManager.setOnline(isOnline(state));
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  return <QueryClientProvider client={queryClient}>{/* ... */}</QueryClientProvider>;
+}
+```
+
+Use the same computed connectivity state for offline banners, upload queues, and chat outbox gating. Do **not** create separate competing network detectors per feature.
+
 ### 2.5 Migrate the S2 auth client
 
 Delete `apps/mobile/src/auth/client.ts`. Move `requestOtp` and `verifyOtp` to `apps/mobile/src/api/identity/useRequestOtp.ts` and `useVerifyOtp.ts`, calling `apiClient.post(...)` with `auth: false` (these calls are pre-login).
@@ -482,6 +534,42 @@ The pattern is always: cancel → snapshot → optimistically patch → return s
 
 ---
 
+## 6.1 — Refresh, realtime, and local queues
+
+Default mobile refresh policy:
+
+- Keep last-seen TanStack Query data visible while reconnecting.
+- Refetch stale data on app foreground (`AppState.active`) and network reconnect (`onlineManager`).
+- Use pull-to-refresh where users expect it: feed, favorites, conversation list, and similar list screens.
+- Do not poll globally. Add polling only for a screen-specific reason with a documented stop condition.
+- No Phase 1 offline-mode promise. Cached data can render if already loaded, but the app does not maintain a full offline listing/chat database.
+
+Surface-specific defaults:
+
+| Surface | Data cache | Refresh rule |
+|---|---|---|
+| Catalog | TanStack Query | Long `staleTime`; refetch on locale change or manual invalidation |
+| Listing feed | TanStack Query + infinite query | Pull-to-refresh, foreground/reconnect refetch, no polling |
+| Listing detail | TanStack Query | Foreground/reconnect refetch if stale; manual retry on error |
+| Favorites / saved searches | TanStack Query | Optimistic mutations; invalidate related list/detail keys |
+| Chat list | TanStack Query | Socket events patch/invalidate; reconnect triggers REST reconciliation refetch |
+| Chat thread | TanStack Query infinite query | Socket append/read patches; reconnect refetches recent page/window |
+| Uploads / outbox | Local persisted queue | Retry on reconnect from staged local files/messages; not a query cache |
+
+Realtime integration rule:
+
+- REST query hooks load the durable server state.
+- Socket.IO events patch or invalidate the TanStack Query cache.
+- Typing indicators, presence, and socket connection status are ephemeral local/socket state. Do not persist them in TanStack Query.
+
+Media/cache boundary:
+
+- TanStack Query caches JSON returned by the API: listing fields, message rows, media keys/URLs.
+- `expo-image` / native media components handle media bytes. Image byte caching is not a TanStack concern; video caching/offline playback is a separate media-player decision and must not be implied by query caching.
+- Upload staging and chat outbox state are local reliability mechanisms, not server-state caches.
+
+---
+
 ## 7 — Error handling at the screen
 
 ```tsx
@@ -574,6 +662,9 @@ The wrapper itself has its own unit tests covering the refresh-dedup state machi
 | Catching `ApiError` with `error.status === 401` in a hook | The wrapper already retried. A surfacing 401 means logged-out; let the global handler bounce. |
 | Inlining a query key: `useQuery({ queryKey: ["brands"] })` | Drift the moment someone invalidates with `["catalog", "brands"]`. Use the factory. |
 | Putting form state inside a query | TanStack Query is for *server* state. Form state is `useState` / form library. |
+| Putting typing/presence/socket status inside a query | These are ephemeral realtime signals. Keep them in local/socket state. |
+| Putting upload staging or chat outbox files inside a query | They are local reliability queues, not server state. Persist them separately. |
+| Expecting TanStack Query to cache image/video bytes | It caches API JSON only. Use native media caches for bytes. |
 | Calling `queryClient.invalidateQueries()` with no key | Invalidates EVERYTHING. Almost never what you want. |
 | Wrapping `useQuery` in `useEffect` to manually trigger | TanStack Query already manages the lifecycle. You're reinventing the cache. |
 | Skipping the schema arg "because the response is trivial" | Future-proofing: when the API field gets renamed, the contract catches it; raw access silently breaks. |
@@ -609,6 +700,12 @@ A green typecheck + test pass does NOT mean the feature works. UI screens that f
 
 **"My query refetches every time I switch tabs."**
 TanStack Query's `refetchOnWindowFocus` fires on `AppState.active`. Either accept the refetch or override `staleTime` for that query so the cache is considered fresh.
+
+**"The app says offline, but requests still work."**
+Check the shared Expo network adapter. `isInternetReachable` can be `null` during OS detection and should not be treated as hard-offline. Only `isConnected === false` or `isInternetReachable === false` is hard offline.
+
+**"The socket reconnected but chat missed messages."**
+Socket reconnect is not the source of truth. On reconnect, invalidate/refetch the conversation list and the active thread's recent messages so REST reconciles anything missed while disconnected.
 
 **"I'm getting infinite refetches."**
 You probably put a non-stable value in the query key (e.g., a new object literal every render). The factory functions return stable refs for primitives; for objects (filters) make sure the screen memoizes the filters with `useMemo`.

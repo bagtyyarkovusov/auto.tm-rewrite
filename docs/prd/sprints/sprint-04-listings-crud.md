@@ -44,8 +44,15 @@ S4 broadens the skeletal `Listing` model (see `apps/api/src/modules/listings/CON
 - [ ] **Media upload**: `POST /api/v1/uploads/presign` returns a MinIO presigned URL; client uploads direct; `POST /api/v1/listings/{id}/media/attach` registers the object
 - [ ] Photos: ≤20 per listing; client-compressed to ≤5 MB each via `expo-image-manipulator` (mobile) or browser canvas (web)
 - [ ] Video: ≤1 per listing, ≤60 s, ≤10 MB; client-compressed via `react-native-compressor` (mobile)
+- [ ] Mobile upload staging cache: selected media is compressed into app-owned local storage, tracked as `selected → compressed → presigned → uploading → uploaded → attached` with `failed` / `waiting_for_network` retry states.
+- [ ] Uploads are best-effort background relative to the wizard UI: users can keep filling later steps, but app background/kill may pause/fail uploads; on reopen/reconnect, retry from the staged compressed file.
+- [ ] Phase 1 uses whole-file retry only. No multipart byte-level resumability and no guaranteed OS-level background upload.
+- [ ] Publish is blocked until required media is attached or removed from the draft; removing an uploaded-but-unattached item attempts object delete and leaves a tombstone for orphan cleanup if offline.
 - [ ] Image variants generated on upload via Sharp (synchronous for S4 — async pipeline lands in S8 worker)
 - [ ] Mobile create-listing wizard: 6 steps (brand-model → year → details → price → photos → review)
+- [ ] Mobile listing/feed refresh behavior: show last-seen TanStack Query data while reconnecting; refetch on app foreground/reconnect; feed supports pull-to-refresh; listing detail has manual retry but no polling.
+- [ ] Mobile media display uses native image caching for remote listing images (`expo-image`); TanStack Query caches listing JSON only, not media bytes.
+- [ ] Mobile video playback is streamed in Phase 1; no offline video playback/cache promise.
 - [ ] Web listing detail page renders with OG metadata (preview-ready for share-in-chat in S7)
 - [ ] Anonymous browsing works without auth headers
 - [ ] `listings/CONTEXT.md` updated to describe everything shipped (per ADR-0019: CONTEXT mirrors current state)
@@ -63,6 +70,7 @@ S4 broadens the skeletal `Listing` model (see `apps/api/src/modules/listings/CON
 - **Application**: `CreateDraft`, `PublishListing`, `EditListing`, `MarkSold`, `DeleteListing`, `AttachMedia`, `ListFeed` — one test class per use-case
 - **Infrastructure** (Testcontainers): `PrismaListingRepository` round-trips, `MinioPresignAdapter` returns a URL with correct expiry (mock MinIO endpoint)
 - **Presentation** (e2e): full publish → fetch detail → list-in-feed cycle
+- **Mobile**: upload staging queue state transitions, offline/reconnect retry from staged file, publish blocked while required media is not attached, feed pull-to-refresh, listing-detail manual retry
 
 ## Files this sprint creates / touches
 
@@ -96,6 +104,8 @@ apps/api/src/modules/listings/
 packages/contracts/src/schemas/listings.ts       (extend with full Listing + DTOs)
 apps/mobile/app/(tabs)/sell.tsx (real wizard)
 apps/mobile/app/listings/[id].tsx
+apps/mobile/src/listings/uploadStaging*          (local staged media queue + retry state)
+apps/mobile/src/network/*                        (shared online/offline state, if not already present)
 apps/web/src/app/[locale]/listings/[id]/page.tsx (full detail + OG)
 apps/web/src/app/[locale]/listings/page.tsx       (feed)
 ```
@@ -118,4 +128,5 @@ apps/web/src/app/[locale]/listings/page.tsx       (feed)
 - **Image variant timing**: S4 uses synchronous Sharp (slower upload). S8 moves it async to the worker. Decision: ship synchronous first; if upload time >3 s p95, accelerate the worker move.
 - **Video transcoding deferral**: original-only in S4; ffmpeg HLS lands in S8. Detail page playback uses original video until then (HTML5 `<video>` + MP4).
 - **Storage cost**: 5 MB × 20 photos × N listings adds up fast. Document an orphan-cleanup cron schedule in S8.
+- **Upload resumability scope**: Phase 1 deliberately retries whole compressed files instead of S3 multipart uploads. Reconsider multipart only if real-device telemetry shows repeated video upload failures.
 - **Pre-publish moderation**: charter is ambiguous. Decision: auto-publish in Phase 1; admin can ban post-hoc. Add a pre-publish-required toggle for Phase 2.

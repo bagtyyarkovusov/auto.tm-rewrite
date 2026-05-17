@@ -35,6 +35,15 @@ Phone calls don't leave a trail. Telegram conversations get lost across channels
 - Last-seen: "был(а) в 14:32" under seller's name in header
 - "Seller usually responds within 1 hour" hint shown if the seller has 5+ past conversations
 
+### Cache + offline behavior
+
+- TanStack Query owns conversation lists, message history pages, unread counts, and quick replies.
+- Socket.IO owns realtime delivery. Incoming `message:new` / `message:read` events patch or invalidate the TanStack Query cache; reconnect triggers a reconciliation refetch.
+- Typing and presence are ephemeral in-memory/socket state, not TanStack Query data and not persisted offline.
+- Chat keeps a small durable outbox for messages/images that were already accepted by the composer but not confirmed by the server. It does not store full chat history offline in Phase 1.
+- If the app is clearly offline, new sends are disabled. If a send was already attempted and then fails, it stays in the outbox with retry.
+- Image attachments use the media upload path into the `chat-attachments` bucket. The local image is staged for preview/retry until the message is sent or discarded.
+
 ### Message types
 
 - **Text** — up to 1000 chars, auto-link URLs
@@ -74,7 +83,7 @@ Tap → fills the composer (editable before send).
 | Chat thread | New (0 messages) | Show quick-reply chips above composer |
 | Chat thread | Many messages | Infinite scroll up to load history |
 | Chat thread | Other side typing | Dots animation under last message |
-| Chat thread | Network offline | Yellow banner; composer disables send; queue locally + send on reconnect |
+| Chat thread | Network offline | Yellow banner; new sends disabled; already-pending outbox items retry on reconnect |
 | Chat thread | Listing sold | System message: "This listing was marked sold by the seller." Composer remains but disabled (can re-enable for follow-up — TBD) |
 | Chat thread | Blocked | Banner: "You blocked this user." + Unblock button |
 | Chat thread | Reported | Owner side: "Reported. We'll review." Banner. |

@@ -8,7 +8,7 @@ Aman wants to sell his Lada. From "Sell" button tap to publish, ≤ 5 minutes (w
 
 - Minimize fields shown at once
 - Save draft automatically — never lose work
-- Defer photo upload — let user fill specs first if data is slow
+- Defer blocking on photo upload — start staging/upload early, but let user fill specs while media finishes
 - Successful first listing should feel rewarding
 
 ## Step-by-step
@@ -35,7 +35,7 @@ Three ways to start:
 ### Step 2 — Photos
 
 - "Add photos" with two buttons: Camera / Library
-- Multi-select from library; instant upload starts
+- Multi-select from library; compression + upload staging starts immediately
 - During upload: thumbnail with progress overlay
 - Drag to reorder; first photo is cover
 - Min 1, max 20
@@ -103,11 +103,16 @@ Three ways to start:
 - "Discard draft" only after explicit cancel + confirm
 - Draft list visible in "My Listings"
 - Resume picks up at the last completed step
+- Staged media is stored locally with the draft until it is uploaded/attached, removed, published, or the draft is discarded.
+- Media uploads run in the background relative to the wizard UI; the user can continue filling later steps while photos upload.
+- Publish is blocked until required media is either attached successfully or removed from the draft.
 
 ## Edge cases
 
 - Photo upload fails on slow data → retry per failed photo (don't restart wizard)
 - User loses connection mid-wizard → state preserved locally; sync on reconnect
+- App backgrounds/kills mid-upload → draft and staged compressed files remain; upload retries when the app is reopened and online
+- Upload retry is whole-file retry from the staged compressed file; Phase 1 does not promise multipart byte-level resume
 - VIN decoder times out → silent fallback to manual entry
 - Publish fails (server error) → keep wizard state, show retry
 
