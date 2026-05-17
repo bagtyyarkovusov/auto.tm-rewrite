@@ -1,0 +1,12 @@
+[
+  { "nameRu": "Седан", "nameTk": "Sedan", "nameEn": "Sedan" },
+  { "nameRu": "Хэтчбек", "nameTk": "Hetçbek", "nameEn": "Hatchback" },
+  { "nameRu": "Внедорожник", "nameTk": "Kross", "nameEn": "SUV" },
+  { "nameRu": "Кроссовер", "nameTk": "Krossower", "nameEn": "Crossover" },
+  { "nameRu": "Пикап", "nameTk": "Pikap", "nameEn": "Pickup" },
+  { "nameRu": "Купе", "nameTk": "Kupe", "nameEn": "Coupe" },
+  { "nameRu": "Универсал", "nameTk": "Uniwersal", "nameEn": "Wagon" },
+  { "nameRu": "Минивэн", "nameTk": "Miniwen", "nameEn": "Minivan" },
+  { "nameRu": "Кабриолет", "nameTk": "Kabriolet", "nameEn": "Cabriolet" },
+  { "nameRu": "Фургон", "nameTk": "Furgon", "nameEn": "Van" }
+]

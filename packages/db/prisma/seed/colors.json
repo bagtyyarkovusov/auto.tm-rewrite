@@ -1,0 +1,17 @@
+[
+  { "nameRu": "Белый", "nameTk": "Ak", "nameEn": "White", "hex": "#FFFFFF" },
+  { "nameRu": "Чёрный", "nameTk": "Gara", "nameEn": "Black", "hex": "#000000" },
+  { "nameRu": "Серебристый", "nameTk": "Kümüş", "nameEn": "Silver", "hex": "#C0C0C0" },
+  { "nameRu": "Серый", "nameTk": "Çal", "nameEn": "Grey", "hex": "#808080" },
+  { "nameRu": "Красный", "nameTk": "Gyzyl", "nameEn": "Red", "hex": "#FF0000" },
+  { "nameRu": "Синий", "nameTk": "Gök", "nameEn": "Blue", "hex": "#0000FF" },
+  { "nameRu": "Тёмно-синий", "nameTk": "Gara gök", "nameEn": "Dark Blue", "hex": "#001F5C" },
+  { "nameRu": "Зелёный", "nameTk": "Ýaşyl", "nameEn": "Green", "hex": "#008000" },
+  { "nameRu": "Бежевый", "nameTk": "Bej", "nameEn": "Beige", "hex": "#F5F5DC" },
+  { "nameRu": "Коричневый", "nameTk": "Mele", "nameEn": "Brown", "hex": "#8B4513" },
+  { "nameRu": "Жёлтый", "nameTk": "Sary", "nameEn": "Yellow", "hex": "#FFFF00" },
+  { "nameRu": "Оранжевый", "nameTk": "Mämişi", "nameEn": "Orange", "hex": "#FFA500" },
+  { "nameRu": "Золотистый", "nameTk": "Altyn reňk", "nameEn": "Gold", "hex": "#FFD700" },
+  { "nameRu": "Бордовый", "nameTk": "Bordo", "nameEn": "Burgundy", "hex": "#800020" },
+  { "nameRu": "Фиолетовый", "nameTk": "Benewşe", "nameEn": "Purple", "hex": "#800080" }
+]
