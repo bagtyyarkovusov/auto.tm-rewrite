@@ -98,6 +98,8 @@ Build a table:
 
 ### 4.1 CONTEXT.md drift
 
+Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), CONTEXT.md mirrors current implemented state. By sprint close, every change to schema / ports / use-cases / events / module structure that this sprint shipped must be reflected in the relevant CONTEXT.md. The `/run-issue` flow's §5.5 enforces this per-PR; this section is the safety net catching anything that slipped through.
+
 For each bounded context the sprint touched:
 
 ```bash
@@ -105,9 +107,11 @@ For each bounded context the sprint touched:
 git log -1 --format="%ad" --date=iso -- apps/api/src/modules/<context>/CONTEXT.md
 ```
 
-If the CONTEXT.md hasn't been touched since the sprint started but the sprint added a new entity, port, or use-case to that context: drift. The CONTEXT.md is supposed to track current invariants per `CLAUDE.md` ("Update the CONTEXT.md when domain invariants change").
+If the CONTEXT.md hasn't been touched since the sprint started but the sprint added a new entity, port, or use-case to that context: **drift**. Under ADR-0019, this is a real problem — CONTEXT.md should have been updated alongside each merged PR.
 
-To detect this: grep the CONTEXT.md for the names of entities/use-cases/ports the sprint introduced. If they're missing, flag.
+To detect this: grep the CONTEXT.md for the names of entities/use-cases/ports the sprint introduced. If they're missing, flag in the retro doc and propose a one-line cleanup commit.
+
+Also verify the **inverse** direction — CONTEXT.md should NOT describe anything that ISN'T in code today. Grep CONTEXT.md's "Owns (entities + tables)" section against `packages/db/prisma/schema.prisma`. Any entity listed in CONTEXT but absent from schema is aspirational content that escaped — flag for a tightening commit. (Per ADR-0019, aspirational content lives in PRD features or sprint files, never in CONTEXT.md.)
 
 ### 4.2 ADR drift
 

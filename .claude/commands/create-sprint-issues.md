@@ -177,9 +177,10 @@ mkdir -p /tmp/sprint-$N-issues
   - The relevant `apps/api/src/modules/<context>/CONTEXT.md` (if API-side)
   - Relevant ADRs from the sprint file's `## References` section
   - `CLAUDE.md`
-- **Files to create / modify** — pull from the sprint file's `## Files this sprint creates / touches` section, narrowed to this slice
+  - **`docs/adr/0019-context-md-describes-current-state.md`** — CONTEXT.md mirrors current code; the agent's PR updates CONTEXT.md when it changes invariants
+- **Files to create / modify** — pull from the sprint file's `## Files this sprint creates / touches` section, narrowed to this slice. **Include the relevant `CONTEXT.md` path(s) if this slice changes domain invariants** (per ADR-0019) — unless the sprint plan explicitly defers the CONTEXT.md update to the sprint-final wiring issue.
 - **Implementation notes** — minimum-viable code skeletons, type signatures, env-var names, Zod schema names, key Prisma model fields. Pull from the sprint file's content. Skip if everything is captured by reference (most foundations issues have detailed notes; most pure-vertical slices need only AC + file list)
-- **Acceptance criteria (slice-scoped)** — a SUBSET of the sprint file's `## Acceptance criteria (DoD)` covering only this slice's behavior. Use the verbatim wording from the sprint file where it applies, then add slice-specific checks (e.g., "domain VO `<X>` rejects malformed input")
+- **Acceptance criteria (slice-scoped)** — a SUBSET of the sprint file's `## Acceptance criteria (DoD)` covering only this slice's behavior. Use the verbatim wording from the sprint file where it applies, then add slice-specific checks (e.g., "domain VO `<X>` rejects malformed input"). **If this slice changes domain invariants, add a checkbox**: `[ ] Update <relevant CONTEXT.md path> to reflect new state (per ADR-0019)` — unless deferred to sprint-final.
 - **Out of scope** — sibling slices in the same sprint, deliberately deferred
 - **Depends on** — the issue number(s) from §4.3 (or "None" for the foundations / unblocked issues)
 - **Completion signal** — the standard `<promise>COMPLETE</promise>` block plus the workspace-specific `pnpm` commands

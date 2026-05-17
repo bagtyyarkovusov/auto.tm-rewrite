@@ -149,11 +149,11 @@ Use templates from `docs/agents/issue-tracker.md` verbatim — Sprint PRD shape 
 
 **Each child body** fills in:
 - Summary — references `docs/prd/sprints/sprint-NN-<name>.md` § the slice's section
-- Read first — paths agent must read
-- Files to create / modify — narrowed from sprint file
+- Read first — paths agent must read. **Always include `docs/adr/0019-context-md-describes-current-state.md`** so the agent knows CONTEXT.md mirrors current code, updated alongside this PR.
+- Files to create / modify — narrowed from sprint file. **Include the relevant `CONTEXT.md` path(s) if this slice changes domain invariants** (per ADR-0019), unless the sprint plan explicitly defers the CONTEXT.md update to the sprint-final wiring issue.
 - Implementation notes — code skeletons, type signatures, env vars, Zod schema names (skip if captured by reference)
 - Testing / TDD note — add explicit tests-first guidance when it materially improves the slice: domain rules, application use-cases, security/session behavior, persistence contracts, migrations, and high-risk edge cases. Do **not** force TDD language into pure docs, mechanical scaffold, UI-only, final wiring, or manual-smoke slices unless tests-first genuinely fits.
-- Acceptance criteria (slice-scoped) — SUBSET of sprint DoD covering only this slice
+- Acceptance criteria (slice-scoped) — SUBSET of sprint DoD covering only this slice. **If this slice changes domain invariants, add a checkbox**: `[ ] Update <relevant CONTEXT.md path> to reflect new state (per ADR-0019)` — unless deferred to sprint-final.
 - Out of scope — sibling slices deferred
 - Depends on — issue numbers from §4.3 (or "None")
 - Completion signal — `<promise>COMPLETE</promise>` + workspace `pnpm` commands

@@ -78,7 +78,9 @@ Build table:
 
 ### 4.1 CONTEXT.md drift
 
-For each touched context, check if `CONTEXT.md` has been updated since sprint started AND if it mentions new entities/use-cases/ports the sprint introduced (grep for symbol names).
+Per [ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md), CONTEXT.md mirrors current implemented state. The `/run-issue` flow's §5.5 enforces this per-PR; this section is the safety net.
+
+For each touched context, check (a) whether `CONTEXT.md` has been updated since the sprint started AND mentions new entities/use-cases/ports the sprint introduced (grep for symbol names), AND (b) the **inverse** — whether CONTEXT.md still lists anything that doesn't exist in code today. Both directions are drift under ADR-0019. Aspirational content belongs in PRD features or sprint files, never CONTEXT.md.
 
 ### 4.2 ADR drift
 

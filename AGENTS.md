@@ -13,6 +13,12 @@ Same policy as `CLAUDE.md` in this repository. AI agents working in this repo sh
 
 For the full agent policy (architecture rules, never-do list, verification checklist, documentation system), read `CLAUDE.md`.
 
+## CONTEXT.md rule (load-bearing)
+
+Per [ADR-0019](docs/adr/0019-context-md-describes-current-state.md), every `CONTEXT.md` file in this repo describes **current implemented state**, not aspirational spec. Code and schema catch up to CONTEXT.md; we never edit CONTEXT.md to match a skinny implementation. **Any PR that changes domain invariants (Prisma field, port, use-case, event, route, app/package structure) must update the relevant CONTEXT.md in the same PR.** This is enforced by item 3 of the verification gate in `CLAUDE.md` and by the `/run-issue` flow's CONTEXT.md verification step.
+
+Aspirational state (what's planned but not yet shipped) lives in `docs/prd/features/*.md` (product capability spec) and `docs/prd/sprints/sprint-NN-*.md` (per-sprint scope).
+
 ## Agent skills
 
 ### Issue tracker

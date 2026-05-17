@@ -109,6 +109,8 @@ If no bail comment exists but the branch does, the issue may have been worked ma
 
 This tells you whether the preserved work is salvageable or whether main has moved out from under it.
 
+**Also check the CONTEXT.md state** (per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md)). For each bounded context the touched files imply, grep its CONTEXT.md for the new entity/port/use-case the issue was meant to ship. If the code is in place but CONTEXT.md wasn't updated, that's a remediation item the resumed flow must fix before commit (this is what `/run-issue` §5.5 enforces; resuming inherits the same rule).
+
 ```bash
 # Touched workspaces (best-effort detection from the diff)
 TOUCHED_WORKSPACES=$(git diff main --name-only | awk -F/ '/^(apps|packages)\// {print $1"/"$2}' | sort -u)

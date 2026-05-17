@@ -122,7 +122,7 @@ The body is read **verbatim** as the prompt by `sandcastle`, so it must be self-
 Emit `<promise>COMPLETE</promise>` once:
 1. `pnpm typecheck` passes for every workspace touched
 2. `pnpm test` passes for every workspace touched
-3. The relevant `CONTEXT.md` reflects the new state (if invariants changed)
+3. The relevant `CONTEXT.md` reflects the new state — **updated in the same PR as the code change** (per [ADR-0019](../adr/0019-context-md-describes-current-state.md)). CONTEXT.md describes current implementation, never aspirational state. If your PR added a Prisma field, port method, use-case, event, or HTTP route, the relevant CONTEXT.md must mention it in the same PR (unless the sprint plan explicitly defers the CONTEXT.md update to a sprint-final wiring issue).
 4. For mobile / Expo issues, the check gate in `docs/agents/mobile-expo.md` passes, including Expo dependency check and runtime/simulator verification when the issue is a runtime crash
 ```
 

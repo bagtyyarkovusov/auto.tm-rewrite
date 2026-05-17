@@ -33,6 +33,7 @@ In order, using whatever file-read tool the host agent provides:
 3. The current sprint file: `docs/prd/sprints/sprint-<NN>-<name>.md`
 4. `CONTEXT-MAP.md`
 5. `docs/agents/issue-tracker.md` — issue body conventions and label rules
+6. **[ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md)** — CONTEXT.md describes **current implemented state**, not aspirational spec. When your PR changes domain invariants (Prisma field, port, use-case, event, route), the relevant CONTEXT.md update goes in the SAME PR. §5.5 enforces this.
 
 If any of those is missing, stop and tell the user — the repo is in an unexpected state.
 
@@ -167,6 +168,29 @@ pnpm --filter <workspace> test
 - After **3 fix attempts** on the same failure: stop, comment per §11
 
 Walk every AC checkbox; write evidence to `/tmp/ac-evidence.md` (file, test name, or grep result per checkbox). If an item has no evidence, it's unmet.
+
+---
+
+## 5.5. CONTEXT.md verification (mandatory before commit, per ADR-0019)
+
+Before composing the commit, **decide if this issue changed any domain invariants** for the bounded context(s) you touched. If yes, the relevant `CONTEXT.md` MUST be updated in this same PR. Per [ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md), CONTEXT.md mirrors current code reality — updates land alongside the code that changes invariants, never lag.
+
+A CONTEXT.md update is **required** for this PR if **any** of the following is true:
+
+- **Schema change**: PR adds/removes/renames a field, table, enum, FK, unique constraint, or index in `packages/db/prisma/schema.prisma`
+- **New port**: PR adds (or removes) a file under `apps/api/src/modules/<ctx>/domain/ports/`
+- **New use-case**: PR adds a file under `apps/api/src/modules/<ctx>/application/`
+- **New emitted/consumed event**: PR adds or removes `eventBus.emit(...)` or `@OnEvent(...)`
+- **New HTTP/WS route**: PR adds or removes a controller route the rest of the system can call
+- **New module / dep / route at app level**: PR adds an npm dep, expo-router route, Next.js route, or worker processor that the app/package CONTEXT.md should reflect
+
+Sections most likely to need editing: **Owns** (when schema changes), **Invariants**, **Module shape (today)**, **Ports exposed**, **Shipped use-cases**, **Events emitted / consumed**. Also REMOVE any bullet from the **Planned additions** section that your PR just delivered.
+
+**Never edit CONTEXT.md to match a skinny implementation.** CONTEXT mirrors what code DOES today.
+
+**Exception**: if the issue body's `## Out of scope` section explicitly defers the CONTEXT.md update to a sprint-final wiring issue, skip the inline update. Default is: update in this PR.
+
+If the issue is a pure docs/test/refactor with no invariant impact, write `(no invariant changes; no CONTEXT.md update needed)` to `/tmp/run-issue-notes.md` so §6 surfaces it in the PR body.
 
 ---
 

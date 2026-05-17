@@ -105,6 +105,8 @@ done
 
 Capture pass/fail per command.
 
+**Also check the CONTEXT.md state** (per [ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md)). For each bounded context the touched files imply, grep its CONTEXT.md for the new entity/port/use-case the issue was meant to ship. If the code is in place but CONTEXT.md wasn't updated, that's a remediation item the resumed flow must fix before commit (mirrors `/run-issue` §5.5).
+
 ---
 
 ## 6. Propose remediation
