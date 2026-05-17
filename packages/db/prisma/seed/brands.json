@@ -1,0 +1,782 @@
+[
+  {
+    "slug": "toyota",
+    "nameRu": "Toyota",
+    "nameTk": "Toyota",
+    "nameEn": "Toyota"
+  },
+  {
+    "slug": "lexus",
+    "nameRu": "Lexus",
+    "nameTk": "Lexus",
+    "nameEn": "Lexus"
+  },
+  {
+    "slug": "bmw",
+    "nameRu": "BMW",
+    "nameTk": "BMW",
+    "nameEn": "BMW"
+  },
+  {
+    "slug": "mercedes-benz",
+    "nameRu": "Mercedes-Benz",
+    "nameTk": "Mercedes-Benz",
+    "nameEn": "Mercedes-Benz"
+  },
+  {
+    "slug": "hyundai",
+    "nameRu": "Hyundai",
+    "nameTk": "Hyundai",
+    "nameEn": "Hyundai"
+  },
+  {
+    "slug": "genesis",
+    "nameRu": "Genesis",
+    "nameTk": "Genesis",
+    "nameEn": "Genesis"
+  },
+  {
+    "slug": "volkswagen",
+    "nameRu": "Volkswagen",
+    "nameTk": "Volkswagen",
+    "nameEn": "Volkswagen"
+  },
+  {
+    "slug": "chevrolet",
+    "nameRu": "Chevrolet",
+    "nameTk": "Chevrolet",
+    "nameEn": "Chevrolet"
+  },
+  {
+    "slug": "mazda",
+    "nameRu": "Mazda",
+    "nameTk": "Mazda",
+    "nameEn": "Mazda"
+  },
+  {
+    "slug": "infiniti",
+    "nameRu": "Infiniti",
+    "nameTk": "Infiniti",
+    "nameEn": "Infiniti"
+  },
+  {
+    "slug": "nissan",
+    "nameRu": "Nissan",
+    "nameTk": "Nissan",
+    "nameEn": "Nissan"
+  },
+  {
+    "slug": "kia",
+    "nameRu": "Kia",
+    "nameTk": "Kia",
+    "nameEn": "Kia"
+  },
+  {
+    "slug": "audi",
+    "nameRu": "Audi",
+    "nameTk": "Audi",
+    "nameEn": "Audi"
+  },
+  {
+    "slug": "jeep",
+    "nameRu": "Jeep",
+    "nameTk": "Jeep",
+    "nameEn": "Jeep"
+  },
+  {
+    "slug": "ford",
+    "nameRu": "Ford",
+    "nameTk": "Ford",
+    "nameEn": "Ford"
+  },
+  {
+    "slug": "mitsubishi",
+    "nameRu": "Mitsubishi",
+    "nameTk": "Mitsubishi",
+    "nameEn": "Mitsubishi"
+  },
+  {
+    "slug": "chrysler",
+    "nameRu": "Chrysler",
+    "nameTk": "Chrysler",
+    "nameEn": "Chrysler"
+  },
+  {
+    "slug": "man",
+    "nameRu": "Man",
+    "nameTk": "Man",
+    "nameEn": "Man"
+  },
+  {
+    "slug": "volvo",
+    "nameRu": "Volvo",
+    "nameTk": "Volvo",
+    "nameEn": "Volvo"
+  },
+  {
+    "slug": "lada",
+    "nameRu": "Лада",
+    "nameTk": "Lada",
+    "nameEn": "Lada"
+  },
+  {
+    "slug": "opel",
+    "nameRu": "Opel",
+    "nameTk": "Opel",
+    "nameEn": "Opel"
+  },
+  {
+    "slug": "waz",
+    "nameRu": "ВАЗ",
+    "nameTk": "Waz",
+    "nameEn": "Waz"
+  },
+  {
+    "slug": "dodge",
+    "nameRu": "Dodge",
+    "nameTk": "Dodge",
+    "nameEn": "Dodge"
+  },
+  {
+    "slug": "honda",
+    "nameRu": "Honda",
+    "nameTk": "Honda",
+    "nameEn": "Honda"
+  },
+  {
+    "slug": "daf",
+    "nameRu": "DAF",
+    "nameTk": "DAF",
+    "nameEn": "DAF"
+  },
+  {
+    "slug": "peugeot",
+    "nameRu": "Peugeot",
+    "nameTk": "Peugeot",
+    "nameEn": "Peugeot"
+  },
+  {
+    "slug": "kamaz",
+    "nameRu": "КамАЗ",
+    "nameTk": "Kamaz",
+    "nameEn": "Kamaz"
+  },
+  {
+    "slug": "citroen",
+    "nameRu": "Citroen",
+    "nameTk": "Citroen",
+    "nameEn": "Citroen"
+  },
+  {
+    "slug": "zil",
+    "nameRu": "ЗИЛ",
+    "nameTk": "Zil",
+    "nameEn": "Zil"
+  },
+  {
+    "slug": "renault",
+    "nameRu": "Renault",
+    "nameTk": "Renault",
+    "nameEn": "Renault"
+  },
+  {
+    "slug": "daewoo",
+    "nameRu": "Daewoo",
+    "nameTk": "Daewoo",
+    "nameEn": "Daewoo"
+  },
+  {
+    "slug": "howo",
+    "nameRu": "Howo",
+    "nameTk": "Howo",
+    "nameEn": "Howo"
+  },
+  {
+    "slug": "uaz",
+    "nameRu": "УАЗ",
+    "nameTk": "UAZ",
+    "nameEn": "UAZ"
+  },
+  {
+    "slug": "ural",
+    "nameRu": "Ural",
+    "nameTk": "Ural",
+    "nameEn": "Ural"
+  },
+  {
+    "slug": "maz",
+    "nameRu": "МАЗ",
+    "nameTk": "Maz",
+    "nameEn": "Maz"
+  },
+  {
+    "slug": "iveco",
+    "nameRu": "Iveco",
+    "nameTk": "Iveco",
+    "nameEn": "Iveco"
+  },
+  {
+    "slug": "gaz",
+    "nameRu": "ГАЗ",
+    "nameTk": "Gaz",
+    "nameEn": "Gaz"
+  },
+  {
+    "slug": "kogel",
+    "nameRu": "Kogel",
+    "nameTk": "Kogel",
+    "nameEn": "Kogel"
+  },
+  {
+    "slug": "scania",
+    "nameRu": "Scania",
+    "nameTk": "Scania",
+    "nameEn": "Scania"
+  },
+  {
+    "slug": "forland",
+    "nameRu": "Forland",
+    "nameTk": "Forland",
+    "nameEn": "Forland"
+  },
+  {
+    "slug": "chery",
+    "nameRu": "Chery",
+    "nameTk": "Chery",
+    "nameEn": "Chery"
+  },
+  {
+    "slug": "mtz",
+    "nameRu": "MTZ",
+    "nameTk": "MTZ",
+    "nameEn": "MTZ"
+  },
+  {
+    "slug": "land-rover",
+    "nameRu": "Land Rover",
+    "nameTk": "Land Rover",
+    "nameEn": "Land Rover"
+  },
+  {
+    "slug": "golden-dragon",
+    "nameRu": "Golden Dragon",
+    "nameTk": "Golden Dragon",
+    "nameEn": "Golden Dragon"
+  },
+  {
+    "slug": "changan",
+    "nameRu": "Changan",
+    "nameTk": "Changan",
+    "nameEn": "Changan"
+  },
+  {
+    "slug": "jcb",
+    "nameRu": "JCB",
+    "nameTk": "JCB",
+    "nameEn": "JCB"
+  },
+  {
+    "slug": "xcmg",
+    "nameRu": "XCMG",
+    "nameTk": "XCMG",
+    "nameEn": "XCMG"
+  },
+  {
+    "slug": "schmitz",
+    "nameRu": "Schmitz",
+    "nameTk": "Schmitz",
+    "nameEn": "Schmitz"
+  },
+  {
+    "slug": "fekon",
+    "nameRu": "Fekon",
+    "nameTk": "Fekon",
+    "nameEn": "Fekon"
+  },
+  {
+    "slug": "tadano-faun",
+    "nameRu": "Tadano Faun",
+    "nameTk": "Tadano Faun",
+    "nameEn": "Tadano Faun"
+  },
+  {
+    "slug": "fiat",
+    "nameRu": "Fiat",
+    "nameTk": "Fiat",
+    "nameEn": "Fiat"
+  },
+  {
+    "slug": "prisep",
+    "nameRu": "Prisep",
+    "nameTk": "Prisep",
+    "nameEn": "Prisep"
+  },
+  {
+    "slug": "container",
+    "nameRu": "Container",
+    "nameTk": "Container",
+    "nameEn": "Container"
+  },
+  {
+    "slug": "saipa",
+    "nameRu": "Saipa",
+    "nameTk": "Saipa",
+    "nameEn": "Saipa"
+  },
+  {
+    "slug": "iž",
+    "nameRu": "Iž",
+    "nameTk": "Iž",
+    "nameEn": "Iž"
+  },
+  {
+    "slug": "saab",
+    "nameRu": "Saab",
+    "nameTk": "Saab",
+    "nameEn": "Saab"
+  },
+  {
+    "slug": "isuzu",
+    "nameRu": "Isuzu",
+    "nameTk": "Isuzu",
+    "nameEn": "Isuzu"
+  },
+  {
+    "slug": "new-holland",
+    "nameRu": "New Holland",
+    "nameTk": "New Holland",
+    "nameEn": "New Holland"
+  },
+  {
+    "slug": "yamaha",
+    "nameRu": "Yamaha",
+    "nameTk": "Yamaha",
+    "nameEn": "Yamaha"
+  },
+  {
+    "slug": "raf",
+    "nameRu": "РАФ",
+    "nameTk": "Raf",
+    "nameEn": "Raf"
+  },
+  {
+    "slug": "москвич",
+    "nameRu": "Москвич",
+    "nameTk": "Москвич",
+    "nameEn": "Москвич"
+  },
+  {
+    "slug": "cmc",
+    "nameRu": "CMC",
+    "nameTk": "CMC",
+    "nameEn": "CMC"
+  },
+  {
+    "slug": "pontiac",
+    "nameRu": "Pontiac",
+    "nameTk": "Pontiac",
+    "nameEn": "Pontiac"
+  },
+  {
+    "slug": "kuba",
+    "nameRu": "Kuba",
+    "nameTk": "Kuba",
+    "nameEn": "Kuba"
+  },
+  {
+    "slug": "tofaş",
+    "nameRu": "Tofaş",
+    "nameTk": "Tofaş",
+    "nameEn": "Tofaş"
+  },
+  {
+    "slug": "liugong",
+    "nameRu": "LiuGong",
+    "nameTk": "LiuGong",
+    "nameEn": "LiuGong"
+  },
+  {
+    "slug": "zaz",
+    "nameRu": "ЗАЗ",
+    "nameTk": "ZAZ",
+    "nameEn": "ZAZ"
+  },
+  {
+    "slug": "skoda",
+    "nameRu": "Skoda",
+    "nameTk": "Skoda",
+    "nameEn": "Skoda"
+  },
+  {
+    "slug": "subaru",
+    "nameRu": "Subaru",
+    "nameTk": "Subaru",
+    "nameEn": "Subaru"
+  },
+  {
+    "slug": "caterpillar",
+    "nameRu": "Caterpillar",
+    "nameTk": "Caterpillar",
+    "nameEn": "Caterpillar"
+  },
+  {
+    "slug": "camc",
+    "nameRu": "CAMC",
+    "nameTk": "CAMC",
+    "nameEn": "CAMC"
+  },
+  {
+    "slug": "zonda",
+    "nameRu": "Zonda",
+    "nameTk": "Zonda",
+    "nameEn": "Zonda"
+  },
+  {
+    "slug": "ssangyong",
+    "nameRu": "SsangYong",
+    "nameTk": "SsangYong",
+    "nameEn": "SsangYong"
+  },
+  {
+    "slug": "lifan",
+    "nameRu": "Lifan",
+    "nameTk": "Lifan",
+    "nameEn": "Lifan"
+  },
+  {
+    "slug": "buick",
+    "nameRu": "Buick",
+    "nameTk": "Buick",
+    "nameEn": "Buick"
+  },
+  {
+    "slug": "alfa-romeo",
+    "nameRu": "ALFA ROMEO",
+    "nameTk": "ALFA ROMEO",
+    "nameEn": "ALFA ROMEO"
+  },
+  {
+    "slug": "byd",
+    "nameRu": "BYD",
+    "nameTk": "BYD",
+    "nameEn": "BYD"
+  },
+  {
+    "slug": "belarus",
+    "nameRu": "Belarus",
+    "nameTk": "Belarus",
+    "nameEn": "Belarus"
+  },
+  {
+    "slug": "porsche",
+    "nameRu": "Porsche",
+    "nameTk": "Porsche",
+    "nameEn": "Porsche"
+  },
+  {
+    "slug": "brilliance",
+    "nameRu": "Brilliance",
+    "nameTk": "Brilliance",
+    "nameEn": "Brilliance"
+  },
+  {
+    "slug": "daihatsu",
+    "nameRu": "Daihatsu",
+    "nameTk": "Daihatsu",
+    "nameEn": "Daihatsu"
+  },
+  {
+    "slug": "roewe",
+    "nameRu": "Roewe",
+    "nameTk": "Roewe",
+    "nameEn": "Roewe"
+  },
+  {
+    "slug": "mg",
+    "nameRu": "MG",
+    "nameTk": "MG",
+    "nameEn": "MG"
+  },
+  {
+    "slug": "mini",
+    "nameRu": "Mini",
+    "nameTk": "Mini",
+    "nameEn": "Mini"
+  },
+  {
+    "slug": "suzuki",
+    "nameRu": "Suzuki",
+    "nameTk": "Suzuki",
+    "nameEn": "Suzuki"
+  },
+  {
+    "slug": "komatsu",
+    "nameRu": "Komatsu",
+    "nameTk": "Komatsu",
+    "nameEn": "Komatsu"
+  },
+  {
+    "slug": "international",
+    "nameRu": "International",
+    "nameTk": "International",
+    "nameEn": "International"
+  },
+  {
+    "slug": "smart",
+    "nameRu": "Smart",
+    "nameTk": "Smart",
+    "nameEn": "Smart"
+  },
+  {
+    "slug": "john",
+    "nameRu": "John",
+    "nameTk": "John",
+    "nameEn": "John"
+  },
+  {
+    "slug": "ppm",
+    "nameRu": "PPM",
+    "nameTk": "PPM",
+    "nameEn": "PPM"
+  },
+  {
+    "slug": "gmc",
+    "nameRu": "GMC",
+    "nameTk": "GMC",
+    "nameEn": "GMC"
+  },
+  {
+    "slug": "lincoln",
+    "nameRu": "Lincoln",
+    "nameTk": "Lincoln",
+    "nameEn": "Lincoln"
+  },
+  {
+    "slug": "dongfeng",
+    "nameRu": "Dongfeng",
+    "nameTk": "Dongfeng",
+    "nameEn": "Dongfeng"
+  },
+  {
+    "slug": "foton",
+    "nameRu": "Foton",
+    "nameTk": "Foton",
+    "nameEn": "Foton"
+  },
+  {
+    "slug": "tesla",
+    "nameRu": "Tesla",
+    "nameTk": "Tesla",
+    "nameEn": "Tesla"
+  },
+  {
+    "slug": "паз",
+    "nameRu": "ПАЗ",
+    "nameTk": "ПАЗ",
+    "nameEn": "ПАЗ"
+  },
+  {
+    "slug": "balkancar",
+    "nameRu": "Balkancar",
+    "nameTk": "Balkancar",
+    "nameEn": "Balkancar"
+  },
+  {
+    "slug": "jawa",
+    "nameRu": "Jawa",
+    "nameTk": "Jawa",
+    "nameEn": "Jawa"
+  },
+  {
+    "slug": "seat",
+    "nameRu": "Seat",
+    "nameTk": "Seat",
+    "nameEn": "Seat"
+  },
+  {
+    "slug": "geely",
+    "nameRu": "Geely",
+    "nameTk": "Geely",
+    "nameEn": "Geely"
+  },
+  {
+    "slug": "hidromek",
+    "nameRu": "Hidromek",
+    "nameTk": "Hidromek",
+    "nameEn": "Hidromek"
+  },
+  {
+    "slug": "ozan",
+    "nameRu": "Ozan",
+    "nameTk": "Ozan",
+    "nameEn": "Ozan"
+  },
+  {
+    "slug": "jetour",
+    "nameRu": "Jetour",
+    "nameTk": "Jetour",
+    "nameEn": "Jetour"
+  },
+  {
+    "slug": "heli",
+    "nameRu": "Heli",
+    "nameTk": "Heli",
+    "nameEn": "Heli"
+  },
+  {
+    "slug": "jungheinrich",
+    "nameRu": "Jungheinrich",
+    "nameTk": "Jungheinrich",
+    "nameEn": "Jungheinrich"
+  },
+  {
+    "slug": "bobcat",
+    "nameRu": "Bobcat",
+    "nameTk": "Bobcat",
+    "nameEn": "Bobcat"
+  },
+  {
+    "slug": "jaguar",
+    "nameRu": "Jaguar",
+    "nameTk": "Jaguar",
+    "nameEn": "Jaguar"
+  },
+  {
+    "slug": "foton-lovol",
+    "nameRu": "Foton Lovol",
+    "nameTk": "Foton Lovol",
+    "nameEn": "Foton Lovol"
+  },
+  {
+    "slug": "sdlg",
+    "nameRu": "SDLG",
+    "nameTk": "SDLG",
+    "nameEn": "SDLG"
+  },
+  {
+    "slug": "kara",
+    "nameRu": "Kara",
+    "nameTk": "Kara",
+    "nameEn": "Kara"
+  },
+  {
+    "slug": "hamm",
+    "nameRu": "Hamm",
+    "nameTk": "Hamm",
+    "nameEn": "Hamm"
+  },
+  {
+    "slug": "case",
+    "nameRu": "Case",
+    "nameTk": "Case",
+    "nameEn": "Case"
+  },
+  {
+    "slug": "voyah",
+    "nameRu": "Voyah",
+    "nameTk": "Voyah",
+    "nameEn": "Voyah"
+  },
+  {
+    "slug": "lixiang",
+    "nameRu": "LiXiang",
+    "nameTk": "LiXiang",
+    "nameEn": "LiXiang"
+  },
+  {
+    "slug": "soueast",
+    "nameRu": "Soueast",
+    "nameTk": "Soueast",
+    "nameEn": "Soueast"
+  },
+  {
+    "slug": "sem",
+    "nameRu": "SEM",
+    "nameTk": "SEM",
+    "nameEn": "SEM"
+  },
+  {
+    "slug": "haval",
+    "nameRu": "Haval",
+    "nameTk": "Haval",
+    "nameEn": "Haval"
+  },
+  {
+    "slug": "avatr",
+    "nameRu": "AVATR",
+    "nameTk": "AVATR",
+    "nameEn": "AVATR"
+  },
+  {
+    "slug": "great-wall",
+    "nameRu": "Great Wall",
+    "nameTk": "Great Wall",
+    "nameEn": "Great Wall"
+  },
+  {
+    "slug": "gwm-tank",
+    "nameRu": "GWM Tank",
+    "nameTk": "GWM Tank",
+    "nameEn": "GWM Tank"
+  },
+  {
+    "slug": "kato",
+    "nameRu": "Kato",
+    "nameTk": "Kato",
+    "nameEn": "Kato"
+  },
+  {
+    "slug": "yto",
+    "nameRu": "YTO",
+    "nameTk": "YTO",
+    "nameEn": "YTO"
+  },
+  {
+    "slug": "shantui",
+    "nameRu": "SHANTUI",
+    "nameTk": "SHANTUI",
+    "nameEn": "SHANTUI"
+  },
+  {
+    "slug": "bomag",
+    "nameRu": "Bomag",
+    "nameTk": "Bomag",
+    "nameEn": "Bomag"
+  },
+  {
+    "slug": "cadillac",
+    "nameRu": "Cadillac",
+    "nameTk": "Cadillac",
+    "nameEn": "Cadillac"
+  },
+  {
+    "slug": "liebherr",
+    "nameRu": "Liebherr",
+    "nameTk": "Liebherr",
+    "nameEn": "Liebherr"
+  },
+  {
+    "slug": "lugong",
+    "nameRu": "Lugong",
+    "nameTk": "Lugong",
+    "nameEn": "Lugong"
+  },
+  {
+    "slug": "zoomlion",
+    "nameRu": "Zoomlion",
+    "nameTk": "Zoomlion",
+    "nameEn": "Zoomlion"
+  },
+  {
+    "slug": "jac",
+    "nameRu": "JAC",
+    "nameTk": "JAC",
+    "nameEn": "JAC"
+  },
+  {
+    "slug": "hongqi",
+    "nameRu": "Hongqi",
+    "nameTk": "Hongqi",
+    "nameEn": "Hongqi"
+  }
+]
