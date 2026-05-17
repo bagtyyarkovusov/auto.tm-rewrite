@@ -14,6 +14,28 @@ import {
   RefreshResponseSchema,
   LogoutRequestSchema,
 } from "./schemas/auth";
+import {
+  BrandSummarySchema,
+  BrandDetailSchema,
+  ModelSummarySchema,
+  ModelDetailSchema,
+  GenerationSummarySchema,
+  GenerationDetailSchema,
+  ColorSummarySchema,
+  ColorDetailSchema,
+  BodyTypeSummarySchema,
+  BodyTypeDetailSchema,
+  RegionSummarySchema,
+  RegionDetailSchema,
+  CitySummarySchema,
+  CityDetailSchema,
+  CreateBrandRequestSchema,
+  UpdateBrandRequestSchema,
+  DeleteBrandParamSchema,
+  CreateModelRequestSchema,
+  UpdateModelRequestSchema,
+  DeleteModelParamSchema,
+} from "./schemas/catalog";
 
 // exactOptionalPropertyTypes: true in tsconfig conflicts with zod-to-openapi's
 // SchemaObject type (Zod nullable() method vs SchemaObject nullable: boolean).
@@ -23,6 +45,30 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   const registry = new OpenAPIRegistry();
 
   registry.registerComponent("schemas", "ErrorResponse", S(ErrorResponseSchema));
+
+  // Catalog read schemas
+  registry.registerComponent("schemas", "BrandSummary", S(BrandSummarySchema));
+  registry.registerComponent("schemas", "BrandDetail", S(BrandDetailSchema));
+  registry.registerComponent("schemas", "ModelSummary", S(ModelSummarySchema));
+  registry.registerComponent("schemas", "ModelDetail", S(ModelDetailSchema));
+  registry.registerComponent("schemas", "GenerationSummary", S(GenerationSummarySchema));
+  registry.registerComponent("schemas", "GenerationDetail", S(GenerationDetailSchema));
+  registry.registerComponent("schemas", "ColorSummary", S(ColorSummarySchema));
+  registry.registerComponent("schemas", "ColorDetail", S(ColorDetailSchema));
+  registry.registerComponent("schemas", "BodyTypeSummary", S(BodyTypeSummarySchema));
+  registry.registerComponent("schemas", "BodyTypeDetail", S(BodyTypeDetailSchema));
+  registry.registerComponent("schemas", "RegionSummary", S(RegionSummarySchema));
+  registry.registerComponent("schemas", "RegionDetail", S(RegionDetailSchema));
+  registry.registerComponent("schemas", "CitySummary", S(CitySummarySchema));
+  registry.registerComponent("schemas", "CityDetail", S(CityDetailSchema));
+
+  // Catalog admin write schemas
+  registry.registerComponent("schemas", "CreateBrandRequest", S(CreateBrandRequestSchema));
+  registry.registerComponent("schemas", "UpdateBrandRequest", S(UpdateBrandRequestSchema));
+  registry.registerComponent("schemas", "DeleteBrandParam", S(DeleteBrandParamSchema));
+  registry.registerComponent("schemas", "CreateModelRequest", S(CreateModelRequestSchema));
+  registry.registerComponent("schemas", "UpdateModelRequest", S(UpdateModelRequestSchema));
+  registry.registerComponent("schemas", "DeleteModelParam", S(DeleteModelParamSchema));
 
   registry.registerPath({
     method: "post",
