@@ -42,6 +42,29 @@ class FakeBrandRepository implements BrandRepository {
   async getBrandById(_id: string): Promise<Brand | null> {
     return this.brands[0] ?? null;
   }
+
+  async getBySlug(_slug: string): Promise<Brand | null> {
+    return this.brands.find((b) => b.slug === _slug) ?? null;
+  }
+
+  async create(data: { slug: string; nameRu: string; nameTk: string; nameEn: string }): Promise<Brand> {
+    const brand: Brand = {
+      id: `brand-${this.brands.length + 1}`,
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.brands.push(brand);
+    return brand;
+  }
+
+  async update(): Promise<Brand> {
+    throw new Error("not implemented");
+  }
+
+  async delete(): Promise<void> {
+    throw new Error("not implemented");
+  }
 }
 
 function makeUseCase(brandRepo?: FakeBrandRepository) {

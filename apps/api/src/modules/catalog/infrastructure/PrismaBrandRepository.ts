@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
+
 import type { Brand } from "../domain/Brand";
 import type { BrandRepository } from "../domain/ports/BrandRepository";
 
@@ -42,6 +43,38 @@ export class PrismaBrandRepository implements BrandRepository {
   async getBrandById(id: string): Promise<Brand | null> {
     const row = await this.prisma.brand.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
+  }
+
+  async getBySlug(slug: string): Promise<Brand | null> {
+    const row = await this.prisma.brand.findUnique({ where: { slug } });
+    return row ? this.toDomain(row) : null;
+  }
+
+  async create(data: {
+    slug: string;
+    nameRu: string;
+    nameTk: string;
+    nameEn: string;
+  }): Promise<Brand> {
+    const row = await this.prisma.brand.create({ data });
+    return this.toDomain(row);
+  }
+
+  async update(
+    id: string,
+    data: Partial<{
+      slug: string;
+      nameRu: string;
+      nameTk: string;
+      nameEn: string;
+    }>,
+  ): Promise<Brand> {
+    const row = await this.prisma.brand.update({ where: { id }, data });
+    return this.toDomain(row);
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.brand.delete({ where: { id } });
   }
 
   private toDomain(
