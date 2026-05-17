@@ -39,6 +39,9 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 /(auth)/
   phone               Phone entry                         — wired (S2)
   otp                 OTP verification                    — wired (S2)
+
+/dev/
+  catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__
 ```
 
 No `/(public)/*`, no `/sell/wizard`, no `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
@@ -51,7 +54,7 @@ No `/(public)/*`, no `/sell/wizard`, no `/chat/[conversationId]`, no `/me/*` rou
 - `expo-secure-store` for JWT access + refresh tokens
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 
-Identity hooks live at `src/api/identity/*`. Catalog hooks ship in S3 at `src/api/catalog/*`.
+Identity hooks live at `src/api/identity/*`. Catalog hooks live at `src/api/catalog/*` (S3: `useBrands`).
 
 ## Dependencies
 
@@ -63,7 +66,7 @@ Identity hooks live at `src/api/identity/*`. Catalog hooks ship in S3 at `src/ap
 
 Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the deps + routes + state below are NOT in code today. Tracked in the named sprint files.
 
-- **S3 (Catalog)** — `src/api/catalog/*` hooks; dev-only `/dev/catalog` route gated `__DEV__`.
+- **S3 (Catalog)** — `src/api/catalog/*` hooks; dev-only `/dev/catalog` route gated `__DEV__`. ✅ Shipped.
 - **S4 (Listings CRUD)** —
   - **`@aws-sdk/client-s3`** dep for presigned MinIO uploads (current package.json does NOT include this; S4 adds it)
   - Routes: `/(public)/listings/[id]`, `/sell/wizard` (7-step create-listing wizard)

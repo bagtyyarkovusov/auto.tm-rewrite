@@ -158,6 +158,17 @@ export const CityDetailSchema = z.object({
 });
 export type CityDetail = z.infer<typeof CityDetailSchema>;
 
+// ── List Response Schemas ──
+
+export const BrandSummaryListResponseSchema = z.object({
+  items: z.array(BrandSummarySchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+export type BrandSummaryListResponse = z.infer<
+  typeof BrandSummaryListResponseSchema
+>;
+
 // ── Admin Write DTOs (Brand + Model only) ──
 
 export const CreateBrandRequestSchema = z.object({
