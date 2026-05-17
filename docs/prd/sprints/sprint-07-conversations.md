@@ -23,6 +23,17 @@ Ship the headline feature: real-time 1:1 chat scoped per-listing, with text + im
 
 ## Acceptance criteria (DoD)
 
+### Schema additions (Prisma migration)
+
+S7 broadens the skinny chat schema (see `apps/api/src/modules/conversations/CONTEXT.md` Planned section) to support last-message preview, soft-delete, mute, unread counts, and quick replies:
+
+- [ ] `Conversation` adds: `lastMessageAt` (DateTime, indexed for sort) + `lastMessageId?` (cached pointer for preview)
+- [ ] `ConversationParticipant` adds: `mutedAt?`, `lastReadAt?` for mute UX and unread counts
+- [ ] `Message` adds: `deletedAt?` for soft-delete (preserve chat history)
+- [ ] New `QuickReply` entity: id, slug, localized labels (`labelRu` / `labelTk` / `labelEn`), localized texts (`textRu` / `textTk` / `textEn`). Seeded with TM-relevant canned replies: "Is it still available?", "What's your best price?", "When can I see it?", "Will you take ${price}?" — etc.
+- [ ] `apps/mobile` adds `socket.io-client` dep (not in package.json today)
+- [ ] Prisma migration is reversible.
+
 ### Backend
 - [ ] `POST /api/v1/conversations` creates or returns existing conversation for `(listingId, buyerId, sellerId)` — unique
 - [ ] `GET /api/v1/conversations` lists my conversations (paginated by last-message-at)

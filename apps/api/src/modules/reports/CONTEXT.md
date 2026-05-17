@@ -1,12 +1,12 @@
 # reports — CONTEXT
 
+> **Phase 2 context. Stubbed in Phase 1** per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md): nothing in this file is in code today; everything described is Phase 2 planned work. The "planned" markers below explicitly signal the future state. Real work begins in Phase 2 sprint files (S11-S14, TBD).
+
 ## Purpose
 
 **Phase 2.** AutoTM-staffed vehicle inspection reports with a 3-tier rating system. Reports are PDF-exportable, viewable on the listing, and used as the "Trusted by AutoTM" signal.
 
-> ⚠️ This context is **stubbed in Phase 1** (folder exists, CONTEXT.md placeholder, no implementation). Real work begins in Phase 2 after the inspection operations are running.
-
-## Owns (entities + tables — planned)
+## Owns (entities + tables — planned, NOT in schema today)
 
 - `InspectionReport` — id, listingId, inspectorUserId, publishedAt?, tier (1 / 2 / 3), totalScore, scoresByCategory (JSON), notes, deletedAt?
 - `RubricTemplate` — id, version, name, sections (JSON), maxScore — admin-edited template; multiple versions over time

@@ -1,73 +1,72 @@
 # conversations — CONTEXT
 
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in [`docs/prd/features/35-conversations.md`](../../../../../docs/prd/features/35-conversations.md) (if present — otherwise inferred from PRD) and `docs/prd/sprints/sprint-07-conversations.md`.
+
 ## Purpose
 
-The chat system — the headline MVP feature. Per-listing scoped 1:1 conversations between buyer and seller, with text/image/post-card messages, read receipts, typing indicators, and presence.
+Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today; the full chat system (WebSocket transport, message send/read/delete, typing/presence, attachments) ships in S7.
 
 ## Owns (entities + tables)
 
-- `Conversation` — id, listingId, buyerUserId, sellerUserId, createdAt, lastMessageAt, lastMessageId?
-- `ConversationMember` — { conversationId, userId, mutedAt?, lastReadAt? } junction (composite PK)
-- `Message` — id, conversationId, senderId, type (`text` / `image` / `post_ref` / `system`), text?, imageKey?, postRefListingId?, systemKind? (`conversation_started` / `listing_sold` / etc), sentAt, deletedAt?
-- `QuickReply` — id, label, text (system-defined seed list: "Hello", "Is it still available?", "Can I see it today?", "Will you take ${price}?", etc., localized)
+- `Conversation` — id, listingId (FK → Listing, Cascade), buyerId (FK → User as "Buyer", Cascade), sellerId (FK → User as "Seller", Cascade), createdAt, updatedAt. Unique on `(listingId, buyerId)`. Index on `sellerId`.
+- `ConversationParticipant` — id, conversationId (FK → Conversation, Cascade), userId (FK → User, Cascade), createdAt. Unique on `(conversationId, userId)`.
+- `Message` — id, conversationId (FK → Conversation, Cascade), senderId (no FK constraint), kind (`MessageKind` enum: text | image | post_ref | system), body?, metadata? (JSON), createdAt. Index on `(conversationId, createdAt)`.
 
-## Invariants
+## Invariants (enforced today)
 
-- A `Conversation` is uniquely identified by `(listingId, buyerUserId)` — only one conversation per buyer per listing
-- `Conversation.sellerUserId` = the listing's `ownerUserId` at conversation creation time (frozen — does not change if listing ownership changes)
-- A `Conversation` cannot exist for a listing the buyer themselves owns (can't message yourself)
-- A `Conversation` cannot exist if either user has blocked the other (returns 403)
-- `Message.senderId` must be `buyerUserId` or `sellerUserId`
-- `Message.type='text'` → `text` is non-empty
-- `Message.type='image'` → `imageKey` references a MinIO object
-- `Message.type='post_ref'` → `postRefListingId` references a valid (any status) Listing
-- `Message.type='system'` → server-generated, never user-sent
-- Messages are **soft-delete only** (preserves chat history for disputes / audit). A deleted message renders as "Message deleted" in the UI.
-- A `Conversation` cannot be deleted — only archived (set `lastMessageAt` very old) or muted by individual members
+- A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
+- `Conversation.sellerId` references a User. **Same-user-cannot-chat-themselves** is NOT enforced by schema; must be application-level in S7.
+- `Message.kind` is one of text | image | post_ref | system.
+- `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
+
+## Module shape (today)
+
+- `apps/api/src/modules/conversations/`:
+  - `domain/`, `application/`, `infrastructure/` — empty
+  - `presentation/conversations.controller.ts` — stub
+  - `conversations.module.ts` — registers stub controller
+- No WebSocket gateway, no Socket.IO server, no message send/read/delete handlers.
 
 ## Ports exposed
 
-```ts
-interface ConversationsReadPort {
-  getConversationSummary(id): Promise<{ id, listingId, buyerUserId, sellerUserId, lastMessageAt } | null>
-  getUnreadCountForUser(userId): Promise<number>
-}
-```
+- (none today — S7 adds `ConversationsReadPort`)
 
 ## Ports consumed
 
-```ts
-ListingsReadPort       // resolve listing summary for pinned card + post-card refs
-IdentityReadPort       // resolve user + dealership names; check block status
-MediaUploadPort        // for image attachments
-```
+- (none today)
+
+## Shipped use-cases
+
+- (none today)
 
 ## Events emitted
 
-- `MessageSent` — primary event; consumed by `notifications/` for push delivery
-- `ConversationStarted` — when a new conversation is created
-- `MessageDeleted` — soft delete by sender (within 5 min of send)
-- `UserBlockedInConversation` — when a user blocks another while in a chat
+- (none today)
 
 ## Events consumed
 
-- `ListingSold` — auto-emits a system message into open conversations: "This listing was marked sold"
-- `UserSuspended` — closes (archives) all conversations involving the suspended user
+- (none today)
 
-## WebSocket events (Socket.IO namespace `/ws/chat`)
+## Planned additions (future sprints)
 
-| Direction | Event | Payload |
-|---|---|---|
-| Client → Server | `message:send` | `{ conversationId, type, text?, imageKey?, postRefListingId? }` |
-| Server → Client | `message:received` | `Message` full object |
-| Server → Client | `message:read` | `{ conversationId, userId, lastReadAt }` |
-| Client → Server | `typing:start` | `{ conversationId }` |
-| Client → Server | `typing:stop` | `{ conversationId }` |
-| Server → Client | `typing:peer` | `{ conversationId, userId, isTyping }` |
-| Server → Client | `presence:peer` | `{ conversationId, userId, lastSeenAt }` |
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the named sprint file:
+
+- **S7 (Conversations)** — `docs/prd/sprints/sprint-07-conversations.md`. Owns:
+  - Schema additions to `Conversation`: `lastMessageAt`, `lastMessageId?` for sort + preview
+  - Schema additions to `ConversationParticipant`: `mutedAt?`, `lastReadAt?` for unread counts + mute UX
+  - Schema additions to `Message`: `deletedAt?` for soft-delete (preserve chat history for disputes)
+  - New `QuickReply` entity (system-defined seed list of localized canned replies: "Hello", "Is it still available?", "Can I see it today?", "Will you take ${price}?", ...)
+  - `ConversationsReadPort` (`getConversationSummary`, `getUnreadCountForUser`)
+  - WebSocket gateway on Socket.IO namespace `/ws/chat` with events: `message:send`, `message:received`, `message:read`, `typing:start`, `typing:stop`, `typing:peer`, `presence:peer`
+  - Use-cases: `StartConversation`, `SendMessage`, `MarkAsRead`, `DeleteMessage`, `MuteConversation`, `BlockInConversation`
+  - Application-level invariants: same-user-cannot-chat-themselves; conversation blocked if either user has blocked the other; soft-delete window (5 min after send)
+  - Events emitted: `MessageSent` (primary, consumed by `notifications/` for push), `ConversationStarted`, `MessageDeleted`, `UserBlockedInConversation`
+  - Events consumed: `ListingSold` (auto-emits system message), `UserSuspended` (archives conversations involving suspended user)
+  - Ports consumed: `ListingsReadPort` (listing pinned card + post-ref), `IdentityReadPort` (user names + block check), `MediaUploadPort` (image attachments)
 
 ## Notable decisions
 
-- [ADR-0001](../../../../docs/adr/0001-architecture.md) — Chat is its own bounded context
-- [ADR-0002](../../../../docs/adr/0002-stack.md) — Socket.IO + NestJS WebSocket gateway
-- [ADR-0009](../../../../docs/adr/0009-notifications.md) — MessageSent → push fan-out
+- [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Chat is its own bounded context
+- [ADR-0002](../../../../../docs/adr/0002-stack.md) — Socket.IO + NestJS WebSocket gateway
+- [ADR-0009](../../../../../docs/adr/0009-notifications.md) — `MessageSent` → push fan-out
+- [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state

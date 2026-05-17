@@ -1,55 +1,84 @@
 # content — CONTEXT
 
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). The Bortzhurnal (Бортжурнал) feature is **mostly Phase 2 work**. Today, only a stub schema exists for `BlogPost`. Aspirational content lives in Phase 2 sprint files (TBD — placeholder rows in `docs/prd/03-roadmap.md`).
+
 ## Purpose
 
 Bortzhurnal (Бортжурнал) — user blog posts about cars and ownership experience. Inspired by auto.ru's eponymous feature. Free-text content with optional media and optional vehicle tagging.
 
 ## Owns (entities + tables)
 
-- `BlogPost` — id, authorUserId, title, body (Markdown), visibility (`public` / `followers_only` / `unlisted`), taggedVehicleId? (links to author's `OwnedVehicle`), taggedBrandId?, taggedModelId?, viewCount, likeCount, createdAt, updatedAt, deletedAt?
-- `BlogMedia` — id, blogPostId, kind (`photo` / `video`), key, position
-- `BlogLike` — { userId, blogPostId, createdAt }
-- `BlogFollow` — { followerUserId, followedUserId, createdAt } — follow another user's blog (foundation for blog feed)
-- `BlogTag` — id, slug, name_ru, name_tk, name_en (predefined categories: "Опыт владения", "Покупка", "Ремонт", "Тюнинг", etc.)
-- `BlogPostTag` — { blogPostId, blogTagId } junction
+> Today: only a stub `BlogPost` table exists. None of the supporting entities (BlogMedia, BlogLike, BlogFollow, BlogTag, BlogPostTag) are in schema — they ship in Phase 2 when the blog feature gets sprint-scoped.
 
-## Invariants
+- `BlogPost` — id, slug (unique), locale, title, body (text/Markdown), authorId (FK → User, Cascade), publishedAt?, deletedAt?, createdAt, updatedAt. Index on `(locale, publishedAt DESC)`.
 
-- A `BlogPost` always has an `authorUserId`
-- `taggedVehicleId` (if set) must reference an `OwnedVehicle` owned by the author
-- `taggedBrandId` / `taggedModelId` (if set) reference valid catalog entries
-- `visibility = 'unlisted'` means hidden from feeds but accessible by direct URL
-- `BlogMedia` photos: max 30 per post; videos: max 1 per post, ≤60s
-- Body is stored as Markdown, sanitized on render
+## Invariants (enforced today)
+
+- `BlogPost.slug` is globally unique.
+- `BlogPost.authorId` references an existing User (FK; deletes cascade).
+- Soft-delete via `BlogPost.deletedAt`.
+
+## Module shape (today)
+
+- `apps/api/src/modules/content/`:
+  - `domain/`, `application/`, `infrastructure/`, `presentation/` — empty
+  - `content.module.ts` — empty module
 
 ## Ports exposed
 
-```ts
-interface ContentReadPort {
-  getBlogPostSummary(id): Promise<{ id, title, authorUserId, photoUrl?, createdAt } | null>
-  getBlogPostsForUser(userId): Promise<BlogPostSummary[]>
-}
-```
+- (none today)
 
 ## Ports consumed
 
-```ts
-IdentityReadPort     // resolve author summary
-CatalogReadPort      // resolve tagged brand/model names
-```
+- (none today)
+
+## Shipped use-cases
+
+- (none today)
 
 ## Events emitted
 
-- `BlogPostPublished` — consumed by `notifications/` for follower activity feed
-- `BlogPostLiked`
-- `BlogFollowAdded`
+- (none today)
 
 ## Events consumed
 
-- `UserSuspended` — archives all blog posts of suspended user
-- `OwnedVehicleDeleted` — nullifies `taggedVehicleId` on affected posts
+- (none today)
+
+## Planned additions (Phase 2 — not Phase 1 scope)
+
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the Bortzhurnal feature is Phase 2 work. Phase 1 (current focus) does NOT include blog functionality. The items below are placeholders for the Phase 2 sprint that owns Content; the authoritative spec lives in `docs/prd/features/40-content.md` (or wherever PRD captures the feature) and the eventual Phase 2 sprint file.
+
+- **Supporting entities** (none in schema today):
+  - `BlogMedia` — id, blogPostId, kind (`photo` / `video`), key, position
+  - `BlogLike` — junction (userId, blogPostId, createdAt)
+  - `BlogFollow` — junction (followerUserId, followedUserId, createdAt) — follow another user's blog
+  - `BlogTag` — id, slug, nameRu, nameTk, nameEn (predefined categories: "Опыт владения", "Покупка", "Ремонт", "Тюнинг", …)
+  - `BlogPostTag` — junction (blogPostId, blogTagId)
+
+- **`BlogPost` schema additions** (not in schema today):
+  - `visibility` enum (`public` | `followers_only` | `unlisted`)
+  - `taggedVehicleId?` (FK → `OwnedVehicle` owned by the author)
+  - `taggedBrandId?` + `taggedModelId?` (FK → Catalog entries)
+  - `viewCount` (Int)
+  - `likeCount` (Int)
+
+- **Application invariants** (to be enforced when use-cases ship):
+  - `taggedVehicleId` (if set) references an `OwnedVehicle` owned by the author
+  - `taggedBrandId` / `taggedModelId` (if set) reference valid catalog entries
+  - `visibility = 'unlisted'` hidden from feeds but accessible by direct URL
+  - `BlogMedia` photos: max 30 per post; videos: max 1 per post, ≤60s
+  - Body stored as Markdown, sanitized on render
+
+- **Ports** (none today):
+  - `ContentReadPort` (`getBlogPostSummary`, `getBlogPostsForUser`)
+  - Consumed: `IdentityReadPort`, `CatalogReadPort`
+
+- **Events** (none emitted/consumed today):
+  - Emit: `BlogPostPublished`, `BlogPostLiked`, `BlogFollowAdded`
+  - Consume: `UserSuspended` (archives all blog posts), `OwnedVehicleDeleted` (nullifies `taggedVehicleId`)
 
 ## Notable decisions
 
-- [ADR-0001](../../../../docs/adr/0001-architecture.md) — Content is its own context
+- [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Content is its own context
 - Content shares the media pipeline with listings (ADR-0008)
+- [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state

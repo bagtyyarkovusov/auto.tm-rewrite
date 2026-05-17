@@ -1,5 +1,7 @@
 # apps/phone-agent — CONTEXT
 
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Gradle structure + 4 Kotlin classes exist as scaffolding; the WebSocket connection + SMS dispatch behavior gets filled in when the sms-gateway WebSocket protocol ships. Aspirational behaviors below are clearly marked.
+
 ## Purpose
 
 Kotlin Android app installed on each AutoTM OTP phone. Maintains a persistent WebSocket connection to `apps/sms-gateway` and dispatches SMS via Android's `SmsManager` when commanded.
@@ -12,7 +14,15 @@ Kotlin Android app installed on each AutoTM OTP phone. Maintains a persistent We
 - Battery optimization disabled for the agent app
 - Foreground service notification (Android requires this for long-running background work)
 
-## What it does
+## Source structure (today)
+
+- `app/src/main/java/tm/auto/phoneagent/MainActivity.kt`
+- `app/src/main/java/tm/auto/phoneagent/PhoneAgentService.kt` — foreground service shell
+- `app/src/main/java/tm/auto/phoneagent/GatewayClient.kt` — gateway WS client
+- `app/src/main/java/tm/auto/phoneagent/SmsSender.kt` — SMS dispatch wrapper
+- `app/src/main/AndroidManifest.xml` — declares `SEND_SMS`, `READ_PHONE_STATE`, `FOREGROUND_SERVICE` (+ `FOREGROUND_SERVICE_DATA_SYNC`), `INTERNET`, `POST_NOTIFICATIONS`, `WAKE_LOCK`
+
+## What it does (target behavior when integrated with sms-gateway WS)
 
 1. On launch: register as foreground service, hold a wake lock
 2. Read config from local storage: `gatewayUrl`, `authToken`, `phoneId`
@@ -53,3 +63,4 @@ Kotlin Android app installed on each AutoTM OTP phone. Maintains a persistent We
 ## Notable decisions
 
 - [ADR-0006](../../docs/adr/0006-auth.md) — Custom Android gateway approach
+- [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state

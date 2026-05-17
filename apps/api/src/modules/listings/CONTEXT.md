@@ -1,63 +1,87 @@
 # listings — CONTEXT
 
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in [`docs/prd/features/32-listings.md`](../../../../../docs/prd/features/32-listings.md) and the relevant sprint files under [`docs/prd/sprints/`](../../../../../docs/prd/sprints/).
+
 ## Purpose
 
-Car ads — the core economic object. Listings have specs, photos, optional video, location, price, and an owner (User, optionally posting as a Dealership).
+Car ads — the core economic object. Listings have specs, photos, optional video, location, price, and a seller (User).
 
 ## Owns (entities + tables)
 
-- `Listing` — id, ownerUserId, dealershipId? (if `publishedAsDealership=true`), publishedAsDealership: bool, brandId, modelId, generationId?, year, mileage, vin?, condition, transmissionId, engineTypeId, enginePower?, driveTypeId, colorId, originalPrice, originalCurrency, price (in user's display currency), currency, regionId, cityId?, locationText?, description, status (`draft` / `active` / `sold` / `archived` / `reported` / `banned`), favoriteCount, viewCount, createdAt, publishedAt?, soldAt?, deletedAt?
-- `ListingMedia` — id, listingId, kind (`photo` / `video` / `orbit`), key (MinIO object key), position, width?, height?, durationMs?, posterKey? (for videos), uploadedByUserId, uploadedByStaff: bool, createdAt
-- `Favorite` — { userId, listingId, createdAt }
-- `ListingDraft` — id, userId, payload (JSON wizard state), updatedAt
+> Schema today is intentionally skinny — the full PRD-defined Listing shape ships in S4 (Listings CRUD). See "Planned additions" below for the gap between current schema and the S4 target.
 
-## Invariants
+- `Listing` — id, sellerId (FK → User), status (`ListingStatus` enum: draft | pending_review | active | sold | archived | rejected; default draft), brandId (FK → Brand), modelId (FK → Model), generationId? (FK → Generation), colorId? (FK → Color), bodyTypeId? (FK → BodyType), cityId (FK → City), year?, mileageKm?, priceAmount (Float), priceCurrency (`Currency` enum: TMT | USD | AED; default TMT), description?, deletedAt?, publishedAt?, createdAt, updatedAt. Indexes on `(status, publishedAt DESC)`, `(brandId, modelId, status)`, `(cityId, status)`.
+- `ListingMedia` — id, listingId (FK → Listing, onDelete: Cascade), kind (`MediaKind` enum: image | video), url, sortOrder, createdAt. Index on `(listingId, sortOrder)`.
+- `Favorite` — id, userId (FK → User, Cascade), listingId (FK → Listing, Cascade), createdAt. Unique on `(userId, listingId)`.
 
-- `Listing.ownerUserId` is the legal owner regardless of `publishedAsDealership`
-- If `publishedAsDealership=true`, then `ownerUser` must currently belong to `dealershipId`
-- `Listing.brandId` and `Listing.modelId` must be related (model.brandId === listing.brandId)
-- `Listing.generationId` (if set) must reference a Generation with `modelId === listing.modelId`
-- `Listing.year` must fall within Generation's `[yearStart, yearEnd ?? now]` if generation is set
-- `Listing.status = 'active'` is the only state visible in public feed
-- `Listing.status = 'sold'` is visible for 14 days with "Sold" badge, then auto-archived
-- `Favorite` requires authenticated user; anonymous users cannot favorite
-- `ListingMedia` photos: max 20 per listing; videos: max 1 per listing
-- Soft-delete via `deletedAt` — listings are never hard-deleted (preserve chat history)
+## Invariants (enforced today)
+
+- `Listing.sellerId` references an existing User (FK; onDelete cascades to listings).
+- `Listing.brandId` and `Listing.modelId` reference existing rows in the catalog. **Cross-FK validity** (model.brandId === listing.brandId) is NOT enforced by the schema — must be enforced at application layer in S4.
+- `Listing.cityId` references an existing City (FK).
+- Soft-delete via `Listing.deletedAt` — listings are never hard-deleted at the schema level.
+- `Favorite` unique constraint: a user can favorite a listing at most once.
+- `ListingMedia.onDelete: Cascade` — deleting a Listing deletes its media rows.
+
+## Module shape (today)
+
+- `apps/api/src/modules/listings/`:
+  - `domain/` — empty (S4 adds entities + ports)
+  - `application/` — empty (S4 adds use-cases)
+  - `infrastructure/` — empty (S4 adds Prisma repositories)
+  - `presentation/listings.controller.ts` — stub controller (no real endpoints yet)
+  - `listings.module.ts` — registers `ListingsController` only
 
 ## Ports exposed
 
-```ts
-interface ListingsReadPort {
-  getListingSummary(id): Promise<{ id, title, photoUrl, price, currency, regionName, brandName, modelName, year } | null>
-  getListingsForOwner(userId, options): Promise<ListingSummary[]>
-  matchesFilters(listingId, filters): Promise<boolean>  // for saved-search use
-}
-```
+- (none today — S4 adds `ListingsReadPort` for cross-context reads)
 
 ## Ports consumed
 
-```ts
-CatalogReadPort        // resolve brand/model/generation/region names
-IdentityReadPort       // resolve owner / dealership info
-MediaUploadPort        // generate presigned MinIO URLs
-VinDecoderPort         // optional auto-fill (mocked in MVP)
-```
+- (none today)
+
+## Shipped use-cases
+
+- (none today — S4 ships the full CRUD set: `CreateDraft`, `PublishListing`, `EditListing`, `MarkSold`, `DeleteListing`, `AttachMedia`, `ListFeed`)
 
 ## Events emitted
 
-- `ListingCreated` — fires on `status → active` transition. Consumed by `subscriptions/` for match fan-out and `notifications/` for analytics.
-- `ListingUpdated` — fires on description/price changes
-- `ListingSold` — fires when seller marks as sold
-- `ListingDeleted` — fires on soft-delete
-- `ListingReported` — fires when a user reports the listing
+- (none today)
 
 ## Events consumed
 
-- `UserSuspended` — automatically marks all `active` listings of that user as `archived`
-- `DealershipVerified` — adds PRO badge to all listings where `publishedAsDealership=true` for that dealership
+- (none today)
+
+## Planned additions (future sprints)
+
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file or PRD feature.
+
+- **S4 (Listings CRUD)** — `docs/prd/sprints/sprint-04-listings-crud.md`. Schema additions to `Listing`:
+  - `dealershipId?` (FK → Dealership) + `publishedAsDealership: Boolean` (dealer posting flag)
+  - `vin?` (String, masked-display capable)
+  - `condition` enum (`new` | `used`)
+  - `engineTypeId?` (FK → EngineType) — see catalog/CONTEXT.md for the enum-vs-catalog decision; current direction is Prisma enums per Decision 3
+  - `transmissionId?` (FK → Transmission) — same enum-vs-catalog note
+  - `driveTypeId?` (FK → DriveType) — same enum-vs-catalog note
+  - `enginePower?` (Int — kW or hp)
+  - `regionId` (FK → Region; redundant given cityId → region.id but indexes the common "filter by region" query)
+  - `locationText?` (free-form location detail beyond city)
+  - `soldAt?` (DateTime — distinct from status transition for "Sold" badge expiry)
+  - `viewCount` (Int — view counter)
+  - `favoriteCount` (Int — denormalized for sort)
+  - `originalPrice` + `originalCurrency` (if seller priced in foreign currency, preserve both)
+  - Status enum may evolve: add `reported` and `banned` if moderation flow needs them (S9 driven)
+  - `ListingDraft` entity for wizard-state persistence
+  - `ListingMedia` additions: `kind` adds `orbit` (Phase 3), `key` column for MinIO object key in addition to / instead of `url`, plus `position` rename, `width?`, `height?`, `durationMs?`, `posterKey?`, `uploadedByUserId`, `uploadedByStaff: Boolean`
+  - `ListingsReadPort` interface (cross-context summary reads)
+  - Events: `ListingCreated`, `ListingUpdated`, `ListingSold`, `ListingDeleted`
+- **S5 (Listings UX)** — saved-search match consumers + Favorite UX
+- **S7 (Conversations)** — listing-detail share-via-chat surfaces; listings consume `MessageSent` indirectly
+- **S9 (Admin)** — `ListingReported` event + admin moderation flow (status → `reported` / `banned`); `UserSuspended` consumer to auto-archive listings
+- **Phase 3** — 360° orbit photos (`ListingMedia.kind = orbit`)
 
 ## Notable decisions
 
-- [ADR-0001](../../../../docs/adr/0001-architecture.md) — Listings is its own context
-- [ADR-0008](../../../../docs/adr/0008-media.md) — Direct-to-MinIO upload, eager variants
-- [ADR-0007](../../../../docs/adr/0007-i18n.md) — Single-locale content, no per-language fields
+- [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Listings is its own context
+- [ADR-0008](../../../../../docs/adr/0008-media.md) — Direct-to-MinIO upload, eager variants
+- [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state, not aspirational spec
