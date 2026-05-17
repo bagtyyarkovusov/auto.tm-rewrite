@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
@@ -20,6 +20,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ContentModule } from "./modules/content/content.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { AdminModule } from "./modules/admin/admin.module";
+import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
 
 @Module({
   imports: [
@@ -61,4 +62,10 @@ import { AdminModule } from "./modules/admin/admin.module";
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(AcceptLanguageMiddleware)
+      .forRoutes("api/v1/catalog/*");
+  }
+}
