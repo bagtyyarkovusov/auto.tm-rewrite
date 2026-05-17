@@ -146,12 +146,12 @@ All admin endpoints are guarded by `AdminGuard` (returns 401 without bearer, 403
 
 `packages/db/prisma/seed/` contains:
 
-- `brands.json` — trilingual brand seed data (ported from `_legacy/cars.brands.json`; 131 brands)
-- `models.json` — trilingual model seed data (~1,700 models, linked to brands by `brandSlug`)
-- `colors.json` — fresh trilingual fixed list (10 colors with hex values)
-- `body-types.json` — fresh trilingual fixed list (9 body types)
+- `brands.json` — trilingual brand seed data (ported from `_legacy/cars.brands.json`; 130 brands)
+- `models.json` — trilingual model seed data (2,447 models, linked to brands by `brandSlug`)
+- `colors.json` — fresh trilingual fixed list (15 colors with hex values)
+- `body-types.json` — fresh trilingual fixed list (10 body types)
 - `regions.json` — fresh trilingual fixed list (6 Turkmenistan regions)
-- `cities.json` — fresh trilingual fixed list (cities linked to regions by `regionSlug`)
+- `cities.json` — fresh trilingual fixed list (35 cities linked to regions by `regionSlug`)
 - `_legacy/cars.brands.json` — monolingual snapshot from the legacy auto.tm backend; kept as historical port source
 - `catalog-stub.json` — legacy regions stub kept in-tree, no longer read by `packages/db/src/seed.ts`
 
