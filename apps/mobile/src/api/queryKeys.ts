@@ -3,7 +3,8 @@ export const queryKeys = {
 
   catalog: {
     all: () => ["catalog"] as const,
-    brands: () => [...queryKeys.catalog.all(), "brands"] as const,
+    brands: (locale: string = "ru") =>
+      [...queryKeys.catalog.all(), "brands", locale] as const,
     models: (brandId: string) =>
       [...queryKeys.catalog.all(), "models", brandId] as const,
     cities: () => [...queryKeys.catalog.all(), "cities"] as const,
