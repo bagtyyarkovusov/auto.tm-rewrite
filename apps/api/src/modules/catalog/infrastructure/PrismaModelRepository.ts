@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
+
 import type { Model } from "../domain/Model";
 import type { ModelRepository } from "../domain/ports/ModelRepository";
 
@@ -44,6 +45,47 @@ export class PrismaModelRepository implements ModelRepository {
   async getModelById(id: string): Promise<Model | null> {
     const row = await this.prisma.model.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;
+  }
+
+  async getBySlug(slug: string): Promise<Model | null> {
+    const row = await this.prisma.model.findFirst({ where: { slug } });
+    return row ? this.toDomain(row) : null;
+  }
+
+  async getByBrandIdAndSlug(brandId: string, slug: string): Promise<Model | null> {
+    const row = await this.prisma.model.findUnique({
+      where: { brandId_slug: { brandId, slug } },
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
+  async create(data: {
+    brandId: string;
+    slug: string;
+    nameRu: string;
+    nameTk: string;
+    nameEn: string;
+  }): Promise<Model> {
+    const row = await this.prisma.model.create({ data });
+    return this.toDomain(row);
+  }
+
+  async update(
+    id: string,
+    data: Partial<{
+      brandId: string;
+      slug: string;
+      nameRu: string;
+      nameTk: string;
+      nameEn: string;
+    }>,
+  ): Promise<Model> {
+    const row = await this.prisma.model.update({ where: { id }, data });
+    return this.toDomain(row);
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.model.delete({ where: { id } });
   }
 
   private toDomain(

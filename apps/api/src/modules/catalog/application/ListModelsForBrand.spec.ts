@@ -44,6 +44,33 @@ class FakeModelRepository implements ModelRepository {
   async getModelById(_id: string): Promise<Model | null> {
     return this.models[0] ?? null;
   }
+
+  async getBySlug(_slug: string): Promise<Model | null> {
+    return this.models.find((m) => m.slug === _slug) ?? null;
+  }
+
+  async getByBrandIdAndSlug(brandId: string, slug: string): Promise<Model | null> {
+    return this.models.find((m) => m.brandId === brandId && m.slug === slug) ?? null;
+  }
+
+  async create(data: { brandId: string; slug: string; nameRu: string; nameTk: string; nameEn: string }): Promise<Model> {
+    const model: Model = {
+      id: `model-${this.models.length + 1}`,
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.models.push(model);
+    return model;
+  }
+
+  async update(): Promise<Model> {
+    throw new Error("not implemented");
+  }
+
+  async delete(): Promise<void> {
+    throw new Error("not implemented");
+  }
 }
 
 function makeUseCase(modelRepo?: FakeModelRepository) {

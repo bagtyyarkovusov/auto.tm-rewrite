@@ -1,8 +1,10 @@
 import { Module } from "@nestjs/common";
 
 import { PrismaModule } from "../../common/prisma.module";
+import { IdentityModule } from "../identity/identity.module";
 
 import { CatalogController } from "./presentation/catalog.controller";
+import { AdminCatalogController } from "./presentation/AdminCatalogController";
 import { ListBrands } from "./application/ListBrands";
 import { ListModelsForBrand } from "./application/ListModelsForBrand";
 import { ListGenerationsForModel } from "./application/ListGenerationsForModel";
@@ -10,6 +12,12 @@ import { ListRegions } from "./application/ListRegions";
 import { ListCitiesForRegion } from "./application/ListCitiesForRegion";
 import { ListBodyTypes } from "./application/ListBodyTypes";
 import { ListColors } from "./application/ListColors";
+import { CreateBrand } from "./application/CreateBrand";
+import { UpdateBrand } from "./application/UpdateBrand";
+import { DeleteBrand } from "./application/DeleteBrand";
+import { CreateModel } from "./application/CreateModel";
+import { UpdateModel } from "./application/UpdateModel";
+import { DeleteModel } from "./application/DeleteModel";
 import { PrismaBrandRepository } from "./infrastructure/PrismaBrandRepository";
 import { PrismaModelRepository } from "./infrastructure/PrismaModelRepository";
 import { PrismaGenerationRepository } from "./infrastructure/PrismaGenerationRepository";
@@ -26,8 +34,8 @@ import { BODY_TYPE_REPOSITORY } from "./domain/ports/BodyTypeRepository";
 import { COLOR_REPOSITORY } from "./domain/ports/ColorRepository";
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [CatalogController],
+  imports: [PrismaModule, IdentityModule],
+  controllers: [CatalogController, AdminCatalogController],
   providers: [
     PrismaBrandRepository,
     PrismaModelRepository,
@@ -71,6 +79,12 @@ import { COLOR_REPOSITORY } from "./domain/ports/ColorRepository";
     ListCitiesForRegion,
     ListBodyTypes,
     ListColors,
+    CreateBrand,
+    UpdateBrand,
+    DeleteBrand,
+    CreateModel,
+    UpdateModel,
+    DeleteModel,
   ],
 })
 export class CatalogModule {}
