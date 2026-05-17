@@ -1,8 +1,8 @@
 # Context Map
 
-Index of every `CONTEXT.md` in this repo. Each file documents the *current* state of a workspace or bounded context: what it owns, what invariants it maintains, what ports it exposes, what events it emits / consumes.
+Index of every `CONTEXT.md` in this repo. Each file documents the **current implemented state** of a workspace or bounded context: what it owns today, what invariants are enforced in code today, what ports exist today, what events have running emit/consume code today.
 
-> `CONTEXT.md` is the *mutable* counterpart to ADRs. ADRs are decisions (immutable, dated). `CONTEXT.md` is "what is true right now."
+> **`CONTEXT.md` is the mutable mirror of current implementation.** ADRs are decisions (immutable, dated). PRD features files (`docs/prd/features/*.md`) describe product capability ambition. Sprint files (`docs/prd/sprints/sprint-NN-*.md`) describe what each sprint adds. `CONTEXT.md` describes what exists **after** each sprint ships — updated as part of any PR that changes domain invariants. Aspirational content (entities/fields not yet shipped) belongs in PRD or sprint files, never in CONTEXT.md. Locked 2026-05-17 — see [ADR-0019](docs/adr/0019-context-md-describes-current-state.md).
 
 ## Agent policy
 

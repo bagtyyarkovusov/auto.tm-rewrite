@@ -92,7 +92,7 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 | System | Where | Mutable? | When to write |
 |---|---|---|---|
 | ADRs | `docs/adr/`, `apps/*/docs/adr/` | No (immutable after merge) | Every architectural decision |
-| `CONTEXT.md` | Per app + per bounded context | Yes | When domain invariants change |
+| `CONTEXT.md` | Per app + per bounded context | Yes | **Current state only** (not aspirational) — updated in the same PR that changes domain invariants. Locked in [ADR-0019](docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in PRD features / sprint files. |
 | PRD vision/scope | `docs/prd/00-...02-...md` | Rarely | Charter-level changes |
 | **PRD roadmap** | **`docs/prd/03-roadmap.md`** | **Per sprint** | **Start of sprint (set 🟡) and end of sprint (set 🟢 + bump Current)** |
 | **Sprint plans** | **`docs/prd/sprints/sprint-NN-*.md`** | **Per sprint** | **Edit DoD/risks as understanding sharpens; never rewrite history** |
@@ -119,7 +119,7 @@ Before claiming a feature done:
 
 1. `pnpm typecheck` passes for every workspace touched
 2. `pnpm test` passes (unit + integration; e2e for full flows)
-3. The relevant `CONTEXT.md` reflects the new state
+3. The relevant `CONTEXT.md` reflects the new state — **updated in the same PR as the code change**. CONTEXT.md describes current implementation, never aspirational state (per [ADR-0019](docs/adr/0019-context-md-describes-current-state.md)). If your PR added a Prisma field, port method, or event, the CONTEXT.md for that bounded context must mention it in the same PR.
 4. If an architectural choice was made, an ADR exists
 5. The PRD section for this feature is updated with what shipped
 6. Manual verification: actually run the dev stack and try the feature in the UI
