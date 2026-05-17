@@ -11,11 +11,10 @@ Curated reference data that listings, garage entries, and saved searches referen
 - `Generation` — id, modelId, name_ru, name_tk, name_en, yearStart, yearEnd?, photoUrl
 - `Color` — id, hexCode, name_ru, name_tk, name_en
 - `BodyType` — id, slug, name_ru, name_tk, name_en, iconKey
-- `EngineType` — id, slug, name_ru, name_tk, name_en
-- `Transmission` — id, slug, name_ru, name_tk, name_en
-- `DriveType` — id, slug, name_ru, name_tk, name_en
 - `Region` — id, slug, name_ru, name_tk, countryCode (default 'TM')
 - `City` — id, regionId, slug, name_ru, name_tk
+
+**Not catalog (intentionally):** `EngineType`, `Transmission`, `DriveType` are modeled as Prisma enums on `Listing` (planned in S4) — same pattern as `ListingStatus` and `Currency`. They are stable closed sets queried as part of listing detail, and don't need DB-driven i18n. UI translation strings will live alongside the Listing surfaces in `apps/mobile` / `apps/web` (decided per-app in S4).
 
 ## Invariants
 
@@ -56,12 +55,13 @@ These ports are how other contexts (`listings`, `garage`, `subscriptions`) displ
 ## Seed data
 
 `packages/db/prisma/seed/` contains:
-- `brands.json` (~100 entries — ported and translated from old backend's `cars.brands.json`)
+- `_legacy/cars.brands.json` (monolingual source from old backend; not loaded directly — ported into the files below during S3)
+- `brands.json` (~130 entries — ported and translated from `_legacy/cars.brands.json`)
 - `models.json` (~5000 entries scoped to brands)
-- `generations.json` (~20000 entries — populated incrementally; admin adds as needed)
+- `generations.json` (populated incrementally; admin adds as needed — empty in S3, table-only)
 - `colors.json` (~20)
 - `regions.json` + `cities.json` (TM administrative divisions)
-- `body-types.json`, `engine-types.json`, `transmissions.json`, `drive-types.json` (~5-10 each)
+- `body-types.json` (~5-10)
 
 ## Notable decisions
 
