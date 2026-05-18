@@ -14,6 +14,17 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 - `ExchangeRate` — id, fromCurrency (`Currency`), toCurrency (`Currency`), rate (Float), updatedAt, setByUserId?. Unique on `(fromCurrency, toCurrency)`.
 - `Favorite` — id, userId (FK → User, Cascade), listingId (FK → Listing, Cascade), createdAt. Unique on `(userId, listingId)`.
 
+## Domain entities (S4 — #86)
+
+All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript classes with `readonly` fields and constructor invariants:
+
+- `Listing` — root entity. Immutable. Constructor enforces `allowCalls OR allowChat`. State transitions (`markSold`, `archive`, `republish`, `softDelete`) return new instances. `canEditField(field)` returns `false` for `brandId`, `modelId`, `generationId`, `year`, `vin`.
+- `ListingDraft` — wizard in-flight state. `payload: Record<string, unknown>` (opaque to domain).
+- `ListingMedia` — media metadata. Invariants: `posterKey` and `durationMs` only allowed when `kind === 'video'`.
+- `Price` — value object `{ amount: number; currency: Currency }`. Validates `amount > 0`.
+- `ExchangeRate` — entity `{ fromCurrency, toCurrency, rate, updatedAt }`. Validates `rate > 0`.
+- `ListingStatus` — `type ListingStatus = 'active' | 'sold' | 'archived'` + `canTransition(from, to)` helper.
+
 ## Invariants (enforced today)
 
 - `Listing.sellerId` references an existing User (FK; onDelete cascades to listings).
@@ -21,37 +32,56 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 - `Listing.cityId` references an existing City (FK).
 - `Listing.engineTypeId`, `transmissionId`, `driveTypeId` reference catalog lookup tables (FK, onDelete SET NULL).
 - `Listing.regionId` references an existing Region (FK, onDelete SET NULL).
-- `allowCalls OR allowChat` must be true — enforced at application layer (not schema-level CHECK constraint).
+- **`allowCalls OR allowChat` must be true** — enforced at domain layer in `Listing` constructor (not schema-level CHECK constraint).
 - Soft-delete via `Listing.deletedAt` — listings are never hard-deleted at the schema level.
 - `Favorite` unique constraint: a user can favorite a listing at most once.
 - `ListingMedia.onDelete: Cascade` — deleting a Listing deletes its media rows.
 - `ListingDraft.onDelete: Cascade` — deleting a User deletes their drafts.
 - `ExchangeRate` unique constraint: one rate row per `(fromCurrency, toCurrency)` pair.
+- **Locked fields post-publish**: `brandId`, `modelId`, `generationId`, `year`, `vin` cannot be edited after publish. Enforced via `Listing.canEditField()`; application layer rejects patches in `EditListing`.
+- **State machine transitions** (Phase 1): `active → sold`, `active → archived`, `sold → archived`, `archived → active` (republish). Enforced via `canTransition()` helper.
 
 ## Module shape (today)
 
 - `apps/api/src/modules/listings/`:
-  - `domain/` — empty (S4 adds entities + ports)
-  - `application/` — empty (S4 adds use-cases)
-  - `infrastructure/` — empty (S4 adds Prisma repositories)
-  - `presentation/listings.controller.ts` — stub controller (no real endpoints yet)
-  - `listings.module.ts` — registers `ListingsController` only
+  - `domain/` — **6 entities + types + 10 ports** (S4 #86)
+  - `application/` — empty (S4 #88-#92 add use-cases)
+  - `infrastructure/` — 4 null/sync adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86)
+  - `presentation/listings.controller.ts` — stub controller (ping endpoint)
+  - `listings.module.ts` — registers null/sync adapters with DI tokens
 
 ## Ports exposed
 
-- (none today — S4 adds `ListingsReadPort` for cross-context reads)
+| Port | Symbol | File | Consumers |
+|---|---|---|---|
+| `ListingsReadPort` | `LISTINGS_READ_PORT` | `domain/ports/ListingsReadPort.ts` | Cross-context: conversations (S7), subscriptions (S5/S8), notifications (S8), admin (S9) |
+| `VinDecoderPort` | `VIN_DECODER_PORT` | `domain/ports/VinDecoderPort.ts` | Internal: `PublishListing` use-case |
+| `MediaContentClassifierPort` | `MEDIA_CONTENT_CLASSIFIER_PORT` | `domain/ports/MediaContentClassifierPort.ts` | Internal: `AttachMedia` use-case |
+| `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` | Internal: `AttachMedia` use-case |
+| `FeedRankingPort` | `FEED_RANKING_PORT` | `domain/ports/FeedRankingPort.ts` | Internal: `ListFeed` use-case |
+| `ExchangeRatePort` | `EXCHANGE_RATE_PORT` | `domain/ports/ExchangeRatePort.ts` | Internal: `PublishListing`, `ListFeed`, `GetListingDetail` |
+| `MediaStoragePort` | `MEDIA_STORAGE_PORT` | `domain/ports/MediaStoragePort.ts` | Internal: `PresignUpload`, `AttachMedia` |
+| `ListingEventPublisher` | `LISTING_EVENT_PUBLISHER` | `domain/ports/ListingEventPublisher.ts` | Internal: state-transition use-cases |
+
+Repository ports (consumed only within `listings/`):
+
+| Port | Symbol | File |
+|---|---|---|
+| `ListingRepository` | `LISTING_REPOSITORY` | `domain/ports/ListingRepository.ts` |
+| `ListingDraftRepository` | `LISTING_DRAFT_REPOSITORY` | `domain/ports/ListingDraftRepository.ts` |
+| `ListingMediaRepository` | `LISTING_MEDIA_REPOSITORY` | `domain/ports/ListingMediaRepository.ts` |
 
 ## Ports consumed
 
-- (none today)
+- `IdentityCheckPort` from `identity/` (via `IdentityModule` export) — used by controllers to verify ownership.
 
 ## Shipped use-cases
 
-- (none today — S4 ships the full CRUD set: `CreateDraft`, `PublishListing`, `EditListing`, `MarkSold`, `DeleteListing`, `AttachMedia`, `ListFeed`)
+- (none today — S4 ships the full CRUD set in issues #88-#92: `CreateDraft`, `PublishListing`, `EditListing`, `MarkSold`, `DeleteListing`, `AttachMedia`, `ListFeed`)
 
 ## Events emitted
 
-- (none today)
+- (no in-process consumers in S4; `EventEmitterListingEventPublisher` emits into the bus with zero handlers. Future consumers: S5 subscriptions `ListingCreated`, S7 conversations `ListingSold`, S9 admin `ListingReported`)
 
 ## Events consumed
 
@@ -61,7 +91,7 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file or PRD feature.
 
-- **S4 (Listings CRUD) — schema shipped in #85**; remaining S4 work: domain entities + ports + use-cases + controllers + contracts (issues #86 onward)
+- **S4 (Listings CRUD) — domain + ports + null adapters shipped in #86**; remaining S4 work: application use-cases + Prisma repository adapters + controllers + contracts (issues #87-#92)
 - **S5 (Listings UX)** — saved-search match consumers, Favorite UX, filter sheet (forward-defined `filters` param in `ListFeed` already in place), availability hours for contact prefs
 - **S6 (Garage + Dealership)** — dealership posting (`dealershipId?` + `publishedAsDealership` columns + cross-context port + wizard step), Sell-from-Garage entry tile + pre-fill, OwnedVehicle redesign (FK columns + status enum), bi-directional Listing↔Garage sync, dealership PRO badge on detail
 - **S7 (Conversations)** — listing-detail Message button becomes functional; chat threads consume `ListingSold` event to auto-close
