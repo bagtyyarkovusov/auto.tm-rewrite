@@ -1,0 +1,4 @@
+[
+  { "fromCurrency": "USD", "toCurrency": "TMT", "rate": 3.50 },
+  { "fromCurrency": "AED", "toCurrency": "TMT", "rate": 0.95 }
+]

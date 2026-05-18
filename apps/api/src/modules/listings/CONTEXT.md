@@ -8,10 +8,10 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 
 ## Owns (entities + tables)
 
-> Schema today is intentionally skinny — the full PRD-defined Listing shape ships in S4 (Listings CRUD). See "Planned additions" below for the gap between current schema and the S4 target.
-
-- `Listing` — id, sellerId (FK → User), status (`ListingStatus` enum: draft | pending_review | active | sold | archived | rejected; default draft), brandId (FK → Brand), modelId (FK → Model), generationId? (FK → Generation), colorId? (FK → Color), bodyTypeId? (FK → BodyType), cityId (FK → City), year?, mileageKm?, priceAmount (Float), priceCurrency (`Currency` enum: TMT | USD | AED; default TMT), description?, deletedAt?, publishedAt?, createdAt, updatedAt. Indexes on `(status, publishedAt DESC)`, `(brandId, modelId, status)`, `(cityId, status)`.
-- `ListingMedia` — id, listingId (FK → Listing, onDelete: Cascade), kind (`MediaKind` enum: image | video), url, sortOrder, createdAt. Index on `(listingId, sortOrder)`.
+- `Listing` — id, sellerId (FK → User), status (`ListingStatus` enum: draft | pending_review | active | sold | archived | rejected | reported | banned; default draft), brandId (FK → Brand), modelId (FK → Model), generationId? (FK → Generation), colorId? (FK → Color), bodyTypeId? (FK → BodyType), cityId (FK → City), year?, mileageKm?, priceAmount (Float), priceCurrency (`Currency` enum: TMT | USD | AED; default TMT), description?, deletedAt?, publishedAt?, createdAt, updatedAt. **S4 schema additions**: vin?, condition (`ListingCondition` enum: new | used), engineTypeId? (FK → EngineType), transmissionId? (FK → Transmission), driveTypeId? (FK → DriveType), enginePower?, regionId? (FK → Region), locationText?, soldAt?, viewCount (Int @default(0)), favoriteCount (Int @default(0)), contactPhone?, allowCalls (Boolean @default(true)), allowChat (Boolean @default(true)). Indexes on `(status, publishedAt DESC)`, `(brandId, modelId, status)`, `(cityId, status)`.
+- `ListingMedia` — id, listingId (FK → Listing, onDelete: Cascade), kind (`MediaKind` enum: image | video), **key** (String — MinIO object key), sortOrder, width?, height?, durationMs?, posterKey?, createdAt. Index on `(listingId, sortOrder)`.
+- `ListingDraft` — id, userId (FK → User, onDelete: Cascade), payload (Json), createdAt, updatedAt. Index on `(userId, updatedAt DESC)`.
+- `ExchangeRate` — id, fromCurrency (`Currency`), toCurrency (`Currency`), rate (Float), updatedAt, setByUserId?. Unique on `(fromCurrency, toCurrency)`.
 - `Favorite` — id, userId (FK → User, Cascade), listingId (FK → Listing, Cascade), createdAt. Unique on `(userId, listingId)`.
 
 ## Invariants (enforced today)
@@ -19,9 +19,14 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 - `Listing.sellerId` references an existing User (FK; onDelete cascades to listings).
 - `Listing.brandId` and `Listing.modelId` reference existing rows in the catalog. **Cross-FK validity** (model.brandId === listing.brandId) is NOT enforced by the schema — must be enforced at application layer in S4.
 - `Listing.cityId` references an existing City (FK).
+- `Listing.engineTypeId`, `transmissionId`, `driveTypeId` reference catalog lookup tables (FK, onDelete SET NULL).
+- `Listing.regionId` references an existing Region (FK, onDelete SET NULL).
+- `allowCalls OR allowChat` must be true — enforced at application layer (not schema-level CHECK constraint).
 - Soft-delete via `Listing.deletedAt` — listings are never hard-deleted at the schema level.
 - `Favorite` unique constraint: a user can favorite a listing at most once.
 - `ListingMedia.onDelete: Cascade` — deleting a Listing deletes its media rows.
+- `ListingDraft.onDelete: Cascade` — deleting a User deletes their drafts.
+- `ExchangeRate` unique constraint: one rate row per `(fromCurrency, toCurrency)` pair.
 
 ## Module shape (today)
 
@@ -56,25 +61,7 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file or PRD feature.
 
-- **S4 (Listings CRUD)** — `docs/prd/sprints/sprint-04-listings-crud.md` (scope refined 2026-05-18 via pre-S4 grill — see `sprint-04-listings-crud-pre-retro.md`). Schema additions to `Listing`:
-  - `vin?` (String) — locked post-publish
-  - `condition` enum (`new` | `used`)
-  - `engineTypeId?`, `transmissionId?`, `driveTypeId?` (FKs → new catalog lookup entities; trilingual)
-  - `enginePower?` (Int — kW or hp)
-  - `regionId` (FK → Region; redundant given cityId but indexes regional filter queries)
-  - `locationText?` (free-form location detail beyond city)
-  - `soldAt?` (DateTime — used by 14-day query-time fade filter in `ChronologicalRankingAdapter`)
-  - `viewCount Int @default(0)`, `favoriteCount Int @default(0)` — denormalized; not incremented in S4; consumed by S19 ranking
-  - `contactPhone?` (String) — override of `seller.phoneE164`
-  - `allowCalls Boolean @default(true)`, `allowChat Boolean @default(true)` — must be `(allowCalls OR allowChat)`
-  - Status enum adds `reported` + `banned` (for S9 admin moderation activation); Phase 1 only writes `active`/`sold`/`archived`/`rejected` values
-  - New entities: `ListingDraft` (JSON-payload wizard state, separate from `Listing`), `ExchangeRate` (admin-managed FX table)
-  - `ListingMedia` changes: rename `url`→`key` (destructive — table empty today); add `width?`, `height?`, `durationMs?`, `posterKey?`
-  - Ports: `ListingsReadPort` (cross-context summary reads), `VinDecoderPort` + `NullVinDecoder` adapter, `MediaContentClassifierPort` + `NullContentClassifier`, `FeedRankingPort` + `ChronologicalRankingAdapter` (per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md)), `ExchangeRatePort`, `ImageVariantGenerator` (sync Sharp in S4; async swap in S8), `MediaStoragePort`
-  - 8 listing use-cases (`CreateDraft`, `UpdateDraft`, `PublishListing`, `EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`) + 4 media + 5 read use-cases
-  - Events emitted: `ListingCreated`, `ListingUpdated`, `ListingSold`, `ListingDeleted` (no in-process consumers in S4; S5/S7/S9 subscribe later)
-  - Edit invariants: `brandId`, `modelId`, `generationId`, `year`, `vin` locked post-publish
-  - 14-day-sold-fade: query-time filter in S4; physical archival cron in S8
+- **S4 (Listings CRUD) — schema shipped in #85**; remaining S4 work: domain entities + ports + use-cases + controllers + contracts (issues #86 onward)
 - **S5 (Listings UX)** — saved-search match consumers, Favorite UX, filter sheet (forward-defined `filters` param in `ListFeed` already in place), availability hours for contact prefs
 - **S6 (Garage + Dealership)** — dealership posting (`dealershipId?` + `publishedAsDealership` columns + cross-context port + wizard step), Sell-from-Garage entry tile + pre-fill, OwnedVehicle redesign (FK columns + status enum), bi-directional Listing↔Garage sync, dealership PRO badge on detail
 - **S7 (Conversations)** — listing-detail Message button becomes functional; chat threads consume `ListingSold` event to auto-close
