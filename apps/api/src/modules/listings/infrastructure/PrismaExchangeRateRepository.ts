@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
-import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
+import type { ExchangeRatePort, ExchangeRate } from "../domain/ports/ExchangeRatePort";
 import type { Currency } from "../domain/types";
 
 @Injectable()
@@ -22,5 +22,15 @@ export class PrismaExchangeRateRepository implements ExchangeRatePort {
     }
 
     return row.rate;
+  }
+
+  async listAll(): Promise<ExchangeRate[]> {
+    const rows = await this.prisma.exchangeRate.findMany();
+    return rows.map((r) => ({
+      fromCurrency: r.fromCurrency as Currency,
+      toCurrency: r.toCurrency as Currency,
+      rate: r.rate,
+      updatedAt: r.updatedAt,
+    }));
   }
 }

@@ -432,4 +432,199 @@ describe("ListingsController e2e", () => {
         .expect(403);
     });
   });
+
+  describe("GET /api/v1/listings/:id", () => {
+    it("returns detail for a published listing", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const res = await request
+        .get(`/api/v1/listings/${listingId}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(listingId);
+      expect(res.body.status).toBe("active");
+      expect(res.body.priceAmount).toBe(validPayload.priceAmount);
+      expect(res.body.displayPriceTmt).toBe(validPayload.priceAmount);
+      expect(res.body.media).toHaveLength(1);
+      expect(res.body.media[0].variants.thumbnail).toContain("thumbnail.jpg");
+    });
+
+    it("returns 404 for soft-deleted listing", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .delete(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(200);
+
+      await request
+        .get(`/api/v1/listings/${listingId}`)
+        .expect(404);
+    });
+
+    it("returns 404 for non-existent listing", async () => {
+      await request
+        .get("/api/v1/listings/non-existent-id")
+        .expect(404);
+    });
+  });
+
+  describe("GET /api/v1/listings", () => {
+    it("returns empty feed when no listings", async () => {
+      const res = await request
+        .get("/api/v1/listings")
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(0);
+      expect(res.body.nextCursor).toBeNull();
+    });
+
+    it("paginates feed with cursor", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+
+      // Publish 25 listings
+      for (let i = 0; i < 25; i++) {
+        const draft = await seedDraft("user-1", {
+          ...validPayload,
+          photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
+        });
+        await request
+          .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+          .set("Authorization", `Bearer ${token}`)
+          .send({})
+          .expect(201);
+      }
+
+      // First page
+      const page1 = await request
+        .get("/api/v1/listings")
+        .expect(200);
+
+      expect(page1.body.items).toHaveLength(20);
+      expect(page1.body.nextCursor).not.toBeNull();
+
+      // Second page
+      const page2 = await request
+        .get("/api/v1/listings")
+        .query({ cursor: page1.body.nextCursor })
+        .expect(200);
+
+      expect(page2.body.items).toHaveLength(5);
+      expect(page2.body.nextCursor).toBeNull();
+    });
+
+    it("shows sold listings within 14 days", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      // Mark sold
+      await request
+        .post(`/api/v1/listings/${listingId}/sold`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      // Should still be in feed
+      const feed = await request
+        .get("/api/v1/listings")
+        .expect(200);
+
+      expect(feed.body.items.some((item: { id: string }) => item.id === listingId)).toBe(true);
+
+      // Rewind soldAt to 15 days ago
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { soldAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) },
+      });
+
+      // Should no longer be in feed
+      const feedAfter = await request
+        .get("/api/v1/listings")
+        .expect(200);
+
+      expect(feedAfter.body.items.some((item: { id: string }) => item.id === listingId)).toBe(false);
+    });
+
+    it("excludes soft-deleted listings from feed", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .delete(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(200);
+
+      const feed = await request
+        .get("/api/v1/listings")
+        .expect(200);
+
+      expect(feed.body.items.some((item: { id: string }) => item.id === listingId)).toBe(false);
+    });
+  });
+
+  describe("GET /api/v1/me/listings", () => {
+    it("returns 401 without bearer token", async () => {
+      await request
+        .get("/api/v1/me/listings")
+        .expect(401);
+    });
+
+    it("returns owner's listings", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const res = await request
+        .get("/api/v1/me/listings")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].id).toBe(listingId);
+    });
+  });
 });

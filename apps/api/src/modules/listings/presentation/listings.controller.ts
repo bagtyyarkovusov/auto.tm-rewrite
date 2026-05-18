@@ -9,6 +9,7 @@ import {
   Put,
   Body,
   Req,
+  Query,
   BadRequestException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
@@ -23,6 +24,8 @@ import { RepublishListing } from "../application/RepublishListing";
 import { AttachMedia } from "../application/AttachMedia";
 import { RemoveMedia } from "../application/RemoveMedia";
 import { ReorderMedia } from "../application/ReorderMedia";
+import { GetListingDetail } from "../application/GetListingDetail";
+import { ListFeed } from "../application/ListFeed";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import { z } from "zod";
 
@@ -38,6 +41,8 @@ export class ListingsController {
     @Inject(AttachMedia) private readonly attachMediaUC: AttachMedia,
     @Inject(RemoveMedia) private readonly removeMediaUC: RemoveMedia,
     @Inject(ReorderMedia) private readonly reorderMediaUC: ReorderMedia,
+    @Inject(GetListingDetail) private readonly getListingDetailUC: GetListingDetail,
+    @Inject(ListFeed) private readonly listFeedUC: ListFeed,
   ) {}
 
   @Public()
@@ -45,6 +50,24 @@ export class ListingsController {
   ping(): { context: "listings"; status: "ok" } {
     return { context: "listings", status: "ok" };
   }
+
+  @Public()
+  @Get()
+  async listFeed(@Query() query: { cursor?: string; limit?: number }) {
+    const pagination = ListingsSchemas.FeedQuerySchema.parse(query);
+    return this.listFeedUC.execute({
+      ...(pagination.cursor !== undefined ? { cursor: pagination.cursor } : {}),
+      limit: pagination.limit,
+    });
+  }
+
+  @Public()
+  @Get(":id")
+  async getDetail(@Param("id") listingId: string) {
+    return this.getListingDetailUC.execute({ listingId });
+  }
+
+
 
   @Post("drafts/:id/publish")
   async publishDraft(
