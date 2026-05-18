@@ -18,7 +18,7 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 
 All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript classes with `readonly` fields and constructor invariants:
 
-- `Listing` — root entity. Immutable. Constructor enforces `allowCalls OR allowChat`. State transitions (`markSold`, `archive`, `republish`, `softDelete`) return new instances. `canEditField(field)` returns `false` for `brandId`, `modelId`, `generationId`, `year`, `vin`.
+- `Listing` — root entity. Immutable. Constructor enforces `allowCalls OR allowChat`. State transitions (`markSold`, `archive`, `republish`, `softDelete`) return new instances. `canEditField(field)` returns `false` for `brandId`, `modelId`, `generationId`, `year`, `vin`. Includes `acceptsExchange` and `installmentAvailable` booleans.
 - `ListingDraft` — wizard in-flight state. `payload: Record<string, unknown>` (opaque to domain).
 - `ListingMedia` — media metadata. Invariants: `posterKey` and `durationMs` only allowed when `kind === 'video'`.
 - `Price` — value object `{ amount: number; currency: Currency }`. Validates `amount > 0`.
@@ -33,6 +33,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 - `Listing.engineTypeId`, `transmissionId`, `driveTypeId` reference catalog lookup tables (FK, onDelete SET NULL).
 - `Listing.regionId` references an existing Region (FK, onDelete SET NULL).
 - **`allowCalls OR allowChat` must be true** — enforced at domain layer in `Listing` constructor (not schema-level CHECK constraint).
+- **`acceptsExchange`** and **`installmentAvailable`** are simple seller-declared booleans persisted on `Listing`; no financing workflow or exchange matching in S4.
 - Soft-delete via `Listing.deletedAt` — listings are never hard-deleted at the schema level.
 - `Favorite` unique constraint: a user can favorite a listing at most once.
 - `ListingMedia.onDelete: Cascade` — deleting a Listing deletes its media rows.
@@ -87,7 +88,7 @@ Repository ports (consumed only within `listings/`):
 - `ListMyDrafts` — paginated list of caller's drafts by `updatedAt DESC`
 - `DiscardDraft` — hard-deletes a draft (owner-validated)
 - `PresignUpload` — generates presigned MinIO PUT URL with content-type/size enforcement
-- `PublishListing` — validates draft payload + FX rate → creates `Listing(active)` + media rows → deletes draft (atomic transaction)
+- `PublishListing` — validates draft payload (requires `year`, requires `mileageKm` when `condition='used'`, requires non-empty `description`, requires ≥1 attached photo with `key`, requires `allowCalls || allowChat`) + FX rate → creates `Listing(active)` + media rows → deletes draft (atomic transaction)
 - `MarkSold` — `active → sold`, writes `listing.marked_sold` audit log, emits `ListingSold`
 - `ArchiveListing` — `active | sold → archived`, writes `listing.archived` audit log
 - `RepublishListing` — `archived → active`, writes `listing.republished` audit log

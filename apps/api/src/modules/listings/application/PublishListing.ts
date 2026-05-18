@@ -23,6 +23,7 @@ import {
 const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.required({
   brandId: true,
   modelId: true,
+  year: true,
   cityId: true,
   regionId: true,
   priceAmount: true,
@@ -35,8 +36,19 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   (data) => data.allowCalls || data.allowChat,
   { message: "CONTACT_METHOD_REQUIRED" },
 ).refine(
-  (data) => data.photos && data.photos.length >= 1,
+  (data) => data.photos && data.photos.length >= 1 && data.photos.some((p) => p.key),
   { message: "AT_LEAST_ONE_PHOTO_REQUIRED" },
+).refine(
+  (data) => data.description.trim().length > 0,
+  { message: "DESCRIPTION_REQUIRED" },
+).refine(
+  (data) => {
+    if (data.condition === "used") {
+      return data.mileageKm !== undefined && data.mileageKm !== null;
+    }
+    return true;
+  },
+  { message: "MILEAGE_REQUIRED_FOR_USED" },
 );
 
 export interface PublishListingInput {
@@ -140,6 +152,8 @@ export class PublishListing {
             mileageKm: payload.mileageKm ?? null,
             locationText: payload.locationText ?? null,
             description: payload.description,
+            acceptsExchange: payload.acceptsExchange ?? false,
+            installmentAvailable: payload.installmentAvailable ?? false,
           },
         }),
         ...photos.map((photo) =>
@@ -200,6 +214,8 @@ export class PublishListing {
         ...(listingRow.mileageKm ? { mileageKm: listingRow.mileageKm } : {}),
         ...(listingRow.locationText ? { locationText: listingRow.locationText } : {}),
         ...(listingRow.description ? { description: listingRow.description } : {}),
+        acceptsExchange: listingRow.acceptsExchange,
+        installmentAvailable: listingRow.installmentAvailable,
       });
 
       await this.events.emit({

@@ -19,6 +19,7 @@ packages/db/
 │   │   ├── 20260514104615_delete_me_cascades/
 │   │   ├── 20260518081943_add_engine_type_transmission_drive_type/
 │   │   ├── 20260518083234_s4_listings_crud/
+│   │   ├── 20260518180741_add_seller_terms_to_listing/
 │   │   └── migration_lock.toml
 │   └── seed/
 │       ├── _legacy/cars.brands.json   Monolingual snapshot from old backend; historical port source

@@ -110,6 +110,8 @@ class FakePrisma {
         mileageKm: d["mileageKm"] as number | null,
         locationText: d["locationText"] as string | null,
         description: d["description"] as string | null,
+        acceptsExchange: d["acceptsExchange"] as boolean,
+        installmentAvailable: d["installmentAvailable"] as boolean,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -184,7 +186,9 @@ describe("PublishListing", () => {
     regionId: "00000000-0000-0000-0000-000000000004",
     priceAmount: 100000,
     priceCurrency: "TMT",
+    year: 2020,
     condition: "used",
+    mileageKm: 50000,
     description: "Great car",
     allowCalls: true,
     allowChat: true,
@@ -232,6 +236,56 @@ describe("PublishListing", () => {
 
   it("throws BadRequestException when draft is missing required fields", async () => {
     seedDraft(draftRepo, { brandId: validPayload.brandId });
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await expect(
+      uc.execute({ draftId: "draft-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("throws BadRequestException when year is missing", async () => {
+    const { year: _, ...payloadWithoutYear } = validPayload;
+    seedDraft(draftRepo, payloadWithoutYear);
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await expect(
+      uc.execute({ draftId: "draft-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("throws BadRequestException when mileageKm is missing for used condition", async () => {
+    const { mileageKm: _, ...payloadWithoutMileage } = validPayload;
+    seedDraft(draftRepo, payloadWithoutMileage);
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await expect(
+      uc.execute({ draftId: "draft-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("accepts missing mileageKm when condition is new", async () => {
+    const { mileageKm: _, ...payloadNew } = validPayload;
+    seedDraft(draftRepo, { ...payloadNew, condition: "new" });
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    const result = await uc.execute({ draftId: "draft-1", userId: "user-1" });
+    expect(result.listing.status).toBe("active");
+  });
+
+  it("throws BadRequestException when description is empty/blank", async () => {
+    seedDraft(draftRepo, { ...validPayload, description: "   " });
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await expect(
+      uc.execute({ draftId: "draft-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("throws BadRequestException when no photos have a key (none attached)", async () => {
+    seedDraft(draftRepo, {
+      ...validPayload,
+      photos: [{ photoId: "00000000-0000-0000-0000-000000000005", sortOrder: 0 }],
+    });
 
     const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
     await expect(

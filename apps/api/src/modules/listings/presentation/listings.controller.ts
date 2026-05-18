@@ -177,6 +177,8 @@ export class ListingsController {
       contactPhone: result.listing.contactPhone,
       allowCalls: result.listing.allowCalls,
       allowChat: result.listing.allowChat,
+      acceptsExchange: result.listing.acceptsExchange,
+      installmentAvailable: result.listing.installmentAvailable,
       condition: result.listing.condition,
       colorId: result.listing.colorId,
       bodyTypeId: result.listing.bodyTypeId,
