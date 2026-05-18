@@ -1,4 +1,5 @@
 import { Controller, Inject, Post, Body, Req } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import type { FastifyRequest } from "fastify";
 import { UploadsSchemas } from "@auto-tm/contracts";
 
@@ -11,6 +12,7 @@ export class UploadsController {
   ) {}
 
   @Post("presign")
+  @SkipThrottle()
   async presignUpload(
     @Body() body: unknown,
     @Req() _req: FastifyRequest,

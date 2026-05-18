@@ -3,6 +3,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { usePresignUpload } from "../../api/uploads/usePresignUpload";
+import { ApiError } from "../../api/client";
 
 import { setupUploadResume } from "./appStateResume";
 import { compressPhoto } from "./compressor";
@@ -54,6 +55,14 @@ export function useUploadQueue(
   const queueRef = useRef(queue);
   queueRef.current = queue;
 
+  // Concurrency limit: max 2 simultaneous uploads
+  const MAX_CONCURRENT = 2;
+  const runningUploads = useRef(0);
+  const uploadQueue = useRef<string[]>([]);
+  const uploadPhotoRef = useRef<(photoId: string) => Promise<void>>(
+    async () => {},
+  );
+
   // Initialize queue from draft + local files
   useEffect(() => {
     async function init() {
@@ -67,6 +76,22 @@ export function useUploadQueue(
     }
     void init();
   }, [draftId, initialPayload]);
+
+  // Process the next items in the upload queue
+  const processUploadQueue = useCallback(() => {
+    while (
+      runningUploads.current < MAX_CONCURRENT &&
+      uploadQueue.current.length > 0
+    ) {
+      const nextId = uploadQueue.current.shift();
+      if (!nextId) continue;
+      runningUploads.current += 1;
+      uploadPhotoRef.current(nextId).finally(() => {
+        runningUploads.current -= 1;
+        processUploadQueue();
+      });
+    }
+  }, []);
 
   // Upload a single photo after it has been compressed
   const uploadPhoto = useCallback(
@@ -122,8 +147,10 @@ export function useUploadQueue(
           }),
         );
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Upload failed";
+        let errorMessage = err instanceof Error ? err.message : "Upload failed";
+        if (err instanceof ApiError && err.status === 429) {
+          errorMessage = "Rate limited — please retry in a moment";
+        }
         setQueue((prev) =>
           updatePhotoState(prev, photoId, "failed", {
             error: errorMessage,
@@ -136,6 +163,9 @@ export function useUploadQueue(
     [presignMutation],
   );
 
+  // Keep uploadPhotoRef in sync so processUploadQueue always calls the latest version
+  uploadPhotoRef.current = uploadPhoto;
+
   // Resume pending uploads on app active / network available
   useEffect(() => {
     const cleanup = setupUploadResume({
@@ -143,17 +173,18 @@ export function useUploadQueue(
         const currentQueue = queueRef.current;
         const photosToRetry = currentQueue.photos.filter(
           (p) =>
-            p.state === "failed" ||
-            p.state === "compressed" ||
-            p.state === "waiting_for_network",
+            (p.state === "compressed" || p.state === "waiting_for_network") ||
+            (p.state === "failed" &&
+              p.retryCount < 2 &&
+              !p.error?.includes("Rate limited")),
         );
-        photosToRetry.forEach((p) => {
-          void uploadPhoto(p.photoId);
-        });
+        if (photosToRetry.length === 0) return;
+        uploadQueue.current.push(...photosToRetry.map((p) => p.photoId));
+        processUploadQueue();
       },
     });
     return cleanup;
-  }, [uploadPhoto]);
+  }, [processUploadQueue]);
 
   const addPhoto = useCallback(
     async (sourceUri: string) => {
@@ -188,8 +219,9 @@ export function useUploadQueue(
           }),
         );
 
-        // Start upload
-        await uploadPhoto(photoId);
+        // Enqueue upload (respects max concurrency)
+        uploadQueue.current.push(photoId);
+        processUploadQueue();
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Compression failed";
@@ -225,9 +257,10 @@ export function useUploadQueue(
 
   const retryPhoto = useCallback(
     (photoId: string) => {
-      void uploadPhoto(photoId);
+      uploadQueue.current.push(photoId);
+      processUploadQueue();
     },
-    [uploadPhoto],
+    [processUploadQueue],
   );
 
   const publishGate: PublishGateResult = computePublishGate(queue);

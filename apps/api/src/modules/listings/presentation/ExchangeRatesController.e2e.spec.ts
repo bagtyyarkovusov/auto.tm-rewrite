@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { ConfigModule } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
-import { JwtService } from "@nestjs/jwt";
+import { JwtModule, JwtService } from "@nestjs/jwt";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -29,6 +29,11 @@ describe("ExchangeRatesController e2e", () => {
         ConfigModule.forRoot({ isGlobal: true }),
         ListingsModule,
         IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
       ],
     })
       .overrideProvider(LISTING_EVENT_PUBLISHER)

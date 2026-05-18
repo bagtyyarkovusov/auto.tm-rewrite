@@ -9,7 +9,7 @@ import {
 import supertest from "supertest";
 import { PrismaService } from "@auto-tm/db";
 import { APP_GUARD, Reflector } from "@nestjs/core";
-import { JwtService } from "@nestjs/jwt";
+import { JwtModule, JwtService } from "@nestjs/jwt";
 
 import { IdentityModule } from "../identity.module";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
@@ -22,7 +22,14 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityModule],
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
@@ -113,7 +120,14 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
   beforeAll(async () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityModule],
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
@@ -226,7 +240,14 @@ describe("AuthController e2e — POST /api/v1/auth/logout", () => {
   beforeAll(async () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityModule],
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
@@ -325,7 +346,14 @@ describe("AuthController e2e — POST /api/v1/auth/logout-all", () => {
   beforeAll(async () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityModule],
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
@@ -420,7 +448,14 @@ describe("MeController e2e — GET /api/v1/me", () => {
   beforeAll(async () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityModule],
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
@@ -506,7 +541,14 @@ describe("MeController e2e — DELETE /api/v1/me", () => {
   beforeAll(async () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityModule],
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(

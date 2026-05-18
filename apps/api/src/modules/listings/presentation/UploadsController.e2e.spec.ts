@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { Reflector } from "@nestjs/core";
-import { JwtService } from "@nestjs/jwt";
+import { JwtModule, JwtService } from "@nestjs/jwt";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -42,7 +42,14 @@ describe("UploadsController e2e", () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [IdentityModule],
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
       controllers: [UploadsController],
       providers: [
         PresignUpload,

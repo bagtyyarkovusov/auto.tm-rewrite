@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { Reflector } from "@nestjs/core";
-import { JwtService } from "@nestjs/jwt";
+import { JwtModule, JwtService } from "@nestjs/jwt";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -25,7 +25,15 @@ describe("AdminCatalogController e2e", () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [CatalogModule, IdentityModule],
+      imports: [
+        CatalogModule,
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(

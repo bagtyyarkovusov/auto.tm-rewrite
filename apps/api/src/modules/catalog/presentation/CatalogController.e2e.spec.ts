@@ -8,6 +8,7 @@ import {
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
 import { PrismaService } from "@auto-tm/db";
+import { JwtModule } from "@nestjs/jwt";
 
 import { CatalogModule } from "../catalog.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
@@ -19,7 +20,14 @@ describe("CatalogController e2e", () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [CatalogModule],
+      imports: [
+        CatalogModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
