@@ -3,23 +3,24 @@ import * as FileSystem from "expo-file-system/legacy";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { usePresignUpload } from "../../api/uploads/usePresignUpload";
-import { ApiError } from "../../api/client";
 
 import { setupUploadResume } from "./appStateResume";
-import { compressPhoto } from "./compressor";
+import { compressPhoto, CompressionError } from "./compressor";
 import {
   computePublishGate,
   reconstructQueueFromDraft,
   removePhotoFromQueue,
   reorderPhotos as reorderPhotosInQueue,
   updatePhotoState,
+  isRetryable,
 } from "./queueState";
 import {
   ensureDraftDir,
   getDraftDir,
   getStagingPath,
 } from "./stagingDir";
-import type { PublishGateResult, UploadQueue } from "./types";
+import { buildUploadError } from "./uploadErrors";
+import type { PublishGateResult, UploadQueue, UploadError } from "./types";
 
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -101,10 +102,27 @@ export function useUploadQueue(
       if (!photo) return;
 
       if (!photo.localUri) {
+        const error: UploadError = {
+          code: "LOCAL_FILE_MISSING",
+          message: "Photo file missing — please remove and re-select",
+          retryable: false,
+        };
         setQueue((prev) =>
-          updatePhotoState(prev, photoId, "failed", {
-            error: "Local file missing",
-          }),
+          updatePhotoState(prev, photoId, "failed", { error }),
+        );
+        return;
+      }
+
+      // Checkpoint 3: verify local file exists on disk before PUT
+      const fileInfo = await FileSystem.getInfoAsync(photo.localUri);
+      if (!fileInfo.exists) {
+        const error: UploadError = {
+          code: "LOCAL_FILE_MISSING",
+          message: "Photo file missing — please remove and re-select",
+          retryable: false,
+        };
+        setQueue((prev) =>
+          updatePhotoState(prev, photoId, "failed", { error }),
         );
         return;
       }
@@ -148,13 +166,10 @@ export function useUploadQueue(
           }),
         );
       } catch (err) {
-        let errorMessage = err instanceof Error ? err.message : "Upload failed";
-        if (err instanceof ApiError && err.status === 429) {
-          errorMessage = "Rate limited — please retry in a moment";
-        }
+        const uploadError = buildUploadError(err);
         setQueue((prev) =>
           updatePhotoState(prev, photoId, "failed", {
-            error: errorMessage,
+            error: uploadError,
           }),
         );
       } finally {
@@ -177,7 +192,7 @@ export function useUploadQueue(
             (p.state === "compressed" || p.state === "waiting_for_network") ||
             (p.state === "failed" &&
               p.retryCount < 2 &&
-              !p.error?.includes("Rate limited")),
+              isRetryable(p.error)),
         );
         if (photosToRetry.length === 0) return;
         uploadQueue.current.push(...photosToRetry.map((p) => p.photoId));
@@ -211,6 +226,15 @@ export function useUploadQueue(
         const compressed = await compressPhoto(sourceUri, destinationUri);
         setIsCompressing(false);
 
+        // Verify destination file exists after compression before enqueuing
+        const destInfo = await FileSystem.getInfoAsync(destinationUri);
+        if (!destInfo.exists) {
+          throw new CompressionError(
+            "Photo file missing — please remove and re-select",
+            "DESTINATION_MISSING",
+          );
+        }
+
         // Update ref synchronously so uploadPhoto sees localUri immediately
         queueRef.current = updatePhotoState(queueRef.current, photoId, "compressed", {
           localUri: compressed.uri,
@@ -224,11 +248,10 @@ export function useUploadQueue(
         uploadQueue.current.push(photoId);
         processUploadQueue();
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Compression failed";
+        const uploadError = buildUploadError(err);
         setQueue((prev) =>
           updatePhotoState(prev, photoId, "failed", {
-            error: errorMessage,
+            error: uploadError,
           }),
         );
         setIsCompressing(false);

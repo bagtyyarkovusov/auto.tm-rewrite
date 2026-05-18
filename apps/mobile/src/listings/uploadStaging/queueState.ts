@@ -1,6 +1,6 @@
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
-import type { StagedPhoto, UploadQueue, PublishGateResult } from "./types";
+import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from "./types";
 
 export function computePublishGate(queue: UploadQueue): PublishGateResult {
   const blockers: string[] = [];
@@ -120,4 +120,9 @@ export function reorderPhotos(queue: UploadQueue, photoIds: string[]): UploadQue
     .map((p, index) => ({ ...p, sortOrder: index }));
 
   return { ...queue, photos: reordered };
+}
+
+export function isRetryable(error?: UploadError): boolean {
+  if (!error) return true;
+  return error.retryable;
 }

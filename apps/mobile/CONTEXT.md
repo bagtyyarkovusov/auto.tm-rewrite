@@ -58,7 +58,7 @@ No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their ow
 - Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay)
 - `expo-secure-store` for JWT access + refresh tokens
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
-- Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach
+- Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
 
 Identity hooks live at `src/api/identity/*`.
@@ -66,7 +66,7 @@ Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerat
 Listings hooks live at `src/api/listings/*` (`useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`).
 Uploads hook lives at `src/api/uploads/usePresignUpload`.
 Exchange-rate hook lives at `src/api/exchange-rates/useExchangeRates`.
-Upload staging utilities live at `src/listings/uploadStaging/` (`types.ts`, `stagingDir.ts`, `compressor.ts`, `queueState.ts`, `orphanCleanup.ts`, `appStateResume.ts`).
+Upload staging utilities live at `src/listings/uploadStaging/` (`types.ts`, `stagingDir.ts`, `compressor.ts`, `queueState.ts`, `uploadErrors.ts`, `orphanCleanup.ts`, `appStateResume.ts`).
 
 ## Dependencies
 
@@ -132,6 +132,7 @@ Issue #93 (mobile wizard) shipped in PR #110. The following fixes were discovere
 | `8542079` | 429 rate-limit on multi-photo upload — `ThrottlerGuard` at 60/min hit by simultaneous presign requests. Retry storm from auto-resume. | `@SkipThrottle()` on `/uploads/presign`. Mobile `MAX_CONCURRENT = 2`. Retry cap at 2. Rate-limited photos skipped in auto-resume. |
 | `c5ed428` | "Local file missing" + "PUT failed" — `setQueue()` is async; `processUploadQueue()` ran before React state propagated. `uploadAsync` defaulted to MULTIPART. | Synchronous `queueRef.current` update before enqueue. `uploadType: BINARY_CONTENT` on PUT. |
 | `c1c3747` | Crash: `ImagePicker.MediaType.Images` — `MediaType` is a TS type alias, not a runtime object. | Changed to string literal array: `mediaTypes: ["images"]` |
+| #112 | Upload pipeline lacks file-existence checks and error categorization. No `getInfoAsync` guards before compression/upload. All errors show generic "Upload failed". | `compressor.ts` verifies source file exists via `getInfoAsync` before `ImageManipulator.manipulate()`. `useUploadQueue.ts` verifies destination file after compression and `localUri` on disk before PUT. `UploadError` discriminated union with 7 error codes (`PRESIGN_FAILED`, `PUT_FAILED`, `LOCAL_FILE_MISSING`, `NETWORK_ERROR`, `RATE_LIMITED`, `COMPRESSION_FAILED`, `UNKNOWN`). Non-retryable errors (`LOCAL_FILE_MISSING`) excluded from auto-resume. UI in `Step2Photos.tsx` renders different icon/color for retryable vs non-retryable failures. |
 
 Full analysis with state machines, sequence diagrams, and race condition analysis: [`docs/prd/flows/61-create-listing-analysis.md`](../../docs/prd/flows/61-create-listing-analysis.md).
 
@@ -141,7 +142,7 @@ Discovered during Context7-validated analysis (Expo SDK 55 docs). Tracked as Git
 
 - **#114** — iOS temp file cleanup can delete picker URIs before compression. Picker returns cache-directory URIs; iOS purges them under memory pressure. Mitigation: copy to document directory before compression, or parallelize compression.
 - **#115** — Sequential photo processing blocks UI on multi-select. `for...await onAddPhoto()` compresses one photo at a time. With 20 photos this freezes the UI for seconds. Mitigation: `Promise.all` for parallel compression.
-- **#112** — Upload pipeline lacks file-existence checks and error categorization. No `getInfoAsync` guards before compression/upload. All errors show generic "Upload failed". Needs retryable vs non-retryable distinction.
+- **#112** ✅ — Upload pipeline file-existence checks and error categorization shipped in PR #<N>. `getInfoAsync` guards at 3 checkpoints (before compression, after compression, before PUT). Retryable vs non-retryable distinction via `UploadError` type.
 - **#113** — `moveAsync` failure in `compressor.ts` leaves file in cache. If move throws, compressed file stays in cache and may be cleaned up. Needs `copyAsync` fallback.
 - **#111** ✅ — `expo-image-manipulator` `manipulateAsync` migrated to `ImageManipulator.manipulate()` contextual API in PR #<N>. Deprecated call removed; identical compression behavior preserved.
 
