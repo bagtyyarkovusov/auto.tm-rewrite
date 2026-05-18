@@ -14,6 +14,9 @@ import { ListRegions } from "../application/ListRegions";
 import { ListCitiesForRegion } from "../application/ListCitiesForRegion";
 import { ListBodyTypes } from "../application/ListBodyTypes";
 import { ListColors } from "../application/ListColors";
+import { ListDriveTypes } from "../application/ListDriveTypes";
+import { ListEngineTypes } from "../application/ListEngineTypes";
+import { ListTransmissions } from "../application/ListTransmissions";
 
 @Controller("api/v1/catalog")
 export class CatalogController {
@@ -28,6 +31,9 @@ export class CatalogController {
     private readonly listCitiesForRegionUC: ListCitiesForRegion,
     @Inject(ListBodyTypes) private readonly listBodyTypesUC: ListBodyTypes,
     @Inject(ListColors) private readonly listColorsUC: ListColors,
+    @Inject(ListEngineTypes) private readonly listEngineTypesUC: ListEngineTypes,
+    @Inject(ListTransmissions) private readonly listTransmissionsUC: ListTransmissions,
+    @Inject(ListDriveTypes) private readonly listDriveTypesUC: ListDriveTypes,
   ) {}
 
   @Public()
@@ -201,6 +207,60 @@ export class CatalogController {
       "ru";
 
     const result = await this.listColorsUC.execute({
+      locale: locale as "tk" | "ru" | "en",
+    });
+
+    return { items: result.items };
+  }
+
+  @Public()
+  @Get("engine-types")
+  async listEngineTypes(
+    @Query() query: CatalogSchemas.LocaleQuery,
+    @Req() req: FastifyRequest & LocalizedRequest,
+  ) {
+    const locale =
+      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      req.locale ??
+      "ru";
+
+    const result = await this.listEngineTypesUC.execute({
+      locale: locale as "tk" | "ru" | "en",
+    });
+
+    return { items: result.items };
+  }
+
+  @Public()
+  @Get("transmissions")
+  async listTransmissions(
+    @Query() query: CatalogSchemas.LocaleQuery,
+    @Req() req: FastifyRequest & LocalizedRequest,
+  ) {
+    const locale =
+      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      req.locale ??
+      "ru";
+
+    const result = await this.listTransmissionsUC.execute({
+      locale: locale as "tk" | "ru" | "en",
+    });
+
+    return { items: result.items };
+  }
+
+  @Public()
+  @Get("drive-types")
+  async listDriveTypes(
+    @Query() query: CatalogSchemas.LocaleQuery,
+    @Req() req: FastifyRequest & LocalizedRequest,
+  ) {
+    const locale =
+      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      req.locale ??
+      "ru";
+
+    const result = await this.listDriveTypesUC.execute({
       locale: locale as "tk" | "ru" | "en",
     });
 

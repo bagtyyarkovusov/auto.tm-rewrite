@@ -1,0 +1,6 @@
+[
+  { "nameRu": "Передний", "nameTk": "Öňki", "nameEn": "FWD" },
+  { "nameRu": "Задний", "nameTk": "Yzky", "nameEn": "RWD" },
+  { "nameRu": "Полный", "nameTk": "Doly", "nameEn": "AWD" },
+  { "nameRu": "Полный (4WD)", "nameTk": "Doly (4WD)", "nameEn": "4WD" }
+]
