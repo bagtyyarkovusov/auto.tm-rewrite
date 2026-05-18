@@ -45,8 +45,8 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 
 - `apps/api/src/modules/listings/`:
   - `domain/` — **6 entities + types + 10 ports** (S4 #86)
-  - `application/` — 11 use-cases (S4 #88, #89, #90): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`
-  - `infrastructure/` — 8 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaExchangeRateRepository` (S4 #89), `MinioMediaStorageAdapter` (S4 #88)
+  - `application/` — 14 use-cases (S4 #88, #89, #90, #91): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`
+  - `infrastructure/` — 10 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
   - `presentation/listings.controller.ts` — public feed stub + 6 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`, `edit`)
   - `presentation/DraftsController.ts` — draft CRUD + list my drafts
   - `presentation/UploadsController.ts` — presign upload endpoint
@@ -72,6 +72,7 @@ Repository ports (consumed only within `listings/`):
 | `ListingRepository` | `LISTING_REPOSITORY` | `domain/ports/ListingRepository.ts` |
 | `ListingDraftRepository` | `LISTING_DRAFT_REPOSITORY` | `domain/ports/ListingDraftRepository.ts` |
 | `ListingMediaRepository` | `LISTING_MEDIA_REPOSITORY` | `domain/ports/ListingMediaRepository.ts` |
+| `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` |
 
 ## Ports consumed
 
@@ -89,8 +90,11 @@ Repository ports (consumed only within `listings/`):
 - `ArchiveListing` — `active | sold → archived`, writes `listing.archived` audit log
 - `RepublishListing` — `archived → active`, writes `listing.republished` audit log
 - `DeleteListing` — soft-delete, preserves media rows, writes `listing.deleted` audit log, emits `ListingDeleted`
+- `AttachMedia` — registers uploaded asset on a listing; calls `ImageVariantGenerator` (sync Sharp) for images; enforces ≤20 photos + ≤1 video
+- `RemoveMedia` — hard-deletes `ListingMedia` row + all variant MinIO objects (best-effort)
+- `ReorderMedia` — bulk-updates `sortOrder` for owner-selected ordering in one Prisma transaction
 
-Remaining S4 use-cases in #91-#92: `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
+Remaining S4 use-cases in #92: `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
 
 ## HTTP routes
 
@@ -107,6 +111,9 @@ Remaining S4 use-cases in #91-#92: `AttachMedia`, `RemoveMedia`, `ReorderMedia`,
 | POST | `/api/v1/listings/:id/archive` | Required | `ArchiveListing` |
 | POST | `/api/v1/listings/:id/republish` | Required | `RepublishListing` |
 | DELETE | `/api/v1/listings/:id` | Required | `DeleteListing` |
+| POST | `/api/v1/listings/:id/media/attach` | Required (owner) | `AttachMedia` |
+| DELETE | `/api/v1/listings/:id/media/:mediaId` | Required (owner) | `RemoveMedia` |
+| PUT | `/api/v1/listings/:id/media/order` | Required (owner) | `ReorderMedia` |
 
 ## Events emitted
 

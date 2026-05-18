@@ -11,8 +11,10 @@ import { ChronologicalRankingAdapter } from "./infrastructure/ChronologicalRanki
 import { EventEmitterListingEventPublisher } from "./infrastructure/EventEmitterListingEventPublisher";
 import { PrismaListingDraftRepository } from "./infrastructure/PrismaListingDraftRepository";
 import { PrismaListingRepository } from "./infrastructure/PrismaListingRepository";
+import { PrismaListingMediaRepository } from "./infrastructure/PrismaListingMediaRepository";
 import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRateRepository";
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
+import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
 import { UpdateDraft } from "./application/UpdateDraft";
 import { ListMyDrafts } from "./application/ListMyDrafts";
@@ -24,12 +26,17 @@ import { ArchiveListing } from "./application/ArchiveListing";
 import { RepublishListing } from "./application/RepublishListing";
 import { DeleteListing } from "./application/DeleteListing";
 import { EditListing } from "./application/EditListing";
+import { AttachMedia } from "./application/AttachMedia";
+import { RemoveMedia } from "./application/RemoveMedia";
+import { ReorderMedia } from "./application/ReorderMedia";
 import { VIN_DECODER_PORT } from "./domain/ports/VinDecoderPort";
 import { MEDIA_CONTENT_CLASSIFIER_PORT } from "./domain/ports/MediaContentClassifierPort";
 import { FEED_RANKING_PORT } from "./domain/ports/FeedRankingPort";
 import { LISTING_EVENT_PUBLISHER } from "./domain/ports/ListingEventPublisher";
 import { LISTING_DRAFT_REPOSITORY } from "./domain/ports/ListingDraftRepository";
 import { LISTING_REPOSITORY } from "./domain/ports/ListingRepository";
+import { LISTING_MEDIA_REPOSITORY } from "./domain/ports/ListingMediaRepository";
+import { IMAGE_VARIANT_GENERATOR } from "./domain/ports/ImageVariantGenerator";
 import { EXCHANGE_RATE_PORT } from "./domain/ports/ExchangeRatePort";
 import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
 
@@ -44,8 +51,10 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
     EventEmitterListingEventPublisher,
     PrismaListingDraftRepository,
     PrismaListingRepository,
+    PrismaListingMediaRepository,
     PrismaExchangeRateRepository,
     MinioMediaStorageAdapter,
+    SharpImageVariantGenerator,
 
     // Port bindings
     {
@@ -73,12 +82,20 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
       useClass: PrismaListingRepository,
     },
     {
+      provide: LISTING_MEDIA_REPOSITORY,
+      useClass: PrismaListingMediaRepository,
+    },
+    {
       provide: EXCHANGE_RATE_PORT,
       useClass: PrismaExchangeRateRepository,
     },
     {
       provide: MEDIA_STORAGE_PORT,
       useClass: MinioMediaStorageAdapter,
+    },
+    {
+      provide: IMAGE_VARIANT_GENERATOR,
+      useClass: SharpImageVariantGenerator,
     },
 
     // Application use-cases
@@ -93,6 +110,9 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
     RepublishListing,
     DeleteListing,
     EditListing,
+    AttachMedia,
+    RemoveMedia,
+    ReorderMedia,
   ],
   exports: [
     VIN_DECODER_PORT,
@@ -101,6 +121,8 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
     LISTING_EVENT_PUBLISHER,
     LISTING_DRAFT_REPOSITORY,
     LISTING_REPOSITORY,
+    LISTING_MEDIA_REPOSITORY,
+    IMAGE_VARIANT_GENERATOR,
     EXCHANGE_RATE_PORT,
     MEDIA_STORAGE_PORT,
   ],
