@@ -122,6 +122,29 @@ CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
 
 Lucide icons must render through `@/components/ui/icon`. The wrapper maps NativeWind class styles into lucide props and must preserve `fill="none"` by default; passing an undefined fill prop through `react-native-svg` makes outline icons render as black filled shapes.
 
+### Upload pipeline hardening (post-#93)
+
+Issue #93 (mobile wizard) shipped in PR #110. The following fixes were discovered during simulator testing and applied as post-ship hardening:
+
+| Commit | Problem | Fix |
+|---|---|---|
+| `b8d3f3c` | JWT 401 on all API calls — `IdentityModule` registered its own `JwtModule` before `ConfigModule.forRoot()` loaded `.env`. Tokens signed with fallback secret, verified with real secret. | Removed redundant `JwtModule` from `IdentityModule`. Updated 8 e2e tests to import `JwtModule` explicitly. |
+| `8542079` | 429 rate-limit on multi-photo upload — `ThrottlerGuard` at 60/min hit by simultaneous presign requests. Retry storm from auto-resume. | `@SkipThrottle()` on `/uploads/presign`. Mobile `MAX_CONCURRENT = 2`. Retry cap at 2. Rate-limited photos skipped in auto-resume. |
+| `c5ed428` | "Local file missing" + "PUT failed" — `setQueue()` is async; `processUploadQueue()` ran before React state propagated. `uploadAsync` defaulted to MULTIPART. | Synchronous `queueRef.current` update before enqueue. `uploadType: BINARY_CONTENT` on PUT. |
+| `c1c3747` | Crash: `ImagePicker.MediaType.Images` — `MediaType` is a TS type alias, not a runtime object. | Changed to string literal array: `mediaTypes: ["images"]` |
+
+Full analysis with state machines, sequence diagrams, and race condition analysis: [`docs/prd/flows/61-create-listing-analysis.md`](../../docs/prd/flows/61-create-listing-analysis.md).
+
+### Upload pipeline open issues
+
+Discovered during Context7-validated analysis (Expo SDK 55 docs). Tracked as GitHub issues:
+
+- **#114** — iOS temp file cleanup can delete picker URIs before compression. Picker returns cache-directory URIs; iOS purges them under memory pressure. Mitigation: copy to document directory before compression, or parallelize compression.
+- **#115** — Sequential photo processing blocks UI on multi-select. `for...await onAddPhoto()` compresses one photo at a time. With 20 photos this freezes the UI for seconds. Mitigation: `Promise.all` for parallel compression.
+- **#112** — Upload pipeline lacks file-existence checks and error categorization. No `getInfoAsync` guards before compression/upload. All errors show generic "Upload failed". Needs retryable vs non-retryable distinction.
+- **#113** — `moveAsync` failure in `compressor.ts` leaves file in cache. If move throws, compressed file stays in cache and may be cleaned up. Needs `copyAsync` fallback.
+- **#111** — `expo-image-manipulator` `manipulateAsync` deprecated in SDK 55. New API is `useImageManipulator` hook. Tech debt — not urgent but will block SDK 56 upgrade.
+
 ## Notable decisions
 
 - [ADR-0002](../../docs/adr/0002-stack.md) — Expo
