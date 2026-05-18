@@ -50,6 +50,9 @@ export function useUploadQueue(
   const [isCompressing, setIsCompressing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Ref counter so parallel addPhoto calls don't clear isCompressing prematurely
+  const compressingCount = useRef(0);
+
   const presignMutation = usePresignUpload();
 
   // Refs to avoid stale closures in async callbacks
@@ -220,11 +223,13 @@ export function useUploadQueue(
       }));
 
       try {
-        setIsCompressing(true);
+        compressingCount.current += 1;
+        if (compressingCount.current === 1) {
+          setIsCompressing(true);
+        }
         await ensureDraftDir(draftId);
         const destinationUri = getStagingPath(draftId, photoId);
         const compressed = await compressPhoto(sourceUri, destinationUri);
-        setIsCompressing(false);
 
         // Verify destination file exists after compression before enqueuing
         const destInfo = await FileSystem.getInfoAsync(destinationUri);
@@ -254,7 +259,11 @@ export function useUploadQueue(
             error: uploadError,
           }),
         );
-        setIsCompressing(false);
+      } finally {
+        compressingCount.current -= 1;
+        if (compressingCount.current === 0) {
+          setIsCompressing(false);
+        }
       }
     },
     [draftId, uploadPhoto],
