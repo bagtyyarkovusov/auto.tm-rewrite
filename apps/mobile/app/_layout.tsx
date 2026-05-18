@@ -7,11 +7,14 @@ import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "nativewind";
 import {
   focusManager,
+  onlineManager,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
+import type { NetInfoState } from "@react-native-community/netinfo";
 
 import { NAV_THEME } from "../lib/theme";
 import { ApiError } from "../src/api/client";
@@ -47,6 +50,15 @@ function onAppStateChange(status: AppStateStatus) {
   focusManager.setFocused(status === "active");
 }
 
+function isOnline(state: NetInfoState): boolean {
+  if (state.isConnected === false || state.isInternetReachable === false) {
+    return false;
+  }
+  // isInternetReachable can be null while the OS is still deciding.
+  // Do not pause all queries during that unknown window.
+  return true;
+}
+
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme ?? "light";
@@ -54,6 +66,18 @@ export default function RootLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", onAppStateChange);
     return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    void NetInfo.fetch().then((state) => {
+      onlineManager.setOnline(isOnline(state));
+    });
+
+    const unsub = NetInfo.addEventListener((state) => {
+      onlineManager.setOnline(isOnline(state));
+    });
+
+    return () => unsub();
   }, []);
 
   useEffect(() => {

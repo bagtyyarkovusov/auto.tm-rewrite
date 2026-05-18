@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { ZodSchema } from "zod";
 
-import { apiClient, ApiError } from "./client";
 import {
   loadAuthSession,
   storeAuthSession,
   clearAuthSession,
 } from "../auth/session";
+
+import { apiClient, ApiError } from "./client";
 
 vi.mock("../auth/session", () => ({
   loadAuthSession: vi.fn(),
@@ -248,7 +250,7 @@ describe("apiClient", () => {
       };
 
       const error = await apiClient
-        .get("/test", schema as unknown as import("zod").ZodSchema<unknown>)
+        .get("/test", schema as unknown as ZodSchema<unknown>)
         .catch((e: ApiError) => e);
 
       expect(error).toBeInstanceOf(ApiError);

@@ -1,0 +1,31 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+
+import { apiClient } from "../client";
+import { queryKeys } from "../queryKeys";
+
+const RepublishResponseSchema = z.object({
+  id: z.string().uuid(),
+  status: z.string(),
+  publishedAt: z.string().datetime(),
+});
+
+export function useRepublishListing() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (listingId: string) =>
+      apiClient.post(
+        `/listings/${listingId}/republish`,
+        {},
+        RepublishResponseSchema,
+      ),
+    onSuccess: (_data, listingId) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.listings.detail(listingId),
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myListings() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.all() });
+    },
+  });
+}

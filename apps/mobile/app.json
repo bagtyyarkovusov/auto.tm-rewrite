@@ -9,13 +9,36 @@
     "platforms": ["ios", "android"],
     "ios": {
       "bundleIdentifier": "tm.auto.app",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "AutoTM uses your camera to take photos of your vehicle for listings.",
+        "NSPhotoLibraryUsageDescription": "AutoTM accesses your photos so you can select vehicle images for listings."
+      }
     },
     "android": {
       "package": "tm.auto.app",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AutoTM accesses your photos so you can select vehicle images for listings."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AutoTM to access your camera to take photos of your vehicle for listings."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }
