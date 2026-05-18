@@ -141,6 +141,8 @@ export class EditListing {
       ...(patch.contactPhone !== undefined && { contactPhone: patch.contactPhone }),
       ...(patch.allowCalls !== undefined && { allowCalls: patch.allowCalls }),
       ...(patch.allowChat !== undefined && { allowChat: patch.allowChat }),
+      ...(patch.acceptsExchange !== undefined && { acceptsExchange: patch.acceptsExchange }),
+      ...(patch.installmentAvailable !== undefined && { installmentAvailable: patch.installmentAvailable }),
     };
 
     let updated: Listing;

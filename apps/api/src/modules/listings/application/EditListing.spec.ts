@@ -400,6 +400,21 @@ describe("EditListing", () => {
     ).rejects.toThrow(NotFoundException);
   });
 
+  it("allows editing seller terms (acceptsExchange, installmentAvailable)", async () => {
+    seedActiveListing(repo);
+
+    const uc = makeUseCase(repo, prisma, events, exchangeRates);
+    const result = await uc.execute({
+      listingId: "listing-1",
+      userId: "user-1",
+      patch: { acceptsExchange: true, installmentAvailable: true },
+    });
+
+    expect(result.listing.acceptsExchange).toBe(true);
+    expect(result.listing.installmentAvailable).toBe(true);
+    expect(prisma.auditLogs).toHaveLength(0);
+  });
+
   it("emits ListingUpdated event on success", async () => {
     seedActiveListing(repo);
 

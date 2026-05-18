@@ -80,6 +80,8 @@ export class GetListingDetail {
       contactPhone: listing.contactPhone,
       allowCalls: listing.allowCalls,
       allowChat: listing.allowChat,
+      acceptsExchange: listing.acceptsExchange,
+      installmentAvailable: listing.installmentAvailable,
       media: media.map((m) => ({
         id: m.id,
         kind: m.kind,

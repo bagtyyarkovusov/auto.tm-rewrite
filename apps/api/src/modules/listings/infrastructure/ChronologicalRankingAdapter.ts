@@ -96,6 +96,8 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     description: string | null;
     viewCount: number;
     favoriteCount: number;
+    acceptsExchange: boolean;
+    installmentAvailable: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): Listing {
@@ -132,6 +134,8 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
       ...(row.mileageKm ? { mileageKm: row.mileageKm } : {}),
       ...(row.locationText ? { locationText: row.locationText } : {}),
       ...(row.description ? { description: row.description } : {}),
+      acceptsExchange: row.acceptsExchange,
+      installmentAvailable: row.installmentAvailable,
     });
   }
 }

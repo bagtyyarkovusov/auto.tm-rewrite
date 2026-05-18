@@ -357,9 +357,11 @@ model Listing {
   soldAt         DateTime?
   viewCount      Int               @default(0)
   favoriteCount  Int               @default(0)
-  contactPhone   String?
-  allowCalls     Boolean           @default(true)
-  allowChat      Boolean           @default(true)
+  contactPhone         String?
+  allowCalls           Boolean           @default(true)
+  allowChat            Boolean           @default(true)
+  acceptsExchange      Boolean           @default(false)
+  installmentAvailable Boolean           @default(false)
 
   media         ListingMedia[]
   favorites     Favorite[]

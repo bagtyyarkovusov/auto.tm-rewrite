@@ -34,6 +34,8 @@ function makeListing(
     description?: string;
     viewCount?: number;
     favoriteCount?: number;
+    acceptsExchange?: boolean;
+    installmentAvailable?: boolean;
     createdAt?: Date;
     updatedAt?: Date;
   }> = {},

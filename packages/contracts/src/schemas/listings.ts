@@ -83,6 +83,8 @@ export const ListingDetailSchema = z.object({
   contactPhone: z.string().optional(),
   allowCalls: z.boolean(),
   allowChat: z.boolean(),
+  acceptsExchange: z.boolean(),
+  installmentAvailable: z.boolean(),
   media: z.array(ListingMediaSchema),
   viewCount: z.number().int().nonnegative(),
   favoriteCount: z.number().int().nonnegative(),
@@ -127,6 +129,8 @@ export const ListingDraftPayloadSchema = z.object({
   contactPhone: z.string().optional(),
   allowCalls: z.boolean().optional(),
   allowChat: z.boolean().optional(),
+  acceptsExchange: z.boolean().optional(),
+  installmentAvailable: z.boolean().optional(),
 });
 export type ListingDraftPayload = z.infer<typeof ListingDraftPayloadSchema>;
 
@@ -175,6 +179,8 @@ export const EditListingRequestSchema = z
     contactPhone: z.string().optional(),
     allowCalls: z.boolean().optional(),
     allowChat: z.boolean().optional(),
+    acceptsExchange: z.boolean().optional(),
+    installmentAvailable: z.boolean().optional(),
   })
   .strict();
 export type EditListingRequest = z.infer<typeof EditListingRequestSchema>;

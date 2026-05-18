@@ -34,6 +34,8 @@ export class Listing {
     readonly description: string | undefined,
     readonly viewCount: number,
     readonly favoriteCount: number,
+    readonly acceptsExchange: boolean,
+    readonly installmentAvailable: boolean,
     readonly createdAt: Date,
     readonly updatedAt: Date,
   ) {
@@ -76,6 +78,8 @@ export class Listing {
     description?: string;
     viewCount?: number;
     favoriteCount?: number;
+    acceptsExchange?: boolean;
+    installmentAvailable?: boolean;
     createdAt?: Date;
     updatedAt?: Date;
   }): Listing {
@@ -110,6 +114,8 @@ export class Listing {
       data.description,
       data.viewCount ?? 0,
       data.favoriteCount ?? 0,
+      data.acceptsExchange ?? false,
+      data.installmentAvailable ?? false,
       data.createdAt ?? new Date(),
       data.updatedAt ?? new Date(),
     );
@@ -157,6 +163,8 @@ export class Listing {
       this.description,
       this.viewCount,
       this.favoriteCount,
+      this.acceptsExchange,
+      this.installmentAvailable,
       this.createdAt,
       new Date(),
     );
@@ -200,6 +208,8 @@ export class Listing {
       this.description,
       this.viewCount,
       this.favoriteCount,
+      this.acceptsExchange,
+      this.installmentAvailable,
       this.createdAt,
       new Date(),
     );
@@ -243,6 +253,8 @@ export class Listing {
       this.description,
       this.viewCount,
       this.favoriteCount,
+      this.acceptsExchange,
+      this.installmentAvailable,
       this.createdAt,
       new Date(),
     );
@@ -280,6 +292,8 @@ export class Listing {
       this.description,
       this.viewCount,
       this.favoriteCount,
+      this.acceptsExchange,
+      this.installmentAvailable,
       this.createdAt,
       new Date(),
     );

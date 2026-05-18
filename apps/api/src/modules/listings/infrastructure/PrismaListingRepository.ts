@@ -43,6 +43,8 @@ export class PrismaListingRepository implements ListingRepository {
         mileageKm: n(listing.mileageKm),
         locationText: n(listing.locationText),
         description: n(listing.description),
+        acceptsExchange: listing.acceptsExchange,
+        installmentAvailable: listing.installmentAvailable,
         viewCount: listing.viewCount,
         favoriteCount: listing.favoriteCount,
         createdAt: listing.createdAt,
@@ -117,6 +119,8 @@ export class PrismaListingRepository implements ListingRepository {
         mileageKm: n(listing.mileageKm),
         locationText: n(listing.locationText),
         description: n(listing.description),
+        acceptsExchange: listing.acceptsExchange,
+        installmentAvailable: listing.installmentAvailable,
         viewCount: listing.viewCount,
         favoriteCount: listing.favoriteCount,
       },
@@ -162,6 +166,8 @@ export class PrismaListingRepository implements ListingRepository {
     description: string | null;
     viewCount: number;
     favoriteCount: number;
+    acceptsExchange: boolean;
+    installmentAvailable: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): Listing {
@@ -198,6 +204,8 @@ export class PrismaListingRepository implements ListingRepository {
       ...(row.mileageKm ? { mileageKm: row.mileageKm } : {}),
       ...(row.locationText ? { locationText: row.locationText } : {}),
       ...(row.description ? { description: row.description } : {}),
+      acceptsExchange: row.acceptsExchange,
+      installmentAvailable: row.installmentAvailable,
     });
   }
 }
