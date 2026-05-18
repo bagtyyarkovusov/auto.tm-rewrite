@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import {
   S3Client,
   PutObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -67,5 +68,20 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
     // Bucket is encoded in the key prefix for pending uploads;
     // for attached media the key includes the full path.
     return `${this.endpoint}/${key}`;
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    const bucket = key.startsWith("pending/")
+      ? key.includes(".mp4")
+        ? "listing-videos"
+        : "listing-photos"
+      : "listing-photos";
+
+    await this.s3.send(
+      new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
   }
 }

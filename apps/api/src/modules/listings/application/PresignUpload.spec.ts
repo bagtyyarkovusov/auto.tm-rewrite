@@ -19,6 +19,8 @@ class FakeMediaStorage implements MediaStoragePort {
   resolvePublicUrl(_key: string): string {
     return `https://media.auto.tm/${_key}`;
   }
+
+  async deleteObject(_key: string): Promise<void> {}
 }
 
 function makeUseCase(storage?: FakeMediaStorage) {

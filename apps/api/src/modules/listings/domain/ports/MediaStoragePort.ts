@@ -7,6 +7,8 @@ export interface MediaStoragePort {
   }): Promise<{ url: string; key: string }>;
 
   resolvePublicUrl(key: string): string;
+
+  deleteObject(key: string): Promise<void>;
 }
 
 export const MEDIA_STORAGE_PORT = Symbol("MediaStoragePort");

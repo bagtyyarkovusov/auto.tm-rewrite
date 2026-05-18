@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Body,
   Req,
   BadRequestException,
@@ -19,6 +20,9 @@ import { EditListing } from "../application/EditListing";
 import { MarkSold } from "../application/MarkSold";
 import { PublishListing } from "../application/PublishListing";
 import { RepublishListing } from "../application/RepublishListing";
+import { AttachMedia } from "../application/AttachMedia";
+import { RemoveMedia } from "../application/RemoveMedia";
+import { ReorderMedia } from "../application/ReorderMedia";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import { z } from "zod";
 
@@ -31,6 +35,9 @@ export class ListingsController {
     @Inject(RepublishListing) private readonly republishListingUC: RepublishListing,
     @Inject(DeleteListing) private readonly deleteListingUC: DeleteListing,
     @Inject(EditListing) private readonly editListingUC: EditListing,
+    @Inject(AttachMedia) private readonly attachMediaUC: AttachMedia,
+    @Inject(RemoveMedia) private readonly removeMediaUC: RemoveMedia,
+    @Inject(ReorderMedia) private readonly reorderMediaUC: ReorderMedia,
   ) {}
 
   @Public()
@@ -171,6 +178,92 @@ export class ListingsController {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
 
     await this.deleteListingUC.execute({ listingId, userId });
+
+    return { success: true };
+  }
+
+  @Post(":id/media/attach")
+  async attachMedia(
+    @Param("id") listingId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    let parsed: typeof ListingsSchemas.AttachMediaRequestSchema._type;
+    try {
+      parsed = ListingsSchemas.AttachMediaRequestSchema.parse(body);
+    } catch (err) {
+      if (err && typeof err === "object" && "issues" in err) {
+        const zodError = err as z.ZodError;
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "Invalid request body",
+          details: zodError.flatten(),
+        });
+      }
+      throw err;
+    }
+
+    const result = await this.attachMediaUC.execute({
+      listingId,
+      userId,
+      ...parsed,
+    });
+
+    return {
+      id: result.media.id,
+      listingId: result.media.listingId,
+      kind: result.media.kind,
+      key: result.media.key,
+      sortOrder: result.media.sortOrder,
+      width: result.media.width,
+      height: result.media.height,
+      durationMs: result.media.durationMs,
+      posterKey: result.media.posterKey,
+      createdAt: result.media.createdAt.toISOString(),
+    };
+  }
+
+  @Delete(":id/media/:mediaId")
+  async removeMedia(
+    @Param("id") listingId: string,
+    @Param("mediaId") mediaId: string,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = (req as { user?: { sub: string } }).user?.sub as string;
+
+    await this.removeMediaUC.execute({ listingId, mediaId, userId });
+
+    return { success: true };
+  }
+
+  @Put(":id/media/order")
+  async reorderMedia(
+    @Param("id") listingId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    let parsed: typeof ListingsSchemas.ReorderMediaRequestSchema._type;
+    try {
+      parsed = ListingsSchemas.ReorderMediaRequestSchema.parse(body);
+    } catch (err) {
+      if (err && typeof err === "object" && "issues" in err) {
+        const zodError = err as z.ZodError;
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "Invalid request body",
+          details: zodError.flatten(),
+        });
+      }
+      throw err;
+    }
+
+    await this.reorderMediaUC.execute({
+      listingId,
+      userId,
+      ordering: parsed.ordering,
+    });
 
     return { success: true };
   }
