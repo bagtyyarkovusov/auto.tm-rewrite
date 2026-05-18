@@ -45,9 +45,9 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 
 - `apps/api/src/modules/listings/`:
   - `domain/` — **6 entities + types + 10 ports** (S4 #86)
-  - `application/` — 10 use-cases (S4 #88, #89): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`
+  - `application/` — 11 use-cases (S4 #88, #89, #90): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`
   - `infrastructure/` — 8 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaExchangeRateRepository` (S4 #89), `MinioMediaStorageAdapter` (S4 #88)
-  - `presentation/listings.controller.ts` — public feed stub + 5 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`)
+  - `presentation/listings.controller.ts` — public feed stub + 6 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`, `edit`)
   - `presentation/DraftsController.ts` — draft CRUD + list my drafts
   - `presentation/UploadsController.ts` — presign upload endpoint
   - `listings.module.ts` — registers null/sync adapters, repositories, and use-cases with DI tokens
@@ -90,7 +90,7 @@ Repository ports (consumed only within `listings/`):
 - `RepublishListing` — `archived → active`, writes `listing.republished` audit log
 - `DeleteListing` — soft-delete, preserves media rows, writes `listing.deleted` audit log, emits `ListingDeleted`
 
-Remaining S4 use-cases in #90-#92: `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
+Remaining S4 use-cases in #91-#92: `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
 
 ## HTTP routes
 
@@ -102,6 +102,7 @@ Remaining S4 use-cases in #90-#92: `EditListing`, `AttachMedia`, `RemoveMedia`, 
 | GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
 | POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
 | POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |
+| PATCH | `/api/v1/listings/:id` | Required (owner) | `EditListing` |
 | POST | `/api/v1/listings/:id/sold` | Required | `MarkSold` |
 | POST | `/api/v1/listings/:id/archive` | Required | `ArchiveListing` |
 | POST | `/api/v1/listings/:id/republish` | Required | `RepublishListing` |
@@ -110,11 +111,9 @@ Remaining S4 use-cases in #90-#92: `EditListing`, `AttachMedia`, `RemoveMedia`, 
 ## Events emitted
 
 - `ListingCreated` — emitted by `PublishListing` after transaction commit (no in-process consumers in S4; S5 subscriptions will consume)
+- `ListingUpdated` — emitted by `EditListing` after successful patch (no in-process consumers in S4)
 - `ListingSold` — emitted by `MarkSold` after DB update (no in-process consumers in S4; S7 conversations will consume)
 - `ListingDeleted` — emitted by `DeleteListing` after soft-delete (no in-process consumers in S4)
-
-Future events (not yet emitted):
-- `ListingUpdated` — will be emitted by `EditListing` (#90)
 
 ## Events consumed
 
@@ -123,13 +122,11 @@ Future events (not yet emitted):
 ## Audit log actions written
 
 - `listing.published` — `{ brandId, modelId, cityId, priceAmount, priceCurrency }`
+- `listing.price_changed` — `{ oldPriceAmount, oldPriceCurrency, newPriceAmount, newPriceCurrency }`
 - `listing.marked_sold` — `{ priceAmount, priceCurrency, daysActive }`
 - `listing.archived` — `{ previousStatus }`
 - `listing.republished` — `{ previousArchivedAt }`
 - `listing.deleted` — `{ status, mediaCount }`
-
-Future audit actions:
-- `listing.price_changed` — will be written by `EditListing` (#90)
 
 ## Planned additions (future sprints)
 

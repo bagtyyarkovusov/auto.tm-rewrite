@@ -23,6 +23,7 @@ import { MarkSold } from "./application/MarkSold";
 import { ArchiveListing } from "./application/ArchiveListing";
 import { RepublishListing } from "./application/RepublishListing";
 import { DeleteListing } from "./application/DeleteListing";
+import { EditListing } from "./application/EditListing";
 import { VIN_DECODER_PORT } from "./domain/ports/VinDecoderPort";
 import { MEDIA_CONTENT_CLASSIFIER_PORT } from "./domain/ports/MediaContentClassifierPort";
 import { FEED_RANKING_PORT } from "./domain/ports/FeedRankingPort";
@@ -91,6 +92,7 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
     ArchiveListing,
     RepublishListing,
     DeleteListing,
+    EditListing,
   ],
   exports: [
     VIN_DECODER_PORT,

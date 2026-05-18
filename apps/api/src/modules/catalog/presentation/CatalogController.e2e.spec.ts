@@ -37,6 +37,8 @@ describe("CatalogController e2e", () => {
   });
 
   beforeEach(async () => {
+    await prisma.listingMedia.deleteMany();
+    await prisma.listing.deleteMany();
     await prisma.generation.deleteMany();
     await prisma.model.deleteMany();
     await prisma.brand.deleteMany();
