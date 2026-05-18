@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 
 import { PrismaModule } from "../../common/prisma.module";
 
@@ -49,7 +50,7 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
 import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, EventEmitterModule],
   controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController],
   providers: [
     // Infrastructure adapters
