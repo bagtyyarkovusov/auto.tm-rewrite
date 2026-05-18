@@ -47,6 +47,8 @@ describe("AdminCatalogController e2e", () => {
 
   beforeEach(async () => {
     await prisma.auditLog.deleteMany();
+    await prisma.listingMedia.deleteMany();
+    await prisma.listing.deleteMany();
     await prisma.model.deleteMany();
     await prisma.brand.deleteMany();
     await prisma.user.deleteMany();

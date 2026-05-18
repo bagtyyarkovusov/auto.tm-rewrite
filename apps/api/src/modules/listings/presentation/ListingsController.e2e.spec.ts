@@ -299,6 +299,101 @@ describe("ListingsController e2e", () => {
       expect(mediaAfter).toHaveLength(1);
     });
 
+  describe("PATCH /api/v1/listings/:id", () => {
+    it("edits a listing's description", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const editRes = await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ description: "Updated description" })
+        .expect(200);
+
+      expect(editRes.body.description).toBe("Updated description");
+      expect(editRes.body.id).toBe(listingId);
+    });
+
+    it("writes price_changed audit log on price update", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ priceAmount: 200000 })
+        .expect(200);
+
+      const audit = await prisma.auditLog.findFirst({
+        where: { action: "listing.price_changed", targetId: listingId },
+      });
+      expect(audit).not.toBeNull();
+      expect(audit?.details).toMatchObject({
+        oldPriceAmount: 100000,
+        oldPriceCurrency: "TMT",
+        newPriceAmount: 200000,
+        newPriceCurrency: "TMT",
+      });
+    });
+
+    it("rejects locked field changes", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const res = await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ brandId: "00000000-0000-0000-0000-000000000099" })
+        .expect(400);
+
+      expect(res.body.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("returns 404 for another user's listing", async () => {
+      await seedCatalog();
+      const token1 = await createUser("user-1");
+      const token2 = await createUser("user-2");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token1}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token2}`)
+        .send({ description: "Should not work" })
+        .expect(404);
+    });
+  });
+
     it("returns 403 when trying to modify another user's listing", async () => {
       await seedCatalog();
       const token1 = await createUser("user-1");
