@@ -58,7 +58,7 @@ export default function Step2Photos({
 }: Step2PhotosProps) {
   const pickFromLibrary = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ["images"],
       allowsMultipleSelection: true,
       quality: 1,
     });
@@ -71,7 +71,7 @@ export default function Step2Photos({
 
   const takePhoto = useCallback(async () => {
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ["images"],
       quality: 1,
     });
     if (!result.canceled && result.assets[0]) {
