@@ -10,16 +10,20 @@ vi.mock("expo-image-manipulator", () => ({
 vi.mock("expo-file-system/legacy", () => ({
   getInfoAsync: vi.fn(),
   moveAsync: vi.fn(),
+  copyAsync: vi.fn(),
+  deleteAsync: vi.fn(),
 }));
 
 import { ImageManipulator } from "expo-image-manipulator";
-import { getInfoAsync, moveAsync } from "expo-file-system/legacy";
+import { getInfoAsync, moveAsync, copyAsync, deleteAsync } from "expo-file-system/legacy";
 
 import { compressPhoto, CompressionError } from "./compressor";
 
 const mockManipulate = vi.mocked(ImageManipulator.manipulate);
 const mockGetInfoAsync = vi.mocked(getInfoAsync);
 const mockMoveAsync = vi.mocked(moveAsync);
+const mockCopyAsync = vi.mocked(copyAsync);
+const mockDeleteAsync = vi.mocked(deleteAsync);
 
 function mockManipulatorChain(result: { uri: string; width: number; height: number }) {
   const saveAsync = vi.fn().mockResolvedValue(result);
@@ -30,6 +34,27 @@ function mockManipulatorChain(result: { uri: string; width: number; height: numb
   };
   mockManipulate.mockReturnValueOnce(context as unknown as ReturnType<typeof ImageManipulator.manipulate>);
   return context;
+}
+
+function setupHappyPath(finalUri: string, destExists = true) {
+  mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
+  mockManipulatorChain({ uri: finalUri, width: 1000, height: 800 });
+  mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
+  if (destExists) {
+    mockGetInfoAsync.mockResolvedValueOnce({
+      exists: true,
+      uri: "",
+      size: 1024,
+      isDirectory: false,
+      modificationTime: 0,
+    });
+  } else {
+    mockGetInfoAsync.mockResolvedValueOnce({
+      exists: false,
+      uri: "",
+      isDirectory: false,
+    });
+  }
 }
 
 describe("compressPhoto", () => {
@@ -53,14 +78,7 @@ describe("compressPhoto", () => {
   });
 
   it("calls ImageManipulator.manipulate with max 2400px width and JPEG quality 0.8", async () => {
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockManipulatorChain({
-      uri: "file:///tmp/compressed.jpg",
-      width: 1000,
-      height: 800,
-    });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
+    setupHappyPath("file:///tmp/compressed.jpg");
 
     await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
 
@@ -94,14 +112,7 @@ describe("compressPhoto", () => {
   });
 
   it("moves file to destination when different", async () => {
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockManipulatorChain({
-      uri: "file:///tmp/compressed.jpg",
-      width: 1000,
-      height: 800,
-    });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
+    setupHappyPath("file:///tmp/compressed.jpg");
 
     await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
 
@@ -112,29 +123,17 @@ describe("compressPhoto", () => {
   });
 
   it("does not move file when destination matches", async () => {
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockManipulatorChain({
-      uri: "file:///tmp/dest.jpg",
-      width: 1000,
-      height: 800,
-    });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
+    setupHappyPath("file:///tmp/dest.jpg");
 
     await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
 
     expect(mockMoveAsync).not.toHaveBeenCalled();
+    expect(mockCopyAsync).not.toHaveBeenCalled();
+    expect(mockDeleteAsync).not.toHaveBeenCalled();
   });
 
   it("throws CompressionError when destination file is missing after move", async () => {
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockManipulatorChain({
-      uri: "file:///tmp/compressed.jpg",
-      width: 1000,
-      height: 800,
-    });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
-    mockGetInfoAsync.mockResolvedValueOnce({ exists: false, uri: "", isDirectory: false });
+    setupHappyPath("file:///tmp/compressed.jpg", false);
 
     await expect(
       compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg"),
@@ -143,5 +142,66 @@ describe("compressPhoto", () => {
       expect((err as CompressionError).code).toBe("DESTINATION_MISSING");
       return true;
     });
+  });
+
+  it("falls back to copyAsync when moveAsync fails", async () => {
+    setupHappyPath("file:///tmp/compressed.jpg");
+    mockMoveAsync.mockRejectedValueOnce(new Error("Disk full"));
+
+    await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
+
+    expect(mockMoveAsync).toHaveBeenCalledWith({
+      from: "file:///tmp/compressed.jpg",
+      to: "file:///tmp/dest.jpg",
+    });
+    expect(mockCopyAsync).toHaveBeenCalledWith({
+      from: "file:///tmp/compressed.jpg",
+      to: "file:///tmp/dest.jpg",
+    });
+  });
+
+  it("cleans up source file after successful move", async () => {
+    setupHappyPath("file:///tmp/compressed.jpg");
+
+    await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
+
+    expect(mockDeleteAsync).toHaveBeenCalledWith("file:///tmp/compressed.jpg", { idempotent: true });
+  });
+
+  it("cleans up source file after successful copy fallback", async () => {
+    setupHappyPath("file:///tmp/compressed.jpg");
+    mockMoveAsync.mockRejectedValueOnce(new Error("Disk full"));
+
+    await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
+
+    expect(mockDeleteAsync).toHaveBeenCalledWith("file:///tmp/compressed.jpg", { idempotent: true });
+  });
+
+  it("throws DESTINATION_MISSING when both moveAsync and copyAsync fail", async () => {
+    setupHappyPath("file:///tmp/compressed.jpg");
+    mockMoveAsync.mockRejectedValueOnce(new Error("Disk full"));
+    mockCopyAsync.mockRejectedValueOnce(new Error("Permission denied"));
+
+    await expect(
+      compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg"),
+    ).rejects.toSatisfy((err: unknown) => {
+      expect(err).toBeInstanceOf(CompressionError);
+      expect((err as CompressionError).code).toBe("DESTINATION_MISSING");
+      expect((err as CompressionError).message).toBe(
+        "Failed to transfer compressed photo to staging — disk full or permission denied",
+      );
+      return true;
+    });
+
+    expect(mockDeleteAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when deleteAsync fails after successful move", async () => {
+    setupHappyPath("file:///tmp/compressed.jpg");
+    mockDeleteAsync.mockRejectedValueOnce(new Error("Cleanup failed"));
+
+    await expect(
+      compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg"),
+    ).resolves.toBeDefined();
   });
 });

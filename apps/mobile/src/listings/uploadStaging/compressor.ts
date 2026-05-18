@@ -63,14 +63,31 @@ export async function compressPhoto(
 
     // Move to destination if different
     if (finalUri !== destinationUri) {
-      await FileSystem.moveAsync({ from: finalUri, to: destinationUri });
+      try {
+        await FileSystem.moveAsync({ from: finalUri, to: destinationUri });
+      } catch {
+        try {
+          await FileSystem.copyAsync({ from: finalUri, to: destinationUri });
+        } catch {
+          throw new CompressionError(
+            "Failed to transfer compressed photo to staging — disk full or permission denied",
+            "DESTINATION_MISSING",
+          );
+        }
+      }
+      // Clean up source (cache) file after successful move or copy
+      try {
+        await FileSystem.deleteAsync(finalUri, { idempotent: true });
+      } catch {
+        // Best-effort cleanup; don't fail compression if delete fails
+      }
     }
 
-    // Checkpoint 2: verify destination file exists after move
+    // Checkpoint 2: verify destination file exists after move/copy
     const destInfo = await FileSystem.getInfoAsync(destinationUri);
     if (!destInfo.exists) {
       throw new CompressionError(
-        "Photo file missing — please remove and re-select",
+        "Photo file missing after transfer — please remove and re-select",
         "DESTINATION_MISSING",
       );
     }
