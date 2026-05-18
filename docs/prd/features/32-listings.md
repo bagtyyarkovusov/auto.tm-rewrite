@@ -114,3 +114,16 @@ Drafts auto-saved on every step. Resume on next visit. Cancel discards (with con
 - Auto-archive policy for `active` listings older than X months — yes or no?
 - Should the seller be able to hide their phone number until the buyer messages? (Auto.ru does this — "защищён" badge)
 - Photo watermarking — Phase 2 once we have AutoTM-staffed media
+
+### Trust + moderation signals (surfaced during pre-S4 grill 2026-05-18)
+
+These are future product capabilities — most map to Phase 2 trust-layer work alongside inspection reports. Captured here so the foundation laid in S4 (audit log, port abstractions, `pending_review` enum value) supports them cleanly when their sprints arrive.
+
+- **Flipper / re-seller detection** — Auto.ru exposes "active listings count" + "listings history" + "average time-to-sell" on the seller profile page so buyers can self-detect flippers. AutoTM equivalent should ship in Phase 2 when seller profile pages exist (likely S9 admin + S15 trust polish). No explicit "flipper" label — let data speak.
+- **"First owner" claim** — Seller self-declares «первый хозяин» equivalent in the wizard; admin verifies post-hoc via registration documents or trust signals. Buyer-side filter in S5 if added. Implementation: `Listing.isFirstOwner: Boolean @default(false)` + admin verification flag.
+- **Phone-number-reuse detection** — "5 other listings from this phone number" surfaced on listing detail (Auto.ru pattern). Phase 2 candidate; uses `Listing.contactPhone ?? seller.phoneE164` as the key. Strong flipper signal.
+- **Edit-triggered re-review** — Auto.ru flags edits that change >50% of photos, drop price >30% in 24h, or rewrite >50% of description. AutoTM equivalent should land in Phase 2 alongside trust tiers. S4's AuditLog scope captures price changes + state transitions; Phase 2 needs to add audit entries for media operations + description edits to enable detection.
+- **Inspected-listing edit policy** — When trust tier exists (Phase 2 inspection reports), structural edits (specs, condition, photos) should invalidate the tier until re-inspection; metadata edits (price, description) should not. Decide policy when S11-S15 plan.
+- **Inappropriate / non-car photo screening** — Phase 1 auto-publishes everything; reactive moderation only via S9. Phase 2 should add self-hosted ML screening: NudeNet for NSFW, YOLO or CLIP for car-detection, pHash for stolen-photo detection (all offline-compatible per air-gap constraint). Implementation: `MediaContentClassifierPort` ships in S4 with `NullContentClassifier` adapter; Phase 2 swaps in `MlContentClassifier`. Failed classifications transition listing to `pending_review` status (enum value already in schema).
+- **Stolen photo detection** — Auto.ru fingerprints photos via perceptual hashing (pHash) to catch reuse across listings. Self-hostable. Phase 2 candidate; companion to NSFW classifier.
+- **Reporting flow** — "Report this listing" button on listing detail page + `POST /listings/:id/report` endpoint + admin queue + `ListingReported` event. Ships in S9 alongside `reported`/`banned` status activation.
