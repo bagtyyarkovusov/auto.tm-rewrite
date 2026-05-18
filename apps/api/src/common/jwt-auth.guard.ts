@@ -37,7 +37,9 @@ export class JwtAuthGuard implements CanActivate {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify req augmentation
       (request as any).user = payload;
       return true;
-    } catch {
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[JwtAuthGuard] token verification failed:", (err as Error).message);
       throw new UnauthorizedException("Invalid or expired token");
     }
   }
