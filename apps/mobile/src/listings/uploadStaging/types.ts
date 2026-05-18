@@ -9,6 +9,21 @@ export type PhotoState =
   | "waiting_for_network"
   | "lost";
 
+export type UploadErrorCode =
+  | "PRESIGN_FAILED"
+  | "PUT_FAILED"
+  | "LOCAL_FILE_MISSING"
+  | "NETWORK_ERROR"
+  | "RATE_LIMITED"
+  | "COMPRESSION_FAILED"
+  | "UNKNOWN";
+
+export interface UploadError {
+  code: UploadErrorCode;
+  message: string;
+  retryable: boolean;
+}
+
 export interface StagedPhoto {
   photoId: string;
   localUri?: string;
@@ -20,7 +35,7 @@ export interface StagedPhoto {
   fileSize?: number;
   sortOrder: number;
   retryCount: number;
-  error?: string;
+  error?: UploadError;
 }
 
 export interface UploadQueue {

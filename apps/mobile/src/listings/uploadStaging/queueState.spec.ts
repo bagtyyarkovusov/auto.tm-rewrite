@@ -6,8 +6,9 @@ import {
   updatePhotoState,
   removePhotoFromQueue,
   reorderPhotos,
+  isRetryable,
 } from "./queueState";
-import type { StagedPhoto, UploadQueue } from "./types";
+import type { StagedPhoto, UploadQueue, UploadError } from "./types";
 
 function makeQueue(photos: StagedPhoto[]): UploadQueue {
   return { draftId: "draft-1", photos };
@@ -21,6 +22,10 @@ function makePhoto(overrides: Partial<StagedPhoto> = {}): StagedPhoto {
     retryCount: 0,
     ...overrides,
   };
+}
+
+function makeError(code: UploadError["code"], retryable: boolean): UploadError {
+  return { code, message: "test error", retryable };
 }
 
 describe("computePublishGate", () => {
@@ -141,5 +146,23 @@ describe("reorderPhotos", () => {
     expect(result.photos[1]?.sortOrder).toBe(1);
     expect(result.photos[2]?.photoId).toBe("p2");
     expect(result.photos[2]?.sortOrder).toBe(2);
+  });
+});
+
+describe("isRetryable", () => {
+  it("returns true when error is undefined", () => {
+    expect(isRetryable(undefined)).toBe(true);
+  });
+
+  it("returns true for retryable errors", () => {
+    expect(isRetryable(makeError("NETWORK_ERROR", true))).toBe(true);
+    expect(isRetryable(makeError("PRESIGN_FAILED", true))).toBe(true);
+    expect(isRetryable(makeError("PUT_FAILED", true))).toBe(true);
+    expect(isRetryable(makeError("RATE_LIMITED", true))).toBe(true);
+  });
+
+  it("returns false for non-retryable errors", () => {
+    expect(isRetryable(makeError("LOCAL_FILE_MISSING", false))).toBe(false);
+    expect(isRetryable(makeError("COMPRESSION_FAILED", false))).toBe(false);
   });
 });

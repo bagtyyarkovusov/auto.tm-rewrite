@@ -14,6 +14,7 @@ import {
   RefreshCw,
   MoreVertical,
   Image as ImageIcon,
+  X,
 } from "lucide-react-native";
 
 import type { StagedPhoto } from "../uploadStaging/types";
@@ -220,14 +221,27 @@ export default function Step2Photos({
             {photo.state === "failed" && (
               <Pressable
                 className="absolute inset-0 items-center justify-center bg-black/50"
-                onPress={() => onRetryPhoto(photo.photoId)}
+                onPress={() => {
+                  if (photo.error?.retryable !== false) {
+                    onRetryPhoto(photo.photoId);
+                  }
+                }}
               >
                 <View className="items-center gap-1">
-                  <Icon as={RefreshCw} className="size-6 text-white" />
-                  <Text className="text-xs text-white">Retry</Text>
+                  {photo.error?.retryable === false ? (
+                    <>
+                      <Icon as={X} className="size-6 text-red-400" />
+                      <Text className="text-xs text-red-400">Failed</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Icon as={RefreshCw} className="size-6 text-white" />
+                      <Text className="text-xs text-white">Retry</Text>
+                    </>
+                  )}
                   {photo.error && (
                     <Text className="px-2 text-center text-[10px] text-white/80">
-                      {photo.error}
+                      {photo.error.message}
                     </Text>
                   )}
                 </View>
