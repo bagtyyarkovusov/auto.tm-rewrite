@@ -57,3 +57,10 @@ export const Locale = {
   En: "en",
 } as const;
 export type Locale = (typeof Locale)[keyof typeof Locale];
+
+export const ListingCondition = {
+  New: "new",
+  Used: "used",
+} as const;
+export type ListingCondition =
+  (typeof ListingCondition)[keyof typeof ListingCondition];

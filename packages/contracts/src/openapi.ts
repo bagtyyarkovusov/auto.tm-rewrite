@@ -36,6 +36,30 @@ import {
   UpdateModelRequestSchema,
   DeleteModelParamSchema,
 } from "./schemas/catalog";
+import {
+  ListingSummarySchema,
+  ListingDetailSchema,
+  ListingMediaSchema,
+  ListingDraftSchema,
+  ListingDraftPayloadSchema,
+  CreateDraftRequestSchema,
+  UpdateDraftRequestSchema,
+  PublishListingRequestSchema,
+  EditListingRequestSchema,
+  AttachMediaRequestSchema,
+  ReorderMediaRequestSchema,
+  FeedResponseSchema,
+  MyListingsResponseSchema,
+  MyDraftsResponseSchema,
+} from "./schemas/listings";
+import {
+  PresignRequestSchema,
+  PresignResponseSchema,
+} from "./schemas/uploads";
+import {
+  ExchangeRateSchema,
+  ExchangeRatesResponseSchema,
+} from "./schemas/exchange-rates";
 
 // exactOptionalPropertyTypes: true in tsconfig conflicts with zod-to-openapi's
 // SchemaObject type (Zod nullable() method vs SchemaObject nullable: boolean).
@@ -69,6 +93,30 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.registerComponent("schemas", "CreateModelRequest", S(CreateModelRequestSchema));
   registry.registerComponent("schemas", "UpdateModelRequest", S(UpdateModelRequestSchema));
   registry.registerComponent("schemas", "DeleteModelParam", S(DeleteModelParamSchema));
+
+  // Listings schemas
+  registry.registerComponent("schemas", "ListingSummary", S(ListingSummarySchema));
+  registry.registerComponent("schemas", "ListingDetail", S(ListingDetailSchema));
+  registry.registerComponent("schemas", "ListingMedia", S(ListingMediaSchema));
+  registry.registerComponent("schemas", "ListingDraft", S(ListingDraftSchema));
+  registry.registerComponent("schemas", "ListingDraftPayload", S(ListingDraftPayloadSchema));
+  registry.registerComponent("schemas", "CreateDraftRequest", S(CreateDraftRequestSchema));
+  registry.registerComponent("schemas", "UpdateDraftRequest", S(UpdateDraftRequestSchema));
+  registry.registerComponent("schemas", "PublishListingRequest", S(PublishListingRequestSchema));
+  registry.registerComponent("schemas", "EditListingRequest", S(EditListingRequestSchema));
+  registry.registerComponent("schemas", "AttachMediaRequest", S(AttachMediaRequestSchema));
+  registry.registerComponent("schemas", "ReorderMediaRequest", S(ReorderMediaRequestSchema));
+  registry.registerComponent("schemas", "FeedResponse", S(FeedResponseSchema));
+  registry.registerComponent("schemas", "MyListingsResponse", S(MyListingsResponseSchema));
+  registry.registerComponent("schemas", "MyDraftsResponse", S(MyDraftsResponseSchema));
+
+  // Uploads schemas
+  registry.registerComponent("schemas", "PresignRequest", S(PresignRequestSchema));
+  registry.registerComponent("schemas", "PresignResponse", S(PresignResponseSchema));
+
+  // Exchange-rates schemas
+  registry.registerComponent("schemas", "ExchangeRate", S(ExchangeRateSchema));
+  registry.registerComponent("schemas", "ExchangeRatesResponse", S(ExchangeRatesResponseSchema));
 
   registry.registerPath({
     method: "post",
