@@ -45,6 +45,13 @@ class FakeExchangeRatePort implements ExchangeRatePort {
     if (from === to) return 1;
     return this.rates[`${from}_${to}`] ?? 0;
   }
+
+  async listAll() {
+    return Object.entries(this.rates).map(([key, rate]) => {
+      const [fromCurrency, toCurrency] = key.split("_") as ["TMT" | "USD" | "AED", "TMT" | "USD" | "AED"];
+      return { fromCurrency, toCurrency, rate, updatedAt: new Date() };
+    });
+  }
 }
 
 class FakeEventPublisher implements ListingEventPublisher {

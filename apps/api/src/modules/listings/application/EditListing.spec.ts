@@ -73,6 +73,13 @@ class FakeExchangeRatePort implements ExchangeRatePort {
     return this.rates[`${from}:${to}`] ?? 0;
   }
 
+  async listAll() {
+    return Object.entries(this.rates).map(([key, rate]) => {
+      const [fromCurrency, toCurrency] = key.split(":") as ["TMT" | "USD" | "AED", "TMT" | "USD" | "AED"];
+      return { fromCurrency, toCurrency, rate, updatedAt: new Date() };
+    });
+  }
+
   seed(from: string, to: string, rate: number) {
     this.rates[`${from}:${to}`] = rate;
   }

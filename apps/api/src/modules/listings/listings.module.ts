@@ -5,6 +5,8 @@ import { PrismaModule } from "../../common/prisma.module";
 import { ListingsController } from "./presentation/listings.controller";
 import { DraftsController } from "./presentation/DraftsController";
 import { UploadsController } from "./presentation/UploadsController";
+import { MyListingsController } from "./presentation/MyListingsController";
+import { ExchangeRatesController } from "./presentation/ExchangeRatesController";
 import { NullVinDecoder } from "./infrastructure/NullVinDecoder";
 import { NullContentClassifier } from "./infrastructure/NullContentClassifier";
 import { ChronologicalRankingAdapter } from "./infrastructure/ChronologicalRankingAdapter";
@@ -13,6 +15,7 @@ import { PrismaListingDraftRepository } from "./infrastructure/PrismaListingDraf
 import { PrismaListingRepository } from "./infrastructure/PrismaListingRepository";
 import { PrismaListingMediaRepository } from "./infrastructure/PrismaListingMediaRepository";
 import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRateRepository";
+import { PrismaListingsReadRepository } from "./infrastructure/PrismaListingsReadRepository";
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
@@ -29,6 +32,10 @@ import { EditListing } from "./application/EditListing";
 import { AttachMedia } from "./application/AttachMedia";
 import { RemoveMedia } from "./application/RemoveMedia";
 import { ReorderMedia } from "./application/ReorderMedia";
+import { GetListingDetail } from "./application/GetListingDetail";
+import { ListFeed } from "./application/ListFeed";
+import { ListMyListings } from "./application/ListMyListings";
+import { GetExchangeRates } from "./application/GetExchangeRates";
 import { VIN_DECODER_PORT } from "./domain/ports/VinDecoderPort";
 import { MEDIA_CONTENT_CLASSIFIER_PORT } from "./domain/ports/MediaContentClassifierPort";
 import { FEED_RANKING_PORT } from "./domain/ports/FeedRankingPort";
@@ -39,10 +46,11 @@ import { LISTING_MEDIA_REPOSITORY } from "./domain/ports/ListingMediaRepository"
 import { IMAGE_VARIANT_GENERATOR } from "./domain/ports/ImageVariantGenerator";
 import { EXCHANGE_RATE_PORT } from "./domain/ports/ExchangeRatePort";
 import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
+import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
 
 @Module({
   imports: [PrismaModule],
-  controllers: [ListingsController, DraftsController, UploadsController],
+  controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController],
   providers: [
     // Infrastructure adapters
     NullVinDecoder,
@@ -53,6 +61,7 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
     PrismaListingRepository,
     PrismaListingMediaRepository,
     PrismaExchangeRateRepository,
+    PrismaListingsReadRepository,
     MinioMediaStorageAdapter,
     SharpImageVariantGenerator,
 
@@ -97,6 +106,10 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
       provide: IMAGE_VARIANT_GENERATOR,
       useClass: SharpImageVariantGenerator,
     },
+    {
+      provide: LISTINGS_READ_PORT,
+      useClass: PrismaListingsReadRepository,
+    },
 
     // Application use-cases
     CreateDraft,
@@ -113,6 +126,10 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
     AttachMedia,
     RemoveMedia,
     ReorderMedia,
+    GetListingDetail,
+    ListFeed,
+    ListMyListings,
+    GetExchangeRates,
   ],
   exports: [
     VIN_DECODER_PORT,
@@ -125,6 +142,7 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
     IMAGE_VARIANT_GENERATOR,
     EXCHANGE_RATE_PORT,
     MEDIA_STORAGE_PORT,
+    LISTINGS_READ_PORT,
   ],
 })
 export class ListingsModule {}

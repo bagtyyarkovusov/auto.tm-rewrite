@@ -45,11 +45,13 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 
 - `apps/api/src/modules/listings/`:
   - `domain/` — **6 entities + types + 10 ports** (S4 #86)
-  - `application/` — 14 use-cases (S4 #88, #89, #90, #91): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`
-  - `infrastructure/` — 10 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
-  - `presentation/listings.controller.ts` — public feed stub + 6 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`, `edit`)
+  - `application/` — 18 use-cases (S4 #88-#92): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
+  - `infrastructure/` — 12 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (full implementation per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md)), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `PrismaListingsReadRepository` (cross-context read surface), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
+  - `presentation/listings.controller.ts` — public feed + detail + 6 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`, `edit`)
   - `presentation/DraftsController.ts` — draft CRUD + list my drafts
   - `presentation/UploadsController.ts` — presign upload endpoint
+  - `presentation/MyListingsController.ts` — `/me/listings` (owner-scoped)
+  - `presentation/ExchangeRatesController.ts` — `/exchange-rates` (public)
   - `listings.module.ts` — registers null/sync adapters, repositories, and use-cases with DI tokens
 
 ## Ports exposed
@@ -61,7 +63,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 | `MediaContentClassifierPort` | `MEDIA_CONTENT_CLASSIFIER_PORT` | `domain/ports/MediaContentClassifierPort.ts` | Internal: `AttachMedia` use-case |
 | `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` | Internal: `AttachMedia` use-case |
 | `FeedRankingPort` | `FEED_RANKING_PORT` | `domain/ports/FeedRankingPort.ts` | Internal: `ListFeed` use-case |
-| `ExchangeRatePort` | `EXCHANGE_RATE_PORT` | `domain/ports/ExchangeRatePort.ts` | Internal: `PublishListing`, `ListFeed`, `GetListingDetail` |
+| `ExchangeRatePort` | `EXCHANGE_RATE_PORT` | `domain/ports/ExchangeRatePort.ts` | Internal: `PublishListing`, `ListFeed`, `GetListingDetail`, `GetExchangeRates` |
 | `MediaStoragePort` | `MEDIA_STORAGE_PORT` | `domain/ports/MediaStoragePort.ts` | Internal: `PresignUpload`, `AttachMedia` |
 | `ListingEventPublisher` | `LISTING_EVENT_PUBLISHER` | `domain/ports/ListingEventPublisher.ts` | Internal: state-transition use-cases |
 
@@ -104,7 +106,11 @@ Remaining S4 use-cases in #92: `GetListingDetail`, `ListFeed`, `ListMyListings`,
 | PATCH | `/api/v1/listings/drafts/:id` | Required | `UpdateDraft` |
 | DELETE | `/api/v1/listings/drafts/:id` | Required | `DiscardDraft` |
 | GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
+| GET | `/api/v1/me/listings` | Required | `ListMyListings` |
 | POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
+| GET | `/api/v1/listings` | Public | `ListFeed` |
+| GET | `/api/v1/listings/:id` | Public | `GetListingDetail` |
+| GET | `/api/v1/exchange-rates` | Public | `GetExchangeRates` |
 | POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |
 | PATCH | `/api/v1/listings/:id` | Required (owner) | `EditListing` |
 | POST | `/api/v1/listings/:id/sold` | Required | `MarkSold` |
@@ -139,7 +145,7 @@ Remaining S4 use-cases in #92: `GetListingDetail`, `ListFeed`, `ListMyListings`,
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file or PRD feature.
 
-- **S4 (Listings CRUD) — domain + ports + null adapters shipped in #86**; draft use-cases + controller in #88; publish + state transitions + audit log in #89; remaining S4 work: `EditListing` + read use-cases + media use-cases + feed ranking (#90-#92)
+- **S4 (Listings CRUD) — shipped**; domain + ports + null adapters in #86; draft use-cases + controller in #88; publish + state transitions + audit log + FX rate in #89; media use-cases in #91; read use-cases + `ChronologicalRankingAdapter` + `PrismaListingsReadRepository` + `GetExchangeRates` in #92
 - **S5 (Listings UX)** — saved-search match consumers, Favorite UX, filter sheet (forward-defined `filters` param in `ListFeed` already in place), availability hours for contact prefs
 - **S6 (Garage + Dealership)** — dealership posting (`dealershipId?` + `publishedAsDealership` columns + cross-context port + wizard step), Sell-from-Garage entry tile + pre-fill, OwnedVehicle redesign (FK columns + status enum), bi-directional Listing↔Garage sync, dealership PRO badge on detail
 - **S7 (Conversations)** — listing-detail Message button becomes functional; chat threads consume `ListingSold` event to auto-close
