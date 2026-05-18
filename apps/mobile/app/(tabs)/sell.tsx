@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
 import { useDiscardDraft } from "../../src/api/listings/useDiscardDraft";
 import { useMyDrafts } from "../../src/api/listings/useMyDrafts";
@@ -16,6 +15,13 @@ import { WizardLayout } from "../../src/listings/wizard/WizardLayout";
 import { useWizardAutosave } from "../../src/listings/wizard/useWizardAutosave";
 import { useAuth } from "../../src/auth/useAuth";
 import { SignInDialog } from "../../components/auth/SignInDialog";
+import Step1Vin from "../../src/listings/wizard/Step1Vin";
+import Step2Photos from "../../src/listings/wizard/Step2Photos";
+import Step3VehicleId from "../../src/listings/wizard/Step3VehicleId";
+import Step4Specs from "../../src/listings/wizard/Step4Specs";
+import Step5Price from "../../src/listings/wizard/Step5Price";
+import Step6Location from "../../src/listings/wizard/Step6Location";
+import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
@@ -48,6 +54,32 @@ function buildPayloadPhotos(
     }));
 }
 
+function getCanContinue(
+  step: WizardStep,
+  payload: WizardPayload,
+  photosCount: number,
+): boolean {
+  switch (step) {
+    case 1:
+      return true;
+    case 2:
+      return photosCount >= 1;
+    case 3:
+      return !!payload.brandId && !!payload.modelId && !!payload.year;
+    case 4:
+      return payload.condition === "new" || !!payload.mileageKm;
+    case 5:
+      return !!payload.priceAmount && !!payload.priceCurrency;
+    case 6:
+      return !!payload.regionId && !!payload.cityId;
+    case 7:
+      return (
+        !!payload.description &&
+        ((payload.allowCalls ?? true) || (payload.allowChat ?? true))
+      );
+  }
+}
+
 export default function SellScreen() {
   const { isAuthenticated } = useAuth();
   const { show } = useToast();
@@ -64,6 +96,10 @@ export default function SellScreen() {
 
   const { save, forceSave, isSaving } = useWizardAutosave(draftId ?? "");
   const uploadQueue = useUploadQueue(draftId ?? "", payload);
+
+  function handlePayloadChange(updates: Partial<WizardPayload>) {
+    setPayload((prev) => ({ ...prev, ...updates }));
+  }
 
   // Sync upload queue photos into payload
   useEffect(() => {
@@ -156,7 +192,9 @@ export default function SellScreen() {
     });
   }
 
-  function handleContinueDraft(draft: NonNullable<typeof draftsData>["items"][number]) {
+  function handleContinueDraft(
+    draft: NonNullable<typeof draftsData>["items"][number],
+  ) {
     setDraftId(draft.id);
     const step = Math.min(
       Math.max(1, draft.payload.currentStep ?? 1),
@@ -241,11 +279,45 @@ export default function SellScreen() {
         onContinue={handleContinue}
         onPublish={handlePublish}
         onDiscard={handleDiscard}
-        canContinue={true}
+        canContinue={getCanContinue(
+          currentStep,
+          payload,
+          uploadQueue.photos.length,
+        )}
         canPublish={uploadQueue.publishGate.canPublish}
         isSaving={isSaving}
       >
-        <StepPlaceholder step={currentStep} />
+        {currentStep === 1 && (
+          <Step1Vin payload={payload} onChange={handlePayloadChange} />
+        )}
+        {currentStep === 2 && (
+          <Step2Photos
+            payload={payload}
+            onChange={handlePayloadChange}
+            photos={uploadQueue.photos}
+            onAddPhoto={uploadQueue.addPhoto}
+            onRemovePhoto={uploadQueue.removePhoto}
+            onReorderPhotos={uploadQueue.reorderPhotos}
+            onRetryPhoto={uploadQueue.retryPhoto}
+            isCompressing={uploadQueue.isCompressing}
+            isUploading={uploadQueue.isUploading}
+          />
+        )}
+        {currentStep === 3 && (
+          <Step3VehicleId payload={payload} onChange={handlePayloadChange} />
+        )}
+        {currentStep === 4 && (
+          <Step4Specs payload={payload} onChange={handlePayloadChange} />
+        )}
+        {currentStep === 5 && (
+          <Step5Price payload={payload} onChange={handlePayloadChange} />
+        )}
+        {currentStep === 6 && (
+          <Step6Location payload={payload} onChange={handlePayloadChange} />
+        )}
+        {currentStep === 7 && (
+          <Step7DescContact payload={payload} onChange={handlePayloadChange} />
+        )}
       </WizardLayout>
     );
   }
@@ -303,13 +375,5 @@ export default function SellScreen() {
         onOpenChange={setShowSignIn}
       />
     </SafeAreaView>
-  );
-}
-
-function StepPlaceholder({ step }: { step: WizardStep }) {
-  return (
-    <View className="flex-1 items-center justify-center py-12">
-      <Text className="text-lg text-muted-foreground">Step {step}</Text>
-    </View>
   );
 }
