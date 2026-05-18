@@ -37,7 +37,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 /(tabs)/
   index               Feed (personalized listings)        — stub, no real feed
   favorites           Favorites + saved searches          — stub
-  sell                Sell / listing wizard entry         — stub
+  sell                Sell / listing wizard entry         — 7-step create-listing wizard (S4)
   chat                Conversation list                   — stub
   services            Profile, garage, settings, blog     — stub
 
@@ -49,7 +49,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
   catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__
 ```
 
-No `/(public)/*`, no `/sell/wizard`, no `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
+No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
 
 ## State management (today)
 
@@ -58,6 +58,8 @@ No `/(public)/*`, no `/sell/wizard`, no `/chat/[conversationId]`, no `/me/*` rou
 - Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay)
 - `expo-secure-store` for JWT access + refresh tokens
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
+- Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach
+- Wizard autosave via debounced `PATCH /listings/drafts/:id`
 
 Identity hooks live at `src/api/identity/*`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
@@ -79,7 +81,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 - **S3 (Catalog)** — `src/api/catalog/*` hooks; dev-only `/dev/catalog` route gated `__DEV__`. ✅ Shipped.
 - **S4 (Listings CRUD)** —
   - **`@aws-sdk/client-s3`** dep for presigned MinIO uploads (current package.json does NOT include this; S4 adds it)
-  - Routes: `/(public)/listings/[id]`, `/sell/wizard` (7-step create-listing wizard)
+  - Routes: `/(public)/listings/[id]`, `/sell/wizard` (7-step create-listing wizard), `/listings/[id]/edit`
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
   - Mobile foundation (deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging) ✅ Shipped.
 - **S5 (Listings UX)** — saved-search UI, filter sheet; mobile picker modals (brand-picker, model-picker)

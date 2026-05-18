@@ -32,6 +32,9 @@ interface WizardLayoutProps {
   canPublish: boolean;
   isSaving: boolean;
   children: React.ReactNode;
+  publishLabel?: string;
+  discardTitle?: string;
+  discardDescription?: string;
 }
 
 export function WizardLayout({
@@ -45,6 +48,9 @@ export function WizardLayout({
   canPublish,
   isSaving,
   children,
+  publishLabel = "Publish",
+  discardTitle = "Discard draft?",
+  discardDescription = "This will delete your draft and all uploaded photos. This action cannot be undone.",
 }: WizardLayoutProps) {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const isFirstStep = currentStep === 1;
@@ -116,7 +122,7 @@ export function WizardLayout({
               onPress={onPublish}
               disabled={!canPublish}
             >
-              <Text>Publish</Text>
+              <Text>{publishLabel}</Text>
             </Button>
           ) : (
             <Button
@@ -134,11 +140,8 @@ export function WizardLayout({
       <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard draft?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete your draft and all uploaded photos. This action
-              cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{discardTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{discardDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onPress={() => setShowDiscardDialog(false)}>
