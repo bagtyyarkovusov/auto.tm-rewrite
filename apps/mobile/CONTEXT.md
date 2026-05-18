@@ -16,11 +16,16 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 ### Stack
 
 - **`expo`** SDK 55, **`expo-router`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
-- **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 11 RNR components installed at `apps/mobile/components/ui/` (avatar, badge, button, card, dialog, icon, input, native-only-animated-view, separator, skeleton, text). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{avatar, dialog, portal, separator, slot}` v1.4.0 wired.
-- **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (includes `catalog.*` keys ready for S3).
+- **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 18 RNR components installed at `apps/mobile/components/ui/` (alert-dialog, avatar, badge, button, card, dialog, dropdown-menu, icon, input, native-only-animated-view, progress, separator, sheet, skeleton, switch, text, toast, tooltip). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{alert-dialog, avatar, checkbox, dialog, dropdown-menu, label, popover, portal, progress, separator, slot, switch, tooltip}` v1.4.0 wired.
+- **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`).
 - **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
 - **`expo-secure-store`** for JWT access + refresh tokens (`src/auth/session.ts`).
+- **`expo-image-picker`** for camera / photo-library selection.
+- **`expo-camera`** for camera capture.
+- **`expo-file-system`** for `documentDirectory` staging of upload media.
 - **`expo-image-manipulator`** for client-side image compression.
+- **`expo-network`** installed (network state detection; NetInfo preferred at runtime).
+- **`@react-native-community/netinfo`** for reconnect detection and TanStack Query `onlineManager` integration.
 - **`react-native-compressor`** for client-side video compression (custom dev client required for that flow; Expo Go is valid for current routing/auth smoke checks).
 - **`react-native-svg`** (+ `react-native-svg-transformer` at build time) for vector icons and brand SVG rendering.
 - **`expo-linking`** installed (Universal Links / App Links handling will be wired in S4).
@@ -54,7 +59,12 @@ No `/(public)/*`, no `/sell/wizard`, no `/chat/[conversationId]`, no `/me/*` rou
 - `expo-secure-store` for JWT access + refresh tokens
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 
-Identity hooks live at `src/api/identity/*`. Catalog hooks live at `src/api/catalog/*` (S3: `useBrands`).
+Identity hooks live at `src/api/identity/*`.
+Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
+Listings hooks live at `src/api/listings/*` (`useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`).
+Uploads hook lives at `src/api/uploads/usePresignUpload`.
+Exchange-rate hook lives at `src/api/exchange-rates/useExchangeRates`.
+Upload staging utilities live at `src/listings/uploadStaging/` (`types.ts`, `stagingDir.ts`, `compressor.ts`, `queueState.ts`, `orphanCleanup.ts`, `appStateResume.ts`).
 
 ## Dependencies
 
@@ -71,6 +81,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
   - **`@aws-sdk/client-s3`** dep for presigned MinIO uploads (current package.json does NOT include this; S4 adds it)
   - Routes: `/(public)/listings/[id]`, `/sell/wizard` (7-step create-listing wizard)
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
+  - Mobile foundation (deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging) ✅ Shipped.
 - **S5 (Listings UX)** — saved-search UI, filter sheet; mobile picker modals (brand-picker, model-picker)
 - **S6 (Garage + Dealership)** — `/me/garage`, `/me/listings`; `/(public)/dealers/[slug]`
 - **S7 (Conversations)** —
