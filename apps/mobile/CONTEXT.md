@@ -23,7 +23,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`expo-image-picker`** for camera / photo-library selection.
 - **`expo-camera`** for camera capture.
 - **`expo-file-system`** for `documentDirectory` staging of upload media.
-- **`expo-image-manipulator`** for client-side image compression.
+- **`expo-image-manipulator`** for client-side image compression (uses the `ImageManipulator.manipulate()` contextual API; deprecated `manipulateAsync` removed in #111).
 - **`expo-network`** installed (network state detection; NetInfo preferred at runtime).
 - **`@react-native-community/netinfo`** for reconnect detection and TanStack Query `onlineManager` integration.
 - **`react-native-compressor`** for client-side video compression (custom dev client required for that flow; Expo Go is valid for current routing/auth smoke checks).
@@ -143,7 +143,7 @@ Discovered during Context7-validated analysis (Expo SDK 55 docs). Tracked as Git
 - **#115** — Sequential photo processing blocks UI on multi-select. `for...await onAddPhoto()` compresses one photo at a time. With 20 photos this freezes the UI for seconds. Mitigation: `Promise.all` for parallel compression.
 - **#112** — Upload pipeline lacks file-existence checks and error categorization. No `getInfoAsync` guards before compression/upload. All errors show generic "Upload failed". Needs retryable vs non-retryable distinction.
 - **#113** — `moveAsync` failure in `compressor.ts` leaves file in cache. If move throws, compressed file stays in cache and may be cleaned up. Needs `copyAsync` fallback.
-- **#111** — `expo-image-manipulator` `manipulateAsync` deprecated in SDK 55. New API is `useImageManipulator` hook. Tech debt — not urgent but will block SDK 56 upgrade.
+- **#111** ✅ — `expo-image-manipulator` `manipulateAsync` migrated to `ImageManipulator.manipulate()` contextual API in PR #<N>. Deprecated call removed; identical compression behavior preserved.
 
 ## Notable decisions
 
