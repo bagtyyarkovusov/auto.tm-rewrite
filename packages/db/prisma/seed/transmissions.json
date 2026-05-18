@@ -1,0 +1,6 @@
+[
+  { "nameRu": "Механика", "nameTk": "Mehanika", "nameEn": "Manual" },
+  { "nameRu": "Автомат", "nameTk": "Awtomat", "nameEn": "Automatic" },
+  { "nameRu": "Робот", "nameTk": "Robot", "nameEn": "Robot/AMT-DCT" },
+  { "nameRu": "Вариатор", "nameTk": "Wariator", "nameEn": "CVT" }
+]

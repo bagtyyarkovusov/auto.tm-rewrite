@@ -218,6 +218,39 @@ model BodyType {
   @@map("body_types")
 }
 
+model EngineType {
+  id     String @id @default(uuid())
+  nameRu String
+  nameTk String
+  nameEn String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("engine_types")
+}
+
+model Transmission {
+  id     String @id @default(uuid())
+  nameRu String
+  nameTk String
+  nameEn String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transmissions")
+}
+
+model DriveType {
+  id     String @id @default(uuid())
+  nameRu String
+  nameTk String
+  nameEn String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("drive_types")
+}
+
 model Region {
   id     String @id @default(uuid())
   slug   String @unique

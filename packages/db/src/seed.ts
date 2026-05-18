@@ -6,8 +6,11 @@ import bodyTypes from "../prisma/seed/body-types.json" with { type: "json" };
 import brands from "../prisma/seed/brands.json" with { type: "json" };
 import cities from "../prisma/seed/cities.json" with { type: "json" };
 import colors from "../prisma/seed/colors.json" with { type: "json" };
+import driveTypes from "../prisma/seed/drive-types.json" with { type: "json" };
+import engineTypes from "../prisma/seed/engine-types.json" with { type: "json" };
 import models from "../prisma/seed/models.json" with { type: "json" };
 import regions from "../prisma/seed/regions.json" with { type: "json" };
+import transmissions from "../prisma/seed/transmissions.json" with { type: "json" };
 
 const pool = new Pool({ connectionString: process.env["DATABASE_URL"] });
 const adapter = new PrismaPg(pool);
@@ -178,6 +181,90 @@ async function main() {
     cityCount++;
   }
   console.log(`Seeded ${cityCount} cities`);
+
+  // 7. EngineType — no FKs, dedup by nameEn
+  let engineTypeCount = 0;
+  for (const et of engineTypes as Array<{
+    nameRu: string;
+    nameTk: string;
+    nameEn: string;
+  }>) {
+    const existing = await prisma.engineType.findFirst({
+      where: { nameEn: et.nameEn },
+    });
+    if (existing) {
+      const changed =
+        existing.nameRu !== et.nameRu || existing.nameTk !== et.nameTk;
+      if (changed) {
+        await prisma.engineType.update({
+          where: { id: existing.id },
+          data: { nameRu: et.nameRu, nameTk: et.nameTk },
+        });
+      }
+    } else {
+      await prisma.engineType.create({ data: et });
+      engineTypeCount++;
+    }
+  }
+  console.log(
+    `Seeded ${engineTypeCount} new engine types (${engineTypes.length} total in file)`,
+  );
+
+  // 8. Transmission — no FKs, dedup by nameEn
+  let transmissionCount = 0;
+  for (const t of transmissions as Array<{
+    nameRu: string;
+    nameTk: string;
+    nameEn: string;
+  }>) {
+    const existing = await prisma.transmission.findFirst({
+      where: { nameEn: t.nameEn },
+    });
+    if (existing) {
+      const changed =
+        existing.nameRu !== t.nameRu || existing.nameTk !== t.nameTk;
+      if (changed) {
+        await prisma.transmission.update({
+          where: { id: existing.id },
+          data: { nameRu: t.nameRu, nameTk: t.nameTk },
+        });
+      }
+    } else {
+      await prisma.transmission.create({ data: t });
+      transmissionCount++;
+    }
+  }
+  console.log(
+    `Seeded ${transmissionCount} new transmissions (${transmissions.length} total in file)`,
+  );
+
+  // 9. DriveType — no FKs, dedup by nameEn
+  let driveTypeCount = 0;
+  for (const dt of driveTypes as Array<{
+    nameRu: string;
+    nameTk: string;
+    nameEn: string;
+  }>) {
+    const existing = await prisma.driveType.findFirst({
+      where: { nameEn: dt.nameEn },
+    });
+    if (existing) {
+      const changed =
+        existing.nameRu !== dt.nameRu || existing.nameTk !== dt.nameTk;
+      if (changed) {
+        await prisma.driveType.update({
+          where: { id: existing.id },
+          data: { nameRu: dt.nameRu, nameTk: dt.nameTk },
+        });
+      }
+    } else {
+      await prisma.driveType.create({ data: dt });
+      driveTypeCount++;
+    }
+  }
+  console.log(
+    `Seeded ${driveTypeCount} new drive types (${driveTypes.length} total in file)`,
+  );
 }
 
 main()

@@ -114,6 +114,63 @@ export const BodyTypeDetailSchema = z.object({
 });
 export type BodyTypeDetail = z.infer<typeof BodyTypeDetailSchema>;
 
+// ── EngineType ──
+
+export const EngineTypeSummarySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+});
+export type EngineTypeSummary = z.infer<typeof EngineTypeSummarySchema>;
+
+export const EngineTypeDetailSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  nameRu: z.string(),
+  nameTk: z.string(),
+  nameEn: z.string(),
+  localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+});
+export type EngineTypeDetail = z.infer<typeof EngineTypeDetailSchema>;
+
+// ── Transmission ──
+
+export const TransmissionSummarySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+});
+export type TransmissionSummary = z.infer<typeof TransmissionSummarySchema>;
+
+export const TransmissionDetailSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  nameRu: z.string(),
+  nameTk: z.string(),
+  nameEn: z.string(),
+  localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+});
+export type TransmissionDetail = z.infer<typeof TransmissionDetailSchema>;
+
+// ── DriveType ──
+
+export const DriveTypeSummarySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+});
+export type DriveTypeSummary = z.infer<typeof DriveTypeSummarySchema>;
+
+export const DriveTypeDetailSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  nameRu: z.string(),
+  nameTk: z.string(),
+  nameEn: z.string(),
+  localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+});
+export type DriveTypeDetail = z.infer<typeof DriveTypeDetailSchema>;
+
 // ── Region ──
 
 export const RegionSummarySchema = z.object({

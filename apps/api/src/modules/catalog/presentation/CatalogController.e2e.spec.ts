@@ -44,6 +44,9 @@ describe("CatalogController e2e", () => {
     await prisma.region.deleteMany();
     await prisma.bodyType.deleteMany();
     await prisma.color.deleteMany();
+    await prisma.engineType.deleteMany();
+    await prisma.transmission.deleteMany();
+    await prisma.driveType.deleteMany();
   });
 
   describe("GET /api/v1/catalog/brands", () => {
@@ -569,6 +572,150 @@ describe("CatalogController e2e", () => {
         .expect(200);
 
       expect(res.body.items[0].name).toBe("Black");
+      expect(res.body.items[0].localeFallback).toBe("en");
+    });
+  });
+
+  describe("GET /api/v1/catalog/engine-types", () => {
+    it("returns 200 with engine type list sorted by locale", async () => {
+      await prisma.engineType.createMany({
+        data: [
+          {
+            id: "et1",
+            nameRu: "Дизель",
+            nameTk: "Dizel",
+            nameEn: "Diesel",
+          },
+          {
+            id: "et2",
+            nameRu: "Бензин",
+            nameTk: "Benzin",
+            nameEn: "Gasoline",
+          },
+        ],
+      });
+
+      const res = await request
+        .get("/api/v1/catalog/engine-types?locale=ru")
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.items[0].name).toBe("Бензин");
+      expect(res.body.items[1].name).toBe("Дизель");
+      expect(res.body.items[0]).toHaveProperty("id");
+    });
+
+    it("falls back to another locale when requested locale is empty", async () => {
+      await prisma.engineType.create({
+        data: {
+          id: "et1",
+          nameRu: "Бензин",
+          nameTk: "",
+          nameEn: "Gasoline",
+        },
+      });
+
+      const res = await request
+        .get("/api/v1/catalog/engine-types?locale=tk")
+        .expect(200);
+
+      expect(res.body.items[0].name).toBe("Gasoline");
+      expect(res.body.items[0].localeFallback).toBe("en");
+    });
+  });
+
+  describe("GET /api/v1/catalog/transmissions", () => {
+    it("returns 200 with transmission list sorted by locale", async () => {
+      await prisma.transmission.createMany({
+        data: [
+          {
+            id: "tr1",
+            nameRu: "Робот",
+            nameTk: "Robot",
+            nameEn: "Robot/AMT-DCT",
+          },
+          {
+            id: "tr2",
+            nameRu: "Автомат",
+            nameTk: "Awtomat",
+            nameEn: "Automatic",
+          },
+        ],
+      });
+
+      const res = await request
+        .get("/api/v1/catalog/transmissions?locale=ru")
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.items[0].name).toBe("Автомат");
+      expect(res.body.items[1].name).toBe("Робот");
+      expect(res.body.items[0]).toHaveProperty("id");
+    });
+
+    it("falls back to another locale when requested locale is empty", async () => {
+      await prisma.transmission.create({
+        data: {
+          id: "tr1",
+          nameRu: "Механика",
+          nameTk: "",
+          nameEn: "Manual",
+        },
+      });
+
+      const res = await request
+        .get("/api/v1/catalog/transmissions?locale=tk")
+        .expect(200);
+
+      expect(res.body.items[0].name).toBe("Manual");
+      expect(res.body.items[0].localeFallback).toBe("en");
+    });
+  });
+
+  describe("GET /api/v1/catalog/drive-types", () => {
+    it("returns 200 with drive type list sorted by locale", async () => {
+      await prisma.driveType.createMany({
+        data: [
+          {
+            id: "dt1",
+            nameRu: "Задний",
+            nameTk: "Yzky",
+            nameEn: "RWD",
+          },
+          {
+            id: "dt2",
+            nameRu: "Передний",
+            nameTk: "Öňki",
+            nameEn: "FWD",
+          },
+        ],
+      });
+
+      const res = await request
+        .get("/api/v1/catalog/drive-types?locale=ru")
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(2);
+      expect(res.body.items[0].name).toBe("Задний");
+      expect(res.body.items[1].name).toBe("Передний");
+      expect(res.body.items[0]).toHaveProperty("id");
+    });
+
+    it("falls back to another locale when requested locale is empty", async () => {
+      await prisma.driveType.create({
+        data: {
+          id: "dt1",
+          nameRu: "Полный",
+          nameTk: "",
+          nameEn: "AWD",
+        },
+      });
+
+      const res = await request
+        .get("/api/v1/catalog/drive-types?locale=tk")
+        .expect(200);
+
+      expect(res.body.items[0].name).toBe("AWD");
       expect(res.body.items[0].localeFallback).toBe("en");
     });
   });

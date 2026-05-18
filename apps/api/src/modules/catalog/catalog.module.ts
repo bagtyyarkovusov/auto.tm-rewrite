@@ -12,6 +12,9 @@ import { ListRegions } from "./application/ListRegions";
 import { ListCitiesForRegion } from "./application/ListCitiesForRegion";
 import { ListBodyTypes } from "./application/ListBodyTypes";
 import { ListColors } from "./application/ListColors";
+import { ListDriveTypes } from "./application/ListDriveTypes";
+import { ListEngineTypes } from "./application/ListEngineTypes";
+import { ListTransmissions } from "./application/ListTransmissions";
 import { CreateBrand } from "./application/CreateBrand";
 import { UpdateBrand } from "./application/UpdateBrand";
 import { DeleteBrand } from "./application/DeleteBrand";
@@ -25,6 +28,9 @@ import { PrismaRegionRepository } from "./infrastructure/PrismaRegionRepository"
 import { PrismaCityRepository } from "./infrastructure/PrismaCityRepository";
 import { PrismaBodyTypeRepository } from "./infrastructure/PrismaBodyTypeRepository";
 import { PrismaColorRepository } from "./infrastructure/PrismaColorRepository";
+import { PrismaDriveTypeRepository } from "./infrastructure/PrismaDriveTypeRepository";
+import { PrismaEngineTypeRepository } from "./infrastructure/PrismaEngineTypeRepository";
+import { PrismaTransmissionRepository } from "./infrastructure/PrismaTransmissionRepository";
 import { BRAND_REPOSITORY } from "./domain/ports/BrandRepository";
 import { MODEL_REPOSITORY } from "./domain/ports/ModelRepository";
 import { GENERATION_REPOSITORY } from "./domain/ports/GenerationRepository";
@@ -32,6 +38,9 @@ import { REGION_REPOSITORY } from "./domain/ports/RegionRepository";
 import { CITY_REPOSITORY } from "./domain/ports/CityRepository";
 import { BODY_TYPE_REPOSITORY } from "./domain/ports/BodyTypeRepository";
 import { COLOR_REPOSITORY } from "./domain/ports/ColorRepository";
+import { DRIVE_TYPE_REPOSITORY } from "./domain/ports/DriveTypeRepository";
+import { ENGINE_TYPE_REPOSITORY } from "./domain/ports/EngineTypeRepository";
+import { TRANSMISSION_REPOSITORY } from "./domain/ports/TransmissionRepository";
 
 @Module({
   imports: [PrismaModule, IdentityModule],
@@ -44,6 +53,9 @@ import { COLOR_REPOSITORY } from "./domain/ports/ColorRepository";
     PrismaCityRepository,
     PrismaBodyTypeRepository,
     PrismaColorRepository,
+    PrismaDriveTypeRepository,
+    PrismaEngineTypeRepository,
+    PrismaTransmissionRepository,
     {
       provide: BRAND_REPOSITORY,
       useClass: PrismaBrandRepository,
@@ -72,6 +84,18 @@ import { COLOR_REPOSITORY } from "./domain/ports/ColorRepository";
       provide: COLOR_REPOSITORY,
       useClass: PrismaColorRepository,
     },
+    {
+      provide: DRIVE_TYPE_REPOSITORY,
+      useClass: PrismaDriveTypeRepository,
+    },
+    {
+      provide: ENGINE_TYPE_REPOSITORY,
+      useClass: PrismaEngineTypeRepository,
+    },
+    {
+      provide: TRANSMISSION_REPOSITORY,
+      useClass: PrismaTransmissionRepository,
+    },
     ListBrands,
     ListModelsForBrand,
     ListGenerationsForModel,
@@ -79,6 +103,9 @@ import { COLOR_REPOSITORY } from "./domain/ports/ColorRepository";
     ListCitiesForRegion,
     ListBodyTypes,
     ListColors,
+    ListDriveTypes,
+    ListEngineTypes,
+    ListTransmissions,
     CreateBrand,
     UpdateBrand,
     DeleteBrand,

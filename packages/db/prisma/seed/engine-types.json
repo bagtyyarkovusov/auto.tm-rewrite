@@ -1,0 +1,8 @@
+[
+  { "nameRu": "Бензин", "nameTk": "Benzin", "nameEn": "Gasoline" },
+  { "nameRu": "Дизель", "nameTk": "Dizel", "nameEn": "Diesel" },
+  { "nameRu": "Гибрид", "nameTk": "Gibrid", "nameEn": "Hybrid" },
+  { "nameRu": "Электро", "nameTk": "Elektro", "nameEn": "Electric" },
+  { "nameRu": "Газ (LPG)", "nameTk": "Gaz (LPG)", "nameEn": "LPG" },
+  { "nameRu": "Газ (CNG)", "nameTk": "Gaz (CNG)", "nameEn": "CNG" }
+]

@@ -15,6 +15,9 @@ Curated reference data that listings, garage entries, and saved searches referen
 - `Generation` — id, modelId (FK → Model), nameRu, nameTk, nameEn, yearStart?, yearEnd?, createdAt, updatedAt
 - `Color` — id, nameRu, nameTk, nameEn, hex?, createdAt, updatedAt
 - `BodyType` — id, nameRu, nameTk, nameEn, createdAt, updatedAt
+- `EngineType` — id, nameRu, nameTk, nameEn, createdAt, updatedAt
+- `Transmission` — id, nameRu, nameTk, nameEn, createdAt, updatedAt
+- `DriveType` — id, nameRu, nameTk, nameEn, createdAt, updatedAt
 - `Region` — id, slug (unique), nameRu, nameTk, nameEn, createdAt, updatedAt
 - `City` — id, regionId (FK → Region), slug, nameRu, nameTk, nameEn, createdAt, updatedAt
 
@@ -63,6 +66,18 @@ All repositories live at `apps/api/src/modules/catalog/domain/ports/`:
   - `listBodyTypes({ locale }) → BodyType[]`
   - `getBodyTypeById(id) → BodyType | null`
 
+- **`EngineTypeRepository`** (`ENGINE_TYPE_REPOSITORY` symbol)
+  - `listEngineTypes({ locale }) → EngineType[]`
+  - `getEngineTypeById(id) → EngineType | null`
+
+- **`TransmissionRepository`** (`TRANSMISSION_REPOSITORY` symbol)
+  - `listTransmissions({ locale }) → Transmission[]`
+  - `getTransmissionById(id) → Transmission | null`
+
+- **`DriveTypeRepository`** (`DRIVE_TYPE_REPOSITORY` symbol)
+  - `listDriveTypes({ locale }) → DriveType[]`
+  - `getDriveTypeById(id) → DriveType | null`
+
 - **`RegionRepository`** (`REGION_REPOSITORY` symbol)
   - `listRegions({ locale }) → Region[]`
   - `getRegionById(id) → Region | null`
@@ -96,6 +111,9 @@ All read methods return entities with a `localeFallback` field when the requeste
 - `ListCitiesForRegion` — cursor-paginated cities for a given region
 - `ListBodyTypes` — full body-type list
 - `ListColors` — full color list
+- `ListEngineTypes` — full engine-type list
+- `ListTransmissions` — full transmission list
+- `ListDriveTypes` — full drive-type list
 
 ### Admin write use-cases (Brand + Model only)
 
@@ -123,6 +141,9 @@ All read endpoints are `@Public()` (no authentication required). Locale resoluti
 | `GET` | `/api/v1/catalog/regions/:id/cities` | List cities for region (cursor pagination) |
 | `GET` | `/api/v1/catalog/body-types` | List all body types |
 | `GET` | `/api/v1/catalog/colors` | List all colors |
+| `GET` | `/api/v1/catalog/engine-types` | List all engine types |
+| `GET` | `/api/v1/catalog/transmissions` | List all transmissions |
+| `GET` | `/api/v1/catalog/drive-types` | List all drive types |
 | `GET` | `/api/v1/catalog/ping` | Health check — returns `{ context: "catalog", status: "ok" }` |
 
 ### Admin write endpoints (`AdminCatalogController` at `POST/PATCH/DELETE /api/v1/admin/catalog`)
@@ -150,6 +171,9 @@ All admin endpoints are guarded by `AdminGuard` (returns 401 without bearer, 403
 - `models.json` — trilingual model seed data (2,447 models, linked to brands by `brandSlug`)
 - `colors.json` — fresh trilingual fixed list (15 colors with hex values)
 - `body-types.json` — fresh trilingual fixed list (10 body types)
+- `engine-types.json` — fresh trilingual fixed list (6 engine types)
+- `transmissions.json` — fresh trilingual fixed list (4 transmissions)
+- `drive-types.json` — fresh trilingual fixed list (4 drive types)
 - `regions.json` — fresh trilingual fixed list (6 Turkmenistan regions)
 - `cities.json` — fresh trilingual fixed list (35 cities linked to regions by `regionSlug`)
 - `_legacy/cars.brands.json` — monolingual snapshot from the legacy auto.tm backend; kept as historical port source
@@ -161,8 +185,7 @@ All admin endpoints are guarded by `AdminGuard` (returns 401 without bearer, 403
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today — they're tracked here only as a pointer so future agents and reviewers can find the sprint that owns each future addition. The authoritative spec for each lives in the named sprint file or PRD feature.
 
-- **S4 (Listings CRUD)** — add `EngineType`, `Transmission`, and `DriveType` as catalog-owned trilingual lookup entities. Listings reference them by `engineTypeId`, `transmissionId`, and `driveTypeId` FKs. These labels are localized by the catalog API, not by frontend enum translation files.
-- **S5 (Listings UX)** — may add `Brand.logoUrl`, `Brand.isActive`, `Brand.displayOrder`, `Generation.photoUrl`, `BodyType.slug`, `BodyType.iconKey` to support picker UX with logos and icons. Decide in S5 if these land then or earlier. Also: generation seed data (TBD half-day standalone issue before S5).
+- **S5 (Listings UX) — may add `Brand.logoUrl`, `Brand.isActive`, `Brand.displayOrder`, `Generation.photoUrl`, `BodyType.slug`, `BodyType.iconKey` to support picker UX with logos and icons. Decide in S5 if these land then or earlier. Also: generation seed data (TBD half-day standalone issue before S5).
 - **S9 (Admin dashboard)** — admin app for catalog management (CRUD UI for Brand/Model/Color/BodyType/etc.); brand-logo upload UX to MinIO. Full admin CRUD for non-Brand/Model entities (Color, BodyType, Region, City).
 
 ## Notable decisions
