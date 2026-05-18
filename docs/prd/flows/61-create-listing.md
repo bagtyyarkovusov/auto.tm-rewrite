@@ -71,10 +71,14 @@ Three ways to start:
 
 ### Step 6 — Location
 
-- Region picker (default to user's profile region)
+- Header: "Car location"
+- Region picker
 - City picker (scoped to region)
-- Free-text location (optional, e.g., "30 mkr near Lukoil")
+- Free-text area/landmark (optional, e.g., "30 mkr near Lukoil")
+- Helper text: "Choose where the car can be inspected. Do not enter your home address."
 - "Continue"
+
+The location is the car's location, not the user's current GPS location. A user posting for a dealer, family member, or remote seller chooses where the car is physically available.
 
 ### Step 7 — Description & contact
 
@@ -122,6 +126,7 @@ Three ways to start:
 - [Feature 31 — Catalog](../features/31-catalog.md)
 - [Feature 37 — Garage](../features/37-garage.md) — Sell-from-Garage shortcut
 - [ADR-0008 — Media](../../adr/0008-media.md)
+- [ADR-0022 — City-first listing location](../../adr/0022-city-first-listing-location.md)
 
 ## Open questions
 

@@ -98,6 +98,7 @@ Per-component specs live in [`ui/components/`](ui/components/).
 | [82](ops/82-incident-template.md) | Incident response template |
 | [83](ops/83-legal.md) | Legal documents (Privacy Policy + Terms) |
 | [84](ops/84-launch-plan.md) | Launch / cutover plan |
+| [85](ops/85-launch-analytics-plan.md) | Launch analytics and scaling plan |
 
 ## How to write a PRD page
 

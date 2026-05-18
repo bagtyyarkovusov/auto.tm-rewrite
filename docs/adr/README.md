@@ -23,6 +23,12 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0015](0015-mobile-data-fetching.md) | Mobile data fetching — TanStack Query v5 + custom fetch wrapper (complements ADR-0002, ADR-0012) | Accepted | 2026-05-16 |
 | [0016](0016-typescript-runtime-boundaries.md) | TypeScript runtime boundaries for workspace packages | Accepted | 2026-05-17 |
 | [0017](0017-context7-as-canonical-doc-source.md) | Context7 MCP as the canonical doc source for AI agents | Accepted | 2026-05-17 |
+| [0018](0018-api-port-3006.md) | API runs on port 3006 in development | Accepted | 2026-05-17 |
+| [0019](0019-context-md-describes-current-state.md) | CONTEXT.md describes current state, not aspirational spec | Accepted | 2026-05-17 |
+| [0020](0020-document-hierarchy-and-mutability.md) | Document hierarchy and mutability rules | Accepted | 2026-05-17 |
+| [0021](0021-feed-ranking-port.md) | Feed ranking via port abstraction | Accepted | 2026-05-18 |
+| [0022](0022-city-first-listing-location.md) | City-first listing location | Accepted | 2026-05-18 |
+| [0023](0023-first-party-product-analytics.md) | First-party product analytics for MVP | Accepted | 2026-05-18 |
 
 ## Per-app ADRs
 

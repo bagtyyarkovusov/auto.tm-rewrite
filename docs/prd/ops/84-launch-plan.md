@@ -101,11 +101,15 @@ Each of these requires a feature flag pre-built into the app — add to Phase 1 
 - Daily metrics review:
   - DAU
   - New listings posted
+  - Active listings by city
+  - Search and saved-search demand by city
   - Conversations started
+  - Favorite/chat/call starts by listing city
   - OTP success rate
   - Push delivery rate
   - Bug reports
 - Daily admin moderation review
+- City planning action: compare demand by city against active supply by city; use gaps to prioritize catalog cleanup, dealer outreach, and launch expansion. Do not introduce GPS prompts or radius search as a launch-day fix; that decision is locked in [ADR-0022](../../adr/0022-city-first-listing-location.md).
 - Weekly retrospective in week 2
 
 ## Post-launch (month 1)
@@ -120,4 +124,5 @@ Each of these requires a feature flag pre-built into the app — add to Phase 1 
 - [Deployment runbook](80-deployment-runbook.md)
 - [Monitoring + alarms](81-monitoring-alarms.md)
 - [Incident template](82-incident-template.md)
+- [Launch analytics + scaling plan](85-launch-analytics-plan.md)
 - [Vision metrics](../00-vision.md)

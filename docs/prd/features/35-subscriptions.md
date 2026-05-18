@@ -25,6 +25,8 @@ Form fields:
 - Notify toggle (default ON)
 - Review the filters (read-only — user goes back to filter results to edit)
 
+Location filters are saved as catalog IDs only. If the source search includes a Region or City, the `SavedSearch.filters` payload stores the resolved `regionId` / `cityId`; it never stores raw GPS coordinates. If a future "Use my location" action resolved the user's coordinate to the nearest catalog City, saving the search stores that City ID, not the coordinate that produced it.
+
 ### Viewing saved searches
 
 - Favorites tab → "Saved Searches" sub-tab
@@ -65,6 +67,7 @@ Form fields:
 
 - [ADR-0001](../../adr/0001-architecture.md) — Subscriptions as its own context
 - [ADR-0009](../../adr/0009-notifications.md) — Debounced delivery, per-search opt-out
+- [ADR-0022](../../adr/0022-city-first-listing-location.md) — Saved searches store city/region filters, not GPS coordinates
 
 ## Phase
 

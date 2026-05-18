@@ -31,8 +31,8 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 
 | Section | Content |
 |---|---|
-| **What we collect** | Phone number (auth), name, profile photo (optional), location (region/city) selected by user, listings + content the user posts, chat messages, push token, device info (model, OS, app version), IP address (for rate limiting only), photo / video uploads, VIN (if user enters), garage vehicle data |
-| **What we do NOT collect** | We do NOT track location via GPS in MVP. We do NOT have third-party advertising SDKs. We do NOT sell data. |
+| **What we collect** | Phone number (auth), name, profile photo (optional), location (region/city) selected by user or attached to a listing as car location, listings + content the user posts, chat messages, push token, device info (model, OS, app version), IP address (for rate limiting only), photo / video uploads, VIN (if user enters), garage vehicle data |
+| **What we do NOT collect** | We do NOT track location via GPS in MVP. We do not store raw GPS coordinates in saved searches or location analytics. We do NOT have third-party advertising SDKs. We do NOT sell data. |
 | **Why we collect it** | Account creation, listing display, search functionality, communication between users, fraud prevention, app store policy compliance |
 | **Who can see it** | Public: name, avatar, listings, public garage, public blog posts, response time. Private: phone (masked in public), email, exact location pin (Phase 2 if added), chat messages (except admin moderation) |
 | **Sharing with third parties** | We send push notifications via Firebase Cloud Messaging (Google) and Apple Push Notification Service. These services receive the recipient's device token and the notification payload. We do not share data with advertisers, brokers, or other third parties. |
@@ -94,4 +94,6 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 ## References
 
 - [Feature 30 — Identity](../features/30-identity.md) — account deletion implementation
+- [ADR-0022 — City-first listing location](../../adr/0022-city-first-listing-location.md) — city-level listing/search location policy
+- [ADR-0023 — First-party product analytics](../../adr/0023-first-party-product-analytics.md) — no third-party analytics SDKs in MVP
 - [GRILL-OUTCOME §19](../../../GRILL-OUTCOME.md) — outstanding action item #7

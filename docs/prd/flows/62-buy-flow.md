@@ -15,7 +15,8 @@ Maral wants to buy her first car. From opening the app to meeting the seller IRL
 ### Step 1 — Discover
 
 - Maral opens the feed (anonymous OK)
-- Browses listings; uses filter to narrow down
+- Browses latest listings; uses explicit Region / City filters to narrow down
+- (Future) She can tap "Use my location" inside the filter sheet; the app maps GPS to the nearest catalog City and applies that City as a temporary filter
 - (Phase 2) Filters by "Trusted by AutoTM" for inspected listings
 
 ### Step 2 — Compare
@@ -90,6 +91,7 @@ Maral wants to buy her first car. From opening the app to meeting the seller IRL
 - [Feature 34 — Conversations](../features/34-conversations.md)
 - [Feature 35 — Subscriptions](../features/35-subscriptions.md)
 - [Feature 36 — Notifications](../features/36-notifications.md)
+- [ADR-0022 — City-first listing location](../../adr/0022-city-first-listing-location.md)
 
 ## Open questions
 

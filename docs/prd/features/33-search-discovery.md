@@ -15,6 +15,7 @@ Maral (the first-time buyer persona) needs to slice through thousands of listing
 - Anonymous + new users: latest 50 listings, paginated infinite scroll
 - Authenticated with browsing history: weak personalization (recent brands viewed appear earlier)
 - Authenticated with saved searches: a "Matches your saved searches" carousel at top
+- No first-open GPS permission prompt. The feed is useful before login and before any location permission.
 
 ### Filter sheet
 
@@ -24,6 +25,7 @@ Bottom sheet with collapsible sections. Persistent in URL state.
 - Status: All / New / Used
 - Region: TM regions (multi-select)
 - City: drill-down from region
+- Future explicit action: "Use my location" requests foreground GPS permission only after the user taps it, then maps the coordinate to the nearest catalog City and applies that city as the current filter.
 - **Brand** → **Model** → **Generation** (using shared catalog picker; multi-select with include/exclude)
 - Year range
 - Price range + currency
@@ -55,6 +57,28 @@ Apply button shows match count: "Show 1,243 listings".
 - (Phase 2) Tier (Trusted first) — only if user opts in via filter
 
 **Sort label is always visible** so users see what they're looking at. No hidden ranking magic.
+
+Location filters are explicit. Phase 1 does not silently rank nearby cars above newer cars. Proximity can become a documented S19 ranking signal through `FeedRankingPort`, but not hidden MVP behavior.
+
+### Location discovery
+
+Per [ADR-0022](../../adr/0022-city-first-listing-location.md), AutoTM uses a city-first location model:
+
+- Phase 1 search filters by `regionId` and `cityId`.
+- Phase 1 does not request GPS on app open.
+- A later "Use my location" control maps foreground GPS to the nearest catalog City, then applies that City as a temporary browse filter.
+- The app may remember the last selected city locally for convenience, but does not write a permanent "home city" to the user profile in MVP.
+- Future catalog `City.latitude` / `City.longitude` centroids can support nearest-city lookup. They are catalog metadata, not user tracking data.
+- Saved searches store resolved `regionId` / `cityId` only, never raw GPS coordinates.
+
+### Search and location analytics
+
+Search analytics are allowed for product planning and admin dashboard reporting, but they stay city-level:
+
+- Track selected `regionId` / `cityId`, filter families used, result-count bucket, zero-result searches, saved-search creation, favorite, call/chat start, and listing city for conversion analysis.
+- Use these aggregates to decide where to seed catalog data, recruit dealers, moderate suspicious listing clusters, and prioritize future city expansion.
+- Do not store raw GPS coordinates, exact device location, exact map pins, or home-city profile fields for analytics in MVP.
+- If a future "Use my location" action resolves GPS to a nearest catalog City, analytics stores the resolved City ID and the action source, not the coordinate.
 
 ### Favorites
 
@@ -95,6 +119,8 @@ Apply button shows match count: "Show 1,243 listings".
 
 - [ADR-0007](../../adr/0007-i18n.md) — FTS with `pg_catalog.simple` for mixed scripts
 - [ADR-0002](../../adr/0002-stack.md) — Postgres FTS (not Meilisearch in Phase 1)
+- [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first location search; explicit GPS only later
+- [ADR-0023](../../adr/0023-first-party-product-analytics.md) — First-party analytics only; search analytics stay in AutoTM-owned storage
 
 ## Phase
 
@@ -103,6 +129,8 @@ Apply button shows match count: "Show 1,243 listings".
 ## Out of scope
 
 - Map-based search ("show me cars near my location") — Phase 2
+- Distance/radius search — not in MVP; revisit only after nearest-city filtering proves insufficient
+- First-open GPS prompt — rejected; location permission must be user-initiated
 - Comparison (side-by-side) — Phase 3
 - Voice search — Phase ∞
 - Saved searches with complex boolean operators (AND/OR/NOT chains) — not needed
@@ -110,6 +138,4 @@ Apply button shows match count: "Show 1,243 listings".
 
 ## Open questions
 
-- Distance-based filtering — need device location permission; defer to Phase 2
-- Search analytics: tracking what users search for to improve catalog? Probably yes
 - Auto.ru-style "Сравнение" tab in Favorites — Phase 3

@@ -17,10 +17,20 @@ A marketplace without listings is empty. This is the central feature; everything
 3. **Brand → Model → Generation → Year** — uses shared catalog picker component
 4. **Mileage + Condition** (`new` / `used`) + **Color** + **Transmission** + **Drive type** + **Engine type** + **Engine power**
 5. **Price + Currency** (TMT / USD / AED). Show "approximate price in user's display currency" using admin FX
-6. **Region + City** (optional pin on map - Phase 2) + **Free-text location** ("Аşgabat, 30 mkr")
+6. **Car location** — Region + City + optional area/landmark text ("Aşgabat, 30 mkr"). This is the physical location where the car can be inspected, not the seller's current GPS location.
 7. **Description + Phone + Contact preferences** (call / chat / both, hours of availability)
 
 Drafts auto-saved on every step. Resume on next visit. Cancel discards (with confirm).
+
+### Listing location policy
+
+Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location means **car location**:
+
+- The listing stores the city/region where the car is physically available for inspection.
+- A user posting for a dealer, family member, or remote seller chooses the car's city, not their own current location.
+- Phase 1 does not store exact listing GPS coordinates.
+- `locationText` is optional area/landmark text, not a home-address field. UX copy should discourage exact private addresses ("Do not enter your home address. Add only the area where the car can be inspected.").
+- Dealer showroom location may become more precise later because it is a business location. Inspection or meeting coordinates are private appointment data, not public listing data.
 
 ### Media upload + refresh behavior
 
@@ -96,6 +106,7 @@ Drafts auto-saved on every step. Resume on next visit. Cancel discards (with con
 - [ADR-0001](../../adr/0001-architecture.md) — Listings as bounded context
 - [ADR-0008](../../adr/0008-media.md) — Photo + video pipeline
 - [ADR-0007](../../adr/0007-i18n.md) — Single-locale content
+- [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first listing location; no exact listing GPS in Phase 1
 
 ## Phase
 
@@ -106,7 +117,8 @@ Drafts auto-saved on every step. Resume on next visit. Cancel discards (with con
 - Listing auto-renewal / bumping (Phase 1.5 if needed)
 - Featured / promoted listings (paid placement) — explicitly against vision
 - Listing expiry (never automatic in MVP; sellers mark sold/archived themselves)
-- Map view in feed (Phase 2)
+- Exact listing GPS coordinates, first-open GPS prompt, and map/radius search in Phase 1
+- Map view in feed (Phase 2+ only if city-first search proves insufficient)
 - Compare 2 listings side-by-side (Phase 3)
 
 ## Open questions

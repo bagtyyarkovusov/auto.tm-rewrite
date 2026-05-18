@@ -32,6 +32,7 @@ A mobile admin UI would be cramped. Desktop web with shadcn/ui gives the room an
   - **Pending verifications** (dealerships awaiting review)
   - **SMS gateway health** (X of N phones connected, error rate)
   - **DAU / WAU** (active users)
+  - **City supply / demand** (active listings, searches, saved searches, favorite/chat/call starts by listing city; no raw GPS)
 - Recent activity feed (5 latest admin actions)
 
 ### Listings moderation
@@ -123,6 +124,8 @@ A mobile admin UI would be cramped. Desktop web with shadcn/ui gives the room an
 
 - [ADR-0006](../../adr/0006-auth.md) — Admin OTP + TOTP 2FA
 - [ADR-0001](../../adr/0001-architecture.md) — Admin operations as their own context
+- [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-level location analytics only; no raw GPS in MVP
+- [ADR-0023](../../adr/0023-first-party-product-analytics.md) — First-party product analytics for MVP
 
 ## Phase
 

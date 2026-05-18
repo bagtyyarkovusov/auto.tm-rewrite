@@ -75,6 +75,7 @@ S9 broadens the schemas in `apps/api/src/modules/admin/CONTEXT.md` + `identity/C
 
 ### Misc
 - [ ] **Account-deletion-requests dashboard**: GDPR-style audit trail of `DELETE /api/v1/me` invocations
+- [ ] **Marketplace metrics dashboard**: DAU/WAU, active listings 7-day trend, and city supply/demand aggregates (active listings, searches, saved searches, favorite/chat/call starts by listing city). Per ADR-0022, this stores catalog `regionId` / `cityId` aggregates only, not raw GPS coordinates.
 - [ ] `admin/CONTEXT.md` updated (now contains real audit-log invariants)
 - [ ] `docs/prd/03-roadmap.md` updated (S9 🟢, S10 🟡)
 
@@ -122,7 +123,10 @@ apps/admin/src/app/(admin)/
 
 - **PRD feature**: [`../features/40-admin.md`](../features/40-admin.md)
 - **End-to-end flow**: [`../flows/65-admin-moderation.md`](../flows/65-admin-moderation.md)
+- **Launch analytics plan**: [`../ops/85-launch-analytics-plan.md`](../ops/85-launch-analytics-plan.md)
 - **Charter sections**: §5 (Admin context), §6 (Admin auth — TOTP), §8 (Announcement override)
+- **Location decision**: [`../../adr/0022-city-first-listing-location.md`](../../adr/0022-city-first-listing-location.md)
+- **Analytics decision**: [`../../adr/0023-first-party-product-analytics.md`](../../adr/0023-first-party-product-analytics.md)
 
 ## Previous-sprint dependencies
 
