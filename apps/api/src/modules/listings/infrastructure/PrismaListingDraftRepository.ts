@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaService, Prisma } from "@auto-tm/db";
+import { PrismaService } from "@auto-tm/db";
+import type { Prisma } from "@auto-tm/db";
 
 import { ListingDraft } from "../domain/ListingDraft";
 import type { ListingDraftRepository } from "../domain/ports/ListingDraftRepository";

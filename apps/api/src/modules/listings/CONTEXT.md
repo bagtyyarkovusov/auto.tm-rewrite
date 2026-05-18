@@ -45,9 +45,9 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 
 - `apps/api/src/modules/listings/`:
   - `domain/` — **6 entities + types + 10 ports** (S4 #86)
-  - `application/` — 5 use-cases (S4 #88): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`
-  - `infrastructure/` — 6 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `MinioMediaStorageAdapter` (S4 #88)
-  - `presentation/listings.controller.ts` — stub controller (ping endpoint)
+  - `application/` — 10 use-cases (S4 #88, #89): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`
+  - `infrastructure/` — 8 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaExchangeRateRepository` (S4 #89), `MinioMediaStorageAdapter` (S4 #88)
+  - `presentation/listings.controller.ts` — public feed stub + 5 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`)
   - `presentation/DraftsController.ts` — draft CRUD + list my drafts
   - `presentation/UploadsController.ts` — presign upload endpoint
   - `listings.module.ts` — registers null/sync adapters, repositories, and use-cases with DI tokens
@@ -84,8 +84,13 @@ Repository ports (consumed only within `listings/`):
 - `ListMyDrafts` — paginated list of caller's drafts by `updatedAt DESC`
 - `DiscardDraft` — hard-deletes a draft (owner-validated)
 - `PresignUpload` — generates presigned MinIO PUT URL with content-type/size enforcement
+- `PublishListing` — validates draft payload + FX rate → creates `Listing(active)` + media rows → deletes draft (atomic transaction)
+- `MarkSold` — `active → sold`, writes `listing.marked_sold` audit log, emits `ListingSold`
+- `ArchiveListing` — `active | sold → archived`, writes `listing.archived` audit log
+- `RepublishListing` — `archived → active`, writes `listing.republished` audit log
+- `DeleteListing` — soft-delete, preserves media rows, writes `listing.deleted` audit log, emits `ListingDeleted`
 
-Remaining S4 use-cases in #89-#92: `PublishListing`, `EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
+Remaining S4 use-cases in #90-#92: `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
 
 ## HTTP routes
 
@@ -96,20 +101,41 @@ Remaining S4 use-cases in #89-#92: `PublishListing`, `EditListing`, `MarkSold`, 
 | DELETE | `/api/v1/listings/drafts/:id` | Required | `DiscardDraft` |
 | GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
 | POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
+| POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |
+| POST | `/api/v1/listings/:id/sold` | Required | `MarkSold` |
+| POST | `/api/v1/listings/:id/archive` | Required | `ArchiveListing` |
+| POST | `/api/v1/listings/:id/republish` | Required | `RepublishListing` |
+| DELETE | `/api/v1/listings/:id` | Required | `DeleteListing` |
 
 ## Events emitted
 
-- (no in-process consumers in S4; `EventEmitterListingEventPublisher` emits into the bus with zero handlers. Future consumers: S5 subscriptions `ListingCreated`, S7 conversations `ListingSold`, S9 admin `ListingReported`)
+- `ListingCreated` — emitted by `PublishListing` after transaction commit (no in-process consumers in S4; S5 subscriptions will consume)
+- `ListingSold` — emitted by `MarkSold` after DB update (no in-process consumers in S4; S7 conversations will consume)
+- `ListingDeleted` — emitted by `DeleteListing` after soft-delete (no in-process consumers in S4)
+
+Future events (not yet emitted):
+- `ListingUpdated` — will be emitted by `EditListing` (#90)
 
 ## Events consumed
 
 - (none today)
 
+## Audit log actions written
+
+- `listing.published` — `{ brandId, modelId, cityId, priceAmount, priceCurrency }`
+- `listing.marked_sold` — `{ priceAmount, priceCurrency, daysActive }`
+- `listing.archived` — `{ previousStatus }`
+- `listing.republished` — `{ previousArchivedAt }`
+- `listing.deleted` — `{ status, mediaCount }`
+
+Future audit actions:
+- `listing.price_changed` — will be written by `EditListing` (#90)
+
 ## Planned additions (future sprints)
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file or PRD feature.
 
-- **S4 (Listings CRUD) — domain + ports + null adapters shipped in #86**; remaining S4 work: application use-cases + Prisma repository adapters + controllers + contracts (issues #87-#92)
+- **S4 (Listings CRUD) — domain + ports + null adapters shipped in #86**; draft use-cases + controller in #88; publish + state transitions + audit log in #89; remaining S4 work: `EditListing` + read use-cases + media use-cases + feed ranking (#90-#92)
 - **S5 (Listings UX)** — saved-search match consumers, Favorite UX, filter sheet (forward-defined `filters` param in `ListFeed` already in place), availability hours for contact prefs
 - **S6 (Garage + Dealership)** — dealership posting (`dealershipId?` + `publishedAsDealership` columns + cross-context port + wizard step), Sell-from-Garage entry tile + pre-fill, OwnedVehicle redesign (FK columns + status enum), bi-directional Listing↔Garage sync, dealership PRO badge on detail
 - **S7 (Conversations)** — listing-detail Message button becomes functional; chat threads consume `ListingSold` event to auto-close
