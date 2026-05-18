@@ -45,10 +45,12 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 
 - `apps/api/src/modules/listings/`:
   - `domain/` — **6 entities + types + 10 ports** (S4 #86)
-  - `application/` — empty (S4 #88-#92 add use-cases)
-  - `infrastructure/` — 4 null/sync adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86)
+  - `application/` — 5 use-cases (S4 #88): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`
+  - `infrastructure/` — 6 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (skeleton), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `MinioMediaStorageAdapter` (S4 #88)
   - `presentation/listings.controller.ts` — stub controller (ping endpoint)
-  - `listings.module.ts` — registers null/sync adapters with DI tokens
+  - `presentation/DraftsController.ts` — draft CRUD + list my drafts
+  - `presentation/UploadsController.ts` — presign upload endpoint
+  - `listings.module.ts` — registers null/sync adapters, repositories, and use-cases with DI tokens
 
 ## Ports exposed
 
@@ -77,7 +79,23 @@ Repository ports (consumed only within `listings/`):
 
 ## Shipped use-cases
 
-- (none today — S4 ships the full CRUD set in issues #88-#92: `CreateDraft`, `PublishListing`, `EditListing`, `MarkSold`, `DeleteListing`, `AttachMedia`, `ListFeed`)
+- `CreateDraft` — creates `ListingDraft` for authenticated user
+- `UpdateDraft` — patches draft payload (idempotent autosave)
+- `ListMyDrafts` — paginated list of caller's drafts by `updatedAt DESC`
+- `DiscardDraft` — hard-deletes a draft (owner-validated)
+- `PresignUpload` — generates presigned MinIO PUT URL with content-type/size enforcement
+
+Remaining S4 use-cases in #89-#92: `PublishListing`, `EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
+
+## HTTP routes
+
+| Method | Path | Auth | Handler |
+|---|---|---|---|
+| POST | `/api/v1/listings/drafts` | Required | `CreateDraft` |
+| PATCH | `/api/v1/listings/drafts/:id` | Required | `UpdateDraft` |
+| DELETE | `/api/v1/listings/drafts/:id` | Required | `DiscardDraft` |
+| GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
+| POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
 
 ## Events emitted
 
