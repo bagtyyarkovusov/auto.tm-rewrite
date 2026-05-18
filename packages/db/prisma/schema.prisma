@@ -20,32 +20,33 @@ enum UserRole {
 }
 
 model User {
-  id                String    @id @default(uuid())
-  phone             String    @unique
-  displayName       String?
-  avatarUrl         String?
-  locale            String    @default("ru")
-  role              UserRole  @default(buyer)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id          String   @id @default(uuid())
+  phone       String   @unique
+  displayName String?
+  avatarUrl   String?
+  locale      String   @default("ru")
+  role        UserRole @default(buyer)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  otpRequests           OtpRequest[]
-  sessions              Session[]
-  dealershipMemberships DealershipMember[]
-  ownedVehicles         OwnedVehicle[]
-  blockedUsers          BlockedUser[]          @relation("Blocker")
-  blockedBy             BlockedUser[]          @relation("Blocked")
-  listings              Listing[]
-  favorites             Favorite[]
-  savedSearches         SavedSearch[]
+  otpRequests                OtpRequest[]
+  sessions                   Session[]
+  dealershipMemberships      DealershipMember[]
+  ownedVehicles              OwnedVehicle[]
+  blockedUsers               BlockedUser[]             @relation("Blocker")
+  blockedBy                  BlockedUser[]             @relation("Blocked")
+  listings                   Listing[]
+  favorites                  Favorite[]
+  savedSearches              SavedSearch[]
   conversationParticipations ConversationParticipant[]
-  fcmDevices            FcmDevice[]
-  notificationHistory   NotificationHistory[]
-  notificationPreferences NotificationPreference?
-  auditLogs             AuditLog[]
-  blogPosts             BlogPost[]
-  conversationsAsBuyer  Conversation[]  @relation("Buyer")
-  conversationsAsSeller Conversation[]  @relation("Seller")
+  fcmDevices                 FcmDevice[]
+  notificationHistory        NotificationHistory[]
+  notificationPreferences    NotificationPreference?
+  auditLogs                  AuditLog[]
+  blogPosts                  BlogPost[]
+  conversationsAsBuyer       Conversation[]            @relation("Buyer")
+  conversationsAsSeller      Conversation[]            @relation("Seller")
+  listingDrafts              ListingDraft[]
 
   @@map("users")
 }
@@ -89,17 +90,17 @@ enum DealershipMemberRole {
 }
 
 model Dealership {
-  id       String  @id @default(uuid())
-  slug     String  @unique
-  name     String
-  logoUrl  String?
-  cityId   String?
-  city     City?   @relation(fields: [cityId], references: [id])
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  logoUrl   String?
+  cityId    String?
+  city      City?    @relation(fields: [cityId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members          DealershipMember[]
-  ownedVehicles    OwnedVehicle[]
+  members       DealershipMember[]
+  ownedVehicles OwnedVehicle[]
 
   @@map("dealerships")
 }
@@ -117,16 +118,16 @@ model DealershipMember {
 }
 
 model OwnedVehicle {
-  id           String   @id @default(uuid())
+  id           String      @id @default(uuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   dealershipId String?
   dealership   Dealership? @relation(fields: [dealershipId], references: [id])
   brand        String
   model        String
   year         Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@map("owned_vehicles")
 }
@@ -148,24 +149,24 @@ model BlockedUser {
 /// ============================================================
 
 model Brand {
-  id     String @id @default(uuid())
-  slug   String @unique
-  nameRu String
-  nameTk String
-  nameEn String
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  nameRu    String
+  nameTk    String
+  nameEn    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  models Model[]
+  models   Model[]
   listings Listing[]
 
   @@map("brands")
 }
 
 model Model {
-  id        String @id @default(uuid())
+  id        String   @id @default(uuid())
   brandId   String
-  brand     Brand  @relation(fields: [brandId], references: [id])
+  brand     Brand    @relation(fields: [brandId], references: [id])
   slug      String
   nameRu    String
   nameTk    String
@@ -181,12 +182,12 @@ model Model {
 }
 
 model Generation {
-  id      String @id @default(uuid())
-  modelId String
-  model   Model  @relation(fields: [modelId], references: [id])
-  nameRu  String
-  nameTk  String
-  nameEn  String
+  id        String   @id @default(uuid())
+  modelId   String
+  model     Model    @relation(fields: [modelId], references: [id])
+  nameRu    String
+  nameTk    String
+  nameEn    String
   yearStart Int?
   yearEnd   Int?
   createdAt DateTime @default(now())
@@ -196,11 +197,11 @@ model Generation {
 }
 
 model Color {
-  id     String @id @default(uuid())
-  nameRu String
-  nameTk String
-  nameEn String
-  hex    String?
+  id        String   @id @default(uuid())
+  nameRu    String
+  nameTk    String
+  nameEn    String
+  hex       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -208,10 +209,10 @@ model Color {
 }
 
 model BodyType {
-  id     String @id @default(uuid())
-  nameRu String
-  nameTk String
-  nameEn String
+  id        String   @id @default(uuid())
+  nameRu    String
+  nameTk    String
+  nameEn    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -219,60 +220,67 @@ model BodyType {
 }
 
 model EngineType {
-  id     String @id @default(uuid())
-  nameRu String
-  nameTk String
-  nameEn String
+  id        String   @id @default(uuid())
+  nameRu    String
+  nameTk    String
+  nameEn    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  listings Listing[]
 
   @@map("engine_types")
 }
 
 model Transmission {
-  id     String @id @default(uuid())
-  nameRu String
-  nameTk String
-  nameEn String
+  id        String   @id @default(uuid())
+  nameRu    String
+  nameTk    String
+  nameEn    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  listings Listing[]
 
   @@map("transmissions")
 }
 
 model DriveType {
-  id     String @id @default(uuid())
-  nameRu String
-  nameTk String
-  nameEn String
+  id        String   @id @default(uuid())
+  nameRu    String
+  nameTk    String
+  nameEn    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  listings Listing[]
 
   @@map("drive_types")
 }
 
 model Region {
-  id     String @id @default(uuid())
-  slug   String @unique
-  nameRu String
-  nameTk String
-  nameEn String
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  nameRu    String
+  nameTk    String
+  nameEn    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cities City[]
+  cities   City[]
+  listings Listing[]
 
   @@map("regions")
 }
 
 model City {
-  id       String @id @default(uuid())
-  regionId String
-  region   Region @relation(fields: [regionId], references: [id])
-  slug     String
-  nameRu   String
-  nameTk   String
-  nameEn   String
+  id        String   @id @default(uuid())
+  regionId  String
+  region    Region   @relation(fields: [regionId], references: [id])
+  slug      String
+  nameRu    String
+  nameTk    String
+  nameEn    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -294,6 +302,13 @@ enum ListingStatus {
   sold
   archived
   rejected
+  reported
+  banned
+}
+
+enum ListingCondition {
+  new
+  used
 }
 
 enum Currency {
@@ -303,28 +318,48 @@ enum Currency {
 }
 
 model Listing {
-  id             String        @id @default(uuid())
-  sellerId       String
-  seller         User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  status         ListingStatus @default(draft)
-  brandId        String
-  brand          Brand         @relation(fields: [brandId], references: [id])
-  modelId        String
-  model          Model         @relation(fields: [modelId], references: [id])
-  generationId   String?
-  colorId        String?
-  bodyTypeId     String?
-  cityId         String
-  city           City          @relation(fields: [cityId], references: [id])
-  year           Int?
-  mileageKm      Int?
-  priceAmount    Float
-  priceCurrency  Currency      @default(TMT)
-  description    String?
-  deletedAt      DateTime?
-  publishedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id            String        @id @default(uuid())
+  sellerId      String
+  seller        User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  status        ListingStatus @default(draft)
+  brandId       String
+  brand         Brand         @relation(fields: [brandId], references: [id])
+  modelId       String
+  model         Model         @relation(fields: [modelId], references: [id])
+  generationId  String?
+  colorId       String?
+  bodyTypeId    String?
+  cityId        String
+  city          City          @relation(fields: [cityId], references: [id])
+  year          Int?
+  mileageKm     Int?
+  priceAmount   Float
+  priceCurrency Currency      @default(TMT)
+  description   String?
+  deletedAt     DateTime?
+  publishedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // S4 additions
+  vin            String?
+  condition      ListingCondition?
+  engineTypeId   String?
+  engineType     EngineType?       @relation(fields: [engineTypeId], references: [id])
+  transmissionId String?
+  transmission   Transmission?     @relation(fields: [transmissionId], references: [id])
+  driveTypeId    String?
+  driveType      DriveType?        @relation(fields: [driveTypeId], references: [id])
+  enginePower    Int?
+  regionId       String?
+  region         Region?           @relation(fields: [regionId], references: [id])
+  locationText   String?
+  soldAt         DateTime?
+  viewCount      Int               @default(0)
+  favoriteCount  Int               @default(0)
+  contactPhone   String?
+  allowCalls     Boolean           @default(true)
+  allowChat      Boolean           @default(true)
 
   media         ListingMedia[]
   favorites     Favorite[]
@@ -342,13 +377,17 @@ enum MediaKind {
 }
 
 model ListingMedia {
-  id        String    @id @default(uuid())
-  listingId String
-  listing   Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  kind      MediaKind
-  url       String
-  sortOrder Int
-  createdAt DateTime  @default(now())
+  id         String    @id @default(uuid())
+  listingId  String
+  listing    Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  kind       MediaKind
+  key        String
+  sortOrder  Int
+  width      Int?
+  height     Int?
+  durationMs Int?
+  posterKey  String?
+  createdAt  DateTime  @default(now())
 
   @@index([listingId, sortOrder])
   @@map("listing_media")
@@ -366,19 +405,43 @@ model Favorite {
   @@map("favorites")
 }
 
+model ListingDraft {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("listing_drafts")
+}
+
+model ExchangeRate {
+  id           String   @id @default(uuid())
+  fromCurrency Currency
+  toCurrency   Currency
+  rate         Float
+  updatedAt    DateTime @updatedAt
+  setByUserId  String?
+
+  @@unique([fromCurrency, toCurrency])
+  @@map("exchange_rates")
+}
+
 /// ============================================================
 /// SUBSCRIPTIONS
 /// ============================================================
 
 model SavedSearch {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  filters       Json
-  pushEnabled   Boolean  @default(true)
-  lastDigestAt  DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filters      Json
+  pushEnabled  Boolean   @default(true)
+  lastDigestAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([userId])
   @@map("saved_searches")
@@ -427,14 +490,14 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String      @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
   kind           MessageKind
   body           String?
   metadata       Json?
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime     @default(now())
 
   @@index([conversationId, createdAt])
   @@map("messages")
@@ -451,13 +514,13 @@ enum PushPlatform {
 }
 
 model FcmDevice {
-  id     String        @id @default(uuid())
-  userId String
-  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token  String        @unique
-  platform PushPlatform
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String       @unique
+  platform  PushPlatform
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@index([userId])
   @@map("fcm_devices")
@@ -488,9 +551,9 @@ model NotificationHistory {
 }
 
 model NotificationPreference {
-  id      String               @id @default(uuid())
-  userId  String               @unique
-  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   optOuts Json
 
   @@map("notification_preferences")
@@ -501,17 +564,17 @@ model NotificationPreference {
 /// ============================================================
 
 model BlogPost {
-  id        String    @id @default(uuid())
-  slug      String    @unique
-  locale    String
-  title     String
-  body      String
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  locale      String
+  title       String
+  body        String
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   publishedAt DateTime?
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([locale, publishedAt(sort: Desc)])
   @@map("blog_posts")
@@ -524,7 +587,7 @@ model BlogPost {
 model AuditLog {
   id         String   @id @default(uuid())
   actorId    String?
-  actor      User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
   action     String
   targetType String
   targetId   String

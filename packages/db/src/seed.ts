@@ -8,6 +8,7 @@ import cities from "../prisma/seed/cities.json" with { type: "json" };
 import colors from "../prisma/seed/colors.json" with { type: "json" };
 import driveTypes from "../prisma/seed/drive-types.json" with { type: "json" };
 import engineTypes from "../prisma/seed/engine-types.json" with { type: "json" };
+import exchangeRates from "../prisma/seed/exchange-rates.json" with { type: "json" };
 import models from "../prisma/seed/models.json" with { type: "json" };
 import regions from "../prisma/seed/regions.json" with { type: "json" };
 import transmissions from "../prisma/seed/transmissions.json" with { type: "json" };
@@ -265,6 +266,31 @@ async function main() {
   console.log(
     `Seeded ${driveTypeCount} new drive types (${driveTypes.length} total in file)`,
   );
+
+  // 10. ExchangeRate — upsert by unique (fromCurrency, toCurrency)
+  let exchangeRateCount = 0;
+  for (const er of exchangeRates as Array<{
+    fromCurrency: string;
+    toCurrency: string;
+    rate: number;
+  }>) {
+    await prisma.exchangeRate.upsert({
+      where: {
+        fromCurrency_toCurrency: {
+          fromCurrency: er.fromCurrency as "USD" | "AED" | "TMT",
+          toCurrency: er.toCurrency as "USD" | "AED" | "TMT",
+        },
+      },
+      update: { rate: er.rate },
+      create: {
+        fromCurrency: er.fromCurrency as "USD" | "AED" | "TMT",
+        toCurrency: er.toCurrency as "USD" | "AED" | "TMT",
+        rate: er.rate,
+      },
+    });
+    exchangeRateCount++;
+  }
+  console.log(`Seeded ${exchangeRateCount} exchange rates`);
 }
 
 main()
