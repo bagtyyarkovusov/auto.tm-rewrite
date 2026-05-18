@@ -12,7 +12,7 @@
 
 ## Goal
 
-Seller creates a listing with photos (≤20) and one short video (≤60 s) via a 7-step wizard. Anonymous user browses the chronological feed + detail page on mobile and web. Owner can edit, mark sold, archive, republish, or delete. Listings are TMT-displayed but multi-currency-input (TMT/USD/AED) with admin-managed FX rates. Feed is chronological in S4; smart ranking lands in S19 via a port swap.
+Seller creates a listing with photos (≤20) via a 7-step wizard. Anonymous user browses the chronological feed + detail page on mobile and web. Owner can edit, mark sold, archive, republish, or delete. Listings are TMT-displayed but multi-currency-input (TMT/USD/AED) with admin-managed FX rates. Feed is chronological in S4; smart ranking lands in S19 via a port swap. Video media primitives can exist behind the API boundary, but mobile video UX is deferred.
 
 ## User capability (the demo line)
 
@@ -59,6 +59,9 @@ Per [ADR-0019](../../adr/0019-context-md-describes-current-state.md), the listin
   - `contactPhone?` (String) — override of `seller.phoneE164`
   - `allowCalls Boolean @default(true)` — must be true OR allowChat
   - `allowChat Boolean @default(true)` — must be true OR allowCalls
+  - `acceptsExchange Boolean @default(false)` — seller says they may consider vehicle exchange; informational only in S4
+  - `installmentAvailable Boolean @default(false)` — seller says installment/payment-plan discussion is possible; AutoTM does not finance or verify terms in S4
+- [ ] Existing `Listing.year` and `Listing.mileageKm` remain nullable at the database level for historical/admin flexibility, but `PublishListing` must require `year` for new mobile listings and must require `mileageKm` when `condition='used'`. This follows marketplace parity (Auto.ru / AutoTrader-style flows require model year and used-car mileage). `vin` and `generationId` remain optional.
 - [ ] **Dropped from S4 scope** (deferred elsewhere): `dealershipId?` + `publishedAsDealership` (S6); `ownedVehicleId?` (S6); `originalPrice?` + `originalCurrency?` (multi-currency handled by `priceAmount`+`priceCurrency` directly)
 - [ ] `Listing.status` enum: keep existing 6 values (`draft` | `pending_review` | `active` | `sold` | `archived` | `rejected`); **add 2 values for S9 use**: `reported`, `banned`. Phase 1 only writes `active`/`sold`/`archived`/`rejected` values; `draft` / `pending_review` retained but unused in Phase 1.
 - [ ] Rename existing `Listing.deletedAt` semantics confirmed: soft-delete only on Listing (per ADR-0001).
@@ -79,7 +82,7 @@ Phase 1 active states: `active`, `sold`, `archived`. Soft-delete via `deletedAt`
 |---|---|---|
 | `CreateDraft` | Creates `ListingDraft` row with empty `payload`. | — |
 | `UpdateDraft` | Autosave wizard step into `payload`. | — |
-| `PublishListing` | Validates required fields from draft → creates `Listing(active)` + sets `publishedAt` → deletes the `ListingDraft` row. Validates `EXCHANGE_RATE_MISSING` if `priceCurrency` other than TMT and rate is absent. | `listing.published` |
+| `PublishListing` | Validates required fields from draft (photos, brand, model, year, condition, mileage for used cars, price, region/city, description, contact method) → creates `Listing(active)` + sets `publishedAt` → deletes the `ListingDraft` row. Validates `EXCHANGE_RATE_MISSING` if `priceCurrency` other than TMT and rate is absent. | `listing.published` |
 | `EditListing` | Patches an existing Listing. Rejects with `LISTING_FIELD_LOCKED` on attempts to change `brandId`, `modelId`, `generationId`, `year`, `vin`. Validates `allowCalls OR allowChat`. | `listing.price_changed` when amount or currency changes; otherwise no entry |
 | `MarkSold` | `active → sold`, sets `soldAt = NOW()`. | `listing.marked_sold` |
 | `ArchiveListing` | `active | sold → archived`. | `listing.archived` |
@@ -187,7 +190,7 @@ Public feed sorts `publishedAt DESC, id DESC`. My Listings / My Drafts sort `upd
 ### Media pipeline
 
 - Photos: ≤20 per listing; client-compressed (`expo-image-manipulator`) to ≤5 MB JPEG; server enforces via MinIO presign conditions
-- Video: ≤1 per listing, ≤60 s, ≤10 MB; client-compressed (`react-native-compressor`); server enforces size + content-type; **original-only playback in S4** (HLS pipeline lands in S8)
+- Video media primitives may exist behind the API boundary, but #93's mobile wizard exposes photos only. Do not render a disabled/coming-soon video control in the S4 create wizard; real mobile video capture/playback UX lands with the S8 media pipeline.
 - Variant naming convention (synced for client + server): `listings/<listingId>/<mediaId>/{original|thumbnail|list|detail|fullscreen}.{jpg|webp}`
 - API serializes Listing detail responses with full variant URLs constructed at read time
 - Sync Sharp generation on `AttachMedia` in S4; S8 swaps `ImageVariantGenerator` adapter to enqueue work to BullMQ
@@ -198,7 +201,7 @@ Public feed sorts `publishedAt DESC, id DESC`. My Listings / My Drafts sort `upd
   - Lifecycle: file deleted on attach success OR RemoveMedia; entire `<draftId>/` directory deleted on draft discard or publish; orphan cleanup on app launch removes directories for non-existent drafts
   - Resume on `AppState 'active'` + `NetInfo isConnected`
   - Phase 1: whole-file retry only (no multipart resumable, no guaranteed OS-level background upload)
-  - Publish blocked until all required media is attached
+  - The user may continue later wizard steps while uploads run, but Publish is blocked until at least one photo is attached successfully and there are no required pending or failed uploads. Failed thumbnails render Retry + Remove.
 
 ### Currency / FX behavior
 
@@ -208,8 +211,11 @@ Public feed sorts `publishedAt DESC, id DESC`. My Listings / My Drafts sort `upd
   - **Owner viewing own listing**: TMT primary + `≈ original currency` secondary (e.g., `1,890,000 TMT` + `≈ $20,000`)
   - **Public buyer viewing listing**: TMT only (e.g., `1,890,000 TMT`)
   - Mobile client branches on `viewer.userId === listing.sellerId`
-- `EditListing` accepts currency changes; clearing the amount field on currency-toggle is mobile UX (no auto-conversion to avoid rounding ugliness)
+- `EditListing` accepts currency changes; clearing the amount field on currency-toggle is mobile UX (no auto-conversion to avoid rounding ugliness). In the wizard, if the seller switches TMT/USD/AED after entering an amount, clear the amount field, focus it, and show helper text asking for the price in the newly selected currency.
 - `PublishListing` rejects with `EXCHANGE_RATE_MISSING` if rate row absent for non-TMT priceCurrency
+- Mobile Publish is blocked for non-TMT listings while the required FX rate is unavailable; show an inline helper such as "Exchange rate unavailable. Try TMT or contact support."
+- Seller terms under price: optional `acceptsExchange` and `installmentAvailable` switches. There is no separate `negotiable` flag in S4; sellers can mention negotiation in Description. Seller terms do not change price validation: `priceAmount` must remain the full asking price, never a down payment or installment amount. S4 does not collect installment duration, down payment, bank, or trade-in target details.
+- Feed/listing cards show small secondary seller-term badges under price when true; detail shows the same badges near price with helper text. S4 has no buyer application form, exchange matching, credit lead routing, or financing workflow.
 - FX rate updates: admin UI defers to S9; manual DB updates seed initial rates; FX-rate updates do NOT write AuditLog entries against affected listings (would be noise)
 - Admin updates FX rate → seller's TMT-equivalent display updates next read; seller sees "Shown in TMT at today's rate — your <original> price is unchanged" tooltip in My Listings (mobile)
 
@@ -217,20 +223,26 @@ Public feed sorts `publishedAt DESC, id DESC`. My Listings / My Drafts sort `upd
 
 Per PRD feature 32 + flow 61 — order is fixed, photos start compressing in step 2 so they upload in parallel with steps 3-7:
 
-1. **VIN** — optional text; Skip prominent; `VinDecoderPort.decode()` always returns `{ decoded: false }` in S4 (silent fallback to manual entry)
-2. **Photos** — Camera/Library; min 1 max 20; client-compresses immediately to staging; first photo is cover; drag to reorder
-3. **Brand → Model → Generation → Year** — catalog pickers
-4. **Specs** — Mileage, Condition, Color, Body type, Transmission, Drive type, Engine type, Engine power
-5. **Price & currency** — Amount input + Currency picker (TMT default); `≈ X TMT` live helper for non-TMT
-6. **Location** — Region picker → City picker → Free-text location
-7. **Description + Contact** — Description (≤2000 chars); optional `contactPhone` override (defaults to `seller.phoneE164`); `allowCalls` + `allowChat` switches (default ON; at-least-one validation)
-- Drafts auto-save on every step transition via `UpdateDraft`
-- Resume on next visit picks up at the last completed step
+1. **VIN** — optional manual text; Skip prominent; no OCR, decoder, checking, or auto-fill UI in #93. `VinDecoderPort` can remain a Null adapter behind the API boundary for Phase 2, but the mobile wizard must not promise lookup.
+2. **Photos** — Camera/Library; min 1 max 20; freeform photo set with lightweight helper chips (front, interior, odometer) but no required angle checklist; client-compresses immediately to staging; first photo is cover and shows a Cover badge; drag to reorder changes the cover; no separate Set cover action; failed thumbnails render Retry + Remove
+3. **Brand → Model → Generation → Year** — input-like trigger rows opening searchable picker sheets; Model disabled until Brand; `year` is required; `generationId` is optional/skippable because seed data may be empty in S4 and empty sheet state says no generations exist yet
+4. **Specs** — Condition defaults to Used; Mileage is visible and required for used cars, optional/hidden for new cars; Color, Body type, Transmission, Drive type, Engine type, and Engine power are optional completeness fields and do not block publish in S4
+5. **Price & currency** — Amount input + Currency picker (TMT default); changing currency clears the amount instead of converting it; `≈ X TMT` live helper for non-TMT; missing non-TMT FX rate blocks Publish with an honest helper; optional Seller terms switches for Exchange possible and Installment possible
+6. **Location** — Region picker → City picker → optional area/landmark text. No GPS/current-location button, map pin, exact address, or first-open location prompt.
+7. **Description + Contact** — Description is required, has no minimum beyond non-empty, is capped at 2000 chars, and is stored exactly as written with no auto-translation or language selector in S4; optional `contactPhone` override (defaults to `seller.phoneE164`); `allowCalls` + `allowChat` switches (default ON; at-least-one validation); show compact Review summary above Publish, not a separate Preview route
+- Navigation is linear Next/Back in S4. The Review summary may deep-link back to completed steps for correction, but there is no full arbitrary stepper navigation.
+- Drafts auto-save through the server only: debounced while editing, forced on every step transition via `UpdateDraft`, and never presented as offline-saved unless local draft persistence is explicitly added later. Save failure keeps the user on the current step with Retry.
+- Resume on next visit picks up at the last completed step. If existing drafts are present, Sell shows a lightweight entry with the latest draft as the primary Continue action plus New listing; full draft management belongs in My Listings / #94.
+- Discard draft lives in the wizard header overflow menu and opens a destructive confirmation `AlertDialog`; it is not a footer action.
 - Edit mode: identity fields (brandId, modelId, generationId, year, vin) render disabled with tooltips
 
 ### Edit invariants (locked post-publish)
 
 `EditListing` rejects patches that change `brandId`, `modelId`, `generationId`, `year`, or `vin` with error code `LISTING_FIELD_LOCKED`. Mobile wizard's edit mode renders these fields as disabled. Drafts (`ListingDraft.payload`) have no locks — full editability before publish. Admin override is S9 work (`AdminEditListing`).
+
+### Listing title
+
+There is no manual `Listing.title` field in S4. Mobile and web derive the display title from structured catalog data: `Year + Brand + Model + Generation/trim when available`. Seller-written free text belongs only in Description.
 
 ### Feed visibility query
 
@@ -287,7 +299,7 @@ Public reads work without auth headers: `GET /listings`, `GET /listings/:id`, `G
 - **Domain**: `Listing` state machine transitions; `Price` VO with `Currency` enum; `MediaCount` invariant (≤20 photos + ≤1 video); `Listing.canEditField()` helper for locked-field enforcement
 - **Application**: one test class per use-case (`CreateDraft`, `UpdateDraft`, `PublishListing`, `EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `PresignUpload`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `ListMyDrafts`, `GetExchangeRates`). Each use-case test injects fake ports.
 - **`EditListing` specifically**: per-locked-field rejection (5 separate spec cases); price-change AuditLog rider; currency change clearing amount
-- **`PublishListing` specifically**: `EXCHANGE_RATE_MISSING` rejection; required-fields validation; `at-least-one-contact-method` validation; draft → listing transition + draft deletion
+- **`PublishListing` specifically**: `EXCHANGE_RATE_MISSING` rejection; required-fields validation including missing `year` and missing used-car `mileageKm`; `at-least-one-contact-method` validation; draft → listing transition + draft deletion
 - **`ChronologicalRankingAdapter`** (Testcontainers): cursor pagination + 14-day-fade + soft-delete exclusion
 - **Infrastructure** (Testcontainers): `PrismaListingRepository` round-trips, `PrismaListingDraftRepository`, `PrismaExchangeRateRepository`, `PrismaListingsReadRepository`, `MinioMediaStorageAdapter` presigned URL with correct expiry + conditions (mock MinIO endpoint or live container)
 - **Presentation** (e2e): full publish → fetch detail → list-in-feed cycle; locked-field rejection; cursor pagination end-of-feed; anonymous public reads succeed

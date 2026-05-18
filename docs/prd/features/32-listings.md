@@ -2,7 +2,7 @@
 
 ## Summary
 
-The core economic object: car ads. Sellers create listings via a 7-step wizard, with photo + optional video, brand/model/generation specs, price, location. Buyers browse anonymously, favorite, chat, and (Phase 2) see the trust tier.
+The core economic object: car ads. Sellers create listings via a 7-step wizard, with photos, brand/model/generation specs, price, location. Buyers browse anonymously, favorite, chat, and (Phase 2) see the trust tier. Video media is future-facing and should not appear in the Sprint 4 mobile create wizard.
 
 ## Why it exists
 
@@ -12,15 +12,15 @@ A marketplace without listings is empty. This is the central feature; everything
 
 ### Create wizard (7 steps for MVP)
 
-1. **VIN entry** — optional; if filled, attempts auto-fill from VIN decoder (mocked in MVP, real in Phase 2). Skip button.
-2. **Photo capture** — pick from library OR camera; min 1, max 20; client-side compress + reorder UI; first photo = cover
-3. **Brand → Model → Generation → Year** — uses shared catalog picker component
-4. **Mileage + Condition** (`new` / `used`) + **Color** + **Transmission** + **Drive type** + **Engine type** + **Engine power**
-5. **Price + Currency** (TMT / USD / AED). Show "approximate price in user's display currency" using admin FX
+1. **VIN entry** — optional manual text only in Sprint 4; no OCR, decoder, checking, or auto-fill promise in the mobile wizard. Skip button is prominent. Real VIN decode is Phase 2.
+2. **Photo capture** — pick from library OR camera; min 1, max 20; freeform photo set with lightweight guidance only; client-side compress + reorder UI; first photo = cover and gets a Cover badge; drag-reorder changes cover; failed uploads expose Retry + Remove
+3. **Brand → Model → Generation → Year** — input-like rows open searchable picker sheets; Brand first, Model disabled until Brand, Generation optional/skippable when no catalog data exists, Year required
+4. **Condition** (`used` default / `new`) + **Mileage** (visible and required for used cars; optional/hidden for new cars) + optional completeness fields: **Color**, **Body type**, **Transmission**, **Drive type**, **Engine type**, **Engine power**. These completeness fields do not block publish in Sprint 4.
+5. **Price + Currency** (TMT default / USD / AED) + **Seller terms**. Switching currency clears the amount instead of auto-converting; non-TMT shows approximate TMT using admin FX; missing non-TMT FX blocks publish with an inline helper. Optional terms: Exchange possible and Installment possible. No separate negotiable toggle in Sprint 4. Price is always the full asking price, never a down payment.
 6. **Car location** — Region + City + optional area/landmark text ("Aşgabat, 30 mkr"). This is the physical location where the car can be inspected, not the seller's current GPS location.
-7. **Description + Phone + Contact preferences** (call / chat / both, hours of availability)
+7. **Description + Phone + Contact preferences** — description is required but has no minimum word count beyond non-empty, max 2000 chars. Store seller text exactly as written; no auto-translation or language selector in Sprint 4. Profile phone is prefilled as a per-listing editable override; calls/chat switches have at-least-one validation; chat can be enabled now with honest helper text that messaging launches later. No separate Preview route in Sprint 4; show a compact Review summary above Publish.
 
-Drafts auto-saved on every step. Resume on next visit. Cancel discards (with confirm).
+Navigation is linear Next/Back in Sprint 4. The compact Review summary can link back to completed steps for corrections; do not build arbitrary step-jump navigation. Drafts auto-save to the server while editing and force-save on step transition. Do not promise offline draft persistence in Sprint 4. Resume on next visit. If drafts exist, Sell opens a lightweight entry with latest draft as the primary Continue action and New listing as secondary; full draft management belongs in My Listings. Discard draft lives in the wizard header overflow menu and requires destructive confirmation.
 
 ### Listing location policy
 
@@ -34,20 +34,21 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 
 ### Media upload + refresh behavior
 
-- Selected photos/videos are compressed into an app-owned local staging area before upload.
+- Selected photos are compressed into an app-owned local staging area before upload.
 - Upload starts as early as possible and runs in the background relative to the wizard UI. The user can continue later steps while media uploads.
 - Background upload is best-effort only. If the app is backgrounded, killed, or the network drops, uploads may pause/fail; on reopen/reconnect the app retries from the staged compressed file as a whole-file retry.
-- Publish is blocked until required media is either attached successfully or removed from the draft.
+- Publish is blocked until at least one photo is attached successfully and there are no required pending or failed uploads.
 - Phase 1 does not promise byte-level resumable/multipart uploads, full offline listing creation, or guaranteed OS-level background upload.
 - Listing/feed screens use last-seen data while reconnecting, then refresh on app foreground/reconnect. This is not an offline browsing mode promise.
 - Remote listing images are displayed through a native image cache (`expo-image` in mobile) using immutable media URLs. TanStack Query caches listing JSON, not image/video bytes.
-- Listing videos are streamed in Phase 1. We do not promise offline video playback or persistent video caching.
+- Listing video playback is deferred with the video media UX. We do not promise offline video playback or persistent video caching.
 
 ### View listing
 
 - Photo gallery (swipe through; pinch zoom; tap to fullscreen)
-- Video below photos if present (HLS adaptive playback, poster frame first)
-- Title block: Brand Model, Year — Price (in user's currency; original price shown if different)
+- Video below photos only after the video media UX ships; Sprint 4 photo listings do not need a video player
+- Title block: derived `Year + Brand + Model + Generation/trim when available`; no manual title field in Sprint 4. Price display follows the S4 TMT-display policy.
+- Seller terms badges when true: Exchange possible, Installment possible. Feed/listing cards show small secondary badges under price; detail shows badges near price with helper text. These are informational; AutoTM does not finance, broker, match exchange vehicles, or verify payment terms in Sprint 4.
 - Spec grid: mileage, transmission, drive, engine, color, body type, condition, year, VIN (masked if seller hides)
 - Description block
 - Seller block: avatar, name (or dealership name + PRO badge), tenure, city, response time stat
@@ -85,6 +86,8 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 |---|---|---|
 | Wizard step 1 (VIN) | Empty | Optional, skip button prominent |
 | Wizard step 2 (photos) | <1 photo | Submit disabled; helper text |
+| Wizard step 3 (vehicle identity) | Missing year | Continue disabled; year is required for marketplace-quality listings |
+| Wizard step 4 (specs) | Used car missing mileage | Continue disabled; mileage is required for used-car listings |
 | Wizard | Upload failed | Retry button per failed photo |
 | Wizard | Network slow | Show progress + "Slow connection" badge |
 | Listing detail | Anonymous | All buttons present; tap → login modal |
