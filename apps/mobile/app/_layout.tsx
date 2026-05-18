@@ -16,9 +16,12 @@ import { AppState, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
 
+
 import { NAV_THEME } from "../lib/theme";
 import { ApiError } from "../src/api/client";
 import { clearAuthSession } from "../src/auth/session";
+
+import { ToastProvider } from "@/components/ui/toast";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,19 +97,21 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={NAV_THEME[scheme]}>
-        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="(auth)/phone"
-            options={{ presentation: "fullScreenModal" }}
-          />
-          <Stack.Screen
-            name="(auth)/otp"
-            options={{ presentation: "fullScreenModal" }}
-          />
-        </Stack>
-        <PortalHost />
+        <ToastProvider>
+          <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="(auth)/phone"
+              options={{ presentation: "fullScreenModal" }}
+            />
+            <Stack.Screen
+              name="(auth)/otp"
+              options={{ presentation: "fullScreenModal" }}
+            />
+          </Stack>
+          <PortalHost />
+        </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
