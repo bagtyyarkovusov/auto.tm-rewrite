@@ -6,6 +6,7 @@ import {
   Pressable,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import {
   Camera,
   ImagePlus,
@@ -57,6 +58,26 @@ export default function Step2Photos({
   isUploading,
   disabled,
 }: Step2PhotosProps) {
+  const ensurePickerTempDir = useCallback(async () => {
+    const dir = `${FileSystem.documentDirectory}picker-temp/`;
+    const info = await FileSystem.getInfoAsync(dir);
+    if (!info.exists) {
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    }
+    return dir;
+  }, []);
+
+  const copyToPickerTemp = useCallback(
+    async (sourceUri: string): Promise<string> => {
+      const dir = await ensurePickerTempDir();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+      const destUri = `${dir}${fileName}`;
+      await FileSystem.copyAsync({ from: sourceUri, to: destUri });
+      return destUri;
+    },
+    [ensurePickerTempDir],
+  );
+
   const pickFromLibrary = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -64,11 +85,24 @@ export default function Step2Photos({
       quality: 1,
     });
     if (!result.canceled) {
-      for (const asset of result.assets) {
-        await onAddPhoto(asset.uri);
-      }
+      // Copy all picker URIs to document directory before any async compression
+      // begins, then fire compressions in parallel so iOS cannot purge cache
+      // files while we are still processing earlier photos.
+      const copiedUris = await Promise.all(
+        result.assets.map((asset) => copyToPickerTemp(asset.uri)),
+      );
+      await Promise.all(
+        copiedUris.map(async (uri) => {
+          try {
+            await onAddPhoto(uri);
+          } finally {
+            // Best-effort cleanup of the temp copy after compression finishes
+            await FileSystem.deleteAsync(uri, { idempotent: true });
+          }
+        }),
+      );
     }
-  }, [onAddPhoto]);
+  }, [onAddPhoto, copyToPickerTemp]);
 
   const takePhoto = useCallback(async () => {
     const result = await ImagePicker.launchCameraAsync({
@@ -76,9 +110,14 @@ export default function Step2Photos({
       quality: 1,
     });
     if (!result.canceled && result.assets[0]) {
-      await onAddPhoto(result.assets[0].uri);
+      const uri = await copyToPickerTemp(result.assets[0].uri);
+      try {
+        await onAddPhoto(uri);
+      } finally {
+        await FileSystem.deleteAsync(uri, { idempotent: true });
+      }
     }
-  }, [onAddPhoto]);
+  }, [onAddPhoto, copyToPickerTemp]);
 
   const handleMoveUp = useCallback((index: number) => {
     if (index === 0) return;

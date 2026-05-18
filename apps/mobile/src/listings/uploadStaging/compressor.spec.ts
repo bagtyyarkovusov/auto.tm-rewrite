@@ -70,7 +70,7 @@ describe("compressPhoto", () => {
     ).rejects.toSatisfy((err: unknown) => {
       expect(err).toBeInstanceOf(CompressionError);
       expect((err as CompressionError).code).toBe("SOURCE_MISSING");
-      expect((err as CompressionError).message).toBe("Photo file missing — please remove and re-select");
+      expect((err as CompressionError).message).toBe("Original photo was deleted — please re-select");
       return true;
     });
 

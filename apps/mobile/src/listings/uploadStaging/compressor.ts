@@ -30,7 +30,7 @@ export async function compressPhoto(
   const sourceInfo = await FileSystem.getInfoAsync(sourceUri);
   if (!sourceInfo.exists) {
     throw new CompressionError(
-      "Photo file missing — please remove and re-select",
+      "Original photo was deleted — please re-select",
       "SOURCE_MISSING",
     );
   }
