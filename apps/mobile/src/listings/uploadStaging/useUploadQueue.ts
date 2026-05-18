@@ -125,12 +125,13 @@ export function useUploadQueue(
           }),
         );
 
-        // PUT to MinIO via expo-file-system
+        // PUT raw binary to MinIO via expo-file-system
         const uploadResult = await FileSystem.uploadAsync(
           presignResult.uploadUrl,
           photo.localUri,
           {
             httpMethod: "PUT",
+            uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
             headers: {
               "Content-Type": "image/jpeg",
             },
@@ -210,14 +211,14 @@ export function useUploadQueue(
         const compressed = await compressPhoto(sourceUri, destinationUri);
         setIsCompressing(false);
 
-        setQueue((prev) =>
-          updatePhotoState(prev, photoId, "compressed", {
-            localUri: compressed.uri,
-            width: compressed.width,
-            height: compressed.height,
-            fileSize: compressed.fileSize,
-          }),
-        );
+        // Update ref synchronously so uploadPhoto sees localUri immediately
+        queueRef.current = updatePhotoState(queueRef.current, photoId, "compressed", {
+          localUri: compressed.uri,
+          width: compressed.width,
+          height: compressed.height,
+          fileSize: compressed.fileSize,
+        });
+        setQueue(queueRef.current);
 
         // Enqueue upload (respects max concurrency)
         uploadQueue.current.push(photoId);
