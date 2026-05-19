@@ -61,21 +61,17 @@ export async function compressPhoto(
       fileSize = fileInfo.exists && "size" in fileInfo ? fileInfo.size : 0;
     }
 
-    // Move to destination if different
+    // Copy to staging directory (always copy, never move — moveAsync fails
+    // silently on some iOS versions crossing filesystem boundaries, see #118)
     if (finalUri !== destinationUri) {
       try {
-        await FileSystem.moveAsync({ from: finalUri, to: destinationUri });
+        await FileSystem.copyAsync({ from: finalUri, to: destinationUri });
       } catch {
-        try {
-          await FileSystem.copyAsync({ from: finalUri, to: destinationUri });
-        } catch {
-          throw new CompressionError(
-            "Failed to transfer compressed photo to staging — disk full or permission denied",
-            "DESTINATION_MISSING",
-          );
-        }
+        throw new CompressionError(
+          "Failed to transfer compressed photo to staging — disk full or permission denied",
+          "DESTINATION_MISSING",
+        );
       }
-      // Clean up source (cache) file after successful move or copy
       try {
         await FileSystem.deleteAsync(finalUri, { idempotent: true });
       } catch {

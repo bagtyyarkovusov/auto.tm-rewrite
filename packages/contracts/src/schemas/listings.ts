@@ -21,7 +21,7 @@ export const ListingSummarySchema = z.object({
   status: ListingStatusSchema,
   brandId: z.string().uuid(),
   modelId: z.string().uuid(),
-  year: z.number().int().min(1900).max(2100).optional(),
+  year: z.number().int().optional(),
   priceAmount: z.number().positive(),
   priceCurrency: CurrencySchema,
   displayPriceTmt: z.number().positive(),

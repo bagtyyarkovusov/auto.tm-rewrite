@@ -47,6 +47,12 @@ Agents working in this repo read these files **before** the per-context `CONTEXT
 | reports | [`reports/CONTEXT.md`](apps/api/src/modules/reports/CONTEXT.md) | **2** | InspectionReport, Tier, PDF artifacts |
 | admin | [`admin/CONTEXT.md`](apps/api/src/modules/admin/CONTEXT.md) | 1 | Audit log, moderation, staff-media attribution |
 
+## Mobile feature modules (inside `apps/mobile/src/`)
+
+| Module | File | Owns |
+|---|---|---|
+| listings | [`listings/CONTEXT.md`](apps/mobile/src/listings/CONTEXT.md) | Upload pipeline, wizard state machine, autosave |
+
 ## Packages
 
 | Package | File | Owns |

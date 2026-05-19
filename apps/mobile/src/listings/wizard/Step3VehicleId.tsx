@@ -1,46 +1,62 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { View } from "react-native";
 
 import { useBrands } from "../../api/catalog/useBrands";
-import { useModels } from "../../api/catalog/useModels";
 import { useGenerations } from "../../api/catalog/useGenerations";
+import { useModels } from "../../api/catalog/useModels";
 
-import type { WizardPayload } from "./types";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
-import { Button } from "@/components/ui/button";
+import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
+import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  shouldShowVehicleFieldError,
+  type VehicleField,
+} from "./vehicleFieldErrorVisibility";
 
-
-
-interface StepProps {
-  payload: WizardPayload;
-  onChange: (updates: Partial<WizardPayload>) => void;
+interface Step3VehicleIdProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  fieldErrors?: Record<string, string>;
   disabled?: boolean;
-  disabledTooltip?: string;
+  showErrors?: boolean;
 }
 
 export default function Step3VehicleId({
   payload,
   onChange,
+  fieldErrors,
   disabled,
-}: StepProps) {
+  showErrors = false,
+}: Step3VehicleIdProps) {
   const [brandOpen, setBrandOpen] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
   const [generationOpen, setGenerationOpen] = useState(false);
   const [brandSearch, setBrandSearch] = useState("");
   const [modelSearch, setModelSearch] = useState("");
   const [generationSearch, setGenerationSearch] = useState("");
+  const [touchedFields, setTouchedFields] = useState<
+    Partial<Record<VehicleField, boolean>>
+  >({});
 
-  const { data: brandsData } = useBrands();
-  const { data: modelsData } = useModels(payload.brandId ?? "");
-  const { data: generationsData } = useGenerations(payload.modelId ?? "");
+  const {
+    data: brandsData,
+    isPending: brandsLoading,
+    isError: brandsError,
+  } = useBrands();
+  const {
+    data: modelsData,
+    isPending: modelsLoading,
+    isError: modelsError,
+  } = useModels(payload.brandId ?? "");
+  const {
+    data: generationsData,
+    isPending: generationsLoading,
+    isError: generationsError,
+  } = useGenerations(payload.modelId ?? "");
 
   const filteredBrands = useMemo(() => {
     if (!brandSearch) return brandsData?.items ?? [];
@@ -63,23 +79,21 @@ export default function Step3VehicleId({
     );
   }, [generationsData, generationSearch]);
 
-  const selectedBrand = brandsData?.items.find(
-    (b) => b.id === payload.brandId,
-  );
-  const selectedModel = modelsData?.items.find(
-    (m) => m.id === payload.modelId,
-  );
+  const selectedBrand = brandsData?.items.find((b) => b.id === payload.brandId);
+  const selectedModel = modelsData?.items.find((m) => m.id === payload.modelId);
   const selectedGeneration = generationsData?.items.find(
     (g) => g.id === payload.generationId,
   );
 
   function handleSelectBrand(brandId: string) {
+    markTouched("brandId");
     onChange({ brandId, modelId: undefined, generationId: undefined });
     setBrandOpen(false);
     setBrandSearch("");
   }
 
   function handleSelectModel(modelId: string) {
+    markTouched("modelId");
     onChange({ modelId, generationId: undefined });
     setModelOpen(false);
     setModelSearch("");
@@ -91,208 +105,170 @@ export default function Step3VehicleId({
     setGenerationSearch("");
   }
 
-  const wrapDisabled = (children: React.ReactNode) => {
-    if (!disabled) return <>{children}</>;
-    return <View className="opacity-50">{children}</View>;
-  };
+  const [yearText, setYearText] = useState(payload.year?.toString() ?? "");
+
+  function markTouched(field: VehicleField) {
+    setTouchedFields((current) =>
+      current[field] ? current : { ...current, [field]: true },
+    );
+  }
+
+  function handleYearChange(text: string) {
+    markTouched("year");
+    const digits = text.replace(/\D/g, "").slice(0, 4);
+    setYearText(digits);
+    if (digits.length === 0) {
+      onChange({ year: undefined });
+      return;
+    }
+    if (digits.length === 4) {
+      const num = parseInt(digits, 10);
+      if (num >= 1900 && num <= 2100) {
+        onChange({ year: num });
+      }
+    }
+  }
+
+  const generationHelper = !payload.modelId
+    ? "Select a model first"
+    : payload.modelId &&
+        !generationsLoading &&
+        !generationsError &&
+        generationsData?.items.length === 0
+      ? "No generations for this model yet."
+      : undefined;
+
+  const yearError = fieldErrors?.year;
+  const visibleError = (field: VehicleField) =>
+    shouldShowVehicleFieldError({
+      field,
+      showAllErrors: showErrors,
+      touchedFields,
+    })
+      ? fieldErrors?.[field]
+      : undefined;
 
   return (
     <View className="gap-4 py-4">
-      {/* Brand */}
-      <View className="gap-1">
-        <Text className="text-sm font-medium text-foreground">Brand *</Text>
-        {wrapDisabled(
-          <Button
-            variant="outline"
-            onPress={() => setBrandOpen(true)}
-            disabled={disabled}
-            className="justify-start"
-          >
-            <Text
-              className={
-                selectedBrand ? "text-foreground" : "text-muted-foreground"
-              }
-            >
-              {selectedBrand?.name ?? "Select brand"}
-            </Text>
-          </Button>,
-        )}
-      </View>
+      <PickerRow
+        label="Brand"
+        required
+        value={selectedBrand?.name}
+        placeholder="Select brand"
+        disabled={disabled}
+        locked={disabled}
+        error={visibleError("brandId")}
+        onPress={() => {
+          markTouched("brandId");
+          setBrandOpen(true);
+        }}
+      />
 
-      {/* Model */}
-      <View className="gap-1">
-        <Text className="text-sm font-medium text-foreground">Model *</Text>
-        {wrapDisabled(
-          <Button
-            variant="outline"
-            onPress={() => setModelOpen(true)}
-            disabled={disabled || !payload.brandId}
-            className="justify-start"
-          >
-            <Text
-              className={
-                selectedModel ? "text-foreground" : "text-muted-foreground"
-              }
-            >
-              {selectedModel?.name ?? "Select model"}
-            </Text>
-          </Button>,
-        )}
-      </View>
+      <PickerRow
+        label="Model"
+        required
+        value={selectedModel?.name}
+        placeholder="Select model"
+        disabled={disabled || !payload.brandId}
+        locked={disabled}
+        error={visibleError("modelId")}
+        onPress={() => {
+          markTouched("modelId");
+          setModelOpen(true);
+        }}
+      />
 
-      {/* Generation */}
-      <View className="gap-1">
-        <Text className="text-sm font-medium text-foreground">
-          Generation
-        </Text>
-        {!payload.modelId ? (
-          <Text className="text-sm text-muted-foreground">
-            Select a model first
-          </Text>
-        ) : generationsData?.items.length === 0 ? (
-          <Text className="text-sm text-muted-foreground">
-            No generations available — skip this step
-          </Text>
-        ) : (
-          wrapDisabled(
-            <Button
-              variant="outline"
-              onPress={() => setGenerationOpen(true)}
-              disabled={disabled}
-              className="justify-start"
-            >
-              <Text
-                className={
-                  selectedGeneration
-                    ? "text-foreground"
-                    : "text-muted-foreground"
-                }
-              >
-                {selectedGeneration?.name ?? "Select generation"}
-              </Text>
-            </Button>,
-          )
-        )}
-      </View>
+      <PickerRow
+        label="Generation"
+        value={selectedGeneration?.name}
+        placeholder="Select generation"
+        disabled={disabled || !payload.modelId || generationsLoading}
+        locked={disabled}
+        helper={generationHelper}
+        onPress={() => setGenerationOpen(true)}
+      />
 
       {/* Year */}
       <View className="gap-1">
         <Text className="text-sm font-medium text-foreground">Year *</Text>
-        {wrapDisabled(
+        <View className={disabled ? "opacity-50" : undefined}>
           <Input
-            value={payload.year?.toString() ?? ""}
-            onChangeText={(text) => {
-              const num = parseInt(text, 10);
-              onChange({
-                year: Number.isNaN(num) ? undefined : num,
-              });
-            }}
-            placeholder="2020"
+            value={yearText}
+            onChangeText={handleYearChange}
+            placeholder="YYYY"
             keyboardType="number-pad"
             editable={!disabled}
             maxLength={4}
-          />,
+            accessibilityState={{ disabled }}
+          />
+        </View>
+        {yearError && visibleError("year") && (
+          <Text className="text-sm text-destructive">{yearError}</Text>
+        )}
+        {disabled && (
+          <Text className="text-sm text-muted-foreground">
+            This field cannot be changed after publishing.
+          </Text>
         )}
       </View>
 
-      {/* Brand Sheet */}
-      <Sheet open={brandOpen} onOpenChange={setBrandOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Select brand</SheetTitle>
-          </SheetHeader>
-          <Input
-            placeholder="Search brands..."
-            value={brandSearch}
-            onChangeText={setBrandSearch}
-            className="mb-2"
-          />
-          <ScrollView className="max-h-80">
-            {filteredBrands.map((brand) => (
-              <Pressable
-                key={brand.id}
-                onPress={() => handleSelectBrand(brand.id)}
-                className="border-b border-border py-3"
-              >
-                <Text className="text-base text-foreground">{brand.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setBrandOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
-        </SheetContent>
-      </Sheet>
+      <CatalogPickerSheet
+        open={brandOpen}
+        onOpenChange={(open) => {
+          setBrandOpen(open);
+          if (!open) setBrandSearch("");
+        }}
+        title="Select brand"
+        searchPlaceholder="Search brands..."
+        search={brandSearch}
+        onSearchChange={setBrandSearch}
+        items={filteredBrands}
+        selectedId={payload.brandId}
+        emptyMessage={brandSearch ? "No brands match your search" : "No brands available"}
+        isLoading={brandsLoading}
+        isError={brandsError}
+        onSelect={handleSelectBrand}
+      />
 
-      {/* Model Sheet */}
-      <Sheet open={modelOpen} onOpenChange={setModelOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Select model</SheetTitle>
-          </SheetHeader>
-          <Input
-            placeholder="Search models..."
-            value={modelSearch}
-            onChangeText={setModelSearch}
-            className="mb-2"
-          />
-          <ScrollView className="max-h-80">
-            {filteredModels.map((model) => (
-              <Pressable
-                key={model.id}
-                onPress={() => handleSelectModel(model.id)}
-                className="border-b border-border py-3"
-              >
-                <Text className="text-base text-foreground">{model.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setModelOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
-        </SheetContent>
-      </Sheet>
+      <CatalogPickerSheet
+        open={modelOpen}
+        onOpenChange={(open) => {
+          setModelOpen(open);
+          if (!open) setModelSearch("");
+        }}
+        title="Select model"
+        searchPlaceholder="Search models..."
+        search={modelSearch}
+        onSearchChange={setModelSearch}
+        items={filteredModels}
+        selectedId={payload.modelId}
+        emptyMessage={modelSearch ? "No models match your search" : "No models available"}
+        isLoading={modelsLoading}
+        isError={modelsError}
+        onSelect={handleSelectModel}
+      />
 
-      {/* Generation Sheet */}
-      <Sheet open={generationOpen} onOpenChange={setGenerationOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Select generation</SheetTitle>
-          </SheetHeader>
-          <Input
-            placeholder="Search generations..."
-            value={generationSearch}
-            onChangeText={setGenerationSearch}
-            className="mb-2"
-          />
-          <ScrollView className="max-h-80">
-            {filteredGenerations.map((gen) => (
-              <Pressable
-                key={gen.id}
-                onPress={() => handleSelectGeneration(gen.id)}
-                className="border-b border-border py-3"
-              >
-                <Text className="text-base text-foreground">{gen.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setGenerationOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
-        </SheetContent>
-      </Sheet>
+      <CatalogPickerSheet
+        open={generationOpen}
+        onOpenChange={(open) => {
+          setGenerationOpen(open);
+          if (!open) setGenerationSearch("");
+        }}
+        title="Select generation"
+        searchPlaceholder="Search generations..."
+        search={generationSearch}
+        onSearchChange={setGenerationSearch}
+        items={filteredGenerations}
+        selectedId={payload.generationId}
+        emptyMessage={
+          generationSearch
+            ? "No generations match your search"
+            : "No generations available"
+        }
+        isLoading={generationsLoading}
+        isError={generationsError}
+        onSelect={handleSelectGeneration}
+      />
     </View>
   );
 }

@@ -1,44 +1,54 @@
 import { View } from "react-native";
 
-import type { WizardPayload } from "./types";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
-
-interface StepProps {
-  payload: WizardPayload;
-  onChange: (updates: Partial<WizardPayload>) => void;
+interface Step1VinProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  fieldErrors?: Record<string, string>;
   disabled?: boolean;
-  disabledTooltip?: string;
 }
 
-export default function Step1Vin({ payload, onChange, disabled }: StepProps) {
+export default function Step1Vin({
+  payload,
+  onChange,
+  fieldErrors,
+  disabled,
+}: Step1VinProps) {
+  const vinError = fieldErrors?.vin;
   return (
     <View className="gap-4 py-4">
-      <Text className="text-base text-foreground">
-        Enter your vehicle&apos;s VIN (optional)
+      <Text className="text-sm text-muted-foreground">
+        Optional. You can fill details manually.
       </Text>
-      <View className={disabled ? "opacity-50" : ""}>
-        <Input
-          value={payload.vin ?? ""}
-          onChangeText={(text) => onChange({ vin: text || undefined })}
-          placeholder="VIN number"
-          editable={!disabled}
-          autoCapitalize="characters"
-          maxLength={17}
-        />
+
+      <View className="gap-2">
+        <Text className="text-sm font-medium text-foreground">
+          VIN / chassis number
+        </Text>
+        <View className={disabled ? "opacity-50" : ""}>
+          <Input
+            value={payload.vin ?? ""}
+            onChangeText={(text) =>
+              onChange({ vin: text.trim() === "" ? undefined : text })
+            }
+            placeholder="WBA1234567890ABCD"
+            editable={!disabled}
+            autoCapitalize="characters"
+            maxLength={17}
+          />
+        </View>
+        {vinError && (
+          <Text className="text-sm text-destructive">{vinError}</Text>
+        )}
       </View>
-      <View className={disabled ? "opacity-50" : ""}>
-        <Button
-          variant="outline"
-          onPress={() => onChange({ vin: undefined })}
-          disabled={disabled}
-        >
-          <Text>Skip</Text>
-        </Button>
-      </View>
+
+      <Text className="text-sm text-muted-foreground">
+        No checking is done in this version.
+      </Text>
     </View>
   );
 }

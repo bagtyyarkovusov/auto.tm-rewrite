@@ -111,7 +111,8 @@ describe("DraftsController e2e", () => {
         .send({ vin: "WBA456", brandId: "00000000-0000-0000-0000-000000000001" })
         .expect(200);
 
-      expect(res.body.payload).toEqual({ vin: "WBA456", brandId: "00000000-0000-0000-0000-000000000001" });
+      expect(res.body.payload).toMatchObject({ vin: "WBA456", brandId: "00000000-0000-0000-0000-000000000001" });
+      expect(res.body.payload.validatedSteps).toBeDefined();
     });
 
     it("returns 404 for another user's draft", async () => {
@@ -180,6 +181,102 @@ describe("DraftsController e2e", () => {
 
       expect(secondPage.body.items).toHaveLength(1);
       expect(secondPage.body.nextCursor).toBeNull();
+    });
+  });
+
+  describe("POST /api/v1/listings/drafts/:id/validate-step", () => {
+    it("returns valid for complete step", async () => {
+      const token = await createUser("user-1");
+      const created = await request
+        .post("/api/v1/listings/drafts")
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const res = await request
+        .post(`/api/v1/listings/drafts/${created.body.id}/validate-step`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          step: "vehicle",
+          payload: {
+            brandId: "00000000-0000-0000-0000-000000000001",
+            modelId: "00000000-0000-0000-0000-000000000002",
+            year: 2020,
+          },
+        })
+        .expect(200);
+
+      expect(res.body.valid).toBe(true);
+      expect(res.body.errors).toEqual([]);
+    });
+
+    it("returns errors for incomplete step", async () => {
+      const token = await createUser("user-1");
+      const created = await request
+        .post("/api/v1/listings/drafts")
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const res = await request
+        .post(`/api/v1/listings/drafts/${created.body.id}/validate-step`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          step: "vehicle",
+          payload: { brandId: "00000000-0000-0000-0000-000000000001" },
+        })
+        .expect(200);
+
+      expect(res.body.valid).toBe(false);
+      expect(res.body.errors.length).toBeGreaterThan(0);
+    });
+
+    it("returns invalidated steps when field changes", async () => {
+      const token = await createUser("user-1");
+      const created = await request
+        .post("/api/v1/listings/drafts")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          initialPayload: {
+            brandId: "00000000-0000-0000-0000-000000000001",
+            modelId: "00000000-0000-0000-0000-000000000002",
+            year: 2020,
+          },
+        })
+        .expect(201);
+
+      const res = await request
+        .post(`/api/v1/listings/drafts/${created.body.id}/validate-step`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          step: "vehicle",
+          payload: {
+            brandId: "00000000-0000-0000-0000-000000000003",
+            modelId: "00000000-0000-0000-0000-000000000002",
+            year: 2020,
+          },
+        })
+        .expect(200);
+
+      expect(res.body.invalidatedSteps).toContain("vehicle");
+      expect(res.body.invalidatedSteps).toContain("specs");
+    });
+
+    it("returns 404 for another user's draft", async () => {
+      const token1 = await createUser("user-1");
+      const token2 = await createUser("user-2");
+
+      const created = await request
+        .post("/api/v1/listings/drafts")
+        .set("Authorization", `Bearer ${token1}`)
+        .send({})
+        .expect(201);
+
+      await request
+        .post(`/api/v1/listings/drafts/${created.body.id}/validate-step`)
+        .set("Authorization", `Bearer ${token2}`)
+        .send({ step: "vin", payload: {} })
+        .expect(404);
     });
   });
 

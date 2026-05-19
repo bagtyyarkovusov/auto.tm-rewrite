@@ -241,6 +241,21 @@ If this is a re-run after the user paused for design (the issue has a comment co
 
 ---
 
+## 3.6. Subagent-driven implementation mode (auto-detect)
+
+Decide whether to implement in subagent-driven mode or single-session mode.
+
+**Trigger subagent-driven mode if ALL apply:**
+- This is a UI-shipping issue (per §3.5.1 heuristic).
+- Wireframe and/or hi-fi specs exist for at least one screen this issue ships (check `docs/prd/ui/wireframes/<slug>.md` and `docs/prd/ui/hifi/<slug>.md` for every slug from §3.5.2).
+- The issue's `## Files to create / modify` list has **3 or more distinct components/files** (single-file UI tweaks stay single-session).
+
+Otherwise stay in single-session mode (the existing flow continues at §4).
+
+When subagent mode triggers, skip §4 below and follow **§4-alt** at the end of this document. Section 5 (verify), §6 (commit/push/PR), §7+ (merge, sync, unblock) apply identically in both modes.
+
+---
+
 ## 4. Implement
 
 Walk through `## Files to create / modify` in the order the issue presents them. For each `- [ ]` in `## Acceptance criteria`:
@@ -517,6 +532,141 @@ Bail procedure:
 - `Read`, `Write`, `Edit`, `Glob`, `Grep` — file work
 - `Bash` — every `git`, `gh`, `pnpm`, `docker` invocation
 - `TodoWrite` — your progress through the AC list
-- **No subagents.** This is a single-session, single-issue run.
+- `Task` (subagents) — **only in §4-alt subagent-driven mode**; standard single-session mode stays subagent-free.
+
+---
+
+## §4-alt — Subagent-driven implementation (UI mode)
+
+Only invoke this path when §3.6's auto-detect trigger fired. Otherwise §4 above is the implementation.
+
+The goal: dispatch one fresh subagent per logical component/screen group, with two-stage review between dispatches (spec compliance → code quality), so the parent's context stays clean while the implementation walks a long UI surface.
+
+### §4-alt.1. Decompose `## Files to create / modify` into groups
+
+Group the file list by **logical UI unit**, where a unit is "one screen + its directly-supporting components + its hooks + its tests." Examples for an issue that ships listing-detail + my-listings + drafts-list:
+
+- Group A — Listing detail: `apps/mobile/app/listings/[id]/index.tsx`, `apps/mobile/src/listings/components/ListingDetail.tsx`, `PhotoGallery.tsx`, `PriceDisplay.tsx`, `ContactCtaBar.tsx`, `SellerBlock.tsx`, `useListing.ts`, plus tests.
+- Group B — My Listings tab: `apps/mobile/app/(tabs)/my-listings.tsx`, `ListingCard.tsx`, `useMyListings.ts`, plus tests.
+- Group C — Drafts list: `DraftCard.tsx`, plus tests.
+- Group D — Owner actions: `apps/mobile/src/listings/owner-actions/*`, plus tests.
+
+Also include:
+- Group F (foundation, optional) — Any shared hook, type, or utility every other group depends on. Run this group FIRST so the rest can import from it. Examples: `useExchangeRates.ts`, query-keys factory updates, shared format helpers.
+- Group Z (CONTEXT.md + integration sweep, always last) — `apps/mobile/CONTEXT.md` update + any cross-group polish.
+
+Print the group list to the user as a TodoWrite checklist before dispatching anything.
+
+### §4-alt.2. Per group: dispatch implementer → spec reviewer → code reviewer
+
+For each group in order, dispatch via `Task` with `subagent_type: general-purpose`:
+
+```
+Task tool:
+  description: "Implement <group name> for #<N>"
+  subagent_type: general-purpose
+  prompt: |
+    You are implementing Group <X> of issue #<N>: <issue title>.
+
+    ## Working directory
+    /Users/bagtyyar/Projects/auto.tm-rewrite (currently on branch agent/issue-<N>)
+
+    ## Files to create / modify in this group
+    <list of paths from the group>
+
+    ## Acceptance criteria this group satisfies
+    <subset of issue's ## Acceptance criteria that this group covers>
+
+    ## Design specs (read these FIRST — implementation is downstream of them)
+    - Wireframe: docs/prd/ui/wireframes/<slug>.md
+    - Hi-fi: docs/prd/ui/hifi/<slug>.md
+
+    ## Read first
+    - docs/agents/mobile-expo.md (REQUIRED for mobile)
+    - docs/agents/nativewind-v4.md (REQUIRED for mobile UI)
+    - docs/agents/mobile-data-fetching.md (REQUIRED for API calls)
+    - apps/<area>/CONTEXT.md
+    - <any other paths the issue body's ## Read first lists that are relevant to this group>
+
+    ## Hard rules (inherit from /run-issue §0)
+    - No commits on main. Work happens on agent/issue-<N> (already checked out).
+    - Never edit protected files (GRILL-OUTCOME.md, docs/adr/*, .env, *.pem, *.key, *-private-key.json).
+    - Never expand scope beyond the files listed for THIS group, plus the allowed extras (CONTEXT.md, pnpm-lock.yaml, codegen output).
+    - Use Context7 for every external library/API/CLI lookup. Your training data lags.
+    - For mobile UI, use RNR primitives + NativeWind v4. Never `StyleSheet.create`. Never hardcoded hex.
+
+    ## Process
+
+    For each AC this group covers:
+    1. If the AC names a test, write the failing test first.
+    2. Implement the minimum code that satisfies the AC.
+    3. Run the test. Confirm green.
+    4. Run `pnpm --filter <mobile-workspace-name> typecheck` after each batch.
+
+    After all ACs in this group pass:
+    1. Run the full verification commands from the issue's `## Completion signal`.
+    2. Update `.mastra/ac-evidence.md` (or `/tmp/ac-evidence.md` if no .mastra dir) with one entry per AC this group covered. Use the strict format:
+       ```
+       ## AC <n>: <verbatim AC text>
+       - Evidence type: test | file | smoke | command
+       - Pointer: <file:line or test name or command + exit code>
+       - Summary: <one sentence>
+       - Status: PASS | FAIL | AMBIGUOUS
+       ```
+    3. Commit (one logical commit per group):
+       ```
+       feat(<area>): <group description>
+
+       - <change 1>
+       - <change 2>
+       Closes-partially #<N>
+       ```
+       Do NOT push yet. The parent commits across all groups together at the end.
+
+    ## Self-review (before reporting back)
+
+    - Did you implement ONLY what this group covers? No scope creep into other groups.
+    - Did every AC in this group get evidence written?
+    - Did `pnpm typecheck` pass on the touched workspace?
+    - Did you use RNR primitives + NativeWind, no StyleSheet.create or hex literals?
+
+    ## Report
+
+    Status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+    - Files created/modified with line counts
+    - Commit SHA(s) from this group
+    - ACs covered + evidence written
+    - Open concerns / scope questions for the parent
+```
+
+**After the implementer reports DONE:**
+
+Dispatch the spec compliance reviewer:
+```
+Task tool:
+  description: "Spec review for Group <X>"
+  subagent_type: general-purpose
+  prompt: [use superpowers:requesting-code-review/code-reviewer.md template with PLAN_OR_REQUIREMENTS = the group description + design spec paths, BASE_SHA = pre-group commit, HEAD_SHA = post-group commit]
+```
+
+If the spec reviewer flags issues, dispatch a fix sub-agent. Then dispatch a code-quality reviewer the same way. Move to the next group only when both reviews pass.
+
+### §4-alt.3. After every group: run §5 verify across all workspaces touched
+
+The implementer subagents may have skipped touched-workspace combinations that interact at integration time. Run §5's full verify block at the parent level.
+
+### §4-alt.4. Then §6 (commit/push/PR), §7 (merge/sync), §8 (unblock dependents)
+
+These sections work identically — the only difference vs single-session mode is that the branch already has multiple commits (one per group) when push happens. PR squash-merge collapses them at merge time.
+
+### Bail conditions in subagent mode
+
+- An implementer subagent reports BLOCKED twice on the same group → bail per §11 of the main prompt.
+- The spec reviewer finds an out-of-scope file change in a group → dispatch a revert subagent (general-purpose) to undo just that file, then re-review. Do not let scope creep across groups.
+- The code reviewer finds a Critical issue across two consecutive review cycles → bail.
+
+End of §4-alt.
+
+---
 
 End of prompt.

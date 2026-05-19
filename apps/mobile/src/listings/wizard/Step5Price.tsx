@@ -1,12 +1,14 @@
+import { X } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 
 import { useExchangeRates } from "../../api/exchange-rates/useExchangeRates";
 
-import type { WizardPayload } from "./types";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
@@ -17,13 +19,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-
-
-interface StepProps {
-  payload: WizardPayload;
-  onChange: (updates: Partial<WizardPayload>) => void;
+interface Step5PriceProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  fieldErrors?: Record<string, string>;
   disabled?: boolean;
-  disabledTooltip?: string;
 }
 
 const CURRENCIES: { value: Enums.Currency; label: string }[] = [
@@ -35,8 +35,9 @@ const CURRENCIES: { value: Enums.Currency; label: string }[] = [
 export default function Step5Price({
   payload,
   onChange,
+  fieldErrors,
   disabled,
-}: StepProps) {
+}: Step5PriceProps) {
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const { data: ratesData } = useExchangeRates();
 
@@ -50,7 +51,8 @@ export default function Step5Price({
       : null;
 
   function handleCurrencyChange(newCurrency: Enums.Currency) {
-    onChange({ priceCurrency: newCurrency, priceAmount: undefined });
+    // CRITICAL FIX: Preserve price amount when changing currency
+    onChange({ priceCurrency: newCurrency });
     setCurrencyOpen(false);
   }
 
@@ -66,7 +68,7 @@ export default function Step5Price({
     <View className="gap-4 py-4">
       {/* Price amount */}
       <View className="gap-1">
-        <Text className="text-sm font-medium text-foreground">Price *</Text>
+        <Text className="text-sm font-medium text-foreground">Amount *</Text>
         {wrapDisabled(
           <Input
             value={payload.priceAmount?.toString() ?? ""}
@@ -80,6 +82,11 @@ export default function Step5Price({
             keyboardType="number-pad"
             editable={!disabled}
           />,
+        )}
+        {fieldErrors?.priceAmount && (
+          <Text className="text-sm text-destructive">
+            {fieldErrors.priceAmount}
+          </Text>
         )}
       </View>
 
@@ -130,10 +137,18 @@ export default function Step5Price({
       {/* Currency Sheet */}
       <Sheet open={currencyOpen} onOpenChange={setCurrencyOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select currency</SheetTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onPress={() => setCurrencyOpen(false)}
+              accessibilityLabel="Close"
+            >
+              <Icon as={X} className="size-5 text-foreground" />
+            </Button>
           </SheetHeader>
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {CURRENCIES.map((c) => (
               <Pressable
                 key={c.value}
@@ -144,13 +159,6 @@ export default function Step5Price({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setCurrencyOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
     </View>

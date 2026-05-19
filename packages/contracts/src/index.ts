@@ -18,6 +18,7 @@ export * as AuthSchemas from "./schemas/auth";
 export * as IdentitySchemas from "./schemas/identity";
 export * as CatalogSchemas from "./schemas/catalog";
 export * as ListingsSchemas from "./schemas/listings";
+export * as WizardSchemas from "./schemas/wizard";
 export * as UploadsSchemas from "./schemas/uploads";
 export * as ExchangeRatesSchemas from "./schemas/exchange-rates";
 export * as SubscriptionsSchemas from "./schemas/subscriptions";

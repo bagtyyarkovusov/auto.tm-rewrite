@@ -1,12 +1,14 @@
+import { X } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
 
-import type { WizardPayload } from "./types";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import {
@@ -16,20 +18,32 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-
-
-interface StepProps {
-  payload: WizardPayload;
-  onChange: (updates: Partial<WizardPayload>) => void;
+interface Step6LocationProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  fieldErrors?: Record<string, string>;
   disabled?: boolean;
-  disabledTooltip?: string;
+}
+
+function SheetCloseButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onPress={onPress}
+      accessibilityLabel="Close"
+    >
+      <Icon as={X} className="size-5 text-foreground" />
+    </Button>
+  );
 }
 
 export default function Step6Location({
   payload,
   onChange,
+  fieldErrors,
   disabled,
-}: StepProps) {
+}: Step6LocationProps) {
   const [regionOpen, setRegionOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [regionSearch, setRegionSearch] = useState("");
@@ -97,6 +111,11 @@ export default function Step6Location({
             </Text>
           </Button>,
         )}
+        {fieldErrors?.regionId && (
+          <Text className="text-sm text-destructive">
+            {fieldErrors.regionId}
+          </Text>
+        )}
       </View>
 
       {/* City */}
@@ -118,12 +137,17 @@ export default function Step6Location({
             </Text>
           </Button>,
         )}
+        {fieldErrors?.cityId && (
+          <Text className="text-sm text-destructive">
+            {fieldErrors.cityId}
+          </Text>
+        )}
       </View>
 
       {/* Location text */}
       <View className="gap-1">
         <Text className="text-sm font-medium text-foreground">
-          Area / Landmark
+          Area / landmark
         </Text>
         {wrapDisabled(
           <Input
@@ -135,13 +159,23 @@ export default function Step6Location({
             editable={!disabled}
           />,
         )}
+        {fieldErrors?.locationText && (
+          <Text className="text-sm text-destructive">
+            {fieldErrors.locationText}
+          </Text>
+        )}
       </View>
+
+      <Text className="text-sm text-muted-foreground">
+        Choose where the car can be inspected. Do not enter your home address.
+      </Text>
 
       {/* Region Sheet */}
       <Sheet open={regionOpen} onOpenChange={setRegionOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select region</SheetTitle>
+            <SheetCloseButton onPress={() => setRegionOpen(false)} />
           </SheetHeader>
           <Input
             placeholder="Search..."
@@ -149,7 +183,7 @@ export default function Step6Location({
             onChangeText={setRegionSearch}
             className="mb-2"
           />
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {filteredRegions.map((r) => (
               <Pressable
                 key={r.id}
@@ -160,21 +194,15 @@ export default function Step6Location({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setRegionOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
 
       {/* City Sheet */}
       <Sheet open={cityOpen} onOpenChange={setCityOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select city</SheetTitle>
+            <SheetCloseButton onPress={() => setCityOpen(false)} />
           </SheetHeader>
           <Input
             placeholder="Search..."
@@ -182,7 +210,7 @@ export default function Step6Location({
             onChangeText={setCitySearch}
             className="mb-2"
           />
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {filteredCities.map((c) => (
               <Pressable
                 key={c.id}
@@ -193,13 +221,6 @@ export default function Step6Location({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setCityOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
     </View>

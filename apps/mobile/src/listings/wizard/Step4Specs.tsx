@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { X } from "lucide-react-native";
+import { useMemo, useState, useEffect } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 
@@ -8,8 +9,7 @@ import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 
-
-import type { WizardPayload } from "./types";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import {
   Sheet,
@@ -20,19 +20,41 @@ import {
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
-interface StepProps {
-  payload: WizardPayload;
-  onChange: (updates: Partial<WizardPayload>) => void;
+interface Step4SpecsProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  fieldErrors?: Record<string, string>;
   disabled?: boolean;
-  disabledTooltip?: string;
+}
+
+function SheetCloseButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onPress={onPress}
+      accessibilityLabel="Close"
+    >
+      <Icon as={X} className="size-5 text-foreground" />
+    </Button>
+  );
 }
 
 export default function Step4Specs({
   payload,
   onChange,
+  fieldErrors,
   disabled,
-}: StepProps) {
+}: Step4SpecsProps) {
+  // CRITICAL FIX: Default condition must be written to payload, not just local state
+  useEffect(() => {
+    if (payload.condition === undefined) {
+      onChange({ condition: Enums.ListingCondition.Used });
+    }
+  }, [payload.condition, onChange]);
+
   const condition = payload.condition ?? Enums.ListingCondition.Used;
 
   // Color sheet
@@ -150,7 +172,7 @@ export default function Step4Specs({
       {condition === Enums.ListingCondition.Used && (
         <View className="gap-1">
           <Text className="text-sm font-medium text-foreground">
-            Mileage (km) *
+            Mileage, km *
           </Text>
           {wrapDisabled(
             <Input
@@ -165,6 +187,11 @@ export default function Step4Specs({
               keyboardType="number-pad"
               editable={!disabled}
             />,
+          )}
+          {fieldErrors?.mileageKm && (
+            <Text className="text-sm text-destructive">
+              {fieldErrors.mileageKm}
+            </Text>
           )}
         </View>
       )}
@@ -312,8 +339,9 @@ export default function Step4Specs({
       {/* Color Sheet */}
       <Sheet open={colorOpen} onOpenChange={setColorOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select color</SheetTitle>
+            <SheetCloseButton onPress={() => setColorOpen(false)} />
           </SheetHeader>
           <Input
             placeholder="Search..."
@@ -321,7 +349,7 @@ export default function Step4Specs({
             onChangeText={setColorSearch}
             className="mb-2"
           />
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {filteredColors.map((c) => (
               <Pressable
                 key={c.id}
@@ -342,21 +370,15 @@ export default function Step4Specs({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setColorOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
 
       {/* Body type Sheet */}
       <Sheet open={bodyOpen} onOpenChange={setBodyOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select body type</SheetTitle>
+            <SheetCloseButton onPress={() => setBodyOpen(false)} />
           </SheetHeader>
           <Input
             placeholder="Search..."
@@ -364,7 +386,7 @@ export default function Step4Specs({
             onChangeText={setBodySearch}
             className="mb-2"
           />
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {filteredBodyTypes.map((b) => (
               <Pressable
                 key={b.id}
@@ -379,21 +401,15 @@ export default function Step4Specs({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setBodyOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
 
       {/* Transmission Sheet */}
       <Sheet open={transmissionOpen} onOpenChange={setTransmissionOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select transmission</SheetTitle>
+            <SheetCloseButton onPress={() => setTransmissionOpen(false)} />
           </SheetHeader>
           <Input
             placeholder="Search..."
@@ -401,7 +417,7 @@ export default function Step4Specs({
             onChangeText={setTransmissionSearch}
             className="mb-2"
           />
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {filteredTransmissions.map((t) => (
               <Pressable
                 key={t.id}
@@ -416,21 +432,15 @@ export default function Step4Specs({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setTransmissionOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
 
       {/* Drive type Sheet */}
       <Sheet open={driveOpen} onOpenChange={setDriveOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select drive type</SheetTitle>
+            <SheetCloseButton onPress={() => setDriveOpen(false)} />
           </SheetHeader>
           <Input
             placeholder="Search..."
@@ -438,7 +448,7 @@ export default function Step4Specs({
             onChangeText={setDriveSearch}
             className="mb-2"
           />
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {filteredDriveTypes.map((d) => (
               <Pressable
                 key={d.id}
@@ -453,21 +463,15 @@ export default function Step4Specs({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setDriveOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
 
       {/* Engine type Sheet */}
       <Sheet open={engineOpen} onOpenChange={setEngineOpen}>
         <SheetContent>
-          <SheetHeader>
+          <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Select engine type</SheetTitle>
+            <SheetCloseButton onPress={() => setEngineOpen(false)} />
           </SheetHeader>
           <Input
             placeholder="Search..."
@@ -475,7 +479,7 @@ export default function Step4Specs({
             onChangeText={setEngineSearch}
             className="mb-2"
           />
-          <ScrollView className="max-h-80">
+          <ScrollView>
             {filteredEngineTypes.map((e) => (
               <Pressable
                 key={e.id}
@@ -490,13 +494,6 @@ export default function Step4Specs({
               </Pressable>
             ))}
           </ScrollView>
-          <Button
-            variant="outline"
-            onPress={() => setEngineOpen(false)}
-            className="mt-2"
-          >
-            <Text>Cancel</Text>
-          </Button>
         </SheetContent>
       </Sheet>
     </View>

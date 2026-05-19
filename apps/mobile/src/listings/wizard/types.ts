@@ -1,8 +1,8 @@
-import type { ListingsSchemas } from "@auto-tm/contracts";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import type { StagedPhoto } from "../uploadStaging/types";
 
-export interface WizardPayload extends ListingsSchemas.ListingDraftPayload {
+export interface WizardPayload extends WizardSchemas.WizardDraftPayload {
   // Photos tracked separately from payload.photos for UI state
   photoStates?: StagedPhoto[];
 }

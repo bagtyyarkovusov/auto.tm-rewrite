@@ -162,3 +162,4 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 - [ADR-0008](../../../../../docs/adr/0008-media.md) — Direct-to-MinIO upload, eager variants
 - [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state, not aspirational spec
 - [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md) — Feed ranking via port abstraction; S4 ships `ChronologicalRankingAdapter`, S19 ships `PersonalizedRankingAdapter`
+- Mobile upload pipeline + wizard state machine documented in [`apps/mobile/src/listings/CONTEXT.md`](../../../../../../apps/mobile/src/listings/CONTEXT.md)

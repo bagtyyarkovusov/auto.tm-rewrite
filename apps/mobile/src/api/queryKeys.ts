@@ -5,10 +5,10 @@ export const queryKeys = {
     all: () => ["catalog"] as const,
     brands: (locale: string = "ru") =>
       [...queryKeys.catalog.all(), "brands", locale] as const,
-    models: (brandId: string) =>
-      [...queryKeys.catalog.all(), "models", brandId] as const,
-    generations: (modelId: string) =>
-      [...queryKeys.catalog.all(), "generations", modelId] as const,
+    models: (brandId: string, locale: string = "ru") =>
+      [...queryKeys.catalog.all(), "models", brandId, locale] as const,
+    generations: (modelId: string, locale: string = "ru") =>
+      [...queryKeys.catalog.all(), "generations", modelId, locale] as const,
     colors: (locale: string = "ru") =>
       [...queryKeys.catalog.all(), "colors", locale] as const,
     bodyTypes: (locale: string = "ru") =>

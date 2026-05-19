@@ -1,8 +1,15 @@
 import { z } from "zod";
 
+// Catalog reads (brands, models, generations, cities, regions, etc.) are the
+// only consumers today and the lists are small, bounded reference data. The
+// mobile wizard fetches the full set in one trip and filters client-side, so
+// max needs to accommodate the largest catalog entity (brands: 130; models per
+// brand: ~80 max; cities per region: ~30). Listings have their own paginated
+// schema in packages/contracts/src/schemas/listings.ts which retains the
+// 50-item cap appropriate for feed reads.
 export const CursorPaginationRequestSchema = z.object({
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  limit: z.coerce.number().int().min(1).max(500).default(20),
 });
 export type CursorPaginationRequest = z.infer<
   typeof CursorPaginationRequestSchema

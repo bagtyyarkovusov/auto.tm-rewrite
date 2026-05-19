@@ -5,6 +5,7 @@ import type { ListingsSchemas } from "@auto-tm/contracts";
 import { usePresignUpload } from "../../api/uploads/usePresignUpload";
 
 import { setupUploadResume } from "./appStateResume";
+import { useAsyncCounter } from "./useAsyncCounter";
 import { compressPhoto, CompressionError } from "./compressor";
 import {
   computePublishGate,
@@ -47,11 +48,11 @@ export function useUploadQueue(
   initialPayload: ListingsSchemas.ListingDraftPayload,
 ) {
   const [queue, setQueue] = useState<UploadQueue>({ draftId, photos: [] });
-  const [isCompressing, setIsCompressing] = useState(false);
+  const { increment: startCompression, decrement: endCompression, isActive: isCompressing } = useAsyncCounter();
   const [isUploading, setIsUploading] = useState(false);
 
-  // Ref counter so parallel addPhoto calls don't clear isCompressing prematurely
-  const compressingCount = useRef(0);
+  // Prevent re-initializing when initialPayload changes reference every render
+  const initializedDraftId = useRef<string | null>(null);
 
   const presignMutation = usePresignUpload();
 
@@ -69,6 +70,7 @@ export function useUploadQueue(
 
   // Initialize queue from draft + local files
   useEffect(() => {
+    if (initializedDraftId.current === draftId) return;
     async function init() {
       const localPhotoIds = await listLocalPhotoIds(draftId);
       const reconstructed = reconstructQueueFromDraft(
@@ -77,6 +79,7 @@ export function useUploadQueue(
         localPhotoIds,
       );
       setQueue(reconstructed);
+      initializedDraftId.current = draftId;
     }
     void init();
   }, [draftId, initialPayload]);
@@ -223,10 +226,7 @@ export function useUploadQueue(
       }));
 
       try {
-        compressingCount.current += 1;
-        if (compressingCount.current === 1) {
-          setIsCompressing(true);
-        }
+        startCompression();
         await ensureDraftDir(draftId);
         const destinationUri = getStagingPath(draftId, photoId);
         const compressed = await compressPhoto(sourceUri, destinationUri);
@@ -260,10 +260,7 @@ export function useUploadQueue(
           }),
         );
       } finally {
-        compressingCount.current -= 1;
-        if (compressingCount.current === 0) {
-          setIsCompressing(false);
-        }
+        endCompression();
       }
     },
     [draftId, uploadPhoto],

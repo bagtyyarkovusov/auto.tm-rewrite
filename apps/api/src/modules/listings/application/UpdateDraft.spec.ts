@@ -16,10 +16,7 @@ class FakeListingDraftRepository implements ListingDraftRepository {
     return this.drafts.find((d) => d.id === id) ?? null;
   }
 
-  async findByUserId(
-    _userId: string,
-    _opts?: { cursor?: { timestamp: string; id: string } | undefined; limit?: number | undefined },
-  ): Promise<{ items: ListingDraft[]; nextCursor?: { timestamp: string; id: string } | undefined }> {
+  async findByUserId(): Promise<{ items: ListingDraft[]; nextCursor?: { timestamp: string; id: string } }> {
     return { items: this.drafts };
   }
 
@@ -56,7 +53,7 @@ describe("UpdateDraft", () => {
       payload: { vin: "new", brandId: "b1" },
     });
 
-    expect(result.draft.payload).toEqual({ vin: "new", brandId: "b1" });
+    expect(result.draft.payload).toMatchObject({ vin: "new", brandId: "b1" });
   });
 
   it("throws NotFoundException for non-existent draft", async () => {
@@ -74,5 +71,84 @@ describe("UpdateDraft", () => {
     await expect(
       uc.execute({ draftId: "draft-1", userId: "user-2", payload: {} }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it("preserves validatedSteps when no fields change", async () => {
+    const draft = ListingDraft.create({
+      id: "draft-1",
+      userId: "user-1",
+      payload: { vin: "WBA123", validatedSteps: ["vin"] },
+    });
+    repo.drafts.push(draft);
+
+    const uc = makeUseCase(repo);
+    const result = await uc.execute({
+      draftId: "draft-1",
+      userId: "user-1",
+      payload: { vin: "WBA123" },
+    });
+
+    expect((result.draft.payload as any).validatedSteps).toEqual(["vin"]);
+  });
+
+  it("invalidates downstream steps when a field changes", async () => {
+    const draft = ListingDraft.create({
+      id: "draft-1",
+      userId: "user-1",
+      payload: {
+        brandId: "old-brand",
+        modelId: "old-model",
+        year: 2020,
+        validatedSteps: ["vin", "photos", "vehicle", "specs"],
+      },
+    });
+    repo.drafts.push(draft);
+
+    const uc = makeUseCase(repo);
+    const result = await uc.execute({
+      draftId: "draft-1",
+      userId: "user-1",
+      payload: {
+        brandId: "new-brand",
+        modelId: "old-model",
+        year: 2020,
+      },
+    });
+
+    expect((result.draft.payload as any).validatedSteps).toEqual([
+      "vin",
+      "photos",
+    ]);
+  });
+
+  it("accepts client-provided validatedSteps and applies invalidation", async () => {
+    const draft = ListingDraft.create({
+      id: "draft-1",
+      userId: "user-1",
+      payload: {
+        priceAmount: 100000,
+        priceCurrency: "TMT",
+        validatedSteps: ["vin", "photos", "vehicle", "specs", "price"],
+      },
+    });
+    repo.drafts.push(draft);
+
+    const uc = makeUseCase(repo);
+    const result = await uc.execute({
+      draftId: "draft-1",
+      userId: "user-1",
+      payload: {
+        priceAmount: 200000,
+        validatedSteps: ["vin", "photos", "vehicle", "specs", "price", "location", "contact"],
+      },
+    });
+
+    // price changed -> invalidate price, location, contact
+    expect((result.draft.payload as any).validatedSteps).toEqual([
+      "vin",
+      "photos",
+      "vehicle",
+      "specs",
+    ]);
   });
 });

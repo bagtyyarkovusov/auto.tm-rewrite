@@ -1,5 +1,7 @@
 # High-fidelity Design - Mobile Create Listing Wizard
 
+> **2026-05-19 closure note.** At sprint-4 closure two structural decisions diverged from this spec and are not reflected below: (1) Review is now its own step (Step 8 of 8), not an inline section at the bottom of Step 7; the header reads "Step N of 8" and progress is position-based. (2) Field errors render inline directly under each input via a `fieldErrors: Record<string,string>` map exposed on the wizard machine context, not as a global stack at the top of the step body. See [sprint-04 retro](../../sprints/sprint-04-listings-crud-retro.md) for rationale. The rest of this document remains the authoritative shape for the wizard, including the token map, motion table, and trilingual copy keys.
+
 Issue: GitHub #93, S4 mobile 7-step listing wizard + drafts + upload staging
 
 Platform decision: mobile only. Create listing is a seller transaction, and Phase 1 public web does not support sell flows.

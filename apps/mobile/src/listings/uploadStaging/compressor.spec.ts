@@ -111,15 +111,16 @@ describe("compressPhoto", () => {
     expect(mockManipulate).toHaveBeenLastCalledWith("file:///tmp/compressed.jpg");
   });
 
-  it("moves file to destination when different", async () => {
+  it("copies file to destination when different", async () => {
     setupHappyPath("file:///tmp/compressed.jpg");
 
     await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
 
-    expect(mockMoveAsync).toHaveBeenCalledWith({
+    expect(mockCopyAsync).toHaveBeenCalledWith({
       from: "file:///tmp/compressed.jpg",
       to: "file:///tmp/dest.jpg",
     });
+    expect(mockMoveAsync).not.toHaveBeenCalled();
   });
 
   it("does not move file when destination matches", async () => {
@@ -132,7 +133,7 @@ describe("compressPhoto", () => {
     expect(mockDeleteAsync).not.toHaveBeenCalled();
   });
 
-  it("throws CompressionError when destination file is missing after move", async () => {
+  it("throws CompressionError when destination file is missing after copy", async () => {
     setupHappyPath("file:///tmp/compressed.jpg", false);
 
     await expect(
@@ -144,23 +145,7 @@ describe("compressPhoto", () => {
     });
   });
 
-  it("falls back to copyAsync when moveAsync fails", async () => {
-    setupHappyPath("file:///tmp/compressed.jpg");
-    mockMoveAsync.mockRejectedValueOnce(new Error("Disk full"));
-
-    await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
-
-    expect(mockMoveAsync).toHaveBeenCalledWith({
-      from: "file:///tmp/compressed.jpg",
-      to: "file:///tmp/dest.jpg",
-    });
-    expect(mockCopyAsync).toHaveBeenCalledWith({
-      from: "file:///tmp/compressed.jpg",
-      to: "file:///tmp/dest.jpg",
-    });
-  });
-
-  it("cleans up source file after successful move", async () => {
+  it("cleans up source file after successful copy", async () => {
     setupHappyPath("file:///tmp/compressed.jpg");
 
     await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
@@ -168,18 +153,8 @@ describe("compressPhoto", () => {
     expect(mockDeleteAsync).toHaveBeenCalledWith("file:///tmp/compressed.jpg", { idempotent: true });
   });
 
-  it("cleans up source file after successful copy fallback", async () => {
+  it("throws DESTINATION_MISSING when copyAsync fails", async () => {
     setupHappyPath("file:///tmp/compressed.jpg");
-    mockMoveAsync.mockRejectedValueOnce(new Error("Disk full"));
-
-    await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg");
-
-    expect(mockDeleteAsync).toHaveBeenCalledWith("file:///tmp/compressed.jpg", { idempotent: true });
-  });
-
-  it("throws DESTINATION_MISSING when both moveAsync and copyAsync fail", async () => {
-    setupHappyPath("file:///tmp/compressed.jpg");
-    mockMoveAsync.mockRejectedValueOnce(new Error("Disk full"));
     mockCopyAsync.mockRejectedValueOnce(new Error("Permission denied"));
 
     await expect(

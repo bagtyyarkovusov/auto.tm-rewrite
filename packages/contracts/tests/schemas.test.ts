@@ -25,6 +25,21 @@ import {
   ExchangeRatesResponseSchema,
 } from "../src/schemas/exchange-rates";
 import { generateOpenApiDocument } from "../src/openapi";
+import {
+  WizardStepSchema,
+  validateStep,
+  getStepDependencies,
+  getInvalidatedSteps,
+  StepVinSchema,
+  StepPhotosSchema,
+  StepVehicleSchema,
+  StepSpecsSchema,
+  StepPriceSchema,
+  StepLocationSchema,
+  StepContactSchema,
+  ValidateStepRequestSchema,
+  ValidateStepResponseSchema,
+} from "../src/schemas/wizard";
 
 describe("OTP request schema", () => {
   it("accepts a valid TM mobile phone (+99362001122)", () => {
@@ -117,6 +132,8 @@ describe("ListingDetailSchema", () => {
       regionId: "550e8400-e29b-41d4-a716-446655440005",
       createdAt: "2026-05-17T14:32:01Z",
       updatedAt: "2026-05-17T14:32:01Z",
+      acceptsExchange: false,
+      installmentAvailable: false,
     });
     expect(result.success).toBe(true);
   });
@@ -347,6 +364,393 @@ describe("ExchangeRatesResponseSchema", () => {
           updatedAt: "2026-05-17T14:32:01Z",
         },
       ],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ── Wizard schemas ──
+
+const validUuid = "550e8400-e29b-41d4-a716-446655440000";
+const validPhoto = { photoId: validUuid, key: "uploads/abc.jpg", sortOrder: 0 };
+
+describe("WizardStepSchema", () => {
+  it("accepts valid steps", () => {
+    expect(WizardStepSchema.safeParse("vin").success).toBe(true);
+    expect(WizardStepSchema.safeParse("photos").success).toBe(true);
+    expect(WizardStepSchema.safeParse("contact").success).toBe(true);
+    expect(WizardStepSchema.safeParse("review").success).toBe(true);
+  });
+
+  it("rejects invalid step", () => {
+    expect(WizardStepSchema.safeParse("publish").success).toBe(false);
+    expect(WizardStepSchema.safeParse("unknown").success).toBe(false);
+  });
+});
+
+describe("StepVinSchema", () => {
+  it("accepts empty payload", () => {
+    expect(StepVinSchema.safeParse({}).success).toBe(true);
+  });
+
+  it("accepts valid VIN", () => {
+    expect(StepVinSchema.safeParse({ vin: "WBA1234567890ABCD" }).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects VIN over 17 chars", () => {
+    expect(StepVinSchema.safeParse({ vin: "A".repeat(18) }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("StepPhotosSchema", () => {
+  it("accepts photos with at least one key", () => {
+    expect(StepPhotosSchema.safeParse({ photos: [validPhoto] }).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects empty photos array", () => {
+    expect(StepPhotosSchema.safeParse({ photos: [] }).success).toBe(false);
+  });
+
+  it("rejects photos with no uploaded keys", () => {
+    expect(
+      StepPhotosSchema.safeParse({ photos: [{ photoId: validUuid, sortOrder: 0 }] }).success,
+    ).toBe(false);
+  });
+});
+
+describe("StepVehicleSchema", () => {
+  it("accepts valid vehicle data", () => {
+    expect(
+      StepVehicleSchema.safeParse({
+        brandId: validUuid,
+        modelId: validUuid,
+        year: 2020,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects missing brandId", () => {
+    expect(
+      StepVehicleSchema.safeParse({ modelId: validUuid, year: 2020 }).success,
+    ).toBe(false);
+  });
+
+  it("rejects year below 1900", () => {
+    expect(
+      StepVehicleSchema.safeParse({
+        brandId: validUuid,
+        modelId: validUuid,
+        year: 1899,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects year too far in future", () => {
+    expect(
+      StepVehicleSchema.safeParse({
+        brandId: validUuid,
+        modelId: validUuid,
+        year: new Date().getFullYear() + 2,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("StepSpecsSchema", () => {
+  it("accepts new vehicle without mileage", () => {
+    expect(
+      StepSpecsSchema.safeParse({ condition: "new" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects used vehicle without mileage", () => {
+    expect(
+      StepSpecsSchema.safeParse({ condition: "used" }).success,
+    ).toBe(false);
+  });
+
+  it("accepts used vehicle with mileage", () => {
+    expect(
+      StepSpecsSchema.safeParse({ condition: "used", mileageKm: 50000 }).success,
+    ).toBe(true);
+  });
+
+  it("rejects negative mileage", () => {
+    expect(
+      StepSpecsSchema.safeParse({
+        condition: "used",
+        mileageKm: -1,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("StepPriceSchema", () => {
+  it("accepts valid TMT price", () => {
+    expect(
+      StepPriceSchema.safeParse({ priceAmount: 100000, priceCurrency: "TMT" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("rejects zero price", () => {
+    expect(
+      StepPriceSchema.safeParse({ priceAmount: 0, priceCurrency: "TMT" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects price over max", () => {
+    expect(
+      StepPriceSchema.safeParse({
+        priceAmount: 1_000_000_000,
+        priceCurrency: "TMT",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("StepLocationSchema", () => {
+  it("accepts valid location", () => {
+    expect(
+      StepLocationSchema.safeParse({
+        regionId: validUuid,
+        cityId: validUuid,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects missing regionId", () => {
+    expect(
+      StepLocationSchema.safeParse({ cityId: validUuid }).success,
+    ).toBe(false);
+  });
+
+  it("rejects location text over 200 chars", () => {
+    expect(
+      StepLocationSchema.safeParse({
+        regionId: validUuid,
+        cityId: validUuid,
+        locationText: "a".repeat(201),
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("StepContactSchema", () => {
+  it("accepts valid contact with both methods", () => {
+    expect(
+      StepContactSchema.safeParse({
+        description: "Great car",
+        allowCalls: true,
+        allowChat: true,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts valid contact with one method", () => {
+    expect(
+      StepContactSchema.safeParse({
+        description: "Great car",
+        allowCalls: false,
+        allowChat: true,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects empty description", () => {
+    expect(
+      StepContactSchema.safeParse({
+        description: "",
+        allowCalls: true,
+        allowChat: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects description over 2000 chars", () => {
+    expect(
+      StepContactSchema.safeParse({
+        description: "a".repeat(2001),
+        allowCalls: true,
+        allowChat: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects when both contact methods disabled", () => {
+    expect(
+      StepContactSchema.safeParse({
+        description: "Great car",
+        allowCalls: false,
+        allowChat: false,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("validateStep", () => {
+  it("returns valid for complete vehicle step", () => {
+    const result = validateStep("vehicle", {
+      brandId: validUuid,
+      modelId: validUuid,
+      year: 2020,
+    });
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("returns errors for incomplete vehicle step", () => {
+    const result = validateStep("vehicle", { brandId: validUuid });
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  it("returns errors for used vehicle without mileage", () => {
+    const result = validateStep("specs", { condition: "used" });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("Mileage is required for used cars");
+    expect(result.fieldErrors.mileageKm).toBe(
+      "Mileage is required for used cars",
+    );
+  });
+
+  it("returns valid for photos with uploaded key", () => {
+    const result = validateStep("photos", { photos: [validPhoto] });
+    expect(result.valid).toBe(true);
+    expect(result.fieldErrors).toEqual({});
+  });
+
+  it("returns errors for photos without key", () => {
+    const result = validateStep("photos", {
+      photos: [{ photoId: validUuid, sortOrder: 0 }],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("Wait for photos to finish uploading");
+  });
+
+  it("returns per-field error map for vehicle step", () => {
+    const result = validateStep("vehicle", {});
+    expect(result.valid).toBe(false);
+    expect(result.fieldErrors.brandId).toBe("Brand is required");
+    expect(result.fieldErrors.modelId).toBe("Model is required");
+    expect(result.fieldErrors.year).toBe("Year is required");
+  });
+
+  it("returns valid for review when invoked directly", () => {
+    const result = validateStep("review", {});
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+});
+
+describe("getStepDependencies", () => {
+  it("vin has no dependencies", () => {
+    expect(getStepDependencies("vin")).toEqual([]);
+  });
+
+  it("vehicle depends on vin and photos", () => {
+    expect(getStepDependencies("vehicle")).toEqual(["vin", "photos"]);
+  });
+
+  it("contact depends on all previous steps", () => {
+    expect(getStepDependencies("contact")).toEqual([
+      "vin",
+      "photos",
+      "vehicle",
+      "specs",
+      "price",
+      "location",
+    ]);
+  });
+});
+
+describe("getInvalidatedSteps", () => {
+  it("changing brandId invalidates vehicle and downstream", () => {
+    const result = getInvalidatedSteps(["brandId"]);
+    expect(result).toEqual([
+      "vehicle",
+      "specs",
+      "price",
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("changing condition invalidates specs and downstream", () => {
+    const result = getInvalidatedSteps(["condition"]);
+    expect(result).toEqual([
+      "specs",
+      "price",
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("changing multiple fields invalidates union of affected steps", () => {
+    const result = getInvalidatedSteps(["brandId", "priceAmount"]);
+    expect(result).toEqual([
+      "vehicle",
+      "specs",
+      "price",
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("changing description only invalidates contact and review", () => {
+    const result = getInvalidatedSteps(["description"]);
+    expect(result).toEqual(["contact", "review"]);
+  });
+
+  it("unknown fields are ignored", () => {
+    const result = getInvalidatedSteps(["unknownField"]);
+    expect(result).toEqual([]);
+  });
+});
+
+describe("ValidateStepRequestSchema", () => {
+  it("accepts valid request", () => {
+    const result = ValidateStepRequestSchema.safeParse({
+      step: "vehicle",
+      payload: { brandId: validUuid, modelId: validUuid, year: 2020 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid step", () => {
+    const result = ValidateStepRequestSchema.safeParse({
+      step: "publish",
+      payload: {},
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ValidateStepResponseSchema", () => {
+  it("accepts valid response", () => {
+    const result = ValidateStepResponseSchema.safeParse({
+      valid: true,
+      errors: [],
+      invalidatedSteps: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts response with errors", () => {
+    const result = ValidateStepResponseSchema.safeParse({
+      valid: false,
+      errors: ["Missing brandId"],
+      invalidatedSteps: ["vehicle"],
     });
     expect(result.success).toBe(true);
   });

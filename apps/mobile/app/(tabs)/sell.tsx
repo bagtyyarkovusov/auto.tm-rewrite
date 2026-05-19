@@ -1,6 +1,6 @@
 import { PlusCircle } from "lucide-react-native";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useNavigation } from "expo-router";
+import { useEffect, useReducer, useState, useCallback } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -10,7 +10,11 @@ import { useMyDrafts } from "../../src/api/listings/useMyDrafts";
 import { usePublishDraft } from "../../src/api/listings/usePublishDraft";
 import { deleteDraftDir } from "../../src/listings/uploadStaging/stagingDir";
 import { useUploadQueue } from "../../src/listings/uploadStaging/useUploadQueue";
-import type { WizardPayload, WizardStep } from "../../src/listings/wizard/types";
+import {
+  wizardMachineReducer,
+  createInitialState,
+  buildMachineContext,
+} from "../../src/listings/wizard/wizardMachine";
 import { WizardLayout } from "../../src/listings/wizard/WizardLayout";
 import { useWizardAutosave } from "../../src/listings/wizard/useWizardAutosave";
 import { useAuth } from "../../src/auth/useAuth";
@@ -22,29 +26,31 @@ import Step4Specs from "../../src/listings/wizard/Step4Specs";
 import Step5Price from "../../src/listings/wizard/Step5Price";
 import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
+import Step8Review from "../../src/listings/wizard/Step8Review";
+
+import { WizardSchemas } from "@auto-tm/contracts";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 
-const STEP_TITLES: Record<WizardStep, string> = {
-  1: "Photos",
-  2: "Brand & Model",
-  3: "Details",
-  4: "Condition",
-  5: "Price",
-  6: "Location",
-  7: "Contact",
-};
+const ROUTE_TITLE = "Sell car";
 
-function getStepTitle(step: WizardStep): string {
-  return STEP_TITLES[step] ?? `Step ${step}`;
-}
+const STEP_TITLES: Record<WizardSchemas.WizardStep, string> = {
+  vin: "VIN or chassis number",
+  photos: "Add photos",
+  vehicle: "Vehicle",
+  specs: "Specs",
+  price: "Price",
+  location: "Car location",
+  contact: "Description & contact",
+  review: "Review",
+};
 
 function buildPayloadPhotos(
   photos: ReturnType<typeof useUploadQueue>["photos"],
-): NonNullable<WizardPayload["photos"]> {
+): NonNullable<WizardSchemas.WizardDraftPayload["photos"]> {
   return photos
     .filter((p): p is typeof p & { key: string } => !!p.key)
     .map((p) => ({
@@ -54,245 +60,286 @@ function buildPayloadPhotos(
     }));
 }
 
-function getCanContinue(
-  step: WizardStep,
-  payload: WizardPayload,
-  photosCount: number,
-): boolean {
-  switch (step) {
-    case 1:
-      return true;
-    case 2:
-      return photosCount >= 1;
-    case 3:
-      return !!payload.brandId && !!payload.modelId && !!payload.year;
-    case 4:
-      return payload.condition === "new" || !!payload.mileageKm;
-    case 5:
-      return !!payload.priceAmount && !!payload.priceCurrency;
-    case 6:
-      return !!payload.regionId && !!payload.cityId;
-    case 7:
-      return (
-        !!payload.description &&
-        ((payload.allowCalls ?? true) || (payload.allowChat ?? true))
-      );
-  }
-}
-
 export default function SellScreen() {
   const { isAuthenticated } = useAuth();
   const { show } = useToast();
+  const navigation = useNavigation();
   const [showSignIn, setShowSignIn] = useState(false);
-  const [wizardMode, setWizardMode] = useState(false);
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
-  const [payload, setPayload] = useState<WizardPayload>({ currentStep: 1 });
+  const [machineState, dispatch] = useReducer(
+    wizardMachineReducer,
+    createInitialState(),
+  );
+  const [attemptedSteps, setAttemptedSteps] = useState<
+    Partial<Record<WizardSchemas.WizardStep, boolean>>
+  >({});
 
-  const { data: draftsData, isPending: draftsLoading } = useMyDrafts();
+  // Hide the bottom tab bar while the wizard is open — the wizard is a focused
+  // flow that should not advertise navigation to other tabs.
+  const inWizard =
+    machineState.status !== "idle" && machineState.draftId !== null;
+  useEffect(() => {
+    navigation.setOptions({
+      tabBarStyle: inWizard
+        ? { display: "none" as const }
+        : undefined,
+    });
+  }, [inWizard, navigation]);
+
+  const { data: draftsData, isPending: draftsLoading } = useMyDrafts({
+    enabled: !!isAuthenticated,
+  });
   const createDraft = useCreateDraft();
   const publishDraft = usePublishDraft();
   const discardDraft = useDiscardDraft();
 
-  const { save, forceSave, isSaving } = useWizardAutosave(draftId ?? "");
-  const uploadQueue = useUploadQueue(draftId ?? "", payload);
+  const { save, forceSave, retrySave, saveStatus, saveError } =
+    useWizardAutosave(machineState.draftId ?? undefined);
+  const uploadQueue = useUploadQueue(
+    machineState.draftId ?? "",
+    machineState.payload,
+  );
 
-  function handlePayloadChange(updates: Partial<WizardPayload>) {
-    setPayload((prev) => ({ ...prev, ...updates }));
-  }
+  const ctx = buildMachineContext(machineState);
 
   // Sync upload queue photos into payload
   useEffect(() => {
     const photosFromQueue = buildPayloadPhotos(uploadQueue.photos);
-    setPayload((prev) => {
-      const prevPhotos = prev.photos ?? [];
-      if (
-        prevPhotos.length === photosFromQueue.length &&
-        prevPhotos.every(
-          (p, i) =>
-            p.photoId === photosFromQueue[i]?.photoId &&
-            p.key === photosFromQueue[i]?.key &&
-            p.sortOrder === photosFromQueue[i]?.sortOrder,
-        )
-      ) {
-        return prev;
-      }
-      return { ...prev, photos: photosFromQueue };
+    dispatch({
+      type: "UPDATE_FIELDS",
+      updates: {
+        photos: photosFromQueue,
+      },
     });
   }, [uploadQueue.photos]);
 
-  // Debounced autosave when payload changes (excluding photos which are handled above)
+  // Autosave when payload changes (excluding photos which are handled above)
   useEffect(() => {
-    if (!draftId || !wizardMode) return;
-    const fullPayload: WizardPayload = {
-      ...payload,
+    if (!machineState.draftId || machineState.status !== "step") return;
+    const fullPayload: WizardSchemas.WizardDraftPayload = {
+      ...machineState.payload,
       photos: buildPayloadPhotos(uploadQueue.photos),
+      validatedSteps: machineState.validatedSteps,
     };
     save(fullPayload);
-    // Intentionally omit `save` and `uploadQueue.photos` to avoid infinite loops;
-    // field changes drive debounced saves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    draftId,
-    wizardMode,
-    payload.vin,
-    payload.brandId,
-    payload.modelId,
-    payload.generationId,
-    payload.year,
-    payload.mileageKm,
-    payload.condition,
-    payload.colorId,
-    payload.bodyTypeId,
-    payload.transmissionId,
-    payload.driveTypeId,
-    payload.engineTypeId,
-    payload.enginePower,
-    payload.priceAmount,
-    payload.priceCurrency,
-    payload.regionId,
-    payload.cityId,
-    payload.locationText,
-    payload.description,
-    payload.contactPhone,
-    payload.allowCalls,
-    payload.allowChat,
-    payload.acceptsExchange,
-    payload.installmentAvailable,
-    payload.currentStep,
+    machineState.draftId,
+    machineState.status,
+    machineState.payload.vin,
+    machineState.payload.brandId,
+    machineState.payload.modelId,
+    machineState.payload.generationId,
+    machineState.payload.year,
+    machineState.payload.mileageKm,
+    machineState.payload.condition,
+    machineState.payload.colorId,
+    machineState.payload.bodyTypeId,
+    machineState.payload.transmissionId,
+    machineState.payload.driveTypeId,
+    machineState.payload.engineTypeId,
+    machineState.payload.enginePower,
+    machineState.payload.priceAmount,
+    machineState.payload.priceCurrency,
+    machineState.payload.regionId,
+    machineState.payload.cityId,
+    machineState.payload.locationText,
+    machineState.payload.description,
+    machineState.payload.contactPhone,
+    machineState.payload.allowCalls,
+    machineState.payload.allowChat,
+    machineState.payload.acceptsExchange,
+    machineState.payload.installmentAvailable,
+    machineState.validatedSteps,
   ]);
 
-  function handleStartListing() {
-    if (!isAuthenticated) {
+  const handleStartListing = useCallback(() => {
+    if (!isAuthenticated && !__DEV__) {
       setShowSignIn(true);
       return;
     }
 
     const existingDraft = draftsData?.items?.[0];
     if (existingDraft) {
-      // Show resume screen — handled by the render below
       return;
     }
 
     handleCreateNewDraft();
-  }
+  }, [isAuthenticated, draftsData]);
 
-  function handleCreateNewDraft() {
-    if (!isAuthenticated) {
+  const handleCreateNewDraft = useCallback(() => {
+    if (!isAuthenticated && !__DEV__) {
       setShowSignIn(true);
       return;
     }
 
     createDraft.mutate(undefined, {
       onSuccess: (draft) => {
-        setDraftId(draft.id);
-        setCurrentStep(1);
-        setPayload({ currentStep: 1 });
-        setWizardMode(true);
+        dispatch({
+          type: "INIT",
+          draftId: draft.id,
+          payload: {
+            currentStep: 1,
+            allowCalls: true,
+            allowChat: true,
+          },
+        });
       },
     });
-  }
+  }, [isAuthenticated, createDraft]);
 
-  function handleContinueDraft(
-    draft: NonNullable<typeof draftsData>["items"][number],
-  ) {
-    setDraftId(draft.id);
-    const step = Math.min(
-      Math.max(1, draft.payload.currentStep ?? 1),
-      7,
-    ) as WizardStep;
-    setCurrentStep(step);
-    setPayload({ ...draft.payload, currentStep: step });
-    setWizardMode(true);
-  }
-
-  function handleBack() {
-    if (currentStep > 1) {
-      const next = (currentStep - 1) as WizardStep;
-      setCurrentStep(next);
-      const fullPayload: WizardPayload = {
-        ...payload,
-        currentStep: next,
-        photos: buildPayloadPhotos(uploadQueue.photos),
-      };
-      setPayload(fullPayload);
-      void forceSave(fullPayload);
-    }
-  }
-
-  function handleContinue() {
-    if (currentStep < 7) {
-      const next = (currentStep + 1) as WizardStep;
-      setCurrentStep(next);
-      const fullPayload: WizardPayload = {
-        ...payload,
-        currentStep: next,
-        photos: buildPayloadPhotos(uploadQueue.photos),
-      };
-      setPayload(fullPayload);
-      void forceSave(fullPayload);
-    }
-  }
-
-  function handlePublish() {
-    if (!draftId) return;
-    const fullPayload: WizardPayload = {
-      ...payload,
-      photos: buildPayloadPhotos(uploadQueue.photos),
-    };
-    void forceSave(fullPayload).then(() => {
-      publishDraft.mutate(draftId, {
-        onSuccess: (result) => {
-          show({
-            title: "Listing published",
-            variant: "success",
-          });
-          setWizardMode(false);
-          setDraftId(null);
-          setPayload({ currentStep: 1 });
-          // Route will be available in S5; cast to avoid TS error during S4
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          router.push(`/(public)/listings/${result.id}` as any);
+  const handleContinueDraft = useCallback(
+    (draft: NonNullable<typeof draftsData>["items"][number]) => {
+      dispatch({
+        type: "INIT",
+        draftId: draft.id,
+        payload: {
+          ...draft.payload,
+          allowCalls: draft.payload.allowCalls ?? true,
+          allowChat: draft.payload.allowChat ?? true,
         },
       });
-    });
-  }
+    },
+    [],
+  );
 
-  function handleDiscard() {
-    if (!draftId) return;
-    discardDraft.mutate(draftId, {
+  const handleBack = useCallback(() => {
+    dispatch({ type: "BACK" });
+  }, []);
+
+  const handleContinue = useCallback(() => {
+    if (!ctx.canContinue) {
+      setAttemptedSteps((current) =>
+        current[machineState.currentStep]
+          ? current
+          : { ...current, [machineState.currentStep]: true },
+      );
+      return;
+    }
+
+    dispatch({ type: "NEXT" });
+    // Force save on navigation
+    const fullPayload: WizardSchemas.WizardDraftPayload = {
+      ...machineState.payload,
+      photos: buildPayloadPhotos(uploadQueue.photos),
+      validatedSteps: machineState.validatedSteps,
+    };
+    void forceSave(fullPayload);
+  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave]);
+
+  const handleSkipVin = useCallback(() => {
+    dispatch({ type: "UPDATE_FIELDS", updates: { vin: undefined } });
+    dispatch({ type: "NEXT" });
+  }, []);
+
+  const handlePublish = useCallback(async () => {
+    if (!machineState.draftId) return;
+
+    const fullPayload: WizardSchemas.WizardDraftPayload = {
+      ...machineState.payload,
+      description: machineState.payload.description?.trim(),
+      photos: buildPayloadPhotos(uploadQueue.photos),
+      validatedSteps: machineState.validatedSteps,
+    };
+
+    dispatch({ type: "PUBLISH_START" });
+
+    try {
+      await forceSave(fullPayload);
+      const result = await publishDraft.mutateAsync(machineState.draftId);
+      dispatch({ type: "PUBLISH_SUCCESS", listingId: result.id });
+      show({
+        title: "Listing published",
+        variant: "success",
+      });
+      router.push(`/(public)/listings/${result.id}` as any);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to publish listing";
+      dispatch({ type: "PUBLISH_ERROR", error: message });
+      show({ title: message, variant: "destructive" });
+    }
+  }, [machineState, uploadQueue.photos, forceSave, publishDraft, show]);
+
+  const handleDiscard = useCallback(() => {
+    const id = machineState.draftId;
+    if (!id) return;
+    discardDraft.mutate(id, {
       onSuccess: () => {
-        void deleteDraftDir(draftId);
-        setWizardMode(false);
-        setDraftId(null);
-        setPayload({ currentStep: 1 });
+        void deleteDraftDir(id);
+        dispatch({ type: "DISCARD" });
       },
     });
-  }
+  }, [machineState.draftId, discardDraft]);
+
+  const handlePayloadChange = useCallback(
+    (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
+      dispatch({ type: "UPDATE_FIELDS", updates });
+    },
+    [],
+  );
 
   // ── Wizard mode ──
-  if (wizardMode && draftId) {
+  if (machineState.status !== "idle" && machineState.draftId) {
+    const currentStep = ctx.state.currentStep;
+    const stepTitle = STEP_TITLES[currentStep] ?? currentStep;
+
+    // Compose a clear reason text when Publish/Continue is disabled.
+    let disabledReason: string | undefined;
+    if (ctx.isLastStep && !ctx.canPublish) {
+      const missing = WizardSchemas.WIZARD_STEPS.filter(
+        (s) =>
+          s !== "review" && !machineState.validatedSteps.includes(s),
+      );
+      if (missing.length > 0) {
+        disabledReason = `Complete ${missing.length} step${
+          missing.length === 1 ? "" : "s"
+        } before publishing.`;
+      }
+    } else if (
+      !ctx.isLastStep &&
+      !ctx.canContinue &&
+      attemptedSteps[currentStep] &&
+      ctx.stepErrors.length > 0
+    ) {
+      disabledReason = ctx.stepErrors[0];
+    }
+
+    const secondaryAction =
+      currentStep === "vin" && !ctx.canGoBack
+        ? { label: "Skip", onPress: handleSkipVin }
+        : undefined;
+
     return (
       <WizardLayout
-        currentStep={currentStep}
-        stepTitle={getStepTitle(currentStep)}
+        routeTitle={ROUTE_TITLE}
+        stepTitle={stepTitle}
+        stepNumber={ctx.stepNumber}
+        stepCount={ctx.stepCount}
         onBack={handleBack}
         onContinue={handleContinue}
         onPublish={handlePublish}
         onDiscard={handleDiscard}
-        canContinue={getCanContinue(
-          currentStep,
-          payload,
-          uploadQueue.photos.length,
-        )}
-        canPublish={uploadQueue.publishGate.canPublish}
-        isSaving={isSaving}
+        canContinue={ctx.canContinue}
+        canPublish={ctx.canPublish}
+        canGoBack={ctx.canGoBack}
+        isLastStep={ctx.isLastStep}
+        saveStatus={saveStatus}
+        saveError={saveError}
+        onRetrySave={retrySave}
+        progressPercent={ctx.progressPercent}
+        disabledReason={disabledReason}
+        secondaryAction={secondaryAction}
       >
-        {currentStep === 1 && (
-          <Step1Vin payload={payload} onChange={handlePayloadChange} />
+        {currentStep === "vin" && (
+          <Step1Vin
+            payload={machineState.payload}
+            onChange={handlePayloadChange}
+            fieldErrors={ctx.fieldErrors}
+          />
         )}
-        {currentStep === 2 && (
+        {currentStep === "photos" && (
           <Step2Photos
-            payload={payload}
+            payload={machineState.payload}
             onChange={handlePayloadChange}
             photos={uploadQueue.photos}
             onAddPhoto={uploadQueue.addPhoto}
@@ -301,22 +348,52 @@ export default function SellScreen() {
             onRetryPhoto={uploadQueue.retryPhoto}
             isCompressing={uploadQueue.isCompressing}
             isUploading={uploadQueue.isUploading}
+            fieldErrors={ctx.fieldErrors}
           />
         )}
-        {currentStep === 3 && (
-          <Step3VehicleId payload={payload} onChange={handlePayloadChange} />
+        {currentStep === "vehicle" && (
+          <Step3VehicleId
+            payload={machineState.payload}
+            onChange={handlePayloadChange}
+            fieldErrors={ctx.fieldErrors}
+            showErrors={attemptedSteps.vehicle === true}
+          />
         )}
-        {currentStep === 4 && (
-          <Step4Specs payload={payload} onChange={handlePayloadChange} />
+        {currentStep === "specs" && (
+          <Step4Specs
+            payload={machineState.payload}
+            onChange={handlePayloadChange}
+            fieldErrors={ctx.fieldErrors}
+          />
         )}
-        {currentStep === 5 && (
-          <Step5Price payload={payload} onChange={handlePayloadChange} />
+        {currentStep === "price" && (
+          <Step5Price
+            payload={machineState.payload}
+            onChange={handlePayloadChange}
+            fieldErrors={ctx.fieldErrors}
+          />
         )}
-        {currentStep === 6 && (
-          <Step6Location payload={payload} onChange={handlePayloadChange} />
+        {currentStep === "location" && (
+          <Step6Location
+            payload={machineState.payload}
+            onChange={handlePayloadChange}
+            fieldErrors={ctx.fieldErrors}
+          />
         )}
-        {currentStep === 7 && (
-          <Step7DescContact payload={payload} onChange={handlePayloadChange} />
+        {currentStep === "contact" && (
+          <Step7DescContact
+            payload={machineState.payload}
+            onChange={handlePayloadChange}
+            fieldErrors={ctx.fieldErrors}
+          />
+        )}
+        {currentStep === "review" && (
+          <Step8Review
+            payload={machineState.payload}
+            validatedSteps={machineState.validatedSteps}
+            onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
+            photos={uploadQueue.photos}
+          />
         )}
       </WizardLayout>
     );

@@ -23,20 +23,33 @@ export class GlobalErrorFilter implements ExceptionFilter {
     let message: string;
     let details: unknown;
 
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const body = exception.getResponse();
+    // Use duck-typing instead of instanceof because pnpm can create
+    // multiple copies of @nestjs/common in memory, breaking instanceof checks.
+    const isHttpException =
+      exception instanceof HttpException ||
+      (typeof exception === "object" &&
+        exception !== null &&
+        "getStatus" in exception &&
+        typeof (exception as { getStatus: unknown }).getStatus ===
+          "function" &&
+        "getResponse" in exception &&
+        typeof (exception as { getResponse: unknown }).getResponse ===
+          "function");
+
+    if (isHttpException) {
+      status = (exception as HttpException).getStatus();
+      const body = (exception as HttpException).getResponse();
       if (typeof body === "string") {
         code = "HTTP_ERROR";
         message = body;
       } else if (typeof body === "object" && body !== null) {
         const b = body as Record<string, unknown>;
         code = (b["code"] as string) ?? "HTTP_ERROR";
-        message = (b["message"] as string) ?? exception.message;
+        message = (b["message"] as string) ?? (exception as Error).message;
         details = b["details"];
       } else {
         code = "HTTP_ERROR";
-        message = exception.message;
+        message = (exception as Error).message;
       }
     } else {
       status = HttpStatus.INTERNAL_SERVER_ERROR;

@@ -21,6 +21,7 @@ import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdap
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
 import { UpdateDraft } from "./application/UpdateDraft";
+import { ValidateDraftStep } from "./application/ValidateDraftStep";
 import { ListMyDrafts } from "./application/ListMyDrafts";
 import { DiscardDraft } from "./application/DiscardDraft";
 import { PresignUpload } from "./application/PresignUpload";
@@ -115,6 +116,7 @@ import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
     // Application use-cases
     CreateDraft,
     UpdateDraft,
+    ValidateDraftStep,
     ListMyDrafts,
     DiscardDraft,
     PresignUpload,

@@ -1,30 +1,30 @@
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 
-
 import { loadAuthSession } from "../../auth/session";
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
 import { useCities } from "../../api/catalog/useCities";
 
-import type { WizardPayload } from "./types";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { Text } from "@/components/ui/text";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 
-interface StepProps {
-  payload: WizardPayload;
-  onChange: (updates: Partial<WizardPayload>) => void;
+interface Step7DescContactProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  fieldErrors?: Record<string, string>;
   disabled?: boolean;
-  disabledTooltip?: string;
 }
 
 export default function Step7DescContact({
   payload,
   onChange,
+  fieldErrors,
   disabled,
-}: StepProps) {
+}: Step7DescContactProps) {
   const [defaultPhone, setDefaultPhone] = useState("");
 
   useEffect(() => {
@@ -87,9 +87,18 @@ export default function Step7DescContact({
             maxLength={2000}
           />,
         )}
-        <Text className="text-right text-xs text-muted-foreground">
-          {descriptionLength}/2000
-        </Text>
+        <View className="flex-row items-center justify-between">
+          {fieldErrors?.description ? (
+            <Text className="text-sm text-destructive">
+              {fieldErrors.description}
+            </Text>
+          ) : (
+            <View />
+          )}
+          <Text className="text-xs text-muted-foreground">
+            {descriptionLength}/2000
+          </Text>
+        </View>
       </View>
 
       {/* Contact phone */}
@@ -113,7 +122,7 @@ export default function Step7DescContact({
       {/* Contact methods */}
       <View className="gap-3">
         <View className="flex-row items-center justify-between">
-          <Text className="text-base text-foreground">Allow calls</Text>
+          <Text className="text-base text-foreground">Calls</Text>
           <Switch
             checked={allowCalls}
             onCheckedChange={(v) => onChange({ allowCalls: v })}
@@ -121,7 +130,7 @@ export default function Step7DescContact({
           />
         </View>
         <View className="flex-row items-center justify-between">
-          <Text className="text-base text-foreground">Allow chat</Text>
+          <Text className="text-base text-foreground">Chat</Text>
           <Switch
             checked={allowChat}
             onCheckedChange={(v) => onChange({ allowChat: v })}
@@ -130,9 +139,13 @@ export default function Step7DescContact({
         </View>
       </View>
 
+      <Text className="text-sm text-muted-foreground">
+        Chat will become available when messaging launches.
+      </Text>
+
       {!hasContactMethod && (
         <Text className="text-sm text-destructive">
-          Enable at least one contact method
+          Choose calls or chat
         </Text>
       )}
     </View>

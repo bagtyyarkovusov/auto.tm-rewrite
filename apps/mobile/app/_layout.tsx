@@ -84,11 +84,20 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    let redirecting = false;
     const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type !== "updated" || event.action?.type !== "error") return;
       const error = event.query.state.error;
-      if (error instanceof ApiError && error.code === "UNAUTHENTICATED") {
+      if (
+        !redirecting &&
+        error instanceof ApiError &&
+        error.code === "UNAUTHENTICATED"
+      ) {
+        redirecting = true;
         void clearAuthSession();
-        router.replace("/(auth)/phone");
+        queueMicrotask(() => {
+          router.replace("/(auth)/phone");
+        });
       }
     });
     return () => unsubscribe();

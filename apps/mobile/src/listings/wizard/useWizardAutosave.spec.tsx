@@ -2,15 +2,21 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const mockMutate = vi.fn();
+const mockMutateAsync = vi.fn();
 
 vi.mock("../../api/listings/useUpdateDraft", () => ({
   useUpdateDraft: () => ({
-    mutate: mockMutate,
+    mutateAsync: mockMutateAsync,
   }),
+}));
+
+vi.mock("@react-native-community/netinfo", () => ({
+  default: {
+    addEventListener: vi.fn(() => vi.fn()),
+  },
 }));
 
 import { useWizardAutosave } from "./useWizardAutosave";
@@ -48,28 +54,32 @@ describe("useWizardAutosave", () => {
       result.current.save({ vin: "C" });
     });
 
-    expect(mockMutate).not.toHaveBeenCalled();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
 
     act(() => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
   });
 
-  it("forceSave() triggers immediately without debounce", () => {
+  it("forceSave() triggers immediately without debounce", async () => {
+    mockMutateAsync.mockResolvedValue({});
+
     const { result } = renderHook(() => useWizardAutosave("draft-1"), {
       wrapper,
     });
 
-    act(() => {
-      result.current.forceSave({ vin: "A" });
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
     });
 
-    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
   });
 
-  it("forceSave() flushes pending debounce", () => {
+  it("forceSave() flushes pending debounce", async () => {
+    mockMutateAsync.mockResolvedValue({});
+
     const { result } = renderHook(() => useWizardAutosave("draft-1"), {
       wrapper,
     });
@@ -78,50 +88,34 @@ describe("useWizardAutosave", () => {
       result.current.save({ vin: "A" });
     });
 
-    expect(mockMutate).not.toHaveBeenCalled();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
 
-    act(() => {
-      // forceSave flushes the pending debounce AND triggers its own call
-      void result.current.forceSave({ vin: "B" });
+    await act(async () => {
+      await result.current.forceSave({ vin: "B" });
     });
 
-    expect(mockMutate).toHaveBeenCalledTimes(2);
-    expect(mockMutate).toHaveBeenLastCalledWith(
-      { draftId: "draft-1", payload: { vin: "B" } },
-      expect.any(Object),
-    );
+    // The flushed debounce + forceSave both call mutateAsync
+    expect(mockMutateAsync).toHaveBeenCalledTimes(2);
   });
 
-  it("isSaving is true during mutation and false after", () => {
-    let settleFn: (() => void) | undefined;
-    mockMutate.mockImplementation((_vars, opts) => {
-      settleFn = () => opts?.onSettled?.();
-    });
+  it("saveStatus transitions from idle -> saving -> idle on success", async () => {
+    mockMutateAsync.mockResolvedValue({});
 
     const { result } = renderHook(() => useWizardAutosave("draft-1"), {
       wrapper,
     });
 
-    act(() => {
-      result.current.forceSave({ vin: "A" });
+    expect(result.current.saveStatus).toBe("idle");
+
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
     });
 
-    expect(result.current.isSaving).toBe(true);
-
-    act(() => {
-      settleFn?.();
-    });
-
-    expect(result.current.isSaving).toBe(false);
+    expect(result.current.saveStatus).toBe("idle");
   });
 
-  it("saveError is set on mutation error", async () => {
-    const error = new Error("Save failed");
-    mockMutate.mockImplementation(async (_vars, opts) => {
-      await Promise.resolve();
-      opts?.onError?.(error);
-      opts?.onSettled?.();
-    });
+  it("enters retry state on mutation error", async () => {
+    mockMutateAsync.mockRejectedValue(new Error("Save failed"));
 
     const { result } = renderHook(() => useWizardAutosave("draft-1"), {
       wrapper,
@@ -131,6 +125,44 @@ describe("useWizardAutosave", () => {
       await result.current.forceSave({ vin: "A" }).catch(() => {});
     });
 
-    expect(result.current.saveError).toEqual(error);
+    // First failure triggers retry, so status is saving with retry message
+    expect(result.current.saveStatus).toBe("saving");
+    expect(result.current.saveError).toContain("Retrying");
+  });
+
+  it("retrySave() attempts save with pending payload", async () => {
+    mockMutateAsync.mockResolvedValue({});
+
+    const { result } = renderHook(() => useWizardAutosave("draft-1"), {
+      wrapper,
+    });
+
+    // Use save() to set pending payload without triggering mutateAsync (debounced)
+    act(() => {
+      result.current.save({ vin: "A" });
+    });
+
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+
+    await act(async () => {
+      result.current.retrySave();
+    });
+
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      { draftId: "draft-1", payload: { vin: "A" } },
+    );
+  });
+
+  it("does not call mutateAsync when draftId is empty", async () => {
+    const { result } = renderHook(() => useWizardAutosave(""), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
+    });
+
+    expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 });

@@ -12,23 +12,35 @@ import Step5Price from "../../../src/listings/wizard/Step5Price";
 import Step6Location from "../../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../../src/listings/wizard/Step7DescContact";
 import { WizardLayout } from "../../../src/listings/wizard/WizardLayout";
-import type { WizardPayload, WizardStep } from "../../../src/listings/wizard/types";
+import type { WizardPayload } from "../../../src/listings/wizard/types";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
 
-const STEP_TITLES: Record<WizardStep, string> = {
-  1: "Photos",
-  2: "Brand & Model",
-  3: "Details",
-  4: "Condition",
-  5: "Price",
-  6: "Location",
-  7: "Contact",
+const EDIT_STEPS = [
+  "vin",
+  "photos",
+  "vehicle",
+  "specs",
+  "price",
+  "location",
+  "contact",
+] as const;
+
+type EditStep = (typeof EDIT_STEPS)[number];
+
+const STEP_TITLES: Record<EditStep, string> = {
+  vin: "VIN or chassis number",
+  photos: "Photos",
+  vehicle: "Vehicle",
+  specs: "Specs",
+  price: "Price",
+  location: "Car location",
+  contact: "Description & contact",
 };
 
-function getStepTitle(step: WizardStep): string {
-  return STEP_TITLES[step] ?? `Step ${step}`;
+function getStepTitle(step: EditStep): string {
+  return STEP_TITLES[step] ?? step;
 }
 
 function listingToPayload(listing: ListingsSchemas.ListingDetail): WizardPayload {
@@ -99,7 +111,7 @@ export default function EditListingScreen() {
   const { data: listing } = useListingDetail(listingId);
   const editListing = useEditListing();
 
-  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
+  const [currentStep, setCurrentStep] = useState<EditStep>("vin");
   const [payload, setPayload] = useState<WizardPayload>({});
 
   useEffect(() => {
@@ -113,14 +125,16 @@ export default function EditListingScreen() {
   }
 
   function handleBack() {
-    if (currentStep > 1) {
-      setCurrentStep((prev) => (prev - 1) as WizardStep);
+    const idx = EDIT_STEPS.indexOf(currentStep);
+    if (idx > 0) {
+      setCurrentStep(EDIT_STEPS[idx - 1]!);
     }
   }
 
   function handleContinue() {
-    if (currentStep < 7) {
-      setCurrentStep((prev) => (prev + 1) as WizardStep);
+    const idx = EDIT_STEPS.indexOf(currentStep);
+    if (idx < EDIT_STEPS.length - 1) {
+      setCurrentStep(EDIT_STEPS[idx + 1]!);
     }
   }
 
@@ -170,30 +184,39 @@ export default function EditListingScreen() {
     );
   }
 
+  const currentIdx = EDIT_STEPS.indexOf(currentStep);
+  const isLastStep = currentIdx === EDIT_STEPS.length - 1;
+
   return (
     <WizardLayout
-      currentStep={currentStep}
+      routeTitle="Edit listing"
       stepTitle={getStepTitle(currentStep)}
+      stepNumber={currentIdx + 1}
+      stepCount={EDIT_STEPS.length}
       onBack={handleBack}
       onContinue={handleContinue}
       onPublish={handleSave}
       onDiscard={handleDiscard}
       canContinue={true}
       canPublish={true}
-      isSaving={editListing.isPending}
+      canGoBack={currentIdx > 0}
+      isLastStep={isLastStep}
+      saveStatus={editListing.isPending ? "saving" : "idle"}
+      saveError={null}
+      onRetrySave={() => {}}
+      progressPercent={((currentIdx + 1) / EDIT_STEPS.length) * 100}
       publishLabel="Save changes"
       discardTitle="Leave edit mode?"
       discardDescription="Any unsaved changes will be lost."
     >
-      {currentStep === 1 && (
+      {currentStep === "vin" && (
         <Step1Vin
           payload={payload}
           onChange={handlePayloadChange}
           disabled={true}
-          disabledTooltip="Locked after publish"
         />
       )}
-      {currentStep === 2 && (
+      {currentStep === "photos" && (
         <View className="gap-4 py-4">
           <Text className="text-sm text-muted-foreground">
             Photos cannot be changed after publishing. To update photos, create
@@ -202,24 +225,23 @@ export default function EditListingScreen() {
           <ReadOnlyPhotos media={listing.media} />
         </View>
       )}
-      {currentStep === 3 && (
+      {currentStep === "vehicle" && (
         <Step3VehicleId
           payload={payload}
           onChange={handlePayloadChange}
           disabled={true}
-          disabledTooltip="Locked after publish"
         />
       )}
-      {currentStep === 4 && (
+      {currentStep === "specs" && (
         <Step4Specs payload={payload} onChange={handlePayloadChange} />
       )}
-      {currentStep === 5 && (
+      {currentStep === "price" && (
         <Step5Price payload={payload} onChange={handlePayloadChange} />
       )}
-      {currentStep === 6 && (
+      {currentStep === "location" && (
         <Step6Location payload={payload} onChange={handlePayloadChange} />
       )}
-      {currentStep === 7 && (
+      {currentStep === "contact" && (
         <Step7DescContact payload={payload} onChange={handlePayloadChange} />
       )}
     </WizardLayout>

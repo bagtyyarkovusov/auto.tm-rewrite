@@ -28,7 +28,7 @@ function SheetOverlay({
     <FullWindowOverlay>
       <DialogPrimitive.Overlay
         className={cn(
-          'absolute bottom-0 left-0 right-0 top-0 items-end justify-center bg-black/50',
+          'absolute bottom-0 left-0 right-0 top-0 items-stretch justify-end bg-black/50',
           Platform.select({
             web: 'animate-in fade-in-0 fixed cursor-default [&>*]:cursor-auto',
           }),
@@ -37,7 +37,7 @@ function SheetOverlay({
         {...props}
         asChild={Platform.OS !== 'web'}>
         <NativeOnlyAnimatedView>
-          <NativeOnlyAnimatedView>
+          <NativeOnlyAnimatedView className="w-full flex-1 justify-end">
             <>{children}</>
           </NativeOnlyAnimatedView>
         </NativeOnlyAnimatedView>
@@ -59,15 +59,18 @@ function SheetContent({
       <SheetOverlay>
         <DialogPrimitive.Content
           className={cn(
-            'bg-background border-border z-50 w-full max-w-[100%] flex-col gap-4 rounded-t-xl border p-6 shadow-lg shadow-black/5',
+            'bg-background border-border z-50 max-h-[85%] w-full max-w-none self-stretch flex-col gap-4 overflow-hidden rounded-t-2xl border border-b-0 border-x-0 p-6 shadow-lg shadow-black/5',
             Platform.select({
               web: 'animate-in fade-in-0 slide-in-from-bottom-10 duration-300',
             }),
             className
           )}
           {...props}>
-          <NativeOnlyAnimatedView entering={SlideInDown.duration(250)} exiting={SlideOutDown.duration(200)}>
-            <View className="flex-col gap-4">
+          <NativeOnlyAnimatedView
+            entering={SlideInDown.duration(250)}
+            exiting={SlideOutDown.duration(200)}
+            className="min-h-0 w-full flex-1">
+            <View className="min-h-0 w-full flex-1 flex-col gap-4">
               <View className="mx-auto h-1.5 w-12 rounded-full bg-muted" />
               <>{children}</>
             </View>

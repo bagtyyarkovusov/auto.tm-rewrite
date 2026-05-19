@@ -54,6 +54,17 @@ export function SignInDialog({
         >
           <Text>{actionLabel}</Text>
         </Button>
+        {__DEV__ && (
+          <Button
+            size="lg"
+            variant="ghost"
+            onPress={() => {
+              onOpenChange(false);
+            }}
+          >
+            <Text className="text-muted-foreground">Skip auth (dev)</Text>
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   );

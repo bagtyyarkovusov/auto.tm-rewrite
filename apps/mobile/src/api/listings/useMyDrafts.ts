@@ -4,7 +4,15 @@ import { ListingsSchemas } from "@auto-tm/contracts";
 import { apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
-export function useMyDrafts(cursor?: string, limit: number = 20) {
+export function useMyDrafts(opts?: {
+  cursor?: string;
+  limit?: number;
+  enabled?: boolean;
+}) {
+  const cursor = opts?.cursor;
+  const limit = opts?.limit ?? 20;
+  const enabled = opts?.enabled ?? true;
+
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
   params.set("limit", String(limit));
@@ -16,5 +24,6 @@ export function useMyDrafts(cursor?: string, limit: number = 20) {
         `/me/drafts?${params.toString()}`,
         ListingsSchemas.MyDraftsResponseSchema,
       ),
+    enabled,
   });
 }

@@ -46,6 +46,7 @@ interface Step2PhotosProps {
   onRetryPhoto: (photoId: string) => void;
   isCompressing: boolean;
   isUploading: boolean;
+  fieldErrors?: Record<string, string>;
 }
 
 export default function Step2Photos({
@@ -57,6 +58,7 @@ export default function Step2Photos({
   isCompressing,
   isUploading,
   disabled,
+  fieldErrors,
 }: Step2PhotosProps) {
   const ensurePickerTempDir = useCallback(async () => {
     const dir = `${FileSystem.documentDirectory}picker-temp/`;
@@ -146,10 +148,14 @@ export default function Step2Photos({
   }, [photos, onReorderPhotos]);
 
   const maxReached = photos.length >= 20;
-  const hasPhotos = photos.length >= 1;
+  const photosError = fieldErrors?.photos;
 
   return (
     <View className="gap-4 py-4">
+      <Text className="text-sm text-muted-foreground">
+        Photos under 5 MB upload faster.
+      </Text>
+
       {/* Camera + Library buttons */}
       <View className="flex-row gap-3">
         <Button
@@ -172,10 +178,8 @@ export default function Step2Photos({
         </Button>
       </View>
 
-      {!hasPhotos && (
-        <Text className="text-sm text-muted-foreground">
-          At least 1 photo required
-        </Text>
+      {photosError && (
+        <Text className="text-sm text-destructive">{photosError}</Text>
       )}
 
       {maxReached && (

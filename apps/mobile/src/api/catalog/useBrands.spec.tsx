@@ -52,7 +52,7 @@ describe("useBrands", () => {
     expect(result.current.data?.items).toHaveLength(1);
     expect(result.current.data?.items[0]?.name).toBe("Toyota");
     expect(mockGet).toHaveBeenCalledWith(
-      "/catalog/brands?locale=en",
+      "/catalog/brands?locale=en&limit=300",
       expect.any(Object),
       { auth: false },
     );
@@ -68,7 +68,7 @@ describe("useBrands", () => {
     renderHook(() => useBrands("ru"), { wrapper });
     await waitFor(() => expect(mockGet).toHaveBeenCalled());
     expect(mockGet).toHaveBeenCalledWith(
-      "/catalog/brands?locale=ru",
+      "/catalog/brands?locale=ru&limit=300",
       expect.any(Object),
       { auth: false },
     );
@@ -124,7 +124,7 @@ describe("useBrands", () => {
       expect(result.current.data?.items[0]?.name).toBe("Lada"),
     );
     expect(mockGet).toHaveBeenCalledWith(
-      "/catalog/brands?locale=ru",
+      "/catalog/brands?locale=ru&limit=300",
       expect.any(Object),
       { auth: false },
     );
