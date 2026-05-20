@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Step 4 — Specs</title>
+  <style>
+    @font-face { font-family: 'UberMove'; src: url('../fonts/UberMoveBold.otf') format('opentype'); font-weight: 700; }
+    @font-face { font-family: 'UberMove'; src: url('../fonts/UberMoveMedium.otf') format('opentype'); font-weight: 500; }
+    @font-face { font-family: 'UberMoveText'; src: url('../fonts/UberMoveTextRegular.otf') format('opentype'); font-weight: 400; }
+    @font-face { font-family: 'UberMoveText'; src: url('../fonts/UberMoveTextMedium.otf') format('opentype'); font-weight: 500; }
+    @font-face { font-family: 'UberMoveText'; src: url('../fonts/UberMoveTextBold.otf') format('opentype'); font-weight: 700; }
+    @font-face { font-family: 'UberMoveMono'; src: url('../fonts/UberMoveMono-Regular.woff2') format('woff2'); font-weight: 400; }
+    @font-face { font-family: 'UberMoveMono'; src: url('../fonts/UberMoveMono-Medium.woff2') format('woff2'); font-weight: 500; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      padding: 12px 20px;
+      border-bottom: 1px solid #e2e2e2;
+      background: #ffffff;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .icon-btn {
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #000000;
+      transition: background 0.15s ease;
+    }
+    .icon-btn:hover { background: #f3f3f3; }
+    .icon-btn:active { opacity: 0.6; }
+    .icon-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+    .header-title {
+      font-family: 'UberMove', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .step-label { font-size: 13px; font-weight: 500; color: #4b4b4b; }
+    .save-status { font-size: 13px; font-weight: 500; color: #4b4b4b; }
+    .save-status.saved { color: #16a34a; }
+    .progress-track { height: 4px; border-radius: 2px; background: #e2e2e2; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 2px; background: #000000; transition: width 0.3s ease; }
+
+    .body {
+      flex: 1;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+    .step-title {
+      font-family: 'UberMove', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .field-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #000000;
+    }
+    .field-label .req { color: #F43F5E; }
+
+    .segmented {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .segment-btn {
+      flex: 1;
+      height: 44px;
+      border-radius: 999px;
+      border: 1.5px solid #e2e2e2;
+      background: #ffffff;
+      color: #000000;
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .segment-btn.active {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+    }
+    .segment-btn:active { transform: scale(0.98); }
+
+    .text-input {
+      height: 52px;
+      border: 1.5px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 0 14px;
+      font-family: 'UberMoveMono', ui-monospace, Menlo, monospace;
+      font-size: 16px;
+      font-weight: 400;
+      color: #000000;
+      background: #ffffff;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      width: 100%;
+    }
+    .text-input:focus {
+      border-color: #000000;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+    }
+    .text-input::placeholder { color: #afafaf; }
+    .field-error {
+      font-size: 13px;
+      color: #F43F5E;
+      line-height: 1.4;
+    }
+
+    .section-title {
+      font-family: 'UberMove', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-top: 8px;
+    }
+
+    .picker-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+      border: 1.5px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 0 14px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .picker-row:hover { background: #fafafa; }
+    .picker-row:focus-within { border-color: #000000; box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+    .picker-value { font-size: 16px; color: #000000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 28px); }
+    .picker-value.placeholder { color: #afafaf; }
+    .picker-row svg { width: 20px; height: 20px; color: #afafaf; flex-shrink: 0; }
+
+    .footer {
+      padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid #e2e2e2;
+      background: #ffffff;
+      display: flex;
+      gap: 12px;
+    }
+    .btn-primary {
+      flex: 1;
+      height: 52px;
+      border-radius: 999px;
+      border: none;
+      background: #000000;
+      color: #ffffff;
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+    }
+    .btn-primary:disabled {
+      background: #e2e2e2;
+      color: #afafaf;
+      cursor: not-allowed;
+    }
+    .btn-primary:active:not(:disabled) { transform: scale(0.98); opacity: 0.9; }
+    .btn-outline {
+      flex: 1;
+      height: 52px;
+      border-radius: 999px;
+      border: 1.5px solid #000000;
+      background: #ffffff;
+      color: #000000;
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .btn-outline:hover { background: #f3f3f3; }
+    .btn-outline:active { transform: scale(0.98); }
+
+    .sheet-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: none; align-items: flex-end; justify-content: center;
+      z-index: 50;
+    }
+    .sheet-overlay.show { display: flex; }
+    .action-sheet {
+      background: #ffffff; border-radius: 16px 16px 0 0;
+      padding: 8px 20px calc(24px + env(safe-area-inset-bottom));
+      width: 100%;
+      animation: sheet-up 0.25s ease;
+    }
+    @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-item {
+      padding: 16px 0; font-size: 16px; font-weight: 500;
+      color: #F43F5E; text-align: center; cursor: pointer;
+      border-bottom: 1px solid #e2e2e2;
+      background: none; border-left: none; border-right: none; border-top: none;
+      width: 100%; font-family: inherit;
+    }
+    .sheet-item:last-child { border-bottom: none; color: #000000; }
+    .sheet-item:active { opacity: 0.6; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <div class="header-left">
+        <button class="icon-btn" onclick="goBack()" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <span class="header-title">Sell car</span>
+      <button class="icon-btn" onclick="showDiscard()" aria-label="More">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      </button>
+    </div>
+    <div class="header-meta">
+      <span class="step-label" id="stepLabel">Step 4 of 8</span>
+      <span class="save-status" id="saveStatus">Saved</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" style="width: 50%;"></div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="step-title">Specs</div>
+
+    <div class="field-group">
+      <label class="field-label">Condition</label>
+      <div class="segmented">
+        <button class="segment-btn active" id="condUsed" onclick="setCondition('used')">Used</button>
+        <button class="segment-btn" id="condNew" onclick="setCondition('new')">New</button>
+      </div>
+    </div>
+
+    <div class="field-group" id="mileageGroup">
+      <label class="field-label">Mileage, km <span class="req">*</span></label>
+      <input class="text-input" type="number" placeholder="" value="62000" />
+    </div>
+
+    <div class="section-title">Optional details</div>
+
+    <div class="field-group">
+      <label class="field-label">Color</label>
+      <div class="picker-row">
+        <span class="picker-value">White</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Body type</label>
+      <div class="picker-row">
+        <span class="picker-value">Sedan</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Transmission</label>
+      <div class="picker-row">
+        <span class="picker-value">Automatic</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Drive type</label>
+      <div class="picker-row">
+        <span class="picker-value">Front-wheel</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Engine type</label>
+      <div class="picker-row">
+        <span class="picker-value">Petrol</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Engine power</label>
+      <input class="text-input" type="number" placeholder="" value="181" />
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="btn-outline" onclick="goBack()">Back</button>
+    <button class="btn-primary" id="continueBtn" onclick="goNext()">Continue</button>
+  </div>
+
+  <div class="sheet-overlay" id="menuSheet" onclick="closeMenu(event)">
+    <div class="action-sheet" onclick="event.stopPropagation()">
+      <button class="sheet-item" onclick="confirmDiscard()">Discard draft</button>
+      <button class="sheet-item" onclick="closeMenu()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const qs = new URLSearchParams(location.search);
+      const saveStatus = qs.get('saveStatus') || 'saved';
+      const mode = qs.get('mode') || 'create';
+      const saveEl = document.getElementById('saveStatus');
+      if (saveStatus === 'saving') {
+        saveEl.textContent = 'Saving…';
+        saveEl.className = 'save-status';
+      } else if (saveStatus === 'error') {
+        saveEl.textContent = 'Could not save — Retry';
+        saveEl.className = 'save-status error';
+      } else {
+        saveEl.textContent = 'Saved';
+        saveEl.className = 'save-status saved';
+      }
+      if (mode === 'edit') {
+        document.getElementById('stepLabel').textContent = 'Edit mode';
+        document.querySelector('.header-title').textContent = 'Edit listing';
+      }
+    })();
+
+    function setCondition(val) {
+      document.getElementById('condUsed').classList.toggle('active', val === 'used');
+      document.getElementById('condNew').classList.toggle('active', val === 'new');
+      document.getElementById('mileageGroup').style.display = val === 'used' ? 'flex' : 'none';
+    }
+    function goBack() {
+      window.parent.postMessage({ action: 'navigate', to: 'step3-vehicle' }, '*');
+    }
+    function goNext() {
+      window.parent.postMessage({ action: 'navigate', to: 'step5-price' }, '*');
+    }
+    function showDiscard() {
+      document.getElementById('menuSheet').classList.add('show');
+    }
+    function closeMenu(e) {
+      document.getElementById('menuSheet').classList.remove('show');
+    }
+    function confirmDiscard() {
+      closeMenu();
+      window.parent.postMessage({ action: 'navigate', to: 'discard' }, '*');
+    }
+  </script>
+</body>
+</html>

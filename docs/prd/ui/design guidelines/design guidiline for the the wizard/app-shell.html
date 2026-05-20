@@ -1,0 +1,1623 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>AutoTM — App</title>
+  <style>
+    /* ─── Fonts ─── */
+    @font-face { font-family: 'UberMove'; src: url('fonts/UberMoveBold.otf') format('opentype'); font-weight: 700; }
+    @font-face { font-family: 'UberMove'; src: url('fonts/UberMoveMedium.otf') format('opentype'); font-weight: 500; }
+    @font-face { font-family: 'UberMoveText'; src: url('fonts/UberMoveTextRegular.otf') format('opentype'); font-weight: 400; }
+    @font-face { font-family: 'UberMoveText'; src: url('fonts/UberMoveTextMedium.otf') format('opentype'); font-weight: 500; }
+    @font-face { font-family: 'UberMoveText'; src: url('fonts/UberMoveTextBold.otf') format('opentype'); font-weight: 700; }
+    @font-face { font-family: 'UberMoveText'; src: url('fonts/UberMoveTextLight.otf') format('opentype'); font-weight: 300; }
+    @font-face { font-family: 'UberMoveMono'; src: url('fonts/UberMoveMono-Regular.woff2') format('woff2'); font-weight: 400; }
+    @font-face { font-family: 'UberMoveMono'; src: url('fonts/UberMoveMono-Medium.woff2') format('woff2'); font-weight: 500; }
+
+    /* ─── Reset & tokens ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #000000;
+      --white: #ffffff;
+      --gray-50: #fafafa;
+      --gray-100: #f3f3f3;
+      --gray-200: #e2e2e2;
+      --gray-300: #d4d4d4;
+      --gray-400: #afafaf;
+      --gray-500: #8a8a8a;
+      --gray-600: #4b4b4b;
+      --gray-700: #333333;
+      --error: #F43F5E;
+      --error-bg: #FFF1F2;
+      --error-border: #FECDD3;
+      --success: #16a34a;
+      --shadow-card: 0 4px 16px rgba(0,0,0,0.12);
+      --shadow-float: 0 2px 8px rgba(0,0,0,0.16);
+      --font-display: 'UberMove', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      --font-body: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      --font-mono: 'UberMoveMono', ui-monospace, Menlo, monospace;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font-body);
+      background: var(--white);
+      color: var(--black);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none;
+    }
+
+    /* ─── App shell ─── */
+    #app {
+      max-width: 430px;
+      height: 100dvh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--white);
+      overflow: hidden;
+    }
+
+    /* ─── Tab content ─── */
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
+    .tab-content.active { display: flex; }
+
+    /* ─── Sell tab header ─── */
+    .sell-header {
+      padding: calc(16px + env(safe-area-inset-top)) 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--white);
+    }
+    .sell-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.22;
+      letter-spacing: -0.02em;
+    }
+    .sell-body {
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ─── Empty states ─── */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 48px 32px;
+      text-align: center;
+    }
+    .empty-state svg {
+      width: 56px;
+      height: 56px;
+      stroke: var(--gray-400);
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .empty-state h2 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--black);
+    }
+    .empty-state p {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--gray-600);
+      max-width: 260px;
+    }
+
+    /* ─── Draft card ─── */
+    .draft-card {
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--white);
+      box-shadow: var(--shadow-card);
+    }
+    .draft-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .draft-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .draft-meta {
+      font-size: 14px;
+      color: var(--gray-600);
+      line-height: 1.4;
+    }
+    .draft-meta span { color: var(--gray-400); }
+    .draft-thumb {
+      width: 100%;
+      height: 140px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 50%, #1a1a1a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .draft-thumb svg {
+      width: 48px;
+      height: 48px;
+      stroke: rgba(255,255,255,0.25);
+      stroke-width: 1.5;
+      fill: none;
+      position: relative;
+      z-index: 1;
+    }
+    .draft-cover-badge {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.65);
+      color: var(--white);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+      z-index: 1;
+    }
+    .draft-progress {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+    .draft-progress-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--gray-200);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .draft-progress-bar > div {
+      height: 100%;
+      background: var(--black);
+      border-radius: 999px;
+    }
+
+    /* ─── Skeleton ─── */
+    .skeleton-card {
+      height: 180px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, var(--gray-100) 25%, #e8e8e8 50%, var(--gray-100) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes skeleton-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ─── Error row ─── */
+    .error-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--error);
+      line-height: 1.4;
+    }
+    .error-row svg { width: 16px; height: 16px; flex-shrink: 0; stroke: var(--error); stroke-width: 2; fill: none; }
+
+    /* ─── Buttons ─── */
+    .btn-primary {
+      height: 52px;
+      border-radius: 999px;
+      border: none;
+      background: var(--black);
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+    }
+    .btn-primary:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
+    .btn-primary:active:not(:disabled) { transform: scale(0.98); opacity: 0.9; }
+
+    .btn-outline {
+      height: 52px;
+      border-radius: 999px;
+      border: 1.5px solid var(--black);
+      background: var(--white);
+      color: var(--black);
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .btn-outline:hover { background: var(--gray-100); }
+    .btn-outline:active { transform: scale(0.98); }
+
+    .btn-group { display: flex; flex-direction: column; gap: 12px; }
+
+    /* ─── Helper rows ─── */
+    .helper-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-top: 1px solid var(--gray-200);
+      cursor: pointer;
+    }
+    .helper-row:first-child { border-top: none; }
+    .helper-row-label {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--black);
+    }
+    .helper-row-action {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray-600);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .helper-row-action svg {
+      width: 16px; height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    /* ─── Bottom tab bar ─── */
+    .tab-bar {
+      flex: 0 0 auto;
+      height: calc(64px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      position: relative;
+      z-index: 50;
+    }
+    .tab-btn {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--gray-400);
+      transition: color 0.15s ease;
+      padding: 0;
+    }
+    .tab-btn.active { color: var(--black); }
+    .tab-btn svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 1.8;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .tab-btn .tab-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+    .tab-btn[data-tab="sell"] { position: relative; }
+    .tab-btn[data-tab="sell"] .sell-pill {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56px;
+      height: 32px;
+      background: var(--black);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+    }
+    .tab-btn[data-tab="sell"] .sell-pill svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--white);
+      stroke-width: 2;
+    }
+    .tab-btn[data-tab="sell"] .tab-label { margin-top: 18px; }
+
+    /* ─── Wizard overlay ─── */
+    .wizard-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--white);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+    }
+    .wizard-overlay.active { display: flex; }
+    .wizard-overlay.animating {
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .wizard-header {
+      flex: 0 0 auto;
+      padding: calc(12px + env(safe-area-inset-top)) 20px 12px;
+      border-bottom: 1px solid var(--gray-200);
+      background: var(--white);
+    }
+    .wizard-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .wizard-back {
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--black);
+      transition: background 0.15s ease;
+      flex-shrink: 0;
+    }
+    .wizard-back:hover { background: var(--gray-100); }
+    .wizard-back svg { width: 22px; height: 22px; stroke-width: 2; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+    .wizard-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+      text-align: center;
+      flex: 1;
+    }
+    .wizard-overflow {
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--black);
+      transition: background 0.15s ease;
+      flex-shrink: 0;
+    }
+    .wizard-overflow:hover { background: var(--gray-100); }
+    .wizard-overflow svg { width: 22px; height: 22px; stroke-width: 2; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+
+    .wizard-progress-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .wizard-step-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-600);
+    }
+    .wizard-save-status {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gray-400);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .wizard-save-status.saving { color: var(--gray-500); }
+    .wizard-save-status.saved { color: var(--success); }
+    .wizard-save-status.error { color: var(--error); }
+    .wizard-save-status svg {
+      width: 14px; height: 14px;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .wizard-progress-track {
+      width: 100%;
+      height: 4px;
+      background: var(--gray-200);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .wizard-progress-fill {
+      height: 100%;
+      background: var(--black);
+      border-radius: 999px;
+      transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .wizard-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .wizard-body.active { display: flex; }
+
+    .wizard-footer {
+      flex: 0 0 auto;
+      padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      gap: 12px;
+      background: var(--white);
+    }
+    .wizard-footer .btn-primary,
+    .wizard-footer .btn-outline { flex: 1; }
+
+    /* ─── Wizard step typography ─── */
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .step-subtitle {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--gray-600);
+    }
+
+    /* ─── Inputs ─── */
+    .field-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--black);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .field-label .required { color: var(--error); }
+    .text-input {
+      width: 100%;
+      height: 52px;
+      padding: 0 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      background: var(--white);
+      font-family: var(--font-body);
+      font-size: 16px;
+      color: var(--black);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .text-input:focus {
+      border-color: var(--black);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+    }
+    .text-input::placeholder { color: var(--gray-400); }
+    .text-input.has-error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(244,63,94,0.08);
+    }
+
+    .textarea-input {
+      width: 100%;
+      min-height: 120px;
+      max-height: 240px;
+      padding: 12px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      background: var(--white);
+      font-family: var(--font-body);
+      font-size: 16px;
+      color: var(--black);
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      line-height: 1.5;
+    }
+    .textarea-input:focus {
+      border-color: var(--black);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+    }
+    .textarea-input::placeholder { color: var(--gray-400); }
+
+    .field-hint {
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.4;
+      margin-top: 6px;
+    }
+    .field-hint.error { color: var(--error); }
+    .char-count {
+      font-size: 13px;
+      color: var(--gray-400);
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    /* ─── Picker rows ─── */
+    .picker-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-200);
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+    .picker-row:hover { opacity: 0.7; }
+    .picker-row.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .picker-label {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--black);
+    }
+    .picker-value {
+      font-size: 15px;
+      color: var(--gray-400);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 60%;
+    }
+    .picker-value.is-set { color: var(--black); }
+    .picker-value svg {
+      width: 16px; height: 16px;
+      stroke: var(--gray-400);
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    /* ─── Segmented control ─── */
+    .segmented {
+      display: flex;
+      background: var(--gray-100);
+      border-radius: 999px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .segmented button {
+      flex: 1;
+      height: 40px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray-600);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .segmented button.active {
+      background: var(--white);
+      color: var(--black);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    /* ─── Photo grid ─── */
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .photo-cell {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: var(--gray-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .photo-cell.cover::after {
+      content: 'Cover';
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: rgba(0,0,0,0.65);
+      color: var(--white);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 3px 6px;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+    .photo-cell.add {
+      border: 1.5px dashed var(--gray-300);
+      background: transparent;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .photo-cell.add:hover { border-color: var(--black); background: var(--gray-50); }
+    .photo-cell.add svg { width: 24px; height: 24px; stroke: var(--gray-400); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+    .photo-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .photo-actions button {
+      flex: 1;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid var(--gray-200);
+      background: var(--white);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--black);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+    .photo-actions button:hover { background: var(--gray-100); }
+    .photo-actions button svg { width: 18px; height: 18px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ─── Switch ─── */
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+    }
+    .switch-row-label {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--black);
+    }
+    .switch-row-hint {
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-top: 2px;
+    }
+    .switch-track {
+      width: 48px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--gray-200);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .switch-track.on { background: var(--black); }
+    .switch-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .switch-track.on .switch-knob { transform: translateX(20px); }
+
+    /* ─── Review rows ─── */
+    .review-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-200);
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+    .review-row:hover { opacity: 0.7; }
+    .review-row:last-child { border-bottom: none; }
+    .review-row-label {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--black);
+      flex-shrink: 0;
+      padding-right: 16px;
+    }
+    .review-row-value {
+      font-size: 15px;
+      color: var(--gray-600);
+      text-align: right;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+    .review-row-value span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .review-row-value svg {
+      width: 16px; height: 16px;
+      stroke: var(--gray-400);
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .review-row-value.incomplete { color: var(--error); }
+
+    /* ─── Dialogs ─── */
+    .dialog-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.2s ease;
+    }
+    .dialog-overlay.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .dialog-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 320px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes scaleIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .dialog-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .dialog-body {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--gray-600);
+      margin-bottom: 20px;
+    }
+    .dialog-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .dialog-actions .btn-outline,
+    .dialog-actions .btn-primary { flex: 1; height: 48px; font-size: 15px; }
+    .dialog-actions .btn-primary.destructive {
+      background: var(--error);
+      color: var(--white);
+      border-color: var(--error);
+    }
+
+    /* ─── Overflow menu ─── */
+    .overflow-menu {
+      position: absolute;
+      top: 56px;
+      right: 12px;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow-card), 0 8px 32px rgba(0,0,0,0.12);
+      padding: 6px;
+      min-width: 200px;
+      z-index: 110;
+      display: none;
+      animation: scaleIn 0.15s ease;
+    }
+    .overflow-menu.active { display: block; }
+    .overflow-item {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--error);
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+    .overflow-item:hover { background: var(--error-bg); }
+
+    /* ─── Toast ─── */
+    .toast {
+      position: absolute;
+      top: calc(12px + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%) translateY(-150%);
+      background: var(--black);
+      color: var(--white);
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 300;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+      box-shadow: var(--shadow-float);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ─── Phone input ─── */
+    .phone-composed {
+      display: flex;
+      align-items: center;
+      height: 52px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      background: var(--white);
+      overflow: hidden;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .phone-composed:focus-within {
+      border-color: var(--black);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+    }
+    .phone-prefix {
+      display: grid; place-items: center;
+      height: 100%;
+      padding: 0 14px;
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--black);
+      border-right: 1px solid var(--gray-200);
+      background: var(--white);
+      white-space: nowrap;
+    }
+    .phone-input-inner {
+      flex: 1;
+      height: 100%;
+      border: none;
+      outline: none;
+      padding: 0 14px;
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 400;
+      color: var(--black);
+      background: transparent;
+    }
+    .phone-input-inner::placeholder { font-family: var(--font-body); color: var(--gray-400); }
+
+    /* ─── Section divider ─── */
+    .section-divider {
+      height: 8px;
+      background: var(--gray-100);
+      margin: 0 -20px;
+    }
+
+    /* ─── Price helper ─── */
+    .price-fx {
+      font-size: 13px;
+      color: var(--gray-600);
+      padding: 8px 12px;
+      background: var(--gray-100);
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ─── Spinner ─── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--gray-200);
+      border-top-color: var(--black);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB: HOME                                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="tab-content" data-tab="home">
+      <div class="sell-header">
+        <h1 class="sell-title">AutoTM</h1>
+        <button class="wizard-back" onclick="showToast('Search coming soon')" aria-label="Search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+      </div>
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <h2>Feed</h2>
+        <p>Personalized listings will appear here once the recommendation engine ships in S5.</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB: FAVORITES                            -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="tab-content" data-tab="favorites">
+      <div class="sell-header">
+        <h1 class="sell-title">Favorites</h1>
+      </div>
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <h2>No favorites yet</h2>
+        <p>Tap the heart on any listing to save it here for quick access.</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB: SELL                                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="tab-content active" data-tab="sell">
+      <div class="sell-header">
+        <h1 class="sell-title">Sell</h1>
+      </div>
+      <div class="sell-body">
+        <div id="draftSection">
+          <div class="draft-card">
+            <div class="draft-thumb">
+              <svg viewBox="0 0 24 24"><path d="M5 17h14M6 17l1.5-4h9L18 17M8 13l-1-2.5A2 2 0 0 1 8.8 8h6.4a2 2 0 0 1 1.8 2.5L16 13M7 17v2M17 17v2"/></svg>
+              <span class="draft-cover-badge">8 photos</span>
+            </div>
+            <span class="draft-label">Latest draft</span>
+            <div class="draft-title">2018 Toyota Camry</div>
+            <div class="draft-meta">Saved 2 min ago <span>&bull;</span> Price missing</div>
+            <div class="draft-progress">
+              <span>6 of 8</span>
+              <div class="draft-progress-bar"><div style="width:75%"></div></div>
+            </div>
+            <button class="btn-primary" onclick="startWizard('draft')">Continue draft</button>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn-outline" onclick="startWizard('new')">New listing</button>
+        </div>
+
+        <div style="margin-top:8px;">
+          <div class="helper-row" onclick="showToast('My listings — S5')">
+            <span class="helper-row-label">My listings</span>
+            <span class="helper-row-action">0 active <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="helper-row" onclick="showToast('Garage — S6')">
+            <span class="helper-row-label">My garage</span>
+            <span class="helper-row-action"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB: CHAT                                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="tab-content" data-tab="chat">
+      <div class="sell-header">
+        <h1 class="sell-title">Messages</h1>
+      </div>
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <h2>No messages yet</h2>
+        <p>Conversations with buyers and sellers will appear here once messaging launches in S7.</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB: SERVICES                             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="tab-content" data-tab="services">
+      <div class="sell-header">
+        <h1 class="sell-title">Services</h1>
+      </div>
+      <div class="sell-body">
+        <div class="helper-row" onclick="showToast('Profile — S5')">
+          <span class="helper-row-label">Profile</span>
+          <span class="helper-row-action"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+        <div class="helper-row" onclick="showToast('Settings — S5')">
+          <span class="helper-row-label">Settings</span>
+          <span class="helper-row-action"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+        <div class="helper-row" onclick="showToast('Bortzhurnal — S6')">
+          <span class="helper-row-label">Bortzhurnal</span>
+          <span class="helper-row-action"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+        <div class="helper-row" onclick="showToast('Help & Support')">
+          <span class="helper-row-label">Help &amp; Support</span>
+          <span class="helper-row-action"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- WIZARD OVERLAY                            -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="wizard-overlay" id="wizardOverlay">
+      <div class="wizard-header">
+        <div class="wizard-topbar">
+          <button class="wizard-back" onclick="wizardBack()" aria-label="Back">
+            <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <span class="wizard-title" id="wizardTitle">Sell car</span>
+          <button class="wizard-overflow" onclick="toggleOverflow()" aria-label="More">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+        </div>
+        <div class="wizard-progress-row">
+          <span class="wizard-step-label" id="stepLabel">Step 1 of 8</span>
+          <span class="wizard-save-status saved" id="saveStatus">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Saved
+          </span>
+        </div>
+        <div class="wizard-progress-track">
+          <div class="wizard-progress-fill" id="progressFill" style="width:12.5%"></div>
+        </div>
+      </div>
+
+      <!-- Overflow menu -->
+      <div class="overflow-menu" id="overflowMenu">
+        <button class="overflow-item" onclick="showDiscardDialog()">Discard draft</button>
+      </div>
+
+      <!-- ── Step 1: VIN ── -->
+      <div class="wizard-body active" data-step="0">
+        <div class="step-title">VIN or chassis number</div>
+        <p class="step-subtitle">Optional. You can fill details manually.</p>
+        <div>
+          <label class="field-label">VIN / chassis number</label>
+          <input class="text-input" id="vinInput" placeholder="e.g. JTDBU4EE3B9123456" maxlength="17" />
+          <p class="field-hint">No checking is done in this version.</p>
+        </div>
+      </div>
+
+      <!-- ── Step 2: Photos ── -->
+      <div class="wizard-body" data-step="1">
+        <div class="step-title">Add photos</div>
+        <p class="step-subtitle">Photos under 5 MB upload faster. First photo is cover.</p>
+        <div class="photo-actions">
+          <button onclick="addPhoto('camera')">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Camera
+          </button>
+          <button onclick="addPhoto('library')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Library
+          </button>
+        </div>
+        <div class="photo-grid" id="photoGrid">
+          <div class="photo-cell cover" style="background:#e8e8e8;">
+            <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--gray-400);stroke-width:2;fill:none;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <div class="photo-cell" style="background:#e8e8e8;">
+            <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--gray-400);stroke-width:2;fill:none;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <div class="photo-cell add" onclick="addPhoto('library')">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+        </div>
+        <p class="field-hint">You have 2 photos. Drag to reorder.</p>
+      </div>
+
+      <!-- ── Step 3: Vehicle ── -->
+      <div class="wizard-body" data-step="2">
+        <div class="step-title">Vehicle</div>
+        <div>
+          <div class="picker-row" onclick="pickOption('brand')">
+            <span class="picker-label">Brand</span>
+            <span class="picker-value is-set" id="pick-brand">Toyota <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="picker-row" onclick="pickOption('model')">
+            <span class="picker-label">Model</span>
+            <span class="picker-value is-set" id="pick-model">Camry <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="picker-row" onclick="pickOption('generation')">
+            <span class="picker-label">Generation</span>
+            <span class="picker-value" id="pick-generation">Not specified <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <p class="field-hint" style="margin-top:4px;">No generations for this model yet.</p>
+        </div>
+        <div>
+          <label class="field-label">Year <span class="required">*</span></label>
+          <input class="text-input" id="yearInput" type="number" placeholder="e.g. 2018" value="2018" />
+        </div>
+      </div>
+
+      <!-- ── Step 4: Specs ── -->
+      <div class="wizard-body" data-step="3">
+        <div class="step-title">Specs</div>
+        <div>
+          <label class="field-label">Condition</label>
+          <div class="segmented" id="conditionSeg">
+            <button class="active" onclick="setCondition('used', this)">Used</button>
+            <button onclick="setCondition('new', this)">New</button>
+          </div>
+        </div>
+        <div id="mileageField">
+          <label class="field-label">Mileage, km <span class="required">*</span></label>
+          <input class="text-input" id="mileageInput" type="number" placeholder="e.g. 62000" value="62000" />
+        </div>
+        <div>
+          <label class="field-label">Optional details</label>
+          <div class="picker-row" onclick="pickOption('color')"><span class="picker-label">Color</span><span class="picker-value is-set" id="pick-color">White <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="picker-row" onclick="pickOption('body')"><span class="picker-label">Body type</span><span class="picker-value is-set" id="pick-body">Sedan <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="picker-row" onclick="pickOption('transmission')"><span class="picker-label">Transmission</span><span class="picker-value is-set" id="pick-transmission">Automatic <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="picker-row" onclick="pickOption('drive')"><span class="picker-label">Drive type</span><span class="picker-value is-set" id="pick-drive">Front-wheel <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="picker-row" onclick="pickOption('engine')"><span class="picker-label">Engine type</span><span class="picker-value is-set" id="pick-engine">Petrol <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="picker-row" onclick="pickOption('power')"><span class="picker-label">Engine power</span><span class="picker-value is-set" id="pick-power">181 hp <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+        </div>
+      </div>
+
+      <!-- ── Step 5: Price ── -->
+      <div class="wizard-body" data-step="4">
+        <div class="step-title">Price</div>
+        <div>
+          <label class="field-label">Amount <span class="required">*</span></label>
+          <input class="text-input" id="priceInput" type="number" placeholder="e.g. 105000" value="105000" />
+        </div>
+        <div>
+          <label class="field-label">Currency</label>
+          <div class="segmented" id="currencySeg">
+            <button class="active" onclick="setCurrency('TMT', this)">TMT</button>
+            <button onclick="setCurrency('USD', this)">USD</button>
+            <button onclick="setCurrency('AED', this)">AED</button>
+          </div>
+          <p class="price-fx" id="fxHelper" style="margin-top:8px;display:none;">About <strong id="fxAmount">&mdash;</strong> TMT</p>
+        </div>
+        <div>
+          <label class="field-label">Seller terms</label>
+          <div class="switch-row">
+            <div class="switch-row-label">Exchange possible</div>
+            <div class="switch-track" onclick="toggleSwitch(this)" id="sw-exchange"><div class="switch-knob"></div></div>
+          </div>
+          <div class="switch-row">
+            <div class="switch-row-label">Installment possible</div>
+            <div class="switch-track" onclick="toggleSwitch(this)" id="sw-installment"><div class="switch-knob"></div></div>
+          </div>
+        </div>
+        <p class="field-hint">Enter the full asking price. AutoTM does not finance or verify seller payment terms.</p>
+      </div>
+
+      <!-- ── Step 6: Location ── -->
+      <div class="wizard-body" data-step="5">
+        <div class="step-title">Car location</div>
+        <div>
+          <div class="picker-row" onclick="pickOption('region')"><span class="picker-label">Region <span class="required" style="color:var(--error);">*</span></span><span class="picker-value is-set" id="pick-region">Ahal <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="picker-row" onclick="pickOption('city')"><span class="picker-label">City <span class="required" style="color:var(--error);">*</span></span><span class="picker-value is-set" id="pick-city">Ashgabat <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+        </div>
+        <div>
+          <label class="field-label">Area / landmark</label>
+          <input class="text-input" id="areaInput" placeholder="e.g. 30 mkr near Lukoil" />
+        </div>
+        <p class="field-hint">Choose where the car can be inspected. Do not enter your home address.</p>
+      </div>
+
+      <!-- ── Step 7: Description ── -->
+      <div class="wizard-body" data-step="6">
+        <div class="step-title">Description</div>
+        <div>
+          <label class="field-label">Description <span class="required">*</span></label>
+          <textarea class="textarea-input" id="descInput" placeholder="Add condition, service history, and reason for selling." maxlength="2000">Well kept Camry. Service done on time. Minor scratches on rear bumper.</textarea>
+          <div class="char-count" id="charCount">48 / 2000</div>
+        </div>
+        <div class="section-divider"></div>
+        <div>
+          <label class="field-label">Contact</label>
+          <label style="font-size:13px;color:var(--gray-600);font-weight:400;margin-bottom:8px;display:block;">Phone</label>
+          <div class="phone-composed">
+            <span class="phone-prefix">+993</span>
+            <input class="phone-input-inner" id="phoneInput" type="tel" placeholder="6X XX-XX-XX" value="62 12-34-56" />
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <div class="switch-row">
+            <div class="switch-row-label">Calls</div>
+            <div class="switch-track on" onclick="toggleSwitch(this)" id="sw-calls"><div class="switch-knob"></div></div>
+          </div>
+          <div class="switch-row">
+            <div>
+              <div class="switch-row-label">Chat</div>
+              <div class="switch-row-hint">Chat will become available when messaging launches.</div>
+            </div>
+            <div class="switch-track on" onclick="toggleSwitch(this)" id="sw-chat"><div class="switch-knob"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Step 8: Review ── -->
+      <div class="wizard-body" data-step="7">
+        <div class="step-title">Review</div>
+        <p class="step-subtitle">Check everything before publishing.</p>
+        <div>
+          <div class="review-row" onclick="goToStep(1)">
+            <span class="review-row-label">Photos</span>
+            <span class="review-row-value"><span>2 attached</span><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="review-row" onclick="goToStep(2)">
+            <span class="review-row-label">Car</span>
+            <span class="review-row-value"><span>2018 Toyota Camry</span><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="review-row" onclick="goToStep(4)">
+            <span class="review-row-label">Price</span>
+            <span class="review-row-value"><span>105000 TMT</span><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="review-row" onclick="goToStep(4)">
+            <span class="review-row-label">Terms</span>
+            <span class="review-row-value"><span>&mdash;</span><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="review-row" onclick="goToStep(5)">
+            <span class="review-row-label">Location</span>
+            <span class="review-row-value"><span>Ashgabat</span><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+          <div class="review-row" onclick="goToStep(6)">
+            <span class="review-row-label">Contact</span>
+            <span class="review-row-value"><span>Calls + chat</span><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wizard footer -->
+      <div class="wizard-footer">
+        <button class="btn-outline" id="backBtn" onclick="wizardBack()">Back</button>
+        <button class="btn-primary" id="continueBtn" onclick="wizardNext()">Continue</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- DIALOG: DISCARD DRAFT                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="dialog-overlay" id="discardDialog">
+      <div class="dialog-card">
+        <div class="dialog-title">Discard draft?</div>
+        <div class="dialog-body">This removes your draft and staged photos for this listing.</div>
+        <div class="dialog-actions">
+          <button class="btn-outline" onclick="hideDiscardDialog()">Cancel</button>
+          <button class="btn-primary destructive" onclick="confirmDiscard()">Discard draft</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TOAST                                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="toast" id="toast">Listing published</div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- BOTTOM TAB BAR                            -->
+    <!-- ═══════════════════════════════════════════ -->
+    <nav class="tab-bar">
+      <button class="tab-btn" data-tab="home" onclick="switchTab('home')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="tab-label">Home</span>
+      </button>
+      <button class="tab-btn" data-tab="favorites" onclick="switchTab('favorites')">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span class="tab-label">Favorites</span>
+      </button>
+      <button class="tab-btn active" data-tab="sell" onclick="switchTab('sell')">
+        <div class="sell-pill">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <span class="tab-label">Sell</span>
+      </button>
+      <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="tab-label">Chat</span>
+      </button>
+      <button class="tab-btn" data-tab="services" onclick="switchTab('services')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.68 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="tab-label">Services</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════
+    const STEPS = ['VIN', 'Photos', 'Vehicle', 'Specs', 'Price', 'Location', 'Description', 'Review'];
+    let currentStep = 0;
+    let wizardOpen = false;
+    let draftState = 'default';
+    let formData = {
+      vin: '', photos: 2, brand: 'Toyota', model: 'Camry', generation: '', year: '2018',
+      condition: 'used', mileage: '62000', color: 'White', body: 'Sedan',
+      transmission: 'Automatic', drive: 'Front-wheel', engine: 'Petrol', power: '181 hp',
+      price: '105000', currency: 'TMT', exchange: false, installment: false,
+      region: 'Ahal', city: 'Ashgabat', area: '',
+      description: 'Well kept Camry. Service done on time. Minor scratches on rear bumper.',
+      phone: '62 12-34-56', calls: true, chat: true,
+    };
+
+    // ═══════════════════════════════════════════
+    // TAB SWITCHING
+    // ═══════════════════════════════════════════
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.querySelector(`.tab-content[data-tab="${tabId}"]`).classList.add('active');
+      document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+    }
+
+    // ═══════════════════════════════════════════
+    // WIZARD
+    // ═══════════════════════════════════════════
+    function startWizard(mode) {
+      wizardOpen = true;
+      currentStep = mode === 'draft' ? 5 : 0;
+      const overlay = document.getElementById('wizardOverlay');
+      overlay.classList.add('active', 'animating');
+      // Remove animating class after animation completes
+      setTimeout(() => overlay.classList.remove('animating'), 350);
+      updateWizardUI();
+    }
+
+    function closeWizard() {
+      wizardOpen = false;
+      document.getElementById('wizardOverlay').classList.remove('active');
+      document.getElementById('overflowMenu').classList.remove('active');
+    }
+
+    function updateWizardUI() {
+      document.getElementById('wizardTitle').textContent = currentStep === 7 ? 'Review listing' : 'Sell car';
+      document.getElementById('stepLabel').textContent = currentStep === 7 ? 'Review' : `Step ${currentStep + 1} of 8`;
+      document.getElementById('progressFill').style.width = (((currentStep + 1) / 8) * 100) + '%';
+
+      document.querySelectorAll('.wizard-body').forEach((el, i) => {
+        el.classList.toggle('active', i === currentStep);
+      });
+
+      const backBtn = document.getElementById('backBtn');
+      const continueBtn = document.getElementById('continueBtn');
+
+      backBtn.style.display = currentStep === 0 ? 'none' : 'block';
+      backBtn.textContent = 'Back';
+      continueBtn.textContent = currentStep === 7 ? 'Publish' : 'Continue';
+      continueBtn.disabled = false;
+
+      // Save status animation
+      const status = document.getElementById('saveStatus');
+      status.className = 'wizard-save-status saving';
+      status.innerHTML = `<svg viewBox="0 0 24 24" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Saving...`;
+      setTimeout(() => {
+        status.className = 'wizard-save-status saved';
+        status.innerHTML = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Saved`;
+      }, 600);
+    }
+
+    function wizardNext() {
+      if (currentStep < 7) {
+        currentStep++;
+        updateWizardUI();
+      } else {
+        const btn = document.getElementById('continueBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Publishing...';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Publish';
+          closeWizard();
+          showToast('Listing published');
+          draftState = 'empty';
+          renderDraftSection();
+        }, 1200);
+      }
+    }
+
+    function wizardBack() {
+      if (currentStep > 0) {
+        currentStep--;
+        updateWizardUI();
+      } else {
+        closeWizard();
+      }
+    }
+
+    function goToStep(stepIndex) {
+      if (stepIndex >= 0 && stepIndex <= 6) {
+        currentStep = stepIndex;
+        updateWizardUI();
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // OVERFLOW & DISCARD
+    // ═══════════════════════════════════════════
+    function toggleOverflow() {
+      document.getElementById('overflowMenu').classList.toggle('active');
+    }
+
+    function showDiscardDialog() {
+      document.getElementById('overflowMenu').classList.remove('active');
+      document.getElementById('discardDialog').classList.add('active');
+    }
+
+    function hideDiscardDialog() {
+      document.getElementById('discardDialog').classList.remove('active');
+    }
+
+    function confirmDiscard() {
+      hideDiscardDialog();
+      closeWizard();
+      draftState = 'empty';
+      renderDraftSection();
+      showToast('Draft discarded');
+    }
+
+    // ═══════════════════════════════════════════
+    // TOAST
+    // ═══════════════════════════════════════════
+    let toastTimer;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ═══════════════════════════════════════════
+    // FORM INTERACTIONS
+    // ═══════════════════════════════════════════
+    function setCondition(val, btn) {
+      formData.condition = val;
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('mileageField').style.display = val === 'new' ? 'none' : 'block';
+    }
+
+    function setCurrency(val, btn) {
+      formData.currency = val;
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const fx = document.getElementById('fxHelper');
+      if (val !== 'TMT') {
+        fx.style.display = 'inline-flex';
+        const rate = val === 'USD' ? 3.5 : 0.95;
+        const amt = Math.round(parseInt(formData.price || '0') * rate);
+        document.getElementById('fxAmount').textContent = amt.toLocaleString();
+      } else {
+        fx.style.display = 'none';
+      }
+    }
+
+    function toggleSwitch(track) {
+      track.classList.toggle('on');
+      const id = track.id;
+      if (id === 'sw-exchange') formData.exchange = track.classList.contains('on');
+      if (id === 'sw-installment') formData.installment = track.classList.contains('on');
+      if (id === 'sw-calls') formData.calls = track.classList.contains('on');
+      if (id === 'sw-chat') formData.chat = track.classList.contains('on');
+    }
+
+    function pickOption(type) {
+      showToast(`Open ${type} picker sheet`);
+    }
+
+    function addPhoto(source) {
+      showToast(`Open ${source} picker`);
+    }
+
+    // Character count
+    document.getElementById('descInput')?.addEventListener('input', function() {
+      document.getElementById('charCount').textContent = `${this.value.length} / 2000`;
+    });
+
+    // Phone formatting
+    document.getElementById('phoneInput')?.addEventListener('input', function(e) {
+      const digits = this.value.replace(/\D/g, '').slice(0, 8);
+      if (digits.length <= 2) this.value = digits;
+      else if (digits.length <= 4) this.value = digits.slice(0, 2) + ' ' + digits.slice(2);
+      else if (digits.length <= 6) this.value = digits.slice(0, 2) + ' ' + digits.slice(2, 4) + '-' + digits.slice(4);
+      else this.value = digits.slice(0, 2) + ' ' + digits.slice(2, 4) + '-' + digits.slice(4, 6) + '-' + digits.slice(6);
+    });
+
+    // ═══════════════════════════════════════════
+    // DRAFT SECTION RENDERING
+    // ═══════════════════════════════════════════
+    function renderDraftSection() {
+      const section = document.getElementById('draftSection');
+      if (draftState === 'loading') {
+        section.innerHTML = '<div class="skeleton-card"></div>';
+      } else if (draftState === 'empty') {
+        section.innerHTML = '';
+      } else if (draftState === 'error') {
+        section.innerHTML = `
+          <div class="error-row">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" x2="12" y1="8" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" x2="12.01" y1="16" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Could not load draft. Try again.
+          </div>`;
+      } else {
+        section.innerHTML = `
+          <div class="draft-card">
+            <div class="draft-thumb">
+              <svg viewBox="0 0 24 24"><path d="M5 17h14M6 17l1.5-4h9L18 17M8 13l-1-2.5A2 2 0 0 1 8.8 8h6.4a2 2 0 0 1 1.8 2.5L16 13M7 17v2M17 17v2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="draft-cover-badge">8 photos</span>
+            </div>
+            <span class="draft-label">Latest draft</span>
+            <div class="draft-title">2018 Toyota Camry</div>
+            <div class="draft-meta">Saved 2 min ago <span>&bull;</span> Price missing</div>
+            <div class="draft-progress">
+              <span>6 of 8</span>
+              <div class="draft-progress-bar"><div style="width:75%"></div></div>
+            </div>
+            <button class="btn-primary" onclick="startWizard('draft')">Continue draft</button>
+          </div>`;
+      }
+    }
+
+    // Demo URL param for draft states
+    (function() {
+      const qs = new URLSearchParams(location.search);
+      const state = qs.get('draft');
+      if (state && ['loading','empty','error','default'].includes(state)) {
+        draftState = state;
+        renderDraftSection();
+      }
+    })();
+  </script>
+</body>
+</html>
