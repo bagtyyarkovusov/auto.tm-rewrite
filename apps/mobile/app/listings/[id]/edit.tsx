@@ -126,15 +126,17 @@ export default function EditListingScreen() {
 
   function handleBack() {
     const idx = EDIT_STEPS.indexOf(currentStep);
-    if (idx > 0) {
-      setCurrentStep(EDIT_STEPS[idx - 1]!);
+    const previousStep = EDIT_STEPS[idx - 1];
+    if (previousStep) {
+      setCurrentStep(previousStep);
     }
   }
 
   function handleContinue() {
     const idx = EDIT_STEPS.indexOf(currentStep);
-    if (idx < EDIT_STEPS.length - 1) {
-      setCurrentStep(EDIT_STEPS[idx + 1]!);
+    const nextStep = EDIT_STEPS[idx + 1];
+    if (nextStep) {
+      setCurrentStep(nextStep);
     }
   }
 
@@ -242,7 +244,11 @@ export default function EditListingScreen() {
         <Step6Location payload={payload} onChange={handlePayloadChange} />
       )}
       {currentStep === "contact" && (
-        <Step7DescContact payload={payload} onChange={handlePayloadChange} />
+        <Step7DescContact
+          payload={payload}
+          onChange={handlePayloadChange}
+          defaultPhone={listing.contactPhone ?? ""}
+        />
       )}
     </WizardLayout>
   );

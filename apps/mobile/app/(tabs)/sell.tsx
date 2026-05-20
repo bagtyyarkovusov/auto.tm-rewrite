@@ -1,5 +1,5 @@
 import { PlusCircle } from "lucide-react-native";
-import { router, useNavigation } from "expo-router";
+import { type Href, router, useNavigation } from "expo-router";
 import { useEffect, useReducer, useState, useCallback } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +18,7 @@ import {
 import { WizardLayout } from "../../src/listings/wizard/WizardLayout";
 import { useWizardAutosave } from "../../src/listings/wizard/useWizardAutosave";
 import { useAuth } from "../../src/auth/useAuth";
+import { loadAuthSession } from "../../src/auth/session";
 import { SignInDialog } from "../../components/auth/SignInDialog";
 import Step1Vin from "../../src/listings/wizard/Step1Vin";
 import Step2Photos from "../../src/listings/wizard/Step2Photos";
@@ -72,6 +73,11 @@ export default function SellScreen() {
   const [attemptedSteps, setAttemptedSteps] = useState<
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
+  const [defaultPhone, setDefaultPhone] = useState("");
+
+  useEffect(() => {
+    loadAuthSession().then((s) => setDefaultPhone(s?.user.phone ?? ""));
+  }, []);
 
   // Hide the bottom tab bar while the wizard is open — the wizard is a focused
   // flow that should not advertise navigation to other tabs.
@@ -121,7 +127,6 @@ export default function SellScreen() {
       validatedSteps: machineState.validatedSteps,
     };
     save(fullPayload);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     machineState.draftId,
     machineState.status,
@@ -204,7 +209,14 @@ export default function SellScreen() {
 
   const handleBack = useCallback(() => {
     dispatch({ type: "BACK" });
-  }, []);
+    // Force save on navigation
+    const fullPayload: WizardSchemas.WizardDraftPayload = {
+      ...machineState.payload,
+      photos: buildPayloadPhotos(uploadQueue.photos),
+      validatedSteps: machineState.validatedSteps,
+    };
+    void forceSave(fullPayload);
+  }, [machineState.payload, machineState.validatedSteps, uploadQueue.photos, forceSave]);
 
   const handleContinue = useCallback(() => {
     if (!ctx.canContinue) {
@@ -251,7 +263,7 @@ export default function SellScreen() {
         title: "Listing published",
         variant: "success",
       });
-      router.push(`/(public)/listings/${result.id}` as any);
+      router.push(`/(public)/listings/${result.id}` as Href);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to publish listing";
@@ -385,6 +397,7 @@ export default function SellScreen() {
             payload={machineState.payload}
             onChange={handlePayloadChange}
             fieldErrors={ctx.fieldErrors}
+            defaultPhone={defaultPhone}
           />
         )}
         {currentStep === "review" && (

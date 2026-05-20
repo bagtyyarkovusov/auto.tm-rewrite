@@ -25,9 +25,7 @@ interface FooterAction {
 }
 
 interface WizardLayoutProps {
-  /** Constant route title shown above the step title — "Sell car" or "Edit listing". */
   routeTitle: string;
-  /** Step-specific bold title shown beneath the route title. */
   stepTitle: string;
   stepNumber: number;
   stepCount: number;
@@ -44,13 +42,280 @@ interface WizardLayoutProps {
   onRetrySave: () => void;
   progressPercent: number;
   children: React.ReactNode;
-  /** Optional helper text rendered beneath a disabled Continue/Publish button. */
   disabledReason?: string;
-  /** Optional secondary footer action injected by individual steps (e.g. VIN Skip). */
   secondaryAction?: FooterAction;
   publishLabel?: string;
   discardTitle?: string;
   discardDescription?: string;
+}
+
+function WizardHeader({
+  routeTitle,
+  stepTitle,
+  stepNumber,
+  stepCount,
+  canGoBack,
+  onBack,
+  onOpenDiscard,
+  progressPercent,
+}: {
+  routeTitle: string;
+  stepTitle: string;
+  stepNumber: number;
+  stepCount: number;
+  canGoBack: boolean;
+  onBack: () => void;
+  onOpenDiscard: () => void;
+  progressPercent: number;
+}) {
+  return (
+    <View className="border-b border-border px-4 py-3 gap-2">
+      <View className="flex-row items-center justify-between">
+        <View className="w-10">
+          {canGoBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11"
+              onPress={onBack}
+              accessibilityLabel="Go back"
+            >
+              <Icon as={ChevronLeft} className="size-6 text-foreground" />
+            </Button>
+          )}
+        </View>
+
+        <Text className="text-base font-semibold text-foreground">
+          {routeTitle}
+        </Text>
+
+        <View className="w-10 items-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11"
+            onPress={onOpenDiscard}
+            accessibilityLabel="More options"
+          >
+            <Icon as={MoreVertical} className="size-5 text-foreground" />
+          </Button>
+        </View>
+      </View>
+
+      <Text className="text-lg font-semibold text-foreground">
+        {stepTitle}
+      </Text>
+
+      <View className="flex-row items-center justify-between">
+        <Text className="text-sm text-muted-foreground">
+          Step {stepNumber} of {stepCount}
+        </Text>
+      </View>
+
+      <Progress
+        value={progressPercent}
+        className="bg-muted"
+        indicatorClassName="bg-primary"
+      />
+    </View>
+  );
+}
+
+function SaveStatusIndicator({
+  saveStatus,
+  onRetrySave,
+}: {
+  saveStatus: WizardLayoutProps["saveStatus"];
+  onRetrySave: () => void;
+}) {
+  const saveStatusText =
+    saveStatus === "saving"
+      ? "Saving draft"
+      : saveStatus === "error"
+        ? "Could not save"
+        : saveStatus === "saved"
+          ? "Saved"
+          : null;
+
+  if (!saveStatusText) return null;
+
+  return (
+    <View className="flex-row items-center gap-2">
+      <Text
+        className={`text-sm ${
+          saveStatus === "error"
+            ? "text-destructive"
+            : saveStatus === "saved"
+              ? "text-foreground"
+              : "text-muted-foreground"
+        }`}
+      >
+        {saveStatusText}
+      </Text>
+      {saveStatus === "error" && (
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto px-0 py-0"
+          onPress={onRetrySave}
+        >
+          <Text className="text-sm text-destructive">Retry</Text>
+        </Button>
+      )}
+    </View>
+  );
+}
+
+function SaveErrorBanner({
+  saveStatus,
+  saveError,
+  onRetrySave,
+}: {
+  saveStatus: WizardLayoutProps["saveStatus"];
+  saveError: string | null;
+  onRetrySave: () => void;
+}) {
+  if (saveStatus !== "error" || !saveError) return null;
+
+  return (
+    <View className="mx-4 mt-3 flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
+      <Icon as={AlertCircle} className="size-4 text-destructive" />
+      <Text className="flex-1 text-sm text-destructive">{saveError}</Text>
+      <Button variant="ghost" size="sm" onPress={onRetrySave}>
+        <Icon as={RefreshCw} className="size-4 text-destructive" />
+      </Button>
+    </View>
+  );
+}
+
+function WizardFooter({
+  isLastStep,
+  canContinue,
+  canPublish,
+  canGoBack,
+  onBack,
+  onContinue,
+  onPublish,
+  disabledReason,
+  secondaryAction,
+  publishLabel = "Publish",
+}: {
+  isLastStep: boolean;
+  canContinue: boolean;
+  canPublish: boolean;
+  canGoBack: boolean;
+  onBack: () => void;
+  onContinue: () => void;
+  onPublish: () => void;
+  disabledReason?: string;
+  secondaryAction?: FooterAction;
+  publishLabel?: string;
+}) {
+  const primaryDisabled = isLastStep ? !canPublish : !canContinue;
+  const showDisabledReason = primaryDisabled && Boolean(disabledReason);
+  const primaryButtonDisabledClass = primaryDisabled
+    ? "border border-border bg-muted opacity-100 shadow-none"
+    : undefined;
+  const primaryButtonTextClass = primaryDisabled
+    ? "text-muted-foreground"
+    : undefined;
+
+  return (
+    <View className="border-t border-border px-4 py-3 gap-2">
+      {showDisabledReason && (
+        <Text className="text-xs text-muted-foreground">
+          {disabledReason}
+        </Text>
+      )}
+      <View className="flex-row gap-3">
+        {canGoBack ? (
+          <Button variant="outline" className="flex-1" onPress={onBack}>
+            <Text>Back</Text>
+          </Button>
+        ) : secondaryAction ? (
+          <Button
+            variant="outline"
+            className="flex-1"
+            onPress={secondaryAction.onPress}
+            disabled={secondaryAction.disabled}
+          >
+            <Text>{secondaryAction.label}</Text>
+          </Button>
+        ) : (
+          <View className="flex-1" />
+        )}
+
+        {isLastStep ? (
+          <Button
+            variant="default"
+            className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
+            onPress={onPublish}
+            disabled={!canPublish}
+          >
+            <Text className={primaryButtonTextClass}>{publishLabel}</Text>
+          </Button>
+        ) : (
+          <Button
+            variant="default"
+            className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
+            onPress={onContinue}
+            disabled={!canContinue}
+          >
+            <Text className={primaryButtonTextClass}>Continue</Text>
+          </Button>
+        )}
+      </View>
+
+      {canGoBack && secondaryAction && (
+        <Button
+          variant="link"
+          className="self-start"
+          onPress={secondaryAction.onPress}
+          disabled={secondaryAction.disabled}
+        >
+          <Text className="text-sm text-primary">{secondaryAction.label}</Text>
+        </Button>
+      )}
+    </View>
+  );
+}
+
+function DiscardConfirmationDialog({
+  open,
+  onOpenChange,
+  onDiscard,
+  discardTitle,
+  discardDescription,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDiscard: () => void;
+  discardTitle: string;
+  discardDescription: string;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{discardTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{discardDescription}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onPress={() => onOpenChange(false)}>
+            <Text>Cancel</Text>
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onPress={() => {
+              onOpenChange(false);
+              onDiscard();
+            }}
+          >
+            <Text className="text-destructive-foreground">Discard draft</Text>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
 
 export function WizardLayout({
@@ -79,197 +344,54 @@ export function WizardLayout({
 }: WizardLayoutProps) {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
-  const saveStatusText =
-    saveStatus === "saving"
-      ? "Saving draft"
-      : saveStatus === "error"
-        ? "Could not save"
-        : saveStatus === "saved"
-          ? "Saved"
-          : null;
-
-  const primaryDisabled = isLastStep ? !canPublish : !canContinue;
-  const showDisabledReason = primaryDisabled && Boolean(disabledReason);
-  const primaryButtonDisabledClass = primaryDisabled
-    ? "border border-border bg-muted opacity-100 shadow-none"
-    : undefined;
-  const primaryButtonTextClass = primaryDisabled
-    ? "text-muted-foreground"
-    : undefined;
-
   return (
     <SafeAreaView className="flex-1 bg-background">
-      {/* Header */}
-      <View className="border-b border-border px-4 py-3 gap-2">
-        <View className="flex-row items-center justify-between">
-          <View className="w-10">
-            {canGoBack && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-11 w-11"
-                onPress={onBack}
-                accessibilityLabel="Go back"
-              >
-                <Icon as={ChevronLeft} className="size-6 text-foreground" />
-              </Button>
-            )}
-          </View>
+      <WizardHeader
+        routeTitle={routeTitle}
+        stepTitle={stepTitle}
+        stepNumber={stepNumber}
+        stepCount={stepCount}
+        canGoBack={canGoBack}
+        onBack={onBack}
+        onOpenDiscard={() => setShowDiscardDialog(true)}
+        progressPercent={progressPercent}
+      />
 
-          <Text className="text-base font-semibold text-foreground">
-            {routeTitle}
-          </Text>
-
-          <View className="w-10 items-end">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-11 w-11"
-              onPress={() => setShowDiscardDialog(true)}
-              accessibilityLabel="More options"
-            >
-              <Icon as={MoreVertical} className="size-5 text-foreground" />
-            </Button>
-          </View>
-        </View>
-
-        <Text className="text-lg font-semibold text-foreground">
-          {stepTitle}
-        </Text>
-
-        <View className="flex-row items-center justify-between">
-          <Text className="text-sm text-muted-foreground">
-            Step {stepNumber} of {stepCount}
-          </Text>
-          {saveStatusText && (
-            <View className="flex-row items-center gap-2">
-              <Text
-                className={`text-sm ${
-                  saveStatus === "error"
-                    ? "text-destructive"
-                    : saveStatus === "saved"
-                      ? "text-foreground"
-                      : "text-muted-foreground"
-                }`}
-              >
-                {saveStatusText}
-              </Text>
-              {saveStatus === "error" && (
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto px-0 py-0"
-                  onPress={onRetrySave}
-                >
-                  <Text className="text-sm text-destructive">Retry</Text>
-                </Button>
-              )}
-            </View>
-          )}
-        </View>
-
-        <Progress
-          value={progressPercent}
-          className="bg-muted"
-          indicatorClassName="bg-primary"
+      <View className="flex-row items-center justify-between px-4 py-1">
+        <SaveStatusIndicator
+          saveStatus={saveStatus}
+          onRetrySave={onRetrySave}
         />
       </View>
 
-      {/* Save error banner (only shown when retry didn't immediately succeed) */}
-      {saveStatus === "error" && saveError && (
-        <View className="mx-4 mt-3 flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
-          <Icon as={AlertCircle} className="size-4 text-destructive" />
-          <Text className="flex-1 text-sm text-destructive">{saveError}</Text>
-          <Button variant="ghost" size="sm" onPress={onRetrySave}>
-            <Icon as={RefreshCw} className="size-4 text-destructive" />
-          </Button>
-        </View>
-      )}
+      <SaveErrorBanner
+        saveStatus={saveStatus}
+        saveError={saveError}
+        onRetrySave={onRetrySave}
+      />
 
-      {/* Content */}
       <ScrollView className="flex-1 px-4">{children}</ScrollView>
 
-      {/* Footer */}
-      <View className="border-t border-border px-4 py-3 gap-2">
-        {showDisabledReason && (
-          <Text className="text-xs text-muted-foreground">
-            {disabledReason}
-          </Text>
-        )}
-        <View className="flex-row gap-3">
-          {canGoBack ? (
-            <Button variant="outline" className="flex-1" onPress={onBack}>
-              <Text>Back</Text>
-            </Button>
-          ) : secondaryAction ? (
-            <Button
-              variant="outline"
-              className="flex-1"
-              onPress={secondaryAction.onPress}
-              disabled={secondaryAction.disabled}
-            >
-              <Text>{secondaryAction.label}</Text>
-            </Button>
-          ) : (
-            <View className="flex-1" />
-          )}
+      <WizardFooter
+        isLastStep={isLastStep}
+        canContinue={canContinue}
+        canPublish={canPublish}
+        canGoBack={canGoBack}
+        onBack={onBack}
+        onContinue={onContinue}
+        onPublish={onPublish}
+        disabledReason={disabledReason}
+        secondaryAction={secondaryAction}
+        publishLabel={publishLabel}
+      />
 
-          {isLastStep ? (
-            <Button
-              variant="default"
-              className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
-              onPress={onPublish}
-              disabled={!canPublish}
-            >
-              <Text className={primaryButtonTextClass}>{publishLabel}</Text>
-            </Button>
-          ) : (
-            <Button
-              variant="default"
-              className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
-              onPress={onContinue}
-              disabled={!canContinue}
-            >
-              <Text className={primaryButtonTextClass}>Continue</Text>
-            </Button>
-          )}
-        </View>
-
-        {/* Secondary action shown beneath when Back is the primary outline slot. */}
-        {canGoBack && secondaryAction && (
-          <Button
-            variant="link"
-            className="self-start"
-            onPress={secondaryAction.onPress}
-            disabled={secondaryAction.disabled}
-          >
-            <Text className="text-sm text-primary">{secondaryAction.label}</Text>
-          </Button>
-        )}
-      </View>
-
-      {/* Discard confirmation */}
-      <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{discardTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{discardDescription}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onPress={() => setShowDiscardDialog(false)}>
-              <Text>Cancel</Text>
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onPress={() => {
-                setShowDiscardDialog(false);
-                onDiscard();
-              }}
-            >
-              <Text className="text-destructive-foreground">Discard draft</Text>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DiscardConfirmationDialog
+        open={showDiscardDialog}
+        onOpenChange={setShowDiscardDialog}
+        onDiscard={onDiscard}
+        discardTitle={discardTitle}
+        discardDescription={discardDescription}
+      />
     </SafeAreaView>
   );
 }

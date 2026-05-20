@@ -68,7 +68,7 @@ function stepIndex(step: WizardMachineStep): number {
 
 function getStepAtIndex(index: number): WizardMachineStep {
   const clamped = Math.max(0, Math.min(index, WIZARD_STEPS.length - 1));
-  return WIZARD_STEPS[clamped]!;
+  return WIZARD_STEPS[clamped] ?? "vin";
 }
 
 function isStepValid(
@@ -100,7 +100,7 @@ export function mapLegacyStep(
   if (typeof legacyStep !== "number") return null;
   const idx = legacyStep - 1;
   if (idx < 0 || idx >= WIZARD_STEPS.length) return null;
-  return WIZARD_STEPS[idx]!;
+  return WIZARD_STEPS[idx] ?? null;
 }
 
 // ── Initial state ──

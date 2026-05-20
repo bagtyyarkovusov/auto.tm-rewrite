@@ -11,7 +11,11 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
   }
 
   const hasPending = queue.photos.some(
-    (p) => p.state === "selected" || p.state === "compressed" || p.state === "presigned" || p.state === "uploading",
+    (p) =>
+      p.state === "selected" ||
+      p.state === "compressed" ||
+      p.state === "presigned" ||
+      p.state === "uploading",
   );
   if (hasPending) {
     blockers.push("Some uploads are still in progress");
@@ -22,7 +26,9 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
     blockers.push("Some uploads failed — retry or remove them");
   }
 
-  const hasAttached = queue.photos.some((p) => p.state === "attached" || p.state === "uploaded");
+  const hasAttached = queue.photos.some(
+    (p) => p.state === "attached" || p.state === "uploaded",
+  );
   if (!hasAttached && hasPhotos) {
     blockers.push("At least one photo must be successfully attached");
   }
@@ -87,6 +93,35 @@ export function getPhotosByState(
   return queue.photos.filter((p) => p.state === state);
 }
 
+export function findPhotoById(
+  queue: UploadQueue,
+  photoId: string,
+): StagedPhoto | undefined {
+  return queue.photos.find((p) => p.photoId === photoId);
+}
+
+export function createStagedPhoto(
+  photoId: string,
+  sortOrder: number,
+): StagedPhoto {
+  return {
+    photoId,
+    state: "selected",
+    sortOrder,
+    retryCount: 0,
+  };
+}
+
+export function appendPhotoToQueue(
+  queue: UploadQueue,
+  photo: StagedPhoto,
+): UploadQueue {
+  return {
+    ...queue,
+    photos: [...queue.photos, photo],
+  };
+}
+
 export function updatePhotoState(
   queue: UploadQueue,
   photoId: string,
@@ -97,13 +132,30 @@ export function updatePhotoState(
     ...queue,
     photos: queue.photos.map((p) =>
       p.photoId === photoId
-        ? { ...p, state, ...updates, retryCount: state === "failed" ? p.retryCount + 1 : p.retryCount }
+        ? {
+            ...p,
+            state,
+            ...updates,
+            retryCount:
+              state === "failed" ? p.retryCount + 1 : p.retryCount,
+          }
         : p,
     ),
   };
 }
 
-export function removePhotoFromQueue(queue: UploadQueue, photoId: string): UploadQueue {
+export function transitionPhotoToFailed(
+  queue: UploadQueue,
+  photoId: string,
+  error: UploadError,
+): UploadQueue {
+  return updatePhotoState(queue, photoId, "failed", { error });
+}
+
+export function removePhotoFromQueue(
+  queue: UploadQueue,
+  photoId: string,
+): UploadQueue {
   return {
     ...queue,
     photos: queue.photos
@@ -120,6 +172,19 @@ export function reorderPhotos(queue: UploadQueue, photoIds: string[]): UploadQue
     .map((p, index) => ({ ...p, sortOrder: index }));
 
   return { ...queue, photos: reordered };
+}
+
+export function getPhotosReadyForUpload(queue: UploadQueue): StagedPhoto[] {
+  return queue.photos.filter((p) => p.state === "compressed");
+}
+
+export function collectPhotosToResume(queue: UploadQueue): StagedPhoto[] {
+  return queue.photos.filter(
+    (p) =>
+      p.state === "compressed" ||
+      p.state === "waiting_for_network" ||
+      (p.state === "failed" && p.retryCount < 2 && isRetryable(p.error)),
+  );
 }
 
 export function isRetryable(error?: UploadError): boolean {

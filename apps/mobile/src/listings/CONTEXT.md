@@ -14,13 +14,15 @@ Client-side listing creation and upload pipeline for the Expo mobile app. Three 
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
     - `wizardMachine.spec.ts` — unit tests for reducer
     - `useWizardAutosave.spec.tsx` — tests for save lifecycle
-    - `Step1Vin.tsx` … `Step7Contact.tsx` — step UI components
-    - `WizardLayout.tsx` — shell with Next/Back navigation
+    - `Step1Vin.tsx` … `Step7DescContact.tsx` — step UI components (<60 lines JSX each; business logic extracted into step-specific hooks and sub-components)
+    - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`)
+    - `PhotoThumbnail.tsx` — photo grid item with state overlay and reorder menu
+    - `PhotoStateOverlay.tsx` — per-photo upload-state badge (compressing, uploading, failed, cover, etc.)
   - `uploadStaging/` — media upload pipeline
     - `types.ts` — `PhotoState`, `UploadErrorCode`, `StagedPhoto`, `UploadQueue`, `PublishGateResult`
     - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track
     - `compressor.ts` — `expo-image-manipulator` chain API (resize ≤2400px, JPEG 0.8, re-compress at 0.6 if >5 MB)
-    - `queueState.ts` — pure state transitions: `updatePhotoState`, `removePhotoFromQueue`, `reorderPhotos`, `reconstructQueueFromDraft`, `computePublishGate`
+    - `queueState.ts` — pure state machine: `PhotoUploadReducer` (discriminated-union actions) + helpers: `updatePhotoState`, `removePhotoFromQueue`, `reorderPhotos`, `reconstructQueueFromDraft`, `computePublishGate`
     - `uploadErrors.ts` — `buildUploadError` classifies caught errors into `UploadErrorCode`
     - `stagingDir.ts` — file-system path helpers: `getStagingPath`, `ensureDraftDir`, `deleteDraftDir`, `listDraftDirs`
     - `appStateResume.ts` — `AppState` + NetInfo listeners to auto-resume uploads

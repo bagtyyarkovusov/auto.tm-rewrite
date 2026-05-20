@@ -76,10 +76,7 @@ export function useWizardAutosave(draftId: string | undefined) {
   }, [saveStatus]);
 
   const performSave = useCallback(
-    async (
-      payload: WizardSchemas.WizardDraftPayload,
-      isRetry = false,
-    ): Promise<void> => {
+    async (payload: WizardSchemas.WizardDraftPayload): Promise<void> => {
       if (!draftId || draftId.length === 0) return;
 
       pendingPayloadRef.current = payload;
@@ -115,7 +112,7 @@ export function useWizardAutosave(draftId: string | undefined) {
 
           setTimeout(() => {
             if (isMountedRef.current && pendingPayloadRef.current) {
-              void performSave(pendingPayloadRef.current, true);
+              void performSave(pendingPayloadRef.current);
             }
           }, delay);
         } else {

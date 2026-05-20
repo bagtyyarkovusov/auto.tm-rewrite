@@ -1,22 +1,15 @@
-import { X } from "lucide-react-native";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { useState } from "react";
+import { View } from "react-native";
 
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
 
 import type { WizardSchemas } from "@auto-tm/contracts";
 
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
+import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 
 interface Step6LocationProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -25,16 +18,132 @@ interface Step6LocationProps {
   disabled?: boolean;
 }
 
-function SheetCloseButton({ onPress }: { onPress: () => void }) {
+function useLocationPicker(payload: WizardSchemas.WizardDraftPayload) {
+  const [regionOpen, setRegionOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
+  const [regionSearch, setRegionSearch] = useState("");
+  const [citySearch, setCitySearch] = useState("");
+
+  const {
+    data: regionsData,
+    isPending: regionsLoading,
+    isError: regionsError,
+  } = useRegions();
+  const {
+    data: citiesData,
+    isPending: citiesLoading,
+    isError: citiesError,
+  } = useCities(payload.regionId ?? "");
+
+  const filteredRegions = filterBySearch(regionsData?.items ?? [], regionSearch);
+  const filteredCities = filterBySearch(citiesData?.items ?? [], citySearch);
+
+  const selectedRegion = findById(regionsData?.items ?? [], payload.regionId);
+  const selectedCity = findById(citiesData?.items ?? [], payload.cityId);
+
+  return {
+    regionOpen,
+    setRegionOpen,
+    cityOpen,
+    setCityOpen,
+    regionSearch,
+    setRegionSearch,
+    citySearch,
+    setCitySearch,
+    filteredRegions,
+    filteredCities,
+    selectedRegion,
+    selectedCity,
+    regionsLoading,
+    regionsError,
+    citiesLoading,
+    citiesError,
+  };
+}
+
+function filterBySearch<T extends { name: string }>(items: T[], search: string) {
+  if (!search) return items;
+  return items.filter((i) =>
+    i.name.toLowerCase().includes(search.toLowerCase()),
+  );
+}
+
+function findById<T extends { id: string }>(items: T[], id?: string) {
+  return items.find((i) => i.id === id);
+}
+
+function wrapDisabled(children: React.ReactNode, disabled: boolean) {
+  if (!disabled) return <>{children}</>;
+  return <View className="opacity-50">{children}</View>;
+}
+
+function LocationSheets({
+  payload,
+  picker,
+  onChange,
+}: {
+  payload: WizardSchemas.WizardDraftPayload;
+  picker: ReturnType<typeof useLocationPicker>;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+}) {
+  function handleSelectRegion(regionId: string) {
+    onChange({ regionId, cityId: undefined });
+    picker.setRegionOpen(false);
+    picker.setRegionSearch("");
+  }
+
+  function handleSelectCity(cityId: string) {
+    onChange({ cityId });
+    picker.setCityOpen(false);
+    picker.setCitySearch("");
+  }
+
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onPress={onPress}
-      accessibilityLabel="Close"
-    >
-      <Icon as={X} className="size-5 text-foreground" />
-    </Button>
+    <>
+      <CatalogPickerSheet
+        open={picker.regionOpen}
+        onOpenChange={(open) => {
+          picker.setRegionOpen(open);
+          if (!open) picker.setRegionSearch("");
+        }}
+        title="Select region"
+        searchPlaceholder="Search regions..."
+        search={picker.regionSearch}
+        onSearchChange={picker.setRegionSearch}
+        items={picker.filteredRegions}
+        selectedId={payload.regionId}
+        emptyMessage={
+          picker.regionSearch
+            ? "No regions match your search"
+            : "No regions available"
+        }
+        isLoading={picker.regionsLoading}
+        isError={picker.regionsError}
+        onSelect={handleSelectRegion}
+      />
+
+      <CatalogPickerSheet
+        open={picker.cityOpen}
+        onOpenChange={(open) => {
+          picker.setCityOpen(open);
+          if (!open) picker.setCitySearch("");
+        }}
+        title="Select city"
+        searchPlaceholder="Search cities..."
+        search={picker.citySearch}
+        onSearchChange={picker.setCitySearch}
+        items={picker.filteredCities}
+        selectedId={payload.cityId}
+        emptyMessage={
+          picker.citySearch
+            ? "No cities match your search"
+            : "No cities available"
+        }
+        isLoading={picker.citiesLoading}
+        isError={picker.citiesError}
+        onSelect={handleSelectCity}
+      />
+    </>
   );
 }
 
@@ -42,109 +151,34 @@ export default function Step6Location({
   payload,
   onChange,
   fieldErrors,
-  disabled,
+  disabled = false,
 }: Step6LocationProps) {
-  const [regionOpen, setRegionOpen] = useState(false);
-  const [cityOpen, setCityOpen] = useState(false);
-  const [regionSearch, setRegionSearch] = useState("");
-  const [citySearch, setCitySearch] = useState("");
-
-  const { data: regionsData } = useRegions();
-  const { data: citiesData } = useCities(payload.regionId ?? "");
-
-  const filteredRegions = useMemo(() => {
-    if (!regionSearch) return regionsData?.items ?? [];
-    return (regionsData?.items ?? []).filter((r) =>
-      r.name.toLowerCase().includes(regionSearch.toLowerCase()),
-    );
-  }, [regionsData, regionSearch]);
-
-  const filteredCities = useMemo(() => {
-    if (!citySearch) return citiesData?.items ?? [];
-    return (citiesData?.items ?? []).filter((c) =>
-      c.name.toLowerCase().includes(citySearch.toLowerCase()),
-    );
-  }, [citiesData, citySearch]);
-
-  const selectedRegion = regionsData?.items.find(
-    (r) => r.id === payload.regionId,
-  );
-  const selectedCity = citiesData?.items.find(
-    (c) => c.id === payload.cityId,
-  );
-
-  function handleSelectRegion(regionId: string) {
-    onChange({ regionId, cityId: undefined });
-    setRegionOpen(false);
-    setRegionSearch("");
-  }
-
-  function handleSelectCity(cityId: string) {
-    onChange({ cityId });
-    setCityOpen(false);
-    setCitySearch("");
-  }
-
-  const wrapDisabled = (children: React.ReactNode) => {
-    if (!disabled) return <>{children}</>;
-    return <View className="opacity-50">{children}</View>;
-  };
+  const picker = useLocationPicker(payload);
 
   return (
     <View className="gap-4 py-4">
-      {/* Region */}
-      <View className="gap-1">
-        <Text className="text-sm font-medium text-foreground">Region *</Text>
-        {wrapDisabled(
-          <Button
-            variant="outline"
-            onPress={() => setRegionOpen(true)}
-            disabled={disabled}
-            className="justify-start"
-          >
-            <Text
-              className={
-                selectedRegion ? "text-foreground" : "text-muted-foreground"
-              }
-            >
-              {selectedRegion?.name ?? "Select region"}
-            </Text>
-          </Button>,
-        )}
-        {fieldErrors?.regionId && (
-          <Text className="text-sm text-destructive">
-            {fieldErrors.regionId}
-          </Text>
-        )}
-      </View>
+      <PickerRow
+        label="Region"
+        required
+        value={picker.selectedRegion?.name}
+        placeholder="Select region"
+        disabled={disabled}
+        locked={disabled}
+        error={fieldErrors?.regionId}
+        onPress={() => picker.setRegionOpen(true)}
+      />
 
-      {/* City */}
-      <View className="gap-1">
-        <Text className="text-sm font-medium text-foreground">City *</Text>
-        {wrapDisabled(
-          <Button
-            variant="outline"
-            onPress={() => setCityOpen(true)}
-            disabled={disabled || !payload.regionId}
-            className="justify-start"
-          >
-            <Text
-              className={
-                selectedCity ? "text-foreground" : "text-muted-foreground"
-              }
-            >
-              {selectedCity?.name ?? "Select city"}
-            </Text>
-          </Button>,
-        )}
-        {fieldErrors?.cityId && (
-          <Text className="text-sm text-destructive">
-            {fieldErrors.cityId}
-          </Text>
-        )}
-      </View>
+      <PickerRow
+        label="City"
+        required
+        value={picker.selectedCity?.name}
+        placeholder="Select city"
+        disabled={disabled || !payload.regionId}
+        locked={disabled}
+        error={fieldErrors?.cityId}
+        onPress={() => picker.setCityOpen(true)}
+      />
 
-      {/* Location text */}
       <View className="gap-1">
         <Text className="text-sm font-medium text-foreground">
           Area / landmark
@@ -158,6 +192,7 @@ export default function Step6Location({
             placeholder="e.g. near Ashgabat Bazaar"
             editable={!disabled}
           />,
+          disabled,
         )}
         {fieldErrors?.locationText && (
           <Text className="text-sm text-destructive">
@@ -170,59 +205,7 @@ export default function Step6Location({
         Choose where the car can be inspected. Do not enter your home address.
       </Text>
 
-      {/* Region Sheet */}
-      <Sheet open={regionOpen} onOpenChange={setRegionOpen}>
-        <SheetContent>
-          <SheetHeader className="flex-row items-center justify-between">
-            <SheetTitle>Select region</SheetTitle>
-            <SheetCloseButton onPress={() => setRegionOpen(false)} />
-          </SheetHeader>
-          <Input
-            placeholder="Search..."
-            value={regionSearch}
-            onChangeText={setRegionSearch}
-            className="mb-2"
-          />
-          <ScrollView>
-            {filteredRegions.map((r) => (
-              <Pressable
-                key={r.id}
-                onPress={() => handleSelectRegion(r.id)}
-                className="border-b border-border py-3"
-              >
-                <Text className="text-base text-foreground">{r.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </SheetContent>
-      </Sheet>
-
-      {/* City Sheet */}
-      <Sheet open={cityOpen} onOpenChange={setCityOpen}>
-        <SheetContent>
-          <SheetHeader className="flex-row items-center justify-between">
-            <SheetTitle>Select city</SheetTitle>
-            <SheetCloseButton onPress={() => setCityOpen(false)} />
-          </SheetHeader>
-          <Input
-            placeholder="Search..."
-            value={citySearch}
-            onChangeText={setCitySearch}
-            className="mb-2"
-          />
-          <ScrollView>
-            {filteredCities.map((c) => (
-              <Pressable
-                key={c.id}
-                onPress={() => handleSelectCity(c.id)}
-                className="border-b border-border py-3"
-              >
-                <Text className="text-base text-foreground">{c.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </SheetContent>
-      </Sheet>
+      <LocationSheets payload={payload} picker={picker} onChange={onChange} />
     </View>
   );
 }
