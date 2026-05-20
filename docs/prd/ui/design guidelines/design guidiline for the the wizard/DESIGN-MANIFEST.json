@@ -1,0 +1,319 @@
+{
+  "schema": "open-design.design-manifest.v1",
+  "title": "1a05ba42-1f8a-46a3-be1d-f99cde49b424",
+  "entryFile": "index.html",
+  "sourceFiles": {
+    "all": [
+      "app-shell.html",
+      "assets/image.png",
+      "assets/logo-red.png",
+      "assets/logo-white.png",
+      "assets/logo.svg",
+      "assets/screenshot.png",
+      "autotm-design-gallery.html",
+      "fonts/UberMoveBold.otf",
+      "fonts/UberMoveMedium.otf",
+      "fonts/UberMoveMono-Medium.woff2",
+      "fonts/UberMoveMono-Regular.woff2",
+      "fonts/UberMoveTextBold.otf",
+      "fonts/UberMoveTextLight.otf",
+      "fonts/UberMoveTextMedium.otf",
+      "fonts/UberMoveTextRegular.otf",
+      "index.html",
+      "mpcrl63k-image.png",
+      "mpcs9oe8-Screenshot-2026-05-19-at-23.24.01.png",
+      "mpcszi4g-image.png",
+      "mpct03dp-image.png",
+      "mpct180j-image.png",
+      "mpctigza-Screenshot-2026-05-19-at-23.58.51.png",
+      "mpcv4x7k-Screenshot-2026-05-20-at-00.44.18.png",
+      "mpcv6icc-Screenshot-2026-05-20-at-00.45.32.png",
+      "mpd2c3vr-Screenshot-2026-05-20-at-04.05.50.png",
+      "mpd2qsqo-Screenshot-2026-05-20-at-04.17.16.png",
+      "mpd3dvus-image.png",
+      "mpd3qajt-Screenshot-2026-05-20-at-04.44.51.png",
+      "screens/00-sell-entry.html",
+      "screens/01-phone.html",
+      "screens/01-vin.html",
+      "screens/02-otp.html",
+      "screens/02-photos.html",
+      "screens/03-vehicle.html",
+      "screens/04-specs.html",
+      "screens/05-price.html",
+      "screens/06-location.html",
+      "screens/07-description.html",
+      "screens/08-review.html",
+      "screens/09-discard.html",
+      "ux-audit-findings.md"
+    ],
+    "html": [
+      "app-shell.html",
+      "autotm-design-gallery.html",
+      "index.html",
+      "screens/00-sell-entry.html",
+      "screens/01-phone.html",
+      "screens/01-vin.html",
+      "screens/02-otp.html",
+      "screens/02-photos.html",
+      "screens/03-vehicle.html",
+      "screens/04-specs.html",
+      "screens/05-price.html",
+      "screens/06-location.html",
+      "screens/07-description.html",
+      "screens/08-review.html",
+      "screens/09-discard.html"
+    ],
+    "css": [],
+    "scriptsAndComponents": [],
+    "assets": [
+      "assets/image.png",
+      "assets/logo-red.png",
+      "assets/logo-white.png",
+      "assets/logo.svg",
+      "assets/screenshot.png",
+      "fonts/UberMoveBold.otf",
+      "fonts/UberMoveMedium.otf",
+      "fonts/UberMoveMono-Medium.woff2",
+      "fonts/UberMoveMono-Regular.woff2",
+      "fonts/UberMoveTextBold.otf",
+      "fonts/UberMoveTextLight.otf",
+      "fonts/UberMoveTextMedium.otf",
+      "fonts/UberMoveTextRegular.otf",
+      "mpcrl63k-image.png",
+      "mpcs9oe8-Screenshot-2026-05-19-at-23.24.01.png",
+      "mpcszi4g-image.png",
+      "mpct03dp-image.png",
+      "mpct180j-image.png",
+      "mpctigza-Screenshot-2026-05-19-at-23.58.51.png",
+      "mpcv4x7k-Screenshot-2026-05-20-at-00.44.18.png",
+      "mpcv6icc-Screenshot-2026-05-20-at-00.45.32.png",
+      "mpd2c3vr-Screenshot-2026-05-20-at-04.05.50.png",
+      "mpd2qsqo-Screenshot-2026-05-20-at-04.17.16.png",
+      "mpd3dvus-image.png",
+      "mpd3qajt-Screenshot-2026-05-20-at-04.44.51.png",
+      "ux-audit-findings.md"
+    ]
+  },
+  "screens": [
+    {
+      "file": "app-shell.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "autotm-design-gallery.html",
+      "role": "screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "index.html",
+      "role": "launcher-overview",
+      "implementationNote": "Use this as the navigation/overview entry only; implement each linked screen file as its own route/surface."
+    },
+    {
+      "file": "screens/00-sell-entry.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/01-phone.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/01-vin.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/02-otp.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/02-photos.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/03-vehicle.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/04-specs.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/05-price.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/06-location.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/07-description.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/08-review.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    },
+    {
+      "file": "screens/09-discard.html",
+      "role": "product-screen",
+      "implementationNote": "Preserve visual hierarchy, responsive behavior, and interactive states from this screen."
+    }
+  ],
+  "screenFilePolicy": {
+    "mode": "screen-file-first",
+    "entryFileRole": "launcher-overview",
+    "rules": [
+      "Each distinct user-facing screen or surface must be delivered and implemented as its own file/route.",
+      "If a landing page is present or requested, keep it in landing.html and do not merge it into the product app screen.",
+      "When multiple HTML screens exist, index.html is a launcher/overview only; it must not be treated as the combined final UI.",
+      "Keep product app screens, landing pages, platform screens, and OS widget surfaces separate in production code."
+    ]
+  },
+  "appModules": [
+    "Identify domain-specific in-app modules from the exported UI; do not reduce them to generic cards.",
+    "For each major module, implement purpose, default/loading/empty/error/success states, and responsive behavior.",
+    "Keep app modules separate from OS home-screen widgets in the production component model."
+  ],
+  "osWidgets": [
+    "If the export includes home-screen, lock-screen, Live Activity, tablet glance, or Android widget surfaces, implement them as platform quick-access surfaces outside the app UI.",
+    "If none are present, do not invent OS widgets unless the product requirements request them."
+  ],
+  "landingPage": {
+    "detection": "Inspect files and screen names for a marketing/landing page surface. If present, keep it separate from product app screens.",
+    "requiredSections": [
+      "hero",
+      "value props",
+      "product proof/screenshots",
+      "feature proof",
+      "CTA"
+    ]
+  },
+  "tokens": {
+    "source": [
+      "index.html"
+    ],
+    "required": [
+      "background",
+      "surface",
+      "foreground",
+      "muted text",
+      "border",
+      "accent",
+      "radius",
+      "shadow",
+      "spacing",
+      "type scale",
+      "motion"
+    ],
+    "note": "Extract/freeze tokens before framework implementation so coding tools do not substitute default theme colors or typography."
+  },
+  "interactions": {
+    "source": [
+      "index.html"
+    ],
+    "requiredStates": [
+      "default",
+      "hover",
+      "focus",
+      "active",
+      "disabled",
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ],
+    "requiredBehaviors": [
+      "forms/validation where present",
+      "tabs/filters where present",
+      "dialogs/sheets/drawers where present",
+      "copy/generate/share actions where present",
+      "player or quick controls where present"
+    ],
+    "note": "If the prototype is static, derive missing behavior from visible controls and document it before coding."
+  },
+  "responsiveViewports": [
+    {
+      "name": "mobile-compact",
+      "width": 360,
+      "height": 800,
+      "category": "mobile",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "mobile-standard",
+      "width": 390,
+      "height": 844,
+      "category": "mobile",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "mobile-large",
+      "width": 430,
+      "height": 932,
+      "category": "mobile",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "foldable-small-tablet",
+      "width": 600,
+      "height": 960,
+      "category": "foldable-tablet",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "tablet-portrait",
+      "width": 820,
+      "height": 1180,
+      "category": "tablet",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "tablet-landscape",
+      "width": 1024,
+      "height": 768,
+      "category": "tablet",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "laptop",
+      "width": 1366,
+      "height": 768,
+      "category": "desktop",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900,
+      "category": "desktop",
+      "mustAvoidHorizontalScroll": true
+    },
+    {
+      "name": "wide",
+      "width": 1920,
+      "height": 1080,
+      "category": "wide",
+      "mustAvoidHorizontalScroll": true
+    }
+  ],
+  "implementationChecklist": [
+    "Open entryFile first and map screens, modules, tokens, and interactions.",
+    "Extract tokens before writing framework components.",
+    "Implement app-specific modules with real states instead of generic card grids.",
+    "Preserve or rebuild JS interactions for meaningful UX actions.",
+    "Validate screenshots at desktop/tablet/mobile viewports with no horizontal overflow.",
+    "Keep landing pages, in-app modules, and OS widgets as separate implementation surfaces."
+  ]
+}

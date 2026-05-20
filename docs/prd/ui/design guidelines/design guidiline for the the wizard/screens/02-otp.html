@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>OTP Entry</title>
+  <style>
+    @font-face {
+      font-family: 'UberMove';
+      src: url('../fonts/UberMoveBold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'UberMove';
+      src: url('../fonts/UberMoveMedium.otf') format('opentype');
+      font-weight: 500;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'UberMoveText';
+      src: url('../fonts/UberMoveTextRegular.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'UberMoveText';
+      src: url('../fonts/UberMoveTextMedium.otf') format('opentype');
+      font-weight: 500;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'UberMoveText';
+      src: url('../fonts/UberMoveTextBold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'UberMoveText';
+      src: url('../fonts/UberMoveTextLight.otf') format('opentype');
+      font-weight: 300;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'UberMoveMono';
+      src: url('../fonts/UberMoveMono-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'UberMoveMono';
+      src: url('../fonts/UberMoveMono-Medium.woff2') format('woff2');
+      font-weight: 500;
+      font-style: normal;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      padding: 0 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+    }
+    .topbar-left { display: flex; gap: 4px; }
+    .icon-btn {
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #000000;
+      transition: background 0.15s ease;
+    }
+    .icon-btn:active { opacity: 0.6; }
+    .icon-btn:hover { background: #f3f3f3; }
+    .icon-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+
+    .lang-switcher {
+      display: flex;
+      gap: 4px;
+    }
+    .lang-chip {
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: #A8A6A0;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .lang-chip:hover { color: #525251; }
+    .lang-chip.active {
+      background: #efefef;
+      color: #000000;
+    }
+
+    .brand-logo {
+      margin-top: 24px;
+      width: 130px;
+      height: auto;
+      display: block;
+    }
+
+    .title-group { margin-top: 32px; display: flex; flex-direction: column; gap: 8px; }
+    .title {
+      font-family: 'UberMove', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.22;
+      letter-spacing: -0.02em;
+      color: #000000;
+    }
+    .subtitle {
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+      color: #4b4b4b;
+    }
+    .text-link {
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #000000;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      align-self: flex-start;
+      margin-top: 4px;
+    }
+    .text-link:hover { opacity: 0.7; }
+    .text-link:active { opacity: 0.5; }
+
+    .otp-area { margin-top: 32px; display: flex; flex-direction: column; gap: 16px; }
+    .otp-row {
+      display: flex;
+      gap: 8px;
+    }
+    .otp-cell {
+      flex: 1;
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      border: 1.5px solid #e2e2e2;
+      background: #ffffff;
+      font-family: 'UberMoveMono', ui-monospace, Menlo, monospace;
+      font-size: 24px;
+      font-weight: 500;
+      color: #000000;
+      transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+      cursor: text;
+    }
+    .otp-cell.filled {
+      border-color: #000000;
+      background: #ffffff;
+    }
+    .otp-cell.focused {
+      border-color: #000000;
+      border-width: 2px;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+    }
+    .otp-cell.error {
+      border-color: #F43F5E;
+      border-width: 2px;
+      background: #ffffff;
+      color: #F43F5E;
+      animation: shake 0.4s ease;
+      box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.08);
+    }
+    .otp-cell.loading { cursor: default; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .error-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #F43F5E;
+    }
+    .error-row svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .network-row {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #F43F5E;
+    }
+    .network-row svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .resend-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .resend-btn {
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #000000;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+    .resend-btn:disabled {
+      color: #afafaf;
+      text-decoration: none;
+      cursor: default;
+    }
+    .resend-btn:hover:not(:disabled) { opacity: 0.7; }
+    .resend-btn:active:not(:disabled) { opacity: 0.5; }
+
+    .loader-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: #4b4b4b;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid #e2e2e2;
+      border-top-color: #000000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .dev-pill {
+      align-self: flex-start;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1.5px solid #000000;
+      font-family: 'UberMoveMono', ui-monospace, Menlo, monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: #000000;
+      cursor: pointer;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .dev-pill:hover { background: #f3f3f3; }
+    .dev-pill:active { opacity: 0.7; }
+
+    .hidden-input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 1px; height: 1px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="icon-btn" onclick="goBack()" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <button class="icon-btn" onclick="closeAuth()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="lang-switcher">
+      <!-- i18n: RU, TK, EN -->
+      <button class="lang-chip" onclick="setLang(this)">RU</button>
+      <button class="lang-chip" onclick="setLang(this)">TK</button>
+      <button class="lang-chip active" onclick="setLang(this)">EN</button>
+    </div>
+  </div>
+
+  <img class="brand-logo" src="../assets/logo.svg" alt="auto.tm" />
+
+  <div class="title-group">
+    <!-- i18n: "Введите код" / "Kody giriziň" / "Enter the code" -->
+    <h1 class="title">Enter the code</h1>
+    <p class="subtitle" id="destination">Code sent to +993 6X XX-XX-XX</p>
+    <!-- i18n: "Изменить номер" / "Belgini üýtgetmek" / "Change number" -->
+    <button class="text-link" onclick="goBack()">Change number</button>
+  </div>
+
+  <div class="otp-area">
+    <div class="otp-row" id="otpRow" onclick="focusInput()">
+      <div class="otp-cell" id="cell0"></div>
+      <div class="otp-cell" id="cell1"></div>
+      <div class="otp-cell" id="cell2"></div>
+      <div class="otp-cell" id="cell3"></div>
+      <div class="otp-cell" id="cell4"></div>
+      <div class="otp-cell" id="cell5"></div>
+    </div>
+
+    <input
+      id="otpInput"
+      class="hidden-input"
+      type="text"
+      inputmode="numeric"
+      maxlength="6"
+      autocomplete="one-time-code"
+    />
+
+    <div class="error-row" id="errorRow" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+      <!-- i18n: "Неверный код. Попробуйте снова" / "Nädogry kod. Gaýtadan synanyşyň" / "Wrong code. Try again." -->
+      <span id="errorText">Wrong code. Try again.</span>
+    </div>
+
+    <div class="network-row" id="networkRow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+      <!-- i18n: "Не удалось отправить код. Проверьте подключение." / "Kody ugratyp bolmady. Baglanyşygy barlaň." / "Couldn't send code. Check your connection." -->
+      <span id="networkText">Couldn't send code. Check your connection.</span>
+    </div>
+
+    <div class="resend-row" id="resendRow">
+      <!-- i18n: "Отправить код повторно" / "Kody gaýtadan iber" / "Resend code" -->
+      <button class="resend-btn" id="resendBtn" disabled>Resend code in 42s</button>
+    </div>
+
+    <div class="loader-row" id="loaderRow" style="display:none;">
+      <div class="spinner"></div>
+      <!-- i18n: "Проверка…" / "Barlanylýar…" / "Verifying…" -->
+      <span>Verifying…</span>
+    </div>
+
+    <button class="dev-pill" id="devPill" style="display:none;">Dev code: 123456</button>
+  </div>
+
+  <script>
+    (function() {
+      const qs = new URLSearchParams(location.search);
+      const phone = qs.get('phone') || '+9936XXXXXXXX';
+      const showError = qs.get('error') === 'true';
+      const showLoading = qs.get('loading') === 'true';
+      const resendReady = qs.get('resend') === 'ready';
+      const prefilled = qs.get('filled') || '';
+      const devCode = qs.get('devCode') || '';
+      const showNetwork = qs.get('network') === 'error';
+      const errorType = qs.get('errorType') || (showError ? 'wrong' : '');
+
+      const ERROR_COPY = {
+        wrong: 'Wrong code. Try again.',
+        expired: 'Code expired. Request a new one.',
+        locked: 'Too many attempts. Request a new code.',
+        used: 'This code has already been used. Request a new one.',
+        rateLimited: 'Too many attempts. Try again in a few minutes.',
+        generic: 'Could not sign in. Try again.'
+      };
+
+      function maskPhone(p) {
+        const clean = p.replace(/\D/g, '');
+        if (clean.length < 4) return p;
+        const last2 = clean.slice(-2);
+        const prefix = clean.slice(0, -2);
+        return '+' + prefix.replace(/(\d{3})(\d{1})(\d{2})(\d{2})(\d{2})/, '$1 $2X XX-XX-') + last2;
+      }
+      document.getElementById('destination').textContent = 'Code sent to ' + maskPhone(phone);
+
+      const input = document.getElementById('otpInput');
+      const cells = Array.from({ length: 6 }, (_, i) => document.getElementById('cell' + i));
+      const errorRow = document.getElementById('errorRow');
+      const errorText = document.getElementById('errorText');
+      const networkRow = document.getElementById('networkRow');
+      const loaderRow = document.getElementById('loaderRow');
+      const resendBtn = document.getElementById('resendBtn');
+      const devPill = document.getElementById('devPill');
+
+      let value = prefilled.slice(0, 6);
+      let isError = showError;
+      let isLoading = showLoading;
+      let seconds = resendReady ? 0 : 42;
+      let timer = null;
+
+      function updateCells() {
+        for (let i = 0; i < 6; i++) {
+          const cell = cells[i];
+          const digit = value[i];
+          cell.textContent = digit || '';
+          cell.classList.toggle('filled', !!digit);
+          cell.classList.toggle('focused', i === value.length && !isError && !isLoading);
+          cell.classList.toggle('error', isError && !!digit);
+          cell.classList.toggle('loading', isLoading);
+        }
+      }
+
+      function updateResend() {
+        if (seconds > 0) {
+          resendBtn.disabled = true;
+          resendBtn.textContent = 'Resend code in ' + seconds + 's';
+        } else {
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Resend code';
+        }
+      }
+
+      input.addEventListener('input', (e) => {
+        if (isLoading) return;
+        const digits = input.value.replace(/\D/g, '').slice(0, 6);
+        input.value = digits;
+        value = digits;
+        updateCells();
+
+        if (isError) {
+          isError = false;
+          errorRow.style.display = 'none';
+          updateCells();
+        }
+
+        if (networkRow.style.display === 'flex') {
+          networkRow.style.display = 'none';
+        }
+
+        if (value.length === 6) {
+          loaderRow.style.display = 'flex';
+          if (showError) {
+            setTimeout(() => {
+              loaderRow.style.display = 'none';
+              isError = true;
+              errorRow.style.display = 'flex';
+              errorText.textContent = 'Wrong code. Try again.';
+              input.value = '';
+              value = '';
+              updateCells();
+              input.focus();
+            }, 800);
+          } else {
+            setTimeout(() => {
+              loaderRow.style.display = 'none';
+              window.parent.postMessage({ action: 'close' }, '*');
+            }, 800);
+          }
+        } else {
+          loaderRow.style.display = 'none';
+        }
+      });
+
+      if (isError) {
+        errorRow.style.display = 'flex';
+        errorText.textContent = ERROR_COPY[errorType] || ERROR_COPY.wrong;
+        input.value = '';
+        value = '';
+      }
+
+      if (isLoading) {
+        loaderRow.style.display = 'flex';
+        input.disabled = true;
+      }
+
+      if (showNetwork) {
+        networkRow.style.display = 'flex';
+      }
+
+      if (devCode) {
+        devPill.style.display = 'inline-block';
+        devPill.textContent = 'Dev code: ' + devCode;
+        devPill.onclick = () => {
+          input.value = devCode;
+          input.dispatchEvent(new Event('input'));
+        };
+      }
+
+      updateCells();
+      updateResend();
+
+      if (seconds > 0) {
+        timer = setInterval(() => {
+          seconds = Math.max(0, seconds - 1);
+          updateResend();
+          if (seconds === 0) clearInterval(timer);
+        }, 1000);
+      }
+
+      resendBtn.addEventListener('click', () => {
+        if (seconds > 0) return;
+        seconds = 42;
+        resendBtn.disabled = true;
+        updateResend();
+        timer = setInterval(() => {
+          seconds = Math.max(0, seconds - 1);
+          updateResend();
+          if (seconds === 0) clearInterval(timer);
+        }, 1000);
+      });
+
+      window.focusInput = function() {
+        if (!isLoading) input.focus();
+      };
+
+      if (!isLoading) {
+        setTimeout(() => input.focus(), 200);
+      }
+    })();
+
+    function goBack() {
+      window.parent.postMessage({ action: 'navigate', to: 'phone' }, '*');
+    }
+    function closeAuth() {
+      if (window.parent !== window) {
+        window.parent.postMessage({ action: 'close' }, '*');
+        window.parent.postMessage({ action: 'navigate', to: 'close' }, '*');
+      }
+    }
+    function setLang(btn) {
+      document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>

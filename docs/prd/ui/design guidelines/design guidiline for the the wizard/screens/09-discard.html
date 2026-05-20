@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Discard Draft</title>
+  <style>
+    @font-face { font-family: 'UberMove'; src: url('../fonts/UberMoveBold.otf') format('opentype'); font-weight: 700; }
+    @font-face { font-family: 'UberMove'; src: url('../fonts/UberMoveMedium.otf') format('opentype'); font-weight: 500; }
+    @font-face { font-family: 'UberMoveText'; src: url('../fonts/UberMoveTextRegular.otf') format('opentype'); font-weight: 400; }
+    @font-face { font-family: 'UberMoveText'; src: url('../fonts/UberMoveTextMedium.otf') format('opentype'); font-weight: 500; }
+    @font-face { font-family: 'UberMoveText'; src: url('../fonts/UberMoveTextBold.otf') format('opentype'); font-weight: 700; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      background: rgba(0, 0, 0, 0.45);
+      color: #000000;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+      overflow-y: auto;
+    }
+
+    .dialog {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: dialog-in 0.25s ease;
+    }
+    @keyframes dialog-in {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .dialog-title {
+      font-family: 'UberMove', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .dialog-body {
+      font-size: 15px;
+      line-height: 1.5;
+      color: #4b4b4b;
+    }
+    .dialog-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .btn-primary {
+      flex: 1;
+      height: 48px;
+      border-radius: 999px;
+      border: none;
+      background: #000000;
+      color: #ffffff;
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+    }
+    .btn-primary.destructive {
+      background: #dc2626;
+    }
+    .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .dialog-error {
+      font-size: 13px;
+      color: #F43F5E;
+      line-height: 1.4;
+      margin-top: -8px;
+    }
+    .btn-outline {
+      flex: 1;
+      height: 48px;
+      border-radius: 999px;
+      border: 1.5px solid #000000;
+      background: #ffffff;
+      color: #000000;
+      font-family: 'UberMoveText', system-ui, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .btn-outline:hover { background: #f3f3f3; }
+    .btn-outline:active { transform: scale(0.98); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dialog">
+    <div class="dialog-title">Discard draft?</div>
+    <p class="dialog-body">This removes your draft and staged photos for this listing.</p>
+    <p class="dialog-error" id="dialogError" style="display:none;">Could not discard draft. Try again.</p>
+    <div class="dialog-actions">
+      <button class="btn-outline" id="cancelBtn" onclick="cancel()">Cancel</button>
+      <button class="btn-primary destructive" id="discardBtn" onclick="confirmDiscard()">Discard draft</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const qs = new URLSearchParams(location.search);
+      if (qs.get('state') === 'error') {
+        document.getElementById('dialogError').style.display = 'block';
+      }
+    })();
+
+    function cancel() {
+      window.parent.postMessage({ action: 'navigate', to: 'back' }, '*');
+    }
+    function confirmDiscard() {
+      const btn = document.getElementById('discardBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+      btn.disabled = true;
+      cancelBtn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Discarding…';
+      setTimeout(() => {
+        window.parent.postMessage({ action: 'navigate', to: 'sell-entry' }, '*');
+      }, 1200);
+    }
+  </script>
+</body>
+</html>
