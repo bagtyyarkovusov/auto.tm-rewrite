@@ -17,6 +17,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 
 - **`expo`** SDK 55, **`expo-router`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
 - **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 18 RNR components installed at `apps/mobile/components/ui/` (alert-dialog, avatar, badge, button, card, dialog, dropdown-menu, icon, input, native-only-animated-view, progress, separator, sheet, skeleton, switch, text, toast, tooltip). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{alert-dialog, avatar, checkbox, dialog, dropdown-menu, label, popover, portal, progress, separator, slot, switch, tooltip}` v1.4.0 wired.
+- **Design system** — Uber Move font family (Bold, Medium, Text Bold/Light/Medium/Regular, Mono Medium/Regular) loaded via `expo-font`. Extended grayscale palette (`gray-50` → `gray-950`, `#fafafa` → `#030303`) with semantic error/success tokens (`error: #F43F5E`, `success: #16a34a`). 52px pill CTAs (`rounded-full`), 8px rounded inputs (`rounded-lg`), black-primary action style (`bg-foreground text-background`).
 - **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`).
 - **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
 - **`expo-secure-store`** for JWT access + refresh tokens (`src/auth/session.ts`).
@@ -37,13 +38,13 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 /(tabs)/
   index               Feed (personalized listings)        — stub, no real feed
   favorites           Favorites + saved searches          — stub
-  sell                Sell / listing wizard entry         — 7-step create-listing wizard (S4)
+  sell                Sell / listing wizard entry         — 8-step create-listing wizard (S4), design-matched shell
   chat                Conversation list                   — stub
   services            Profile, garage, settings, blog     — stub
 
 /(auth)/
-  phone               Phone entry                         — wired (S2)
-  otp                 OTP verification                    — wired (S2)
+  phone               Phone entry                         — wired (S2), design-matched with +993 prefix, formatted input, paste normalization
+  otp                 OTP verification                    — wired (S2), design-matched OTP cells with shake animation, specific error copy
 
 /dev/
   catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__

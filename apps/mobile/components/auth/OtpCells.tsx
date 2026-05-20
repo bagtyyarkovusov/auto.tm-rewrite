@@ -19,6 +19,7 @@ interface OtpCellsProps {
   onChange: (value: string) => void;
   hasError?: boolean;
   length?: number;
+  disabled?: boolean;
 }
 
 interface OtpCellsRef {
@@ -27,7 +28,7 @@ interface OtpCellsRef {
 }
 
 const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
-  ({ value, onChange, hasError, length = 6 }, ref) => {
+  ({ value, onChange, hasError, length = 6, disabled }, ref) => {
     const inputRef = useRef<TextInput>(null);
     const shake = useRef(new Animated.Value(0)).current;
 
@@ -60,46 +61,54 @@ const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
     useImperativeHandle(
       ref,
       () => ({
-        focus: () => inputRef.current?.focus(),
+        focus: () => {
+          if (!disabled) {
+            inputRef.current?.focus();
+          }
+        },
         shake: runShake,
       }),
-      [runShake],
+      [runShake, disabled],
     );
 
     function handleChange(text: string) {
+      if (disabled) return;
       const digits = text.replace(/\D/g, "").slice(0, length);
       onChange(digits);
     }
 
     return (
-      <Pressable onPress={() => inputRef.current?.focus()}>
+      <Pressable onPress={() => {
+        if (!disabled) {
+          inputRef.current?.focus();
+        }
+      }}>
         <Animated.View
           className="flex-row gap-2"
           style={{ transform: [{ translateX: shake }] }}
         >
           {Array.from({ length }, (_, index) => {
             const digit = value[index];
-            const focused = index === value.length;
+            const focused = index === value.length && !disabled;
             const errored = hasError === true;
 
             return (
               <View
                 className={cn(
-                  "h-12 flex-1 items-center justify-center rounded-md border bg-card",
-                  errored && "border-2 border-destructive",
-                  !errored && focused && "border-2 border-primary",
-                  !errored && !focused && digit && "border border-primary",
-                  !errored &&
-                    !focused &&
-                    !digit &&
-                    "border border-border bg-muted",
+                  "aspect-square flex-1 items-center justify-center rounded-lg border-[1.5px] bg-background",
+                  errored && !disabled && "border-2 border-destructive",
+                  !errored && focused && "border-2 border-foreground",
+                  !errored && !focused && digit && "border-foreground",
+                  !errored && !focused && !digit && "border-input",
+                  disabled && "opacity-60",
                 )}
                 key={index}
                 pointerEvents="none"
               >
                 <Text
                   className={cn(
-                    "font-mono text-2xl font-semibold leading-tight text-foreground",
+                    "font-mono text-2xl font-medium leading-tight text-foreground",
+                    errored && !disabled && "text-destructive",
                     digit ? "opacity-100" : "opacity-0",
                   )}
                 >
@@ -114,6 +123,7 @@ const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
           autoComplete="sms-otp"
           caretHidden
           className="absolute inset-0 opacity-0"
+          editable={!disabled}
           inputMode="numeric"
           keyboardType="number-pad"
           maxLength={length}

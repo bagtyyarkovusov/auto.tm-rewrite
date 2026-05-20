@@ -14,10 +14,11 @@ Client-side listing creation and upload pipeline for the Expo mobile app. Three 
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
     - `wizardMachine.spec.ts` — unit tests for reducer
     - `useWizardAutosave.spec.tsx` — tests for save lifecycle
-    - `Step1Vin.tsx` … `Step7DescContact.tsx` — step UI components (<60 lines JSX each; business logic extracted into step-specific hooks and sub-components)
-    - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`)
-    - `PhotoThumbnail.tsx` — photo grid item with state overlay and reorder menu
-    - `PhotoStateOverlay.tsx` — per-photo upload-state badge (compressing, uploading, failed, cover, etc.)
+    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI components with design-matched styling (`font-uber` titles, `gap-6` spacing, `gray-500/600` muted text, `error` semantic tokens)
+    - `WizardLayout.tsx` — shell with design-matched header (back + overflow menu + centered route title), 2px black progress bar, 52px rounded-full footer buttons (Back outline / Continue filled), save status indicator, error banner, discard confirmation dialog
+    - `PhotoThumbnail.tsx` — photo grid item (`w-[48%] aspect-square`, `rounded-lg`, grayscale placeholder bg) with state overlay and reorder menu
+    - `PhotoStateOverlay.tsx` — per-photo upload-state badge using grayscale + semantic tokens (black checkmarks, error red for failures, white text on dark overlays)
+    - `PickerRow.tsx` — shared picker primitive: `h-[52px]`, `rounded-lg`, `border-gray-200`, `text-[17px]` value text
   - `uploadStaging/` — media upload pipeline
     - `types.ts` — `PhotoState`, `UploadErrorCode`, `StagedPhoto`, `UploadQueue`, `PublishGateResult`
     - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track

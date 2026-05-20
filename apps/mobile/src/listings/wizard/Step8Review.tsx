@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { Check, AlertCircle } from "lucide-react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
@@ -10,8 +11,6 @@ import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
-
-import type { WizardSchemas } from "@auto-tm/contracts";
 import type { StagedPhoto } from "../uploadStaging/types";
 
 import { Button } from "@/components/ui/button";
@@ -65,10 +64,15 @@ export default function Step8Review({
   const uploadedPhotos = photos.filter((p) => p.key);
 
   return (
-    <View className="gap-4 py-4">
-      <Text className="text-lg font-semibold text-foreground">
-        Review your listing
-      </Text>
+    <View className="gap-6 py-4">
+      <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          Review your listing
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Check everything is correct before publishing.
+        </Text>
+      </View>
 
       {/* Vehicle */}
       <ReviewSection
@@ -80,7 +84,7 @@ export default function Step8Review({
           {brandName} {modelName} {payload.year}
         </Text>
         {payload.generationId && (
-          <Text className="text-sm text-muted-foreground">Generation ID: {payload.generationId}</Text>
+          <Text className="text-sm text-gray-500">Generation ID: {payload.generationId}</Text>
         )}
       </ReviewSection>
 
@@ -105,22 +109,22 @@ export default function Step8Review({
           {payload.condition === "new" ? "New" : `Used, ${payload.mileageKm?.toLocaleString()} km`}
         </Text>
         {colorName && (
-          <Text className="text-sm text-muted-foreground">Color: {colorName}</Text>
+          <Text className="text-sm text-gray-500">Color: {colorName}</Text>
         )}
         {bodyTypeName && (
-          <Text className="text-sm text-muted-foreground">Body: {bodyTypeName}</Text>
+          <Text className="text-sm text-gray-500">Body: {bodyTypeName}</Text>
         )}
         {transmissionName && (
-          <Text className="text-sm text-muted-foreground">Transmission: {transmissionName}</Text>
+          <Text className="text-sm text-gray-500">Transmission: {transmissionName}</Text>
         )}
         {driveTypeName && (
-          <Text className="text-sm text-muted-foreground">Drive: {driveTypeName}</Text>
+          <Text className="text-sm text-gray-500">Drive: {driveTypeName}</Text>
         )}
         {engineTypeName && (
-          <Text className="text-sm text-muted-foreground">Engine: {engineTypeName}</Text>
+          <Text className="text-sm text-gray-500">Engine: {engineTypeName}</Text>
         )}
         {payload.enginePower && (
-          <Text className="text-sm text-muted-foreground">Power: {payload.enginePower} hp</Text>
+          <Text className="text-sm text-gray-500">Power: {payload.enginePower} hp</Text>
         )}
       </ReviewSection>
 
@@ -134,10 +138,10 @@ export default function Step8Review({
           {payload.priceAmount?.toLocaleString()} {payload.priceCurrency}
         </Text>
         {payload.acceptsExchange && (
-          <Text className="text-sm text-muted-foreground">Exchange possible</Text>
+          <Text className="text-sm text-gray-500">Exchange possible</Text>
         )}
         {payload.installmentAvailable && (
-          <Text className="text-sm text-muted-foreground">Installment available</Text>
+          <Text className="text-sm text-gray-500">Installment available</Text>
         )}
       </ReviewSection>
 
@@ -151,7 +155,7 @@ export default function Step8Review({
           {regionName}, {cityName}
         </Text>
         {payload.locationText && (
-          <Text className="text-sm text-muted-foreground">{payload.locationText}</Text>
+          <Text className="text-sm text-gray-500">{payload.locationText}</Text>
         )}
       </ReviewSection>
 
@@ -164,12 +168,12 @@ export default function Step8Review({
         <Text className="text-sm text-foreground" numberOfLines={2}>
           {payload.description}
         </Text>
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-sm text-gray-500">
           {payload.allowCalls ? "Calls allowed" : "No calls"} ·{" "}
           {payload.allowChat ? "Chat allowed" : "No chat"}
         </Text>
         {payload.contactPhone && (
-          <Text className="text-sm text-muted-foreground">
+          <Text className="text-sm text-gray-500">
             Phone: {payload.contactPhone}
           </Text>
         )}
@@ -190,18 +194,18 @@ function ReviewSection({
   children: React.ReactNode;
 }) {
   return (
-    <View className="rounded-lg border border-border p-3">
+    <View className="rounded-lg border border-gray-200 p-3">
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
           {isValid ? (
-            <Icon as={Check} className="size-4 text-primary" />
+            <Icon as={Check} className="size-4 text-success" />
           ) : (
-            <Icon as={AlertCircle} className="size-4 text-destructive" />
+            <Icon as={AlertCircle} className="size-4 text-error" />
           )}
           <Text className="text-sm font-medium text-foreground">{title}</Text>
         </View>
         <Button variant="ghost" size="sm" onPress={onEdit}>
-          <Text className="text-sm text-primary">Edit</Text>
+          <Text className="text-sm font-medium text-foreground underline">Edit</Text>
         </Button>
       </View>
       <View className="mt-2 gap-0.5 pl-6">{children}</View>

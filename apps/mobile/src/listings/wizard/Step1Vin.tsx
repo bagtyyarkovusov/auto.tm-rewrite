@@ -1,9 +1,9 @@
 import { View } from "react-native";
-
 import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 interface Step1VinProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -21,16 +21,21 @@ export default function Step1Vin({
   const vinError = fieldErrors?.vin;
 
   return (
-    <View className="gap-4 py-4">
-      <Text className="text-sm text-muted-foreground">
-        Optional. You can fill details manually.
-      </Text>
-
+    <View className="gap-6 py-4">
       <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          VIN / chassis number
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Optional. You can fill details manually if you don't have a VIN.
+        </Text>
+      </View>
+
+      <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
           VIN / chassis number
         </Text>
-        <View className={disabled ? "opacity-50" : ""}>
+        <View className={cn(disabled && "opacity-50")}>
           <Input
             value={payload.vin ?? ""}
             onChangeText={(text) =>
@@ -43,12 +48,12 @@ export default function Step1Vin({
           />
         </View>
         {vinError && (
-          <Text className="text-sm text-destructive">{vinError}</Text>
+          <Text className="text-sm font-medium text-error">{vinError}</Text>
         )}
       </View>
 
-      <Text className="text-sm text-muted-foreground">
-        No checking is done in this version.
+      <Text className="text-sm text-gray-500">
+        No VIN checking is done in this version.
       </Text>
     </View>
   );

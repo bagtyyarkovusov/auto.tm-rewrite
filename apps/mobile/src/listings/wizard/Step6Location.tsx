@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { View } from "react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-
 interface Step6LocationProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
@@ -156,7 +155,16 @@ export default function Step6Location({
   const picker = useLocationPicker(payload);
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-6 py-4">
+      <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          Car location
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Choose where the car can be inspected. Do not enter your home address.
+        </Text>
+      </View>
+
       <PickerRow
         label="Region"
         required
@@ -179,7 +187,7 @@ export default function Step6Location({
         onPress={() => picker.setCityOpen(true)}
       />
 
-      <View className="gap-1">
+      <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
           Area / landmark
         </Text>
@@ -195,15 +203,11 @@ export default function Step6Location({
           disabled,
         )}
         {fieldErrors?.locationText && (
-          <Text className="text-sm text-destructive">
+          <Text className="text-sm font-medium text-error">
             {fieldErrors.locationText}
           </Text>
         )}
       </View>
-
-      <Text className="text-sm text-muted-foreground">
-        Choose where the car can be inspected. Do not enter your home address.
-      </Text>
 
       <LocationSheets payload={payload} picker={picker} onChange={onChange} />
     </View>

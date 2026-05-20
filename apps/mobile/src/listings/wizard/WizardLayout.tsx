@@ -15,8 +15,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Progress } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
+import { WizardOverflowMenu } from "@/components/listings/wizard/WizardOverflowMenu";
 
 interface FooterAction {
   label: string;
@@ -69,23 +70,23 @@ function WizardHeader({
   progressPercent: number;
 }) {
   return (
-    <View className="border-b border-border px-4 py-3 gap-2">
+    <View className="border-b border-gray-100 px-5 pt-2 pb-3 gap-3">
       <View className="flex-row items-center justify-between">
         <View className="w-10">
           {canGoBack && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-11 w-11"
+              className="h-10 w-10 rounded-full"
               onPress={onBack}
               accessibilityLabel="Go back"
             >
-              <Icon as={ChevronLeft} className="size-6 text-foreground" />
+              <Icon as={ChevronLeft} className="size-5 text-foreground" />
             </Button>
           )}
         </View>
 
-        <Text className="text-base font-semibold text-foreground">
+        <Text className="text-[15px] font-semibold text-foreground">
           {routeTitle}
         </Text>
 
@@ -93,7 +94,7 @@ function WizardHeader({
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11"
+            className="h-10 w-10 rounded-full"
             onPress={onOpenDiscard}
             accessibilityLabel="More options"
           >
@@ -102,21 +103,21 @@ function WizardHeader({
         </View>
       </View>
 
-      <Text className="text-lg font-semibold text-foreground">
-        {stepTitle}
-      </Text>
-
-      <View className="flex-row items-center justify-between">
-        <Text className="text-sm text-muted-foreground">
+      <View className="gap-1">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          {stepTitle}
+        </Text>
+        <Text className="text-sm text-gray-500">
           Step {stepNumber} of {stepCount}
         </Text>
       </View>
 
-      <Progress
-        value={progressPercent}
-        className="bg-muted"
-        indicatorClassName="bg-primary"
-      />
+      <View className="h-1 w-full overflow-hidden rounded-full bg-gray-100">
+        <View
+          className="h-full rounded-full bg-foreground"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </View>
     </View>
   );
 }
@@ -130,7 +131,7 @@ function SaveStatusIndicator({
 }) {
   const saveStatusText =
     saveStatus === "saving"
-      ? "Saving draft"
+      ? "Saving draft..."
       : saveStatus === "error"
         ? "Could not save"
         : saveStatus === "saved"
@@ -142,13 +143,12 @@ function SaveStatusIndicator({
   return (
     <View className="flex-row items-center gap-2">
       <Text
-        className={`text-sm ${
-          saveStatus === "error"
-            ? "text-destructive"
-            : saveStatus === "saved"
-              ? "text-foreground"
-              : "text-muted-foreground"
-        }`}
+        className={cn(
+          "text-xs",
+          saveStatus === "error" && "text-error",
+          saveStatus === "saved" && "text-gray-500",
+          saveStatus === "saving" && "text-gray-400",
+        )}
       >
         {saveStatusText}
       </Text>
@@ -159,7 +159,7 @@ function SaveStatusIndicator({
           className="h-auto px-0 py-0"
           onPress={onRetrySave}
         >
-          <Text className="text-sm text-destructive">Retry</Text>
+          <Text className="text-xs font-medium text-error">Retry</Text>
         </Button>
       )}
     </View>
@@ -178,11 +178,11 @@ function SaveErrorBanner({
   if (saveStatus !== "error" || !saveError) return null;
 
   return (
-    <View className="mx-4 mt-3 flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
-      <Icon as={AlertCircle} className="size-4 text-destructive" />
-      <Text className="flex-1 text-sm text-destructive">{saveError}</Text>
+    <View className="mx-5 mt-2 flex-row items-center gap-2 rounded-lg bg-error-bg px-3 py-2.5">
+      <Icon as={AlertCircle} className="size-4 text-error" />
+      <Text className="flex-1 text-sm text-error">{saveError}</Text>
       <Button variant="ghost" size="sm" onPress={onRetrySave}>
-        <Icon as={RefreshCw} className="size-4 text-destructive" />
+        <Icon as={RefreshCw} className="size-4 text-error" />
       </Button>
     </View>
   );
@@ -213,33 +213,29 @@ function WizardFooter({
 }) {
   const primaryDisabled = isLastStep ? !canPublish : !canContinue;
   const showDisabledReason = primaryDisabled && Boolean(disabledReason);
-  const primaryButtonDisabledClass = primaryDisabled
-    ? "border border-border bg-muted opacity-100 shadow-none"
-    : undefined;
-  const primaryButtonTextClass = primaryDisabled
-    ? "text-muted-foreground"
-    : undefined;
 
   return (
-    <View className="border-t border-border px-4 py-3 gap-2">
+    <View className="border-t border-gray-100 px-5 py-4 gap-2">
       {showDisabledReason && (
-        <Text className="text-xs text-muted-foreground">
-          {disabledReason}
-        </Text>
+        <Text className="text-xs text-gray-500">{disabledReason}</Text>
       )}
       <View className="flex-row gap-3">
         {canGoBack ? (
-          <Button variant="outline" className="flex-1" onPress={onBack}>
-            <Text>Back</Text>
+          <Button
+            variant="outline"
+            className="h-[52px] flex-1 rounded-full border-gray-200"
+            onPress={onBack}
+          >
+            <Text className="text-base font-medium text-foreground">Back</Text>
           </Button>
         ) : secondaryAction ? (
           <Button
             variant="outline"
-            className="flex-1"
+            className="h-[52px] flex-1 rounded-full border-gray-200"
             onPress={secondaryAction.onPress}
             disabled={secondaryAction.disabled}
           >
-            <Text>{secondaryAction.label}</Text>
+            <Text className="text-base font-medium text-foreground">{secondaryAction.label}</Text>
           </Button>
         ) : (
           <View className="flex-1" />
@@ -247,21 +243,43 @@ function WizardFooter({
 
         {isLastStep ? (
           <Button
-            variant="default"
-            className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
+            className={cn(
+              "h-[52px] flex-1 rounded-full",
+              primaryDisabled
+                ? "border border-gray-200 bg-gray-100"
+                : "bg-foreground",
+            )}
             onPress={onPublish}
             disabled={!canPublish}
           >
-            <Text className={primaryButtonTextClass}>{publishLabel}</Text>
+            <Text
+              className={cn(
+                "text-base font-medium",
+                primaryDisabled ? "text-gray-400" : "text-background",
+              )}
+            >
+              {publishLabel}
+            </Text>
           </Button>
         ) : (
           <Button
-            variant="default"
-            className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
+            className={cn(
+              "h-[52px] flex-1 rounded-full",
+              primaryDisabled
+                ? "border border-gray-200 bg-gray-100"
+                : "bg-foreground",
+            )}
             onPress={onContinue}
             disabled={!canContinue}
           >
-            <Text className={primaryButtonTextClass}>Continue</Text>
+            <Text
+              className={cn(
+                "text-base font-medium",
+                primaryDisabled ? "text-gray-400" : "text-background",
+              )}
+            >
+              Continue
+            </Text>
           </Button>
         )}
       </View>
@@ -273,7 +291,9 @@ function WizardFooter({
           onPress={secondaryAction.onPress}
           disabled={secondaryAction.disabled}
         >
-          <Text className="text-sm text-primary">{secondaryAction.label}</Text>
+          <Text className="text-sm font-medium text-foreground underline">
+            {secondaryAction.label}
+          </Text>
         </Button>
       )}
     </View>
@@ -342,6 +362,7 @@ export function WizardLayout({
   discardTitle = "Discard draft?",
   discardDescription = "This removes your draft and staged photos for this listing.",
 }: WizardLayoutProps) {
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   return (
@@ -353,11 +374,17 @@ export function WizardLayout({
         stepCount={stepCount}
         canGoBack={canGoBack}
         onBack={onBack}
-        onOpenDiscard={() => setShowDiscardDialog(true)}
+        onOpenDiscard={() => setShowOverflowMenu(true)}
         progressPercent={progressPercent}
       />
 
-      <View className="flex-row items-center justify-between px-4 py-1">
+      <WizardOverflowMenu
+        open={showOverflowMenu}
+        onOpenChange={setShowOverflowMenu}
+        onDiscard={() => setShowDiscardDialog(true)}
+      />
+
+      <View className="flex-row items-center justify-between px-5 py-1">
         <SaveStatusIndicator
           saveStatus={saveStatus}
           onRetrySave={onRetrySave}
@@ -370,7 +397,7 @@ export function WizardLayout({
         onRetrySave={onRetrySave}
       />
 
-      <ScrollView className="flex-1 px-4">{children}</ScrollView>
+      <ScrollView className="flex-1 px-5">{children}</ScrollView>
 
       <WizardFooter
         isLastStep={isLastStep}

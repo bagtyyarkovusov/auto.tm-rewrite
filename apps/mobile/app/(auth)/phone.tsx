@@ -9,7 +9,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useColorScheme } from "nativewind";
 
 import { PhoneInput } from "../../components/auth/PhoneInput";
 import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
@@ -24,7 +23,6 @@ import {
   validateTmPhone,
 } from "../../src/auth/phone";
 
-import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -38,7 +36,6 @@ function closeAuth() {
     router.back();
     return;
   }
-
   router.replace("/(tabs)");
 }
 
@@ -49,9 +46,6 @@ export default function PhoneScreen() {
   }>();
   const initialLocale = resolveLocale(firstParam(params.locale));
   const initialPhone = firstParam(params.phone);
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
-
   const [locale, setLocale] = useState<Locale>(initialLocale);
   const [phoneDisplay, setPhoneDisplay] = useState(
     initialPhone ? displayPhoneFromCanonical(initialPhone) : "",
@@ -73,11 +67,9 @@ export default function PhoneScreen() {
     if (requestError) {
       return requestError;
     }
-
     if (!touched || phoneValidation === null) {
       return copy.phoneInputHelper;
     }
-
     return phoneValidation === "incomplete"
       ? copy.phoneIncompleteError
       : copy.phoneFormatError;
@@ -127,30 +119,33 @@ export default function PhoneScreen() {
     void Linking.openURL(`https://auto.tm/${locale}/legal/${kind}`);
   }
 
+  const hasError = !!(requestError || (touched && phoneValidation !== null));
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 bg-background"
     >
-      <SafeAreaView className="flex-1 px-4">
+      <SafeAreaView className="flex-1 px-5">
         <View className="flex-row items-center justify-between py-4">
           <Button
             accessibilityLabel={copy.close}
             size="icon"
             variant="ghost"
+            className="h-10 w-10 rounded-full"
             onPress={closeAuth}
           >
-            <Icon as={X} className="size-5 text-foreground" />
+            <Icon as={X} className="size-5 text-foreground" strokeWidth={2} />
           </Button>
           <LocaleSwitcher onChange={setLocale} value={locale} />
         </View>
 
         <View className="flex-1">
-          <View className="mt-8 gap-8">
+          <View className="mt-6 gap-8">
             <BrandLogo />
 
             <View className="gap-2">
-              <Text className="text-2xl font-semibold leading-snug text-foreground">
+              <Text className="text-[28px] font-bold leading-snug text-foreground">
                 {copy.phoneTitle}
               </Text>
               <Text className="text-base leading-normal text-muted-foreground">
@@ -164,7 +159,7 @@ export default function PhoneScreen() {
               </Text>
               <PhoneInput
                 accessibilityLabel={copy.phoneLabel}
-                hasError={!!(requestError || (touched && phoneValidation !== null))}
+                hasError={hasError}
                 keyboardType="phone-pad"
                 onBlur={() => setTouched(true)}
                 onChangeText={handlePhoneChange}
@@ -174,7 +169,7 @@ export default function PhoneScreen() {
               />
               <Text
                 className={
-                  requestError || (touched && phoneValidation !== null)
+                  hasError
                     ? "text-sm leading-snug text-destructive"
                     : "text-sm leading-snug text-muted-foreground"
                 }
@@ -185,14 +180,12 @@ export default function PhoneScreen() {
 
             <Button
               disabled={!canSubmit}
-              size="lg"
+              size="xl"
               variant="default"
               onPress={handleSubmit}
             >
               {isSubmitting ? (
-                <ActivityIndicator
-                  color={`hsl(${THEME[isDark ? "dark" : "light"].primaryForeground})`}
-                />
+                <ActivityIndicator color="white" />
               ) : (
                 <Text>{copy.getCode}</Text>
               )}
@@ -202,14 +195,14 @@ export default function PhoneScreen() {
           <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
             {copy.legalPrefix}{" "}
             <Text
-              className="font-medium text-info-500 underline"
+              className="font-medium text-foreground underline"
               onPress={() => openLegalPage("terms")}
             >
               {copy.terms}
             </Text>{" "}
             {copy.legalAnd}{" "}
             <Text
-              className="font-medium text-info-500 underline"
+              className="font-medium text-foreground underline"
               onPress={() => openLegalPage("privacy")}
             >
               {copy.privacy}

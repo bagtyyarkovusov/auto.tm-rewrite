@@ -19,7 +19,24 @@ module.exports = {
   theme: {
     extend: {
       ...tailwindTheme,
+      fontFamily: {
+        display: ["UberMoveBold", "UberMoveMedium", "system-ui", "sans-serif"],
+        sans: [
+          "UberMoveTextRegular",
+          "UberMoveTextMedium",
+          "UberMoveTextBold",
+          "system-ui",
+          "sans-serif",
+        ],
+        mono: [
+          "UberMoveMonoRegular",
+          "UberMoveMonoMedium",
+          "ui-monospace",
+          "monospace",
+        ],
+      },
       colors: {
+        ...tailwindTheme.colors,
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

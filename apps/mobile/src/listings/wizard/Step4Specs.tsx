@@ -2,14 +2,13 @@ import { X } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useColors } from "../../api/catalog/useColors";
 import { useBodyTypes } from "../../api/catalog/useBodyTypes";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
-
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import {
   Sheet,
@@ -21,6 +20,7 @@ import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 
 interface Step4SpecsProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -34,6 +34,7 @@ function SheetCloseButton({ onPress }: { onPress: () => void }) {
     <Button
       variant="ghost"
       size="icon"
+      className="h-10 w-10 rounded-full"
       onPress={onPress}
       accessibilityLabel="Close"
     >
@@ -97,9 +98,10 @@ function SpecPickerSheet({
             <Pressable
               key={item.id}
               onPress={() => onSelect(item.id)}
-              className={`border-b border-border py-3 ${
-                item.id === selectedId ? "bg-muted" : ""
-              }`}
+              className={cn(
+                "border-b border-gray-100 py-3",
+                item.id === selectedId && "bg-gray-50",
+              )}
             >
               <Text className="text-base text-foreground">{item.name}</Text>
             </Pressable>
@@ -135,13 +137,14 @@ function ColorPickerSheet({
             <Pressable
               key={c.id}
               onPress={() => onSelect(c.id)}
-              className={`flex-row items-center gap-2 border-b border-border py-3 ${
-                c.id === selectedId ? "bg-muted" : ""
-              }`}
+              className={cn(
+                "flex-row items-center gap-2 border-b border-gray-100 py-3",
+                c.id === selectedId && "bg-gray-50",
+              )}
             >
               {c.hex && (
                 <View
-                  className="h-4 w-4 rounded-full border border-border"
+                  className="h-4 w-4 rounded-full border border-gray-200"
                   style={{ backgroundColor: c.hex }}
                 />
               )}
@@ -315,7 +318,16 @@ export default function Step4Specs({
   const specs = useSpecsStep(payload);
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-6 py-4">
+      <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          Specs
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Enter the specifications of your vehicle.
+        </Text>
+      </View>
+
       <ConditionToggle
         condition={specs.condition}
         disabled={disabled}
@@ -389,7 +401,12 @@ function ConditionToggle({
           variant={
             condition === Enums.ListingCondition.New ? "default" : "outline"
           }
-          className="flex-1"
+          className={cn(
+            "h-[52px] flex-1 rounded-full",
+            condition === Enums.ListingCondition.New
+              ? "bg-foreground"
+              : "border-gray-200",
+          )}
           onPress={() => {
             onChange({
               condition: Enums.ListingCondition.New,
@@ -398,19 +415,42 @@ function ConditionToggle({
           }}
           disabled={disabled}
         >
-          <Text>New</Text>
+          <Text
+            className={cn(
+              "text-base font-medium",
+              condition === Enums.ListingCondition.New
+                ? "text-background"
+                : "text-foreground",
+            )}
+          >
+            New
+          </Text>
         </Button>
         <Button
           variant={
             condition === Enums.ListingCondition.Used ? "default" : "outline"
           }
-          className="flex-1"
+          className={cn(
+            "h-[52px] flex-1 rounded-full",
+            condition === Enums.ListingCondition.Used
+              ? "bg-foreground"
+              : "border-gray-200",
+          )}
           onPress={() => {
             onChange({ condition: Enums.ListingCondition.Used });
           }}
           disabled={disabled}
         >
-          <Text>Used</Text>
+          <Text
+            className={cn(
+              "text-base font-medium",
+              condition === Enums.ListingCondition.Used
+                ? "text-background"
+                : "text-foreground",
+            )}
+          >
+            Used
+          </Text>
         </Button>
       </View>
     </View>
@@ -429,7 +469,7 @@ function MileageInput({
   disabled: boolean;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Mileage, km *
       </Text>
@@ -449,7 +489,7 @@ function MileageInput({
         disabled,
       )}
       {fieldErrors?.mileageKm && (
-        <Text className="text-sm text-destructive">
+        <Text className="text-sm font-medium text-error">
           {fieldErrors.mileageKm}
         </Text>
       )}
@@ -467,29 +507,30 @@ function ColorPicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Color</Text>
       {wrapDisabled(
-        <Button
-          variant="outline"
+        <Pressable
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="flex-row items-center rounded-lg border border-gray-200 bg-background px-3.5"
+          style={{ height: 52 }}
         >
           {selectedColor?.hex && (
             <View
-              className="mr-2 h-4 w-4 rounded-full border border-border"
+              className="mr-2 h-4 w-4 rounded-full border border-gray-200"
               style={{ backgroundColor: selectedColor.hex }}
             />
           )}
           <Text
-            className={
-              selectedColor ? "text-foreground" : "text-muted-foreground"
-            }
+            className={cn(
+              "text-[17px] leading-snug",
+              selectedColor ? "text-foreground" : "text-gray-400",
+            )}
           >
             {selectedColor?.name ?? "Select color"}
           </Text>
-        </Button>,
+        </Pressable>,
         disabled,
       )}
     </View>
@@ -506,23 +547,24 @@ function BodyTypePicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Body type</Text>
       {wrapDisabled(
-        <Button
-          variant="outline"
+        <Pressable
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="flex-row items-center rounded-lg border border-gray-200 bg-background px-3.5"
+          style={{ height: 52 }}
         >
           <Text
-            className={
-              selectedBodyType ? "text-foreground" : "text-muted-foreground"
-            }
+            className={cn(
+              "text-[17px] leading-snug",
+              selectedBodyType ? "text-foreground" : "text-gray-400",
+            )}
           >
             {selectedBodyType?.name ?? "Select body type"}
           </Text>
-        </Button>,
+        </Pressable>,
         disabled,
       )}
     </View>
@@ -539,27 +581,26 @@ function TransmissionPicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Transmission
       </Text>
       {wrapDisabled(
-        <Button
-          variant="outline"
+        <Pressable
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="flex-row items-center rounded-lg border border-gray-200 bg-background px-3.5"
+          style={{ height: 52 }}
         >
           <Text
-            className={
-              selectedTransmission
-                ? "text-foreground"
-                : "text-muted-foreground"
-            }
+            className={cn(
+              "text-[17px] leading-snug",
+              selectedTransmission ? "text-foreground" : "text-gray-400",
+            )}
           >
             {selectedTransmission?.name ?? "Select transmission"}
           </Text>
-        </Button>,
+        </Pressable>,
         disabled,
       )}
     </View>
@@ -576,23 +617,24 @@ function DriveTypePicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Drive type</Text>
       {wrapDisabled(
-        <Button
-          variant="outline"
+        <Pressable
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="flex-row items-center rounded-lg border border-gray-200 bg-background px-3.5"
+          style={{ height: 52 }}
         >
           <Text
-            className={
-              selectedDriveType ? "text-foreground" : "text-muted-foreground"
-            }
+            className={cn(
+              "text-[17px] leading-snug",
+              selectedDriveType ? "text-foreground" : "text-gray-400",
+            )}
           >
             {selectedDriveType?.name ?? "Select drive type"}
           </Text>
-        </Button>,
+        </Pressable>,
         disabled,
       )}
     </View>
@@ -609,23 +651,24 @@ function EngineTypePicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Engine type</Text>
       {wrapDisabled(
-        <Button
-          variant="outline"
+        <Pressable
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="flex-row items-center rounded-lg border border-gray-200 bg-background px-3.5"
+          style={{ height: 52 }}
         >
           <Text
-            className={
-              selectedEngineType ? "text-foreground" : "text-muted-foreground"
-            }
+            className={cn(
+              "text-[17px] leading-snug",
+              selectedEngineType ? "text-foreground" : "text-gray-400",
+            )}
           >
             {selectedEngineType?.name ?? "Select engine type"}
           </Text>
-        </Button>,
+        </Pressable>,
         disabled,
       )}
     </View>
@@ -642,7 +685,7 @@ function EnginePowerInput({
   disabled: boolean;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Engine power (hp)
       </Text>

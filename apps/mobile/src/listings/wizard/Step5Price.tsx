@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useExchangeRates } from "../../api/exchange-rates/useExchangeRates";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
-
 interface Step5PriceProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
@@ -66,7 +65,7 @@ function PriceInput({
   disabled: boolean;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Amount *</Text>
       {wrapDisabled(
         <Input
@@ -84,7 +83,7 @@ function PriceInput({
         disabled,
       )}
       {fieldErrors?.priceAmount && (
-        <Text className="text-sm text-destructive">
+        <Text className="text-sm font-medium text-error">
           {fieldErrors.priceAmount}
         </Text>
       )}
@@ -106,16 +105,16 @@ function CurrencyPicker({
 
   return (
     <>
-      <View className="gap-1">
+      <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">Currency</Text>
         {wrapDisabled(
           <Button
             variant="outline"
             onPress={() => setCurrencyOpen(true)}
             disabled={disabled}
-            className="justify-start"
+            className="h-[52px] justify-start rounded-full border-gray-200"
           >
-            <Text className="text-foreground">{selectedCurrencyLabel}</Text>
+            <Text className="text-[17px] text-foreground">{selectedCurrencyLabel}</Text>
           </Button>,
           disabled,
         )}
@@ -145,7 +144,7 @@ function CurrencyPicker({
 function TmtEquivalent({ amount }: { amount: number | null }) {
   if (amount === null) return null;
   return (
-    <Text className="text-sm text-muted-foreground">
+    <Text className="text-sm text-gray-500">
       ≈ {amount.toLocaleString()} TMT
     </Text>
   );
@@ -193,7 +192,16 @@ export default function Step5Price({
   const { tmtEquivalent } = usePriceStep(payload);
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-6 py-4">
+      <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          Price
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Set your asking price and payment terms.
+        </Text>
+      </View>
+
       <PriceInput
         payload={payload}
         onChange={onChange}

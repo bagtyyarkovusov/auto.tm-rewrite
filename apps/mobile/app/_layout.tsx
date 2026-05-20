@@ -1,6 +1,7 @@
 import "../global.css";
 
 import { Stack, router } from "expo-router";
+import { useFonts } from "expo-font";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
 import { StatusBar } from "expo-status-bar";
@@ -15,7 +16,6 @@ import { useEffect } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
-
 
 import { NAV_THEME } from "../lib/theme";
 import { ApiError } from "../src/api/client";
@@ -65,6 +65,19 @@ function isOnline(state: NetInfoState): boolean {
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme ?? "light";
+
+  // Load UberMove font family from design handoff (#123).
+  // WOFF2 mono fonts may not render on native; they fall back to system mono.
+  useFonts({
+    UberMoveBold: require("../assets/fonts/UberMoveBold.otf"),
+    UberMoveMedium: require("../assets/fonts/UberMoveMedium.otf"),
+    UberMoveTextRegular: require("../assets/fonts/UberMoveTextRegular.otf"),
+    UberMoveTextMedium: require("../assets/fonts/UberMoveTextMedium.otf"),
+    UberMoveTextBold: require("../assets/fonts/UberMoveTextBold.otf"),
+    UberMoveTextLight: require("../assets/fonts/UberMoveTextLight.otf"),
+    UberMoveMonoRegular: require("../assets/fonts/UberMoveMono-Regular.woff2"),
+    UberMoveMonoMedium: require("../assets/fonts/UberMoveMono-Medium.woff2"),
+  });
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", onAppStateChange);

@@ -1,15 +1,14 @@
 import { View } from "react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
 import { useCities } from "../../api/catalog/useCities";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
-
 interface Step7DescContactProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
@@ -46,8 +45,8 @@ function ReviewSummary({
   const { brandName, modelName, cityName } = useReviewSummary(payload);
 
   return (
-    <View className="gap-1 rounded-lg bg-muted p-3">
-      <Text className="text-sm font-medium text-foreground">
+    <View className="gap-1 rounded-lg bg-gray-50 p-3">
+      <Text className="text-sm font-semibold text-foreground">
         {brandName} {modelName} {payload.year}
       </Text>
       <Text className="text-sm text-foreground">
@@ -55,7 +54,7 @@ function ReviewSummary({
           ? `${payload.priceAmount.toLocaleString()} ${payload.priceCurrency}`
           : "—"}
       </Text>
-      <Text className="text-sm text-muted-foreground">{cityName}</Text>
+      <Text className="text-sm text-gray-500">{cityName}</Text>
     </View>
   );
 }
@@ -74,7 +73,7 @@ function DescriptionInput({
   const descriptionLength = payload.description?.length ?? 0;
 
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Description *
       </Text>
@@ -95,13 +94,13 @@ function DescriptionInput({
       )}
       <View className="flex-row items-center justify-between">
         {fieldErrors?.description ? (
-          <Text className="text-sm text-destructive">
+          <Text className="text-sm font-medium text-error">
             {fieldErrors.description}
           </Text>
         ) : (
           <View />
         )}
-        <Text className="text-xs text-muted-foreground">
+        <Text className="text-xs text-gray-500">
           {descriptionLength}/2000
         </Text>
       </View>
@@ -121,7 +120,7 @@ function ContactPhoneInput({
   defaultPhone: string;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Contact phone
       </Text>
@@ -175,12 +174,12 @@ function ContactMethods({
         </View>
       </View>
 
-      <Text className="text-sm text-muted-foreground">
+      <Text className="text-sm text-gray-500">
         Chat will become available when messaging launches.
       </Text>
 
       {!hasContactMethod && (
-        <Text className="text-sm text-destructive">
+        <Text className="text-sm font-medium text-error">
           Choose calls or chat
         </Text>
       )}
@@ -196,7 +195,16 @@ export default function Step7DescContact({
   defaultPhone = "",
 }: Step7DescContactProps) {
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-6 py-4">
+      <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          Description & contact
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Add a description and choose how buyers can reach you.
+        </Text>
+      </View>
+
       <ReviewSummary payload={payload} />
       <DescriptionInput
         payload={payload}

@@ -13,12 +13,11 @@ import {
 import type { StagedPhoto } from "../uploadStaging/types";
 
 import type { WizardPayload } from "./types";
+import { PhotoThumbnail } from "./PhotoThumbnail";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
-
-import { PhotoThumbnail } from "./PhotoThumbnail";
 
 interface Step2PhotosProps {
   payload: WizardPayload;
@@ -153,21 +152,21 @@ function PhotoActions({
     <View className="flex-row gap-3">
       <Button
         variant="outline"
-        className="flex-1"
+        className="h-[52px] flex-1 rounded-full border-gray-200"
         onPress={onTakePhoto}
         disabled={disabled || maxReached}
       >
-        <Icon as={Camera} className="size-4" />
-        <Text>Camera</Text>
+        <Icon as={Camera} className="size-4 text-foreground" />
+        <Text className="text-base font-medium text-foreground">Camera</Text>
       </Button>
       <Button
         variant="outline"
-        className="flex-1"
+        className="h-[52px] flex-1 rounded-full border-gray-200"
         onPress={onPickFromLibrary}
         disabled={disabled || maxReached}
       >
-        <Icon as={ImagePlus} className="size-4" />
-        <Text>Library</Text>
+        <Icon as={ImagePlus} className="size-4 text-foreground" />
+        <Text className="text-base font-medium text-foreground">Library</Text>
       </Button>
     </View>
   );
@@ -219,8 +218,8 @@ function StatusIndicator({
   if (!isCompressing && !isUploading) return null;
   return (
     <View className="flex-row items-center gap-2">
-      <ActivityIndicator size="small" />
-      <Text className="text-sm text-muted-foreground">
+      <ActivityIndicator size="small" color="#000" />
+      <Text className="text-sm text-gray-500">
         {isCompressing ? "Compressing..." : "Uploading..."}
       </Text>
     </View>
@@ -248,10 +247,15 @@ export default function Step2Photos({
   const photosError = fieldErrors?.photos;
 
   return (
-    <View className="gap-4 py-4">
-      <Text className="text-sm text-muted-foreground">
-        Photos under 5 MB upload faster.
-      </Text>
+    <View className="gap-6 py-4">
+      <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          Add photos
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Photos under 5 MB upload faster. First photo becomes the cover.
+        </Text>
+      </View>
 
       <PhotoActions
         disabled={disabled ?? false}
@@ -261,11 +265,11 @@ export default function Step2Photos({
       />
 
       {photosError && (
-        <Text className="text-sm text-destructive">{photosError}</Text>
+        <Text className="text-sm font-medium text-error">{photosError}</Text>
       )}
 
       {maxReached && (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-sm text-gray-500">
           Maximum 20 photos reached
         </Text>
       )}

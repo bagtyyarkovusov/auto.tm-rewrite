@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { View } from "react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useGenerations } from "../../api/catalog/useGenerations";
 import { useModels } from "../../api/catalog/useModels";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
-
-import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
-import { PickerRow } from "@/components/listings/wizard/PickerRow";
-import { Input } from "@/components/ui/input";
-import { Text } from "@/components/ui/text";
 
 import {
   shouldShowVehicleFieldError,
   type VehicleField,
 } from "./vehicleFieldErrorVisibility";
+
+import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
+import { PickerRow } from "@/components/listings/wizard/PickerRow";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 interface Step3VehicleIdProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -202,9 +203,9 @@ function YearInput({
   });
 
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Year *</Text>
-      <View className={disabled ? "opacity-50" : undefined}>
+      <View className={cn(disabled && "opacity-50")}>
         <Input
           value={yearText}
           onChangeText={handleYearChange}
@@ -216,10 +217,10 @@ function YearInput({
         />
       </View>
       {yearError && showYearError && (
-        <Text className="text-sm text-destructive">{yearError}</Text>
+        <Text className="text-sm font-medium text-error">{yearError}</Text>
       )}
       {disabled && (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-sm text-gray-500">
           This field cannot be changed after publishing.
         </Text>
       )}
@@ -328,7 +329,16 @@ export default function Step3VehicleId({
       : undefined;
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-6 py-4">
+      <View className="gap-2">
+        <Text className="font-uber text-[22px] font-bold leading-tight tracking-tight text-foreground">
+          Vehicle
+        </Text>
+        <Text className="text-base leading-normal text-gray-600">
+          Select the brand, model, and year of your vehicle.
+        </Text>
+      </View>
+
       <PickerRow
         label="Brand"
         required

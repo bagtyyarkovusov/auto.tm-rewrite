@@ -1,8 +1,9 @@
-import { PlusCircle } from "lucide-react-native";
+import { Car } from "lucide-react-native";
 import { type Href, router, useNavigation } from "expo-router";
 import { useEffect, useReducer, useState, useCallback } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { WizardSchemas } from "@auto-tm/contracts";
 
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
 import { useDiscardDraft } from "../../src/api/listings/useDiscardDraft";
@@ -28,8 +29,6 @@ import Step5Price from "../../src/listings/wizard/Step5Price";
 import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
 import Step8Review from "../../src/listings/wizard/Step8Review";
-
-import { WizardSchemas } from "@auto-tm/contracts";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
@@ -79,8 +78,7 @@ export default function SellScreen() {
     loadAuthSession().then((s) => setDefaultPhone(s?.user.phone ?? ""));
   }, []);
 
-  // Hide the bottom tab bar while the wizard is open — the wizard is a focused
-  // flow that should not advertise navigation to other tabs.
+  // Hide the bottom tab bar while the wizard is open
   const inWizard =
     machineState.status !== "idle" && machineState.draftId !== null;
   useEffect(() => {
@@ -209,7 +207,6 @@ export default function SellScreen() {
 
   const handleBack = useCallback(() => {
     dispatch({ type: "BACK" });
-    // Force save on navigation
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
       photos: buildPayloadPhotos(uploadQueue.photos),
@@ -229,7 +226,6 @@ export default function SellScreen() {
     }
 
     dispatch({ type: "NEXT" });
-    // Force save on navigation
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
       photos: buildPayloadPhotos(uploadQueue.photos),
@@ -295,7 +291,6 @@ export default function SellScreen() {
     const currentStep = ctx.state.currentStep;
     const stepTitle = STEP_TITLES[currentStep] ?? currentStep;
 
-    // Compose a clear reason text when Publish/Continue is disabled.
     let disabledReason: string | undefined;
     if (ctx.isLastStep && !ctx.canPublish) {
       const missing = WizardSchemas.WIZARD_STEPS.filter(
@@ -418,41 +413,70 @@ export default function SellScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center px-4">
-        <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
-        <Text className="mt-4 text-lg font-semibold text-foreground">
-          Sell your car
-        </Text>
-        <Text className="mt-1 text-center text-sm text-muted-foreground">
-          List your vehicle on AutoTM
-        </Text>
+      <View className="flex-1 px-5 pt-8">
+        <View className="gap-2">
+          <Text className="font-uber text-[28px] font-bold leading-snug tracking-tight text-foreground">
+            Sell your car
+          </Text>
+          <Text className="text-base leading-normal text-gray-600">
+            List your vehicle on AutoTM and reach buyers across Turkmenistan.
+          </Text>
+        </View>
 
         {hasDrafts && isAuthenticated && !draftsLoading ? (
-          <View className="mt-6 w-full gap-3">
+          <View className="mt-8 gap-4">
+            {/* Draft card */}
+            <View className="rounded-xl border border-gray-200 bg-card p-4 gap-3">
+              <View className="flex-row items-center gap-3">
+                <View className="h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
+                  <Icon as={Car} className="size-6 text-gray-500" />
+                </View>
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-sm font-medium text-foreground">
+                    Draft listing
+                  </Text>
+                  <Text className="text-xs text-gray-500">
+                    In progress
+                  </Text>
+                </View>
+              </View>
+              <View className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                <View
+                  className="h-full rounded-full bg-foreground"
+                  style={{ width: "30%" }}
+                />
+              </View>
+            </View>
+
             <Button
-              size="lg"
-              variant="default"
+              className="h-[52px] rounded-full bg-foreground"
               onPress={() => handleContinueDraft(existingDraft)}
             >
-              <Text>Continue listing</Text>
+              <Text className="text-base font-medium text-background">
+                Continue listing
+              </Text>
             </Button>
             <Button
-              size="lg"
               variant="outline"
+              className="h-[52px] rounded-full border-gray-200"
               onPress={handleCreateNewDraft}
             >
-              <Text>New listing</Text>
+              <Text className="text-base font-medium text-foreground">
+                New listing
+              </Text>
             </Button>
           </View>
         ) : (
-          <Button
-            className="mt-6"
-            size="lg"
-            variant="default"
-            onPress={handleStartListing}
-          >
-            <Text>Start listing</Text>
-          </Button>
+          <View className="mt-8">
+            <Button
+              className="h-[52px] rounded-full bg-foreground"
+              onPress={handleStartListing}
+            >
+              <Text className="text-base font-medium text-background">
+                Start listing
+              </Text>
+            </Button>
+          </View>
         )}
       </View>
 

@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 interface PickerRowProps {
   label: string;
@@ -30,7 +31,7 @@ export function PickerRow({
   const isDisabled = disabled || locked;
 
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         {label}
         {required ? " *" : ""}
@@ -40,32 +41,38 @@ export function PickerRow({
         disabled={isDisabled}
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled }}
-        className={`flex-row items-center justify-between border border-border rounded-md bg-card px-3 py-3${isDisabled ? " opacity-50" : ""}`}
+        className={cn(
+          "flex-row items-center justify-between rounded-lg border bg-background px-3.5",
+          error ? "border-2 border-error" : "border border-gray-200",
+          isDisabled && "opacity-50",
+        )}
+        style={{ height: 52 }}
       >
         <Text
-          className={
-            value ? "text-base text-foreground" : "text-base text-muted-foreground"
-          }
+          className={cn(
+            "text-[17px] leading-snug",
+            value ? "text-foreground" : "text-gray-400",
+          )}
         >
           {value ?? placeholder}
         </Text>
         <Icon
           as={locked ? Lock : ChevronRight}
-          className={
-            locked ? "size-4 text-muted-foreground" : "size-5 text-muted-foreground"
-          }
+          className={cn(
+            locked ? "size-4 text-gray-400" : "size-5 text-gray-400",
+          )}
         />
       </Pressable>
       {locked && (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-sm text-gray-500">
           This field cannot be changed after publishing.
         </Text>
       )}
       {!locked && helper && !error && (
-        <Text className="text-sm text-muted-foreground">{helper}</Text>
+        <Text className="text-sm text-gray-500">{helper}</Text>
       )}
       {error && (
-        <Text className="text-sm text-destructive">{error}</Text>
+        <Text className="text-sm font-medium text-error">{error}</Text>
       )}
     </View>
   );
