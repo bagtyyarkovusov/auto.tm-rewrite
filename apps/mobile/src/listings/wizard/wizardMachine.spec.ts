@@ -212,7 +212,7 @@ describe("UPDATE_FIELDS", () => {
   });
 
   it("invalidates downstream steps when brand changes", () => {
-    let state = wizardMachineReducer(createInitialState(), {
+    const state = wizardMachineReducer(createInitialState(), {
       type: "INIT",
       draftId: "draft-1",
       payload: {

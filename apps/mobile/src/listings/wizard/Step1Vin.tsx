@@ -19,6 +19,7 @@ export default function Step1Vin({
   disabled,
 }: Step1VinProps) {
   const vinError = fieldErrors?.vin;
+
   return (
     <View className="gap-4 py-4">
       <Text className="text-sm text-muted-foreground">

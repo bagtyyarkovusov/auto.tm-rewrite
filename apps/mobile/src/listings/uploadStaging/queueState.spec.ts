@@ -7,6 +7,11 @@ import {
   removePhotoFromQueue,
   reorderPhotos,
   isRetryable,
+  createStagedPhoto,
+  appendPhotoToQueue,
+  findPhotoById,
+  transitionPhotoToFailed,
+  collectPhotosToResume,
 } from "./queueState";
 import type { StagedPhoto, UploadQueue, UploadError } from "./types";
 
@@ -97,6 +102,82 @@ describe("reconstructQueueFromDraft", () => {
       [],
     );
     expect(result.photos[0]?.state).toBe("lost");
+  });
+});
+
+describe("createStagedPhoto", () => {
+  it("creates a photo in selected state with given id and sort order", () => {
+    const photo = createStagedPhoto("new-id", 5);
+    expect(photo.photoId).toBe("new-id");
+    expect(photo.state).toBe("selected");
+    expect(photo.sortOrder).toBe(5);
+    expect(photo.retryCount).toBe(0);
+  });
+});
+
+describe("appendPhotoToQueue", () => {
+  it("appends a photo to the end of the queue", () => {
+    const queue = makeQueue([makePhoto({ photoId: "p1" })]);
+    const photo = makePhoto({ photoId: "p2" });
+    const result = appendPhotoToQueue(queue, photo);
+    expect(result.photos).toHaveLength(2);
+    expect(result.photos[1]?.photoId).toBe("p2");
+  });
+});
+
+describe("findPhotoById", () => {
+  it("finds an existing photo by id", () => {
+    const queue = makeQueue([makePhoto({ photoId: "p1" })]);
+    expect(findPhotoById(queue, "p1")?.photoId).toBe("p1");
+  });
+
+  it("returns undefined for missing photo", () => {
+    const queue = makeQueue([makePhoto({ photoId: "p1" })]);
+    expect(findPhotoById(queue, "missing")).toBeUndefined();
+  });
+});
+
+describe("transitionPhotoToFailed", () => {
+  it("transitions photo to failed with error and increments retryCount", () => {
+    const queue = makeQueue([makePhoto({ retryCount: 1 })]);
+    const error = makeError("NETWORK_ERROR", true);
+    const result = transitionPhotoToFailed(queue, "p1", error);
+    expect(result.photos[0]?.state).toBe("failed");
+    expect(result.photos[0]?.error).toEqual(error);
+    expect(result.photos[0]?.retryCount).toBe(2);
+  });
+});
+
+describe("collectPhotosToResume", () => {
+  it("collects compressed photos", () => {
+    const queue = makeQueue([makePhoto({ state: "compressed" })]);
+    expect(collectPhotosToResume(queue)).toHaveLength(1);
+  });
+
+  it("collects waiting_for_network photos", () => {
+    const queue = makeQueue([makePhoto({ state: "waiting_for_network" })]);
+    expect(collectPhotosToResume(queue)).toHaveLength(1);
+  });
+
+  it("collects failed photos with retryable errors under retry cap", () => {
+    const queue = makeQueue([
+      makePhoto({ state: "failed", retryCount: 1, error: makeError("NETWORK_ERROR", true) }),
+    ]);
+    expect(collectPhotosToResume(queue)).toHaveLength(1);
+  });
+
+  it("skips failed photos with non-retryable errors", () => {
+    const queue = makeQueue([
+      makePhoto({ state: "failed", retryCount: 0, error: makeError("LOCAL_FILE_MISSING", false) }),
+    ]);
+    expect(collectPhotosToResume(queue)).toHaveLength(0);
+  });
+
+  it("skips failed photos at retry cap", () => {
+    const queue = makeQueue([
+      makePhoto({ state: "failed", retryCount: 2, error: makeError("NETWORK_ERROR", true) }),
+    ]);
+    expect(collectPhotosToResume(queue)).toHaveLength(0);
   });
 });
 
