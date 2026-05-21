@@ -28,27 +28,27 @@ Client-side listing creation + upload pipeline for `apps/mobile`. Three subsyste
     - `PickerRow.tsx` — shared pressable picker row (`components/listings/wizard/`). 52px height, border, chevron/lock icon, label + error + helper text support.
   - `uploadStaging/` — media upload pipeline
     - `types.ts` — `PhotoState`, `UploadErrorCode`, `StagedPhoto`, `UploadQueue`, `PublishGateResult`
-    - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track (**exports `publishGate` — presently unused consumer-side**)
+    - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track. Signature is `useUploadQueue(stagingKey, payload)` where `stagingKey` is opaque to the queue (`draft-{draftId}` for create today; `edit-{listingId}` is reserved for edit media). **Exports `publishGate` — presently unused consumer-side.**
     - `useAsyncCounter.ts` — ref-based counter surfaced as `isCompressing` (**prevents overlapping parallel compress regressions**)
     - `compressor.ts` — `expo-image-manipulator` chain API (resize ≤2400px, JPEG 0.8, re-compress at 0.6 if >5 MB)
     - `queueState.ts` — pure state machine: `PhotoUploadReducer` (discriminated-union actions) + helpers: `updatePhotoState`, `removePhotoFromQueue`, `reorderPhotos`, `reconstructQueueFromDraft`, `computePublishGate`
     - `uploadErrors.ts` — `buildUploadError` classifies caught errors into `UploadErrorCode`
-    - `stagingDir.ts` — file-system path helpers: `getStagingPath`, `ensureDraftDir`, `deleteDraftDir`, `listDraftDirs`
-    - `appStateResume.ts` — `AppState` + NetInfo listeners to auto-resume uploads
-    - `orphanCleanup.ts` — deletes staging dirs for drafts that no longer exist
+    - `stagingDir.ts` — file-system path helpers: `getStagingPath`, `ensureDraftDir`, `deleteDraftDir`, `listDraftDirs`; helper names still say "Draft" but accept any opaque staging key
+    - `appStateResume.ts` — `AppState` + NetInfo listeners to auto-resume uploads and surface offline transitions
+    - `orphanCleanup.ts` — deletes `draft-*` staging dirs for drafts that no longer exist and `edit-*` staging dirs for listings that no longer exist; unknown prefixes are logged and skipped
 
 ## 1. Media upload pipeline
 
 ### Photo lifecycle (9 states — design surface area)
 
-Lifecycle diagram expresses **everything the domain might represent**. Runtime today **never transitions photos into `waiting_for_network`** (type + resume selectors exist — **planned / unused** orchestration):
+Lifecycle diagram expresses everything the domain can represent. Runtime transitions upload-ready / in-flight photos into `waiting_for_network` when NetInfo reports offline; reconnect reuses the same resume collector.
 
 ```
 selected → compressed → presigned → uploading → uploaded → attached
              ↓             ↓           ↓
            failed ←──────────←──────────┘
              ↓
-   waiting_for_network   ← ───── NOT assigned anywhere in production code yet
+   waiting_for_network
              ↓
            lost (unrecoverable — no local file, no server key)
 ```
@@ -56,13 +56,13 @@ selected → compressed → presigned → uploading → uploaded → attached
 | State | Meaning | Trigger |
 |---|---|---|
 | `selected` | Picked from gallery; no file yet in staging | `addPhoto()` |
-| `compressed` | Resized + JPEG-compressed; staged at `listing-staging/{draftId}/{photoId}.jpg` | `compressPhoto()` success |
+| `compressed` | Resized + JPEG-compressed; staged at `listing-staging/{stagingKey}/{photoId}.jpg` | `compressPhoto()` success |
 | `presigned` | MinIO presigned PUT URL obtained | `/uploads/presign` response |
 | `uploading` | Binary PUT to MinIO in progress | `FileSystem.uploadAsync` started |
 | `uploaded` | PUT succeeded; `key` (MinIO object key) set | PUT 2xx |
 | `attached` | API confirmed media row created | `reconstructQueueFromDraft` when `key` exists |
 | `failed` | Any step errored; may be retryable | caught exception |
-| `waiting_for_network` | Network dropped mid-upload | **Hypothetical** — NetInfo / offline hook would flip here; **`useUploadQueue` does not mutate into this enum member yet.** |
+| `waiting_for_network` | Network dropped while a photo was `compressed`, `presigned`, or `uploading` | `appStateResume` NetInfo listener calls `useUploadQueue`'s offline transition |
 | `lost` | Photo referenced in draft payload but local file missing and no server `key` | `reconstructQueueFromDraft` when neither local file nor `key` exists |
 
 ### StagedPhoto shape
@@ -101,7 +101,9 @@ interface StagedPhoto {
 ${documentDirectory}/
   picker-temp/                     ← ephemeral; copies of picker URIs before compression
   listing-staging/
-    {draftId}/
+    draft-{draftId}/                ← create flow
+      {photoId}.jpg                ← compressed, staging; persists until attached
+    edit-{listingId}/               ← edit flow reservation; call site not wired yet
       {photoId}.jpg                ← compressed, staging; persists until attached
 ```
 
@@ -135,13 +137,19 @@ Resume logic: enqueues photos in `compressed`, `waiting_for_network`, or `failed
 
 ### Orphan cleanup
 
-`cleanupOrphanDraftDirs(existingDraftIds)` is **exported** helper — **no callers today** means stale `listing-staging/{draftId}/` dirs can stick around after drafts vanish remotely. Planned wiring location: whichever bootstrap path already fetched current draft IDs (not implemented).
+`cleanupOrphanDraftDirs(existingDraftIds, existingListingIds)` is called from `app/_layout.tsx` at authenticated app boot after `useMyDrafts` and `useMyListings` resolve.
+
+Directory semantics:
+
+- `draft-{id}` → orphan when the current user's draft IDs do not contain `id`
+- `edit-{id}` → orphan when the current user's listing IDs do not contain `id`
+- unknown prefix → logged and skipped; never deleted by this helper
 
 Published-listing edit media will need separate cleanup semantics when edit photo uploads ship: cancel/discard should clear local edit staging and best-effort clean newly uploaded media that never reached `AttachMedia`. Any remote object left without a `ListingMedia` row is a storage orphan for API/storage cleanup, not public listing media.
 
 ### State reconstruction on resume
 
-`reconstructQueueFromDraft(draftId, payload, localPhotoIds)`:
+`reconstructQueueFromDraft(stagingKey, payload, localPhotoIds)`:
 - Photo has `key` → state = `attached`
 - Photo has local file → state = `compressed` (re-enqueued for upload)
 - Neither → state = `lost` (unrecoverable)
@@ -292,7 +300,7 @@ These workarounds exist because of iOS-specific runtime behavior discovered on-d
 
 ### 4.2 Staging transfer: copyAsync only — no moveAsync
 
-**What**: Intermediate JPEG from `renderAsync()/saveAsync()` is **always** **`copyAsync`’d into** `listing-staging/{draftId}/{photoId}.jpg`, then temp files cleaned best-effort. **Never** **`moveAsync`**.
+**What**: Intermediate JPEG from `renderAsync()/saveAsync()` is **always** **`copyAsync`’d into** `listing-staging/{stagingKey}/{photoId}.jpg`, then temp files cleaned best-effort. **Never** **`moveAsync`**.
 
 **Why**: `moveAsync` used to silently fail across cache ↔︎ documents boundaries (#118 legacy analysis); dual-path branching left stranded temp files (#113-era concern).
 
@@ -314,7 +322,7 @@ These workarounds exist because of iOS-specific runtime behavior discovered on-d
 
 ## Cross-reference — engineering backlog
 
-Correctness + UX remediation checklist (autosave deps, **`publishGate` wiring**, orphaned staging cleanup, **`/(public)`** route, typography hierarchy): see **`### Planned refactor roadmap`** in [`apps/mobile/CONTEXT.md`](../CONTEXT.md).
+Correctness + UX remediation checklist (autosave deps, **`publishGate` wiring**, **`/(public)`** route, typography hierarchy): see **`### Planned refactor roadmap`** in [`apps/mobile/CONTEXT.md`](../CONTEXT.md).
 
 ## Notable decisions
 

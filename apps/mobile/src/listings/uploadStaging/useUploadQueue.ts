@@ -18,6 +18,7 @@ import {
   appendPhotoToQueue,
   findPhotoById,
   collectPhotosToResume,
+  transitionUploadQueueToWaitingForNetwork,
 } from "./queueState";
 import {
   ensureDraftDir,
@@ -35,8 +36,8 @@ function generateUUID(): string {
   });
 }
 
-async function listLocalPhotoIds(draftId: string): Promise<string[]> {
-  const dir = getDraftDir(draftId);
+async function listLocalPhotoIds(stagingKey: string): Promise<string[]> {
+  const dir = getDraftDir(stagingKey);
   const dirInfo = await FileSystem.getInfoAsync(dir);
   if (!dirInfo.exists) {
     return [];
@@ -74,14 +75,14 @@ async function uploadFileToPresignedUrl(
 }
 
 export function useUploadQueue(
-  draftId: string,
+  stagingKey: string,
   initialPayload: ListingsSchemas.ListingDraftPayload,
 ) {
-  const [queue, setQueue] = useState<UploadQueue>({ draftId, photos: [] });
+  const [queue, setQueue] = useState<UploadQueue>({ stagingKey, photos: [] });
   const { increment: startCompression, decrement: endCompression, isActive: isCompressing } = useAsyncCounter();
   const [isUploading, setIsUploading] = useState(false);
 
-  const initializedDraftId = useRef<string | null>(null);
+  const initializedStagingKey = useRef<string | null>(null);
   const presignMutation = usePresignUpload();
   const queueRef = useRef(queue);
   queueRef.current = queue;
@@ -89,25 +90,26 @@ export function useUploadQueue(
   const MAX_CONCURRENT = 2;
   const runningUploads = useRef(0);
   const uploadQueue = useRef<string[]>([]);
+  const networkAvailable = useRef(true);
   const uploadPhotoRef = useRef<(photoId: string) => Promise<void>>(
     async () => {},
   );
 
   // Initialize queue from draft + local files
   useEffect(() => {
-    if (initializedDraftId.current === draftId) return;
+    if (initializedStagingKey.current === stagingKey) return;
     async function init() {
-      const localPhotoIds = await listLocalPhotoIds(draftId);
+      const localPhotoIds = await listLocalPhotoIds(stagingKey);
       const reconstructed = reconstructQueueFromDraft(
-        draftId,
+        stagingKey,
         initialPayload,
         localPhotoIds,
       );
       setQueue(reconstructed);
-      initializedDraftId.current = draftId;
+      initializedStagingKey.current = stagingKey;
     }
     void init();
-  }, [draftId, initialPayload]);
+  }, [stagingKey, initialPayload]);
 
   const processUploadQueue = useCallback(() => {
     while (
@@ -149,6 +151,16 @@ export function useUploadQueue(
       const photo = findPhotoById(queueRef.current, photoId);
       if (!photo) return;
 
+      if (!networkAvailable.current) {
+        queueRef.current = updatePhotoState(
+          queueRef.current,
+          photoId,
+          "waiting_for_network",
+        );
+        setQueue(queueRef.current);
+        return;
+      }
+
       if (!photo.localUri) {
         transitionToFailed(photoId, {
           code: "LOCAL_FILE_MISSING",
@@ -178,6 +190,17 @@ export function useUploadQueue(
           sizeBytes: photo.fileSize ?? 0,
         });
 
+        if (!networkAvailable.current) {
+          queueRef.current = updatePhotoState(
+            queueRef.current,
+            photoId,
+            "waiting_for_network",
+            { uploadUrl: presignResult.uploadUrl },
+          );
+          setQueue(queueRef.current);
+          return;
+        }
+
         transitionToUploading(photoId, presignResult.uploadUrl);
         await uploadFileToPresignedUrl(presignResult.uploadUrl, photo.localUri);
         transitionToUploaded(photoId, presignResult.key);
@@ -202,6 +225,17 @@ export function useUploadQueue(
         uploadQueue.current.push(...photosToRetry.map((p) => p.photoId));
         processUploadQueue();
       },
+      onNetworkAvailable: () => {
+        networkAvailable.current = true;
+      },
+      onNetworkUnavailable: () => {
+        networkAvailable.current = false;
+        uploadQueue.current = [];
+        queueRef.current = transitionUploadQueueToWaitingForNetwork(
+          queueRef.current,
+        );
+        setQueue(queueRef.current);
+      },
     });
     return cleanup;
   }, [processUploadQueue]);
@@ -219,8 +253,8 @@ export function useUploadQueue(
 
       try {
         startCompression();
-        await ensureDraftDir(draftId);
-        const destinationUri = getStagingPath(draftId, photoId);
+        await ensureDraftDir(stagingKey);
+        const destinationUri = getStagingPath(stagingKey, photoId);
         const compressed = await compressPhoto(sourceUri, destinationUri);
 
         const destExists = await verifyStagingFileExists(destinationUri);
@@ -249,7 +283,7 @@ export function useUploadQueue(
         endCompression();
       }
     },
-    [draftId, processUploadQueue, startCompression, endCompression],
+    [stagingKey, processUploadQueue, startCompression, endCompression],
   );
 
   const removePhoto = useCallback(

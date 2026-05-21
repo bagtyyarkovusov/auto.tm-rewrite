@@ -5,6 +5,7 @@ import type { NetInfoState } from "@react-native-community/netinfo";
 export interface ResumeCallbacks {
   onAppActive?: () => void;
   onNetworkAvailable?: () => void;
+  onNetworkUnavailable?: () => void;
   resumePendingUploads?: () => void;
 }
 
@@ -26,6 +27,8 @@ export function setupUploadResume(callbacks: ResumeCallbacks): () => void {
     if (state.isConnected) {
       callbacks.onNetworkAvailable?.();
       callbacks.resumePendingUploads?.();
+    } else if (state.isConnected === false) {
+      callbacks.onNetworkUnavailable?.();
     }
   };
 

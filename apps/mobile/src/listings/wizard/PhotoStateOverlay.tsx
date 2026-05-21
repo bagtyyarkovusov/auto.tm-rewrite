@@ -3,7 +3,7 @@ import {
   ActivityIndicator,
   Pressable,
 } from "react-native";
-import { Check, RefreshCw, X, AlertTriangle } from "lucide-react-native";
+import { Check, RefreshCw, X, AlertTriangle, WifiOff } from "lucide-react-native";
 
 import type { StagedPhoto } from "../uploadStaging/types";
 
@@ -92,6 +92,19 @@ export function PhotoStateOverlay({
           )}
         </View>
       </Pressable>
+    );
+  }
+
+  if (photo.state === "waiting_for_network") {
+    return (
+      <View className="absolute inset-0 items-center justify-center bg-warning-500/10">
+        <View className="items-center gap-1 rounded-md bg-background/90 px-2 py-1.5">
+          <Icon as={WifiOff} className="size-5 text-warning-500" />
+          <Text className="text-center text-[10px] font-medium text-muted-foreground">
+            Waiting for network
+          </Text>
+        </View>
+      </View>
     );
   }
 

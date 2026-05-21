@@ -15,7 +15,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 
 ### Stack
 
-- **`expo`** SDK 55, **`expo-router`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
+- **`expo`** SDK 55 (`expo@55.0.26`), **`expo-router@55.0.16`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
 - **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 18 RNR components installed at `apps/mobile/components/ui/` (alert-dialog, avatar, badge, button, card, dialog, dropdown-menu, icon, input, native-only-animated-view, progress, separator, sheet, skeleton, switch, text, toast, tooltip). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{alert-dialog, avatar, checkbox, dialog, dropdown-menu, label, popover, portal, progress, separator, slot, switch, tooltip}` v1.4.0 wired.
 - **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`).
 - **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
@@ -79,16 +79,16 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 |-----|----------------------|
 | **Autosave + photos** | `sell.tsx` syncs `uploadQueue.photos` into reducer via `UPDATE_FIELDS`, but **debounced `save()` does not depend on queue/photo payloads** — if only queue photos change until the next unrelated field edit, PATCH may lag until `forceSave` (step change / publish paths). |
 | **`publishGate` unused** | `useUploadQueue` computes `publishGate`; **sell tab never reads it** — Continue/Publish gating follows `wizardMachine` + contracts Zod (`photos[].key`), not staging states like `presigned` / `uploading`. |
-| **`waiting_for_network` state** | Declared on `PhotoState` and collectors in `queueState` / resume — **nothing in orchestration assigns it yet** — `PhotoStateOverlay` renders nothing for that state. |
+| **`waiting_for_network` state** | NetInfo offline events now move `compressed` / `presigned` / `uploading` photos into `waiting_for_network`; reconnect reuses upload resume. |
 | **`removePhoto` vs `queueRef`** | Compression/upload paths update `queueRef` synchronously; **remove relies on passive `queueRef.current = queue` on the next render** — brief window vs in-flight uploads. |
-| **`orphanCleanup`** | `cleanupOrphanDraftDirs()` exists — **nothing calls it on app boot** (staging dirs for vanished drafts linger until wired). Canonical detail in [`src/listings/CONTEXT.md`](src/listings/CONTEXT.md). |
+| **`orphanCleanup`** | `app/_layout.tsx` calls `cleanupOrphanDraftDirs(existingDraftIds, existingListingIds)` after authenticated `useMyDrafts` + `useMyListings` resolve. Canonical detail in [`src/listings/CONTEXT.md`](src/listings/CONTEXT.md). |
 | **Post-publish navigation** | `router.push('/(public)/listings/:id')` — **`app/(public)` tree absent** → broken navigation until a listing-detail route ships. |
 | **`Step2Photos` props noise** | Still accepts `payload` / `onChange` / `disabledTooltip`; **implementations ignore them** (photo props only). |
 | **Edit photos read-only** | `/listings/[id]/edit` renders `<ReadOnlyPhotos/>`, but [ADR-0024](../../docs/adr/0024-owner-post-publish-photo-editing.md) locks owner add/remove/reorder photos after publish as the product contract. Target behavior stages photo edits locally, may upload new files during edit, and applies `AttachMedia` / `RemoveMedia` / `ReorderMedia` only on **Save changes**. Cancel/discard cleanup for uploaded-but-unattached edit media is not implemented. |
 
 ### Planned refactor roadmap (follow-up PRs — not aspirational CONTEXT)
 
-1. **Correctness**: Fix autosave deps or trigger `save()` from queue sync; wire `publishGate` into Publish/Continue UX; synchronize `queueRef` on removals; optionally implement `waiting_for_network` or delete it from lifecycle; hook `cleanupOrphanDraftDirs`; add or stub **`/(public)/listings/[id]`** entry.
+1. **Correctness**: Fix autosave deps or trigger `save()` from queue sync; wire `publishGate` into Publish/Continue UX; synchronize `queueRef` on removals; add or stub **`/(public)/listings/[id]`** entry.
 
 2. **Edit media parity + create orchestration cleanup** (agreed): `/listings/[id]/edit` now shares **`wizardMachine` + `@auto-tm/contracts` step validation** with create and opens at Review/Save per [ADR-0026](../../docs/adr/0026-edit-mode-review-first-entry.md). Remaining edit parity work is media: per [ADR-0024](../../docs/adr/0024-owner-post-publish-photo-editing.md), edit mode must support owner photo add/remove/reorder after publish; stage photo edits locally, allow new uploads during edit for responsiveness, and apply `AttachMedia` / `RemoveMedia` / `ReorderMedia` only on **Save changes**. Cancel/discard should clean local staging and best-effort clean newly uploaded media that was never attached; remaining remote objects are storage orphans for server cleanup. Reuse or adapt the upload queue for published-listing media rather than keeping photos read-only. Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
 
@@ -163,7 +163,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 
 ### Expo SDK 55 package alignment
 
-Expo Go includes native modules at SDK-specific versions. `expo install --fix` aligned this app to the SDK 55 expected package set (`expo-router@55.0.14`, `react-native@0.83.6`, `react-native-svg@15.15.3`, `react-native-reanimated@4.2.1`). After package alignment, run `pnpm install --force` at the repo root; pnpm can otherwise leave stale symlinks in `apps/mobile/node_modules`.
+Expo Go includes native modules at SDK-specific versions. `expo install --check` expects this app's SDK 55 package set to include `expo@55.0.26`, `expo-router@55.0.16`, `expo-camera@55.0.19`, `expo-file-system@55.0.22`, `expo-font@55.0.8`, `expo-image-manipulator@55.0.17`, `react-native@0.83.6`, `react-native-svg@15.15.3`, and `react-native-reanimated@4.2.1`. After package alignment, run `pnpm install --force` at the repo root; pnpm can otherwise leave stale symlinks in `apps/mobile/node_modules`.
 
 Agents must run the mobile gate in `docs/agents/mobile-expo.md` before claiming SDK/package/runtime fixes. The first command is always:
 

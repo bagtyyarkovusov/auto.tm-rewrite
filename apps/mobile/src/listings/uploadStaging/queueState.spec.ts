@@ -12,11 +12,12 @@ import {
   findPhotoById,
   transitionPhotoToFailed,
   collectPhotosToResume,
+  transitionUploadQueueToWaitingForNetwork,
 } from "./queueState";
 import type { StagedPhoto, UploadQueue, UploadError } from "./types";
 
 function makeQueue(photos: StagedPhoto[]): UploadQueue {
-  return { draftId: "draft-1", photos };
+  return { stagingKey: "draft-1", photos };
 }
 
 function makePhoto(overrides: Partial<StagedPhoto> = {}): StagedPhoto {
@@ -178,6 +179,28 @@ describe("collectPhotosToResume", () => {
       makePhoto({ state: "failed", retryCount: 2, error: makeError("NETWORK_ERROR", true) }),
     ]);
     expect(collectPhotosToResume(queue)).toHaveLength(0);
+  });
+});
+
+describe("transitionUploadQueueToWaitingForNetwork", () => {
+  it("moves upload-ready and in-flight photos to waiting_for_network", () => {
+    const result = transitionUploadQueueToWaitingForNetwork(
+      makeQueue([
+        makePhoto({ photoId: "p1", state: "compressed" }),
+        makePhoto({ photoId: "p2", state: "presigned" }),
+        makePhoto({ photoId: "p3", state: "uploading" }),
+        makePhoto({ photoId: "p4", state: "uploaded" }),
+        makePhoto({ photoId: "p5", state: "failed" }),
+      ]),
+    );
+
+    expect(result.photos.map((photo) => photo.state)).toEqual([
+      "waiting_for_network",
+      "waiting_for_network",
+      "waiting_for_network",
+      "uploaded",
+      "failed",
+    ]);
   });
 });
 
