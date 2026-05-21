@@ -106,7 +106,7 @@ Pattern: **hybrid** —
 - **UI integration child issues** at the end: one per frontend surface (`mobile`, `web`, `admin` where applicable). These depend on the relevant slice issues.
 - **A "sprint-final wiring" child issue** that closes the loop: runs the full pipeline, smoke-tests the user-visible flow, updates the roadmap to 🟢, bumps current to the next sprint. Depends on everything else.
 
-Typical S2-S10 has 5-10 children. Aim for issues that fit a single sandcastle/Claude Code run (~1-3 hours each).
+Typical S2-S10 has 5-10 children. Aim for issues that fit a single Claude Code run (~1-3 hours each).
 
 ### 4.3 Compose the proposal table
 
@@ -257,7 +257,7 @@ Sprint <N> issues created.
 Parent:     #<parent-num>  https://github.com/.../issues/<parent-num>
 Children:   #<first>-#<last>  (M issues)
 
-Initially unblocked queue (sandcastle / /run-issue can start now):
+Initially unblocked queue (`/run-issue` can start now):
   - #<X>  S<N>: <title>
   - #<Y>  S<N>: <title>
   ...

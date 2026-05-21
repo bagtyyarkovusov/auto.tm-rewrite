@@ -18,7 +18,7 @@ An issue should have **exactly one** of these labels at a time.
 
 | Label | Meaning |
 |---|---|
-| `blocked` | Applied IN ADDITION to a triage label when the issue body's `## Depends on` section lists at least one open issue. The orchestrator (`sandcastle`) skips `blocked` issues even if they're `ready-for-agent`. Auto-removed by `.github/workflows/unblock.yml` when the last blocker closes; or `gh issue edit <n> --remove-label "blocked"` manually. |
+| `blocked` | Applied IN ADDITION to a triage label when the issue body's `## Depends on` section lists at least one open issue. The `/run-issue` skill skips `blocked` issues even if they're `ready-for-agent`. Removed by the `/run-issue` skill's §8 unblock-dependents step when the last blocker closes, or manually via `gh issue edit <n> --remove-label "blocked"`. |
 
 ## Area labels (orthogonal to triage state)
 

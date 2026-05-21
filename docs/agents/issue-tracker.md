@@ -51,7 +51,7 @@ Two kinds of issues coexist in this repo, **one parent per sprint** plus **one c
 | Type | Used for | Body shape |
 |---|---|---|
 | **Sprint PRD (parent)** | One per sprint (S1, S2, ...). Tracks child sub-issues. | Dashboard + tasklist — no agent prompt. |
-| **Sprint child** | One per vertical slice within a sprint. Read verbatim by `sandcastle` as an AFK agent prompt. | Self-contained prompt seed (see below). |
+| **Sprint child** | One per vertical slice within a sprint. Read verbatim by the `/run-issue` skill as an AFK agent prompt. | Self-contained prompt seed (see below). |
 
 ## Sprint PRD body template (parent)
 
@@ -75,14 +75,14 @@ Canonical in the sprint doc. The list above is the slice-level rollup; when ever
 
 ## How AFK agents pick this up
 
-Orchestrator (`.sandcastle/main.ts`) queries:
+AFK execution is launched manually via the `/run-issue <N>` skill (Claude Code). The user picks an issue from the unblocked queue:
 \`gh issue list --label "ready-for-agent" --search "-label:blocked" --json number,title,labels\`
-and picks the first match. Each pick feeds the issue body to sandcastle as the prompt.
+and invokes `/run-issue <N>`. The skill reads the issue body verbatim as its prompt and runs the full branch → implement → test → PR → merge → sync main → unblock-dependents flow.
 ```
 
-## Sprint child body template (sandcastle prompt seed)
+## Sprint child body template (`/run-issue` prompt seed)
 
-The body is read **verbatim** as the prompt by `sandcastle`, so it must be self-contained. Reference repo files by path; the agent reads them inside the sandbox.
+The body is read **verbatim** as the prompt by `/run-issue`, so it must be self-contained. Reference repo files by path; the agent reads them inside the working tree.
 
 ```markdown
 ## Summary
@@ -140,7 +140,7 @@ Parent PRD issues get `phase-N` + `feature` only — no triage label, since they
 ## Acceptance criteria — source of truth
 
 - **Sprint-wide DoD** lives in `docs/prd/sprints/sprint-NN-*.md`. It's mutable; updated as understanding sharpens.
-- **Slice-specific AC** lives in the child issue body. Once a sandcastle agent picks it up, the body is effectively immutable for that run.
+- **Slice-specific AC** lives in the child issue body. Once a `/run-issue` agent picks it up, the body is effectively immutable for that run.
 - The two never overlap semantically: sprint DoD describes the sprint demo; slice AC describes one vertical PR.
 
 ## Dependency tracking (`Depends on`)
@@ -151,16 +151,22 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 - When a blocker closes: a human removes the `blocked` label from dependents with `gh issue edit <n> --remove-label "blocked"`. (An automated `unblock` workflow was discussed during S1 but deferred — manual handling has been fine so far. Revisit if dependency graphs get larger in Phase 2.)
 - The orchestrator's AFK query is `gh issue list --label "ready-for-agent" --search "-label:blocked"`.
 
-## Sandcastle integration
+## `/run-issue` integration
 
-`sandcastle` is a prompt runner, not an issue picker. The orchestrator script in `.sandcastle/main.ts` performs, per run:
+`/run-issue <N>` is the Claude Code skill that drives one issue end-to-end. Per invocation it:
 
-1. `gh issue view <n> --json body,title,labels` — fetch
-2. Build prompt: a small house-rules header + the issue body verbatim
-3. `sandcastle.run({ promptFile, branchStrategy: { type: "branch", branch: \`agent/issue-${n}\` } })`
-4. On `<promise>COMPLETE</promise>`: `gh pr create --head agent/issue-${n} --title "..." --body "Closes #${n}"`
+1. Reads the issue body via `gh issue view <N> --json body,title,labels`
+2. Reads CLAUDE.md house rules + the issue's referenced docs (`## Read first` section)
+3. Creates an `agent/issue-<N>` branch off main
+4. Implements, tests, and runs the verification gate (typecheck, tests, Expo gate for mobile)
+5. Opens a PR with title mirroring the issue + body starting `Closes #<N>` so the issue auto-closes on merge
+6. Self-approves and merges the PR (no branch protection or required reviews in this repo)
+7. Syncs `main` locally
+8. Strips the `blocked` label from any open issue whose `## Depends on` section now has zero open blockers
 
-Branch convention: `agent/issue-<N>`. PR title mirrors issue title. PR body starts with `Closes #<N>` so the issue auto-closes when the PR merges.
+Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.
+
+Note: there is no separate orchestrator service or scheduled job — `/run-issue` runs synchronously in the user's Claude Code session. No `.github/workflows/unblock.yml` exists; step 8 above is where dependents get unblocked.
 
 ## Body template (general / non-sprint issues)
 
