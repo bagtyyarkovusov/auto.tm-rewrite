@@ -1,10 +1,10 @@
 import { View } from "react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
 import { useCities } from "../../api/catalog/useCities";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -74,7 +74,7 @@ function DescriptionInput({
   const descriptionLength = payload.description?.length ?? 0;
 
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Description *
       </Text>
@@ -121,7 +121,7 @@ function ContactPhoneInput({
   defaultPhone: string;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Contact phone
       </Text>
@@ -156,7 +156,7 @@ function ContactMethods({
 
   return (
     <>
-      <View className="gap-3">
+      <View className="gap-4">
         <View className="flex-row items-center justify-between">
           <Text className="text-base text-foreground">Calls</Text>
           <Switch
@@ -196,7 +196,11 @@ export default function Step7DescContact({
   defaultPhone = "",
 }: Step7DescContactProps) {
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
+        Description & contact
+      </Text>
+
       <ReviewSummary payload={payload} />
       <DescriptionInput
         payload={payload}

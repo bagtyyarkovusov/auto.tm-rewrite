@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { Check, AlertCircle } from "lucide-react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
@@ -10,8 +11,6 @@ import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
-
-import type { WizardSchemas } from "@auto-tm/contracts";
 import type { StagedPhoto } from "../uploadStaging/types";
 
 import { Button } from "@/components/ui/button";
@@ -65,8 +64,8 @@ export default function Step8Review({
   const uploadedPhotos = photos.filter((p) => p.key);
 
   return (
-    <View className="gap-4 py-4">
-      <Text className="text-lg font-semibold text-foreground">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
         Review your listing
       </Text>
 

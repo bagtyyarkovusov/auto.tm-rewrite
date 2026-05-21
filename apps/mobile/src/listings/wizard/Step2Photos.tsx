@@ -13,12 +13,12 @@ import {
 import type { StagedPhoto } from "../uploadStaging/types";
 
 import type { WizardPayload } from "./types";
+import { PhotoThumbnail } from "./PhotoThumbnail";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 
-import { PhotoThumbnail } from "./PhotoThumbnail";
 
 interface Step2PhotosProps {
   payload: WizardPayload;
@@ -153,7 +153,7 @@ function PhotoActions({
     <View className="flex-row gap-3">
       <Button
         variant="outline"
-        className="flex-1"
+        className="flex-1 h-[52px] rounded-full"
         onPress={onTakePhoto}
         disabled={disabled || maxReached}
       >
@@ -162,7 +162,7 @@ function PhotoActions({
       </Button>
       <Button
         variant="outline"
-        className="flex-1"
+        className="flex-1 h-[52px] rounded-full"
         onPress={onPickFromLibrary}
         disabled={disabled || maxReached}
       >
@@ -248,7 +248,11 @@ export default function Step2Photos({
   const photosError = fieldErrors?.photos;
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
+        Photos
+      </Text>
+
       <Text className="text-sm text-muted-foreground">
         Photos under 5 MB upload faster.
       </Text>

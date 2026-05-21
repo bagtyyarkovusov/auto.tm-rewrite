@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useExchangeRates } from "../../api/exchange-rates/useExchangeRates";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ function PriceInput({
   disabled: boolean;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Amount *</Text>
       {wrapDisabled(
         <Input
@@ -106,7 +106,7 @@ function CurrencyPicker({
 
   return (
     <>
-      <View className="gap-1">
+      <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">Currency</Text>
         {wrapDisabled(
           <Button
@@ -161,7 +161,7 @@ function SellerTerms({
   disabled: boolean;
 }) {
   return (
-    <View className="mt-2 gap-3">
+    <View className="mt-2 gap-4">
       <View className="flex-row items-center justify-between">
         <Text className="text-base text-foreground">Exchange possible</Text>
         <Switch
@@ -193,7 +193,11 @@ export default function Step5Price({
   const { tmtEquivalent } = usePriceStep(payload);
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
+        Price & terms
+      </Text>
+
       <PriceInput
         payload={payload}
         onChange={onChange}

@@ -210,6 +210,8 @@ export default function EditListingScreen() {
       publishLabel="Save changes"
       discardTitle="Leave edit mode?"
       discardDescription="Any unsaved changes will be lost."
+      isDiscarding={false}
+      discardError={null}
     >
       {currentStep === "vin" && (
         <Step1Vin
@@ -219,7 +221,10 @@ export default function EditListingScreen() {
         />
       )}
       {currentStep === "photos" && (
-        <View className="gap-4 py-4">
+        <View className="gap-5 py-5">
+          <Text className="text-2xl font-semibold text-foreground">
+            Photos
+          </Text>
           <Text className="text-sm text-muted-foreground">
             Photos cannot be changed after publishing. To update photos, create
             a new listing.

@@ -30,6 +30,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`react-native-svg`** (+ `react-native-svg-transformer` at build time) for vector icons and brand SVG rendering.
 - **`expo-linking`** installed (Universal Links / App Links handling will be wired in S4).
 - **`lucide-react-native`** for icons, rendered through the `@/components/ui/icon` wrapper.
+- **Custom fonts**: UberMove, UberMoveText, UberMoveMono families (8 files) loaded at root via `expo-font` `useFonts`. `tailwind.config.js` extends `fontFamily` with `uber-move`, `uber-move-text`, `uber-mono` tokens. All wizard step titles and key headings use `font-uber-move` (display); body text uses `font-uber-move-text`.
 
 ### Routes (Phase 1, today)
 
@@ -37,19 +38,24 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 /(tabs)/
   index               Feed (personalized listings)        — stub, no real feed
   favorites           Favorites + saved searches          — stub
-  sell                Sell / listing wizard entry         — 7-step create-listing wizard (S4)
+  sell                Sell / listing wizard entry         — 8-step create-listing wizard (S4)
   chat                Conversation list                   — stub
   services            Profile, garage, settings, blog     — stub
 
 /(auth)/
-  phone               Phone entry                         — wired (S2)
-  otp                 OTP verification                    — wired (S2)
+  phone               Phone entry                         — wired (S2), design-refactored (#124)
+  otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
 /dev/
   catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__
 ```
 
 No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
+
+## Navigation chrome (today)
+
+- **Tab bar**: Custom `AutoTmTabBar` component at `components/navigation/AutoTmTabBar.tsx`. Replaces default Expo Router tab bar; renders 5 routes (Search, Favorites, Sell, Chat, Services) with active/inactive icon + label styling. Central Sell action (`PlusCircle`) has distinct visual treatment. Uses `lucide-react-native` icons via RNR `Icon` wrapper.
+- **Auth modals**: `/(auth)/phone` and `/(auth)/otp` render as `presentation: "fullScreenModal"` Stack screens. Both use `KeyboardAvoidingView` + `SafeAreaView` layout with `BrandLogo`, `LocaleSwitcher`, and `PhoneInput` / `OtpCells` components.
 
 ## State management (today)
 
@@ -60,6 +66,7 @@ No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their ow
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 - Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
+- Wizard design system applied in #124: step titles (`text-2xl font-semibold`), body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height
 
 Identity hooks live at `src/api/identity/*`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).

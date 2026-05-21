@@ -3,6 +3,8 @@ import { Image as ImageIcon, MoreVertical } from "lucide-react-native";
 
 import type { StagedPhoto } from "../uploadStaging/types";
 
+import { PhotoStateOverlay } from "./PhotoStateOverlay";
+
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -13,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { PhotoStateOverlay } from "./PhotoStateOverlay";
 
 interface PhotoThumbnailProps {
   photo: StagedPhoto;

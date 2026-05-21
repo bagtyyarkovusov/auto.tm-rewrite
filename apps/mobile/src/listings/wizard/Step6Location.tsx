@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { View } from "react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
@@ -156,7 +156,11 @@ export default function Step6Location({
   const picker = useLocationPicker(payload);
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
+        Location
+      </Text>
+
       <PickerRow
         label="Region"
         required
@@ -179,7 +183,7 @@ export default function Step6Location({
         onPress={() => picker.setCityOpen(true)}
       />
 
-      <View className="gap-1">
+      <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
           Area / landmark
         </Text>

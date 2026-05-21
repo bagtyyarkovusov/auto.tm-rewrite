@@ -25,6 +25,8 @@ type AuthCopy = {
   wrongCode: string;
   expiredCode: string;
   lockedCode: string;
+  usedCode: string;
+  rateLimitedCode: string;
   resendIn: (seconds: number) => string;
   resendCode: string;
   verifyFailed: string;
@@ -57,6 +59,8 @@ export const authCopy: Record<Locale, AuthCopy> = {
     wrongCode: "Неверный код. Попробуйте еще раз.",
     expiredCode: "Код истек. Запросите новый.",
     lockedCode: "Слишком много попыток. Запросите новый код.",
+    usedCode: "Код уже использован. Запросите новый.",
+    rateLimitedCode: "Слишком много запросов. Подождите немного.",
     resendIn: (seconds) => `Отправить код снова через ${seconds} с`,
     resendCode: "Отправить код снова",
     verifyFailed: "Не удалось проверить код. Попробуйте еще раз.",
@@ -87,6 +91,8 @@ export const authCopy: Record<Locale, AuthCopy> = {
     wrongCode: "Kod nädogry. Täzeden synanyşyň.",
     expiredCode: "Koduň wagty gutardy. Täze kod soraň.",
     lockedCode: "Synanyşyk köpeldi. Täze kod soraň.",
+    usedCode: "Kod eýýäm ulanyldy. Täze kod soraň.",
+    rateLimitedCode: "Sorag köp. Biraz garaşyň.",
     resendIn: (seconds) => `Kody ${seconds} s soň täzeden iber`,
     resendCode: "Kody täzeden iber",
     verifyFailed: "Kody barlamak başartmady. Täzeden synanyşyň.",
@@ -117,6 +123,8 @@ export const authCopy: Record<Locale, AuthCopy> = {
     wrongCode: "Wrong code. Try again.",
     expiredCode: "Code expired. Request a new one.",
     lockedCode: "Too many attempts. Request a new code.",
+    usedCode: "Code already used. Request a new one.",
+    rateLimitedCode: "Too many requests. Please wait a moment.",
     resendIn: (seconds) => `Resend code in ${seconds}s`,
     resendCode: "Resend code",
     verifyFailed: "Could not verify the code. Try again.",
