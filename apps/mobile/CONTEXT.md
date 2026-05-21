@@ -60,6 +60,9 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   phone               Phone entry                         — wired (S2), design-refactored (#124)
   otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
+/(public)/
+  listings/[id]       Buyer-facing listing detail stub    — wired (S4, #133); renders title/price/photos/description from `useListingDetail`; no contact/favorite/chat (S5/S7)
+
 /listings/
   [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes orchestrated via `useSaveListingEdit` (fields → attach → remove → reorder, fail-fast, retry-from-failure per ADR-0025); no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
 
@@ -67,7 +70,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__
 ```
 
-There is **no** dedicated **`/sell/wizard`** Expo route — the create flow runs **inline** under `/(tabs)/sell`. No **`/(public)/listings/[id]`** listing-detail route exists in mobile yet (`sell.tsx` navigates there after publish — broken until that screen exists — see **[Listing wizard — known implementation gaps](#listing-wizard--known-implementation-gaps)**).
+There is **no** dedicated **`/sell/wizard`** Expo route — the create flow runs **inline** under `/(tabs)/sell`.
 
 No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
 
@@ -80,17 +83,13 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 | **`waiting_for_network` state** | NetInfo offline events now move `compressed` / `presigned` / `uploading` photos into `waiting_for_network`; reconnect reuses upload resume. |
 | **`removePhoto` vs `queueRef`** | Compression/upload paths update `queueRef` synchronously; **remove relies on passive `queueRef.current = queue` on the next render** — brief window vs in-flight uploads. |
 | **`orphanCleanup`** | `app/_layout.tsx` calls `cleanupOrphanDraftDirs(existingDraftIds, existingListingIds)` after authenticated `useMyDrafts` + `useMyListings` resolve. Canonical detail in [`src/listings/CONTEXT.md`](src/listings/CONTEXT.md). |
-| **Post-publish navigation** | `router.push('/(public)/listings/:id')` — **`app/(public)` tree absent** → broken navigation until a listing-detail route ships. |
 | **`Step2Photos` props noise** | Still accepts `payload` / `onChange` / `disabledTooltip`; **implementations ignore them** (photo props only). |
 
 ### Planned refactor roadmap (follow-up PRs — not aspirational CONTEXT)
 
-1. **Correctness**: Wire `publishGate` into Publish/Continue UX; synchronize `queueRef` on removals; add or stub **`/(public)/listings/[id]`** entry.
-
-2. **Create orchestration cleanup**: Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
+1. **Create orchestration cleanup**: Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
 
    Remaining convergence items (locked 2026-05-22):
-   - **Post-publish navigation**: stub `app/(public)/listings/[id].tsx` as a minimal screen consuming `useListingDetail`; Publish + Save changes both use `router.replace` to land there.
    - **Design system migration**: add `size="pill"` variant + `disabled:bg-muted disabled:border-border disabled:text-muted-foreground` baked into every Button variant. Wizard footer migrates from inlined `cn()` classes to `variant + size` props.
    - **Heading hierarchy**: Apple Large Title pattern in `WizardHeader` (muted position-marker row + `text-2xl font-heading` step title + progress); step bodies delete their `text-2xl font-semibold` title.
 
@@ -132,8 +131,8 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 - **S3 (Catalog)** — `src/api/catalog/*` hooks; dev-only `/dev/catalog` route gated `__DEV__`. ✅ Shipped.
 - **S4 (Listings CRUD)** —
   - Mobile uploads are **HTTPS PUT** to presigned URLs — **`apps/mobile/package.json` does not include `@aws-sdk/client-s3`** (clients never embedded the SDK; server issues presigned URLs).
-  - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**.
-  - **Still missing vs PRD / backlog**: **`/(public)/listings/[id]`** buyer listing screen, optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
+  - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**, **`/(public)/listings/[id]`** buyer detail stub.
+  - **Still missing vs PRD / backlog**: optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
   - Mobile foundation (`apps/mobile` deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging pipeline) ✅ Shipped.
 - **S5 (Listings UX)** — saved-search UI, filter sheet; mobile picker modals (brand-picker, model-picker)
