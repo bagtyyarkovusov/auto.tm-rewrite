@@ -30,7 +30,7 @@ export function PickerRow({
   const isDisabled = disabled || locked;
 
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         {label}
         {required ? " *" : ""}
@@ -40,7 +40,7 @@ export function PickerRow({
         disabled={isDisabled}
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled }}
-        className={`flex-row items-center justify-between border border-border rounded-md bg-card px-3 py-3${isDisabled ? " opacity-50" : ""}`}
+        className={`flex-row items-center justify-between border border-border rounded-md bg-card px-3 h-[52px]${isDisabled ? " opacity-50" : ""}`}
       >
         <Text
           className={

@@ -1,5 +1,4 @@
 import { View } from "react-native";
-
 import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { Input } from "@/components/ui/input";
@@ -21,12 +20,16 @@ export default function Step1Vin({
   const vinError = fieldErrors?.vin;
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
+        VIN or chassis number
+      </Text>
+
       <Text className="text-sm text-muted-foreground">
         Optional. You can fill details manually.
       </Text>
 
-      <View className="gap-2">
+      <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
           VIN / chassis number
         </Text>

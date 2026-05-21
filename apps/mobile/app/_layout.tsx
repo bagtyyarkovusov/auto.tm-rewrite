@@ -4,6 +4,7 @@ import { Stack, router } from "expo-router";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
 import { StatusBar } from "expo-status-bar";
+import { useFonts } from "expo-font";
 import { useColorScheme } from "nativewind";
 import {
   focusManager,
@@ -12,10 +13,9 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { AppState, type AppStateStatus } from "react-native";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
-
 
 import { NAV_THEME } from "../lib/theme";
 import { ApiError } from "../src/api/client";
@@ -65,6 +65,35 @@ function isOnline(state: NetInfoState): boolean {
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme ?? "light";
+
+   
+  const [fontsLoaded] = useFonts({
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "UberMove-Bold": require("../assets/fonts/UberMoveBold.otf"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "UberMove-Medium": require("../assets/fonts/UberMoveMedium.otf"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "UberMoveText-Bold": require("../assets/fonts/UberMoveTextBold.otf"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "UberMoveText-Light": require("../assets/fonts/UberMoveTextLight.otf"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "UberMoveText-Medium": require("../assets/fonts/UberMoveTextMedium.otf"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "UberMoveText-Regular": require("../assets/fonts/UberMoveTextRegular.otf"),
+    ...(Platform.OS === "ios"
+      ? {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          "UberMoveMono-Medium": require("../assets/fonts/UberMoveMono-Medium.woff2"),
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          "UberMoveMono-Regular": require("../assets/fonts/UberMoveMono-Regular.woff2"),
+        }
+      : {}),
+  });
+
+  // Prevent rendering until fonts are loaded to avoid layout shift
+  if (!fontsLoaded) {
+    return null;
+  }
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", onAppStateChange);

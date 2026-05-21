@@ -150,12 +150,16 @@ export default function OtpScreen() {
       requestAnimationFrame(() => otpRef.current?.focus());
 
       if (error instanceof ApiError) {
-        if (error.code === "INVALID_OTP" || error.code === "OTP_ALREADY_USED") {
+        if (error.code === "INVALID_OTP") {
           setOtpError(copy.wrongCode);
+        } else if (error.code === "OTP_ALREADY_USED") {
+          setOtpError(copy.usedCode);
         } else if (error.code === "OTP_EXPIRED" || error.code === "OTP_NOT_FOUND") {
           setOtpError(copy.expiredCode);
         } else if (error.code === "OTP_LOCKED") {
           setOtpError(copy.lockedCode);
+        } else if (error.code === "RATE_LIMITED" || error.status === 429) {
+          setOtpError(copy.rateLimitedCode);
         } else {
           setOtpError(error.message || copy.verifyFailed);
         }
@@ -227,6 +231,7 @@ export default function OtpScreen() {
 
           <OtpCells
             ref={otpRef}
+            disabled={isVerifying || isResending}
             hasError={otpError !== null}
             length={OTP_LENGTH}
             onChange={handleCodeChange}
@@ -248,10 +253,12 @@ export default function OtpScreen() {
             className="self-start px-0"
             onPress={resendCode}
           >
-            <Text>
+            <Text className={secondsRemaining > 0 || isResending ? "text-muted-foreground" : "text-foreground underline"}>
               {secondsRemaining > 0
                 ? copy.resendIn(secondsRemaining)
-                : copy.resendCode}
+                : isResending
+                  ? copy.loading
+                  : copy.resendCode}
             </Text>
           </Button>
 

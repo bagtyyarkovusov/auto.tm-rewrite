@@ -3,6 +3,7 @@ import { type Href, router, useNavigation } from "expo-router";
 import { useEffect, useReducer, useState, useCallback } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { WizardSchemas } from "@auto-tm/contracts";
 
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
 import { useDiscardDraft } from "../../src/api/listings/useDiscardDraft";
@@ -29,7 +30,6 @@ import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
 import Step8Review from "../../src/listings/wizard/Step8Review";
 
-import { WizardSchemas } from "@auto-tm/contracts";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
@@ -341,6 +341,8 @@ export default function SellScreen() {
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
         secondaryAction={secondaryAction}
+        isDiscarding={discardDraft.isPending}
+        discardError={discardDraft.error?.message ?? null}
       >
         {currentStep === "vin" && (
           <Step1Vin
@@ -418,41 +420,62 @@ export default function SellScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center px-4">
-        <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
-        <Text className="mt-4 text-lg font-semibold text-foreground">
-          Sell your car
-        </Text>
-        <Text className="mt-1 text-center text-sm text-muted-foreground">
-          List your vehicle on AutoTM
+      <View className="flex-1 px-5 pt-3">
+        <Text className="text-[32px] font-bold leading-tight tracking-tight text-foreground">
+          Sell
         </Text>
 
         {hasDrafts && isAuthenticated && !draftsLoading ? (
-          <View className="mt-6 w-full gap-3">
+          <View className="mt-6 w-full gap-4">
+            <View className="gap-3 rounded-xl border border-border p-4">
+              <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                Latest draft
+              </Text>
+              <Text className="text-lg font-semibold text-foreground">
+                {existingDraft.payload.brandId && existingDraft.payload.modelId
+                  ? `${existingDraft.payload.year ?? ""} ${existingDraft.payload.brandId} ${existingDraft.payload.modelId}`
+                  : "Continue your listing"}
+              </Text>
+              <Text className="text-sm text-muted-foreground">
+                {existingDraft.payload.photos?.length
+                  ? `${existingDraft.payload.photos.length} photo${existingDraft.payload.photos.length !== 1 ? "s" : ""}`
+                  : "No photos yet"}
+                {" · "}
+                {existingDraft.payload.priceAmount
+                  ? `${existingDraft.payload.priceAmount.toLocaleString()} ${existingDraft.payload.priceCurrency ?? "TMT"}`
+                  : "Price missing"}
+              </Text>
+              <Button
+                className="h-[52px] rounded-full bg-foreground"
+                onPress={() => handleContinueDraft(existingDraft)}
+              >
+                <Text className="text-background">Continue listing</Text>
+              </Button>
+            </View>
             <Button
-              size="lg"
-              variant="default"
-              onPress={() => handleContinueDraft(existingDraft)}
-            >
-              <Text>Continue listing</Text>
-            </Button>
-            <Button
-              size="lg"
+              className="h-[52px] rounded-full border-foreground bg-background"
               variant="outline"
               onPress={handleCreateNewDraft}
             >
-              <Text>New listing</Text>
+              <Text className="text-foreground">New listing</Text>
             </Button>
           </View>
         ) : (
-          <Button
-            className="mt-6"
-            size="lg"
-            variant="default"
-            onPress={handleStartListing}
-          >
-            <Text>Start listing</Text>
-          </Button>
+          <View className="flex-1 items-center justify-center px-4">
+            <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
+            <Text className="mt-4 text-lg font-semibold text-foreground">
+              Sell your car
+            </Text>
+            <Text className="mt-1 text-center text-sm text-muted-foreground">
+              List your vehicle on AutoTM
+            </Text>
+            <Button
+              className="mt-6 h-[52px] rounded-full bg-foreground"
+              onPress={handleStartListing}
+            >
+              <Text className="text-background">Start listing</Text>
+            </Button>
+          </View>
         )}
       </View>
 

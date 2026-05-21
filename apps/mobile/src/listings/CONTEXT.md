@@ -14,10 +14,11 @@ Client-side listing creation and upload pipeline for the Expo mobile app. Three 
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
     - `wizardMachine.spec.ts` — unit tests for reducer
     - `useWizardAutosave.spec.tsx` — tests for save lifecycle
-    - `Step1Vin.tsx` … `Step7DescContact.tsx` — step UI components (<60 lines JSX each; business logic extracted into step-specific hooks and sub-components)
-    - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`)
+    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI components (business logic extracted into step-specific hooks and sub-components). Design system: step title (`text-2xl font-semibold text-foreground`), body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons.
+    - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`). Footer buttons are 52px pill-shaped (`h-[52px] rounded-full`). Overflow button opens `WizardOverflowMenu` sheet first; "Discard draft" inside the sheet opens `DiscardConfirmationDialog`. Dialog shows loading spinner + "Discarding…" and error text when discard mutation is pending or fails.
     - `PhotoThumbnail.tsx` — photo grid item with state overlay and reorder menu
     - `PhotoStateOverlay.tsx` — per-photo upload-state badge (compressing, uploading, failed, cover, etc.)
+    - `PickerRow.tsx` — shared pressable picker row (`components/listings/wizard/`). 52px height, border, chevron/lock icon, label + error + helper text support.
   - `uploadStaging/` — media upload pipeline
     - `types.ts` — `PhotoState`, `UploadErrorCode`, `StagedPhoto`, `UploadQueue`, `PublishGateResult`
     - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track

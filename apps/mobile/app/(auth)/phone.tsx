@@ -83,6 +83,15 @@ export default function PhoneScreen() {
       : copy.phoneFormatError;
   }, [copy, phoneValidation, requestError, touched]);
 
+  const showError = useMemo(() => {
+    if (requestError) return true;
+    if (!touched) return false;
+    // Only show aggressive red after blur OR when 8+ digits have been entered
+    const localDigits = phoneDisplay.replace(/\D/g, "");
+    if (localDigits.length >= 8) return phoneValidation !== null;
+    return phoneValidation === "format";
+  }, [requestError, touched, phoneDisplay, phoneValidation]);
+
   function handlePhoneChange(value: string) {
     setPhoneDisplay(formatLocalPhone(value));
     setRequestError(null);
@@ -164,7 +173,7 @@ export default function PhoneScreen() {
               </Text>
               <PhoneInput
                 accessibilityLabel={copy.phoneLabel}
-                hasError={!!(requestError || (touched && phoneValidation !== null))}
+                hasError={showError}
                 keyboardType="phone-pad"
                 onBlur={() => setTouched(true)}
                 onChangeText={handlePhoneChange}
@@ -174,7 +183,7 @@ export default function PhoneScreen() {
               />
               <Text
                 className={
-                  requestError || (touched && phoneValidation !== null)
+                  showError
                     ? "text-sm leading-snug text-destructive"
                     : "text-sm leading-snug text-muted-foreground"
                 }

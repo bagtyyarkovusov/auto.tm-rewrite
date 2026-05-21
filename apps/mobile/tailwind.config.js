@@ -53,11 +53,17 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: { 500: "#16a34a" },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        sans: ["UberMoveText-Regular", "system-ui", "sans-serif"],
+        heading: ["UberMove-Medium", "system-ui", "sans-serif"],
+        mono: ["UberMoveMono-Regular", "Menlo", "monospace"],
       },
       borderWidth: {
         hairline: hairlineWidth(),

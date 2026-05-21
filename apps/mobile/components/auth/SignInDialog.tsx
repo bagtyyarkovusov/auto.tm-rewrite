@@ -46,6 +46,7 @@ export function SignInDialog({
         <Button
           size="lg"
           variant="default"
+          className="h-[52px] rounded-full"
           onPress={() => {
             onOpenChange(false);
             setIntent({ returnPath, replay });

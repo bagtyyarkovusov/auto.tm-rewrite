@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { View } from "react-native";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useGenerations } from "../../api/catalog/useGenerations";
 import { useModels } from "../../api/catalog/useModels";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
+
+import {
+  shouldShowVehicleFieldError,
+  type VehicleField,
+} from "./vehicleFieldErrorVisibility";
 
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
-import {
-  shouldShowVehicleFieldError,
-  type VehicleField,
-} from "./vehicleFieldErrorVisibility";
 
 interface Step3VehicleIdProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -202,7 +203,7 @@ function YearInput({
   });
 
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Year *</Text>
       <View className={disabled ? "opacity-50" : undefined}>
         <Input
@@ -328,7 +329,11 @@ export default function Step3VehicleId({
       : undefined;
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
+        Vehicle details
+      </Text>
+
       <PickerRow
         label="Brand"
         required

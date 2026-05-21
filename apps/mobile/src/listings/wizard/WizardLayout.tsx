@@ -1,6 +1,6 @@
 import { ChevronLeft, MoreVertical, AlertCircle, RefreshCw } from "lucide-react-native";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
+import { WizardOverflowMenu } from "@/components/listings/wizard/WizardOverflowMenu";
 
 interface FooterAction {
   label: string;
@@ -47,6 +49,8 @@ interface WizardLayoutProps {
   publishLabel?: string;
   discardTitle?: string;
   discardDescription?: string;
+  isDiscarding?: boolean;
+  discardError?: string | null;
 }
 
 function WizardHeader({
@@ -69,14 +73,14 @@ function WizardHeader({
   progressPercent: number;
 }) {
   return (
-    <View className="border-b border-border px-4 py-3 gap-2">
+    <View className="border-b border-border px-5 py-3 gap-2">
       <View className="flex-row items-center justify-between">
         <View className="w-10">
           {canGoBack && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-11 w-11"
+              className="h-10 w-10"
               onPress={onBack}
               accessibilityLabel="Go back"
             >
@@ -93,7 +97,7 @@ function WizardHeader({
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11"
+            className="h-10 w-10"
             onPress={onOpenDiscard}
             accessibilityLabel="More options"
           >
@@ -114,8 +118,8 @@ function WizardHeader({
 
       <Progress
         value={progressPercent}
-        className="bg-muted"
-        indicatorClassName="bg-primary"
+        className="bg-muted h-1"
+        indicatorClassName="bg-foreground"
       />
     </View>
   );
@@ -130,7 +134,7 @@ function SaveStatusIndicator({
 }) {
   const saveStatusText =
     saveStatus === "saving"
-      ? "Saving draft"
+      ? "Saving draft..."
       : saveStatus === "error"
         ? "Could not save"
         : saveStatus === "saved"
@@ -146,7 +150,7 @@ function SaveStatusIndicator({
           saveStatus === "error"
             ? "text-destructive"
             : saveStatus === "saved"
-              ? "text-foreground"
+              ? "text-success-500"
               : "text-muted-foreground"
         }`}
       >
@@ -178,7 +182,7 @@ function SaveErrorBanner({
   if (saveStatus !== "error" || !saveError) return null;
 
   return (
-    <View className="mx-4 mt-3 flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
+    <View className="mx-5 mt-3 flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
       <Icon as={AlertCircle} className="size-4 text-destructive" />
       <Text className="flex-1 text-sm text-destructive">{saveError}</Text>
       <Button variant="ghost" size="sm" onPress={onRetrySave}>
@@ -213,15 +217,9 @@ function WizardFooter({
 }) {
   const primaryDisabled = isLastStep ? !canPublish : !canContinue;
   const showDisabledReason = primaryDisabled && Boolean(disabledReason);
-  const primaryButtonDisabledClass = primaryDisabled
-    ? "border border-border bg-muted opacity-100 shadow-none"
-    : undefined;
-  const primaryButtonTextClass = primaryDisabled
-    ? "text-muted-foreground"
-    : undefined;
 
   return (
-    <View className="border-t border-border px-4 py-3 gap-2">
+    <View className="border-t border-border px-5 py-3 gap-2">
       {showDisabledReason && (
         <Text className="text-xs text-muted-foreground">
           {disabledReason}
@@ -229,17 +227,21 @@ function WizardFooter({
       )}
       <View className="flex-row gap-3">
         {canGoBack ? (
-          <Button variant="outline" className="flex-1" onPress={onBack}>
-            <Text>Back</Text>
+          <Button
+            variant="outline"
+            className="flex-1 h-[52px] rounded-full border-foreground bg-background"
+            onPress={onBack}
+          >
+            <Text className="text-foreground">Back</Text>
           </Button>
         ) : secondaryAction ? (
           <Button
             variant="outline"
-            className="flex-1"
+            className="flex-1 h-[52px] rounded-full border-foreground bg-background"
             onPress={secondaryAction.onPress}
             disabled={secondaryAction.disabled}
           >
-            <Text>{secondaryAction.label}</Text>
+            <Text className="text-foreground">{secondaryAction.label}</Text>
           </Button>
         ) : (
           <View className="flex-1" />
@@ -247,21 +249,33 @@ function WizardFooter({
 
         {isLastStep ? (
           <Button
-            variant="default"
-            className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
+            className={cn(
+              "flex-1 h-[52px] rounded-full",
+              primaryDisabled
+                ? "bg-muted border border-border"
+                : "bg-foreground"
+            )}
             onPress={onPublish}
             disabled={!canPublish}
           >
-            <Text className={primaryButtonTextClass}>{publishLabel}</Text>
+            <Text className={primaryDisabled ? "text-muted-foreground" : "text-background"}>
+              {publishLabel}
+            </Text>
           </Button>
         ) : (
           <Button
-            variant="default"
-            className={`flex-1 ${primaryButtonDisabledClass ?? ""}`}
+            className={cn(
+              "flex-1 h-[52px] rounded-full",
+              primaryDisabled
+                ? "bg-muted border border-border"
+                : "bg-foreground"
+            )}
             onPress={onContinue}
             disabled={!canContinue}
           >
-            <Text className={primaryButtonTextClass}>Continue</Text>
+            <Text className={primaryDisabled ? "text-muted-foreground" : "text-background"}>
+              Continue
+            </Text>
           </Button>
         )}
       </View>
@@ -273,7 +287,9 @@ function WizardFooter({
           onPress={secondaryAction.onPress}
           disabled={secondaryAction.disabled}
         >
-          <Text className="text-sm text-primary">{secondaryAction.label}</Text>
+          <Text className="text-sm text-foreground underline">
+            {secondaryAction.label}
+          </Text>
         </Button>
       )}
     </View>
@@ -286,12 +302,16 @@ function DiscardConfirmationDialog({
   onDiscard,
   discardTitle,
   discardDescription,
+  isDiscarding,
+  discardError,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDiscard: () => void;
   discardTitle: string;
   discardDescription: string;
+  isDiscarding?: boolean;
+  discardError?: string | null;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -300,17 +320,27 @@ function DiscardConfirmationDialog({
           <AlertDialogTitle>{discardTitle}</AlertDialogTitle>
           <AlertDialogDescription>{discardDescription}</AlertDialogDescription>
         </AlertDialogHeader>
+        {discardError ? (
+          <Text className="text-sm text-destructive">{discardError}</Text>
+        ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel onPress={() => onOpenChange(false)}>
+          <AlertDialogCancel disabled={isDiscarding} onPress={() => onOpenChange(false)}>
             <Text>Cancel</Text>
           </AlertDialogCancel>
           <AlertDialogAction
+            disabled={isDiscarding}
             onPress={() => {
-              onOpenChange(false);
               onDiscard();
             }}
           >
-            <Text className="text-destructive-foreground">Discard draft</Text>
+            {isDiscarding ? (
+              <View className="flex-row items-center gap-2">
+                <ActivityIndicator size="small" color="#ffffff" />
+                <Text className="text-destructive-foreground">Discarding…</Text>
+              </View>
+            ) : (
+              <Text className="text-destructive-foreground">Discard draft</Text>
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -341,8 +371,11 @@ export function WizardLayout({
   publishLabel = "Publish",
   discardTitle = "Discard draft?",
   discardDescription = "This removes your draft and staged photos for this listing.",
+  isDiscarding = false,
+  discardError = null,
 }: WizardLayoutProps) {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -353,11 +386,11 @@ export function WizardLayout({
         stepCount={stepCount}
         canGoBack={canGoBack}
         onBack={onBack}
-        onOpenDiscard={() => setShowDiscardDialog(true)}
+        onOpenDiscard={() => setShowOverflowMenu(true)}
         progressPercent={progressPercent}
       />
 
-      <View className="flex-row items-center justify-between px-4 py-1">
+      <View className="flex-row items-center justify-between px-5 py-1">
         <SaveStatusIndicator
           saveStatus={saveStatus}
           onRetrySave={onRetrySave}
@@ -370,7 +403,7 @@ export function WizardLayout({
         onRetrySave={onRetrySave}
       />
 
-      <ScrollView className="flex-1 px-4">{children}</ScrollView>
+      <ScrollView className="flex-1 px-5">{children}</ScrollView>
 
       <WizardFooter
         isLastStep={isLastStep}
@@ -385,12 +418,22 @@ export function WizardLayout({
         publishLabel={publishLabel}
       />
 
+      <WizardOverflowMenu
+        open={showOverflowMenu}
+        onOpenChange={setShowOverflowMenu}
+        onDiscard={() => setShowDiscardDialog(true)}
+      >
+        <View />
+      </WizardOverflowMenu>
+
       <DiscardConfirmationDialog
         open={showDiscardDialog}
         onOpenChange={setShowDiscardDialog}
         onDiscard={onDiscard}
         discardTitle={discardTitle}
         discardDescription={discardDescription}
+        isDiscarding={isDiscarding}
+        discardError={discardError}
       />
     </SafeAreaView>
   );

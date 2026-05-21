@@ -2,6 +2,7 @@ import { X } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
+import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useColors } from "../../api/catalog/useColors";
 import { useBodyTypes } from "../../api/catalog/useBodyTypes";
@@ -9,7 +10,6 @@ import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 
-import type { WizardSchemas } from "@auto-tm/contracts";
 
 import {
   Sheet,
@@ -315,7 +315,11 @@ export default function Step4Specs({
   const specs = useSpecsStep(payload);
 
   return (
-    <View className="gap-4 py-4">
+    <View className="gap-5 py-5">
+      <Text className="text-2xl font-semibold text-foreground">
+        Specifications
+      </Text>
+
       <ConditionToggle
         condition={specs.condition}
         disabled={disabled}
@@ -382,7 +386,7 @@ function ConditionToggle({
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
 }) {
   return (
-    <View className="gap-2">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Condition</Text>
       <View className="flex-row gap-3">
         <Button
@@ -429,7 +433,7 @@ function MileageInput({
   disabled: boolean;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Mileage, km *
       </Text>
@@ -467,7 +471,7 @@ function ColorPicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Color</Text>
       {wrapDisabled(
         <Button
@@ -506,7 +510,7 @@ function BodyTypePicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Body type</Text>
       {wrapDisabled(
         <Button
@@ -539,7 +543,7 @@ function TransmissionPicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Transmission
       </Text>
@@ -576,7 +580,7 @@ function DriveTypePicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Drive type</Text>
       {wrapDisabled(
         <Button
@@ -609,7 +613,7 @@ function EngineTypePicker({
   onPress: () => void;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Engine type</Text>
       {wrapDisabled(
         <Button
@@ -642,7 +646,7 @@ function EnginePowerInput({
   disabled: boolean;
 }) {
   return (
-    <View className="gap-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
         Engine power (hp)
       </Text>

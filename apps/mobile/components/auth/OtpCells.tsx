@@ -19,6 +19,7 @@ interface OtpCellsProps {
   onChange: (value: string) => void;
   hasError?: boolean;
   length?: number;
+  disabled?: boolean;
 }
 
 interface OtpCellsRef {
@@ -27,7 +28,7 @@ interface OtpCellsRef {
 }
 
 const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
-  ({ value, onChange, hasError, length = 6 }, ref) => {
+  ({ value, onChange, hasError, length = 6, disabled }, ref) => {
     const inputRef = useRef<TextInput>(null);
     const shake = useRef(new Animated.Value(0)).current;
 
@@ -72,7 +73,7 @@ const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
     }
 
     return (
-      <Pressable onPress={() => inputRef.current?.focus()}>
+      <Pressable onPress={() => !disabled && inputRef.current?.focus()}>
         <Animated.View
           className="flex-row gap-2"
           style={{ transform: [{ translateX: shake }] }}
@@ -85,21 +86,23 @@ const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
             return (
               <View
                 className={cn(
-                  "h-12 flex-1 items-center justify-center rounded-md border bg-card",
+                  "aspect-square flex-1 items-center justify-center rounded-lg border bg-card",
                   errored && "border-2 border-destructive",
-                  !errored && focused && "border-2 border-primary",
-                  !errored && !focused && digit && "border border-primary",
+                  !errored && focused && "border-2 border-foreground",
+                  !errored && !focused && digit && "border border-foreground",
                   !errored &&
                     !focused &&
                     !digit &&
                     "border border-border bg-muted",
+                  disabled && "opacity-50",
                 )}
                 key={index}
                 pointerEvents="none"
               >
                 <Text
                   className={cn(
-                    "font-mono text-2xl font-semibold leading-tight text-foreground",
+                    "text-2xl font-semibold leading-tight font-uber-mono",
+                    errored ? "text-destructive" : "text-foreground",
                     digit ? "opacity-100" : "opacity-0",
                   )}
                 >
@@ -114,6 +117,7 @@ const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
           autoComplete="sms-otp"
           caretHidden
           className="absolute inset-0 opacity-0"
+          editable={!disabled}
           inputMode="numeric"
           keyboardType="number-pad"
           maxLength={length}
