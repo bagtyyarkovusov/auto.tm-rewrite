@@ -33,8 +33,10 @@ In order:
 4. `docs/prd/sprints/sprint-<NN+1>-<name>.md` if it exists — next sprint's spec (for prereq comparison)
 5. `docs/agents/issue-tracker.md` — issue body templates + label rules
 6. `CONTEXT-MAP.md` — index of CONTEXT.md files
-7. For each bounded context the sprint touched (from the sprint file's `## Bounded contexts touched` section): `apps/api/src/modules/<context>/CONTEXT.md`
-8. `docs/adr/` directory listing — to know what ADRs exist; read any referenced by the sprint file
+7. `docs/adr/0019-context-md-describes-current-state.md` and `docs/adr/0020-document-hierarchy-and-mutability.md`
+8. `docs/agents/documentation-lookups.md`
+9. For each bounded context the sprint touched (from the sprint file's `## Bounded contexts touched` section): `apps/api/src/modules/<context>/CONTEXT.md`
+10. `docs/adr/` directory listing — to know what ADRs exist; read any referenced by the sprint file
 
 If sprint file or roadmap is missing, stop and tell the user.
 
@@ -159,6 +161,23 @@ If coverage on `domain/` or `application/` directories is below 70% (per charter
 
 This is a spot-check, not a definitive measurement.
 
+### 4.7 Architecture and complexity drift
+
+Run a focused pass for the kinds of shortcuts `/run-issue` may miss when it is trying to ship:
+
+```bash
+rg "@nestjs|@prisma/client|Prisma\\." apps/api/src/modules/*/domain apps/api/src/modules/*/application || true
+rg "from ['\"](\\.\\./)+[a-z-]+/(domain|application|infrastructure|presentation)" apps/api/src/modules || true
+rg "Manager|Helper|Wrapper|Service" apps/api/src/modules apps/mobile/src apps/web/src apps/admin/src || true
+```
+
+Treat results as review leads, not automatic defects. Flag real issues when:
+- domain/application code imports framework, ORM, SDK, or transport details
+- one bounded context imports another context directly instead of using a port or event
+- new abstractions are pass-through wrappers that add interface surface without hiding complexity
+- use-cases or UI containers became large enough that future agents will have to understand unrelated responsibilities to change one behavior
+- PRs touched external libraries but did not mention Context7 or the relevant `docs/agents/*` guide in their PR body
+
 ---
 
 ## 5. Identify prerequisites for sprint N+1
@@ -219,6 +238,9 @@ Write to `docs/prd/sprints/sprint-<NN>-<name>-retro.md`:
 
 ### Test coverage
 - <findings, with the actual numbers from §4.6 if measured>
+
+### Architecture / complexity drift
+- <each finding from §4.7>
 
 ## Prerequisites for sprint <N+1>
 

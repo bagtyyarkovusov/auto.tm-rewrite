@@ -34,7 +34,9 @@ description: Creates GitHub issues for an AutoTM sprint from its docs/prd/sprint
 5. `docs/agents/issue-tracker.md` — **the canonical templates** for Sprint PRD parent + Sprint child bodies, label rules
 6. `docs/agents/triage-labels.md` — label vocabulary
 7. `CONTEXT-MAP.md` — to know which per-context `CONTEXT.md` to reference per issue
-8. The relevant per-context `CONTEXT.md` files and any ADRs the sprint file lists in `## References`
+8. `docs/adr/0019-context-md-describes-current-state.md` and `docs/adr/0020-document-hierarchy-and-mutability.md`
+9. `docs/agents/documentation-lookups.md` — so child issues can require Context7 for touched external libraries
+10. The relevant per-context `CONTEXT.md` files and any ADRs the sprint file lists in `## References`
 
 If `docs/agents/issue-tracker.md` is missing or empty, stop — the conventions aren't codified.
 
@@ -105,6 +107,18 @@ Pattern: **hybrid** —
 
 Typical 5-10 children. Aim for ~1-3 hours per issue.
 
+### 4.2.5 Slice quality bar
+
+Before showing the proposal, check each child issue against this bar:
+
+- **One reason to change**: each child should map to one foundations concern, one use-case, one frontend surface, or one final-wiring sweep. If a child mixes unrelated actors or layers, split it.
+- **Vertical where it matters**: use-case children should carry domain + application + infrastructure + presentation changes together when that produces a shippable behavior. Do not create shallow layer-only issues unless the sprint truly needs a shared foundation first.
+- **Clear boundary ownership**: each child names the bounded context(s), app/package `CONTEXT.md`, ports, events, routes, and mappers it may affect.
+- **TDD where it pays**: domain/application/security/persistence slices name the first failing tests. UI-only, docs-only, and mechanical wiring slices do not pretend to be TDD work.
+- **No hidden library guessing**: if a child will touch React, Expo, Prisma, NestJS, NativeWind, TanStack Query, or any other external API surface, its `Read first` or notes must point to `docs/agents/documentation-lookups.md` and the relevant repo guide.
+- **No classitis instructions**: avoid issue notes that ask agents to create wrappers/services by default. Ask for a new abstraction only when it hides a policy, data format, protocol, query-key shape, mapper, or repeated algorithm.
+- **Scoped file list**: every expected edit is in `## Files to create / modify`, including relevant `CONTEXT.md`. If the slice cannot be scoped without guessing, ask the user instead of creating it.
+
 ### 4.3 Compose proposal table
 
 ```
@@ -150,8 +164,10 @@ Use templates from `docs/agents/issue-tracker.md` verbatim — Sprint PRD shape 
 **Each child body** fills in:
 - Summary — references `docs/prd/sprints/sprint-NN-<name>.md` § the slice's section
 - Read first — paths agent must read. **Always include `docs/adr/0019-context-md-describes-current-state.md`** so the agent knows CONTEXT.md mirrors current code, updated alongside this PR.
+- Also include `docs/adr/0020-document-hierarchy-and-mutability.md` and `docs/agents/documentation-lookups.md` when the child touches docs hierarchy or external libraries.
 - Files to create / modify — narrowed from sprint file. **Include the relevant `CONTEXT.md` path(s) if this slice changes domain invariants** (per ADR-0019), unless the sprint plan explicitly defers the CONTEXT.md update to the sprint-final wiring issue.
 - Implementation notes — code skeletons, type signatures, env vars, Zod schema names (skip if captured by reference)
+- Architecture notes — keep short: layer boundaries, ports/mappers/events/routes allowed, external library docs to consult, and any abstraction that must stay deep rather than pass-through.
 - Testing / TDD note — add explicit tests-first guidance when it materially improves the slice: domain rules, application use-cases, security/session behavior, persistence contracts, migrations, and high-risk edge cases. Do **not** force TDD language into pure docs, mechanical scaffold, UI-only, final wiring, or manual-smoke slices unless tests-first genuinely fits.
 - Acceptance criteria (slice-scoped) — SUBSET of sprint DoD covering only this slice. **If this slice changes domain invariants, add a checkbox**: `[ ] Update <relevant CONTEXT.md path> to reflect new state (per ADR-0019)` — unless deferred to sprint-final.
 - Out of scope — sibling slices deferred

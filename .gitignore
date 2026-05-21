@@ -73,6 +73,7 @@ packages/db/.env
 .cache/
 tmp/
 .scratch/
+.commandcode/
 
 
 #Claude Code

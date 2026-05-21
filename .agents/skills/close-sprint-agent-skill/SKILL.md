@@ -31,8 +31,10 @@ description: Runs a closure / retrospective pass on a finished AutoTM sprint. Us
 4. `docs/prd/sprints/sprint-<NN+1>-<name>.md` if exists — next sprint
 5. `docs/agents/issue-tracker.md`
 6. `CONTEXT-MAP.md`
-7. Per-context `CONTEXT.md` files for contexts the sprint touched
-8. ADRs referenced by the sprint file
+7. `docs/adr/0019-context-md-describes-current-state.md` and `docs/adr/0020-document-hierarchy-and-mutability.md`
+8. `docs/agents/documentation-lookups.md`
+9. Per-context `CONTEXT.md` files for contexts the sprint touched
+10. ADRs referenced by the sprint file
 
 ---
 
@@ -120,6 +122,23 @@ pnpm --filter <touched workspace> test -- --coverage 2>&1 | tail -20
 
 Coverage on `domain/` / `application/` < 70% (per charter §13) → flag.
 
+### 4.7 Architecture and complexity drift
+
+Run a focused pass for the kinds of shortcuts `/run-issue` may miss when it is trying to ship:
+
+```bash
+rg "@nestjs|@prisma/client|Prisma\\." apps/api/src/modules/*/domain apps/api/src/modules/*/application || true
+rg "from ['\"](\\.\\./)+[a-z-]+/(domain|application|infrastructure|presentation)" apps/api/src/modules || true
+rg "Manager|Helper|Wrapper|Service" apps/api/src/modules apps/mobile/src apps/web/src apps/admin/src || true
+```
+
+Treat results as review leads, not automatic defects. Flag real issues when:
+- domain/application code imports framework, ORM, SDK, or transport details
+- one bounded context imports another context directly instead of using a port or event
+- new abstractions are pass-through wrappers that add interface surface without hiding complexity
+- use-cases or UI containers became large enough that future agents will have to understand unrelated responsibilities to change one behavior
+- PRs touched external libraries but did not mention Context7 or the relevant `docs/agents/*` guide in their PR body
+
 ---
 
 ## 5. Identify prerequisites for sprint N+1
@@ -157,6 +176,7 @@ Write to `docs/prd/sprints/sprint-<NN>-<name>-retro.md`:
 ### Roadmap drift
 ### Dependency / version drift
 ### Test coverage
+### Architecture / complexity drift
 
 ## Prerequisites for sprint <N+1>
 ### Hard blockers

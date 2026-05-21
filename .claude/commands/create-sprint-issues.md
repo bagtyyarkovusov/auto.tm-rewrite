@@ -35,8 +35,10 @@ In order:
 4. `docs/agents/issue-tracker.md` — **the canonical templates** for Sprint PRD parent + Sprint child bodies, label rules, AC source-of-truth, and the `## Depends on` convention
 5. `docs/agents/triage-labels.md` — label vocabulary
 6. `CONTEXT-MAP.md` — to know which `apps/api/src/modules/<context>/CONTEXT.md` to reference per issue
-7. The relevant per-context `CONTEXT.md` files for whichever bounded contexts this sprint touches (you'll know after reading the sprint file)
-8. Any ADRs referenced by the sprint file under `## References`
+7. `docs/adr/0019-context-md-describes-current-state.md` and `docs/adr/0020-document-hierarchy-and-mutability.md`
+8. `docs/agents/documentation-lookups.md` — so child issues can require Context7 for touched external libraries
+9. The relevant per-context `CONTEXT.md` files for whichever bounded contexts this sprint touches (you'll know after reading the sprint file)
+10. Any ADRs referenced by the sprint file under `## References`
 
 If `docs/agents/issue-tracker.md` is missing or empty, stop — the conventions are not yet codified, which means earlier work didn't land.
 
@@ -108,6 +110,18 @@ Pattern: **hybrid** —
 
 Typical S2-S10 has 5-10 children. Aim for issues that fit a single Claude Code run (~1-3 hours each).
 
+### 4.2.5 Slice quality bar
+
+Before showing the proposal, check each child issue against this bar:
+
+- **One reason to change**: each child should map to one foundations concern, one use-case, one frontend surface, or one final-wiring sweep. If a child mixes unrelated actors or layers, split it.
+- **Vertical where it matters**: use-case children should carry domain + application + infrastructure + presentation changes together when that produces a shippable behavior. Do not create shallow layer-only issues unless the sprint truly needs a shared foundation first.
+- **Clear boundary ownership**: each child names the bounded context(s), app/package `CONTEXT.md`, ports, events, routes, and mappers it may affect.
+- **TDD where it pays**: domain/application/security/persistence slices name the first failing tests. UI-only, docs-only, and mechanical wiring slices do not pretend to be TDD work.
+- **No hidden library guessing**: if a child will touch React, Expo, Prisma, NestJS, NativeWind, TanStack Query, or any other external API surface, its `Read first` or notes must point to `docs/agents/documentation-lookups.md` and the relevant repo guide.
+- **No classitis instructions**: avoid issue notes that ask agents to create wrappers/services by default. Ask for a new abstraction only when it hides a policy, data format, protocol, query-key shape, mapper, or repeated algorithm.
+- **Scoped file list**: every expected edit is in `## Files to create / modify`, including relevant `CONTEXT.md`. If the slice cannot be scoped without guessing, ask the user instead of creating it.
+
 ### 4.3 Compose the proposal table
 
 Build a markdown table and a dependency graph. Use the predicted issue numbers from §3(d):
@@ -178,8 +192,11 @@ mkdir -p /tmp/sprint-$N-issues
   - Relevant ADRs from the sprint file's `## References` section
   - `CLAUDE.md`
   - **`docs/adr/0019-context-md-describes-current-state.md`** — CONTEXT.md mirrors current code; the agent's PR updates CONTEXT.md when it changes invariants
+  - **`docs/adr/0020-document-hierarchy-and-mutability.md`** — doc hierarchy and mutability rules
+  - **`docs/agents/documentation-lookups.md`** — required when the child touches external libraries/frameworks/SDKs/CLIs
 - **Files to create / modify** — pull from the sprint file's `## Files this sprint creates / touches` section, narrowed to this slice. **Include the relevant `CONTEXT.md` path(s) if this slice changes domain invariants** (per ADR-0019) — unless the sprint plan explicitly defers the CONTEXT.md update to the sprint-final wiring issue.
 - **Implementation notes** — minimum-viable code skeletons, type signatures, env-var names, Zod schema names, key Prisma model fields. Pull from the sprint file's content. Skip if everything is captured by reference (most foundations issues have detailed notes; most pure-vertical slices need only AC + file list)
+- **Architecture notes** — keep short: layer boundaries, ports/mappers/events/routes allowed, external library docs to consult, and any abstraction that must stay deep rather than pass-through.
 - **Acceptance criteria (slice-scoped)** — a SUBSET of the sprint file's `## Acceptance criteria (DoD)` covering only this slice's behavior. Use the verbatim wording from the sprint file where it applies, then add slice-specific checks (e.g., "domain VO `<X>` rejects malformed input"). **If this slice changes domain invariants, add a checkbox**: `[ ] Update <relevant CONTEXT.md path> to reflect new state (per ADR-0019)` — unless deferred to sprint-final.
 - **Out of scope** — sibling slices in the same sprint, deliberately deferred
 - **Depends on** — the issue number(s) from §4.3 (or "None" for the foundations / unblocked issues)

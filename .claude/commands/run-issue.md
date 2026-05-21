@@ -21,6 +21,8 @@ description: Pick a GitHub issue from the current sprint and run it end-to-end �
 - **Never** silently expand scope beyond the issue body's `## Files to create / modify`. If you'd need to, **stop and comment on the issue** instead (see §11).
 - **Never** disable a failing test, mock Prisma, or skip the 60s/5MB media-compression rules from `CLAUDE.md`.
 - **Never** modify labels on any issue other than the one you're working on (and its dependents in §8). In particular, never touch `ready-for-agent`, `wontfix`, `phase-*`, or area labels on other issues.
+- **Never** accept tactical shortcuts that leak framework, ORM, transport, or vendor details inward. If the clean fix needs a small in-scope refactor, do it; if it needs a larger refactor outside the file list, bail with the reason.
+- **Never** add pass-through wrappers, shallow abstractions, or "manager" classes that do not hide real complexity. A new abstraction must enforce a domain boundary, hide an implementation detail, or remove meaningful duplication.
 
 ---
 
@@ -34,8 +36,16 @@ In order:
 4. `CONTEXT-MAP.md`
 5. `docs/agents/issue-tracker.md` — issue body conventions + the `blocked` label rule
 6. **[ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md)** — CONTEXT.md describes **current implemented state**, not aspirational spec. When your PR changes domain invariants (Prisma field, port, use-case, event, route), the relevant CONTEXT.md update goes in the SAME PR. §5.5 enforces this.
+7. **[ADR-0020](../../docs/adr/0020-document-hierarchy-and-mutability.md)** — document hierarchy + mutability rules. ADRs are immutable, sprint files lock at 🟡, CONTEXT.md is present-state only.
+8. `docs/agents/documentation-lookups.md` — Context7 workflow. Required whenever the issue touches an external library, SDK, framework, CLI, or cloud service.
 
 If any of those is missing or empty, stop and tell the user. The repo is in an unexpected state.
+
+Also read the relevant repo guide before editing:
+- `docs/agents/mobile-expo.md` for any `mobile` label, Expo package, Metro, Codegen, navigation, or runtime crash work.
+- `docs/agents/nativewind-v4.md` for mobile UI or styling.
+- `docs/agents/mobile-data-fetching.md` for mobile API calls, TanStack Query, `apiClient`, or cache changes.
+- `docs/agents/typescript-runtime.md` for package `exports`, module resolution, `.js` import specifiers, or runtime-shared packages (`@auto-tm/db`, `@auto-tm/contracts`).
 
 ---
 
@@ -88,6 +98,47 @@ gh issue view <dep_num> --json state --jq '.state'
 ```
 
 Any blocker still `OPEN` means the label state was inconsistent (issue shouldn't have been pickable). Stop and tell the user.
+
+---
+
+## 3.4. Execution plan + quality bar
+
+Before writing code, turn the issue body into a short local plan at `/tmp/run-issue-plan.md`:
+
+```markdown
+## Issue
+#<N> <title>
+
+## Scope
+- Files allowed by issue:
+- Allowed automatic docs updates:
+
+## Acceptance criteria map
+- AC 1 -> files/tests likely touched
+
+## Contexts and layers
+- <context>: domain | application | infrastructure | presentation | frontend | package
+
+## External docs
+- Context7 lookups needed:
+- Repo guides needed:
+
+## Complexity notes
+- Existing abstraction to reuse:
+- New abstraction, if any, and what complexity it hides:
+```
+
+Use this as the implementation contract. It should be specific enough that another agent can resume the branch without guessing.
+
+Apply these quality rules while planning:
+
+- **Dependency rule**: source imports point inward. Domain knows no Nest, Prisma, HTTP, queue, Socket.IO, React, Expo, or SDK names. Application knows ports and DTOs, not adapters. Infrastructure and presentation adapt outward details.
+- **One operation per use-case**: API application classes have one public `execute()` and one reason to change. If a use-case is growing past roughly 100 lines, extract domain logic into a domain function/value object before adding branches.
+- **Boundary data is plain data**: ORM rows, HTTP request objects, SDK responses, and React component state do not cross into domain/application code. Map at infrastructure/presentation/frontend boundaries.
+- **Deep modules over shallow wrappers**: add a helper only when it hides a real policy, data format, protocol, query-key shape, mapper, or repeated algorithm. Do not create pass-through services just to satisfy a layer.
+- **Clean code defaults**: names reveal intent, booleans are predicates, magic values become named constants, errors include operation + useful context, comments explain why or invariants only.
+- **Boy-scout cleanup is allowed only in scope**: improve files you are already allowed to edit. Do not broaden the PR for unrelated cleanup.
+- **Context7 is mandatory for external APIs**: if you touch library/framework/SDK/CLI/cloud behavior, follow `docs/agents/documentation-lookups.md` and record the library ID + query in `/tmp/run-issue-notes.md`.
 
 ---
 
@@ -264,13 +315,22 @@ Walk through `## Files to create / modify` in the order the issue presents them.
 - Implement the minimum code that satisfies the AC.
 - Run the test. Confirm green.
 
-Architecture rules from `CLAUDE.md` apply at every edit:
+Architecture rules from `CLAUDE.md` and the §3.4 plan apply at every edit:
 
 - **Domain** layer pure TS — no `@nestjs/*`, no Prisma, no framework decorators
 - **Application** layer — one use-case per file, one `execute()` method, ~100 lines max
 - **Infrastructure** layer — Prisma, FCM clients, mappers live here only
 - **Presentation** layer — thin controllers + WS gateways only
 - **Cross-context calls** go through ports or the event bus — never direct imports across `apps/api/src/modules/<x>/`
+
+Implementation heuristics from the project design bar:
+
+- Prefer the repo's existing module shape and naming over introducing a new pattern.
+- Keep functions at one abstraction level. Extract named helpers for branches that hide policy, not for one-line delegation.
+- Keep third-party data formats at the edge. If a framework object leaks inward, add a mapper/port at the boundary.
+- Avoid boolean flag arguments. Split behavior or introduce a small options object with named fields.
+- Add tests for failure paths and invariants, not only happy paths. Domain/application changes should have fast unit coverage before adapter/e2e coverage.
+- If an architectural decision appears mid-run, stop and ask whether to add a new ADR. Do not edit an existing ADR.
 
 Use `TodoWrite` to track your progress through the AC list (5-15 todos).
 
@@ -294,6 +354,20 @@ pnpm --filter <workspace> test
 - After **3 fix attempts** if the same command still fails: stop, comment on the issue per §11. Don't ship broken code.
 
 Then walk every `## Acceptance criteria` checkbox out loud and write the evidence per checkbox to `/tmp/ac-evidence.md`. If you can't point to a file/test for any checkbox, that AC item is unmet — implement it or bail.
+
+Add the repo-specific checks when relevant:
+
+```bash
+# API layering smoke checks when apps/api/src/modules/** changed.
+rg "@nestjs|@prisma/client|Prisma\\." apps/api/src/modules/*/domain apps/api/src/modules/*/application || true
+
+# Cross-context import smoke check when API bounded contexts changed.
+rg "from ['\"](\\.\\./)+[a-z-]+/(domain|application|infrastructure|presentation)" apps/api/src/modules || true
+```
+
+Treat matches as prompts for inspection, not automatic failures: generated paths, type-only imports, and comments can be false positives. Any real dependency-rule violation must be fixed before PR.
+
+For mobile, TypeScript runtime, package exports, or external-library work, run the additional commands required by the relevant `docs/agents/*.md` guide and record the evidence in `/tmp/ac-evidence.md`.
 
 ---
 
@@ -365,6 +439,9 @@ Closes #<N>
 - ...
 
 ## Architecture notes (omit if irrelevant)
+- CONTEXT.md: <updated path or "no invariant changes">
+- Context7: <library ID + query, or "not needed — no external API surface touched">
+- Boundary notes: <ports/mappers/events/routes affected, or "none">
 - <any deviation from the issue's plan worth flagging>
 
 ## Design notes (omit if not a UI issue)
@@ -473,6 +550,10 @@ Design specs used:
   Wireframe: <path | "none — backend/config issue" | "none — chose continue-without-design">
   Hi-fi:     <path | "none — backend/config issue" | "none — chose continue-without-design">
 
+Architecture/docs:
+  CONTEXT.md: <updated path or "not needed">
+  Context7: <lookups used or "not needed">
+
 AC evidence:
   - <AC 1> → <file:line or test name>
   - <AC 2> → <file:line or test name>
@@ -494,6 +575,8 @@ Stop and comment on the issue when:
 - The change requires editing outside `## Files to create / modify` and outside the `CONTEXT.md` invariant-update allowance
 - A blocker listed in `## Depends on` is still OPEN
 - `gh pr merge` fails (required check missing, conflict, protection)
+- Required repo guide or Context7 lookup contradicts the issue body and the clean path is unclear
+- The only implementation path would add a shallow abstraction, leak outer-layer details inward, or create a direct cross-context import
 - You'd have to violate any rule in §0
 
 Bail procedure:
@@ -577,6 +660,11 @@ Task tool:
     ## Acceptance criteria this group satisfies
     <subset of issue's ## Acceptance criteria that this group covers>
 
+    ## Parent plan and quality bar
+    - Read /tmp/run-issue-plan.md before editing.
+    - Follow §3.4: dependency rule, plain boundary data, deep modules over shallow wrappers, clean names/errors/tests.
+    - If this group needs a larger abstraction than /tmp/run-issue-plan.md allowed, report NEEDS_CONTEXT instead of inventing it.
+
     ## Design specs (read these FIRST — implementation is downstream of them)
     - Wireframe: docs/prd/ui/wireframes/<slug>.md
     - Hi-fi: docs/prd/ui/hifi/<slug>.md
@@ -593,6 +681,8 @@ Task tool:
     - Never edit protected files (GRILL-OUTCOME.md, docs/adr/*, .env, *.pem, *.key, *-private-key.json).
     - Never expand scope beyond the files listed for THIS group, plus the allowed extras (CONTEXT.md, pnpm-lock.yaml, codegen output).
     - Use Context7 for every external library/API/CLI lookup. Your training data lags.
+    - Do not leak framework/ORM/SDK/transport details into domain or application code.
+    - Do not add pass-through wrappers or shallow helpers just to satisfy a layer.
     - For mobile UI, use RNR primitives + NativeWind v4. Never `StyleSheet.create`. Never hardcoded hex.
 
     ## Process
@@ -629,6 +719,7 @@ Task tool:
     - Did every AC in this group get evidence written?
     - Did `pnpm typecheck` pass on the touched workspace?
     - Did you use RNR primitives + NativeWind, no StyleSheet.create or hex literals?
+    - Did any new abstraction hide real complexity rather than just delegate?
 
     ## Report
 

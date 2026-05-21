@@ -21,6 +21,8 @@ description: Runs a single GitHub issue from the current AutoTM sprint end-to-en
 - **Never** silently expand scope beyond the issue body's `## Files to create / modify`. If you'd need to, **stop and comment on the issue** (see §11).
 - **Never** disable a failing test, mock Prisma, or skip the 60s/5MB media-compression rules from `CLAUDE.md`.
 - **Never** apply `wontfix` or remove `ready-for-agent` from any other issue. The only label you remove is `blocked` from dependents of the just-merged issue.
+- **Never** accept tactical shortcuts that leak framework, ORM, transport, or vendor details inward. If the clean fix needs a small in-scope refactor, do it; if it needs a larger refactor outside the file list, bail with the reason.
+- **Never** add pass-through wrappers, shallow abstractions, or "manager" classes that do not hide real complexity. A new abstraction must enforce a domain boundary, hide an implementation detail, or remove meaningful duplication.
 
 ---
 
@@ -34,14 +36,22 @@ In order, using whatever file-read tool the host agent provides:
 4. `CONTEXT-MAP.md`
 5. `docs/agents/issue-tracker.md` — issue body conventions and label rules
 6. **[ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md)** — CONTEXT.md describes **current implemented state**, not aspirational spec. When your PR changes domain invariants (Prisma field, port, use-case, event, route), the relevant CONTEXT.md update goes in the SAME PR. §5.5 enforces this.
+7. **[ADR-0020](../../../docs/adr/0020-document-hierarchy-and-mutability.md)** — document hierarchy + mutability rules. ADRs are immutable, sprint files lock at 🟡, CONTEXT.md is present-state only.
+8. `docs/agents/documentation-lookups.md` — Context7 workflow. Required whenever the issue touches an external library, SDK, framework, CLI, or cloud service.
 
 If any of those is missing, stop and tell the user — the repo is in an unexpected state.
+
+Also read the relevant repo guide before editing:
+- `docs/agents/mobile-expo.md` for any `mobile` label, Expo package, Metro, Codegen, navigation, or runtime crash work.
+- `docs/agents/nativewind-v4.md` for mobile UI or styling.
+- `docs/agents/mobile-data-fetching.md` for mobile API calls, TanStack Query, `apiClient`, or cache changes.
+- `docs/agents/typescript-runtime.md` for package `exports`, module resolution, `.js` import specifiers, or runtime-shared packages (`@auto-tm/db`, `@auto-tm/contracts`).
 
 ---
 
 ## 2. Pick the issue
 
-**If the user's message named an issue number:** use it. Skip to §3.
+**If the user's message named an issue number:** use it. Skip to the verify-state step below.
 
 **Otherwise**, list the unblocked queue and ask:
 
@@ -58,14 +68,15 @@ Print and ask: *"Which issue should I work on? Reply with the number."* Wait for
 Once `N` is set, verify state:
 
 ```bash
-gh issue view $N --json state,labels,body > /tmp/issue.json
+gh issue view $N --json state,labels,body,title > /tmp/issue.json
 ```
 
 Confirm:
 - `state == "OPEN"`
 - `labels` includes `ready-for-agent` and does **NOT** include `blocked`
+- `body` has `## Read first`, `## Files to create / modify`, `## Acceptance criteria`, `## Depends on`, and `## Completion signal`
 
-If either fails, tell the user and stop.
+If any check fails, tell the user and stop.
 
 ---
 
@@ -89,6 +100,47 @@ Any blocker still OPEN means the label state was inconsistent. Stop and tell the
 
 ---
 
+## 3.4. Execution plan + quality bar
+
+Before writing code, turn the issue body into a short local plan at `/tmp/run-issue-plan.md`:
+
+```markdown
+## Issue
+#<N> <title>
+
+## Scope
+- Files allowed by issue:
+- Allowed automatic docs updates:
+
+## Acceptance criteria map
+- AC 1 -> files/tests likely touched
+
+## Contexts and layers
+- <context>: domain | application | infrastructure | presentation | frontend | package
+
+## External docs
+- Context7 lookups needed:
+- Repo guides needed:
+
+## Complexity notes
+- Existing abstraction to reuse:
+- New abstraction, if any, and what complexity it hides:
+```
+
+Use this as the implementation contract. It should be specific enough that another agent can resume the branch without guessing.
+
+Apply these quality rules while planning:
+
+- **Dependency rule**: source imports point inward. Domain knows no Nest, Prisma, HTTP, queue, Socket.IO, React, Expo, or SDK names. Application knows ports and DTOs, not adapters. Infrastructure and presentation adapt outward details.
+- **One operation per use-case**: API application classes have one public `execute()` and one reason to change. If a use-case is growing past roughly 100 lines, extract domain logic into a domain function/value object before adding branches.
+- **Boundary data is plain data**: ORM rows, HTTP request objects, SDK responses, and React component state do not cross into domain/application code. Map at infrastructure/presentation/frontend boundaries.
+- **Deep modules over shallow wrappers**: add a helper only when it hides a real policy, data format, protocol, query-key shape, mapper, or repeated algorithm. Do not create pass-through services just to satisfy a layer.
+- **Clean code defaults**: names reveal intent, booleans are predicates, magic values become named constants, errors include operation + useful context, comments explain why or invariants only.
+- **Boy-scout cleanup is allowed only in scope**: improve files you are already allowed to edit. Do not broaden the PR for unrelated cleanup.
+- **Context7 is mandatory for external APIs**: if you touch library/framework/SDK/CLI/cloud behavior, follow `docs/agents/documentation-lookups.md` and record the library ID + query in `/tmp/run-issue-notes.md`.
+
+---
+
 ## 3.5. Design check (only if this issue ships UI)
 
 Before writing code for a UI-shipping issue, check whether design context exists. The hi-fi / wireframe specs in `docs/prd/ui/wireframes/` and `docs/prd/ui/hifi/` are inputs to good implementation.
@@ -99,7 +151,7 @@ Before writing code for a UI-shipping issue, check whether design context exists
 - `## Files to create / modify` includes paths like `apps/mobile/app/**/*.tsx`, `apps/web/src/app/**/*.tsx`, `apps/admin/src/app/**/*.tsx`
 - AC items mention "screen", "page", "modal", "sheet", "wizard", "feed", "tab", "card"
 
-If no → skip §3.5, go to §4.
+If no → skip the rest of §3.5 and go to §3.6.
 
 **If yes:** identify the screen(s), slugify, check for specs:
 
@@ -126,7 +178,27 @@ For (b) or (c): comment on the issue `"Paused for design. Run <skill> <slug> bef
 
 For (a): log rationale in `/tmp/run-issue-notes.md`, include in PR description's Design notes section, proceed.
 
-If specs DO exist: read them in addition to issue's `## Read first` list and proceed.
+If specs DO exist: read them in addition to issue's `## Read first` list and proceed to §3.6.
+
+---
+
+## 3.6. Multi-agent mode (optional, host-dependent)
+
+Some hosts can spawn subagents; others cannot. Use this mode only when it reduces cognitive load without weakening scope control.
+
+Trigger multi-agent mode when **all** are true:
+- The issue ships UI or touches 3+ logical areas.
+- The issue has existing wireframe/hi-fi specs or a precise file list.
+- Each group can be described as "one screen/use-case + direct support files + tests."
+
+If triggered:
+1. Split `## Files to create / modify` into logical groups and show the grouping in the todo list.
+2. Run one implementer per group if the host supports subagents; otherwise process the groups sequentially in the same session.
+3. After each group, run the smallest relevant verification command and update `/tmp/ac-evidence.md`.
+4. Review for two things before moving on: spec/AC compliance and code quality. Fix findings before starting the next group.
+5. Parent agent remains responsible for final §5 verification, §5.5 CONTEXT.md decision, PR body, merge, and unblocking.
+
+Never use multi-agent mode to edit files outside the issue list, and never let a subagent commit/push/merge unless the host workflow explicitly requires it. If subagent output conflicts with the issue body, the issue body wins.
 
 ---
 
@@ -138,13 +210,22 @@ Walk `## Files to create / modify` in order. For each `- [ ]` in `## Acceptance 
 - Implement the minimum to satisfy the AC.
 - Run the test. Confirm green.
 
-Architecture rules from `CLAUDE.md`:
+Architecture rules from `CLAUDE.md` and the §3.4 plan:
 
 - **Domain** layer pure TS — no `@nestjs/*`, no Prisma, no decorators
 - **Application** layer — one use-case per file, one `execute()` method, ~100 lines max
 - **Infrastructure** layer — Prisma + framework code lives here only
 - **Presentation** layer — thin controllers + WS gateways only
 - **Cross-context** calls go through ports or the event bus — never direct imports across `apps/api/src/modules/<x>/`
+
+Implementation heuristics from the reference design skills:
+
+- Prefer the repo's existing module shape and naming over introducing a new pattern.
+- Keep functions at one abstraction level. Extract named helpers for branches that hide policy, not for one-line delegation.
+- Keep third-party data formats at the edge. If a framework object leaks inward, add a mapper/port at the boundary.
+- Avoid boolean flag arguments. Split behavior or introduce a small options object with named fields.
+- Add tests for failure paths and invariants, not only happy paths. Domain/application changes should have fast unit coverage before adapter/e2e coverage.
+- If an architectural decision appears mid-run, stop and ask whether to add a new ADR. Do not edit an existing ADR.
 
 Track your progress through the AC with a todo list (5-15 items).
 
@@ -168,6 +249,20 @@ pnpm --filter <workspace> test
 - After **3 fix attempts** on the same failure: stop, comment per §11
 
 Walk every AC checkbox; write evidence to `/tmp/ac-evidence.md` (file, test name, or grep result per checkbox). If an item has no evidence, it's unmet.
+
+Add the repo-specific checks when relevant:
+
+```bash
+# API layering smoke checks when apps/api/src/modules/** changed.
+rg "@nestjs|@prisma/client|Prisma\\." apps/api/src/modules/*/domain apps/api/src/modules/*/application || true
+
+# Cross-context import smoke check when API bounded contexts changed.
+rg "from ['\"](\\.\\./)+[a-z-]+/(domain|application|infrastructure|presentation)" apps/api/src/modules || true
+```
+
+Treat matches as prompts for inspection, not automatic failures: generated paths, type-only imports, and comments can be false positives. Any real dependency-rule violation must be fixed before PR.
+
+For mobile, TypeScript runtime, package exports, or external-library work, run the additional commands required by the relevant `docs/agents/*.md` guide and record the evidence in `/tmp/ac-evidence.md`.
 
 ---
 
@@ -235,6 +330,11 @@ Closes #<N>
 ## Test plan
 - [ ] <AC 1> — verified by <evidence>
 - [ ] <AC 2> — verified by <evidence>
+
+## Architecture / docs notes
+- CONTEXT.md: <updated path or "no invariant changes">
+- Context7: <library ID + query, or "not needed — no external API surface touched">
+- Boundary notes: <ports/mappers/events/routes affected, or "none">
 
 ## Design notes (omit if not a UI issue)
 - Wireframe: <path or "not run">
@@ -317,6 +417,10 @@ Design specs used:
   Wireframe: <path or "none">
   Hi-fi:     <path or "none">
 
+Architecture/docs:
+  CONTEXT.md: <updated path or "not needed">
+  Context7: <lookups used or "not needed">
+
 AC evidence:
   - <AC 1> → <file:line or test name>
   ...
@@ -335,6 +439,8 @@ Stop and comment on the issue when:
 - Change requires editing outside scope
 - A blocker listed in `## Depends on` is still OPEN
 - `gh pr merge` fails
+- Required repo guide or Context7 lookup contradicts the issue body and the clean path is unclear
+- The only implementation path would add a shallow abstraction, leak outer-layer details inward, or create a direct cross-context import
 - Any §0 rule would be violated
 
 Bail procedure:
