@@ -208,6 +208,20 @@ export const AttachMediaRequestSchema = z.object({
 });
 export type AttachMediaRequest = z.infer<typeof AttachMediaRequestSchema>;
 
+export const AttachMediaResponseSchema = z.object({
+  id: z.string().uuid(),
+  listingId: z.string().uuid(),
+  kind: z.enum(["image", "video"]),
+  key: z.string(),
+  sortOrder: z.number().int().nonnegative(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  durationMs: z.number().int().positive().optional(),
+  posterKey: z.string().optional(),
+  createdAt: z.string().datetime(),
+});
+export type AttachMediaResponse = z.infer<typeof AttachMediaResponseSchema>;
+
 export const ReorderMediaRequestSchema = z.object({
   ordering: z.array(
     z.object({
@@ -217,6 +231,16 @@ export const ReorderMediaRequestSchema = z.object({
   ),
 });
 export type ReorderMediaRequest = z.infer<typeof ReorderMediaRequestSchema>;
+
+export const ReorderMediaResponseSchema = z.object({
+  success: z.boolean(),
+});
+export type ReorderMediaResponse = z.infer<typeof ReorderMediaResponseSchema>;
+
+export const RemoveMediaResponseSchema = z.object({
+  success: z.boolean(),
+});
+export type RemoveMediaResponse = z.infer<typeof RemoveMediaResponseSchema>;
 
 // ── Cursor helpers ──
 

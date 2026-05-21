@@ -55,6 +55,7 @@ vi.mock("./stagingDir", () => ({
   ensureDraftDir: vi.fn(() => Promise.resolve()),
   getDraftDir: vi.fn((stagingKey: string) => `file:///doc/listing-staging/${stagingKey}/`),
   getStagingPath: vi.fn((stagingKey: string, photoId: string) => `file:///doc/listing-staging/${stagingKey}/${photoId}.jpg`),
+  listLocalPhotoIds: vi.fn(() => Promise.resolve([])),
 }));
 
 vi.mock("./appStateResume", () => ({

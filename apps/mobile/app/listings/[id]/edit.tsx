@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useReducer, useState } from "react";
-import { Image, View } from "react-native";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { View } from "react-native";
 import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
 import { useEditListing } from "../../../src/api/listings/useEditListing";
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
-import type { StagedPhoto } from "../../../src/listings/uploadStaging/types";
+import { useUploadQueue } from "../../../src/listings/uploadStaging/useUploadQueue";
 import Step1Vin from "../../../src/listings/wizard/Step1Vin";
+import Step2Photos from "../../../src/listings/wizard/Step2Photos";
 import Step3VehicleId from "../../../src/listings/wizard/Step3VehicleId";
 import Step4Specs from "../../../src/listings/wizard/Step4Specs";
 import Step5Price from "../../../src/listings/wizard/Step5Price";
@@ -74,44 +75,18 @@ function listingToPayload(
   };
 }
 
-function listingMediaToPhotos(
-  media: ListingsSchemas.ListingMedia[],
-): StagedPhoto[] {
-  return media.map((m, index) => ({
-    photoId: m.id,
-    key: m.key,
-    state: "attached",
-    sortOrder: m.sortOrder ?? index,
-    retryCount: 0,
-    width: m.width,
-    height: m.height,
-  }));
-}
+const EMPTY_PAYLOAD = {} as WizardSchemas.WizardDraftPayload;
 
-function ReadOnlyPhotos({ media }: { media: ListingsSchemas.ListingMedia[] }) {
-  return (
-    <View className="flex-row flex-wrap gap-2">
-      {media.map((m, i) => (
-        <View
-          key={m.id}
-          className="relative aspect-square w-[48%] overflow-hidden rounded-lg bg-muted"
-        >
-          <Image
-            source={{ uri: m.variants.thumbnail }}
-            className="h-full w-full"
-            resizeMode="cover"
-          />
-          {i === 0 && (
-            <View className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5">
-              <Text className="text-[10px] font-medium text-white">
-                Cover
-              </Text>
-            </View>
-          )}
-        </View>
-      ))}
-    </View>
-  );
+function buildPayloadPhotos(
+  photos: ReturnType<typeof useUploadQueue>["photos"],
+): NonNullable<WizardSchemas.WizardDraftPayload["photos"]> {
+  return photos
+    .filter((p): p is typeof p & { key: string } => !!p.key)
+    .map((p) => ({
+      photoId: p.photoId,
+      key: p.key,
+      sortOrder: p.sortOrder,
+    }));
 }
 
 export default function EditListingScreen() {
@@ -129,6 +104,16 @@ export default function EditListingScreen() {
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
 
+  const editPayload = useMemo(() => {
+    if (!listing) return EMPTY_PAYLOAD;
+    return listingToPayload(listing);
+  }, [listing]);
+
+  const uploadQueue = useUploadQueue(
+    listing ? `edit-${listingId}` : "",
+    editPayload,
+  );
+
   useEffect(() => {
     if (listing) {
       dispatch({
@@ -141,6 +126,15 @@ export default function EditListingScreen() {
       });
     }
   }, [listing]);
+
+  // Sync upload queue photos into payload so wizard validation and review see changes
+  useEffect(() => {
+    const photosFromQueue = buildPayloadPhotos(uploadQueue.photos);
+    dispatch({
+      type: "UPDATE_FIELDS",
+      updates: { photos: photosFromQueue },
+    });
+  }, [uploadQueue.photos]);
 
   const ctx = buildMachineContext(machineState);
 
@@ -257,16 +251,16 @@ export default function EditListingScreen() {
         />
       )}
       {currentStep === "photos" && (
-        <View className="gap-5 py-5">
-          <Text className="text-2xl font-semibold text-foreground">
-            Photos
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            Photos cannot be changed after publishing. To update photos, create
-            a new listing.
-          </Text>
-          <ReadOnlyPhotos media={listing.media} />
-        </View>
+        <Step2Photos
+          photos={uploadQueue.photos}
+          onAddPhoto={uploadQueue.addPhoto}
+          onRemovePhoto={uploadQueue.removePhoto}
+          onReorderPhotos={uploadQueue.reorderPhotos}
+          onRetryPhoto={uploadQueue.retryPhoto}
+          isCompressing={uploadQueue.isCompressing}
+          isUploading={uploadQueue.isUploading}
+          fieldErrors={ctx.fieldErrors}
+        />
       )}
       {currentStep === "vehicle" && (
         <Step3VehicleId
@@ -311,7 +305,7 @@ export default function EditListingScreen() {
           payload={machineState.payload}
           validatedSteps={machineState.validatedSteps}
           onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
-          photos={listingMediaToPhotos(listing.media)}
+          photos={uploadQueue.photos}
         />
       )}
     </WizardLayout>

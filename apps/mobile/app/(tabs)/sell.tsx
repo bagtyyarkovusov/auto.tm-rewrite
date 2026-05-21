@@ -355,8 +355,6 @@ export default function SellScreen() {
         )}
         {currentStep === "photos" && (
           <Step2Photos
-            payload={machineState.payload}
-            onChange={handlePayloadChange}
             photos={uploadQueue.photos}
             onAddPhoto={uploadQueue.addPhoto}
             onRemovePhoto={uploadQueue.removePhoto}

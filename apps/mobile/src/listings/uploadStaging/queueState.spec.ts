@@ -1,4 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("expo-file-system/legacy", () => ({
+  documentDirectory: "/mock/documents/",
+  getInfoAsync: vi.fn(() => Promise.resolve({ exists: false })),
+  makeDirectoryAsync: vi.fn(() => Promise.resolve()),
+  readDirectoryAsync: vi.fn(() => Promise.resolve([])),
+}));
 
 import {
   computePublishGate,

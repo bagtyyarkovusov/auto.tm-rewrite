@@ -11,7 +11,7 @@ Client-side listing creation + upload pipeline for `apps/mobile`. Three subsyste
 | Flow | Primary route | Wizard state | Photos |
 |---|---|---|---|
 | **Create draft / publish** | `app/(tabs)/sell.tsx` | `wizardMachine` reducer (`wizardMachine.ts`) | `useUploadQueue` wired end-to-end |
-| **Edit published listing** | `app/listings/[id]/edit.tsx` | `wizardMachine` reducer initialized with `mode: "edit"`, `listingId`, and `entryStep: "review"`. Edit opens at Review (Step 8/8); section Edit affordances detour to shared step bodies; detour footer shows single Done action back to Review. Field edits stay local until **Save changes**, then direct `PATCH /listings/:id` through `useEditListing`; no `ListingDraft` or autosave is created for published edits. | `<ReadOnlyPhotos/>` messaging only today; **no queue**. [ADR-0024](../../../../docs/adr/0024-owner-post-publish-photo-editing.md) locks owner photo add/remove/reorder after publish, so read-only photos are a current implementation gap. Target behavior stages photo edits locally, may upload new files during edit for responsiveness, and applies media endpoint changes only on **Save changes**. Cancel/discard cleanup for uploaded-but-unattached edit media is not implemented. |
+| **Edit published listing** | `app/listings/[id]/edit.tsx` | `wizardMachine` reducer initialized with `mode: "edit"`, `listingId`, and `entryStep: "review"`. Edit opens at Review (Step 8/8); section Edit affordances detour to shared step bodies; detour footer shows single Done action back to Review. Field edits stay local until **Save changes**, then direct `PATCH /listings/:id` through `useEditListing`; no `ListingDraft` or autosave is created for published edits. | `useUploadQueue('edit-' + listingId, payload)` wired end-to-end. Existing media seeds the queue in `attached` state via `reconstructQueueFromListing`. New uploads compress + PUT immediately for responsiveness. Removed photos are dropped from the local queue only; actual `DELETE /listings/:id/media/:mediaId` is deferred to the Save changes orchestrator (A4). Reordered photos update local `sortOrder` only; actual `PUT /listings/:id/media/order` is deferred to A4. |
 
 ## Module shape (today)
 
@@ -21,7 +21,7 @@ Client-side listing creation + upload pipeline for `apps/mobile`. Three subsyste
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
     - `wizardMachine.spec.ts` — unit tests for reducer
     - `useWizardAutosave.spec.tsx` — tests for save lifecycle
-    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI bodies. Design system conventions: mirrored titles (`WizardLayout` `text-lg` + body `text-2xl`), body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons. **`Step2Photos` declares unused wizard props (`payload`, `onChange`, `disabledTooltip`) — housekeeping backlog.**
+    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI bodies. Design system conventions: mirrored titles (`WizardLayout` `text-lg` + body `text-2xl`), body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons.
     - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`). Footer buttons are 52px pill-shaped (`h-[52px] rounded-full`). Overflow button opens `WizardOverflowMenu` sheet first; "Discard draft" inside the sheet opens `DiscardConfirmationDialog`. Dialog shows loading spinner + "Discarding…" and error text when discard mutation is pending or fails.
     - `PhotoThumbnail.tsx` — photo grid item with state overlay and reorder menu
     - `PhotoStateOverlay.tsx` — per-photo upload-state badge (compressing, uploading, failed, cover, etc.)
@@ -31,7 +31,7 @@ Client-side listing creation + upload pipeline for `apps/mobile`. Three subsyste
     - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track. Signature is `useUploadQueue(stagingKey, payload)` where `stagingKey` is opaque to the queue (`draft-{draftId}` for create today; `edit-{listingId}` is reserved for edit media). **Exports `publishGate` — presently unused consumer-side.**
     - `useAsyncCounter.ts` — ref-based counter surfaced as `isCompressing` (**prevents overlapping parallel compress regressions**)
     - `compressor.ts` — `expo-image-manipulator` chain API (resize ≤2400px, JPEG 0.8, re-compress at 0.6 if >5 MB)
-    - `queueState.ts` — pure state machine: `PhotoUploadReducer` (discriminated-union actions) + helpers: `updatePhotoState`, `removePhotoFromQueue`, `reorderPhotos`, `reconstructQueueFromDraft`, `computePublishGate`
+    - `queueState.ts` — pure state machine: `PhotoUploadReducer` (discriminated-union actions) + helpers: `updatePhotoState`, `removePhotoFromQueue`, `reorderPhotos`, `reconstructQueueFromDraft`, `reconstructQueueFromListing`, `computePublishGate`
     - `uploadErrors.ts` — `buildUploadError` classifies caught errors into `UploadErrorCode`
     - `stagingDir.ts` — file-system path helpers: `getStagingPath`, `ensureDraftDir`, `deleteDraftDir`, `listDraftDirs`; helper names still say "Draft" but accept any opaque staging key
     - `appStateResume.ts` — `AppState` + NetInfo listeners to auto-resume uploads and surface offline transitions
@@ -103,7 +103,7 @@ ${documentDirectory}/
   listing-staging/
     draft-{draftId}/                ← create flow
       {photoId}.jpg                ← compressed, staging; persists until attached
-    edit-{listingId}/               ← edit flow reservation; call site not wired yet
+    edit-{listingId}/               ← edit flow; wired in `edit.tsx` via `useUploadQueue('edit-' + listingId, payload)`
       {photoId}.jpg                ← compressed, staging; persists until attached
 ```
 
@@ -145,7 +145,7 @@ Directory semantics:
 - `edit-{id}` → orphan when the current user's listing IDs do not contain `id`
 - unknown prefix → logged and skipped; never deleted by this helper
 
-Published-listing edit media will need separate cleanup semantics when edit photo uploads ship: cancel/discard should clear local edit staging and best-effort clean newly uploaded media that never reached `AttachMedia`. Any remote object left without a `ListingMedia` row is a storage orphan for API/storage cleanup, not public listing media.
+Edit-session local removal: when an existing `attached` photo is removed in edit mode, `removePhoto` drops it from the local queue (no `localUri` to delete) but does **not** fire `DELETE /listings/:id/media/:mediaId`. The photo disappears from the grid and from the staged payload, but the server-side `ListingMedia` row and MinIO object remain until the Save changes orchestrator (A4) applies the batch. Cancel/discard should clear local edit staging (`edit-{listingId}/` dir) and best-effort clean newly uploaded media that never reached `AttachMedia`. Any remote object left without a `ListingMedia` row is a storage orphan for API/storage cleanup, not public listing media.
 
 ### State reconstruction on resume
 
