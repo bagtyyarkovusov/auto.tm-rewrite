@@ -101,7 +101,7 @@ export default function SellScreen() {
   const { save, forceSave, retrySave, saveStatus, saveError } =
     useWizardAutosave(machineState.draftId ?? undefined);
   const uploadQueue = useUploadQueue(
-    machineState.draftId ?? "",
+    machineState.draftId ? `draft-${machineState.draftId}` : "",
     machineState.payload,
   );
 
@@ -277,7 +277,7 @@ export default function SellScreen() {
     if (!id) return;
     discardDraft.mutate(id, {
       onSuccess: () => {
-        void deleteDraftDir(id);
+        void deleteDraftDir(`draft-${id}`);
         dispatch({ type: "DISCARD" });
       },
     });

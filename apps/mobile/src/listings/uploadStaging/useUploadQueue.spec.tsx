@@ -53,8 +53,8 @@ vi.mock("./compressor", () => ({
 
 vi.mock("./stagingDir", () => ({
   ensureDraftDir: vi.fn(() => Promise.resolve()),
-  getDraftDir: vi.fn((draftId: string) => `file:///doc/listing-staging/${draftId}/`),
-  getStagingPath: vi.fn((draftId: string, photoId: string) => `file:///doc/listing-staging/${draftId}/${photoId}.jpg`),
+  getDraftDir: vi.fn((stagingKey: string) => `file:///doc/listing-staging/${stagingKey}/`),
+  getStagingPath: vi.fn((stagingKey: string, photoId: string) => `file:///doc/listing-staging/${stagingKey}/${photoId}.jpg`),
 }));
 
 vi.mock("./appStateResume", () => ({
@@ -64,12 +64,15 @@ vi.mock("./appStateResume", () => ({
 import { getInfoAsync, readDirectoryAsync, uploadAsync } from "expo-file-system/legacy";
 
 import { compressPhoto } from "./compressor";
+import { ensureDraftDir, getStagingPath } from "./stagingDir";
 import { useUploadQueue } from "./useUploadQueue";
 
 const mockReadDirectoryAsync = vi.mocked(readDirectoryAsync);
 const mockGetInfoAsync = vi.mocked(getInfoAsync);
 const mockUploadAsync = vi.mocked(uploadAsync);
 const mockCompressPhoto = vi.mocked(compressPhoto);
+const mockEnsureDraftDir = vi.mocked(ensureDraftDir);
+const mockGetStagingPath = vi.mocked(getStagingPath);
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({
@@ -248,5 +251,32 @@ describe("useUploadQueue — parallel batch compression", () => {
     });
     await waitFor(() => expect(result.current.photos[2]?.state).toBe("uploaded"));
     expect(result.current.isCompressing).toBe(false);
+  });
+
+  it("uses the opaque staging key for staging paths", async () => {
+    mockCompressPhoto.mockResolvedValue({
+      uri: "file:///doc/listing-staging/draft-abc123/photo-id.jpg",
+      width: 100,
+      height: 100,
+      fileSize: 1024,
+    });
+
+    const initialPayload = { photos: [] };
+    const { result } = renderHook(
+      () => useUploadQueue("draft-abc123", initialPayload),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.photos).toHaveLength(0));
+
+    await act(async () => {
+      await result.current.addPhoto("file:///picker/photo.jpg");
+    });
+
+    expect(mockEnsureDraftDir).toHaveBeenCalledWith("draft-abc123");
+    expect(mockGetStagingPath).toHaveBeenCalledWith(
+      "draft-abc123",
+      expect.any(String),
+    );
   });
 });

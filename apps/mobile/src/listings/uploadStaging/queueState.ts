@@ -40,7 +40,7 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
 }
 
 export function reconstructQueueFromDraft(
-  draftId: string,
+  stagingKey: string,
   draftPayload: ListingsSchemas.ListingDraftPayload,
   localPhotoIds: string[],
 ): UploadQueue {
@@ -83,7 +83,7 @@ export function reconstructQueueFromDraft(
   // Re-sort by sortOrder
   photos.sort((a, b) => a.sortOrder - b.sortOrder);
 
-  return { draftId, photos };
+  return { stagingKey, photos };
 }
 
 export function getPhotosByState(
@@ -185,6 +185,21 @@ export function collectPhotosToResume(queue: UploadQueue): StagedPhoto[] {
       p.state === "waiting_for_network" ||
       (p.state === "failed" && p.retryCount < 2 && isRetryable(p.error)),
   );
+}
+
+export function transitionUploadQueueToWaitingForNetwork(
+  queue: UploadQueue,
+): UploadQueue {
+  return {
+    ...queue,
+    photos: queue.photos.map((photo) =>
+      photo.state === "compressed" ||
+      photo.state === "presigned" ||
+      photo.state === "uploading"
+        ? { ...photo, state: "waiting_for_network" }
+        : photo,
+    ),
+  };
 }
 
 export function isRetryable(error?: UploadError): boolean {

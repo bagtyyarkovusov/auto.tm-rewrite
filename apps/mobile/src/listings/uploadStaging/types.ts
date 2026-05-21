@@ -39,7 +39,7 @@ export interface StagedPhoto {
 }
 
 export interface UploadQueue {
-  draftId: string;
+  stagingKey: string;
   photos: StagedPhoto[];
 }
 

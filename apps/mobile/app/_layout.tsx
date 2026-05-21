@@ -12,7 +12,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
@@ -20,6 +20,10 @@ import type { NetInfoState } from "@react-native-community/netinfo";
 import { NAV_THEME } from "../lib/theme";
 import { ApiError } from "../src/api/client";
 import { clearAuthSession } from "../src/auth/session";
+import { useAuth } from "../src/auth/useAuth";
+import { useMyDrafts } from "../src/api/listings/useMyDrafts";
+import { useMyListings } from "../src/api/listings/useMyListings";
+import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanCleanup";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -60,6 +64,61 @@ function isOnline(state: NetInfoState): boolean {
   // isInternetReachable can be null while the OS is still deciding.
   // Do not pause all queries during that unknown window.
   return true;
+}
+
+function AuthenticatedOrphanCleanup() {
+  const {
+    data: draftsData,
+    isPending: draftsPending,
+    isSuccess: draftsSuccess,
+  } = useMyDrafts();
+  const {
+    data: listingsData,
+    isPending: listingsPending,
+    isSuccess: listingsSuccess,
+  } = useMyListings();
+  const cleanupRan = useRef(false);
+
+  useEffect(() => {
+    if (
+      cleanupRan.current ||
+      draftsPending ||
+      listingsPending ||
+      !draftsSuccess ||
+      !listingsSuccess
+    ) {
+      return;
+    }
+    cleanupRan.current = true;
+
+    const draftIds = new Set(draftsData?.items.map((draft) => draft.id) ?? []);
+    const listingIds = new Set(
+      listingsData?.items.map((listing) => listing.id) ?? [],
+    );
+
+    void cleanupOrphanDraftDirs(draftIds, listingIds).catch((error) => {
+      console.warn("Failed to clean listing staging dirs", error);
+    });
+  }, [
+    draftsData,
+    draftsPending,
+    draftsSuccess,
+    listingsData,
+    listingsPending,
+    listingsSuccess,
+  ]);
+
+  return null;
+}
+
+function OrphanCleanupOnBoot() {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated !== true) {
+    return null;
+  }
+
+  return <AuthenticatedOrphanCleanup />;
 }
 
 export default function RootLayout() {
@@ -135,6 +194,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={NAV_THEME[scheme]}>
         <ToastProvider>
+          <OrphanCleanupOnBoot />
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
