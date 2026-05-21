@@ -207,7 +207,7 @@ export default function EditListingScreen() {
       await saveEdit.save();
       show({ title: "Changes saved", variant: "success" });
       // Navigate to public detail; may 404 until downstream route ships
-      router.replace(`/(public)/listings/${listingId}` as never);
+      router.replace(`/(public)/listings/${listingId}`);
     } catch {
       // Error state surfaced by saveEdit.error + per-op banner below
     }

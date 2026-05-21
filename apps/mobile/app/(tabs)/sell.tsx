@@ -1,5 +1,5 @@
 import { PlusCircle } from "lucide-react-native";
-import { type Href, router, useNavigation } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useEffect, useReducer, useState, useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -273,7 +273,7 @@ export default function SellScreen() {
         title: "Listing published",
         variant: "success",
       });
-      router.push(`/(public)/listings/${result.id}` as Href);
+      router.replace(`/(public)/listings/${result.id}`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to publish listing";

@@ -198,6 +198,7 @@ export default function RootLayout() {
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(public)" />
             <Stack.Screen
               name="(auth)/phone"
               options={{ presentation: "fullScreenModal" }}
