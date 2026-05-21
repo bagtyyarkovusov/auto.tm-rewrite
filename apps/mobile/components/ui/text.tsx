@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 const textVariants = cva(
   cn(
-    'text-foreground text-base',
+    'font-sans text-base leading-normal text-foreground',
     Platform.select({
       web: 'select-text',
     })
@@ -17,24 +17,26 @@ const textVariants = cva(
       variant: {
         default: '',
         h1: cn(
-          'text-center text-4xl font-extrabold tracking-tight',
+          'font-heading text-3xl font-bold leading-tight',
           Platform.select({ web: 'scroll-m-20 text-balance' })
         ),
         h2: cn(
-          'border-border border-b pb-2 text-3xl font-semibold tracking-tight',
+          'font-heading text-2xl font-semibold leading-snug',
           Platform.select({ web: 'scroll-m-20 first:mt-0' })
         ),
-        h3: cn('text-2xl font-semibold tracking-tight', Platform.select({ web: 'scroll-m-20' })),
-        h4: cn('text-xl font-semibold tracking-tight', Platform.select({ web: 'scroll-m-20' })),
-        p: 'mt-3 leading-7 sm:mt-6',
-        blockquote: 'mt-4 border-l-2 pl-3 italic sm:mt-6 sm:pl-6',
+        h3: cn('font-heading text-xl font-semibold leading-snug', Platform.select({ web: 'scroll-m-20' })),
+        h4: cn('font-heading text-lg font-semibold leading-snug', Platform.select({ web: 'scroll-m-20' })),
+        p: 'leading-relaxed',
+        blockquote: 'border-l-2 border-border pl-3 italic text-muted-foreground',
         code: cn(
-          'bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold'
+          'relative rounded-md bg-muted px-1.5 py-1 font-mono text-sm font-medium'
         ),
-        lead: 'text-muted-foreground text-xl',
+        lead: 'text-lg leading-relaxed text-muted-foreground',
         large: 'text-lg font-semibold',
-        small: 'text-sm font-medium leading-none',
+        small: 'text-sm font-medium leading-snug',
         muted: 'text-muted-foreground text-sm',
+        label: 'text-sm font-medium leading-snug text-foreground',
+        caption: 'text-xs font-medium leading-snug text-muted-foreground',
       },
     },
     defaultVariants: {

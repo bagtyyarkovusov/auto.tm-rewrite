@@ -6,7 +6,7 @@ import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { cn } from '@/lib/utils';
 import { Text } from '@/components/ui/text';
 
-type ToastVariant = 'default' | 'destructive' | 'success';
+type ToastVariant = 'default' | 'destructive' | 'success' | 'warning' | 'info';
 
 interface Toast {
   id: string;
@@ -92,18 +92,22 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
           className={cn(
             'flex-row items-center gap-3 rounded-lg border px-4 py-3 shadow-lg shadow-black/5',
             toast.variant === 'destructive' &&
-              'border-destructive/20 bg-destructive',
+              'border-destructive/20 bg-destructive/10',
             toast.variant === 'success' && 'border-success-500/20 bg-success-500/10',
+            toast.variant === 'warning' && 'border-warning-500/20 bg-warning-500/10',
+            toast.variant === 'info' && 'border-info-500/20 bg-info-500/10',
             (!toast.variant || toast.variant === 'default') &&
-              'bg-background border-border'
+              'bg-card border-border'
           )}>
           <View className="flex-1">
             <Text
               className={cn(
                 'text-sm font-medium',
-                toast.variant === 'destructive'
-                  ? 'text-destructive-foreground'
-                  : 'text-foreground'
+                toast.variant === 'destructive' && 'text-destructive',
+                toast.variant === 'success' && 'text-success-500',
+                toast.variant === 'warning' && 'text-warning-500',
+                toast.variant === 'info' && 'text-info-500',
+                (!toast.variant || toast.variant === 'default') && 'text-foreground'
               )}>
               {toast.title}
             </Text>
@@ -112,7 +116,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
                 className={cn(
                   'text-sm mt-1',
                   toast.variant === 'destructive'
-                    ? 'text-destructive-foreground/80'
+                    ? 'text-destructive'
                     : 'text-muted-foreground'
                 )}>
                 {toast.description}

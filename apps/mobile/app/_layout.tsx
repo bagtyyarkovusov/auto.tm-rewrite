@@ -83,17 +83,12 @@ export default function RootLayout() {
     ...(Platform.OS === "ios"
       ? {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          "UberMoveMono-Medium": require("../assets/fonts/UberMoveMono-Medium.woff2"),
+          "UberMoveMono-Medium": require("../assets/fonts/UberMoveMono-Medium.ttf"),
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          "UberMoveMono-Regular": require("../assets/fonts/UberMoveMono-Regular.woff2"),
+          "UberMoveMono-Regular": require("../assets/fonts/UberMoveMono-Regular.ttf"),
         }
       : {}),
   });
-
-  // Prevent rendering until fonts are loaded to avoid layout shift
-  if (!fontsLoaded) {
-    return null;
-  }
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", onAppStateChange);
@@ -131,6 +126,10 @@ export default function RootLayout() {
     });
     return () => unsubscribe();
   }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

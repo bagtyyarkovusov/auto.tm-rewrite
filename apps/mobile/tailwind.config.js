@@ -20,6 +20,7 @@ module.exports = {
     extend: {
       ...tailwindTheme,
       colors: {
+        ...tailwindTheme.colors,
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -53,9 +54,9 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        success: { 500: "#16a34a" },
       },
       borderRadius: {
+        ...tailwindTheme.borderRadius,
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",

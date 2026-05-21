@@ -1,35 +1,29 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { Image, View } from "react-native";
-import type { ListingsSchemas } from "@auto-tm/contracts";
+import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
 import { useEditListing } from "../../../src/api/listings/useEditListing";
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
+import type { StagedPhoto } from "../../../src/listings/uploadStaging/types";
 import Step1Vin from "../../../src/listings/wizard/Step1Vin";
 import Step3VehicleId from "../../../src/listings/wizard/Step3VehicleId";
 import Step4Specs from "../../../src/listings/wizard/Step4Specs";
 import Step5Price from "../../../src/listings/wizard/Step5Price";
 import Step6Location from "../../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../../src/listings/wizard/Step7DescContact";
+import Step8Review from "../../../src/listings/wizard/Step8Review";
 import { WizardLayout } from "../../../src/listings/wizard/WizardLayout";
-import type { WizardPayload } from "../../../src/listings/wizard/types";
+import {
+  buildMachineContext,
+  createInitialState,
+  wizardMachineReducer,
+} from "../../../src/listings/wizard/wizardMachine";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
 
-const EDIT_STEPS = [
-  "vin",
-  "photos",
-  "vehicle",
-  "specs",
-  "price",
-  "location",
-  "contact",
-] as const;
-
-type EditStep = (typeof EDIT_STEPS)[number];
-
-const STEP_TITLES: Record<EditStep, string> = {
+const STEP_TITLES: Record<WizardSchemas.WizardStep, string> = {
   vin: "VIN or chassis number",
   photos: "Photos",
   vehicle: "Vehicle",
@@ -37,13 +31,16 @@ const STEP_TITLES: Record<EditStep, string> = {
   price: "Price",
   location: "Car location",
   contact: "Description & contact",
+  review: "Review",
 };
 
-function getStepTitle(step: EditStep): string {
+function getStepTitle(step: WizardSchemas.WizardStep): string {
   return STEP_TITLES[step] ?? step;
 }
 
-function listingToPayload(listing: ListingsSchemas.ListingDetail): WizardPayload {
+function listingToPayload(
+  listing: ListingsSchemas.ListingDetail,
+): WizardSchemas.WizardDraftPayload {
   return {
     vin: listing.vin,
     brandId: listing.brandId,
@@ -77,6 +74,20 @@ function listingToPayload(listing: ListingsSchemas.ListingDetail): WizardPayload
   };
 }
 
+function listingMediaToPhotos(
+  media: ListingsSchemas.ListingMedia[],
+): StagedPhoto[] {
+  return media.map((m, index) => ({
+    photoId: m.id,
+    key: m.key,
+    state: "attached",
+    sortOrder: m.sortOrder ?? index,
+    retryCount: 0,
+    width: m.width,
+    height: m.height,
+  }));
+}
+
 function ReadOnlyPhotos({ media }: { media: ListingsSchemas.ListingMedia[] }) {
   return (
     <View className="flex-row flex-wrap gap-2">
@@ -91,8 +102,8 @@ function ReadOnlyPhotos({ media }: { media: ListingsSchemas.ListingMedia[] }) {
             resizeMode="cover"
           />
           {i === 0 && (
-            <View className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5">
-              <Text className="text-[10px] font-medium text-primary-foreground">
+            <View className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5">
+              <Text className="text-[10px] font-medium text-white">
                 Cover
               </Text>
             </View>
@@ -110,57 +121,71 @@ export default function EditListingScreen() {
 
   const { data: listing } = useListingDetail(listingId);
   const editListing = useEditListing();
-
-  const [currentStep, setCurrentStep] = useState<EditStep>("vin");
-  const [payload, setPayload] = useState<WizardPayload>({});
+  const [machineState, dispatch] = useReducer(
+    wizardMachineReducer,
+    createInitialState(),
+  );
+  const [attemptedSteps, setAttemptedSteps] = useState<
+    Partial<Record<WizardSchemas.WizardStep, boolean>>
+  >({});
 
   useEffect(() => {
     if (listing) {
-      setPayload(listingToPayload(listing));
+      dispatch({
+        type: "INIT",
+        draftId: null,
+        listingId: listing.id,
+        mode: "edit",
+        entryStep: "review",
+        payload: listingToPayload(listing),
+      });
     }
   }, [listing]);
 
-  function handlePayloadChange(updates: Partial<WizardPayload>) {
-    setPayload((prev) => ({ ...prev, ...updates }));
-  }
+  const ctx = buildMachineContext(machineState);
 
-  function handleBack() {
-    const idx = EDIT_STEPS.indexOf(currentStep);
-    const previousStep = EDIT_STEPS[idx - 1];
-    if (previousStep) {
-      setCurrentStep(previousStep);
+  const handlePayloadChange = useCallback(
+    (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
+      dispatch({ type: "UPDATE_FIELDS", updates });
+    },
+    [],
+  );
+
+  const handleReturnToReview = useCallback(() => {
+    if (!ctx.canContinue) {
+      setAttemptedSteps((current) =>
+        current[machineState.currentStep]
+          ? current
+          : { ...current, [machineState.currentStep]: true },
+      );
+      return;
     }
-  }
+    dispatch({ type: "GO_TO_STEP", step: "review" });
+  }, [ctx.canContinue, machineState.currentStep]);
 
-  function handleContinue() {
-    const idx = EDIT_STEPS.indexOf(currentStep);
-    const nextStep = EDIT_STEPS[idx + 1];
-    if (nextStep) {
-      setCurrentStep(nextStep);
-    }
-  }
+  const handleSave = useCallback(() => {
+    if (!ctx.canPublish) return;
 
-  function handleSave() {
     const patch: ListingsSchemas.EditListingRequest = {
-      priceAmount: payload.priceAmount,
-      priceCurrency: payload.priceCurrency,
-      description: payload.description,
-      condition: payload.condition,
-      mileageKm: payload.mileageKm,
-      colorId: payload.colorId,
-      bodyTypeId: payload.bodyTypeId,
-      transmissionId: payload.transmissionId,
-      driveTypeId: payload.driveTypeId,
-      engineTypeId: payload.engineTypeId,
-      enginePower: payload.enginePower,
-      regionId: payload.regionId,
-      cityId: payload.cityId,
-      locationText: payload.locationText,
-      contactPhone: payload.contactPhone,
-      allowCalls: payload.allowCalls,
-      allowChat: payload.allowChat,
-      acceptsExchange: payload.acceptsExchange,
-      installmentAvailable: payload.installmentAvailable,
+      priceAmount: machineState.payload.priceAmount,
+      priceCurrency: machineState.payload.priceCurrency,
+      description: machineState.payload.description,
+      condition: machineState.payload.condition,
+      mileageKm: machineState.payload.mileageKm,
+      colorId: machineState.payload.colorId,
+      bodyTypeId: machineState.payload.bodyTypeId,
+      transmissionId: machineState.payload.transmissionId,
+      driveTypeId: machineState.payload.driveTypeId,
+      engineTypeId: machineState.payload.engineTypeId,
+      enginePower: machineState.payload.enginePower,
+      regionId: machineState.payload.regionId,
+      cityId: machineState.payload.cityId,
+      locationText: machineState.payload.locationText,
+      contactPhone: machineState.payload.contactPhone,
+      allowCalls: machineState.payload.allowCalls,
+      allowChat: machineState.payload.allowChat,
+      acceptsExchange: machineState.payload.acceptsExchange,
+      installmentAvailable: machineState.payload.installmentAvailable,
     };
 
     editListing.mutate(
@@ -172,7 +197,7 @@ export default function EditListingScreen() {
         },
       },
     );
-  }
+  }, [ctx.canPublish, editListing, listingId, machineState.payload, show]);
 
   function handleDiscard() {
     router.back();
@@ -186,27 +211,37 @@ export default function EditListingScreen() {
     );
   }
 
-  const currentIdx = EDIT_STEPS.indexOf(currentStep);
-  const isLastStep = currentIdx === EDIT_STEPS.length - 1;
+  const currentStep = machineState.currentStep;
+  const disabledReason =
+    !ctx.isLastStep &&
+    !ctx.canContinue &&
+    attemptedSteps[currentStep] &&
+    ctx.stepErrors.length > 0
+      ? ctx.stepErrors[0]
+      : undefined;
 
   return (
     <WizardLayout
       routeTitle="Edit listing"
       stepTitle={getStepTitle(currentStep)}
-      stepNumber={currentIdx + 1}
-      stepCount={EDIT_STEPS.length}
-      onBack={handleBack}
-      onContinue={handleContinue}
+      stepNumber={ctx.stepNumber}
+      stepCount={ctx.stepCount}
+      onBack={() => {}}
+      onContinue={handleReturnToReview}
       onPublish={handleSave}
+      onReturnToReview={handleReturnToReview}
       onDiscard={handleDiscard}
-      canContinue={true}
-      canPublish={true}
-      canGoBack={currentIdx > 0}
-      isLastStep={isLastStep}
+      mode={machineState.mode}
+      editDetourActive={ctx.editDetourActive}
+      canContinue={ctx.canContinue && !editListing.isPending}
+      canPublish={ctx.canPublish && !editListing.isPending}
+      canGoBack={ctx.canGoBack}
+      isLastStep={ctx.isLastStep}
       saveStatus={editListing.isPending ? "saving" : "idle"}
       saveError={null}
       onRetrySave={() => {}}
-      progressPercent={((currentIdx + 1) / EDIT_STEPS.length) * 100}
+      progressPercent={ctx.progressPercent}
+      disabledReason={disabledReason}
       publishLabel="Save changes"
       discardTitle="Leave edit mode?"
       discardDescription="Any unsaved changes will be lost."
@@ -215,8 +250,9 @@ export default function EditListingScreen() {
     >
       {currentStep === "vin" && (
         <Step1Vin
-          payload={payload}
+          payload={machineState.payload}
           onChange={handlePayloadChange}
+          fieldErrors={ctx.fieldErrors}
           disabled={true}
         />
       )}
@@ -234,25 +270,48 @@ export default function EditListingScreen() {
       )}
       {currentStep === "vehicle" && (
         <Step3VehicleId
-          payload={payload}
+          payload={machineState.payload}
           onChange={handlePayloadChange}
+          fieldErrors={ctx.fieldErrors}
           disabled={true}
+          showErrors={attemptedSteps.vehicle === true}
         />
       )}
       {currentStep === "specs" && (
-        <Step4Specs payload={payload} onChange={handlePayloadChange} />
+        <Step4Specs
+          payload={machineState.payload}
+          onChange={handlePayloadChange}
+          fieldErrors={ctx.fieldErrors}
+        />
       )}
       {currentStep === "price" && (
-        <Step5Price payload={payload} onChange={handlePayloadChange} />
+        <Step5Price
+          payload={machineState.payload}
+          onChange={handlePayloadChange}
+          fieldErrors={ctx.fieldErrors}
+        />
       )}
       {currentStep === "location" && (
-        <Step6Location payload={payload} onChange={handlePayloadChange} />
+        <Step6Location
+          payload={machineState.payload}
+          onChange={handlePayloadChange}
+          fieldErrors={ctx.fieldErrors}
+        />
       )}
       {currentStep === "contact" && (
         <Step7DescContact
-          payload={payload}
+          payload={machineState.payload}
           onChange={handlePayloadChange}
+          fieldErrors={ctx.fieldErrors}
           defaultPhone={listing.contactPhone ?? ""}
+        />
+      )}
+      {currentStep === "review" && (
+        <Step8Review
+          payload={machineState.payload}
+          validatedSteps={machineState.validatedSteps}
+          onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
+          photos={listingMediaToPhotos(listing.media)}
         />
       )}
     </WizardLayout>

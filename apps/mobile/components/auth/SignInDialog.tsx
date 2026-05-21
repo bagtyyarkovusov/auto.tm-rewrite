@@ -45,7 +45,7 @@ export function SignInDialog({
         </DialogHeader>
         <Button
           size="lg"
-          variant="default"
+          variant="brand"
           className="h-[52px] rounded-full"
           onPress={() => {
             onOpenChange(false);

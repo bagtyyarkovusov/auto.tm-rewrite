@@ -51,7 +51,7 @@ Agents working in this repo read these files **before** the per-context `CONTEXT
 
 | Module | File | Owns |
 |---|---|---|
-| listings | [`listings/CONTEXT.md`](apps/mobile/src/listings/CONTEXT.md) | Upload pipeline, wizard state machine, autosave |
+| listings | [`listings/CONTEXT.md`](apps/mobile/src/listings/CONTEXT.md) | Create `sell` reducer + staging queue vs edit-route shell; uploads, autosave, wizard documentation |
 
 ## Packages
 

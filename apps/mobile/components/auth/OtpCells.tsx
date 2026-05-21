@@ -101,7 +101,7 @@ const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
               >
                 <Text
                   className={cn(
-                    "text-2xl font-semibold leading-tight font-uber-mono",
+                    "font-mono text-2xl font-semibold leading-tight",
                     errored ? "text-destructive" : "text-foreground",
                     digit ? "opacity-100" : "opacity-0",
                   )}

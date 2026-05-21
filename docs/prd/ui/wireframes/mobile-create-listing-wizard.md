@@ -684,10 +684,13 @@ Reuse the wizard for editing existing listings while protecting post-publish ide
 - Generation
 - Year
 
+Photos are explicitly not locked after publishing. Owners can add, remove, and reorder photos in edit mode; reordering changes the cover photo. See [ADR-0024](../../../adr/0024-owner-post-publish-photo-editing.md).
+
 ## Interactions
 
 - Locked rows are disabled and expose helper text or tooltip.
 - Editable fields use the same step layouts.
+- Photo editing uses the same photo-grid affordances where applicable: add, remove, retry failed upload, and reorder.
 - Final CTA says `Save changes`, not `Publish`.
 
 ## States

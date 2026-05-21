@@ -49,12 +49,12 @@ export function PhotoStateOverlay({
   if (photo.state === "uploaded" || photo.state === "attached") {
     return (
       <>
-        <View className="absolute right-1 top-1 rounded-full bg-primary p-1">
-          <Icon as={Check} className="size-3 text-primary-foreground" />
+        <View className="absolute right-1 top-1 rounded-full bg-success-500 p-1">
+          <Icon as={Check} className="size-3 text-white" />
         </View>
         {index === 0 && (
-          <View className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5">
-            <Text className="text-[10px] font-medium text-primary-foreground">
+          <View className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5">
+            <Text className="text-[10px] font-medium text-white">
               Cover
             </Text>
           </View>
@@ -76,8 +76,8 @@ export function PhotoStateOverlay({
         <View className="items-center gap-1">
           {photo.error?.retryable === false ? (
             <>
-              <Icon as={X} className="size-6 text-red-400" />
-              <Text className="text-xs text-red-400">Failed</Text>
+              <Icon as={X} className="size-6 text-destructive" />
+              <Text className="text-xs text-destructive">Failed</Text>
             </>
           ) : (
             <>
@@ -98,7 +98,7 @@ export function PhotoStateOverlay({
   if (photo.state === "lost") {
     return (
       <View className="absolute inset-0 items-center justify-center bg-black/40">
-        <Icon as={AlertTriangle} className="size-6 text-yellow-400" />
+        <Icon as={AlertTriangle} className="size-6 text-warning-500" />
         <Text className="mt-1 text-xs text-white">Lost</Text>
       </View>
     );

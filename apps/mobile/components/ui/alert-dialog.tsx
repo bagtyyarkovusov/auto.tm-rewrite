@@ -57,7 +57,7 @@ function AlertDialogContent({
       <AlertDialogOverlay>
         <AlertDialogPrimitive.Content
           className={cn(
-            'bg-background border-border z-50 flex w-full max-w-[calc(100%-2rem)] flex-col gap-4 rounded-lg border p-6 shadow-lg shadow-black/5 sm:max-w-lg',
+            'z-50 flex w-full max-w-[calc(100%-2rem)] flex-col gap-4 rounded-lg border border-border bg-card p-5 shadow-lg shadow-black/5 sm:max-w-lg',
             Platform.select({
               web: 'animate-in fade-in-0 zoom-in-95 duration-200',
             }),
@@ -93,7 +93,7 @@ function AlertDialogTitle({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn('text-foreground text-lg font-semibold', className)}
+      className={cn('font-heading text-lg font-semibold leading-snug text-foreground', className)}
       {...props}
     />
   );
@@ -116,7 +116,7 @@ function AlertDialogAction({
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
   return (
-    <TextClassContext.Provider value={buttonTextVariants({ className })}>
+    <TextClassContext.Provider value={buttonTextVariants()}>
       <AlertDialogPrimitive.Action className={cn(buttonVariants(), className)} {...props} />
     </TextClassContext.Provider>
   );

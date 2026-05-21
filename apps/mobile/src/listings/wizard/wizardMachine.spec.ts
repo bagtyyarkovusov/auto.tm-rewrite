@@ -9,12 +9,31 @@ import {
 
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
 const validPhoto = { photoId: validUuid, key: "uploads/abc.jpg", sortOrder: 0 };
+const completePayload = {
+  photos: [validPhoto],
+  brandId: validUuid,
+  modelId: validUuid,
+  year: 2020,
+  condition: "used" as const,
+  mileageKm: 10000,
+  priceAmount: 100000,
+  priceCurrency: "TMT" as const,
+  regionId: validUuid,
+  cityId: validUuid,
+  description: "Great car",
+  allowCalls: true,
+  allowChat: true,
+};
+const dataSteps = ["vin", "photos", "vehicle", "specs", "price", "location", "contact"];
 
 describe("createInitialState", () => {
   it("returns idle state with empty payload", () => {
     const state = createInitialState();
     expect(state.status).toBe("idle");
     expect(state.draftId).toBeNull();
+    expect(state.listingId).toBeNull();
+    expect(state.mode).toBe("create");
+    expect(state.editEntryAtReview).toBe(false);
     expect(state.payload).toEqual({});
     expect(state.validatedSteps).toEqual([]);
   });
@@ -54,8 +73,53 @@ describe("INIT", () => {
 
     expect(next.status).toBe("step");
     expect(next.draftId).toBe("draft-1");
+    expect(next.mode).toBe("create");
     expect(next.payload).toEqual({ vin: "WBA123" });
     expect(next.currentStep).toBe("vin");
+  });
+
+  it("initializes edit mode at review with all data steps validated", () => {
+    const next = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: null,
+      listingId: "listing-1",
+      mode: "edit",
+      entryStep: "review",
+      payload: completePayload,
+    });
+
+    expect(next.status).toBe("step");
+    expect(next.draftId).toBeNull();
+    expect(next.listingId).toBe("listing-1");
+    expect(next.mode).toBe("edit");
+    expect(next.editEntryAtReview).toBe(true);
+    expect(next.currentStep).toBe("review");
+    expect(next.validatedSteps).toEqual(dataSteps);
+  });
+
+  it("supports edit detours from review and back to review", () => {
+    let state = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: null,
+      listingId: "listing-1",
+      mode: "edit",
+      entryStep: "review",
+      payload: completePayload,
+    });
+
+    state = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "price" });
+    expect(state.currentStep).toBe("price");
+    expect(buildMachineContext(state).editDetourActive).toBe(true);
+
+    state = wizardMachineReducer(state, {
+      type: "UPDATE_FIELDS",
+      updates: { priceAmount: 120000 },
+    });
+    expect(state.validatedSteps).toEqual(dataSteps);
+
+    state = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "review" });
+    expect(state.currentStep).toBe("review");
+    expect(buildMachineContext(state).editDetourActive).toBe(false);
   });
 
   it("resumes at legacy currentStep when prior steps are validated", () => {
@@ -332,57 +396,6 @@ describe("GO_TO_STEP", () => {
   });
 });
 
-describe("SAVE lifecycle", () => {
-  it("transitions to saving then step on success", () => {
-    let state = wizardMachineReducer(createInitialState(), {
-      type: "INIT",
-      draftId: "draft-1",
-      payload: { vin: "WBA123" },
-    });
-
-    state = wizardMachineReducer(state, { type: "SAVE_START" });
-    expect(state.status).toBe("saving");
-
-    state = wizardMachineReducer(state, {
-      type: "SAVE_SUCCESS",
-      payload: { vin: "WBA123", validatedSteps: ["vin"] },
-    });
-    expect(state.status).toBe("step");
-  });
-
-  it("transitions to saveError on failure", () => {
-    let state = wizardMachineReducer(createInitialState(), {
-      type: "INIT",
-      draftId: "draft-1",
-      payload: {},
-    });
-
-    state = wizardMachineReducer(state, { type: "SAVE_START" });
-    state = wizardMachineReducer(state, {
-      type: "SAVE_ERROR",
-      error: "Network error",
-    });
-
-    expect(state.status).toBe("saveError");
-    expect(state.saveError).toBe("Network error");
-  });
-
-  it("retries save from saveError", () => {
-    let state = wizardMachineReducer(createInitialState(), {
-      type: "INIT",
-      draftId: "draft-1",
-      payload: {},
-    });
-
-    state = wizardMachineReducer(state, { type: "SAVE_START" });
-    state = wizardMachineReducer(state, { type: "SAVE_ERROR", error: "fail" });
-    state = wizardMachineReducer(state, { type: "SAVE_RETRY" });
-
-    expect(state.status).toBe("saving");
-    expect(state.saveError).toBeNull();
-  });
-});
-
 describe("PUBLISH lifecycle", () => {
   it("transitions to complete on success", () => {
     let state = wizardMachineReducer(createInitialState(), {
@@ -446,6 +459,7 @@ describe("buildMachineContext", () => {
     const ctx = buildMachineContext(state);
     expect(ctx.canContinue).toBe(true); // vin step is always valid
     expect(ctx.canGoBack).toBe(false);
+    expect(ctx.editDetourActive).toBe(false);
     expect(ctx.isLastStep).toBe(false);
     expect(ctx.stepErrors).toEqual([]);
     expect(ctx.stepNumber).toBe(1);
@@ -507,5 +521,25 @@ describe("buildMachineContext", () => {
     const ctx = buildMachineContext(state);
     expect(ctx.canContinue).toBe(false);
     expect(ctx.stepErrors.length).toBeGreaterThan(0);
+  });
+
+  it("disables back on edit review and edit detours", () => {
+    let state = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: null,
+      listingId: "listing-1",
+      mode: "edit",
+      entryStep: "review",
+      payload: completePayload,
+    });
+
+    let ctx = buildMachineContext(state);
+    expect(ctx.canGoBack).toBe(false);
+    expect(ctx.editDetourActive).toBe(false);
+
+    state = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "price" });
+    ctx = buildMachineContext(state);
+    expect(ctx.canGoBack).toBe(false);
+    expect(ctx.editDetourActive).toBe(true);
   });
 });

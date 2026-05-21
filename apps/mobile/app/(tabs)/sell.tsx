@@ -331,6 +331,8 @@ export default function SellScreen() {
         onContinue={handleContinue}
         onPublish={handlePublish}
         onDiscard={handleDiscard}
+        mode={machineState.mode}
+        editDetourActive={ctx.editDetourActive}
         canContinue={ctx.canContinue}
         canPublish={ctx.canPublish}
         canGoBack={ctx.canGoBack}

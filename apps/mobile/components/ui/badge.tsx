@@ -7,7 +7,7 @@ import { TextClassContext } from '@/components/ui/text';
 
 const badgeVariants = cva(
   cn(
-    'border-border group shrink-0 flex-row items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-0.5',
+    'group shrink-0 flex-row items-center justify-center gap-1 overflow-hidden rounded-full border px-2 py-0.5',
     Platform.select({
       web: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive w-fit whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] [&>svg]:pointer-events-none [&>svg]:size-3',
     })
@@ -16,6 +16,10 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: cn(
+          'border-transparent bg-muted',
+          Platform.select({ web: '[a&]:hover:bg-muted/80' })
+        ),
+        brand: cn(
           'bg-primary border-transparent',
           Platform.select({ web: '[a&]:hover:bg-primary/90' })
         ),
@@ -24,9 +28,12 @@ const badgeVariants = cva(
           Platform.select({ web: '[a&]:hover:bg-secondary/90' })
         ),
         destructive: cn(
-          'bg-destructive border-transparent',
+          'border-destructive/20 bg-destructive/10',
           Platform.select({ web: '[a&]:hover:bg-destructive/90' })
         ),
+        success: 'border-success-500/20 bg-success-500/10',
+        warning: 'border-warning-500/20 bg-warning-500/10',
+        info: 'border-info-500/20 bg-info-500/10',
         outline: Platform.select({ web: '[a&]:hover:bg-accent [a&]:hover:text-accent-foreground' }),
       },
     },
@@ -39,9 +46,13 @@ const badgeVariants = cva(
 const badgeTextVariants = cva('text-xs font-medium', {
   variants: {
     variant: {
-      default: 'text-primary-foreground',
+      default: 'text-foreground',
+      brand: 'text-primary-foreground',
       secondary: 'text-secondary-foreground',
-      destructive: 'text-white',
+      destructive: 'text-destructive',
+      success: 'text-success-500',
+      warning: 'text-warning-500',
+      info: 'text-info-500',
       outline: 'text-foreground',
     },
   },

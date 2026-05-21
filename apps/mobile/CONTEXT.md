@@ -30,7 +30,21 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`react-native-svg`** (+ `react-native-svg-transformer` at build time) for vector icons and brand SVG rendering.
 - **`expo-linking`** installed (Universal Links / App Links handling will be wired in S4).
 - **`lucide-react-native`** for icons, rendered through the `@/components/ui/icon` wrapper.
-- **Custom fonts**: UberMove, UberMoveText, UberMoveMono families (8 files) loaded at root via `expo-font` `useFonts`. `tailwind.config.js` extends `fontFamily` with `uber-move`, `uber-move-text`, `uber-mono` tokens. All wizard step titles and key headings use `font-uber-move` (display); body text uses `font-uber-move-text`.
+- **Custom fonts**: `app/_layout.tsx` loads UberMove / UberMoveText `.otf` families via `useFonts`. **UberMove Mono** `.ttf` files (`UberMoveMono-Regular`, `UberMoveMono-Medium`) load **only on iOS** today; Android has no bundled mono fonts (tailwind `font-mono` falls through to `"Menlo", monospace` fallback on Android).
+
+### Typography utilities (today)
+
+[`tailwind.config.js`](tailwind.config.js) maps:
+
+- **`font-heading`** → `UberMove-Medium`
+- **`font-sans`** (default semantic body) → `UberMoveText-Regular`
+- **`font-mono`** → `UberMoveMono-Regular`, `Menlo`, `monospace`
+
+There are **no** `font-uber-move`, `font-uber-move-text`, or `font-uber-mono` utilities. Wizard shell + steps mostly use **`font-semibold`** on headings without specifying `font-heading`; auth `OtpCells` uses **`font-mono`** for the code digits.
+
+### RNR primitive design contract (today)
+
+Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first surfaces, 8px default radius, UberMove semantic font utilities, flat cards/inputs, and restrained brand red. `Button` default is high-contrast neutral (`bg-foreground`); `Button variant="brand"` is the red commit/action style. Status UI uses `success-500`, `warning-500`, `info-500`, and `destructive` instead of brand red. `Progress`, `Switch`, `Tooltip`, tabs, and photo cover badges use neutral tokens so red stays reserved for true brand or commit moments.
 
 ### Routes (Phase 1, today)
 
@@ -38,7 +52,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 /(tabs)/
   index               Feed (personalized listings)        — stub, no real feed
   favorites           Favorites + saved searches          — stub
-  sell                Sell / listing wizard entry         — 8-step create-listing wizard (S4)
+  sell                Sell tab + inline 8-step create-listing wizard (S4) — WizardLayout overlays this route; tab bar hidden while wizard is open
   chat                Conversation list                   — stub
   services            Profile, garage, settings, blog     — stub
 
@@ -46,11 +60,48 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
   phone               Phone entry                         — wired (S2), design-refactored (#124)
   otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
+/listings/
+  [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes direct PATCHes via useEditListing; no edit draft/autosave; photos read-only today
+
 /dev/
   catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__
 ```
 
+There is **no** dedicated **`/sell/wizard`** Expo route — the create flow runs **inline** under `/(tabs)/sell`. No **`/(public)/listings/[id]`** listing-detail route exists in mobile yet (`sell.tsx` navigates there after publish — broken until that screen exists — see **[Listing wizard — known implementation gaps](#listing-wizard--known-implementation-gaps)**).
+
 No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
+
+### Listing wizard — known implementation gaps
+
+Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below (next PRs).
+
+| Gap | What code does today |
+|-----|----------------------|
+| **Autosave + photos** | `sell.tsx` syncs `uploadQueue.photos` into reducer via `UPDATE_FIELDS`, but **debounced `save()` does not depend on queue/photo payloads** — if only queue photos change until the next unrelated field edit, PATCH may lag until `forceSave` (step change / publish paths). |
+| **`publishGate` unused** | `useUploadQueue` computes `publishGate`; **sell tab never reads it** — Continue/Publish gating follows `wizardMachine` + contracts Zod (`photos[].key`), not staging states like `presigned` / `uploading`. |
+| **`waiting_for_network` state** | Declared on `PhotoState` and collectors in `queueState` / resume — **nothing in orchestration assigns it yet** — `PhotoStateOverlay` renders nothing for that state. |
+| **`removePhoto` vs `queueRef`** | Compression/upload paths update `queueRef` synchronously; **remove relies on passive `queueRef.current = queue` on the next render** — brief window vs in-flight uploads. |
+| **`orphanCleanup`** | `cleanupOrphanDraftDirs()` exists — **nothing calls it on app boot** (staging dirs for vanished drafts linger until wired). Canonical detail in [`src/listings/CONTEXT.md`](src/listings/CONTEXT.md). |
+| **Post-publish navigation** | `router.push('/(public)/listings/:id')` — **`app/(public)` tree absent** → broken navigation until a listing-detail route ships. |
+| **`Step2Photos` props noise** | Still accepts `payload` / `onChange` / `disabledTooltip`; **implementations ignore them** (photo props only). |
+| **Edit photos read-only** | `/listings/[id]/edit` renders `<ReadOnlyPhotos/>`, but [ADR-0024](../../docs/adr/0024-owner-post-publish-photo-editing.md) locks owner add/remove/reorder photos after publish as the product contract. Target behavior stages photo edits locally, may upload new files during edit, and applies `AttachMedia` / `RemoveMedia` / `ReorderMedia` only on **Save changes**. Cancel/discard cleanup for uploaded-but-unattached edit media is not implemented. |
+
+### Planned refactor roadmap (follow-up PRs — not aspirational CONTEXT)
+
+1. **Correctness**: Fix autosave deps or trigger `save()` from queue sync; wire `publishGate` into Publish/Continue UX; synchronize `queueRef` on removals; optionally implement `waiting_for_network` or delete it from lifecycle; hook `cleanupOrphanDraftDirs`; add or stub **`/(public)/listings/[id]`** entry.
+
+2. **Edit media parity + create orchestration cleanup** (agreed): `/listings/[id]/edit` now shares **`wizardMachine` + `@auto-tm/contracts` step validation** with create and opens at Review/Save per [ADR-0026](../../docs/adr/0026-edit-mode-review-first-entry.md). Remaining edit parity work is media: per [ADR-0024](../../docs/adr/0024-owner-post-publish-photo-editing.md), edit mode must support owner photo add/remove/reorder after publish; stage photo edits locally, allow new uploads during edit for responsiveness, and apply `AttachMedia` / `RemoveMedia` / `ReorderMedia` only on **Save changes**. Cancel/discard should clean local staging and best-effort clean newly uploaded media that was never attached; remaining remote objects are storage orphans for server cleanup. Reuse or adapt the upload queue for published-listing media rather than keeping photos read-only. Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
+
+   Convergence sub-decisions (locked 2026-05-22):
+   - **Staging key**: `useUploadQueue` accepts an opaque `stagingKey`; create passes `draft-{draftId}`, edit passes `edit-{listingId}`. `orphanCleanup` walks both prefixes from app boot.
+   - **Save-changes atomicity**: sequential best-effort, fail-fast, retry-from-failure — per [ADR-0025](../../docs/adr/0025-edit-save-atomicity.md). Phase 2 migrates to a bundled transactional endpoint.
+   - **Edit entry pattern**: edit opens at Step 8 (Review); detour steps render a single full-width "Done" footer that returns to Review — per [ADR-0026](../../docs/adr/0026-edit-mode-review-first-entry.md). Create stays linear.
+   - **publishGate consumption**: Continue allowed during in-flight uploads; Publish / Save changes blocked until queue is fully green. Footer chip surfaces "X uploading / Y failed".
+   - **Post-publish navigation**: stub `app/(public)/listings/[id].tsx` as a minimal screen consuming `useListingDetail`; Publish + Save changes both use `router.replace` to land there.
+   - **Design system migration**: add `size="pill"` variant + `disabled:bg-muted disabled:border-border disabled:text-muted-foreground` baked into every Button variant. Wizard footer migrates from inlined `cn()` classes to `variant + size` props.
+   - **Heading hierarchy**: Apple Large Title pattern in `WizardHeader` (muted position-marker row + `text-2xl font-heading` step title + progress); step bodies delete their `text-2xl font-semibold` title.
+
+3. **Refactoring UI (photos step + WizardLayout)** — hierarchy: unify duplicate route title + header step title + step body `text-2xl`; simplify upload overlays vs step-level summary; keep upload/status overlays on semantic tokens instead of brand red; propagate `font-heading` on wizard headings.
 
 ## Navigation chrome (today)
 
@@ -66,7 +117,7 @@ No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their ow
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 - Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
-- Wizard design system applied in #124: step titles (`text-2xl font-semibold`), body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height
+- Wizard design system applied in #124: **`WizardLayout`** shows route title + **`text-lg`** step title + progress; steps **also** echo a **`text-2xl font-semibold`** screen title (**three-level heading stack — refinement backlog**, see **Planned refactor roadmap** above). Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.
 
 Identity hooks live at `src/api/identity/*`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
@@ -87,10 +138,11 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 
 - **S3 (Catalog)** — `src/api/catalog/*` hooks; dev-only `/dev/catalog` route gated `__DEV__`. ✅ Shipped.
 - **S4 (Listings CRUD)** —
-  - **`@aws-sdk/client-s3`** dep for presigned MinIO uploads (current package.json does NOT include this; S4 adds it)
-  - Routes: `/(public)/listings/[id]`, `/sell/wizard` (7-step create-listing wizard), `/listings/[id]/edit`
+  - Mobile uploads are **HTTPS PUT** to presigned URLs — **`apps/mobile/package.json` does not include `@aws-sdk/client-s3`** (clients never embedded the SDK; server issues presigned URLs).
+  - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**.
+  - **Still missing vs PRD / backlog**: **`/(public)/listings/[id]`** buyer listing screen, optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
-  - Mobile foundation (deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging) ✅ Shipped.
+  - Mobile foundation (`apps/mobile` deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging pipeline) ✅ Shipped.
 - **S5 (Listings UX)** — saved-search UI, filter sheet; mobile picker modals (brand-picker, model-picker)
 - **S6 (Garage + Dealership)** — `/me/garage`, `/me/listings`; `/(public)/dealers/[slug]`
 - **S7 (Conversations)** —
@@ -145,12 +197,17 @@ Full analysis with state machines, sequence diagrams, and race condition analysi
 
 ### Upload pipeline open issues
 
-Discovered during Context7-validated analysis (Expo SDK 55 docs). Tracked as GitHub issues:
+Historical GitHub Issues #111–#115 captured Expo-file-system realities. **`Step2Photos` now mitigates the worst `#114/#115` regressions**:
 
-- **#114** — iOS temp file cleanup can delete picker URIs before compression. Picker returns cache-directory URIs; iOS purges them under memory pressure. Mitigation: copy to document directory before compression, or parallelize compression.
-- **#115** — Sequential photo processing blocks UI on multi-select. `for...await onAddPhoto()` compresses one photo at a time. With 20 photos this freezes the UI for seconds. Mitigation: `Promise.all` for parallel compression.
+- Copies every picker URI to **`${documentDirectory}picker-temp/`** before enqueueing uploads (survives iOS cache eviction during parallel work — original #114 symptom).
+- Library multi-select invokes **`Promise.all`** over temp copies (`onAddPhoto` per asset) (#115 parallelism).
+
+Residual risk (still tracked by issues until closed): **`Promise.all` bursts** spike CPU concurrently; revisit batching/back-pressure if QA shows thermal throttling.
+
+- **#114** ⚠️ **partially mitigated** — **`picker-temp` + `Promise.all`** in `Step2Photos` (still open if Issue remains for edge cases Camera-only paths, telemetry, docs).
+- **#115** ⚠️ **partially mitigated** — parallel enqueue replaces sequential **`for-await`**, but concurrency still limited by compressor + **`MAX_CONCURRENT = 2`** uploads.
 - **#112** ✅ — Upload pipeline file-existence checks and error categorization shipped in PR #<N>. `getInfoAsync` guards at 3 checkpoints (before compression, after compression, before PUT). Retryable vs non-retryable distinction via `UploadError` type.
-- **#113** — `moveAsync` failure in `compressor.ts` leaves file in cache. If move throws, compressed file stays in cache and may be cleaned up. Needs `copyAsync` fallback.
+- **#113** ✅ — Compressor hardened: staging transfer uses **`copyAsync` only** (no `moveAsync` path) — orphaned cache files prevented by deterministic copy semantics.
 - **#111** ✅ — `expo-image-manipulator` `manipulateAsync` migrated to `ImageManipulator.manipulate()` contextual API in PR #<N>. Deprecated call removed; identical compression behavior preserved.
 
 ## Notable decisions
@@ -161,3 +218,6 @@ Discovered during Context7-validated analysis (Expo SDK 55 docs). Tracked as Git
 - [ADR-0014](../../docs/adr/0014-mobile-component-library.md) — NativeWind v4 + RNR
 - [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) — TanStack Query v5 + apiClient wrapper
 - [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
+- [ADR-0024](../../docs/adr/0024-owner-post-publish-photo-editing.md) — Owner post-publish photo editing
+- [ADR-0025](../../docs/adr/0025-edit-save-atomicity.md) — Edit Save-changes sequential best-effort (Phase 1) → transactional bundle (Phase 2)
+- [ADR-0026](../../docs/adr/0026-edit-mode-review-first-entry.md) — Edit opens at Review; create stays linear

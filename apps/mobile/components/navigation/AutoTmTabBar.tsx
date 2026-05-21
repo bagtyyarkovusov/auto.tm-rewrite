@@ -7,12 +7,12 @@ import {
 } from "lucide-react-native";
 import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useColorScheme } from "nativewind";
 import { CommonActions } from "@react-navigation/native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 
 const TAB_CONFIG = [
   { name: "index", label: "Search", icon: Search },
@@ -28,8 +28,6 @@ export function AutoTmTabBar({
   navigation,
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === "dark";
 
   return (
     <View
@@ -97,8 +95,10 @@ export function AutoTmTabBar({
                   />
                 </View>
                 <Text
-                  className="mt-1 text-[11px] font-medium"
-                  style={{ color: isFocused ? (isDark ? "#ffffff" : "#000000") : "#afafaf" }}
+                  className={cn(
+                    "mt-1 text-[11px] font-medium",
+                    isFocused ? "text-foreground" : "text-muted-foreground",
+                  )}
                 >
                   {tab.label}
                 </Text>
@@ -112,14 +112,10 @@ export function AutoTmTabBar({
                   className={isFocused ? "text-foreground" : "text-muted-foreground"}
                 />
                 <Text
-                  className="text-[11px] font-medium"
-                  style={{
-                    color: isFocused
-                      ? isDark
-                        ? "#ffffff"
-                        : "#000000"
-                      : "#afafaf",
-                  }}
+                  className={cn(
+                    "text-[11px] font-medium",
+                    isFocused ? "text-foreground" : "text-muted-foreground",
+                  )}
                 >
                   {tab.label}
                 </Text>

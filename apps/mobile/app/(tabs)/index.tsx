@@ -66,7 +66,7 @@ export default function FeedScreen() {
         <Button
           className="mt-6"
           size="lg"
-          variant="default"
+          variant="brand"
           onPress={() => router.push("/(auth)/phone")}
         >
           <Text>Sign In</Text>

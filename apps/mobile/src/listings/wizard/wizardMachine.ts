@@ -22,6 +22,9 @@ export type WizardMachineStatus =
 export interface WizardMachineState {
   status: WizardMachineStatus;
   draftId: string | null;
+  listingId: string | null;
+  mode: "create" | "edit";
+  editEntryAtReview: boolean;
   currentStep: WizardMachineStep;
   payload: WizardSchemas.WizardDraftPayload;
   validatedSteps: WizardSchemas.WizardStep[];
@@ -35,6 +38,7 @@ export interface WizardMachineContext {
   canContinue: boolean;
   canPublish: boolean;
   canGoBack: boolean;
+  editDetourActive: boolean;
   stepErrors: string[];
   fieldErrors: Record<string, string>;
   isLastStep: boolean;
@@ -46,14 +50,19 @@ export interface WizardMachineContext {
 // ── Actions ──
 
 export type WizardMachineAction =
-  | { type: "INIT"; draftId: string; payload: WizardSchemas.WizardDraftPayload }
+  | {
+      type: "INIT";
+      draftId: string | null;
+      listingId?: string | null;
+      payload: WizardSchemas.WizardDraftPayload;
+      mode?: "create" | "edit";
+      entryStep?: WizardMachineStep;
+    }
   | { type: "NEXT" }
   | { type: "BACK" }
   | { type: "UPDATE_FIELDS"; updates: Partial<WizardSchemas.WizardDraftPayload> }
   | { type: "GO_TO_STEP"; step: WizardMachineStep }
-  | { type: "SAVE_START" }
   | { type: "SAVE_SUCCESS"; payload: WizardSchemas.WizardDraftPayload }
-  | { type: "SAVE_ERROR"; error: string }
   | { type: "SAVE_RETRY" }
   | { type: "PUBLISH_START" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
@@ -109,6 +118,9 @@ export function createInitialState(): WizardMachineState {
   return {
     status: "idle",
     draftId: null,
+    listingId: null,
+    mode: "create",
+    editEntryAtReview: false,
     currentStep: "vin",
     payload: {},
     validatedSteps: [],
@@ -126,6 +138,7 @@ export function wizardMachineReducer(
 ): WizardMachineState {
   switch (action.type) {
     case "INIT": {
+      const mode = action.mode ?? "create";
       const legacyStep = mapLegacyStep(action.payload.currentStep);
       const validatedSteps =
         action.payload.validatedSteps && Array.isArray(action.payload.validatedSteps)
@@ -134,8 +147,24 @@ export function wizardMachineReducer(
             )
           : [];
 
+      if (mode === "edit" && action.entryStep === "review") {
+        return {
+          ...state,
+          status: "step",
+          draftId: action.draftId,
+          listingId: action.listingId ?? null,
+          mode,
+          editEntryAtReview: true,
+          payload: action.payload,
+          validatedSteps: DATA_STEPS,
+          currentStep: "review",
+          saveError: null,
+          publishError: null,
+        };
+      }
+
       // Resume at the step indicated by the draft, or the first unvalidated data step
-      let resumeStep: WizardMachineStep = legacyStep ?? "vin";
+      let resumeStep: WizardMachineStep = action.entryStep ?? legacyStep ?? "vin";
       const resumeIdx = stepIndex(resumeStep);
       for (let i = 0; i <= resumeIdx; i++) {
         const step = getStepAtIndex(i);
@@ -150,6 +179,9 @@ export function wizardMachineReducer(
         ...state,
         status: "step",
         draftId: action.draftId,
+        listingId: action.listingId ?? null,
+        mode,
+        editEntryAtReview: false,
         payload: action.payload,
         validatedSteps,
         currentStep: resumeStep,
@@ -214,9 +246,10 @@ export function wizardMachineReducer(
       const invalidated =
         changedFields.length > 0 ? getInvalidatedSteps(changedFields) : [];
 
-      const newValidatedSteps = state.validatedSteps.filter(
-        (s) => !invalidated.includes(s),
-      );
+      const newValidatedSteps =
+        state.mode === "edit"
+          ? computeValidatedSteps(newPayload, DATA_STEPS)
+          : state.validatedSteps.filter((s) => !invalidated.includes(s));
 
       return {
         ...state,
@@ -245,11 +278,6 @@ export function wizardMachineReducer(
       return { ...state, currentStep: action.step, saveError: null };
     }
 
-    case "SAVE_START": {
-      if (state.status !== "step" && state.status !== "saveError") return state;
-      return { ...state, status: "saving", saveError: null };
-    }
-
     case "SAVE_SUCCESS": {
       if (state.status !== "saving") return state;
       return {
@@ -262,11 +290,6 @@ export function wizardMachineReducer(
         ),
         saveError: null,
       };
-    }
-
-    case "SAVE_ERROR": {
-      if (state.status !== "saving") return state;
-      return { ...state, status: "saveError", saveError: action.error };
     }
 
     case "SAVE_RETRY": {
@@ -310,6 +333,7 @@ export function buildMachineContext(
 ): WizardMachineContext {
   const currentIdx = stepIndex(state.currentStep);
   const isLastStep = state.currentStep === "review";
+  const editDetourActive = state.mode === "edit" && !isLastStep;
 
   const validation = validateStep(state.currentStep, state.payload);
 
@@ -321,7 +345,10 @@ export function buildMachineContext(
   const canPublish =
     isLastStep && DATA_STEPS.every((s) => state.validatedSteps.includes(s));
 
-  const canGoBack = currentIdx > 0 && state.status === "step";
+  const canGoBack =
+    state.mode === "edit"
+      ? false
+      : currentIdx > 0 && state.status === "step";
 
   // Position-based progress: where in the wizard am I right now.
   const stepNumber = currentIdx + 1;
@@ -333,6 +360,7 @@ export function buildMachineContext(
     canContinue,
     canPublish,
     canGoBack,
+    editDetourActive,
     stepErrors: validation.errors,
     fieldErrors: validation.fieldErrors,
     isLastStep,

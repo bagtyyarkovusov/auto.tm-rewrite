@@ -195,7 +195,7 @@ export default function PhoneScreen() {
             <Button
               disabled={!canSubmit}
               size="lg"
-              variant="default"
+              variant="brand"
               onPress={handleSubmit}
             >
               {isSubmitting ? (

@@ -58,8 +58,10 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 ### Edit listing
 
 - Same wizard, pre-filled
-- Some fields locked (VIN, year cannot be changed; would invalidate identity of the car)
-- Update photo order, add/remove photos
+- Published edits PATCH the `Listing` directly. They do not create or autosave a `ListingDraft`; drafts are only for pre-publish listing creation.
+- Edit changes stay local inside the edit screen until the seller taps **Save changes**. Buyers keep seeing the old published listing while the seller is editing, including the old photo set.
+- Locked identity fields: VIN, brand, model, generation, and year cannot be changed; they define the identity of the car.
+- Owners can update photo order, add photos, and remove photos after publishing. The first photo remains the cover. Photo edits are staged locally in edit mode and applied only on **Save changes**. New photo uploads may start during editing for responsiveness, but uploaded files are not public until attached on Save; abandoned unattached uploads are storage orphans for cleanup. This is locked by [ADR-0024](../../adr/0024-owner-post-publish-photo-editing.md).
 - Change price (price-change history kept for analytics)
 
 ### Mark sold
@@ -110,6 +112,7 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 - [ADR-0008](../../adr/0008-media.md) — Photo + video pipeline
 - [ADR-0007](../../adr/0007-i18n.md) — Single-locale content
 - [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first listing location; no exact listing GPS in Phase 1
+- [ADR-0024](../../adr/0024-owner-post-publish-photo-editing.md) — Owners may edit photos after publishing
 
 ## Phase
 

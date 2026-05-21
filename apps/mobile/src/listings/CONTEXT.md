@@ -4,7 +4,14 @@
 
 ## Purpose
 
-Client-side listing creation and upload pipeline for the Expo mobile app. Three subsystems: the wizard state machine (step flow + validation), the media upload pipeline (compress + stage + upload), and autosave (debounced draft persistence with retry).
+Client-side listing creation + upload pipeline for `apps/mobile`. Three subsystems: the **wizard** (step navigation + contracts validation), **media upload staging** (compress → presign → PUT), and **autosave** (debounced draft persistence + retry).
+
+**Single wizard shell today** — create and edit share `wizardMachine` + `WizardLayout`, but persistence and photos differ by flow:
+
+| Flow | Primary route | Wizard state | Photos |
+|---|---|---|---|
+| **Create draft / publish** | `app/(tabs)/sell.tsx` | `wizardMachine` reducer (`wizardMachine.ts`) | `useUploadQueue` wired end-to-end |
+| **Edit published listing** | `app/listings/[id]/edit.tsx` | `wizardMachine` reducer initialized with `mode: "edit"`, `listingId`, and `entryStep: "review"`. Edit opens at Review (Step 8/8); section Edit affordances detour to shared step bodies; detour footer shows single Done action back to Review. Field edits stay local until **Save changes**, then direct `PATCH /listings/:id` through `useEditListing`; no `ListingDraft` or autosave is created for published edits. | `<ReadOnlyPhotos/>` messaging only today; **no queue**. [ADR-0024](../../../../docs/adr/0024-owner-post-publish-photo-editing.md) locks owner photo add/remove/reorder after publish, so read-only photos are a current implementation gap. Target behavior stages photo edits locally, may upload new files during edit for responsiveness, and applies media endpoint changes only on **Save changes**. Cancel/discard cleanup for uploaded-but-unattached edit media is not implemented. |
 
 ## Module shape (today)
 
@@ -14,14 +21,15 @@ Client-side listing creation and upload pipeline for the Expo mobile app. Three 
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
     - `wizardMachine.spec.ts` — unit tests for reducer
     - `useWizardAutosave.spec.tsx` — tests for save lifecycle
-    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI components (business logic extracted into step-specific hooks and sub-components). Design system: step title (`text-2xl font-semibold text-foreground`), body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons.
+    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI bodies. Design system conventions: mirrored titles (`WizardLayout` `text-lg` + body `text-2xl`), body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons. **`Step2Photos` declares unused wizard props (`payload`, `onChange`, `disabledTooltip`) — housekeeping backlog.**
     - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`). Footer buttons are 52px pill-shaped (`h-[52px] rounded-full`). Overflow button opens `WizardOverflowMenu` sheet first; "Discard draft" inside the sheet opens `DiscardConfirmationDialog`. Dialog shows loading spinner + "Discarding…" and error text when discard mutation is pending or fails.
     - `PhotoThumbnail.tsx` — photo grid item with state overlay and reorder menu
     - `PhotoStateOverlay.tsx` — per-photo upload-state badge (compressing, uploading, failed, cover, etc.)
     - `PickerRow.tsx` — shared pressable picker row (`components/listings/wizard/`). 52px height, border, chevron/lock icon, label + error + helper text support.
   - `uploadStaging/` — media upload pipeline
     - `types.ts` — `PhotoState`, `UploadErrorCode`, `StagedPhoto`, `UploadQueue`, `PublishGateResult`
-    - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track
+    - `useUploadQueue.ts` — orchestrator hook: compress → presign → PUT → track (**exports `publishGate` — presently unused consumer-side**)
+    - `useAsyncCounter.ts` — ref-based counter surfaced as `isCompressing` (**prevents overlapping parallel compress regressions**)
     - `compressor.ts` — `expo-image-manipulator` chain API (resize ≤2400px, JPEG 0.8, re-compress at 0.6 if >5 MB)
     - `queueState.ts` — pure state machine: `PhotoUploadReducer` (discriminated-union actions) + helpers: `updatePhotoState`, `removePhotoFromQueue`, `reorderPhotos`, `reconstructQueueFromDraft`, `computePublishGate`
     - `uploadErrors.ts` — `buildUploadError` classifies caught errors into `UploadErrorCode`
@@ -31,14 +39,16 @@ Client-side listing creation and upload pipeline for the Expo mobile app. Three 
 
 ## 1. Media upload pipeline
 
-### Photo lifecycle (9 states)
+### Photo lifecycle (9 states — design surface area)
+
+Lifecycle diagram expresses **everything the domain might represent**. Runtime today **never transitions photos into `waiting_for_network`** (type + resume selectors exist — **planned / unused** orchestration):
 
 ```
 selected → compressed → presigned → uploading → uploaded → attached
              ↓             ↓           ↓
            failed ←──────────←──────────┘
              ↓
-   waiting_for_network
+   waiting_for_network   ← ───── NOT assigned anywhere in production code yet
              ↓
            lost (unrecoverable — no local file, no server key)
 ```
@@ -52,7 +62,7 @@ selected → compressed → presigned → uploading → uploaded → attached
 | `uploaded` | PUT succeeded; `key` (MinIO object key) set | PUT 2xx |
 | `attached` | API confirmed media row created | `reconstructQueueFromDraft` when `key` exists |
 | `failed` | Any step errored; may be retryable | caught exception |
-| `waiting_for_network` | Network dropped mid-upload | NetInfo reports disconnected |
+| `waiting_for_network` | Network dropped mid-upload | **Hypothetical** — NetInfo / offline hook would flip here; **`useUploadQueue` does not mutate into this enum member yet.** |
 | `lost` | Photo referenced in draft payload but local file missing and no server `key` | `reconstructQueueFromDraft` when neither local file nor `key` exists |
 
 ### StagedPhoto shape
@@ -97,17 +107,23 @@ ${documentDirectory}/
 
 ### Concurrency model
 
-- **Compression**: unlimited parallel (all selected photos compress via `Promise.all`)
-- **Uploads**: max 2 concurrent (`MAX_CONCURRENT = 2` in `useUploadQueue`)
-- Upload queue is FIFO; `processUploadQueue` drains recursively via `.finally()`
+- **Calls into `useUploadQueue.addPhoto`**: unbounded parallelism can be triggered concurrently from UI — gallery flow fans out `Promise.all` over temp copies invoking `addPhoto` per URI.
+- **`addPhoto` body**: sequentially compress → enqueue upload worker for that id (heavy CPU still overlaps across parallel invocations — watch device thermals during stress tests).
+- **Upload drain**: capped at **`MAX_CONCURRENT = 2`** binary PUT workers.
+- **`processUploadQueue`**: FIFO drain guarded by concurrency counter; completions chain via `.finally()` recursion.
 
-### Publish gate
+### Publish gate (`computePublishGate`)
 
-Blocks publish button unless ALL of:
+Pure helper evaluates whether **staging work is complete** regardless of reducer validation:
+
+Blocks publish (**theoretical consumer contract**) unless ALL hold:
+
 - ≥1 photo exists in queue
-- No photos in `selected`, `compressed`, `presigned`, or `uploading` state
-- No photos in `failed` state
-- ≥1 photo in `attached` or `uploaded` state
+- No photos remain in `selected`, `compressed`, `presigned`, or `uploading`
+- No photo is `failed`
+- ≥1 photo is `attached` OR `uploaded`
+
+**Consumption gap (today)** — hook returns **`publishGate`**, yet **`sell.tsx` never consumes it.** Continue/Publish buttons instead rely exclusively on **`buildMachineContext` + `@auto-tm/contracts` Zod** (e.g. photos must serialize with `photoId/key/sortOrder`). That implies user could theoretically satisfy Zod metadata while uploads still churn — guarded only after next explicit save / incidental field mutation (see autosave caveat below).
 
 ### Auto-resume
 
@@ -119,7 +135,9 @@ Resume logic: enqueues photos in `compressed`, `waiting_for_network`, or `failed
 
 ### Orphan cleanup
 
-`cleanupOrphanDraftDirs(existingDraftIds)` runs on app launch. Lists all directories under `listing-staging/`, deletes any whose `draftId` has no matching draft.
+`cleanupOrphanDraftDirs(existingDraftIds)` is **exported** helper — **no callers today** means stale `listing-staging/{draftId}/` dirs can stick around after drafts vanish remotely. Planned wiring location: whichever bootstrap path already fetched current draft IDs (not implemented).
+
+Published-listing edit media will need separate cleanup semantics when edit photo uploads ship: cancel/discard should clear local edit staging and best-effort clean newly uploaded media that never reached `AttachMedia`. Any remote object left without a `ListingMedia` row is a storage orphan for API/storage cleanup, not public listing media.
 
 ### State reconstruction on resume
 
@@ -134,7 +152,8 @@ Reducer-based stepper in `wizardMachine.ts`. Not XState — a pure `(state, acti
 
 ### Machine status
 
-`idle → loading → step ⇄ saving ⇄ saveError`
+Documented reducer supports create and edit sessions through a `mode: "create" | "edit"` discriminator. `draftId` is populated for create; `listingId` is populated for edit. Autosave UI is owned by TanStack-backed `useWizardAutosave`, so the reducer no longer exposes `SAVE_START` / `SAVE_ERROR` branches.
+
 `step → publishing → complete | publishError`
 `any → idle (DISCARD)`
 
@@ -182,10 +201,11 @@ Implemented in `UPDATE_FIELDS` action via `getInvalidatedSteps(changedFields)` f
 - **Forward via NEXT**: validates current step first; blocks if invalid. On `review`, NEXT is a no-op — Publish is the only action.
 - **Forward via GO_TO_STEP**: allowed only if all target step's dependencies are in `validatedSteps`
 - **Review**: reachable only when all 7 data steps are in `validatedSteps`; Publish requires the same condition
+- **Edit route** (`/listings/[id]/edit`): initializes with `mode: "edit"` and `entryStep: "review"`, marks all data steps validated from the published listing payload, disables Back, and uses Review section Edit affordances for detours. Detour steps use the same schemas; invalid edits block Done and show the step error. Valid detours return to Review via `GO_TO_STEP("review")`.
 
 ### Resume logic
 
-`INIT` action: loads draft payload → extracts `validatedSteps[]` → resumes at the first unvalidated step up to the previously-reached step. Handles legacy numeric `currentStep` (1–7) via `mapLegacyStep()`.
+`INIT` action: loads draft/listing payload → extracts `validatedSteps[]` → resumes at the first unvalidated step up to the previously-reached step. Handles legacy numeric `currentStep` (1–7) via `mapLegacyStep()`. In edit mode with `entryStep: "review"`, it skips draft resume semantics, lands directly on Review, and marks all seven data steps validated because the payload came from a published listing.
 
 ### Derived context (`buildMachineContext`)
 
@@ -195,6 +215,7 @@ interface WizardMachineContext {
   canContinue: boolean;                // current step valid (false on review — Publish handles advance)
   canPublish: boolean;                  // on review + all data steps validated
   canGoBack: boolean;                   // index > 0 and status === "step"
+  editDetourActive: boolean;            // edit mode away from Review
   stepErrors: string[];                 // current step's Zod errors, flat list
   fieldErrors: Record<string, string>;  // current step's Zod errors keyed by field path
   isLastStep: boolean;                  // currentStep === "review"
@@ -248,6 +269,15 @@ error → saving (manual retrySave or network available)
 
 `pendingPayloadRef` holds the last payload attempted. On retry (manual or auto), the pending payload is re-sent — no data loss between debounce and failure.
 
+### Create flow integration caveat (`sell.tsx`)
+
+Two effects collaborate:
+
+1. **Queue synchronization** pushes `uploadQueue.photos` → `wizardMachine` via `UPDATE_FIELDS` whenever thumbnails mutate.
+2. **Debounced `save()` effect** PATCHes derived payload.
+
+**Bug-shaped gap until fixed:** autosave **`useEffect` dependency list excludes upload queue fingerprints** (`uploadQueue.photos` / `payload.photos`), so rapid photo-only bursts may omit server persistence until a **non-photo** payload field mutates OR an explicit **`forceSave`** executes (typically step-change / publish). Track alongside `publishGate` consumption work.
+
 ## 4. Platform invariants — DO NOT REMOVE
 
 These workarounds exist because of iOS-specific runtime behavior discovered on-device during S4 (#116–#120). Removing them will reintroduce the bugs.
@@ -260,21 +290,19 @@ These workarounds exist because of iOS-specific runtime behavior discovered on-d
 
 **Hardening path**: After each `copyAsync` to `picker-temp/`, verify the copy exists with `getInfoAsync`. Fail fast with `LOCAL_FILE_MISSING` if the copy is missing, instead of discovering the failure mid-compression.
 
-### 4.2 moveAsync fallback to copyAsync
+### 4.2 Staging transfer: copyAsync only — no moveAsync
 
-**What**: `compressor.ts` tries `moveAsync` to transfer the compressed file to the staging directory. On failure, falls back to `copyAsync`. Verifies destination exists after either operation.
+**What**: Intermediate JPEG from `renderAsync()/saveAsync()` is **always** **`copyAsync`’d into** `listing-staging/{draftId}/{photoId}.jpg`, then temp files cleaned best-effort. **Never** **`moveAsync`**.
 
-**Why**: `FileSystem.moveAsync` fails silently on some iOS versions when crossing filesystem boundaries (e.g., cache → documents). (#118 / `d42b6e8`)
+**Why**: `moveAsync` used to silently fail across cache ↔︎ documents boundaries (#118 legacy analysis); dual-path branching left stranded temp files (#113-era concern).
 
-**Hardening path**: Remove `moveAsync` entirely. Always use `copyAsync` — it works reliably across filesystem boundaries and the performance cost on a ≤5 MB JPEG is negligible. One code path instead of two.
+**Hardening residual**: Optionally add **`getInfoAsync`** right after **`copyAsync`** on `picker-temp` sources (parity with autosave caveat) — compressor already validates destination footprint post-transfer.
 
-### 4.3 useRef counter for parallel compression tracking
+### 4.3 Parallel compression counter hook
 
-**What**: `compressingCount` is a `useRef<number>` counter, not a `useState<boolean>`. The React state `isCompressing` toggles only at the 0→1 and 1→0 boundary crossings.
+**What**: `src/listings/uploadStaging/useAsyncCounter.ts` wraps the **ref-counter** semantics (`increment` / `decrement` → boolean `isActive`) consumed by **`useUploadQueue`**.
 
-**Why**: A boolean `useState` flag cannot track multiple concurrent async operations. When N photos compress in parallel and the first one finishes, `setIsCompressing(false)` fires while N-1 compressions are still running. This caused the UI to incorrectly show compression as complete. (#120 / `16c44b7`)
-
-**Hardening path**: Extract into a `useAsyncCounter()` hook with a clear name (`{ increment, decrement, isActive }`) so the intent is obvious and the pattern is reusable.
+**Why**: Boolean `useState` cannot observe overlapping async compress sessions (#120 regression).
 
 ### 4.4 expo-image-manipulator contextual chain API
 
@@ -283,6 +311,10 @@ These workarounds exist because of iOS-specific runtime behavior discovered on-d
 **Why**: The previous `manipulateAsync()` top-level function was deprecated in Expo SDK 55. The chain API is the only supported surface. (#116 / `dda8537`)
 
 **Hardening path**: No code change needed — this is the correct API. On any Expo SDK upgrade, re-verify via Context7 (`resolve-library-id` → `query-docs` for `expo-image-manipulator`) before assuming the chain API is unchanged.
+
+## Cross-reference — engineering backlog
+
+Correctness + UX remediation checklist (autosave deps, **`publishGate` wiring**, orphaned staging cleanup, **`/(public)`** route, typography hierarchy): see **`### Planned refactor roadmap`** in [`apps/mobile/CONTEXT.md`](../CONTEXT.md).
 
 ## Notable decisions
 

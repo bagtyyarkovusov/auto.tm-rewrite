@@ -21,6 +21,25 @@ const eslintConfig = defineConfig([
     rules: {
       "import/no-unresolved": "off",
       "import/namespace": "off",
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@auto-tm/ui/components",
+              message:
+                "Mobile must use React Native Reusables from @/components/ui/*; @auto-tm/ui/components is web/admin only.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@auto-tm/ui/components/*"],
+              message:
+                "Mobile must use React Native Reusables from @/components/ui/*; @auto-tm/ui/components is web/admin only.",
+            },
+          ],
+        },
+      ],
     },
   },
 ]);

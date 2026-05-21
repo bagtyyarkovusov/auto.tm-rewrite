@@ -29,6 +29,9 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0021](0021-feed-ranking-port.md) | Feed ranking via port abstraction | Accepted | 2026-05-18 |
 | [0022](0022-city-first-listing-location.md) | City-first listing location | Accepted | 2026-05-18 |
 | [0023](0023-first-party-product-analytics.md) | First-party product analytics for MVP | Accepted | 2026-05-18 |
+| [0024](0024-owner-post-publish-photo-editing.md) | Owner post-publish photo editing | Accepted | 2026-05-21 |
+| [0025](0025-edit-save-atomicity.md) | Edit-mode Save changes uses sequential best-effort, not server-side atomic bundle | Accepted | 2026-05-22 |
+| [0026](0026-edit-mode-review-first-entry.md) | Edit mode opens at Review; create mode stays linear | Accepted | 2026-05-22 |
 
 ## Per-app ADRs
 

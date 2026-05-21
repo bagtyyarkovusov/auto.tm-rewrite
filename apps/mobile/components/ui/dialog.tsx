@@ -1,12 +1,13 @@
 import * as DialogPrimitive from '@rn-primitives/dialog';
 import { X } from 'lucide-react-native';
 import * as React from 'react';
-import { Platform, Text, View, type ViewProps } from 'react-native';
+import { Platform, View, type ViewProps } from 'react-native';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
 
 import { cn } from '@/lib/utils';
 import { NativeOnlyAnimatedView } from '@/components/ui/native-only-animated-view';
 import { Icon } from '@/components/ui/icon';
+import { Text } from '@/components/ui/text';
 
 const Dialog = DialogPrimitive.Root;
 
@@ -59,7 +60,7 @@ function DialogContent({
       <DialogOverlay>
         <DialogPrimitive.Content
           className={cn(
-            'bg-background border-border z-50 mx-auto w-full max-w-[calc(100%-2rem)] flex-col gap-4 rounded-lg border p-6 shadow-lg shadow-black/5 sm:max-w-lg',
+            'z-50 mx-auto w-full max-w-[calc(100%-2rem)] flex-col gap-4 rounded-lg border border-border bg-card p-5 shadow-lg shadow-black/5 sm:max-w-lg',
             Platform.select({
               web: 'animate-in fade-in-0 zoom-in-95 duration-200',
             }),
@@ -77,7 +78,7 @@ function DialogContent({
             hitSlop={12}>
             <Icon
               as={X}
-              className={cn('text-accent-foreground web:pointer-events-none size-4 shrink-0')}
+              className={cn('web:pointer-events-none size-4 shrink-0 text-muted-foreground')}
             />
             <Text className="sr-only">Close</Text>
           </DialogPrimitive.Close>
@@ -108,7 +109,7 @@ function DialogTitle({
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn('text-foreground text-lg font-semibold leading-none', className)}
+      className={cn('font-heading text-lg font-semibold leading-snug text-foreground', className)}
       {...props}
     />
   );

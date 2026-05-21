@@ -8,7 +8,7 @@ function Card({ className, ...props }: React.ComponentProps<typeof View> & React
     <TextClassContext.Provider value="text-card-foreground">
       <View
         className={cn(
-          'bg-card border-border flex-col gap-6 rounded-xl border py-6 shadow-sm shadow-black/5',
+          'flex-col gap-4 rounded-lg border border-border bg-card py-4 shadow-none',
           className
         )}
         {...props}
@@ -18,7 +18,7 @@ function Card({ className, ...props }: React.ComponentProps<typeof View> & React
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<typeof View> & React.RefAttributes<View>) {
-  return <View className={cn('flex-col gap-1.5 px-6', className)} {...props} />;
+  return <View className={cn('flex-col gap-1.5 px-4', className)} {...props} />;
 }
 
 function CardTitle({
@@ -32,7 +32,7 @@ function CardTitle({
       ref={ref}
       role="heading"
       aria-level={3}
-      className={cn('font-semibold leading-none', className)}
+      className={cn('font-heading text-lg font-semibold leading-snug', className)}
       {...props}
     />
   );
@@ -46,11 +46,11 @@ function CardDescription({
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<typeof View> & React.RefAttributes<View>) {
-  return <View className={cn('px-6', className)} {...props} />;
+  return <View className={cn('px-4', className)} {...props} />;
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<typeof View> & React.RefAttributes<View>) {
-  return <View className={cn('flex-row items-center px-6', className)} {...props} />;
+  return <View className={cn('flex-row items-center px-4', className)} {...props} />;
 }
 
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };

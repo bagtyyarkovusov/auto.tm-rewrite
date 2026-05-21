@@ -79,7 +79,7 @@ cssInterop(IconImpl, {
  * import { ArrowRight } from 'lucide-react-native';
  * import { Icon } from '@/components/ui/icon';
  *
- * <Icon as={ArrowRight} className="text-red-500" size={16} />
+ * <Icon as={ArrowRight} className="text-foreground" size={16} />
  * ```
  *
  * @param {LucideIcon} as - The Lucide icon component to render.

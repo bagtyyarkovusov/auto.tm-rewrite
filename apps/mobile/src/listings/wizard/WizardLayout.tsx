@@ -34,7 +34,10 @@ interface WizardLayoutProps {
   onBack: () => void;
   onContinue: () => void;
   onPublish: () => void;
+  onReturnToReview?: () => void;
   onDiscard: () => void;
+  mode: "create" | "edit";
+  editDetourActive: boolean;
   canContinue: boolean;
   canPublish: boolean;
   canGoBack: boolean;
@@ -200,6 +203,9 @@ function WizardFooter({
   onBack,
   onContinue,
   onPublish,
+  onReturnToReview,
+  mode,
+  editDetourActive,
   disabledReason,
   secondaryAction,
   publishLabel = "Publish",
@@ -211,12 +217,68 @@ function WizardFooter({
   onBack: () => void;
   onContinue: () => void;
   onPublish: () => void;
+  onReturnToReview?: () => void;
+  mode: "create" | "edit";
+  editDetourActive: boolean;
   disabledReason?: string;
   secondaryAction?: FooterAction;
   publishLabel?: string;
 }) {
   const primaryDisabled = isLastStep ? !canPublish : !canContinue;
   const showDisabledReason = primaryDisabled && Boolean(disabledReason);
+  const isEditReview = mode === "edit" && isLastStep;
+
+  if (editDetourActive) {
+    return (
+      <View className="border-t border-border px-5 py-3 gap-2">
+        {showDisabledReason && (
+          <Text className="text-xs text-muted-foreground">
+            {disabledReason}
+          </Text>
+        )}
+        <Button
+          className={cn(
+            "h-[52px] rounded-full",
+            primaryDisabled
+              ? "bg-muted border border-border"
+              : "bg-foreground",
+          )}
+          onPress={onReturnToReview}
+          disabled={primaryDisabled || !onReturnToReview}
+        >
+          <Text className={primaryDisabled ? "text-muted-foreground" : "text-background"}>
+            Done
+          </Text>
+        </Button>
+      </View>
+    );
+  }
+
+  if (isEditReview) {
+    return (
+      <View className="border-t border-border px-5 py-3 gap-2">
+        {showDisabledReason && (
+          <Text className="text-xs text-muted-foreground">
+            {disabledReason}
+          </Text>
+        )}
+        <Button
+          className={cn(
+            "h-[52px] rounded-full",
+            primaryDisabled
+              ? "bg-muted border border-border"
+              : "bg-primary",
+          )}
+          onPress={onPublish}
+          disabled={!canPublish}
+        >
+          <Text className={primaryDisabled ? "text-muted-foreground" : "text-primary-foreground"}>
+            {publishLabel}
+          </Text>
+        </Button>
+      </View>
+    );
+  }
 
   return (
     <View className="border-t border-border px-5 py-3 gap-2">
@@ -253,12 +315,12 @@ function WizardFooter({
               "flex-1 h-[52px] rounded-full",
               primaryDisabled
                 ? "bg-muted border border-border"
-                : "bg-foreground"
+                : "bg-primary"
             )}
             onPress={onPublish}
             disabled={!canPublish}
           >
-            <Text className={primaryDisabled ? "text-muted-foreground" : "text-background"}>
+            <Text className={primaryDisabled ? "text-muted-foreground" : "text-primary-foreground"}>
               {publishLabel}
             </Text>
           </Button>
@@ -328,6 +390,7 @@ function DiscardConfirmationDialog({
             <Text>Cancel</Text>
           </AlertDialogCancel>
           <AlertDialogAction
+            className="bg-destructive active:bg-destructive/90"
             disabled={isDiscarding}
             onPress={() => {
               onDiscard();
@@ -335,7 +398,7 @@ function DiscardConfirmationDialog({
           >
             {isDiscarding ? (
               <View className="flex-row items-center gap-2">
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color="white" />
                 <Text className="text-destructive-foreground">Discarding…</Text>
               </View>
             ) : (
@@ -356,7 +419,10 @@ export function WizardLayout({
   onBack,
   onContinue,
   onPublish,
+  onReturnToReview,
   onDiscard,
+  mode,
+  editDetourActive,
   canContinue,
   canPublish,
   canGoBack,
@@ -413,6 +479,9 @@ export function WizardLayout({
         onBack={onBack}
         onContinue={onContinue}
         onPublish={onPublish}
+        onReturnToReview={onReturnToReview}
+        mode={mode}
+        editDetourActive={editDetourActive}
         disabledReason={disabledReason}
         secondaryAction={secondaryAction}
         publishLabel={publishLabel}
