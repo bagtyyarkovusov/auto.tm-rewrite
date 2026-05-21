@@ -1,4 +1,4 @@
-import { ChevronLeft, MoreVertical, AlertCircle, RefreshCw } from "lucide-react-native";
+import { ChevronLeft, MoreVertical, AlertCircle, RefreshCw, Loader2 } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,6 +24,12 @@ interface FooterAction {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+}
+
+interface UploadStatusChip {
+  inflight: number;
+  failed: number;
+  total: number;
 }
 
 interface WizardLayoutProps {
@@ -54,6 +60,7 @@ interface WizardLayoutProps {
   discardDescription?: string;
   isDiscarding?: boolean;
   discardError?: string | null;
+  uploadStatus?: UploadStatusChip;
 }
 
 function WizardHeader({
@@ -439,6 +446,7 @@ export function WizardLayout({
   discardDescription = "This removes your draft and staged photos for this listing.",
   isDiscarding = false,
   discardError = null,
+  uploadStatus,
 }: WizardLayoutProps) {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
@@ -470,6 +478,27 @@ export function WizardLayout({
       />
 
       <ScrollView className="flex-1 px-5">{children}</ScrollView>
+
+      {uploadStatus && (uploadStatus.inflight > 0 || uploadStatus.failed > 0) && (
+        <View className="mx-5 mb-2 flex-row items-center gap-2 rounded-lg bg-muted px-3 py-2">
+          {uploadStatus.inflight > 0 && (
+            <View className="flex-row items-center gap-1.5">
+              <Icon as={Loader2} className="size-3.5 text-muted-foreground" />
+              <Text className="text-xs text-muted-foreground">
+                {uploadStatus.inflight} uploading
+              </Text>
+            </View>
+          )}
+          {uploadStatus.failed > 0 && (
+            <View className="flex-row items-center gap-1.5">
+              <Icon as={AlertCircle} className="size-3.5 text-destructive" />
+              <Text className="text-xs text-destructive">
+                {uploadStatus.failed} failed
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <WizardFooter
         isLastStep={isLastStep}

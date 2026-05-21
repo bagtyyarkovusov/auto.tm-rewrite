@@ -125,7 +125,7 @@ Blocks publish (**theoretical consumer contract**) unless ALL hold:
 - No photo is `failed`
 - ≥1 photo is `attached` OR `uploaded`
 
-**Consumption gap (today)** — hook returns **`publishGate`**, yet **`sell.tsx` never consumes it.** Continue/Publish buttons instead rely exclusively on **`buildMachineContext` + `@auto-tm/contracts` Zod** (e.g. photos must serialize with `photoId/key/sortOrder`). That implies user could theoretically satisfy Zod metadata while uploads still churn — guarded only after next explicit save / incidental field mutation (see autosave caveat below).
+**Consumption** — `publishGate` is wired into `sell.tsx` and `edit.tsx` AND-gated with Zod-derived `canPublish`. Publish / Save changes are disabled when uploads are in-flight or failed; Continue between steps remains Zod-only so users can fill other wizard steps while photos upload.
 
 ### Auto-resume
 
