@@ -305,9 +305,26 @@ export default function SellScreen() {
     const currentStep = ctx.state.currentStep;
     const stepTitle = STEP_TITLES[currentStep] ?? currentStep;
 
+    // Compute upload status counts for chip + publishGate reason
+    const uploadStatus = {
+      inflight: uploadQueue.photos.filter((p) =>
+        ["selected", "compressed", "presigned", "uploading"].includes(p.state),
+      ).length,
+      failed: uploadQueue.photos.filter((p) => p.state === "failed").length,
+      total: uploadQueue.photos.length,
+    };
+
     // Compose a clear reason text when Publish/Continue is disabled.
     let disabledReason: string | undefined;
-    if (ctx.isLastStep && !ctx.canPublish) {
+    if (ctx.isLastStep && !uploadQueue.publishGate.canPublish) {
+      if (uploadStatus.failed > 0) {
+        disabledReason = `${uploadStatus.failed} failed — retry or remove`;
+      } else if (uploadStatus.inflight > 0) {
+        disabledReason = `Wait for ${uploadStatus.inflight} photos to finish uploading`;
+      } else {
+        disabledReason = uploadQueue.publishGate.blockers[0] ?? "Cannot publish yet";
+      }
+    } else if (ctx.isLastStep && !ctx.canPublish) {
       const missing = WizardSchemas.WIZARD_STEPS.filter(
         (s) =>
           s !== "review" && !machineState.validatedSteps.includes(s),
@@ -344,7 +361,7 @@ export default function SellScreen() {
         mode={machineState.mode}
         editDetourActive={ctx.editDetourActive}
         canContinue={ctx.canContinue}
-        canPublish={ctx.canPublish}
+        canPublish={ctx.canPublish && uploadQueue.publishGate.canPublish}
         canGoBack={ctx.canGoBack}
         isLastStep={ctx.isLastStep}
         saveStatus={saveStatus}
@@ -352,6 +369,7 @@ export default function SellScreen() {
         onRetrySave={retrySave}
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
+        uploadStatus={uploadStatus}
         secondaryAction={secondaryAction}
         isDiscarding={discardDraft.isPending}
         discardError={discardDraft.error?.message ?? null}

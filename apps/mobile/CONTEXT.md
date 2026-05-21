@@ -77,7 +77,6 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 | Gap | What code does today |
 |-----|----------------------|
-| **`publishGate` unused** | `useUploadQueue` computes `publishGate`; **sell tab never reads it** — Continue/Publish gating follows `wizardMachine` + contracts Zod (`photos[].key`), not staging states like `presigned` / `uploading`. |
 | **`waiting_for_network` state** | NetInfo offline events now move `compressed` / `presigned` / `uploading` photos into `waiting_for_network`; reconnect reuses upload resume. |
 | **`removePhoto` vs `queueRef`** | Compression/upload paths update `queueRef` synchronously; **remove relies on passive `queueRef.current = queue` on the next render** — brief window vs in-flight uploads. |
 | **`orphanCleanup`** | `app/_layout.tsx` calls `cleanupOrphanDraftDirs(existingDraftIds, existingListingIds)` after authenticated `useMyDrafts` + `useMyListings` resolve. Canonical detail in [`src/listings/CONTEXT.md`](src/listings/CONTEXT.md). |
@@ -91,7 +90,6 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 2. **Create orchestration cleanup**: Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
 
    Remaining convergence items (locked 2026-05-22):
-   - **publishGate consumption**: Continue allowed during in-flight uploads; Publish / Save changes blocked until queue is fully green. Footer chip surfaces "X uploading / Y failed".
    - **Post-publish navigation**: stub `app/(public)/listings/[id].tsx` as a minimal screen consuming `useListingDetail`; Publish + Save changes both use `router.replace` to land there.
    - **Design system migration**: add `size="pill"` variant + `disabled:bg-muted disabled:border-border disabled:text-muted-foreground` baked into every Button variant. Wizard footer migrates from inlined `cn()` classes to `variant + size` props.
    - **Heading hierarchy**: Apple Large Title pattern in `WizardHeader` (muted position-marker row + `text-2xl font-heading` step title + progress); step bodies delete their `text-2xl font-semibold` title.

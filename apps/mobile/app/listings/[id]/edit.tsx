@@ -226,13 +226,29 @@ export default function EditListingScreen() {
   }
 
   const currentStep = machineState.currentStep;
+
+  // Compute upload status counts for chip + publishGate reason
+  const uploadStatus = {
+    inflight: uploadQueue.photos.filter((p) =>
+      ["selected", "compressed", "presigned", "uploading"].includes(p.state),
+    ).length,
+    failed: uploadQueue.photos.filter((p) => p.state === "failed").length,
+    total: uploadQueue.photos.length,
+  };
+
   const disabledReason =
-    !ctx.isLastStep &&
-    !ctx.canContinue &&
-    attemptedSteps[currentStep] &&
-    ctx.stepErrors.length > 0
-      ? ctx.stepErrors[0]
-      : undefined;
+    ctx.isLastStep && !uploadQueue.publishGate.canPublish
+      ? uploadStatus.failed > 0
+        ? `${uploadStatus.failed} failed — retry or remove`
+        : uploadStatus.inflight > 0
+          ? `Wait for ${uploadStatus.inflight} photos to finish uploading`
+          : (uploadQueue.publishGate.blockers[0] ?? "Cannot save yet")
+      : !ctx.isLastStep &&
+          !ctx.canContinue &&
+          attemptedSteps[currentStep] &&
+          ctx.stepErrors.length > 0
+        ? ctx.stepErrors[0]
+        : undefined;
 
   const saveStatus: "idle" | "saving" | "saved" | "error" =
     saveEdit.isPending ? "saving" : saveEdit.status === "failed" ? "error" : "idle";
@@ -251,7 +267,7 @@ export default function EditListingScreen() {
       mode={machineState.mode}
       editDetourActive={ctx.editDetourActive}
       canContinue={ctx.canContinue && !saveEdit.isPending}
-      canPublish={ctx.canPublish && !saveEdit.isPending}
+      canPublish={uploadQueue.publishGate.canPublish && !saveEdit.isPending}
       canGoBack={ctx.canGoBack}
       isLastStep={ctx.isLastStep}
       saveStatus={saveStatus}
@@ -259,6 +275,7 @@ export default function EditListingScreen() {
       onRetrySave={saveEdit.retry}
       progressPercent={ctx.progressPercent}
       disabledReason={disabledReason}
+      uploadStatus={uploadStatus}
       publishLabel="Save changes"
       discardTitle="Leave edit mode?"
       discardDescription="Any unsaved changes will be lost."
