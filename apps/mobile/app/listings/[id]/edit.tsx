@@ -3,9 +3,13 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { View } from "react-native";
 import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
-import { useEditListing } from "../../../src/api/listings/useEditListing";
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
 import { useUploadQueue } from "../../../src/listings/uploadStaging/useUploadQueue";
+import {
+  useSaveListingEdit,
+  opLabel,
+  type OpState,
+} from "../../../src/listings/edit/useSaveListingEdit";
 import Step1Vin from "../../../src/listings/wizard/Step1Vin";
 import Step2Photos from "../../../src/listings/wizard/Step2Photos";
 import Step3VehicleId from "../../../src/listings/wizard/Step3VehicleId";
@@ -23,6 +27,7 @@ import {
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
 
 const STEP_TITLES: Record<WizardSchemas.WizardStep, string> = {
   vin: "VIN or chassis number",
@@ -89,13 +94,44 @@ function buildPayloadPhotos(
     }));
 }
 
+function EditSaveErrorBanner({
+  opStates,
+  onRetry,
+}: {
+  opStates: Record<string, OpState>;
+  onRetry: () => void;
+}) {
+  return (
+    <View className="gap-2 rounded-lg bg-destructive/10 p-3">
+      <Text className="text-sm font-medium text-destructive">
+        Couldn't save all changes
+      </Text>
+      {Object.entries(opStates).map(([opId, state]) => (
+        <Text key={opId} className="text-xs text-muted-foreground">
+          {state === "succeeded"
+            ? "✓"
+            : state === "failed"
+              ? "✗"
+              : "·"}{" "}
+          {opLabel(opId)}
+        </Text>
+      ))}
+      <Button
+        className="h-[52px] rounded-full"
+        onPress={onRetry}
+      >
+        <Text className="text-background">Retry</Text>
+      </Button>
+    </View>
+  );
+}
+
 export default function EditListingScreen() {
   const { id } = useLocalSearchParams();
   const { show } = useToast();
   const listingId = id as string;
 
   const { data: listing } = useListingDetail(listingId);
-  const editListing = useEditListing();
   const [machineState, dispatch] = useReducer(
     wizardMachineReducer,
     createInitialState(),
@@ -112,6 +148,13 @@ export default function EditListingScreen() {
   const uploadQueue = useUploadQueue(
     listing ? `edit-${listingId}` : "",
     editPayload,
+  );
+
+  const saveEdit = useSaveListingEdit(
+    listingId,
+    machineState.payload,
+    uploadQueue.photos,
+    listing?.media ?? [],
   );
 
   useEffect(() => {
@@ -157,41 +200,18 @@ export default function EditListingScreen() {
     dispatch({ type: "GO_TO_STEP", step: "review" });
   }, [ctx.canContinue, machineState.currentStep]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!ctx.canPublish) return;
 
-    const patch: ListingsSchemas.EditListingRequest = {
-      priceAmount: machineState.payload.priceAmount,
-      priceCurrency: machineState.payload.priceCurrency,
-      description: machineState.payload.description,
-      condition: machineState.payload.condition,
-      mileageKm: machineState.payload.mileageKm,
-      colorId: machineState.payload.colorId,
-      bodyTypeId: machineState.payload.bodyTypeId,
-      transmissionId: machineState.payload.transmissionId,
-      driveTypeId: machineState.payload.driveTypeId,
-      engineTypeId: machineState.payload.engineTypeId,
-      enginePower: machineState.payload.enginePower,
-      regionId: machineState.payload.regionId,
-      cityId: machineState.payload.cityId,
-      locationText: machineState.payload.locationText,
-      contactPhone: machineState.payload.contactPhone,
-      allowCalls: machineState.payload.allowCalls,
-      allowChat: machineState.payload.allowChat,
-      acceptsExchange: machineState.payload.acceptsExchange,
-      installmentAvailable: machineState.payload.installmentAvailable,
-    };
-
-    editListing.mutate(
-      { listingId, patch },
-      {
-        onSuccess: () => {
-          show({ title: "Changes saved", variant: "success" });
-          router.back();
-        },
-      },
-    );
-  }, [ctx.canPublish, editListing, listingId, machineState.payload, show]);
+    try {
+      await saveEdit.save();
+      show({ title: "Changes saved", variant: "success" });
+      // Navigate to public detail; may 404 until downstream route ships
+      router.replace(`/(public)/listings/${listingId}` as never);
+    } catch {
+      // Error state surfaced by saveEdit.error + per-op banner below
+    }
+  }, [ctx.canPublish, saveEdit, show, listingId]);
 
   function handleDiscard() {
     router.back();
@@ -214,6 +234,9 @@ export default function EditListingScreen() {
       ? ctx.stepErrors[0]
       : undefined;
 
+  const saveStatus: "idle" | "saving" | "saved" | "error" =
+    saveEdit.isPending ? "saving" : saveEdit.status === "failed" ? "error" : "idle";
+
   return (
     <WizardLayout
       routeTitle="Edit listing"
@@ -227,13 +250,13 @@ export default function EditListingScreen() {
       onDiscard={handleDiscard}
       mode={machineState.mode}
       editDetourActive={ctx.editDetourActive}
-      canContinue={ctx.canContinue && !editListing.isPending}
-      canPublish={ctx.canPublish && !editListing.isPending}
+      canContinue={ctx.canContinue && !saveEdit.isPending}
+      canPublish={ctx.canPublish && !saveEdit.isPending}
       canGoBack={ctx.canGoBack}
       isLastStep={ctx.isLastStep}
-      saveStatus={editListing.isPending ? "saving" : "idle"}
-      saveError={null}
-      onRetrySave={() => {}}
+      saveStatus={saveStatus}
+      saveError={saveEdit.error ? "Couldn't save all changes" : null}
+      onRetrySave={saveEdit.retry}
       progressPercent={ctx.progressPercent}
       disabledReason={disabledReason}
       publishLabel="Save changes"
@@ -301,12 +324,22 @@ export default function EditListingScreen() {
         />
       )}
       {currentStep === "review" && (
-        <Step8Review
-          payload={machineState.payload}
-          validatedSteps={machineState.validatedSteps}
-          onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
-          photos={uploadQueue.photos}
-        />
+        <>
+          <Step8Review
+            payload={machineState.payload}
+            validatedSteps={machineState.validatedSteps}
+            onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
+            photos={uploadQueue.photos}
+          />
+          {saveEdit.status === "failed" && (
+            <View className="mt-4">
+              <EditSaveErrorBanner
+                opStates={saveEdit.opStates}
+                onRetry={saveEdit.retry}
+              />
+            </View>
+          )}
+        </>
       )}
     </WizardLayout>
   );

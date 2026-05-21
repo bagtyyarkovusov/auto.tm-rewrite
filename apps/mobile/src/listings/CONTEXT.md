@@ -284,9 +284,48 @@ Two effects collaborate:
 1. **Queue synchronization** pushes `uploadQueue.photos` → `wizardMachine` via `UPDATE_FIELDS` whenever thumbnails mutate.
 2. **Debounced `save()` effect** PATCHes derived payload.
 
-**Bug-shaped gap until fixed:** autosave **`useEffect` dependency list excludes upload queue fingerprints** (`uploadQueue.photos` / `payload.photos`), so rapid photo-only bursts may omit server persistence until a **non-photo** payload field mutates OR an explicit **`forceSave`** executes (typically step-change / publish). Track alongside `publishGate` consumption work.
+**Fixed:** `sell.tsx` now computes a stable `photoFingerprint` (`photoId:key:sortOrder` joined) via `useMemo` and includes it in the autosave `useEffect` dependency list. Photo-only bursts now correctly trigger debounced PATCH without requiring an unrelated field edit.
 
-## 4. Platform invariants — DO NOT REMOVE
+## 4. Edit save orchestrator
+
+`useSaveListingEdit(listingId, payload, photos, seedMedia)` — client-side orchestrator that commits a converged edit session to the server using the sequential best-effort pattern locked in [ADR-0025](../../../../docs/adr/0025-edit-save-atomicity.md).
+
+### Diff computation
+
+The hook computes four operation groups from the current wizard payload, upload queue snapshot, and the seed `ListingMedia[]` from initial load:
+
+1. **`fieldsPatch`** — editable fields from `payload` (excludes locked fields: `brandId`, `modelId`, `generationId`, `year`, `vin`). Only included when at least one editable field is present.
+2. **`attachOps`** — queue photos with `key` set and `photoId` **not** in `seedMedia` ids (new uploads that reached MinIO but were never attached).
+3. **`removeOps`** — `seedMedia` ids absent from the current queue (locally removed photos).
+4. **`reorderOp`** — always fired when `photos.length > 0`; sends the final `sortOrder` array derived from queue order.
+
+### Sequence
+
+Ops run in this order, fail-fast:
+
+```
+fields → attach (one per new photo) → remove (one per removed mediaId) → reorder
+```
+
+### Per-op state machine
+
+Each op is tracked in a `Record<opId, OpState>` where `OpState ∈ {pending, in_flight, succeeded, failed}`.
+
+- On any failure, the orchestrator **stops** immediately.
+- `EditSessionError` is thrown, carrying the full per-op state map and the `failedOpId`.
+- The UI renders the state map as a checklist (✓ succeeded, ✗ failed, · pending).
+
+### Retry-from-failure
+
+`retry()` re-runs the sequence but **skips ops already in `succeeded` state**. Failed ops are reset to `pending` and re-attempted. This avoids re-firing already-successful sub-operations (e.g., re-PATCHing unchanged fields).
+
+### Integration
+
+- `edit.tsx` replaces the direct `useEditListing` call with `useSaveListingEdit`.
+- On success: "Changes saved" toast + `router.replace` to public detail.
+- On failure: per-op error banner renders inline on the Review step, with a **Retry** button.
+
+## 5. Platform invariants — DO NOT REMOVE
 
 These workarounds exist because of iOS-specific runtime behavior discovered on-device during S4 (#116–#120). Removing them will reintroduce the bugs.
 

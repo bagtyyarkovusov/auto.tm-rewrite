@@ -61,7 +61,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
 /listings/
-  [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes direct PATCHes via useEditListing; no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
+  [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes orchestrated via `useSaveListingEdit` (fields → attach → remove → reorder, fail-fast, retry-from-failure per ADR-0025); no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
 
 /dev/
   catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__
@@ -77,7 +77,6 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 | Gap | What code does today |
 |-----|----------------------|
-| **Autosave + photos** | `sell.tsx` syncs `uploadQueue.photos` into reducer via `UPDATE_FIELDS`, but **debounced `save()` does not depend on queue/photo payloads** — if only queue photos change until the next unrelated field edit, PATCH may lag until `forceSave` (step change / publish paths). |
 | **`publishGate` unused** | `useUploadQueue` computes `publishGate`; **sell tab never reads it** — Continue/Publish gating follows `wizardMachine` + contracts Zod (`photos[].key`), not staging states like `presigned` / `uploading`. |
 | **`waiting_for_network` state** | NetInfo offline events now move `compressed` / `presigned` / `uploading` photos into `waiting_for_network`; reconnect reuses upload resume. |
 | **`removePhoto` vs `queueRef`** | Compression/upload paths update `queueRef` synchronously; **remove relies on passive `queueRef.current = queue` on the next render** — brief window vs in-flight uploads. |
@@ -87,14 +86,11 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 ### Planned refactor roadmap (follow-up PRs — not aspirational CONTEXT)
 
-1. **Correctness**: Fix autosave deps or trigger `save()` from queue sync; wire `publishGate` into Publish/Continue UX; synchronize `queueRef` on removals; add or stub **`/(public)/listings/[id]`** entry.
+1. **Correctness**: Wire `publishGate` into Publish/Continue UX; synchronize `queueRef` on removals; add or stub **`/(public)/listings/[id]`** entry.
 
-2. **Edit media parity + create orchestration cleanup** (agreed): `/listings/[id]/edit` now shares **`wizardMachine` + `@auto-tm/contracts` step validation** with create and opens at Review/Save per [ADR-0026](../../docs/adr/0026-edit-mode-review-first-entry.md). Remaining edit parity work is media: per [ADR-0024](../../docs/adr/0024-owner-post-publish-photo-editing.md), edit mode must support owner photo add/remove/reorder after publish; stage photo edits locally, allow new uploads during edit for responsiveness, and apply `AttachMedia` / `RemoveMedia` / `ReorderMedia` only on **Save changes**. Cancel/discard should clean local staging and best-effort clean newly uploaded media that was never attached; remaining remote objects are storage orphans for server cleanup. Reuse or adapt the upload queue for published-listing media rather than keeping photos read-only. Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
+2. **Create orchestration cleanup**: Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
 
-   Convergence sub-decisions (locked 2026-05-22):
-   - **Staging key**: `useUploadQueue` accepts an opaque `stagingKey`; create passes `draft-{draftId}`, edit passes `edit-{listingId}`. `orphanCleanup` walks both prefixes from app boot.
-   - **Save-changes atomicity**: sequential best-effort, fail-fast, retry-from-failure — per [ADR-0025](../../docs/adr/0025-edit-save-atomicity.md). Phase 2 migrates to a bundled transactional endpoint.
-   - **Edit entry pattern**: edit opens at Step 8 (Review); detour steps render a single full-width "Done" footer that returns to Review — per [ADR-0026](../../docs/adr/0026-edit-mode-review-first-entry.md). Create stays linear.
+   Remaining convergence items (locked 2026-05-22):
    - **publishGate consumption**: Continue allowed during in-flight uploads; Publish / Save changes blocked until queue is fully green. Footer chip surfaces "X uploading / Y failed".
    - **Post-publish navigation**: stub `app/(public)/listings/[id].tsx` as a minimal screen consuming `useListingDetail`; Publish + Save changes both use `router.replace` to land there.
    - **Design system migration**: add `size="pill"` variant + `disabled:bg-muted disabled:border-border disabled:text-muted-foreground` baked into every Button variant. Wizard footer migrates from inlined `cn()` classes to `variant + size` props.

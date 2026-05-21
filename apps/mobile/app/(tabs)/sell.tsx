@@ -1,6 +1,6 @@
 import { PlusCircle } from "lucide-react-native";
 import { type Href, router, useNavigation } from "expo-router";
-import { useEffect, useReducer, useState, useCallback } from "react";
+import { useEffect, useReducer, useState, useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WizardSchemas } from "@auto-tm/contracts";
@@ -118,7 +118,16 @@ export default function SellScreen() {
     });
   }, [uploadQueue.photos]);
 
-  // Autosave when payload changes (excluding photos which are handled above)
+  // Stable fingerprint of the photo queue so photo-only bursts trigger autosave
+  const photoFingerprint = useMemo(
+    () =>
+      uploadQueue.photos
+        .map((p) => `${p.photoId}:${p.key ?? "pending"}:${p.sortOrder}`)
+        .join("|"),
+    [uploadQueue.photos],
+  );
+
+  // Autosave when payload changes (photos handled via fingerprint above)
   useEffect(() => {
     if (!machineState.draftId || machineState.status !== "step") return;
     const fullPayload: WizardSchemas.WizardDraftPayload = {
@@ -155,6 +164,7 @@ export default function SellScreen() {
     machineState.payload.acceptsExchange,
     machineState.payload.installmentAvailable,
     machineState.validatedSteps,
+    photoFingerprint,
   ]);
 
   const handleStartListing = useCallback(() => {
