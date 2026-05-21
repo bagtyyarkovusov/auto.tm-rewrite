@@ -12,7 +12,6 @@ import {
 
 import type { StagedPhoto } from "../uploadStaging/types";
 
-import type { WizardPayload } from "./types";
 import { PhotoThumbnail } from "./PhotoThumbnail";
 
 import { Button } from "@/components/ui/button";
@@ -21,10 +20,6 @@ import { Icon } from "@/components/ui/icon";
 
 
 interface Step2PhotosProps {
-  payload: WizardPayload;
-  onChange: (updates: Partial<WizardPayload>) => void;
-  disabled?: boolean;
-  disabledTooltip?: string;
   photos: StagedPhoto[];
   onAddPhoto: (uri: string) => Promise<void>;
   onRemovePhoto: (photoId: string) => void;
@@ -32,6 +27,7 @@ interface Step2PhotosProps {
   onRetryPhoto: (photoId: string) => void;
   isCompressing: boolean;
   isUploading: boolean;
+  disabled?: boolean;
   fieldErrors?: Record<string, string>;
 }
 

@@ -1,5 +1,6 @@
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
+import { listLocalPhotoIds } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from "./types";
 
 export function computePublishGate(queue: UploadQueue): PublishGateResult {
@@ -200,6 +201,39 @@ export function transitionUploadQueueToWaitingForNetwork(
         : photo,
     ),
   };
+}
+
+export async function reconstructQueueFromListing(
+  listingId: string,
+  media: ListingsSchemas.ListingMedia[],
+): Promise<UploadQueue> {
+  const stagingKey = `edit-${listingId}`;
+  const localPhotoIds = await listLocalPhotoIds(stagingKey);
+
+  const photos: StagedPhoto[] = media.map((m) => ({
+    photoId: m.id,
+    key: m.key,
+    state: "attached",
+    sortOrder: m.sortOrder,
+    retryCount: 0,
+    width: m.width,
+    height: m.height,
+  }));
+
+  for (const localId of localPhotoIds) {
+    if (!photos.some((p) => p.photoId === localId)) {
+      photos.push({
+        photoId: localId,
+        state: "selected",
+        sortOrder: photos.length,
+        retryCount: 0,
+      });
+    }
+  }
+
+  photos.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  return { stagingKey, photos };
 }
 
 export function isRetryable(error?: UploadError): boolean {

@@ -24,7 +24,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions<TResponse> {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   schema?: ZodSchema<TResponse>;
   // If false, do not attach Authorization header (used for OTP request/verify pre-login)
@@ -163,6 +163,9 @@ export const apiClient = {
   },
   patch<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
     return rawRequest<T>(path, { method: "PATCH", body, schema, ...opts }, false);
+  },
+  put<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
+    return rawRequest<T>(path, { method: "PUT", body, schema, ...opts }, false);
   },
   delete<T>(path: string, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
     return rawRequest<T>(path, { method: "DELETE", schema, ...opts }, false);

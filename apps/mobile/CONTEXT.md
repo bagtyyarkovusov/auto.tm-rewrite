@@ -61,7 +61,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
 /listings/
-  [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes direct PATCHes via useEditListing; no edit draft/autosave; photos read-only today
+  [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes direct PATCHes via useEditListing; no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
 
 /dev/
   catalog             Dev-only catalog smoke screen       — wired (S3), gated __DEV__
@@ -84,7 +84,6 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 | **`orphanCleanup`** | `app/_layout.tsx` calls `cleanupOrphanDraftDirs(existingDraftIds, existingListingIds)` after authenticated `useMyDrafts` + `useMyListings` resolve. Canonical detail in [`src/listings/CONTEXT.md`](src/listings/CONTEXT.md). |
 | **Post-publish navigation** | `router.push('/(public)/listings/:id')` — **`app/(public)` tree absent** → broken navigation until a listing-detail route ships. |
 | **`Step2Photos` props noise** | Still accepts `payload` / `onChange` / `disabledTooltip`; **implementations ignore them** (photo props only). |
-| **Edit photos read-only** | `/listings/[id]/edit` renders `<ReadOnlyPhotos/>`, but [ADR-0024](../../docs/adr/0024-owner-post-publish-photo-editing.md) locks owner add/remove/reorder photos after publish as the product contract. Target behavior stages photo edits locally, may upload new files during edit, and applies `AttachMedia` / `RemoveMedia` / `ReorderMedia` only on **Save changes**. Cancel/discard cleanup for uploaded-but-unattached edit media is not implemented. |
 
 ### Planned refactor roadmap (follow-up PRs — not aspirational CONTEXT)
 
@@ -121,7 +120,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 Identity hooks live at `src/api/identity/*`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
-Listings hooks live at `src/api/listings/*` (`useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`).
+Listings hooks live at `src/api/listings/*` (`useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useAttachMedia`, `useRemoveMedia`, `useReorderMedia`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`).
 Uploads hook lives at `src/api/uploads/usePresignUpload`.
 Exchange-rate hook lives at `src/api/exchange-rates/useExchangeRates`.
 Upload staging utilities live at `src/listings/uploadStaging/` (`types.ts`, `stagingDir.ts`, `compressor.ts`, `queueState.ts`, `uploadErrors.ts`, `orphanCleanup.ts`, `appStateResume.ts`).

@@ -22,11 +22,12 @@ import {
 } from "./queueState";
 import {
   ensureDraftDir,
-  getDraftDir,
   getStagingPath,
+  listLocalPhotoIds,
 } from "./stagingDir";
 import { buildUploadError } from "./uploadErrors";
 import type { PublishGateResult, UploadQueue, UploadError } from "./types";
+export { reconstructQueueFromListing } from "./queueState";
 
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -34,18 +35,6 @@ function generateUUID(): string {
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
-}
-
-async function listLocalPhotoIds(stagingKey: string): Promise<string[]> {
-  const dir = getDraftDir(stagingKey);
-  const dirInfo = await FileSystem.getInfoAsync(dir);
-  if (!dirInfo.exists) {
-    return [];
-  }
-  const files = await FileSystem.readDirectoryAsync(dir);
-  return files
-    .filter((f) => f.endsWith(".jpg"))
-    .map((f) => f.replace(".jpg", ""));
 }
 
 async function verifyStagingFileExists(localUri: string): Promise<boolean> {
