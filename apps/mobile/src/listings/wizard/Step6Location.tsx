@@ -157,10 +157,6 @@ export default function Step6Location({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        Location
-      </Text>
-
       <PickerRow
         label="Region"
         required

@@ -194,10 +194,6 @@ export default function Step5Price({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        Price & terms
-      </Text>
-
       <PriceInput
         payload={payload}
         onChange={onChange}

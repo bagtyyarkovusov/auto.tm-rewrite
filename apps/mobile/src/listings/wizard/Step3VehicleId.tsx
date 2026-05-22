@@ -330,10 +330,6 @@ export default function Step3VehicleId({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        Vehicle details
-      </Text>
-
       <PickerRow
         label="Brand"
         required

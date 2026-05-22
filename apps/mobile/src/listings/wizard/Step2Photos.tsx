@@ -245,10 +245,6 @@ export default function Step2Photos({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        Photos
-      </Text>
-
       <Text className="text-sm text-muted-foreground">
         Photos under 5 MB upload faster.
       </Text>

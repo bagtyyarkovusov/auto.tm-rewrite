@@ -1,4 +1,4 @@
-import { ChevronLeft, MoreVertical, AlertCircle, RefreshCw, Loader2 } from "lucide-react-native";
+import { ChevronLeft, MoreVertical, AlertCircle, RefreshCw } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +18,7 @@ import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
 import { WizardOverflowMenu } from "@/components/listings/wizard/WizardOverflowMenu";
+import { cn } from "@/lib/utils";
 
 interface FooterAction {
   label: string;
@@ -71,6 +72,8 @@ function WizardHeader({
   onBack,
   onOpenDiscard,
   progressPercent,
+  saveStatus,
+  onRetrySave,
 }: {
   routeTitle: string;
   stepTitle: string;
@@ -80,9 +83,28 @@ function WizardHeader({
   onBack: () => void;
   onOpenDiscard: () => void;
   progressPercent: number;
+  saveStatus: WizardLayoutProps["saveStatus"];
+  onRetrySave: () => void;
 }) {
+  const saveStatusText =
+    saveStatus === "saving"
+      ? "Saving…"
+      : saveStatus === "error"
+        ? "Could not save"
+        : saveStatus === "saved"
+          ? "Saved"
+          : null;
+
+  const saveStatusClass =
+    saveStatus === "error"
+      ? "text-destructive"
+      : saveStatus === "saved"
+        ? "text-success-500"
+        : "text-muted-foreground";
+
   return (
     <View className="border-b border-border px-5 py-3 gap-2">
+      {/* Row 1: nav + position marker + inline save status + overflow */}
       <View className="flex-row items-center justify-between">
         <View className="w-10">
           {canGoBack && (
@@ -98,9 +120,26 @@ function WizardHeader({
           )}
         </View>
 
-        <Text className="text-base font-semibold text-foreground">
-          {routeTitle}
-        </Text>
+        <View className="flex-row items-center gap-1 flex-1 justify-center">
+          <Text className="text-xs text-muted-foreground">
+            {routeTitle} · Step {stepNumber} of {stepCount}
+          </Text>
+          {saveStatusText && (
+            <Text className={cn("text-xs", saveStatusClass)}>
+              {" · "}{saveStatusText}
+            </Text>
+          )}
+          {saveStatus === "error" && (
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto px-0 py-0"
+              onPress={onRetrySave}
+            >
+              <Text className="text-xs text-destructive">Retry</Text>
+            </Button>
+          )}
+        </View>
 
         <View className="w-10 items-end">
           <Button
@@ -115,66 +154,17 @@ function WizardHeader({
         </View>
       </View>
 
-      <Text className="text-lg font-semibold text-foreground">
+      {/* Row 2: the prominent step title — the ONE title */}
+      <Text className="text-2xl font-heading text-foreground">
         {stepTitle}
       </Text>
 
-      <View className="flex-row items-center justify-between">
-        <Text className="text-sm text-muted-foreground">
-          Step {stepNumber} of {stepCount}
-        </Text>
-      </View>
-
+      {/* Row 3: progress */}
       <Progress
         value={progressPercent}
         className="bg-muted h-1"
         indicatorClassName="bg-foreground"
       />
-    </View>
-  );
-}
-
-function SaveStatusIndicator({
-  saveStatus,
-  onRetrySave,
-}: {
-  saveStatus: WizardLayoutProps["saveStatus"];
-  onRetrySave: () => void;
-}) {
-  const saveStatusText =
-    saveStatus === "saving"
-      ? "Saving draft..."
-      : saveStatus === "error"
-        ? "Could not save"
-        : saveStatus === "saved"
-          ? "Saved"
-          : null;
-
-  if (!saveStatusText) return null;
-
-  return (
-    <View className="flex-row items-center gap-2">
-      <Text
-        className={`text-sm ${
-          saveStatus === "error"
-            ? "text-destructive"
-            : saveStatus === "saved"
-              ? "text-success-500"
-              : "text-muted-foreground"
-        }`}
-      >
-        {saveStatusText}
-      </Text>
-      {saveStatus === "error" && (
-        <Button
-          variant="link"
-          size="sm"
-          className="h-auto px-0 py-0"
-          onPress={onRetrySave}
-        >
-          <Text className="text-sm text-destructive">Retry</Text>
-        </Button>
-      )}
     </View>
   );
 }
@@ -443,14 +433,9 @@ export function WizardLayout({
         onBack={onBack}
         onOpenDiscard={() => setShowOverflowMenu(true)}
         progressPercent={progressPercent}
+        saveStatus={saveStatus}
+        onRetrySave={onRetrySave}
       />
-
-      <View className="flex-row items-center justify-between px-5 py-1">
-        <SaveStatusIndicator
-          saveStatus={saveStatus}
-          onRetrySave={onRetrySave}
-        />
-      </View>
 
       <SaveErrorBanner
         saveStatus={saveStatus}
@@ -464,7 +449,7 @@ export function WizardLayout({
         <View className="mx-5 mb-2 flex-row items-center gap-2 rounded-lg bg-muted px-3 py-2">
           {uploadStatus.inflight > 0 && (
             <View className="flex-row items-center gap-1.5">
-              <Icon as={Loader2} className="size-3.5 text-muted-foreground" />
+              <ActivityIndicator size="small" />
               <Text className="text-xs text-muted-foreground">
                 {uploadStatus.inflight} uploading
               </Text>

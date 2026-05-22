@@ -197,10 +197,6 @@ export default function Step7DescContact({
 }: Step7DescContactProps) {
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        Description & contact
-      </Text>
-
       <ReviewSummary payload={payload} />
       <DescriptionInput
         payload={payload}
