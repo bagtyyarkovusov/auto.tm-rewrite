@@ -476,7 +476,7 @@ Use these for ALL composite-component internals. RNR components are pre-wired to
 
 ### Layer C — Component variants (via `cva` inside a component file)
 
-Each RNR component file defines its own `variants` map. `Button` ships with `default | destructive | outline | secondary | ghost | link` and `size: default | sm | lg | icon`. To add a "brand" variant, edit the component file in place (see §7.1).
+Each RNR component file defines its own `variants` map. `Button` ships with `default | destructive | outline | secondary | ghost | link` and `size: default | sm | lg | pill | icon`. `size="pill"` (52px `rounded-full`) is reserved for commit buttons — wizard footer actions, Sell entry CTAs, and any primary flow completion step. To add a "brand" variant, edit the component file in place (see §7.1).
 
 ### When to use which
 
@@ -838,7 +838,7 @@ The full RNR catalogue (status as of 2026-05). Install via `npx @react-native-re
 | `aspect-ratio` | Fixed-ratio container | No |
 | `avatar` | User avatar with fallback | No |
 | `badge` | Status pill | No |
-| `button` | Pressable with variants | No |
+| `button` | Pressable with variants (`default`/`brand`/`destructive`/`outline`/`secondary`/`ghost`/`link` + `default`/`sm`/`lg`/`pill`/`icon`) | No |
 | `card` | Card with header/content/footer | No |
 | `checkbox` | Boolean input | No |
 | `collapsible` | Generic collapsible | No |
@@ -1105,7 +1105,9 @@ When a component already uses `cva()` (Class Variance Authority), you have two t
 
 **LOCKSTEP rule:** Many RNR components have TWO `cva()` calls — one for the container (`buttonVariants`), one for the text (`buttonTextVariants`). When you add a new variant key, you MUST add it to both. The anti-pattern: adding `"outline-brand"` to `buttonVariants` but skipping `buttonTextVariants` → button text renders white on a white border, invisible. The RNR Button, Badge, and Toggle have this paired-CVA pattern; check each component's file for a second `cva()` call before committing.
 
-**Example — adding `"outline-brand"` to Button:**
+**Example — adding `"outline-brand"` and `"pill"` to Button:**
+
+`"pill"` is a size variant, not a color variant. It is orthogonal to `variant` — combine them as `variant="brand" size="pill"`.
 
 ```tsx
 // apps/mobile/components/ui/button.tsx
@@ -1178,6 +1180,7 @@ Do not:
 | Using `bg-opacity-50` | Runtime cost; opacity utility is disabled by default | Use `opacity-50` on the element OR `bg-black/50` |
 | `colorScheme === "dark" ? palette.neutral[50] : palette.neutral[900]` to compute icon color | Imperative — re-renders, doesn't track theme system | `<Icon as={X} className="text-foreground" />` |
 | `darkMode: "media"` in tailwind.config | Locks out manual override | `darkMode: "class"` (NativeWind treats `"system"` as the default value) |
+| Inlining `h-[52px] rounded-full` instead of `size='pill'` | Repeats the same 6+ call sites; drifts from system when design tokens change | Add a CVA size variant at 3+ occurrences (§7.4); use `size="pill"` |
 | Patching `node_modules` to "fix" a styling issue | Always wrong — see `docs/agents/mobile-expo.md` | Run `expo install --check` first |
 
 ---

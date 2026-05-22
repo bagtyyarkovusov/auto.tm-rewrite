@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
-import { cn } from "@/lib/utils";
 import { WizardOverflowMenu } from "@/components/listings/wizard/WizardOverflowMenu";
 
 interface FooterAction {
@@ -244,18 +243,13 @@ function WizardFooter({
           </Text>
         )}
         <Button
-          className={cn(
-            "h-[52px] rounded-full",
-            primaryDisabled
-              ? "bg-muted border border-border"
-              : "bg-foreground",
-          )}
+          variant="default"
+          size="pill"
+          className="flex-1"
           onPress={onReturnToReview}
           disabled={primaryDisabled || !onReturnToReview}
         >
-          <Text className={primaryDisabled ? "text-muted-foreground" : "text-background"}>
-            Done
-          </Text>
+          <Text>Done</Text>
         </Button>
       </View>
     );
@@ -270,18 +264,13 @@ function WizardFooter({
           </Text>
         )}
         <Button
-          className={cn(
-            "h-[52px] rounded-full",
-            primaryDisabled
-              ? "bg-muted border border-border"
-              : "bg-primary",
-          )}
+          variant="brand"
+          size="pill"
+          className="flex-1"
           onPress={onPublish}
           disabled={!canPublish}
         >
-          <Text className={primaryDisabled ? "text-muted-foreground" : "text-primary-foreground"}>
-            {publishLabel}
-          </Text>
+          <Text>{publishLabel}</Text>
         </Button>
       </View>
     );
@@ -298,19 +287,21 @@ function WizardFooter({
         {canGoBack ? (
           <Button
             variant="outline"
-            className="flex-1 h-[52px] rounded-full border-foreground bg-background"
+            size="pill"
+            className="flex-1"
             onPress={onBack}
           >
-            <Text className="text-foreground">Back</Text>
+            <Text>Back</Text>
           </Button>
         ) : secondaryAction ? (
           <Button
             variant="outline"
-            className="flex-1 h-[52px] rounded-full border-foreground bg-background"
+            size="pill"
+            className="flex-1"
             onPress={secondaryAction.onPress}
             disabled={secondaryAction.disabled}
           >
-            <Text className="text-foreground">{secondaryAction.label}</Text>
+            <Text>{secondaryAction.label}</Text>
           </Button>
         ) : (
           <View className="flex-1" />
@@ -318,33 +309,23 @@ function WizardFooter({
 
         {isLastStep ? (
           <Button
-            className={cn(
-              "flex-1 h-[52px] rounded-full",
-              primaryDisabled
-                ? "bg-muted border border-border"
-                : "bg-primary"
-            )}
+            variant="brand"
+            size="pill"
+            className="flex-1"
             onPress={onPublish}
             disabled={!canPublish}
           >
-            <Text className={primaryDisabled ? "text-muted-foreground" : "text-primary-foreground"}>
-              {publishLabel}
-            </Text>
+            <Text>{publishLabel}</Text>
           </Button>
         ) : (
           <Button
-            className={cn(
-              "flex-1 h-[52px] rounded-full",
-              primaryDisabled
-                ? "bg-muted border border-border"
-                : "bg-foreground"
-            )}
+            variant="default"
+            size="pill"
+            className="flex-1"
             onPress={onContinue}
             disabled={!canContinue}
           >
-            <Text className={primaryDisabled ? "text-muted-foreground" : "text-background"}>
-              Continue
-            </Text>
+            <Text>Continue</Text>
           </Button>
         )}
       </View>
