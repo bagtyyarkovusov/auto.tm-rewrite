@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Platform, Pressable } from 'react-native';
+import { Platform, Pressable, type PressableProps } from 'react-native';
 
 import { TextClassContext } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
@@ -15,39 +15,40 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: cn(
-          'bg-foreground active:bg-foreground/90',
+          'bg-foreground active:bg-foreground/90 disabled:bg-muted disabled:border disabled:border-border',
           Platform.select({ web: 'hover:bg-foreground/90' })
         ),
         brand: cn(
-          'bg-primary active:bg-primary/90 shadow-sm shadow-black/5',
+          'bg-primary active:bg-primary/90 shadow-sm shadow-black/5 disabled:bg-muted disabled:border disabled:border-border disabled:shadow-none',
           Platform.select({ web: 'hover:bg-primary/90' })
         ),
         destructive: cn(
-          'bg-destructive active:bg-destructive/90 shadow-sm shadow-black/5',
+          'bg-destructive active:bg-destructive/90 shadow-sm shadow-black/5 disabled:bg-muted disabled:border disabled:border-border disabled:shadow-none',
           Platform.select({
             web: 'hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
           })
         ),
         outline: cn(
-          'border-border bg-background active:bg-muted dark:border-input dark:bg-input/20 dark:active:bg-input/40',
+          'border-border bg-background active:bg-muted disabled:bg-muted disabled:border-border dark:border-input dark:bg-input/20 dark:active:bg-input/40',
           Platform.select({
             web: 'hover:bg-muted dark:hover:bg-input/40',
           })
         ),
         secondary: cn(
-          'bg-muted active:bg-muted/80',
+          'bg-muted active:bg-muted/80 disabled:bg-muted disabled:border disabled:border-border',
           Platform.select({ web: 'hover:bg-muted/80' })
         ),
         ghost: cn(
-          'active:bg-muted dark:active:bg-muted/70',
+          'active:bg-muted dark:active:bg-muted/70 disabled:bg-muted disabled:border disabled:border-border',
           Platform.select({ web: 'hover:bg-muted dark:hover:bg-muted/70' })
         ),
-        link: '',
+        link: 'disabled:text-muted-foreground',
       },
       size: {
         default: cn('h-12 px-4 py-3', Platform.select({ web: 'has-[>svg]:px-3' })),
         sm: cn('h-9 gap-1.5 rounded-md px-3', Platform.select({ web: 'has-[>svg]:px-2.5' })),
         lg: cn('h-[52px] px-5 py-3', Platform.select({ web: 'has-[>svg]:px-4' })),
+        pill: 'h-[52px] rounded-full px-5 py-3',
         icon: 'h-10 w-10',
       },
     },
@@ -66,17 +67,17 @@ const buttonTextVariants = cva(
   {
     variants: {
       variant: {
-        default: 'text-background',
-        brand: 'text-primary-foreground',
-        destructive: 'text-white',
+        default: 'text-background disabled:text-muted-foreground',
+        brand: 'text-primary-foreground disabled:text-muted-foreground',
+        destructive: 'text-white disabled:text-muted-foreground',
         outline: cn(
-          'text-foreground group-active:text-foreground',
+          'text-foreground group-active:text-foreground disabled:text-muted-foreground',
           Platform.select({ web: 'group-hover:text-foreground' })
         ),
-        secondary: 'text-foreground',
-        ghost: 'text-foreground group-active:text-foreground',
+        secondary: 'text-foreground disabled:text-muted-foreground',
+        ghost: 'text-foreground group-active:text-foreground disabled:text-muted-foreground',
         link: cn(
-          'text-info-500 group-active:underline',
+          'text-info-500 group-active:underline disabled:text-muted-foreground',
           Platform.select({ web: 'underline-offset-4 hover:underline group-hover:underline' })
         ),
       },
@@ -84,6 +85,7 @@ const buttonTextVariants = cva(
         default: '',
         sm: '',
         lg: '',
+        pill: '',
         icon: '',
       },
     },
@@ -94,13 +96,13 @@ const buttonTextVariants = cva(
   }
 );
 
-type ButtonProps = React.ComponentProps<typeof Pressable> & React.RefAttributes<typeof Pressable> & VariantProps<typeof buttonVariants>;
+type ButtonProps = PressableProps & VariantProps<typeof buttonVariants>;
 
 function Button({ className, variant, size, ...props }: ButtonProps) {
   return (
     <TextClassContext.Provider value={buttonTextVariants({ variant, size })}>
       <Pressable
-        className={cn(props.disabled && 'opacity-50', buttonVariants({ variant, size }), className)}
+        className={cn(buttonVariants({ variant, size }), className)}
         role="button"
         {...props}
       />

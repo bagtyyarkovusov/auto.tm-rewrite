@@ -474,18 +474,19 @@ export default function SellScreen() {
                   : "Price missing"}
               </Text>
               <Button
-                className="h-[52px] rounded-full bg-foreground"
+                variant="default"
+                size="pill"
                 onPress={() => handleContinueDraft(existingDraft)}
               >
-                <Text className="text-background">Continue listing</Text>
+                <Text>Continue listing</Text>
               </Button>
             </View>
             <Button
-              className="h-[52px] rounded-full border-foreground bg-background"
               variant="outline"
+              size="pill"
               onPress={handleCreateNewDraft}
             >
-              <Text className="text-foreground">New listing</Text>
+              <Text>New listing</Text>
             </Button>
           </View>
         ) : (
@@ -498,10 +499,12 @@ export default function SellScreen() {
               List your vehicle on AutoTM
             </Text>
             <Button
-              className="mt-6 h-[52px] rounded-full bg-foreground"
+              variant="default"
+              size="pill"
+              className="mt-6 self-stretch"
               onPress={handleStartListing}
             >
-              <Text className="text-background">Start listing</Text>
+              <Text>Start listing</Text>
             </Button>
           </View>
         )}

@@ -44,7 +44,7 @@ There are **no** `font-uber-move`, `font-uber-move-text`, or `font-uber-mono` ut
 
 ### RNR primitive design contract (today)
 
-Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first surfaces, 8px default radius, UberMove semantic font utilities, flat cards/inputs, and restrained brand red. `Button` default is high-contrast neutral (`bg-foreground`); `Button variant="brand"` is the red commit/action style. Status UI uses `success-500`, `warning-500`, `info-500`, and `destructive` instead of brand red. `Progress`, `Switch`, `Tooltip`, tabs, and photo cover badges use neutral tokens so red stays reserved for true brand or commit moments.
+Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first surfaces, 8px default radius, UberMove semantic font utilities, flat cards/inputs, and restrained brand red. `Button` default is high-contrast neutral (`bg-foreground`); `Button variant="brand"` is the red commit/action style. `Button size="pill"` (52px rounded-full) is the commit-button size used in the wizard footer and Sell entry screen. `variant` and `size` are orthogonal — callers combine them (e.g., `variant="brand" size="pill"`). Every variant bakes in `disabled:bg-muted disabled:border disabled:border-border` (container) and `disabled:text-muted-foreground` (text) so disabled buttons show a visible muted shell instead of fading via `opacity-50`. Status UI uses `success-500`, `warning-500`, `info-500`, and `destructive` instead of brand red. `Progress`, `Switch`, `Tooltip`, tabs, and photo cover badges use neutral tokens so red stays reserved for true brand or commit moments.
 
 ### Routes (Phase 1, today)
 
@@ -90,7 +90,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 1. **Create orchestration cleanup**: Extract create orchestration out of **`sell.tsx`** into a dedicated hook/module.
 
    Remaining convergence items (locked 2026-05-22):
-   - **Design system migration**: add `size="pill"` variant + `disabled:bg-muted disabled:border-border disabled:text-muted-foreground` baked into every Button variant. Wizard footer migrates from inlined `cn()` classes to `variant + size` props.
+   - **Design system migration**: ✅ Shipped in #134. `size="pill"` + disabled-state bake-in live in `buttonVariants`/`buttonTextVariants`. Wizard footer and Sell entry buttons use `variant + size` props.
    - **Heading hierarchy**: Apple Large Title pattern in `WizardHeader` (muted position-marker row + `text-2xl font-heading` step title + progress); step bodies delete their `text-2xl font-semibold` title.
 
 3. **Refactoring UI (photos step + WizardLayout)** — hierarchy: unify duplicate route title + header step title + step body `text-2xl`; simplify upload overlays vs step-level summary; keep upload/status overlays on semantic tokens instead of brand red; propagate `font-heading` on wizard headings.
