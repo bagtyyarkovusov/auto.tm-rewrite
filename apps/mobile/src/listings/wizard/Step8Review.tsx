@@ -65,10 +65,6 @@ export default function Step8Review({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        Review your listing
-      </Text>
-
       {/* Vehicle */}
       <ReviewSection
         title={STEP_LABELS.vehicle}

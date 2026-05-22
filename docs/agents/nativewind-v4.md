@@ -1150,6 +1150,26 @@ const buttonTextVariants = cva("text-sm font-medium", {
 
 **ADR REQUIRED.** No fork lands without one. The ADR must justify why in-place editing or a custom composition wouldn't suffice.
 
+### 7.9 Screen patterns — Apple Large Title
+
+The canonical AutoTM screen header for focused flows (wizard steps, settings, onboarding) follows the Apple Large Title pattern adapted for React Native:
+
+```
+┌─────────────────────────────────────────┐
+│  ←    Sell car · Step 2 of 8    ···     │  ← Row 1: nav + muted position marker + overflow
+│         VIN or chassis number           │  ← Row 2: text-2xl font-heading (the ONE title)
+│ ████████████████████░░░░░░░░░░░░░░░░░░░ │  ← Row 3: progress bar
+└─────────────────────────────────────────┘
+```
+
+**Rules:**
+- **One title per screen.** The prominent heading lives in the header; the body opens directly with form rows or brief orientation copy. Never duplicate the step title between header and body.
+- **`font-heading` for prominent headings.** The step title uses `text-2xl font-heading text-foreground`. Body emphasis (field labels, card titles) uses `font-semibold`.
+- **Position marker is muted.** `text-xs text-muted-foreground` combines route name + step position (`Sell car · Step 2 of 8`). Inline save status appends as `· Saved` / `· Saving…` / `· Could not save · Retry` in the same row.
+- **Progress is neutral.** The progress bar uses `bg-muted` track and `bg-foreground` indicator so it reads as chrome, not a brand moment.
+
+**Reference implementation:** `apps/mobile/src/listings/wizard/WizardLayout.tsx` (`WizardHeader` subcomponent).
+
 ### 7.8 Anti-patterns when customizing
 
 Do not:
@@ -1181,6 +1201,8 @@ Do not:
 | `colorScheme === "dark" ? palette.neutral[50] : palette.neutral[900]` to compute icon color | Imperative — re-renders, doesn't track theme system | `<Icon as={X} className="text-foreground" />` |
 | `darkMode: "media"` in tailwind.config | Locks out manual override | `darkMode: "class"` (NativeWind treats `"system"` as the default value) |
 | Inlining `h-[52px] rounded-full` instead of `size='pill'` | Repeats the same 6+ call sites; drifts from system when design tokens change | Add a CVA size variant at 3+ occurrences (§7.4); use `size="pill"` |
+| Duplicating step / page titles between header and body | Competing hierarchies confuse scan order; drift when one copy changes | Pick one source of truth — header carries the prominent title (`text-2xl font-heading`), body opens with form rows or brief orientation copy (§7.9) |
+| Using `font-semibold` for prominent screen headings | Renders in body face (UberMoveText) instead of the brand heading face (UberMove-Medium) | Use `font-heading` for screen/step titles; reserve `font-semibold` for body emphasis |
 | Patching `node_modules` to "fix" a styling issue | Always wrong — see `docs/agents/mobile-expo.md` | Run `expo install --check` first |
 
 ---

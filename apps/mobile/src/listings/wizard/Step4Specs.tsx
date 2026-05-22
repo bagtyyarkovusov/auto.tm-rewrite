@@ -316,10 +316,6 @@ export default function Step4Specs({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        Specifications
-      </Text>
-
       <ConditionToggle
         condition={specs.condition}
         disabled={disabled}

@@ -21,10 +21,6 @@ export default function Step1Vin({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-2xl font-semibold text-foreground">
-        VIN or chassis number
-      </Text>
-
       <Text className="text-sm text-muted-foreground">
         Optional. You can fill details manually.
       </Text>

@@ -449,7 +449,7 @@ export default function SellScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 px-5 pt-3">
-        <Text className="text-[32px] font-bold leading-tight tracking-tight text-foreground">
+        <Text className="text-3xl font-heading leading-tight tracking-tight text-foreground">
           Sell
         </Text>
 

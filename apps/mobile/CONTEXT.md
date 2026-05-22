@@ -40,7 +40,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`font-sans`** (default semantic body) → `UberMoveText-Regular`
 - **`font-mono`** → `UberMoveMono-Regular`, `Menlo`, `monospace`
 
-There are **no** `font-uber-move`, `font-uber-move-text`, or `font-uber-mono` utilities. Wizard shell + steps mostly use **`font-semibold`** on headings without specifying `font-heading`; auth `OtpCells` uses **`font-mono`** for the code digits.
+There are **no** `font-uber-move`, `font-uber-move-text`, or `font-uber-mono` utilities. Wizard `WizardHeader` and the Sell entry screen use **`font-heading`** for prominent headings. `font-semibold` is reserved for body emphasis (field labels, card titles). Auth `OtpCells` uses **`font-mono`** for the code digits.
 
 ### RNR primitive design contract (today)
 
@@ -61,7 +61,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
 /(public)/
-  listings/[id]       Buyer-facing listing detail stub    — wired (S4, #133); renders title/price/photos/description from `useListingDetail`; no contact/favorite/chat (S5/S7)
+  listings/[id]       Buyer-facing listing detail stub    — wired (S4, #133); renders title/price/photos/description from `useListingDetail`; contact lands in S6; favorite/rich chat are post-MLP
 
 /listings/
   [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes orchestrated via `useSaveListingEdit` (fields → attach → remove → reorder, fail-fast, retry-from-failure per ADR-0025); no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
@@ -91,9 +91,9 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
    Remaining convergence items (locked 2026-05-22):
    - **Design system migration**: ✅ Shipped in #134. `size="pill"` + disabled-state bake-in live in `buttonVariants`/`buttonTextVariants`. Wizard footer and Sell entry buttons use `variant + size` props.
-   - **Heading hierarchy**: Apple Large Title pattern in `WizardHeader` (muted position-marker row + `text-2xl font-heading` step title + progress); step bodies delete their `text-2xl font-semibold` title.
+   - **Heading hierarchy**: ✅ Shipped in #135. Apple Large Title pattern in `WizardHeader` (muted position-marker row + `text-2xl font-heading` step title + progress); step bodies deleted their `text-2xl font-semibold` title.
 
-3. **Refactoring UI (photos step + WizardLayout)** — hierarchy: unify duplicate route title + header step title + step body `text-2xl`; simplify upload overlays vs step-level summary; keep upload/status overlays on semantic tokens instead of brand red; propagate `font-heading` on wizard headings.
+3. **Refactoring UI (photos step + WizardLayout)** — simplify upload overlays vs step-level summary; keep upload/status overlays on semantic tokens instead of brand red.
 
 ## Navigation chrome (today)
 
@@ -109,7 +109,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 - `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
 - Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
-- Wizard design system applied in #124: **`WizardLayout`** shows route title + **`text-lg`** step title + progress; steps **also** echo a **`text-2xl font-semibold`** screen title (**three-level heading stack — refinement backlog**, see **Planned refactor roadmap** above). Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.
+- Wizard design system applied in #124 + #135: **`WizardHeader`** shows muted position-marker (`text-xs text-muted-foreground`) + **`text-2xl font-heading`** step title + progress bar. Step bodies open directly with form rows or brief `text-sm text-muted-foreground` orientation copy — no duplicate title. Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.
 
 Identity hooks live at `src/api/identity/*`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
@@ -135,17 +135,17 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
   - **Still missing vs PRD / backlog**: optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
   - Mobile foundation (`apps/mobile` deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging pipeline) ✅ Shipped.
-- **S5 (Listings UX)** — saved-search UI, filter sheet; mobile picker modals (brand-picker, model-picker)
-- **S6 (Garage + Dealership)** — `/me/garage`, `/me/listings`; `/(public)/dealers/[slug]`
-- **S7 (Conversations)** —
-  - **`socket.io-client`** dep (not in package.json today; S7 adds it)
-  - Routes: `/chat/[conversationId]`
-- **S8 (Notifications)** —
-  - **`expo-notifications`** dep (not in package.json today; S8 adds it for FCM/APNS device token registration)
-- **S9 (Admin)** — `/(auth)/totp` route for admin TOTP enrollment (admin-flagged users only)
+- **S5 (Search + listing detail)** — MLP filter sheet; mobile picker modals (brand-picker, model-picker)
+- **S6 (Contact seller)** — simple text conversation list/detail routes; no `socket.io-client` dependency required for MLP
+- **S7 (Minimal admin + moderation)** — report-entry UI as needed by beta safety
+- **S8 (Private beta polish)** — legal/settings links, beta distribution polish, smoke-path fixes
+- **Post-MLP Garage/Dealership** — `/me/garage`, dealer public routes, dealer-specific listing UX
+- **Post-MLP rich chat** — `socket.io-client`, realtime chat routes, attachments, read receipts
+- **Post-MLP notifications** — `expo-notifications` for FCM/APNS device token registration
+- **Post-MLP admin hardening** — `/(auth)/totp` route for admin TOTP enrollment (admin-flagged users only)
 - **i18n** —
   - **`react-i18next`** dep (not in package.json today; sprint TBD — likely S5 alongside locale switcher UX)
-- **App-wide locale store + query-key invalidation on locale change** — S5 picker UX consumes; locale store ships then.
+- **App-wide locale store + query-key invalidation on locale change** — ship in S5/S8 only if required for MLP locale behavior; otherwise post-MLP polish.
 
 ## Known issues / workarounds
 
