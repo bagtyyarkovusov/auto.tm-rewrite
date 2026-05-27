@@ -66,16 +66,20 @@ function PriceInput({
   disabled: boolean;
 }) {
   return (
-    <View className="gap-1.5">
+    <View className="gap-1.5 flex-1">
       <Text className="text-sm font-medium text-foreground">Amount *</Text>
       {wrapDisabled(
         <Input
           value={payload.priceAmount?.toString() ?? ""}
           onChangeText={(text) => {
             const num = parseInt(text, 10);
-            onChange({
+            const updates: Partial<WizardSchemas.WizardDraftPayload> = {
               priceAmount: Number.isNaN(num) ? undefined : num,
-            });
+            };
+            if (!Number.isNaN(num) && !payload.priceCurrency) {
+              updates.priceCurrency = Enums.Currency.TMT;
+            }
+            onChange(updates);
           }}
           placeholder="Enter amount"
           keyboardType="number-pad"
@@ -84,7 +88,7 @@ function PriceInput({
         disabled,
       )}
       {fieldErrors?.priceAmount && (
-        <Text className="text-sm text-destructive">
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
           {fieldErrors.priceAmount}
         </Text>
       )}
@@ -106,16 +110,16 @@ function CurrencyPicker({
 
   return (
     <>
-      <View className="gap-1.5">
+      <View className="gap-1.5 w-[120px]">
         <Text className="text-sm font-medium text-foreground">Currency</Text>
         {wrapDisabled(
           <Button
             variant="outline"
             onPress={() => setCurrencyOpen(true)}
             disabled={disabled}
-            className="justify-start"
+            className="justify-center h-[52px]"
           >
-            <Text className="text-foreground">{selectedCurrencyLabel}</Text>
+            <Text className="text-foreground font-medium">{selectedCurrencyLabel}</Text>
           </Button>,
           disabled,
         )}
@@ -145,7 +149,7 @@ function CurrencyPicker({
 function TmtEquivalent({ amount }: { amount: number | null }) {
   if (amount === null) return null;
   return (
-    <Text className="text-sm text-muted-foreground">
+    <Text className="text-xs text-muted-foreground">
       ≈ {amount.toLocaleString()} TMT
     </Text>
   );
@@ -161,19 +165,27 @@ function SellerTerms({
   disabled: boolean;
 }) {
   return (
-    <View className="mt-2 gap-4">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-base text-foreground">Exchange possible</Text>
+    <View className="rounded-xl border border-border p-4 gap-1">
+      <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+        Seller terms
+      </Text>
+      <View className="flex-row items-center justify-between py-2">
+        <View className="gap-0.5">
+          <Text className="text-base text-foreground">Exchange possible</Text>
+          <Text className="text-xs text-muted-foreground">Willing to trade for another vehicle</Text>
+        </View>
         <Switch
           checked={payload.acceptsExchange ?? false}
           onCheckedChange={(v) => onChange({ acceptsExchange: v })}
           disabled={disabled}
         />
       </View>
-      <View className="flex-row items-center justify-between">
-        <Text className="text-base text-foreground">
-          Installment available
-        </Text>
+      <View className="h-px bg-border" />
+      <View className="flex-row items-center justify-between py-2">
+        <View className="gap-0.5">
+          <Text className="text-base text-foreground">Installment available</Text>
+          <Text className="text-xs text-muted-foreground">Buyer can pay in installments</Text>
+        </View>
         <Switch
           checked={payload.installmentAvailable ?? false}
           onCheckedChange={(v) => onChange({ installmentAvailable: v })}
@@ -194,18 +206,23 @@ export default function Step5Price({
 
   return (
     <View className="gap-5 py-5">
-      <PriceInput
-        payload={payload}
-        onChange={onChange}
-        fieldErrors={fieldErrors}
-        disabled={disabled}
-      />
-      <CurrencyPicker
-        payload={payload}
-        onChange={onChange}
-        disabled={disabled}
-      />
-      <TmtEquivalent amount={tmtEquivalent} />
+      <View className="gap-1.5">
+        <Text className="text-sm font-medium text-foreground">Price *</Text>
+        <View className="flex-row gap-3 items-start">
+          <PriceInput
+            payload={payload}
+            onChange={onChange}
+            fieldErrors={fieldErrors}
+            disabled={disabled}
+          />
+          <CurrencyPicker
+            payload={payload}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        </View>
+        <TmtEquivalent amount={tmtEquivalent} />
+      </View>
       <SellerTerms payload={payload} onChange={onChange} disabled={disabled} />
     </View>
   );

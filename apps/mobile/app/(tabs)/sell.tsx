@@ -1,6 +1,7 @@
 import { PlusCircle } from "lucide-react-native";
-import { router, useNavigation } from "expo-router";
-import { useEffect, useReducer, useState, useCallback, useMemo } from "react";
+import { router } from "expo-router";
+import { NavigationContext } from "@react-navigation/native";
+import { useContext, useEffect, useReducer, useState, useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WizardSchemas } from "@auto-tm/contracts";
@@ -9,6 +10,8 @@ import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
 import { useDiscardDraft } from "../../src/api/listings/useDiscardDraft";
 import { useMyDrafts } from "../../src/api/listings/useMyDrafts";
 import { usePublishDraft } from "../../src/api/listings/usePublishDraft";
+import { useBrands } from "../../src/api/catalog/useBrands";
+import { useModels } from "../../src/api/catalog/useModels";
 import { deleteDraftDir } from "../../src/listings/uploadStaging/stagingDir";
 import { useUploadQueue } from "../../src/listings/uploadStaging/useUploadQueue";
 import {
@@ -64,7 +67,7 @@ function buildPayloadPhotos(
 export default function SellScreen() {
   const { isAuthenticated } = useAuth();
   const { show } = useToast();
-  const navigation = useNavigation();
+  const navigation = useContext(NavigationContext);
   const [showSignIn, setShowSignIn] = useState(false);
   const [machineState, dispatch] = useReducer(
     wizardMachineReducer,
@@ -84,6 +87,7 @@ export default function SellScreen() {
   const inWizard =
     machineState.status !== "idle" && machineState.draftId !== null;
   useEffect(() => {
+    if (!navigation) return;
     navigation.setOptions({
       tabBarStyle: inWizard
         ? { display: "none" as const }
@@ -98,6 +102,16 @@ export default function SellScreen() {
   const publishDraft = usePublishDraft();
   const discardDraft = useDiscardDraft();
 
+  const { data: brandsData } = useBrands();
+  const draftBrandId = draftsData?.items?.[0]?.payload.brandId ?? "";
+  const { data: modelsData } = useModels(draftBrandId);
+  const draftBrandName = brandsData?.items.find(
+    (b) => b.id === draftBrandId,
+  )?.name;
+  const draftModelName = modelsData?.items.find(
+    (m) => m.id === draftsData?.items?.[0]?.payload.modelId,
+  )?.name;
+
   const { save, forceSave, retrySave, saveStatus, saveError } =
     useWizardAutosave(machineState.draftId ?? undefined);
   const uploadQueue = useUploadQueue(
@@ -110,24 +124,30 @@ export default function SellScreen() {
   // Sync upload queue photos into payload
   useEffect(() => {
     const photosFromQueue = buildPayloadPhotos(uploadQueue.photos);
-    dispatch({
-      type: "UPDATE_FIELDS",
-      updates: {
-        photos: photosFromQueue,
-      },
-    });
+    const currentPhotos = JSON.stringify(machineState.payload.photos ?? []);
+    const newPhotos = JSON.stringify(photosFromQueue);
+    if (currentPhotos !== newPhotos) {
+      dispatch({
+        type: "UPDATE_FIELDS",
+        updates: {
+          photos: photosFromQueue,
+        },
+      });
+    }
   }, [uploadQueue.photos]);
 
-  // Stable fingerprint of the photo queue so photo-only bursts trigger autosave
-  const photoFingerprint = useMemo(
+  // Stable key for autosave trigger — avoids 25+ individual deps and reference churn
+  const payloadKey = useMemo(
     () =>
-      uploadQueue.photos
-        .map((p) => `${p.photoId}:${p.key ?? "pending"}:${p.sortOrder}`)
-        .join("|"),
-    [uploadQueue.photos],
+      JSON.stringify({
+        ...machineState.payload,
+        photos: buildPayloadPhotos(uploadQueue.photos),
+        validatedSteps: machineState.validatedSteps,
+      }),
+    [machineState.payload, machineState.validatedSteps, uploadQueue.photos],
   );
 
-  // Autosave when payload changes (photos handled via fingerprint above)
+  // Autosave when payload changes
   useEffect(() => {
     if (!machineState.draftId || machineState.status !== "step") return;
     const fullPayload: WizardSchemas.WizardDraftPayload = {
@@ -136,39 +156,10 @@ export default function SellScreen() {
       validatedSteps: machineState.validatedSteps,
     };
     save(fullPayload);
-  }, [
-    machineState.draftId,
-    machineState.status,
-    machineState.payload.vin,
-    machineState.payload.brandId,
-    machineState.payload.modelId,
-    machineState.payload.generationId,
-    machineState.payload.year,
-    machineState.payload.mileageKm,
-    machineState.payload.condition,
-    machineState.payload.colorId,
-    machineState.payload.bodyTypeId,
-    machineState.payload.transmissionId,
-    machineState.payload.driveTypeId,
-    machineState.payload.engineTypeId,
-    machineState.payload.enginePower,
-    machineState.payload.priceAmount,
-    machineState.payload.priceCurrency,
-    machineState.payload.regionId,
-    machineState.payload.cityId,
-    machineState.payload.locationText,
-    machineState.payload.description,
-    machineState.payload.contactPhone,
-    machineState.payload.allowCalls,
-    machineState.payload.allowChat,
-    machineState.payload.acceptsExchange,
-    machineState.payload.installmentAvailable,
-    machineState.validatedSteps,
-    photoFingerprint,
-  ]);
+  }, [machineState.draftId, machineState.status, payloadKey, save]);
 
   const handleStartListing = useCallback(() => {
-    if (!isAuthenticated && !__DEV__) {
+    if (!isAuthenticated) {
       setShowSignIn(true);
       return;
     }
@@ -182,7 +173,7 @@ export default function SellScreen() {
   }, [isAuthenticated, draftsData]);
 
   const handleCreateNewDraft = useCallback(() => {
-    if (!isAuthenticated && !__DEV__) {
+    if (!isAuthenticated) {
       setShowSignIn(true);
       return;
     }
@@ -196,11 +187,17 @@ export default function SellScreen() {
             currentStep: 1,
             allowCalls: true,
             allowChat: true,
+            priceCurrency: "TMT",
           },
         });
       },
+      onError: (err) => {
+        const message =
+          err instanceof Error ? err.message : "Failed to create draft";
+        show({ title: message, variant: "destructive" });
+      },
     });
-  }, [isAuthenticated, createDraft]);
+  }, [isAuthenticated, createDraft, show]);
 
   const handleContinueDraft = useCallback(
     (draft: NonNullable<typeof draftsData>["items"][number]) => {
@@ -211,7 +208,8 @@ export default function SellScreen() {
           ...draft.payload,
           allowCalls: draft.payload.allowCalls ?? true,
           allowChat: draft.payload.allowChat ?? true,
-        },
+          priceCurrency: draft.payload.priceCurrency ?? "TMT",
+        } as WizardSchemas.WizardDraftPayload,
       });
     },
     [],
@@ -285,13 +283,21 @@ export default function SellScreen() {
   const handleDiscard = useCallback(() => {
     const id = machineState.draftId;
     if (!id) return;
+
+    // Always clear local state immediately so the user can escape a broken
+    // draft (e.g., orphaned draftId after a server restart / DB reset).
+    void deleteDraftDir(`draft-${id}`);
+    dispatch({ type: "DISCARD" });
+
+    // Best-effort server-side delete. If the draft is already gone (404) or
+    // the request fails for any other reason, we don't block the user.
     discardDraft.mutate(id, {
-      onSuccess: () => {
-        void deleteDraftDir(`draft-${id}`);
-        dispatch({ type: "DISCARD" });
+      onError: (err) => {
+        const message = err instanceof Error ? err.message : "Failed to discard draft";
+        show({ title: message, variant: "destructive" });
       },
     });
-  }, [machineState.draftId, discardDraft]);
+  }, [machineState.draftId, discardDraft, show]);
 
   const handlePayloadChange = useCallback(
     (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
@@ -460,9 +466,11 @@ export default function SellScreen() {
                 Latest draft
               </Text>
               <Text className="text-lg font-semibold text-foreground">
-                {existingDraft.payload.brandId && existingDraft.payload.modelId
-                  ? `${existingDraft.payload.year ?? ""} ${existingDraft.payload.brandId} ${existingDraft.payload.modelId}`
-                  : "Continue your listing"}
+                {draftBrandName && draftModelName
+                  ? `${existingDraft.payload.year ?? ""} ${draftBrandName} ${draftModelName}`
+                  : existingDraft.payload.brandId && existingDraft.payload.modelId
+                    ? `${existingDraft.payload.year ?? ""} ${existingDraft.payload.brandId} ${existingDraft.payload.modelId}`
+                    : "Continue your listing"}
               </Text>
               <Text className="text-sm text-muted-foreground">
                 {existingDraft.payload.photos?.length

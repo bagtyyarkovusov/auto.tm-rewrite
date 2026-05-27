@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View } from "react-native";
+import { MapPin } from "lucide-react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useRegions } from "../../api/catalog/useRegions";
@@ -10,6 +11,7 @@ import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSh
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { Icon } from "@/components/ui/icon";
 
 interface Step6LocationProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -184,24 +186,30 @@ export default function Step6Location({
           Area / landmark
         </Text>
         {wrapDisabled(
-          <Input
-            value={payload.locationText ?? ""}
-            onChangeText={(text) =>
-              onChange({ locationText: text || undefined })
-            }
-            placeholder="e.g. near Ashgabat Bazaar"
-            editable={!disabled}
-          />,
+          <View className="relative">
+            <View className="absolute left-3 top-1/2 -translate-y-1/2 z-10">
+              <Icon as={MapPin} className="size-4 text-muted-foreground" />
+            </View>
+            <Input
+              value={payload.locationText ?? ""}
+              onChangeText={(text) =>
+                onChange({ locationText: text || undefined })
+              }
+              placeholder="e.g. near Ashgabat Bazaar"
+              editable={!disabled}
+              className="pl-10"
+            />
+          </View>,
           disabled,
         )}
         {fieldErrors?.locationText && (
-          <Text className="text-sm text-destructive">
+          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
             {fieldErrors.locationText}
           </Text>
         )}
       </View>
 
-      <Text className="text-sm text-muted-foreground">
+      <Text className="text-sm text-muted-foreground leading-relaxed">
         Choose where the car can be inspected. Do not enter your home address.
       </Text>
 

@@ -29,7 +29,7 @@ const buttonVariants = cva(
           })
         ),
         outline: cn(
-          'border-border bg-background active:bg-muted disabled:bg-muted disabled:border-border dark:border-input dark:bg-input/20 dark:active:bg-input/40',
+          'border-border bg-background active:bg-muted disabled:bg-muted disabled:border disabled:border-border dark:border-input dark:bg-input/20 dark:active:bg-input/40',
           Platform.select({
             web: 'hover:bg-muted dark:hover:bg-input/40',
           })

@@ -1,0 +1,70 @@
+# 86 — Admin bootstrap runbook
+
+Status: S7 planned. This runbook becomes executable only after S7 adds the checked-in DB script and package command described below.
+
+## Purpose
+
+Create the first usable admin path without adding staff-management UI or relying on ad hoc SQL.
+
+The bootstrap script promotes an existing OTP-verified user to `role = admin`. That role is only a pending admin assignment until the user logs into `apps/admin`, completes TOTP enrollment/verification, and receives a current `Session.adminTotpExpiresAt` elevation.
+
+S7 moderation is not admin-account management. Admin accounts cannot be suspended or unsuspended through the report queue, and S7 ships no admin demotion/deprovision UI. Compromised or abusive admin accounts require operator session revocation / follow-up outside this MLP runbook until post-MLP admin-account management is shaped.
+
+## Invariants
+
+- The target user must already exist. The script must not create users or bypass OTP.
+- The script must not create a `TotpEnrollment`, set `Session.adminTotpExpiresAt`, mint tokens, or bypass `AdminGuard`.
+- Direct SQL is break-glass only, not the normal bootstrap path.
+- The promotion is auditable. The script writes `ADMIN_BOOTSTRAP_PROMOTE` with `actorId = null`, `targetType = "user"`, `targetId = promotedUserId`, and an operator-supplied `details.reason`. The reason follows the S7 internal admin-reason text rules: plain text, trimmed before validation/storage, non-empty after trim, capped at 1000 chars after trim, and stored with internal line breaks preserved.
+- The bootstrap audit row records `details.before.role` and `details.after.role`; it does not store phone snapshots in `AuditLog.details`.
+- `apps/api` must start with a valid 32-byte base64 `TOTP_SECRET_ENCRYPTION_KEY`; missing/invalid key fails startup before any admin TOTP enrollment can happen.
+- `TOTP_SECRET_ENCRYPTION_KEY` is generated before first production deploy, stored only in the production secret store plus the offline operator password manager, backed up with deployment secrets, and never committed, logged, pasted into issues, or stored in audit details. Startup failure because the key is missing/invalid is fixed by correcting the secret, not by bypassing TOTP.
+- Bootstrap must be drilled once in staging or a prod-like environment before the first production admin promotion.
+- Lost TOTP device plus lost backup codes remains manual operator recovery per ADR-0006; no self-service recovery UI ships in the MLP.
+
+## Planned command
+
+```bash
+pnpm --filter @auto-tm/db admin:promote -- --phone +9936XXXXXXX --reason "bootstrap first admin"
+pnpm --filter @auto-tm/db admin:promote -- --phone +9936XXXXXXX --reason "bootstrap first admin" --dry-run
+```
+
+Expected S7 implementation:
+
+- `packages/db/scripts/promote-admin.ts`
+- `packages/db/package.json` command: `admin:promote`
+- required `--phone` and `--reason` flags; optional `--dry-run`
+- phone normalization/validation using the same E.164 Turkmenistan format as identity
+- idempotent zero exit if the user is already `admin`; this no-op does not write another audit row
+- non-zero exit if the phone has no existing `User`; no audit row is written
+- `--dry-run` validates input and reports the planned action without mutating `User` or writing `AuditLog`
+- audit log action `ADMIN_BOOTSTRAP_PROMOTE`
+
+## Procedure
+
+1. Generate and store `TOTP_SECRET_ENCRYPTION_KEY` in the production secret store and offline operator password manager before deploy.
+2. Confirm `apps/api` starts in staging or a prod-like environment with the configured key, and fails fast when the key is missing/invalid during the drill.
+3. Run the bootstrap command with `--dry-run` in staging or a prod-like snapshot before the production promotion.
+4. Ask the intended admin to complete normal OTP login once.
+5. Verify the target phone number out of band.
+6. Confirm a recent DB backup exists.
+7. Run the planned command with the target phone and reason.
+8. Ask the admin to open `admin.auto.tm`.
+9. Admin completes OTP, TOTP enrollment or verification, and copies the 10 backup codes.
+10. Confirm `GET /api/v1/auth/admin/totp/status` reports enrolled and currently elevated.
+11. Confirm an AdminGuard-protected route succeeds only after TOTP elevation.
+
+## Failure handling
+
+- No user found: stop; the target person must log in through OTP first.
+- Wrong phone promoted: revoke sessions/refresh tokens for the promoted account, use a reviewed operator fix path, and record an incident/operator note; there is no S7 admin demotion UI.
+- TOTP enrollment fails: do not grant temporary admin access; fix the TOTP flow or recover manually.
+- Compromised admin: revoke sessions/refresh tokens, rotate admin cookies or affected secrets if needed, record an incident/operator note, review recent audit rows, and do not try to suspend the admin through the report queue.
+- Direct DB edit: break-glass only. Record an incident note, include the exact reason and affected ids, and create a follow-up audit/operator record once the system is stable. Do not use manual DB edits as the normal bootstrap or recovery path.
+
+## References
+
+- [Sprint 7 — Minimal admin + moderation](../sprints/sprint-07-minimal-admin.md)
+- [Feature 30 — Identity](../features/30-identity.md)
+- [Feature 40 — Admin](../features/40-admin.md)
+- [ADR-0006 — Auth](../../adr/0006-auth.md)

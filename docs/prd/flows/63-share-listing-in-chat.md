@@ -1,8 +1,8 @@
-# 63 — Share listing in chat (deep-link round trip)
+# 63 — Share listing link (deep-link round trip)
 
 ## Summary
 
-Aman wants to send Maral a listing he just saw on AutoTM via WhatsApp. The round trip: AutoTM URL → WhatsApp preview → Maral taps → AutoTM mobile app opens at that listing.
+Aman wants to send Maral a listing he just saw on AutoTM via WhatsApp. The MLP beta scope is the public listing URL and OG preview. In-chat post-card sharing is deferred with rich chat per [ADR-0027](../../adr/0027-mlp-beta-scope.md).
 
 ## Goal
 
@@ -81,9 +81,9 @@ Aman wants to send Maral a listing he just saw on AutoTM via WhatsApp. The round
 - `expo-linking` configured to route paths to internal routes
 - Custom URI scheme `autotm://` as a fallback for explicit deep links (rare)
 
-### In-chat post-card sharing
+### In-chat post-card sharing (post-MLP)
 
-When Aman wants to send Maral a listing **inside the AutoTM chat** (not via WhatsApp):
+When rich chat is bet on later, Aman may send Maral a listing **inside the AutoTM chat** (not via WhatsApp):
 - He's already in a conversation with Maral
 - Tap the attachment icon → "Share listing"
 - Picks a listing from his recent views / favorites / my listings
@@ -103,8 +103,9 @@ This is a separate (but related) flow — same UX outcome (Maral sees a clear li
 ## References
 
 - [Feature 32 — Listings](../features/32-listings.md)
-- [Feature 34 — Conversations](../features/34-conversations.md)
-- [Feature 38 — Showroom](../features/38-showroom.md) — same flow for dealer pages
+- [Feature 34 — Conversations](../features/34-conversations.md) — rich in-chat sharing deferred
+- [Feature 38 — Showroom](../features/38-showroom.md) — same flow for dealer pages after showroom is bet on
+- [ADR-0027 — MLP beta scope](../../adr/0027-mlp-beta-scope.md)
 - `apps/web/CONTEXT.md` — OG meta generation
 
 ## Open questions

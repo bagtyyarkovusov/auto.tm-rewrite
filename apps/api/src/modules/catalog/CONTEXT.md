@@ -150,6 +150,10 @@ All read endpoints are `@Public()` (no authentication required). Locale resoluti
 
 All admin endpoints are guarded by `AdminGuard` (returns 401 without bearer, 403 with non-admin JWT).
 
+S7 hardens `AdminGuard` to also require current TOTP elevation for every admin-only API, so catalog admin writes inherit the same admin-auth policy as the S7 moderation endpoints.
+
+S7 does not add catalog UI in `apps/admin`; `/catalog` stays post-MLP dashboard work. If private beta needs an urgent catalog correction before the dashboard exists, operators use the existing protected API/operator tooling. A small beta-polish correction UI must be explicitly shaped in S8 before it is built.
+
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/api/v1/admin/catalog/brands` | Create brand (trilingual fields required) |
@@ -185,11 +189,12 @@ All admin endpoints are guarded by `AdminGuard` (returns 401 without bearer, 403
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today — they're tracked here only as a pointer so future agents and reviewers can find the sprint that owns each future addition. The authoritative spec for each lives in the named sprint file or PRD feature.
 
-- **S5 (Listings UX) — may add `Brand.logoUrl`, `Brand.isActive`, `Brand.displayOrder`, `Generation.photoUrl`, `BodyType.slug`, `BodyType.iconKey` to support picker UX with logos and icons. Decide in S5 if these land then or earlier. Also: generation seed data (TBD half-day standalone issue before S5).
-- **S9 (Admin dashboard)** — admin app for catalog management (CRUD UI for Brand/Model/Color/BodyType/etc.); brand-logo upload UX to MinIO. Full admin CRUD for non-Brand/Model entities (Color, BodyType, Region, City).
+- **S5 (Search + listing detail)** — may add only the catalog fields required for MLP picker/search UX. Rich visual picker fields (`Brand.logoUrl`, `Brand.displayOrder`, `Generation.photoUrl`, `BodyType.iconKey`) are post-MLP unless needed.
+- **S7/S8 or post-MLP admin** — S7 only hardens auth for existing catalog admin APIs. Beta-critical corrections use protected API/operator tooling unless S8 explicitly shapes a small correction UI. Full catalog management UI and brand-logo upload are post-MLP dashboard work.
 
 ## Notable decisions
 
 - [ADR-0007](../../../../../docs/adr/0007-i18n.md) — Trilingual catalog columns
 - [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Catalog is its own context (not embedded in listings)
 - [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state, not aspirational spec
+- [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) — Catalog admin breadth deferred out of MLP beta

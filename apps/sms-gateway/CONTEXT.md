@@ -40,7 +40,7 @@ The Node service that orchestrates the AutoTM physical Android phone fleet for O
 
 - `apps/api` calls the HTTP API for OTP dispatch
 
-## Planned additions (future — likely S10 or a dedicated SMS-gateway sprint)
+## Planned additions (future dedicated SMS-gateway bet)
 
 Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the sprint that wires the real production OTP path:
 

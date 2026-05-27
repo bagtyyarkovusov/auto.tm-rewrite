@@ -13,8 +13,6 @@ export type WizardMachineStatus =
   | "idle"
   | "loading"
   | "step"
-  | "saving"
-  | "saveError"
   | "publishing"
   | "publishError"
   | "complete";
@@ -62,8 +60,6 @@ export type WizardMachineAction =
   | { type: "BACK" }
   | { type: "UPDATE_FIELDS"; updates: Partial<WizardSchemas.WizardDraftPayload> }
   | { type: "GO_TO_STEP"; step: WizardMachineStep }
-  | { type: "SAVE_SUCCESS"; payload: WizardSchemas.WizardDraftPayload }
-  | { type: "SAVE_RETRY" }
   | { type: "PUBLISH_START" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
   | { type: "PUBLISH_ERROR"; error: string }
@@ -243,8 +239,11 @@ export function wizardMachineReducer(
             JSON.stringify(action.updates[key as keyof typeof action.updates]),
       );
 
-      const invalidated =
-        changedFields.length > 0 ? getInvalidatedSteps(changedFields) : [];
+      if (changedFields.length === 0) {
+        return state;
+      }
+
+      const invalidated = getInvalidatedSteps(changedFields);
 
       const newValidatedSteps =
         state.mode === "edit"
@@ -276,25 +275,6 @@ export function wizardMachineReducer(
       if (!allDepsValid) return state;
 
       return { ...state, currentStep: action.step, saveError: null };
-    }
-
-    case "SAVE_SUCCESS": {
-      if (state.status !== "saving") return state;
-      return {
-        ...state,
-        status: "step",
-        payload: action.payload,
-        validatedSteps: computeValidatedSteps(
-          action.payload,
-          state.validatedSteps,
-        ),
-        saveError: null,
-      };
-    }
-
-    case "SAVE_RETRY": {
-      if (state.status !== "saveError") return state;
-      return { ...state, status: "saving", saveError: null };
     }
 
     case "PUBLISH_START": {

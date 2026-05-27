@@ -4,6 +4,8 @@
 
 A listing is created that matches one of Maral's saved searches. She receives a push notification, taps, lands on the listing.
 
+**MLP status:** deferred by [ADR-0027](../../adr/0027-mlp-beta-scope.md). This flow returns after beta users repeatedly perform the same searches manually and direct-message/contact usage proves notifications are worth the platform surface.
+
 ## Goal
 
 - Latency: ≤ 5 seconds from listing publish to Maral's notification

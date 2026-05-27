@@ -1,10 +1,10 @@
 # notifications — CONTEXT
 
-> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in `docs/prd/sprints/sprint-08-notifications.md`. Push delivery + match algorithm + admin broadcast tooling all ship in S8.
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational notification-platform content lives in `docs/prd/features/36-notifications.md`. Per [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md), the full notification platform is post-MLP; direct-message push may be shaped first after contact usage proves the need.
 
 ## Purpose
 
-All push delivery + in-app notification feed + admin broadcast tooling. Schema-only today; the dispatch + transport layer ships in S8.
+All push delivery + in-app notification feed + admin broadcast tooling. Schema-only today; the dispatch + transport layer is post-MLP.
 
 ## Owns (entities + tables)
 
@@ -29,7 +29,7 @@ All push delivery + in-app notification feed + admin broadcast tooling. Schema-o
 
 ## Ports exposed
 
-- (none today — S8 adds `NotificationsDispatchPort` and `PushPort`)
+- (none today — post-MLP notification work adds `NotificationsDispatchPort` and `PushPort`)
 
 ## Ports consumed
 
@@ -47,9 +47,9 @@ All push delivery + in-app notification feed + admin broadcast tooling. Schema-o
 
 - (none today)
 
-## Planned additions (S8 — Notifications + match)
+## Planned additions (post-MLP notification platform)
 
-Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in `docs/prd/sprints/sprint-08-notifications.md`:
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in `docs/prd/features/36-notifications.md` and must be shaped into a sprint before implementation. [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) defers this work out of the MLP beta.
 
 - **Schema additions to `FcmDevice`** (rename to `PushToken` may be considered): `deviceId`, `registeredAt`, `lastUsedAt`, `invalidatedAt?` for token-invalidation handling
 - **Schema additions to `NotificationHistory`** for broadcast support: `recipientGroup?` (e.g., "all-admins"), `sentByUserId?` (admin-initiated), `deliveryDetails` (JSON per-token success/fail), `totalRecipients`, `successfulDeliveries`, `failedDeliveries` (broadcast metrics)
@@ -93,8 +93,9 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
   - `MessageSent` (from `conversations/`) — fires push to offline recipient
   - `SavedSearchMatched` (from `subscriptions/`) — fires push (debounced)
   - `ListingFavorited` (from `listings/`) — digestable activity push
-  - `ListingReported` (from `listings/`) — admin notification
+  - `ContentReportCreated` (from `admin/`) — future admin notification; emitted only for newly inserted report rows, not duplicate pending reuse; not consumed in S7
   - `DealershipVerified` (from `identity/` or `admin/`) — congrats push to dealership members
+  - S7 moderation events such as `ListingBanned`, `ListingUnbanned`, `UserSuspended`, and `UserUnsuspended` are not consumed for user-facing notifications in the MLP. Moderation feedback notifications require explicit future PRD coverage and must not expose admin free-text reasons.
 - **Ports consumed**: `IdentityReadPort` (resolve user + admin check for broadcasts), `ListingsReadPort` (hydrate match notification body)
 
 ## Notable decisions
@@ -102,3 +103,4 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 - [ADR-0009](../../../../../docs/adr/0009-notifications.md) — Dual-stack transport, 6 categories
 - [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Notifications is its own context
 - [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
+- [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) — Full notification platform is post-MLP

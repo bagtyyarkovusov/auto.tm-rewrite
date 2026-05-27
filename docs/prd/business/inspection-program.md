@@ -1,7 +1,7 @@
 # AutoTM Inspection Program — Operational Model
 
 > **Status**: Strategy doc, drafted 2026-05-18. Mutable; not an ADR.
-> **First matters in**: Phase 2 (Sprints S11-S16, per [`02-phases.md`](../02-phases.md))
+> **First matters in**: Trust bet after the MLP beta, per [`02-phases.md`](../02-phases.md)
 > **Why it exists**: This is the largest discretionary revenue stream AutoTM has under its direct control, and the single biggest trust-differentiator vs. unfunded competitors. A failed inspection program collapses the moat.
 
 ---
@@ -540,7 +540,7 @@ Timeline assumes Phase 2 starts ~12 months after AutoTM public launch (per [`02-
 ## Cross-references
 
 - [`../02-phases.md`](../02-phases.md) — Phase 2 sprint plan + operational prereqs (rubric signoff, inspector hiring, sample inspections)
-- [`../03-roadmap.md`](../03-roadmap.md) — Sprint S11-S16 placeholder rows for Phase 2
+- [`../03-roadmap.md`](../03-roadmap.md) — trust work is a post-MLP bet, not a fixed S11-S16 roster
 - [`../features/`](../features/) — future feature PRD for `33-inspection-reports.md` (TBD; written when Phase 2 sprint files crystallize)
 - [`dealer-subscriptions.md`](dealer-subscriptions.md) — dealer PRO subs may bundle inspections for high-volume dealers
 - [`ad-sales-strategy.md`](ad-sales-strategy.md) — inspection report viewer pages are prime ad inventory (mechanics, parts, service)

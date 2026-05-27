@@ -1,8 +1,10 @@
-import { X } from "lucide-react-native";
+import { AlertCircle, X } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { WizardSchemas } from "@auto-tm/contracts";
+
+import { cn } from "@/lib/utils";
 
 import { useColors } from "../../api/catalog/useColors";
 import { useBodyTypes } from "../../api/catalog/useBodyTypes";
@@ -69,6 +71,8 @@ function SpecPickerSheet({
   items,
   selectedId,
   onSelect,
+  isLoading,
+  isError,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -78,33 +82,57 @@ function SpecPickerSheet({
   items: { id: string; name: string }[];
   selectedId?: string;
   onSelect: (id: string) => void;
+  isLoading?: boolean;
+  isError?: boolean;
 }) {
+  const showSearch = items.length > 12;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent>
+      <SheetContent compact>
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>{title}</SheetTitle>
           <SheetCloseButton onPress={() => onOpenChange(false)} />
         </SheetHeader>
-        <Input
-          placeholder="Search..."
-          value={search}
-          onChangeText={onSearchChange}
-          className="mb-2"
-        />
-        <ScrollView>
-          {items.map((item) => (
-            <Pressable
-              key={item.id}
-              onPress={() => onSelect(item.id)}
-              className={`border-b border-border py-3 ${
-                item.id === selectedId ? "bg-muted" : ""
-              }`}
-            >
-              <Text className="text-base text-foreground">{item.name}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        {showSearch && (
+          <Input
+            placeholder="Search..."
+            value={search}
+            onChangeText={onSearchChange}
+            className="mb-2"
+          />
+        )}
+        {isLoading ? (
+          <View className="py-4 items-center">
+            <ActivityIndicator size="small" />
+            <Text className="mt-2 text-sm text-muted-foreground">Loading...</Text>
+          </View>
+        ) : isError ? (
+          <View className="py-4 items-center">
+            <Icon as={AlertCircle} className="size-6 text-destructive" />
+            <Text className="mt-2 text-sm text-destructive">Failed to load options</Text>
+          </View>
+        ) : items.length === 0 ? (
+          <View className="py-4 items-center">
+            <Text className="text-sm text-muted-foreground">No options available</Text>
+          </View>
+        ) : (
+          <ScrollView>
+            {items.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => onSelect(item.id)}
+                className={`flex-row items-center border-b border-border py-3 px-1 ${
+                  item.id === selectedId ? "bg-muted" : ""
+                }`}
+              >
+                {item.id === selectedId && (
+                  <View className="mr-2 h-2 w-2 rounded-full bg-primary" />
+                )}
+                <Text className="text-base text-foreground">{item.name}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -116,39 +144,64 @@ function ColorPickerSheet({
   colors,
   selectedId,
   onSelect,
+  isLoading,
+  isError,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   colors: { id: string; name: string; hex?: string | null }[];
   selectedId?: string;
   onSelect: (id: string) => void;
+  isLoading?: boolean;
+  isError?: boolean;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent>
+      <SheetContent compact>
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>Select color</SheetTitle>
           <SheetCloseButton onPress={() => onOpenChange(false)} />
         </SheetHeader>
-        <ScrollView>
-          {colors.map((c) => (
-            <Pressable
-              key={c.id}
-              onPress={() => onSelect(c.id)}
-              className={`flex-row items-center gap-2 border-b border-border py-3 ${
-                c.id === selectedId ? "bg-muted" : ""
-              }`}
-            >
-              {c.hex && (
-                <View
-                  className="h-4 w-4 rounded-full border border-border"
-                  style={{ backgroundColor: c.hex }}
-                />
-              )}
-              <Text className="text-base text-foreground">{c.name}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        {isLoading ? (
+          <View className="py-4 items-center">
+            <ActivityIndicator size="small" />
+            <Text className="mt-2 text-sm text-muted-foreground">Loading...</Text>
+          </View>
+        ) : isError ? (
+          <View className="py-4 items-center">
+            <Icon as={AlertCircle} className="size-6 text-destructive" />
+            <Text className="mt-2 text-sm text-destructive">Failed to load colors</Text>
+          </View>
+        ) : colors.length === 0 ? (
+          <View className="py-4 items-center">
+            <Text className="text-sm text-muted-foreground">No colors available</Text>
+          </View>
+        ) : (
+          <ScrollView>
+            {colors.map((c) => (
+              <Pressable
+                key={c.id}
+                onPress={() => onSelect(c.id)}
+                className={`flex-row items-center gap-3 border-b border-border py-3 px-1 ${
+                  c.id === selectedId ? "bg-muted" : ""
+                }`}
+              >
+                {c.hex ? (
+                  <View
+                    className="h-6 w-6 rounded-full border border-border"
+                    style={{ backgroundColor: c.hex }}
+                  />
+                ) : (
+                  <View className="h-6 w-6 rounded-full border border-border bg-muted" />
+                )}
+                <Text className="text-base text-foreground">{c.name}</Text>
+                {c.id === selectedId && (
+                  <View className="ml-auto mr-2 h-2 w-2 rounded-full bg-primary" />
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -157,29 +210,29 @@ function ColorPickerSheet({
 function useSpecsStep(payload: WizardSchemas.WizardDraftPayload) {
   const condition = payload.condition ?? Enums.ListingCondition.Used;
 
-  const { data: colorsData } = useColors();
+  const { data: colorsData, isPending: colorsLoading, isError: colorsError } = useColors();
   const colorPicker = useCatalogPicker(colorsData?.items ?? []);
   const selectedColor = colorsData?.items.find((c) => c.id === payload.colorId);
 
-  const { data: bodyTypesData } = useBodyTypes();
+  const { data: bodyTypesData, isPending: bodyTypesLoading, isError: bodyTypesError } = useBodyTypes();
   const bodyPicker = useCatalogPicker(bodyTypesData?.items ?? []);
   const selectedBodyType = bodyTypesData?.items.find(
     (b) => b.id === payload.bodyTypeId,
   );
 
-  const { data: transmissionsData } = useTransmissions();
+  const { data: transmissionsData, isPending: transmissionsLoading, isError: transmissionsError } = useTransmissions();
   const transmissionPicker = useCatalogPicker(transmissionsData?.items ?? []);
   const selectedTransmission = transmissionsData?.items.find(
     (t) => t.id === payload.transmissionId,
   );
 
-  const { data: driveTypesData } = useDriveTypes();
+  const { data: driveTypesData, isPending: driveTypesLoading, isError: driveTypesError } = useDriveTypes();
   const drivePicker = useCatalogPicker(driveTypesData?.items ?? []);
   const selectedDriveType = driveTypesData?.items.find(
     (d) => d.id === payload.driveTypeId,
   );
 
-  const { data: engineTypesData } = useEngineTypes();
+  const { data: engineTypesData, isPending: engineTypesLoading, isError: engineTypesError } = useEngineTypes();
   const enginePicker = useCatalogPicker(engineTypesData?.items ?? []);
   const selectedEngineType = engineTypesData?.items.find(
     (e) => e.id === payload.engineTypeId,
@@ -197,6 +250,16 @@ function useSpecsStep(payload: WizardSchemas.WizardDraftPayload) {
     selectedDriveType,
     enginePicker,
     selectedEngineType,
+    colorsLoading,
+    colorsError,
+    bodyTypesLoading,
+    bodyTypesError,
+    transmissionsLoading,
+    transmissionsError,
+    driveTypesLoading,
+    driveTypesError,
+    engineTypesLoading,
+    engineTypesError,
   };
 }
 
@@ -229,6 +292,8 @@ function SpecSheets({
           specs.colorPicker.setOpen(false);
           specs.colorPicker.reset();
         }}
+        isLoading={specs.colorsLoading}
+        isError={specs.colorsError}
       />
 
       <SpecPickerSheet
@@ -247,6 +312,8 @@ function SpecSheets({
           specs.bodyPicker.setOpen(false);
           specs.bodyPicker.reset();
         }}
+        isLoading={specs.bodyTypesLoading}
+        isError={specs.bodyTypesError}
       />
 
       <SpecPickerSheet
@@ -265,6 +332,8 @@ function SpecSheets({
           specs.transmissionPicker.setOpen(false);
           specs.transmissionPicker.reset();
         }}
+        isLoading={specs.transmissionsLoading}
+        isError={specs.transmissionsError}
       />
 
       <SpecPickerSheet
@@ -283,6 +352,8 @@ function SpecSheets({
           specs.drivePicker.setOpen(false);
           specs.drivePicker.reset();
         }}
+        isLoading={specs.driveTypesLoading}
+        isError={specs.driveTypesError}
       />
 
       <SpecPickerSheet
@@ -301,6 +372,8 @@ function SpecSheets({
           specs.enginePicker.setOpen(false);
           specs.enginePicker.reset();
         }}
+        isLoading={specs.engineTypesLoading}
+        isError={specs.engineTypesError}
       />
     </>
   );
@@ -343,29 +416,39 @@ export default function Step4Specs({
         onPress={() => specs.bodyPicker.setOpen(true)}
       />
 
-      <TransmissionPicker
-        selectedTransmission={specs.selectedTransmission}
-        disabled={disabled}
-        onPress={() => specs.transmissionPicker.setOpen(true)}
-      />
+      {/* Drivetrain group */}
+      <View className="gap-5 rounded-xl border border-border p-4">
+        <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          Drivetrain
+        </Text>
+        <TransmissionPicker
+          selectedTransmission={specs.selectedTransmission}
+          disabled={disabled}
+          onPress={() => specs.transmissionPicker.setOpen(true)}
+        />
+        <DriveTypePicker
+          selectedDriveType={specs.selectedDriveType}
+          disabled={disabled}
+          onPress={() => specs.drivePicker.setOpen(true)}
+        />
+      </View>
 
-      <DriveTypePicker
-        selectedDriveType={specs.selectedDriveType}
-        disabled={disabled}
-        onPress={() => specs.drivePicker.setOpen(true)}
-      />
-
-      <EngineTypePicker
-        selectedEngineType={specs.selectedEngineType}
-        disabled={disabled}
-        onPress={() => specs.enginePicker.setOpen(true)}
-      />
-
-      <EnginePowerInput
-        payload={payload}
-        onChange={onChange}
-        disabled={disabled}
-      />
+      {/* Engine group */}
+      <View className="gap-5 rounded-xl border border-border p-4">
+        <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          Engine
+        </Text>
+        <EngineTypePicker
+          selectedEngineType={specs.selectedEngineType}
+          disabled={disabled}
+          onPress={() => specs.enginePicker.setOpen(true)}
+        />
+        <EnginePowerInput
+          payload={payload}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      </View>
 
       <SpecSheets payload={payload} onChange={onChange} specs={specs} />
     </View>
@@ -384,12 +467,8 @@ function ConditionToggle({
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">Condition</Text>
-      <View className="flex-row gap-3">
-        <Button
-          variant={
-            condition === Enums.ListingCondition.New ? "default" : "outline"
-          }
-          className="flex-1"
+      <View className="flex-row rounded-lg bg-muted p-1">
+        <Pressable
           onPress={() => {
             onChange({
               condition: Enums.ListingCondition.New,
@@ -397,21 +476,51 @@ function ConditionToggle({
             });
           }}
           disabled={disabled}
+          accessibilityRole="button"
+          accessibilityState={{ selected: condition === Enums.ListingCondition.New }}
+          accessibilityLabel="New condition"
+          className={cn(
+            "flex-1 items-center justify-center rounded-md py-2.5",
+            condition === Enums.ListingCondition.New && "bg-card",
+            disabled && "opacity-50",
+          )}
         >
-          <Text>New</Text>
-        </Button>
-        <Button
-          variant={
-            condition === Enums.ListingCondition.Used ? "default" : "outline"
-          }
-          className="flex-1"
+          <Text
+            className={cn(
+              "text-sm font-medium",
+              condition === Enums.ListingCondition.New
+                ? "text-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            New
+          </Text>
+        </Pressable>
+        <Pressable
           onPress={() => {
             onChange({ condition: Enums.ListingCondition.Used });
           }}
           disabled={disabled}
+          accessibilityRole="button"
+          accessibilityState={{ selected: condition === Enums.ListingCondition.Used }}
+          accessibilityLabel="Used condition"
+          className={cn(
+            "flex-1 items-center justify-center rounded-md py-2.5",
+            condition === Enums.ListingCondition.Used && "bg-card",
+            disabled && "opacity-50",
+          )}
         >
-          <Text>Used</Text>
-        </Button>
+          <Text
+            className={cn(
+              "text-sm font-medium",
+              condition === Enums.ListingCondition.Used
+                ? "text-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            Used
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -449,7 +558,7 @@ function MileageInput({
         disabled,
       )}
       {fieldErrors?.mileageKm && (
-        <Text className="text-sm text-destructive">
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
           {fieldErrors.mileageKm}
         </Text>
       )}
@@ -474,17 +583,17 @@ function ColorPicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="justify-start h-[52px]"
         >
           {selectedColor?.hex && (
             <View
-              className="mr-2 h-4 w-4 rounded-full border border-border"
+              className="mr-3 h-6 w-6 rounded-full border border-border"
               style={{ backgroundColor: selectedColor.hex }}
             />
           )}
           <Text
             className={
-              selectedColor ? "text-foreground" : "text-muted-foreground"
+              selectedColor ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
             {selectedColor?.name ?? "Select color"}
@@ -513,11 +622,11 @@ function BodyTypePicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="justify-start h-[52px]"
         >
           <Text
             className={
-              selectedBodyType ? "text-foreground" : "text-muted-foreground"
+              selectedBodyType ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
             {selectedBodyType?.name ?? "Select body type"}
@@ -548,12 +657,12 @@ function TransmissionPicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="justify-start h-[52px]"
         >
           <Text
             className={
               selectedTransmission
-                ? "text-foreground"
+                ? "text-foreground font-medium"
                 : "text-muted-foreground"
             }
           >
@@ -583,11 +692,11 @@ function DriveTypePicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="justify-start h-[52px]"
         >
           <Text
             className={
-              selectedDriveType ? "text-foreground" : "text-muted-foreground"
+              selectedDriveType ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
             {selectedDriveType?.name ?? "Select drive type"}
@@ -616,11 +725,11 @@ function EngineTypePicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start"
+          className="justify-start h-[52px]"
         >
           <Text
             className={
-              selectedEngineType ? "text-foreground" : "text-muted-foreground"
+              selectedEngineType ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
             {selectedEngineType?.name ?? "Select engine type"}

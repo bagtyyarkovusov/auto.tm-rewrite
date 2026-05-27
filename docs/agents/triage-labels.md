@@ -53,9 +53,9 @@ Apply *in addition* to the triage label, to indicate which part of the system:
 
 | Label | Phase |
 |---|---|
-| `phase-1` | Marketplace MVP (current focus) |
-| `phase-2` | Inspection reports + PDF + tier system |
-| `phase-3` | 360° + comparisons + polish |
+| `phase-1` | MLP beta (current focus) |
+| `phase-2` | Post-MLP marketplace bets |
+| `phase-3` | Trust and premium bets |
 
 ## Creating labels in a fresh repo
 

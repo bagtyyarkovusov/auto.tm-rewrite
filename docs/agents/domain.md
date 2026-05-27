@@ -16,6 +16,7 @@ Skills that read these files (`improve-codebase-architecture`, `diagnose`, `tdd`
 2. **Read the relevant `CONTEXT.md`** for **current** domain language and invariants (per ADR-0019, this describes shipped code, not what's planned)
 3. **Cross-reference ADRs** in `docs/adr/` and `apps/*/docs/adr/` for the "why" behind decisions
 4. **For "what's planned but not yet shipped"**, read the relevant PRD feature file in `docs/prd/features/` or sprint file in `docs/prd/sprints/` — never CONTEXT.md (per ADR-0020)
+5. **For deferred features**, check `docs/prd/03-roadmap.md` first, then the owning feature PRD/flow. Do not infer scheduled work from old sprint labels or historical retros.
 
 ## File locations
 
@@ -77,5 +78,7 @@ Every `CONTEXT.md` follows this skeleton:
 - **Change a domain invariant** → update Invariants (consider an ADR if it's an architectural shift)
 - **Add a new port or event** → update Ports / Events
 - **Rename or split a context** → update CONTEXT.md + CONTEXT-MAP.md + write an ADR
+- **Move a planned capability between phases** → update roadmap + owning PRD/flow; add an ADR if the move changes material capability scope
+- **Close a phase/beta gate** → verify `CONTEXT-MAP.md`, local `CONTEXT.md` files, roadmap bet table, and open issues agree before marking the phase complete
 
 Treat `CONTEXT.md` as living code documentation — drift = bugs.

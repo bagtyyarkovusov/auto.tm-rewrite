@@ -1,6 +1,6 @@
 # content — CONTEXT
 
-> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). The Bortzhurnal (Бортжурнал) feature is **mostly Phase 2 work**. Today, only a stub schema exists for `BlogPost`. Aspirational content lives in Phase 2 sprint files (TBD — placeholder rows in `docs/prd/03-roadmap.md`).
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). The Bortzhurnal (Бортжурнал) feature is a **post-MLP bet** per [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md). Today, only a stub schema exists for `BlogPost`. Aspirational content lives in [`docs/prd/features/39-content-blogs.md`](../../../../../docs/prd/features/39-content-blogs.md) until a future sprint is shaped.
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Bortzhurnal (Бортжурнал) — user blog posts about cars and ownership 
 
 ## Owns (entities + tables)
 
-> Today: only a stub `BlogPost` table exists. None of the supporting entities (BlogMedia, BlogLike, BlogFollow, BlogTag, BlogPostTag) are in schema — they ship in Phase 2 when the blog feature gets sprint-scoped.
+> Today: only a stub `BlogPost` table exists. None of the supporting entities (BlogMedia, BlogLike, BlogFollow, BlogTag, BlogPostTag) are in schema — they ship only when a post-MLP blog bet gets sprint-scoped.
 
 - `BlogPost` — id, slug (unique), locale, title, body (text/Markdown), authorId (FK → User, Cascade), publishedAt?, deletedAt?, createdAt, updatedAt. Index on `(locale, publishedAt DESC)`.
 
@@ -44,9 +44,9 @@ Bortzhurnal (Бортжурнал) — user blog posts about cars and ownership 
 
 - (none today)
 
-## Planned additions (Phase 2 — not Phase 1 scope)
+## Planned additions (post-MLP — not MLP beta scope)
 
-Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the Bortzhurnal feature is Phase 2 work. Phase 1 (current focus) does NOT include blog functionality. The items below are placeholders for the Phase 2 sprint that owns Content; the authoritative spec lives in `docs/prd/features/40-content.md` (or wherever PRD captures the feature) and the eventual Phase 2 sprint file.
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the Bortzhurnal feature is post-MLP work. The MLP beta does NOT include blog functionality. The items below are placeholders for the future sprint that owns Content; the authoritative spec lives in [`docs/prd/features/39-content-blogs.md`](../../../../../docs/prd/features/39-content-blogs.md) and the eventual sprint file.
 
 - **Supporting entities** (none in schema today):
   - `BlogMedia` — id, blogPostId, kind (`photo` / `video`), key, position
@@ -75,7 +75,7 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 
 - **Events** (none emitted/consumed today):
   - Emit: `BlogPostPublished`, `BlogPostLiked`, `BlogFollowAdded`
-  - Consume: `UserSuspended` (archives all blog posts), `OwnedVehicleDeleted` (nullifies `taggedVehicleId`)
+  - Consume: `OwnedVehicleDeleted` (nullifies `taggedVehicleId`). If Bortzhurnal ships later, user-suspension content handling must be shaped then; S7 suspension does not auto-archive blog posts.
 
 ## Notable decisions
 

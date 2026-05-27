@@ -8,6 +8,8 @@ import * as FileSystem from "expo-file-system/legacy";
 import {
   Camera,
   ImagePlus,
+  AlertCircle,
+  ImageIcon,
 } from "lucide-react-native";
 
 import type { StagedPhoto } from "../uploadStaging/types";
@@ -152,6 +154,7 @@ function PhotoActions({
         className="flex-1 h-[52px] rounded-full"
         onPress={onTakePhoto}
         disabled={disabled || maxReached}
+        accessibilityLabel="Take a photo with camera"
       >
         <Icon as={Camera} className="size-4" />
         <Text>Camera</Text>
@@ -161,6 +164,7 @@ function PhotoActions({
         className="flex-1 h-[52px] rounded-full"
         onPress={onPickFromLibrary}
         disabled={disabled || maxReached}
+        accessibilityLabel="Choose photos from library"
       >
         <Icon as={ImagePlus} className="size-4" />
         <Text>Library</Text>
@@ -205,6 +209,33 @@ function PhotoGrid({
   );
 }
 
+function EmptyState() {
+  return (
+    <View className="items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 py-8 gap-3">
+      <View className="h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <Icon as={ImageIcon} className="size-6 text-muted-foreground" />
+      </View>
+      <View className="items-center gap-1">
+        <Text className="text-sm font-medium text-foreground">No photos yet</Text>
+        <Text className="text-xs text-muted-foreground text-center px-8">
+          Tap Camera or Library to add your first photo
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function InlineError({ message }: { message: string }) {
+  return (
+    <View className="flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
+      <Icon as={AlertCircle} className="size-4 text-destructive shrink-0" />
+      <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        {message}
+      </Text>
+    </View>
+  );
+}
+
 function StatusIndicator({
   isCompressing,
   isUploading,
@@ -217,7 +248,7 @@ function StatusIndicator({
     <View className="flex-row items-center gap-2">
       <ActivityIndicator size="small" />
       <Text className="text-sm text-muted-foreground">
-        {isCompressing ? "Compressing..." : "Uploading..."}
+        {isCompressing ? "Compressing…" : "Uploading…"}
       </Text>
     </View>
   );
@@ -242,11 +273,12 @@ export default function Step2Photos({
 
   const maxReached = photos.length >= 20;
   const photosError = fieldErrors?.photos;
+  const hasPhotos = photos.length > 0;
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-sm text-muted-foreground">
-        Photos under 5 MB upload faster.
+      <Text className="text-sm text-muted-foreground leading-relaxed">
+        Photos under 5 MB upload faster. Add up to 20 photos.
       </Text>
 
       <PhotoActions
@@ -256,9 +288,7 @@ export default function Step2Photos({
         onPickFromLibrary={pickFromLibrary}
       />
 
-      {photosError && (
-        <Text className="text-sm text-destructive">{photosError}</Text>
-      )}
+      {photosError && <InlineError message={photosError} />}
 
       {maxReached && (
         <Text className="text-sm text-muted-foreground">
@@ -268,15 +298,19 @@ export default function Step2Photos({
 
       <StatusIndicator isCompressing={isCompressing} isUploading={isUploading} />
 
-      <PhotoGrid
-        photos={photos}
-        disabled={disabled ?? false}
-        onRetry={onRetryPhoto}
-        onRemove={onRemovePhoto}
-        onMoveUp={handleMoveUp}
-        onMoveDown={handleMoveDown}
-        onSetAsCover={handleSetAsCover}
-      />
+      {hasPhotos ? (
+        <PhotoGrid
+          photos={photos}
+          disabled={disabled ?? false}
+          onRetry={onRetryPhoto}
+          onRemove={onRemovePhoto}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
+          onSetAsCover={handleSetAsCover}
+        />
+      ) : (
+        <EmptyState />
+      )}
     </View>
   );
 }

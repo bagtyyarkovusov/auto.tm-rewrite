@@ -21,8 +21,10 @@ Use this when a significant incident occurs (production down, data loss, securit
 - Priority is **stop the bleeding**, not understand root cause
 - If recent deploy: rollback ([80-deployment-runbook.md](80-deployment-runbook.md))
 - If DB issue: failover to replica (Phase 2 setup TBD)
-- If feature gone: disable the feature (admin toggle if available)
+- If a write path is unsafe: pause it with the server-side beta flag (`SIGNUPS_ENABLED`, `LISTING_PUBLISH_ENABLED`, `LISTING_MUTATIONS_ENABLED`, `CONTACT_ENABLED`, `REPORT_ENTRY_ENABLED`, or `ADMIN_MODERATION_ACTIONS_ENABLED`) before manual repair
 - If security: revoke credentials, block IPs
+- If moderation state is wrong: use the normal admin reversal action where available (`unban` / `unsuspend`) with a new reason; do not delete or rewrite audit rows
+- If the only possible repair is a manual DB edit: record affected ids, reason, exact SQL/operator action, and follow-up audit/operator-record plan in the incident timeline before making the change
 
 ### 4. Communicate
 
@@ -107,7 +109,13 @@ Write a postmortem using the template below. **Blameless** — focus on the syst
 | SMS gateway down | Switch to backup phones or `SMS_DRIVER=mock` (warning: blocks new logins) |
 | TLS cert expired | Manual renewal via TM Proxy PC |
 | Security breach (suspected) | Rotate all secrets, force re-login, audit log review |
-| Data loss / corruption | Restore from backup, communicate with users, RCA |
+| Data loss / corruption | Stop affected writes, restore from backup or clone for analysis, communicate with users, RCA |
+| Bad moderation action | Reverse through `unban` / `unsuspend` with a new reason and audit row; leave the original audit row intact |
+| Audit write failure | Set `ADMIN_MODERATION_ACTIONS_ENABLED=false`, investigate API/DB health, and do not perform manual state mutation without a recorded incident/operator note |
+| Suspected admin compromise | Revoke sessions/refresh tokens, rotate affected secrets if needed, review audit rows, and handle the admin through operator recovery rather than the report queue |
+| Manual DB edit | Break-glass only; record affected ids/reason in the incident timeline and create a follow-up audit/operator record |
+| Report spam / unsafe queue volume | Set `REPORT_ENTRY_ENABLED=false`, keep admin report/audit reads online, clear the queue through normal moderation actions, then re-enable after review |
+| Listing/contact abuse spike | Use `LISTING_PUBLISH_ENABLED`, `LISTING_MUTATIONS_ENABLED`, or `CONTACT_ENABLED` to stop new writes while preserving browse/read surfaces where possible |
 
 ## Severity definitions
 
@@ -127,6 +135,7 @@ Write a postmortem using the template below. **Blameless** — focus on the syst
 
 - Deploy on Tue/Wed mornings (not Fri afternoon)
 - Always have a < 6h backup before deploying schema changes
+- Keep restore, rollback, alert, feature-pause, and moderation-incident drills current before inviting real beta users
 - Use the migration discipline ([ADR-0004](../../adr/0004-migrations.md))
 - Watch the dashboard for 30 min after every deploy
 - Don't skip the smoke test in the runbook

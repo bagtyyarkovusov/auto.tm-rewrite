@@ -29,6 +29,15 @@ export function AutoTmTabBar({
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
+  const currentRoute = state.routes[state.index];
+  const currentDescriptor = currentRoute ? descriptors[currentRoute.key] : undefined;
+  const tabBarStyle = currentDescriptor?.options
+    ?.tabBarStyle as { display?: string } | undefined;
+
+  if (tabBarStyle?.display === "none") {
+    return <View style={{ height: 0 }} />;
+  }
+
   return (
     <View
       className="flex-row items-center border-t border-border bg-background/90"

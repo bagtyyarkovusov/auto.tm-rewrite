@@ -4,6 +4,8 @@
 
 A user blog feature inspired by auto.ru's "Бортжурнал." Users post about their cars, ownership experience, repairs, road trips. Posts can be tagged with a Garage vehicle and/or a Brand/Model.
 
+**MLP status:** deferred by [ADR-0027](../../adr/0027-mlp-beta-scope.md). Build only after marketplace activity exists and content/community pull is visible.
+
 ## Why it exists
 
 Ata (the power buyer / enthusiast persona) writes blog posts about his cars and reads others'. Blogs:
@@ -52,6 +54,12 @@ Ata (the power buyer / enthusiast persona) writes blog posts about his cars and 
 - Post URLs work on web: `auto.tm/<lang>/blog/<id>`
 - OG meta: title, cover image, author, snippet
 
+### Moderation placement
+
+- Blog/content reports are post-MLP because blogs are post-MLP. Do not add `blog_post` report targets to S7 before content ships.
+- When shaped, Content owns blog visibility/deletion policy and validates reportable blog targets; Admin owns queue display, resolution actions, and audit rows.
+- Blog moderation should be shaped with content author privacy, Markdown rendering/sanitization, media handling, and editorial/admin workflow. It should not be treated as a copy-paste of listing reports.
+
 ## Screens / states
 
 | Screen | State | Notes |
@@ -76,11 +84,12 @@ Ata (the power buyer / enthusiast persona) writes blog posts about his cars and 
 
 ## Phase
 
-**Phase 1.**
+**Post-MLP marketplace bet.**
 
 ## Out of scope
 
 - Public comments / threading on posts (chat replaces)
+- Blog/content reporting and moderation in S7; shape it with the content bet after blogs exist
 - Polls inside posts (auto.ru has these — defer to Phase 2)
 - Featured posts / editorial curation (Phase 2+)
 - Public blog feed aggregation by hashtag (defer)

@@ -1,7 +1,7 @@
 # AutoTM Ad Sales Strategy
 
 > **Status**: Strategy doc, drafted 2026-05-18. Mutable; not an ADR.
-> **First matters in**: Phase 1 late (S9-S10) for ad inventory + first sales; Phase 2 for meaningful revenue
+> **First matters in**: Post-MLP marketplace bets. Ads should not distract from the MLP beta loop.
 > **Why it exists**: Per [`00-vision.md`](../00-vision.md) anti-goals, AutoTM bans paid placement on listings. Third-party advertising is the alternative ad-revenue stream that respects that constraint. The detail page + feed + blog generate ~10-100M impressions/year by Year 3 — sellable inventory if monetized thoughtfully.
 
 ---
@@ -25,7 +25,7 @@ Important to draw the line clearly. Vision.md bans:
 
 Vision.md does NOT ban:
 - Display ads in marketplace surfaces (banner ads, native sponsored content, sidebar ads)
-- Sponsored content on the blog (Bortzhurnal — Phase 1 S10)
+- Sponsored content on the blog (Bortzhurnal — post-MLP)
 - Loan calculator + insurance widgets that route to specific brands
 - Newsletter sponsorships
 - B2B partnership integrations (bank pre-qualification, insurance leads)
@@ -223,7 +223,7 @@ Honest acknowledgment: this deck is 80% identical to any AdSense pitch deck. The
 
 ## Software integration — what we actually build
 
-### Phase 1 (S10 or earlier) — basic ad delivery
+### Post-MLP bet — basic ad delivery
 
 Minimum viable infrastructure:
 
@@ -233,7 +233,7 @@ Minimum viable infrastructure:
   - `AdImpression` log: when shown + which user + which ad (consent-aware)
   - `AdClick` log: same but for clicks
 - **Frontend integration**: `<AdSlot slotKey="listing-detail-sidebar" />` component on web + `<AdSlot>` on mobile. Component fetches active ads for the slot; renders + records impression.
-- **Admin dashboard** (S9): Create/edit campaigns; upload creative; view performance reports
+- **Admin dashboard expansion**: Create/edit campaigns; upload creative; view performance reports
 - **Tracking**: Impression counter (real-time); click tracking via `/r/click/:id` redirect endpoint that logs + redirects
 
 Total effort: ~3-4 weeks of focused dev.
@@ -408,7 +408,7 @@ If at Year 2 we're below $50k MRR from ads → consider whether ad strategy need
 ## Cross-references
 
 - [`../00-vision.md`](../00-vision.md) — Anti-goals: no paid placement
-- [`../03-roadmap.md`](../03-roadmap.md) — S10 ships public web + blog; S9 admin includes ad management
+- [`../03-roadmap.md`](../03-roadmap.md) — ads are a post-MLP bet, not part of the MLP beta
 - [`../features/`](../features/) — future feature PRD for `34-advertising.md` (TBD)
 - [`inspection-program.md`](inspection-program.md) — inspection report viewer pages = prime ad inventory
 - [`dealer-subscriptions.md`](dealer-subscriptions.md) — dealers + advertisers overlap (brand-authorized dealers may pay for both subscription + brand sponsorship)

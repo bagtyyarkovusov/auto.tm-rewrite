@@ -27,10 +27,10 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 - Listing detail opens: photos, price, specs, seller info
 - She can scroll, view all photos, see related listings — all without login
 
-### Step 3 — Wants to favorite ♥
+### Step 3 — Wants to contact the seller
 
-- She taps the ♥ button
-- Bottom sheet slides up: "Sign in to save listings"
+- She taps the Message button
+- Bottom sheet slides up: "Sign in to contact the seller"
 - Single button: "Continue with phone"
 - (X close also returns her to the listing, no harm)
 
@@ -56,8 +56,8 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 ### Step 6 — Profile setup (deferred)
 
 - After OTP success, return to where she was (the listing)
-- ♥ is now filled (the deferred action played)
-- Toast: "Saved to Favorites"
+- The message composer opens (the deferred action played)
+- Toast: "Signed in. You can message the seller."
 - OTP itself does not show a separate "Signed in" toast when a deferred action owns the feedback
 - No "complete your profile" interruption — she can edit profile later
 
@@ -87,7 +87,8 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 
 - [Feature 30 — Identity](../features/30-identity.md)
 - [Feature 32 — Listings](../features/32-listings.md)
-- [Feature 36 — Notifications](../features/36-notifications.md) — first notification permission prompt timing
+- [Feature 34 — Contact seller](../features/34-conversations.md)
+- [ADR-0027 — MLP beta scope](../../adr/0027-mlp-beta-scope.md)
 
 ## Open questions
 
@@ -95,5 +96,5 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 
 ## Resolved follow-up decisions
 
-- Native notification permission is asked at most once automatically, after a concrete notification-using action such as sending the first chat message or enabling saved-search notifications. It is not part of OTP login.
+- Native notification permission is not part of the MLP first-time flow. If direct-message push is shaped later, permission is asked after a concrete notification-using action, not during OTP login.
 - If notification permission was declined, later notification features show an inline System Settings CTA instead of opening the native prompt again.

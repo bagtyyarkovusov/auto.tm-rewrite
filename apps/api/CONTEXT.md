@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The NestJS API. Hosts all bounded contexts, exposes REST endpoints, runs Prisma against Postgres. The single source of business logic — mobile, admin, and web are thin clients. WebSocket (chat) layer + push dispatch + SMS gateway driver land in their owning sprints (S7, S8, S2 respectively — S2 SMS driver already shipped via `apps/sms-gateway`).
+The NestJS API. Hosts all bounded contexts, exposes REST endpoints, runs Prisma against Postgres. The single source of business logic — mobile, admin, and web are thin clients. MLP contact ships as a simple REST text thread in S6; WebSocket chat and push dispatch are post-MLP. SMS gateway driver shipped in S2 via `apps/sms-gateway`.
 
 ## Layer rules (Level 2 architecture)
 
@@ -20,13 +20,13 @@ Every bounded context under `src/modules/<context>/` has four layers:
 ## What it contains
 
 - 9 bounded-context modules under `src/modules/` (admin, catalog, content, conversations, identity, listings, notifications, reports, subscriptions) — only `identity` has shipped use-cases today; the rest are skeletons
-- Global `JwtAuthGuard` + `@Public()` decorator at `src/common/` for auth-gating + anonymous-browsing escape hatch
+- Global `JwtAuthGuard` + `@Public()` decorator at `src/common/` for auth-gating + anonymous-browsing escape hatch. The API auth boundary is bearer-token only; browser cookie storage belongs to `apps/admin`, which forwards `Authorization: Bearer <accessToken>` server-side.
 - `AdminGuard` at `src/common/admin.guard.ts` composing on top of `JwtAuthGuard` (gates admin-only routes via `IdentityCheckPort.isAdmin`)
-- Global throttler (`@nestjs/throttler`) — 60 req/min/IP default; per-route override via `@Throttle()`
+- Global throttler (`@nestjs/throttler`) — 60 req/min/IP default; per-route override via `@Throttle()`. S7 public report routes use this global throttler only; no report-specific quota store or custom report throttling rule ships in the MLP.
 - Prisma client via `PrismaService` (PrismaModule is currently commented out in `app.module.ts` pending API ESM migration — issue #16)
 - Swagger / OpenAPI docs generated from Zod contracts
-- `ConfigModule` with Zod-validated env schema (`src/env.schema.ts`), including `PORT=3006` (see ADR-0018)
-- `socket.io` package installed but no `IoAdapter` attached today; no WebSocket gateways — chat namespace ships in S7 (`conversations` module)
+- `ConfigModule` with Zod-validated env schema (`src/env.schema.ts`), including `PORT=3006` (see ADR-0018). S7 adds required `TOTP_SECRET_ENCRYPTION_KEY` for encrypted admin TOTP secrets; it must decode to 32 bytes from base64 and fail startup if missing/invalid.
+- `socket.io` package installed but no `IoAdapter` attached today; no WebSocket gateways — rich chat namespace is post-MLP (`conversations` module)
 
 ## Public API surface (today)
 

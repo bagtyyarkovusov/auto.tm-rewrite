@@ -24,7 +24,7 @@ If those aren't ready, **don't build the software yet** — you'll have an empty
 
 ### Inspector workflow (admin web)
 
-1. Admin assigns a listing to an inspector (queue: `apps/admin/reports`)
+1. Admin assigns a listing to an inspector (queue: `apps/admin/inspection-reports`)
 2. Inspector visits car (off-platform — this is real-world ops)
 3. Inspector returns to office (or uses tablet on-site), opens the report draft
 4. Fills in rubric: per section, per item — score (0-N) + notes + photos

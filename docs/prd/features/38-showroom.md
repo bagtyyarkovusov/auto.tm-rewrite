@@ -4,6 +4,8 @@
 
 The public-facing page for a Dealership — logo, name, city, hours, contact, response-time stat, and all their active listings. Accessible via `auto.tm/dealers/<slug>` (web) and `app://dealers/<slug>` (mobile deep link).
 
+**MLP status:** deferred by [ADR-0027](../../adr/0027-mlp-beta-scope.md). Build after dealers actively post enough inventory to need a shareable storefront.
+
 ## Why it exists
 
 Dealerships rely on credibility. Ilýa (the dealer rep persona) needs:
@@ -80,7 +82,7 @@ Identical content. Web is server-rendered with OG meta:
 
 ## Phase
 
-**Phase 1.**
+**Post-MLP marketplace bet.**
 
 ## Out of scope
 

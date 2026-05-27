@@ -1,6 +1,6 @@
 # apps/worker — CONTEXT
 
-> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Most worker jobs are stub processors today; the full pipelines (video transcode, image variants, push delivery, orphan cleanup) ship with their owning sprints.
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Most worker jobs are stub processors today; full video transcode, push delivery, and broad orphan-cleanup pipelines are post-MLP unless required by a shaped beta reliability issue.
 
 ## Purpose
 
@@ -46,16 +46,16 @@ None — worker is internal. Only Redis (queues) + Postgres + MinIO connections 
 
 Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
 
-- **S4 (Listings CRUD)** — Image variant generation pipeline:
+- **MLP image reliability** — queued image variant generation may be shaped in S8 only if API-request lifecycle Sharp generation becomes a beta reliability problem:
   - New `src/queues/image-variants.processor.ts` processor
   - `sharp` dep for variant generation (thumbnail / list / detail / fullscreen × JPEG + WebP)
   - `@aws-sdk/client-s3` dep for MinIO read/write
   - Consumes `image-variants` queue → reads from `listing-photos` bucket → writes variants back → updates `ListingMedia` row
-- **S4 / S5** — Video transcoding pipeline (extend existing stub):
+- **Post-MLP video pipeline** — video transcoding remains deferred unless a future media bet is shaped:
   - `ffmpeg-static` dep + ffmpeg toolchain
   - Pull source from `listing-videos` MinIO bucket → produce HLS at 320p + 720p + poster at 2s
-  - Update `Listing.videoStatus` (schema addition) → emit `VideoReady`
-- **S8 (Notifications)** — Push delivery + notification fan-out:
+  - Add any required video processing status fields in the sprint that owns video UX
+- **Post-MLP notifications** — Push delivery + notification fan-out:
   - New `src/queues/push.processor.ts` processor
   - `firebase-admin` dep for FCM (and APNS HTTP/2 layer)
   - Saved-search match fan-out (extend existing `notification-fanout` stub):
@@ -74,3 +74,4 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
 - [ADR-0009](../../docs/adr/0009-notifications.md) — Push fan-out
 - [ADR-0010](../../docs/adr/0010-testing-obs.md) — Uptime probes via worker
 - [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
+- [ADR-0027](../../docs/adr/0027-mlp-beta-scope.md) — Full notification/media platform deferred out of MLP beta

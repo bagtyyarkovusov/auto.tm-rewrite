@@ -1,7 +1,8 @@
 import { View, Image } from "react-native";
-import { Image as ImageIcon, MoreVertical } from "lucide-react-native";
+import { ImageIcon, MoreVertical } from "lucide-react-native";
 
 import type { StagedPhoto } from "../uploadStaging/types";
+import { getPhotoUri } from "../uploadStaging/photoUri";
 
 import { PhotoStateOverlay } from "./PhotoStateOverlay";
 
@@ -40,17 +41,23 @@ export function PhotoThumbnail({
   return (
     <View
       key={photo.photoId}
-      className="relative aspect-square w-[48%] overflow-hidden rounded-lg bg-muted"
+      className="relative aspect-square w-[31.5%] overflow-hidden rounded-lg bg-muted"
     >
-      {photo.localUri ? (
+      {getPhotoUri(photo) ? (
         <Image
-          source={{ uri: photo.localUri }}
+          source={{ uri: getPhotoUri(photo) }}
           className="h-full w-full"
           resizeMode="cover"
         />
       ) : (
         <View className="h-full w-full items-center justify-center">
-          <Icon as={ImageIcon} className="size-8 text-muted-foreground" />
+          <Icon as={ImageIcon} className="size-6 text-muted-foreground" />
+        </View>
+      )}
+
+      {index === 0 && (
+        <View className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5">
+          <Text className="text-[10px] font-medium text-white">Cover</Text>
         </View>
       )}
 
@@ -58,8 +65,8 @@ export function PhotoThumbnail({
 
       <DropdownMenu>
         <DropdownMenuTrigger>
-          <View className="absolute bottom-1 right-1 h-8 w-8 items-center justify-center rounded-full bg-black/40">
-            <Icon as={MoreVertical} className="size-4 text-white" />
+          <View className="absolute bottom-1.5 right-1.5 h-7 w-7 items-center justify-center rounded-full bg-black/40">
+            <Icon as={MoreVertical} className="size-3.5 text-white" />
           </View>
         </DropdownMenuTrigger>
         <DropdownMenuContent>

@@ -4,6 +4,8 @@
 
 A user's personal vehicles — cars they own or want — separate from listings (which are for sale). Sourced from auto.ru's "Гараж" feature. Builds profile depth, enables sell-from-Garage shortcut, and seeds dream-car SavedSearches.
 
+**MLP status:** deferred by [ADR-0027](../../adr/0027-mlp-beta-scope.md). Build when repeat sellers need a faster listing path or profile trust becomes a bottleneck.
+
 ## Why it exists
 
 Empty profiles look like bots. A profile that shows "I drive a Lada Granta and dream of an Audi" demonstrates the user is a real human + a car enthusiast, which lifts seller credibility and surfaces blog content. Plus, when Aman wants to sell his Lada, having it in Garage already means his listing creation takes 3 steps instead of 7.
@@ -82,7 +84,7 @@ From a Dream Garage entry:
 
 ## Phase
 
-**Phase 1.**
+**Post-MLP marketplace bet.**
 
 ## Out of scope (deferred to v2+)
 

@@ -6,9 +6,9 @@ This directory holds **revenue-model + go-to-market strategy documents** — dis
 
 | Document | Revenue stream | Phase first matters | TL;DR |
 |---|---|---|---|
-| [`inspection-program.md`](inspection-program.md) | AutoTM-staffed inspection fees | **Phase 2** (S11-S16) | Largest discretionary revenue stream; unique trust-layer moat; 8-15 inspectors at maturity |
-| [`ad-sales-strategy.md`](ad-sales-strategy.md) | Third-party display + native advertising | **Phase 1 late / Phase 2** | Banks, insurance, parts, service centers; direct-sales motion; modest but compounding |
-| [`dealer-subscriptions.md`](dealer-subscriptions.md) | Recurring SaaS-style dealer PRO accounts | **Phase 1 (S6+)** | 200-500 dealers at maturity; tiered pricing; major recurring revenue |
+| [`inspection-program.md`](inspection-program.md) | AutoTM-staffed inspection fees | **Trust bet after MLP** | Largest discretionary revenue stream; unique trust-layer moat; 8-15 inspectors at maturity |
+| [`ad-sales-strategy.md`](ad-sales-strategy.md) | Third-party display + native advertising | **Post-MLP marketplace bet** | Banks, insurance, parts, service centers; direct-sales motion; modest but compounding |
+| [`dealer-subscriptions.md`](dealer-subscriptions.md) | Recurring SaaS-style dealer PRO accounts | **Post-MLP dealer bet** | 200-500 dealers at maturity; tiered pricing; major recurring revenue |
 
 ## How these documents relate to the rest of the repo
 
@@ -27,7 +27,7 @@ These documents are **forward-looking strategy**, not commitments. They reflect 
 ## Source material referenced across docs
 
 - [`../00-vision.md`](../00-vision.md) — anti-goals, especially "no paid placement"
-- [`../02-phases.md`](../02-phases.md) — Phase 2 trust layer (Sprint S11-S16)
+- [`../02-phases.md`](../02-phases.md) — MLP beta, post-MLP marketplace bets, trust/premium bets
 - [`../03-roadmap.md`](../03-roadmap.md) — sprint sequence + milestones
 - [`../features/32-listings.md`](../features/32-listings.md) — listing capability (Open Questions section)
 - [`../features/`](../features/) — other feature PRDs as they're written
@@ -37,5 +37,5 @@ These documents are **forward-looking strategy**, not commitments. They reflect 
 
 These docs should be revisited:
 - **Every 6 months** for sanity-check + numbers refresh
-- **Before each Phase boundary** (Phase 1 → 2 → 3)
+- **Before each phase or post-MLP bet boundary**
 - **After any major market signal** (competitor launch, partnership formed, dealer feedback at scale)

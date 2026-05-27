@@ -1,98 +1,92 @@
 # 02 — Phases
 
-We ship in three phases. **Cutting scope between phases is mandatory** — every "let's add this too" question goes through "which phase?" before "how do we build it?"
+We ship the smallest complete marketplace loop first, then bet on the next layer from real usage.
 
-## Phase 1 — Marketplace MVP (~8-10 weeks)
+The original Phase 1 was a broad marketplace MVP. [ADR-0027](../adr/0027-mlp-beta-scope.md) narrows the first release to an **MLP beta**: enough for real buyers and sellers to use AutoTM, not enough to run every future product surface.
 
-Goal: a working marketplace with the headline chat + notifications experience.
+## Phase 1 — MLP beta
+
+Goal: prove the core loop with real users.
+
+> A seller posts a real car. A buyer finds it. The buyer contacts the seller. AutoTM can moderate obvious abuse.
 
 ### In scope
 
-- **Identity** — phone OTP login, user profile, dealerships, garage, blocking
-- **Catalog** — brand/model/generation pickers, regions, colors, body types (trilingual seed data)
-- **Listings** — create wizard, edit, view, mark sold, photos (≤20), 1 short video (≤60s), favorites, drafts
-- **Search + discovery** — feed, filter sheet, free-text search, sort by recency
-- **Conversations (chat)** — 1:1 per-listing, text + image + post-card, read receipts, typing, presence, block-user
-- **Saved searches** — create, list, edit, delete, push on match (debounced digest)
-- **Notifications** — push (FCM+APNS), in-app feed, 6 categories, per-item opt-out
-- **Garage** — add owned/dream cars, sell-from-garage shortcut, public profile display
-- **Showroom** — dealership public page with their listings
-- **Bortzhurnal** — blog post create, view, follow another user
-- **Admin dashboard** — moderation, user mgmt, dealer verify, notification broadcast, SMS health, catalog edit
-- **Public web** — landing, listing detail (with OG), dealer page, blog read-only, legal pages
-- **Deep linking** — Universal Links + App Links + OG meta for share-in-chat
-- **i18n** — RU + TK + EN UI; trilingual catalog; auto-detected content language
+- **Identity** — phone OTP login, basic user profile, anonymous browsing, auth only on action
+- **Catalog** — brand/model/generation pickers, regions, cities, colors, body types, engine/transmission/drive lookups needed by listings
+- **Listings** — create, edit, view, mark sold/archive, photos, drafts, public feed, owner listing management
+- **Basic search + discovery** — feed, listing detail, brand/model/city/price/year filters, recency sort
+- **Contact seller** — simple per-listing buyer-to-seller contact; text-first, no rich chat requirements
+- **Minimal admin** — listing/user moderation, report queue, basic audit log, catalog data access where needed
+- **Public web essentials** — landing page, public listing detail with OG metadata, legal pages
+- **Private beta readiness** — internal TestFlight/Play track or equivalent distribution, smoke tests, first-user launch checklist
+- **i18n essentials** — RU + TK + EN UI shell and trilingual catalog where already required
 
-### Out of scope (deferred to later)
+### Deferred out of MLP beta
 
-- Inspection reports, tier system, PDF (Phase 2)
-- 360° orbit photos (Phase 3)
-- AutoTM-staffed pro photos / videos (Phase 2)
-- VIN auto-fill via real API (mocked in Phase 1; real integration when TM Proxy PC is stable)
-- Comparisons (Phase 3)
-- Service history / fuel logs in Garage (deferred)
-- Public-web search / chat / sell (mobile only)
-- Test drive scheduling, escrow, payments (never planned)
+- Garage, dream-car flows, sell-from-Garage
+- Dealership showroom, PRO badge, dealer-member management
+- Saved searches and match notifications
+- Full notification platform: 6 categories, in-app feed, digests, broadcast, marketing
+- Rich chat: image messages, post-card messages, read receipts, typing, presence, quick replies, durable outbox
+- Blog / Bortzhurnal
+- Video upload, ffmpeg/HLS transcoding, and async media processing beyond photo variants needed by listings
+- Full admin dashboard beyond moderation essentials
+- Full app-store polish and public launch marketing
+- Inspection reports, tier badges, PDF reports
+- 360 orbit photos, comparisons, advanced ranking, onboarding polish
 
-### Critical milestones inside Phase 1
+### MLP beta sprint path
 
 | Sprint | Goal |
 |---|---|
-| 1 | Scaffold + dev environment running locally; first commit through commit 16 of charter |
-| 2 | Identity — OTP login + JWT issuance end-to-end (mock SMS driver) |
-| 3 | Catalog — pickers + seed data |
-| 4 | Listings CRUD — create, photos upload, anonymous browse |
-| 5 | Listings UX — search, filters, favorites, drafts, deep links |
-| 6 | Garage + Dealership pages |
-| 7 | Conversations — chat 1:1 + post-card refs |
-| 8 | Notifications + Subscriptions — FCM + saved-search match |
-| 9 | Admin dashboard — moderation, broadcast, SMS health |
-| 10 | Public web + Blog + Polish — landing, listing detail, dealer pages, OG, app-store readiness |
+| S1 | Scaffold + dev environment running locally |
+| S2 | Identity — OTP login + JWT issuance end-to-end |
+| S3 | Catalog — pickers + seed data |
+| S4 | Listings CRUD — create, photos, anonymous browse |
+| S5 | Search + listing detail — buyers can find relevant cars |
+| S6 | Contact seller — buyer and seller can communicate simply |
+| S7 | Minimal admin + moderation — bad content can be controlled |
+| S8 | Private beta polish — first 10-50 real users can use the loop safely |
 
-## Phase 2 — Trust Layer (~6-8 weeks after Phase 1 ships)
+## Phase 2 — Post-MLP marketplace bets
 
-Goal: AutoTM-backed quality signal that differentiates from "anyone-can-list" marketplaces.
+Goal: deepen the product only where beta behavior proves a missing capability.
 
-### In scope
+Phase 2 is not a fixed sprint roster. The betting table chooses from these shaped candidates after Phase 1 learning:
 
-- **Inspection Reports context** — full data model + admin workflow
-- **Rubric configuration** — sections, items, weights; versioned
-- **Inspector workflow** — admin-facing UI to record an inspection (sections, items, photos, notes)
-- **3-tier rating** — computed from totalScore; displayed on listing as a badge
-- **Listing tier filter** — "Show only Trusted by AutoTM cars" (a filter, not the default sort)
-- **PDF generation** — Puppeteer + HTML template, downloadable by viewer
-- **Pro media attribution** — admin can upload photos/videos on behalf of a seller, marked "Photos by AutoTM"
+- **Favorites + better discovery** — if buyers revisit listings manually
+- **Saved searches** — if buyers repeat the same searches manually
+- **Direct-message push** — if contact usage proves notifications would materially improve response time
+- **Richer chat** — if users need image attachments, post-card messages, read receipts, or quick replies
+- **Dealership showroom** — if dealers actively post enough inventory to deserve a dedicated public surface
+- **Garage** — if sellers need a faster repeat-listing path or profile trust signal
+- **Public web expansion** — if listing share traffic or search traffic is meaningful
+- **Full app-store/public launch polish** — when the beta loop is stable enough for a wider audience
 
-### Operational prerequisites (must happen BEFORE Phase 2 starts)
+## Phase 3 — Trust and premium bets
 
-- Rubric defined and signed off by a real mechanic
-- 1-2 inspectors hired and trained
-- Sample inspections done as quality control
-- Pricing model decided (free / paid / subsidized)
+Goal: add differentiated trust and visual inspection features after the basic marketplace has activity.
 
-### Out of scope
+Candidates:
 
-- Same anti-goals as Phase 1
-
-## Phase 3 — 360° + Polish (~4-6 weeks after Phase 2)
-
-Goal: differentiate visually + comparison shopping.
-
-### In scope
-
-- **360° orbit photos** — capture flow (walk-around camera UI) + viewer (swipe-rotation)
-- **Comparisons** — side-by-side compare 2-3 listings
-- **Sort + ranking refinements** — beyond pure recency (e.g., price-quality optimization with full disclosure)
-- **Performance polish** — image variant tuning, query optimization passes
-- **Onboarding** — first-run tutorial in mobile (Phase 1 ships without; we'll see what users need)
-
-### Phase 3 is more flexible than 1 or 2 — content depends on what we learn after launch
+- Inspection reports and rubric workflow
+- 3-tier trusted badge on listings
+- PDF inspection report export
+- AutoTM-staffed pro media attribution
+- Blog / Bortzhurnal, if community/content pull is visible
+- Video uploads and async media pipeline
+- 360 orbit photos
+- Side-by-side comparisons
+- Sort/ranking refinements beyond recency
+- Onboarding and performance polish based on observed friction
 
 ## How to propose a scope change
 
-If you want to move a feature between phases, the change goes through this checklist:
+If you want to move a feature between phases, use this checklist:
 
-1. Does it block any in-phase feature? If yes, must be in the same or earlier phase.
-2. Is the operational dependency ready? (Phase 2 inspection ops are the canonical example.)
-3. Is this MVP-critical or "nice to have"? Default to deferring.
-4. Updates: this file, the relevant feature PRD page, and the README index.
+1. Does it block the core marketplace loop? If yes, it belongs in or before the MLP beta.
+2. Is there real beta evidence that users are working around the missing feature? If no, defer.
+3. Can a 2-3 person team ship the shaped version inside one cycle? If no, cut scope or split it.
+4. What gets pushed out to make room? No feature moves into Phase 1 for free.
+5. Update this file, the relevant feature PRD, `03-roadmap.md`, and add an ADR for any material capability change per [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md).

@@ -1,6 +1,6 @@
 # apps/web — CONTEXT
 
-> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). The public web app is a **scaffold** today; deep-link landing pages + SEO + listing detail rendering ship in S4/S5/S10. Aspirational content lives in the relevant sprint files.
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). The public web app is a **scaffold** today; listing detail rendering ships in S4/S5 and MLP public-web polish ships in S8. Aspirational content lives in the relevant sprint files and feature PRDs.
 
 ## Purpose
 
@@ -45,11 +45,11 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the i
 - **S4 (Listings CRUD)** — `docs/prd/sprints/sprint-04-listings-crud.md`. Adds:
   - `/[locale]/listings/[id]` — public listing detail (photo gallery, full spec, "Open in app" + "Get the app" CTAs)
   - OG metadata via `generateMetadata()`: `og:title = "{Brand} {Model}, {Year} — {Price}"`, `og:image` (1200×630 first photo), `og:description`, `twitter:card = summary_large_image`
-- **S5 (Listings UX)** — filter sheet web component (`src/components/filter/BrandModelSelect.tsx`)
-- **S6 (Garage + Dealership)** — `/[locale]/dealers/[slug]` public dealer showroom
-- **S7 (Conversations)** — listing-detail "open chat in app" deep-link CTAs
-- **S10 (Polish + app-store)** — full landing page (hero, value props, screenshots, app store badges); `/[locale]/legal/privacy` + `/[locale]/legal/terms`; `/.well-known/apple-app-site-association` + `/.well-known/assetlinks.json` for Universal Links / App Links
-- **Phase 2** — blog read-only pages (`/[locale]/blog/[id]`)
+- **S5 (Search + listing detail)** — public listing detail polish and minimal share URL / OG behavior
+- **S6 (Contact seller)** — listing-detail Message CTA points to the MLP contact flow
+- **S8 (Private beta polish)** — simple landing page, `/[locale]/legal/privacy`, `/[locale]/legal/terms`, and any beta-required link metadata
+- **Post-MLP dealership bet** — `/[locale]/dealers/[slug]` public dealer showroom
+- **Post-MLP rich public web** — app-store badges, Universal Links / App Links polish, blog read-only pages (`/[locale]/blog/[id]`)
 
 ## What this app will NOT do (MVP)
 

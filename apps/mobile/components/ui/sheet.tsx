@@ -50,16 +50,19 @@ function SheetContent({
   className,
   portalHost,
   children,
+  compact,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   portalHost?: string;
+  compact?: boolean;
 }) {
   return (
     <SheetPortal hostName={portalHost}>
       <SheetOverlay>
         <DialogPrimitive.Content
           className={cn(
-            'z-50 max-h-[85%] w-full max-w-none self-stretch flex-col gap-4 overflow-hidden rounded-t-xl border border-x-0 border-b-0 border-border bg-card p-5 shadow-lg shadow-black/5',
+            'z-50 w-full max-w-none self-stretch flex-col gap-4 overflow-hidden rounded-t-xl border border-x-0 border-b-0 border-border bg-card p-5 shadow-lg shadow-black/5',
+            compact ? 'max-h-[70%]' : 'max-h-[85%]',
             Platform.select({
               web: 'animate-in fade-in-0 slide-in-from-bottom-10 duration-300',
             }),
@@ -69,8 +72,8 @@ function SheetContent({
           <NativeOnlyAnimatedView
             entering={SlideInDown.duration(250)}
             exiting={SlideOutDown.duration(200)}
-            className="min-h-0 w-full flex-1">
-            <View className="min-h-0 w-full flex-1 flex-col gap-4">
+            className={cn("min-h-0 w-full", compact ? "" : "flex-1")}>
+            <View className={cn("min-h-0 w-full flex-col gap-4", compact ? "" : "flex-1")}>
               <View className="mx-auto h-1 w-10 rounded-full bg-border" />
               <>{children}</>
             </View>

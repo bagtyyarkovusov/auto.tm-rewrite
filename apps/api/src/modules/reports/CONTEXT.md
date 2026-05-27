@@ -1,6 +1,6 @@
 # reports — CONTEXT
 
-> **Phase 2 context. Stubbed in Phase 1** per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md): nothing in this file is in code today; everything described is Phase 2 planned work. The "planned" markers below explicitly signal the future state. Real work begins in Phase 2 sprint files (S11-S14, TBD).
+> **Trust-bet context. Stubbed in the MLP beta** per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md): nothing in this file is in code today; everything described is planned work. The "planned" markers below explicitly signal the future state. Real work begins only after a post-MLP trust bet is shaped.
 
 ## Purpose
 

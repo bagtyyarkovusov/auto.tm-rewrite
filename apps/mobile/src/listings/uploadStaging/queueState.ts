@@ -1,6 +1,6 @@
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
-import { listLocalPhotoIds } from "./stagingDir";
+import { getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from "./types";
 
 export function computePublishGate(queue: UploadQueue): PublishGateResult {
@@ -66,6 +66,7 @@ export function reconstructQueueFromDraft(
       state,
       sortOrder: payloadPhoto.sortOrder,
       retryCount: 0,
+      localUri: isLocal ? getStagingPath(stagingKey, payloadPhoto.photoId) : undefined,
     });
   }
 
@@ -218,6 +219,9 @@ export async function reconstructQueueFromListing(
     retryCount: 0,
     width: m.width,
     height: m.height,
+    localUri: localPhotoIds.includes(m.id)
+      ? getStagingPath(stagingKey, m.id)
+      : undefined,
   }));
 
   for (const localId of localPhotoIds) {
@@ -227,6 +231,7 @@ export async function reconstructQueueFromListing(
         state: "selected",
         sortOrder: photos.length,
         retryCount: 0,
+        localUri: getStagingPath(stagingKey, localId),
       });
     }
   }

@@ -21,41 +21,47 @@ Per-sprint detail (DoD, file list, tests, references) lives in [`sprints/`](spri
 | [02](sprints/sprint-02-identity.md) | Identity (OTP) | 1 | M2 |
 | [03](sprints/sprint-03-catalog.md) | Catalog | 1 | — |
 | [04](sprints/sprint-04-listings-crud.md) | Listings CRUD | 1 | M3 |
-| [05](sprints/sprint-05-listings-ux.md) | Listings UX | 1 | M4 |
-| [06](sprints/sprint-06-garage-dealership.md) | Garage + Dealership | 1 | — |
-| [07](sprints/sprint-07-conversations.md) | Conversations (chat) | 1 | M5 |
-| [08](sprints/sprint-08-notifications.md) | Notifications + match | 1 | M6 |
-| [09](sprints/sprint-09-admin.md) | Admin dashboard | 1 | M7 |
-| [10](sprints/sprint-10-polish.md) | Polish + Blog + app-store | 1 | M8 |
+| [05](sprints/sprint-05-search-listing-detail.md) | Search + listing detail | 1 | M4 |
+| [06](sprints/sprint-06-contact-seller.md) | Contact seller | 1 | M5 |
+| [07](sprints/sprint-07-minimal-admin.md) | Minimal admin + moderation | 1 | M6 |
+| [08](sprints/sprint-08-private-beta-polish.md) | Private beta polish | 1 | M7 |
 
-Phase 2 + 3 sprint files get created during the Phase 1 launch retro (see [03-roadmap.md](03-roadmap.md)).
+Post-MLP sprint files get created from shaped bets after the Phase 1 beta retro (see [03-roadmap.md](03-roadmap.md) and [ADR-0027](../adr/0027-mlp-beta-scope.md)).
+
+Deferred features should not become orphan sprint files or loose issues. Put the target capability in the owning feature PRD or flow, add/keep a row in `03-roadmap.md` with a trigger to build, and create a sprint file only when the bet is shaped for execution. `CONTEXT.md` may mention the item only as a planned addition that points back to that PRD/sprint home.
 
 Then pick a feature:
 
-## Features (Phase 1)
+## Features (Phase 1 MLP beta)
 
 | # | Feature | Bounded context |
 |---|---|---|
-| [30](features/30-identity.md) | Identity (auth, profile, dealership, garage) | `identity/` |
+| [30](features/30-identity.md) | Identity (auth, basic profile) | `identity/` |
 | [31](features/31-catalog.md) | Catalog (brands, models, regions) | `catalog/` |
-| [32](features/32-listings.md) | Listings (create, view, edit, photos, video) | `listings/` |
-| [33](features/33-search-discovery.md) | Search + filters + favorites | `listings/` + client |
-| [34](features/34-conversations.md) | Chat (the headline MVP feature) | `conversations/` |
+| [32](features/32-listings.md) | Listings (create, view, edit, photos) | `listings/` |
+| [33](features/33-search-discovery.md) | Basic search + listing detail discovery | `listings/` + client |
+| [34](features/34-conversations.md) | Contact seller (simple text thread) | `conversations/` |
+| [40](features/40-admin.md) | Minimal admin moderation | `admin/` + `apps/admin` |
+
+## Features (post-MLP marketplace bets)
+
+| # | Feature | Bounded context |
+|---|---|---|
 | [35](features/35-subscriptions.md) | Saved searches → match notifications | `subscriptions/` |
 | [36](features/36-notifications.md) | Push + in-app notifications | `notifications/` |
 | [37](features/37-garage.md) | My Garage (cars I own / dream of) | `identity/` |
 | [38](features/38-showroom.md) | Dealership showroom (public page) | `identity/` + `apps/web` |
 | [39](features/39-content-blogs.md) | Bortzhurnal (blog posts) | `content/` |
-| [40](features/40-admin.md) | Admin dashboard | `admin/` + `apps/admin` |
+| [40](features/40-admin.md) | Full admin dashboard expansion | `admin/` + `apps/admin` |
 
-## Features (Phase 2)
+## Features (trust and premium bets)
 
 | # | Feature | Bounded context |
 |---|---|---|
 | [50](features/50-reports-tier.md) | Inspection reports + 3-tier system | `reports/` |
 | [51](features/51-pdf-export.md) | PDF generation for reports | `reports/` |
 
-## Features (Phase 3)
+## Features (premium media bets)
 
 | # | Feature | Bounded context |
 |---|---|---|
@@ -67,9 +73,9 @@ Then pick a feature:
 |---|---|
 | [60](flows/60-first-time-user.md) | Anonymous browse → action → OTP → in |
 | [61](flows/61-create-listing.md) | Sell button → wizard → publish → shared link |
-| [62](flows/62-buy-flow.md) | Browse → favorite → chat → meet |
+| [62](flows/62-buy-flow.md) | Browse → contact → meet |
 | [63](flows/63-share-listing-in-chat.md) | Deep link round trip |
-| [64](flows/64-saved-search-match.md) | Match → push → app open → listing |
+| [64](flows/64-saved-search-match.md) | Post-MLP saved-search match |
 | [65](flows/65-admin-moderation.md) | Report received → review → action |
 
 ## UI / design
@@ -99,6 +105,7 @@ Per-component specs live in [`ui/components/`](ui/components/).
 | [83](ops/83-legal.md) | Legal documents (Privacy Policy + Terms) |
 | [84](ops/84-launch-plan.md) | Launch / cutover plan |
 | [85](ops/85-launch-analytics-plan.md) | Launch analytics and scaling plan |
+| [86](ops/86-admin-bootstrap-runbook.md) | Admin bootstrap runbook |
 
 ## How to write a PRD page
 
@@ -136,3 +143,14 @@ Every page follows this skeleton:
 ```
 
 Keep pages 1-3 pages each. Smaller = under-specified. Bigger = nobody reads them.
+
+## Closing a phase or beta gate
+
+At a phase boundary, run a documentation closeout before creating the next wave of sprint issues:
+
+1. Reconcile roadmap status against shipped sprint retros and closed parent/child issues.
+2. Check every post-MLP candidate has a PRD/flow home and trigger to build.
+3. Remove or relabel orphan issues that imply Phase 1 work but are really Phase 2/3 bets.
+4. Confirm `CONTEXT-MAP.md` indexes every current `CONTEXT.md`.
+5. Confirm changed invariants landed with matching `CONTEXT.md` updates.
+6. Add an ADR only for material capability movement or a surprising architectural trade-off; routine deferred-feature placement does not need one.

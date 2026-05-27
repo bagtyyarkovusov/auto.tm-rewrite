@@ -4,6 +4,8 @@
 
 Users save filter criteria; when a matching listing is created, they get a push notification (debounced, bundled). Auto.ru calls this "Поиски" (in Favorites tab).
 
+**MLP status:** deferred by [ADR-0027](../../adr/0027-mlp-beta-scope.md). Build after beta users repeatedly perform the same searches manually.
+
 ## Why it exists
 
 Maral (first-time buyer) is browsing for the right car, but the right one isn't listed yet. Without saved searches, she'd check the app every day or give up. With saved searches, she stays in the app's mindshare without effort — the app pings her.
@@ -71,7 +73,7 @@ Location filters are saved as catalog IDs only. If the source search includes a 
 
 ## Phase
 
-**Phase 1.**
+**Post-MLP marketplace bet.**
 
 ## Out of scope
 

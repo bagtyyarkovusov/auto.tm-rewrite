@@ -2,7 +2,7 @@
 
 ## Summary
 
-The **headline MVP feature**. 1:1 chat between buyer and seller, scoped to a specific listing, with text/image/post-card messages, read receipts, typing, presence, and block-user. Real-time via Socket.IO; offline delivery via FCM/APNS push.
+Buyer-to-seller contact scoped to a listing. The MLP beta ships a simple text thread so the market loop is observable. Report-from-thread is not part of S6 unless that sprint is explicitly reshaped; otherwise message reports ship with a later rich-chat/moderation bet. Rich chat — image messages, post-card messages, read receipts, typing, presence, Socket.IO realtime, quick replies, and push delivery — is a post-MLP bet.
 
 ## Why it exists
 
@@ -67,6 +67,7 @@ Tap → fills the composer (editable before send).
 - From the chat header menu (⋯): Block user, Report message
 - Block → no further messages can be sent in either direction; existing history preserved for moderation
 - Report → admin queue; original messages stay; admin can act
+- MLP placement: report-from-thread is not part of S6/S7 unless S6 is explicitly reshaped. When shaped, Conversations owns message/report context, deleted-message behavior, and surrounding-message excerpts; Admin owns queue display, resolution, and audit.
 
 ### Delete a message
 
@@ -84,7 +85,9 @@ Tap → fills the composer (editable before send).
 | Chat thread | Many messages | Infinite scroll up to load history |
 | Chat thread | Other side typing | Dots animation under last message |
 | Chat thread | Network offline | Yellow banner; new sends disabled; already-pending outbox items retry on reconnect |
-| Chat thread | Listing sold | System message: "This listing was marked sold by the seller." Composer remains but disabled (can re-enable for follow-up — TBD) |
+| Chat thread | Listing sold | System message: "This listing was marked sold by the seller." Existing history remains readable; new contact/messages disabled in the MLP. |
+| Chat thread | Listing banned | Banner: "This listing is no longer available." Existing history remains readable; new contact/messages disabled. |
+| Chat thread | Participant suspended | Generic unavailable/account-restricted banner. Existing history remains readable; new contact/messages disabled. |
 | Chat thread | Blocked | Banner: "You blocked this user." + Unblock button |
 | Chat thread | Reported | Owner side: "Reported. We'll review." Banner. |
 | Composer | Image attached | Preview thumbnail + remove × |
@@ -103,10 +106,13 @@ Tap → fills the composer (editable before send).
 - [ADR-0001](../../adr/0001-architecture.md) — Conversations as bounded context
 - [ADR-0002](../../adr/0002-stack.md) — Socket.IO via NestJS Gateway
 - [ADR-0009](../../adr/0009-notifications.md) — Offline → FCM/APNS push
+- [ADR-0027](../../adr/0027-mlp-beta-scope.md) — MLP beta scope; simple text contact first
+- MLP moderation decision: S7 listing bans and user suspensions do not auto-close conversations. They make the affected listing/thread read-only for contact/message sends while preserving existing conversation history. Send/contact checks are synchronous against current listing status and user suspension state. S7 moderation events are not consumed by conversations, and S7 emits no conversation system messages from moderation; future system messages or thread policy changes require a shaped rich-chat/moderation sprint.
+- Deferred report decision: message reports belong to the rich-chat/moderation bet. They should not be implemented by adding a generic S7 `message` report target until Conversations has a clear message deletion policy, context excerpt contract, and admin-visible privacy boundary.
 
 ## Phase
 
-**Phase 1.**
+**Phase 1 MLP beta for simple text contact.** Rich realtime chat remains the target capability for a later bet.
 
 ## Out of scope
 
@@ -121,6 +127,6 @@ Tap → fills the composer (editable before send).
 
 ## Open questions
 
-- "Sold" state — chat fully closed, or can buyer still message? (Likely: stays open for "could you let me know if it falls through?" use case)
+- Post-MLP sold-listing follow-up: whether to allow messages after a sold event remains a rich-chat decision. MLP keeps sold listing threads readable but disables new contact/messages.
 - Listing-card preview rendering in the WhatsApp share — handled via OG meta in public web (Feature 38)
 - Response time SLA shown on seller profile — what threshold gets the "fast responder" badge?

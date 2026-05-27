@@ -4,7 +4,6 @@ import { View } from "react-native";
 import {
   Sheet,
   SheetContent,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
@@ -14,20 +13,17 @@ interface WizardOverflowMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDiscard: () => void;
-  children: React.ReactNode;
 }
 
 export function WizardOverflowMenu({
   open,
   onOpenChange,
   onDiscard,
-  children,
 }: WizardOverflowMenuProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent>
-        <View className="gap-2">
+      <SheetContent style={{ height: 200 }}>
+        <View className="h-[120px] justify-center">
           <Button
             variant="ghost"
             className="h-[52px] flex-row items-center justify-start gap-3 rounded-lg px-3"

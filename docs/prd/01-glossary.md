@@ -17,7 +17,7 @@ Domain language used across PRD, code, and conversation. When introducing a new 
 
 | Term | Definition |
 |---|---|
-| **Listing** | A car ad. Owned by a User. May be `publishedAsDealership` (shows dealership branding + PRO badge). Goes through states: `draft → active → sold | archived | reported | banned`. |
+| **Listing** | A car ad. Owned by a User. May be `publishedAsDealership` (shows dealership branding + PRO badge). Goes through states: `draft → active → sold | archived | reported | banned`. In S7, reports create `ContentReport` rows and do not automatically move active listings to `reported`. |
 | **ListingMedia** | Photos / videos / orbit-photos attached to a Listing. Photos: max 20. Video: max 1, ≤60s. |
 | **Draft** | Saved-but-not-yet-published listing. Auto-restored on next listing-create attempt. |
 | **Favorite** | User-saved listing reference. Auth-only. |

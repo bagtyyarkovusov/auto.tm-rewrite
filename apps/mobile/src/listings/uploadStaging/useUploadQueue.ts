@@ -3,6 +3,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { usePresignUpload } from "../../api/uploads/usePresignUpload";
+import { ApiError } from "../../api/client";
 
 import { setupUploadResume } from "./appStateResume";
 import { useAsyncCounter } from "./useAsyncCounter";
@@ -42,21 +43,28 @@ async function verifyStagingFileExists(localUri: string): Promise<boolean> {
   return fileInfo.exists;
 }
 
+const UPLOAD_TIMEOUT_MS = 60_000;
+
 async function uploadFileToPresignedUrl(
   uploadUrl: string,
   localUri: string,
 ): Promise<void> {
-  const uploadResult = await FileSystem.uploadAsync(
-    uploadUrl,
-    localUri,
-    {
-      httpMethod: "PUT",
-      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-      headers: {
-        "Content-Type": "image/jpeg",
-      },
+  const uploadPromise = FileSystem.uploadAsync(uploadUrl, localUri, {
+    httpMethod: "PUT",
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      "Content-Type": "image/jpeg",
     },
+  });
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new ApiError("NETWORK_ERROR", 0, "Upload timed out")),
+      UPLOAD_TIMEOUT_MS,
+    ),
   );
+
+  const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
 
   if (uploadResult.status >= 400) {
     throw new Error(`PUT failed: ${uploadResult.status}`);
@@ -69,7 +77,7 @@ export function useUploadQueue(
 ) {
   const [queue, setQueue] = useState<UploadQueue>({ stagingKey, photos: [] });
   const { increment: startCompression, decrement: endCompression, isActive: isCompressing } = useAsyncCounter();
-  const [isUploading, setIsUploading] = useState(false);
+  const { increment: startUpload, decrement: endUpload, isActive: isUploading } = useAsyncCounter();
 
   const initializedStagingKey = useRef<string | null>(null);
   const presignMutation = usePresignUpload();
@@ -171,7 +179,7 @@ export function useUploadQueue(
 
       try {
         transitionToPresigned(photoId);
-        setIsUploading(true);
+        startUpload();
 
         const presignResult = await presignMutation.mutateAsync({
           kind: "image",
@@ -197,7 +205,7 @@ export function useUploadQueue(
         const uploadError = buildUploadError(err);
         transitionToFailed(photoId, uploadError);
       } finally {
-        setIsUploading(false);
+        endUpload();
       }
     },
     [presignMutation, transitionToFailed, transitionToPresigned, transitionToUploading, transitionToUploaded],

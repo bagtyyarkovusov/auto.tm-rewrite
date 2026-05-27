@@ -8,45 +8,45 @@ Five tabs. Center button is the visual "do something" CTA.
 
 | Tab | Label (RU) | Label (TK) | Label (EN) | Default route |
 |---|---|---|---|---|
-| 1 | Поиск | Gözle | Search | Feed (personalized listings) |
-| 2 | Избранное | Saýlanan | Favorites | Favorites + Saved Searches + Comparisons (Phase 3) |
+| 1 | Поиск | Gözle | Search | Feed (latest listings + MLP filters) |
+| 2 | Избранное | Saýlanan | Favorites | Post-MLP; can be hidden in MLP beta |
 | 3 | + | + | + | Sell entry point |
-| 4 | Сообщения | Habarlar | Chat | Conversation list (with unread badge) |
-| 5 | Сервисы | Hyzmatlar | Services | Profile + Garage + Settings + Blog + About |
+| 4 | Сообщения | Habarlar | Messages | Simple contact threads |
+| 5 | Сервисы | Hyzmatlar | Services | Profile + Settings + About |
 
 ### Mobile route map
 
 ```
 /(tabs)/
   index                Feed
-  favorites            Saved searches + favorites
-  sell                 Sell entry — buttons: "Sell from Garage" / "New listing"
-  chat                 Conversation list
+  favorites            Post-MLP favorites/saved searches
+  sell                 Sell entry — New listing
+  chat                 Simple contact thread list
   services             Profile menu
 
 /(auth)/
   phone                Phone entry
   otp                  OTP code entry
-  totp                 Admin TOTP (admin-flagged users)
+  totp                 Admin TOTP (required if admin UI exposed)
 
 /(public)/
   listings/[id]        Listing detail
-  dealers/[slug]       Dealer showroom
-  blog/[id]            Blog post
+  dealers/[slug]       Post-MLP dealer showroom
+  blog/[id]            Post-MLP blog post
 
 /sell/wizard           Listing wizard (steps 1-7)
 /sell/wizard/[step]    Specific step deep link
 /me                    My profile
-/me/garage             My Garage
-/me/garage/[id]        Garage vehicle detail
+/me/garage             Post-MLP My Garage
+/me/garage/[id]        Post-MLP Garage vehicle detail
 /me/listings           My listings
-/me/saved-searches     My saved searches
-/me/notifications      Notification preferences
+/me/saved-searches     Post-MLP my saved searches
+/me/notifications      Post-MLP notification preferences
 /me/settings           App settings (theme, language)
 /me/edit               Edit profile
-/dealers/me            "My dealership" if user is a member
+/dealers/me            Post-MLP "My dealership" if user is a member
 
-/chat/[conversationId] Chat thread
+/chat/[conversationId] Simple text contact thread
 ```
 
 ## Mobile navigation patterns
@@ -63,18 +63,20 @@ Sidebar layout. Top-bar shows admin's name + current TOTP state + logout.
 | Route | Purpose |
 |---|---|
 | `/login` | Phone OTP + TOTP entry |
-| `/dashboard` | Overview: active counts, queues, gateway health |
-| `/listings` | List + moderate listings (filter by status / region / brand) |
-| `/listings/[id]` | View + actions on a listing |
-| `/users` | List users, search, suspend |
-| `/users/[id]` | User detail, listings owned, suspend action |
-| `/dealers` | List dealerships + verify |
-| `/dealers/[id]` | Dealership detail, members, verify/unverify |
-| `/notifications` | Send notification + history view + stats |
-| `/sms` | Phone fleet health, per-phone status, recent SMS log |
-| `/catalog` | Brand / Model / Generation / Color / Region CRUD (trilingual editor) |
-| `/audit` | Audit log search + filter + export |
-| `/settings` | Admin profile + TOTP re-enroll |
+| `/reports` | MLP report queue |
+| `/reports/[id]` | MLP report detail + actions |
+| `/listings/[id]` | MLP listing moderation actions |
+| `/users/[id]` | MLP user suspension action |
+| `/audit` | MLP audit log |
+| `/dashboard` | Post-MLP overview: active counts, queues, gateway health |
+| `/listings` | Post-MLP listing table with filters |
+| `/users` | Post-MLP user search/list |
+| `/dealers` | Post-MLP dealership verification |
+| `/dealers/[id]` | Post-MLP dealership detail |
+| `/notifications` | Post-MLP notification broadcast |
+| `/sms` | Post-MLP phone fleet health UI |
+| `/catalog` | Post-MLP catalog CRUD UI unless beta-critical |
+| `/settings` | Post-MLP admin profile + TOTP re-enroll |
 
 Phase 2 additions:
 | `/reports` | Inspection reports — pending, published, drafts |
@@ -88,14 +90,14 @@ Minimal — only what's needed for OG / SEO / share-link landing.
 
 | Route | Purpose |
 |---|---|
-| `/[lang]` | Landing — hero, features, "Get the app" CTA, app store badges |
+| `/[lang]` | MLP landing — simple browse/contact CTA |
 | `/[lang]/listings/[id]` | Listing detail (server-rendered with full OG) |
-| `/[lang]/dealers/[slug]` | Dealer showroom (public) |
-| `/[lang]/blog/[id]` | Blog post (read-only) |
+| `/[lang]/dealers/[slug]` | Post-MLP dealer showroom (public) |
+| `/[lang]/blog/[id]` | Post-MLP blog post (read-only) |
 | `/[lang]/legal/privacy` | Privacy policy |
 | `/[lang]/legal/terms` | Terms of service |
-| `/.well-known/apple-app-site-association` | iOS Universal Links manifest |
-| `/.well-known/assetlinks.json` | Android App Links manifest |
+| `/.well-known/apple-app-site-association` | Post-MLP or beta-required iOS Universal Links manifest |
+| `/.well-known/assetlinks.json` | Post-MLP or beta-required Android App Links manifest |
 
 `/<no-lang>/path` redirects to user's preferred locale (default `/ru`).
 
@@ -106,9 +108,9 @@ URLs that open the mobile app via Universal Links / App Links:
 | Path | What happens |
 |---|---|
 | `/listings/*` | Open listing detail in app |
-| `/dealers/*` | Open dealer page in app |
-| `/blog/*` | Open blog post in app |
-| `/chat/*` | Open chat thread (auth-gated; redirect to login if not authed) |
+| `/dealers/*` | Post-MLP dealer page in app |
+| `/blog/*` | Post-MLP blog post in app |
+| `/chat/*` | Open contact thread (auth-gated; redirect to login if not authed) |
 
 URLs that always open in browser (never in app):
 
@@ -118,7 +120,7 @@ URLs that always open in browser (never in app):
 | `/legal/*` | Legal docs are web canonical |
 | `/.well-known/*` | OS-only fetches |
 
-## Notification deep-link targets
+## Notification deep-link targets (post-MLP)
 
 When a push notification is tapped, the app routes to:
 
@@ -137,9 +139,9 @@ Each major surface has an explicit empty state — see [`ui/75-illustration-styl
 
 - Feed (anonymous, no recent views): "Find your next car"
 - Feed (authed, no preferences): "Personalize your feed" + filter CTA
-- Favorites: "Tap ♥ on listings you like"
+- Favorites: "Tap ♥ on listings you like" (post-MLP)
 - Conversations: "Start by messaging a seller"
-- Saved searches: "Save searches to get notified"
+- Saved searches: "Save searches to get notified" (post-MLP)
 - My listings: "List your first car" + Sell CTA
-- Garage: "Add a car to your garage" + benefits explainer
-- Notifications feed: "All caught up"
+- Garage: "Add a car to your garage" + benefits explainer (post-MLP)
+- Notifications feed: "All caught up" (post-MLP)

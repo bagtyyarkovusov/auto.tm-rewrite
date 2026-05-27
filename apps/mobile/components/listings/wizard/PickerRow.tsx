@@ -40,12 +40,14 @@ export function PickerRow({
         disabled={isDisabled}
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled }}
-        className={`flex-row items-center justify-between border border-border rounded-md bg-card px-3 h-[52px]${isDisabled ? " opacity-50" : ""}`}
+        accessibilityLabel={`${label}: ${value ?? placeholder}`}
+        className={`flex-row items-center justify-between border border-border rounded-lg bg-card px-4 h-[52px] active:bg-muted/60 ${isDisabled ? " opacity-50" : ""}`}
       >
         <Text
           className={
-            value ? "text-base text-foreground" : "text-base text-muted-foreground"
+            value ? "text-base text-foreground font-medium" : "text-base text-muted-foreground"
           }
+          numberOfLines={1}
         >
           {value ?? placeholder}
         </Text>
@@ -65,7 +67,9 @@ export function PickerRow({
         <Text className="text-sm text-muted-foreground">{helper}</Text>
       )}
       {error && (
-        <Text className="text-sm text-destructive">{error}</Text>
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
       )}
     </View>
   );

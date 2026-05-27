@@ -63,6 +63,14 @@ All running on Server B.
 - Messages sent per minute
 - Connection churn (connects + disconnects per minute)
 
+### Admin moderation
+
+- Pending content report count
+- Oldest pending content report age
+- Moderation action failure rate by action
+- Audit write failures
+- TOTP failure and throttle counters
+
 ## Alert rules
 
 Severity tiers:
@@ -74,6 +82,8 @@ Severity tiers:
 | **Medium** | Within 24 hours | Telegram (silent / no notification sound) |
 | **Low** | Daily digest | Telegram once/day |
 
+Until a formal on-call rotation exists, the release operator is the primary responder for the first 24 hours after a deploy. Outside that window, the founder/operator owning the beta invite cohort is primary. If neither can respond, pause the affected write path with the relevant beta flag before attempting manual repair.
+
 ### Critical (page immediately)
 
 - API error rate > 5% for 5 min
@@ -82,6 +92,7 @@ Severity tiers:
 - Disk free < 5% on Server A or Server B
 - All 5 OTP phones offline simultaneously for > 5 min (no OTPs deliverable)
 - Postgres replica lag > 5 minutes
+- Restore drill failure during a launch gate or schema-change readiness check
 
 ### High
 
@@ -93,6 +104,8 @@ Severity tiers:
 - FCM/APNS push failure rate > 10% for 15 min
 - Disk free < 10%
 - Server A memory > 90% for 10 min
+- Any audit write failure for an otherwise successful admin moderation action
+- Telegram alert delivery failure during a drill
 
 ### Medium
 
@@ -100,12 +113,28 @@ Severity tiers:
 - BullMQ queue depth > 200 for 30 min
 - Single FCM/APNS push failure rate > 5% sustained 1 hour
 - Pending content reports > 5 sitting unreviewed for > 1 hour
+- Oldest pending content report age > 24 hours during beta
+- Moderation action failure rate > 5% for 15 min
 
 ### Low
 
 - Failed login attempts spike (potential brute force)
 - New user signups (daily count, for dashboard)
 - Database table growth rate alerts
+
+Moderation-specific Telegram alerts beyond pending count, oldest pending age, moderation action failure rate, and audit write failures are post-MLP unless beta safety explicitly reshapes them. Future rules should consume `ContentReportCreated` or aggregate thresholds such as repeated targets, pending-report age, or admin-set severity; reporters do not provide an `urgent` flag.
+
+## Required drills
+
+Before private beta, and before wider public launch, run and record these drills:
+
+- **Alert delivery drill** — force a harmless test alert through Grafana to Telegram; confirm ack in the ops channel.
+- **Rollback drill** — deploy a known-good test version in staging/prod-like infra, roll back, and verify health.
+- **Restore drill** — restore a recent backup into staging/prod-like infra and run the deployment smoke set.
+- **Feature-pause drill** — toggle each beta kill switch in staging/prod-like infra and verify the API blocks writes with `FEATURE_DISABLED` while allowed reads still work.
+- **Moderation incident drill** — simulate a bad moderation action, reverse it through `unban` or `unsuspend`, verify a new audit row, and confirm the original audit row remains intact.
+
+Record drill date, operator, environment, result, and follow-up issue links. A failed drill blocks beta launch unless S8 explicitly records the accepted risk and mitigation.
 
 ## Alert format (Telegram)
 
@@ -133,6 +162,7 @@ The Telegram bot supports interactive commands:
 3. Check recent deploys (last 1 hour) — most spikes correlate to a release
 4. If recent deploy: consider rollback ([80-deployment-runbook.md](80-deployment-runbook.md))
 5. If not: check DB health, look for slow queries, check Redis
+6. If a single write path is causing the spike, pause that path with the relevant beta flag before manual data repair
 
 ### SMS phone offline
 

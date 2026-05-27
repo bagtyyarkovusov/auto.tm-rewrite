@@ -1,4 +1,4 @@
-import { ChevronLeft, MoreVertical, AlertCircle, RefreshCw } from "lucide-react-native";
+import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
-import { WizardOverflowMenu } from "@/components/listings/wizard/WizardOverflowMenu";
 import { cn } from "@/lib/utils";
 
 interface FooterAction {
@@ -104,21 +103,24 @@ function WizardHeader({
 
   return (
     <View className="border-b border-border px-5 py-3 gap-2">
-      {/* Row 1: nav + position marker + inline save status + overflow */}
+      {/* Row 1: nav + position marker + inline save status + cancel */}
       <View className="flex-row items-center justify-between">
-        <View className="w-10">
-          {canGoBack && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10"
-              onPress={onBack}
-              accessibilityLabel="Go back"
-            >
-              <Icon as={ChevronLeft} className="size-6 text-foreground" />
-            </Button>
-          )}
-        </View>
+        {canGoBack ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 px-0 -ml-1"
+            onPress={onBack}
+            accessibilityLabel="Go back"
+          >
+            <View className="flex-row items-center gap-0.5">
+              <Icon as={ChevronLeft} className="size-5 text-foreground" />
+              <Text className="text-sm font-medium text-foreground">Back</Text>
+            </View>
+          </Button>
+        ) : (
+          <View className="w-16" />
+        )}
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
           <Text className="text-xs text-muted-foreground">
@@ -141,17 +143,15 @@ function WizardHeader({
           )}
         </View>
 
-        <View className="w-10 items-end">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10"
-            onPress={onOpenDiscard}
-            accessibilityLabel="More options"
-          >
-            <Icon as={MoreVertical} className="size-5 text-foreground" />
-          </Button>
-        </View>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-10 px-0 -mr-1"
+          onPress={onOpenDiscard}
+          accessibilityLabel="Cancel and discard draft"
+        >
+          <Text className="text-sm font-medium text-muted-foreground">Cancel</Text>
+        </Button>
       </View>
 
       {/* Row 2: the prominent step title — the ONE title */}
@@ -365,7 +365,7 @@ function DiscardConfirmationDialog({
         ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDiscarding} onPress={() => onOpenChange(false)}>
-            <Text>Cancel</Text>
+            <Text>Keep editing</Text>
           </AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive active:bg-destructive/90"
@@ -380,7 +380,7 @@ function DiscardConfirmationDialog({
                 <Text className="text-destructive-foreground">Discarding…</Text>
               </View>
             ) : (
-              <Text className="text-destructive-foreground">Discard draft</Text>
+              <Text className="text-destructive-foreground">Discard</Text>
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -413,14 +413,13 @@ export function WizardLayout({
   disabledReason,
   secondaryAction,
   publishLabel = "Publish",
-  discardTitle = "Discard draft?",
-  discardDescription = "This removes your draft and staged photos for this listing.",
+  discardTitle = "Discard listing?",
+  discardDescription = "Your draft and photos will be deleted. This cannot be undone.",
   isDiscarding = false,
   discardError = null,
   uploadStatus,
 }: WizardLayoutProps) {
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
-  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -431,7 +430,7 @@ export function WizardLayout({
         stepCount={stepCount}
         canGoBack={canGoBack}
         onBack={onBack}
-        onOpenDiscard={() => setShowOverflowMenu(true)}
+        onOpenDiscard={() => setShowDiscardDialog(true)}
         progressPercent={progressPercent}
         saveStatus={saveStatus}
         onRetrySave={onRetrySave}
@@ -443,52 +442,52 @@ export function WizardLayout({
         onRetrySave={onRetrySave}
       />
 
-      <ScrollView className="flex-1 px-5">{children}</ScrollView>
+      {/* Content area: flex-1 so footer sticks to bottom when content is short,
+          ScrollView without flex-1 so it shrinks to content height with no gap */}
+      <View className="flex-1">
+        <ScrollView>
+          <View className="px-5">{children}</View>
+        </ScrollView>
 
-      {uploadStatus && (uploadStatus.inflight > 0 || uploadStatus.failed > 0) && (
-        <View className="mx-5 mb-2 flex-row items-center gap-2 rounded-lg bg-muted px-3 py-2">
-          {uploadStatus.inflight > 0 && (
-            <View className="flex-row items-center gap-1.5">
-              <ActivityIndicator size="small" />
-              <Text className="text-xs text-muted-foreground">
-                {uploadStatus.inflight} uploading
-              </Text>
+        <View className="mt-auto">
+          {uploadStatus && (uploadStatus.inflight > 0 || uploadStatus.failed > 0) && (
+            <View className="mx-5 mb-2 flex-row items-center gap-2 rounded-lg bg-muted px-3 py-2">
+              {uploadStatus.inflight > 0 && (
+                <View className="flex-row items-center gap-1.5">
+                  <ActivityIndicator size="small" />
+                  <Text className="text-xs text-muted-foreground">
+                    {uploadStatus.inflight} uploading
+                  </Text>
+                </View>
+              )}
+              {uploadStatus.failed > 0 && (
+                <View className="flex-row items-center gap-1.5">
+                  <Icon as={AlertCircle} className="size-3.5 text-destructive" />
+                  <Text className="text-xs text-destructive">
+                    {uploadStatus.failed} failed
+                  </Text>
+                </View>
+              )}
             </View>
           )}
-          {uploadStatus.failed > 0 && (
-            <View className="flex-row items-center gap-1.5">
-              <Icon as={AlertCircle} className="size-3.5 text-destructive" />
-              <Text className="text-xs text-destructive">
-                {uploadStatus.failed} failed
-              </Text>
-            </View>
-          )}
+
+          <WizardFooter
+            isLastStep={isLastStep}
+            canContinue={canContinue}
+            canPublish={canPublish}
+            canGoBack={canGoBack}
+            onBack={onBack}
+            onContinue={onContinue}
+            onPublish={onPublish}
+            onReturnToReview={onReturnToReview}
+            mode={mode}
+            editDetourActive={editDetourActive}
+            disabledReason={disabledReason}
+            secondaryAction={secondaryAction}
+            publishLabel={publishLabel}
+          />
         </View>
-      )}
-
-      <WizardFooter
-        isLastStep={isLastStep}
-        canContinue={canContinue}
-        canPublish={canPublish}
-        canGoBack={canGoBack}
-        onBack={onBack}
-        onContinue={onContinue}
-        onPublish={onPublish}
-        onReturnToReview={onReturnToReview}
-        mode={mode}
-        editDetourActive={editDetourActive}
-        disabledReason={disabledReason}
-        secondaryAction={secondaryAction}
-        publishLabel={publishLabel}
-      />
-
-      <WizardOverflowMenu
-        open={showOverflowMenu}
-        onOpenChange={setShowOverflowMenu}
-        onDiscard={() => setShowDiscardDialog(true)}
-      >
-        <View />
-      </WizardOverflowMenu>
+      </View>
 
       <DiscardConfirmationDialog
         open={showDiscardDialog}

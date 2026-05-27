@@ -260,4 +260,68 @@ describe("apiClient", () => {
       });
     });
   });
+
+  describe("timeout", () => {
+    function mockFetchThatObservesAbort() {
+      return vi.spyOn(globalThis, "fetch").mockImplementation((_url, init) => {
+        return new Promise((_resolve, reject) => {
+          const signal = (init as RequestInit | undefined)?.signal;
+          if (signal?.aborted) {
+            const err = new Error("Aborted");
+            err.name = "AbortError";
+            reject(err);
+            return;
+          }
+          signal?.addEventListener("abort", () => {
+            const err = new Error("Aborted");
+            err.name = "AbortError";
+            reject(err);
+          });
+        });
+      });
+    }
+
+    it("throws NETWORK_ERROR when request exceeds timeout", async () => {
+      mockedLoadAuthSession.mockResolvedValue(null);
+      mockFetchThatObservesAbort();
+
+      const error = await apiClient
+        .get("/test", undefined, { timeout: 50 })
+        .catch((e: ApiError) => e);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
+        code: "NETWORK_ERROR",
+        status: 0,
+        message: "Request timed out",
+      });
+    });
+
+    it("throws NETWORK_ERROR when refresh request times out", async () => {
+      mockedLoadAuthSession.mockResolvedValue({
+        accessToken: "old-token",
+        refreshToken: "refresh-123",
+        user: {
+          id: "u1",
+          phone: "+99361000000",
+          displayName: null,
+          role: "buyer" as const,
+        },
+        storedAt: new Date().toISOString(),
+      });
+
+      mockFetchThatObservesAbort();
+
+      const error = await apiClient
+        .get("/test", undefined, { timeout: 50 })
+        .catch((e: ApiError) => e);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
+        code: "NETWORK_ERROR",
+        status: 0,
+        message: "Request timed out",
+      });
+    });
+  });
 });

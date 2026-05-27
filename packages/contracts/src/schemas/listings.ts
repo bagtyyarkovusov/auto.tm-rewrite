@@ -131,6 +131,7 @@ export const ListingDraftPayloadSchema = z.object({
   allowChat: z.boolean().optional(),
   acceptsExchange: z.boolean().optional(),
   installmentAvailable: z.boolean().optional(),
+  validatedSteps: z.array(z.string()).optional(),
 });
 export type ListingDraftPayload = z.infer<typeof ListingDraftPayloadSchema>;
 

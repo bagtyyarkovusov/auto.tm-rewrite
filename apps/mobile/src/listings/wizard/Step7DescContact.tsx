@@ -1,4 +1,5 @@
 import { View } from "react-native";
+import { Phone, MessageSquare } from "lucide-react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
 
 import { useBrands } from "../../api/catalog/useBrands";
@@ -9,6 +10,7 @@ import { useCities } from "../../api/catalog/useCities";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
+import { Icon } from "@/components/ui/icon";
 
 interface Step7DescContactProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -46,7 +48,7 @@ function ReviewSummary({
   const { brandName, modelName, cityName } = useReviewSummary(payload);
 
   return (
-    <View className="gap-1 rounded-lg bg-muted p-3">
+    <View className="gap-1 rounded-lg border-l-4 border-l-primary bg-muted/60 p-3">
       <Text className="text-sm font-medium text-foreground">
         {brandName} {modelName} {payload.year}
       </Text>
@@ -75,9 +77,14 @@ function DescriptionInput({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
-        Description *
-      </Text>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-sm font-medium text-foreground">
+          Description *
+        </Text>
+        <Text className="text-xs text-muted-foreground">
+          {descriptionLength}/2000
+        </Text>
+      </View>
       {wrapDisabled(
         <Input
           value={payload.description ?? ""}
@@ -90,21 +97,15 @@ function DescriptionInput({
           editable={!disabled}
           className="h-auto min-h-[96px] py-2"
           maxLength={2000}
+          accessibilityLabel="Vehicle description"
         />,
         disabled,
       )}
-      <View className="flex-row items-center justify-between">
-        {fieldErrors?.description ? (
-          <Text className="text-sm text-destructive">
-            {fieldErrors.description}
-          </Text>
-        ) : (
-          <View />
-        )}
-        <Text className="text-xs text-muted-foreground">
-          {descriptionLength}/2000
+      {fieldErrors?.description ? (
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          {fieldErrors.description}
         </Text>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -134,6 +135,7 @@ function ContactPhoneInput({
           placeholder={defaultPhone ? `Default: ${defaultPhone}` : "Enter phone number"}
           editable={!disabled}
           keyboardType="phone-pad"
+          accessibilityLabel="Contact phone number"
         />,
         disabled,
       )}
@@ -156,17 +158,40 @@ function ContactMethods({
 
   return (
     <>
-      <View className="gap-4">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-base text-foreground">Calls</Text>
+      <View className="rounded-xl border border-border p-4 gap-1">
+        <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+          Contact methods
+        </Text>
+
+        <View className="flex-row items-center justify-between py-1">
+          <View className="flex-row items-center gap-3">
+            <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+              <Icon as={Phone} className="size-4 text-foreground" />
+            </View>
+            <View className="gap-0.5">
+              <Text className="text-base text-foreground">Phone calls</Text>
+              <Text className="text-xs text-muted-foreground">Buyers can call you directly</Text>
+            </View>
+          </View>
           <Switch
             checked={allowCalls}
             onCheckedChange={(v) => onChange({ allowCalls: v })}
             disabled={disabled}
           />
         </View>
-        <View className="flex-row items-center justify-between">
-          <Text className="text-base text-foreground">Chat</Text>
+
+        <View className="h-px bg-border my-1" />
+
+        <View className="flex-row items-center justify-between py-1">
+          <View className="flex-row items-center gap-3">
+            <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+              <Icon as={MessageSquare} className="size-4 text-foreground" />
+            </View>
+            <View className="gap-0.5">
+              <Text className="text-base text-foreground">In-app chat</Text>
+              <Text className="text-xs text-muted-foreground">Chat when messaging launches</Text>
+            </View>
+          </View>
           <Switch
             checked={allowChat}
             onCheckedChange={(v) => onChange({ allowChat: v })}
@@ -175,13 +200,9 @@ function ContactMethods({
         </View>
       </View>
 
-      <Text className="text-sm text-muted-foreground">
-        Chat will become available when messaging launches.
-      </Text>
-
       {!hasContactMethod && (
-        <Text className="text-sm text-destructive">
-          Choose calls or chat
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          Choose at least one contact method
         </Text>
       )}
     </>

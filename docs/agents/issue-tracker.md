@@ -142,6 +142,8 @@ Parent PRD issues get `phase-N` + `feature` only — no triage label, since they
 - **Sprint-wide DoD** lives in `docs/prd/sprints/sprint-NN-*.md`. It's mutable; updated as understanding sharpens.
 - **Slice-specific AC** lives in the child issue body. Once a `/run-issue` agent picks it up, the body is effectively immutable for that run.
 - The two never overlap semantically: sprint DoD describes the sprint demo; slice AC describes one vertical PR.
+- For decision-heavy sprints, prefer a `Recommended child issue map` in the sprint file over copying every sprint decision into every issue body. Child issues should reference the sprint file and local `CONTEXT.md`, then restate only the acceptance criteria needed for that slice.
+- If a child issue would need more than one unrelated bounded context behavior to pass, split it. If splitting would make one behavior land without its enforcement/tests, keep it together as one vertical slice.
 
 ## Dependency tracking (`Depends on`)
 

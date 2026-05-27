@@ -32,6 +32,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0024](0024-owner-post-publish-photo-editing.md) | Owner post-publish photo editing | Accepted | 2026-05-21 |
 | [0025](0025-edit-save-atomicity.md) | Edit-mode Save changes uses sequential best-effort, not server-side atomic bundle | Accepted | 2026-05-22 |
 | [0026](0026-edit-mode-review-first-entry.md) | Edit mode opens at Review; create mode stays linear | Accepted | 2026-05-22 |
+| [0027](0027-mlp-beta-scope.md) | MLP beta scope before full marketplace MVP | Accepted | 2026-05-22 |
 
 ## Per-app ADRs
 

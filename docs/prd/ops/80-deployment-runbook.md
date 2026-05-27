@@ -12,6 +12,8 @@ Before kicking off a release:
 - [ ] `CHANGELOG.md` (or release notes) updated
 - [ ] Verify the date-time + version tag in `package.json` matches what's intended
 - [ ] Backup TM database BEFORE deploying (safety net for migration failures)
+- [ ] Confirm current beta feature-flag values are recorded before deploy (`SIGNUPS_ENABLED`, `LISTING_PUBLISH_ENABLED`, `LISTING_MUTATIONS_ENABLED`, `CONTACT_ENABLED`, `REPORT_ENTRY_ENABLED`, `ADMIN_MODERATION_ACTIONS_ENABLED`)
+- [ ] For schema-changing deploys, confirm the last successful restore drill used a staging/prod-like backup less than 30 days old
 
 ## Step 1 — Build the bundle (on self-hosted runner)
 
@@ -121,6 +123,8 @@ Check Grafana dashboard:
 - DB connections in normal range
 - WebSocket connections re-established
 
+For MLP beta, WebSocket/push checks apply only if rich chat or native push has shipped. If S6 is still text-only HTTP contact and notifications are still post-MLP, verify contact-message send/list instead.
+
 ## Step 6 — Smoke test (manual)
 
 On your phone:
@@ -128,13 +132,15 @@ On your phone:
 2. Sign in with phone OTP (verify SMS gateway works)
 3. Browse listings (verify feed renders)
 4. Tap a listing (verify detail loads)
-5. Send a chat message (verify Socket.IO works)
-6. Receive a push notification (verify FCM/APNS)
+5. Create or edit a listing if listing mutations are enabled
+6. Send a contact/message if contact is enabled
+7. Verify disabled-feature copy if any beta kill switch is intentionally off
 
 On admin:
 1. Open `admin.auto.tm`
 2. Sign in (OTP + TOTP)
-3. Navigate dashboard (verify data renders)
+3. Load reports and audit
+4. If moderation actions are enabled, run the deterministic report -> admin action -> audit -> public enforcement smoke on seeded/staging data
 
 ## Rollback
 
@@ -154,12 +160,28 @@ The `rollback.sh`:
 
 Forward-fix is almost always preferred. Restoring from backup is destructive of any data written between deploy and rollback.
 
+## Restore drill
+
+A restore drill is required before private beta and at least once every 30 days while beta data matters. It runs against staging or a prod-like clone, never directly over production as a test.
+
+Minimum successful drill:
+
+1. Take or select a recent production-like Postgres backup.
+2. Restore it into an isolated database.
+3. Run migrations to the currently deployed version.
+4. Start API against the restored database.
+5. Verify health, login with a test user, listing read, contact read/write if enabled, admin TOTP login, report list, audit list, and a sample media object reference.
+6. Record backup timestamp, restore start/end time, operator, result, and any data gaps.
+
+If restore fails or takes too long for beta operations, private beta launch is blocked until the backup path is fixed or the risk is explicitly accepted in the S8 closeout.
+
 ## Post-deploy
 
 - Update `CHANGELOG.md` with the version + summary
 - Telegram message to AutoTM channel: "v0.X.Y deployed — <summary>"
 - Monitor Grafana for 30 min
 - Close any deployment-related GitHub issues
+- Record whether rollback, restore, alert, and feature-flag drills remain current for the launch gate
 
 ## When NOT to deploy
 

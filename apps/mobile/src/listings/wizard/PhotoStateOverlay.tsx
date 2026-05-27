@@ -48,18 +48,9 @@ export function PhotoStateOverlay({
 
   if (photo.state === "uploaded" || photo.state === "attached") {
     return (
-      <>
-        <View className="absolute right-1 top-1 rounded-full bg-success-500 p-1">
-          <Icon as={Check} className="size-3 text-white" />
-        </View>
-        {index === 0 && (
-          <View className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5">
-            <Text className="text-[10px] font-medium text-white">
-              Cover
-            </Text>
-          </View>
-        )}
-      </>
+      <View className="absolute right-1 top-1 rounded-full bg-success-500 p-1">
+        <Icon as={Check} className="size-3 text-white" />
+      </View>
     );
   }
 

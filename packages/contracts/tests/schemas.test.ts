@@ -214,6 +214,14 @@ describe("ListingDraftPayloadSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts validatedSteps in payload", () => {
+    const result = ListingDraftPayloadSchema.safeParse({
+      vin: "WBA123",
+      validatedSteps: ["vin", "photos"],
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("ListingDraftSchema", () => {
@@ -616,7 +624,7 @@ describe("validateStep", () => {
     const result = validateStep("specs", { condition: "used" });
     expect(result.valid).toBe(false);
     expect(result.errors).toContain("Mileage is required for used cars");
-    expect(result.fieldErrors.mileageKm).toBe(
+    expect(result.fieldErrors["mileageKm"]).toBe(
       "Mileage is required for used cars",
     );
   });
@@ -638,9 +646,9 @@ describe("validateStep", () => {
   it("returns per-field error map for vehicle step", () => {
     const result = validateStep("vehicle", {});
     expect(result.valid).toBe(false);
-    expect(result.fieldErrors.brandId).toBe("Brand is required");
-    expect(result.fieldErrors.modelId).toBe("Model is required");
-    expect(result.fieldErrors.year).toBe("Year is required");
+    expect(result.fieldErrors["brandId"]).toBe("Brand is required");
+    expect(result.fieldErrors["modelId"]).toBe("Model is required");
+    expect(result.fieldErrors["year"]).toBe("Year is required");
   });
 
   it("returns valid for review when invoked directly", () => {

@@ -31,18 +31,19 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 
 | Section | Content |
 |---|---|
-| **What we collect** | Phone number (auth), name, profile photo (optional), location (region/city) selected by user or attached to a listing as car location, listings + content the user posts, chat messages, push token, device info (model, OS, app version), IP address (for rate limiting only), photo / video uploads, VIN (if user enters), garage vehicle data |
-| **What we do NOT collect** | We do NOT track location via GPS in MVP. We do not store raw GPS coordinates in saved searches or location analytics. We do NOT have third-party advertising SDKs. We do NOT sell data. |
+| **What we collect** | Phone number (auth), name and profile photo if enabled, location (region/city) selected by user or attached to a listing as car location, listings the user posts, simple contact-thread messages, device info needed for debugging (model, OS, app version), IP address for rate limiting/security, photo uploads, VIN if the user enters one |
+| **Future collections if features ship** | Push token (if native push ships), video uploads (if video ships), garage vehicle data (if Garage ships), blog content (if Bortzhurnal ships), inspection data (if reports ship) |
+| **What we do NOT collect** | We do NOT track location via GPS in the MLP beta. We do not store raw GPS coordinates in saved searches or location analytics. We do NOT have third-party advertising SDKs. We do NOT sell data. |
 | **Why we collect it** | Account creation, listing display, search functionality, communication between users, fraud prevention, app store policy compliance |
-| **Who can see it** | Public: name, avatar, listings, public garage, public blog posts, response time. Private: phone (masked in public), email, exact location pin (Phase 2 if added), chat messages (except admin moderation) |
-| **Sharing with third parties** | We send push notifications via Firebase Cloud Messaging (Google) and Apple Push Notification Service. These services receive the recipient's device token and the notification payload. We do not share data with advertisers, brokers, or other third parties. |
-| **Data retention** | User data retained while account is active. After account deletion: 30-day grace period, then PII removed. Listings + messages preserved with "Deleted user" attribution for audit trail. |
-| **User rights** | Right to access (export your data), right to delete (account deletion in-app), right to correct (edit profile fields), right to opt out of marketing notifications |
+| **Who can see it** | Public: name/avatar if shown, active listings, public listing photos and listing location city/region. Private: phone, contact-thread messages except admin moderation, exact location pin if a future phase adds it. Public Garage, public blog posts, response-time stats, and inspection reports are visible only if those later features ship. |
+| **Sharing with third parties** | MLP beta uses AutoTM-owned auth and hosting. If native push ships later, Firebase Cloud Messaging (Google) and Apple Push Notification Service receive the recipient's device token and notification payload. We do not share data with advertisers, brokers, or other third parties. |
+| **Data retention** | User data retained while account is active. After account deletion: 30-day grace period, then PII removed. Listings, messages, moderation reports, and audit rows are preserved with "Deleted user" / historical attribution for audit trail. S8 must verify implementation matches this before beta; the S2 hard-delete endpoint is not the beta target. |
+| **User rights** | Right to access (export your data), right to delete (account deletion in-app or documented beta support path), right to correct (edit profile/listing fields), right to opt out of marketing notifications if marketing notifications ever ship |
 | **Children's privacy** | App not intended for users under 18 (consistent with auto purchase being adult-only); we do not knowingly collect data from minors |
-| **Cookies (web only)** | Session cookies for admin login. No analytics cookies in MVP. |
+| **Cookies (web only)** | HTTP-only session cookies for admin login in `apps/admin`; `apps/api` still accepts bearer auth only. No analytics cookies in the MLP beta. |
 | **Security** | HTTPS in transit; bcrypt-hashed refresh tokens; encrypted-at-rest disk; TM-hosted servers; admin actions audit-logged |
 | **Contact** | Email + physical address for privacy inquiries |
-| **Changes to policy** | Users notified via in-app push when policy changes materially; effective date displayed |
+| **Changes to policy** | Users notified in-app or through the documented beta support channel when policy changes materially; effective date displayed |
 | **Jurisdiction** | Turkmenistan law applies |
 
 ## Terms of Service — required sections
@@ -54,13 +55,13 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 | **Acceptable use** | Listings must be for real cars user owns or represents; no scams, fraud, harassment, illegal content, intellectual property infringement |
 | **Listing accuracy** | Sellers represent their listings accurately; misrepresentation may result in suspension |
 | **Prohibited content** | Spam, duplicate listings, stolen vehicles, vehicles with active liens (without disclosure), illegal modifications |
-| **Communication** | Users agree to receive transactional notifications (OTP, chat messages); marketing notifications are opt-in |
+| **Communication** | Users agree to receive transactional messages needed to operate the service (OTP and contact-thread messages). Native push and marketing notifications require the later notification feature and marketing remains opt-in. |
 | **Disclaimer** | AutoTM is a marketplace; we do not own / inspect / warrant listed cars (except where Phase 2 inspection report explicitly applies). Transactions are between users. |
 | **Inspection reports (Phase 2)** | Reports are AutoTM's good-faith assessment; not a warranty; buyers should perform independent verification |
-| **Dealer terms** | Dealer accounts subject to additional verification; PRO badge contingent on verification status; dealers responsible for accuracy of all listings under their account |
+| **Dealer terms** | Dealer accounts, PRO badge, and dealership verification are post-MLP features. If shipped, dealers are responsible for accuracy of all listings under their account. |
 | **Termination** | Users can delete account in-app at any time; AutoTM can suspend accounts that violate these terms |
 | **Liability** | AutoTM not liable for user-to-user disputes, transactions, or content (within legal limits) |
-| **Modifications** | We may update terms; material changes communicated via in-app push |
+| **Modifications** | We may update terms; material changes communicated in-app or through the documented beta support channel |
 | **Governing law** | Turkmenistan |
 | **Contact** | Email + physical address |
 
@@ -83,11 +84,11 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 - [ ] Data Safety section (Google Play) filled in to match
 - [ ] "Account Deletion" feature: shows `/me/delete` flow (see [Feature 30](../features/30-identity.md))
 - [ ] No third-party SDKs that share data without disclosure
-- [ ] No ATT prompt needed in MVP (no ad SDKs)
+- [ ] No ATT prompt needed in the MLP beta (no ad SDKs)
 
 ## Open questions
 
-- Do we need a Cookies Policy separately, or fold into Privacy Policy? (TM doesn't strictly require; folding into Privacy is fine for MVP)
+- Do we need a Cookies Policy separately, or fold into Privacy Policy? (TM doesn't strictly require; folding into Privacy is fine for MLP beta)
 - Translation review: should TK + RU versions go through a separate legal review or is translating the EN version enough? (Likely separate review by TM lawyer)
 - DMCA / IP infringement notice mechanism — needed for App Store? (US-style DMCA isn't required in TM; add a generic "report IP violation" flow in Phase 2)
 
@@ -95,5 +96,5 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 
 - [Feature 30 — Identity](../features/30-identity.md) — account deletion implementation
 - [ADR-0022 — City-first listing location](../../adr/0022-city-first-listing-location.md) — city-level listing/search location policy
-- [ADR-0023 — First-party product analytics](../../adr/0023-first-party-product-analytics.md) — no third-party analytics SDKs in MVP
+- [ADR-0023 — First-party product analytics](../../adr/0023-first-party-product-analytics.md) — no third-party analytics SDKs in the MLP beta
 - [GRILL-OUTCOME §19](../../../GRILL-OUTCOME.md) — outstanding action item #7

@@ -3,10 +3,14 @@
 > **The "where are we?" file.** Open this first in every session. It tells you which sprint is current, what shipped before it, and what comes next.
 >
 > Sister docs:
-> - **`GRILL-OUTCOME.md`** — locked decisions (what we agreed to build)
-> - **`02-phases.md`** — scope per phase (what's in / out of each phase)
+> - **`GRILL-OUTCOME.md`** — locked original design charter
+> - **`02-phases.md`** — current phase scope
 > - **`sprints/sprint-NN-<name>.md`** — per-sprint detail (DoD, files, tests, references)
 > - **This file (`03-roadmap.md`)** — the cross-sprint trajectory + current pointer
+>
+> [ADR-0027](../adr/0027-mlp-beta-scope.md) narrows the first release to an MLP beta. Deferred features are not abandoned; they return as post-MLP bets after real usage.
+>
+> Historical sprint labels in shipped or locked artifacts are not canonical after ADR-0027. References such as "S9 admin", "S6 Garage + Dealership", or "S8 notifications" in older sprint docs should be read as historical labels unless this roadmap, a current pending sprint file, or a mutable feature PRD explicitly re-scopes the work. Do not rewrite shipped sprint plans just to rename old labels; update the active sprint/context doc when stale placement affects implementation.
 
 ---
 
@@ -17,8 +21,8 @@
 | **Sprint** | S4 — Listings CRUD |
 | **Status** | 🟡 In progress |
 | **Started** | 2026-05-17 |
-| **Phase** | 1 (Marketplace MVP) |
-| **Plan file** | Parent issue (to be created) |
+| **Phase** | 1 (MLP beta) |
+| **Plan file** | Parent issue |
 | **Sprint doc** | [`sprints/sprint-04-listings-crud.md`](sprints/sprint-04-listings-crud.md) |
 | **Milestone** | M3 — I can browse cars |
 
@@ -26,19 +30,19 @@
 
 ---
 
-## Three phases at a glance
+## Release shape
 
-| Phase | Wall-clock | Sprints | Headline outcome |
+| Phase | Planning mode | Sprints | Headline outcome |
 |---|---|---|---|
-| **Phase 1** — Marketplace MVP | ~8-10 weeks | S1-S10 | Buyers find listings → contact sellers; sellers post; admins moderate; soft launch ready |
-| **Phase 2** — Trust Layer | ~6-8 weeks | S11-S16 (TBD) | AutoTM-staffed inspections, 3-tier badge on listings, downloadable PDF reports |
-| **Phase 3** — Premium polish | ~4-6 weeks | S17-S20 (TBD) | 360° orbit photos, listing comparisons, performance + UX polish before scaling marketing |
+| **Phase 1 — MLP beta** | Fixed path | S1-S8 | Buyers find real listings, contact sellers, and admins can keep beta safe |
+| **Phase 2 — Post-MLP marketplace bets** | Betting table | TBD | Add the missing capabilities beta users demonstrably need |
+| **Phase 3 — Trust and premium bets** | Betting table | TBD | Add trust reports, richer media, comparison, and polish when the marketplace loop is active |
 
-Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals (what we explicitly will NOT build): [`00-vision.md`](00-vision.md#anti-goals-things-we-explicitly-will-not-build).
+Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-vision.md`](00-vision.md#anti-goals-things-we-explicitly-will-not-build).
 
 ---
 
-## Phase 1 — Sprint status
+## Phase 1 — MLP beta sprint status
 
 | # | Sprint | Status | Started | Shipped | Milestone | Demo audience |
 |---|---|---|---|---|---|---|
@@ -46,88 +50,68 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals (what we explic
 | S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | 🟢 Shipped | 2026-05-14 | 2026-05-16 | M2 | Tiny internal group |
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | 🟢 Shipped | 2026-05-17 | 2026-05-17 | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | 🟡 In progress | 2026-05-17 | — | M3 | Internal group |
-| S5 | [Listings UX](sprints/sprint-05-listings-ux.md) | ⚪ Pending | — | — | M4 | 10-20 beta testers (mocked data) |
-| S6 | [Garage + Dealership](sprints/sprint-06-garage-dealership.md) | ⚪ Pending | — | — | — | Beta testers |
-| S7 | [Conversations (chat)](sprints/sprint-07-conversations.md) | ⚪ Pending | — | — | M5 | Beta testers (real listings) |
-| S8 | [Notifications + match](sprints/sprint-08-notifications.md) | ⚪ Pending | — | — | M6 | Beta testers (full loop) |
-| S9 | [Admin dashboard](sprints/sprint-09-admin.md) | ⚪ Pending | — | — | M7 | Go-to-market planning |
-| S10 | [Polish + app-store](sprints/sprint-10-polish.md) | ⚪ Pending | — | — | M8 | TM market (soft launch) |
+| S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | ⚪ Pending | — | — | M4 | 10-20 beta testers with seeded listings |
+| S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | ⚪ Pending | — | — | M5 | Beta testers with real listings |
+| S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | ⚪ Pending | — | — | M6 | Internal admins |
+| S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | ⚪ Pending | — | — | M7 | First 10-50 real users |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
 
 ---
 
-## Phase 2 — Sprint roster (placeholder)
+## Post-MLP bets
 
-These get fleshed out into individual `sprint-NN-*.md` files during the Phase 1 launch retro. Until then they're rows here.
+These are not a backlog. They are candidates for shaping after beta learning. If an idea still matters, it will come back to the betting table with a problem, appetite, no-gos, and rabbit holes.
 
-| # | Sprint (tentative) | Bounded context | Notes |
-|---|---|---|---|
-| S11 | Reports — domain + admin workflow | `reports/` | Rubric editor + inspection-recording UI |
-| S12 | Reports — tier computation + listing badge | `reports/` + `listings/` | Score → tier mapping; badge component |
-| S13 | Reports — PDF export | `reports/` | Puppeteer + HTML template + MinIO storage |
-| S14 | Reports — pro media attribution | `admin/` + `listings/` | "Photos by AutoTM" credit on staff-uploaded media |
-| S15 | Tier filter + discovery surfacing | `listings/` + mobile/web | "Trusted by AutoTM" filter chip |
-| S16 | Phase 2 polish | various | App-store update; pricing-tier UX |
-
-**Operational prereqs** (must finish before S11 starts, per `02-phases.md`):
-- Rubric signed off by a real mechanic
-- 1-2 inspectors hired + trained
-- Sample inspections done as QC
-- Pricing model decided (free / paid / subsidized)
-
----
-
-## Phase 3 — Sprint roster (placeholder)
-
-Highly flexible — content depends on launch-data learnings.
-
-| # | Sprint (tentative) | Bounded context | Notes |
-|---|---|---|---|
-| S17 | 360° orbit photos | `listings/` + mobile/web | Walk-around capture flow + viewer |
-| S18 | Comparisons | mobile/web | Side-by-side compare 2-3 listings |
-| S19 | Sort + ranking refinements | `listings/` | Beyond pure recency |
-| S20 | Onboarding + perf polish | mobile + global | First-run tutorial; image variant tuning |
+| Bet candidate | Trigger to build | Current home |
+|---|---|---|
+| Favorites + better discovery | Buyers repeatedly revisit the same listings manually | [`features/33-search-discovery.md`](features/33-search-discovery.md) |
+| Saved searches | Buyers repeat the same search manually across days | [`features/35-subscriptions.md`](features/35-subscriptions.md) |
+| Direct-message push | Contact usage is high enough that response delay hurts conversion | [`features/36-notifications.md`](features/36-notifications.md) |
+| Rich chat | Text-only contact cannot support negotiation or trust needs | [`features/34-conversations.md`](features/34-conversations.md) |
+| Dealership showroom | Dealers actively post inventory and need a shareable storefront | [`features/38-showroom.md`](features/38-showroom.md) |
+| Garage | Repeat sellers or profile trust need a vehicle ownership surface | [`features/37-garage.md`](features/37-garage.md) |
+| Blog / Bortzhurnal | Marketplace activity exists and content/community pull is visible | [`features/39-content-blogs.md`](features/39-content-blogs.md) |
+| Full admin dashboard | Manual admin work becomes repetitive enough to justify UI breadth | [`features/40-admin.md`](features/40-admin.md) |
+| Moderation operations | Report volume makes manual first-in/first-out review too slow | [`features/40-admin.md`](features/40-admin.md), [`flows/65-admin-moderation.md`](flows/65-admin-moderation.md) |
+| Trust/support workflows | Users need transparency, appeals, report correction, or dispute handling | [`flows/65-admin-moderation.md`](flows/65-admin-moderation.md) until a dedicated trust/support PRD is shaped |
+| Moderation alerts | Reports need paging outside normal admin review cadence | [`features/36-notifications.md`](features/36-notifications.md), [`ops/81-monitoring-alarms.md`](ops/81-monitoring-alarms.md) |
+| Inspection reports + tier | Trust, misrepresentation, or inspection demand becomes the bottleneck | [`features/50-reports-tier.md`](features/50-reports-tier.md) |
+| PDF reports | Reports exist and users need printable/shareable artifacts | [`features/51-pdf-export.md`](features/51-pdf-export.md) |
+| Video / 360 / comparisons | Visual inspection quality or comparison friction blocks purchases | [`features/52-orbit-photos.md`](features/52-orbit-photos.md) |
 
 ---
 
-## Milestones (visible to non-engineers)
+## Milestones
 
 | Milestone | After sprint | Demo-able to |
 |---|---|---|
 | **M1** Hello stack | S1 | Nobody — confirms the rails |
 | **M2** I can log in | S2 | Tiny internal group |
 | **M3** I can browse cars | S4 | Internal group |
-| **M4** I can search + save | S5 | 10-20 beta testers (mocked data) |
-| **M5** I can contact the seller | S7 | Beta testers (real listings, real chats) |
-| **M6** I get notified | S8 | Beta testers (full notifications loop) |
-| **M7** Admins run the place | S9 | Go-to-market planning |
-| **M8** Soft launch | S10 | TM beta market |
+| **M4** I can find relevant cars | S5 | 10-20 beta testers with seeded listings |
+| **M5** I can contact the seller | S6 | Beta testers with real listings |
+| **M6** Admins can keep beta safe | S7 | Internal admins |
+| **M7** Private beta | S8 | First 10-50 real users |
 
 ---
 
-## Sprint dependencies (don't reorder lightly)
+## Sprint dependencies
 
 ```
-S1 ────► S2 ────► S3 ─┬─► S4 ────► S5 ─┬─► S7 ────► S8 ─┐
-                      │                 │              ├─► S9 ────► S10
-                      └─► S6 ───────────┘              │
-                                                       │
-                              (catalog data feeds       │
-                               filter UI in S5)         │
-                                                       │
-                              (chat needs identity      │
-                               + listings detail)       │
+S1 ────► S2 ────► S3 ────► S4 ────► S5 ────► S6 ────► S7 ────► S8
+          auth      catalog   listings  discovery contact   safety   beta
 ```
 
-- **S2 unlocks everything else** — no use-case is reachable until auth works.
-- **S3 (Catalog) is a hard prereq for S4 (Listings)** — you can't create a listing without picking a brand/model.
-- **S4 unblocks S5, S6, S7.**
-- **S5 + S7 → S8** — saved-search match needs both the saved-search infra (S5) and the notification primitive proven by chat-push (S7).
-- **S9 (Admin)** can technically start any time after S2 but is most useful late (it moderates content that doesn't exist yet in early sprints).
-- **S10 is always last** — landing/blog/legal/app-store work polishes everything before launch.
+- **S2 unlocks authenticated actions** — contact seller, create listing, and admin elevation all depend on identity.
+- **S3 unlocks listings and filters** — listing creation and discovery need catalog data.
+- **S4 unlocks the market object** — search and contact need real listings.
+- **S5 unlocks buyer intent** — contact is meaningful only when buyers can find relevant listings.
+- **S6 unlocks real marketplace learning** — once buyers contact sellers, we can measure the loop.
+- **S7 comes before broader beta** — moderation must exist before 10-50 real users enter.
+- **S8 is last** — only polish the loop after the loop exists.
 
-If a sprint slips, slide all downstream rows in the table by the same delta; don't try to parallelize unless you've explicitly broken the dependency.
+If a sprint slips, slide downstream rows by the same delta. Do not parallelize unless a shaped pitch proves the dependency is false.
 
 ---
 
@@ -137,17 +121,17 @@ Once per sprint:
 
 1. **Start of sprint N**: open `sprints/sprint-NN-<name>.md`; set the Current Sprint block at the top of this file to N + status 🟡; the row for N in the table to 🟡 with `Started` = today's date.
 
-2. **End of sprint N**: set the row for N to 🟢 with `Shipped` = today's date. Bump Current to N+1 with status ⚪ Pending. Add a one-line note under "Shipped log" below describing what landed (the demo line for the milestone, if any).
+2. **End of sprint N**: set the row for N to 🟢 with `Shipped` = today's date. Bump Current to N+1 with status ⚪ Pending. Add a one-line note under "Shipped log" below describing what landed.
 
-3. **If scope shifts between sprints**: follow the "How to propose a scope change" checklist in [`02-phases.md`](02-phases.md). Update the affected sprint file's DoD; do **not** silently move work.
+3. **If scope shifts between sprints**: follow the "How to propose a scope change" checklist in [`02-phases.md`](02-phases.md). Update the affected pending sprint file's DoD; do **not** silently move work.
 
-4. **Never edit the milestones table** without a charter revision (since milestones are externally communicated).
+4. **If a material feature capability moves phase**: add an ADR per [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md).
 
 ## Shipped log
 
-> One-line entries, newest first. Empty until the first sprint closes.
+> One-line entries, newest first.
 
-- 2026-05-17 — S3 Catalog. Trilingual catalog API (read + admin write for Brand+Model) shipped: 7 entities seeded (Brand/Model/Color/BodyType/Region/City; Generation table-only), Accept-Language middleware live, dev-only `/dev/catalog` mobile route renders the brand list via apiClient. Admin write tested with mintAdminJwt helper; full admin UI ships in S9.
+- 2026-05-17 — S3 Catalog. Trilingual catalog API (read + admin write for Brand+Model) shipped: 7 entities seeded (Brand/Model/Color/BodyType/Region/City; Generation table-only), Accept-Language middleware live, dev-only `/dev/catalog` mobile route renders the brand list via apiClient. Admin write tested with mintAdminJwt helper; full admin UI ships in S7 under the MLP beta roadmap.
 - 2026-05-16 — S2 Identity (M2). Phone OTP login works end-to-end on mobile: request OTP → verify → JWT access + per-session bcrypt-hashed refresh (ADR-0012), 10-session cap with FIFO eviction, rate-limited (5/phone/day + 10/IP/hour), full chaos coverage at domain/application layer, e2e for happy path + rate-limit shape + logout/me/delete-me. Public web stayed anonymous-only (#41 retracted); deferred-action replay tracked at #52; mobile data-fetching architecture locked in ADR-0015 with implementation at #53. _(Carry-over: PRs #60, #61, #63 — mobile data-fetching wrapper, apiClient diagnostic fix, action-gated auth — merged on 2026-05-16 after the sprint-close PR #55 ran. They count as S2-adjacent work; the rest of the line above is in-sprint scope.)_
 - 2026-05-14 — S1 Scaffold (M1). Local dev stack runs (`pnpm install && pnpm dev`); CI green; air-gapped bundle path proven via `make -n bundle`.
 
@@ -155,8 +139,8 @@ Once per sprint:
 
 ## Cross-references
 
-- **Feature PRDs** — [`features/`](features/) — one per Phase 1 feature
-- **End-to-end flows** — [`flows/`](flows/) — six user journeys
+- **Feature PRDs** — [`features/`](features/) — one per product capability
+- **End-to-end flows** — [`flows/`](flows/) — user journeys; some are post-MLP now
 - **UI / design system** — [`ui/`](ui/)
 - **Ops** — [`ops/`](ops/) — deploy / monitoring / launch
 - **Decision log** — [`../adr/`](../adr/)

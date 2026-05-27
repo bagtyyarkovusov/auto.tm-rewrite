@@ -7,6 +7,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const mockMutateAsync = vi.fn();
 
+function makeNetworkError(message = "Request timed out"): Error & { code: string; status: number } {
+  const err = new Error(message);
+  (err as unknown as { code: string }).code = "NETWORK_ERROR";
+  (err as unknown as { status: number }).status = 0;
+  return err as Error & { code: string; status: number };
+}
+
 vi.mock("../../api/listings/useUpdateDraft", () => ({
   useUpdateDraft: () => ({
     mutateAsync: mockMutateAsync,
@@ -77,7 +84,7 @@ describe("useWizardAutosave", () => {
     expect(mockMutateAsync).toHaveBeenCalledTimes(1);
   });
 
-  it("forceSave() flushes pending debounce", async () => {
+  it("forceSave() cancels pending debounce and saves once", async () => {
     mockMutateAsync.mockResolvedValue({});
 
     const { result } = renderHook(() => useWizardAutosave("draft-1"), {
@@ -94,11 +101,14 @@ describe("useWizardAutosave", () => {
       await result.current.forceSave({ vin: "B" });
     });
 
-    // The flushed debounce + forceSave both call mutateAsync
-    expect(mockMutateAsync).toHaveBeenCalledTimes(2);
+    // Cancel drops the pending debounce; forceSave saves exactly once
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      { draftId: "draft-1", payload: { vin: "B" } },
+    );
   });
 
-  it("saveStatus transitions from idle -> saving -> idle on success", async () => {
+  it("saveStatus transitions from idle -> saving -> saved on success", async () => {
     mockMutateAsync.mockResolvedValue({});
 
     const { result } = renderHook(() => useWizardAutosave("draft-1"), {
@@ -111,7 +121,7 @@ describe("useWizardAutosave", () => {
       await result.current.forceSave({ vin: "A" });
     });
 
-    expect(result.current.saveStatus).toBe("idle");
+    expect(result.current.saveStatus).toBe("saved");
   });
 
   it("enters retry state on mutation error", async () => {
@@ -154,6 +164,25 @@ describe("useWizardAutosave", () => {
     );
   });
 
+  it("shows network error when error code is NETWORK_ERROR", async () => {
+    mockMutateAsync.mockRejectedValue(makeNetworkError());
+
+    const { result } = renderHook(() => useWizardAutosave("draft-1"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" }).catch(() => {});
+    });
+
+    // NETWORK_ERROR is treated as a connectivity issue: immediate error state
+    // with "Will retry when online" instead of entering the retry loop
+    expect(result.current.saveStatus).toBe("error");
+    expect(result.current.saveError).toBe(
+      "No internet connection. Will retry when online.",
+    );
+  });
+
   it("does not call mutateAsync when draftId is empty", async () => {
     const { result } = renderHook(() => useWizardAutosave(""), {
       wrapper,
@@ -164,5 +193,62 @@ describe("useWizardAutosave", () => {
     });
 
     expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("transitions to saved even when component re-renders during save", async () => {
+    let resolveMutation: (value: unknown) => void = () => {};
+    mockMutateAsync.mockImplementation(
+      () => new Promise((res) => { resolveMutation = res; })
+    );
+
+    const { result, rerender } = renderHook(
+      () => useWizardAutosave("draft-1"),
+      { wrapper }
+    );
+
+    // Start a save
+    act(() => {
+      result.current.save({ vin: "A" });
+    });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(result.current.saveStatus).toBe("saving");
+
+    // Simulate a re-render (what React does when parent state changes)
+    rerender();
+
+    // Resolve the mutation
+    await act(async () => {
+      resolveMutation({});
+    });
+
+    // BEFORE FIX: would stay "saving" because isMountedRef was false
+    // AFTER FIX: correctly transitions to "saved"
+    expect(result.current.saveStatus).toBe("saved");
+  });
+
+  it("safety timeout transitions to error when mutation hangs", async () => {
+    mockMutateAsync.mockImplementation(() => new Promise(() => {})); // never resolves
+
+    const { result, rerender } = renderHook(
+      () => useWizardAutosave("draft-1"),
+      { wrapper }
+    );
+
+    act(() => {
+      void result.current.forceSave({ vin: "A" });
+    });
+
+    // Re-render mid-flight (simulates React behavior)
+    rerender();
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(result.current.saveStatus).toBe("error");
+    expect(result.current.saveError).toBe("Save timed out. Please retry.");
   });
 });

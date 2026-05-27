@@ -66,6 +66,6 @@ Plus internal admins and (Phase 2) inspectors.
 
 Detailed in [02-phases.md](02-phases.md). Headline:
 
-- **Phase 1** — Marketplace MVP with chat + notifications (~8-10 weeks)
-- **Phase 2** — Inspections + tier system + PDF reports (~6-8 weeks)
-- **Phase 3** — 360° photos + comparisons + polish (~4-6 weeks)
+- **Phase 1** — MLP beta: listings, basic search, contact seller, minimal admin
+- **Phase 2** — Post-MLP marketplace bets chosen from real beta usage
+- **Phase 3** — Trust and premium bets: inspections, richer media, comparisons, polish

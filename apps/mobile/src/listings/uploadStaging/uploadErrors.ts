@@ -13,6 +13,13 @@ export function buildUploadError(err: unknown): UploadError {
   }
 
   if (err instanceof ApiError) {
+    if (err.code === "NETWORK_ERROR") {
+      return {
+        code: "NETWORK_ERROR",
+        message: "No internet connection — will retry automatically",
+        retryable: true,
+      };
+    }
     if (err.status === 429) {
       return {
         code: "RATE_LIMITED",

@@ -21,8 +21,8 @@ export default function Step1Vin({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-sm text-muted-foreground">
-        Optional. You can fill details manually.
+      <Text className="text-sm text-muted-foreground leading-relaxed">
+        Enter the 17-character VIN to auto-fill vehicle details, or skip and enter manually.
       </Text>
 
       <View className="gap-1.5">
@@ -39,16 +39,15 @@ export default function Step1Vin({
             editable={!disabled}
             autoCapitalize="characters"
             maxLength={17}
+            accessibilityLabel="VIN or chassis number"
           />
         </View>
         {vinError && (
-          <Text className="text-sm text-destructive">{vinError}</Text>
+          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+            {vinError}
+          </Text>
         )}
       </View>
-
-      <Text className="text-sm text-muted-foreground">
-        No checking is done in this version.
-      </Text>
     </View>
   );
 }

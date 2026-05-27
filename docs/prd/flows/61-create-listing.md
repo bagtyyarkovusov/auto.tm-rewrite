@@ -22,7 +22,7 @@ Sprint 4 starts from the Sell tab only:
    - If no drafts exist: create/open the 7-step wizard directly
 2. Edit an existing listing uses the same wizard state with post-publish identity fields disabled
 
-Sell-from-Garage entry and Garage prefill are deferred to S6.
+Sell-from-Garage entry and Garage prefill are post-MLP per [ADR-0027](../../adr/0027-mlp-beta-scope.md).
 
 ### Step 1 — VIN entry
 
@@ -139,4 +139,4 @@ The location is the car's location, not the user's current GPS location. A user 
 
 ## Open questions
 
-None for Sprint 4 create-listing wireframe. Sell-from-Garage, fixed-angle guidance enforcement, VIN OCR/decode, and translation assistance are deferred outside #93.
+None for Sprint 4 create-listing wireframe. Sell-from-Garage, fixed-angle guidance enforcement, VIN OCR/decode, and translation assistance are deferred outside #93. Sell-from-Garage is post-MLP.

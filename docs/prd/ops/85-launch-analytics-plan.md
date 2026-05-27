@@ -2,7 +2,7 @@
 
 ## Summary
 
-This is the operating plan for AutoTM's first MVP launch: what must be ready before launch, what analytics we collect, what the admin dashboard shows, how we act on the data, and when we scale from beta to public soft launch to broader growth.
+This is the operating plan for AutoTM's first MLP beta launch: what must be ready before launch, what analytics we collect, what the minimal admin surface shows, how we act on the data, and when we scale from private beta to public soft launch to broader growth.
 
 The plan is intentionally practical. It is not a marketing wish list and not a generic analytics spec. It answers:
 
@@ -10,20 +10,22 @@ The plan is intentionally practical. It is not a marketing wish list and not a g
 - Is the marketplace working after launch?
 - Which city needs more supply or more demand?
 - Which reliability issue blocks growth?
-- Which Phase 2 bets are justified by real launch data?
+- Which post-MLP bets are justified by real launch data?
 
 ## Locked decisions
 
 These decisions are treated as the default unless a future ADR or PRD revision supersedes them:
 
-1. **First launch means controlled public soft launch after S10.** App stores are public, but growth is staged and monitored. No full-market paid push on day one.
+1. **First launch means controlled private beta after S8.** Wider public soft launch and full app-store polish come after the MLP loop is stable.
 2. **North-star launch metric is qualified buyer-seller connections per active listing.** Downloads and DAU matter, but the marketplace works only if buyers contact sellers.
-3. **MVP analytics are first-party only.** No PostHog, Mixpanel, Google Analytics, Firebase Analytics, session replay, ad identifiers, or third-party analytics SDKs in MVP.
+3. **MLP analytics are first-party only.** No PostHog, Mixpanel, Google Analytics, Firebase Analytics, session replay, ad identifiers, or third-party analytics SDKs in the beta.
 4. **Analytics measure product health, not surveillance.** No raw GPS, background location, contact-book scraping, keystroke tracking, exact home-address tracking, or hidden paid ranking.
 5. **Location analytics are city-level.** Store catalog `regionId` / `cityId` and listing city. If future "Use my location" resolves GPS to a nearest catalog City, store the resolved City ID and source action, not the coordinate.
-6. **Admin analytics are operational.** The dashboard tells admins what to fix today: reliability, supply, demand, trust, seller responsiveness, and city gaps.
+6. **Admin analytics are operational.** The MLP admin surface tells admins what to fix today: moderation, reliability, supply, demand, and seller responsiveness.
 7. **Growth is stage-gated.** Increase marketing only after OTP, uploads, listing creation, contact actions, and moderation are stable.
-8. **Launch plan separates blocking MVP work from later work.** A metric can be important without blocking first launch.
+8. **Launch plan separates blocking MLP work from later work.** A metric can be important without blocking first launch.
+
+ADR-0023 still governs the architectural choice: product analytics are first-party, not third-party SDKs. ADR-0027 narrows the beta event subset. Do not create a new analytics ADR unless the team changes the first-party requirement, removes launch-critical analytics entirely, accepts third-party analytics, or turns the event taxonomy into a broader shared platform commitment.
 
 ## Canonical terms
 
@@ -32,30 +34,30 @@ These decisions are treated as the default unless a future ADR or PRD revision s
 | **Active listing** | Public listing visible in browse/search. Excludes drafts, archived, banned, and deleted listings. |
 | **Qualified connection** | A buyer-intent action from listing detail: `chat_started` or `call_tapped`. |
 | **Connection rate** | Qualified connections divided by active listings for the same period. Also viewable by city. |
-| **Supply** | Active listings, new listings, verified dealers, and publish success. |
-| **Demand** | Searches, listing views, saved searches, favorites, chat starts, call taps. |
+| **Supply** | Active listings, new listings, publish success, and verified dealers only after the dealer bet ships. |
+| **Demand** | Searches, listing views, contact starts, call taps, and post-MLP signals such as saved searches/favorites only after they ship. |
 | **Liquidity** | Whether supply and demand produce buyer-seller contact. |
-| **Reliability** | OTP, uploads, API, push, chat, and background jobs working at launch quality. |
+| **Reliability** | OTP, uploads, API, contact flow, SMS gateway, and any shipped background jobs working at launch quality. Native push is post-MLP unless shaped earlier. |
 | **City gap** | Demand and supply are mismatched for a city. Example: many searches for Mary, few Mary listings. |
 | **Raw product event** | Append-only event row from API/mobile/web, retained short term. |
 | **Aggregate metric** | Daily/hourly precomputed metric used by admin dashboard and reviews. |
 
 ## Scope boundaries
 
-### MVP launch-blocking
+### MLP beta-blocking
 
-These must be ready before public soft launch:
+These must be ready before the S8 private beta:
 
-- First-party event ingestion path for launch-critical events.
-- Admin dashboard cards for marketplace health, reliability, and moderation.
-- Daily aggregate metrics for the launch scorecard.
-- Launch gates and rollback flags.
+- First-party event ingestion path for MLP-critical events, or an explicit S8 retro note explaining the manual substitute.
+- Minimal admin/scorecard views for marketplace health, reliability, and moderation, or a documented operator query/runbook for the private beta.
+- Daily aggregate metrics for the beta scorecard.
+- Private-beta gates and rollback/pause flags.
 - Privacy/legal text matching actual data collection.
 - A repeatable launch review cadence.
 
-### MVP important but not launch-blocking
+### MLP important but not beta-blocking
 
-These should be added during S9/S10 if cheap, or immediately after launch if needed:
+These should be added during S8 if cheap, or immediately after beta if needed:
 
 - CSV export for analytics tables.
 - More detailed city drilldowns.
@@ -63,7 +65,7 @@ These should be added during S9/S10 if cheap, or immediately after launch if nee
 - Zero-result search review queue for catalog cleanup.
 - Simple feedback form linked from Settings or support.
 
-### Phase 1.5 / Phase 2
+### Post-MLP bets
 
 These are explicitly later:
 
@@ -80,12 +82,12 @@ These are explicitly later:
 
 ### First launch definition
 
-First launch is **controlled public soft launch**:
+First launch is **controlled private beta after S8**:
 
-- App is installable from Google Play and App Store.
+- App is available through TestFlight, Play internal testing, direct APK, or another documented private distribution path.
 - Public web is live.
-- Real users can browse, create listings, favorite, save searches, and contact sellers.
-- Marketing is intentionally limited.
+- Invited real users can browse, create listings, search/filter, open listing detail, and contact sellers.
+- Marketing is intentionally absent or limited to hand-invited users.
 - Founder/team watch metrics daily.
 - The goal is learning plus operational safety, not maximum traffic.
 
@@ -99,9 +101,9 @@ AutoTM is a two-sided marketplace. Full demand before supply creates disappointm
 - moderation can keep up;
 - city-level supply/demand data tells us where to push next.
 
-## MVP feature boundary
+## MLP feature boundary
 
-### Must be present at launch
+### Must be present for private beta
 
 - Anonymous browse.
 - Catalog-backed listing creation.
@@ -109,17 +111,20 @@ AutoTM is a two-sided marketplace. Full demand before supply creates disappointm
 - Price/currency handling.
 - City-first listing location.
 - Listing detail.
-- Favorites.
-- Saved searches.
 - OTP login.
-- Chat or call/contact flow, depending on final S7 scope.
-- Notifications for saved-search/chat basics.
-- Dealer profiles and verified dealer badge.
-- Admin moderation.
-- Admin catalog tools.
-- Admin metrics dashboard.
+- Simple buyer-to-seller contact flow.
+- Minimal admin moderation.
 - Legal/account deletion/store readiness.
 - Monitoring, alerts, rollback, and support channels.
+
+### Public soft-launch candidates, not private-beta requirements
+
+- Favorites.
+- Saved searches.
+- Direct-message push.
+- Dealer profiles and verified dealer badge.
+- Admin catalog tools.
+- Admin metrics dashboard.
 
 ### Explicitly not required for launch
 
@@ -138,19 +143,19 @@ AutoTM is a two-sided marketplace. Full demand before supply creates disappointm
 
 ## Launch gates
 
-Public soft launch is blocked unless all critical gates are green.
+Private beta is blocked unless all critical gates are green.
 
 ### Engineering gates
 
 | Gate | Requirement | Blocking? |
 |---|---|---|
-| Phase 1 scope | S1-S10 scope complete or explicitly deferred in sprint/retro docs | Yes |
+| Phase 1 scope | S1-S8 MLP beta scope complete or explicitly deferred in sprint/retro docs | Yes |
 | E2E tests | Critical happy paths pass | Yes |
 | Production deploy | At least one successful production deploy | Yes |
 | Rollback | Rollback command/process tested | Yes |
 | Backup/restore | Full restore drill from staging/prod-like backup | Yes |
-| Feature flags | Signups, listing publish, chat/contact, broadcast can be paused | Yes |
-| Store builds | Android/iOS approved or on ready public testing track | Yes |
+| Feature flags | Server-side config can pause signups (`SIGNUPS_ENABLED`), listing publish (`LISTING_PUBLISH_ENABLED`), listing mutations/read-only mode (`LISTING_MUTATIONS_ENABLED`), contact writes (`CONTACT_ENABLED`), report entry (`REPORT_ENTRY_ENABLED`), and admin moderation writes (`ADMIN_MODERATION_ACTIONS_ENABLED`); disabled writes return `FEATURE_DISABLED` without leaking flag names | Yes |
+| Beta builds | Android/iOS available through internal/private beta distribution | Yes |
 | Legal URLs | Privacy/Terms live in RU/TK/EN | Yes |
 
 ### Reliability gates
@@ -160,7 +165,7 @@ Public soft launch is blocked unless all critical gates are green.
 | OTP success | >= 95% in beta | Yes |
 | Image upload success | >= 95% in beta | Yes |
 | API stability | No unresolved P0/P1 bugs | Yes |
-| Push delivery | Verified on real Android and iOS devices | Yes |
+| Contact reliability | Buyer-to-seller contact path verified on real Android and iOS devices | Yes |
 | SMS gateway | 5 phones provisioned, spare phone ready | Yes |
 | Alerts | Telegram alert drill passed | Yes |
 
@@ -169,16 +174,16 @@ Public soft launch is blocked unless all critical gates are green.
 | Gate | Target | Blocking? |
 |---|---|---|
 | Seed listings | 10-20 real-looking listings | Yes |
-| Verified dealers | At least 2 | Yes |
+| Verified dealers | Not required for private beta unless the dealer bet is explicitly shaped before launch | No |
 | Catalog | Common launch-market cars covered | Yes |
-| Moderation | Admin can review reports and ban/hide listings | Yes |
+| Moderation | Admin can review reports, ban listings, suspend abusive users, see audit rows, and pass the report -> TOTP admin action -> audit -> enforcement smoke | Yes |
 | Support | Support phone/email or Telegram process ready | Yes |
 
 ### Analytics gates
 
 | Gate | Target | Blocking? |
 |---|---|---|
-| Core events | OTP, listing, search, favorite, contact, upload, report events ingest | Yes |
+| Core events | OTP, listing, search, contact, upload, report events ingest | Yes |
 | Daily aggregates | Scorecard metrics roll up | Yes |
 | Dashboard | Admin can view launch scorecard | Yes |
 | Privacy check | No raw GPS, ad IDs, session replay, or third-party analytics SDKs | Yes |
@@ -188,7 +193,7 @@ Public soft launch is blocked unless all critical gates are green.
 
 ### Decision
 
-MVP uses a custom first-party analytics system.
+The MLP beta uses a custom first-party analytics system.
 
 The product emits marketplace events to AutoTM's own API. The API validates and stores raw events in an append-only table or log. A scheduled worker rolls events into daily/hourly aggregates for admin dashboards and reviews.
 
@@ -264,7 +269,7 @@ AnalyticsDailyMetric
 | Daily aggregates | 2+ years | Long-term planning and trend analysis |
 | Error traces/logs | Per observability runbook | Operational debugging |
 | Audit logs | Long-term | Admin/legal accountability |
-| Raw GPS | Not collected in MVP | Privacy and ADR-0022 |
+| Raw GPS | Not collected in the MLP beta | Privacy and ADR-0022 |
 
 ## Event taxonomy
 
@@ -324,9 +329,11 @@ AnalyticsDailyMetric
 | `chat_started` | Conversation created from listing | listingId, cityId, sellerType | Qualified connection |
 | `message_sent` | Message sent | conversationId, senderRole | Chat health |
 | `seller_first_response_sent` | Seller replies first time | responseTimeBucket | Seller quality |
-| `conversation_reported` | User reports conversation | reason | Trust |
+| `conversation_reported` | User reports conversation after report-from-thread ships | reason | Trust; post-MLP rich-chat/moderation bet |
 
 ### Notification events
+
+These are post-MLP unless direct-message push is explicitly shaped before public soft launch.
 
 | Event | When recorded | Key dimensions | Used for |
 |---|---|---|---|
@@ -334,7 +341,7 @@ AnalyticsDailyMetric
 | `push_sent` | Worker sends push | category | Delivery funnel |
 | `push_delivery_failed` | FCM/APNS rejects send | reason bucket | Reliability |
 | `push_opened` | User opens push | category, deepLinkType | Notification value |
-| `saved_search_match_created` | Worker finds a match | savedSearchId, cityId | Match quality |
+| `saved_search_match_created` | Worker finds a match after saved searches ship | savedSearchId, cityId | Match quality |
 
 ### Moderation and trust events
 
@@ -342,11 +349,15 @@ AnalyticsDailyMetric
 |---|---|---|---|
 | `report_submitted` | User submits report | targetType, reason | Trust |
 | `admin_action_recorded` | Admin action writes audit log | actionType, targetType | Governance |
+| `moderation_action_failed` | Admin moderation action fails after validation or infrastructure error | actionType, reason bucket | Launch safety |
+| `audit_write_failed` | Audit write fails in a moderation path | actionType, targetType | Governance/reliability |
 | `listing_banned` | Listing removed by admin | reason | Trust |
 | `user_suspended` | User suspended | reason | Trust |
-| `dealership_verified` | Dealer verified | cityId | Dealer supply |
+| `dealership_verified` | Dealer verified after the dealer bet ships | cityId | Dealer supply |
 
-### Banned MVP analytics
+Moderation analytics answer operating questions only. S7 should not add reporter trust scores, public report status analytics, per-reporter quotas, or auto-hide thresholds until beta data shows queue spam or moderation bottlenecks. If that happens, shape a moderation-abuse bet with [Feature 40 — Admin](../features/40-admin.md) instead of quietly growing the S7 report model.
+
+### Banned Launch Analytics
 
 Do not collect:
 
@@ -364,7 +375,7 @@ Do not collect:
 
 ## Admin dashboard
 
-The MVP dashboard should be operational, dense, and decision-oriented.
+The beta dashboard should be operational, dense, and decision-oriented.
 
 ### Section 1: Marketplace health
 
@@ -373,7 +384,7 @@ The MVP dashboard should be operational, dense, and decision-oriented.
 | DAU / WAU | Unique active users | Demand trend |
 | Active listings | Visible listings | Supply baseline |
 | New listings today / 7 days | Published listings | Seller activation |
-| Qualified connections | `call_tapped + chat_started` | Liquidity |
+| Qualified connections | `call_tapped + chat_started` or the shipped contact equivalent | Liquidity |
 | Connections per active listing | Qualified connections / active listings | North-star launch health |
 
 ### Section 2: City supply / demand
@@ -382,8 +393,8 @@ The MVP dashboard should be operational, dense, and decision-oriented.
 |---|---|---|
 | Active listings by city | Current supply | Recruit sellers where low |
 | Searches by city | Demand signal | Seed supply where high |
-| Saved searches by city | Strong demand | Dealer outreach |
-| Favorite/chat/call starts by listing city | Conversion by city | Improve city quality |
+| Saved searches by city | Strong demand; post-MLP if saved searches have shipped | Dealer outreach |
+| Contact starts by listing city | Conversion by city | Improve city quality |
 | Zero-result searches by city | Unmet demand | Catalog/supply cleanup |
 
 ### Section 3: Funnel
@@ -392,8 +403,8 @@ The MVP dashboard should be operational, dense, and decision-oriented.
 |---|---|---|
 | Auth | OTP requested -> verified | Fix SMS/rate limits |
 | Listing publish | draft started -> publish attempted -> published | Fix wizard/uploads |
-| Buyer intent | listing viewed -> favorite -> call/chat | Fix listing detail/contact UX |
-| Saved search | filter applied -> saved search created -> push opened | Fix matching/notifications |
+| Buyer intent | listing viewed -> contact started | Fix listing detail/contact UX |
+| Saved search | filter applied -> saved search created -> push opened (post-MLP) | Fix matching/notifications |
 
 ### Section 4: Reliability
 
@@ -402,15 +413,18 @@ The MVP dashboard should be operational, dense, and decision-oriented.
 | OTP success | >= 95% | Stop growth if below target |
 | Upload success | >= 95% | Fix media pipeline |
 | API error rate | < 2% sustained | Investigate/rollback |
-| Push delivery | >= 90% initially | Fix tokens/provider |
+| Push delivery | >= 90% initially after native push ships | Fix tokens/provider |
 | SMS phone health | 5/5 preferred, 4/5 acceptable short term | Repair phone fleet |
 
 ### Section 5: Moderation and trust
 
 | Metric | Target | Action |
 |---|---|---|
-| Pending reports | Cleared daily | Add moderation time |
-| Report rate | Watch spikes | Tighten abuse controls |
+| Pending reports | Cleared daily | Add moderation time; no report auto-expiry or auto-dismiss in S7 |
+| Oldest pending report age | Same day in launch week | Add moderation time or pause growth |
+| Report rate | Watch spikes | Tighten abuse controls; shape post-MLP per-reporter quotas only if beta shows queue spam |
+| Moderation action failures | Near zero | Investigate API/DB/audit path before adding traffic |
+| Audit write failures | Zero | Pause moderation actions; no unaudited moderation state changes |
 | Banned listings | Review patterns | Improve listing validation |
 | Suspended users | Review patterns | Improve fraud controls |
 | Average moderation response time | Same day in launch week | Protect trust |
@@ -430,7 +444,7 @@ The MVP dashboard should be operational, dense, and decision-oriented.
 ### Launch day
 
 - Monitor every 30 minutes.
-- Watch reliability first: OTP, uploads, API, SMS, push.
+- Watch reliability first: OTP, uploads, API, SMS, contact flow, and push only if shipped.
 - Watch support and moderation queue.
 - Do not optimize growth on day one.
 - Write end-of-day launch note: what broke, what worked, what changes tomorrow.
@@ -448,13 +462,13 @@ The MVP dashboard should be operational, dense, and decision-oriented.
 - Review 3 times per week.
 - Start separating reliability problems from product conversion problems.
 - Decide whether growth can increase city by city.
-- Write the Phase 1 launch retro at the end of week 2 or week 4.
+- Write the MLP beta / public soft-launch retro at the end of week 2 or week 4.
 
 ### Month 2-3
 
 - Weekly growth/ops review.
 - Use city supply/demand to guide outreach.
-- Start Phase 1.5 or Phase 2 planning from data.
+- Start post-MLP betting from data.
 - Re-evaluate success metrics and revenue assumptions.
 
 ### After month 3
@@ -535,7 +549,7 @@ Audience:
 Goal:
 
 - Catch bugs.
-- Validate OTP/upload/chat/push on real devices.
+- Validate OTP/upload/contact on real devices. Validate push only if direct-message push has shipped.
 - Verify listing creation and moderation.
 
 Exit:
@@ -604,10 +618,10 @@ Exit:
 
 Use this agenda during launch week:
 
-1. Reliability: OTP, uploads, API, push, SMS phones.
+1. Reliability: OTP, uploads, API, contact flow, SMS phones, and push only if shipped.
 2. Liquidity: qualified connections, connection rate, listing views.
 3. Supply: active listings, new listings, publish funnel.
-4. Demand: DAU, searches, saved searches, favorites.
+4. Demand: DAU, searches, contact starts; saved searches/favorites only if shipped.
 5. Trust: reports, bans, moderation response time.
 6. City gaps: top demand cities, top supply cities, zero-result cities.
 7. Actions: one owner, one fix, one deadline per red metric.
@@ -633,7 +647,7 @@ These are early operating targets, not investor promises.
 | OTP success | >= 95% | Auth must work |
 | Upload success | >= 95% | Sellers must publish |
 | Active listings | 30+ by day 30 | Marketplace cannot look empty |
-| Verified dealers | 2+ by launch, more by day 30 | Trust and supply |
+| Verified dealers | Target only after the dealer bet ships | Trust and supply |
 | Qualified connection rate | Non-zero in week 1, improving by week 4 | Liquidity |
 | Zero-result searches | < 30% | Catalog/supply relevance |
 | Moderation queue | Cleared daily | Trust |
@@ -668,27 +682,27 @@ This plan should not silently rewrite sprint scope. Use this mapping when slicin
 
 | Work | Sprint / phase | Blocking? |
 |---|---|---|
-| Listing view/publish/favorite/search/contact events | S4-S7 as features land | Yes for launch-critical subset |
-| Saved-search and notification events | S8 | Yes for saved-search launch flow |
-| Admin metrics dashboard | S9 | Yes for MVP scorecard |
-| Marketplace metrics aggregates | S9 | Yes |
-| Legal/store data disclosures | S10 | Yes |
-| Launch gates/rollback support | S10 | Yes |
-| Feedback form | Phase 1.5 | No |
-| Dealer monthly analytics report | Phase 1.5 / Phase 2 | No |
-| Inspection analytics | Phase 2 | No |
-| Ad campaign analytics | Phase 2+ | No |
+| Listing view/publish/search/contact events | S4-S6 as features land | Yes for MLP launch-critical subset |
+| Moderation/report events | S7 | Yes for beta safety |
+| Minimal marketplace scorecard | S7/S8 | Yes |
+| Legal/beta data disclosures | S8 | Yes |
+| Launch gates/rollback support | S8 | Yes |
+| Saved-search and notification events | Post-MLP | No |
+| Feedback form | Post-MLP if needed | No |
+| Dealer monthly analytics report | Post-MLP dealer bet | No |
+| Inspection analytics | Trust bet | No |
+| Ad campaign analytics | Post-MLP ads bet | No |
 | BI exports | Phase 2+ | No |
 
 ## Privacy and compliance checklist
 
-Before app-store submission, confirm:
+Before public app-store submission, confirm:
 
 - Privacy Policy says exactly what is collected.
 - App Store privacy nutrition labels match the code.
 - Google Play Data Safety answers match the code.
 - No third-party analytics SDK is bundled.
-- No raw GPS collection exists in MVP.
+- No raw GPS collection exists in the MLP beta.
 - Saved searches store catalog city/region IDs, not coordinates.
 - Analytics payloads do not include full phone numbers.
 - Account deletion flow exists and has been tested.
@@ -697,7 +711,7 @@ Before app-store submission, confirm:
 ## Open questions
 
 - What exact first 30-day numeric target should we set for qualified connections per active listing after beta data exists?
-- Does S7 launch with chat fully enabled, or does call/contact carry the first connection metric until chat stabilizes?
+- Does S6 launch with the contact thread fully enabled, or does call/contact carry the first connection metric until the thread stabilizes?
 - Should the first city-focused push be Asgabat by default, or should beta demand choose the first city?
 - How much manual seller/dealer outreach is the team willing to do in launch month?
 - What is the minimum support schedule for week 1: business-hours only or near-real-time?
@@ -706,7 +720,7 @@ Before app-store submission, confirm:
 
 - [ADR-0010](../../adr/0010-testing-obs.md) - Testing and observability stack
 - [ADR-0022](../../adr/0022-city-first-listing-location.md) - City-first listing location
-- [ADR-0023](../../adr/0023-first-party-product-analytics.md) - First-party product analytics for MVP
+- [ADR-0023](../../adr/0023-first-party-product-analytics.md) - First-party product analytics for launch
 - [00-vision.md](../00-vision.md) - 12-month success metrics and anti-goals
 - [03-roadmap.md](../03-roadmap.md) - Phase 1 sprint trajectory
 - [40-admin.md](../features/40-admin.md) - Admin dashboard

@@ -23,15 +23,57 @@ export class ApiError extends Error {
   }
 }
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+const REFRESH_TIMEOUT_MS = 15_000;
+
 interface RequestOptions<TResponse> {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   schema?: ZodSchema<TResponse>;
   // If false, do not attach Authorization header (used for OTP request/verify pre-login)
   auth?: boolean;
+  // Per-request timeout override (defaults to 30s)
+  timeout?: number;
 }
 
 let refreshInFlight: Promise<void> | null = null;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  // React Native 0.83's AbortController polyfill does not reliably cancel
+  // fetch requests (facebook/react-native#55247). We use Promise.race so
+  // the timeout always wins even if fetch ignores the abort signal.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new ApiError("NETWORK_ERROR", 0, "Request timed out")),
+      timeoutMs,
+    ),
+  );
+
+  try {
+    const res = await Promise.race([
+      fetch(url, { ...init, signal: controller.signal }),
+      timeoutPromise,
+    ]);
+    return res;
+  } catch (err) {
+    if (err instanceof ApiError && err.code === "NETWORK_ERROR") {
+      throw err;
+    }
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError("NETWORK_ERROR", 0, "Request timed out");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 async function refreshOnce(): Promise<void> {
   if (refreshInFlight) {
@@ -44,14 +86,18 @@ async function refreshOnce(): Promise<void> {
       throw new ApiError("UNAUTHENTICATED", 401, "No session to refresh");
     }
 
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/auth/refresh`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
       },
-      body: JSON.stringify({ refreshToken: session.refreshToken }),
-    });
+      REFRESH_TIMEOUT_MS,
+    );
 
     if (!res.ok) {
       await clearAuthSession();
@@ -85,8 +131,11 @@ async function rawRequest<TResponse>(
 ): Promise<TResponse> {
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "Content-Type": "application/json",
   };
+
+  if (opts.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (opts.auth !== false) {
     const session = await loadAuthSession();
@@ -95,11 +144,15 @@ async function rawRequest<TResponse>(
     }
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: opts.method ?? "GET",
-    headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-  });
+  const res = await fetchWithTimeout(
+    `${BASE_URL}${path}`,
+    {
+      method: opts.method ?? "GET",
+      headers,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    },
+    opts.timeout ?? DEFAULT_TIMEOUT_MS,
+  );
 
   if (res.status === 401 && opts.auth !== false && !isRetry) {
     await refreshOnce();
@@ -155,19 +208,19 @@ async function rawRequest<TResponse>(
 }
 
 export const apiClient = {
-  get<T>(path: string, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
+  get<T>(path: string, schema?: ZodSchema<T>, opts: { auth?: boolean; timeout?: number } = {}) {
     return rawRequest<T>(path, { method: "GET", schema, ...opts }, false);
   },
-  post<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
+  post<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean; timeout?: number } = {}) {
     return rawRequest<T>(path, { method: "POST", body, schema, ...opts }, false);
   },
-  patch<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
+  patch<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean; timeout?: number } = {}) {
     return rawRequest<T>(path, { method: "PATCH", body, schema, ...opts }, false);
   },
-  put<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
+  put<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean; timeout?: number } = {}) {
     return rawRequest<T>(path, { method: "PUT", body, schema, ...opts }, false);
   },
-  delete<T>(path: string, schema?: ZodSchema<T>, opts: { auth?: boolean } = {}) {
+  delete<T>(path: string, schema?: ZodSchema<T>, opts: { auth?: boolean; timeout?: number } = {}) {
     return rawRequest<T>(path, { method: "DELETE", schema, ...opts }, false);
   },
 };

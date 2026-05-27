@@ -4,6 +4,8 @@
 
 Push delivery + in-app notification feed + per-category opt-out. 6 categories. FCM + APNS happy path with fallback abstraction. Admin broadcast tooling.
 
+**MLP status:** deferred by [ADR-0027](../../adr/0027-mlp-beta-scope.md). Direct-message push may be shaped first after contact usage proves response delay is hurting the loop. The full 6-category platform is not part of the MLP beta.
+
 ## Why it exists
 
 A marketplace chat without push notifications is dead — by the time Maral checks the app, Aman has already sold the car to someone else. Notifications turn the app from "I'll check it later" to "responding in 2 minutes."
@@ -63,6 +65,13 @@ If the user declines, store `notificationPermissionPrompted=true` locally. Later
 - Tap → deep link to relevant screen
 - Mark all read button
 - Old notifications fade visually
+- Post-MLP moderation feedback may add a generic "report reviewed" feed item or consume moderation events, but S7 ships no user-facing moderation notifications. Future moderation notifications must not expose an admin's private free-text reason.
+
+### Moderation alerts
+
+- Admin-facing report alerts are post-MLP unless beta safety explicitly reshapes them before launch.
+- Future alerting should consume `ContentReportCreated` or aggregate thresholds such as pending report age/count, repeated targets, or admin-set severity. Reporters do not provide an `urgent` flag.
+- Telegram paging and incident routing are owned by [81 — Monitoring + alarms](../ops/81-monitoring-alarms.md); user-facing feed/push copy is owned here.
 
 ### Admin broadcast
 
@@ -94,7 +103,7 @@ If the user declines, store `notificationPermissionPrompted=true` locally. Later
 
 ## Phase
 
-**Phase 1.**
+**Post-MLP marketplace bet.**
 
 ## Out of scope
 

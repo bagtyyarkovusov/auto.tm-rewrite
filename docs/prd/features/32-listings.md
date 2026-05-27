@@ -2,7 +2,7 @@
 
 ## Summary
 
-The core economic object: car ads. Sellers create listings via a 7-step wizard, with photos, brand/model/generation specs, price, location. Buyers browse anonymously, favorite, chat, and (Phase 2) see the trust tier. Video media is future-facing and should not appear in the Sprint 4 mobile create wizard.
+The core economic object: car ads. Sellers create listings via a 7-step wizard, with photos, brand/model/generation specs, price, and location. Buyers browse anonymously, inspect listing detail, and contact the seller. Video media is deferred out of the MLP beta and should not appear in the Sprint 4 mobile create wizard.
 
 ## Why it exists
 
@@ -77,10 +77,10 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 |---|---|---|
 | `draft` | Owner only | Continue / discard |
 | `active` | Public | Favorite, chat, share, owner-edit |
-| `sold` | Public (badged) | View only (chat closed) |
+| `sold` | Public (badged) | New contact disabled; existing threads readable |
 | `archived` | Owner + admin | Owner can republish |
-| `reported` | Admin only | Admin review queue |
-| `banned` | Owner sees ban notice + reason; not in feed | None |
+| `reported` | Admin only | Reserved review-hold status; S7 report submission does not auto-transition active listings here |
+| `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact/messages disabled; existing threads readable; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
 
 ## Screens / states
 
@@ -113,10 +113,11 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 - [ADR-0007](../../adr/0007-i18n.md) — Single-locale content
 - [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first listing location; no exact listing GPS in Phase 1
 - [ADR-0024](../../adr/0024-owner-post-publish-photo-editing.md) — Owners may edit photos after publishing
+- [ADR-0027](../../adr/0027-mlp-beta-scope.md) — MLP beta scope; video and adjacent platform features deferred
 
 ## Phase
 
-**Phase 1.**
+**Phase 1 MLP beta.** Photos, listing create/edit/detail, and mark-sold ship now. Video, advanced trust signals, and adjacent platform features are post-MLP bets.
 
 ## Out of scope
 
@@ -137,11 +138,11 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 
 These are future product capabilities — most map to Phase 2 trust-layer work alongside inspection reports. Captured here so the foundation laid in S4 (audit log, port abstractions, `pending_review` enum value) supports them cleanly when their sprints arrive.
 
-- **Flipper / re-seller detection** — Auto.ru exposes "active listings count" + "listings history" + "average time-to-sell" on the seller profile page so buyers can self-detect flippers. AutoTM equivalent should ship in Phase 2 when seller profile pages exist (likely S9 admin + S15 trust polish). No explicit "flipper" label — let data speak.
-- **"First owner" claim** — Seller self-declares «первый хозяин» equivalent in the wizard; admin verifies post-hoc via registration documents or trust signals. Buyer-side filter in S5 if added. Implementation: `Listing.isFirstOwner: Boolean @default(false)` + admin verification flag.
+- **Flipper / re-seller detection** — Auto.ru exposes "active listings count" + "listings history" + "average time-to-sell" on the seller profile page so buyers can self-detect flippers. AutoTM equivalent should ship after seller profile/admin trust work is bet on. No explicit "flipper" label — let data speak.
+- **"First owner" claim** — Seller self-declares «первый хозяин» equivalent in the wizard; admin verifies post-hoc via registration documents or trust signals. Buyer-side filter is post-MLP if added. Implementation: `Listing.isFirstOwner: Boolean @default(false)` + admin verification flag.
 - **Phone-number-reuse detection** — "5 other listings from this phone number" surfaced on listing detail (Auto.ru pattern). Phase 2 candidate; uses `Listing.contactPhone ?? seller.phoneE164` as the key. Strong flipper signal.
 - **Edit-triggered re-review** — Auto.ru flags edits that change >50% of photos, drop price >30% in 24h, or rewrite >50% of description. AutoTM equivalent should land in Phase 2 alongside trust tiers. S4's AuditLog scope captures price changes + state transitions; Phase 2 needs to add audit entries for media operations + description edits to enable detection.
 - **Inspected-listing edit policy** — When trust tier exists (Phase 2 inspection reports), structural edits (specs, condition, photos) should invalidate the tier until re-inspection; metadata edits (price, description) should not. Decide policy when S11-S15 plan.
-- **Inappropriate / non-car photo screening** — Phase 1 auto-publishes everything; reactive moderation only via S9. Phase 2 should add self-hosted ML screening: NudeNet for NSFW, YOLO or CLIP for car-detection, pHash for stolen-photo detection (all offline-compatible per air-gap constraint). Implementation: `MediaContentClassifierPort` ships in S4 with `NullContentClassifier` adapter; Phase 2 swaps in `MlContentClassifier`. Failed classifications transition listing to `pending_review` status (enum value already in schema).
+- **Inappropriate / non-car photo screening** — MLP beta auto-publishes everything; reactive moderation ships in S7. A later trust bet should add self-hosted ML screening: NudeNet for NSFW, YOLO or CLIP for car-detection, pHash for stolen-photo detection (all offline-compatible per air-gap constraint). Implementation: `MediaContentClassifierPort` ships in S4 with `NullContentClassifier` adapter; trust bet swaps in `MlContentClassifier`. Failed classifications transition listing to `pending_review` status (enum value already in schema).
 - **Stolen photo detection** — Auto.ru fingerprints photos via perceptual hashing (pHash) to catch reuse across listings. Self-hostable. Phase 2 candidate; companion to NSFW classifier.
-- **Reporting flow** — "Report this listing" button on listing detail page + `POST /listings/:id/report` endpoint + admin queue + `ListingReported` event. Ships in S9 alongside `reported`/`banned` status activation.
+- **Reporting flow** — "Report this listing" button on listing detail page + authenticated `POST /listings/:id/report` endpoint + admin queue. Ships in S7 alongside `banned` status activation. The route stays resource-shaped for client ergonomics, but report creation is implemented in `admin/` as a generic `ContentReport`; `listings/` only validates the listing target through a port. Listing reports are accepted only for currently `active` listings. Draft, archived, banned, soft-deleted, and other non-public listings return `NOT_FOUND`; visible but non-reportable states such as `sold` return `VALIDATION_FAILED` / `REPORT_TARGET_NOT_REPORTABLE`. Sellers cannot report their own listings; the API rejects own-listing reports with `VALIDATION_FAILED` / `SELF_REPORT_NOT_ALLOWED`, and owner-facing UI should hide the report action where ownership is known. If an event is needed, `admin/` emits `ContentReportCreated`, not a listing-owned `ListingReported` event. Report submission does not change `Listing.status` or public visibility; pending reports do not block owner archive/delete flows while the listing remains owner-actionable; only explicit admin ban hides a listing. S7 bans only active listings and unbans them back to active; there is no `previousStatus` restoration model. Banned listings are omitted from public feed/search/favorites and non-owner detail, while owner surfaces show only a generic banned notice. Owner routes cannot edit, change media, mark sold, archive, republish, or delete a banned listing until admin unban. Unban does not clean up favorites, emit saved-search events, or resolve/dismiss pending reports. Banning blocks new contact/new messages for that listing but does not auto-close existing conversations. Listing owners see no report metadata, and admin free-text reasons stay internal. The status mutation remains owned by `listings/` behind `ListingsAdminPort`; `admin/` does not write listing rows directly. Successful ban/unban may emit internal `ListingBanned` / `ListingUnbanned` events after commit, but S7 ships no user-facing consumers, notifications, conversation system messages, or worker jobs from those events.

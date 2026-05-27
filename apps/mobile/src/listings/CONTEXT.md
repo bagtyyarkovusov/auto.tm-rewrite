@@ -111,8 +111,9 @@ ${documentDirectory}/
 
 - **Calls into `useUploadQueue.addPhoto`**: unbounded parallelism can be triggered concurrently from UI — gallery flow fans out `Promise.all` over temp copies invoking `addPhoto` per URI.
 - **`addPhoto` body**: sequentially compress → enqueue upload worker for that id (heavy CPU still overlaps across parallel invocations — watch device thermals during stress tests).
-- **Upload drain**: capped at **`MAX_CONCURRENT = 2`** binary PUT workers.
+- **Upload drain**: capped at **`MAX_CONCURRENT = 2`** binary PUT workers. `isUploading` is derived from a `useAsyncCounter` (ref-based increment/decrement) so parallel uploads do not incorrectly clear the uploading flag when one of two concurrent uploads finishes.
 - **`processUploadQueue`**: FIFO drain guarded by concurrency counter; completions chain via `.finally()` recursion.
+- **PUT timeout**: each `FileSystem.uploadAsync` call is wrapped in `Promise.race` with a 60-second timeout. Timeouts throw `ApiError("NETWORK_ERROR", 0, "Upload timed out")` which `buildUploadError` maps to retryable `NETWORK_ERROR`.
 
 ### Publish gate (`computePublishGate`)
 
@@ -160,7 +161,7 @@ Reducer-based stepper in `wizardMachine.ts`. Not XState — a pure `(state, acti
 
 ### Machine status
 
-Documented reducer supports create and edit sessions through a `mode: "create" | "edit"` discriminator. `draftId` is populated for create; `listingId` is populated for edit. Autosave UI is owned by TanStack-backed `useWizardAutosave`, so the reducer no longer exposes `SAVE_START` / `SAVE_ERROR` branches.
+Documented reducer supports create and edit sessions through a `mode: "create" | "edit"` discriminator. `draftId` is populated for create; `listingId` is populated for edit. Autosave UI is owned entirely by TanStack-backed `useWizardAutosave` (local `useState`), so the reducer does not expose `saving`, `saveError`, `SAVE_SUCCESS`, or `SAVE_RETRY` branches.
 
 `step → publishing → complete | publishError`
 `any → idle (DISCARD)`
@@ -243,12 +244,12 @@ Each step renders its own field errors inline directly under the relevant Input/
 
 ## 3. Autosave
 
-`useWizardAutosave(draftId)` — debounced PATCH to `/api/v1/listings/drafts/:id` with exponential-backoff retry and network-aware auto-retry.
+`useWizardAutosave(draftId)` — debounced PATCH to `/api/v1/listings/drafts/:id` with exponential-backoff retry and network-aware auto-retry. `forceSave` cancels any pending debounce and saves the latest payload exactly once.
 
 ### Status lifecycle
 
 ```
-idle → saving → idle (success)
+idle → saving → saved (success)
 idle → saving → saving (retry 1/3) → saving (retry 2/3) → saving (retry 3/3) → error
 error → saving (manual retrySave or network available)
 ```
@@ -260,6 +261,8 @@ error → saving (manual retrySave or network available)
 | Debounce delay | 500 ms |
 | Max retries | 3 |
 | Retry delays | 1000 ms, 2000 ms, 4000 ms (exponential) |
+| Safety timeout | 10 000 ms (mutation → error if no response) |
+| Saved-to-idle fade | 2 000 ms |
 
 ### Methods
 
@@ -269,22 +272,22 @@ error → saving (manual retrySave or network available)
 
 ### Network awareness
 
-- `NetInfo.addEventListener` tracks connectivity via `isOnlineRef`
-- When offline: save error shows "Will retry when online"
+- `NetInfo.addEventListener` is subscribed **once on mount** (empty dependency array). The callback reads the latest status via `saveStatusRef` and only auto-retries when `status === "error"`.
+- When offline OR when the error is `ApiError("NETWORK_ERROR")` (e.g., wrapper timeout): save error shows "Will retry when online"
 - When back online + pending payload + status is error: auto-retries with reset retry counter
 
 ### Pending payload tracking
 
 `pendingPayloadRef` holds the last payload attempted. On retry (manual or auto), the pending payload is re-sent — no data loss between debounce and failure.
 
-### Create flow integration caveat (`sell.tsx`)
+### Create flow integration (`sell.tsx`)
 
 Two effects collaborate:
 
 1. **Queue synchronization** pushes `uploadQueue.photos` → `wizardMachine` via `UPDATE_FIELDS` whenever thumbnails mutate.
-2. **Debounced `save()` effect** PATCHes derived payload.
+2. **Debounced `save()` effect** PATCHes derived payload using a stable `payloadKey` (`JSON.stringify` of payload + photos + validatedSteps). This eliminates the previous 25+ individual field dependencies and prevents reference-churn from resetting the debounce timer during active photo uploads.
 
-**Fixed:** `sell.tsx` now computes a stable `photoFingerprint` (`photoId:key:sortOrder` joined) via `useMemo` and includes it in the autosave `useEffect` dependency list. Photo-only bursts now correctly trigger debounced PATCH without requiring an unrelated field edit.
+**Defensive:** The 10 s safety timeout and 2 s saved-to-idle timeout are no longer cleared by spurious effect re-runs. `isMountedRef` is reset to `true` on every effect body run and only set to `false` on actual unmount.
 
 ## 4. Edit save orchestrator
 

@@ -1,7 +1,7 @@
 # AutoTM Dealer Subscription Tier Design
 
 > **Status**: Strategy doc, drafted 2026-05-18. Mutable; not an ADR.
-> **First matters in**: Phase 1 mid (S6 — Garage + Dealership pages); meaningful revenue starts late Phase 1 / early Phase 2
+> **First matters in**: Post-MLP dealer bet. MLP beta proves listing/contact demand first; dealer subscriptions return after dealers are actively posting enough inventory.
 > **Why it exists**: This is the **most recurring, most defensible revenue stream** AutoTM has. Dealers have budgets; they make business decisions; they LTV at 3-5+ years. Subscription revenue compounds in a way inspection fees + ads don't.
 
 ---
@@ -96,7 +96,7 @@ For **individual sellers + tiny dealers + tire-kickers**.
 | Listing editing | Full |
 | Mark sold / archive / republish | Full |
 | Basic stats | Views per listing |
-| Chat | Yes (when S7 ships) |
+| Contact threads | Yes (when S6 ships) |
 | Profile page | Personal user profile only — no dealership page |
 | Verified dealer badge | NO |
 | Bulk upload | NO |
@@ -232,31 +232,31 @@ Don't discount below break-even per dealer. Compute fully-loaded cost-to-serve (
 
 ## Software integration — what we actually build
 
-### Phase 1 sprint S6 — basic subscription infrastructure
+### Post-MLP dealer bet — basic subscription infrastructure
 
 **Subscription model + auth**:
 
 - `SubscriptionTier` enum in `apps/api/src/modules/identity/` (or new `apps/api/src/modules/billing/`): 'starter', 'dealer_basic', 'dealer_pro', 'dealer_enterprise'
 - `Subscription` entity: user/dealership ID, tier, current period start/end, status (active/expired/grace_period), payment method, last payment received
 - `BillingEvent` entity: invoices issued, payments received, refunds
-- API endpoints for admin to manage subscriptions (S9)
+- API endpoints for admin to manage subscriptions (post-MLP admin/dashboard expansion)
 - API endpoints for dealers to see their own subscription status
 
-### Dealer profile page (S6)
+### Dealer profile page (post-MLP)
 
 - `DealershipProfile` entity in identity context: name, logo, address, opening hours, description, gallery photos
 - Public-facing page at `/dealers/:slug`: shows all the dealership's active listings + profile info + lead capture form
 - Mobile + web both surface this page
 
-### Listing limits + tier-gating (S6+)
+### Listing limits + tier-gating (post-MLP)
 
 The listing creation flow checks the seller's subscription tier:
 
 - If `user.subscription.listingLimit !== 'unlimited'` and `user.activeListingCount >= user.subscription.listingLimit`: block creation with upgrade prompt
-- Listing duration enforced at `Listing.publishedAt + tier.durationDays`; auto-archive cron in S8 handles expiration
+- Listing duration enforced at `Listing.publishedAt + tier.durationDays`; auto-archive cron belongs with the shaped dealer/subscription bet
 - Photo count limit: enforced in `AttachMedia` use-case
 
-### Bulk upload + CSV (S6 or S7)
+### Bulk upload + CSV (post-MLP)
 
 For Dealer Pro and Enterprise:
 
@@ -265,7 +265,7 @@ For Dealer Pro and Enterprise:
 - Server validates each row against the schema (using existing `@auto-tm/contracts`); creates Listing rows for valid entries; reports errors per row
 - Photos referenced by URL or pre-uploaded keys; bulk upload assumes photos already accessible
 
-### Multi-staff accounts (S7 or S8)
+### Multi-staff accounts (post-MLP)
 
 For Dealer Pro and Enterprise:
 
@@ -274,7 +274,7 @@ For Dealer Pro and Enterprise:
 - Lead inbox routing by member (lead assignments)
 - Permission model: owner can manage subscription + invite staff; sales can manage listings only
 
-### Dashboard + analytics (S9)
+### Dashboard + analytics (post-MLP)
 
 For all tiers (different depth per tier):
 
@@ -300,7 +300,7 @@ For Dealer Enterprise:
 - Multi-staff accounts: 2-3 weeks
 - Dashboard + analytics: 3-4 weeks (basic) + 2-3 weeks for advanced
 - API access: 3-4 weeks (Year 2-3)
-- **Total Phase 1 dealer features**: ~12-15 weeks across S6-S9 sprints. Aligns with existing roadmap.
+- **Total dealer feature appetite**: ~12-15 weeks if built as a full suite. This must be split into smaller shaped bets after MLP learning.
 
 ---
 
@@ -548,7 +548,7 @@ If Year 2 we're below 50 paid dealers → major rethink of pricing / packaging /
 ## Cross-references
 
 - [`../00-vision.md`](../00-vision.md) — Anti-goals: no paid placement (subscription is different — sells software/branding, not search ranking)
-- [`../03-roadmap.md`](../03-roadmap.md) — S6 (Garage + Dealership pages) — when this lands
+- [`../03-roadmap.md`](../03-roadmap.md) — dealer subscription work is a post-MLP bet
 - [`../features/`](../features/) — future feature PRDs: `35-dealer-pages.md`, `36-subscriptions-billing.md` (TBD)
 - [`../../adr/0013-user-role-split.md`](../../adr/0013-user-role-split.md) — `DealershipMember.role` separate from `User.role`
 - [`inspection-program.md`](inspection-program.md) — Inspection discounts are a Dealer Pro+ benefit; cross-program partnership

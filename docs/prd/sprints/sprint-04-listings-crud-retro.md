@@ -108,3 +108,19 @@ docs/prd/ui/wireframes/mobile-create-listing-wizard.md     — closure banner
 docs/prd/ui/hifi/mobile-create-listing-wizard.md           — closure banner
 docs/prd/sprints/sprint-04-listings-crud-retro.md          — this file
 ```
+
+## MLP roadmap reshape note — 2026-05-23
+
+[ADR-0027](../../adr/0027-mlp-beta-scope.md) supersedes the old broad Phase 1 forward references inside the locked S4 sprint plan and this pre-retro. Those references were correct when S4 was shaped, but they no longer describe the current trajectory.
+
+Interpretation rule for future agents:
+
+- Do not edit the locked S4 sprint plan just to rename old future sprints.
+- Treat `docs/prd/03-roadmap.md`, `docs/prd/02-phases.md`, and ADR-0027 as the current sequencing source of truth.
+- S5 now means Search + listing detail.
+- S6 now means Contact seller.
+- S7 now means Minimal admin + moderation.
+- S8 now means Private beta polish.
+- Old references to S5 Listings UX, S6 Garage + Dealership, S8 Notifications + Subscriptions, S9 Admin dashboard, and S10 Polish should be read as post-MLP candidates unless a current pending sprint file explicitly includes the work.
+
+This is a documentation interpretation note only. It does not change what S4 shipped or what S4 committed to build.

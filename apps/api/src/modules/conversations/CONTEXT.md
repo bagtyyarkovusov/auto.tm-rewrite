@@ -1,10 +1,10 @@
 # conversations — CONTEXT
 
-> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in [`docs/prd/features/35-conversations.md`](../../../../../docs/prd/features/35-conversations.md) (if present — otherwise inferred from PRD) and `docs/prd/sprints/sprint-07-conversations.md`.
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). MLP contact scope lives in `docs/prd/sprints/sprint-06-contact-seller.md`. Rich chat target capability lives in [`docs/prd/features/34-conversations.md`](../../../../../docs/prd/features/34-conversations.md) and is post-MLP per [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md).
 
 ## Purpose
 
-Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today; the full chat system (WebSocket transport, message send/read/delete, typing/presence, attachments) ships in S7.
+Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today; the MLP beta ships simple text contact in S6. The full chat system (WebSocket transport, message read/delete, typing/presence, attachments) is post-MLP.
 
 ## Owns (entities + tables)
 
@@ -15,7 +15,7 @@ Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today
 ## Invariants (enforced today)
 
 - A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
-- `Conversation.sellerId` references a User. **Same-user-cannot-chat-themselves** is NOT enforced by schema; must be application-level in S7.
+- `Conversation.sellerId` references a User. **Same-user-cannot-chat-themselves** is NOT enforced by schema; must be application-level in S6.
 - `Message.kind` is one of text | image | post_ref | system.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
 
@@ -29,7 +29,7 @@ Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today
 
 ## Ports exposed
 
-- (none today — S7 adds `ConversationsReadPort`)
+- (none today — S6 adds the first simple conversation read/write surface)
 
 ## Ports consumed
 
@@ -49,9 +49,16 @@ Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today
 
 ## Planned additions (future sprints)
 
-Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the named sprint file:
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the named sprint file or feature PRD:
+- **S6 (Contact seller)** — `docs/prd/sprints/sprint-06-contact-seller.md`. Owns:
+	  - Text-only per-listing thread creation and message send/list endpoints
+	  - Use-cases: `OpenConversation`, `ListMyConversations`, `ListMessages`, `SendTextMessage`
+	  - Application-level invariants: same-user-cannot-chat-themselves; participants only; archived/sold listing contact behavior explicit. When S7 activates `banned`, banned listing threads use the same read-only rule: no new contact or messages, existing history remains readable. If either participant is suspended, new contact/messages are also blocked while existing history remains readable.
+	  - Private-beta launch-safety flag `CONTACT_ENABLED=false` blocks new conversation opens and message sends while conversation list/detail history remains readable. Disabled contact writes return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and do not expose internal flag names.
+	  - S7 moderation events are not consumed by `conversations/`; no conversation auto-close, worker side effect, or system message ships for listing bans or user suspensions in the MLP. Contact/message blocking is enforced by synchronous listing/user state checks.
+  - No Socket.IO, no image messages, no post-card messages, no read receipts, no typing, no presence, no push, no report-from-thread unless S6 is explicitly reshaped before it starts
 
-- **S7 (Conversations)** — `docs/prd/sprints/sprint-07-conversations.md`. Owns:
+- **Post-MLP rich chat** — `docs/prd/features/34-conversations.md`. Owns:
   - Schema additions to `Conversation`: `lastMessageAt`, `lastMessageId?` for sort + preview
   - Schema additions to `ConversationParticipant`: `mutedAt?`, `lastReadAt?` for unread counts + mute UX
   - Schema additions to `Message`: `deletedAt?` for soft-delete (preserve chat history for disputes)
@@ -61,7 +68,7 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
   - Use-cases: `StartConversation`, `SendMessage`, `MarkAsRead`, `DeleteMessage`, `MuteConversation`, `BlockInConversation`
   - Application-level invariants: same-user-cannot-chat-themselves; conversation blocked if either user has blocked the other; soft-delete window (5 min after send)
   - Events emitted: `MessageSent` (primary, consumed by `notifications/` for push), `ConversationStarted`, `MessageDeleted`, `UserBlockedInConversation`
-  - Events consumed: `ListingSold` (auto-emits system message), `UserSuspended` (archives conversations involving suspended user)
+  - Events consumed: `ListingSold` (auto-emits system message). A post-MLP rich-chat bet may consume `ListingBanned`, `ListingUnbanned`, `UserSuspended`, or `UserUnsuspended` for system messages or thread policy changes, but only after explicit PRD coverage.
   - Ports consumed: `ListingsReadPort` (listing pinned card + post-ref), `IdentityReadPort` (user names + block check), `MediaUploadPort` (image attachments)
 
 ## Notable decisions
@@ -70,3 +77,4 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 - [ADR-0002](../../../../../docs/adr/0002-stack.md) — Socket.IO + NestJS WebSocket gateway
 - [ADR-0009](../../../../../docs/adr/0009-notifications.md) — `MessageSent` → push fan-out
 - [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
+- [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) — Simple text contact first; rich chat is post-MLP

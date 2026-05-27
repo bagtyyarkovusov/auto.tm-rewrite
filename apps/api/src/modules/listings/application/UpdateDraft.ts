@@ -14,9 +14,7 @@ import {
 export interface UpdateDraftInput {
   draftId: string;
   userId: string;
-  payload: ListingsSchemas.ListingDraftPayload & {
-    validatedSteps?: WizardSchemas.WizardStep[];
-  };
+  payload: ListingsSchemas.ListingDraftPayload;
 }
 
 export interface UpdateDraftResult {
@@ -45,13 +43,13 @@ export class UpdateDraft {
 
     // Compute invalidated steps and filter validatedSteps
     const existingValidated = oldPayload.validatedSteps ?? [];
-    const clientValidated = input.payload.validatedSteps ?? existingValidated;
+    const clientValidated = (input.payload.validatedSteps as WizardSchemas.WizardStep[] | undefined) ?? existingValidated;
     const invalidatedSteps =
       changedFields.length > 0
         ? WizardSchemas.getInvalidatedSteps(changedFields)
         : [];
     const newValidatedSteps = clientValidated.filter(
-      (s) => !invalidatedSteps.includes(s),
+      (s): s is WizardSchemas.WizardStep => !invalidatedSteps.includes(s),
     );
 
     // Merge payload: keep all existing fields, overwrite with new ones,

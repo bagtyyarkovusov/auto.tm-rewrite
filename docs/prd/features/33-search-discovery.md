@@ -2,7 +2,7 @@
 
 ## Summary
 
-How buyers find listings — feed, filter sheet, free-text search, saved searches (cross-references Feature 35), and favorites. Mobile-only in Phase 1 (public web is OG-landing only).
+How buyers find listings. The MLP beta ships the feed, listing detail, and a small filter set. Favorites, saved searches, broad filter coverage, and free-text search are post-MLP bets unless beta usage proves they block the core loop.
 
 ## Why it exists
 
@@ -12,14 +12,20 @@ Maral (the first-time buyer persona) needs to slice through thousands of listing
 
 ### Default feed
 
-- Anonymous + new users: latest 50 listings, paginated infinite scroll
-- Authenticated with browsing history: weak personalization (recent brands viewed appear earlier)
-- Authenticated with saved searches: a "Matches your saved searches" carousel at top
+- Anonymous + new users: latest listings, paginated infinite scroll
 - No first-open GPS permission prompt. The feed is useful before login and before any location permission.
 
 ### Filter sheet
 
-Bottom sheet with collapsible sections. Persistent in URL state.
+Bottom sheet with the MLP filter set first:
+
+- Brand → Model
+- Region / City
+- Price range
+- Year range
+- Condition
+
+Post-MLP filters can be added once beta behavior shows they matter:
 
 - Vehicle category: Cars (Легковые) / Light commercial (Комтранс) / Moto
 - Status: All / New / Used
@@ -42,7 +48,7 @@ Bottom sheet with collapsible sections. Persistent in URL state.
 
 Apply button shows match count: "Show 1,243 listings".
 
-### Free-text search
+### Free-text search (post-MLP unless needed)
 
 - Top-of-feed search bar
 - Searches across listing title + description + brand name + model name
@@ -52,13 +58,13 @@ Apply button shows match count: "Show 1,243 listings".
 ### Sort
 
 - **Recency (default)** — newest first
-- Price ascending / descending
+- Price ascending / descending — post-MLP unless beta users need it immediately
 - Mileage ascending
 - (Phase 2) Tier (Trusted first) — only if user opts in via filter
 
 **Sort label is always visible** so users see what they're looking at. No hidden ranking magic.
 
-Location filters are explicit. Phase 1 does not silently rank nearby cars above newer cars. Proximity can become a documented S19 ranking signal through `FeedRankingPort`, but not hidden MVP behavior.
+Location filters are explicit. Phase 1 does not silently rank nearby cars above newer cars. Proximity can become a documented later ranking signal through `FeedRankingPort`, but not hidden MLP behavior.
 
 ### Location discovery
 
@@ -80,14 +86,14 @@ Search analytics are allowed for product planning and admin dashboard reporting,
 - Do not store raw GPS coordinates, exact device location, exact map pins, or home-city profile fields for analytics in MVP.
 - If a future "Use my location" action resolves GPS to a nearest catalog City, analytics stores the resolved City ID and the action source, not the coordinate.
 
-### Favorites
+### Favorites (post-MLP bet)
 
 - Tap ♥ on any listing → added to Favorites
 - Favorites tab: thumbnails grid, tap to view
 - Favorites tab also surfaces saved searches and (Phase 3) comparisons
 - Unfavorite: tap filled ♥ again
 
-### Saved searches (entry points)
+### Saved searches (post-MLP bet)
 
 - From filter results: "Save this search" button → name + notify toggle
 - From a Garage Dream entry: "Notify when one is listed"
@@ -121,10 +127,11 @@ Search analytics are allowed for product planning and admin dashboard reporting,
 - [ADR-0002](../../adr/0002-stack.md) — Postgres FTS (not Meilisearch in Phase 1)
 - [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first location search; explicit GPS only later
 - [ADR-0023](../../adr/0023-first-party-product-analytics.md) — First-party analytics only; search analytics stay in AutoTM-owned storage
+- [ADR-0027](../../adr/0027-mlp-beta-scope.md) — MLP beta scope; saved searches and favorites deferred
 
 ## Phase
 
-**Phase 1.**
+**Phase 1 MLP beta for basic filters and listing detail.** Favorites, saved searches, broad filters, and full free-text search are post-MLP bets.
 
 ## Out of scope
 
