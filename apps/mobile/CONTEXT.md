@@ -132,6 +132,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 - **S4 (Listings CRUD)** —
   - Mobile uploads are **HTTPS PUT** to presigned URLs — **`apps/mobile/package.json` does not include `@aws-sdk/client-s3`** (clients never embedded the SDK; server issues presigned URLs).
   - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**, **`/(public)/listings/[id]`** buyer detail stub.
+  - **Still missing vs #94 / S4 close**: real mobile feed on **`/(tabs)/index`**, full buyer/owner listing detail (spec grid, seller block, Call/Message CTAs, owner actions, retry/empty states), and My Listings/Drafts management surface. The current **`/(public)/listings/[id]`** route is only a stub, and **`/(tabs)/sell`** only resumes the latest draft.
   - **Still missing vs PRD / backlog**: optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
   - Mobile foundation (`apps/mobile` deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging pipeline) ✅ Shipped.

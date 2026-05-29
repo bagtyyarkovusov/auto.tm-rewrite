@@ -124,3 +124,13 @@ Interpretation rule for future agents:
 - Old references to S5 Listings UX, S6 Garage + Dealership, S8 Notifications + Subscriptions, S9 Admin dashboard, and S10 Polish should be read as post-MLP candidates unless a current pending sprint file explicitly includes the work.
 
 This is a documentation interpretation note only. It does not change what S4 shipped or what S4 committed to build.
+
+## Web SSR deferral — 2026-05-29
+
+Issue #95 (`S4: web — SSR feed + detail with OG + Schema.org JSON-LD`) is no longer an S4 closure blocker.
+
+- **What changed**: S4 closure keeps the mobile buyer/owner read surface as the remaining product blocker (#94), but defers the public web SSR feed/detail work from S4.
+- **Why**: ADR-0027 narrowed Phase 1 around the mobile-first MLP beta loop. S4 still needs mobile browsing/detail/My Listings to prove "I can browse cars"; anonymous web SEO/share polish is useful, but it is not required to finish the S4 market-object slice.
+- **Future home**: S8's `Public web + legal links` child slice owns the MLP web landing, listing-detail public metadata, and legal links before private beta invites.
+- **Issue handling**: Close #95 as deferred/not planned for S4. Do not silently delete the capability; recreate or reshape it when creating S8 issues from `docs/prd/sprints/sprint-08-private-beta-polish.md`.
+- **S4 close rule after this decision**: #96 waits on #94 plus the already-shipped backend/mobile wizard children, then runs sprint-final wiring. #95 should not be listed as a required child for S4 closure after this retro entry.

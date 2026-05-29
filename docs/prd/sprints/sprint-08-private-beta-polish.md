@@ -58,7 +58,7 @@ Use this map when creating S8 GitHub issues. S8 is a closure sprint, so children
 |---|---|---|---|---|
 | 1 | Beta gate inventory + issue sequencing | `docs` | S7 shipped | Confirm S1-S7 shipped state, open blockers, and exact S8 issue order before implementation starts. |
 | 2 | Account deletion legal alignment | `api`, `identity`, `db`, `mobile` | 1 | Replace S2 hard delete with grace-period beta behavior, session revocation, listing archive behavior, recovery path, day-30 purge definition, and mobile/settings or support entry. |
-| 3 | Public web + legal links | `web`, `docs` | 1 | Landing/search CTA, listing detail public metadata, RU/TK/EN privacy and terms links. |
+| 3 | Public web + legal links | `web`, `docs` | 1 | Landing/search CTA, listing detail public metadata deferred from S4 issue #95, RU/TK/EN privacy and terms links. |
 | 4 | Seed data + catalog readiness | `db`, `api` | 1 | Beta cities, core brand/model/spec coverage, deterministic seed/check command or documented operator path. |
 | 5 | Top errors, accessibility, mobile polish | `mobile`, `api` | 1 | Plain copy/retry for top MLP errors, tap target/contrast pass, smoke fixes only. |
 | 6 | Query/index/performance gate | `api`, `db`, `perf` | 1 | Top 5 MLP queries have indexes or acceptable plans; no broad tuning outside measured beta paths. |
