@@ -90,8 +90,9 @@ tmp/
 .agents/skills/*
 !.agents/skills/*-agent-skill/
 
-# Sandcastle — ephemeral worktrees, logs, env (config files not tracked)
-.sandcastle/
+# Sandcastle — the .sandcastle/ orchestrator config IS tracked (Dockerfile,
+# main.mts, prompts). Its own .sandcastle/.gitignore ignores the ephemeral
+# .env, logs/, and worktrees/.
 
 # Expo prebuild generated native projects
 apps/mobile/android/

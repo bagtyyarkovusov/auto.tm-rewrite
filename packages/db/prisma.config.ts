@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+
 import { defineConfig, env } from "prisma/config";
 
 const envPath = new URL(".env", import.meta.url);

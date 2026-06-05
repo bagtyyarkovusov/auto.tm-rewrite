@@ -17,6 +17,8 @@ import { RefreshSession } from "../application/RefreshSession";
 import { Logout } from "../application/Logout";
 import { LogoutAll } from "../application/LogoutAll";
 
+type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
+
 @Controller("api/v1/auth")
 export class AuthController {
   constructor(
@@ -204,7 +206,7 @@ export class AuthController {
   @HttpCode(204)
   @Post("logout-all")
   async logoutAll(@Req() req: FastifyRequest) {
-    const userId = (req as any).user?.sub as string;
+    const userId = (req as AuthenticatedRequest).user?.sub as string;
     await this.logoutAllUseCase.execute({ userId });
   }
 }

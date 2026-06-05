@@ -1,12 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
-import type { Currency } from "../domain/types";
+import type { Currency, FeedCursor, ListingFilterCriteria } from "../domain/types";
 import type {
   ListingsReadPort,
   ListingSummary,
 } from "../domain/ports/ListingsReadPort";
-import type { FeedCursor, ListingFilterCriteria } from "../domain/types";
 import {
   EXCHANGE_RATE_PORT,
   type ExchangeRatePort,

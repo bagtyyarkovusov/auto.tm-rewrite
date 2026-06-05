@@ -10,7 +10,8 @@
     "ios": "expo run:ios",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:unit": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@auto-tm/contracts": "workspace:*",

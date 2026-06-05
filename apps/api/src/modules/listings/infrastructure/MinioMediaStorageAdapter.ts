@@ -7,10 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import {
-  MEDIA_STORAGE_PORT,
-  type MediaStoragePort,
-} from "../domain/ports/MediaStoragePort";
+import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { Env } from "../../../env.schema";
 
 @Injectable()

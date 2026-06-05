@@ -7,10 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
-import {
-  IMAGE_VARIANT_GENERATOR,
-  type ImageVariantGenerator,
-} from "../domain/ports/ImageVariantGenerator";
+import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
 import type { Env } from "../../../env.schema";
 
 interface VariantSpec {
@@ -26,6 +23,17 @@ const VARIANTS: VariantSpec[] = [
   { name: "detail", width: 1200, height: 800, fit: "contain" },
   { name: "fullscreen", width: 2400, height: 1600, fit: "contain" },
 ];
+
+function requireVariantKey(
+  keys: Partial<Record<VariantSpec["name"], string>>,
+  name: VariantSpec["name"],
+): string {
+  const key = keys[name];
+  if (!key) {
+    throw new Error(`Missing generated image variant ${name}`);
+  }
+  return key;
+}
 
 @Injectable()
 export class SharpImageVariantGenerator implements ImageVariantGenerator {
@@ -71,7 +79,7 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     const buffer = Buffer.from(await original.Body.transformToByteArray());
     const base = originalKey.replace(/\/original\.(jpg|webp|jpeg)$/, "");
 
-    const variantKeys: Record<string, string> = {};
+    const variantKeys: Partial<Record<VariantSpec["name"], string>> = {};
 
     for (const spec of VARIANTS) {
       const resized = await sharp(buffer)
@@ -114,10 +122,10 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
 
     return {
       variants: {
-        thumbnail: variantKeys["thumbnail"]!,
-        list: variantKeys["list"]!,
-        detail: variantKeys["detail"]!,
-        fullscreen: variantKeys["fullscreen"]!,
+        thumbnail: requireVariantKey(variantKeys, "thumbnail"),
+        list: requireVariantKey(variantKeys, "list"),
+        detail: requireVariantKey(variantKeys, "detail"),
+        fullscreen: requireVariantKey(variantKeys, "fullscreen"),
       },
     };
   }

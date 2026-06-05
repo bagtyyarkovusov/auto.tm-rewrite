@@ -3,7 +3,7 @@ import { PrismaService } from "@auto-tm/db";
 
 import { Listing } from "../domain/Listing";
 import { DomainError, LISTING_ERROR_CODES, LOCKED_FIELDS } from "../domain/types";
-import { ListingsSchemas } from "@auto-tm/contracts";
+import type { ListingsSchemas } from "@auto-tm/contracts";
 import {
   LISTING_REPOSITORY,
   type ListingRepository,

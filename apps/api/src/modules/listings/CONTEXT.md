@@ -60,7 +60,6 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 | Port | Symbol | File | Consumers |
 |---|---|---|---|
 | `ListingsReadPort` | `LISTINGS_READ_PORT` | `domain/ports/ListingsReadPort.ts` | Cross-context: contact seller (S6), minimal admin (S7), post-MLP subscriptions/notifications |
-| `ListingsAdminPort` | `LISTINGS_ADMIN_PORT` | `domain/ports/ListingsAdminPort.ts` | Cross-context: minimal admin (S7) listing ban/unban only |
 | `VinDecoderPort` | `VIN_DECODER_PORT` | `domain/ports/VinDecoderPort.ts` | Internal: `PublishListing` use-case |
 | `MediaContentClassifierPort` | `MEDIA_CONTENT_CLASSIFIER_PORT` | `domain/ports/MediaContentClassifierPort.ts` | Internal: `AttachMedia` use-case |
 | `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` | Internal: `AttachMedia` use-case |

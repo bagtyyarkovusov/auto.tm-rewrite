@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { ExchangeRatesSchemas } from "@auto-tm/contracts";
+import type { ExchangeRatesSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
 import {
