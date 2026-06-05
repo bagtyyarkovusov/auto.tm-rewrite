@@ -108,6 +108,10 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 
 GitHub Issues via `gh` CLI. See `docs/agents/issue-tracker.md`.
 
+### Autonomous execution
+
+Two paths consume the `ready-for-agent` queue: `/run-issue` (synchronous, single-issue, in your session) and **Kimi-Sandcastle** (AFK, parallel, in Docker sandboxes). See `docs/agents/sandcastle.md` + [ADR-0028](docs/adr/0028-kimi-sandcastle-afk-orchestrator.md). In-sandbox gate = typecheck + lint + Docker-free unit tests; the Testcontainers e2e suite stays on CI; the mobile Expo simulator gate stays with the human.
+
 ### Triage labels
 
 Canonical five-role vocabulary, default names. See `docs/agents/triage-labels.md`.

@@ -1,0 +1,9 @@
+# Build context for .sandcastle/Dockerfile (built with `--dockerfile`, so the
+# context is the repo root). The warm-store layer only needs the lockfile +
+# workspace manifest + the vendored tarball (referenced via file: in the
+# lockfile) — exclude everything else so the context transfer stays tiny.
+*
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!vendor
+!vendor/**
