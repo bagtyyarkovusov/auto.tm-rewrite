@@ -36,6 +36,7 @@ export class Listing {
     readonly favoriteCount: number,
     readonly acceptsExchange: boolean,
     readonly installmentAvailable: boolean,
+    readonly coverMediaKey: string | undefined,
     readonly createdAt: Date,
     readonly updatedAt: Date,
   ) {
@@ -80,6 +81,7 @@ export class Listing {
     favoriteCount?: number;
     acceptsExchange?: boolean;
     installmentAvailable?: boolean;
+    coverMediaKey?: string;
     createdAt?: Date;
     updatedAt?: Date;
   }): Listing {
@@ -116,6 +118,7 @@ export class Listing {
       data.favoriteCount ?? 0,
       data.acceptsExchange ?? false,
       data.installmentAvailable ?? false,
+      data.coverMediaKey,
       data.createdAt ?? new Date(),
       data.updatedAt ?? new Date(),
     );
@@ -165,6 +168,7 @@ export class Listing {
       this.favoriteCount,
       this.acceptsExchange,
       this.installmentAvailable,
+      this.coverMediaKey,
       this.createdAt,
       new Date(),
     );
@@ -210,6 +214,7 @@ export class Listing {
       this.favoriteCount,
       this.acceptsExchange,
       this.installmentAvailable,
+      this.coverMediaKey,
       this.createdAt,
       new Date(),
     );
@@ -255,6 +260,7 @@ export class Listing {
       this.favoriteCount,
       this.acceptsExchange,
       this.installmentAvailable,
+      this.coverMediaKey,
       this.createdAt,
       new Date(),
     );
@@ -294,6 +300,7 @@ export class Listing {
       this.favoriteCount,
       this.acceptsExchange,
       this.installmentAvailable,
+      this.coverMediaKey,
       this.createdAt,
       new Date(),
     );

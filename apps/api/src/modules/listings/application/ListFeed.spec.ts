@@ -85,6 +85,7 @@ describe("ListFeed", () => {
       allowCalls: true,
       allowChat: true,
       publishedAt: new Date("2026-05-01T00:00:00Z"),
+      ...(overrides?.coverMediaKey ? { coverMediaKey: overrides.coverMediaKey } : {}),
       ...overrides,
     });
   }
@@ -106,6 +107,24 @@ describe("ListFeed", () => {
     expect(result.items).toHaveLength(2);
     expect(result.items[0]!.id).toBe("l1");
     expect(result.items[0]!.displayPriceTmt).toBe(100000);
+  });
+
+  it("includes coverMediaKey when listing has media", async () => {
+    ranking.items = [seedListing({ id: "l1", coverMediaKey: "listings/l1/m1/original.jpg" })];
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    const result = await uc.execute({});
+
+    expect(result.items[0]!.coverMediaKey).toBe("listings/l1/m1/original.jpg");
+  });
+
+  it("omits coverMediaKey when listing has no media", async () => {
+    ranking.items = [seedListing({ id: "l1" })];
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    const result = await uc.execute({});
+
+    expect(result.items[0]!.coverMediaKey).toBeUndefined();
   });
 
   it("computes displayPriceTmt for USD listings", async () => {

@@ -505,6 +505,27 @@ describe("ListingsController e2e", () => {
       expect(res.body.nextCursor).toBeNull();
     });
 
+    it("returns coverMediaKey for published listings with media", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const feed = await request
+        .get("/api/v1/listings")
+        .expect(200);
+
+      const item = feed.body.items.find((i: { id: string }) => i.id === listingId);
+      expect(item).toBeDefined();
+      expect(item.coverMediaKey).toBe("photo1.jpg");
+    });
+
     it("paginates feed with cursor", async () => {
       await seedCatalog();
       const token = await createUser("user-1");

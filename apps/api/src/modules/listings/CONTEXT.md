@@ -110,7 +110,7 @@ Remaining S4 use-cases in #92: `GetListingDetail`, `ListFeed`, `ListMyListings`,
 | GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
 | GET | `/api/v1/me/listings` | Required | `ListMyListings` |
 | POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
-| GET | `/api/v1/listings` | Public | `ListFeed` |
+| GET | `/api/v1/listings` | Public | `ListFeed` | Includes `coverMediaKey` when listing has media |
 | GET | `/api/v1/listings/:id` | Public | `GetListingDetail` |
 | GET | `/api/v1/exchange-rates` | Public | `GetExchangeRates` |
 | POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |

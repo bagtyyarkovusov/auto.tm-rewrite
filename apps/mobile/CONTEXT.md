@@ -20,6 +20,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`). The wrapper uses `AbortController` with a 30-second default request timeout (15 seconds for refresh); timeouts throw `ApiError("NETWORK_ERROR", 0, "Request timed out")`.
 - **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
 - **`expo-secure-store`** for JWT access + refresh tokens (`src/auth/session.ts`).
+- **`expo-image`** for remote listing photos (feed cards + detail).
 - **`expo-image-picker`** for camera / photo-library selection.
 - **`expo-camera`** for camera capture.
 - **`expo-file-system`** for `documentDirectory` staging of upload media.
@@ -50,7 +51,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
 
 ```
 /(tabs)/
-  index               Feed (personalized listings)        — stub, no real feed
+  index               Feed (chronological listings)       — real feed via `useListings`; `expo-image` cards; pull-to-refresh; infinite scroll
   favorites           Favorites + saved searches          — stub
   sell                Sell tab + inline 8-step create-listing wizard (S4) — WizardLayout overlays this route; tab bar hidden while wizard is open
   chat                Conversation list                   — stub
@@ -113,7 +114,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 Identity hooks live at `src/api/identity/*`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
-Listings hooks live at `src/api/listings/*` (`useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useAttachMedia`, `useRemoveMedia`, `useReorderMedia`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`).
+Listings hooks live at `src/api/listings/*` (`useListings`, `useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useAttachMedia`, `useRemoveMedia`, `useReorderMedia`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`).
 Uploads hook lives at `src/api/uploads/usePresignUpload`.
 Exchange-rate hook lives at `src/api/exchange-rates/useExchangeRates`.
 Upload staging utilities live at `src/listings/uploadStaging/` (`types.ts`, `stagingDir.ts`, `compressor.ts`, `queueState.ts`, `uploadErrors.ts`, `orphanCleanup.ts`, `appStateResume.ts`).

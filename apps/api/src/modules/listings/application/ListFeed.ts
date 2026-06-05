@@ -67,7 +67,7 @@ export class ListFeed {
         priceAmount: listing.priceAmount,
         priceCurrency: listing.priceCurrency,
         displayPriceTmt,
-        coverMediaKey: undefined, // FeedRankingPort returns Listing entities without media
+        coverMediaKey: listing.coverMediaKey,
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
       };
