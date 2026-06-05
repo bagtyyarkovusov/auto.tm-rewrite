@@ -1,5 +1,6 @@
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
+import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +78,7 @@ export function ListingCard({ listing, onPress }: ListingCardProps) {
           </View>
 
           <View className="flex-row items-center gap-2">
-            {listing.status === "sold" && (
+            {listing.status === Enums.ListingStatus.Sold && (
               <Badge variant="secondary" className="px-2 py-0.5">
                 <Text className="text-xs text-secondary-foreground">Sold</Text>
               </Badge>

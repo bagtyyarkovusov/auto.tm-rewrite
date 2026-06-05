@@ -85,7 +85,6 @@ describe("ListFeed", () => {
       allowCalls: true,
       allowChat: true,
       publishedAt: new Date("2026-05-01T00:00:00Z"),
-      ...(overrides?.coverMediaKey ? { coverMediaKey: overrides.coverMediaKey } : {}),
       ...overrides,
     });
   }

@@ -85,7 +85,6 @@ export default function FeedScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={() => refetch()}
-            tintColor="hsl(var(--muted-foreground))"
           />
         }
         onEndReached={() => {
