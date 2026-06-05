@@ -1,6 +1,6 @@
 # TASK
 
-Merge these branches into the current branch (`{{SOURCE_BRANCH}}`):
+Merge these branches into the current branch (`{{TARGET_BRANCH}}`):
 
 {{BRANCHES}}
 

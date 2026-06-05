@@ -134,7 +134,6 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
               BRANCH: issue.branch,
-              SOURCE_BRANCH: "main",
             },
           });
 
@@ -196,7 +195,6 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     agent: sandcastle.kimiCode("kimi-k2.6"),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
-      SOURCE_BRANCH: "main",
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),
       ISSUES: completedIssues.map((i) => `- ${i.id}: ${i.title}`).join("\n"),
     },
