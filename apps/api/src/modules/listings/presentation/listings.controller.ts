@@ -27,7 +27,7 @@ import { ReorderMedia } from "../application/ReorderMedia";
 import { GetListingDetail } from "../application/GetListingDetail";
 import { ListFeed } from "../application/ListFeed";
 import { ListingsSchemas } from "@auto-tm/contracts";
-import { z } from "zod";
+import type { z } from "zod";
 
 @Controller("api/v1/listings")
 export class ListingsController {

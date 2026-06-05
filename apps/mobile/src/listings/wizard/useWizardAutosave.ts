@@ -16,17 +16,14 @@ function debounce<TArgs extends unknown[]>(
   delay: number,
 ): DebouncedFn<TArgs> {
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let lastArgs: TArgs | null = null;
 
   const debounced = (...args: TArgs) => {
-    lastArgs = args;
     if (timer) {
       clearTimeout(timer);
     }
     timer = setTimeout(() => {
       fn(...args);
       timer = null;
-      lastArgs = null;
     }, delay);
   };
 
@@ -34,7 +31,6 @@ function debounce<TArgs extends unknown[]>(
     if (timer) {
       clearTimeout(timer);
       timer = null;
-      lastArgs = null;
     }
   };
 

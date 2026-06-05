@@ -15,7 +15,6 @@ import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
 
 const MAX_ATTEMPTS = 6;
 const MAX_SESSIONS = 10;
-const ACCESS_TTL_SECONDS = 15 * 60; // 15 minutes
 const REFRESH_TTL_DAYS = 30;
 
 function hashSha256(input: string): string {

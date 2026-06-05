@@ -5,7 +5,7 @@ import {
   type ListingsSchemas,
 } from "@auto-tm/contracts";
 
-import { ListingDraft } from "../domain/ListingDraft";
+import type { ListingDraft } from "../domain/ListingDraft";
 import {
   LISTING_DRAFT_REPOSITORY,
   type ListingDraftRepository,

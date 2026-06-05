@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 
-import { ListingsSchemas } from "@auto-tm/contracts";
+import type { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
 import type { Currency } from "../domain/types";

@@ -12,13 +12,11 @@ import { Icon } from "@/components/ui/icon";
 
 interface PhotoStateOverlayProps {
   photo: StagedPhoto;
-  index: number;
   onRetry: (photoId: string) => void;
 }
 
 export function PhotoStateOverlay({
   photo,
-  index,
   onRetry,
 }: PhotoStateOverlayProps) {
   if (photo.state === "selected") {

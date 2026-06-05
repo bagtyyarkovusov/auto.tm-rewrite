@@ -22,6 +22,8 @@ import { DiscardDraft } from "../application/DiscardDraft";
 import { ListMyDrafts } from "../application/ListMyDrafts";
 import { ValidateDraftStep } from "../application/ValidateDraftStep";
 
+type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
+
 @Controller()
 export class DraftsController {
   constructor(
@@ -49,13 +51,17 @@ export class DraftsController {
     }
   }
 
+  private userId(req: FastifyRequest): string {
+    return (req as AuthenticatedRequest).user?.sub as string;
+  }
+
   @Post("api/v1/listings/drafts")
   async createDraft(
     @Body() body: unknown,
     @Req() req: FastifyRequest,
   ) {
     const parsed = this.parseOrThrow(ListingsSchemas.CreateDraftRequestSchema, body);
-    const userId = (req as any).user?.sub as string;
+    const userId = this.userId(req);
 
     const result = await this.createDraftUC.execute({
       userId,
@@ -78,7 +84,7 @@ export class DraftsController {
     @Req() req: FastifyRequest,
   ) {
     const parsed = this.parseOrThrow(ListingsSchemas.UpdateDraftRequestSchema, body);
-    const userId = (req as any).user?.sub as string;
+    const userId = this.userId(req);
 
     const result = await this.updateDraftUC.execute({
       draftId,
@@ -103,7 +109,7 @@ export class DraftsController {
     @Req() req: FastifyRequest,
   ) {
     const parsed = this.parseOrThrow(WizardSchemas.ValidateStepRequestSchema, body);
-    const userId = (req as any).user?.sub as string;
+    const userId = this.userId(req);
 
     const result = await this.validateStepUC.execute({
       draftId,
@@ -124,7 +130,7 @@ export class DraftsController {
     @Param("id") draftId: string,
     @Req() req: FastifyRequest,
   ) {
-    const userId = (req as any).user?.sub as string;
+    const userId = this.userId(req);
     await this.discardDraftUC.execute({ draftId, userId });
     return { success: true };
   }
@@ -134,7 +140,7 @@ export class DraftsController {
     @Query() query: { cursor?: string; limit?: number },
     @Req() req: FastifyRequest,
   ) {
-    const userId = (req as any).user?.sub as string;
+    const userId = this.userId(req);
     const pagination = this.parseOrThrow(ListingsSchemas.FeedQuerySchema, query);
 
     const cursor = pagination.cursor

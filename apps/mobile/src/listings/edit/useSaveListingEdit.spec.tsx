@@ -13,7 +13,6 @@ import {
   computeOps,
   buildFieldsPatch,
   EditSessionError,
-  type OpState,
 } from "./useSaveListingEdit";
 import type { StagedPhoto } from "../uploadStaging/types";
 import type { ListingsSchemas } from "@auto-tm/contracts";

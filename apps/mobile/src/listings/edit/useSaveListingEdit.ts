@@ -179,6 +179,10 @@ export function opLabel(opId: string): string {
   return opId;
 }
 
+function hasUploadKey(photo: StagedPhoto): photo is StagedPhoto & { key: string } {
+  return Boolean(photo.key);
+}
+
 export function useSaveListingEdit(
   listingId: string,
   payload: WizardSchemas.WizardDraftPayload,
@@ -225,12 +229,13 @@ export function useSaveListingEdit(
       }
 
       const newPhotos = photos.filter(
-        (p) => p.key && !seedMediaIds.has(p.photoId),
+        (p): p is StagedPhoto & { key: string } =>
+          hasUploadKey(p) && !seedMediaIds.has(p.photoId),
       );
       for (const photo of newPhotos) {
         await runOp(`attach:${photo.photoId}`, () =>
           attachMedia.mutateAsync({
-            key: photo.key!,
+            key: photo.key,
             kind: "image",
             sortOrder: photo.sortOrder,
             width: photo.width,

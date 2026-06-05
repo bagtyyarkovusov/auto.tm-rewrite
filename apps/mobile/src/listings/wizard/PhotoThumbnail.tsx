@@ -61,7 +61,7 @@ export function PhotoThumbnail({
         </View>
       )}
 
-      <PhotoStateOverlay photo={photo} index={index} onRetry={onRetry} />
+      <PhotoStateOverlay photo={photo} onRetry={onRetry} />
 
       <DropdownMenu>
         <DropdownMenuTrigger>
