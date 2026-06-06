@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Client-side listing creation + upload pipeline + feed browsing for `apps/mobile`. Four subsystems: the **wizard** (step navigation + contracts validation), **media upload staging** (compress → presign → PUT), **autosave** (debounced draft persistence + retry), and **feed** (chronological listing cards via `useListings`).
+Client-side listing creation + upload pipeline + feed browsing + search filters for `apps/mobile`. Five subsystems: the **wizard** (step navigation + contracts validation), **media upload staging** (compress → presign → PUT), **autosave** (debounced draft persistence + retry), **feed** (chronological listing cards via `useListings`), and **search** (filter sheet with draft/active state).
 
 **Single wizard shell today** — create and edit share `wizardMachine` + `WizardLayout`, but persistence and photos differ by flow:
 
@@ -21,6 +21,10 @@ Client-side listing creation + upload pipeline + feed browsing for `apps/mobile`
     - `FeedSkeleton.tsx` — skeleton rows for initial load
     - `FeedEmpty.tsx` — empty feed CTA to Sell tab
     - `FeedError.tsx` — retry affordance on network/API failure
+  - `search/` — feed filter sheet + filter state hook
+    - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, and `count`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both.
+    - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions and draft/active isolation.
+    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand, Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
   - `detail/` — buyer listing detail helpers
     - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
     - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)
@@ -347,11 +351,37 @@ Each op is tracked in a `Record<opId, OpState>` where `OpState ∈ {pending, in_
 - On success: "Changes saved" toast + `router.replace` to public detail.
 - On failure: per-op error banner renders inline on the Review step, with a **Retry** button.
 
-## 5. Platform invariants — DO NOT REMOVE
+## 5. Search / filter state
+
+`useListingFilters()` owns the filter-draft → active lifecycle on the Search tab. Filter type is `z.infer<typeof ListingsSchemas.ListingFilterSchema>` (contract-driven, not hand-rolled).
+
+### State model
+
+- `draft` — in-progress filter values edited inside the sheet. Mutated by `setField(key, value)`.
+- `active` — committed filters that will be consumed by the query hook (#163). Mutated only by `apply()` or `reset()`.
+- `count` — number of fields in `active` whose value is not `undefined`, `null`, or empty string.
+
+### Lifecycle
+
+```
+open sheet → edit draft via setField → Apply → draft → active + close sheet
+open sheet → edit draft → Reset → clear draft + active
+```
+
+`apply()` reads the latest draft via a synchronous ref (batched `setField` calls are visible to `apply` in the same event tick). `reset()` clears both states.
+
+### UI contract
+
+- The Search tab trigger shows a brand `Badge` with `count` when `count > 0`.
+- `FilterSheet` exposes named slot components (`BrandSlot`, `ModelSlot`, `CitySlot`, `PriceRangeSlot`, `YearRangeSlot`, `ConditionSlot`) so each control slice (#158–#162) adds exactly one component file + one line in `FilterSheet`.
+- Apply button label adapts: `"Apply"` when no active filters, `"Show results ({count})"` when filters are active.
+- Reset button is always visible and uses `variant="ghost"`; Apply uses `variant="brand" size="pill"`.
+
+## 6. Platform invariants — DO NOT REMOVE
 
 These workarounds exist because of iOS-specific runtime behavior discovered on-device during S4 (#116–#120). Removing them will reintroduce the bugs.
 
-### 4.1 Copy picker URIs before compression
+### 6.1 Copy picker URIs before compression
 
 **What**: All picker URIs are copied to `${documentDirectory}picker-temp/` before parallel compression starts. Temp copies are cleaned up after compression completes.
 
@@ -359,7 +389,7 @@ These workarounds exist because of iOS-specific runtime behavior discovered on-d
 
 **Hardening path**: After each `copyAsync` to `picker-temp/`, verify the copy exists with `getInfoAsync`. Fail fast with `LOCAL_FILE_MISSING` if the copy is missing, instead of discovering the failure mid-compression.
 
-### 4.2 Staging transfer: copyAsync only — no moveAsync
+### 6.2 Staging transfer: copyAsync only — no moveAsync
 
 **What**: Intermediate JPEG from `renderAsync()/saveAsync()` is **always** **`copyAsync`’d into** `listing-staging/{stagingKey}/{photoId}.jpg`, then temp files cleaned best-effort. **Never** **`moveAsync`**.
 
@@ -367,13 +397,13 @@ These workarounds exist because of iOS-specific runtime behavior discovered on-d
 
 **Hardening residual**: Optionally add **`getInfoAsync`** right after **`copyAsync`** on `picker-temp` sources (parity with autosave caveat) — compressor already validates destination footprint post-transfer.
 
-### 4.3 Parallel compression counter hook
+### 6.3 Parallel compression counter hook
 
 **What**: `src/listings/uploadStaging/useAsyncCounter.ts` wraps the **ref-counter** semantics (`increment` / `decrement` → boolean `isActive`) consumed by **`useUploadQueue`**.
 
 **Why**: Boolean `useState` cannot observe overlapping async compress sessions (#120 regression).
 
-### 4.4 expo-image-manipulator contextual chain API
+### 6.4 expo-image-manipulator contextual chain API
 
 **What**: `compressor.ts` uses `ImageManipulator.manipulate(uri).resize().renderAsync().saveAsync()` — the contextual chain API.
 
