@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
 import { Conversation } from "../domain/Conversation";
-import type { Message } from "../domain/Message";
+import { Message } from "../domain/Message";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 
 @Injectable()
@@ -89,14 +89,53 @@ export class PrismaConversationRepository implements ConversationRepository {
   }
 
   async listMessages(
-    _conversationId: string,
-    _query: { cursor?: string; limit?: number },
+    conversationId: string,
+    query: { cursor?: string; limit?: number },
   ): Promise<{ items: Message[]; nextCursor: string | null }> {
-    return { items: [], nextCursor: null };
+    const take = (query.limit ?? 20) + 1;
+
+    const rows = await this.prisma.message.findMany({
+      where: {
+        conversationId,
+        kind: "text",
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take,
+      ...(query.cursor
+        ? {
+            skip: 1,
+            cursor: { id: query.cursor },
+          }
+        : {}),
+    });
+
+    const hasMore = rows.length === take;
+    const items = hasMore ? rows.slice(0, -1) : rows;
+    const last = items[items.length - 1];
+
+    return {
+      items: items.map((r) => this.toDomainMessage(r)),
+      nextCursor: hasMore && last ? last.id : null,
+    };
   }
 
-  async saveMessage(_message: Message): Promise<void> {
-    throw new Error("saveMessage is not implemented");
+  async saveMessage(message: Message): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.message.create({
+        data: {
+          id: message.id,
+          conversationId: message.conversationId,
+          senderId: message.senderId,
+          kind: "text",
+          body: message.text,
+          createdAt: message.createdAt,
+        },
+      }),
+      this.prisma.conversation.update({
+        where: { id: message.conversationId },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
   }
 
   private toDomain(row: {
@@ -114,6 +153,22 @@ export class PrismaConversationRepository implements ConversationRepository {
       sellerId: row.sellerId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+    });
+  }
+
+  private toDomainMessage(row: {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    body: string | null;
+    createdAt: Date;
+  }): Message {
+    return Message.create({
+      id: row.id,
+      conversationId: row.conversationId,
+      senderId: row.senderId,
+      text: row.body ?? "",
+      createdAt: row.createdAt,
     });
   }
 }

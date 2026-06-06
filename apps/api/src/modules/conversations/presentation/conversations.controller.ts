@@ -5,6 +5,7 @@ import {
   Body,
   Req,
   Query,
+  Param,
   BadRequestException,
   Inject,
 } from "@nestjs/common";
@@ -16,7 +17,10 @@ import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPor
 import { Public } from "../../../common/public.decorator";
 import { OpenConversation } from "../application/OpenConversation";
 import { ListMyConversations } from "../application/ListMyConversations";
+import { ListMessages } from "../application/ListMessages";
+import { SendTextMessage } from "../application/SendTextMessage";
 import type { Conversation } from "../domain/Conversation";
+import type { Message } from "../domain/Message";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -27,6 +31,10 @@ export class ConversationsController {
     private readonly openConversationUC: OpenConversation,
     @Inject(ListMyConversations)
     private readonly listMyConversationsUC: ListMyConversations,
+    @Inject(ListMessages)
+    private readonly listMessagesUC: ListMessages,
+    @Inject(SendTextMessage)
+    private readonly sendTextMessageUC: SendTextMessage,
   ) {}
 
   @Public()
@@ -87,6 +95,52 @@ export class ConversationsController {
     };
   }
 
+  @Get(":id/messages")
+  async listMessages(
+    @Param("id") conversationId: string,
+    @Query() query: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.ListMessagesQuerySchema,
+      query,
+    );
+
+    const result = await this.listMessagesUC.execute({
+      userId,
+      conversationId,
+      ...(parsed.cursor ? { cursor: parsed.cursor } : {}),
+      limit: parsed.limit,
+    });
+
+    return {
+      items: result.items.map((m) => this.toMessageSummary(m)),
+      nextCursor: result.nextCursor,
+    };
+  }
+
+  @Post(":id/messages")
+  async sendTextMessage(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.SendTextMessageRequestSchema,
+      body,
+    );
+
+    const result = await this.sendTextMessageUC.execute({
+      senderId: userId,
+      conversationId,
+      text: parsed.text,
+    });
+
+    return this.toMessageSummary(result.message);
+  }
+
   private userId(req: FastifyRequest): string {
     return (req as AuthenticatedRequest).user?.sub as string;
   }
@@ -135,6 +189,16 @@ export class ConversationsController {
             status: listing.status,
           }
         : null,
+    };
+  }
+
+  private toMessageSummary(message: Message) {
+    return {
+      id: message.id,
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+      text: message.text,
+      createdAt: message.createdAt.toISOString(),
     };
   }
 }

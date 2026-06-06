@@ -12,7 +12,7 @@ Per-listing scoped 1:1 conversations between buyer and seller. The MLP beta ship
 - `ConversationParticipant` — id, conversationId (FK → Conversation, Cascade), userId (FK → User, Cascade), createdAt. Unique on `(conversationId, userId)`.
 - `Message` — id, conversationId (FK → Conversation, Cascade), senderId (no FK constraint), kind (`MessageKind` enum: text | image | post_ref | system), body?, metadata? (JSON), createdAt. Index on `(conversationId, createdAt)`.
 
-## Domain layer (S6 — #168)
+## Domain layer (S6 — #168, #170)
 
 Pure TypeScript, no Nest decorators, no Prisma imports.
 
@@ -24,21 +24,23 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 - A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
 - **Same-user-cannot-chat-themselves** — enforced at domain layer in `Conversation` constructor and at application layer in `OpenConversation`.
-- **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller.
+- **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller. Enforced by `ListMessages` and `SendTextMessage`.
 - **New contact restrictions** — `OpenConversation` rejects new contact for non-existent listings (`NOT_FOUND`), sold/archived listings (`FORBIDDEN`), listings with `allowChat = false` (`FORBIDDEN`), and self-contact (`FORBIDDEN`). Existing conversations remain retrievable regardless of subsequent listing state changes.
-- `Message.kind` is one of text | image | post_ref | system.
+- **Send restrictions** — `SendTextMessage` blocks sends when the referenced listing is unavailable (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), sold (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), archived (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), has `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`), or when the sender is not a participant (`FORBIDDEN` with `NOT_A_PARTICIPANT`). Existing history remains readable in all read-only states.
+- `Message.kind` is one of text | image | post_ref | system. S6 messages are persisted as `kind = text`.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
 - `Message` text is trimmed at creation; blank-after-trim and >1000 chars after trim are rejected by the domain layer.
+- **Conversation activity update on send** — `PrismaConversationRepository.saveMessage` updates the parent `Conversation.updatedAt` in the same Prisma transaction as the message insert, so `ListMyConversations` sort by `updatedAt DESC` reflects the latest message.
 
 ## Module shape (today)
 
 - `apps/api/src/modules/conversations/`:
   - `domain/` — `Conversation.ts`, `Message.ts`, `types.ts`, `ports/ConversationRepository.ts`
-  - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, plus unit tests (`OpenConversation.spec.ts`, `ListMyConversations.spec.ts`)
-  - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence and list queries)
-  - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations` and `GET /api/v1/conversations`, plus health-check ping
+  - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, plus unit tests (`OpenConversation.spec.ts`, `ListMyConversations.spec.ts`, `ListMessages.spec.ts`, `SendTextMessage.spec.ts`)
+  - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, and list queries)
+  - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, plus health-check ping
   - `conversations.module.ts` — registers controller, use-cases, and `ConversationRepository` port binding; imports `ListingsModule` for `ListingsReadPort`
-- No WebSocket gateway, no Socket.IO server, no message send/read/delete handlers.
+- No WebSocket gateway, no Socket.IO server, no message read/delete handlers.
 
 ## Ports exposed
 
@@ -46,12 +48,14 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 ## Ports consumed
 
-- `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `OpenConversation` and `ListMyConversations` to validate listing state and embed listing card fields in responses.
+- `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `OpenConversation`, `ListMyConversations`, and `SendTextMessage` to validate listing state and embed listing card fields in responses.
 
 ## Shipped use-cases
 
 - `OpenConversation` — for an authenticated buyer and a `listingId`, fetches the listing summary, validates the listing is active and chat-enabled, rejects self-contact, then creates or returns the existing `Conversation` and its two `ConversationParticipant` rows.
 - `ListMyConversations` — returns paginated conversations where the authenticated user is buyer or seller, sorted by `updatedAt DESC`. Embeds listing summaries via `ListingsReadPort`.
+- `ListMessages` — returns paginated text messages for a conversation, participant-only. Existing history remains readable even when the listing is sold, archived, or unavailable.
+- `SendTextMessage` — creates and persists a text message in a conversation after validating participant status and current listing contactability. Updates conversation activity in the same transaction.
 
 ## Events emitted
 
@@ -68,6 +72,8 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 | GET | `/api/v1/conversations/ping` | Public | Health check |
 | POST | `/api/v1/conversations` | Required | `OpenConversation` — body `{ listingId }` |
 | GET | `/api/v1/conversations` | Required | `ListMyConversations` — query `cursor?`, `limit?` |
+| GET | `/api/v1/conversations/:id/messages` | Required | `ListMessages` — query `cursor?`, `limit?` |
+| POST | `/api/v1/conversations/:id/messages` | Required | `SendTextMessage` — body `{ text }` |
 
 ## Planned additions (future sprints)
 
