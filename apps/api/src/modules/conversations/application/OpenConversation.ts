@@ -13,6 +13,7 @@ import type {
 } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
 import { Conversation } from "../domain/Conversation";
+import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
@@ -51,7 +52,7 @@ export class OpenConversation {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Cannot contact yourself",
-        details: { reason: "SELF_CONTACT_NOT_ALLOWED" },
+        details: { reason: CONVERSATION_ERROR_CODES.SELF_CONTACT_NOT_ALLOWED },
       });
     }
 
@@ -76,7 +77,7 @@ export class OpenConversation {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Chat is disabled for this listing",
-        details: { reason: "CHAT_DISABLED" },
+        details: { reason: CONVERSATION_ERROR_CODES.CHAT_DISABLED },
       });
     }
 

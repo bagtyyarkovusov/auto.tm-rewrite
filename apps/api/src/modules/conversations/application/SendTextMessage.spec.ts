@@ -5,7 +5,6 @@ import { Conversation } from "../domain/Conversation";
 import { Message } from "../domain/Message";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
-import { CONVERSATION_ERROR_CODES } from "../domain/types";
 
 import { SendTextMessage } from "./SendTextMessage";
 

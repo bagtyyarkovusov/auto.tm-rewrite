@@ -71,7 +71,7 @@ export class SendTextMessage {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Listing is no longer available for contact",
-        details: { reason: "LISTING_NOT_CONTACTABLE" },
+        details: { reason: CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE },
       });
     }
 
@@ -79,7 +79,7 @@ export class SendTextMessage {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Listing is not available for contact",
-        details: { reason: "LISTING_NOT_CONTACTABLE" },
+        details: { reason: CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE },
       });
     }
 
@@ -87,7 +87,7 @@ export class SendTextMessage {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Chat is disabled for this listing",
-        details: { reason: "CHAT_DISABLED" },
+        details: { reason: CONVERSATION_ERROR_CODES.CHAT_DISABLED },
       });
     }
 
