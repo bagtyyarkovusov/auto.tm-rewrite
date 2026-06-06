@@ -2,6 +2,7 @@ import { X } from "lucide-react-native";
 import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
+import { CityFilterControl } from "./CityFilterControl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -39,17 +40,6 @@ function ModelSlot() {
       <Text className="text-sm font-medium text-foreground">Model</Text>
       <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
         <Text className="text-sm text-muted-foreground">Model picker (#159)</Text>
-      </View>
-    </View>
-  );
-}
-
-function CitySlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">City</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">City picker (#160)</Text>
       </View>
     </View>
   );
@@ -118,7 +108,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
         <View className="min-h-0 flex-1 gap-4">
           <BrandSlot />
           <ModelSlot />
-          <CitySlot />
+          <CityFilterControl draft={filters.draft} setField={filters.setField} />
           <PriceRangeSlot />
           <YearRangeSlot />
           <ConditionSlot />

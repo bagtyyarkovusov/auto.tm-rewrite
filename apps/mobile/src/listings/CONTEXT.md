@@ -25,6 +25,8 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
     - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, and `count`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both.
     - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions and draft/active isolation.
     - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand, Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
+    - `CityFilterControl.tsx` — Region → City drilldown control for the filter sheet. Uses `useRegions` + `useCities(regionId)` to populate searchable `CatalogPickerSheet`s. Only `cityId` is written to the draft; regionId is local state used solely to fetch the city list. A module-level `cityMetaCache` preserves the selected city name across sheet close/open cycles.
+    - `CityFilterControl.spec.tsx` — source-code analysis tests for the control structure, drilldown behavior, selection/clear logic, and picker state wiring.
   - `detail/` — buyer listing detail helpers
     - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
     - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)
@@ -373,7 +375,7 @@ open sheet → edit draft → Reset → clear draft + active
 ### UI contract
 
 - The Search tab trigger shows a brand `Badge` with `count` when `count > 0`.
-- `FilterSheet` exposes named slot components (`BrandSlot`, `ModelSlot`, `CitySlot`, `PriceRangeSlot`, `YearRangeSlot`, `ConditionSlot`) so each control slice (#158–#162) adds exactly one component file + one line in `FilterSheet`.
+- `FilterSheet` exposes named slot components (`BrandSlot`, `ModelSlot`, `PriceRangeSlot`, `YearRangeSlot`, `ConditionSlot`) for pending controls; `CityFilterControl` is already wired in. Each future control adds one component file + one line in `FilterSheet`.
 - Apply button label adapts: `"Apply"` when no active filters, `"Show results ({count})"` when filters are active.
 - Reset button is always visible and uses `variant="ghost"`; Apply uses `variant="brand" size="pill"`.
 
