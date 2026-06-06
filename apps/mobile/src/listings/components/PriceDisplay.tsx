@@ -9,20 +9,34 @@ function formatPrice(amount: number): string {
 
 interface PriceDisplayProps {
   displayPriceTmt: number;
+  priceAmount: number;
+  priceCurrency: string;
   acceptsExchange: boolean;
   installmentAvailable: boolean;
+  isOwner?: boolean;
 }
 
 export function PriceDisplay({
   displayPriceTmt,
+  priceAmount,
+  priceCurrency,
   acceptsExchange,
   installmentAvailable,
+  isOwner = false,
 }: PriceDisplayProps) {
+  const showOriginal = isOwner && priceCurrency !== "TMT";
+
   return (
     <View className="gap-2">
       <Text className="text-3xl font-heading text-primary">
         {formatPrice(displayPriceTmt)}
       </Text>
+
+      {showOriginal && (
+        <Text className="text-sm text-muted-foreground">
+          {priceAmount.toLocaleString("en-US")} {priceCurrency}
+        </Text>
+      )}
 
       {(acceptsExchange || installmentAvailable) && (
         <View className="flex-row flex-wrap gap-2">

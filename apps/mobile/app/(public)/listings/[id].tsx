@@ -7,6 +7,7 @@ import { useListingDetail } from "../../../src/api/listings/useListingDetail";
 import { useCatalogMaps } from "../../../src/listings/detail/useCatalogMaps";
 import { ListingDetailView } from "../../../src/listings/components/ListingDetail";
 import { ContactCtaBar } from "../../../src/listings/components/ContactCtaBar";
+import { useViewer } from "../../../src/auth/useViewer";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -86,12 +87,16 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isPending, error, refetch } = useListingDetail(id ?? "");
+  const viewer = useViewer();
 
   const { maps } = useCatalogMaps(
     data?.brandId,
     data?.modelId,
     data?.regionId,
   );
+
+  const isOwner =
+    viewer != null && data != null && viewer.userId === data.sellerId;
 
   if (isPending) {
     return <DetailSkeleton />;
@@ -123,17 +128,20 @@ export default function ListingDetailScreen() {
       </View>
 
       <View className="flex-1">
-        <ListingDetailView listing={data} maps={maps} />
+        <ListingDetailView listing={data} maps={maps} isOwner={isOwner} />
       </View>
 
-      <View className="border-t border-border">
-        <ContactCtaBar
-          listingId={data.id}
-          contactPhone={data.contactPhone}
-          allowCalls={data.allowCalls}
-          status={data.status}
-        />
-      </View>
+      {/* Buyer CTAs only for non-owners */}
+      {!isOwner && (
+        <View className="border-t border-border">
+          <ContactCtaBar
+            listingId={data.id}
+            contactPhone={data.contactPhone}
+            allowCalls={data.allowCalls}
+            status={data.status}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }

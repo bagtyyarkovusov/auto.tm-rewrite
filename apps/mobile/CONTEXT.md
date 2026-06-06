@@ -62,7 +62,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
 /(public)/
-  listings/[id]       Buyer-facing listing detail         — complete buyer detail surface (S4, #145); photo gallery with fullscreen viewer, spec grid, seller block, price with seller-term badges, Call/Message/Share/Favorite CTAs; Message and Favorite disabled with honest coming-soon copy; sold badge and disabled contact actions for sold listings; unavailable state with back/retry for 404s
+  listings/[id]       Listing detail (buyer + owner)      — complete detail surface (S4, #145 + #146); photo gallery with fullscreen viewer, spec grid, seller block, price with seller-term badges; buyer CTAs: Call/Message/Share/Favorite (Message and Favorite disabled with honest coming-soon copy); sold badge and disabled contact actions for sold listings; unavailable state with back/retry for 404s; owner sees asymmetric price (TMT primary + original currency secondary for USD/AED), owner action panel (Edit, Mark sold, Archive, Republish, Delete) with AlertDialog confirmations, hides buyer CTAs; ownership determined by `useViewer` comparing session user.id to `listing.sellerId`
 
 /listings/
   [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes orchestrated via `useSaveListingEdit` (fields → attach → remove → reorder, fail-fast, retry-from-failure per ADR-0025); no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
@@ -112,11 +112,12 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
 - Wizard design system applied in #124 + #135: **`WizardHeader`** shows muted position-marker (`text-xs text-muted-foreground`) + **`text-2xl font-heading`** step title + progress bar. Step bodies open directly with form rows or brief `text-sm text-muted-foreground` orientation copy — no duplicate title. Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.
 
-Identity hooks live at `src/api/identity/*`.
+Identity hooks live at `src/api/identity/*`. Viewer hook lives at `src/auth/useViewer.ts`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
-Listings hooks live at `src/api/listings/*` (`useListings`, `useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useAttachMedia`, `useRemoveMedia`, `useReorderMedia`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`).
+Listings hooks live at `src/api/listings/*` (`useListings`, `useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useListingDetail`, `useEditListing`, `useAttachMedia`, `useRemoveMedia`, `useReorderMedia`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`). Owner mutations invalidate `detail`, `myListings`, and `all` query keys on success.
 Uploads hook lives at `src/api/uploads/usePresignUpload`.
 Exchange-rate hook lives at `src/api/exchange-rates/useExchangeRates`.
+Listing components live at `src/listings/components/` (`ListingDetail.tsx`, `PhotoGallery.tsx`, `PriceDisplay.tsx`, `SellerBlock.tsx`, `ContactCtaBar.tsx`, `OwnerActions.tsx`). `PriceDisplay` supports asymmetric owner mode (TMT + original currency). `OwnerActions` renders status-aware controls with `AlertDialog` confirmations.
 Upload staging utilities live at `src/listings/uploadStaging/` (`types.ts`, `stagingDir.ts`, `compressor.ts`, `queueState.ts`, `uploadErrors.ts`, `orphanCleanup.ts`, `appStateResume.ts`).
 
 ## Dependencies
@@ -133,7 +134,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 - **S4 (Listings CRUD)** —
   - Mobile uploads are **HTTPS PUT** to presigned URLs — **`apps/mobile/package.json` does not include `@aws-sdk/client-s3`** (clients never embedded the SDK; server issues presigned URLs).
   - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**, **`/(public)/listings/[id]`** complete buyer detail (photo gallery, spec grid, seller block, price with seller-term badges, Call/Message/Share/Favorite CTAs), and real mobile feed on **`/(tabs)/index`**.
-  - **Still missing vs #94 / S4 close**: owner-specific detail actions (edit, mark sold, archive from detail), My Listings/Drafts management surface. **`/(tabs)/sell`** only resumes the latest draft.
+  - **Still missing vs #94 / S4 close**: My Listings/Drafts management surface. **`/(tabs)/sell`** only resumes the latest draft.
   - **Still missing vs PRD / backlog**: optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
   - Mobile foundation (`apps/mobile` deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging pipeline) ✅ Shipped.

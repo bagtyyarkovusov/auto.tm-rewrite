@@ -2,12 +2,12 @@ import { ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
-
 import type { CatalogMaps } from "../detail/useCatalogMaps";
 
 import { PhotoGallery } from "./PhotoGallery";
 import { PriceDisplay } from "./PriceDisplay";
 import { SellerBlock } from "./SellerBlock";
+import { OwnerActions } from "./OwnerActions";
 
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +18,7 @@ type ListingDetail = ListingsSchemas.ListingDetail;
 interface ListingDetailProps {
   listing: ListingDetail;
   maps: CatalogMaps;
+  isOwner?: boolean;
 }
 
 function buildTitle(listing: ListingDetail, maps: CatalogMaps): string {
@@ -47,7 +48,7 @@ function SpecItem({ label, value }: SpecItemProps) {
   );
 }
 
-export function ListingDetailView({ listing, maps }: ListingDetailProps) {
+export function ListingDetailView({ listing, maps, isOwner = false }: ListingDetailProps) {
   const isSold = listing.status === Enums.ListingStatus.Sold;
 
   const specs: SpecItemProps[] = [
@@ -127,8 +128,11 @@ export function ListingDetailView({ listing, maps }: ListingDetailProps) {
         {/* Price */}
         <PriceDisplay
           displayPriceTmt={listing.displayPriceTmt}
+          priceAmount={listing.priceAmount}
+          priceCurrency={listing.priceCurrency}
           acceptsExchange={listing.acceptsExchange}
           installmentAvailable={listing.installmentAvailable}
+          isOwner={isOwner}
         />
 
         {visibleSpecs.length > 0 && (
@@ -163,17 +167,21 @@ export function ListingDetailView({ listing, maps }: ListingDetailProps) {
 
         <Separator className="my-1" />
 
-        {/* Seller block */}
-        <SellerBlock
-          cityName={maps.cityName(listing.cityId)}
-          regionName={maps.regionName(listing.regionId)}
-          locationText={listing.locationText}
-          contactPhone={listing.contactPhone}
-          allowCalls={listing.allowCalls}
-        />
+        {/* Owner actions or seller block */}
+        {isOwner ? (
+          <OwnerActions listingId={listing.id} status={listing.status} />
+        ) : (
+          <SellerBlock
+            cityName={maps.cityName(listing.cityId)}
+            regionName={maps.regionName(listing.regionId)}
+            locationText={listing.locationText}
+            contactPhone={listing.contactPhone}
+            allowCalls={listing.allowCalls}
+          />
+        )}
       </View>
 
-      {/* Bottom padding for CTA */}
+      {/* Bottom padding for CTA or scroll breathing room */}
       <View className="h-4" />
     </ScrollView>
   );

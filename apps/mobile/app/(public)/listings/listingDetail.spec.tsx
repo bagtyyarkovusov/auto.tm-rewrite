@@ -41,8 +41,12 @@ describe("PriceDisplay (public/buyer mode)", () => {
     expect(priceDisplaySource).toContain("TMT");
     expect(priceDisplaySource).not.toContain("USD");
     expect(priceDisplaySource).not.toContain("AED");
-    expect(priceDisplaySource).not.toContain("priceAmount");
-    expect(priceDisplaySource).not.toContain("priceCurrency");
+  });
+
+  it("accepts priceAmount and priceCurrency for owner mode", () => {
+    expect(priceDisplaySource).toContain("priceAmount");
+    expect(priceDisplaySource).toContain("priceCurrency");
+    expect(priceDisplaySource).toContain("isOwner");
   });
 
   it("renders seller term badges conditionally", () => {
@@ -171,5 +175,33 @@ describe("ListingDetailScreen", () => {
   it("shows manual retry on hard error", () => {
     expect(screenSource).toContain("onRetry");
     expect(screenSource).toContain("refetch");
+  });
+
+  it("uses useViewer to determine ownership", () => {
+    expect(screenSource).toContain("useViewer");
+    expect(screenSource).toContain("viewer.userId === data.sellerId");
+  });
+
+  it("hides buyer ContactCtaBar for owner", () => {
+    expect(screenSource).toContain("!isOwner &&");
+  });
+
+  it("passes isOwner to ListingDetailView", () => {
+    expect(screenSource).toContain("isOwner={isOwner}");
+  });
+});
+
+describe("ListingDetailView owner branching", () => {
+  it("renders OwnerActions when isOwner is true", () => {
+    expect(listingDetailSource).toContain("isOwner ? (");
+    expect(listingDetailSource).toContain("<OwnerActions");
+  });
+
+  it("renders SellerBlock when isOwner is false", () => {
+    expect(listingDetailSource).toContain("<SellerBlock");
+  });
+
+  it("accepts isOwner prop", () => {
+    expect(listingDetailSource).toContain("isOwner?: boolean");
   });
 });
