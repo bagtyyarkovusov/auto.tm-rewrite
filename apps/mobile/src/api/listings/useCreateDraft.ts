@@ -16,6 +16,7 @@ export function useCreateDraft() {
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDrafts() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDraftsInfinite() });
     },
   });
 }

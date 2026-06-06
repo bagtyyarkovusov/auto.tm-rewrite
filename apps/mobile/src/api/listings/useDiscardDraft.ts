@@ -11,6 +11,7 @@ export function useDiscardDraft() {
       apiClient.delete(`/listings/drafts/${draftId}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDrafts() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDraftsInfinite() });
     },
   });
 }

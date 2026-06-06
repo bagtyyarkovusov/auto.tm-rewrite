@@ -20,6 +20,9 @@ export function useRemoveMedia(listingId: string) {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.listings.myListings(),
       });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.listings.myListingsInfinite(),
+      });
     },
   });
 }

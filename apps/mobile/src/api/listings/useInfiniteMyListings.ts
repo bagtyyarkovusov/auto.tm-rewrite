@@ -6,6 +6,7 @@ import { queryKeys } from "../queryKeys";
 
 interface UseInfiniteMyListingsOptions {
   limit?: number;
+  enabled?: boolean;
 }
 
 export function useInfiniteMyListings(opts?: UseInfiniteMyListingsOptions) {
@@ -27,5 +28,6 @@ export function useInfiniteMyListings(opts?: UseInfiniteMyListingsOptions) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     staleTime: 30_000,
+    enabled: opts?.enabled,
   });
 }

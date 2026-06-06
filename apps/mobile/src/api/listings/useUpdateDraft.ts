@@ -22,6 +22,7 @@ export function useUpdateDraft() {
       ),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDrafts() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDraftsInfinite() });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.listings.detail(variables.draftId),
       });

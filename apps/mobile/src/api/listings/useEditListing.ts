@@ -25,6 +25,7 @@ export function useEditListing() {
         queryKey: queryKeys.listings.detail(variables.listingId),
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myListings() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myListingsInfinite() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.all() });
     },
   });

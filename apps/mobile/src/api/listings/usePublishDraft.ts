@@ -28,7 +28,9 @@ export function usePublishDraft() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.all() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myListings() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myListingsInfinite() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDrafts() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDraftsInfinite() });
     },
   });
 }

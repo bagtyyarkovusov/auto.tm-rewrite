@@ -6,6 +6,7 @@ import { queryKeys } from "../queryKeys";
 
 interface UseInfiniteMyDraftsOptions {
   limit?: number;
+  enabled?: boolean;
 }
 
 export function useInfiniteMyDrafts(opts?: UseInfiniteMyDraftsOptions) {
@@ -27,5 +28,6 @@ export function useInfiniteMyDrafts(opts?: UseInfiniteMyDraftsOptions) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     staleTime: 30_000,
+    enabled: opts?.enabled,
   });
 }

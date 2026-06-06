@@ -138,8 +138,12 @@ export default function ManageListingsScreen() {
   const [activeTab, setActiveTab] = useState<ManageTab>("active");
   const [showSignIn, setShowSignIn] = useState(false);
 
-  const listingsQuery = useInfiniteMyListings();
-  const draftsQuery = useInfiniteMyDrafts();
+  const listingsQuery = useInfiniteMyListings({
+    enabled: isAuthenticated === true,
+  });
+  const draftsQuery = useInfiniteMyDrafts({
+    enabled: isAuthenticated === true,
+  });
   const discardDraft = useDiscardDraft();
 
   const { data: brandsData } = useBrands();

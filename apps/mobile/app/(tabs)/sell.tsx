@@ -78,7 +78,7 @@ export default function SellScreen() {
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
   const [defaultPhone, setDefaultPhone] = useState("");
-  const resumedRef = useRef(false);
+  const resumedRef = useRef<string | null>(null);
 
   useEffect(() => {
     loadAuthSession().then((s) => setDefaultPhone(s?.user.phone ?? ""));
@@ -99,6 +99,7 @@ export default function SellScreen() {
 
   const { data: draftsData, isPending: draftsLoading } = useMyDrafts({
     enabled: !!isAuthenticated,
+    limit: params.resumeDraftId ? 500 : 20,
   });
 
   const createDraft = useCreateDraft();
@@ -220,9 +221,12 @@ export default function SellScreen() {
 
   // Resume a specific draft when navigated from My Listings / Drafts management.
   useEffect(() => {
+    if (!params.resumeDraftId) {
+      resumedRef.current = null;
+      return;
+    }
     if (
-      !params.resumeDraftId ||
-      resumedRef.current ||
+      resumedRef.current === params.resumeDraftId ||
       !draftsData ||
       machineState.status !== "idle"
     ) {
@@ -230,10 +234,16 @@ export default function SellScreen() {
     }
     const target = draftsData.items.find((d) => d.id === params.resumeDraftId);
     if (target) {
-      resumedRef.current = true;
+      resumedRef.current = params.resumeDraftId;
       handleContinueDraft(target);
+    } else {
+      resumedRef.current = params.resumeDraftId;
+      show({
+        title: "Draft not found. It may have been published or discarded.",
+        variant: "destructive",
+      });
     }
-  }, [params.resumeDraftId, draftsData, machineState.status, handleContinueDraft]);
+  }, [params.resumeDraftId, draftsData, machineState.status, handleContinueDraft, show]);
 
   const handleBack = useCallback(() => {
     dispatch({ type: "BACK" });
