@@ -32,7 +32,11 @@ export const queryKeys = {
     detail: (id: string) =>
       [...queryKeys.listings.all(), "detail", id] as const,
     myListings: () => [...queryKeys.listings.all(), "my-listings"] as const,
+    myListingsInfinite: () =>
+      [...queryKeys.listings.all(), "my-listings-infinite"] as const,
     myDrafts: () => [...queryKeys.listings.all(), "my-drafts"] as const,
+    myDraftsInfinite: () =>
+      [...queryKeys.listings.all(), "my-drafts-infinite"] as const,
   },
 
   uploads: {

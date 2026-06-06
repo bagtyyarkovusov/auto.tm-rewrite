@@ -1,7 +1,7 @@
-import { PlusCircle } from "lucide-react-native";
-import { router } from "expo-router";
+import { PlusCircle, List } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
 import { NavigationContext } from "@react-navigation/native";
-import { useContext, useEffect, useReducer, useState, useCallback, useMemo } from "react";
+import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WizardSchemas } from "@auto-tm/contracts";
@@ -68,6 +68,7 @@ export default function SellScreen() {
   const { isAuthenticated } = useAuth();
   const { show } = useToast();
   const navigation = useContext(NavigationContext);
+  const params = useLocalSearchParams<{ resumeDraftId?: string }>();
   const [showSignIn, setShowSignIn] = useState(false);
   const [machineState, dispatch] = useReducer(
     wizardMachineReducer,
@@ -77,6 +78,7 @@ export default function SellScreen() {
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
   const [defaultPhone, setDefaultPhone] = useState("");
+  const resumedRef = useRef(false);
 
   useEffect(() => {
     loadAuthSession().then((s) => setDefaultPhone(s?.user.phone ?? ""));
@@ -98,6 +100,7 @@ export default function SellScreen() {
   const { data: draftsData, isPending: draftsLoading } = useMyDrafts({
     enabled: !!isAuthenticated,
   });
+
   const createDraft = useCreateDraft();
   const publishDraft = usePublishDraft();
   const discardDraft = useDiscardDraft();
@@ -214,6 +217,23 @@ export default function SellScreen() {
     },
     [],
   );
+
+  // Resume a specific draft when navigated from My Listings / Drafts management.
+  useEffect(() => {
+    if (
+      !params.resumeDraftId ||
+      resumedRef.current ||
+      !draftsData ||
+      machineState.status !== "idle"
+    ) {
+      return;
+    }
+    const target = draftsData.items.find((d) => d.id === params.resumeDraftId);
+    if (target) {
+      resumedRef.current = true;
+      handleContinueDraft(target);
+    }
+  }, [params.resumeDraftId, draftsData, machineState.status, handleContinueDraft]);
 
   const handleBack = useCallback(() => {
     dispatch({ type: "BACK" });
@@ -496,6 +516,14 @@ export default function SellScreen() {
             >
               <Text>New listing</Text>
             </Button>
+            <Button
+              variant="ghost"
+              size="pill"
+              onPress={() => router.push("/listings/manage")}
+            >
+              <Icon as={List} className="size-4 text-foreground" />
+              <Text>My listings & drafts</Text>
+            </Button>
           </View>
         ) : (
           <View className="flex-1 items-center justify-center px-4">
@@ -514,6 +542,17 @@ export default function SellScreen() {
             >
               <Text>Start listing</Text>
             </Button>
+            {isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="pill"
+                className="mt-2"
+                onPress={() => router.push("/listings/manage")}
+              >
+                <Icon as={List} className="size-4 text-foreground" />
+                <Text>My listings & drafts</Text>
+              </Button>
+            )}
           </View>
         )}
       </View>

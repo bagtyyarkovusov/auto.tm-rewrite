@@ -1,0 +1,154 @@
+import { Pressable, View } from "react-native";
+import { Image } from "expo-image";
+import { Pencil } from "lucide-react-native";
+import { Enums } from "@auto-tm/contracts";
+import type { ListingsSchemas } from "@auto-tm/contracts";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Text } from "@/components/ui/text";
+
+const MEDIA_URL = (
+  process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""
+).replace(/\/$/, "");
+
+function buildVariantUrl(
+  key: string,
+  variant: "thumbnail" | "list" | "detail" | "fullscreen",
+): string {
+  if (!MEDIA_URL) return "";
+  if (key.endsWith(".mp4") || key.endsWith(".mov")) {
+    return `${MEDIA_URL}/${key}`;
+  }
+  const base = key.replace(/\/original\.(jpg|webp|jpeg)$/, "");
+  return `${MEDIA_URL}/${base}/${variant}.jpg`;
+}
+
+type ListingSummary = ListingsSchemas.ListingSummary;
+type ListingStatus = ListingsSchemas.ListingSummary["status"];
+
+interface OwnerListingCardProps {
+  listing: ListingSummary;
+  onOpen: (id: string) => void;
+  onEdit: (id: string) => void;
+}
+
+function formatPrice(amount: number): string {
+  return `${amount.toLocaleString("en-US")} TMT`;
+}
+
+function statusLabel(status: ListingStatus): string {
+  switch (status) {
+    case Enums.ListingStatus.Active:
+      return "Active";
+    case Enums.ListingStatus.Sold:
+      return "Sold";
+    case Enums.ListingStatus.Archived:
+      return "Archived";
+    default:
+      return status;
+  }
+}
+
+function statusBadgeVariant(
+  status: ListingStatus,
+): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case Enums.ListingStatus.Active:
+      return "default";
+    case Enums.ListingStatus.Sold:
+      return "secondary";
+    case Enums.ListingStatus.Archived:
+      return "outline";
+    default:
+      return "secondary";
+  }
+}
+
+export function OwnerListingCard({
+  listing,
+  onOpen,
+  onEdit,
+}: OwnerListingCardProps) {
+  const imageUrl = listing.coverMediaKey
+    ? buildVariantUrl(listing.coverMediaKey, "list")
+    : null;
+
+  const titleParts = [
+    listing.year ? String(listing.year) : null,
+    listing.brandId,
+    listing.modelId,
+  ].filter(Boolean);
+
+  return (
+    <Pressable
+      className="active:opacity-90"
+      onPress={() => onOpen(listing.id)}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${statusLabel(listing.status).toLowerCase()} listing`}
+    >
+      <View className="flex-row gap-3 px-4 py-3">
+        {/* Cover image */}
+        <View className="h-[100px] w-[140px] overflow-hidden rounded-lg bg-muted">
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={{ width: 140, height: 100 }}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View className="h-full w-full items-center justify-center">
+              <Text className="text-xs text-muted-foreground">No photo</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Text content */}
+        <View className="flex-1 justify-between py-0.5">
+          <View className="gap-1">
+            <Text
+              className="text-base font-semibold text-foreground leading-5"
+              numberOfLines={2}
+            >
+              {titleParts.join(" ")}
+            </Text>
+            <Text className="text-lg font-heading text-primary">
+              {formatPrice(listing.displayPriceTmt)}
+            </Text>
+          </View>
+
+          <View className="flex-row flex-wrap items-center gap-2">
+            <Badge variant={statusBadgeVariant(listing.status)} className="px-2 py-0.5">
+              <Text className="text-xs">{statusLabel(listing.status)}</Text>
+            </Badge>
+            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              {listing.cityId}
+            </Text>
+          </View>
+
+          <View className="flex-row gap-2 pt-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
+              onPress={() => onOpen(listing.id)}
+            >
+              <Text>Open</Text>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onPress={() => onEdit(listing.id)}
+            >
+              <Icon as={Pencil} className="size-4 text-foreground" />
+              <Text>Edit</Text>
+            </Button>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
