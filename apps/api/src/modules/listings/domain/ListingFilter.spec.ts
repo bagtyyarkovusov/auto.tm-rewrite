@@ -71,14 +71,12 @@ describe("ListingFilter", () => {
     expect(filter.toCriteria()).toEqual({ condition: "used" });
   });
 
-  it("rejects equal priceMin and priceMax if that is considered inverted", () => {
-    // The issue says priceMin > priceMax is rejected; equal is fine
+  it("accepts equal priceMin and priceMax", () => {
     const filter = ListingFilter.create({ priceMin: 5000, priceMax: 5000 });
     expect(filter.toCriteria()).toEqual({ priceMin: 5000, priceMax: 5000 });
   });
 
-  it("rejects equal yearMin and yearMax if that is considered inverted", () => {
-    // The issue says yearMin > yearMax is rejected; equal is fine
+  it("accepts equal yearMin and yearMax", () => {
     const filter = ListingFilter.create({ yearMin: 2020, yearMax: 2020 });
     expect(filter.toCriteria()).toEqual({ yearMin: 2020, yearMax: 2020 });
   });
