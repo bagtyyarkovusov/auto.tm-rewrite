@@ -136,7 +136,6 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
   - Mobile uploads are **HTTPS PUT** to presigned URLs — **`apps/mobile/package.json` does not include `@aws-sdk/client-s3`** (clients never embedded the SDK; server issues presigned URLs).
   - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**, **`/(public)/listings/[id]`** complete buyer detail (photo gallery, spec grid, seller block, price with seller-term badges, Call/Message/Share/Favorite CTAs), and real mobile feed on **`/(tabs)/index`**.
   - **Shipped via #147**: My Listings/Drafts management surface at `/listings/manage` with Active/Sold/Archived/Drafts tabs, resume-any-draft, and auth-on-action. Existing `useMyListings`/`useMyDrafts` preserved for `app/_layout.tsx` orphan cleanup; new `useInfiniteMyListings`/`useInfiniteMyDrafts` power the management screen.
-  - **Still missing vs PRD / backlog**: optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
   - Mobile foundation (`apps/mobile` deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging pipeline) ✅ Shipped.
 - **S5 (Search + listing detail)** — MLP filter sheet; mobile picker modals (brand-picker, model-picker)

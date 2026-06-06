@@ -3,7 +3,7 @@ import { resolve } from "path";
 
 import { describe, it, expect } from "vitest";
 
-const source = readFileSync(resolve(__dirname, "manage.tsx"), "utf-8");
+const source = readFileSync(resolve(__dirname, "../../app/listings/manage.tsx"), "utf-8");
 
 describe("ManageListingsScreen structure", () => {
   it("renders four segmented tabs", () => {

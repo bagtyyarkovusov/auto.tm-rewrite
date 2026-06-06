@@ -6,32 +6,32 @@ import { resolve } from "path";
 import { describe, it, expect } from "vitest";
 
 const priceDisplaySource = readFileSync(
-  resolve(__dirname, "../../../src/listings/components/PriceDisplay.tsx"),
+  resolve(__dirname, "../components/PriceDisplay.tsx"),
   "utf-8",
 );
 
 const sellerBlockSource = readFileSync(
-  resolve(__dirname, "../../../src/listings/components/SellerBlock.tsx"),
+  resolve(__dirname, "../components/SellerBlock.tsx"),
   "utf-8",
 );
 
 const contactCtaSource = readFileSync(
-  resolve(__dirname, "../../../src/listings/components/ContactCtaBar.tsx"),
+  resolve(__dirname, "../components/ContactCtaBar.tsx"),
   "utf-8",
 );
 
 const photoGallerySource = readFileSync(
-  resolve(__dirname, "../../../src/listings/components/PhotoGallery.tsx"),
+  resolve(__dirname, "../components/PhotoGallery.tsx"),
   "utf-8",
 );
 
 const listingDetailSource = readFileSync(
-  resolve(__dirname, "../../../src/listings/components/ListingDetail.tsx"),
+  resolve(__dirname, "../components/ListingDetail.tsx"),
   "utf-8",
 );
 
 const screenSource = readFileSync(
-  resolve(__dirname, "./[id].tsx"),
+  resolve(__dirname, "../../../app/(public)/listings/[id].tsx"),
   "utf-8",
 );
 

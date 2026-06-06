@@ -24,12 +24,17 @@ Client-side listing creation + upload pipeline + feed browsing for `apps/mobile`
   - `detail/` — buyer listing detail helpers
     - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
     - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)
-  - `components/` — shared listing display components (used by feed + detail)
+  - `components/` — shared listing display components (used by feed + detail + management)
     - `PhotoGallery.tsx` — horizontal paging gallery (`FlatList` + `expo-image` `detail` variant) with dot indicator; tap opens fullscreen modal (`fullscreen` variant); no-media fallback renders "No photos"
-    - `PriceDisplay.tsx` — public TMT-only price + conditional seller-term badges (`Exchange possible`, `Installment possible`)
+    - `PriceDisplay.tsx` — public/buyer TMT-only price + owner asymmetric mode (TMT primary + original currency secondary for USD/AED) + conditional seller-term badges (`Exchange possible`, `Installment possible`)
     - `SellerBlock.tsx` — private seller label + location context (region/city/locationText) + contact phone when calls enabled; no avatar/tenure/response time (backend lacks rich seller profile in S4)
     - `ContactCtaBar.tsx` — sticky bottom CTA bar: Call (`tel:` via `expo-linking`, disabled when sold/no-phone/allowCalls=false), Message (disabled, "Chat coming soon"), Share (`react-native` `Share`), Favorite (disabled, "Favorite coming soon")
-    - `ListingDetail.tsx` — full detail composition: title (year + brand + model + generation), sold badge, price block, spec grid (year, condition, mileage, transmission, drive, engine, power, color, body type, VIN — conditional on presence), description, seller block
+    - `ListingDetail.tsx` — full detail composition: title (year + brand + model + generation), sold badge, price block, spec grid (year, condition, mileage, transmission, drive, engine, power, color, body type, VIN — conditional on presence), description, seller block; branches between buyer (`SellerBlock`) and owner (`OwnerActions`) presentation via `isOwner` prop
+    - `OwnerActions.tsx` — status-aware owner controls on detail (Edit, Mark sold, Archive, Republish, Delete) with `AlertDialog` confirmations; disables while pending and invalidates feed/detail/management caches on success
+    - `OwnerListingCard.tsx` — feed-card visual language adapted for owner management with status badge, Open and Edit actions
+    - `DraftCard.tsx` — draft row/card with draft identity, progress, photo count, Resume CTA, and destructive Discard with `AlertDialog` confirmation
+  - `manage/` — owner listing/draft management surface (S4 #147)
+    - Route: `app/listings/manage.tsx` — segmented tabs for Active/Sold/Archived/Drafts; auth-on-action prompt for anonymous users; reuses `OwnerListingCard` and `DraftCard`; pull-to-refresh and infinite scroll powered by `useInfiniteMyListings` and `useInfiniteMyDrafts`; resumes any draft by navigating to `/(tabs)/sell?resumeDraftId=<id>`; links to detail (`/(public)/listings/[id]`) and edit (`/listings/[id]/edit`)
   - `wizard/` — wizard state machine + autosave + step UI components
     - `wizardMachine.ts` — reducer-based state machine (not XState)
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
@@ -229,6 +234,8 @@ Implemented in `UPDATE_FIELDS` action via `getInvalidatedSteps(changedFields)` f
 ### Resume logic
 
 `INIT` action: loads draft/listing payload → extracts `validatedSteps[]` → resumes at the first unvalidated step up to the previously-reached step. Handles legacy numeric `currentStep` (1–7) via `mapLegacyStep()`. In edit mode with `entryStep: "review"`, it skips draft resume semantics, lands directly on Review, and marks all seven data steps validated because the payload came from a published listing.
+
+**Resume-any-draft from management**: `app/(tabs)/sell.tsx` reads the `resumeDraftId` route param and, after the latest drafts list resolves, initializes the wizard with the requested draft instead of the most recently updated one. This lets the owner management screen resume any draft, not just the latest.
 
 ### Derived context (`buildMachineContext`)
 

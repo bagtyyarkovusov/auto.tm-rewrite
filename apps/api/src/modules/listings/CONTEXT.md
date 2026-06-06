@@ -46,7 +46,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 
 - `apps/api/src/modules/listings/`:
   - `domain/` — **6 entities + types + 10 ports** (S4 #86)
-  - `application/` — 18 use-cases (S4 #88-#92): `CreateDraft`, `UpdateDraft`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
+  - `application/` — 19 use-cases (S4 #88-#92): `CreateDraft`, `UpdateDraft`, `ValidateDraftStep`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
   - `infrastructure/` — 12 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (full implementation per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md)), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `PrismaListingsReadRepository` (cross-context read surface), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
   - `presentation/listings.controller.ts` — public feed + detail + 6 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`, `edit`)
   - `presentation/DraftsController.ts` — draft CRUD + list my drafts
@@ -97,8 +97,7 @@ Repository ports (consumed only within `listings/`):
 - `AttachMedia` — registers uploaded asset on a listing; calls `ImageVariantGenerator` (sync Sharp) for images; enforces ≤20 photos + ≤1 video
 - `RemoveMedia` — hard-deletes `ListingMedia` row + all variant MinIO objects (best-effort)
 - `ReorderMedia` — bulk-updates `sortOrder` for owner-selected ordering in one Prisma transaction
-
-Remaining S4 use-cases in #92: `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
+- `ValidateDraftStep` — validates a single wizard step payload against the shared step schema without persisting it; used for step-level guard logic before autosave or publish
 
 ## HTTP routes
 
