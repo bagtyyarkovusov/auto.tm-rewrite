@@ -8,7 +8,6 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react-native";
-
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
@@ -69,16 +68,19 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
     switch (confirmAction.kind) {
       case "markSold":
         markSold.mutate(listingId, {
+          onSuccess: () => setConfirmAction(null),
           onError: () => setConfirmAction(null),
         });
         break;
       case "archive":
         archive.mutate(listingId, {
+          onSuccess: () => setConfirmAction(null),
           onError: () => setConfirmAction(null),
         });
         break;
       case "republish":
         republish.mutate(listingId, {
+          onSuccess: () => setConfirmAction(null),
           onError: () => setConfirmAction(null),
         });
         break;
