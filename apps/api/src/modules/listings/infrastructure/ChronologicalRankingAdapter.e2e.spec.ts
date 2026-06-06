@@ -10,6 +10,7 @@ import { PrismaService } from "@auto-tm/db";
 
 import { ChronologicalRankingAdapter } from "./ChronologicalRankingAdapter";
 import { PrismaExchangeRateRepository } from "./PrismaExchangeRateRepository";
+import type { Currency } from "../domain/types";
 
 describe("ChronologicalRankingAdapter — Testcontainers", () => {
   let container: StartedPostgreSqlContainer;
@@ -85,8 +86,8 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
   }
 
   async function seedExchangeRate(
-    from: "TMT" | "USD" | "AED",
-    to: "TMT" | "USD" | "AED",
+    from: Currency,
+    to: Currency,
     rate: number,
   ): Promise<void> {
     await prisma.exchangeRate.create({
@@ -101,7 +102,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
     modelId: string;
     cityId: string;
     priceAmount: number;
-    priceCurrency: "TMT" | "USD" | "AED";
+    priceCurrency: Currency;
     year?: number;
     condition?: "new" | "used";
     publishedAt: Date;
@@ -545,6 +546,178 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
         yearMax: 2021,
         condition: "new",
       },
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]!.id).toBe("l1");
+  });
+
+  it("filters by yearMin only", async () => {
+    const { cityA, brandX, modelX, seller } = await seedBaseCatalog();
+
+    const now = new Date();
+    await seedListing({
+      id: "l1",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 100_000,
+      priceCurrency: "TMT",
+      year: 2020,
+      publishedAt: now,
+    });
+    await seedListing({
+      id: "l2",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 200_000,
+      priceCurrency: "TMT",
+      year: 2015,
+      publishedAt: new Date(now.getTime() - 1000),
+    });
+
+    const result = await adapter.rank({
+      limit: 10,
+      filters: { yearMin: 2019 },
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]!.id).toBe("l1");
+  });
+
+  it("filters by yearMax only", async () => {
+    const { cityA, brandX, modelX, seller } = await seedBaseCatalog();
+
+    const now = new Date();
+    await seedListing({
+      id: "l1",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 100_000,
+      priceCurrency: "TMT",
+      year: 2020,
+      publishedAt: now,
+    });
+    await seedListing({
+      id: "l2",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 200_000,
+      priceCurrency: "TMT",
+      year: 2015,
+      publishedAt: new Date(now.getTime() - 1000),
+    });
+
+    const result = await adapter.rank({
+      limit: 10,
+      filters: { yearMax: 2018 },
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]!.id).toBe("l2");
+  });
+
+  it("filters by priceMin only", async () => {
+    const { cityA, brandX, modelX, seller } = await seedBaseCatalog();
+
+    const now = new Date();
+    await seedListing({
+      id: "l1",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 100_000,
+      priceCurrency: "TMT",
+      publishedAt: now,
+    });
+    await seedListing({
+      id: "l2",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 40_000,
+      priceCurrency: "TMT",
+      publishedAt: new Date(now.getTime() - 1000),
+    });
+
+    const result = await adapter.rank({
+      limit: 10,
+      filters: { priceMin: 50_000 },
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]!.id).toBe("l1");
+  });
+
+  it("filters by priceMax only", async () => {
+    const { cityA, brandX, modelX, seller } = await seedBaseCatalog();
+
+    const now = new Date();
+    await seedListing({
+      id: "l1",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 100_000,
+      priceCurrency: "TMT",
+      publishedAt: now,
+    });
+    await seedListing({
+      id: "l2",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 40_000,
+      priceCurrency: "TMT",
+      publishedAt: new Date(now.getTime() - 1000),
+    });
+
+    const result = await adapter.rank({
+      limit: 10,
+      filters: { priceMax: 50_000 },
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]!.id).toBe("l2");
+  });
+
+  it("excludes listings in currencies with missing FX rates when price filter is applied", async () => {
+    const { cityA, brandX, modelX, seller } = await seedBaseCatalog();
+
+    // Only seed TMT rate; USD rate is intentionally missing
+    await seedExchangeRate("TMT", "TMT", 1);
+
+    const now = new Date();
+    await seedListing({
+      id: "l1",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 80_000,
+      priceCurrency: "TMT",
+      publishedAt: now,
+    });
+    await seedListing({
+      id: "l2",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 20_000,
+      priceCurrency: "USD",
+      publishedAt: new Date(now.getTime() - 1000),
+    });
+
+    const result = await adapter.rank({
+      limit: 10,
+      filters: { priceMin: 50_000, priceMax: 100_000 },
     });
     expect(result.items).toHaveLength(1);
     expect(result.items[0]!.id).toBe("l1");

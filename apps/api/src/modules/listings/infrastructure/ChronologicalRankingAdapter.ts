@@ -146,18 +146,17 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
         max = priceMax !== undefined ? priceMax / rate : undefined;
       }
 
-      const branch: Prisma.ListingWhereInput = {
+      branches.push({
         priceCurrency: currency,
-      };
-
-      if (min !== undefined || max !== undefined) {
-        branch.priceAmount = {
-          ...(min !== undefined ? { gte: min } : {}),
-          ...(max !== undefined ? { lte: max } : {}),
-        };
-      }
-
-      branches.push(branch);
+        ...(min !== undefined || max !== undefined
+          ? {
+              priceAmount: {
+                ...(min !== undefined ? { gte: min } : {}),
+                ...(max !== undefined ? { lte: max } : {}),
+              },
+            }
+          : {}),
+      });
     }
 
     return branches;
