@@ -2,6 +2,7 @@ import { X } from "lucide-react-native";
 import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
+import { ConditionFilterControl } from "./ConditionFilterControl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -77,14 +78,12 @@ function YearRangeSlot() {
   );
 }
 
-function ConditionSlot() {
+function ConditionSlot({ filters }: { filters: UseListingFiltersReturn }) {
   return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Condition</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Condition picker (#162)</Text>
-      </View>
-    </View>
+    <ConditionFilterControl
+      value={filters.draft.condition}
+      onChange={(value) => filters.setField("condition", value)}
+    />
   );
 }
 
@@ -121,7 +120,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
           <CitySlot />
           <PriceRangeSlot />
           <YearRangeSlot />
-          <ConditionSlot />
+          <ConditionSlot filters={filters} />
         </View>
 
         <View className="flex-row gap-3 pt-2">
