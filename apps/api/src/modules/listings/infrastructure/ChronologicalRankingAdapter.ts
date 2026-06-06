@@ -1,13 +1,21 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaService } from "@auto-tm/db";
+import { PrismaService, type Prisma } from "@auto-tm/db";
 
 import { Listing } from "../domain/Listing";
 import type { FeedRankingPort } from "../domain/ports/FeedRankingPort";
-import type { FeedCursor, ListingFilterCriteria } from "../domain/types";
+import {
+  EXCHANGE_RATE_PORT,
+  type ExchangeRatePort,
+} from "../domain/ports/ExchangeRatePort";
+import type { Currency, FeedCursor, ListingFilterCriteria } from "../domain/types";
 
 @Injectable()
 export class ChronologicalRankingAdapter implements FeedRankingPort {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(EXCHANGE_RATE_PORT)
+    private readonly exchangeRates: ExchangeRatePort,
+  ) {}
 
   async rank(query: {
     viewerId?: string;
@@ -18,31 +26,10 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     const take = query.limit + 1;
     const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
+    const where = await this.buildWhere(query.filters, query.cursor, fourteenDaysAgo);
+
     const rows = await this.prisma.listing.findMany({
-      where: {
-        deletedAt: null,
-        OR: [
-          { status: "active" },
-          { status: "sold", soldAt: { gt: fourteenDaysAgo } },
-        ],
-        ...(query.cursor
-          ? {
-              AND: [
-                {
-                  OR: [
-                    { publishedAt: { lt: new Date(query.cursor.timestamp) } },
-                    {
-                      publishedAt: {
-                        equals: new Date(query.cursor.timestamp),
-                      },
-                      id: { lt: query.cursor.id },
-                    },
-                  ],
-                },
-              ],
-            }
-          : {}),
-      },
+      where,
       orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
       take,
       include: {
@@ -69,6 +56,111 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     }
 
     return result;
+  }
+
+  private async buildWhere(
+    filters: ListingFilterCriteria | undefined,
+    cursor: FeedCursor | undefined,
+    fourteenDaysAgo: Date,
+  ): Promise<Prisma.ListingWhereInput> {
+    const conditions: Prisma.ListingWhereInput[] = [
+      { deletedAt: null },
+      {
+        OR: [
+          { status: "active" },
+          { status: "sold", soldAt: { gt: fourteenDaysAgo } },
+        ],
+      },
+    ];
+
+    if (filters?.brandId) {
+      conditions.push({ brandId: filters.brandId });
+    }
+    if (filters?.modelId) {
+      conditions.push({ modelId: filters.modelId });
+    }
+    if (filters?.cityId) {
+      conditions.push({ cityId: filters.cityId });
+    }
+    if (filters?.condition) {
+      conditions.push({ condition: filters.condition });
+    }
+
+    if (filters?.yearMin !== undefined || filters?.yearMax !== undefined) {
+      conditions.push({
+        year: {
+          ...(filters.yearMin !== undefined ? { gte: filters.yearMin } : {}),
+          ...(filters.yearMax !== undefined ? { lte: filters.yearMax } : {}),
+        },
+      });
+    }
+
+    if (filters?.priceMin !== undefined || filters?.priceMax !== undefined) {
+      const priceOr = await this.buildPriceFilter(filters.priceMin, filters.priceMax);
+      if (priceOr.length > 0) {
+        conditions.push({ OR: priceOr });
+      }
+    }
+
+    if (cursor) {
+      conditions.push({
+        OR: [
+          { publishedAt: { lt: new Date(cursor.timestamp) } },
+          {
+            publishedAt: { equals: new Date(cursor.timestamp) },
+            id: { lt: cursor.id },
+          },
+        ],
+      });
+    }
+
+    return { AND: conditions };
+  }
+
+  private async buildPriceFilter(
+    priceMin?: number,
+    priceMax?: number,
+  ): Promise<Array<Prisma.ListingWhereInput>> {
+    const rates = await this.exchangeRates.listAll();
+    const rateMap = new Map<string, number>();
+    for (const r of rates) {
+      rateMap.set(`${r.fromCurrency}->${r.toCurrency}`, r.rate);
+    }
+
+    const currencies: Currency[] = ["TMT", "USD", "AED"];
+    const branches: Array<Prisma.ListingWhereInput> = [];
+
+    for (const currency of currencies) {
+      let min: number | undefined;
+      let max: number | undefined;
+
+      if (currency === "TMT") {
+        min = priceMin;
+        max = priceMax;
+      } else {
+        const rate = rateMap.get(`${currency}->TMT`);
+        if (!rate || rate <= 0) {
+          continue;
+        }
+        min = priceMin !== undefined ? priceMin / rate : undefined;
+        max = priceMax !== undefined ? priceMax / rate : undefined;
+      }
+
+      const branch: Prisma.ListingWhereInput = {
+        priceCurrency: currency,
+      };
+
+      if (min !== undefined || max !== undefined) {
+        branch.priceAmount = {
+          ...(min !== undefined ? { gte: min } : {}),
+          ...(max !== undefined ? { lte: max } : {}),
+        };
+      }
+
+      branches.push(branch);
+    }
+
+    return branches;
   }
 
   private toDomain(row: {
