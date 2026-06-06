@@ -369,17 +369,21 @@ Each op is tracked in a `Record<opId, OpState>` where `OpState ∈ {pending, in_
 ### State model
 
 - `draft` — in-progress filter values edited inside the sheet. Mutated by `setField(key, value)`.
-- `active` — committed filters that will be consumed by the query hook (#163). Mutated only by `apply()` or `reset()`.
+- `active` — committed filters consumed by `useListings` on the Search tab. Mutated only by `apply()` or `reset()`.
 - `count` — number of fields in `active` whose value is not `undefined`, `null`, or empty string.
 
 ### Lifecycle
 
 ```
-open sheet → edit draft via setField → Apply → draft → active + close sheet
-open sheet → edit draft → Reset → clear draft + active
+open sheet → edit draft via setField → Apply → draft → active + close sheet → useListings refetches with new filters
+open sheet → edit draft → Reset → clear draft + active → useListings refetches unfiltered
 ```
 
 `apply()` reads the latest draft via a synchronous ref (batched `setField` calls are visible to `apply` in the same event tick). `reset()` clears both states.
+
+### Feed query wiring
+
+`useListings({ filters })` (`apps/mobile/src/api/listings/useListings.ts`) builds `URLSearchParams` from defined filter fields + `limit` + `cursor`, keys the infinite query through `queryKeys.listings.list({ ...filters, limit })`, and parses the response with `@auto-tm/contracts` `FeedResponseSchema`. Only defined filter values are appended; `undefined`/`null`/empty-string fields are omitted. Each distinct filter set gets its own cache entry; changing `active` triggers a refetch. The Search tab passes `filters.active` into the hook.
 
 ### UI contract
 

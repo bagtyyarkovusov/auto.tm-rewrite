@@ -33,7 +33,7 @@ export default function FeedScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useListings();
+  } = useListings({ filters: filters.active })
 
   const handlePress = useCallback((id: string) => {
     router.push(`/(public)/listings/${id}`);

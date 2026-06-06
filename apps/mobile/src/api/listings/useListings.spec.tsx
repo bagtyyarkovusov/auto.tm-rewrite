@@ -4,6 +4,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { useListings } from "./useListings";
 
@@ -129,7 +130,9 @@ describe("useListings", () => {
     const { result } = renderHook(() => useListings(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect((result.current.error as unknown as { code: string }).code).toBe("CONTRACT_VIOLATION");
+    expect((result.current.error as unknown as { code: string }).code).toBe(
+      "CONTRACT_VIOLATION",
+    );
   });
 
   it("surfaces network error", async () => {
@@ -139,5 +142,90 @@ describe("useListings", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeDefined();
+  });
+
+  it("appends only defined filter fields to request params", async () => {
+    mockGet.mockResolvedValue({
+      items: [makeFeedItem("l1")],
+      nextCursor: null,
+    });
+
+    const filters: ListingsSchemas.ListingFilter = {
+      brandId: "brand-1",
+      modelId: "model-1",
+      cityId: "city-1",
+      priceMin: 50000,
+      priceMax: 150000,
+      yearMin: 2018,
+      yearMax: 2024,
+      condition: "used",
+    };
+
+    renderHook(() => useListings({ filters }), { wrapper });
+
+    await waitFor(() => expect(mockGet).toHaveBeenCalled());
+
+    const url = String(mockGet.mock.calls[0]?.[0]);
+    expect(url).toContain("limit=20");
+    expect(url).toContain("brandId=brand-1");
+    expect(url).toContain("modelId=model-1");
+    expect(url).toContain("cityId=city-1");
+    expect(url).toContain("priceMin=50000");
+    expect(url).toContain("priceMax=150000");
+    expect(url).toContain("yearMin=2018");
+    expect(url).toContain("yearMax=2024");
+    expect(url).toContain("condition=used");
+  });
+
+  it("omits undefined, null and empty filter values from params", async () => {
+    mockGet.mockResolvedValue({
+      items: [makeFeedItem("l1")],
+      nextCursor: null,
+    });
+
+    const filters = {
+      brandId: "brand-1",
+      modelId: undefined,
+      cityId: "",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      priceMin: null as any,
+    } as ListingsSchemas.ListingFilter;
+
+    renderHook(() => useListings({ filters }), { wrapper });
+
+    await waitFor(() => expect(mockGet).toHaveBeenCalled());
+
+    const url = String(mockGet.mock.calls[0]?.[0]);
+    expect(url).toContain("brandId=brand-1");
+    expect(url).not.toContain("modelId=");
+    expect(url).not.toContain("cityId=");
+    expect(url).not.toContain("priceMin=");
+  });
+
+  it("varies query key by filter set", async () => {
+    mockGet.mockResolvedValue({
+      items: [makeFeedItem("l1")],
+      nextCursor: null,
+    });
+
+    const { result, rerender } = renderHook(
+      ({ filters }) => useListings({ filters }),
+      {
+        wrapper,
+        initialProps: { filters: { brandId: "brand-a" } as ListingsSchemas.ListingFilter },
+      },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockGet).toHaveBeenCalledTimes(1);
+
+    rerender({ filters: { brandId: "brand-b" } as ListingsSchemas.ListingFilter });
+
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
+
+    const firstUrl = String(mockGet.mock.calls[0]?.[0]);
+    const secondUrl = String(mockGet.mock.calls[1]?.[0]);
+    expect(firstUrl).toContain("brandId=brand-a");
+    expect(secondUrl).toContain("brandId=brand-b");
   });
 });
