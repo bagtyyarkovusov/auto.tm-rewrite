@@ -1,8 +1,11 @@
 import {
   OpenAPIRegistry,
   OpenApiGeneratorV3,
+  extendZodWithOpenApi,
 } from "@asteasolutions/zod-to-openapi";
-import type { z } from "zod";
+import { z } from "zod";
+
+extendZodWithOpenApi(z);
 
 import { ErrorResponseSchema } from "./errors";
 import {
@@ -60,6 +63,18 @@ import {
   ExchangeRateSchema,
   ExchangeRatesResponseSchema,
 } from "./schemas/exchange-rates";
+import {
+  OpenConversationRequestSchema,
+  OpenConversationResponseSchema,
+  ListConversationsResponseSchema,
+  ListMessagesQuerySchema,
+  ListMessagesResponseSchema,
+  SendTextMessageRequestSchema,
+  SendTextMessageResponseSchema,
+  ConversationSummarySchema,
+  MessageSummarySchema,
+  ConversationListingCardSchema,
+} from "./schemas/conversations";
 
 // exactOptionalPropertyTypes: true in tsconfig conflicts with zod-to-openapi's
 // SchemaObject type (Zod nullable() method vs SchemaObject nullable: boolean).
@@ -117,6 +132,124 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   // Exchange-rates schemas
   registry.registerComponent("schemas", "ExchangeRate", S(ExchangeRateSchema));
   registry.registerComponent("schemas", "ExchangeRatesResponse", S(ExchangeRatesResponseSchema));
+
+  // Conversation schemas
+  registry.registerComponent("schemas", "OpenConversationRequest", S(OpenConversationRequestSchema));
+  registry.registerComponent("schemas", "OpenConversationResponse", S(OpenConversationResponseSchema));
+  registry.registerComponent("schemas", "ListConversationsResponse", S(ListConversationsResponseSchema));
+  registry.registerComponent("schemas", "ListMessagesQuery", S(ListMessagesQuerySchema));
+  registry.registerComponent("schemas", "ListMessagesResponse", S(ListMessagesResponseSchema));
+  registry.registerComponent("schemas", "SendTextMessageRequest", S(SendTextMessageRequestSchema));
+  registry.registerComponent("schemas", "SendTextMessageResponse", S(SendTextMessageResponseSchema));
+  registry.registerComponent("schemas", "ConversationSummary", S(ConversationSummarySchema));
+  registry.registerComponent("schemas", "MessageSummary", S(MessageSummarySchema));
+  registry.registerComponent("schemas", "ConversationListingCard", S(ConversationListingCardSchema));
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/conversations",
+    summary: "Open or create a conversation",
+    tags: ["Conversations"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: S(OpenConversationRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Conversation opened",
+        content: {
+          "application/json": { schema: S(OpenConversationResponseSchema) },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      403: {
+        description: "Feature disabled or self-contact not allowed",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/conversations",
+    summary: "List my conversations",
+    tags: ["Conversations"],
+    request: {
+      query: ListMessagesQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Conversation list",
+        content: {
+          "application/json": { schema: S(ListConversationsResponseSchema) },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/conversations/{id}/messages",
+    summary: "List messages in a conversation",
+    tags: ["Conversations"],
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+      query: ListMessagesQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Message list",
+        content: {
+          "application/json": { schema: S(ListMessagesResponseSchema) },
+        },
+      },
+      404: {
+        description: "Conversation not found",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/conversations/{id}/messages",
+    summary: "Send a text message",
+    tags: ["Conversations"],
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+      body: {
+        content: {
+          "application/json": { schema: S(SendTextMessageRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Message sent",
+        content: {
+          "application/json": { schema: S(SendTextMessageResponseSchema) },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      403: {
+        description: "Feature disabled or not a participant",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Conversation not found",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
 
   registry.registerPath({
     method: "post",

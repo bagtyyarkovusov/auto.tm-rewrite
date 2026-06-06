@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today; the MLP beta ships simple text contact in S6. The full chat system (WebSocket transport, message read/delete, typing/presence, attachments) is post-MLP.
+Per-listing scoped 1:1 conversations between buyer and seller. The MLP beta ships simple text contact in S6. The full chat system (WebSocket transport, message read/delete, typing/presence, attachments) is post-MLP.
 
 ## Owns (entities + tables)
 
@@ -12,24 +12,36 @@ Per-listing scoped 1:1 conversations between buyer and seller. Schema-only today
 - `ConversationParticipant` — id, conversationId (FK → Conversation, Cascade), userId (FK → User, Cascade), createdAt. Unique on `(conversationId, userId)`.
 - `Message` — id, conversationId (FK → Conversation, Cascade), senderId (no FK constraint), kind (`MessageKind` enum: text | image | post_ref | system), body?, metadata? (JSON), createdAt. Index on `(conversationId, createdAt)`.
 
+## Domain layer (S6 — #168)
+
+Pure TypeScript, no Nest decorators, no Prisma imports.
+
+- `Conversation` — root entity. Immutable. Constructor enforces `buyerId !== sellerId` (self-contact rejection). `isParticipant(userId)` and `participantRoleOf(userId)` for access checks.
+- `Message` — value object for text-only messages. Constructor trims text, rejects blank-after-trim, caps at 1000 chars after trim, preserves internal line breaks.
+- `types.ts` — `ConversationDomainError`, `CONVERSATION_ERROR_CODES`, `ParticipantRole`.
+
 ## Invariants (enforced today)
 
 - A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
-- `Conversation.sellerId` references a User. **Same-user-cannot-chat-themselves** is NOT enforced by schema; must be application-level in S6.
+- **Same-user-cannot-chat-themselves** — enforced at domain layer in `Conversation` constructor.
+- **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller.
 - `Message.kind` is one of text | image | post_ref | system.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
+- `Message` text is trimmed at creation; blank-after-trim and >1000 chars after trim are rejected by the domain layer.
 
 ## Module shape (today)
 
 - `apps/api/src/modules/conversations/`:
-  - `domain/`, `application/`, `infrastructure/` — empty
-  - `presentation/conversations.controller.ts` — stub
+  - `domain/` — `Conversation.ts`, `Message.ts`, `types.ts`, `ports/ConversationRepository.ts`
+  - `application/` — empty (use-cases ship in later S6 slices)
+  - `infrastructure/` — empty (Prisma adapters ship in later S6 slices)
+  - `presentation/conversations.controller.ts` — stub (health-check ping only)
   - `conversations.module.ts` — registers stub controller
 - No WebSocket gateway, no Socket.IO server, no message send/read/delete handlers.
 
 ## Ports exposed
 
-- (none today — S6 adds the first simple conversation read/write surface)
+- (none today — S6 adds the first simple conversation read/write surface in later API slices)
 
 ## Ports consumed
 

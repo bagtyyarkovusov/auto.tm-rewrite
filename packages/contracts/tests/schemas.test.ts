@@ -25,6 +25,15 @@ import {
   ExchangeRateSchema,
   ExchangeRatesResponseSchema,
 } from "../src/schemas/exchange-rates";
+import {
+  OpenConversationRequestSchema,
+  SendTextMessageRequestSchema,
+  ConversationSummarySchema,
+  MessageSummarySchema,
+  ConversationListingCardSchema,
+  ListMessagesResponseSchema,
+  ListConversationsResponseSchema,
+} from "../src/schemas/conversations";
 import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
@@ -910,5 +919,181 @@ describe("OpenAPI document", () => {
     expect(doc.components.schemas).toHaveProperty("PresignResponse");
     expect(doc.components.schemas).toHaveProperty("ExchangeRate");
     expect(doc.components.schemas).toHaveProperty("ExchangeRatesResponse");
+  });
+
+  it("contains conversation schemas", () => {
+    const doc = generateOpenApiDocument() as {
+      components: { schemas: Record<string, unknown> };
+    };
+    expect(doc.components.schemas).toHaveProperty("OpenConversationRequest");
+    expect(doc.components.schemas).toHaveProperty("OpenConversationResponse");
+    expect(doc.components.schemas).toHaveProperty("ConversationSummary");
+    expect(doc.components.schemas).toHaveProperty("MessageSummary");
+    expect(doc.components.schemas).toHaveProperty("ConversationListingCard");
+    expect(doc.components.schemas).toHaveProperty("ListConversationsResponse");
+    expect(doc.components.schemas).toHaveProperty("ListMessagesResponse");
+    expect(doc.components.schemas).toHaveProperty("SendTextMessageRequest");
+    expect(doc.components.schemas).toHaveProperty("SendTextMessageResponse");
+  });
+
+  it("contains conversation paths", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, unknown>;
+    };
+    expect(doc.paths).toHaveProperty("/api/v1/conversations");
+    expect(doc.paths).toHaveProperty("/api/v1/conversations/{id}/messages");
+  });
+});
+
+// ── Conversation schemas ──
+
+const validConversationListingCard = {
+  id: "550e8400-e29b-41d4-a716-446655440000",
+  brandId: "550e8400-e29b-41d4-a716-446655440001",
+  modelId: "550e8400-e29b-41d4-a716-446655440002",
+  year: 2020,
+  displayPriceTmt: 1890000,
+  priceCurrency: "TMT" as const,
+  coverMediaKey: "listings/abc/123/cover.jpg",
+  status: "active" as const,
+};
+
+const validMessageSummary = {
+  id: "550e8400-e29b-41d4-a716-446655440003",
+  conversationId: "550e8400-e29b-41d4-a716-446655440004",
+  senderId: "550e8400-e29b-41d4-a716-446655440005",
+  text: "Is it still available?",
+  createdAt: "2026-05-17T14:32:01Z",
+};
+
+const validConversationSummary = {
+  id: "550e8400-e29b-41d4-a716-446655440004",
+  listing: validConversationListingCard,
+  buyerId: "550e8400-e29b-41d4-a716-446655440005",
+  sellerId: "550e8400-e29b-41d4-a716-446655440006",
+  myRole: "buyer" as const,
+  lastMessage: validMessageSummary,
+  updatedAt: "2026-05-17T14:32:01Z",
+};
+
+describe("ConversationListingCardSchema", () => {
+  it("accepts a valid listing card", () => {
+    const result = ConversationListingCardSchema.safeParse(
+      validConversationListingCard,
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid status", () => {
+    const result = ConversationListingCardSchema.safeParse({
+      ...validConversationListingCard,
+      status: "banned",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("MessageSummarySchema", () => {
+  it("accepts a valid message summary", () => {
+    const result = MessageSummarySchema.safeParse(validMessageSummary);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a message with optional deliveryStatus", () => {
+    const result = MessageSummarySchema.safeParse({
+      ...validMessageSummary,
+      deliveryStatus: "sent" as const,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid datetime", () => {
+    const result = MessageSummarySchema.safeParse({
+      ...validMessageSummary,
+      createdAt: "not-a-datetime",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ConversationSummarySchema", () => {
+  it("accepts a valid conversation summary", () => {
+    const result = ConversationSummarySchema.safeParse(validConversationSummary);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts without lastMessage", () => {
+    const result = ConversationSummarySchema.safeParse({
+      ...validConversationSummary,
+      lastMessage: undefined,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("OpenConversationRequestSchema", () => {
+  it("accepts a valid request", () => {
+    const result = OpenConversationRequestSchema.safeParse({
+      listingId: "550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects non-uuid listingId", () => {
+    const result = OpenConversationRequestSchema.safeParse({
+      listingId: "not-a-uuid",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("SendTextMessageRequestSchema", () => {
+  it("accepts a valid text message", () => {
+    const result = SendTextMessageRequestSchema.safeParse({
+      text: "Hello, is it still available?",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty text", () => {
+    const result = SendTextMessageRequestSchema.safeParse({
+      text: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects text over 1000 chars", () => {
+    const result = SendTextMessageRequestSchema.safeParse({
+      text: "a".repeat(1001),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ListMessagesResponseSchema", () => {
+  it("accepts a valid paginated response", () => {
+    const result = ListMessagesResponseSchema.safeParse({
+      items: [validMessageSummary],
+      nextCursor: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a response with a cursor", () => {
+    const result = ListMessagesResponseSchema.safeParse({
+      items: [validMessageSummary],
+      nextCursor: "next-page-token",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("ListConversationsResponseSchema", () => {
+  it("accepts a valid paginated response", () => {
+    const result = ListConversationsResponseSchema.safeParse({
+      items: [validConversationSummary],
+      nextCursor: null,
+    });
+    expect(result.success).toBe(true);
   });
 });
