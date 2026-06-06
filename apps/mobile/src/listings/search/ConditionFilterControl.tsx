@@ -1,6 +1,6 @@
 import { Pressable, View } from "react-native";
-
 import { Enums } from "@auto-tm/contracts";
+
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 

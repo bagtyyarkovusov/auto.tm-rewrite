@@ -19,7 +19,7 @@ describe("ConditionFilterControl", () => {
   });
 
   it("renders three segments: Any, New, Used", () => {
-    expect(source).toContain('label: "Any"');
+    expect(source).toContain('{ value: undefined, label: "Any" }');
     expect(source).toContain('label: "New"');
     expect(source).toContain('label: "Used"');
   });
@@ -33,7 +33,11 @@ describe("ConditionFilterControl", () => {
   });
 
   it("calls onChange with undefined for Any (clears filter)", () => {
-    expect(source).toContain("value: undefined");
+    expect(source).toContain('{ value: undefined, label: "Any" }');
+  });
+
+  it("wires onPress to onChange for each segment", () => {
+    expect(source).toContain("onPress={() => onChange(segment.value)}");
   });
 
   it("has accessibilityRole button on each segment", () => {
@@ -44,11 +48,21 @@ describe("ConditionFilterControl", () => {
     expect(source).toContain("accessibilityState={{ selected }}");
   });
 
+  it("has accessibilityLabel per segment", () => {
+    expect(source).toContain('accessibilityLabel={`${segment.label} condition`}');
+  });
+
+  it("uses stable keys for each segment", () => {
+    expect(source).toContain("key={segment.label}");
+  });
+
   it("visually distinguishes selected segment with bg-card", () => {
     expect(source).toContain('selected && "bg-card"');
   });
 
   it("uses text-foreground for selected and text-muted-foreground for unselected", () => {
-    expect(source).toContain('selected ? "text-foreground" : "text-muted-foreground"');
+    expect(source).toContain(
+      'selected ? "text-foreground" : "text-muted-foreground"',
+    );
   });
 });
