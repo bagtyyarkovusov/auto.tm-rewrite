@@ -663,7 +663,7 @@ describe("ListingsController e2e", () => {
         .send({})
         .expect(201);
 
-      const publish2 = await request
+      await request
         .post(`/api/v1/listings/drafts/${draft2.id}/publish`)
         .set("Authorization", `Bearer ${token}`)
         .send({})
@@ -724,7 +724,6 @@ describe("ListingsController e2e", () => {
       const token = await createUser("user-1");
 
       // Publish 4 listings alternating brands
-      const listingIds: string[] = [];
       for (let i = 0; i < 4; i++) {
         const draft = await seedDraft("user-1", {
           ...validPayload,
@@ -732,12 +731,11 @@ describe("ListingsController e2e", () => {
           modelId: i % 2 === 0 ? validPayload.modelId : "00000000-0000-0000-0000-000000000011",
           photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
         });
-        const res = await request
+        await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
           .set("Authorization", `Bearer ${token}`)
           .send({})
           .expect(201);
-        listingIds.push(res.body.id);
       }
 
       // Page through with limit=1 and brand filter (should get 2 listings)

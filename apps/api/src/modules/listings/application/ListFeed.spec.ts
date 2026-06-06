@@ -4,6 +4,7 @@ import { Listing } from "../domain/Listing";
 import type { FeedRankingPort } from "../domain/ports/FeedRankingPort";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
+import type { ListingFilterCriteria } from "../domain/types";
 
 class FakeFeedRankingPort implements FeedRankingPort {
   items: Listing[] = [];
@@ -11,7 +12,7 @@ class FakeFeedRankingPort implements FeedRankingPort {
 
   async rank(_query: {
     viewerId?: string;
-    filters?: Record<string, unknown>;
+    filters?: ListingFilterCriteria;
     cursor?: { timestamp: string; id: string };
     limit: number;
   }): Promise<{ items: Listing[]; nextCursor?: { timestamp: string; id: string } }> {
@@ -175,11 +176,11 @@ describe("ListFeed", () => {
   });
 
   it("forwards filters to ranking port", async () => {
-    let receivedFilters: Record<string, unknown> | undefined;
+    let receivedFilters: ListingFilterCriteria | undefined;
 
     const spyRanking: FeedRankingPort = {
       async rank(query) {
-        receivedFilters = query.filters as Record<string, unknown>;
+        receivedFilters = query.filters;
         return { items: [] };
       },
     };
