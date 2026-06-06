@@ -67,7 +67,7 @@ export type ParticipantRole = z.infer<typeof ParticipantRoleSchema>;
 
 export const ConversationSummarySchema = z.object({
   id: z.string().uuid(),
-  listing: ConversationListingCardSchema,
+  listing: ConversationListingCardSchema.nullable(),
   buyerId: z.string().uuid(),
   sellerId: z.string().uuid(),
   myRole: ParticipantRoleSchema,

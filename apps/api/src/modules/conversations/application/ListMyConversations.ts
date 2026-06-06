@@ -1,6 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
+import type {
+  ListingsReadPort,
+  ListingSummary,
+} from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
 import type { Conversation } from "../domain/Conversation";
 import {
@@ -17,19 +20,7 @@ export interface ListMyConversationsInput {
 export interface ListMyConversationsResult {
   items: Array<{
     conversation: Conversation;
-    listing: {
-      id: string;
-      sellerId: string;
-      status: string;
-      brandId: string;
-      modelId: string;
-      year?: number;
-      priceAmount: number;
-      priceCurrency: "TMT" | "USD" | "AED";
-      displayPriceTmt: number;
-      coverMediaKey?: string;
-      allowChat: boolean;
-    } | null;
+    listing: ListingSummary | null;
   }>;
   nextCursor: string | null;
 }

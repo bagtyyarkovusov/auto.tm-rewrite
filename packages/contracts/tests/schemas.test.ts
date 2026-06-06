@@ -1031,6 +1031,14 @@ describe("ConversationSummarySchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts a null listing when the listing is unavailable", () => {
+    const result = ConversationSummarySchema.safeParse({
+      ...validConversationSummary,
+      listing: null,
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("OpenConversationRequestSchema", () => {

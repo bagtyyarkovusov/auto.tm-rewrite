@@ -9,19 +9,24 @@ import {
   Inject,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-
+import { ZodError } from "zod";
 import { ConversationsSchemas } from "@auto-tm/contracts";
-import type { z } from "zod";
 
+import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
 import { Public } from "../../../common/public.decorator";
 import { OpenConversation } from "../application/OpenConversation";
 import { ListMyConversations } from "../application/ListMyConversations";
+import type { Conversation } from "../domain/Conversation";
+
+type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
 @Controller("api/v1/conversations")
 export class ConversationsController {
   constructor(
-    @Inject(OpenConversation) private readonly openConversationUC: OpenConversation,
-    @Inject(ListMyConversations) private readonly listMyConversationsUC: ListMyConversations,
+    @Inject(OpenConversation)
+    private readonly openConversationUC: OpenConversation,
+    @Inject(ListMyConversations)
+    private readonly listMyConversationsUC: ListMyConversations,
   ) {}
 
   @Public()
@@ -35,22 +40,11 @@ export class ConversationsController {
     @Body() body: unknown,
     @Req() req: FastifyRequest,
   ) {
-    const userId = (req as { user?: { sub: string } }).user?.sub as string;
-
-    let parsed: typeof ConversationsSchemas.OpenConversationRequestSchema._type;
-    try {
-      parsed = ConversationsSchemas.OpenConversationRequestSchema.parse(body);
-    } catch (err) {
-      if (err && typeof err === "object" && "issues" in err) {
-        const zodError = err as z.ZodError;
-        throw new BadRequestException({
-          code: "VALIDATION_FAILED",
-          message: "Invalid request body",
-          details: zodError.flatten(),
-        });
-      }
-      throw err;
-    }
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.OpenConversationRequestSchema,
+      body,
+    );
 
     const result = await this.openConversationUC.execute({
       buyerId: userId,
@@ -69,22 +63,11 @@ export class ConversationsController {
     @Query() query: unknown,
     @Req() req: FastifyRequest,
   ) {
-    const userId = (req as { user?: { sub: string } }).user?.sub as string;
-
-    let parsed: typeof ConversationsSchemas.ListConversationsQuerySchema._type;
-    try {
-      parsed = ConversationsSchemas.ListConversationsQuerySchema.parse(query);
-    } catch (err) {
-      if (err && typeof err === "object" && "issues" in err) {
-        const zodError = err as z.ZodError;
-        throw new BadRequestException({
-          code: "VALIDATION_FAILED",
-          message: "Invalid query parameters",
-          details: zodError.flatten(),
-        });
-      }
-      throw err;
-    }
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.ListConversationsQuerySchema,
+      query,
+    );
 
     const result = await this.listMyConversationsUC.execute({
       userId,
@@ -104,23 +87,31 @@ export class ConversationsController {
     };
   }
 
+  private userId(req: FastifyRequest): string {
+    return (req as AuthenticatedRequest).user?.sub as string;
+  }
+
+  private parseOrThrow<T>(
+    schema: { parse: (data: unknown) => T },
+    data: unknown,
+  ): T {
+    try {
+      return schema.parse(data);
+    } catch (err) {
+      if (err instanceof ZodError) {
+        throw new BadRequestException({
+          code: "VALIDATION_FAILED",
+          message: "Invalid request",
+          details: err.flatten(),
+        });
+      }
+      throw err;
+    }
+  }
+
   private toConversationSummaryResponse(
-    conversation: {
-      id: string;
-      buyerId: string;
-      sellerId: string;
-      updatedAt: Date;
-    },
-    listing: {
-      id: string;
-      brandId: string;
-      modelId: string;
-      year?: number;
-      displayPriceTmt: number;
-      priceCurrency: "TMT" | "USD" | "AED";
-      coverMediaKey?: string;
-      status: string;
-    } | null,
+    conversation: Pick<Conversation, "id" | "buyerId" | "sellerId" | "updatedAt">,
+    listing: ListingSummary | null,
     userId: string,
   ) {
     return {
@@ -141,16 +132,9 @@ export class ConversationsController {
             displayPriceTmt: listing.displayPriceTmt,
             priceCurrency: listing.priceCurrency,
             coverMediaKey: listing.coverMediaKey,
-            status: listing.status as "active" | "sold" | "archived",
+            status: listing.status,
           }
-        : {
-            id: "",
-            brandId: "",
-            modelId: "",
-            displayPriceTmt: 0,
-            priceCurrency: "TMT" as const,
-            status: "active" as const,
-          },
+        : null,
     };
   }
 }

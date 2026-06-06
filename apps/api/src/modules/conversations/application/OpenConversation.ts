@@ -7,7 +7,10 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 
-import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
+import type {
+  ListingsReadPort,
+  ListingSummary,
+} from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
 import { Conversation } from "../domain/Conversation";
 import {
@@ -22,19 +25,7 @@ export interface OpenConversationInput {
 
 export interface OpenConversationResult {
   conversation: Conversation;
-  listing: {
-    id: string;
-    sellerId: string;
-    status: string;
-    brandId: string;
-    modelId: string;
-    year?: number;
-    priceAmount: number;
-    priceCurrency: "TMT" | "USD" | "AED";
-    displayPriceTmt: number;
-    coverMediaKey?: string;
-    allowChat: boolean;
-  };
+  listing: ListingSummary;
 }
 
 @Injectable()
