@@ -21,6 +21,7 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
     - `FeedSkeleton.tsx` — skeleton rows for initial load
     - `FeedEmpty.tsx` — empty feed CTA to Sell tab (shown when no listings exist and no filters are active)
     - `FilteredEmpty.tsx` — zero-result state when active filters match nothing; shows "No listings match. Try adjusting filters." + Reset filters button that calls `useListingFilters().reset()`
+    - `FilteredEmpty.spec.tsx` — source tests for zero-result copy and Reset action
     - `FeedError.tsx` — retry affordance on network/API failure
   - `search/` — feed filter sheet + filter state hook
     - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, `count`, and `isValid`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both. `isValid` is `false` when `yearMin > yearMax`.
