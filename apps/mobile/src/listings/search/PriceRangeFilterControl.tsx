@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { View } from "react-native";
 
 import { Input } from "@/components/ui/input";
@@ -17,16 +17,8 @@ export function PriceRangeFilterControl({
   setField,
   onValidityChange,
 }: PriceRangeFilterControlProps) {
-  const isInvalid = useMemo(() => {
-    if (
-      priceMin !== undefined &&
-      priceMax !== undefined &&
-      priceMin > priceMax
-    ) {
-      return true;
-    }
-    return false;
-  }, [priceMin, priceMax]);
+  const isInvalid =
+    priceMin !== undefined && priceMax !== undefined && priceMin > priceMax;
 
   useEffect(() => {
     onValidityChange?.(!isInvalid);

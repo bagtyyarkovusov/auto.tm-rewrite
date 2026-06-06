@@ -24,7 +24,7 @@ describe("PriceRangeFilterControl structure", () => {
   });
 
   it("writes undefined when input is cleared", () => {
-    expect(source).toContain("undefined");
+    expect(source).toContain('=== "" ? undefined');
   });
 });
 
