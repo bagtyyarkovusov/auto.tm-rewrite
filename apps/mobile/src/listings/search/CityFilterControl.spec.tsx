@@ -86,6 +86,24 @@ describe("CityFilterControl selection behavior", () => {
   });
 });
 
+describe("CityFilterControl external draft sync", () => {
+  it("uses an effect to keep selectedRegionId in sync with draft.cityId", () => {
+    expect(source).toContain("useEffect");
+    expect(source).toContain("isInternalChangeRef");
+    expect(source).toContain("isInternalChangeRef.current = false");
+  });
+
+  it("restores region from cache when draft.cityId is set externally", () => {
+    expect(source).toContain("const cachedMeta = cityMetaCache.get(draft.cityId)");
+    expect(source).toContain("setSelectedRegionId(cachedMeta.regionId)");
+  });
+
+  it("resets selectedRegionId when draft.cityId is cleared externally", () => {
+    expect(source).toContain("} else if (!isInternalChangeRef.current) {");
+    expect(source).toContain('setSelectedRegionId("")');
+  });
+});
+
 describe("CityFilterControl clearability", () => {
   it("renders a clear action when a city is selected", () => {
     expect(source).toContain("{draft.cityId && (");

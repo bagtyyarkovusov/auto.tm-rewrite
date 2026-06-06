@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { useRegions } from "../../api/catalog/useRegions";
@@ -39,6 +39,20 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
   const [regionSearch, setRegionSearch] = useState("");
   const [citySearch, setCitySearch] = useState("");
   const [selectedRegionId, setSelectedRegionId] = useState<string>(cached?.regionId ?? "");
+
+  const isInternalChangeRef = useRef(false);
+
+  useEffect(() => {
+    if (draft.cityId) {
+      const cachedMeta = cityMetaCache.get(draft.cityId);
+      if (cachedMeta) {
+        setSelectedRegionId(cachedMeta.regionId);
+      }
+    } else if (!isInternalChangeRef.current) {
+      setSelectedRegionId("");
+    }
+    isInternalChangeRef.current = false;
+  }, [draft.cityId]);
 
   const {
     data: regionsData,
@@ -87,6 +101,7 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
         setField("cityId", undefined);
       }
       setCityOpen(true);
+      isInternalChangeRef.current = true;
     },
     [draft.cityId, setField],
   );
