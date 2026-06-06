@@ -25,9 +25,7 @@ function buildFeedParams(
     return params;
   }
 
-  for (const _key of Object.keys(filters)) {
-    const key = _key as keyof ListingsSchemas.ListingFilter;
-    const value = filters[key];
+  for (const [key, value] of Object.entries(filters)) {
     if (value !== undefined && value !== null && value !== "") {
       params.set(key, String(value));
     }

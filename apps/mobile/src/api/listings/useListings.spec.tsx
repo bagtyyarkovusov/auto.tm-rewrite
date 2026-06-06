@@ -187,9 +187,8 @@ describe("useListings", () => {
       brandId: "brand-1",
       modelId: undefined,
       cityId: "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      priceMin: null as any,
-    } as ListingsSchemas.ListingFilter;
+      priceMin: null,
+    } as unknown as ListingsSchemas.ListingFilter;
 
     renderHook(() => useListings({ filters }), { wrapper });
 
