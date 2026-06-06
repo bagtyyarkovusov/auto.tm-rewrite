@@ -21,6 +21,15 @@ Client-side listing creation + upload pipeline + feed browsing for `apps/mobile`
     - `FeedSkeleton.tsx` — skeleton rows for initial load
     - `FeedEmpty.tsx` — empty feed CTA to Sell tab
     - `FeedError.tsx` — retry affordance on network/API failure
+  - `detail/` — buyer listing detail helpers
+    - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
+    - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)
+  - `components/` — shared listing display components (used by feed + detail)
+    - `PhotoGallery.tsx` — horizontal paging gallery (`FlatList` + `expo-image` `detail` variant) with dot indicator; tap opens fullscreen modal (`fullscreen` variant); no-media fallback renders "No photos"
+    - `PriceDisplay.tsx` — public TMT-only price + conditional seller-term badges (`Exchange possible`, `Installment possible`)
+    - `SellerBlock.tsx` — private seller label + location context (region/city/locationText) + contact phone when calls enabled; no avatar/tenure/response time (backend lacks rich seller profile in S4)
+    - `ContactCtaBar.tsx` — sticky bottom CTA bar: Call (`tel:` via `expo-linking`, disabled when sold/no-phone/allowCalls=false), Message (disabled, "Chat coming soon"), Share (`react-native` `Share`), Favorite (disabled, "Favorite coming soon")
+    - `ListingDetail.tsx` — full detail composition: title (year + brand + model + generation), sold badge, price block, spec grid (year, condition, mileage, transmission, drive, engine, power, color, body type, VIN — conditional on presence), description, seller block
   - `wizard/` — wizard state machine + autosave + step UI components
     - `wizardMachine.ts` — reducer-based state machine (not XState)
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry

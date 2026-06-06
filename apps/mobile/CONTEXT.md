@@ -62,7 +62,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   otp                 OTP verification                    — wired (S2), design-refactored (#124)
 
 /(public)/
-  listings/[id]       Buyer-facing listing detail stub    — wired (S4, #133); renders title/price/photos/description from `useListingDetail`; contact lands in S6; favorite/rich chat are post-MLP
+  listings/[id]       Buyer-facing listing detail         — complete buyer detail surface (S4, #145); photo gallery with fullscreen viewer, spec grid, seller block, price with seller-term badges, Call/Message/Share/Favorite CTAs; Message and Favorite disabled with honest coming-soon copy; sold badge and disabled contact actions for sold listings; unavailable state with back/retry for 404s
 
 /listings/
   [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes orchestrated via `useSaveListingEdit` (fields → attach → remove → reorder, fail-fast, retry-from-failure per ADR-0025); no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
@@ -132,8 +132,8 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 - **S3 (Catalog)** — `src/api/catalog/*` hooks; dev-only `/dev/catalog` route gated `__DEV__`. ✅ Shipped.
 - **S4 (Listings CRUD)** —
   - Mobile uploads are **HTTPS PUT** to presigned URLs — **`apps/mobile/package.json` does not include `@aws-sdk/client-s3`** (clients never embedded the SDK; server issues presigned URLs).
-  - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**, **`/(public)/listings/[id]`** buyer detail stub.
-  - **Still missing vs #94 / S4 close**: real mobile feed on **`/(tabs)/index`**, full buyer/owner listing detail (spec grid, seller block, Call/Message CTAs, owner actions, retry/empty states), and My Listings/Drafts management surface. The current **`/(public)/listings/[id]`** route is only a stub, and **`/(tabs)/sell`** only resumes the latest draft.
+  - **Shipped**: inline **8-step** create wizard on **`/(tabs)/sell`**, upload staging utilities, drafts/publish/edit hooks, **`/listings/[id]/edit`**, **`/(public)/listings/[id]`** complete buyer detail (photo gallery, spec grid, seller block, price with seller-term badges, Call/Message/Share/Favorite CTAs), and real mobile feed on **`/(tabs)/index`**.
+  - **Still missing vs #94 / S4 close**: owner-specific detail actions (edit, mark sold, archive from detail), My Listings/Drafts management surface. **`/(tabs)/sell`** only resumes the latest draft.
   - **Still missing vs PRD / backlog**: optional refactor to a standalone **`/sell/wizard`** route (today everything lives in **`sell.tsx`**).
   - Universal Links / App Links manifest wiring via the already-installed `expo-linking`
   - Mobile foundation (`apps/mobile` deps, RNR primitives, query keys, catalog/listings/uploads hooks, upload staging pipeline) ✅ Shipped.
