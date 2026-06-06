@@ -22,9 +22,11 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
     - `FeedEmpty.tsx` — empty feed CTA to Sell tab
     - `FeedError.tsx` — retry affordance on network/API failure
   - `search/` — feed filter sheet + filter state hook
-    - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, and `count`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both.
-    - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions and draft/active isolation.
-    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand, Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
+    - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, `count`, and `isValid`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both. `isValid` is `false` when `yearMin > yearMax` (or future price-range inversions).
+    - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions, draft/active isolation, and `isValid` logic.
+    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand, Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet and is disabled when `isValid` is `false`; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
+    - `YearRangeFilterControl.tsx` — two `Input` fields (`number-pad`, 4-digit) for `yearMin`/`yearMax`. Digits-only, clamped to 1900–current year + 1. Open-ended when either bound is empty. Inline `text-destructive` error when `yearMin > yearMax`. Local text state syncs with external draft changes (e.g. reset).
+    - `YearRangeFilterControl.spec.tsx` — source tests + `parseYearInput` behavioral tests for bounds and digit stripping.
   - `detail/` — buyer listing detail helpers
     - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
     - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)

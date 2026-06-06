@@ -12,6 +12,7 @@ describe("useListingFilters", () => {
     expect(result.current.draft).toEqual({});
     expect(result.current.active).toEqual({});
     expect(result.current.count).toBe(0);
+    expect(result.current.isValid).toBe(true);
   });
 
   it("sets a field on the draft without affecting active", () => {
@@ -79,6 +80,42 @@ describe("useListingFilters", () => {
     expect(result.current.draft).toEqual({});
     expect(result.current.active).toEqual({});
     expect(result.current.count).toBe(0);
+  });
+
+  it("isValid is false when yearMin > yearMax", () => {
+    const { result } = renderHook(() => useListingFilters());
+
+    act(() => {
+      result.current.setField("yearMin", 2020);
+      result.current.setField("yearMax", 2010);
+    });
+
+    expect(result.current.isValid).toBe(false);
+  });
+
+  it("isValid is true when only one year bound is set", () => {
+    const { result } = renderHook(() => useListingFilters());
+
+    act(() => {
+      result.current.setField("yearMin", 2020);
+    });
+
+    expect(result.current.isValid).toBe(true);
+  });
+
+  it("isValid becomes true after fixing an inverted range", () => {
+    const { result } = renderHook(() => useListingFilters());
+
+    act(() => {
+      result.current.setField("yearMin", 2020);
+      result.current.setField("yearMax", 2010);
+    });
+    expect(result.current.isValid).toBe(false);
+
+    act(() => {
+      result.current.setField("yearMax", 2025);
+    });
+    expect(result.current.isValid).toBe(true);
   });
 
   it("overwrites active fields on subsequent apply", () => {

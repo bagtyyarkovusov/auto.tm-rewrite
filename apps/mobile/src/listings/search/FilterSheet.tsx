@@ -1,6 +1,7 @@
 import { X } from "lucide-react-native";
 import { View } from "react-native";
 
+import { YearRangeFilterControl } from "./YearRangeFilterControl";
 import type { UseListingFiltersReturn } from "./useListingFilters";
 
 import { Button } from "@/components/ui/button";
@@ -66,16 +67,7 @@ function PriceRangeSlot() {
   );
 }
 
-function YearRangeSlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Year range</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Year range (#161)</Text>
-      </View>
-    </View>
-  );
-}
+
 
 function ConditionSlot() {
   return (
@@ -89,7 +81,7 @@ function ConditionSlot() {
 }
 
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
-  const { apply, reset, count } = filters;
+  const { apply, reset, count, isValid } = filters;
 
   const handleApply = () => {
     apply();
@@ -120,7 +112,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
           <ModelSlot />
           <CitySlot />
           <PriceRangeSlot />
-          <YearRangeSlot />
+          <YearRangeFilterControl draft={filters.draft} setField={filters.setField} />
           <ConditionSlot />
         </View>
 
@@ -139,6 +131,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             size="pill"
             className="flex-1"
             onPress={handleApply}
+            disabled={!isValid}
             accessibilityLabel="Apply filters"
           >
             <Text>{count > 0 ? `Show results (${count})` : "Apply"}</Text>
