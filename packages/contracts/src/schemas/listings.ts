@@ -265,12 +265,28 @@ export function decodeCursor(token: string): {
     .parse(JSON.parse(json));
 }
 
+// ── Feed filters ──
+
+export const ListingFilterSchema = z.object({
+  brandId: z.string().uuid().optional(),
+  modelId: z.string().uuid().optional(),
+  cityId: z.string().uuid().optional(),
+  priceMin: z.coerce.number().positive().optional(),
+  priceMax: z.coerce.number().positive().optional(),
+  yearMin: z.coerce.number().int().min(1900).max(2100).optional(),
+  yearMax: z.coerce.number().int().min(1900).max(2100).optional(),
+  condition: ListingConditionSchema.optional(),
+});
+export type ListingFilter = z.infer<typeof ListingFilterSchema>;
+
 // ── Feed query / response ──
 
-export const FeedQuerySchema = z.object({
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-});
+export const FeedQuerySchema = z
+  .object({
+    cursor: z.string().optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  })
+  .merge(ListingFilterSchema);
 export type FeedQuery = z.infer<typeof FeedQuerySchema>;
 
 export const FeedResponseSchema = z.object({

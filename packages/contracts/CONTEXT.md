@@ -20,7 +20,7 @@ packages/contracts/
 │   │   ├── auth.ts             OTP request/verify/refresh/logout schemas
 │   │   ├── identity.ts         User, Dealership, Garage schemas
 │   │   ├── catalog.ts          Brand, Model, Generation, Color, BodyType, Region, City schemas
-│   │   ├── listings.ts         ListingSummary, ListingDetail, ListingMedia, ListingDraft, request/response DTOs, cursor helpers, error codes
+│   │   ├── listings.ts         ListingSummary, ListingDetail, ListingMedia, ListingDraft, ListingFilter, request/response DTOs, cursor helpers, error codes
 │   │   ├── uploads.ts          PresignRequest/Response for MinIO uploads
 │   │   ├── exchange-rates.ts   ExchangeRate DTOs
 │   │   ├── subscriptions.ts    SavedSearch schemas

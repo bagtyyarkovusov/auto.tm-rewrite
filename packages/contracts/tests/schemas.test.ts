@@ -13,6 +13,7 @@ import {
   EditListingRequestSchema,
   FeedQuerySchema,
   FeedResponseSchema,
+  ListingFilterSchema,
   encodeCursor,
   decodeCursor,
 } from "../src/schemas/listings";
@@ -289,6 +290,121 @@ describe("FeedQuerySchema", () => {
 
   it("rejects limit over 50", () => {
     const result = FeedQuerySchema.safeParse({ limit: 100 });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts query with filter fields", () => {
+    const result = FeedQuerySchema.safeParse({
+      cursor: "abc123",
+      limit: 10,
+      brandId: "550e8400-e29b-41d4-a716-446655440002",
+      priceMin: 50000,
+      yearMin: 2018,
+      condition: "used",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.brandId).toBe("550e8400-e29b-41d4-a716-446655440002");
+      expect(result.data.priceMin).toBe(50000);
+      expect(result.data.yearMin).toBe(2018);
+      expect(result.data.condition).toBe("used");
+    }
+  });
+
+  it("coerces string query values to numbers", () => {
+    const result = FeedQuerySchema.safeParse({
+      priceMin: "150000",
+      priceMax: "300000",
+      yearMin: "2015",
+      yearMax: "2022",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.priceMin).toBe(150000);
+      expect(result.data.priceMax).toBe(300000);
+      expect(result.data.yearMin).toBe(2015);
+      expect(result.data.yearMax).toBe(2022);
+    }
+  });
+
+  it("rejects negative priceMin", () => {
+    const result = FeedQuerySchema.safeParse({ priceMin: -100 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects yearMin below 1900", () => {
+    const result = FeedQuerySchema.safeParse({ yearMin: 1899 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects yearMax above 2100", () => {
+    const result = FeedQuerySchema.safeParse({ yearMax: 2101 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid condition", () => {
+    const result = FeedQuerySchema.safeParse({ condition: "broken" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ListingFilterSchema", () => {
+  it("accepts empty filter", () => {
+    const result = ListingFilterSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts partial filter", () => {
+    const result = ListingFilterSchema.safeParse({
+      brandId: "550e8400-e29b-41d4-a716-446655440002",
+      priceMin: 100000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts full filter", () => {
+    const result = ListingFilterSchema.safeParse({
+      brandId: "550e8400-e29b-41d4-a716-446655440002",
+      modelId: "550e8400-e29b-41d4-a716-446655440003",
+      cityId: "550e8400-e29b-41d4-a716-446655440004",
+      priceMin: 50000,
+      priceMax: 200000,
+      yearMin: 2010,
+      yearMax: 2023,
+      condition: "new",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("coerces string numbers", () => {
+    const result = ListingFilterSchema.safeParse({
+      priceMin: "150000",
+      yearMin: "2018",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.priceMin).toBe(150000);
+      expect(result.data.yearMin).toBe(2018);
+    }
+  });
+
+  it("rejects negative priceMin", () => {
+    const result = ListingFilterSchema.safeParse({ priceMin: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects yearMin below 1900", () => {
+    const result = ListingFilterSchema.safeParse({ yearMin: 1899 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects yearMax above 2100", () => {
+    const result = ListingFilterSchema.safeParse({ yearMax: 2101 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid condition", () => {
+    const result = ListingFilterSchema.safeParse({ condition: "repaired" });
     expect(result.success).toBe(false);
   });
 });
