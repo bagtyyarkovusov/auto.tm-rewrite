@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { X } from "lucide-react-native";
 import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
 import { CityFilterControl } from "./CityFilterControl";
+import { PriceRangeFilterControl } from "./PriceRangeFilterControl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -19,28 +21,6 @@ interface FilterSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filters: UseListingFiltersReturn;
-}
-
-function CitySlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">City</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">City picker (#159)</Text>
-      </View>
-    </View>
-  );
-}
-
-function PriceRangeSlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Price range</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Price range (#161)</Text>
-      </View>
-    </View>
-  );
 }
 
 function YearRangeSlot() {
@@ -66,7 +46,9 @@ function ConditionSlot() {
 }
 
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
-  const { apply, reset, count } = filters;
+  const { draft, setField, apply, reset, count } = filters;
+  const [priceRangeValid, setPriceRangeValid] = useState(true);
+  const isApplyDisabled = !priceRangeValid;
 
   const handleApply = () => {
     apply();
@@ -98,7 +80,12 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             setField={filters.setField}
           />
           <CityFilterControl draft={filters.draft} setField={filters.setField} />
-          <PriceRangeSlot />
+          <PriceRangeFilterControl
+            priceMin={draft.priceMin}
+            priceMax={draft.priceMax}
+            setField={setField}
+            onValidityChange={setPriceRangeValid}
+          />
           <YearRangeSlot />
           <ConditionSlot />
         </View>
@@ -118,6 +105,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             size="pill"
             className="flex-1"
             onPress={handleApply}
+            disabled={isApplyDisabled}
             accessibilityLabel="Apply filters"
           >
             <Text>{count > 0 ? `Show results (${count})` : "Apply"}</Text>
