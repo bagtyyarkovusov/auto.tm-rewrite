@@ -12,8 +12,10 @@ export interface ListingFilterCriteria {
   brandId?: string;
   modelId?: string;
   cityId?: string;
-  minPrice?: number;
-  maxPrice?: number;
+  priceMin?: number;
+  priceMax?: number;
+  yearMin?: number;
+  yearMax?: number;
   condition?: "new" | "used";
 }
 
@@ -32,6 +34,7 @@ export const LISTING_ERROR_CODES = {
   EXCHANGE_RATE_MISSING: "EXCHANGE_RATE_MISSING",
   INVALID_TRANSITION: "INVALID_TRANSITION",
   INVALID_PRICE: "INVALID_PRICE",
+  INVALID_FILTER_RANGE: "INVALID_FILTER_RANGE",
   INVALID_EXCHANGE_RATE: "INVALID_EXCHANGE_RATE",
   MEDIA_LIMIT_EXCEEDED: "MEDIA_LIMIT_EXCEEDED",
 } as const;

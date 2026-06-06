@@ -22,6 +22,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 - `ListingDraft` — wizard in-flight state. `payload: Record<string, unknown>` (opaque to domain).
 - `ListingMedia` — media metadata. Invariants: `posterKey` and `durationMs` only allowed when `kind === 'video'`.
 - `Price` — value object `{ amount: number; currency: Currency }`. Validates `amount > 0`.
+- `ListingFilter` — value object. `static create(criteria)` validates price range (`priceMin ≤ priceMax`), year range (`yearMin ≤ yearMax`), and condition (`new` | `used`). Immutable; `toCriteria()` returns a copy; `isEmpty()` when no field is set.
 - `ExchangeRate` — entity `{ fromCurrency, toCurrency, rate, updatedAt }`. Validates `rate > 0`.
 - `ListingStatus` — `type ListingStatus = 'active' | 'sold' | 'archived'` + `canTransition(from, to)` helper.
 
