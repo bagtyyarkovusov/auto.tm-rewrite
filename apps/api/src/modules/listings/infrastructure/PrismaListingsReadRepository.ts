@@ -102,9 +102,15 @@ export class PrismaListingsReadRepository implements ListingsReadPort {
     if (filters.brandId && listing.brandId !== filters.brandId) return false;
     if (filters.modelId && listing.modelId !== filters.modelId) return false;
     if (filters.cityId && listing.cityId !== filters.cityId) return false;
-    if (filters.minPrice && listing.displayPriceTmt < filters.minPrice)
+    if (filters.priceMin != null && listing.displayPriceTmt < filters.priceMin)
       return false;
-    if (filters.maxPrice && listing.displayPriceTmt > filters.maxPrice)
+    if (filters.priceMax != null && listing.displayPriceTmt > filters.priceMax)
+      return false;
+    if (filters.yearMin != null &&
+      (listing.year == null || listing.year < filters.yearMin))
+      return false;
+    if (filters.yearMax != null &&
+      (listing.year == null || listing.year > filters.yearMax))
       return false;
     if (filters.condition) {
       // condition is not part of ListingSummary; would need to fetch full row
