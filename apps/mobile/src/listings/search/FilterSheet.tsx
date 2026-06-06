@@ -102,7 +102,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="max-h-[85%]" style={{ height: "85%" }}>
+      <SheetContent>
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>Filters</SheetTitle>
           <Button
