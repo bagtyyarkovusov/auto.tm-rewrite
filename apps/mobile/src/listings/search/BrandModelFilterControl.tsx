@@ -55,6 +55,15 @@ export function BrandModelFilterControl({
   const selectedBrand = findById(brandsData?.items ?? [], draft.brandId);
   const selectedModel = findById(modelsData?.items ?? [], draft.modelId);
 
+  let modelEmptyMessage: string;
+  if (!draft.brandId) {
+    modelEmptyMessage = "Select a brand first";
+  } else if (modelSearch) {
+    modelEmptyMessage = "No models match your search";
+  } else {
+    modelEmptyMessage = "No models available";
+  }
+
   function handleSelectBrand(brandId: string) {
     setField("brandId", brandId);
     setField("modelId", undefined);
@@ -119,13 +128,7 @@ export function BrandModelFilterControl({
         onSearchChange={setModelSearch}
         items={filteredModels}
         selectedId={draft.modelId}
-        emptyMessage={
-          !draft.brandId
-            ? "Select a brand first"
-            : modelSearch
-              ? "No models match your search"
-              : "No models available"
-        }
+        emptyMessage={modelEmptyMessage}
         isLoading={modelsLoading}
         isError={modelsError}
         onSelect={handleSelectModel}
