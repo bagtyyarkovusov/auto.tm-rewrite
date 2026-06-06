@@ -19,6 +19,10 @@ import {
   LISTING_EVENT_PUBLISHER,
   type ListingEventPublisher,
 } from "../domain/ports/ListingEventPublisher";
+import {
+  IMAGE_VARIANT_GENERATOR,
+  type ImageVariantGenerator,
+} from "../domain/ports/ImageVariantGenerator";
 
 const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.required({
   brandId: true,
@@ -71,6 +75,8 @@ export class PublishListing {
     private readonly exchangeRates: ExchangeRatePort,
     @Inject(LISTING_EVENT_PUBLISHER)
     private readonly events: ListingEventPublisher,
+    @Inject(IMAGE_VARIANT_GENERATOR)
+    private readonly variantGenerator: ImageVariantGenerator,
   ) {}
 
   async execute(input: PublishListingInput): Promise<PublishListingResult> {
@@ -121,6 +127,13 @@ export class PublishListing {
 
     const photos = payload.photos;
     if (!photos) throw new BadRequestException({ code: "INVALID_DRAFT_PAYLOAD", message: "Photos are required" });
+    const attachedPhotos = photos.filter((photo) => photo.key);
+
+    await Promise.all(
+      attachedPhotos.map((photo) =>
+        this.variantGenerator.generate(photo.key as string),
+      ),
+    );
 
     try {
       const [listingRow] = await this.prisma.$transaction([
@@ -156,13 +169,13 @@ export class PublishListing {
             installmentAvailable: payload.installmentAvailable ?? false,
           },
         }),
-        ...photos.map((photo) =>
+        ...attachedPhotos.map((photo) =>
           this.prisma.listingMedia.create({
             data: {
               id: photo.photoId,
               listingId,
               kind: "image",
-              key: photo.key ?? `listings/${listingId}/${photo.photoId}/original.jpg`,
+              key: photo.key as string,
               sortOrder: photo.sortOrder,
             },
           }),

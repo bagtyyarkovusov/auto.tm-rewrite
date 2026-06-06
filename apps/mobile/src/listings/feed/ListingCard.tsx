@@ -2,46 +2,46 @@ import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
+import { useState } from "react";
+
+import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
-
-const MEDIA_URL = (
-  process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""
-).replace(/\/$/, "");
-
-function buildVariantUrl(
-  key: string,
-  variant: "thumbnail" | "list" | "detail" | "fullscreen",
-): string {
-  if (!MEDIA_URL) return "";
-  if (key.endsWith(".mp4") || key.endsWith(".mov")) {
-    return `${MEDIA_URL}/${key}`;
-  }
-  const base = key.replace(/\/original\.(jpg|webp|jpeg)$/, "");
-  return `${MEDIA_URL}/${base}/${variant}.jpg`;
-}
 
 type ListingSummary = ListingsSchemas.ListingSummary;
 
 interface ListingCardProps {
   listing: ListingSummary;
   onPress: (id: string) => void;
+  brandName?: string;
+  modelName?: string;
+  cityName?: string;
 }
 
 function formatPrice(amount: number): string {
   return `${amount.toLocaleString("en-US")} TMT`;
 }
 
-export function ListingCard({ listing, onPress }: ListingCardProps) {
+export function ListingCard({
+  listing,
+  onPress,
+  brandName,
+  modelName,
+  cityName,
+}: ListingCardProps) {
   const imageUrl = listing.coverMediaKey
     ? buildVariantUrl(listing.coverMediaKey, "list")
     : null;
+  const fallbackImageUrl = listing.coverMediaKey
+    ? buildOriginalUrl(listing.coverMediaKey)
+    : null;
+  const [useOriginalImage, setUseOriginalImage] = useState(false);
 
   const titleParts = [
     listing.year ? String(listing.year) : null,
-    listing.brandId,
-    listing.modelId,
+    brandName ?? "Brand loading...",
+    modelName ?? "Model loading...",
   ].filter(Boolean);
 
   return (
@@ -54,10 +54,11 @@ export function ListingCard({ listing, onPress }: ListingCardProps) {
         <View className="h-[100px] w-[140px] overflow-hidden rounded-lg bg-muted">
           {imageUrl ? (
             <Image
-              source={{ uri: imageUrl }}
+              source={{ uri: useOriginalImage && fallbackImageUrl ? fallbackImageUrl : imageUrl }}
               style={{ width: 140, height: 100 }}
               contentFit="cover"
               cachePolicy="memory-disk"
+              onError={() => setUseOriginalImage(true)}
             />
           ) : (
             <View className="h-full w-full items-center justify-center">
@@ -84,7 +85,7 @@ export function ListingCard({ listing, onPress }: ListingCardProps) {
               </Badge>
             )}
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              {listing.cityId}
+              {cityName ?? "City loading..."}
             </Text>
           </View>
         </View>

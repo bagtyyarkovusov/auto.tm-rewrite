@@ -2,8 +2,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   S3Client,
+  CreateBucketCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  PutBucketPolicyCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -13,7 +16,7 @@ import type { Env } from "../../../env.schema";
 @Injectable()
 export class MinioMediaStorageAdapter implements MediaStoragePort {
   private readonly s3: S3Client;
-  private readonly endpoint: string;
+  private readonly publicUrl: string;
 
   constructor(
     @Inject(ConfigService) private readonly config: ConfigService<Env, true>,
@@ -23,7 +26,9 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
     const secretKey = this.config.get("MINIO_SECRET_KEY", { infer: true });
     const region = this.config.get("MINIO_REGION", { infer: true });
 
-    this.endpoint = minioEndpoint;
+    this.publicUrl = this.config
+      .get("MINIO_PUBLIC_URL", { infer: true })
+      .replace(/\/$/, "");
     this.s3 = new S3Client({
       endpoint: minioEndpoint,
       region,
@@ -33,6 +38,13 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
       },
       forcePathStyle: true,
     });
+  }
+
+  async onModuleInit(): Promise<void> {
+    await Promise.all([
+      this.ensurePublicReadBucket("listing-photos"),
+      this.ensurePublicReadBucket("listing-videos"),
+    ]);
   }
 
   async presignUpload(data: {
@@ -62,22 +74,47 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
 
   resolvePublicUrl(key: string): string {
     // Caddy serves at https://media.auto.tm/<bucket>/<key>
-    // Bucket is encoded in the key prefix for pending uploads;
-    // for attached media the key includes the full path.
-    return `${this.endpoint}/${key}`;
+    return `${this.publicUrl}/${this.inferBucket(key)}/${key}`;
   }
 
   async deleteObject(key: string): Promise<void> {
-    const bucket = key.startsWith("pending/")
-      ? key.includes(".mp4")
-        ? "listing-videos"
-        : "listing-photos"
-      : "listing-photos";
+    const bucket = this.inferBucket(key);
 
     await this.s3.send(
       new DeleteObjectCommand({
         Bucket: bucket,
         Key: key,
+      }),
+    );
+  }
+
+  private inferBucket(key: string): string {
+    return key.includes(".mp4") || key.includes(".mov")
+      ? "listing-videos"
+      : "listing-photos";
+  }
+
+  private async ensurePublicReadBucket(bucket: string): Promise<void> {
+    try {
+      await this.s3.send(new HeadBucketCommand({ Bucket: bucket }));
+    } catch {
+      await this.s3.send(new CreateBucketCommand({ Bucket: bucket }));
+    }
+
+    await this.s3.send(
+      new PutBucketPolicyCommand({
+        Bucket: bucket,
+        Policy: JSON.stringify({
+          Version: "2012-10-17",
+          Statement: [
+            {
+              Effect: "Allow",
+              Principal: { AWS: ["*"] },
+              Action: ["s3:GetObject"],
+              Resource: [`arn:aws:s3:::${bucket}/*`],
+            },
+          ],
+        }),
       }),
     );
   }

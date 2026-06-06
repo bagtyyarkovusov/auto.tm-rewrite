@@ -1,276 +1,350 @@
 ---
 name: create-sprint-issues-agent-skill
-description: Creates GitHub issues for an AutoTM sprint from its docs/prd/sprints/sprint-NN-<name>.md file. Use when the user asks to "create sprint N issues", "set up sprint N", "issue out sprint N", or wants the parent Sprint PRD plus child sub-issues created on GitHub before AFK execution begins. The skill reads the sprint file, proposes a vertical-slice issue breakdown (workspace-per-issue for scaffold sprints; hybrid foundations + use-case slices for feature sprints), waits for explicit human confirmation of the proposed slicing, then creates the parent PRD + N child issues with correct labels, dependency graph via `## Depends on` sections, and bumps docs/prd/03-roadmap.md to 🟡. Refuses to act for Sprint 1 (already created) or for a sprint whose previous sprint isn't 🟢 shipped.
+description: Use when creating GitHub issues for one AutoTM sprint from docs/prd/sprints/sprint-NN-*.md, especially before running Sandcastle or /run-issue. Use for "create sprint issues", "set up sprint N", "issue out sprint N", or preparing AFK-ready vertical slices.
 ---
 
-# AutoTM — Create a sprint's GitHub issues (agent skill)
+# AutoTM - Create a sprint's GitHub issues
 
-> **Source:** Mirrors `.claude/commands/create-sprint-issues.md` adapted for cross-agent use (SKILL.md format per agentskills.io). Drives the sprint-bootstrapping rhythm one sprint at a time.
+> **Source:** Mirrors `.claude/commands/create-sprint-issues.md` for cross-agent use.
 >
-> **Invocation:** When the user says "create issues for sprint 2", "set up sprint 3", "issue sprint 4", or names a sprint number, treat that number as **N**. If no number, list pending sprints from `docs/prd/03-roadmap.md` and ask which.
->
-> The user prepares the next sprint for AFK execution. **You propose, the user confirms, then you execute.** Never create issues without explicit confirmation — the cost of a wrong bulk-create is high.
+> The user is preparing exactly one sprint for AFK execution. The output is one parent Sprint PRD issue plus child issues that can be consumed by both `/run-issue` and Sandcastle. You propose the slicing, the user confirms, then you create issues. Never bulk-create without explicit confirmation.
 
 ---
 
-## 0. Hard rules (non-negotiable)
+## 0. Hard rules
 
-- **Never create issues without explicit human confirmation** of the proposed breakdown.
-- **Never** create issues for a sprint whose previous sprint isn't 🟢 shipped in `docs/prd/03-roadmap.md`.
-- **Never** create a second parent PRD for a sprint that already has one (check `gh issue list --search "Sprint N — in:title"`).
-- **Never** edit the sprint file — it's input. If you find a flaw, stop and tell the user.
-- **Never** create labels that aren't already in `docs/agents/triage-labels.md`. If you'd need a new one, ask first.
-- **Never** apply `ready-for-agent` to the parent PRD issue (parents aren't picked up by agents).
-- **Never** push the roadmap update to `main` until all issues are created and the user has seen the final summary.
+- **One sprint only.** Refuse multi-sprint requests.
+- **Human confirmation is required** before any issue is created.
+- **Previous sprint must be shipped.** Refuse Sprint N if Sprint N-1 is not `🟢 Shipped` in `docs/prd/03-roadmap.md`, except Sprint 1.
+- **No duplicate parent.** Check all issues for an existing `Sprint N —` parent before creating anything.
+- **Do not edit the sprint file.** It is input. If it is ambiguous, stale, or unsliceable, stop and tell the user.
+- **Use only existing labels** from `docs/agents/triage-labels.md`.
+- **Never label the parent `ready-for-agent`.** Parents are dashboards, not work units.
+- **Do not flip the roadmap to `🟡`** until every issue is created successfully.
+- **Do not create Sandcastle work from vague UI language.** If a UI slice only says "make it nice", "polish it", or "improve UX" without concrete constraints, make it `ready-for-human` or stop for shaping.
 
 ---
 
-## 1. Read these first
+## 1. Read first
+
+Read these in order:
 
 1. `CLAUDE.md`
-2. `docs/prd/03-roadmap.md` — current sprint pointer + Phase 1 sprint-status table
-3. `docs/prd/sprints/sprint-<NN>-<name>.md` — the target sprint file
-4. `docs/prd/sprints/sprint-<NN+1>-<name>.md` if it exists — next sprint (for hint context)
-5. `docs/agents/issue-tracker.md` — **the canonical templates** for Sprint PRD parent + Sprint child bodies, label rules
-6. `docs/agents/triage-labels.md` — label vocabulary
-7. `CONTEXT-MAP.md` — to know which per-context `CONTEXT.md` to reference per issue
-8. `docs/adr/0019-context-md-describes-current-state.md` and `docs/adr/0020-document-hierarchy-and-mutability.md`
-9. `docs/agents/documentation-lookups.md` — so child issues can require Context7 for touched external libraries
-10. The relevant per-context `CONTEXT.md` files and any ADRs the sprint file lists in `## References`
+2. `GRILL-OUTCOME.md`
+3. `docs/prd/03-roadmap.md`
+4. `docs/prd/sprints/sprint-<NN>-<name>.md` for the target sprint
+5. `docs/prd/sprints/sprint-<NN+1>-<name>.md` if it exists, for downstream hints only
+6. `docs/agents/issue-tracker.md` for canonical parent and child templates
+7. `docs/agents/triage-labels.md` for exact labels
+8. `docs/agents/sandcastle.md` and `docs/adr/0028-kimi-sandcastle-afk-orchestrator.md`
+9. `CONTEXT-MAP.md`
+10. `docs/adr/0019-context-md-describes-current-state.md`
+11. `docs/adr/0020-document-hierarchy-and-mutability.md`
+12. `docs/agents/documentation-lookups.md`
+13. Relevant per-context `CONTEXT.md` files and ADRs listed in the sprint file's `## References`
+14. `.agents/skills/to-issues/SKILL.md` for tracer-bullet issue slicing
 
-If `docs/agents/issue-tracker.md` is missing or empty, stop — the conventions aren't codified.
+For UI, mobile, web, or admin slices, also apply the compressed Lean UX, UX heuristics, and Impeccable rules in §4.4 and §5.2. If the full personal skills are present, you may read them, but this skill must remain usable from repo-local docs alone.
 
----
-
-## 2. Pick the sprint number
-
-**If user named a sprint number:** treat as **N**.
-
-**If empty:** read `docs/prd/03-roadmap.md`, list ⚪ Pending sprints, and ask: *"Which sprint should I create issues for? Reply with the number."*
+If `docs/agents/issue-tracker.md` or `docs/agents/triage-labels.md` is missing or empty, stop.
 
 ---
 
-## 3. Verify pre-conditions
+## 2. Resolve the sprint number
+
+If the user names a sprint number, set it as **N**.
+
+If no number is provided:
+
+1. Read the Current Sprint block and Phase 1 table in `docs/prd/03-roadmap.md`.
+2. List pending `⚪` sprints.
+3. Ask: `Which sprint should I create issues for? Reply with the number.`
+4. Wait for the answer.
+
+Refuse Sprint 1 with: `Sprint 1's issues already exist. Use this skill for Sprint 2 onward.`
+
+---
+
+## 3. Verify preconditions
 
 ```bash
-# (a) Sprint file exists
+# Sprint file exists
 ls docs/prd/sprints/sprint-$(printf '%02d' $N)-*.md
 ```
 
-If no match, stop.
+If no file matches, stop.
+
+Read `docs/prd/03-roadmap.md` and verify Sprint N-1 is `🟢 Shipped`, unless N is 1. If not, stop.
 
 ```bash
-# (b) Previous sprint shipped (or N == 1)
+# Parent does not already exist
+gh issue list --state all --search "\"Sprint $N\" in:title" --json number,title,state
 ```
 
-Read `docs/prd/03-roadmap.md`, find row for sprint N-1. Status must be 🟢. (Skip if N == 1.)
-
-If not, stop: `"Sprint <N-1> is not yet 🟢 in the roadmap. Refusing to create Sprint <N> until previous ships."`
+If an existing parent issue for this sprint exists, stop and report it.
 
 ```bash
-# (c) No existing parent PRD
-gh issue list --state all --search "Sprint $N — in:title" --json number,title,state
+# Predict issue numbers
+LAST=$(gh issue list --state all --limit 1 --json number --jq '.[0].number // 0')
+NEXT=$((LAST + 1))
+echo "Predicted parent issue: #$NEXT"
 ```
 
-If any result exists (open or closed), stop and name the existing parent.
-
-```bash
-# (d) Capture the next issue number
-NEXT=$(gh issue list --state all --limit 1 --json number --jq '.[0].number')
-NEXT=$((NEXT + 1))
-echo "Next issue number will be: #$NEXT"
-```
-
-`NEXT` becomes the parent's number. Children get `NEXT+1`, `NEXT+2`, etc.
+The parent is predicted as `#NEXT`; children are predicted sequentially as `#NEXT+1`, `#NEXT+2`, etc. If GitHub returns any different number during creation, stop.
 
 ---
 
-## 4. Propose the slicing — DO NOT CREATE YET
+## 4. Propose the slicing, do not create yet
 
-Read the sprint file in full. Decide slicing:
+### 4.1 Extract sprint facts
 
-### 4.1 Scaffold sprint (use-case-free)
+From the sprint file, identify:
 
-Signs: `## Bounded contexts touched` says "All — but only at the scaffold level"; goal mentions "scaffold", "skeleton", "monorepo bootstrap." Sprint 1 is the canonical example.
+- sprint name, phase, milestone, demo line
+- bounded contexts touched
+- user-facing behaviors in the sprint DoD
+- files the sprint expects to create or modify
+- tests required
+- references and open risks
+- any explicit `Recommended child issue map`
 
-Pattern: **one child issue per workspace** (each `apps/*` and `packages/*`). Plus "version-uplift / docs" first child for cross-cutting prep and "wiring + verify" final child.
+Use the sprint's language in issue titles. Prefer domain behavior titles over layer titles, for example `S6: start contact from listing detail`, not `S6: add conversations controller`.
 
-### 4.2 Feature sprint (S2-S10)
+### 4.2 Slice as tracer bullets
 
-Signs: bounded contexts named specifically; AC enumerates use-case behaviors.
+This skill is a project-specific superset of `to-issues`:
 
-Pattern: **hybrid** —
-- 1 "foundations" issue at the start (module wiring, Zod contracts, env vars, migration). All others depend on this.
-- N vertical-slice issues, one per use-case. Each ships its own domain + application + infrastructure + presentation slice.
-- UI integration issues at end (one per frontend surface — mobile/web/admin where applicable).
-- 1 "sprint-final wiring" issue that closes the loop and updates the roadmap.
+- Each child issue is a narrow, complete tracer bullet through the needed layers.
+- A completed child is demoable or mechanically verifiable on its own.
+- Prefer many thin slices over a few thick ones.
+- Publish blockers before dependents.
+- Classify every child as **AFK** or **HITL** in the proposal.
 
-Typical 5-10 children. Aim for ~1-3 hours per issue.
+Default to **AFK** only when the issue body can give an agent enough context to finish without more human judgment. Use **HITL** when the slice requires a product decision, design choice, unresolved architecture tradeoff, credential, manual simulator gate as the primary deliverable, or ambiguous copy/UX judgment.
 
-### 4.2.5 Slice quality bar
+For Sandcastle, only AFK issues should receive `ready-for-agent`. HITL issues, if the user explicitly wants them created, use `ready-for-human` and must not be in the initially unblocked Sandcastle queue.
 
-Before showing the proposal, check each child issue against this bar:
+### 4.3 Sandcastle sizing bar
 
-- **One reason to change**: each child should map to one foundations concern, one use-case, one frontend surface, or one final-wiring sweep. If a child mixes unrelated actors or layers, split it.
-- **Vertical where it matters**: use-case children should carry domain + application + infrastructure + presentation changes together when that produces a shippable behavior. Do not create shallow layer-only issues unless the sprint truly needs a shared foundation first.
-- **Clear boundary ownership**: each child names the bounded context(s), app/package `CONTEXT.md`, ports, events, routes, and mappers it may affect.
-- **TDD where it pays**: domain/application/security/persistence slices name the first failing tests. UI-only, docs-only, and mechanical wiring slices do not pretend to be TDD work.
-- **No hidden library guessing**: if a child will touch React, Expo, Prisma, NestJS, NativeWind, TanStack Query, or any other external API surface, its `Read first` or notes must point to `docs/agents/documentation-lookups.md` and the relevant repo guide.
-- **No classitis instructions**: avoid issue notes that ask agents to create wrappers/services by default. Ask for a new abstraction only when it hides a policy, data format, protocol, query-key shape, mapper, or repeated algorithm.
-- **Scoped file list**: every expected edit is in `## Files to create / modify`, including relevant `CONTEXT.md`. If the slice cannot be scoped without guessing, ask the user instead of creating it.
+Each AFK child must be one-shot-able by a single agent in one sandbox run:
 
-### 4.3 Compose proposal table
+- **One reason to change:** one use case, one shared foundation concern, one frontend surface, or one final verification sweep.
+- **Small file surface:** name the expected files. If you cannot scope the likely files, the slice is not ready.
+- **No hidden design/product decisions:** all labels, copy intent, states, and acceptance criteria needed by the implementer are in the sprint file or issue body.
+- **No broad foundations by habit:** create a foundations issue only for truly shared compile/runtime prerequisites. Let vertical slices own their own schema, contracts, tests, and UI where that avoids a bottleneck.
+- **Parallel-safe edits:** avoid placing unblocked sibling issues on the same hot files (`schema.prisma`, route registries, module exports, shared mobile layouts). If two issues must touch the same hot file, add a real dependency or combine the change.
+- **No new dependency surprises:** if a child needs a package not already in the lockfile, call it out. Sandcastle's offline install may fail until the host updates `pnpm-lock.yaml` and rebuilds the image.
+- **D1 gate aware:** Sandcastle runs typecheck, lint, and Docker-free unit tests. Do not make in-sandbox completion depend on Testcontainers e2e, Docker-in-Docker, iOS simulator, or Expo Go.
+- **Mobile caveat explicit:** mobile issues can be AFK for code, typecheck, lint, and unit tests, but the host must run the Expo simulator gate after merge.
 
+If a slice violates this bar, split it, mark it HITL, or stop for clarification.
+
+### 4.4 UI and UX issue quality bar
+
+For mobile, web, admin, shared UI, onboarding, form, empty-state, or flow issues, add concrete UX guidance. Keep it short and testable.
+
+Lean UX:
+
+- State the riskiest user assumption when there is one.
+- Add a hypothesis in this shape when useful: `We believe <outcome> improves if <persona> can <action> with <feature>.`
+- Add one success signal or learning check when the sprint is meant to teach us user behavior.
+- Keep artifacts lightweight. Do not ask for a heavy design spec when a small implemented slice can answer the question.
+
+UX heuristics:
+
+- Main action is obvious and named in plain language.
+- System status is visible for loading, saving, sending, disabled, success, and failure states.
+- Errors say what happened and how to recover.
+- Users can back out, retry, undo, or return to the previous screen where the flow needs it.
+- Inputs prevent common mistakes and preserve user-entered data after errors.
+- No hover-only critical information; mobile tap targets are at least 44x44 px.
+- Navigation and page/screen identity are clear without reading instructions.
+
+Impeccable anti-slop:
+
+- Use project tokens and existing components before inventing new visual language.
+- Do not accept generic AI UI tropes: decorative glass, gradient text, side-stripe cards, hero-metric templates, identical icon-card grids, or modal-first flows.
+- Avoid category-reflex design. The UI should fit AutoTM's marketplace task and the actual surface, not a generic "car app" palette or SaaS dashboard trope.
+- Every word earns its place. Issue bodies should specify user-visible copy only when the copy matters.
+- If the visual direction is not determined enough for an AFK agent, create a HITL design-shaping issue instead of a vague implementation issue.
+
+### 4.5 Common sprint patterns
+
+Scaffold sprint:
+
+- Use one child per workspace (`apps/*`, `packages/*`) plus cross-cutting prep and final verification.
+- Do not create a generic foundations issue unless it unlocks several children.
+
+Feature sprint:
+
+- Prefer vertical use-case slices.
+- Add a shared foundations issue only for unavoidable shared schema/contracts/env/module wiring.
+- Add UI integration slices only when UI cannot naturally ship inside the use-case slice.
+- Add one final wiring issue for smoke checks, dependency cleanup, docs reconciliation, and roadmap closeout.
+
+Typical sprint size is 5-10 children. If you need more, explain why. If any issue looks like more than one focused agent run, split it.
+
+### 4.6 Proposal format
+
+Print a table using predicted issue numbers:
+
+```markdown
+| # | Title | Mode | Area | Type | Depends on | One-line scope |
+|---|---|---|---|---|---|---|
+| #120 | Sprint 6 — Contact seller (parent) | parent | - | feature | - | Dashboard + tasklist |
+| #121 | S6: contact foundations | AFK | api,db,contracts | task | None | Minimal schema/contracts/module wiring |
+| #122 | S6: buyer starts contact from listing detail | AFK | api,mobile | feature | #121 | Create/get thread path and CTA wiring |
+| #123 | S6: contact UX copy and empty/error states | HITL | mobile | enhancement | #122 | Human reviews labels/states before AFK |
 ```
-| #     | Title                                      | Area     | Type    | Depends on        | One-line scope        |
-|-------|--------------------------------------------|----------|---------|-------------------|------------------------|
-| #N+0  | Sprint <N> — <Name> (parent)               | -        | feature | (parent)          | Dashboard + tasklist  |
-| #N+1  | S<N>: foundations — <details>              | api      | task    | None              | Module, env, Zod      |
-| #N+2  | S<N>: <UseCase1> end-to-end                | api      | feature | #N+1              | Domain+app+infra+REST |
-| ...   |                                            |          |         |                   |                        |
-| #N+M  | S<N>: Final wiring + roadmap S<N> → 🟢     | docs,api | task    | All above         | Smoke + roadmap       |
-```
 
-And a dependency graph diagram.
+Then print a dependency graph and a short `Notes / questions` section. Ask:
 
-### 4.4 Show + wait
+`Confirm to create these <M> issues on GitHub? (yes / edit / cancel)`
 
-Print proposal. Ask:
-
-> *"Confirm to create these `M` issues on GitHub? (yes / edit / cancel)"*
-
-- `yes` → §5
-- `edit` → ask what to change, redo, re-confirm
-- `cancel` → stop
-
-Do not proceed without explicit confirmation.
+If the user says `edit`, ask what to change, revise the table, and re-confirm. Stop after three failed confirmation rounds.
 
 ---
 
-## 5. Create the issues
+## 5. Write issue bodies
 
-### 5.1 Write each body to /tmp/sprint-<N>-issues/
+After confirmation, create `/tmp/sprint-<N>-issues/` and write one markdown body per issue.
 
-Use templates from `docs/agents/issue-tracker.md` verbatim — Sprint PRD shape for parent, Sprint child shape for children.
+Use `docs/agents/issue-tracker.md` as the canonical template. The `to-issues` `Parent` and `What to build` intent maps into the sprint child `Summary`: include the parent issue number and a concise behavior statement there instead of inventing a separate template unless the tracker doc changes.
 
-**Parent body** fills in:
-- Sprint name from sprint file's header
-- Phase + Milestone from sprint file's status table
-- Sprint doc link
-- Sub-issues tasklist with predicted numbers
-- Dependency graph from §4.3
-- Initially unblocked list (issues whose `## Depends on` is None)
+### 5.1 Parent body
 
-**Each child body** fills in:
-- Summary — references `docs/prd/sprints/sprint-NN-<name>.md` § the slice's section
-- Read first — paths agent must read. **Always include `docs/adr/0019-context-md-describes-current-state.md`** so the agent knows CONTEXT.md mirrors current code, updated alongside this PR.
-- Also include `docs/adr/0020-document-hierarchy-and-mutability.md` and `docs/agents/documentation-lookups.md` when the child touches docs hierarchy or external libraries.
-- Files to create / modify — narrowed from sprint file. **Include the relevant `CONTEXT.md` path(s) if this slice changes domain invariants** (per ADR-0019), unless the sprint plan explicitly defers the CONTEXT.md update to the sprint-final wiring issue.
-- Implementation notes — code skeletons, type signatures, env vars, Zod schema names (skip if captured by reference)
-- Architecture notes — keep short: layer boundaries, ports/mappers/events/routes allowed, external library docs to consult, and any abstraction that must stay deep rather than pass-through.
-- Testing / TDD note — add explicit tests-first guidance when it materially improves the slice: domain rules, application use-cases, security/session behavior, persistence contracts, migrations, and high-risk edge cases. Do **not** force TDD language into pure docs, mechanical scaffold, UI-only, final wiring, or manual-smoke slices unless tests-first genuinely fits.
-- Acceptance criteria (slice-scoped) — SUBSET of sprint DoD covering only this slice. **If this slice changes domain invariants, add a checkbox**: `[ ] Update <relevant CONTEXT.md path> to reflect new state (per ADR-0019)` — unless deferred to sprint-final.
-- Out of scope — sibling slices deferred
-- Depends on — issue numbers from §4.3 (or "None")
-- Completion signal — `<promise>COMPLETE</promise>` + workspace `pnpm` commands
+Fill the Sprint PRD parent template with:
 
-For TDD-suitable slices, be concrete: name the first failing tests the agent should write before implementation (for example value objects, use-case policies, token rotation/reuse, rate limits, deletion scope). Keep this short; the issue should guide the agent, not become a testing essay.
+- status `🟡 In progress` if the roadmap will be flipped in §7, otherwise the current status
+- phase, milestone, sprint doc link, and demo line
+- child tasklist with predicted numbers
+- dependency graph
+- initially unblocked queue, excluding HITL and `blocked` children
+- note that Sandcastle consumes `ready-for-agent -blocked` and `/run-issue` can also run one child synchronously
 
-### 5.2 Create parent first
+### 5.2 Child body
+
+Every child body must be self-contained enough for a cold Sandcastle sandbox.
+
+Fill these sections:
+
+- **Summary:** one paragraph with parent reference, sprint doc section, what this slice ships, and why it matters.
+- **Read first:** always include the sprint file, `CLAUDE.md`, ADR-0019, ADR-0020, `docs/agents/issue-tracker.md`, `docs/agents/sandcastle.md`, and relevant `CONTEXT.md` files. Include `docs/agents/documentation-lookups.md` whenever the slice touches an external library, framework, SDK, CLI, or cloud service. Add mobile/nativewind/data-fetching/type-runtime guides when relevant.
+- **Files to create / modify:** scoped file list with one-line purpose. Include relevant `CONTEXT.md` when domain invariants, ports, events, Prisma fields, routes, package exports, or app/package structure change.
+- **Implementation notes:** only the minimum details needed to avoid guessing: names, type shapes, route shapes, event names, env vars, or critical constraints from the sprint file.
+- **Architecture notes:** allowed bounded contexts, ports, mappers, events, routes, and deep abstractions. Do not request pass-through services or wrappers by default.
+- **Testing / TDD note:** name the first failing tests for domain, application, security, persistence, mapper, and high-risk slices. Do not force TDD language into pure docs, mechanical wiring, UI-only, or final smoke slices.
+- **UX notes:** include only for UI/user-flow slices. Use the Lean UX, UX heuristics, and Impeccable rules in §4.4. Make the notes concrete: required states, copy constraints, accessibility/tap-target constraints, and anti-slop bans relevant to the surface.
+- **Acceptance criteria:** slice-scoped subset of sprint DoD. Include `Update <CONTEXT.md path> to reflect new state (per ADR-0019)` whenever the slice changes current-state invariants, unless explicitly deferred to final wiring.
+- **Out of scope:** sibling slices and deferred product scope.
+- **Depends on:** issue numbers or `None`.
+- **Completion signal:** `<promise>COMPLETE</promise>` plus workspace-specific commands. For Sandcastle-compatible issues, include the expected in-sandbox gate: `pnpm exec turbo run typecheck lint test:unit --filter=<workspace>`. For mobile, also state that the host Expo simulator gate remains a post-merge human check.
+
+AFK issue bodies must not contain placeholders like `TBD`, `decide later`, or `make this polished`. Resolve them before creation or mark the issue HITL.
+
+---
+
+## 6. Create the issues
+
+Create the parent first:
 
 ```bash
 gh issue create \
   --title "Sprint <N> — <Name>" \
   --body-file /tmp/sprint-$N-issues/00-parent.md \
-  --label "phase-<N's phase>,feature,<primary area>"
+  --label "phase-<phase>,feature"
 ```
 
-Verify the returned issue number matches `NEXT`. Halt if not.
+Verify the returned issue number matches the predicted parent. If not, stop.
 
-### 5.3 Create children sequentially
-
-For each child in proposal order:
+Create children sequentially in dependency order:
 
 ```bash
 gh issue create \
   --title "S<N>: <child title>" \
   --body-file /tmp/sprint-$N-issues/<NN>-<slug>.md \
-  --label "ready-for-agent,phase-<N's phase>,<area>,<type><,blocked if any dep is open>"
+  --label "<triage>,phase-<phase>,<area labels>,<type labels><,blocked>"
 ```
 
-Label rules per `docs/agents/issue-tracker.md`:
-- Always: `ready-for-agent`, `phase-<N's phase>`
-- Area: primary workspace label (`api`, `db`, `mobile`, etc.)
-- Type: `feature` (default), `task` (plumbing), `security`, `perf`
-- `blocked` if any `Depends on` is open
+Label rules:
 
-Capture each returned URL/number. Verify sequential.
+- AFK children: `ready-for-agent`
+- HITL children: `ready-for-human`
+- Add `blocked` if `## Depends on` lists any open issue
+- Add one or more area labels from `docs/agents/triage-labels.md`
+- Add one type label: `feature`, `enhancement`, `task`, `security`, or `perf`
+- Use numeric phase labels exactly as defined in `docs/agents/triage-labels.md`, for example `phase-1`, not `phase-1 (MLP beta)`
+- Parent: `phase-<phase>,feature` only
 
-### 5.4 If verification fails
-
-If a predicted number is wrong (parallel issue creator), don't create more. Tell user the mismatch. Offer: (a) edit affected bodies via `gh issue edit --body-file`, or (b) close and retry from §3(d).
+After each create, verify the actual number matches the predicted number. If any mismatch occurs, stop immediately and tell the user which bodies now contain stale references. Offer to either edit the created issues with corrected bodies or close and retry from fresh predictions.
 
 ---
 
-## 6. Update roadmap to 🟡
+## 7. Update roadmap to `🟡`
 
-Only after all issues created successfully.
+Only after all issue creation succeeds.
 
 Edit `docs/prd/03-roadmap.md`:
-- Current Sprint block: Sprint → S<N>, Status → 🟡 In progress, Started → today (UTC)
-- Phase 1 table: S<N> row Status → 🟡, Started → today
 
-Commit + push to main (doc-only, no PR).
+- Current Sprint block: set Sprint, Status `🟡 In progress`, Started to `date -u +%Y-%m-%d`, Plan file/Sprint doc/Milestone to the target sprint.
+- Phase 1 table: set S<N> row Status `🟡`, Started to today's UTC date.
+
+Commit and push directly to `main` unless the repo state or user instruction requires a PR:
+
+```bash
+git add docs/prd/03-roadmap.md
+git commit -m "docs: mark S<N> in progress"
+git push origin main
+```
+
+Do not include unrelated files.
 
 ---
 
-## 7. Final summary
+## 8. Final summary
 
-```
+Print:
+
+```text
 Sprint <N> issues created.
 
-Parent:     #<parent-num>  https://github.com/.../issues/<parent-num>
-Children:   #<first>-#<last>  (M issues)
+Parent:   #<parent> <url>
+Children: #<first>-#<last> (<M> issues)
 
-Initially unblocked queue:
-  - #<X>  S<N>: <title>
-  - #<Y>  S<N>: <title>
-  ...
+Sandcastle-ready unblocked queue:
+  - #<n> S<N>: <title>
+
+HITL or manually-gated issues:
+  - #<n> S<N>: <title> (if any)
 
 Roadmap: S<N> flipped to 🟡 In progress on main.
 
-Suggested next: run-issue-agent-skill <first unblocked number>
+Suggested next:
+  - Sandcastle: pnpm sandcastle
+  - Single issue: run-issue-agent-skill <first unblocked issue>
 ```
 
-Then stop.
+Then stop. Do not start Sandcastle or `run-issue-agent-skill` automatically.
 
 ---
 
-## 8. Bail conditions
+## 9. Bail conditions
 
-Stop when:
-- Sprint file doesn't exist
-- Previous sprint isn't 🟢
-- Parent issue already exists for this sprint
-- Sprint AC ambiguous or empty
-- User cancels or doesn't reach confirmed proposal after 3 rounds
-- `gh issue create` returns unexpected number mid-creation
-- Codified templates in `docs/agents/issue-tracker.md` are missing
+Stop without creating issues or editing the roadmap when:
 
-Do **not** edit the roadmap on bail.
+- sprint file is missing
+- previous sprint is not `🟢`
+- parent issue already exists
+- sprint DoD is empty, ambiguous, or unsliceable
+- issue bodies would need unresolved design, product, architecture, or dependency decisions
+- predicted issue number changes mid-create
+- labels/templates are missing
+- user cancels or does not confirm after three rounds
 
----
-
-## 9. Special cases
-
-**Sprint 1** (`N == 1`): refuse — issues already exist from a prior session.
-
-**Phase 2/3 sprints (S11+):** if sprint file doesn't exist, refuse and ask the user to create it first.
-
-**Multi-sprint runs:** refuse. One sprint at a time — JIT rhythm.
+If any issues were created before a failure, report exactly what exists and what needs cleanup.
 
 ---
 
 ## Cross-agent notes
 
-Requires file read/write/edit + shell + `gh` CLI. Works in any agent host. Logic identical across Claude Code, Codex CLI, Cursor, etc.
+Requires repo file read/write/edit access, shell, `git`, and GitHub CLI. Works in Claude Code, Codex, Cursor, Windsurf, and other agents that can read this SKILL.md. The Claude command and this skill should stay identical in behavior; update both together.

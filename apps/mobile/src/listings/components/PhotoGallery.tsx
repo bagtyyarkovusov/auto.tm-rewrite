@@ -10,8 +10,9 @@ import {
 import { Image } from "expo-image";
 import { X } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
+import type { ComponentProps } from "react";
 
-import { buildVariantUrl } from "../detail/buildVariantUrl";
+import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -21,9 +22,39 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 type ListingMedia = ListingsSchemas.ListingMedia;
+type ExpoImageStyle = ComponentProps<typeof Image>["style"];
 
 interface PhotoGalleryProps {
   media: ListingMedia[];
+}
+
+function GalleryImage({
+  item,
+  variant,
+  contentFit,
+  style,
+}: {
+  item: ListingMedia;
+  variant: "detail" | "fullscreen";
+  contentFit: "cover" | "contain";
+  style: ExpoImageStyle;
+}) {
+  const [useOriginalImage, setUseOriginalImage] = useState(false);
+  const generatedUri = buildVariantUrl(item.key, variant);
+  const sourceUri =
+    useOriginalImage
+      ? buildOriginalUrl(item.key)
+      : item.variants[variant] || generatedUri;
+
+  return (
+    <Image
+      source={{ uri: sourceUri }}
+      style={style}
+      contentFit={contentFit}
+      cachePolicy="memory-disk"
+      onError={() => setUseOriginalImage(true)}
+    />
+  );
 }
 
 export function PhotoGallery({ media }: PhotoGalleryProps) {
@@ -62,18 +93,17 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
 
   const renderItem = useCallback(
     ({ item, index }: { item: ListingMedia; index: number }) => {
-      const uri = buildVariantUrl(item.key, "detail");
       return (
         <Pressable
           onPress={() => setFullscreenIndex(index)}
           className="active:opacity-90"
         >
           <View style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.65 }}>
-            <Image
-              source={{ uri }}
+            <GalleryImage
+              item={item}
+              variant="detail"
               style={{ width: "100%", height: "100%" }}
               contentFit="cover"
-              cachePolicy="memory-disk"
             />
           </View>
         </Pressable>
@@ -134,18 +164,17 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
             onViewableItemsChanged={onFullscreenViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             renderItem={({ item }) => {
-              const uri = buildVariantUrl(item.key, "fullscreen");
               return (
                 <Pressable
                   onPress={() => setFullscreenIndex(null)}
                   className="flex-1 items-center justify-center"
                   style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT }}
                 >
-                  <Image
-                    source={{ uri }}
+                  <GalleryImage
+                    item={item}
+                    variant="fullscreen"
                     style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT * 0.8 }}
                     contentFit="contain"
-                    cachePolicy="memory-disk"
                   />
                 </Pressable>
               );

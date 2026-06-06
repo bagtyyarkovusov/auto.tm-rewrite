@@ -5,6 +5,7 @@ import { ListingDraft } from "../domain/ListingDraft";
 import type { ListingDraftRepository } from "../domain/ports/ListingDraftRepository";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { ListingEventPublisher } from "../domain/ports/ListingEventPublisher";
+import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
 
 import { PublishListing } from "./PublishListing";
 
@@ -59,6 +60,22 @@ class FakeEventPublisher implements ListingEventPublisher {
 
   async emit(payload: { event: string; listingId: string; sellerId?: string }): Promise<void> {
     this.events.push(payload);
+  }
+}
+
+class FakeImageVariantGenerator implements ImageVariantGenerator {
+  generated: string[] = [];
+
+  async generate(originalKey: string) {
+    this.generated.push(originalKey);
+    return {
+      variants: {
+        thumbnail: originalKey.replace("original.jpg", "thumbnail.jpg"),
+        list: originalKey.replace("original.jpg", "list.jpg"),
+        detail: originalKey.replace("original.jpg", "detail.jpg"),
+        fullscreen: originalKey.replace("original.jpg", "fullscreen.jpg"),
+      },
+    };
   }
 }
 
@@ -143,12 +160,14 @@ function makeUseCase(
   prisma?: FakePrisma,
   exchangeRates?: FakeExchangeRatePort,
   events?: FakeEventPublisher,
+  variantGenerator?: FakeImageVariantGenerator,
 ) {
   return new PublishListing(
     draftRepo ?? new FakeListingDraftRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof PublishListing>[1],
     exchangeRates ?? new FakeExchangeRatePort(),
     events ?? new FakeEventPublisher(),
+    variantGenerator ?? new FakeImageVariantGenerator(),
   );
 }
 
@@ -171,12 +190,14 @@ describe("PublishListing", () => {
   let prisma: FakePrisma;
   let exchangeRates: FakeExchangeRatePort;
   let events: FakeEventPublisher;
+  let variantGenerator: FakeImageVariantGenerator;
 
   beforeEach(() => {
     draftRepo = new FakeListingDraftRepository();
     prisma = new FakePrisma();
     exchangeRates = new FakeExchangeRatePort();
     events = new FakeEventPublisher();
+    variantGenerator = new FakeImageVariantGenerator();
   });
 
   const validPayload = {
@@ -198,13 +219,14 @@ describe("PublishListing", () => {
   it("publishes a valid draft", async () => {
     seedDraft(draftRepo, validPayload);
 
-    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
     const result = await uc.execute({ draftId: "draft-1", userId: "user-1" });
 
     expect(result.listing.status).toBe("active");
     expect(result.listing.brandId).toBe(validPayload.brandId);
     expect(prisma.createdListings).toHaveLength(1);
     expect(prisma.createdMedia).toHaveLength(1);
+    expect(variantGenerator.generated).toEqual(["photo1.jpg"]);
     expect(prisma.deletedDrafts).toContain("draft-1");
     expect(prisma.auditLogs).toHaveLength(1);
     expect(prisma.auditLogs[0]).toMatchObject({
@@ -219,7 +241,7 @@ describe("PublishListing", () => {
   });
 
   it("throws NotFoundException for non-existent draft", async () => {
-    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
     await expect(
       uc.execute({ draftId: "missing", userId: "user-1" }),
     ).rejects.toThrow(NotFoundException);
@@ -228,7 +250,7 @@ describe("PublishListing", () => {
   it("throws ForbiddenException for draft owned by another user", async () => {
     seedDraft(draftRepo, validPayload, "user-1");
 
-    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
     await expect(
       uc.execute({ draftId: "draft-1", userId: "user-2" }),
     ).rejects.toThrow(ForbiddenException);
@@ -237,7 +259,7 @@ describe("PublishListing", () => {
   it("throws BadRequestException when draft is missing required fields", async () => {
     seedDraft(draftRepo, { brandId: validPayload.brandId });
 
-    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
     await expect(
       uc.execute({ draftId: "draft-1", userId: "user-1" }),
     ).rejects.toThrow(BadRequestException);
@@ -341,9 +363,10 @@ describe("PublishListing", () => {
       ],
     });
 
-    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
     await uc.execute({ draftId: "draft-1", userId: "user-1" });
 
     expect(prisma.createdMedia).toHaveLength(2);
+    expect(variantGenerator.generated).toEqual(["p1.jpg", "p2.jpg"]);
   });
 });

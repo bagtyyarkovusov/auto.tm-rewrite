@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react-native";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
@@ -41,7 +41,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent>
+      <SheetContent className="max-h-[85%]" style={{ height: "85%" }}>
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>Filters</SheetTitle>
           <Button
@@ -54,7 +54,11 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
           </Button>
         </SheetHeader>
 
-        <View className="min-h-0 flex-1 gap-4">
+        <ScrollView
+          className="min-h-0 flex-1"
+          contentContainerClassName="gap-4 pb-2"
+          keyboardShouldPersistTaps="handled"
+        >
           <BrandModelFilterControl
             draft={filters.draft}
             setField={filters.setField}
@@ -71,7 +75,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             value={draft.condition}
             onChange={(value) => setField("condition", value)}
           />
-        </View>
+        </ScrollView>
 
         <View className="flex-row gap-3 pt-2">
           <Button

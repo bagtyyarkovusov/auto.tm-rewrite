@@ -17,6 +17,7 @@ import { FeedSkeleton } from "../../src/listings/feed/FeedSkeleton";
 import { ListingCard } from "../../src/listings/feed/ListingCard";
 import { FilterSheet } from "../../src/listings/search/FilterSheet";
 import { useListingFilters } from "../../src/listings/search/useListingFilters";
+import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
@@ -41,6 +42,7 @@ export default function FeedScreen() {
   }, []);
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? [];
+  const catalogMaps = useFeedCatalogMaps(allItems);
 
   const header = (
     <View className="px-4 pt-6 pb-3 flex-row items-center justify-between">
@@ -102,7 +104,13 @@ export default function FeedScreen() {
         data={allItems}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <ListingCard listing={item} onPress={handlePress} />
+          <ListingCard
+            listing={item}
+            onPress={handlePress}
+            brandName={catalogMaps.brandName(item.brandId)}
+            modelName={catalogMaps.modelName(item.modelId)}
+            cityName={catalogMaps.cityName(item.cityId)}
+          />
         )}
         ItemSeparatorComponent={() => (
           <View className="h-px mx-4 bg-border" />

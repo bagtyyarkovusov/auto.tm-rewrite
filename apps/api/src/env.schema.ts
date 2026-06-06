@@ -27,6 +27,7 @@ export const EnvSchema = z.object({
   RATE_LIMIT_OTP_IP_HOURLY: z.coerce.number().int().positive().default(10),
 
   MINIO_ENDPOINT: z.string().default("http://localhost:9000"),
+  MINIO_PUBLIC_URL: z.string().default("http://localhost:9000"),
   MINIO_ACCESS_KEY: z.string().default("minioadmin"),
   MINIO_SECRET_KEY: z.string().default("minioadmin"),
   MINIO_REGION: z.string().default("us-east-1"),
