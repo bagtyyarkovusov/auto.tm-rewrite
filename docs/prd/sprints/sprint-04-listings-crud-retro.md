@@ -134,3 +134,68 @@ Issue #95 (`S4: web — SSR feed + detail with OG + Schema.org JSON-LD`) is no l
 - **Future home**: S8's `Public web + legal links` child slice owns the MLP web landing, listing-detail public metadata, and legal links before private beta invites.
 - **Issue handling**: Close #95 as deferred/not planned for S4. Do not silently delete the capability; recreate or reshape it when creating S8 issues from `docs/prd/sprints/sprint-08-private-beta-polish.md`.
 - **S4 close rule after this decision**: #96 waits on #94 plus the already-shipped backend/mobile wizard children, then runs sprint-final wiring. #95 should not be listed as a required child for S4 closure after this retro entry.
+
+## Sprint close — 2026-06-06 (`/close-sprint 4`)
+
+> Final closure pass run by `/close-sprint 4` on 2026-06-06 (UTC). S4 shipped 2026-06-06 (roadmap). Parent PRD #83 and sprint-final #96 are CLOSED; closing PR #151 (docs-only) squash-merged to `main` (`e42a231`). Per [ADR-0020](../../adr/0020-document-hierarchy-and-mutability.md) this section **appends to** (does not edit) the entries above.
+
+### Shipped vs planned
+
+S4 ran as 30 child issues under #83. **29 shipped; 1 (#95 web SSR) closed as a deliberate deferral to S8.** Evidence verified against `packages/db/prisma/schema.prisma`, both context `CONTEXT.md` files, and the `apps/api/src/modules/listings` tree.
+
+| Area (issues) | Planned (DoD) | Evidence in code | Status |
+|---|---|---|---|
+| Catalog extension (#84) | 3 lookup entities + 3 read routes + seed | schema 3 tables; catalog CONTEXT 3 entities/use-cases/routes; seeds present | ✅ |
+| Schema migration (#85) | 16 Listing fields + ListingDraft + ExchangeRate + `url`→`key` | schema.prisma matches exactly | ✅ |
+| Domain + ports + null adapters (#86) | 5 entities + 11 ports + null/sync adapters | listings CONTEXT confirms all | ✅ |
+| Contracts (#87) | Zod DTOs (listings/uploads/FX/catalog) | contracts pkg; 79/79 schema tests | ✅ |
+| Drafts + presign (#88) | CreateDraft/UpdateDraft + PresignUpload | use-cases + MinioMediaStorageAdapter | ✅ |
+| Publish + transitions + audit (#89) | Publish/MarkSold/Archive/Republish/Delete + 6 audit actions | use-cases + 6 audit actions | ✅ |
+| Edit + locked fields (#90) | EditListing; 5 locked fields; price_changed | canEditField (5 fields) + price_changed | ✅ |
+| Media pipeline (#91) | Attach/Remove/Reorder + Sharp + MinIO | use-cases + SharpImageVariantGenerator | ✅ |
+| Read + ranking + FX API (#92) | ListFeed/GetListingDetail/My* + ChronologicalRankingAdapter + GetExchangeRates | all present (ADR-0021) | ✅ |
+| Mobile foundation (#106, #107, #124) | hooks, RNR primitives, staging, contract align, design handoff | mobile listings module + 16 specs | ✅ |
+| Mobile wizard (#93) | 7-step wizard + drafts + staging | shipped **8-step** (Review own step) — 2026-05-19 entry | ✅ reshaped |
+| Mobile read surface (#94 → #144–#148) | feed + detail + My Listings/Drafts + smoke | 5 split issues all closed | ✅ |
+| Wizard convergence (#128–#135) | ADR-0024/25/26 edit-mode + atomicity + button/heading system | 8 issues closed; 3 ADRs | ✅ |
+| Web SSR (#95) | feed + detail SSR + OG + JSON-LD | **not shipped — deferred to S8** (2026-05-29 entry) | ⛔ deferred |
+| Sprint-final (#96) | roadmap 🟢 + CONTEXT sweep + close #83 | PR #151 merged; this retro | ✅ |
+
+**Gaps:** only #95, and it was a documented mobile-first deferral (ADR-0027), not a miss.
+
+### Drift findings
+
+- **CONTEXT.md — CLEAN.** Doc-pair check both directions: listings `Owns` (Listing, ListingMedia, ListingDraft, ExchangeRate, Favorite) and catalog `Owns` (10 entities incl. EngineType/Transmission/DriveType) all match `schema.prisma`; all 16 S4 Listing fields present; no schema entity missing from CONTEXT and no CONTEXT entity absent from schema.
+- **ADR — none missing.** S4 was ADR-rich: 0021 (feed ranking), 0022 (city-first location), 0023 (analytics), 0024 (post-publish photo editing), 0025 (edit-save atomicity), 0026 (edit-mode review-first), 0027 (MLP scope), 0028 (Kimi-Sandcastle). One *pre-existing* uncaptured pattern — see Architecture.
+- **Sprint-file accuracy.** *Planned-not-done:* web SSR (#95)→S8. *Done-beyond-plan (healthy, documented):* 8-step wizard vs 7; 19 application use-cases vs 8; 20 HTTP routes vs 18 (`/listings/ping`, `/drafts/:id/validate-step`); mid-sprint #106/#107/#124 + retro-tail #128–#135.
+- **Roadmap — CLEAN.** S4 🟢 2026-06-06; shipped-log entry present; Current → S5 ⚪ (left ⚪ for a deliberate S5 start per #96).
+- **Dependency/version — none material.** No major framework bumps in-window; Expo SDK 55 verified via `expo install --check` (PR #151). package.json deltas were feature deps (Sharp, expo-image-manipulator).
+- **Test coverage — strong.** listings: 29 API specs (10 domain / 19 application / e2e+infra) + 16 mobile specs; 79/79 contracts, 89/89 mobile, full `pnpm test` green. No gap flagged.
+- **Architecture / complexity.**
+  - Domain layer **CLEAN** — zero framework/ORM/transport imports in any `*/domain`.
+  - Cross-context imports **CLEAN** — only `IdentityCheckPort` / `ListingsReadPort`; no context reaches into another's internals.
+  - *Application-layer coupling (pre-existing, repo-wide):* ~12 use-cases inject `PrismaService` directly and throw Nest HTTP exceptions — 6 listings (Publish/Edit/MarkSold/Archive/Republish/Delete) + 6 catalog (Create/Update/Delete Brand/Model). Established since S3 for write+audit atomicity (cf. ADR-0025). Honors the CLAUDE.md hard rule (framework-free **domain**) but stretches the application layer. **Not an S4 regression.** Candidate for an ADR formalizing the boundary (keep-as-is vs a UnitOfWork/transaction port). Low urgency.
+  - *Mobile follow-ups:* the 2026-05-19 items were partly resolved by #128 (wizardMachine convergence, ADR-0026) and #129 (staging-key abstraction). Remaining: locale hardcoded `"ru"` across mobile catalog hooks (no `useLocale()` provider) — fold into bilingual UI work.
+
+### Prerequisites for Sprint 5 (Search + listing detail)
+
+- **Hard blockers: NONE.** S5 deps all shipped — S2 auth ✅, S3 catalog ✅, S4 listing model/feed/detail ✅ (`ListFeed` already carries the forward-defined `filters` param; cursor stable on `(publishedAt, id)`).
+- **Soft prereq — reconcile at the S5 grill:** S5's DoD carries two **web** ACs ("Web listing detail SSR … OG", "Web listing detail URL shareable `/{locale}/listings/{id}`"), but S4 deferred **all** web SSR (#95) to S8 — so S5 has no S4 web foundation to extend. Before `/create-sprint-issues 5`, decide (a) build web detail from scratch in S5, or (b) move S5's web ACs to S8 with #95. **Recommend (b)** — keep S5 mobile-first per ADR-0027; S8 owns the public-web slice.
+- **Charter §19:** none block S5 (catalog seed = item 9 shipped in S3; TLS/domain/store-accounts/privacy/Docker-bundling are S8/launch).
+
+### Proposed doc updates
+
+- [x] **Append this closure section** — done (this commit).
+- [ ] **(optional, low urgency) ADR — application-layer transactional-write boundary.** Pre-existing since S3, not S4-specific. Defer unless the team wants the boundary blessed before S5.
+- [ ] **(S5 planning, not now) Reconcile S5 web ACs** with the #95→S8 deferral — do it in the S5 grill, not as an edit here (S5 still ⚪ and owned by its own start).
+- No CONTEXT.md or roadmap remediation needed (both clean / done by PR #151).
+
+### Lessons for Sprint 5
+
+1. **Honor the mobile-first cut.** S5 must not silently assume a web read surface exists; its web ACs need an explicit home (recommend S8). This was the one inconsistency this close-out found.
+2. **Budget a design grill before mobile UI.** S4's largest scope growth (#106/#107/#124, #128–#135) came from post-issue wizard-convergence + design-handoff grills. S5's filter sheet + detail gallery will benefit from `/wireframe` + `/hifi-design` up front. (This session's UX audit is in that spirit.)
+3. **Decide the application-layer boundary deliberately** if S5 adds transactional search/audit — bless the Prisma-in-application pattern with an ADR or abstract it; don't let it spread by default.
+
+### Sign-off
+
+Sprint 4 closed honestly: 29/30 children shipped, 1 documented deferral, CONTEXT.md / roadmap / ADRs consistent, domain + cross-context architecture clean. After the optional ADR decision and the S5 web-AC reconciliation, `/create-sprint-issues 5` can begin Sprint 5.
