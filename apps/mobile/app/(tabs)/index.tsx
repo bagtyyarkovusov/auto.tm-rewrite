@@ -1,8 +1,9 @@
 import { router } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   View,
 } from "react-native";
@@ -13,10 +14,16 @@ import { FeedEmpty } from "../../src/listings/feed/FeedEmpty";
 import { FeedError } from "../../src/listings/feed/FeedError";
 import { FeedSkeleton } from "../../src/listings/feed/FeedSkeleton";
 import { ListingCard } from "../../src/listings/feed/ListingCard";
+import { FilterSheet } from "../../src/listings/search/FilterSheet";
+import { useListingFilters } from "../../src/listings/search/useListingFilters";
 
+import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 
 export default function FeedScreen() {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const filters = useListingFilters();
+
   const {
     data,
     isPending,
@@ -34,13 +41,31 @@ export default function FeedScreen() {
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? [];
 
+  const header = (
+    <View className="px-4 pt-6 pb-3 flex-row items-center justify-between">
+      <Text className="text-2xl font-semibold text-foreground">Search</Text>
+      <Pressable
+        onPress={() => setSheetOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Open filters"
+        className="flex-row items-center gap-2"
+      >
+        {filters.count > 0 ? (
+          <Badge variant="brand">
+            <Text>{filters.count}</Text>
+          </Badge>
+        ) : null}
+        <Text className="text-sm font-medium text-foreground">Filters</Text>
+      </Pressable>
+    </View>
+  );
+
   if (isPending) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="px-4 pt-6 pb-3">
-          <Text className="text-2xl font-semibold text-foreground">Search</Text>
-        </View>
+        {header}
         <FeedSkeleton />
+        <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
       </SafeAreaView>
     );
   }
@@ -48,10 +73,9 @@ export default function FeedScreen() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="px-4 pt-6 pb-3">
-          <Text className="text-2xl font-semibold text-foreground">Search</Text>
-        </View>
+        {header}
         <FeedError onRetry={() => refetch()} />
+        <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
       </SafeAreaView>
     );
   }
@@ -59,19 +83,16 @@ export default function FeedScreen() {
   if (allItems.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="px-4 pt-6 pb-3">
-          <Text className="text-2xl font-semibold text-foreground">Search</Text>
-        </View>
+        {header}
         <FeedEmpty />
+        <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-semibold text-foreground">Search</Text>
-      </View>
+      {header}
       <FlatList
         data={allItems}
         keyExtractor={(item) => item.id}
@@ -107,6 +128,7 @@ export default function FeedScreen() {
           ) : null
         }
       />
+      <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
     </SafeAreaView>
   );
 }
