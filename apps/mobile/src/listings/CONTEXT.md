@@ -33,8 +33,6 @@ Client-side listing creation + upload pipeline + feed browsing for `apps/mobile`
     - `OwnerActions.tsx` — status-aware owner controls on detail (Edit, Mark sold, Archive, Republish, Delete) with `AlertDialog` confirmations; disables while pending and invalidates feed/detail/management caches on success
     - `OwnerListingCard.tsx` — feed-card visual language adapted for owner management with status badge, Open and Edit actions
     - `DraftCard.tsx` — draft row/card with draft identity, progress, photo count, Resume CTA, and destructive Discard with `AlertDialog` confirmation
-  - `manage/` — owner listing/draft management surface (S4 #147)
-    - Route: `app/listings/manage.tsx` — segmented tabs for Active/Sold/Archived/Drafts; auth-on-action prompt for anonymous users; reuses `OwnerListingCard` and `DraftCard`; pull-to-refresh and infinite scroll powered by `useInfiniteMyListings` and `useInfiniteMyDrafts`; resumes any draft by navigating to `/(tabs)/sell?resumeDraftId=<id>`; links to detail (`/(public)/listings/[id]`) and edit (`/listings/[id]/edit`)
   - `wizard/` — wizard state machine + autosave + step UI components
     - `wizardMachine.ts` — reducer-based state machine (not XState)
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
