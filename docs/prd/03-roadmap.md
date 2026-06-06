@@ -22,9 +22,9 @@
 | **Status** | ⚪ Pending |
 | **Started** | — |
 | **Phase** | 1 (MLP beta) |
-| **Plan file** | [#152](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/152) |
-| **Sprint doc** | [`sprints/sprint-05-search-listing-detail.md`](sprints/sprint-05-search-listing-detail.md) |
-| **Milestone** | M4 — I can find relevant cars |
+| **Plan file** | Pending issue creation |
+| **Sprint doc** | [`sprints/sprint-06-contact-seller.md`](sprints/sprint-06-contact-seller.md) |
+| **Milestone** | M5 — I can contact the seller |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 
