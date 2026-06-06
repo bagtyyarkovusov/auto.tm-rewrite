@@ -54,9 +54,8 @@ describe("PriceRangeFilterControl FilterSheet integration", () => {
     "utf-8",
   );
 
-  it("is wired into FilterSheet as PriceRangeSlot", () => {
+  it("is wired into FilterSheet as PriceRangeFilterControl", () => {
     expect(filterSheetSource).toContain("PriceRangeFilterControl");
-    expect(filterSheetSource).toContain("PriceRangeSlot");
   });
 
   it("disables Apply button when price range is invalid", () => {

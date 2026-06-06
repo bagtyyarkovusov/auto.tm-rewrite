@@ -19,7 +19,8 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
   - `feed/` — public feed card components
     - `ListingCard.tsx` — cover image (`expo-image` `list` variant) + derived title + price + status badge + city
     - `FeedSkeleton.tsx` — skeleton rows for initial load
-    - `FeedEmpty.tsx` — empty feed CTA to Sell tab
+    - `FeedEmpty.tsx` — empty feed CTA to Sell tab (shown when no listings exist and no filters are active)
+    - `FilteredEmpty.tsx` — zero-result state when active filters match nothing; shows "No listings match. Try adjusting filters." + Reset filters button that calls `useListingFilters().reset()`
     - `FeedError.tsx` — retry affordance on network/API failure
   - `search/` — feed filter sheet + filter state hook
     - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, `count`, and `isValid`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both. `isValid` is `false` when `yearMin > yearMax`.
@@ -388,6 +389,7 @@ open sheet → edit draft → Reset → clear draft + active → useListings ref
 ### UI contract
 
 - The Search tab trigger shows a brand `Badge` with `count` when `count > 0`.
+- When `allItems.length === 0` after a successful query, the Search tab branches: `filters.count > 0` → `FilteredEmpty` with Reset action; otherwise → `FeedEmpty` with Sell CTA.
 - `FilterSheet` hosts `BrandModelFilterControl`, `CityFilterControl`, `PriceRangeFilterControl`, `YearRangeFilterControl`, and `ConditionFilterControl`. All filter controls from #158–#162 are wired in.
 - Apply button label adapts: `"Apply"` when no active filters, `"Show results ({count})"` when filters are active.
 - Reset button is always visible and uses `variant="ghost"`; Apply uses `variant="brand" size="pill"`.

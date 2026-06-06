@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useListings } from "../../src/api/listings/useListings";
 import { FeedEmpty } from "../../src/listings/feed/FeedEmpty";
+import { FilteredEmpty } from "../../src/listings/feed/FilteredEmpty";
 import { FeedError } from "../../src/listings/feed/FeedError";
 import { FeedSkeleton } from "../../src/listings/feed/FeedSkeleton";
 import { ListingCard } from "../../src/listings/feed/ListingCard";
@@ -84,7 +85,11 @@ export default function FeedScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background">
         {header}
-        <FeedEmpty />
+        {filters.count > 0 ? (
+          <FilteredEmpty onReset={filters.reset} />
+        ) : (
+          <FeedEmpty />
+        )}
         <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
       </SafeAreaView>
     );
