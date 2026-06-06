@@ -19,10 +19,10 @@
 | | |
 |---|---|
 | **Sprint** | S6 — Contact seller |
-| **Status** | ⚪ Pending |
-| **Started** | — |
+| **Status** | 🟡 In progress |
+| **Started** | 2026-06-06 |
 | **Phase** | 1 (MLP beta) |
-| **Plan file** | — (created by `/create-sprint-issues 6`) |
+| **Plan file** | [Sprint 6 PRD — #167](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/167) |
 | **Sprint doc** | [`sprints/sprint-06-contact-seller.md`](sprints/sprint-06-contact-seller.md) |
 | **Milestone** | M5 — I can contact the seller |
 
@@ -51,7 +51,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | 🟢 Shipped | 2026-05-17 | 2026-05-17 | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | 🟢 Shipped | 2026-05-17 | 2026-06-06 | M3 | Internal group |
 | S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | 🟢 Shipped | 2026-06-06 | 2026-06-06 | M4 | 10-20 beta testers with seeded listings |
-| S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | ⚪ Pending | — | — | M5 | Beta testers with real listings |
+| S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟡 In progress | 2026-06-06 | — | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | ⚪ Pending | — | — | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | ⚪ Pending | — | — | M7 | First 10-50 real users |
 
