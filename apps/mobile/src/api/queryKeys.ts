@@ -58,5 +58,7 @@ export const queryKeys = {
     list: () => [...queryKeys.conversations.all(), "list"] as const,
     detail: (id: string) =>
       [...queryKeys.conversations.all(), "detail", id] as const,
+    messages: (id: string) =>
+      [...queryKeys.conversations.all(), "messages", id] as const,
   },
 };
