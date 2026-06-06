@@ -8,6 +8,8 @@
 | **Demo audience** | 10-20 beta testers with seeded listings |
 | **Estimated time** | ~1 week |
 
+> **Scope refinement (2026-06-06, pre-issue):** Web listing-detail/feed SSR is **not** in S5 — it moved to **S8** (`Public web + legal links`, which already absorbs S4's deferred #95) per [ADR-0027](../../adr/0027-mlp-beta-scope.md) and the 2026-05-29 entry in [`sprint-04-listings-crud-retro.md`](sprint-04-listings-crud-retro.md). S5's buyer surface is **mobile-only**. Locks with this content when the roadmap row flips 🟡.
+
 ## Goal
 
 Make the S4 listing surface useful for buyers. A buyer can narrow the feed by the few filters that matter, open a listing detail screen, and decide whether to contact the seller.
@@ -21,7 +23,7 @@ This sprint intentionally does **less** than the old Listings UX sprint. It does
 ## Bounded contexts touched
 
 - **Primary**: `listings/` — search use-case + filter criteria
-- **Supporting**: `catalog/` read data for picker labels; mobile + web listing surfaces
+- **Supporting**: `catalog/` read data for picker labels; mobile listing surfaces (web SSR detail/feed → S8)
 
 ## Acceptance criteria (DoD)
 
@@ -30,10 +32,8 @@ This sprint intentionally does **less** than the old Listings UX sprint. It does
 - [ ] Default sort remains recency only (`publishedAt DESC, id DESC`)
 - [ ] Mobile feed filter sheet supports brand → model, city, price range, year range, condition
 - [ ] Mobile listing detail shows photo gallery, specs, price, seller block, Call, Message, Share
-- [ ] Web listing detail SSR shows the same essential listing data with OG title/image/description
-- [ ] Web listing detail URL is shareable: `/{locale}/listings/{id}`
 - [ ] Empty and zero-result states are clear: reset filters, no fake recommendations
-- [ ] Free-text search, favorites, saved searches, price sort, body/color filters, and install deep-linking are deferred
+- [ ] Free-text search, favorites, saved searches, price sort, body/color filters, install deep-linking, and **public web SSR (listing detail + feed → S8 per #95)** are deferred
 - [ ] `listings/CONTEXT.md` updated if new search invariants or endpoints ship
 - [ ] `docs/prd/03-roadmap.md` updated when S5 closes
 
@@ -57,7 +57,6 @@ apps/api/src/modules/listings/
 
 apps/mobile/app/(tabs)/search.tsx
 apps/mobile/app/listings/[id].tsx
-apps/web/src/app/[locale]/listings/[id]/page.tsx
 ```
 
 ## References
