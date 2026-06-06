@@ -52,7 +52,7 @@ export function ContactCtaBar({
         onPress={handleCall}
         disabled={!canCall}
       >
-        <Icon as={Phone} className="size-5 text-primary-foreground" />
+        <Icon as={Phone} className="size-5" />
         <Text>Call</Text>
       </Button>
 

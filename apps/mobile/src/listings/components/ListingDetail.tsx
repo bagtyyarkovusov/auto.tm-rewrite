@@ -131,34 +131,34 @@ export function ListingDetailView({ listing, maps }: ListingDetailProps) {
           installmentAvailable={listing.installmentAvailable}
         />
 
-        <Separator className="my-1" />
-
-        {/* Spec grid */}
         {visibleSpecs.length > 0 && (
-          <View className="gap-1">
-            <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Specifications
-            </Text>
-            <View className="flex-row flex-wrap">
-              {visibleSpecs.map((spec) => (
-                <SpecItem key={spec.label} label={spec.label} value={spec.value} />
-              ))}
+          <>
+            <Separator className="my-1" />
+            <View className="gap-1">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Specifications
+              </Text>
+              <View className="flex-row flex-wrap">
+                {visibleSpecs.map((spec) => (
+                  <SpecItem key={spec.label} label={spec.label} value={spec.value} />
+                ))}
+              </View>
             </View>
-          </View>
+          </>
         )}
 
-        <Separator className="my-1" />
-
-        {/* Description */}
         {listing.description && (
-          <View className="gap-1">
-            <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Description
-            </Text>
-            <Text className="text-base text-foreground leading-5">
-              {listing.description}
-            </Text>
-          </View>
+          <>
+            <Separator className="my-1" />
+            <View className="gap-1">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Description
+              </Text>
+              <Text className="text-base text-foreground leading-5">
+                {listing.description}
+              </Text>
+            </View>
+          </>
         )}
 
         <Separator className="my-1" />

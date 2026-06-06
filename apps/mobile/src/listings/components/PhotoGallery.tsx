@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -40,7 +40,17 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
     [],
   );
 
-  const viewabilityConfig = { itemVisiblePercentThreshold: 50 };
+  const onFullscreenViewableItemsChanged = useCallback(
+    (info: { viewableItems: ViewToken[] }) => {
+      const first = info.viewableItems[0];
+      if (first?.index != null) {
+        setFullscreenIndex(first.index);
+      }
+    },
+    [],
+  );
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
   if (media.length === 0) {
     return (
@@ -121,6 +131,8 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
               offset: SCREEN_WIDTH * index,
               index,
             })}
+            onViewableItemsChanged={onFullscreenViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
             renderItem={({ item }) => {
               const uri = buildVariantUrl(item.key, "fullscreen");
               return (

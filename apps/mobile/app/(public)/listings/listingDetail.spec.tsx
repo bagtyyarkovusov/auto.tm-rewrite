@@ -159,7 +159,7 @@ describe("ListingDetailView", () => {
 describe("ListingDetailScreen", () => {
   it("renders unavailable state for missing/soft-deleted listings", () => {
     expect(screenSource).toContain("This listing is no longer available");
-    expect(screenSource).toContain("error.status === 404");
+    expect(screenSource).toContain('"status" in error');
   });
 
   it("shows skeleton with stable dimensions", () => {

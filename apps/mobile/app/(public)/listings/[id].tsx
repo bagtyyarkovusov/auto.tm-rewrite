@@ -99,7 +99,10 @@ export default function ListingDetailScreen() {
 
   if (error || !data) {
     const isNotFound =
-      error && "status" in error && error.status === 404;
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      (error as { status?: number }).status === 404;
     return (
       <UnavailableState onRetry={isNotFound ? undefined : () => refetch()} />
     );
