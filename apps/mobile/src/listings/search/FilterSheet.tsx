@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { X } from "lucide-react-native";
-import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
 import { CityFilterControl } from "./CityFilterControl";
+import { ConditionFilterControl } from "./ConditionFilterControl";
 import { PriceRangeFilterControl } from "./PriceRangeFilterControl";
 import { YearRangeFilterControl } from "./YearRangeFilterControl";
 
@@ -22,17 +22,6 @@ interface FilterSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filters: UseListingFiltersReturn;
-}
-
-function ConditionSlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Condition</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Condition picker (#162)</Text>
-      </View>
-    </View>
-  );
 }
 
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
@@ -77,7 +66,10 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             onValidityChange={setPriceRangeValid}
           />
           <YearRangeFilterControl draft={filters.draft} setField={filters.setField} />
-          <ConditionSlot />
+          <ConditionFilterControl
+            value={draft.condition}
+            onChange={(value) => setField("condition", value)}
+          />
         </View>
 
         <View className="flex-row gap-3 pt-2">
