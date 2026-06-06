@@ -108,6 +108,24 @@ describe("ListFeed", () => {
     expect(result.items[0]!.displayPriceTmt).toBe(100000);
   });
 
+  it("includes coverMediaKey when listing has media", async () => {
+    ranking.items = [seedListing({ id: "l1", coverMediaKey: "listings/l1/m1/original.jpg" })];
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    const result = await uc.execute({});
+
+    expect(result.items[0]!.coverMediaKey).toBe("listings/l1/m1/original.jpg");
+  });
+
+  it("omits coverMediaKey when listing has no media", async () => {
+    ranking.items = [seedListing({ id: "l1" })];
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    const result = await uc.execute({});
+
+    expect(result.items[0]!.coverMediaKey).toBeUndefined();
+  });
+
   it("computes displayPriceTmt for USD listings", async () => {
     ranking.items = [seedListing({ id: "l1", priceAmount: 1000, priceCurrency: "USD" })];
     exchangeRates.rates["USD->TMT"] = 3.5;

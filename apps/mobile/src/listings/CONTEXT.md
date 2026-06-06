@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Client-side listing creation + upload pipeline for `apps/mobile`. Three subsystems: the **wizard** (step navigation + contracts validation), **media upload staging** (compress → presign → PUT), and **autosave** (debounced draft persistence + retry).
+Client-side listing creation + upload pipeline + feed browsing for `apps/mobile`. Four subsystems: the **wizard** (step navigation + contracts validation), **media upload staging** (compress → presign → PUT), **autosave** (debounced draft persistence + retry), and **feed** (chronological listing cards via `useListings`).
 
 **Single wizard shell today** — create and edit share `wizardMachine` + `WizardLayout`, but persistence and photos differ by flow:
 
@@ -16,6 +16,11 @@ Client-side listing creation + upload pipeline for `apps/mobile`. Three subsyste
 ## Module shape (today)
 
 - `apps/mobile/src/listings/`
+  - `feed/` — public feed card components
+    - `ListingCard.tsx` — cover image (`expo-image` `list` variant) + derived title + price + status badge + city
+    - `FeedSkeleton.tsx` — skeleton rows for initial load
+    - `FeedEmpty.tsx` — empty feed CTA to Sell tab
+    - `FeedError.tsx` — retry affordance on network/API failure
   - `wizard/` — wizard state machine + autosave + step UI components
     - `wizardMachine.ts` — reducer-based state machine (not XState)
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry

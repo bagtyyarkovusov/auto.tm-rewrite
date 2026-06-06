@@ -36,6 +36,23 @@ Merged issues:
 
 {{ISSUES}}
 
+# UNBLOCK DEPENDENTS
+
+After closing merged child issues, unlock the next ready child issues whose
+blockers are now closed:
+
+1. Query blocked AFK-ready issues:
+   `gh issue list --state open --label "ready-for-agent" --label "blocked" --json number,title,body --limit 100`
+2. For each issue, inspect `## Blocked by` and `## Depends on` sections. Treat
+   issue references such as `#144` as blockers.
+3. For every referenced blocker, run `gh issue view <id> --json state`.
+4. If all referenced blockers are `CLOSED`, remove the `blocked` label and add a
+   short comment:
+   `gh issue edit <issue> --remove-label blocked`
+   `gh issue comment <issue> --body "Unlocked by Sandcastle: all listed blockers are closed."`
+5. Do not unlock an issue if any listed blocker is still open, missing, or
+   ambiguous. Do not unlock parent PRD/dashboard issues.
+
 # MOBILE
 
 If any merged branch touched `apps/mobile`, note in the merge commit (or an

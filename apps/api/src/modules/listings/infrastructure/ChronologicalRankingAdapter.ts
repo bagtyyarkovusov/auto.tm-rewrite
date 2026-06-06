@@ -45,6 +45,12 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
       },
       orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
       take,
+      include: {
+        media: {
+          orderBy: { sortOrder: "asc" },
+          take: 1,
+        },
+      },
     });
 
     const hasMore = rows.length === take;
@@ -100,6 +106,7 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     installmentAvailable: boolean;
     createdAt: Date;
     updatedAt: Date;
+    media: Array<{ key: string }>;
   }): Listing {
     return Listing.create({
       id: row.id,
@@ -136,6 +143,7 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
       ...(row.description ? { description: row.description } : {}),
       acceptsExchange: row.acceptsExchange,
       installmentAvailable: row.installmentAvailable,
+      ...(row.media[0]?.key ? { coverMediaKey: row.media[0].key } : {}),
     });
   }
 }
