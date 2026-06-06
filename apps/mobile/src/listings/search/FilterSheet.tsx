@@ -3,6 +3,7 @@ import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
+import { CityFilterControl } from "./CityFilterControl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -25,7 +26,7 @@ function CitySlot() {
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">City</Text>
       <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">City picker (#160)</Text>
+        <Text className="text-sm text-muted-foreground">City picker (#159)</Text>
       </View>
     </View>
   );
@@ -96,7 +97,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             draft={filters.draft}
             setField={filters.setField}
           />
-          <CitySlot />
+          <CityFilterControl draft={filters.draft} setField={filters.setField} />
           <PriceRangeSlot />
           <YearRangeSlot />
           <ConditionSlot />
