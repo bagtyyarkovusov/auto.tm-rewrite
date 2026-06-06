@@ -19,10 +19,10 @@
 | | |
 |---|---|
 | **Sprint** | S5 — Search + listing detail |
-| **Status** | ⚪ Pending |
-| **Started** | — |
+| **Status** | 🟡 In progress |
+| **Started** | 2026-06-06 |
 | **Phase** | 1 (MLP beta) |
-| **Plan file** | Pending issue creation |
+| **Plan file** | [#152](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/152) |
 | **Sprint doc** | [`sprints/sprint-05-search-listing-detail.md`](sprints/sprint-05-search-listing-detail.md) |
 | **Milestone** | M4 — I can find relevant cars |
 
@@ -50,7 +50,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | 🟢 Shipped | 2026-05-14 | 2026-05-16 | M2 | Tiny internal group |
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | 🟢 Shipped | 2026-05-17 | 2026-05-17 | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | 🟢 Shipped | 2026-05-17 | 2026-06-06 | M3 | Internal group |
-| S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | ⚪ Pending | — | — | M4 | 10-20 beta testers with seeded listings |
+| S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | 🟡 In progress | 2026-06-06 | — | M4 | 10-20 beta testers with seeded listings |
 | S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | ⚪ Pending | — | — | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | ⚪ Pending | — | — | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | ⚪ Pending | — | — | M7 | First 10-50 real users |
