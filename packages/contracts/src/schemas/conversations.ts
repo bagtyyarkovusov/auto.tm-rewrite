@@ -84,6 +84,9 @@ export const ListMessagesQuerySchema = z.object({
 });
 export type ListMessagesQuery = z.infer<typeof ListMessagesQuerySchema>;
 
+export const ListConversationsQuerySchema = ListMessagesQuerySchema;
+export type ListConversationsQuery = ListMessagesQuery;
+
 export const ListMessagesResponseSchema = z.object({
   items: z.array(MessageSummarySchema),
   nextCursor: z.string().nullable(),

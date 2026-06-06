@@ -55,5 +55,16 @@ describe("Message", () => {
       const msg = makeMessage({ text });
       expect(msg.text).toBe(text);
     });
+
+    it("accepts text at exactly 1000 chars after trimming whitespace", () => {
+      const msg = makeMessage({ text: "  " + "a".repeat(1000) + "  " });
+      expect(msg.text).toBe("a".repeat(1000));
+    });
+
+    it("rejects text that is blank after trimming mixed whitespace", () => {
+      expect(() => makeMessage({ text: "\n\t \r" })).toThrowError(
+        CONVERSATION_ERROR_CODES.MESSAGE_TEXT_BLANK,
+      );
+    });
   });
 });

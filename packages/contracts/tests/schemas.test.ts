@@ -31,6 +31,8 @@ import {
   ConversationSummarySchema,
   MessageSummarySchema,
   ConversationListingCardSchema,
+  ListMessagesQuerySchema,
+  ListConversationsQuerySchema,
   ListMessagesResponseSchema,
   ListConversationsResponseSchema,
 } from "../src/schemas/conversations";
@@ -1083,6 +1085,43 @@ describe("ListMessagesResponseSchema", () => {
     const result = ListMessagesResponseSchema.safeParse({
       items: [validMessageSummary],
       nextCursor: "next-page-token",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("ListMessagesQuerySchema", () => {
+  it("accepts a valid query with defaults", () => {
+    const result = ListMessagesQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ limit: 20 });
+  });
+
+  it("accepts cursor and limit", () => {
+    const result = ListMessagesQuerySchema.safeParse({
+      cursor: "next-page",
+      limit: 10,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects limit over 50", () => {
+    const result = ListMessagesQuerySchema.safeParse({ limit: 51 });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ListConversationsQuerySchema", () => {
+  it("accepts a valid query with defaults", () => {
+    const result = ListConversationsQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ limit: 20 });
+  });
+
+  it("accepts cursor and limit", () => {
+    const result = ListConversationsQuerySchema.safeParse({
+      cursor: "next-page",
+      limit: 10,
     });
     expect(result.success).toBe(true);
   });

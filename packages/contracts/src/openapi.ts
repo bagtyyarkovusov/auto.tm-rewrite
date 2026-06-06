@@ -67,6 +67,7 @@ import {
   OpenConversationRequestSchema,
   OpenConversationResponseSchema,
   ListConversationsResponseSchema,
+  ListConversationsQuerySchema,
   ListMessagesQuerySchema,
   ListMessagesResponseSchema,
   SendTextMessageRequestSchema,
@@ -181,7 +182,7 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
     summary: "List my conversations",
     tags: ["Conversations"],
     request: {
-      query: ListMessagesQuerySchema,
+      query: ListConversationsQuerySchema,
     },
     responses: {
       200: {
