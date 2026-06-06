@@ -22,15 +22,18 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
     - `FeedEmpty.tsx` — empty feed CTA to Sell tab
     - `FeedError.tsx` — retry affordance on network/API failure
   - `search/` — feed filter sheet + filter state hook
-    - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, and `count`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both.
-    - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions and draft/active isolation.
-    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand+Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`. Apply is disabled when any control reports invalid (price-range min > max).
+    - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, `count`, and `isValid`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both. `isValid` is `false` when `yearMin > yearMax`.
+    - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions, draft/active isolation, and `isValid` logic.
+    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand+Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet and is disabled when `isValid` is `false` or any control reports invalid (price-range min > max); Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
     - `BrandModelFilterControl.tsx` — Brand→Model filter control: two `PickerRow`s + two `CatalogPickerSheet`s. Reuses `useBrands()` and `useModels(brandId)` with hardcoded `"ru"` locale. Model row disabled until brand selected; selecting a brand clears any previously selected model. Writes `brandId`/`modelId` to filter draft via `setField`.
     - `BrandModelFilterControl.spec.ts` — static source tests verifying picker wiring, cascade rule, and loading/error/empty states.
     - `CityFilterControl.tsx` — Region → City drilldown control for the filter sheet. Uses `useRegions` + `useCities(regionId)` to populate searchable `CatalogPickerSheet`s. Only `cityId` is written to the draft; regionId is local state used solely to fetch the city list. A module-level `cityMetaCache` preserves the selected city name across sheet close/open cycles.
     - `CityFilterControl.spec.tsx` — source-code analysis tests for the control structure, drilldown behavior, selection/clear logic, and picker state wiring.
     - `PriceRangeFilterControl.tsx` — two RNR `Input` fields (`keyboardType="number-pad"`) for `priceMin`/`priceMax` in TMT. Digits-only; empty = unbounded. Inline `text-destructive` error when `min > max`; signals validity to the sheet host via `onValidityChange`.
     - `PriceRangeFilterControl.spec.tsx` — source-assertion tests for input structure, digit stripping, validation logic, and FilterSheet integration.
+    - `YearRangeFilterControl.tsx` — two `Input` fields (`number-pad`, 4-digit) for `yearMin`/`yearMax`. Digits-only, clamped to 1900–current year + 1. Open-ended when either bound is empty. Inline `text-destructive` error when `yearMin > yearMax`. Local text state syncs with external draft changes (e.g. reset).
+    - `YearRangeFilterControl.spec.tsx` — source tests + `parseYearInput` behavioral tests for bounds and digit stripping.
+    - `yearRangeFilterLogic.ts` — pure `parseYearInput` helper with digit stripping, 4-digit requirement, and 1900–current-year+1 clamping.
   - `detail/` — buyer listing detail helpers
     - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
     - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)
@@ -379,7 +382,7 @@ open sheet → edit draft → Reset → clear draft + active
 ### UI contract
 
 - The Search tab trigger shows a brand `Badge` with `count` when `count > 0`.
-- `FilterSheet` exposes named slot components (`YearRangeSlot`, `ConditionSlot`) for pending controls; `BrandModelFilterControl`, `CityFilterControl`, and `PriceRangeFilterControl` are already wired in. Each future control adds one component file + one line in `FilterSheet`.
+- `FilterSheet` exposes named slot component (`ConditionSlot`) for pending controls; `BrandModelFilterControl`, `CityFilterControl`, `PriceRangeFilterControl`, and `YearRangeFilterControl` are already wired in. Each future control adds one component file + one line in `FilterSheet`.
 - Apply button label adapts: `"Apply"` when no active filters, `"Show results ({count})"` when filters are active.
 - Reset button is always visible and uses `variant="ghost"`; Apply uses `variant="brand" size="pill"`.
 

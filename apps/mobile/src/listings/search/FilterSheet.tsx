@@ -6,6 +6,7 @@ import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
 import { CityFilterControl } from "./CityFilterControl";
 import { PriceRangeFilterControl } from "./PriceRangeFilterControl";
+import { YearRangeFilterControl } from "./YearRangeFilterControl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -23,17 +24,6 @@ interface FilterSheetProps {
   filters: UseListingFiltersReturn;
 }
 
-function YearRangeSlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Year range</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Year range (#161)</Text>
-      </View>
-    </View>
-  );
-}
-
 function ConditionSlot() {
   return (
     <View className="gap-1.5">
@@ -46,9 +36,9 @@ function ConditionSlot() {
 }
 
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
-  const { draft, setField, apply, reset, count } = filters;
+  const { draft, setField, apply, reset, count, isValid } = filters;
   const [priceRangeValid, setPriceRangeValid] = useState(true);
-  const isApplyDisabled = !priceRangeValid;
+  const isApplyDisabled = !isValid || !priceRangeValid;
 
   const handleApply = () => {
     apply();
@@ -86,7 +76,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             setField={setField}
             onValidityChange={setPriceRangeValid}
           />
-          <YearRangeSlot />
+          <YearRangeFilterControl draft={filters.draft} setField={filters.setField} />
           <ConditionSlot />
         </View>
 

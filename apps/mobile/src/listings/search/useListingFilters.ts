@@ -19,6 +19,8 @@ export interface UseListingFiltersReturn {
   reset: () => void;
   /** Number of fields with a non-empty value in active. */
   count: number;
+  /** False when draft contains an invalid combination (e.g. yearMin > yearMax). */
+  isValid: boolean;
 }
 
 function countActiveFields(filter: ListingFilter): number {
@@ -63,7 +65,18 @@ export function useListingFilters(): UseListingFiltersReturn {
     setActive({});
   }, []);
 
+  const isValid = useMemo(() => {
+    if (
+      draft.yearMin != null &&
+      draft.yearMax != null &&
+      draft.yearMin > draft.yearMax
+    ) {
+      return false;
+    }
+    return true;
+  }, [draft]);
+
   const count = useMemo(() => countActiveFields(active), [active]);
 
-  return { draft, active, setField, apply, reset, count };
+  return { draft, active, setField, apply, reset, count, isValid };
 }
