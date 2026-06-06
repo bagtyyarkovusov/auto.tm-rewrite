@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react-native";
+import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
