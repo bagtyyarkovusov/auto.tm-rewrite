@@ -8,7 +8,7 @@ Car ads — the core economic object. Listings have specs, photos, optional vide
 
 ## Owns (entities + tables)
 
-- `Listing` — id, sellerId (FK → User), status (`ListingStatus` enum: draft | pending_review | active | sold | archived | rejected | reported | banned; default draft), brandId (FK → Brand), modelId (FK → Model), generationId? (FK → Generation), colorId? (FK → Color), bodyTypeId? (FK → BodyType), cityId (FK → City), year?, mileageKm?, priceAmount (Float), priceCurrency (`Currency` enum: TMT | USD | AED; default TMT), description?, deletedAt?, publishedAt?, createdAt, updatedAt. **S4 schema additions**: vin?, condition (`ListingCondition` enum: new | used), engineTypeId? (FK → EngineType), transmissionId? (FK → Transmission), driveTypeId? (FK → DriveType), enginePower?, regionId? (FK → Region), locationText?, soldAt?, viewCount (Int @default(0)), favoriteCount (Int @default(0)), contactPhone?, allowCalls (Boolean @default(true)), allowChat (Boolean @default(true)). Indexes on `(status, publishedAt DESC)`, `(brandId, modelId, status)`, `(cityId, status)`.
+- `Listing` — id, sellerId (FK → User), status (`ListingStatus` enum: draft | pending_review | active | sold | archived | rejected | reported | banned; default draft), brandId (FK → Brand), modelId (FK → Model), generationId? (scalar ID; no Prisma relation today), colorId? (scalar ID; no Prisma relation today), bodyTypeId? (scalar ID; no Prisma relation today), cityId (FK → City), year?, mileageKm?, priceAmount (Float), priceCurrency (`Currency` enum: TMT | USD | AED; default TMT), description?, deletedAt?, publishedAt?, createdAt, updatedAt. **S4 schema additions**: vin?, condition? (`ListingCondition` enum: new | used; nullable at DB level, required by `PublishListing`), engineTypeId? (FK → EngineType), transmissionId? (FK → Transmission), driveTypeId? (FK → DriveType), enginePower?, regionId? (FK → Region), locationText?, soldAt?, viewCount (Int @default(0)), favoriteCount (Int @default(0)), contactPhone?, allowCalls (Boolean @default(true)), allowChat (Boolean @default(true)), acceptsExchange (Boolean @default(false)), installmentAvailable (Boolean @default(false)). Indexes on `(status, publishedAt DESC)`, `(brandId, modelId, status)`, `(cityId, status)`.
 - `ListingMedia` — id, listingId (FK → Listing, onDelete: Cascade), kind (`MediaKind` enum: image | video), **key** (String — MinIO object key), sortOrder, width?, height?, durationMs?, posterKey?, createdAt. Index on `(listingId, sortOrder)`.
 - `ListingDraft` — id, userId (FK → User, onDelete: Cascade), payload (Json), createdAt, updatedAt. Index on `(userId, updatedAt DESC)`.
 - `ExchangeRate` — id, fromCurrency (`Currency`), toCurrency (`Currency`), rate (Float), updatedAt, setByUserId?. Unique on `(fromCurrency, toCurrency)`.
@@ -28,10 +28,11 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 ## Invariants (enforced today)
 
 - `Listing.sellerId` references an existing User (FK; onDelete cascades to listings).
-- `Listing.brandId` and `Listing.modelId` reference existing rows in the catalog. **Cross-FK validity** (model.brandId === listing.brandId) is NOT enforced by the schema — must be enforced at application layer in S4.
+- `Listing.brandId` and `Listing.modelId` reference existing rows in the catalog. **Cross-catalog consistency** (`model.brandId === listing.brandId`, `generation.modelId === listing.modelId`) is NOT enforced by the schema or application layer today.
 - `Listing.cityId` references an existing City (FK).
-- `Listing.engineTypeId`, `transmissionId`, `driveTypeId` reference catalog lookup tables (FK, onDelete SET NULL).
-- `Listing.regionId` references an existing Region (FK, onDelete SET NULL).
+- `Listing.generationId`, `colorId`, and `bodyTypeId` are nullable scalar catalog IDs today; Prisma does not model FK relations for these three fields yet.
+- `Listing.engineTypeId`, `transmissionId`, and `driveTypeId` reference catalog lookup tables as nullable FKs.
+- `Listing.regionId` references an existing Region as a nullable FK.
 - **`allowCalls OR allowChat` must be true** — enforced at domain layer in `Listing` constructor (not schema-level CHECK constraint).
 - **`acceptsExchange`** and **`installmentAvailable`** are simple seller-declared booleans persisted on `Listing`; no financing workflow or exchange matching in S4.
 - Soft-delete via `Listing.deletedAt` — listings are never hard-deleted at the schema level.
@@ -45,11 +46,11 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 ## Module shape (today)
 
 - `apps/api/src/modules/listings/`:
-  - `domain/` — **6 entities + types + 10 ports** (S4 #86)
+  - `domain/` — **5 entity/value-object classes + `ListingStatus` helper + types + 11 ports** (S4 #86)
   - `application/` — 19 use-cases (S4 #88-#92): `CreateDraft`, `UpdateDraft`, `ValidateDraftStep`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
-  - `infrastructure/` — 12 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (full implementation per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md)), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `PrismaListingsReadRepository` (cross-context read surface), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
-  - `presentation/listings.controller.ts` — public feed + detail + 6 owner mutation endpoints (`publish`, `markSold`, `archive`, `republish`, `delete`, `edit`)
-  - `presentation/DraftsController.ts` — draft CRUD + list my drafts
+  - `infrastructure/` — 11 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (full implementation per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md)), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `PrismaListingsReadRepository` (cross-context read surface), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
+  - `presentation/listings.controller.ts` — listings health check, public feed + detail, owner publish/state/edit/delete endpoints, and media attach/remove/reorder endpoints
+  - `presentation/DraftsController.ts` — draft CRUD + validate-step + list my drafts
   - `presentation/UploadsController.ts` — presign upload endpoint
   - `presentation/MyListingsController.ts` — `/me/listings` (owner-scoped)
   - `presentation/ExchangeRatesController.ts` — `/exchange-rates` (public)
@@ -75,7 +76,6 @@ Repository ports (consumed only within `listings/`):
 | `ListingRepository` | `LISTING_REPOSITORY` | `domain/ports/ListingRepository.ts` |
 | `ListingDraftRepository` | `LISTING_DRAFT_REPOSITORY` | `domain/ports/ListingDraftRepository.ts` |
 | `ListingMediaRepository` | `LISTING_MEDIA_REPOSITORY` | `domain/ports/ListingMediaRepository.ts` |
-| `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` |
 
 ## Ports consumed
 
@@ -103,8 +103,10 @@ Repository ports (consumed only within `listings/`):
 
 | Method | Path | Auth | Handler |
 |---|---|---|---|
+| GET | `/api/v1/listings/ping` | Public | Health check |
 | POST | `/api/v1/listings/drafts` | Required | `CreateDraft` |
 | PATCH | `/api/v1/listings/drafts/:id` | Required | `UpdateDraft` |
+| POST | `/api/v1/listings/drafts/:id/validate-step` | Required | `ValidateDraftStep` |
 | DELETE | `/api/v1/listings/drafts/:id` | Required | `DiscardDraft` |
 | GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
 | GET | `/api/v1/me/listings` | Required | `ListMyListings` |

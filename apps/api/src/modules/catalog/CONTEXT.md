@@ -150,9 +150,7 @@ All read endpoints are `@Public()` (no authentication required). Locale resoluti
 
 All admin endpoints are guarded by `AdminGuard` (returns 401 without bearer, 403 with non-admin JWT).
 
-S7 hardens `AdminGuard` to also require current TOTP elevation for every admin-only API, so catalog admin writes inherit the same admin-auth policy as the S7 moderation endpoints.
-
-S7 does not add catalog UI in `apps/admin`; `/catalog` stays post-MLP dashboard work. If private beta needs an urgent catalog correction before the dashboard exists, operators use the existing protected API/operator tooling. A small beta-polish correction UI must be explicitly shaped in S8 before it is built.
+There is no catalog UI in `apps/admin` today. Operators use the existing protected API/operator tooling for urgent catalog corrections.
 
 | Method | Path | Description |
 |---|---|---|
@@ -190,7 +188,7 @@ S7 does not add catalog UI in `apps/admin`; `/catalog` stays post-MLP dashboard 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in CONTEXT.md as if they exist today — they're tracked here only as a pointer so future agents and reviewers can find the sprint that owns each future addition. The authoritative spec for each lives in the named sprint file or PRD feature.
 
 - **S5 (Search + listing detail)** — may add only the catalog fields required for MLP picker/search UX. Rich visual picker fields (`Brand.logoUrl`, `Brand.displayOrder`, `Generation.photoUrl`, `BodyType.iconKey`) are post-MLP unless needed.
-- **S7/S8 or post-MLP admin** — S7 only hardens auth for existing catalog admin APIs. Beta-critical corrections use protected API/operator tooling unless S8 explicitly shapes a small correction UI. Full catalog management UI and brand-logo upload are post-MLP dashboard work.
+- **S7/S8 or post-MLP admin** — S7 hardens admin auth for existing catalog admin APIs by requiring current TOTP elevation. Beta-critical corrections use protected API/operator tooling unless S8 explicitly shapes a small correction UI. Full catalog management UI and brand-logo upload are post-MLP dashboard work.
 
 ## Notable decisions
 

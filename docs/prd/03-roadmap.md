@@ -18,13 +18,13 @@
 
 | | |
 |---|---|
-| **Sprint** | S4 — Listings CRUD |
-| **Status** | 🟡 In progress |
-| **Started** | 2026-05-17 |
+| **Sprint** | S5 — Search + listing detail |
+| **Status** | ⚪ Pending |
+| **Started** | — |
 | **Phase** | 1 (MLP beta) |
-| **Plan file** | Parent issue |
-| **Sprint doc** | [`sprints/sprint-04-listings-crud.md`](sprints/sprint-04-listings-crud.md) |
-| **Milestone** | M3 — I can browse cars |
+| **Plan file** | Pending issue creation |
+| **Sprint doc** | [`sprints/sprint-05-search-listing-detail.md`](sprints/sprint-05-search-listing-detail.md) |
+| **Milestone** | M4 — I can find relevant cars |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 
@@ -49,7 +49,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S1 | [Scaffold](sprints/sprint-01-scaffold.md) | 🟢 Shipped | 2026-05-14 | 2026-05-14 | M1 | Nobody — confirms rails |
 | S2 | [Identity (OTP)](sprints/sprint-02-identity.md) | 🟢 Shipped | 2026-05-14 | 2026-05-16 | M2 | Tiny internal group |
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | 🟢 Shipped | 2026-05-17 | 2026-05-17 | — | Internal |
-| S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | 🟡 In progress | 2026-05-17 | — | M3 | Internal group |
+| S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | 🟢 Shipped | 2026-05-17 | 2026-06-06 | M3 | Internal group |
 | S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | ⚪ Pending | — | — | M4 | 10-20 beta testers with seeded listings |
 | S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | ⚪ Pending | — | — | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | ⚪ Pending | — | — | M6 | Internal admins |
@@ -131,6 +131,7 @@ Once per sprint:
 
 > One-line entries, newest first.
 
+- 2026-06-06 — S4 Listings CRUD (M3). Seller posts listings via an 8-step mobile wizard (seven data steps plus Review) with VIN/photos/specs/price/location/contact; anonymous buyer views the chronological feed + full detail on mobile; public web SSR is deferred to S8 per the 2026-05-29 S4 retro. Drafts auto-save, mobile photo uploads run in parallel with form-filling, and My Listings/Drafts supports owner management. Multi-currency input (TMT/USD/AED) displays public prices in TMT through admin-managed FX rates. State machine shipped for active/sold/archived + soft-delete, 14-day sold fade, locked identity fields, price-change audit, and foundation ports (`VinDecoder`, `MediaContentClassifier`, `FeedRanking`, `ImageVariantGenerator`) with null/sync adapters for later swaps.
 - 2026-05-17 — S3 Catalog. Trilingual catalog API (read + admin write for Brand+Model) shipped: 7 entities seeded (Brand/Model/Color/BodyType/Region/City; Generation table-only), Accept-Language middleware live, dev-only `/dev/catalog` mobile route renders the brand list via apiClient. Admin write tested with mintAdminJwt helper; full admin UI ships in S7 under the MLP beta roadmap.
 - 2026-05-16 — S2 Identity (M2). Phone OTP login works end-to-end on mobile: request OTP → verify → JWT access + per-session bcrypt-hashed refresh (ADR-0012), 10-session cap with FIFO eviction, rate-limited (5/phone/day + 10/IP/hour), full chaos coverage at domain/application layer, e2e for happy path + rate-limit shape + logout/me/delete-me. Public web stayed anonymous-only (#41 retracted); deferred-action replay tracked at #52; mobile data-fetching architecture locked in ADR-0015 with implementation at #53. _(Carry-over: PRs #60, #61, #63 — mobile data-fetching wrapper, apiClient diagnostic fix, action-gated auth — merged on 2026-05-16 after the sprint-close PR #55 ran. They count as S2-adjacent work; the rest of the line above is in-sprint scope.)_
 - 2026-05-14 — S1 Scaffold (M1). Local dev stack runs (`pnpm install && pnpm dev`); CI green; air-gapped bundle path proven via `make -n bundle`.
