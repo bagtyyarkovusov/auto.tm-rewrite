@@ -3,7 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import type { Currency } from "../domain/types";
+import type { Currency, ListingFilterCriteria } from "../domain/types";
 import {
   FEED_RANKING_PORT,
   type FeedRankingPort,
@@ -20,7 +20,7 @@ import {
 export interface ListFeedInput {
   cursor?: string;
   limit?: number;
-  filters?: Record<string, unknown>;
+  filters?: ListingFilterCriteria;
 }
 
 export type FeedResponseDto = z.infer<typeof ListingsSchemas.FeedResponseSchema>;
@@ -46,6 +46,7 @@ export class ListFeed {
     const rankResult = await this.ranking.rank({
       ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
       limit,
+      ...(input.filters !== undefined ? { filters: input.filters } : {}),
     });
 
     const rateMap = await this.buildRateMap();

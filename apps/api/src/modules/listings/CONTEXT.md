@@ -112,7 +112,7 @@ Repository ports (consumed only within `listings/`):
 | GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
 | GET | `/api/v1/me/listings` | Required | `ListMyListings` |
 | POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
-| GET | `/api/v1/listings` | Public | `ListFeed` | Includes `coverMediaKey` when listing has media |
+| GET | `/api/v1/listings` | Public | `ListFeed` | Accepts `cursor`, `limit`, and MLP filters (`brandId`, `modelId`, `cityId`, `priceMin`, `priceMax`, `yearMin`, `yearMax`, `condition`). Includes `coverMediaKey` when listing has media |
 | GET | `/api/v1/listings/:id` | Public | `GetListingDetail` |
 | GET | `/api/v1/exchange-rates` | Public | `GetExchangeRates` |
 | POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |

@@ -173,4 +173,20 @@ describe("ListFeed", () => {
     const uc = makeUseCase(ranking, exchangeRates);
     await expect(uc.execute({})).rejects.toThrow("Missing exchange rate");
   });
+
+  it("forwards filters to ranking port", async () => {
+    let receivedFilters: Record<string, unknown> | undefined;
+
+    const spyRanking: FeedRankingPort = {
+      async rank(query) {
+        receivedFilters = query.filters as Record<string, unknown>;
+        return { items: [] };
+      },
+    };
+
+    const uc = new ListFeed(spyRanking, exchangeRates, new FakeMediaStoragePort());
+    await uc.execute({ filters: { brandId: "brand-x", priceMin: 50000 } });
+
+    expect(receivedFilters).toEqual({ brandId: "brand-x", priceMin: 50000 });
+  });
 });

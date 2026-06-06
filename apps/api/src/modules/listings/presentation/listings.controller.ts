@@ -28,6 +28,8 @@ import { GetListingDetail } from "../application/GetListingDetail";
 import { ListFeed } from "../application/ListFeed";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
+import { ListingFilter } from "../domain/ListingFilter";
+import { DomainError, type ListingFilterCriteria } from "../domain/types";
 
 @Controller("api/v1/listings")
 export class ListingsController {
@@ -53,11 +55,53 @@ export class ListingsController {
 
   @Public()
   @Get()
-  async listFeed(@Query() query: { cursor?: string; limit?: number }) {
-    const pagination = ListingsSchemas.FeedQuerySchema.parse(query);
+  async listFeed(@Query() query: unknown) {
+    let parsed: typeof ListingsSchemas.FeedQuerySchema._type;
+    try {
+      parsed = ListingsSchemas.FeedQuerySchema.parse(query);
+    } catch (err) {
+      if (err && typeof err === "object" && "issues" in err) {
+        const zodError = err as z.ZodError;
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+          details: zodError.flatten(),
+        });
+      }
+      throw err;
+    }
+
+    const { cursor, limit, ...filterFields } = parsed;
+
+    const filters: ListingFilterCriteria = {};
+    if (filterFields.brandId !== undefined) filters.brandId = filterFields.brandId;
+    if (filterFields.modelId !== undefined) filters.modelId = filterFields.modelId;
+    if (filterFields.cityId !== undefined) filters.cityId = filterFields.cityId;
+    if (filterFields.priceMin !== undefined) filters.priceMin = filterFields.priceMin;
+    if (filterFields.priceMax !== undefined) filters.priceMax = filterFields.priceMax;
+    if (filterFields.yearMin !== undefined) filters.yearMin = filterFields.yearMin;
+    if (filterFields.yearMax !== undefined) filters.yearMax = filterFields.yearMax;
+    if (filterFields.condition !== undefined) filters.condition = filterFields.condition;
+
+    if (Object.keys(filters).length > 0) {
+      try {
+        ListingFilter.create(filters);
+      } catch (err) {
+        if (err instanceof DomainError) {
+          throw new BadRequestException({
+            code: "VALIDATION_ERROR",
+            message: err.message,
+            details: { reason: err.code },
+          });
+        }
+        throw err;
+      }
+    }
+
     return this.listFeedUC.execute({
-      ...(pagination.cursor !== undefined ? { cursor: pagination.cursor } : {}),
-      limit: pagination.limit,
+      ...(cursor !== undefined ? { cursor } : {}),
+      limit,
+      ...(Object.keys(filters).length > 0 ? { filters } : {}),
     });
   }
 

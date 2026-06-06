@@ -625,6 +625,147 @@ describe("ListingsController e2e", () => {
 
       expect(feed.body.items.some((item: { id: string }) => item.id === listingId)).toBe(false);
     });
+
+    it("filters feed by brandId", async () => {
+      await seedCatalog();
+      const brand2 = await prisma.brand.create({
+        data: {
+          id: "00000000-0000-0000-0000-000000000010",
+          slug: "test-brand-2",
+          nameRu: "Test Brand 2",
+          nameTk: "Test Brand 2",
+          nameEn: "Test Brand 2",
+        },
+      });
+      await prisma.model.create({
+        data: {
+          id: "00000000-0000-0000-0000-000000000011",
+          brandId: brand2.id,
+          slug: "test-model-2",
+          nameRu: "Test Model 2",
+          nameTk: "Test Model 2",
+          nameEn: "Test Model 2",
+        },
+      });
+
+      const token = await createUser("user-1");
+
+      const draft1 = await seedDraft("user-1", validPayload);
+      const draft2 = await seedDraft("user-1", {
+        ...validPayload,
+        brandId: brand2.id,
+        modelId: "00000000-0000-0000-0000-000000000011",
+      });
+
+      const publish1 = await request
+        .post(`/api/v1/listings/drafts/${draft1.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const publish2 = await request
+        .post(`/api/v1/listings/drafts/${draft2.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const feed = await request
+        .get("/api/v1/listings")
+        .query({ brandId: validPayload.brandId })
+        .expect(200);
+
+      expect(feed.body.items).toHaveLength(1);
+      expect(feed.body.items[0].id).toBe(publish1.body.id);
+      expect(feed.body.nextCursor).toBeNull();
+    });
+
+    it("returns empty result for zero-match filter", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const feed = await request
+        .get("/api/v1/listings")
+        .query({ brandId: "00000000-0000-0000-0000-000000000999" })
+        .expect(200);
+
+      expect(feed.body.items).toHaveLength(0);
+      expect(feed.body.nextCursor).toBeNull();
+    });
+
+    it("paginates to cursor end with filters applied", async () => {
+      await seedCatalog();
+      const brand2 = await prisma.brand.create({
+        data: {
+          id: "00000000-0000-0000-0000-000000000010",
+          slug: "test-brand-2",
+          nameRu: "Test Brand 2",
+          nameTk: "Test Brand 2",
+          nameEn: "Test Brand 2",
+        },
+      });
+      await prisma.model.create({
+        data: {
+          id: "00000000-0000-0000-0000-000000000011",
+          brandId: brand2.id,
+          slug: "test-model-2",
+          nameRu: "Test Model 2",
+          nameTk: "Test Model 2",
+          nameEn: "Test Model 2",
+        },
+      });
+
+      const token = await createUser("user-1");
+
+      // Publish 4 listings alternating brands
+      const listingIds: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const draft = await seedDraft("user-1", {
+          ...validPayload,
+          brandId: i % 2 === 0 ? validPayload.brandId : brand2.id,
+          modelId: i % 2 === 0 ? validPayload.modelId : "00000000-0000-0000-0000-000000000011",
+          photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
+        });
+        const res = await request
+          .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+          .set("Authorization", `Bearer ${token}`)
+          .send({})
+          .expect(201);
+        listingIds.push(res.body.id);
+      }
+
+      // Page through with limit=1 and brand filter (should get 2 listings)
+      const page1 = await request
+        .get("/api/v1/listings")
+        .query({ brandId: validPayload.brandId, limit: 1 })
+        .expect(200);
+
+      expect(page1.body.items).toHaveLength(1);
+      expect(page1.body.nextCursor).not.toBeNull();
+
+      const page2 = await request
+        .get("/api/v1/listings")
+        .query({ brandId: validPayload.brandId, limit: 1, cursor: page1.body.nextCursor })
+        .expect(200);
+
+      expect(page2.body.items).toHaveLength(1);
+      expect(page2.body.nextCursor).toBeNull();
+    });
+
+    it("returns 400 VALIDATION_ERROR for invalid filter range", async () => {
+      const res = await request
+        .get("/api/v1/listings")
+        .query({ priceMin: 200000, priceMax: 100000 })
+        .expect(400);
+
+      expect(res.body.code).toBe("VALIDATION_ERROR");
+    });
   });
 
   describe("GET /api/v1/me/listings", () => {
