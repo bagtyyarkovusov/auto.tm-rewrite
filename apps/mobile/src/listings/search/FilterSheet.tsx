@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { X } from "lucide-react-native";
 import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
+import { PriceRangeFilterControl } from "./PriceRangeFilterControl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -55,14 +57,22 @@ function CitySlot() {
   );
 }
 
-function PriceRangeSlot() {
+function PriceRangeSlot({
+  draft,
+  setField,
+  onValidityChange,
+}: {
+  draft: UseListingFiltersReturn["draft"];
+  setField: UseListingFiltersReturn["setField"];
+  onValidityChange: (valid: boolean) => void;
+}) {
   return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Price range</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Price range (#161)</Text>
-      </View>
-    </View>
+    <PriceRangeFilterControl
+      priceMin={draft.priceMin}
+      priceMax={draft.priceMax}
+      setField={setField}
+      onValidityChange={onValidityChange}
+    />
   );
 }
 
@@ -89,7 +99,9 @@ function ConditionSlot() {
 }
 
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
-  const { apply, reset, count } = filters;
+  const { draft, setField, apply, reset, count } = filters;
+  const [priceRangeValid, setPriceRangeValid] = useState(true);
+  const isApplyDisabled = !priceRangeValid;
 
   const handleApply = () => {
     apply();
@@ -119,7 +131,11 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
           <BrandSlot />
           <ModelSlot />
           <CitySlot />
-          <PriceRangeSlot />
+          <PriceRangeSlot
+            draft={draft}
+            setField={setField}
+            onValidityChange={setPriceRangeValid}
+          />
           <YearRangeSlot />
           <ConditionSlot />
         </View>
@@ -139,6 +155,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             size="pill"
             className="flex-1"
             onPress={handleApply}
+            disabled={isApplyDisabled}
             accessibilityLabel="Apply filters"
           >
             <Text>{count > 0 ? `Show results (${count})` : "Apply"}</Text>

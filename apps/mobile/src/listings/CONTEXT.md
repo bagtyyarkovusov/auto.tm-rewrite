@@ -24,7 +24,9 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
   - `search/` — feed filter sheet + filter state hook
     - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, and `count`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both.
     - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions and draft/active isolation.
-    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand, Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
+    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand, Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`. Apply is disabled when any control reports invalid (price-range min > max).
+    - `PriceRangeFilterControl.tsx` — two RNR `Input` fields (`keyboardType="number-pad"`) for `priceMin`/`priceMax` in TMT. Digits-only; empty = unbounded. Inline `text-destructive` error when `min > max`; signals validity to the sheet host via `onValidityChange`.
+    - `PriceRangeFilterControl.spec.tsx` — source-assertion tests for input structure, digit stripping, validation logic, and FilterSheet integration.
   - `detail/` — buyer listing detail helpers
     - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
     - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)
