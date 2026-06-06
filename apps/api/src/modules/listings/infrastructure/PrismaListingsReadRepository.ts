@@ -132,6 +132,7 @@ export class PrismaListingsReadRepository implements ListingsReadPort {
     priceCurrency: string;
     cityId: string;
     publishedAt: Date | null;
+    allowChat: boolean;
     media: Array<{ key: string }>;
   }): Promise<ListingSummary> {
     const displayPriceTmt = await this.computeDisplayPriceTmt(
@@ -150,6 +151,7 @@ export class PrismaListingsReadRepository implements ListingsReadPort {
       displayPriceTmt,
       cityId: row.cityId,
       publishedAt: row.publishedAt ?? new Date(),
+      allowChat: row.allowChat,
     };
 
     if (row.year !== null && row.year !== undefined) {

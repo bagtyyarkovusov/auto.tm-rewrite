@@ -53,6 +53,7 @@ describe("ListMyListings", () => {
       displayPriceTmt: 100000,
       cityId: "city-1",
       publishedAt: new Date("2026-05-01T00:00:00Z"),
+      allowChat: true,
       ...overrides,
     };
     port.summaries.push(summary);

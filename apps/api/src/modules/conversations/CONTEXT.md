@@ -23,8 +23,9 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Invariants (enforced today)
 
 - A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
-- **Same-user-cannot-chat-themselves** — enforced at domain layer in `Conversation` constructor.
+- **Same-user-cannot-chat-themselves** — enforced at domain layer in `Conversation` constructor and at application layer in `OpenConversation`.
 - **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller.
+- **New contact restrictions** — `OpenConversation` rejects new contact for non-existent listings (`NOT_FOUND`), sold/archived listings (`FORBIDDEN`), listings with `allowChat = false` (`FORBIDDEN`), and self-contact (`FORBIDDEN`). Existing conversations remain retrievable regardless of subsequent listing state changes.
 - `Message.kind` is one of text | image | post_ref | system.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
 - `Message` text is trimmed at creation; blank-after-trim and >1000 chars after trim are rejected by the domain layer.
@@ -33,23 +34,24 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 - `apps/api/src/modules/conversations/`:
   - `domain/` — `Conversation.ts`, `Message.ts`, `types.ts`, `ports/ConversationRepository.ts`
-  - `application/` — empty (use-cases ship in later S6 slices)
-  - `infrastructure/` — empty (Prisma adapters ship in later S6 slices)
-  - `presentation/conversations.controller.ts` — stub (health-check ping only)
-  - `conversations.module.ts` — registers stub controller
+  - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, plus unit tests (`OpenConversation.spec.ts`, `ListMyConversations.spec.ts`)
+  - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence and list queries)
+  - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations` and `GET /api/v1/conversations`, plus health-check ping
+  - `conversations.module.ts` — registers controller, use-cases, and `ConversationRepository` port binding; imports `ListingsModule` for `ListingsReadPort`
 - No WebSocket gateway, no Socket.IO server, no message send/read/delete handlers.
 
 ## Ports exposed
 
-- (none today — S6 adds the first simple conversation read/write surface in later API slices)
+- `ConversationRepository` (`CONVERSATION_REPOSITORY`) — implemented by `PrismaConversationRepository`. Methods: `findById`, `findByListingAndBuyer`, `save`, `listForUser`, `listMessages`, `saveMessage`.
 
 ## Ports consumed
 
-- (none today)
+- `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `OpenConversation` and `ListMyConversations` to validate listing state and embed listing card fields in responses.
 
 ## Shipped use-cases
 
-- (none today)
+- `OpenConversation` — for an authenticated buyer and a `listingId`, fetches the listing summary, validates the listing is active and chat-enabled, rejects self-contact, then creates or returns the existing `Conversation` and its two `ConversationParticipant` rows.
+- `ListMyConversations` — returns paginated conversations where the authenticated user is buyer or seller, sorted by `updatedAt DESC`. Embeds listing summaries via `ListingsReadPort`.
 
 ## Events emitted
 
@@ -59,15 +61,23 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 - (none today)
 
+## HTTP routes
+
+| Method | Path | Auth | Handler |
+|---|---|---|---|
+| GET | `/api/v1/conversations/ping` | Public | Health check |
+| POST | `/api/v1/conversations` | Required | `OpenConversation` — body `{ listingId }` |
+| GET | `/api/v1/conversations` | Required | `ListMyConversations` — query `cursor?`, `limit?` |
+
 ## Planned additions (future sprints)
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the named sprint file or feature PRD:
 - **S6 (Contact seller)** — `docs/prd/sprints/sprint-06-contact-seller.md`. Owns:
-	  - Text-only per-listing thread creation and message send/list endpoints
-	  - Use-cases: `OpenConversation`, `ListMyConversations`, `ListMessages`, `SendTextMessage`
-	  - Application-level invariants: same-user-cannot-chat-themselves; participants only; archived/sold listing contact behavior explicit. When S7 activates `banned`, banned listing threads use the same read-only rule: no new contact or messages, existing history remains readable. If either participant is suspended, new contact/messages are also blocked while existing history remains readable.
-	  - Private-beta launch-safety flag `CONTACT_ENABLED=false` blocks new conversation opens and message sends while conversation list/detail history remains readable. Disabled contact writes return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and do not expose internal flag names.
-	  - S7 moderation events are not consumed by `conversations/`; no conversation auto-close, worker side effect, or system message ships for listing bans or user suspensions in the MLP. Contact/message blocking is enforced by synchronous listing/user state checks.
+		- Text-only per-listing thread creation and message send/list endpoints
+		- Use-cases: `OpenConversation`, `ListMyConversations`, `ListMessages`, `SendTextMessage`
+		- Application-level invariants: same-user-cannot-chat-themselves; participants only; archived/sold listing contact behavior explicit. When S7 activates `banned`, banned listing threads use the same read-only rule: no new contact or messages, existing history remains readable. If either participant is suspended, new contact/messages are also blocked while existing history remains readable.
+		- Private-beta launch-safety flag `CONTACT_ENABLED=false` blocks new conversation opens and message sends while conversation list/detail history remains readable. Disabled contact writes return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and do not expose internal flag names.
+		- S7 moderation events are not consumed by `conversations/`; no conversation auto-close, worker side effect, or system message ships for listing bans or user suspensions in the MLP. Contact/message blocking is enforced by synchronous listing/user state checks.
   - No Socket.IO, no image messages, no post-card messages, no read receipts, no typing, no presence, no push, no report-from-thread unless S6 is explicitly reshaped before it starts
 
 - **Post-MLP rich chat** — `docs/prd/features/34-conversations.md`. Owns:

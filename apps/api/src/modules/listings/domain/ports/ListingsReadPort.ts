@@ -14,6 +14,7 @@ export interface ListingSummary {
   coverMediaKey?: string;
   cityId: string;
   publishedAt: Date;
+  allowChat: boolean;
 }
 
 export interface ListingsReadPort {

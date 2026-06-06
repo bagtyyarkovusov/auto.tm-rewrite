@@ -9,6 +9,17 @@ export interface ConversationRepository {
   ): Promise<Conversation | null>;
   save(conversation: Conversation): Promise<void>;
 
+  listForUser(
+    userId: string,
+    query: {
+      cursor?: string;
+      limit?: number;
+    },
+  ): Promise<{
+    items: Conversation[];
+    nextCursor: string | null;
+  }>;
+
   listMessages(
     conversationId: string,
     query: {
