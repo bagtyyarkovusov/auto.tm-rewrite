@@ -2,6 +2,7 @@ import { X } from "lucide-react-native";
 import { View } from "react-native";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
+import { BrandModelFilterControl } from "./BrandModelFilterControl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -17,31 +18,6 @@ interface FilterSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filters: UseListingFiltersReturn;
-}
-
-/** Named slots for per-control slices (#158–#162).
- *  Each future control adds one component file + one line here.
- */
-function BrandSlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Brand</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Brand picker (#158)</Text>
-      </View>
-    </View>
-  );
-}
-
-function ModelSlot() {
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Model</Text>
-      <View className="h-[52px] items-center justify-center rounded-lg border border-dashed border-border bg-card">
-        <Text className="text-sm text-muted-foreground">Model picker (#159)</Text>
-      </View>
-    </View>
-  );
 }
 
 function CitySlot() {
@@ -116,8 +92,10 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
         </SheetHeader>
 
         <View className="min-h-0 flex-1 gap-4">
-          <BrandSlot />
-          <ModelSlot />
+          <BrandModelFilterControl
+            draft={filters.draft}
+            setField={filters.setField}
+          />
           <CitySlot />
           <PriceRangeSlot />
           <YearRangeSlot />

@@ -24,7 +24,9 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
   - `search/` — feed filter sheet + filter state hook
     - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, and `count`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both.
     - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions and draft/active isolation.
-    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand, Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
+    - `FilterSheet.tsx` — RNR `Sheet` shell with named control slots (Brand+Model, City, Price range, Year range, Condition) and Apply/Reset footer. Apply closes the sheet; Reset clears all filters. Active-filter count is surfaced on the Search tab trigger via a `Badge`.
+    - `BrandModelFilterControl.tsx` — Brand→Model filter control: two `PickerRow`s + two `CatalogPickerSheet`s. Reuses `useBrands()` and `useModels(brandId)` with hardcoded `"ru"` locale. Model row disabled until brand selected; selecting a brand clears any previously selected model. Writes `brandId`/`modelId` to filter draft via `setField`.
+    - `BrandModelFilterControl.spec.ts` — static source tests verifying picker wiring, cascade rule, and loading/error/empty states.
   - `detail/` — buyer listing detail helpers
     - `useCatalogMaps.ts` — resolves catalog IDs (brand, model, generation, color, bodyType, transmission, driveType, engineType, region, city) to display names using existing public catalog hooks; falls back to raw ID when catalog data is loading
     - `buildVariantUrl.ts` — constructs `expo-image` URLs from MinIO keys and variant names (`detail`, `fullscreen`, etc.)
