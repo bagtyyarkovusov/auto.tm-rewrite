@@ -21,20 +21,26 @@ export function YearRangeFilterControl({
 
   useEffect(() => {
     setMinText(draft.yearMin?.toString() ?? "");
-  }, [draft.yearMin]);
+  }, [draft.yearMin, Object.prototype.hasOwnProperty.call(draft, "yearMin")]);
 
   useEffect(() => {
     setMaxText(draft.yearMax?.toString() ?? "");
-  }, [draft.yearMax]);
+  }, [draft.yearMax, Object.prototype.hasOwnProperty.call(draft, "yearMax")]);
 
   function handleMinChange(text: string) {
-    setMinText(text);
-    setField("yearMin", parseYearInput(text));
+    const digits = text.replace(/\D/g, "").slice(0, 4);
+    setMinText(digits);
+    if (digits.length === 0 || digits.length === 4) {
+      setField("yearMin", parseYearInput(digits));
+    }
   }
 
   function handleMaxChange(text: string) {
-    setMaxText(text);
-    setField("yearMax", parseYearInput(text));
+    const digits = text.replace(/\D/g, "").slice(0, 4);
+    setMaxText(digits);
+    if (digits.length === 0 || digits.length === 4) {
+      setField("yearMax", parseYearInput(digits));
+    }
   }
 
   const isInvalid =

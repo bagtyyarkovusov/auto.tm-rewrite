@@ -93,6 +93,14 @@ describe("YearRangeFilterControl source", () => {
     expect(source).toContain("draft.yearMax?.toString()");
   });
 
+  it("strips non-digits inline before updating local text", () => {
+    expect(source).toContain('replace(/\\D/g, "").slice(0, 4)');
+  });
+
+  it("only calls setField for empty or complete 4-digit input", () => {
+    expect(source).toContain('if (digits.length === 0 || digits.length === 4)');
+  });
+
   it("uses flex-row layout for the two inputs", () => {
     expect(source).toContain("flex-row");
   });

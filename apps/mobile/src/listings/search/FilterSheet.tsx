@@ -67,8 +67,6 @@ function PriceRangeSlot() {
   );
 }
 
-
-
 function ConditionSlot() {
   return (
     <View className="gap-1.5">
