@@ -28,7 +28,8 @@ interface LocalMessage {
 export default function ConversationDetailScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  const conversationId = params.id as string;
+  const rawId = params.id;
+  const conversationId = typeof rawId === "string" ? rawId : "";
   const viewer = useViewer();
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
@@ -37,24 +38,24 @@ export default function ConversationDetailScreen() {
   const sendMessage = useSendTextMessage();
 
   const listingCard = useMemo(() => {
-    const listingId = params.listingId as string | undefined;
+    const listingId = typeof params.listingId === "string" ? params.listingId : undefined;
     if (!listingId) return null;
     return {
       id: listingId,
-      brandId: (params.brandId as string) ?? "",
-      modelId: (params.modelId as string) ?? "",
-      year: params.year ? Number(params.year) : undefined,
-      displayPriceTmt: params.displayPriceTmt ? Number(params.displayPriceTmt) : 0,
-      priceCurrency: (params.priceCurrency as string) ?? "TMT",
-      coverMediaKey: params.coverMediaKey as string | undefined,
-      status: (params.status as string) ?? "active",
+      brandId: typeof params.brandId === "string" ? params.brandId : "",
+      modelId: typeof params.modelId === "string" ? params.modelId : "",
+      year: typeof params.year === "string" ? Number(params.year) : undefined,
+      displayPriceTmt: typeof params.displayPriceTmt === "string" ? Number(params.displayPriceTmt) : 0,
+      priceCurrency: typeof params.priceCurrency === "string" ? params.priceCurrency : "TMT",
+      coverMediaKey: typeof params.coverMediaKey === "string" ? params.coverMediaKey : undefined,
+      status: typeof params.status === "string" ? params.status : "active",
     };
   }, [params]);
 
   const allMessages: LocalMessage[] = useMemo(() => {
     const serverMessages: LocalMessage[] =
       messagesQuery.data?.pages.flatMap(
-        (page: { items: Array<{ id: string; senderId: string; text: string; createdAt: string }> }) =>
+        (page) =>
           page.items.map((m) => ({
             id: m.id,
             senderId: m.senderId,
@@ -80,7 +81,7 @@ export default function ConversationDetailScreen() {
 
   const handleSend = useCallback(
     (text: string) => {
-      if (!viewer?.userId) return;
+      if (!viewer?.userId || !conversationId) return;
 
       const tempId = `pending-${Date.now()}-${Math.random()}`;
       const pendingMessage: LocalMessage = {
@@ -118,6 +119,7 @@ export default function ConversationDetailScreen() {
 
   const handleRetry = useCallback(
     (tempId: string) => {
+      if (!conversationId) return;
       const msg = localMessages.find((m) => m.id === tempId);
       if (!msg || msg.status !== "failed") return;
 

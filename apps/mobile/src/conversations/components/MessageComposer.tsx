@@ -1,10 +1,14 @@
 import { useState, useCallback } from "react";
 import { View, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { useColorScheme } from "nativewind";
 import { Send } from "lucide-react-native";
+
+import { THEME } from "../../../lib/theme";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+
 
 const MAX_CHARS = 1000;
 
@@ -18,6 +22,9 @@ export function MessageComposer({
   disabled = false,
 }: MessageComposerProps) {
   const [text, setText] = useState("");
+  const { colorScheme } = useColorScheme();
+  const scheme = colorScheme ?? "light";
+  const placeholderColor = `hsl(${THEME[scheme].mutedForeground})`;
 
   const trimmed = text.trim();
   const isOverLimit = text.length > MAX_CHARS;
@@ -38,7 +45,7 @@ export function MessageComposer({
           <TextInput
             className="text-base text-foreground max-h-[120px]"
             placeholder="Message"
-            placeholderTextColor="hsl(var(--muted-foreground))"
+            placeholderTextColor={placeholderColor}
             value={text}
             onChangeText={setText}
             multiline

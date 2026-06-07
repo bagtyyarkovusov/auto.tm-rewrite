@@ -12,7 +12,7 @@ describe("ConversationDetailScreen", () => {
 
   it("reads conversation id from route params", () => {
     expect(source).toContain("useLocalSearchParams");
-    expect(source).toContain('const conversationId = params.id');
+    expect(source).toContain('typeof rawId === "string" ? rawId : ""');
   });
 
   it("uses useViewer for current user id", () => {

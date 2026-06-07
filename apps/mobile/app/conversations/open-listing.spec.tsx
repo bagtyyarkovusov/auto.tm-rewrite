@@ -21,8 +21,8 @@ describe("OpenListingConversationScreen", () => {
     );
   });
 
-  it("calls openConversation.mutate on mount", () => {
-    expect(source).toContain("openConversation.mutate({ listingId })");
+  it("calls openConversation mutate on mount", () => {
+    expect(source).toContain("mutate({ listingId })");
   });
 
   it("navigates to conversation detail on success", () => {
@@ -43,7 +43,7 @@ describe("OpenListingConversationScreen", () => {
   });
 
   it("shows error state with retry on failure", () => {
-    expect(source).toContain("openConversation.isError");
+    expect(source).toContain("isError");
     expect(source).toContain("Retry");
   });
 

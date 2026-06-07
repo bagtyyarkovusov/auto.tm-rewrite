@@ -11,19 +11,25 @@ import { Text } from "@/components/ui/text";
 export default function OpenListingConversationScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const router = useRouter();
-  const openConversation = useOpenConversation();
+  const {
+    mutate,
+    isPending,
+    isSuccess,
+    isError,
+    data,
+    error,
+  } = useOpenConversation();
 
   useEffect(() => {
-    if (!listingId || openConversation.isPending || openConversation.isSuccess) {
+    if (!listingId || isPending || isSuccess) {
       return;
     }
 
-    openConversation.mutate({ listingId });
-  }, [listingId, openConversation]);
+    mutate({ listingId });
+  }, [listingId, mutate, isPending, isSuccess]);
 
   useEffect(() => {
-    if (openConversation.isSuccess && openConversation.data) {
-      const data = openConversation.data;
+    if (isSuccess && data) {
       const listing = data.listing;
       router.replace({
         pathname: `/conversations/${data.id}`,
@@ -41,9 +47,9 @@ export default function OpenListingConversationScreen() {
         },
       });
     }
-  }, [openConversation.isSuccess, openConversation.data, router]);
+  }, [isSuccess, data, router]);
 
-  if (openConversation.isError) {
+  if (!listingId) {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center px-6 gap-4">
@@ -51,17 +57,33 @@ export default function OpenListingConversationScreen() {
             Could not open conversation
           </Text>
           <Text className="text-center text-sm text-muted-foreground">
-            {openConversation.error instanceof Error
-              ? openConversation.error.message
+            Listing information is missing.
+          </Text>
+          <Button variant="ghost" onPress={() => router.back()}>
+            <Text>Go back</Text>
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-1 items-center justify-center px-6 gap-4">
+          <Text className="text-lg font-semibold text-foreground">
+            Could not open conversation
+          </Text>
+          <Text className="text-center text-sm text-muted-foreground">
+            {error instanceof Error
+              ? error.message
               : "Something went wrong. Please try again."}
           </Text>
           <Button
             variant="brand"
             size="pill"
             onPress={() => {
-              if (listingId) {
-                openConversation.mutate({ listingId });
-              }
+              mutate({ listingId });
             }}
           >
             <Text>Retry</Text>

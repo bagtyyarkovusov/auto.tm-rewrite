@@ -113,7 +113,7 @@ export function ContactCtaBar({
         disabled={!canMessage || openConversation.isPending}
         onPress={handleMessage}
         accessibilityLabel={canMessage ? "Message seller" : "Message unavailable"}
-        accessibilityState={{ disabled: !canMessage }}
+        accessibilityState={{ disabled: !canMessage || openConversation.isPending }}
       >
         <Icon
           as={MessageCircle}

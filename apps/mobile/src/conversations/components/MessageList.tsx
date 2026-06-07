@@ -44,7 +44,10 @@ export function MessageList({ messages, currentUserId, onRetry }: MessageListPro
       inverted
       keyboardShouldPersistTaps="handled"
       ListEmptyComponent={
-        <View className="flex-1 items-center justify-center px-6 py-12">
+        <View
+          style={{ transform: [{ scaleY: -1 }] }}
+          className="flex-1 items-center justify-center px-6 py-12"
+        >
           <Text className="text-sm text-muted-foreground">
             No messages yet. Start the conversation.
           </Text>
