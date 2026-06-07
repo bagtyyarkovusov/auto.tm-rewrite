@@ -54,10 +54,10 @@ RUN corepack enable
 
 USER ${AGENT_UID}:${AGENT_GID}
 
-# 5. Pin pnpm to the repo's version as the agent user (cached in the agent's
-#    corepack home so no download is needed at run time). Matches packageManager
-#    in package.json and the pnpm/action-setup version in CI.
-RUN corepack prepare pnpm@9.12.0 --activate
+# 5. Pin pnpm 10 for Sandcastle only. The repo itself remains pinned to pnpm 9
+#    until Expo/Metro are validated under pnpm 10 globally; this image opts into
+#    pnpm 10's global virtual store only inside the sandbox install hook.
+RUN corepack prepare pnpm@10.33.2 --activate
 
 # Use a dedicated store dir so the warm-store layer (below) and the per-worktree
 # `pnpm install --offline` at run time agree on a single content-addressable store.
@@ -74,23 +74,22 @@ RUN mkdir -p /home/agent/.kimi && \
 ENV PATH="/home/agent/.local/bin:${PATH}"
 
 # 7. Warm the pnpm store from the lockfile only (pnpm fetch needs just the
-#    lockfile + workspace manifest — no per-package package.json copies). This
-#    fully populates the content-addressable store in an image layer, so the
-#    per-worktree `pnpm install --offline --frozen-lockfile` at run time is fast
-#    and needs no network. Rebuild the image when pnpm-lock.yaml changes.
+#    lockfile + workspace manifest — no per-package package.json copies). Use the
+#    same global-virtual-store flag as the runtime hook so the shared link graph is
+#    baked into the image too. Rebuild the image when pnpm-lock.yaml changes.
 WORKDIR /home/agent/.warmup
 COPY --chown=${AGENT_UID}:${AGENT_GID} pnpm-lock.yaml pnpm-workspace.yaml ./
 # The lockfile references the vendored sandcastle tarball via `file:`, so it must
 # be present for `pnpm fetch` to resolve it. (Sandcastle is a host-only devDep but
 # lives in the single shared lockfile; warming it costs a few harmless MB.)
 COPY --chown=${AGENT_UID}:${AGENT_GID} vendor ./vendor
-# Resilient fetch for slow/intermittent links (Turkmenistan): more retries, a
-# generous per-request timeout, and fewer parallel connections so a constrained
-# link doesn't starve downloads and stall at the tail.
+# Resilient fetch for slow/intermittent links: keep retries and a generous
+# per-request timeout, but do not lower pnpm's default network concurrency. The
+# image build is the one place where we want to spend bandwidth so parallel
+# sandbox installs can stay offline.
 RUN pnpm config set fetch-retries 5 \
  && pnpm config set fetch-timeout 300000 \
- && pnpm config set network-concurrency 4 \
- && pnpm fetch
+ && pnpm fetch --config.enableGlobalVirtualStore=true
 
 WORKDIR /home/agent
 
@@ -98,7 +97,8 @@ WORKDIR /home/agent
 #    CLI against Kimi's Anthropic-compatible endpoint — ANTHROPIC_BASE_URL +
 #    ANTHROPIC_API_KEY are forwarded from .sandcastle/.env at run time (EnvResolver).
 #    The Kimi CLI above is kept so the kimiCode provider still works if we revert.
-RUN curl -fsSL https://claude.ai/install.sh | bash
+RUN mkdir -p /home/agent/.local && \
+    NPM_CONFIG_PREFIX=/home/agent/.local npm install -g @anthropic-ai/claude-code
 
 # Register Context7 MCP for Claude Code at user scope (ADR-0017), mirroring the kimi
 # mcp.json above. CONTEXT7_API_KEY is forwarded from .env at run time.

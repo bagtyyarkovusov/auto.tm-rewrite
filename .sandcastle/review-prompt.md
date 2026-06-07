@@ -35,7 +35,7 @@ behavior; fix real problems you find.
 If you make changes, run the gate for the touched workspaces:
 
 ```
-pnpm exec turbo run typecheck lint test:unit --filter=<workspace>
+COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck lint test:unit --filter=<workspace>
 ```
 
 then commit the refinements (end the message with

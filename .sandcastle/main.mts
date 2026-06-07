@@ -19,6 +19,48 @@
 
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+const readSandcastleEnv = async () => {
+  const content = await readFile(".sandcastle/.env", "utf8").catch(() => "");
+  const env: Record<string, string> = {};
+
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex === -1) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    let value = trimmed.slice(eqIndex + 1).trim();
+    const quoted =
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"));
+    if (quoted) value = value.slice(1, -1);
+    env[key] = value;
+  }
+
+  return env;
+};
+
+const pushCurrentBranch = async () => {
+  const sandcastleEnv = await readSandcastleEnv();
+  const env = { ...process.env, ...sandcastleEnv };
+  const { stdout } = await execFileAsync("git", ["branch", "--show-current"], {
+    env,
+  });
+  const branch = stdout.trim();
+  if (!branch) {
+    throw new Error("Cannot push: current git branch is empty/detached.");
+  }
+
+  await execFileAsync("gh", ["auth", "setup-git"], { env });
+  await execFileAsync("git", ["push", "origin", branch], { env });
+  console.log(`Pushed ${branch} to origin.`);
+};
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -34,52 +76,63 @@ const MAX_ITERATIONS = Number(process.env.MAX_ITERATIONS ?? 10);
 // matches the one the native Kimi config used.
 const MODEL = "kimi-k2.6";
 
-// Dependency strategy (supersedes ADR-0028 D3 — needs a follow-up ADR once proven).
-// The slow planner→implementer gap was `pnpm install` COPYING ~2GB: the warm store
-// lived in-VM (overlay) while the worktree's node_modules lived on the macOS host
-// share, and Docker treats those as separate mounts — so pnpm can't hardlink across
-// them (proven: `ln` returns EXDEV even though both report the same st_dev). Fix:
-// keep the store INSIDE the worktree bind-mount so store + node_modules are the SAME
-// mount and pnpm hardlinks (metadata-only) instead of copying content.
-//   onWorktreeReady (host): clone the shared host store into <worktree>/.pnpm-store
-//     natively (APFS clonefile — instant, CoW; never crosses the FUSE boundary).
-//   onSandboxReady (sandbox): point pnpm at that in-worktree store, then install.
-// The shared host store (.sandcastle/.pnpm-store) is populated once from the image's
-// baked store — see docs/agents/sandcastle.md. Both stores are named `.pnpm-store`
-// so the existing root .gitignore rule covers them.
-const SHARED_STORE = `${process.cwd()}/.sandcastle/.pnpm-store`;
-const WORKTREE_STORE = "/home/agent/workspace/.pnpm-store";
+// Kimi K2.6 reasons by default, and the Claude Code stream-json parser now surfaces
+// those `thinking` blocks as first-class events (and silences the high-frequency
+// `thinking_tokens` progress counter) — see the vendored fork's AgentProvider. So
+// enable thinking for every phase with a 16K budget: Kimi's docs recommend
+// max_tokens >= 16000 for K2-thinking to avoid truncating reasoning + final answer.
+// (`CLAUDE_CODE_DISABLE_THINKING` was a no-op — not a real Claude Code env var — so
+// it's gone; `MAX_THINKING_TOKENS` is the real lever, and the Anthropic API forces
+// temperature=1.0 whenever thinking is on, which matches Kimi's recommendation.)
+const CLAUDE_CODE_THINKING_ENV = {
+  MAX_THINKING_TOKENS: "16000",
+};
+
+const kimiClaudeAgent = (effort: "low" | "medium" = "low") =>
+  sandcastle.claudeCode(MODEL, {
+    effort,
+    env: CLAUDE_CODE_THINKING_ENV,
+  });
+
+// Dependency strategy (Sandcastle-only pnpm 10 experiment).
+// Do not copy/clone node_modules or a per-worktree store onto the macOS bind mount:
+// that creates 1-2GB of host filesystem churn per agent. Instead, keep pnpm's store
+// inside Docker's Linux filesystem and opt only Sandcastle installs into pnpm's
+// global virtual store. The host worktree receives mostly symlinks in node_modules;
+// package contents stay in /home/agent/.pnpm-store.
+const SANDCASTLE_ENV = "CI=1 COREPACK_ENABLE_PROJECT_SPEC=0";
+const SANDCASTLE_PNPM = `${SANDCASTLE_ENV} pnpm`;
+const SANDCASTLE_INSTALL =
+  `${SANDCASTLE_PNPM} install --offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`;
+const SANDCASTLE_INSTALL_TIMEOUT_MS = 600_000;
+const SANDCASTLE_GIT_AUTH = "gh auth setup-git";
 
 const implementerHooks = {
-  host: {
-    onWorktreeReady: [
-      {
-        command: `cp -Rc "${SHARED_STORE}" .pnpm-store 2>/dev/null || cp -R "${SHARED_STORE}" .pnpm-store`,
-        timeoutMs: 300_000,
-      },
-    ],
-  },
   sandbox: {
     onSandboxReady: [
       {
-        command: `pnpm config set store-dir ${WORKTREE_STORE} --global && pnpm install --offline --frozen-lockfile && pnpm --filter @auto-tm/db generate`,
-        timeoutMs: 300_000,
+        command: `${SANDCASTLE_INSTALL} && ${SANDCASTLE_PNPM} --filter @auto-tm/db generate`,
+        timeoutMs: SANDCASTLE_INSTALL_TIMEOUT_MS,
       },
     ],
   },
 };
 
-// The merger also runs the gate (typecheck), so it installs too — but it's a single
-// serial sandbox, not the parallel hot path, so it keeps the simple in-VM-store
-// install (one ~2GB copy per merge cycle). Optimize later if it becomes a pain
-// (run() doesn't fire onWorktreeReady, so the in-worktree-store trick needs more work).
+// The merger also runs the gate (typecheck), so it installs too. Run it in a
+// temporary Sandcastle worktree (branchStrategy below), never the root checkout:
+// pnpm 10 may purge incompatible node_modules layouts, and that is only safe
+// inside a throwaway worktree. Also wire GH_TOKEN into Git so the merge agent can
+// fetch/push over HTTPS without an interactive prompt.
 const mergerHook = {
   sandbox: {
     onSandboxReady: [
       {
-        command:
-          "pnpm install --offline --frozen-lockfile && pnpm --filter @auto-tm/db generate",
-        timeoutMs: 300_000,
+        command: SANDCASTLE_GIT_AUTH,
+        timeoutMs: 30_000,
+      },
+      {
+        command: `${SANDCASTLE_INSTALL} && ${SANDCASTLE_PNPM} --filter @auto-tm/db generate`,
+        timeoutMs: SANDCASTLE_INSTALL_TIMEOUT_MS,
       },
     ],
   },
@@ -101,7 +154,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     sandbox: docker(),
     name: "planner",
     maxIterations: 1,
-    agent: sandcastle.claudeCode(MODEL),
+    agent: kimiClaudeAgent("low"),
     promptFile: "./.sandcastle/plan-prompt.md",
   });
 
@@ -153,7 +206,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         const implement = await sandbox.run({
           name: "implementer",
           maxIterations: 100,
-          agent: sandcastle.claudeCode(MODEL),
+          agent: kimiClaudeAgent("medium"),
           promptFile: "./.sandcastle/implement-prompt.md",
           promptArgs: {
             TASK_ID: issue.id,
@@ -167,7 +220,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
           const review = await sandbox.run({
             name: "reviewer",
             maxIterations: 1,
-            agent: sandcastle.claudeCode(MODEL),
+            agent: kimiClaudeAgent("low"),
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
               BRANCH: issue.branch,
@@ -227,15 +280,18 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   await sandcastle.run({
     hooks: mergerHook,
     sandbox: docker(),
+    branchStrategy: { type: "merge-to-head" },
     name: "merger",
     maxIterations: 1,
-    agent: sandcastle.claudeCode(MODEL),
+    agent: kimiClaudeAgent("low"),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),
       ISSUES: completedIssues.map((i) => `- ${i.id}: ${i.title}`).join("\n"),
     },
   });
+
+  await pushCurrentBranch();
 
   console.log("\nBranches merged.");
 }

@@ -59,7 +59,7 @@ Before committing, run the gate for every workspace you touched — via turbo, s
 runtime deps (`@auto-tm/db`, `@auto-tm/contracts` `dist/`) build first:
 
 ```
-pnpm exec turbo run typecheck lint test:unit --filter=<workspace>
+COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck lint test:unit --filter=<workspace>
 ```
 
 (e.g. `--filter=@auto-tm/mobile`, `--filter=@auto-tm/api`.) `test:unit` is the

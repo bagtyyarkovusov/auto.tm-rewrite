@@ -26,6 +26,11 @@ Docker); it is never deployed to the air-gapped runtime.
   - `KIMI_API_KEY` — Kimi Code API key.
   - `GH_TOKEN` — GitHub token with `repo` scope (issue read/close, push).
   - `CONTEXT7_API_KEY` — Context7 MCP (live library docs), recommended.
+  - `DATABASE_URL` — a dummy is enough. The setup hook runs `pnpm --filter
+    @auto-tm/db generate`, and `packages/db/prisma.config.ts` resolves
+    `env("DATABASE_URL")` at config-load time (it throws if unset) even though
+    `generate` never connects. Clean worktrees have no `packages/db/.env`, and the
+    EnvResolver only forwards keys declared in `.sandcastle/.env`, so it must be set.
 - The vendored fork installed: `pnpm install` (links `vendor/ai-hero-sandcastle-*.tgz`).
 
 ## Build the sandbox image
@@ -60,12 +65,26 @@ The planner selects `gh issue list --state open --label "ready-for-agent"
 --search "-label:blocked"`, excludes parent `Sprint N —` PRDs, and works the
 unblocked slices in parallel.
 
+## Agent reasoning mode
+
+Sandcastle runs Claude Code against Kimi's Anthropic-compatible coding endpoint.
+`kimi-k2.6` enables thinking by default, and this workflow now keeps thinking on
+with a 16K budget:
+
+```bash
+MAX_THINKING_TOKENS=16000
+```
+
+Planner, reviewer, and merger run with low effort; implementer runs with medium
+effort. The vendored fork parses Claude Code `thinking` blocks, normal tool
+calls, and suppresses high-frequency `thinking_tokens` progress records in logs.
+
 ## The gate (D1)
 
 In-sandbox, each implementer/reviewer runs:
 
 ```bash
-pnpm exec turbo run typecheck lint test:unit --filter=<workspace>
+COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck lint test:unit --filter=<workspace>
 ```
 
 `test:unit` is the **Docker-free** unit suite (excludes `*.e2e.spec.ts`). The
@@ -88,14 +107,33 @@ Per-phase logs stream to `.sandcastle/logs/` (gitignored). Worktrees live under
 run is interrupted, a worktree with uncommitted changes is preserved on disk —
 remove it manually once you've inspected it.
 
+## Merge phase
+
+The merger runs in a temporary Sandcastle worktree, not the root checkout. This is
+intentional: pnpm 10 may purge an incompatible existing `node_modules` layout, and
+that must never happen against the developer's real repo root. After the merge
+agent emits `<promise>COMPLETE</promise>`, Sandcastle merges the temporary branch
+back into the current host branch and the host orchestrator pushes that branch to
+`origin` using `.sandcastle/.env` / `gh auth setup-git`.
+
 ## Dependency model (why it's fast + offline)
 
-- The image bakes a warm pnpm content-addressable store (`pnpm fetch`).
-- Each worktree runs `pnpm install --offline --frozen-lockfile` (a
-  `hooks.sandbox.onSandboxReady` command) — no network, links from the store.
+- The repo remains pinned to pnpm 9 for normal development. The Sandcastle image
+  pins pnpm 10 for sandboxes only.
+- The image bakes a warm pnpm content-addressable store and global virtual store
+  link graph (`pnpm fetch --config.enableGlobalVirtualStore=true`).
+- Each worktree runs
+  `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm install --offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`
+  (a `hooks.sandbox.onSandboxReady` command). `COREPACK_ENABLE_PROJECT_SPEC=0`
+  is required because the root `packageManager` still points Corepack at pnpm 9.
+  `CI=1` keeps pnpm non-interactive when a reused worktree needs to purge stale
+  `node_modules`.
+  The host worktree's `node_modules` is mostly symlinks/metadata; package
+  contents stay in `/home/agent/.pnpm-store` inside Docker.
 - `dist/` for `@auto-tm/db` + `@auto-tm/contracts` is produced by turbo `^build`
   when the gate runs (per [ADR-0016](../adr/0016-typescript-runtime-boundaries.md));
-  the hook also runs `pnpm --filter @auto-tm/db generate`.
+  the hook also runs
+  `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm --filter @auto-tm/db generate`.
 - If an issue **adds** a dependency, `--offline` will miss it. Rebuild the image
   (re-warms the store) or, as a stop-gap, the sandbox's default bridge network
   allows a non-offline install.

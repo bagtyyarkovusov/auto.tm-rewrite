@@ -1,6 +1,6 @@
 # Vendored dependencies
 
-## `ai-hero-sandcastle-0.5.10-4fb2265.tgz`
+## `ai-hero-sandcastle-0.5.10-dc7dab2.tgz`
 
 Prebuilt tarball of the Kimi-enabled `@ai-hero/sandcastle` fork, consumed as a
 **host-only** devDependency (`file:`) by the root `package.json`. Sandcastle runs
@@ -9,8 +9,8 @@ image or any deployed artifact, so it does not touch the air-gapped runtime.
 
 - **Upstream:** https://github.com/mattpocock/sandcastle (`@ai-hero/sandcastle`)
 - **Fork:** https://github.com/bagtyyarkovusov/sandcastle
-- **Branch / commit:** `feature/kimi-code-provider` @ `4fb2265` (adds the `kimiCode` agent provider)
-- **Built:** 2026-06-04 via `npm run build && npm pack --ignore-scripts`
+- **Branch / commit:** `feature/kimi-code-provider` @ `dc7dab2` (`kimiCode` agent provider + Claude Code stream-json parsing; setup hooks in `createSandbox` now fail on non-zero exit with stderr and managed worktree paths are canonicalized on macOS)
+- **Built:** 2026-06-07 via `npm run build && npm pack --ignore-scripts`
   (tsgo build; `--ignore-scripts` skips the fork's `husky` + rebuild `prepare`).
 
 ### Why vendored (not a `github:` git dependency)
