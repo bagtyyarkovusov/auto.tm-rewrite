@@ -28,15 +28,52 @@ import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 //   MAX_ITERATIONS=1 pnpm sandcastle
 const MAX_ITERATIONS = Number(process.env.MAX_ITERATIONS ?? 10);
 
-// Dependency strategy (ADR-0028, D3): NO copyToWorktree of node_modules. pnpm's
-// node_modules is a symlink farm into the store — copying it across a worktree is
-// fragile. Instead the image bakes a warm pnpm store (.sandcastle/Dockerfile,
-// `pnpm fetch`) and each worktree links from it offline. This hook runs INSIDE the
-// sandbox once the worktree is mounted; `dist/` for @auto-tm/db & @auto-tm/contracts
-// is then produced on demand by turbo `^build` when the gate runs typecheck/tests.
-// The per-command timeoutMs is configurable (the 60s default only governs
-// copyToWorktree copies, which we do not use), so a generous budget is safe.
-const installHook = {
+// Agent: Claude Code (the `claude` CLI) pointed at Kimi's Anthropic-compatible
+// endpoint. ANTHROPIC_BASE_URL=https://api.kimi.com/coding/ + ANTHROPIC_API_KEY are
+// forwarded into each sandbox from .sandcastle/.env (see EnvResolver). The model id
+// matches the one the native Kimi config used.
+const MODEL = "kimi-k2.6";
+
+// Dependency strategy (supersedes ADR-0028 D3 — needs a follow-up ADR once proven).
+// The slow planner→implementer gap was `pnpm install` COPYING ~2GB: the warm store
+// lived in-VM (overlay) while the worktree's node_modules lived on the macOS host
+// share, and Docker treats those as separate mounts — so pnpm can't hardlink across
+// them (proven: `ln` returns EXDEV even though both report the same st_dev). Fix:
+// keep the store INSIDE the worktree bind-mount so store + node_modules are the SAME
+// mount and pnpm hardlinks (metadata-only) instead of copying content.
+//   onWorktreeReady (host): clone the shared host store into <worktree>/.pnpm-store
+//     natively (APFS clonefile — instant, CoW; never crosses the FUSE boundary).
+//   onSandboxReady (sandbox): point pnpm at that in-worktree store, then install.
+// The shared host store (.sandcastle/.pnpm-store) is populated once from the image's
+// baked store — see docs/agents/sandcastle.md. Both stores are named `.pnpm-store`
+// so the existing root .gitignore rule covers them.
+const SHARED_STORE = `${process.cwd()}/.sandcastle/.pnpm-store`;
+const WORKTREE_STORE = "/home/agent/workspace/.pnpm-store";
+
+const implementerHooks = {
+  host: {
+    onWorktreeReady: [
+      {
+        command: `cp -Rc "${SHARED_STORE}" .pnpm-store 2>/dev/null || cp -R "${SHARED_STORE}" .pnpm-store`,
+        timeoutMs: 300_000,
+      },
+    ],
+  },
+  sandbox: {
+    onSandboxReady: [
+      {
+        command: `pnpm config set store-dir ${WORKTREE_STORE} --global && pnpm install --offline --frozen-lockfile && pnpm --filter @auto-tm/db generate`,
+        timeoutMs: 300_000,
+      },
+    ],
+  },
+};
+
+// The merger also runs the gate (typecheck), so it installs too — but it's a single
+// serial sandbox, not the parallel hot path, so it keeps the simple in-VM-store
+// install (one ~2GB copy per merge cycle). Optimize later if it becomes a pain
+// (run() doesn't fire onWorktreeReady, so the in-worktree-store trick needs more work).
+const mergerHook = {
   sandbox: {
     onSandboxReady: [
       {
@@ -64,7 +101,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     sandbox: docker(),
     name: "planner",
     maxIterations: 1,
-    agent: sandcastle.kimiCode("kimi-k2.6", { thinking: false }),
+    agent: sandcastle.claudeCode(MODEL),
     promptFile: "./.sandcastle/plan-prompt.md",
   });
 
@@ -109,14 +146,14 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       const sandbox = await sandcastle.createSandbox({
         branch: issue.branch,
         sandbox: docker(),
-        hooks: installHook,
+        hooks: implementerHooks,
       });
 
       try {
         const implement = await sandbox.run({
           name: "implementer",
           maxIterations: 100,
-          agent: sandcastle.kimiCode("kimi-k2.6"),
+          agent: sandcastle.claudeCode(MODEL),
           promptFile: "./.sandcastle/implement-prompt.md",
           promptArgs: {
             TASK_ID: issue.id,
@@ -130,7 +167,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
           const review = await sandbox.run({
             name: "reviewer",
             maxIterations: 1,
-            agent: sandcastle.kimiCode("kimi-k2.6"),
+            agent: sandcastle.claudeCode(MODEL),
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
               BRANCH: issue.branch,
@@ -188,11 +225,11 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // tm-proxy runner) for the Testcontainers e2e gate — no Docker-in-Docker here.
   // -------------------------------------------------------------------------
   await sandcastle.run({
-    hooks: installHook,
+    hooks: mergerHook,
     sandbox: docker(),
     name: "merger",
     maxIterations: 1,
-    agent: sandcastle.kimiCode("kimi-k2.6"),
+    agent: sandcastle.claudeCode(MODEL),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),

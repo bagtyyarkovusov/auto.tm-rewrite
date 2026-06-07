@@ -84,9 +84,25 @@ COPY --chown=${AGENT_UID}:${AGENT_GID} pnpm-lock.yaml pnpm-workspace.yaml ./
 # be present for `pnpm fetch` to resolve it. (Sandcastle is a host-only devDep but
 # lives in the single shared lockfile; warming it costs a few harmless MB.)
 COPY --chown=${AGENT_UID}:${AGENT_GID} vendor ./vendor
-RUN pnpm fetch
+# Resilient fetch for slow/intermittent links (Turkmenistan): more retries, a
+# generous per-request timeout, and fewer parallel connections so a constrained
+# link doesn't starve downloads and stall at the tail.
+RUN pnpm config set fetch-retries 5 \
+ && pnpm config set fetch-timeout 300000 \
+ && pnpm config set network-concurrency 4 \
+ && pnpm fetch
 
 WORKDIR /home/agent
+
+# 8. Claude Code CLI. The planner/implementer/reviewer/merger now run the `claude`
+#    CLI against Kimi's Anthropic-compatible endpoint — ANTHROPIC_BASE_URL +
+#    ANTHROPIC_API_KEY are forwarded from .sandcastle/.env at run time (EnvResolver).
+#    The Kimi CLI above is kept so the kimiCode provider still works if we revert.
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# Register Context7 MCP for Claude Code at user scope (ADR-0017), mirroring the kimi
+# mcp.json above. CONTEXT7_API_KEY is forwarded from .env at run time.
+RUN printf '{"mcpServers":{"context7":{"command":"npx","args":["-y","@upstash/context7-mcp"]}}}\n' > /home/agent/.claude.json
 
 # sandcastle drives commands into the running container; keep it alive.
 ENTRYPOINT ["sleep", "infinity"]
