@@ -34,6 +34,8 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0026](0026-edit-mode-review-first-entry.md) | Edit mode opens at Review; create mode stays linear | Accepted | 2026-05-22 |
 | [0027](0027-mlp-beta-scope.md) | MLP beta scope before full marketplace MVP | Accepted | 2026-05-22 |
 | [0028](0028-kimi-sandcastle-afk-orchestrator.md) | Kimi-Sandcastle as the AFK parallel orchestrator | Accepted | 2026-06-04 |
+| [0029](0029-self-hosted-ota-air-gap-delivery.md) | Self-hosted Expo Updates (OTA) + hybrid air-gapped app delivery | Accepted | 2026-06-07 |
+| [0030](0030-reviewer-demo-account-otp-bypass.md) | Reviewer demo-account OTP bypass for store review | Accepted | 2026-06-07 |
 
 ## Per-app ADRs
 

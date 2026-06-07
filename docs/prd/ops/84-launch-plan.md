@@ -49,10 +49,57 @@ Before announcing publicly, all of these must be green:
 Goal: shake out bugs with a small known cohort before everyone arrives.
 
 - Cohort: 10-30 invited users (friends, family, sympathetic dealers)
-- Distribution: TestFlight (iOS), Internal Testing (Google Play), or direct APK
+- Distribution: store tracks (TestFlight + Play closed/internal) with **direct-APK fallback**; updates via **self-hosted OTA** — see "App + update delivery" below ([ADR-0029](../../adr/0029-self-hosted-ota-air-gap-delivery.md))
 - Feedback channel: dedicated Telegram group with AutoTM team
 - Daily standup-style review of feedback during beta
 - Bug fix window: anything serious gets a hotfix before public launch or blocks launch entirely
+
+## App + update delivery (self-hosted OTA + hybrid)
+
+Locked in [ADR-0029](../../adr/0029-self-hosted-ota-air-gap-delivery.md) (delivery) and [ADR-0030](../../adr/0030-reviewer-demo-account-otp-bypass.md) (review access).
+
+- **Binary / initial install — hybrid.** Store tracks for legitimacy and the public path (Google Play closed/internal testing, Apple TestFlight), with **direct-APK download as the TM fallback** — and the primary Android path if Play is throttled on Telecom. Test Play/TestFlight reachability on a real TM SIM before relying on them.
+- **Updates — self-hosted OTA inside TM.** The app's `updates.url` points at a first-party Expo Updates server (`updates.auto.tm`); bundles live in the existing MinIO; manifests are code-signed (private key in TM, public cert in the build). No runtime dependency on EAS Update cloud. This is the iteration lever: JS/asset fixes ship over-the-air with no store re-review.
+- **OTA covers JS/assets only.** Native changes (new native module, SDK bump, new permission, the deferred video pipeline) require a fresh binary + bumped `runtimeVersion` — not an OTA.
+- **Channel discipline.** The beta cohort is pinned to a stable OTA channel; parallel/dev work uses a separate channel and is never pushed to the beta channel mid-test.
+- **Reviewer access.** Store reviewers (abroad, no `+993` SIM) authenticate via the single reserved fixed-OTP demo account (ADR-0030): normal privileges only, rate-limit-exempt, flag-gated, audited; the reserved number + code go only in App Store Connect / Play review notes. Seeded demo content lets a reviewer exercise post / contact / report / block for Apple Guideline 1.2.
+
+## Launch-prep checklist (sequenced)
+
+The path from "MLP done" to public launch. Tracked here in the launch plan (intentionally **not** broken into separate issues yet).
+
+> **Store accounts are NOT created yet** (Apple Developer + Google Play Console). They are the long pole — organization accounts need identity / D-U-N-S verification that can take weeks. **Register them first**; everything store-side blocks on them.
+
+**Now (parallel to S6–S7)**
+
+- [ ] Register **Apple Developer (organization)** — needs a D-U-N-S number. *Not created yet.*
+- [ ] Register **Google Play Console (organization)** — an org account avoids the personal-account closed-testing-before-production gate (verify the current Play policy in-console). *Not created yet.*
+- [ ] Reserve the demo `+993` number (ADR-0030); never issue it to a real user.
+
+**S7 (moderation sprint — already planned)**
+
+- [ ] Ship moderation / report / block — also the Apple Guideline 1.2 UGC gate for the public step.
+
+**S8 (private-beta sprint — already planned)**
+
+- [ ] Self-hosted OTA server live (`updates.auto.tm`, code-signing keys, bundles in MinIO) — ADR-0029.
+- [ ] Hardened reviewer demo account (ADR-0030) + seeded demo content.
+- [ ] Legal pages RU/TK/EN + account-deletion grace period (S8 children #2/#3).
+- [ ] Binary built (EAS Build); Play closed track + TestFlight set up; APK fallback published.
+- [ ] Beta cohort pinned to a stable OTA channel.
+
+**Closed beta (~2–4 weeks, after S8)**
+
+- [ ] 10–50 real TM testers invited (real OTP); reviewer uses the bypass.
+- [ ] Iterate via self-hosted OTA (JS-only, no native changes mid-beta).
+- [ ] Feedback via dedicated Telegram group.
+- [ ] Parallel work limited to launch prep + Favorites (separate channel); engagement layer + expensive bets deferred to the Phase 1 retro (ADR-0027).
+
+**Public launch (after the Phase 1 retro picks bets)**
+
+- [ ] Submit App Store + Google Play production (demo account for review, S7 moderation, legal, account deletion).
+- [ ] Follow the pre-launch milestones + launch-day sequence in this doc.
+- [ ] Keep self-hosted OTA + APK fallback as ongoing levers; then build the retro-selected post-MLP bets.
 
 ## Public launch day
 
