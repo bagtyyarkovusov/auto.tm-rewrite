@@ -18,13 +18,13 @@
 
 | | |
 |---|---|
-| **Sprint** | S6 — Contact seller |
-| **Status** | 🟡 In progress |
-| **Started** | 2026-06-06 |
+| **Sprint** | S7 — Minimal admin + moderation |
+| **Status** | ⚪ Pending |
+| **Started** | — |
 | **Phase** | 1 (MLP beta) |
-| **Plan file** | [Sprint 6 PRD — #167](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/167) |
-| **Sprint doc** | [`sprints/sprint-06-contact-seller.md`](sprints/sprint-06-contact-seller.md) |
-| **Milestone** | M5 — I can contact the seller |
+| **Plan file** | TBD — created by `/create-sprint-issues 7` |
+| **Sprint doc** | [`sprints/sprint-07-minimal-admin.md`](sprints/sprint-07-minimal-admin.md) |
+| **Milestone** | M6 — Admins can keep beta safe |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 
@@ -51,7 +51,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S3 | [Catalog](sprints/sprint-03-catalog.md) | 🟢 Shipped | 2026-05-17 | 2026-05-17 | — | Internal |
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | 🟢 Shipped | 2026-05-17 | 2026-06-06 | M3 | Internal group |
 | S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | 🟢 Shipped | 2026-06-06 | 2026-06-06 | M4 | 10-20 beta testers with seeded listings |
-| S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟡 In progress | 2026-06-06 | — | M5 | Beta testers with real listings |
+| S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟢 Shipped | 2026-06-06 | 2026-06-07 | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | ⚪ Pending | — | — | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | ⚪ Pending | — | — | M7 | First 10-50 real users |
 
@@ -131,6 +131,7 @@ Once per sprint:
 
 > One-line entries, newest first.
 
+- 2026-06-07 — S6 Contact seller (M5). Simplest buyer↔seller text-contact loop shipped per [ADR-0027](../adr/0027-mlp-beta-scope.md) — no Socket.IO, no rich-chat fields. Per-listing `Conversation` + `ConversationParticipant` + text `Message` (unique on `(listingId, buyerId)`, self-contact rejected, participant-only access, explicit sold/archived read-only-thread behavior with banned/suspended hooks pre-documented for S7). Four use-cases (`OpenConversation`, `ListMyConversations`, `ListMessages`, `SendTextMessage`) behind `POST/GET /api/v1/conversations` + `GET/POST /api/v1/conversations/:id/messages`, consuming `listings/` only through `ListingsReadPort` (extended with `allowChat`); message insert + conversation-activity bump run in one Prisma transaction so the list sorts by latest message. Mobile: anonymous Message CTA → OTP resume → conversation detail with optimistic send/retry, plus the seller Chat-tab conversation list; TanStack Query refetch-on-focus, no WebSocket. Built AFK via Kimi-Sandcastle as direct branch merges (#168–#174); 52/52 conversations domain+application unit tests green; **zero schema migrations** (conversation models pre-provisioned). Outstanding: human Expo Go simulator smoke of the end-to-end contact flow before the M5 beta demo (sandcastle cannot run the simulator). Retro: [`sprints/sprint-06-contact-seller-retro.md`](sprints/sprint-06-contact-seller-retro.md).
 - 2026-06-06 — S5 Search + listing detail (M4). MLP feed filters (brand→model, city, price range, year range, condition) wired end-to-end from mobile filter sheet through contracts, `ListingFilter` VO, and FX-aware `ChronologicalRankingAdapter` to Prisma query. Filtered infinite query with distinct query-key cache per filter set, zero-result + reset state, and stable cursor pagination on `(publishedAt DESC, id DESC)`. Buyer detail surface (photo gallery, specs, price, seller block, Call/Share CTAs) verified from S4; Message remains "coming soon" → S6. Mobile-only; public web SSR stays deferred to S8.
 - 2026-06-06 — S4 Listings CRUD (M3). Seller posts listings via an 8-step mobile wizard (seven data steps plus Review) with VIN/photos/specs/price/location/contact; anonymous buyer views the chronological feed + full detail on mobile; public web SSR is deferred to S8 per the 2026-05-29 S4 retro. Drafts auto-save, mobile photo uploads run in parallel with form-filling, and My Listings/Drafts supports owner management. Multi-currency input (TMT/USD/AED) displays public prices in TMT through admin-managed FX rates. State machine shipped for active/sold/archived + soft-delete, 14-day sold fade, locked identity fields, price-change audit, and foundation ports (`VinDecoder`, `MediaContentClassifier`, `FeedRanking`, `ImageVariantGenerator`) with null/sync adapters for later swaps.
 - 2026-05-17 — S3 Catalog. Trilingual catalog API (read + admin write for Brand+Model) shipped: 7 entities seeded (Brand/Model/Color/BodyType/Region/City; Generation table-only), Accept-Language middleware live, dev-only `/dev/catalog` mobile route renders the brand list via apiClient. Admin write tested with mintAdminJwt helper; full admin UI ships in S7 under the MLP beta roadmap.
