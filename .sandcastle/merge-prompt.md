@@ -12,7 +12,7 @@ For each branch, in order:
 2. Resolve any conflicts by reading both sides and choosing the correct
    resolution (respect `CLAUDE.md` + each context's `CONTEXT.md`).
 3. After resolving, run
-   `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck --filter=<affected>`
+   `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck --filter=<affected> --cache-dir=/tmp/turbo-cache`
    to confirm the merge still typechecks.
 
 **Do NOT run the Testcontainers e2e suite or build images here.** The full

@@ -84,7 +84,7 @@ calls, and suppresses high-frequency `thinking_tokens` progress records in logs.
 In-sandbox, each implementer/reviewer runs:
 
 ```bash
-COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck lint test:unit --filter=<workspace>
+CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck lint test:unit --filter=<workspace> --cache-dir=/tmp/turbo-cache
 ```
 
 `test:unit` is the **Docker-free** unit suite (excludes `*.e2e.spec.ts`). The
