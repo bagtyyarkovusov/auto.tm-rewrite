@@ -48,6 +48,8 @@ Expo Go contains native code for specific SDK-compatible versions. Treat Expo CL
 
 The fix is SDK alignment, not local package patching: `expo install --fix` aligned the mobile app to the SDK 55 expected package set (`expo-router@55.0.14`, `react-native@0.83.6`, `react-native-svg@15.15.3`, etc.). After changing Expo/RN package versions, run `pnpm install --force` from the repo root so pnpm relinks stale workspace symlinks.
 
+Reanimated 4 is a Worklets-backed native runtime dependency. Keep `react-native-reanimated` and `react-native-worklets` installed explicitly through Expo in `apps/mobile`; RNR components that import animation builders like `FadeIn` can otherwise compile but crash in Expo Go at module import time with vague `Exception in HostFunction` errors.
+
 Required first check for SDK/package issues:
 
 ```bash
