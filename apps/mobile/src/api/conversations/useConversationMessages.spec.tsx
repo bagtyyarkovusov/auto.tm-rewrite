@@ -168,7 +168,7 @@ describe("useConversationMessages", () => {
     );
   });
 
-  it("is disabled when conversationId is empty", async () => {
+  it("is disabled when conversationId is empty", () => {
     const { result } = renderHook(
       () => useConversationMessages({ conversationId: "" }),
       { wrapper },
