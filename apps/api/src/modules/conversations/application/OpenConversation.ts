@@ -69,7 +69,7 @@ export class OpenConversation {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Listing is not available for contact",
-        details: { reason: "LISTING_NOT_AVAILABLE" },
+        details: { reason: CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE },
       });
     }
 

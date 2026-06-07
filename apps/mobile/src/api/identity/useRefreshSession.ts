@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query";
-
 import { AuthSchemas } from "@auto-tm/contracts";
 
 import { loadAuthSession } from "../../auth/session";

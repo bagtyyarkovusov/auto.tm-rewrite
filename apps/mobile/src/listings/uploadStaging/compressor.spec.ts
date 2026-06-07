@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ImageManipulator } from "expo-image-manipulator";
+import { getInfoAsync, moveAsync, copyAsync, deleteAsync } from "expo-file-system/legacy";
+
+import { compressPhoto, CompressionError } from "./compressor";
 
 vi.mock("expo-image-manipulator", () => ({
   SaveFormat: { JPEG: "jpeg" },
@@ -13,11 +17,6 @@ vi.mock("expo-file-system/legacy", () => ({
   copyAsync: vi.fn(),
   deleteAsync: vi.fn(),
 }));
-
-import { ImageManipulator } from "expo-image-manipulator";
-import { getInfoAsync, moveAsync, copyAsync, deleteAsync } from "expo-file-system/legacy";
-
-import { compressPhoto, CompressionError } from "./compressor";
 
 const mockManipulate = vi.mocked(ImageManipulator.manipulate);
 const mockGetInfoAsync = vi.mocked(getInfoAsync);

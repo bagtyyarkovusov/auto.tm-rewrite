@@ -4,7 +4,6 @@ import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { WizardSchemas } from "@auto-tm/contracts";
 
-import { cn } from "@/lib/utils";
 
 import { useColors } from "../../api/catalog/useColors";
 import { useBodyTypes } from "../../api/catalog/useBodyTypes";
@@ -12,7 +11,7 @@ import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 
-
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,

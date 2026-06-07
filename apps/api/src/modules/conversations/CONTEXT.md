@@ -25,7 +25,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
 - **Same-user-cannot-chat-themselves** — enforced at domain layer in `Conversation` constructor and at application layer in `OpenConversation`.
 - **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller. Enforced by `ListMessages` and `SendTextMessage`.
-- **New contact restrictions** — `OpenConversation` rejects new contact for non-existent listings (`NOT_FOUND`), sold/archived listings (`FORBIDDEN`), listings with `allowChat = false` (`FORBIDDEN`), and self-contact (`FORBIDDEN`). Existing conversations remain retrievable regardless of subsequent listing state changes.
+- **New contact restrictions** — `OpenConversation` rejects self-contact first (`FORBIDDEN` with `SELF_CONTACT_NOT_ALLOWED`), returns an existing conversation if one exists (regardless of subsequent listing state changes), then for new conversations rejects non-existent listings (`NOT_FOUND`), sold/archived listings (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), and listings with `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`).
 - **Send restrictions** — `SendTextMessage` blocks sends when the referenced listing is unavailable (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), sold (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), archived (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), has `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`), or when the sender is not a participant (`FORBIDDEN` with `NOT_A_PARTICIPANT`). Existing history remains readable in all read-only states.
 - `Message.kind` is one of text | image | post_ref | system. S6 messages are persisted as `kind = text`.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
@@ -52,7 +52,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 ## Shipped use-cases
 
-- `OpenConversation` — for an authenticated buyer and a `listingId`, fetches the listing summary, validates the listing is active and chat-enabled, rejects self-contact, then creates or returns the existing `Conversation` and its two `ConversationParticipant` rows.
+- `OpenConversation` — for an authenticated buyer and a `listingId`, fetches the listing summary, rejects self-contact first, returns an existing conversation if one exists (regardless of subsequent listing state changes), then for new conversations validates the listing is active and chat-enabled before creating the `Conversation` and its two `ConversationParticipant` rows.
 - `ListMyConversations` — returns paginated conversations where the authenticated user is buyer or seller, sorted by `updatedAt DESC`. Embeds listing summaries via `ListingsReadPort`.
 - `ListMessages` — returns paginated text messages for a conversation, participant-only. Existing history remains readable even when the listing is sold, archived, or unavailable.
 - `SendTextMessage` — creates and persists a text message in a conversation after validating participant status and current listing contactability. Updates conversation activity in the same transaction.
@@ -82,7 +82,6 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 		- Text-only per-listing thread creation and message send/list endpoints
 		- Use-cases: `OpenConversation`, `ListMyConversations`, `ListMessages`, `SendTextMessage`
 		- Application-level invariants: same-user-cannot-chat-themselves; participants only; archived/sold listing contact behavior explicit. When S7 activates `banned`, banned listing threads use the same read-only rule: no new contact or messages, existing history remains readable. If either participant is suspended, new contact/messages are also blocked while existing history remains readable.
-		- Private-beta launch-safety flag `CONTACT_ENABLED=false` blocks new conversation opens and message sends while conversation list/detail history remains readable. Disabled contact writes return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and do not expose internal flag names.
 		- S7 moderation events are not consumed by `conversations/`; no conversation auto-close, worker side effect, or system message ships for listing bans or user suspensions in the MLP. Contact/message blocking is enforced by synchronous listing/user state checks.
   - No Socket.IO, no image messages, no post-card messages, no read receipts, no typing, no presence, no push, no report-from-thread unless S6 is explicitly reshaped before it starts
 

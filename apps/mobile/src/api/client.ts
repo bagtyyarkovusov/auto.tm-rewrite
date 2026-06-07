@@ -1,11 +1,11 @@
 import type { ZodSchema } from "zod";
+import { AuthSchemas } from "@auto-tm/contracts";
 
 import {
   clearAuthSession,
   loadAuthSession,
   storeAuthSession,
 } from "../auth/session";
-import { AuthSchemas } from "@auto-tm/contracts";
 
 const BASE_URL = (
   process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:3006/api/v1"
@@ -180,7 +180,6 @@ async function rawRequest<TResponse>(
       errorBody?.message ??
       (rawText ? `Non-JSON error (${res.status}): ${rawText.slice(0, 200)}` : `HTTP ${res.status}`);
 
-    // eslint-disable-next-line no-console
     console.error("[apiClient] request failed", {
       url: `${BASE_URL}${path}`,
       status: res.status,

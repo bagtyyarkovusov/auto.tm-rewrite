@@ -5,8 +5,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
+import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { server } from "../../../test/msw";
+import type { StagedPhoto } from "../uploadStaging/types";
 
 import {
   useSaveListingEdit,
@@ -14,8 +16,6 @@ import {
   buildFieldsPatch,
   EditSessionError,
 } from "./useSaveListingEdit";
-import type { StagedPhoto } from "../uploadStaging/types";
-import type { ListingsSchemas } from "@auto-tm/contracts";
 
 vi.mock("../../auth/session", () => ({
   loadAuthSession: vi.fn(() =>

@@ -4,6 +4,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { getInfoAsync, readDirectoryAsync, uploadAsync } from "expo-file-system/legacy";
+
+import { compressPhoto } from "./compressor";
+import { ensureDraftDir, getStagingPath } from "./stagingDir";
+import { useUploadQueue } from "./useUploadQueue";
 
 vi.mock("expo-file-system/legacy", () => ({
   getInfoAsync: vi.fn(),
@@ -61,12 +66,6 @@ vi.mock("./stagingDir", () => ({
 vi.mock("./appStateResume", () => ({
   setupUploadResume: vi.fn(() => () => {}),
 }));
-
-import { getInfoAsync, readDirectoryAsync, uploadAsync } from "expo-file-system/legacy";
-
-import { compressPhoto } from "./compressor";
-import { ensureDraftDir, getStagingPath } from "./stagingDir";
-import { useUploadQueue } from "./useUploadQueue";
 
 const mockReadDirectoryAsync = vi.mocked(readDirectoryAsync);
 const mockGetInfoAsync = vi.mocked(getInfoAsync);
