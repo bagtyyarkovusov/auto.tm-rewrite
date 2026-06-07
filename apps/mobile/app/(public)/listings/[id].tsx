@@ -138,6 +138,7 @@ export default function ListingDetailScreen() {
             listingId={data.id}
             contactPhone={data.contactPhone}
             allowCalls={data.allowCalls}
+            allowChat={data.allowChat}
             status={data.status}
           />
         </View>

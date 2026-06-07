@@ -85,10 +85,12 @@ describe("ContactCtaBar", () => {
     expect(contactCtaSource).toContain("contactPhone");
   });
 
-  it("disables Message with honest coming-soon copy", () => {
-    expect(contactCtaSource).toContain("Chat coming soon");
+  it("enables Message for eligible listings with auth-on-action", () => {
+    expect(contactCtaSource).toContain("allowChat");
+    expect(contactCtaSource).toContain("canMessage");
     expect(contactCtaSource).toContain("MessageCircle");
-    expect(contactCtaSource).toContain("disabled");
+    expect(contactCtaSource).toContain("useAuthIntentStore");
+    expect(contactCtaSource).toContain("useOpenConversation");
   });
 
   it("disables Favorite without implementing favorites behavior", () => {

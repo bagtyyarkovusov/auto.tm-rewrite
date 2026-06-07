@@ -1,0 +1,55 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+import { describe, it, expect } from "vitest";
+
+const source = readFileSync(resolve(__dirname, "./MessageBubble.tsx"), "utf-8");
+
+describe("MessageBubble", () => {
+  it("exports MessageBubble component", () => {
+    expect(source).toContain("export function MessageBubble");
+  });
+
+  it("accepts text, isMine, status, and createdAt props", () => {
+    expect(source).toContain("text: string");
+    expect(source).toContain("isMine: boolean");
+    expect(source).toContain("status: MessageStatus");
+    expect(source).toContain("createdAt: string");
+  });
+
+  it("accepts onRetry callback for failed messages", () => {
+    expect(source).toContain("onRetry?: () => void");
+  });
+
+  it("aligns own messages to the right", () => {
+    expect(source).toContain('isMine ? "justify-end" : "justify-start"');
+  });
+
+  it("uses primary background for own messages", () => {
+    expect(source).toContain('isMine\n            ? "bg-primary rounded-br-md"');
+  });
+
+  it("uses muted background for peer messages", () => {
+    expect(source).toContain(': "bg-muted rounded-bl-md"');
+  });
+
+  it("shows pending status text", () => {
+    expect(source).toContain('status === "pending"');
+    expect(source).toContain("Sending…");
+  });
+
+  it("shows failed status text with retry affordance", () => {
+    expect(source).toContain('status === "failed"');
+    expect(source).toContain("Failed to send");
+    expect(source).toContain("RotateCcw");
+    expect(source).toContain("onRetry");
+  });
+
+  it("has retry accessibility label", () => {
+    expect(source).toContain('accessibilityLabel="Retry sending message"');
+  });
+
+  it("uses hitSlop for retry tap target", () => {
+    expect(source).toContain("hitSlop");
+  });
+});

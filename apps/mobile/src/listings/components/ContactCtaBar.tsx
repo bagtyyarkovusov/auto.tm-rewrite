@@ -1,7 +1,12 @@
 import { Share, View } from "react-native";
 import * as Linking from "expo-linking";
+import { useRouter } from "expo-router";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
+
+import { useAuth } from "../../auth/useAuth";
+import { useAuthIntentStore } from "../../auth/intentStore";
+import { useOpenConversation } from "../../api/conversations/useOpenConversation";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -11,6 +16,7 @@ interface ContactCtaBarProps {
   listingId: string;
   contactPhone?: string;
   allowCalls: boolean;
+  allowChat: boolean;
   status: Enums.ListingStatus;
 }
 
@@ -18,10 +24,17 @@ export function ContactCtaBar({
   listingId,
   contactPhone,
   allowCalls,
+  allowChat,
   status,
 }: ContactCtaBarProps) {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const openConversation = useOpenConversation();
+
   const isSold = status === Enums.ListingStatus.Sold;
-  const canCall = allowCalls && !!contactPhone && !isSold;
+  const isArchived = status === Enums.ListingStatus.Archived;
+  const canCall = allowCalls && !!contactPhone && !isSold && !isArchived;
+  const canMessage = allowChat && !isSold && !isArchived;
 
   const handleCall = async () => {
     if (!canCall || !contactPhone) return;
@@ -29,6 +42,44 @@ export function ContactCtaBar({
     const supported = await Linking.canOpenURL(url);
     if (supported) {
       await Linking.openURL(url);
+    }
+  };
+
+  const handleMessage = () => {
+    if (!canMessage) return;
+
+    if (isAuthenticated === false) {
+      useAuthIntentStore.getState().setIntent({
+        returnPath: `/conversations/open-listing?listingId=${listingId}`,
+      });
+      router.push("/(auth)/phone");
+      return;
+    }
+
+    if (isAuthenticated === true) {
+      openConversation.mutate(
+        { listingId },
+        {
+          onSuccess: (data) => {
+            const listing = data.listing;
+            router.push({
+              pathname: `/conversations/${data.id}`,
+              params: {
+                listingId: listing?.id ?? "",
+                brandId: listing?.brandId ?? "",
+                modelId: listing?.modelId ?? "",
+                year: listing?.year ? String(listing.year) : "",
+                displayPriceTmt: listing?.displayPriceTmt
+                  ? String(listing.displayPriceTmt)
+                  : "",
+                priceCurrency: listing?.priceCurrency ?? "",
+                coverMediaKey: listing?.coverMediaKey ?? "",
+                status: listing?.status ?? "",
+              },
+            });
+          },
+        },
+      );
     }
   };
 
@@ -57,13 +108,21 @@ export function ContactCtaBar({
       </Button>
 
       <Button
-        variant="secondary"
+        variant={canMessage ? "default" : "secondary"}
         size="icon"
-        disabled
-        accessibilityLabel="Chat coming soon"
-        accessibilityState={{ disabled: true }}
+        disabled={!canMessage || openConversation.isPending}
+        onPress={handleMessage}
+        accessibilityLabel={canMessage ? "Message seller" : "Message unavailable"}
+        accessibilityState={{ disabled: !canMessage }}
       >
-        <Icon as={MessageCircle} className="size-5 text-muted-foreground" />
+        <Icon
+          as={MessageCircle}
+          className={
+            canMessage
+              ? "size-5 text-primary-foreground"
+              : "size-5 text-muted-foreground"
+          }
+        />
       </Button>
 
       <Button variant="secondary" size="icon" onPress={handleShare}>

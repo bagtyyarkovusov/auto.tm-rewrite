@@ -199,6 +199,8 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(public)" />
+            <Stack.Screen name="conversations/[id]" />
+            <Stack.Screen name="conversations/open-listing" />
             <Stack.Screen
               name="(auth)/phone"
               options={{ presentation: "fullScreenModal" }}
