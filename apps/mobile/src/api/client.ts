@@ -180,7 +180,7 @@ async function rawRequest<TResponse>(
       errorBody?.message ??
       (rawText ? `Non-JSON error (${res.status}): ${rawText.slice(0, 200)}` : `HTTP ${res.status}`);
 
-     console.error("[apiClient] request failed", {
+    console.error("[apiClient] request failed", {
       url: `${BASE_URL}${path}`,
       status: res.status,
       code,
