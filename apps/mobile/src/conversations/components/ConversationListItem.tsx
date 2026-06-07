@@ -71,7 +71,7 @@ export function ConversationListItem({
     : null;
 
   const handlePress = () => {
-    const params: Record<string, string> = {
+    const params: { id: string } & Record<string, string> = {
       id: conversation.id,
     };
 
@@ -87,7 +87,7 @@ export function ConversationListItem({
     }
 
     router.push({
-      pathname: `/conversations/${conversation.id}`,
+      pathname: "/conversations/[id]",
       params,
     });
   };

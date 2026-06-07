@@ -63,8 +63,9 @@ export function ContactCtaBar({
           onSuccess: (data) => {
             const listing = data.listing;
             router.push({
-              pathname: `/conversations/${data.id}`,
+              pathname: "/conversations/[id]",
               params: {
+                id: data.id,
                 listingId: listing?.id ?? "",
                 brandId: listing?.brandId ?? "",
                 modelId: listing?.modelId ?? "",

@@ -32,8 +32,9 @@ export default function OpenListingConversationScreen() {
     if (isSuccess && data) {
       const listing = data.listing;
       router.replace({
-        pathname: `/conversations/${data.id}`,
+        pathname: "/conversations/[id]",
         params: {
+          id: data.id,
           listingId: listing?.id ?? "",
           brandId: listing?.brandId ?? "",
           modelId: listing?.modelId ?? "",

@@ -55,7 +55,8 @@ describe("ConversationListItem", () => {
 
   it("navigates to conversation detail on press", () => {
     expect(source).toContain('router.push({');
-    expect(source).toContain('pathname: `/conversations/${conversation.id}`');
+    expect(source).toContain('pathname: "/conversations/[id]"');
+    expect(source).toContain("id: conversation.id");
   });
 
   it("passes listing card params to detail route", () => {
