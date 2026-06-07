@@ -1,6 +1,7 @@
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { Enums } from "@auto-tm/contracts";
 
 import { Text } from "@/components/ui/text";
 
@@ -144,7 +145,7 @@ export function ConversationListItem({
           <Text className="text-xs text-muted-foreground capitalize">
             {conversation.myRole === "buyer" ? "You are buyer" : "You are seller"}
           </Text>
-          {listing && listing.status !== "active" && (
+          {listing && listing.status !== Enums.ListingStatus.Active && (
             <Text className="text-xs text-muted-foreground capitalize">
               · {listing.status}
             </Text>

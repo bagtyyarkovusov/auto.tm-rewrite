@@ -49,7 +49,7 @@ describe("ConversationListItem", () => {
   });
 
   it("shows listing status when not active", () => {
-    expect(source).toContain('listing.status !== "active"');
+    expect(source).toContain("Enums.ListingStatus.Active");
     expect(source).toContain("listing.status");
   });
 

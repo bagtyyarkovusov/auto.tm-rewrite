@@ -32,6 +32,22 @@ function AnonymousChatEntry() {
   );
 }
 
+function ChatContent({ isAuthenticated }: { isAuthenticated: boolean | null }) {
+  if (isAuthenticated === false) {
+    return <AnonymousChatEntry />;
+  }
+
+  if (isAuthenticated === true) {
+    return <ConversationList />;
+  }
+
+  return (
+    <View className="flex-1 items-center justify-center">
+      <Text className="text-sm text-muted-foreground">Loading…</Text>
+    </View>
+  );
+}
+
 export default function ChatScreen() {
   const { isAuthenticated } = useAuth();
 
@@ -41,15 +57,7 @@ export default function ChatScreen() {
         <Text className="text-2xl font-semibold text-foreground">Messages</Text>
       </View>
 
-      {isAuthenticated === false ? (
-        <AnonymousChatEntry />
-      ) : isAuthenticated === true ? (
-        <ConversationList />
-      ) : (
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-sm text-muted-foreground">Loading…</Text>
-        </View>
-      )}
+      <ChatContent isAuthenticated={isAuthenticated} />
     </SafeAreaView>
   );
 }

@@ -85,7 +85,7 @@ export function ConversationList() {
     return <LoadingSkeleton />;
   }
 
-  if (isError) {
+  if (isError && !data) {
     return <ErrorState onRetry={handleRefresh} />;
   }
 
