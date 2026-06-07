@@ -19,10 +19,10 @@
 | | |
 |---|---|
 | **Sprint** | S7 — Minimal admin + moderation |
-| **Status** | ⚪ Pending |
-| **Started** | — |
+| **Status** | 🟡 In progress |
+| **Started** | 2026-06-07 |
 | **Phase** | 1 (MLP beta) |
-| **Plan file** | TBD — created by `/create-sprint-issues 7` |
+| **Plan file** | [Sprint 7 parent #175](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/175) (10 child issues #176–#185) |
 | **Sprint doc** | [`sprints/sprint-07-minimal-admin.md`](sprints/sprint-07-minimal-admin.md) |
 | **Milestone** | M6 — Admins can keep beta safe |
 
@@ -52,7 +52,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S4 | [Listings CRUD](sprints/sprint-04-listings-crud.md) | 🟢 Shipped | 2026-05-17 | 2026-06-06 | M3 | Internal group |
 | S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | 🟢 Shipped | 2026-06-06 | 2026-06-06 | M4 | 10-20 beta testers with seeded listings |
 | S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟢 Shipped | 2026-06-06 | 2026-06-07 | M5 | Beta testers with real listings |
-| S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | ⚪ Pending | — | — | M6 | Internal admins |
+| S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | 🟡 | 2026-06-07 | — | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | ⚪ Pending | — | — | M7 | First 10-50 real users |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
