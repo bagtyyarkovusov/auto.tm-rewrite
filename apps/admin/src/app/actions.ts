@@ -1,0 +1,319 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { AuthSchemas, ErrorCode } from "@auto-tm/contracts";
+
+import { apiFetch, apiFetchOptional, ApiError } from "@/lib/api-client";
+import {
+  clearAuthCookies,
+  getRefreshToken,
+  setAuthCookies,
+} from "@/lib/cookies";
+import { validateReturnTo } from "@/lib/validators";
+
+// ─── OTP ───
+
+export async function requestOtp(
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ ok: false; error: string } | { ok: true; resendInSeconds: number }> {
+  const phone = formData.get("phone") as string;
+  const parsed = AuthSchemas.PhoneTm.safeParse(phone);
+  if (!parsed.success) {
+    return { ok: false, error: "Введите номер телефона в формате +993XXXXXXXX" };
+  }
+
+  try {
+    const result = await apiFetch<AuthSchemas.OtpRequestResponse>(
+      "/auth/otp/request",
+      { method: "POST", body: { phone: parsed.data } as unknown },
+    );
+    return { ok: true, resendInSeconds: result.resendInSeconds };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.code === ErrorCode.RateLimited) {
+        return { ok: false, error: "Слишком много попыток. Попробуйте позже." };
+      }
+      return { ok: false, error: err.message };
+    }
+    return { ok: false, error: "Не удалось отправить код. Попробуйте позже." };
+  }
+}
+
+export type VerifyOtpResult =
+  | { ok: false; error: string }
+  | { ok: true; next: "totp" | "reports"; backupCodes?: string[] };
+
+export async function verifyOtp(
+  _prev: unknown,
+  formData: FormData,
+): Promise<VerifyOtpResult> {
+  const phone = formData.get("phone") as string;
+  const code = formData.get("code") as string;
+
+  const parsedPhone = AuthSchemas.PhoneTm.safeParse(phone);
+  if (!parsedPhone.success) {
+    return { ok: false, error: "Неверный формат номера телефона." };
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return { ok: false, error: "Код должен содержать 6 цифр." };
+  }
+
+  try {
+    const result = await apiFetch<AuthSchemas.OtpVerifyResponse>(
+      "/auth/otp/verify",
+      {
+        method: "POST",
+        body: { phone: parsedPhone.data, code } as unknown,
+      },
+    );
+
+    if (result.user.role !== "admin") {
+      await clearAuthCookies();
+      return {
+        ok: false,
+        error:
+          "Доступ к панели администратора ограничен. Обратитесь к администратору.",
+      };
+    }
+
+    await setAuthCookies(result.accessToken, result.refreshToken);
+
+    // After OTP, check TOTP status to decide where to send the user
+    const totpStatus =
+      await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
+        "/auth/admin/totp/status",
+      );
+
+    if (!totpStatus) {
+      // Token expired/invalid between OTP verify and status check (rare)
+      await clearAuthCookies();
+      return { ok: false, error: "Сессия истекла. Войдите снова." };
+    }
+
+    if (totpStatus.enrolled && totpStatus.elevated) {
+      return { ok: true, next: "reports" };
+    }
+
+    return { ok: true, next: "totp" };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.code === ErrorCode.RateLimited) {
+        return {
+          ok: false,
+          error: "Слишком много попыток. Подождите и попробуйте снова.",
+        };
+      }
+      if (err.status === 401) {
+        return {
+          ok: false,
+          error: "Неверный код. Попробуйте ещё раз.",
+        };
+      }
+      return { ok: false, error: err.message };
+    }
+    return { ok: false, error: "Не удалось подтвердить код. Попробуйте позже." };
+  }
+}
+
+// ─── TOTP ───
+
+export type TotpStatusResult =
+  | { ok: false }
+  | {
+      ok: true;
+      enrolled: boolean;
+      elevated: boolean;
+      adminTotpExpiresAt?: string;
+    };
+
+export async function getTotpStatus(): Promise<TotpStatusResult> {
+  try {
+    const status =
+      await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
+        "/auth/admin/totp/status",
+      );
+    if (!status) return { ok: false };
+    const result: TotpStatusResult = {
+      ok: true,
+      enrolled: status.enrolled,
+      elevated: status.elevated,
+    };
+    if (status.adminTotpExpiresAt != null) {
+      result.adminTotpExpiresAt = status.adminTotpExpiresAt;
+    }
+    return result;
+  } catch {
+    return { ok: false };
+  }
+}
+
+export type TotpEnrollResult =
+  | { ok: false; error: string }
+  | { ok: true; qrCodeDataUrl: string };
+
+export async function enrollTotp(): Promise<TotpEnrollResult> {
+  try {
+    const result = await apiFetch<AuthSchemas.AdminTotpEnrollResponse>(
+      "/auth/admin/totp/enroll",
+      { method: "POST" },
+    );
+    // Generate the QR data URL server-side so the secret never reaches the client
+    const { generateTotpQrCodeDataUrl } = await import("@/lib/qrcode");
+    const qrCodeDataUrl = await generateTotpQrCodeDataUrl(result.qrCodeUrl);
+    return { ok: true, qrCodeDataUrl };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (
+        err.code === ErrorCode.Conflict &&
+        (err.responseBody as { details?: { reason?: string } })?.details
+          ?.reason === "TOTP_ALREADY_ENROLLED"
+      ) {
+        return {
+          ok: false,
+          error: "Двухфакторная аутентификация уже настроена.",
+        };
+      }
+      return { ok: false, error: err.message };
+    }
+    return {
+      ok: false,
+      error: "Не удалось начать настройку 2FA. Попробуйте позже.",
+    };
+  }
+}
+
+export type TotpVerifyResult =
+  | { ok: false; error: string }
+  | { ok: true; adminTotpExpiresAt: string; backupCodes?: string[] };
+
+export async function verifyTotp(
+  _prev: unknown,
+  formData: FormData,
+): Promise<TotpVerifyResult> {
+  const code = formData.get("code") as string;
+  if (!code || code.length < 1) {
+    return { ok: false, error: "Введите код." };
+  }
+
+  try {
+    const result = await apiFetch<AuthSchemas.AdminTotpVerifyResponse>(
+      "/auth/admin/totp/verify",
+      { method: "POST", body: { code } as unknown },
+    );
+    const response: TotpVerifyResult = {
+      ok: true,
+      adminTotpExpiresAt: result.adminTotpExpiresAt,
+    };
+    if (result.backupCodes != null) {
+      response.backupCodes = result.backupCodes;
+    }
+    return response;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.code === ErrorCode.RateLimited) {
+        return {
+          ok: false,
+          error: "Слишком много попыток. Подождите и попробуйте снова.",
+        };
+      }
+      if (err.status === 401 || err.status === 403) {
+        return {
+          ok: false,
+          error: "Неверный код. Попробуйте ещё раз.",
+        };
+      }
+      return { ok: false, error: err.message };
+    }
+    return {
+      ok: false,
+      error: "Не удалось подтвердить код. Попробуйте позже.",
+    };
+  }
+}
+
+// ─── Logout ───
+
+export async function logout(): Promise<void> {
+  const refreshToken = await getRefreshToken();
+  if (refreshToken) {
+    try {
+      await apiFetch("/auth/logout", {
+        method: "POST",
+        body: { refreshToken } as unknown,
+      });
+    } catch {
+      // Ignore API failures — always clear cookies locally
+    }
+  }
+  await clearAuthCookies();
+  redirect("/login");
+}
+
+export async function logoutAll(): Promise<void> {
+  try {
+    await apiFetch("/auth/logout-all", { method: "POST" });
+  } catch {
+    // Ignore API failures — always clear cookies locally
+  }
+  await clearAuthCookies();
+  redirect("/login");
+}
+
+// ─── Auth gate helpers ───
+
+export async function requireAuth(): Promise<{
+  enrolled: boolean;
+  elevated: boolean;
+  adminTotpExpiresAt?: string;
+}> {
+  const status = await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
+    "/auth/admin/totp/status",
+  );
+
+  if (!status) {
+    await clearAuthCookies();
+    redirect("/login");
+  }
+
+  if (!status.elevated) {
+    redirect("/login?mode=totp");
+  }
+
+  const result: {
+    enrolled: boolean;
+    elevated: boolean;
+    adminTotpExpiresAt?: string;
+  } = {
+    enrolled: status.enrolled,
+    elevated: status.elevated,
+  };
+  if (status.adminTotpExpiresAt != null) {
+    result.adminTotpExpiresAt = status.adminTotpExpiresAt;
+  }
+  return result;
+}
+
+export async function requireAuthWithReturnTo(
+  returnTo: string | null | undefined,
+): Promise<void> {
+  const status = await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
+    "/auth/admin/totp/status",
+  );
+
+  if (!status) {
+    await clearAuthCookies();
+    const safeReturnTo = validateReturnTo(returnTo);
+    const url = new URL("/login", "http://localhost");
+    if (safeReturnTo) url.searchParams.set("returnTo", safeReturnTo);
+    redirect(url.pathname + url.search);
+  }
+
+  if (!status.elevated) {
+    const safeReturnTo = validateReturnTo(returnTo);
+    const url = new URL("/login", "http://localhost");
+    url.searchParams.set("mode", "totp");
+    if (safeReturnTo) url.searchParams.set("returnTo", safeReturnTo);
+    redirect(url.pathname + url.search);
+  }
+}
