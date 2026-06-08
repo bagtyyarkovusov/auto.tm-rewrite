@@ -53,6 +53,14 @@ function statusBadgeClass(status: string): string {
   }
 }
 
+function reportPlural(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "жалоба";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "жалобы";
+  return "жалоб";
+}
+
 export default async function ReportsPage({
   searchParams,
 }: {
@@ -115,7 +123,7 @@ export default async function ReportsPage({
         <div>
           <h1 className="text-2xl font-bold">Очередь жалоб</h1>
           <p className="text-sm text-neutral-500">
-            {total} {total === 1 ? "жалоба" : total < 5 ? "жалобы" : "жалоб"}
+            {total} {reportPlural(total)}
           </p>
         </div>
         <form

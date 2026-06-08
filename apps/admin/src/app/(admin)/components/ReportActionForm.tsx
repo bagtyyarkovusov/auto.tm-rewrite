@@ -56,7 +56,9 @@ export function ReportActionForm({
 
       if (!result.ok) {
         const code = result.code;
-        const details = result.details as { reason?: string; reportStatus?: string } | undefined;
+        const details = (
+          result.details as { details?: { reason?: string; reportStatus?: string } } | undefined
+        )?.details;
 
         if (code === "CONFLICT" && details?.reason === "REPORT_ALREADY_RESOLVED") {
           setError("Жалоба уже обработана другим администратором. Страница обновлена.");

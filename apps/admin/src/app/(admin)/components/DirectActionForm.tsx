@@ -54,7 +54,9 @@ export function DirectActionForm({ actionType, targetId }: DirectActionFormProps
 
       if (!result.ok) {
         const code = result.code;
-        const details = result.details as { reason?: string; targetState?: unknown } | undefined;
+        const details = (
+          result.details as { details?: { reason?: string; targetState?: unknown } } | undefined
+        )?.details;
 
         if (code === "CONFLICT" && details?.reason === "MODERATION_TARGET_STATE_CONFLICT") {
           setError("Состояние цели изменилось. Страница обновлена.");

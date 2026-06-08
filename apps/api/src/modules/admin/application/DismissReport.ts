@@ -57,13 +57,15 @@ export class DismissReport {
       });
     }
 
+    const reviewedAt = new Date();
+
     const result = await this.prisma.$transaction(async (tx) => {
       await this.reportRepo.updateStatus(
         report.id,
         {
           status: "dismissed",
           reviewedById: input.adminUserId,
-          reviewedAt: new Date(),
+          reviewedAt,
         },
         tx,
       );
@@ -88,7 +90,7 @@ export class DismissReport {
       return {
         reportId: report.id,
         status: "dismissed" as const,
-        reviewedAt: new Date().toISOString(),
+        reviewedAt: reviewedAt.toISOString(),
         auditLogId: auditRow.id,
       };
     });

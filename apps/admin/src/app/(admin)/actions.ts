@@ -73,7 +73,7 @@ export async function dismissReport(
       `/admin/reports/${id}/dismiss`,
       {
         method: "POST",
-        body: { reason } as unknown,
+        body: { reason },
       },
     );
     return { ok: true, data };
@@ -94,7 +94,7 @@ export async function banListing(
       `/admin/listings/${id}/ban`,
       {
         method: "POST",
-        body: { reason, reportId } as unknown,
+        body: { reason, reportId },
       },
     );
     return { ok: true, data };
@@ -112,7 +112,7 @@ export async function unbanListing(
       `/admin/listings/${id}/unban`,
       {
         method: "POST",
-        body: { reason } as unknown,
+        body: { reason },
       },
     );
     return { ok: true, data };
@@ -133,7 +133,7 @@ export async function suspendUser(
       `/admin/users/${id}/suspend`,
       {
         method: "POST",
-        body: { reason, reportId } as unknown,
+        body: { reason, reportId },
       },
     );
     return { ok: true, data };
@@ -151,7 +151,7 @@ export async function unsuspendUser(
       `/admin/users/${id}/unsuspend`,
       {
         method: "POST",
-        body: { reason } as unknown,
+        body: { reason },
       },
     );
     return { ok: true, data };
