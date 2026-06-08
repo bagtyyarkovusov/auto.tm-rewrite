@@ -9,6 +9,7 @@ import { useCatalogMaps } from "../../../src/listings/detail/useCatalogMaps";
 import { ListingDetailView } from "../../../src/listings/components/ListingDetail";
 import { ContactCtaBar } from "../../../src/listings/components/ContactCtaBar";
 import { useViewer } from "../../../src/auth/useViewer";
+import { useConfig } from "../../../src/api/admin/useConfig";
 import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ export default function ListingDetailScreen() {
   const router = useRouter();
   const { data, isPending, error, refetch } = useListingDetail(id ?? "");
   const viewer = useViewer();
+  const { data: config } = useConfig();
   const [reportOpen, setReportOpen] = useState(false);
 
   const { maps } = useCatalogMaps(
@@ -135,7 +137,11 @@ export default function ListingDetailScreen() {
           listing={data}
           maps={maps}
           isOwner={isOwner}
-          onReport={() => setReportOpen(true)}
+          onReport={
+            config?.reportEntryEnabled !== false
+              ? () => setReportOpen(true)
+              : undefined
+          }
         />
       </View>
 

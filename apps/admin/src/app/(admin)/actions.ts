@@ -12,6 +12,7 @@ type UnbanListingResponse = AdminSchemas.UnbanListingResponse;
 type SuspendUserResponse = AdminSchemas.SuspendUserResponse;
 type UnsuspendUserResponse = AdminSchemas.UnsuspendUserResponse;
 type ListAuditEntriesResponse = AdminSchemas.ListAuditEntriesResponse;
+type ConfigResponse = AdminSchemas.ConfigResponse;
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -180,6 +181,17 @@ export async function listAuditEntries(params: {
     const data = await apiFetch<ListAuditEntriesResponse>(
       `/admin/audit?${searchParams.toString()}`,
     );
+    return { ok: true, data };
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+// ─── Config ───
+
+export async function getConfig(): Promise<ActionResult<ConfigResponse>> {
+  try {
+    const data = await apiFetch<ConfigResponse>("/config");
     return { ok: true, data };
   } catch (err) {
     return handleApiError(err);

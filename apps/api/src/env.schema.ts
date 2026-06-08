@@ -42,6 +42,16 @@ export const EnvSchema = z.object({
   MINIO_ACCESS_KEY: z.string().default("minioadmin"),
   MINIO_SECRET_KEY: z.string().default("minioadmin"),
   MINIO_REGION: z.string().default("us-east-1"),
+
+  REPORT_ENTRY_ENABLED: z
+    .string()
+    .transform((v) => v === "true")
+    .default("true"),
+
+  ADMIN_MODERATION_ACTIONS_ENABLED: z
+    .string()
+    .transform((v) => v === "true")
+    .default("true"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
