@@ -6,12 +6,14 @@ export {
   CursorPaginationResponseSchema,
   OffsetPaginationRequestSchema,
   OffsetPaginationResponseSchema,
+  AdminTablePaginationRequestSchema,
 } from "./pagination";
 export type {
   CursorPaginationRequest,
   CursorPaginationResponse,
   OffsetPaginationRequest,
   OffsetPaginationResponse,
+  AdminTablePaginationRequest,
 } from "./pagination";
 
 export * as AuthSchemas from "./schemas/auth";

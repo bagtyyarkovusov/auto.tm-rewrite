@@ -13,993 +13,3844 @@
   "components": {
     "schemas": {
       "ErrorResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer"
           },
-          "typeName": "ZodObject"
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_FAILED",
+              "UNAUTHORIZED",
+              "FORBIDDEN",
+              "NOT_FOUND",
+              "CONFLICT",
+              "RATE_LIMITED",
+              "INTERNAL"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "timestamp",
+          "requestId"
+        ]
       },
       "BrandSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
       },
       "BrandDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameTk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "nameRu",
+          "nameTk",
+          "nameEn",
+          "slug"
+        ]
       },
       "ModelSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "brandId": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "brandId"
+        ]
       },
       "ModelDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameTk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "brandId": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "nameRu",
+          "nameTk",
+          "nameEn",
+          "slug",
+          "brandId"
+        ]
       },
       "GenerationSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "yearStart": {
+            "type": "integer",
+            "nullable": true
+          },
+          "yearEnd": {
+            "type": "integer",
+            "nullable": true
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "modelId"
+        ]
       },
       "GenerationDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameTk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "yearStart": {
+            "type": "integer",
+            "nullable": true
+          },
+          "yearEnd": {
+            "type": "integer",
+            "nullable": true
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "nameRu",
+          "nameTk",
+          "nameEn",
+          "modelId"
+        ]
       },
       "ColorSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "hex": {
+            "type": "string",
+            "nullable": true
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name"
+        ]
       },
       "ColorDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameTk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "hex": {
+            "type": "string",
+            "nullable": true
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "nameRu",
+          "nameTk",
+          "nameEn"
+        ]
       },
       "BodyTypeSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name"
+        ]
       },
       "BodyTypeDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameTk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "nameRu",
+          "nameTk",
+          "nameEn"
+        ]
       },
       "RegionSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
       },
       "RegionDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameTk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "nameRu",
+          "nameTk",
+          "nameEn",
+          "slug"
+        ]
       },
       "CitySummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "regionId"
+        ]
       },
       "CityDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "name": {
+            "type": "string"
+          },
+          "nameRu": {
+            "type": "string"
+          },
+          "nameTk": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "localeFallback": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "tk",
+              "en"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "name",
+          "nameRu",
+          "nameTk",
+          "nameEn",
+          "slug",
+          "regionId"
+        ]
       },
       "CreateBrandRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "nameRu": {
+            "type": "string",
+            "minLength": 1
           },
-          "typeName": "ZodObject"
+          "nameTk": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameEn": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "nameRu",
+          "nameTk",
+          "nameEn",
+          "slug"
+        ]
       },
       "UpdateBrandRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "nameRu": {
+            "type": "string",
+            "minLength": 1
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+          "nameTk": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameEn": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       },
       "DeleteBrandParam": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
-          },
-          "typeName": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id"
+        ]
       },
       "CreateModelRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "nameRu": {
+            "type": "string",
+            "minLength": 1
           },
-          "typeName": "ZodObject"
+          "nameTk": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameEn": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "nameRu",
+          "nameTk",
+          "nameEn",
+          "slug",
+          "brandId"
+        ]
       },
       "UpdateModelRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "nameRu": {
+            "type": "string",
+            "minLength": 1
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+          "nameTk": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameEn": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "DeleteModelParam": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
-          },
-          "typeName": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id"
+        ]
       },
       "ListingSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "active",
+              "sold",
+              "archived",
+              "rejected"
+            ]
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "displayPriceTmt": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "coverMediaKey": {
+            "type": "string"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "sellerId",
+          "status",
+          "brandId",
+          "modelId",
+          "priceAmount",
+          "priceCurrency",
+          "displayPriceTmt",
+          "cityId",
+          "publishedAt"
+        ]
       },
       "ListingDetail": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
-      },
-      "ListingMedia": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
-      },
-      "ListingDraft": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "active",
+              "sold",
+              "archived",
+              "rejected"
+            ]
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
-      },
-      "ListingDraftPayload": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
-      },
-      "CreateDraftRequest": {
-        "_def": {
-          "innerType": {
-            "_def": {
-              "unknownKeys": "strip",
-              "catchall": {
-                "_def": {
-                  "typeName": "ZodNever"
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "vin": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "colorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodyTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "driveTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enginePower": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "displayPriceTmt": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locationText": {
+            "type": "string"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "allowCalls": {
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          },
+          "acceptsExchange": {
+            "type": "boolean"
+          },
+          "installmentAvailable": {
+            "type": "boolean"
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
                 },
-                "~standard": {
-                  "version": 1,
-                  "vendor": "zod"
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "image",
+                    "video"
+                  ]
+                },
+                "key": {
+                  "type": "string"
+                },
+                "variants": {
+                  "type": "object",
+                  "properties": {
+                    "thumbnail": {
+                      "type": "string"
+                    },
+                    "list": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "fullscreen": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "thumbnail",
+                    "list",
+                    "detail",
+                    "fullscreen"
+                  ]
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "sortOrder": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "posterKey": {
+                  "type": "string"
                 }
               },
-              "typeName": "ZodObject"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            },
-            "_cached": null
+              "required": [
+                "id",
+                "kind",
+                "key",
+                "variants",
+                "sortOrder"
+              ]
+            }
           },
-          "typeName": "ZodOptional"
+          "viewCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "favoriteCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "soldAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
+        "required": [
+          "id",
+          "sellerId",
+          "status",
+          "brandId",
+          "modelId",
+          "priceAmount",
+          "priceCurrency",
+          "displayPriceTmt",
+          "regionId",
+          "cityId",
+          "allowCalls",
+          "allowChat",
+          "acceptsExchange",
+          "installmentAvailable",
+          "media",
+          "viewCount",
+          "favoriteCount",
+          "publishedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ListingMedia": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "variants": {
+            "type": "object",
+            "properties": {
+              "thumbnail": {
+                "type": "string"
+              },
+              "list": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "fullscreen": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "thumbnail",
+              "list",
+              "detail",
+              "fullscreen"
+            ]
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "durationMs": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "posterKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "key",
+          "variants",
+          "sortOrder"
+        ]
+      },
+      "ListingDraft": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "payload": {
+            "type": "object",
+            "properties": {
+              "currentStep": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 7
+              },
+              "vin": {
+                "type": "string"
+              },
+              "photos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "photoId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "key": {
+                      "type": "string"
+                    },
+                    "sortOrder": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "photoId",
+                    "sortOrder"
+                  ]
+                }
+              },
+              "brandId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "modelId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "generationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "year": {
+                "type": "integer",
+                "minimum": 1900,
+                "maximum": 2100
+              },
+              "mileageKm": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "condition": {
+                "type": "string",
+                "enum": [
+                  "new",
+                  "used"
+                ]
+              },
+              "colorId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "bodyTypeId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "transmissionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "driveTypeId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "engineTypeId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "enginePower": {
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "priceAmount": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "priceCurrency": {
+                "type": "string",
+                "enum": [
+                  "TMT",
+                  "USD",
+                  "AED"
+                ]
+              },
+              "regionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "cityId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "locationText": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "contactPhone": {
+                "type": "string"
+              },
+              "allowCalls": {
+                "type": "boolean"
+              },
+              "allowChat": {
+                "type": "boolean"
+              },
+              "acceptsExchange": {
+                "type": "boolean"
+              },
+              "installmentAvailable": {
+                "type": "boolean"
+              },
+              "validatedSteps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "payload",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ListingDraftPayload": {
+        "type": "object",
+        "properties": {
+          "currentStep": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "vin": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "photoId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "sortOrder": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "photoId",
+                "sortOrder"
+              ]
+            }
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "colorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodyTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "driveTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enginePower": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locationText": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "allowCalls": {
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          },
+          "acceptsExchange": {
+            "type": "boolean"
+          },
+          "installmentAvailable": {
+            "type": "boolean"
+          },
+          "validatedSteps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateDraftRequest": {
+        "type": "object",
+        "properties": {
+          "initialPayload": {
+            "type": "object",
+            "properties": {
+              "currentStep": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 7
+              },
+              "vin": {
+                "type": "string"
+              },
+              "photos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "photoId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "key": {
+                      "type": "string"
+                    },
+                    "sortOrder": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "photoId",
+                    "sortOrder"
+                  ]
+                }
+              },
+              "brandId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "modelId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "generationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "year": {
+                "type": "integer",
+                "minimum": 1900,
+                "maximum": 2100
+              },
+              "mileageKm": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "condition": {
+                "type": "string",
+                "enum": [
+                  "new",
+                  "used"
+                ]
+              },
+              "colorId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "bodyTypeId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "transmissionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "driveTypeId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "engineTypeId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "enginePower": {
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "priceAmount": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "priceCurrency": {
+                "type": "string",
+                "enum": [
+                  "TMT",
+                  "USD",
+                  "AED"
+                ]
+              },
+              "regionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "cityId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "locationText": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "contactPhone": {
+                "type": "string"
+              },
+              "allowCalls": {
+                "type": "boolean"
+              },
+              "allowChat": {
+                "type": "boolean"
+              },
+              "acceptsExchange": {
+                "type": "boolean"
+              },
+              "installmentAvailable": {
+                "type": "boolean"
+              },
+              "validatedSteps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
       },
       "UpdateDraftRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "currentStep": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "vin": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "photoId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "sortOrder": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "photoId",
+                "sortOrder"
+              ]
             }
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "colorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodyTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "driveTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enginePower": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locationText": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "allowCalls": {
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          },
+          "acceptsExchange": {
+            "type": "boolean"
+          },
+          "installmentAvailable": {
+            "type": "boolean"
+          },
+          "validatedSteps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "PublishListingRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
-          },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "type": "object",
+        "properties": {}
       },
       "EditListingRequest": {
-        "_def": {
-          "unknownKeys": "strict",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
           },
-          "typeName": "ZodObject"
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "colorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodyTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "driveTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enginePower": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locationText": {
+            "type": "string"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "allowCalls": {
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          },
+          "acceptsExchange": {
+            "type": "boolean"
+          },
+          "installmentAvailable": {
+            "type": "boolean"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "additionalProperties": false
       },
       "AttachMediaRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ]
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "durationMs": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "posterKey": {
+            "type": "string"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "key",
+          "kind",
+          "sortOrder"
+        ]
       },
       "ReorderMediaRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "ordering": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mediaId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sortOrder": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "mediaId",
+                "sortOrder"
+              ]
             }
-          },
-          "typeName": "ZodObject"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "ordering"
+        ]
       },
       "FeedResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sellerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "pending_review",
+                    "active",
+                    "sold",
+                    "archived",
+                    "rejected"
+                  ]
+                },
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "modelId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "year": {
+                  "type": "integer"
+                },
+                "priceAmount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "priceCurrency": {
+                  "type": "string",
+                  "enum": [
+                    "TMT",
+                    "USD",
+                    "AED"
+                  ]
+                },
+                "displayPriceTmt": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "coverMediaKey": {
+                  "type": "string"
+                },
+                "cityId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "sellerId",
+                "status",
+                "brandId",
+                "modelId",
+                "priceAmount",
+                "priceCurrency",
+                "displayPriceTmt",
+                "cityId",
+                "publishedAt"
+              ]
             }
           },
-          "typeName": "ZodObject"
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "items",
+          "nextCursor"
+        ]
       },
       "MyListingsResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sellerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "pending_review",
+                    "active",
+                    "sold",
+                    "archived",
+                    "rejected"
+                  ]
+                },
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "modelId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "year": {
+                  "type": "integer"
+                },
+                "priceAmount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "priceCurrency": {
+                  "type": "string",
+                  "enum": [
+                    "TMT",
+                    "USD",
+                    "AED"
+                  ]
+                },
+                "displayPriceTmt": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "coverMediaKey": {
+                  "type": "string"
+                },
+                "cityId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "sellerId",
+                "status",
+                "brandId",
+                "modelId",
+                "priceAmount",
+                "priceCurrency",
+                "displayPriceTmt",
+                "cityId",
+                "publishedAt"
+              ]
             }
           },
-          "typeName": "ZodObject"
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "items",
+          "nextCursor"
+        ]
       },
       "MyDraftsResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "payload": {
+                  "type": "object",
+                  "properties": {
+                    "currentStep": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 7
+                    },
+                    "vin": {
+                      "type": "string"
+                    },
+                    "photos": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "photoId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "sortOrder": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "photoId",
+                          "sortOrder"
+                        ]
+                      }
+                    },
+                    "brandId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "modelId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "generationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": 1900,
+                      "maximum": 2100
+                    },
+                    "mileageKm": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "condition": {
+                      "type": "string",
+                      "enum": [
+                        "new",
+                        "used"
+                      ]
+                    },
+                    "colorId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "bodyTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "transmissionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "driveTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "engineTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "enginePower": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "priceAmount": {
+                      "type": "number",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "priceCurrency": {
+                      "type": "string",
+                      "enum": [
+                        "TMT",
+                        "USD",
+                        "AED"
+                      ]
+                    },
+                    "regionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "cityId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "locationText": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "contactPhone": {
+                      "type": "string"
+                    },
+                    "allowCalls": {
+                      "type": "boolean"
+                    },
+                    "allowChat": {
+                      "type": "boolean"
+                    },
+                    "acceptsExchange": {
+                      "type": "boolean"
+                    },
+                    "installmentAvailable": {
+                      "type": "boolean"
+                    },
+                    "validatedSteps": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "userId",
+                "payload",
+                "createdAt",
+                "updatedAt"
+              ]
             }
           },
-          "typeName": "ZodObject"
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "items",
+          "nextCursor"
+        ]
       },
       "PresignRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ]
           },
-          "typeName": "ZodObject"
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "kind",
+          "contentType",
+          "sizeBytes"
+        ]
       },
       "PresignResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
           },
-          "typeName": "ZodObject"
+          "key": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "maxSizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "uploadUrl",
+          "key",
+          "expiresIn",
+          "maxSizeBytes"
+        ]
       },
       "ExchangeRate": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "fromCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
           },
-          "typeName": "ZodObject"
+          "toCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "rate": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "fromCurrency",
+          "toCurrency",
+          "rate",
+          "updatedAt"
+        ]
       },
       "ExchangeRatesResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "rates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fromCurrency": {
+                  "type": "string",
+                  "enum": [
+                    "TMT",
+                    "USD",
+                    "AED"
+                  ]
+                },
+                "toCurrency": {
+                  "type": "string",
+                  "enum": [
+                    "TMT",
+                    "USD",
+                    "AED"
+                  ]
+                },
+                "rate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "fromCurrency",
+                "toCurrency",
+                "rate",
+                "updatedAt"
+              ]
             }
-          },
-          "typeName": "ZodObject"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "rates"
+        ]
       },
       "OpenConversationRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
-          },
-          "typeName": "ZodObject"
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "listingId"
+        ]
       },
       "OpenConversationResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
+          "listing": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "brandId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "modelId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "year": {
+                "type": "integer",
+                "minimum": 1900,
+                "maximum": 2100
+              },
+              "displayPriceTmt": {
+                "type": "number",
+                "minimum": 0
+              },
+              "priceCurrency": {
+                "type": "string",
+                "enum": [
+                  "TMT",
+                  "USD",
+                  "AED"
+                ]
+              },
+              "coverMediaKey": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending_review",
+                  "active",
+                  "sold",
+                  "archived",
+                  "rejected"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "brandId",
+              "modelId",
+              "displayPriceTmt",
+              "priceCurrency",
+              "status"
+            ]
+          },
+          "buyerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "myRole": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "seller"
+            ]
+          },
+          "lastMessage": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "text": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "deliveryStatus": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "sent",
+                  "failed"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "conversationId",
+              "senderId",
+              "text",
+              "createdAt"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "listing",
+          "buyerId",
+          "sellerId",
+          "myRole",
+          "updatedAt"
+        ]
       },
       "ListConversationsResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "listing": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "brandId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "modelId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": 1900,
+                      "maximum": 2100
+                    },
+                    "displayPriceTmt": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "priceCurrency": {
+                      "type": "string",
+                      "enum": [
+                        "TMT",
+                        "USD",
+                        "AED"
+                      ]
+                    },
+                    "coverMediaKey": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "pending_review",
+                        "active",
+                        "sold",
+                        "archived",
+                        "rejected"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "brandId",
+                    "modelId",
+                    "displayPriceTmt",
+                    "priceCurrency",
+                    "status"
+                  ]
+                },
+                "buyerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sellerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "myRole": {
+                  "type": "string",
+                  "enum": [
+                    "buyer",
+                    "seller"
+                  ]
+                },
+                "lastMessage": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "conversationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "senderId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "deliveryStatus": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "sent",
+                        "failed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "conversationId",
+                    "senderId",
+                    "text",
+                    "createdAt"
+                  ]
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "listing",
+                "buyerId",
+                "sellerId",
+                "myRole",
+                "updatedAt"
+              ]
             }
           },
-          "typeName": "ZodObject"
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "items",
+          "nextCursor"
+        ]
       },
       "ListMessagesQuery": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string"
           },
-          "typeName": "ZodObject"
-        },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 20
+          }
+        }
       },
       "ListMessagesResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "conversationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "senderId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "deliveryStatus": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "sent",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "conversationId",
+                "senderId",
+                "text",
+                "createdAt"
+              ]
             }
           },
-          "typeName": "ZodObject"
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "items",
+          "nextCursor"
+        ]
       },
       "SendTextMessageRequest": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
-          },
-          "typeName": "ZodObject"
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "text"
+        ]
       },
       "SendTextMessageResponse": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveryStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "failed"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "conversationId",
+          "senderId",
+          "text",
+          "createdAt"
+        ]
       },
       "ConversationSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
+          "listing": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "brandId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "modelId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "year": {
+                "type": "integer",
+                "minimum": 1900,
+                "maximum": 2100
+              },
+              "displayPriceTmt": {
+                "type": "number",
+                "minimum": 0
+              },
+              "priceCurrency": {
+                "type": "string",
+                "enum": [
+                  "TMT",
+                  "USD",
+                  "AED"
+                ]
+              },
+              "coverMediaKey": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending_review",
+                  "active",
+                  "sold",
+                  "archived",
+                  "rejected"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "brandId",
+              "modelId",
+              "displayPriceTmt",
+              "priceCurrency",
+              "status"
+            ]
+          },
+          "buyerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "myRole": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "seller"
+            ]
+          },
+          "lastMessage": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "text": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "deliveryStatus": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "sent",
+                  "failed"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "conversationId",
+              "senderId",
+              "text",
+              "createdAt"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "listing",
+          "buyerId",
+          "sellerId",
+          "myRole",
+          "updatedAt"
+        ]
       },
       "MessageSummary": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
-            },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
-            }
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           },
-          "typeName": "ZodObject"
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveryStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "failed"
+            ]
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
-        },
-        "_cached": null
+        "required": [
+          "id",
+          "conversationId",
+          "senderId",
+          "text",
+          "createdAt"
+        ]
       },
       "ConversationListingCard": {
-        "_def": {
-          "unknownKeys": "strip",
-          "catchall": {
-            "_def": {
-              "typeName": "ZodNever"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "displayPriceTmt": {
+            "type": "number",
+            "minimum": 0
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "coverMediaKey": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "active",
+              "sold",
+              "archived",
+              "rejected"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "brandId",
+          "modelId",
+          "displayPriceTmt",
+          "priceCurrency",
+          "status"
+        ]
+      },
+      "AdminTotpStatusResponse": {
+        "type": "object",
+        "properties": {
+          "enrolled": {
+            "type": "boolean"
+          },
+          "elevated": {
+            "type": "boolean"
+          },
+          "adminTotpExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "enrolled",
+          "elevated"
+        ],
+        "additionalProperties": false
+      },
+      "AdminTotpEnrollResponse": {
+        "type": "object",
+        "properties": {
+          "qrCodeUrl": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "qrCodeUrl",
+          "secret"
+        ],
+        "additionalProperties": false
+      },
+      "AdminTotpVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "AdminTotpVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "adminTotpExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "backupCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "adminTotpExpiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateReportRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "spam",
+              "scam",
+              "misleading",
+              "wrong_category",
+              "harassment",
+              "other"
+            ]
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreateReportResponse": {
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "actioned",
+              "dismissed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reusedExisting": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "reportId",
+          "status",
+          "createdAt",
+          "reusedExisting"
+        ]
+      },
+      "ReportListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "actioned",
+              "dismissed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "spam",
+              "scam",
+              "misleading",
+              "wrong_category",
+              "harassment",
+              "other"
+            ]
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "listing",
+              "user"
+            ]
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "targetSummary": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "label": {
+                "type": "string"
+              },
+              "targetType": {
+                "type": "string",
+                "enum": [
+                  "listing",
+                  "user",
+                  "content_report"
+                ]
+              },
+              "targetId": {
+                "type": "string"
+              }
             },
-            "~standard": {
-              "version": 1,
-              "vendor": "zod"
+            "required": [
+              "available",
+              "label",
+              "targetType",
+              "targetId"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "reason",
+          "targetType",
+          "targetId",
+          "targetSummary"
+        ]
+      },
+      "ListReportsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "actioned",
+                    "dismissed"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "spam",
+                    "scam",
+                    "misleading",
+                    "wrong_category",
+                    "harassment",
+                    "other"
+                  ]
+                },
+                "targetType": {
+                  "type": "string",
+                  "enum": [
+                    "listing",
+                    "user"
+                  ]
+                },
+                "targetId": {
+                  "type": "string"
+                },
+                "targetSummary": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "targetType": {
+                      "type": "string",
+                      "enum": [
+                        "listing",
+                        "user",
+                        "content_report"
+                      ]
+                    },
+                    "targetId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "available",
+                    "label",
+                    "targetType",
+                    "targetId"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "createdAt",
+                "reason",
+                "targetType",
+                "targetId",
+                "targetSummary"
+              ]
             }
           },
-          "typeName": "ZodObject"
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0
+          }
         },
-        "~standard": {
-          "version": 1,
-          "vendor": "zod"
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ]
+      },
+      "GetReportDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "actioned",
+              "dismissed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "spam",
+              "scam",
+              "misleading",
+              "wrong_category",
+              "harassment",
+              "other"
+            ]
+          },
+          "details": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reporter": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "label": {
+                "type": "string"
+              },
+              "userId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "available",
+              "label"
+            ]
+          },
+          "reviewer": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "label": {
+                "type": "string"
+              },
+              "userId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "available",
+              "label"
+            ]
+          },
+          "target": {
+            "type": "object",
+            "properties": {
+              "targetType": {
+                "type": "string",
+                "enum": [
+                  "listing",
+                  "user"
+                ]
+              },
+              "available": {
+                "type": "boolean"
+              },
+              "label": {
+                "type": "string"
+              },
+              "targetId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "year": {
+                "type": "number"
+              },
+              "make": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "targetType",
+              "available",
+              "label",
+              "targetId"
+            ]
+          },
+          "targetModerationState": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "suspendedAt": {
+                "type": "string",
+                "nullable": true,
+                "format": "date-time"
+              },
+              "suspendedById": {
+                "type": "string",
+                "nullable": true,
+                "format": "uuid"
+              },
+              "suspensionReason": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "reportsSubmittedByReporterCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingReportsOnTargetCount": {
+            "type": "integer",
+            "minimum": 0
+          }
         },
-        "_cached": null
+        "required": [
+          "id",
+          "status",
+          "reason",
+          "createdAt",
+          "reporter",
+          "target",
+          "pendingReportsOnTargetCount"
+        ]
+      },
+      "DismissReportRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "DismissReportResponse": {
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "dismissed"
+            ]
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "auditLogId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "reportId",
+          "status",
+          "reviewedAt",
+          "auditLogId"
+        ]
+      },
+      "BanListingRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "BanListingResponse": {
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetState": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "suspendedAt": {
+                "type": "string",
+                "nullable": true,
+                "format": "date-time"
+              },
+              "suspendedById": {
+                "type": "string",
+                "nullable": true,
+                "format": "uuid"
+              },
+              "suspensionReason": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportStatus": {
+            "type": "string",
+            "enum": [
+              "actioned"
+            ]
+          },
+          "auditLogId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "targetId",
+          "targetState",
+          "auditLogId"
+        ]
+      },
+      "UnbanListingRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "UnbanListingResponse": {
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetState": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "suspendedAt": {
+                "type": "string",
+                "nullable": true,
+                "format": "date-time"
+              },
+              "suspendedById": {
+                "type": "string",
+                "nullable": true,
+                "format": "uuid"
+              },
+              "suspensionReason": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "auditLogId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "targetId",
+          "targetState",
+          "auditLogId"
+        ]
+      },
+      "SuspendUserRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "SuspendUserResponse": {
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetState": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "suspendedAt": {
+                "type": "string",
+                "nullable": true,
+                "format": "date-time"
+              },
+              "suspendedById": {
+                "type": "string",
+                "nullable": true,
+                "format": "uuid"
+              },
+              "suspensionReason": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportStatus": {
+            "type": "string",
+            "enum": [
+              "actioned"
+            ]
+          },
+          "auditLogId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "targetId",
+          "targetState",
+          "auditLogId"
+        ]
+      },
+      "UnsuspendUserRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "UnsuspendUserResponse": {
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetState": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "suspendedAt": {
+                "type": "string",
+                "nullable": true,
+                "format": "date-time"
+              },
+              "suspendedById": {
+                "type": "string",
+                "nullable": true,
+                "format": "uuid"
+              },
+              "suspensionReason": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "auditLogId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "targetId",
+          "targetState",
+          "auditLogId"
+        ]
+      },
+      "AuditLogListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "ADMIN_BOOTSTRAP_PROMOTE",
+              "LISTING_BAN",
+              "LISTING_UNBAN",
+              "USER_SUSPEND",
+              "USER_UNSUSPEND",
+              "CONTENT_REPORT_RESOLVE"
+            ]
+          },
+          "actorSummary": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "label"
+            ]
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "targetLabel": {
+            "type": "string"
+          },
+          "reasonPreview": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "action",
+          "actorSummary",
+          "targetType",
+          "targetId"
+        ]
+      },
+      "ListAuditEntriesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "ADMIN_BOOTSTRAP_PROMOTE",
+                    "LISTING_BAN",
+                    "LISTING_UNBAN",
+                    "USER_SUSPEND",
+                    "USER_UNSUSPEND",
+                    "CONTENT_REPORT_RESOLVE"
+                  ]
+                },
+                "actorSummary": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label"
+                  ]
+                },
+                "targetType": {
+                  "type": "string"
+                },
+                "targetId": {
+                  "type": "string"
+                },
+                "targetLabel": {
+                  "type": "string"
+                },
+                "reasonPreview": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "action",
+                "actorSummary",
+                "targetType",
+                "targetId"
+              ]
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ]
       }
     },
     "parameters": {}
@@ -1043,6 +3894,7 @@
                     },
                     "listing": {
                       "type": "object",
+                      "nullable": true,
                       "properties": {
                         "id": {
                           "type": "string",
@@ -1311,6 +4163,7 @@
                           },
                           "listing": {
                             "type": "object",
+                            "nullable": true,
                             "properties": {
                               "id": {
                                 "type": "string",
