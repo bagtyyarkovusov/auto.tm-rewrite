@@ -14,7 +14,7 @@ import {
 
 type Step =
   | { kind: "phone"; phone: string; error?: string }
-  | { kind: "otp"; phone: string; error?: string }
+  | { kind: "otp"; phone: string; testCode?: string; error?: string }
   | { kind: "totp-enroll"; phone: string; qrCodeDataUrl: string; error?: string }
   | { kind: "totp-verify"; phone: string; error?: string }
   | { kind: "backup-codes"; codes: string[] };
@@ -71,7 +71,14 @@ export default function LoginPage() {
       startTransition(async () => {
         const result = await requestOtp(null, formData);
         if (result.ok) {
-          setStep({ kind: "otp", phone: String(formData.get("phone") ?? "") });
+          const nextStep: Extract<Step, { kind: "otp" }> = {
+            kind: "otp",
+            phone: String(formData.get("phone") ?? ""),
+          };
+          if (result.testCode !== undefined) {
+            nextStep.testCode = result.testCode;
+          }
+          setStep(nextStep);
         } else {
           setStep({
             kind: "phone",
@@ -232,6 +239,11 @@ export default function LoginPage() {
                   disabled={isPending}
                 />
               </div>
+              {step.testCode && (
+                <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Dev mode — код: <span className="font-mono font-bold">{step.testCode}</span>
+                </p>
+              )}
               {step.error && (
                 <p className="flex items-center gap-1 text-sm text-red-600">
                   <AlertCircle className="h-4 w-4" /> {step.error}

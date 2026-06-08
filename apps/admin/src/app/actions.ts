@@ -16,7 +16,10 @@ import { validateReturnTo } from "@/lib/validators";
 export async function requestOtp(
   _prev: unknown,
   formData: FormData,
-): Promise<{ ok: false; error: string } | { ok: true; resendInSeconds: number }> {
+): Promise<
+  | { ok: false; error: string }
+  | { ok: true; resendInSeconds: number; testCode?: string }
+> {
   const phone = formData.get("phone");
   const parsed = AuthSchemas.PhoneTm.safeParse(phone);
   if (!parsed.success) {
@@ -28,7 +31,14 @@ export async function requestOtp(
       "/auth/otp/request",
       { method: "POST", body: { phone: parsed.data } as unknown },
     );
-    return { ok: true, resendInSeconds: result.resendInSeconds };
+    const response: { ok: true; resendInSeconds: number; testCode?: string } = {
+      ok: true,
+      resendInSeconds: result.resendInSeconds,
+    };
+    if (result.testCode !== undefined) {
+      response.testCode = result.testCode;
+    }
+    return response;
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
