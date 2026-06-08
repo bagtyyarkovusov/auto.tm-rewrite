@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminSchemas, Enums, ErrorCode } from "@auto-tm/contracts";
 
-import { getReportDetail } from "../../actions";
+import { getReportDetail, getConfig } from "../../actions";
 import { ReportActionForm } from "../../components/ReportActionForm";
 
 function formatDate(iso: string): string {
@@ -56,6 +56,7 @@ interface PageProps {
 export default async function ReportDetailPage({ params }: PageProps) {
   const { id } = await params;
   const result = await getReportDetail(id);
+  const configResult = await getConfig();
 
   if (!result.ok && result.code === ErrorCode.NotFound) {
     notFound();
@@ -78,6 +79,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
 
   const report = result.data;
   const isPending = report.status === AdminSchemas.ContentReportStatus.Pending;
+  const moderationEnabled = configResult.ok ? configResult.data.adminModerationActionsEnabled : true;
 
   // Determine actionable state
   const isListing = report.target.targetType === "listing";
@@ -227,7 +229,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
       )}
 
       {/* Action forms */}
-      {isPending && (
+      {isPending && moderationEnabled && (
         <div className="mt-6 space-y-4">
           <h2 className="text-lg font-semibold">Действия</h2>
 
@@ -292,6 +294,14 @@ export default async function ReportDetailPage({ params }: PageProps) {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {isPending && !moderationEnabled && (
+        <div className="mt-6 rounded-md border bg-surface p-4">
+          <p className="text-sm text-neutral-500">
+            Действия модерации временно недоступны.
+          </p>
         </div>
       )}
     </div>

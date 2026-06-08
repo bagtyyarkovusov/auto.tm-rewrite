@@ -29,6 +29,7 @@ import {
   suspendUser,
   unsuspendUser,
   listAuditEntries,
+  getConfig,
 } from "./actions";
 
 const mockCookieStore = mockState.cookieStore;
@@ -423,6 +424,40 @@ describe("moderation server actions", () => {
         expect(result.code).toBe("FORBIDDEN");
         const body = result.details as { details?: { reason?: string } };
         expect(body.details?.reason).toBe("FEATURE_DISABLED");
+      }
+    });
+  });
+
+  describe("getConfig", () => {
+    it("returns config on success", async () => {
+      mockFetchSuccess({
+        reportEntryEnabled: true,
+        adminModerationActionsEnabled: false,
+      });
+
+      const result = await getConfig();
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.reportEntryEnabled).toBe(true);
+        expect(result.data.adminModerationActionsEnabled).toBe(false);
+      }
+    });
+
+    it("returns error on API failure", async () => {
+      mockFetchError(500, {
+        statusCode: 500,
+        code: "INTERNAL_ERROR",
+        message: "Server error",
+        timestamp: "2026-01-01T00:00:00Z",
+        requestId: "req-1",
+      });
+
+      const result = await getConfig();
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe("INTERNAL_ERROR");
       }
     });
   });

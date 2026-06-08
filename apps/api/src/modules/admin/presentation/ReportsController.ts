@@ -6,17 +6,20 @@ import {
   Body,
   Req,
   BadRequestException,
+  ForbiddenException,
   HttpStatus,
   Inject,
   Res,
   UseGuards,
   Query,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 import { AdminGuard } from "../../../common/admin.guard";
+import type { Env } from "../../../env.schema";
 import { CreateReport } from "../application/CreateReport";
 import { ListReports } from "../application/ListReports";
 import { GetReportDetail } from "../application/GetReportDetail";
@@ -32,7 +35,20 @@ export class ReportsController {
     private readonly listReportsUC: ListReports,
     @Inject(GetReportDetail)
     private readonly getReportDetailUC: GetReportDetail,
+    @Inject(ConfigService)
+    private readonly config: ConfigService<Env, true>,
   ) {}
+
+  private assertReportEntryEnabled(): void {
+    const enabled = this.config.get("REPORT_ENTRY_ENABLED", { infer: true });
+    if (!enabled) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Feature disabled",
+        details: { reason: AdminSchemas.AdminErrorReason.FeatureDisabled },
+      });
+    }
+  }
 
   // ── Public report creation ──
 
@@ -43,6 +59,7 @@ export class ReportsController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
+    this.assertReportEntryEnabled();
     const userId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.CreateReportRequestSchema, body);
 
@@ -64,6 +81,7 @@ export class ReportsController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) res: FastifyReply,
   ) {
+    this.assertReportEntryEnabled();
     const reporterUserId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.CreateReportRequestSchema, body);
 

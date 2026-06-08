@@ -280,3 +280,11 @@ export const ListAuditEntriesResponseSchema = z.object({
 export type ListAuditEntriesResponse = z.infer<
   typeof ListAuditEntriesResponseSchema
 >;
+
+// ── Config ──
+
+export const ConfigResponseSchema = z.object({
+  reportEntryEnabled: z.boolean(),
+  adminModerationActionsEnabled: z.boolean(),
+});
+export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;

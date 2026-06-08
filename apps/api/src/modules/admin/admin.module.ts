@@ -7,6 +7,7 @@ import { AdminController } from "./presentation/admin.controller";
 import { ReportsController } from "./presentation/ReportsController";
 import { AuditController } from "./presentation/AuditController";
 import { AdminModerationController } from "./presentation/AdminModerationController";
+import { ConfigController } from "./presentation/ConfigController";
 import { CreateReport } from "./application/CreateReport";
 import { ListReports } from "./application/ListReports";
 import { GetReportDetail } from "./application/GetReportDetail";
@@ -23,7 +24,7 @@ import { AUDIT_LOG_REPOSITORY } from "./domain/ports/AuditLogRepository";
 
 @Module({
   imports: [ListingsModule, IdentityModule],
-  controllers: [AdminController, ReportsController, AuditController, AdminModerationController],
+  controllers: [AdminController, ReportsController, AuditController, AdminModerationController, ConfigController],
   providers: [
     PrismaContentReportRepository,
     {

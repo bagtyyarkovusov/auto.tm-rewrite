@@ -7,12 +7,15 @@ import {
   Inject,
   UseGuards,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 import { AdminGuard } from "../../../common/admin.guard";
+import type { Env } from "../../../env.schema";
 import { BanListing } from "../application/BanListing";
 import { UnbanListing } from "../application/UnbanListing";
 import { SuspendUser } from "../application/SuspendUser";
@@ -35,7 +38,20 @@ export class AdminModerationController {
     private readonly unsuspendUserUC: UnsuspendUser,
     @Inject(DismissReport)
     private readonly dismissReportUC: DismissReport,
+    @Inject(ConfigService)
+    private readonly config: ConfigService<Env, true>,
   ) {}
+
+  private assertModerationActionsEnabled(): void {
+    const enabled = this.config.get("ADMIN_MODERATION_ACTIONS_ENABLED", { infer: true });
+    if (!enabled) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Feature disabled",
+        details: { reason: AdminSchemas.AdminErrorReason.FeatureDisabled },
+      });
+    }
+  }
 
   @Post("reports/:id/dismiss")
   async dismissReport(
@@ -43,6 +59,7 @@ export class AdminModerationController {
     @Body() body: unknown,
     @Req() req: FastifyRequest,
   ) {
+    this.assertModerationActionsEnabled();
     const adminUserId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.DismissReportRequestSchema, body);
 
@@ -66,6 +83,7 @@ export class AdminModerationController {
     @Body() body: unknown,
     @Req() req: FastifyRequest,
   ) {
+    this.assertModerationActionsEnabled();
     const adminUserId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.BanListingRequestSchema, body);
 
@@ -91,6 +109,7 @@ export class AdminModerationController {
     @Body() body: unknown,
     @Req() req: FastifyRequest,
   ) {
+    this.assertModerationActionsEnabled();
     const adminUserId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.UnbanListingRequestSchema, body);
 
@@ -113,6 +132,7 @@ export class AdminModerationController {
     @Body() body: unknown,
     @Req() req: FastifyRequest,
   ) {
+    this.assertModerationActionsEnabled();
     const adminUserId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.SuspendUserRequestSchema, body);
 
@@ -142,6 +162,7 @@ export class AdminModerationController {
     @Body() body: unknown,
     @Req() req: FastifyRequest,
   ) {
+    this.assertModerationActionsEnabled();
     const adminUserId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.UnsuspendUserRequestSchema, body);
 

@@ -281,6 +281,17 @@ function getErrorCopy(error: unknown): string {
   if (
     typeof error === "object" &&
     error !== null &&
+    "details" in error &&
+    typeof (error as { details?: unknown }).details === "object" &&
+    (error as { details?: { reason?: string } }).details?.reason ===
+      "FEATURE_DISABLED"
+  ) {
+    return "This feature is currently unavailable.";
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
     "status" in error &&
     (error as { status?: number }).status === 404
   ) {

@@ -25,9 +25,9 @@ Internal admin dashboard. Next.js + shadcn/ui at `admin.auto.tm`. MLP beta uses 
 - `src/app/login/page.tsx` — OTP entry → TOTP enroll/verify UI with backup codes display
 - `src/app/(admin)/layout.tsx` — protected layout with full auth+elevation check via API
 - `src/app/(admin)/reports/page.tsx` — reports list (pending default, status/targetType filters, pagination, empty state, invalid-filter reset)
-- `src/app/(admin)/reports/[id]/page.tsx` — report detail with reporter/target summaries, live counts, dismiss/ban/suspend action forms with required reason
-- `src/app/(admin)/listings/[id]/page.tsx` — listing deep-link action page (direct ban/unban)
-- `src/app/(admin)/users/[id]/page.tsx` — user deep-link action page (direct suspend/unsuspend)
+- `src/app/(admin)/reports/[id]/page.tsx` — report detail with reporter/target summaries, live counts, dismiss/ban/suspend action forms with required reason; conditionally hides action forms when `ADMIN_MODERATION_ACTIONS_ENABLED=false`
+- `src/app/(admin)/listings/[id]/page.tsx` — listing deep-link action page (direct ban/unban); conditionally hides forms when `ADMIN_MODERATION_ACTIONS_ENABLED=false`
+- `src/app/(admin)/users/[id]/page.tsx` — user deep-link action page (direct suspend/unsuspend); conditionally hides forms when `ADMIN_MODERATION_ACTIONS_ENABLED=false`
 - `src/app/(admin)/audit/page.tsx` — audit list (newest-first, action/targetType/targetId filters, pagination)
 - Workspace deps: `@auto-tm/contracts`, `@auto-tm/ui`, `shadcn`, `@base-ui/react`, `class-variance-authority`, `clsx`, `tailwind-merge`, `qrcode`
 
@@ -103,6 +103,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
 - Moderation server-action tests in `src/app/(admin)/actions.spec.ts`:
   - `listReports` / `getReportDetail` / `listAuditEntries` success + error paths
   - `dismissReport` / `banListing` / `unbanListing` / `suspendUser` / `unsuspendUser` success + conflict/policy error handling (REPORT_ALREADY_RESOLVED, MODERATION_TARGET_STATE_CONFLICT, ADMIN_TARGET_NOT_MODERATABLE, SELF_MODERATION_NOT_ALLOWED, FEATURE_DISABLED)
+  - `getConfig` success + error paths
   - Operator-script actor rendering, audit entry fields
 
 ## Notable decisions

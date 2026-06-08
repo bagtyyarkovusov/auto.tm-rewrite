@@ -22,6 +22,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 - `ContentReport.reason` enum values: `spam`, `scam`, `misleading`, `wrong_category` (listing-only), `harassment` (user-only), `other` (requires non-empty trimmed details ≤ 1000 chars).
 - `ContentReportCreated` event is emitted from `admin/` after a new report row commits. Duplicate reuse emits no event. S7 has no in-process consumers.
 - Public report routes (`POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report`) are authenticated with `JwtAuthGuard` (not `AdminGuard`). The public response shape is exactly `{ reportId, status, createdAt, reusedExisting }`.
+- **Launch-safety flags** (S7 closeout): `REPORT_ENTRY_ENABLED=false` blocks public report writes at the controller level (403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"`) while admin report/audit reads remain available. `ADMIN_MODERATION_ACTIONS_ENABLED=false` blocks dismiss/ban/unban/suspend/unsuspend writes at the controller level (same 403 shape) while admin login, report list/detail, and audit list remain readable. Flag checks are server-side environment config injected via `ConfigService`; disabled responses do not leak internal flag names.
 
 ## Module shape (today)
 
@@ -51,8 +52,12 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
   - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard); admin `GET /api/v1/admin/reports` and `GET /api/v1/admin/reports/:id` (AdminGuard)
   - `presentation/AuditController.ts` — admin `GET /api/v1/admin/audit` (AdminGuard)
   - `presentation/AdminModerationController.ts` — admin `POST /api/v1/admin/reports/:id/dismiss`, `POST /api/v1/admin/listings/:id/ban`, `POST /api/v1/admin/listings/:id/unban`, `POST /api/v1/admin/users/:id/suspend`, and `POST /api/v1/admin/users/:id/unsuspend` (AdminGuard)
+  - `presentation/ConfigController.ts` — public `GET /api/v1/config` returning `{ reportEntryEnabled, adminModerationActionsEnabled }`
   - `presentation/admin.controller.ts` — stub ping endpoint
   - `admin.module.ts` — registers repositories, use-cases, and controllers; imports `ListingsModule` + `IdentityModule`
+  - `presentation/ReportsController.spec.ts` — controller-level tests for `REPORT_ENTRY_ENABLED` guard
+  - `presentation/AdminModerationController.spec.ts` — controller-level tests for `ADMIN_MODERATION_ACTIONS_ENABLED` guard
+  - `presentation/AdminModerationController.e2e.spec.ts` — deterministic end-to-end smoke: report → TOTP admin ban/dismiss → audit → public enforcement
 
 ## Ports exposed
 
@@ -95,6 +100,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 | POST | `/api/v1/admin/listings/:id/unban` | AdminGuard | `UnbanListing` — unban a banned listing |
 | POST | `/api/v1/admin/users/:id/suspend` | AdminGuard | `SuspendUser` — suspend an unsuspended user (direct or report-backed) |
 | POST | `/api/v1/admin/users/:id/unsuspend` | AdminGuard | `UnsuspendUser` — unsuspend a suspended user |
+| GET | `/api/v1/config` | Public | `ConfigController.getConfig` — returns launch-safety flag state |
 
 ## Events consumed
 
