@@ -5,6 +5,7 @@ import { Conversation } from "../domain/Conversation";
 import { Message } from "../domain/Message";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
+import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 
 import { SendTextMessage } from "./SendTextMessage";
 
@@ -84,13 +85,35 @@ class FakeListingsReadPort implements ListingsReadPort {
   }
 }
 
+class FakeIdentityCheckPort implements IdentityCheckPort {
+  suspendedUsers = new Set<string>();
+
+  async isAdmin(): Promise<boolean> {
+    return false;
+  }
+
+  async isInDealership(): Promise<boolean> {
+    return false;
+  }
+
+  async isSuspended(userId: string): Promise<boolean> {
+    return this.suspendedUsers.has(userId);
+  }
+
+  suspend(userId: string) {
+    this.suspendedUsers.add(userId);
+  }
+}
+
 function makeUseCase(
   repo?: FakeConversationRepository,
   listings?: FakeListingsReadPort,
+  identityCheck?: FakeIdentityCheckPort,
 ) {
   return new SendTextMessage(
     repo ?? new FakeConversationRepository(),
     listings ?? new FakeListingsReadPort(),
+    identityCheck ?? new FakeIdentityCheckPort(),
   );
 }
 
@@ -346,6 +369,38 @@ describe("SendTextMessage", () => {
     seedConversation(repo);
     seedListing(listings, { allowChat: false });
     const uc = makeUseCase(repo, listings);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        text: "Hello",
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks sends when sender is suspended", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const identity = new FakeIdentityCheckPort();
+    identity.suspend("buyer-1");
+    const uc = makeUseCase(repo, listings, identity);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        text: "Hello",
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks sends when other participant is suspended", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const identity = new FakeIdentityCheckPort();
+    identity.suspend("seller-1");
+    const uc = makeUseCase(repo, listings, identity);
 
     await expect(
       uc.execute({

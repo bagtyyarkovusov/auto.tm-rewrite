@@ -25,8 +25,8 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
 - **Same-user-cannot-chat-themselves** — enforced at domain layer in `Conversation` constructor and at application layer in `OpenConversation`.
 - **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller. Enforced by `ListMessages` and `SendTextMessage`.
-- **New contact restrictions** — `OpenConversation` rejects self-contact first (`FORBIDDEN` with `SELF_CONTACT_NOT_ALLOWED`), returns an existing conversation if one exists (regardless of subsequent listing state changes), then for new conversations rejects non-existent or banned listings (`NOT_FOUND`), sold/archived listings (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), and listings with `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`).
-- **Send restrictions** — `SendTextMessage` blocks sends when the referenced listing is unavailable (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), sold (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), archived (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), banned (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), has `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`), or when the sender is not a participant (`FORBIDDEN` with `NOT_A_PARTICIPANT`). Existing history remains readable in all read-only states.
+- **New contact restrictions** — `OpenConversation` rejects self-contact first (`FORBIDDEN` with `SELF_CONTACT_NOT_ALLOWED`), returns an existing conversation if one exists (regardless of subsequent listing state changes), then for new conversations rejects non-existent or banned listings (`NOT_FOUND`), sold/archived listings (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), and listings with `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`). New contact is also blocked when either participant is suspended (`FORBIDDEN` with `USER_SUSPENDED` via `IdentityCheckPort.isSuspended`).
+- **Send restrictions** — `SendTextMessage` blocks sends when the referenced listing is unavailable (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), sold (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), archived (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), banned (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), has `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`), or when the sender is not a participant (`FORBIDDEN` with `NOT_A_PARTICIPANT`). Send is also blocked when either participant is suspended (`FORBIDDEN` with `USER_SUSPENDED` via `IdentityCheckPort.isSuspended`). Existing history remains readable in all read-only states.
 - `Message.kind` is one of text | image | post_ref | system. S6 messages are persisted as `kind = text`.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
 - `Message` text is trimmed at creation; blank-after-trim and >1000 chars after trim are rejected by the domain layer.
@@ -39,7 +39,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
   - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, plus unit tests (`OpenConversation.spec.ts`, `ListMyConversations.spec.ts`, `ListMessages.spec.ts`, `SendTextMessage.spec.ts`)
   - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, and list queries)
   - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, plus health-check ping
-  - `conversations.module.ts` — registers controller, use-cases, and `ConversationRepository` port binding; imports `ListingsModule` for `ListingsReadPort`
+  - `conversations.module.ts` — registers controller, use-cases, and `ConversationRepository` port binding; imports `ListingsModule` for `ListingsReadPort` and `IdentityModule` for `IdentityCheckPort`
 - No WebSocket gateway, no Socket.IO server, no message read/delete handlers.
 
 ## Ports exposed
@@ -49,6 +49,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Ports consumed
 
 - `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `OpenConversation`, `ListMyConversations`, and `SendTextMessage` to validate listing state and embed listing card fields in responses.
+- `IdentityCheckPort` (`IDENTITY_TOKENS.IdentityCheckPort`) from `identity/` — used by `OpenConversation` and `SendTextMessage` to enforce suspended-user blocking when either participant is suspended.
 
 ## Shipped use-cases
 

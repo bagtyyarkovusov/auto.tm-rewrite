@@ -11,11 +11,14 @@ import {
   Query,
   Req,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
-import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas, WizardSchemas, AdminSchemas } from "@auto-tm/contracts";
 
+import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
+import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import { CreateDraft } from "../application/CreateDraft";
 import { UpdateDraft } from "../application/UpdateDraft";
 import { DiscardDraft } from "../application/DiscardDraft";
@@ -32,7 +35,20 @@ export class DraftsController {
     @Inject(DiscardDraft) private readonly discardDraftUC: DiscardDraft,
     @Inject(ListMyDrafts) private readonly listMyDraftsUC: ListMyDrafts,
     @Inject(ValidateDraftStep) private readonly validateStepUC: ValidateDraftStep,
+    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    private readonly identityCheck: IdentityCheckPort,
   ) {}
+
+  private async assertNotSuspended(userId: string): Promise<void> {
+    const suspended = await this.identityCheck.isSuspended(userId);
+    if (suspended) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "User is suspended",
+        details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
+      });
+    }
+  }
 
   private parseOrThrow<T>(schema: { parse: (data: unknown) => T }, data: unknown): T {
     try {
@@ -62,6 +78,7 @@ export class DraftsController {
   ) {
     const parsed = this.parseOrThrow(ListingsSchemas.CreateDraftRequestSchema, body);
     const userId = this.userId(req);
+    await this.assertNotSuspended(userId);
 
     const result = await this.createDraftUC.execute({
       userId,
@@ -85,6 +102,7 @@ export class DraftsController {
   ) {
     const parsed = this.parseOrThrow(ListingsSchemas.UpdateDraftRequestSchema, body);
     const userId = this.userId(req);
+    await this.assertNotSuspended(userId);
 
     const result = await this.updateDraftUC.execute({
       draftId,
@@ -131,6 +149,7 @@ export class DraftsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = this.userId(req);
+    await this.assertNotSuspended(userId);
     await this.discardDraftUC.execute({ draftId, userId });
     return { success: true };
   }

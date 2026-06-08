@@ -42,6 +42,10 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
   - `application/BanListing.spec.ts` — unit tests with fake ports and fake Prisma transaction
   - `application/UnbanListing.ts` — admin listing unban use-case; restores `banned → active`; no `reportId` accepted; single-transaction mutation + audit
   - `application/UnbanListing.spec.ts` — unit tests with fake ports and fake Prisma transaction
+  - `application/SuspendUser.ts` — admin user suspend use-case; direct and report-backed; checks admin-target and self-moderation policies before mutation; single-transaction report resolution (when provided) + user suspension via `IdentityAdminPort` + audit; returns target state + `auditLogId` (+ `reportId`/`reportStatus` when report-backed)
+  - `application/SuspendUser.spec.ts` — unit tests with fake ports and fake Prisma transaction
+  - `application/UnsuspendUser.ts` — admin user unsuspend use-case; restores suspended → unsuspended; checks admin-target and self-moderation policies; no `reportId` accepted; single-transaction mutation + audit
+  - `application/UnsuspendUser.spec.ts` — unit tests with fake ports and fake Prisma transaction
   - `infrastructure/PrismaContentReportRepository.ts` — Prisma adapter for `ContentReportRepository`
   - `infrastructure/PrismaAuditLogRepository.ts` — Prisma adapter for `AuditLogRepository`
   - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard); admin `GET /api/v1/admin/reports` and `GET /api/v1/admin/reports/:id` (AdminGuard)
@@ -60,6 +64,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 - `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `CreateReport` to validate listing targets; used by `ListReports`, `GetReportDetail`, `ListAuditEntries`, `BanListing`, and `UnbanListing` for live listing target summaries and state checks
 - `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `CreateReport` to validate user targets and check reporter suspension state; used by `ListReports`, `GetReportDetail`, and `ListAuditEntries` for live user/reporter/actor summaries
 - `ListingsAdminPort` (`LISTINGS_ADMIN_PORT`) from `listings/` — used by `BanListing` and `UnbanListing` to perform transaction-scoped listing status transitions (`banActiveListing`, `unbanBannedListing`)
+- `IdentityAdminPort` (`IDENTITY_ADMIN_PORT`) from `identity/` — used by `SuspendUser` and `UnsuspendUser` to perform transaction-scoped user suspension transitions (`suspendUser`, `unsuspendUser`)
 
 ## Shipped use-cases
 
@@ -69,6 +74,8 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 - `ListAuditEntries` — admin audit log with `OffsetPagination` (default 50 / max 100), `createdAt DESC, id DESC` sort, `action`/`targetType`/`targetId` filters, live `actorSummary` (deleted admin vs operator script), short target label, one-line `reasonPreview`; missing targets tolerated
 - `BanListing` — admin listing ban; accepts optional `reportId`; validates report order: unknown → 404, wrong-target → 400 `REPORT_TARGET_MISMATCH`, already-resolved → 409 `REPORT_ALREADY_RESOLVED`, pending-but-stale-target → 409 `REPORT_TARGET_NOT_ACTIONABLE`; direct-ban state conflict → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction report resolution (when provided) + listing mutation via `ListingsAdminPort.banActiveListing` + audit write; returns target state + `auditLogId` (+ `reportId`/`reportStatus=actioned` when report-backed)
 - `UnbanListing` — admin listing unban; restores `banned → active` via `ListingsAdminPort.unbanBannedListing`; rejects `reportId`; state conflict → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction mutation + audit; returns target state + `auditLogId`
+- `SuspendUser` — admin user suspend; accepts optional `reportId`; validates admin-target (`role = admin` → 403 `ADMIN_TARGET_NOT_MODERATABLE`) and self-moderation (target id === acting admin → 403 `SELF_MODERATION_NOT_ALLOWED`) before any mutation/report/audit; report-backed validation order identical to `BanListing`; direct-suspend state conflict (already suspended) → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction report resolution (when provided) + user suspension via `IdentityAdminPort.suspendUser` + audit write; returns target suspension state + `auditLogId` (+ `reportId`/`reportStatus=actioned` when report-backed)
+- `UnsuspendUser` — admin user unsuspend; restores suspended → unsuspended via `IdentityAdminPort.unsuspendUser`; checks admin-target and self-moderation policies; rejects `reportId`; state conflict (not suspended) → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction mutation + audit; returns target suspension state + `auditLogId`
 
 ## Events emitted
 
@@ -85,6 +92,8 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 | GET | `/api/v1/admin/audit` | AdminGuard | `ListAuditEntries` — admin audit log (newest-first) |
 | POST | `/api/v1/admin/listings/:id/ban` | AdminGuard | `BanListing` — ban an active listing (direct or report-backed) |
 | POST | `/api/v1/admin/listings/:id/unban` | AdminGuard | `UnbanListing` — unban a banned listing |
+| POST | `/api/v1/admin/users/:id/suspend` | AdminGuard | `SuspendUser` — suspend an unsuspended user (direct or report-backed) |
+| POST | `/api/v1/admin/users/:id/unsuspend` | AdminGuard | `UnsuspendUser` — unsuspend a suspended user |
 
 ## Events consumed
 

@@ -44,6 +44,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 - **Locked fields post-publish**: `brandId`, `modelId`, `generationId`, `year`, `vin` cannot be edited after publish. Enforced via `Listing.canEditField()`; application layer rejects patches in `EditListing`.
 - **State machine transitions** (Phase 1): `active → sold`, `active → archived`, `sold → archived`, `archived → active` (republish). Enforced via `canTransition()` helper. `banned` has no owner transitions; admin ban/unban bypasses `canTransition` via `ListingsAdminPort`.
 - **Banned listing enforcement** (S7): `banned` listings are omitted from public feed/search/favorites (`ChronologicalRankingAdapter` and `PrismaListingsReadRepository` exclude `banned`). Non-owner public detail reads return `NOT_FOUND`. Owner-scoped surfaces (`/me/listings`, owner detail) show the listing with `status: "banned"` (frontend renders generic banned notice). Owner mutations (`EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`) are blocked with `FORBIDDEN` while banned. New contact/messages for banned listings are blocked via `conversations/` synchronous state checks (`getListingSummary` excludes `banned`).
+- **Suspended-user enforcement** (S7): authenticated marketplace mutations in `listings/` are blocked for suspended users (`CreateDraft`, `UpdateDraft`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`) via `IdentityCheckPort.isSuspended` checks in controllers. Returns HTTP 403 `FORBIDDEN` with `details.reason = "USER_SUSPENDED"`. Reads (`ListFeed`, `GetListingDetail`, `ListMyListings`, `ListMyDrafts`) remain available.
 
 ## Module shape (today)
 
@@ -56,7 +57,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
   - `presentation/UploadsController.ts` — presign upload endpoint
   - `presentation/MyListingsController.ts` — `/me/listings` (owner-scoped)
   - `presentation/ExchangeRatesController.ts` — `/exchange-rates` (public)
-  - `listings.module.ts` — registers null/sync adapters, repositories, and use-cases with DI tokens
+  - `listings.module.ts` — registers null/sync adapters, repositories, and use-cases with DI tokens; imports `IdentityModule` for `IdentityCheckPort.isSuspended` enforcement in controllers
 
 ## Ports exposed
 

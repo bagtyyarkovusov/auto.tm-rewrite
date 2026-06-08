@@ -24,11 +24,15 @@ import { BcryptHasherAdapter } from "./infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "./infrastructure/SystemClockAdapter";
 import { PrismaIdentityCheckAdapter } from "./infrastructure/PrismaIdentityCheckAdapter";
 import { PrismaIdentityReadAdapter } from "./infrastructure/PrismaIdentityReadAdapter";
+import { PrismaIdentityAdminRepository } from "./infrastructure/PrismaIdentityAdminRepository";
 import { AesGcmTotpSecretCipher } from "./infrastructure/AesGcmTotpSecretCipher";
 import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
 import { IDENTITY_TOKENS } from "./identity.tokens";
+import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
+import { SuspendUserAccount } from "./application/SuspendUserAccount";
+import { UnsuspendUserAccount } from "./application/UnsuspendUserAccount";
 
 @Module({
   imports: [
@@ -45,6 +49,7 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     SystemClockAdapter,
     PrismaIdentityCheckAdapter,
     PrismaIdentityReadAdapter,
+    PrismaIdentityAdminRepository,
     AesGcmTotpSecretCipher,
     OtplibTotpVerifier,
     InMemoryTotpThrottleAdapter,
@@ -60,6 +65,10 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     {
       provide: IDENTITY_TOKENS.IdentityReadPort,
       useClass: PrismaIdentityReadAdapter,
+    },
+    {
+      provide: IDENTITY_ADMIN_PORT,
+      useClass: PrismaIdentityAdminRepository,
     },
     {
       provide: IDENTITY_TOKENS.ClockPort,
@@ -115,12 +124,15 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     GetAdminTotpStatus,
     EnrollAdminTotp,
     VerifyAdminTotp,
+    SuspendUserAccount,
+    UnsuspendUserAccount,
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,
     IDENTITY_TOKENS.IdentityReadPort,
     IDENTITY_TOKENS.SessionRepository,
     IDENTITY_TOKENS.ClockPort,
+    IDENTITY_ADMIN_PORT,
   ],
 })
 export class IdentityModule {}

@@ -35,6 +35,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - Rate limits: 5 OTP requests per phone per 24h; 10 per IP per hour. Exponential backoff: `60 × 2^N` seconds where N is the count of prior requests.
 - `SMS_DRIVER=mock` (default) logs the OTP code; `SMS_DRIVER=gateway` sends via SMS gateway. `OTP_TEST_MODE=true` returns the plaintext code in the API response.
 - `BlockedUser` is one-way (block by A on B). If both want, both must block.
+- **S7 user suspension enforcement** — `User.suspendedAt` blocks authenticated marketplace mutations across `listings/` (create/edit/publish/media/state), `conversations/` (new contact/send when either participant is suspended), and `admin/` (report creation). Suspended users may still authenticate, log out, browse public surfaces, view their generic suspension state, and delete their account. Enforcement is synchronous via `IdentityCheckPort.isSuspended` (no event side effects). `IdentityAdminPort` owns the suspension field writes and participates in the caller's transaction for S7 admin moderation.
 
 ## Ports exposed (consumed by other contexts)
 
@@ -42,10 +43,12 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 interface IdentityCheckPort {
   isAdmin(userId): Promise<boolean>
   isInDealership(userId, dealershipId): Promise<boolean>
+  isSuspended(userId): Promise<boolean>
 }
 ```
 
 - `IdentityCheckPort` is implemented by `PrismaIdentityCheckAdapter` and exported from `IdentityModule` under DI token `IDENTITY_TOKENS.IdentityCheckPort`.
+- `IdentityAdminPort` (`IDENTITY_ADMIN_PORT`) is implemented by `PrismaIdentityAdminRepository` and exported from `IdentityModule`. It exposes `suspendUser(userId, adminUserId, reason, tx?)`, `unsuspendUser(userId, tx?)`, and `isSuspended(userId)`. `suspendUser` and `unsuspendUser` participate in the caller's transaction (transaction-scoped) for S7 admin moderation; `isSuspended` is a standalone read.
 - `AdminGuard` (`apps/api/src/common/admin.guard.ts`) composes on top of `JwtAuthGuard` and requires: authenticated user, `role = admin`, and current TOTP elevation (`adminTotpExpiresAt > now`) loaded via `sid` claim.
 
 ## Internal ports (within identity context)
@@ -81,6 +84,8 @@ SecurityLoggerPort         // structured security logging for TOTP failures
 - `GetAdminTotpStatus` — returns `enrolled`, `elevated`, and optional `adminTotpExpiresAt` for the current admin session. No secret/backup material. Exposed as `GET /api/v1/auth/admin/totp/status` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 - `EnrollAdminTotp` — generates a new TOTP secret, encrypts it, creates a pending `TotpEnrollment`, and returns QR URI + plaintext secret. Verified re-enroll returns HTTP 409 `TOTP_ALREADY_ENROLLED`; pending unverified enrollment may be replaced. Exposed as `POST /api/v1/auth/admin/totp/enroll` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 - `VerifyAdminTotp` — verifies a TOTP code (first enrollment) or TOTP code/backup code (post-enrollment). On first success, marks enrollment verified, generates 10 backup codes (SHA-256 hashed, stored), sets `Session.adminTotpExpiresAt = now + 12h`, and returns `adminTotpExpiresAt` + plaintext backup codes exactly once. Post-enrollment returns `adminTotpExpiresAt` only. Implements 5-failure/10-min throttle, adjacent-step skew, atomic backup-code consumption, and structured security logging on failure. Exposed as `POST /api/v1/auth/admin/totp/verify` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
+- `SuspendUserAccount` — sets `User.suspendedAt`, `suspendedById`, and `suspensionReason` for an unsuspended user. Called by `IdentityAdminPort.suspendUser`; participates in the caller's Prisma transaction.
+- `UnsuspendUserAccount` — clears `User.suspendedAt`, `suspendedById`, and `suspensionReason` for a suspended user. Called by `IdentityAdminPort.unsuspendUser`; participates in the caller's Prisma transaction.
 
 ### Account deletion scope
 

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 
 import { PrismaModule } from "../../common/prisma.module";
+import { IdentityModule } from "../identity/identity.module";
 
 import { ListingsController } from "./presentation/listings.controller";
 import { DraftsController } from "./presentation/DraftsController";
@@ -53,7 +54,7 @@ import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
 import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
 
 @Module({
-  imports: [PrismaModule, EventEmitterModule],
+  imports: [PrismaModule, EventEmitterModule, IdentityModule],
   controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController],
   providers: [
     // Infrastructure adapters
