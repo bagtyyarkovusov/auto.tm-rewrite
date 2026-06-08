@@ -1,6 +1,6 @@
 # 86 — Admin bootstrap runbook
 
-Status: S7 planned. This runbook becomes executable only after S7 adds the checked-in DB script and package command described below.
+Status: Implemented in #177. This runbook is executable via the checked-in `packages/db/scripts/promote-admin.ts` script.
 
 ## Purpose
 
@@ -22,23 +22,24 @@ S7 moderation is not admin-account management. Admin accounts cannot be suspende
 - Bootstrap must be drilled once in staging or a prod-like environment before the first production admin promotion.
 - Lost TOTP device plus lost backup codes remains manual operator recovery per ADR-0006; no self-service recovery UI ships in the MLP.
 
-## Planned command
+## Command
 
 ```bash
 pnpm --filter @auto-tm/db admin:promote -- --phone +9936XXXXXXX --reason "bootstrap first admin"
 pnpm --filter @auto-tm/db admin:promote -- --phone +9936XXXXXXX --reason "bootstrap first admin" --dry-run
 ```
 
-Expected S7 implementation:
+Implementation (checked in):
 
-- `packages/db/scripts/promote-admin.ts`
+- `packages/db/scripts/promote-admin.ts` — CLI wrapper that creates a Prisma client and calls the core logic.
+- `packages/db/src/promote-admin.ts` — testable core logic (`runPromoteAdmin`) with a fake-port unit-test suite.
 - `packages/db/package.json` command: `admin:promote`
-- required `--phone` and `--reason` flags; optional `--dry-run`
-- phone normalization/validation using the same E.164 Turkmenistan format as identity
-- idempotent zero exit if the user is already `admin`; this no-op does not write another audit row
-- non-zero exit if the phone has no existing `User`; no audit row is written
+- Required `--phone` and `--reason` flags; optional `--dry-run`
+- Phone validation using the same E.164 Turkmenistan format as identity (`+993[6-7]XXXXXXX`)
+- Idempotent zero exit if the user is already `admin`; this no-op does not write another audit row
+- Non-zero exit if the phone has no existing `User`; no audit row is written
 - `--dry-run` validates input and reports the planned action without mutating `User` or writing `AuditLog`
-- audit log action `ADMIN_BOOTSTRAP_PROMOTE`
+- Audit log action `ADMIN_BOOTSTRAP_PROMOTE` with `actorId = null`, `targetType = "user"`, `targetId = promotedUserId`, `details.reason`, `details.before.role`, and `details.after.role`; no phone snapshot stored in `details`
 
 ## Procedure
 
