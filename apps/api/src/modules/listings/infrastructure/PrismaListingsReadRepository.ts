@@ -165,7 +165,7 @@ export class PrismaListingsReadRepository implements ListingsReadPort {
     const summary: ListingSummary = {
       id: row.id,
       sellerId: row.sellerId,
-      status: row.status as "active" | "sold" | "archived",
+      status: row.status as "active" | "sold" | "archived" | "banned",
       brandId: row.brandId,
       modelId: row.modelId,
       priceAmount: row.priceAmount,

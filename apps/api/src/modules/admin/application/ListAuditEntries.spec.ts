@@ -33,6 +33,10 @@ class FakeAuditLogRepository implements AuditLogRepository {
     const items = sorted.slice(start, start + params.pageSize);
     return { items, total };
   }
+
+  async create(): Promise<AuditLogRow> {
+    throw new Error("Not implemented");
+  }
 }
 
 class FakeListingsReadPort implements ListingsReadPort {

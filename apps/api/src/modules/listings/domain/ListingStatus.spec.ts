@@ -37,4 +37,16 @@ describe("canTransition", () => {
   it("disallows archived → archived", () => {
     expect(canTransition("archived", "archived")).toBe(false);
   });
+
+  it("disallows banned → sold", () => {
+    expect(canTransition("banned", "sold")).toBe(false);
+  });
+
+  it("disallows banned → archived", () => {
+    expect(canTransition("banned", "archived")).toBe(false);
+  });
+
+  it("disallows active → banned via canTransition (admin only)", () => {
+    expect(canTransition("active", "banned")).toBe(false);
+  });
 });

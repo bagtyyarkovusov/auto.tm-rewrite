@@ -23,6 +23,7 @@ import {
 
 export interface GetListingDetailInput {
   listingId: string;
+  requestingUserId?: string | undefined;
 }
 
 export type ListingDetailDto = z.infer<typeof ListingsSchemas.ListingDetailSchema>;
@@ -45,6 +46,13 @@ export class GetListingDetail {
 
     if (!listing || listing.deletedAt) {
       throw new NotFoundException("Listing not found");
+    }
+
+    // Banned listings: non-owner → 404; owner → show detail (frontend shows generic notice)
+    if (listing.status === "banned") {
+      if (input.requestingUserId !== listing.sellerId) {
+        throw new NotFoundException("Listing not found");
+      }
     }
 
     const media = await this.mediaRepo.findByListingId(input.listingId);

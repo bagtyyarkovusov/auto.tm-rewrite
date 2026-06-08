@@ -22,6 +22,7 @@ export const ListingStatus = {
   Sold: "sold",
   Archived: "archived",
   Rejected: "rejected",
+  Banned: "banned",
 } as const;
 export type ListingStatus = (typeof ListingStatus)[keyof typeof ListingStatus];
 

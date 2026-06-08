@@ -103,6 +103,28 @@ export class PrismaContentReportRepository implements ContentReportRepository {
     });
   }
 
+  async updateStatus(
+    id: string,
+    data: {
+      status: string;
+      reviewedById: string;
+      reviewedAt: Date;
+    },
+    tx?: unknown,
+  ): Promise<ContentReport> {
+    const client = (tx as PrismaService | undefined) ?? this.prisma;
+    const row = await client.contentReport.update({
+      where: { id },
+      data: {
+        status: data.status,
+        reviewedById: data.reviewedById,
+        reviewedAt: data.reviewedAt,
+      },
+    });
+
+    return this.toDomain(row);
+  }
+
   private toDomain(
     row: Awaited<ReturnType<PrismaService["contentReport"]["create"]>>,
   ): ContentReport {

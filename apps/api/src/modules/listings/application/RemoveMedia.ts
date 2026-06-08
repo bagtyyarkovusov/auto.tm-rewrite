@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, Logger } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, Logger, ForbiddenException } from "@nestjs/common";
 
 import {
   LISTING_REPOSITORY,
@@ -36,6 +36,12 @@ export class RemoveMedia {
     const listing = await this.listings.findById(input.listingId);
     if (!listing || listing.sellerId !== input.userId || listing.deletedAt) {
       throw new NotFoundException("Listing not found");
+    }
+    if (listing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and media cannot be removed",
+      });
     }
 
     const media = await this.mediaRepo.findById(input.mediaId);

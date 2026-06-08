@@ -180,6 +180,34 @@ describe("Listing", () => {
     });
   });
 
+  describe("banned status", () => {
+    it("allows creation with banned status", () => {
+      const listing = makeListing({ status: "banned" });
+      expect(listing.status).toBe("banned");
+    });
+
+    it("throws INVALID_TRANSITION when markSold from banned", () => {
+      const listing = makeListing({ status: "banned" });
+      expect(() => listing.markSold(new Date())).toThrowError(
+        LISTING_ERROR_CODES.INVALID_TRANSITION,
+      );
+    });
+
+    it("throws INVALID_TRANSITION when archive from banned", () => {
+      const listing = makeListing({ status: "banned" });
+      expect(() => listing.archive()).toThrowError(
+        LISTING_ERROR_CODES.INVALID_TRANSITION,
+      );
+    });
+
+    it("throws INVALID_TRANSITION when republish from banned", () => {
+      const listing = makeListing({ status: "banned" });
+      expect(() => listing.republish(new Date())).toThrowError(
+        LISTING_ERROR_CODES.INVALID_TRANSITION,
+      );
+    });
+  });
+
   describe("immutability", () => {
     it("returns a new instance on markSold", () => {
       const listing = makeListing();

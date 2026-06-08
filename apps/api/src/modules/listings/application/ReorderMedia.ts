@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
 
 import {
   LISTING_REPOSITORY,
@@ -28,6 +28,12 @@ export class ReorderMedia {
     const listing = await this.listings.findById(input.listingId);
     if (!listing || listing.sellerId !== input.userId || listing.deletedAt) {
       throw new NotFoundException("Listing not found");
+    }
+    if (listing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and media cannot be reordered",
+      });
     }
 
     await this.mediaRepo.updateSortOrder(input.listingId, input.ordering);

@@ -47,7 +47,7 @@ class FakeListingsReadPort implements ListingsReadPort {
   listings: Array<{
     id: string;
     sellerId: string;
-    status: "active" | "sold" | "archived";
+    status: "active" | "sold" | "archived" | "banned";
     brandId: string;
     modelId: string;
     year?: number;
@@ -61,7 +61,10 @@ class FakeListingsReadPort implements ListingsReadPort {
   }> = [];
 
   async getListingSummary(id: string) {
-    return this.listings.find((l) => l.id === id) ?? null;
+    const listing = this.listings.find((l) => l.id === id);
+    if (!listing) return null;
+    if (listing.status === "banned") return null;
+    return listing;
   }
 
   async getListingSummaries(ids: string[]) {
@@ -300,6 +303,20 @@ describe("SendTextMessage", () => {
   it("blocks sends when listing is archived", async () => {
     seedConversation(repo);
     seedListing(listings, { status: "archived" });
+    const uc = makeUseCase(repo, listings);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        text: "Hello",
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks sends when listing is banned", async () => {
+    seedConversation(repo);
+    seedListing(listings, { status: "banned" });
     const uc = makeUseCase(repo, listings);
 
     await expect(

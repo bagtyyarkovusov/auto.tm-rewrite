@@ -1,9 +1,10 @@
-export type ListingStatus = "active" | "sold" | "archived";
+export type ListingStatus = "active" | "sold" | "archived" | "banned";
 
 const TRANSITIONS: Record<ListingStatus, ListingStatus[]> = {
   active: ["sold", "archived"],
   sold: ["archived"],
   archived: ["active"],
+  banned: [],
 };
 
 export function canTransition(

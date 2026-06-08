@@ -39,6 +39,12 @@ export class MarkSold {
     if (existing.sellerId !== input.userId) {
       throw new ForbiddenException("Not the owner of this listing");
     }
+    if (existing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and cannot be marked as sold",
+      });
+    }
 
     const updated = existing.markSold(new Date());
     const saved = await this.listings.update(updated);

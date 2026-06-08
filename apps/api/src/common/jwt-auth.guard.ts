@@ -27,10 +27,23 @@ export class JwtAuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const authHeader = request.headers.authorization;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      try {
+        const payload = this.jwtService.verify(token);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify req augmentation
+        (request as any).user = payload;
+      } catch {
+        // Ignore invalid tokens on public routes; protected routes will re-verify below
+      }
+    }
+
+    if (isPublic) return true;
+
     if (!authHeader?.startsWith("Bearer ")) {
       throw new UnauthorizedException("Missing or malformed Authorization header");
     }

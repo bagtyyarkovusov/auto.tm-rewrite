@@ -16,6 +16,16 @@ export interface AuditLogRepository {
     page: number;
     pageSize: number;
   }): Promise<{ items: AuditLogRow[]; total: number }>;
+  create(
+    data: {
+      actorId: string | null;
+      action: string;
+      targetType: string;
+      targetId: string;
+      details?: Record<string, unknown> | null;
+    },
+    tx?: unknown,
+  ): Promise<AuditLogRow>;
 }
 
 export const AUDIT_LOG_REPOSITORY = Symbol("AuditLogRepository");

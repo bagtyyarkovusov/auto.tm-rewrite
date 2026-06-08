@@ -36,6 +36,12 @@ export class RepublishListing {
     if (existing.deletedAt) {
       throw new NotFoundException("Listing not found");
     }
+    if (existing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and cannot be republished",
+      });
+    }
 
     const previousArchivedAt = existing.status === "archived" ? existing.updatedAt : undefined;
     const updated = existing.republish(new Date());

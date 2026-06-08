@@ -34,6 +34,12 @@ export class DeleteListing {
     if (existing.sellerId !== input.userId) {
       throw new ForbiddenException("Not the owner of this listing");
     }
+    if (existing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and cannot be deleted",
+      });
+    }
 
     const mediaCount = await this.prisma.listingMedia.count({
       where: { listingId: existing.id },

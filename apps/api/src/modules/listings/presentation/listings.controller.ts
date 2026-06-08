@@ -107,8 +107,9 @@ export class ListingsController {
 
   @Public()
   @Get(":id")
-  async getDetail(@Param("id") listingId: string) {
-    return this.getListingDetailUC.execute({ listingId });
+  async getDetail(@Param("id") listingId: string, @Req() req: FastifyRequest) {
+    const requestingUserId = (req as { user?: { sub: string } }).user?.sub;
+    return this.getListingDetailUC.execute({ listingId, requestingUserId });
   }
 
 

@@ -50,7 +50,7 @@ class FakeListingsReadPort implements ListingsReadPort {
   listings: Array<{
     id: string;
     sellerId: string;
-    status: "active" | "sold" | "archived";
+    status: "active" | "sold" | "archived" | "banned";
     brandId: string;
     modelId: string;
     year?: number;
@@ -64,7 +64,10 @@ class FakeListingsReadPort implements ListingsReadPort {
   }> = [];
 
   async getListingSummary(id: string) {
-    return this.listings.find((l) => l.id === id) ?? null;
+    const listing = this.listings.find((l) => l.id === id);
+    if (!listing) return null;
+    if (listing.status === "banned") return null;
+    return listing;
   }
 
   async getListingSummaries(ids: string[]) {
@@ -193,6 +196,15 @@ describe("OpenConversation", () => {
     await expect(
       uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("returns NOT_FOUND for banned listing (hidden by getListingSummary)", async () => {
+    seedListing(listings, { status: "banned" });
+    const uc = makeUseCase(repo, listings);
+
+    await expect(
+      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it("rejects listing with allowChat = false", async () => {
