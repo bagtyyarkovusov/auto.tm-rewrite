@@ -47,20 +47,206 @@ const readSandcastleEnv = async () => {
 };
 
 const pushCurrentBranch = async () => {
-  const sandcastleEnv = await readSandcastleEnv();
-  const env = { ...process.env, ...sandcastleEnv };
   const { stdout } = await execFileAsync("git", ["branch", "--show-current"], {
-    env,
+    env: HOST_ENV,
   });
   const branch = stdout.trim();
   if (!branch) {
     throw new Error("Cannot push: current git branch is empty/detached.");
   }
 
-  await execFileAsync("gh", ["auth", "setup-git"], { env });
-  await execFileAsync("git", ["push", "origin", branch], { env });
+  await execFileAsync("gh", ["auth", "setup-git"], { env: HOST_ENV });
+  await execFileAsync("git", ["push", "origin", branch], { env: HOST_ENV });
   console.log(`Pushed ${branch} to origin.`);
 };
+
+const execGit = async (args: string[], options: { cwd?: string } = {}) =>
+  execFileAsync("git", args, {
+    ...options,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+
+const branchExists = async (branch: string) => {
+  try {
+    await execGit(["show-ref", "--verify", "--quiet", `refs/heads/${branch}`]);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getCurrentHead = async () => {
+  const { stdout } = await execGit(["rev-parse", "HEAD"]);
+  return stdout.trim();
+};
+
+const getCurrentBranch = async () => {
+  const { stdout } = await execGit(["branch", "--show-current"]);
+  return stdout.trim();
+};
+
+const slugIssueTitle = (title: string) =>
+  title
+    .replace(/^\s*S\d+\s*:\s*/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .split("-")
+    .filter(Boolean)
+    .slice(0, 6)
+    .join("-");
+
+const canonicalIssueBranch = (issue: { id: string; title: string }) =>
+  `sandcastle/issue-${issue.id}-${slugIssueTitle(issue.title)}`;
+
+const getWorktreeForBranch = async (branch: string) => {
+  const { stdout } = await execGit(["worktree", "list", "--porcelain"]);
+  const blocks = stdout.trim().split(/\n\n+/).filter(Boolean);
+  const ref = `refs/heads/${branch}`;
+
+  for (const block of blocks) {
+    const lines = block.split("\n");
+    const worktreeLine = lines.find((line) => line.startsWith("worktree "));
+    const branchLine = lines.find((line) => line.startsWith("branch "));
+
+    if (branchLine?.slice("branch ".length) === ref && worktreeLine) {
+      return worktreeLine.slice("worktree ".length);
+    }
+  }
+
+  return undefined;
+};
+
+const getDirtyStatus = async (worktreePath: string) => {
+  const { stdout } = await execGit(["status", "--porcelain"], {
+    cwd: worktreePath,
+  });
+  return stdout.trim();
+};
+
+const countUniqueCommits = async (baseHead: string, branch: string) => {
+  const { stdout } = await execGit([
+    "rev-list",
+    "--count",
+    `${baseHead}..${branch}`,
+  ]);
+  return Number(stdout.trim());
+};
+
+const removeEmptyStaleBranch = async (branch: string, baseHead: string) => {
+  if (!(await branchExists(branch))) return false;
+
+  const uniqueCommits = await countUniqueCommits(baseHead, branch);
+  if (uniqueCommits > 0) {
+    console.log(
+      `[branch:${branch}] keeping existing branch with ${uniqueCommits} unique commit(s).`,
+    );
+    return false;
+  }
+
+  const currentBranch = await getCurrentBranch();
+  if (currentBranch === branch) {
+    console.log(`[branch:${branch}] keeping branch because it is currently checked out.`);
+    return false;
+  }
+
+  const worktreePath = await getWorktreeForBranch(branch);
+  if (worktreePath) {
+    const dirtyStatus = await getDirtyStatus(worktreePath);
+    if (dirtyStatus) {
+      console.log(
+        `[branch:${branch}] keeping existing worktree with uncommitted changes at ${worktreePath}.`,
+      );
+      return false;
+    }
+
+    console.log(
+      `[branch:${branch}] removing empty stale worktree before resetting to current HEAD.`,
+    );
+    await execGit(["worktree", "remove", "--force", worktreePath]);
+  }
+
+  console.log(`[branch:${branch}] resetting empty stale branch to current HEAD.`);
+  await execGit(["branch", "-f", branch, baseHead]);
+  return true;
+};
+
+const cleanupSiblingBranches = async (
+  issue: { id: string; branch: string },
+  baseHead: string,
+) => {
+  const { stdout } = await execGit([
+    "for-each-ref",
+    `refs/heads/sandcastle/issue-${issue.id}-*`,
+    "--format=%(refname:short)",
+  ]);
+  const siblingBranches = stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((branch) => branch && branch !== issue.branch);
+
+  for (const branch of siblingBranches) {
+    const removed = await removeEmptyStaleBranch(branch, baseHead);
+    if (removed) {
+      await execGit(["branch", "-D", branch]);
+      console.log(`[branch:${branch}] deleted obsolete planner slug variant.`);
+    }
+  }
+};
+
+const prepareIssueBranch = async (issue: { id: string; branch: string }) => {
+  const baseHead = await getCurrentHead();
+  await cleanupSiblingBranches(issue, baseHead);
+  await removeEmptyStaleBranch(issue.branch, baseHead);
+};
+
+const checkGitHubBudget = async () => {
+  const minCore = Number(HOST_ENV.SANDCASTLE_MIN_GH_CORE_REMAINING ?? 50);
+  const minGraphql = Number(HOST_ENV.SANDCASTLE_MIN_GH_GRAPHQL_REMAINING ?? 50);
+
+  const { stdout } = await execFileAsync(
+    "gh",
+    ["api", "rate_limit", "--jq", ".resources"],
+    { env: HOST_ENV, maxBuffer: 1024 * 1024 },
+  );
+  const resources = JSON.parse(stdout) as {
+    core?: { remaining: number; reset: number };
+    graphql?: { remaining: number; reset: number };
+  };
+
+  const core = resources.core;
+  const graphql = resources.graphql;
+  const lowCore = core && core.remaining < minCore;
+  const lowGraphql = graphql && graphql.remaining < minGraphql;
+
+  if (lowCore || lowGraphql) {
+    const parts = [
+      core
+        ? `core remaining ${core.remaining}, resets ${new Date(core.reset * 1000).toISOString()}`
+        : "core unavailable",
+      graphql
+        ? `graphql remaining ${graphql.remaining}, resets ${new Date(graphql.reset * 1000).toISOString()}`
+        : "graphql unavailable",
+    ];
+
+    throw new Error(
+      `GitHub API budget is too low for a Sandcastle cycle (${parts.join(
+        "; ",
+      )}). Wait for reset or lower SANDCASTLE_MIN_GH_*_REMAINING for a smoke run.`,
+    );
+  }
+
+  console.log(
+    `GitHub API budget ok: core=${core?.remaining ?? "unknown"}, graphql=${
+      graphql?.remaining ?? "unknown"
+    }.`,
+  );
+};
+
+const formatDuration = (startedAt: number) =>
+  `${((Date.now() - startedAt) / 1000).toFixed(1)}s`;
+
+const HOST_ENV = { ...process.env, ...(await readSandcastleEnv()) };
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -68,7 +254,7 @@ const pushCurrentBranch = async () => {
 
 // plan→execute→merge cycles before stopping. Override for a quick smoke test:
 //   MAX_ITERATIONS=1 pnpm sandcastle
-const MAX_ITERATIONS = Number(process.env.MAX_ITERATIONS ?? 10);
+const MAX_ITERATIONS = Number(HOST_ENV.MAX_ITERATIONS ?? 10);
 
 // Agent: Claude Code (the `claude` CLI) pointed at Kimi's Anthropic-compatible
 // endpoint. ANTHROPIC_BASE_URL=https://api.kimi.com/coding/ + ANTHROPIC_API_KEY are
@@ -85,6 +271,8 @@ const MODEL = "kimi-k2.6";
 // it's gone; `MAX_THINKING_TOKENS` is the real lever, and the Anthropic API forces
 // temperature=1.0 whenever thinking is on, which matches Kimi's recommendation.)
 const CLAUDE_CODE_THINKING_ENV = {
+  CI: "1",
+  COREPACK_ENABLE_PROJECT_SPEC: "0",
   MAX_THINKING_TOKENS: "16000",
 };
 
@@ -106,12 +294,22 @@ const SANDCASTLE_INSTALL =
   `${SANDCASTLE_PNPM} install --offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`;
 const SANDCASTLE_INSTALL_TIMEOUT_MS = 600_000;
 const SANDCASTLE_GIT_AUTH = "gh auth setup-git";
+const IMPLEMENTER_IDLE_TIMEOUT_SECONDS = Number(
+  HOST_ENV.SANDCASTLE_IMPLEMENTER_IDLE_TIMEOUT_SECONDS ?? 300,
+);
+const REVIEWER_IDLE_TIMEOUT_SECONDS = Number(
+  HOST_ENV.SANDCASTLE_REVIEWER_IDLE_TIMEOUT_SECONDS ?? 180,
+);
+const MERGER_IDLE_TIMEOUT_SECONDS = Number(
+  HOST_ENV.SANDCASTLE_MERGER_IDLE_TIMEOUT_SECONDS ?? 180,
+);
+const SETUP_LOG_COMMAND = `bash -lc 'set -euo pipefail; mkdir -p .sandcastle; { echo "[sandcastle-setup] $(date -Iseconds) install start"; ${SANDCASTLE_PNPM} config get store-dir; ${SANDCASTLE_INSTALL}; echo "[sandcastle-setup] $(date -Iseconds) db generate start"; ${SANDCASTLE_PNPM} --filter @auto-tm/db generate; echo "[sandcastle-setup] $(date -Iseconds) setup done"; } 2>&1 | tee .sandcastle/setup.log'`;
 
 const implementerHooks = {
   sandbox: {
     onSandboxReady: [
       {
-        command: `${SANDCASTLE_INSTALL} && ${SANDCASTLE_PNPM} --filter @auto-tm/db generate`,
+        command: SETUP_LOG_COMMAND,
         timeoutMs: SANDCASTLE_INSTALL_TIMEOUT_MS,
       },
     ],
@@ -131,7 +329,7 @@ const mergerHook = {
         timeoutMs: 30_000,
       },
       {
-        command: `${SANDCASTLE_INSTALL} && ${SANDCASTLE_PNPM} --filter @auto-tm/db generate`,
+        command: SETUP_LOG_COMMAND,
         timeoutMs: SANDCASTLE_INSTALL_TIMEOUT_MS,
       },
     ],
@@ -143,12 +341,14 @@ const mergerHook = {
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
+  await checkGitHubBudget();
 
   // -------------------------------------------------------------------------
   // Phase 1: Plan
   //
-  // Kimi with thinking disabled (faster/cheaper, and avoids the planner
-  // shell-loop observed with thinking on). One iteration: read + reason only.
+  // One planner iteration: read the issue queue once, emit a plan, then let the
+  // host script canonicalize branch names so planner slug drift cannot create
+  // duplicate stale branches.
   // -------------------------------------------------------------------------
   const plan = await sandcastle.run({
     sandbox: docker(),
@@ -174,9 +374,19 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     .replace(/\\"/g, '"')
     .replace(/\\t/g, "\t")
     .trim();
-  const { issues } = JSON.parse(planJson) as {
+  const parsedPlan = JSON.parse(planJson) as {
     issues: { id: string; title: string; branch: string }[];
   };
+  const issues = parsedPlan.issues.map((issue) => {
+    const branch = canonicalIssueBranch(issue);
+    if (issue.branch !== branch) {
+      console.log(
+        `Canonicalized planner branch for #${issue.id}: ${issue.branch} → ${branch}`,
+      );
+    }
+
+    return { ...issue, branch };
+  });
 
   if (issues.length === 0) {
     console.log("No unblocked issues to work on. Exiting.");
@@ -196,16 +406,26 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // -------------------------------------------------------------------------
   const settled = await Promise.allSettled(
     issues.map(async (issue) => {
+      await prepareIssueBranch(issue);
+      const setupStartedAt = Date.now();
+      console.log(
+        `[${issue.id}] creating sandbox and running offline setup for ${issue.branch}...`,
+      );
       const sandbox = await sandcastle.createSandbox({
         branch: issue.branch,
         sandbox: docker(),
         hooks: implementerHooks,
       });
+      console.log(`[${issue.id}] sandbox ready in ${formatDuration(setupStartedAt)}.`);
 
       try {
+        console.log(
+          `[${issue.id}] implementer starting (idle timeout ${IMPLEMENTER_IDLE_TIMEOUT_SECONDS}s).`,
+        );
         const implement = await sandbox.run({
           name: "implementer",
           maxIterations: 100,
+          idleTimeoutSeconds: IMPLEMENTER_IDLE_TIMEOUT_SECONDS,
           agent: kimiClaudeAgent("medium"),
           promptFile: "./.sandcastle/implement-prompt.md",
           promptArgs: {
@@ -217,9 +437,13 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
 
         // Only review if the implementer produced commits.
         if (implement.commits.length > 0) {
+          console.log(
+            `[${issue.id}] reviewer starting (idle timeout ${REVIEWER_IDLE_TIMEOUT_SECONDS}s).`,
+          );
           const review = await sandbox.run({
             name: "reviewer",
             maxIterations: 1,
+            idleTimeoutSeconds: REVIEWER_IDLE_TIMEOUT_SECONDS,
             agent: kimiClaudeAgent("low"),
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
@@ -283,6 +507,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     branchStrategy: { type: "merge-to-head" },
     name: "merger",
     maxIterations: 1,
+    idleTimeoutSeconds: MERGER_IDLE_TIMEOUT_SECONDS,
     agent: kimiClaudeAgent("low"),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {

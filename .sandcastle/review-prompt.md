@@ -32,6 +32,11 @@ behavior; fix real problems you find.
 
 # EXECUTION
 
+Run **all** package-manager commands in this sandbox with
+`CI=1 COREPACK_ENABLE_PROJECT_SPEC=0`. Do not run bare `pnpm`: the Sandcastle
+image uses a prewarmed pnpm 10 store even though the repo root is pinned to pnpm
+9 for normal development.
+
 If you make changes, run the gate for the touched workspaces:
 
 ```

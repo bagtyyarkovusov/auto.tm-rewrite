@@ -65,6 +65,13 @@ The planner selects `gh issue list --state open --label "ready-for-agent"
 --search "-label:blocked"`, excludes parent `Sprint N —` PRDs, and works the
 unblocked slices in parallel.
 
+Before each planner cycle, the host script checks the GitHub core + GraphQL
+rate-limit budget. If either budget is below the configured floor
+(`SANDCASTLE_MIN_GH_CORE_REMAINING`, `SANDCASTLE_MIN_GH_GRAPHQL_REMAINING`;
+defaults: 50), the run stops before creating more worktrees. This avoids the
+half-started state where the planner succeeds but implementer/reviewer `gh`
+calls later fail under a shared 5,000/hour quota.
+
 ## Agent reasoning mode
 
 Sandcastle runs Claude Code against Kimi's Anthropic-compatible coding endpoint.
@@ -107,6 +114,20 @@ Per-phase logs stream to `.sandcastle/logs/` (gitignored). Worktrees live under
 run is interrupted, a worktree with uncommitted changes is preserved on disk —
 remove it manually once you've inspected it.
 
+The setup hook also writes `.sandcastle/setup.log` inside each issue worktree.
+Use that file to distinguish a dependency/bootstrap failure from a slow agent
+response:
+
+```bash
+tail -n 120 .sandcastle/worktrees/<issue-worktree>/.sandcastle/setup.log
+```
+
+If an interrupted run left an empty branch/worktree, the next run resets that
+zero-commit Sandcastle branch to the current host `HEAD` before starting. Branches
+with unique commits or uncommitted changes are preserved for inspection. This
+matters after `pnpm-lock.yaml` changes: an old empty branch would otherwise keep
+the old lockfile even after the Docker image has a freshly warmed store.
+
 ## Merge phase
 
 The merger runs in a temporary Sandcastle worktree, not the root checkout. This is
@@ -126,7 +147,10 @@ back into the current host branch and the host orchestrator pushes that branch t
   `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm install --offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`
   (a `hooks.sandbox.onSandboxReady` command). `COREPACK_ENABLE_PROJECT_SPEC=0`
   is required because the root `packageManager` still points Corepack at pnpm 9.
-  `CI=1` keeps pnpm non-interactive when a reused worktree needs to purge stale
+  The Claude Code agent process also receives `CI=1` and
+  `COREPACK_ENABLE_PROJECT_SPEC=0`, so even an agent-issued bare `pnpm` command
+  uses the image's pnpm 10 instead of making Corepack download pnpm 9. `CI=1`
+  keeps pnpm non-interactive when a reused worktree needs to purge stale
   `node_modules`.
   The host worktree's `node_modules` is mostly symlinks/metadata; package
   contents stay in `/home/agent/.pnpm-store` inside Docker.
@@ -137,6 +161,11 @@ back into the current host branch and the host orchestrator pushes that branch t
 - If an issue **adds** a dependency, `--offline` will miss it. Rebuild the image
   (re-warms the store) or, as a stop-gap, the sandbox's default bridge network
   allows a non-offline install.
+
+The implementer/reviewer/merger phases have explicit idle budgets so a stuck Kimi
+or Claude Code stream does not look like an infinite package-manager hang:
+`SANDCASTLE_IMPLEMENTER_IDLE_TIMEOUT_SECONDS` defaults to 300 seconds;
+reviewer/merger default to 180 seconds.
 
 ## Updating the fork
 

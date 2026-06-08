@@ -15,6 +15,11 @@ For each branch, in order:
    `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm exec turbo run typecheck --filter=<affected> --cache-dir=/tmp/turbo-cache`
    to confirm the merge still typechecks.
 
+Run **all** package-manager commands in this sandbox with
+`CI=1 COREPACK_ENABLE_PROJECT_SPEC=0`. Do not run bare `pnpm`: the Sandcastle
+image uses a prewarmed pnpm 10 store even though the repo root is pinned to pnpm
+9 for normal development.
+
 **Do NOT run the Testcontainers e2e suite or build images here.** The full
 `pnpm test` (e2e included) runs on CI (`pr-checks.yml` / `ci.yml`, self-hosted
 `tm-proxy` runner) once the merge reaches GitHub — that is the e2e gate (D1).

@@ -55,6 +55,12 @@ issue lists: `docs/agents/mobile-expo.md`, `docs/agents/nativewind-v4.md`,
 
 # THE IN-SANDBOX GATE (D1)
 
+Run **all** package-manager commands in this sandbox with
+`CI=1 COREPACK_ENABLE_PROJECT_SPEC=0`. Do not run bare `pnpm`: the repo root
+declares `packageManager: pnpm@9.12.0`, but the Sandcastle image intentionally
+uses the prewarmed pnpm 10 store. Bare `pnpm` can make Corepack download pnpm 9
+and bypass the offline-store path.
+
 Before committing, run the gate for every workspace you touched — via turbo, so
 runtime deps (`@auto-tm/db`, `@auto-tm/contracts` `dist/`) build first:
 
