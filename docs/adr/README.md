@@ -36,6 +36,8 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0028](0028-kimi-sandcastle-afk-orchestrator.md) | Kimi-Sandcastle as the AFK parallel orchestrator | Accepted | 2026-06-04 |
 | [0029](0029-self-hosted-ota-air-gap-delivery.md) | Self-hosted Expo Updates (OTA) + hybrid air-gapped app delivery | Accepted | 2026-06-07 |
 | [0030](0030-reviewer-demo-account-otp-bypass.md) | Reviewer demo-account OTP bypass for store review | Accepted | 2026-06-07 |
+| [0031](0031-mobile-i18n.md) | Mobile i18n runtime — locale store + Accept-Language transport + query-key cache (implements ADR-0007; supersedes its §catalog client-side rendering) | Accepted | 2026-06-09 |
+| [0032](0032-account-deletion-grace-period.md) | Account deletion — 30-day grace, tombstone-retain content, recoverable by login | Accepted | 2026-06-09 |
 
 ## Per-app ADRs
 

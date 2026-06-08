@@ -6,100 +6,134 @@
 | **Phase** | 1 (MLP beta final) |
 | **Milestone** | M7 — Private beta |
 | **Demo audience** | First 10-50 real users |
-| **Estimated time** | ~1 week |
+| **Estimated time** | S8a ~1.5 weeks (remote) + S8b on-site (TM) |
+
+> **Reshaped 2026-06-09.** The original S8 plan assumed the TM ops/infra track was live. It is not: the founder is remote (China) and **geo-blocked from all TM hardware** — no OTP phones, no TM SIMs, no Proxy PC, no air-gap deploy, no TLS, no domains (only the Google Play account exists). Equally, a hands-on review found the **mobile app is not product-coherent enough for even 10 testers** (no logout, no Profile/Settings — the Services tab is five dead tiles, English-only past the auth screens, a dead Favorites tab). So S8 is **split**:
+> - **S8a — remote product-completeness** (do now, verifiable on a local dev stack): mobile completeness + compliance code.
+> - **S8b — on-site beta cutover** (deferred to TM): ops, distribution, real OTP, the actual invites.
+>
+> This is a sequencing reshape of a still-`⚪ Pending` sprint, permitted by [ADR-0020](../../adr/0020-document-hierarchy-and-mutability.md). The S8 product capability (a safe private beta) is unchanged. Two design decisions surfaced during the reshape are captured as [ADR-0031](../../adr/0031-mobile-i18n.md) (mobile i18n) and [ADR-0032](../../adr/0032-account-deletion-grace-period.md) (account deletion). **Favorites** is pulled from the post-MLP bet table into S8a (it removes two dead surfaces and matches the beta-window plan) — capability move recorded here per ADR-0020; no separate ADR needed.
 
 ## Goal
 
-Prepare the small marketplace loop for real private beta users. This is not a feature expansion sprint. It is the circuit-breaker sprint for the MLP: fix the obvious UX, reliability, legal, seed-data, and operations gaps before inviting real users.
+Make the small marketplace loop **product-complete and beta-safe**, doing every piece that can be done remotely first. This is the circuit-breaker sprint for the MLP: fix the obvious UX, reliability, legal, i18n, account, seed-data, and verification gaps so that — once on-site infra exists — inviting real users is the only step left.
 
 ## User capability (the demo line)
 
-> "A real seller can post a car, a real buyer can find and contact them, and the team can watch the beta and moderate issues without SSH."
+> "A real seller can post a car, log in **and out**, manage their account in **their own language**, a real buyer can find and contact them, and the team can moderate — and nothing in the app looks broken or dead."
 
 ## Bounded contexts touched
 
-- **Primary**: all Phase 1 MLP surfaces, mostly polish and verification
-- **Supporting**: ops docs, legal docs, seed data, mobile/web/admin smoke paths
+- **Primary**: `apps/mobile` (product-completeness), `identity/` (account deletion), `listings/` (favorites, deletion archive)
+- **Supporting**: `apps/web` (legal pages), `packages/db` (deletion + favorites migration, seed), ops/legal docs
+
+---
+
+## S8a — remote product-completeness (active)
+
+Everything below is verifiable on a local dev stack from anywhere. **Build order matters**: the i18n foundation lands first so every new screen is built localized, not retrofitted.
+
+| ID | Slice | Primary areas | Depends on | Verify |
+|---|---|---|---|---|
+| **0** | **S7 closeout** — commit in-flight admin fixes + `clear-otp-rate-limit.ts`; close parent issue #175 | docs, db | — | trivial |
+| **A4a** | **i18n foundation** — react-i18next + zustand locale store + `AsyncStorage` persistence + in-app LocaleSwitcher + `Accept-Language` from store + retire `?locale=` params + **fix the `cities` query key** + Hermes `Intl` polyfills. See [ADR-0031](../../adr/0031-mobile-i18n.md). | mobile, api | 0 | 🧑 sim |
+| **A1** | **Profile screen** — wire the dead Profile tile; extend `useViewer`/`GetMe` to surface phone + identity | mobile, api | A4a | 🧑 sim |
+| **A2** | **Settings + Logout** — Settings screen: **logout**, language switch, delete-account entry | mobile | A4a | 🧑 sim |
+| **A3** | **Account deletion (30-day grace)** — replace the S2 hard-delete; tombstone-retain + recovery. See [ADR-0032](../../adr/0032-account-deletion-grace-period.md). | api, db, mobile, worker | A2 | 🤖 AFK + 🧑 |
+| **A5** | **Favorites** — API (favorite/unfavorite/list) + wire the existing disabled detail button + the stub tab | mobile, api | A4a | 🤖 AFK + 🧑 |
+| **A4b + A6** | **String migration + broken-UI sweep** — migrate existing screens' English → keys; hide/route the Garage/Blog/About dead tiles; finish the feed/search/chat/detail/edit audit | mobile | A4a | 🧑 sim |
+| **A7** | **Top-5 errors + accessibility** — plain copy + retry for top MLP errors; tap-target/contrast pass | mobile, api | A4a | 🧑 sim |
+| **B1-legal** | **RU/TK/EN legal pages** — privacy + terms (needed for store review) | web | — | 🤖 AFK |
+| **C1** | **Full MLP e2e + admin moderation smoke** — Testcontainers; finishes the admin browser walkthrough already in flight | api, verify | A1–A7 | 🧑 CI |
+| **C2** | **Docs drift closeout** — roadmap, CONTEXT, deferred-feature ledger reconcile | docs | all | — |
+
+**If time (not tester-blocking for a 10-50 cohort):** public web landing + listing-detail OG (deferred from S4 #95); seed-data depth; top-5 MLP query index gate.
+
+**Verify legend:** 🧑 sim = needs the founder's Expo Go simulator (Sandcastle is blind to UI). 🤖 AFK = cleanly Sandcastle-able (Testcontainers/static). 🧑 CI = e2e/human gate.
+
+### Parallel de-risk (remote, independent)
+
+- **China-SIM `phone-agent` test** — validate the Kotlin SMS-read pipeline against a real (China) SIM before depending on scarce TM SIMs.
+
+---
+
+## S8b — on-site beta cutover (deferred to TM)
+
+Blocked from China; resume when the founder is on-site with hardware.
+
+- OTP phones + real TM SIMs (real OTP delivery) · TM Proxy PC (UPS, dedicated) · ≥1 proven air-gap deploy to TM servers · TLS certs (Let's Encrypt via Proxy PC) + domains (`auto.tm` + `api/admin/media` subdomains)
+- Ops drills in prod-like infra: Telegram alert delivery, rollback, backup restore, feature-pause flags, bad-moderation reversal
+- Real **TestFlight / Play internal-track** distribution + APK fallback to physical devices ([ADR-0029](../../adr/0029-self-hosted-ota-air-gap-delivery.md))
+- Monitoring/runbook live; beta responder owner for first 24h
+- **The actual 10-50 invites**
+
+---
+
+## Locked design decisions (S8a)
+
+- **i18n** ([ADR-0031](../../adr/0031-mobile-i18n.md)): react-i18next · device-detect → **RU** fallback · zustand locale store + `AsyncStorage` · **`Accept-Language` from store** (retire `?locale=`, **keep locale in query keys**, fix `cities`) · per-feature namespaces · boundary = UI chrome + catalog localized, **user content never auto-translated**.
+- **Account deletion** ([ADR-0032](../../adr/0032-account-deletion-grace-period.md)): 30-day grace via `User.deletionScheduledAt` · revoke sessions + archive listings (tagged `archivedByDeletion`) on request · recovery = **prompt + auto-republish** on OTP login during grace (survives `SIGNUPS_ENABLED=false`) · day-30 **tombstone-retain** purge by a daily `apps/worker` job (keep User row, null PII, prune private tables, retain listings/conversations/messages/reports re-attributed) · existing cascades stay as a true-erasure safety net.
+
+---
 
 ## Acceptance criteria (DoD)
 
-- [ ] End-to-end happy path works on mobile: login → create listing → browse/search → contact seller → seller replies
-- [ ] Public web landing exists with a simple search/browse CTA and links to listing detail
-- [ ] Legal pages exist in RU/TK/EN: privacy and terms
-- [ ] Account deletion path is reachable from mobile settings or documented beta support path
-- [ ] Account deletion behavior matches Feature 30 and Legal docs before beta: `DELETE /api/v1/me` starts a 30-day grace period, revokes refresh sessions, archives user listings, allows recovery by login during the grace period, preserves listings/messages/moderation reports/audit rows with deleted-user attribution, and schedules/defines PII purge after day 30; the S2 hard-delete cascade is not acceptable for beta legal posture
-- [ ] Internal beta distribution path works (TestFlight/Play internal track or documented equivalent)
-- [ ] Seed data supports the first beta: core brands/models, regions/cities, body/color/spec options
-- [ ] Top 5 user-facing errors have plain copy and retry behavior
-- [ ] Top 5 API queries in the MLP path have indexes or documented acceptable query plans
-- [ ] Mobile tap targets and obvious contrast issues pass a focused accessibility check
-- [ ] Admin reports/moderation path is smoke-tested with real beta-like data
-- [ ] Monitoring/runbook covers API health, DB health, SMS OTP health, media storage, admin escalation, and the beta responder owner for the first 24h after deploy
-- [ ] Operational drills pass in staging/prod-like infra before beta invites: Telegram alert delivery, rollback, backup restore, feature-pause flags, and bad-moderation reversal through normal admin actions
-- [ ] No new product capability is added unless it blocks the MLP loop
-- [ ] Documentation drift audit passes: PRD features, flows, ops docs, `CONTEXT-MAP.md`, relevant `CONTEXT.md` files, and issue-label guidance reflect ADR-0027's MLP beta scope; historical ADRs/retros remain historical
-- [ ] Deferred-feature ledger is reviewed: every post-MLP candidate in `03-roadmap.md` has a current PRD home, a trigger to build, and no orphan future sprint file or issue
-- [ ] `docs/prd/03-roadmap.md` updated to mark Phase 1 MLP beta complete when S8 closes
-- [ ] Phase 1 retro captures which post-MLP bets should be shaped next
+**S8a (remote):**
+- [ ] i18n: signed-in app fully localized TK/RU/EN; fresh install device-detects → RU fallback; locale switch refetches catalog (incl. cities) and persists across launches
+- [ ] Account surface reachable: Profile (shows the signed-in identity) + Settings with working **logout** and language switch
+- [ ] Account deletion matches [ADR-0032](../../adr/0032-account-deletion-grace-period.md): `DELETE /api/v1/me` starts a 30-day grace, revokes sessions, archives listings, allows prompt+auto-republish recovery by login, tombstone-retains content with deleted-user attribution, and a worker job purges PII at day 30; the S2 hard-delete cascade is gone from the user path
+- [ ] Favorites works: favorite/unfavorite from detail + feed, real Favorites list; no dead Favorites surfaces remain
+- [ ] No dead/tappable-but-inert UI: Garage/Blog/About tiles hidden or routed; broken-UI sweep of feed/search/chat/detail/edit done
+- [ ] Top 5 user-facing errors have plain copy + retry; mobile tap targets + obvious contrast pass a focused accessibility check
+- [ ] Legal pages exist in RU/TK/EN: privacy + terms
+- [ ] End-to-end happy path passes locally: login → create listing → browse/search → contact seller → seller replies; admin reports/moderation smoke with beta-like data
+- [ ] Docs drift audit passes (see closeout below); deferred-feature ledger reviewed; Favorites move recorded in roadmap
+
+**S8b (on-site, gates the invites):**
+- [ ] Internal beta distribution works (TestFlight/Play internal track or documented equivalent) on physical devices
+- [ ] Real OTP delivery via TM phones/SIMs; reachable beta surfaces over TLS
+- [ ] Monitoring/runbook covers API/DB/SMS-OTP/media/admin health + the 24h beta responder owner
+- [ ] Ops drills pass in prod-like infra: alert delivery, rollback, backup restore, feature-pause flags, bad-moderation reversal
+- [ ] `docs/prd/03-roadmap.md` marks Phase 1 MLP beta complete when S8 closes; Phase 1 retro captures the next 1-3 post-MLP bets
 
 ## Tests required
 
-- **API e2e**: MLP happy path across identity, listings, contact, moderation; account deletion starts grace period instead of hard-deleting user immediately
-- **Mobile smoke**: login, create listing, search, contact
-- **Web smoke**: landing + listing detail OG metadata
+- **API e2e**: MLP happy path across identity, listings, contact, moderation; account deletion starts grace (not hard delete), recovery republishes, day-30 purge tombstones + retains content
+- **Mobile smoke**: login, logout, create listing, search, contact, locale switch, delete-account flow
+- **Web smoke**: legal pages render RU/TK/EN
 - **Admin smoke**: report, ban, audit log
-- **Manual beta checklist**: distribution, legal links, seed data, monitoring, alert/rollback/restore/feature-pause/moderation drills
-
-## Recommended child issue map
-
-Use this map when creating S8 GitHub issues. S8 is a closure sprint, so children should be mostly verification/polish slices, not new product surfaces.
-
-| Order | Child slice | Primary areas | Depends on | Notes |
-|---|---|---|---|---|
-| 1 | Beta gate inventory + issue sequencing | `docs` | S7 shipped | Confirm S1-S7 shipped state, open blockers, and exact S8 issue order before implementation starts. |
-| 2 | Account deletion legal alignment | `api`, `identity`, `db`, `mobile` | 1 | Replace S2 hard delete with grace-period beta behavior, session revocation, listing archive behavior, recovery path, day-30 purge definition, and mobile/settings or support entry. |
-| 3 | Public web + legal links | `web`, `docs` | 1 | Landing/search CTA, listing detail public metadata deferred from S4 issue #95, RU/TK/EN privacy and terms links. |
-| 4 | Seed data + catalog readiness | `db`, `api` | 1 | Beta cities, core brand/model/spec coverage, deterministic seed/check command or documented operator path. |
-| 5 | Top errors, accessibility, mobile polish | `mobile`, `api` | 1 | Plain copy/retry for top MLP errors, tap target/contrast pass, smoke fixes only. |
-| 6 | Query/index/performance gate | `api`, `db`, `perf` | 1 | Top 5 MLP queries have indexes or acceptable plans; no broad tuning outside measured beta paths. |
-| 7 | Ops drills + beta distribution | `infra`, `docs`, `mobile` | 1 | Internal/private app distribution, alert/rollback/restore/feature-pause/moderation drills, support channel readiness. |
-| 8 | Full MLP smoke + docs drift closeout | `docs`, `api`, `mobile`, `admin`, `web` | 2, 3, 4, 5, 6, 7 | End-to-end beta path, deferred-feature ledger review, `CONTEXT-MAP.md`/`CONTEXT.md` drift check, roadmap M1-M7 update, Phase 1 retro inputs. |
-
-Any S8 issue that tries to add blog, saved searches, notifications, showroom, Garage, rich chat, video, broad dashboard, or app-store marketing should be moved to a post-MLP PRD home instead of being accepted as S8 scope.
+- **Manual beta checklist (S8b)**: distribution, real OTP, monitoring, alert/rollback/restore/feature-pause/moderation drills
 
 ## Documentation drift closeout
 
-The final S8 closeout issue must run this checklist before Phase 1 is marked complete:
+The final S8 closeout (C2) runs this before Phase 1 is marked complete:
 
-- **Roadmap**: `docs/prd/03-roadmap.md` has S1-S8 accurate statuses, M1-M7 state, and a current post-MLP bet table.
-- **Deferred-feature ledger**: every deferred feature has a current PRD or flow home, a trigger to build, and no orphan "future sprint" file pretending the work is already scheduled.
-- **Sprint docs**: S7 and S8 child issue outcomes reconcile with their sprint DoD; any shipped-vs-planned drift is captured in the retro, not by silently rewriting a locked sprint file.
-- **CONTEXT docs**: every implementation PR that changed a domain invariant updated the local `CONTEXT.md`; planned additions remain clearly marked as planned and point to owning PRD/sprint docs.
-- **CONTEXT-MAP**: any new app, package, bounded context, or mobile feature-module context is indexed.
-- **Issues**: open issues for post-MLP ideas point to the owning PRD/flow and use `phase-2` or `phase-3`; S8 does not leave Phase 1 cleanup hidden in vague `needs-triage` issues.
-- **ADRs**: no new ADR is required for clarifying deferred placement, but any material capability move between phases or any surprising architectural trade-off has an ADR or an explicit "no ADR needed" note in the retro.
+- **Roadmap**: S1-S8 statuses, M1-M7 state, post-MLP bet table current (Favorites removed from the bet table — now shipped).
+- **Deferred-feature ledger**: every remaining deferred feature has a PRD/flow home + a trigger to build; no orphan future-sprint file.
+- **Sprint docs**: S7 + S8 child outcomes reconcile with the sprint DoDs; drift captured in the retro, not by rewriting locked files.
+- **CONTEXT docs**: every implementation PR that changed a domain invariant updated the local `CONTEXT.md` (i18n, account-deletion grace, favorites, tombstone-user state); planned items clearly marked.
+- **CONTEXT-MAP**: any new module/context indexed.
+- **ADRs**: 0031 + 0032 merged; any further surprising trade-off has an ADR or an explicit "no ADR needed" note.
 
-If the checklist finds a gap that affects beta safety, fix it before invites. If it finds only post-MLP planning work, park it in the roadmap bet table or the owning feature PRD and do not keep extending S8.
+If the checklist finds a beta-safety gap, fix it before invites. Post-MLP planning work parks in the roadmap bet table.
 
 ## Files this sprint creates / touches
 
 ```
-apps/mobile/
-apps/web/src/app/[locale]/
-apps/admin/src/app/(admin)/
-docs/prd/ops/83-legal.md
-docs/prd/ops/84-launch-plan.md
-docs/prd/ops/85-launch-analytics-plan.md
-apps/api/src/modules/identity/
-packages/db/prisma/schema.prisma
+apps/mobile/                              # i18n, account surface, favorites, broken-UI sweep
+apps/api/src/modules/identity/            # account deletion grace + recovery
+apps/api/src/modules/listings/            # favorites, deletion archive tagging
+apps/worker/                              # day-30 purge job
+apps/web/src/app/[locale]/                # legal pages (RU/TK/EN)
+packages/db/prisma/schema.prisma          # deletionScheduledAt, archivedByDeletion, Favorite wiring
+docs/prd/ops/83-legal.md, 84-launch-plan.md, 85-launch-analytics-plan.md
 ```
 
 ## References
 
-- **Phase scope**: [`../02-phases.md`](../02-phases.md)
-- **Roadmap**: [`../03-roadmap.md`](../03-roadmap.md)
-- **Ops PRDs**: [`../ops/83-legal.md`](../ops/83-legal.md), [`../ops/84-launch-plan.md`](../ops/84-launch-plan.md), [`../ops/85-launch-analytics-plan.md`](../ops/85-launch-analytics-plan.md)
-- **ADRs**: [ADR-0027](../../adr/0027-mlp-beta-scope.md)
+- **ADRs**: [ADR-0027](../../adr/0027-mlp-beta-scope.md) (MLP scope), [ADR-0031](../../adr/0031-mobile-i18n.md) (mobile i18n), [ADR-0032](../../adr/0032-account-deletion-grace-period.md) (account deletion), [ADR-0029](../../adr/0029-self-hosted-ota-air-gap-delivery.md) (OTA delivery), [ADR-0020](../../adr/0020-document-hierarchy-and-mutability.md) (doc mutability)
+- **Roadmap**: [`../03-roadmap.md`](../03-roadmap.md) · **Phase scope**: [`../02-phases.md`](../02-phases.md)
+- **Ops PRDs**: [`../ops/83-legal.md`](../ops/83-legal.md), [`../ops/84-launch-plan.md`](../ops/84-launch-plan.md)
 
 ## Previous-sprint dependencies
 
@@ -107,20 +141,13 @@ packages/db/prisma/schema.prisma
 
 ## No-gos
 
-- No blog
-- No saved searches
-- No notification categories
-- No dealership showroom
-- No Garage
-- No rich chat
-- No video pipeline
-- No broad app-store marketing launch
+- No blog · no saved searches · no notification categories · no dealership showroom · no Garage · no rich chat · no video pipeline · no broad app-store marketing launch
+- (Favorites is **in** scope this sprint — pulled from post-MLP per the reshape above.)
 
 ## Definition of "MLP beta complete"
 
-After this sprint:
-
-- [ ] M1-M7 are all 🟢 in `03-roadmap.md`
-- [ ] First 10-50 users can be invited
-- [ ] The team can observe, moderate, and support those users
+- [ ] S8a shipped: app is product-coherent, localized, with a working account surface + deletion + favorites
+- [ ] S8b shipped on-site: distribution + real OTP + monitoring + drills
+- [ ] M1-M7 all 🟢 in `03-roadmap.md`
+- [ ] First 10-50 users can be invited; the team can observe, moderate, and support them
 - [ ] A Phase 1 retro lists the next 1-3 shaped post-MLP bets
