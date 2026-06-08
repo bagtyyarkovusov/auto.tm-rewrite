@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,6 +9,7 @@ import { useCatalogMaps } from "../../../src/listings/detail/useCatalogMaps";
 import { ListingDetailView } from "../../../src/listings/components/ListingDetail";
 import { ContactCtaBar } from "../../../src/listings/components/ContactCtaBar";
 import { useViewer } from "../../../src/auth/useViewer";
+import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -88,6 +90,7 @@ export default function ListingDetailScreen() {
   const router = useRouter();
   const { data, isPending, error, refetch } = useListingDetail(id ?? "");
   const viewer = useViewer();
+  const [reportOpen, setReportOpen] = useState(false);
 
   const { maps } = useCatalogMaps(
     data?.brandId,
@@ -128,7 +131,12 @@ export default function ListingDetailScreen() {
       </View>
 
       <View className="flex-1">
-        <ListingDetailView listing={data} maps={maps} isOwner={isOwner} />
+        <ListingDetailView
+          listing={data}
+          maps={maps}
+          isOwner={isOwner}
+          onReport={() => setReportOpen(true)}
+        />
       </View>
 
       {/* Buyer CTAs only for non-owners */}
@@ -143,6 +151,13 @@ export default function ListingDetailScreen() {
           />
         </View>
       )}
+
+      <ReportSheet
+        targetType="listing"
+        targetId={data.id}
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+      />
     </SafeAreaView>
   );
 }

@@ -61,4 +61,8 @@ export const queryKeys = {
     messages: (id: string) =>
       [...queryKeys.conversations.all(), "messages", id] as const,
   },
+
+  reports: {
+    all: () => ["reports"] as const,
+  },
 };

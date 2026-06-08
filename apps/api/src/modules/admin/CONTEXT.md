@@ -9,34 +9,50 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 ## Owns (entities + tables)
 
 - `AuditLog` — id, actorId? (FK → User, onDelete: SetNull — admin user who performed the action; nullable to preserve audit history when an admin user is deleted), action (String — not yet an enum), targetType (String), targetId (String), details? (JSON), createdAt. Indexes on `(targetType, targetId)` and `(actorId, createdAt)`.
+- `ContentReport` — id, reporterUserId? (FK → User, onDelete: SetNull — nullable after account deletion), targetType (String), targetId (String), reason (String), details? (String), status (String, default "pending"), reviewedById? (FK → User, onDelete: SetNull), reviewedAt? (DateTime), createdAt. Indexes on `(status, createdAt, id)`, `(targetType, targetId, status)`, and `(reporterUserId, createdAt, id)`.
 
 ## Invariants (enforced today)
 
 - `AuditLog.actorId` references a User if non-null; on user delete, `actorId` is set to NULL (audit row survives for compliance).
 - `AuditLog` is append-only at the schema level (no soft-delete; no schema-level update restriction — must be enforced at application layer when moderation ships in S7).
+- `ContentReport.reporterUserId` is required at creation time (S7 does not create anonymous reports). Historical reports survive account deletion by nulling `reporterUserId`.
+- `ContentReport.targetType` + `targetId` are polymorphic references with no DB FK. Target existence is validated at creation time through `ListingsReadPort` (for `listing` targets) and `IdentityReadPort` (for `user` targets).
+- Report creation validates: active listings only (`sold` → `REPORT_TARGET_NOT_REPORTABLE`; missing/draft/archived/banned/deleted → 404); existing non-deleted users only (missing → 404); no self-reporting (own listing or own profile → `SELF_REPORT_NOT_ALLOWED`); suspended reporters are blocked (`USER_SUSPENDED`).
+- Duplicate pending reports are deduped at application level: same `(reporterUserId, targetType, targetId)` while `status = pending` returns the existing report (HTTP 200, `reusedExisting = true`) instead of creating a new row. New reports return HTTP 201 with `reusedExisting = false`.
+- `ContentReport.reason` enum values: `spam`, `scam`, `misleading`, `wrong_category` (listing-only), `harassment` (user-only), `other` (requires non-empty trimmed details ≤ 1000 chars).
+- `ContentReportCreated` event is emitted from `admin/` after a new report row commits. Duplicate reuse emits no event. S7 has no in-process consumers.
+- Public report routes (`POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report`) are authenticated with `JwtAuthGuard` (not `AdminGuard`). The public response shape is exactly `{ reportId, status, createdAt, reusedExisting }`.
 
 ## Module shape (today)
 
 - `apps/api/src/modules/admin/`:
-  - `domain/`, `application/`, `infrastructure/`, `presentation/` — empty
-  - `admin.module.ts` — empty module
-- No admin endpoints, no audit writer service, no moderation actions today.
+  - `domain/ContentReport.ts` — domain entity with reason/target compatibility rules, `other`-requires-details, and details length cap
+  - `domain/types.ts` — `DomainError` + `CONTENT_REPORT_ERROR_CODES`
+  - `domain/ports/ContentReportRepository.ts` — repository port (`save`, `findPendingByReporterAndTarget`)
+  - `application/CreateReport.ts` — public report creation use-case; validates targets through `ListingsReadPort` + `IdentityReadPort`, enforces suspended-reporter block, self-report rejection, and duplicate pending dedupe; emits `ContentReportCreated` for new rows
+  - `application/CreateReport.spec.ts` — unit tests with fake repository + fake ports
+  - `infrastructure/PrismaContentReportRepository.ts` — Prisma adapter for `ContentReportRepository`
+  - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard)
+  - `presentation/admin.controller.ts` — stub ping endpoint
+  - `admin.module.ts` — registers `PrismaContentReportRepository`, `CreateReport`, `ReportsController`; imports `ListingsModule` + `IdentityModule`
+- No audit writer service, no moderation action use-cases (dismiss/ban/suspend) yet.
 
 ## Ports exposed
 
-- (none today — S7 adds the first moderation/audit ports)
+- (none today — S7 report creation is consumed only by the in-module `ReportsController`)
 
 ## Ports consumed
 
-- (none today)
+- `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `CreateReport` to validate listing targets
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `CreateReport` to validate user targets and check reporter suspension state
 
 ## Shipped use-cases
 
-- (none today)
+- `CreateReport` — creates a `ContentReport` for `listing` or `user` targets after validating target existence/reachability, reporter suspension, and self-report rules; dedupes pending reports; emits `ContentReportCreated` for new rows only
 
 ## Events emitted
 
-- (none today)
+- `ContentReportCreated` — emitted after a new `ContentReport` row commits. Payload: `{ reportId, targetType, targetId, reporterUserId, reason }`. Duplicate pending reuse emits no event.
 
 ## Events consumed
 
