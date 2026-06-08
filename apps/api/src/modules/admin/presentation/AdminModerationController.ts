@@ -17,6 +17,7 @@ import { BanListing } from "../application/BanListing";
 import { UnbanListing } from "../application/UnbanListing";
 import { SuspendUser } from "../application/SuspendUser";
 import { UnsuspendUser } from "../application/UnsuspendUser";
+import { DismissReport } from "../application/DismissReport";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -32,7 +33,32 @@ export class AdminModerationController {
     private readonly suspendUserUC: SuspendUser,
     @Inject(UnsuspendUser)
     private readonly unsuspendUserUC: UnsuspendUser,
+    @Inject(DismissReport)
+    private readonly dismissReportUC: DismissReport,
   ) {}
+
+  @Post("reports/:id/dismiss")
+  async dismissReport(
+    @Param("id") reportId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const adminUserId = this.userId(req);
+    const parsed = this.parseOrThrow(AdminSchemas.DismissReportRequestSchema, body);
+
+    const result = await this.dismissReportUC.execute({
+      reportId,
+      adminUserId,
+      reason: parsed.reason,
+    });
+
+    return {
+      reportId: result.reportId,
+      status: result.status,
+      reviewedAt: result.reviewedAt,
+      auditLogId: result.auditLogId,
+    };
+  }
 
   @Post("listings/:id/ban")
   async banListing(

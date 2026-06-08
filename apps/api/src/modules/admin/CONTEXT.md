@@ -50,7 +50,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
   - `infrastructure/PrismaAuditLogRepository.ts` — Prisma adapter for `AuditLogRepository`
   - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard); admin `GET /api/v1/admin/reports` and `GET /api/v1/admin/reports/:id` (AdminGuard)
   - `presentation/AuditController.ts` — admin `GET /api/v1/admin/audit` (AdminGuard)
-  - `presentation/AdminModerationController.ts` — admin `POST /api/v1/admin/listings/:id/ban`, `POST /api/v1/admin/listings/:id/unban`, `POST /api/v1/admin/users/:id/suspend`, and `POST /api/v1/admin/users/:id/unsuspend` (AdminGuard)
+  - `presentation/AdminModerationController.ts` — admin `POST /api/v1/admin/reports/:id/dismiss`, `POST /api/v1/admin/listings/:id/ban`, `POST /api/v1/admin/listings/:id/unban`, `POST /api/v1/admin/users/:id/suspend`, and `POST /api/v1/admin/users/:id/unsuspend` (AdminGuard)
   - `presentation/admin.controller.ts` — stub ping endpoint
   - `admin.module.ts` — registers repositories, use-cases, and controllers; imports `ListingsModule` + `IdentityModule`
 
@@ -75,6 +75,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 - `UnbanListing` — admin listing unban; restores `banned → active` via `ListingsAdminPort.unbanBannedListing`; rejects `reportId`; state conflict → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction mutation + audit; returns target state + `auditLogId`
 - `SuspendUser` — admin user suspend; accepts optional `reportId`; validates admin-target (`role = admin` → 403 `ADMIN_TARGET_NOT_MODERATABLE`) and self-moderation (target id === acting admin → 403 `SELF_MODERATION_NOT_ALLOWED`) before any mutation/report/audit; report-backed validation order identical to `BanListing`; direct-suspend state conflict (already suspended) → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction report resolution (when provided) + user suspension via `IdentityAdminPort.suspendUser` + audit write; returns target suspension state + `auditLogId` (+ `reportId`/`reportStatus=actioned` when report-backed)
 - `UnsuspendUser` — admin user unsuspend; restores suspended → unsuspended via `IdentityAdminPort.unsuspendUser`; checks admin-target and self-moderation policies; rejects `reportId`; state conflict (not suspended) → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction mutation + audit; returns target suspension state + `auditLogId`
+- `DismissReport` — admin report dismiss; accepts only pending reports; sets `ContentReport.status = dismissed`, `reviewedById`, `reviewedAt`; writes `CONTENT_REPORT_RESOLVE` audit row with `targetType = "content_report"`, `details.reportedTargetType`, and `details.reportedTargetId`; returns `reportId`, `status = dismissed`, `reviewedAt`, and `auditLogId`; already-resolved reports return 409 `REPORT_ALREADY_RESOLVED`
 
 ## Events emitted
 
@@ -89,6 +90,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 | GET | `/api/v1/admin/reports` | AdminGuard | `ListReports` — admin report queue (default pending, oldest-first) |
 | GET | `/api/v1/admin/reports/:id` | AdminGuard | `GetReportDetail` — admin report detail with live counts |
 | GET | `/api/v1/admin/audit` | AdminGuard | `ListAuditEntries` — admin audit log (newest-first) |
+| POST | `/api/v1/admin/reports/:id/dismiss` | AdminGuard | `DismissReport` — dismiss a pending content report |
 | POST | `/api/v1/admin/listings/:id/ban` | AdminGuard | `BanListing` — ban an active listing (direct or report-backed) |
 | POST | `/api/v1/admin/listings/:id/unban` | AdminGuard | `UnbanListing` — unban a banned listing |
 | POST | `/api/v1/admin/users/:id/suspend` | AdminGuard | `SuspendUser` — suspend an unsuspended user (direct or report-backed) |
