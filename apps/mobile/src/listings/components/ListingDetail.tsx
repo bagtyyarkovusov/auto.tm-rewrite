@@ -1,6 +1,7 @@
 import { ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
+import { Flag } from "lucide-react-native";
 
 import type { CatalogMaps } from "../detail/useCatalogMaps";
 
@@ -12,6 +13,8 @@ import { OwnerActions } from "./OwnerActions";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 type ListingDetail = ListingsSchemas.ListingDetail;
 
@@ -19,6 +22,7 @@ interface ListingDetailProps {
   listing: ListingDetail;
   maps: CatalogMaps;
   isOwner?: boolean;
+  onReport?: () => void;
 }
 
 function buildTitle(listing: ListingDetail, maps: CatalogMaps): string {
@@ -48,7 +52,7 @@ function SpecItem({ label, value }: SpecItemProps) {
   );
 }
 
-export function ListingDetailView({ listing, maps, isOwner = false }: ListingDetailProps) {
+export function ListingDetailView({ listing, maps, isOwner = false, onReport }: ListingDetailProps) {
   const isSold = listing.status === Enums.ListingStatus.Sold;
 
   const specs: SpecItemProps[] = [
@@ -178,6 +182,22 @@ export function ListingDetailView({ listing, maps, isOwner = false }: ListingDet
             contactPhone={listing.contactPhone}
             allowCalls={listing.allowCalls}
           />
+        )}
+
+        {/* Report button for non-owner active listings */}
+        {!isOwner && listing.status === Enums.ListingStatus.Active && onReport && (
+          <>
+            <Separator className="my-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onPress={onReport}
+            >
+              <Icon as={Flag} className="size-4 text-muted-foreground" />
+              <Text className="text-sm text-muted-foreground">Report</Text>
+            </Button>
+          </>
         )}
       </View>
 

@@ -23,6 +23,7 @@ import { HttpOtpSenderAdapter } from "./infrastructure/HttpOtpSenderAdapter";
 import { BcryptHasherAdapter } from "./infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "./infrastructure/SystemClockAdapter";
 import { PrismaIdentityCheckAdapter } from "./infrastructure/PrismaIdentityCheckAdapter";
+import { PrismaIdentityReadAdapter } from "./infrastructure/PrismaIdentityReadAdapter";
 import { AesGcmTotpSecretCipher } from "./infrastructure/AesGcmTotpSecretCipher";
 import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
@@ -43,6 +44,7 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     BcryptHasherAdapter,
     SystemClockAdapter,
     PrismaIdentityCheckAdapter,
+    PrismaIdentityReadAdapter,
     AesGcmTotpSecretCipher,
     OtplibTotpVerifier,
     InMemoryTotpThrottleAdapter,
@@ -54,6 +56,10 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
     {
       provide: IDENTITY_TOKENS.IdentityCheckPort,
       useClass: PrismaIdentityCheckAdapter,
+    },
+    {
+      provide: IDENTITY_TOKENS.IdentityReadPort,
+      useClass: PrismaIdentityReadAdapter,
     },
     {
       provide: IDENTITY_TOKENS.ClockPort,
@@ -112,6 +118,7 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,
+    IDENTITY_TOKENS.IdentityReadPort,
     IDENTITY_TOKENS.SessionRepository,
     IDENTITY_TOKENS.ClockPort,
   ],
