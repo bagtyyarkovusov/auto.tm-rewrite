@@ -31,8 +31,6 @@ import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrott
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
 import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
-import { SuspendUserAccount } from "./application/SuspendUserAccount";
-import { UnsuspendUserAccount } from "./application/UnsuspendUserAccount";
 
 @Module({
   imports: [
@@ -124,8 +122,6 @@ import { UnsuspendUserAccount } from "./application/UnsuspendUserAccount";
     GetAdminTotpStatus,
     EnrollAdminTotp,
     VerifyAdminTotp,
-    SuspendUserAccount,
-    UnsuspendUserAccount,
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,

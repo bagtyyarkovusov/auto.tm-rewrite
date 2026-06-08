@@ -50,10 +50,9 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
   - `infrastructure/PrismaAuditLogRepository.ts` — Prisma adapter for `AuditLogRepository`
   - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard); admin `GET /api/v1/admin/reports` and `GET /api/v1/admin/reports/:id` (AdminGuard)
   - `presentation/AuditController.ts` — admin `GET /api/v1/admin/audit` (AdminGuard)
-  - `presentation/AdminModerationController.ts` — admin `POST /api/v1/admin/listings/:id/ban` and `POST /api/v1/admin/listings/:id/unban` (AdminGuard)
+  - `presentation/AdminModerationController.ts` — admin `POST /api/v1/admin/listings/:id/ban`, `POST /api/v1/admin/listings/:id/unban`, `POST /api/v1/admin/users/:id/suspend`, and `POST /api/v1/admin/users/:id/unsuspend` (AdminGuard)
   - `presentation/admin.controller.ts` — stub ping endpoint
   - `admin.module.ts` — registers repositories, use-cases, and controllers; imports `ListingsModule` + `IdentityModule`
-- No moderation action use-cases (dismiss/ban/suspend) yet.
 
 ## Ports exposed
 
