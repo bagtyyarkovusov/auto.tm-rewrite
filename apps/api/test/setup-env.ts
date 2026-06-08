@@ -15,3 +15,10 @@ if (existsSync(envPath)) {
 if (!hadOtpTestMode) {
   delete process.env["OTP_TEST_MODE"];
 }
+
+// Tests that instantiate IdentityModule (and therefore AesGcmTotpSecretCipher)
+// need a valid 32-byte base64 encryption key.
+if (!process.env["TOTP_SECRET_ENCRYPTION_KEY"]) {
+  process.env["TOTP_SECRET_ENCRYPTION_KEY"] =
+    "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=";
+}

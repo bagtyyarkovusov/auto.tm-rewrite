@@ -55,6 +55,9 @@ describe("AdminCatalogController e2e", () => {
 
   beforeEach(async () => {
     await prisma.auditLog.deleteMany();
+    await prisma.totpBackupCode.deleteMany();
+    await prisma.totpEnrollment.deleteMany();
+    await prisma.session.deleteMany();
     await prisma.listingMedia.deleteMany();
     await prisma.listing.deleteMany();
     await prisma.model.deleteMany();
@@ -70,7 +73,15 @@ describe("AdminCatalogController e2e", () => {
         role: "admin",
       },
     });
-    return { userId: user.id, token: mintAdminJwt(user.id) };
+    const session = await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: randomUUID(),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        adminTotpExpiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000),
+      },
+    });
+    return { userId: user.id, token: mintAdminJwt(user.id, session.id) };
   }
 
   async function createNonAdminUser(): Promise<{ userId: string; token: string }> {

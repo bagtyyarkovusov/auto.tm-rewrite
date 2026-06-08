@@ -56,6 +56,10 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
       useClass: PrismaIdentityCheckAdapter,
     },
     {
+      provide: IDENTITY_TOKENS.ClockPort,
+      useExisting: SystemClockAdapter,
+    },
+    {
       provide: IDENTITY_TOKENS.SessionRepository,
       useExisting: PrismaSessionRepository,
     },
@@ -108,6 +112,8 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,
+    IDENTITY_TOKENS.SessionRepository,
+    IDENTITY_TOKENS.ClockPort,
   ],
 })
 export class IdentityModule {}
