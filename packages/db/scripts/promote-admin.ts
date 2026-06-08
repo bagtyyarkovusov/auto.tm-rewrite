@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import "dotenv/config";
 import { PrismaClient } from "../generated/prisma/client/client";
 import { runPromoteAdmin } from "../src/promote-admin";
 
@@ -20,14 +21,14 @@ function parseArgs(argv: string[]) {
   return { phone, reason, dryRun };
 }
 
-async function main() {
+async function main(): Promise<number> {
   const args = parseArgs(process.argv);
 
   if (!args.phone || !args.reason) {
     console.error(
       "Usage: tsx scripts/promote-admin.ts --phone <phone> --reason <reason> [--dry-run]",
     );
-    process.exit(1);
+    return 1;
   }
 
   const prisma = new PrismaClient();
@@ -54,13 +55,20 @@ async function main() {
     );
 
     console.log(result.message);
-    process.exit(result.exitCode);
+    return result.exitCode;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    return 1;
   } finally {
     await prisma.$disconnect();
   }
 }
 
-main();
+main()
+  .then((code) => {
+    process.exit(code);
+  })
+  .catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });

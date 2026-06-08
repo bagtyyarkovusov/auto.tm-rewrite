@@ -124,8 +124,9 @@ describe("runPromoteAdmin", () => {
       findUserByPhone: vi.fn().mockResolvedValue({ id: "user-1", role: "buyer" }),
     });
     const reason = "Line 1\nLine 2\nLine 3";
-    await runPromoteAdmin(deps, { ...validOptions, reason });
+    const result = await runPromoteAdmin(deps, { ...validOptions, reason });
 
+    expect(result.exitCode).toBe(0);
     expect(deps.createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         details: expect.objectContaining({ reason }),
