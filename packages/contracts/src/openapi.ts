@@ -16,6 +16,10 @@ import {
   RefreshRequestSchema,
   RefreshResponseSchema,
   LogoutRequestSchema,
+  AdminTotpStatusResponseSchema,
+  AdminTotpEnrollResponseSchema,
+  AdminTotpVerifyRequestSchema,
+  AdminTotpVerifyResponseSchema,
 } from "./schemas/auth";
 import {
   BrandSummarySchema,
@@ -63,6 +67,25 @@ import {
   ExchangeRateSchema,
   ExchangeRatesResponseSchema,
 } from "./schemas/exchange-rates";
+import {
+  CreateReportRequestSchema,
+  CreateReportResponseSchema,
+  ReportListItemSchema,
+  ListReportsResponseSchema,
+  GetReportDetailResponseSchema,
+  DismissReportRequestSchema,
+  DismissReportResponseSchema,
+  BanListingRequestSchema,
+  BanListingResponseSchema,
+  UnbanListingRequestSchema,
+  UnbanListingResponseSchema,
+  SuspendUserRequestSchema,
+  SuspendUserResponseSchema,
+  UnsuspendUserRequestSchema,
+  UnsuspendUserResponseSchema,
+  AuditLogListItemSchema,
+  ListAuditEntriesResponseSchema,
+} from "./schemas/admin";
 import {
   OpenConversationRequestSchema,
   OpenConversationResponseSchema,
@@ -145,6 +168,35 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.registerComponent("schemas", "ConversationSummary", S(ConversationSummarySchema));
   registry.registerComponent("schemas", "MessageSummary", S(MessageSummarySchema));
   registry.registerComponent("schemas", "ConversationListingCard", S(ConversationListingCardSchema));
+
+  // Admin TOTP schemas
+  registry.registerComponent("schemas", "AdminTotpStatusResponse", S(AdminTotpStatusResponseSchema));
+  registry.registerComponent("schemas", "AdminTotpEnrollResponse", S(AdminTotpEnrollResponseSchema));
+  registry.registerComponent("schemas", "AdminTotpVerifyRequest", S(AdminTotpVerifyRequestSchema));
+  registry.registerComponent("schemas", "AdminTotpVerifyResponse", S(AdminTotpVerifyResponseSchema));
+
+  // Admin report schemas
+  registry.registerComponent("schemas", "CreateReportRequest", S(CreateReportRequestSchema));
+  registry.registerComponent("schemas", "CreateReportResponse", S(CreateReportResponseSchema));
+  registry.registerComponent("schemas", "ReportListItem", S(ReportListItemSchema));
+  registry.registerComponent("schemas", "ListReportsResponse", S(ListReportsResponseSchema));
+  registry.registerComponent("schemas", "GetReportDetailResponse", S(GetReportDetailResponseSchema));
+
+  // Admin moderation schemas
+  registry.registerComponent("schemas", "DismissReportRequest", S(DismissReportRequestSchema));
+  registry.registerComponent("schemas", "DismissReportResponse", S(DismissReportResponseSchema));
+  registry.registerComponent("schemas", "BanListingRequest", S(BanListingRequestSchema));
+  registry.registerComponent("schemas", "BanListingResponse", S(BanListingResponseSchema));
+  registry.registerComponent("schemas", "UnbanListingRequest", S(UnbanListingRequestSchema));
+  registry.registerComponent("schemas", "UnbanListingResponse", S(UnbanListingResponseSchema));
+  registry.registerComponent("schemas", "SuspendUserRequest", S(SuspendUserRequestSchema));
+  registry.registerComponent("schemas", "SuspendUserResponse", S(SuspendUserResponseSchema));
+  registry.registerComponent("schemas", "UnsuspendUserRequest", S(UnsuspendUserRequestSchema));
+  registry.registerComponent("schemas", "UnsuspendUserResponse", S(UnsuspendUserResponseSchema));
+
+  // Admin audit schemas
+  registry.registerComponent("schemas", "AuditLogListItem", S(AuditLogListItemSchema));
+  registry.registerComponent("schemas", "ListAuditEntriesResponse", S(ListAuditEntriesResponseSchema));
 
   registry.registerPath({
     method: "post",

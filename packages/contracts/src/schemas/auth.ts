@@ -70,3 +70,44 @@ export type MeResponse = z.infer<typeof MeResponseSchema>;
 
 // No request body — uses bearer access token; returns 204
 export const DeleteMeResponseSchema = z.object({});
+
+// ── Admin TOTP schemas (S7) ──
+
+export const AdminTotpStatusResponseSchema = z
+  .object({
+    enrolled: z.boolean(),
+    elevated: z.boolean(),
+    adminTotpExpiresAt: z.string().datetime().optional(),
+  })
+  .strict();
+export type AdminTotpStatusResponse = z.infer<
+  typeof AdminTotpStatusResponseSchema
+>;
+
+export const AdminTotpEnrollResponseSchema = z
+  .object({
+    qrCodeUrl: z.string(),
+    secret: z.string(),
+  })
+  .strict();
+export type AdminTotpEnrollResponse = z.infer<
+  typeof AdminTotpEnrollResponseSchema
+>;
+
+export const AdminTotpVerifyRequestSchema = z.object({
+  code: z.string().min(1),
+});
+export type AdminTotpVerifyRequest = z.infer<
+  typeof AdminTotpVerifyRequestSchema
+>;
+
+// First enrollment verify returns backupCodes (exactly 10); later verify does not.
+export const AdminTotpVerifyResponseSchema = z
+  .object({
+    adminTotpExpiresAt: z.string().datetime(),
+    backupCodes: z.array(z.string()).length(10).optional(),
+  })
+  .strict();
+export type AdminTotpVerifyResponse = z.infer<
+  typeof AdminTotpVerifyResponseSchema
+>;

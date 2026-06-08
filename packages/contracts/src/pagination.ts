@@ -40,3 +40,12 @@ export const OffsetPaginationResponseSchema = z.object({
 export type OffsetPaginationResponse = z.infer<
   typeof OffsetPaginationResponseSchema
 >;
+
+// Admin-table pagination: stricter cap than the shared offset schema.
+export const AdminTablePaginationRequestSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(10).max(100).default(50),
+});
+export type AdminTablePaginationRequest = z.infer<
+  typeof AdminTablePaginationRequestSchema
+>;
