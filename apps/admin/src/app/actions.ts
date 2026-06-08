@@ -17,7 +17,7 @@ export async function requestOtp(
   _prev: unknown,
   formData: FormData,
 ): Promise<{ ok: false; error: string } | { ok: true; resendInSeconds: number }> {
-  const phone = formData.get("phone") as string;
+  const phone = formData.get("phone");
   const parsed = AuthSchemas.PhoneTm.safeParse(phone);
   if (!parsed.success) {
     return { ok: false, error: "Введите номер телефона в формате +993XXXXXXXX" };
@@ -48,14 +48,14 @@ export async function verifyOtp(
   _prev: unknown,
   formData: FormData,
 ): Promise<VerifyOtpResult> {
-  const phone = formData.get("phone") as string;
-  const code = formData.get("code") as string;
+  const phone = formData.get("phone");
+  const code = formData.get("code");
 
   const parsedPhone = AuthSchemas.PhoneTm.safeParse(phone);
   if (!parsedPhone.success) {
     return { ok: false, error: "Неверный формат номера телефона." };
   }
-  if (!/^\d{6}$/.test(code)) {
+  if (typeof code !== "string" || !/^\d{6}$/.test(code)) {
     return { ok: false, error: "Код должен содержать 6 цифр." };
   }
 
@@ -261,38 +261,6 @@ export async function logoutAll(): Promise<void> {
 }
 
 // ─── Auth gate helpers ───
-
-export async function requireAuth(): Promise<{
-  enrolled: boolean;
-  elevated: boolean;
-  adminTotpExpiresAt?: string;
-}> {
-  const status = await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
-    "/auth/admin/totp/status",
-  );
-
-  if (!status) {
-    await clearAuthCookies();
-    redirect("/login");
-  }
-
-  if (!status.elevated) {
-    redirect("/login?mode=totp");
-  }
-
-  const result: {
-    enrolled: boolean;
-    elevated: boolean;
-    adminTotpExpiresAt?: string;
-  } = {
-    enrolled: status.enrolled,
-    elevated: status.elevated,
-  };
-  if (status.adminTotpExpiresAt != null) {
-    result.adminTotpExpiresAt = status.adminTotpExpiresAt;
-  }
-  return result;
-}
 
 export async function requireAuthWithReturnTo(
   returnTo: string | null | undefined,

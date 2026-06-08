@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback, useRef, useEffect } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Input, Card, CardHeader, CardBody } from "@auto-tm/ui/components";
 import { Copy, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
@@ -17,8 +17,36 @@ type Step =
   | { kind: "otp"; phone: string; error?: string }
   | { kind: "totp-enroll"; phone: string; qrCodeDataUrl: string; error?: string }
   | { kind: "totp-verify"; phone: string; error?: string }
-  | { kind: "backup-codes"; codes: string[]; error?: string }
-  | { kind: "error"; message: string; error?: string };
+  | { kind: "backup-codes"; codes: string[] };
+
+function getTitle(step: Step): string {
+  switch (step.kind) {
+    case "backup-codes":
+      return "Резервные коды";
+    case "totp-enroll":
+    case "totp-verify":
+      return "Двухфакторная аутентификация";
+    default:
+      return "Вход в панель администратора";
+  }
+}
+
+function getDescription(step: Step): string {
+  switch (step.kind) {
+    case "phone":
+      return "Введите номер телефона для получения кода подтверждения.";
+    case "otp":
+      return `Введите 6-значный код, отправленный на ${step.phone}`;
+    case "totp-enroll":
+      return "Отсканируйте QR-код в приложении-аутентификаторе и введите код.";
+    case "totp-verify":
+      return "Введите код из приложения-аутентификатора.";
+    case "backup-codes":
+      return "Сохраните эти коды — они больше не будут показаны.";
+    default:
+      return "";
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,8 +57,6 @@ export default function LoginPage() {
   const [step, setStep] = useState<Step>({ kind: "phone", phone: "" });
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
-  const otpInputRef = useRef<HTMLInputElement>(null);
-  const totpInputRef = useRef<HTMLInputElement>(null);
 
   // If forcedMode=totp and we land here with cookies, we need to check status
   // The proxy/layout will have redirected; this page just renders the TOTP verify form.
@@ -45,13 +71,13 @@ export default function LoginPage() {
       startTransition(async () => {
         const result = await requestOtp(null, formData);
         if (result.ok) {
-          setStep({ kind: "otp", phone: formData.get("phone") as string });
+          setStep({ kind: "otp", phone: String(formData.get("phone") ?? "") });
         } else {
           setStep({
             kind: "phone",
-            phone: (formData.get("phone") as string) ?? "",
+            phone: String(formData.get("phone") ?? ""),
+            error: result.error,
           });
-          alert(result.error); // Simple inline error would be better; using alert for minimal UI
         }
       });
     },
@@ -66,7 +92,7 @@ export default function LoginPage() {
           setStep((s) =>
             s.kind === "otp"
               ? { ...s, error: result.error }
-              : { kind: "otp", phone: formData.get("phone") as string, error: result.error },
+              : { kind: "otp", phone: String(formData.get("phone") ?? ""), error: result.error },
           );
           return;
         }
@@ -132,26 +158,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <h1 className="text-xl font-bold text-neutral-900">
-            {step.kind === "backup-codes"
-              ? "Резервные коды"
-              : step.kind === "totp-enroll" || step.kind === "totp-verify"
-                ? "Двухфакторная аутентификация"
-                : "Вход в панель администратора"}
-          </h1>
-          <p className="text-sm text-neutral-600">
-            {step.kind === "phone"
-              ? "Введите номер телефона для получения кода подтверждения."
-              : step.kind === "otp"
-                ? `Введите 6-значный код, отправленный на ${step.phone}`
-                : step.kind === "totp-enroll"
-                  ? "Отсканируйте QR-код в приложении-аутентификаторе и введите код."
-                  : step.kind === "totp-verify"
-                    ? "Введите код из приложения-аутентификатора."
-                    : step.kind === "backup-codes"
-                      ? "Сохраните эти коды — они больше не будут показаны."
-                      : ""}
-          </p>
+          <h1 className="text-xl font-bold text-neutral-900">{getTitle(step)}</h1>
+          <p className="text-sm text-neutral-600">{getDescription(step)}</p>
         </CardHeader>
         <CardBody>
           {step.kind === "phone" && (
@@ -221,7 +229,6 @@ export default function LoginPage() {
                   required
                   pattern="\\d{6}"
                   autoFocus
-                  ref={otpInputRef}
                   disabled={isPending}
                 />
               </div>
@@ -283,7 +290,6 @@ export default function LoginPage() {
                   placeholder="123456"
                   required
                   autoFocus
-                  ref={totpInputRef}
                   disabled={isPending}
                 />
               </div>
@@ -327,7 +333,6 @@ export default function LoginPage() {
                   placeholder="123456"
                   required
                   autoFocus
-                  ref={totpInputRef}
                   disabled={isPending}
                 />
               </div>

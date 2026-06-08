@@ -9,7 +9,7 @@ function getAccessCookieName(): string {
     : "auto_tm_admin_access";
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip static files, API routes, login page, and Next.js internals

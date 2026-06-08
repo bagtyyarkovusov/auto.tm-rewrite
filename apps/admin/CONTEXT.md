@@ -16,7 +16,7 @@ Internal admin dashboard. Next.js + shadcn/ui at `admin.auto.tm`. MLP beta uses 
 
 - Next.js 16.x App Router scaffold under `src/app/` — `layout.tsx` + `globals.css` + `favicon.ico`
 - **Auth bridge (S7)** — server-side API fetch wrapper, HTTP-only cookie storage, refresh-on-401, TOTP enrollment/verify flow, auth gate
-- `proxy.ts` — fast-path redirect when access cookie is missing on protected routes
+- `middleware.ts` — fast-path redirect when access cookie is missing on protected routes
 - `src/lib/cookies.ts` — canonical cookie names/flags, set/clear helpers
 - `src/lib/validators.ts` — `validateReturnTo` (relative internal only), `validateOrigin`
 - `src/lib/api-client.ts` — server-side fetch wrapper with refresh-on-401, cookie rotation, clear+redirect on failure
@@ -58,7 +58,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
 
 ## Auth gate
 
-- `proxy.ts`: fast-path redirect to `/login` when access cookie is missing on protected paths (`/reports`, `/audit`, `/listings`, `/users`).
+- `middleware.ts`: fast-path redirect to `/login` when access cookie is missing on protected paths (`/reports`, `/audit`, `/listings`, `/users`).
 - `app/(admin)/layout.tsx`: full auth validation via `requireAuthWithReturnTo()` server action. Calls `/auth/admin/totp/status`, handles 401 refresh, redirects to `/login` or `/login?mode=totp` with preserved `returnTo`.
 
 ## TOTP `returnTo`
