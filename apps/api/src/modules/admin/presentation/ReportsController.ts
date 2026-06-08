@@ -5,11 +5,11 @@ import {
   Body,
   Req,
   BadRequestException,
-  HttpCode,
   HttpStatus,
   Inject,
+  Res,
 } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import type { FastifyRequest, FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import { AdminSchemas } from "@auto-tm/contracts";
 
@@ -25,11 +25,11 @@ export class ReportsController {
   ) {}
 
   @Post("listings/:id/report")
-  @HttpCode(HttpStatus.CREATED)
   async reportListing(
     @Param("id") listingId: string,
     @Body() body: unknown,
     @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const userId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.CreateReportRequestSchema, body);
@@ -41,19 +41,16 @@ export class ReportsController {
       request: parsed,
     });
 
-    if (result.reusedExisting) {
-      return this.toResponse(result.report, true);
-    }
-
-    return this.toResponse(result.report, false);
+    res.status(result.reusedExisting ? HttpStatus.OK : HttpStatus.CREATED);
+    return this.toResponse(result.report, result.reusedExisting);
   }
 
   @Post("users/:id/report")
-  @HttpCode(HttpStatus.CREATED)
   async reportUser(
     @Param("id") userId: string,
     @Body() body: unknown,
     @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) res: FastifyReply,
   ) {
     const reporterUserId = this.userId(req);
     const parsed = this.parseOrThrow(AdminSchemas.CreateReportRequestSchema, body);
@@ -65,11 +62,8 @@ export class ReportsController {
       request: parsed,
     });
 
-    if (result.reusedExisting) {
-      return this.toResponse(result.report, true);
-    }
-
-    return this.toResponse(result.report, false);
+    res.status(result.reusedExisting ? HttpStatus.OK : HttpStatus.CREATED);
+    return this.toResponse(result.report, result.reusedExisting);
   }
 
   private userId(req: FastifyRequest): string {

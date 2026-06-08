@@ -90,6 +90,11 @@ export function ReportSheet({
       return;
     }
 
+    if (isAuthenticated !== true) {
+      // Auth state still loading; wait rather than firing an unauthenticated request
+      return;
+    }
+
     createReport.mutate(
       {
         targetType,
