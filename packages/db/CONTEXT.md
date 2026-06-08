@@ -38,9 +38,12 @@ packages/db/
 ├── src/
 │   ├── index.ts              Public re-export
 │   ├── prisma.service.ts     NestJS-injectable wrapper around PrismaClient
-│   └── seed.ts               Seed script (`pnpm db:seed`)
+│   ├── seed.ts               Seed script (`pnpm db:seed`)
+│   └── promote-admin.ts      Testable core for the admin bootstrap script
+├── scripts/
+│   ├── build.cjs             Build helper that serializes prisma generate + tsc with .build.lock
+│   └── promote-admin.ts      CLI entry point for first-admin bootstrap (`pnpm admin:promote`)
 ├── tsconfig.build.json       CJS runtime build for Node consumers
-├── scripts/build.cjs         Build helper that serializes prisma generate + tsc with .build.lock
 ├── eslint.config.mjs         Lints source/config files; ignores generated and built output
 ├── package.json
 └── CONTEXT.md
@@ -55,8 +58,14 @@ packages/db/
 /// IDENTITY
 /// ============================================================
 model User { ... }
+model OtpRequest { ... }
+model Session { ... }
 model Dealership { ... }
-...
+model DealershipMember { ... }
+model OwnedVehicle { ... }
+model BlockedUser { ... }
+model TotpEnrollment { ... }
+model TotpBackupCode { ... }
 
 /// ============================================================
 /// CATALOG
@@ -64,6 +73,13 @@ model Dealership { ... }
 model Brand { ... }
 ...
 ```
+
+S7 additions (now in schema):
+- `User.suspendedAt`, `User.suspendedById`, `User.suspensionReason` — current-state suspension fields owned by `identity/`.
+- `Session.adminTotpExpiresAt` — 12-hour admin TOTP elevation window.
+- `TotpEnrollment` / `TotpBackupCode` — admin TOTP metadata; encrypted recoverable secret plus one-way-hashed backup codes.
+- `ContentReport` — polymorphic moderation tickets (`targetType` + `targetId`, no DB FK to target tables).
+- S7 indexes: `content_reports(status, createdAt, id)`, `(targetType, targetId, status)`, `(reporterUserId, createdAt, id)`; `audit_logs(createdAt, id)`, `(action, createdAt, id)`, `(targetType, targetId, createdAt, id)`.
 
 ## Foreign-key policy across contexts
 
@@ -131,23 +147,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
 - **S3 (Catalog)** — catalog API repositories/controllers/admin write flow shipped; Generation seed stays empty per S3 sprint file.
 - **S4 (Listings CRUD) — schema shipped in #85** (Listing additions, `ListingCondition` enum, `ListingStatus` extended, `ListingDraft`, `ListingMedia` rename `url`→`key` + new columns, `ExchangeRate` table). Remaining S4 work: domain entities, ports, use-cases, controllers, contracts (issues #86 onward).
 - **S6 (Contact seller)** — ships only schema additions required for simple text contact if current conversation schema is insufficient.
-- **S7 (Minimal admin + moderation)** — adds `TotpEnrollment` (encrypted recoverable TOTP secret using required 32-byte base64 `TOTP_SECRET_ENCRYPTION_KEY`, hashed backup codes, `verifiedAt`; verified re-enroll is rejected in application code while pending unverified enrollment may be replaced; key rotation is post-MLP because existing rows need decrypt/re-encrypt), `Session.adminTotpExpiresAt` for 12-hour admin elevation (refresh preserves but never extends it), simple current-state `User` suspension fields owned by `identity/` (`suspendedAt`, `suspendedById?`, internal `suspensionReason?`; suspend sets them from the normalized internal admin action reason, unsuspend clears them; AuditLog owns history), the MLP `ContentReport` shape (`listing`/`user` targets stored as polymorphic `targetType` + `targetId` with no DB FK to target tables, `reporterUserId` required at creation but nullable after account deletion via `SetNull`, `reviewedById?` also nullable after admin deletion, no anonymous reports, no self-reports, no denormalized reporter/reviewer PII snapshots; reason enum `spam`/`scam`/`misleading`/`wrong_category`/`harassment`/`other`; `other` requires plain-text details after trim, max 1000 chars after trim, with internal line breaks preserved and no rich-text/PII-scan fields; status is `pending` -> `dismissed` through dismiss or supplied matching `reportId` only `pending` -> `actioned` through ban/suspend, with no public report history/edit/retract state, no cascade to sibling pending reports, no direct-action auto-resolution, no pending-report expiry/auto-dismiss, and no moderation epoch/report invalidation snapshot/staleness-lock/age-state/SLA-timer columns or cleanup job model; duplicate pending reports by the same reporter/target are deduped in application code, with no DB partial unique index; no report-specific quota/counter table and no denormalized report-count columns/counter tables in S7; `message` only if S6 explicitly ships report-from-thread; `blog_post` post-MLP), and the `packages/db/scripts/promote-admin.ts` operator script for first-admin bootstrap. The script requires `--phone` and `--reason`, supports optional `--dry-run`, exits zero as an already-admin no-op without another audit row, and exits non-zero with no audit row when no user matches. S7 keeps existing `AuditLog.action` as String and stores moderation metadata in `AuditLog.details` with required internal plain-text `reason` for admin actions (trimmed, non-empty after trim, max 1000 chars after trim, line breaks preserved; no rich-text fields); bootstrap audit rows target the promoted user with `actorId = null`, role before/after in details, and no phone snapshot; dismiss audit rows target `content_report` and store the reported listing/user in `details.reportedTargetType` / `details.reportedTargetId`, while report-backed ban/suspend rows target the moderated listing/user and store `details.reportId`; no Prisma enum/backfill or `beforeJson`/`afterJson`/top-level `reason` columns in the MLP.
-
-S7 audit-list presentation does not add DB columns for actor labels, target labels, reason previews, export state, or retention policy. Those are live-resolved in application/query code from `AuditLog.actorId`, `targetType`, `targetId`, and `details`. Audit rows remain append-only and retained indefinitely for the MLP; retention controls and export tables are post-MLP compliance/dashboard work if required.
-
-S7 query/index shape is deliberately narrow. `ContentReport` gets only the indexes needed for the MLP moderation paths: `(status, createdAt, id)` for the oldest-pending queue, `(targetType, targetId, status)` for pending-target counts/detail lookups, and `(reporterUserId, createdAt, id)` for reporter history counts. `AuditLog` keeps the existing target/actor indexes and S7 adds audit-list indexes for `(createdAt, id)`, `(action, createdAt, id)`, and `(targetType, targetId, createdAt, id)`. S7 does not add a partial unique index for duplicate pending reports, JSON/GIN indexes on `AuditLog.details` or report details, denormalized count columns, counter tables, report-count read models, or audit export tables. Before private beta, seeded-volume smoke should cover the pending queue, detail counts, duplicate-report race, and audit filters.
-
-S7 also adds no public report status, appeal, support-ticket, or reporter-facing management state. If those workflows are needed, they belong in a post-MLP trust/support PRD rather than new `ContentReport` columns in the MLP.
-
-S7 intentionally adds no owner/user-visible report metadata storage or read-model columns. Report counts, reasons/details, reporter identity, report status, and admin notes stay admin-only; owner/user surfaces derive only generic banned/suspended state from `Listing.status` or `User.suspendedAt`.
-
-S7 intentionally adds no target-lock, moderation-hold, legal-hold, or pending-report freeze columns. Listing archive/delete and account deletion flows are not blocked by `ContentReport`; stale reports keep their polymorphic `targetType`/`targetId` for admin visibility and become non-actionable when the target is gone.
-
-S7 intentionally adds no reporter-state invalidation columns. A reporter's later suspension or deletion does not alter `ContentReport.status`; deleted reporters are represented by nullable `reporterUserId`, and trust scoring or abusive-reporter invalidation is post-MLP.
-
-S7 intentionally adds no admin-account-management model for moderation. `User.suspendedAt` is not used to suspend `role = admin` targets through S7 moderation; self/admin-target policy rejection lives in application code, with no DB constraint or extra admin lockout table in the MLP.
-
-S7 moderation enforcement does not add cleanup/read-model tables for favorites, saved-search notifications, conversations, or owner-facing moderation state. Banned listings remain ordinary `Listing.status = banned` rows; public omission, owner mutation blocking, and contact/message blocking are synchronous application checks. User suspension does not change listing rows; admins ban individual listings separately when needed.
+- **S7 (Minimal admin + moderation) — schema, migration, bootstrap script, and fixtures shipped in #177.** The schema now includes `TotpEnrollment` (encrypted recoverable secret + `verifiedAt`), `TotpBackupCode` (one-way-hashed codes + `usedAt`), `Session.adminTotpExpiresAt`, `ContentReport` (polymorphic `targetType` + `targetId`, no DB FK, `reporterUserId` / `reviewedById` both nullable via `SetNull`), and `User` suspension fields (`suspendedAt`, `suspendedById`, `suspensionReason`). S7 indexes are committed: `content_reports(status, createdAt, id)`, `(targetType, targetId, status)`, `(reporterUserId, createdAt, id)`; `audit_logs(createdAt, id)`, `(action, createdAt, id)`, `(targetType, targetId, createdAt, id)`. The `packages/db/scripts/promote-admin.ts` operator script and `packages/db/prisma/seed/s7-moderation.fixture.ts` are checked in. Remaining S7 application work (TOTP crypto/use-cases, report/moderation use-cases, UI) is tracked in child issues #178–#185.
 - **S8 (Private beta polish)** — aligns account deletion with Feature 30 / Legal by adding the DB fields needed for a 30-day deletion grace period before PII purge. Current S2 hard-delete behavior is not the beta target.
 - **Post-MLP rich chat** — adds `Conversation.lastMessageAt`/`lastMessageId`, `Message.deletedAt`, `ConversationParticipant.{mutedAt, lastReadAt}`, new `QuickReply` entity if shaped.
 - **Post-MLP notifications/subscriptions** — adds `FcmDevice` field additions, `NotificationHistory` broadcast fields, new `SavedSearchMatchHistory` entity.

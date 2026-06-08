@@ -29,6 +29,11 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  suspendedAt      DateTime?
+  suspendedById    String?
+  suspendedBy      User?    @relation("UserSuspensions", fields: [suspendedById], references: [id], onDelete: SetNull)
+  suspensionReason String?
+
   otpRequests                OtpRequest[]
   sessions                   Session[]
   dealershipMemberships      DealershipMember[]
@@ -47,6 +52,10 @@ model User {
   conversationsAsBuyer       Conversation[]            @relation("Buyer")
   conversationsAsSeller      Conversation[]            @relation("Seller")
   listingDrafts              ListingDraft[]
+  totpEnrollment             TotpEnrollment?
+  reportsSubmitted           ContentReport[]           @relation("Reporter")
+  reportsReviewed            ContentReport[]           @relation("Reviewer")
+  suspendedUsers             User[]                    @relation("UserSuspensions")
 
   @@map("users")
 }
@@ -76,9 +85,10 @@ model Session {
   refreshTokenHash String   @unique
   deviceLabel      String?
   userAgent        String?
-  expiresAt        DateTime
-  createdAt        DateTime @default(now())
-  lastSeenAt       DateTime @default(now())
+  expiresAt          DateTime
+  createdAt          DateTime @default(now())
+  lastSeenAt         DateTime @default(now())
+  adminTotpExpiresAt DateTime?
 
   @@index([userId])
   @@map("sessions")
@@ -142,6 +152,30 @@ model BlockedUser {
 
   @@unique([blockerId, blockedId])
   @@map("blocked_users")
+}
+
+model TotpEnrollment {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  encryptedSecret String
+  verifiedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  backupCodes TotpBackupCode[]
+
+  @@map("totp_enrollments")
+}
+
+model TotpBackupCode {
+  id               String         @id @default(uuid())
+  totpEnrollmentId String
+  totpEnrollment   TotpEnrollment @relation(fields: [totpEnrollmentId], references: [id], onDelete: Cascade)
+  codeHash         String
+  usedAt           DateTime?
+
+  @@map("totp_backup_codes")
 }
 
 /// ============================================================
@@ -598,5 +632,28 @@ model AuditLog {
 
   @@index([targetType, targetId])
   @@index([actorId, createdAt])
+  @@index([createdAt, id])
+  @@index([action, createdAt, id])
+  @@index([targetType, targetId, createdAt, id])
   @@map("audit_logs")
+}
+
+model ContentReport {
+  id             String    @id @default(uuid())
+  reporterUserId String?
+  reporter       User?     @relation("Reporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
+  targetType     String
+  targetId       String
+  reason         String
+  details        String?
+  status         String    @default("pending")
+  reviewedById   String?
+  reviewedBy     User?     @relation("Reviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([status, createdAt, id])
+  @@index([targetType, targetId, status])
+  @@index([reporterUserId, createdAt, id])
+  @@map("content_reports")
 }
