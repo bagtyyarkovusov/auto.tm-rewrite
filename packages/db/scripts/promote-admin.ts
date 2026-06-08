@@ -1,5 +1,7 @@
 #!/usr/bin/env tsx
 import "dotenv/config";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client/client";
 import { runPromoteAdmin } from "../src/promote-admin";
 
@@ -31,7 +33,8 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  const prisma = new PrismaClient();
+  const pool = new Pool({ connectionString: process.env["DATABASE_URL"] });
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
   try {
     const result = await runPromoteAdmin(
@@ -61,6 +64,7 @@ async function main(): Promise<number> {
     return 1;
   } finally {
     await prisma.$disconnect();
+    await pool.end();
   }
 }
 
