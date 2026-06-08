@@ -6,6 +6,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { ConfigModule } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { JwtModule, JwtService } from "@nestjs/jwt";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -18,6 +19,7 @@ import { IdentityModule } from "../../identity/identity.module";
 import { ListingsModule } from "../../listings/listings.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
+import { EnvSchema } from "../../../env.schema";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
 import { mintAdminJwt } from "../../../../test/helpers/mintAdminJwt";
 
@@ -29,7 +31,8 @@ describe("AdminModerationController e2e smoke", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
+        ConfigModule.forRoot({ isGlobal: true, validate: (cfg) => EnvSchema.parse(cfg) }),
+        EventEmitterModule.forRoot(),
         AdminModule,
         IdentityModule,
         ListingsModule,

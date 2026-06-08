@@ -8,6 +8,7 @@ import {
   UseGuards,
   BadRequestException,
   ForbiddenException,
+  HttpCode,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { FastifyRequest } from "fastify";
@@ -54,6 +55,7 @@ export class AdminModerationController {
   }
 
   @Post("reports/:id/dismiss")
+  @HttpCode(200)
   async dismissReport(
     @Param("id") reportId: string,
     @Body() body: unknown,
@@ -78,6 +80,7 @@ export class AdminModerationController {
   }
 
   @Post("listings/:id/ban")
+  @HttpCode(200)
   async banListing(
     @Param("id") listingId: string,
     @Body() body: unknown,
@@ -104,6 +107,7 @@ export class AdminModerationController {
   }
 
   @Post("listings/:id/unban")
+  @HttpCode(200)
   async unbanListing(
     @Param("id") listingId: string,
     @Body() body: unknown,
@@ -127,6 +131,7 @@ export class AdminModerationController {
   }
 
   @Post("users/:id/suspend")
+  @HttpCode(200)
   async suspendUser(
     @Param("id") userId: string,
     @Body() body: unknown,
@@ -157,6 +162,7 @@ export class AdminModerationController {
   }
 
   @Post("users/:id/unsuspend")
+  @HttpCode(200)
   async unsuspendUser(
     @Param("id") userId: string,
     @Body() body: unknown,
