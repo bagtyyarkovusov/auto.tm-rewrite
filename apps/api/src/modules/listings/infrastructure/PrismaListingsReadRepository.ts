@@ -5,6 +5,7 @@ import type { Currency, FeedCursor, ListingFilterCriteria } from "../domain/type
 import type {
   ListingsReadPort,
   ListingSummary,
+  AdminListingSummary,
 } from "../domain/ports/ListingsReadPort";
 import {
   EXCHANGE_RATE_PORT,
@@ -47,6 +48,27 @@ export class PrismaListingsReadRepository implements ListingsReadPort {
     });
 
     return Promise.all(rows.map((r) => this.toSummary(r)));
+  }
+
+  async getListingAdminSummaries(ids: string[]): Promise<AdminListingSummary[]> {
+    if (ids.length === 0) return [];
+
+    const rows = await this.prisma.listing.findMany({
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+      },
+      include: { brand: true, model: true },
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      sellerId: r.sellerId,
+      status: r.status,
+      year: r.year ?? null,
+      brandName: r.brand.nameRu,
+      modelName: r.model.nameRu,
+    }));
   }
 
   async getListingsForOwner(

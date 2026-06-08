@@ -17,6 +17,10 @@ class FakeContentReportRepository implements ContentReportRepository {
     return report;
   }
 
+  async findById(_id: string): Promise<ContentReport | null> {
+    return null;
+  }
+
   async findPendingByReporterAndTarget(
     reporterUserId: string,
     targetType: string,
@@ -31,6 +35,18 @@ class FakeContentReportRepository implements ContentReportRepository {
           r.status === "pending",
       ) ?? null
     );
+  }
+
+  async findMany(): Promise<{ items: ContentReport[]; total: number }> {
+    return { items: [], total: 0 };
+  }
+
+  async countPendingByTarget(): Promise<number> {
+    return 0;
+  }
+
+  async countByReporter(): Promise<number> {
+    return 0;
   }
 }
 
@@ -49,6 +65,10 @@ class FakeListingsReadPort implements ListingsReadPort {
     return { items: [] };
   }
 
+  async getListingAdminSummaries(): Promise<[]> {
+    return [];
+  }
+
   async matchesFilters(): Promise<boolean> {
     return true;
   }
@@ -59,18 +79,24 @@ class FakeListingsReadPort implements ListingsReadPort {
 }
 
 class FakeIdentityReadPort implements IdentityReadPort {
-  users: Record<string, { id: string; displayName: string | null; role: string; suspendedAt: Date | null }> = {};
+  users: Record<string, { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null }> = {};
 
-  async findUserById(id: string): Promise<{ id: string; displayName: string | null; role: string; suspendedAt: Date | null } | null> {
+  async findUserById(id: string): Promise<{ id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | null> {
     return this.users[id] ?? null;
   }
 
-  seed(id: string, user: { displayName?: string | null; role?: string; suspendedAt?: Date | null }) {
+  async findUsersByIds(): Promise<[]> {
+    return [];
+  }
+
+  seed(id: string, user: { displayName?: string | null; role?: string; suspendedAt?: Date | null; suspendedById?: string | null; suspensionReason?: string | null }) {
     this.users[id] = {
       id,
       displayName: user.displayName ?? null,
       role: user.role ?? "buyer",
       suspendedAt: user.suspendedAt ?? null,
+      suspendedById: user.suspendedById ?? null,
+      suspensionReason: user.suspensionReason ?? null,
     };
   }
 }

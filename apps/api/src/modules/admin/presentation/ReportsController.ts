@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Param,
   Body,
   Req,
@@ -8,12 +9,17 @@ import {
   HttpStatus,
   Inject,
   Res,
+  UseGuards,
+  Query,
 } from "@nestjs/common";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import { AdminSchemas } from "@auto-tm/contracts";
 
+import { AdminGuard } from "../../../common/admin.guard";
 import { CreateReport } from "../application/CreateReport";
+import { ListReports } from "../application/ListReports";
+import { GetReportDetail } from "../application/GetReportDetail";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -22,7 +28,13 @@ export class ReportsController {
   constructor(
     @Inject(CreateReport)
     private readonly createReportUC: CreateReport,
+    @Inject(ListReports)
+    private readonly listReportsUC: ListReports,
+    @Inject(GetReportDetail)
+    private readonly getReportDetailUC: GetReportDetail,
   ) {}
+
+  // ── Public report creation ──
 
   @Post("listings/:id/report")
   async reportListing(
@@ -64,6 +76,61 @@ export class ReportsController {
 
     res.status(result.reusedExisting ? HttpStatus.OK : HttpStatus.CREATED);
     return this.toResponse(result.report, result.reusedExisting);
+  }
+
+  // ── Admin report reads ──
+
+  @Get("admin/reports")
+  @UseGuards(AdminGuard)
+  async listReports(
+    @Query("status") status: string | undefined,
+    @Query("targetType") targetType: string | undefined,
+    @Query("page") page: string | undefined,
+    @Query("pageSize") pageSize: string | undefined,
+  ) {
+    const result = await this.listReportsUC.execute({
+      status,
+      targetType,
+      page: page !== undefined ? Number(page) : undefined,
+      pageSize: pageSize !== undefined ? Number(pageSize) : undefined,
+    });
+
+    return {
+      items: result.items.map((item) => ({
+        ...item,
+        createdAt: item.createdAt.toISOString(),
+      })),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+    };
+  }
+
+  @Get("admin/reports/:id")
+  @UseGuards(AdminGuard)
+  async getReportDetail(@Param("id") reportId: string) {
+    const result = await this.getReportDetailUC.execute({ reportId });
+
+    return {
+      id: result.id,
+      status: result.status,
+      reason: result.reason,
+      details: result.details ?? undefined,
+      createdAt: result.createdAt.toISOString(),
+      reviewedAt: result.reviewedAt?.toISOString(),
+      reporter: result.reporter,
+      reviewer: result.reviewer,
+      target: result.target,
+      targetModerationState: result.targetModerationState
+        ? {
+            ...result.targetModerationState,
+            suspendedAt: result.targetModerationState.suspendedAt?.toISOString() ?? null,
+          }
+        : undefined,
+      reportsSubmittedByReporterCount: result.reportsSubmittedByReporterCount,
+      pendingReportsOnTargetCount: result.pendingReportsOnTargetCount,
+    };
   }
 
   private userId(req: FastifyRequest): string {

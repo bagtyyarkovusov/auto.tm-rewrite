@@ -17,9 +17,19 @@ export interface ListingSummary {
   allowChat: boolean;
 }
 
+export interface AdminListingSummary {
+  id: string;
+  sellerId: string;
+  status: string;
+  year: number | null;
+  brandName: string;
+  modelName: string;
+}
+
 export interface ListingsReadPort {
   getListingSummary(id: string): Promise<ListingSummary | null>;
   getListingSummaries(ids: string[]): Promise<ListingSummary[]>;
+  getListingAdminSummaries(ids: string[]): Promise<AdminListingSummary[]>;
   getListingsForOwner(
     ownerId: string,
     query?: { cursor?: FeedCursor; limit?: number },

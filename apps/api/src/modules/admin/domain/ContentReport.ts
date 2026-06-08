@@ -66,6 +66,21 @@ export class ContentReport {
       );
     }
 
+    return ContentReport.reconstruct({
+      id: props.id,
+      reporterUserId: props.reporterUserId,
+      targetType: props.targetType,
+      targetId: props.targetId,
+      reason: props.reason,
+      details: props.details ?? null,
+      status: "pending",
+      reviewedById: null,
+      reviewedAt: null,
+      createdAt: props.createdAt ?? new Date(),
+    });
+  }
+
+  static reconstruct(props: ContentReportProps): ContentReport {
     // Reason / target compatibility
     if (props.reason === "wrong_category" && props.targetType !== "listing") {
       throw new DomainError(
@@ -106,10 +121,10 @@ export class ContentReport {
       targetId: props.targetId,
       reason: props.reason,
       details: trimmedDetails ?? null,
-      status: "pending",
-      reviewedById: null,
-      reviewedAt: null,
-      createdAt: props.createdAt ?? new Date(),
+      status: props.status,
+      reviewedById: props.reviewedById,
+      reviewedAt: props.reviewedAt,
+      createdAt: props.createdAt,
     });
   }
 }

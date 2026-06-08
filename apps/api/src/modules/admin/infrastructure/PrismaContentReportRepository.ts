@@ -27,6 +27,14 @@ export class PrismaContentReportRepository implements ContentReportRepository {
     return this.toDomain(row);
   }
 
+  async findById(id: string): Promise<ContentReport | null> {
+    const row = await this.prisma.contentReport.findUnique({
+      where: { id },
+    });
+
+    return row ? this.toDomain(row) : null;
+  }
+
   async findPendingByReporterAndTarget(
     reporterUserId: string,
     targetType: string,
@@ -44,16 +52,70 @@ export class PrismaContentReportRepository implements ContentReportRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findMany(params: {
+    status?: string;
+    targetType?: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ items: ContentReport[]; total: number }> {
+    const where: Record<string, unknown> = {};
+    if (params.status) {
+      where["status"] = params.status;
+    }
+    if (params.targetType) {
+      where["targetType"] = params.targetType;
+    }
+
+    const [rows, total] = await Promise.all([
+      this.prisma.contentReport.findMany({
+        where,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        skip: (params.page - 1) * params.pageSize,
+        take: params.pageSize,
+      }),
+      this.prisma.contentReport.count({ where }),
+    ]);
+
+    return {
+      items: rows.map((r) => this.toDomain(r)),
+      total,
+    };
+  }
+
+  async countPendingByTarget(
+    targetType: string,
+    targetId: string,
+  ): Promise<number> {
+    return this.prisma.contentReport.count({
+      where: {
+        targetType,
+        targetId,
+        status: "pending",
+      },
+    });
+  }
+
+  async countByReporter(reporterUserId: string): Promise<number> {
+    return this.prisma.contentReport.count({
+      where: {
+        reporterUserId,
+      },
+    });
+  }
+
   private toDomain(
     row: Awaited<ReturnType<PrismaService["contentReport"]["create"]>>,
   ): ContentReport {
-    return ContentReport.create({
+    return ContentReport.reconstruct({
       id: row.id,
       reporterUserId: row.reporterUserId,
       targetType: row.targetType as "listing" | "user",
       targetId: row.targetId,
       reason: row.reason as ContentReport["reason"],
       details: row.details,
+      status: row.status as ContentReport["status"],
+      reviewedById: row.reviewedById,
+      reviewedAt: row.reviewedAt,
       createdAt: row.createdAt,
     });
   }

@@ -14,6 +14,10 @@ class FakeListingsReadPort implements ListingsReadPort {
     return this.summaries;
   }
 
+  async getListingAdminSummaries(): Promise<[]> {
+    return [];
+  }
+
   async getListingsForOwner(
     _ownerId: string,
     query?: { cursor?: { timestamp: string; id: string }; limit?: number },

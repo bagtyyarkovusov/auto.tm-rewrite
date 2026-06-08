@@ -68,6 +68,10 @@ class FakeListingsReadPort implements ListingsReadPort {
     return this.listings.filter((l) => ids.includes(l.id));
   }
 
+  async getListingAdminSummaries(): Promise<[]> {
+    return [];
+  }
+
   async getListingsForOwner() {
     return { items: [] };
   }

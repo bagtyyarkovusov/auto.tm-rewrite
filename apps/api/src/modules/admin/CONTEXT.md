@@ -26,33 +26,55 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 ## Module shape (today)
 
 - `apps/api/src/modules/admin/`:
-  - `domain/ContentReport.ts` — domain entity with reason/target compatibility rules, `other`-requires-details, and details length cap
+  - `domain/ContentReport.ts` — domain entity with reason/target compatibility rules, `other`-requires-details, details length cap, and `reconstruct()` for loading rows with nullable `reporterUserId` after account deletion
   - `domain/types.ts` — `DomainError` + `CONTENT_REPORT_ERROR_CODES`
-  - `domain/ports/ContentReportRepository.ts` — repository port (`save`, `findPendingByReporterAndTarget`)
+  - `domain/ports/ContentReportRepository.ts` — repository port (`save`, `findById`, `findPendingByReporterAndTarget`, `findMany`, `countPendingByTarget`, `countByReporter`)
+  - `domain/ports/AuditLogRepository.ts` — repository port (`findMany` for audit list)
   - `application/CreateReport.ts` — public report creation use-case; validates targets through `ListingsReadPort` + `IdentityReadPort`, enforces suspended-reporter block, self-report rejection, and duplicate pending dedupe; emits `ContentReportCreated` for new rows
   - `application/CreateReport.spec.ts` — unit tests with fake repository + fake ports
+  - `application/ListReports.ts` — admin report queue use-case; default `status=pending`, oldest-first deterministic sort, `status`/`targetType` filters, live `targetSummary` resolution
+  - `application/ListReports.spec.ts` — unit tests with fake repository + fake ports
+  - `application/GetReportDetail.ts` — admin report detail use-case; live counts, deleted/unavailable handling, admin-only `target.role` on user targets
+  - `application/GetReportDetail.spec.ts` — unit tests with fake repository + fake ports
+  - `application/ListAuditEntries.ts` — admin audit log use-case; newest-first deterministic sort, `action`/`targetType`/`targetId` filters, live actor/target resolution
+  - `application/ListAuditEntries.spec.ts` — unit tests with fake repository + fake ports
   - `infrastructure/PrismaContentReportRepository.ts` — Prisma adapter for `ContentReportRepository`
-  - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard)
+  - `infrastructure/PrismaAuditLogRepository.ts` — Prisma adapter for `AuditLogRepository`
+  - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard); admin `GET /api/v1/admin/reports` and `GET /api/v1/admin/reports/:id` (AdminGuard)
+  - `presentation/AuditController.ts` — admin `GET /api/v1/admin/audit` (AdminGuard)
   - `presentation/admin.controller.ts` — stub ping endpoint
-  - `admin.module.ts` — registers `PrismaContentReportRepository`, `CreateReport`, `ReportsController`; imports `ListingsModule` + `IdentityModule`
-- No audit writer service, no moderation action use-cases (dismiss/ban/suspend) yet.
+  - `admin.module.ts` — registers repositories, use-cases, and controllers; imports `ListingsModule` + `IdentityModule`
+- No moderation action use-cases (dismiss/ban/suspend) yet.
 
 ## Ports exposed
 
-- (none today — S7 report creation is consumed only by the in-module `ReportsController`)
+- (none today — S7 report creation and admin reads are consumed only by in-module controllers)
 
 ## Ports consumed
 
-- `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `CreateReport` to validate listing targets
-- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `CreateReport` to validate user targets and check reporter suspension state
+- `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `CreateReport` to validate listing targets; used by `ListReports`, `GetReportDetail`, and `ListAuditEntries` for live listing target summaries
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `CreateReport` to validate user targets and check reporter suspension state; used by `ListReports`, `GetReportDetail`, and `ListAuditEntries` for live user/reporter/actor summaries
 
 ## Shipped use-cases
 
 - `CreateReport` — creates a `ContentReport` for `listing` or `user` targets after validating target existence/reachability, reporter suspension, and self-report rules; dedupes pending reports; emits `ContentReportCreated` for new rows only
+- `ListReports` — admin report queue with `OffsetPagination` (default 50 / max 100), default `status=pending`, `createdAt ASC, id ASC` sort, `status` + `targetType` filters, live `targetSummary` resolution; unavailable targets render `{ available: false, label: "Unavailable target" }`
+- `GetReportDetail` — lean report detail with reporter/reviewer summary (deleted-user state), target summary (unavailable tolerated), live `pendingReportsOnTargetCount` and `reportsSubmittedByReporterCount`, admin-only `target.role` on user targets; returns 404 for missing report
+- `ListAuditEntries` — admin audit log with `OffsetPagination` (default 50 / max 100), `createdAt DESC, id DESC` sort, `action`/`targetType`/`targetId` filters, live `actorSummary` (deleted admin vs operator script), short target label, one-line `reasonPreview`; missing targets tolerated
 
 ## Events emitted
 
 - `ContentReportCreated` — emitted after a new `ContentReport` row commits. Payload: `{ reportId, targetType, targetId, reporterUserId, reason }`. Duplicate pending reuse emits no event.
+
+## HTTP routes
+
+| Method | Path | Auth | Handler |
+|---|---|---|---|
+| POST | `/api/v1/listings/:id/report` | Required (JwtAuthGuard) | `CreateReport` — public report creation for listings |
+| POST | `/api/v1/users/:id/report` | Required (JwtAuthGuard) | `CreateReport` — public report creation for users |
+| GET | `/api/v1/admin/reports` | AdminGuard | `ListReports` — admin report queue (default pending, oldest-first) |
+| GET | `/api/v1/admin/reports/:id` | AdminGuard | `GetReportDetail` — admin report detail with live counts |
+| GET | `/api/v1/admin/audit` | AdminGuard | `ListAuditEntries` — admin audit log (newest-first) |
 
 ## Events consumed
 
