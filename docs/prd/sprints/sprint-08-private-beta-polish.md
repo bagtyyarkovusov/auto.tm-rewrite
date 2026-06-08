@@ -2,11 +2,12 @@
 
 | | |
 |---|---|
-| **Status** | ⚪ Pending |
+| **Status** | 🟡 In progress (S8a) |
 | **Phase** | 1 (MLP beta final) |
 | **Milestone** | M7 — Private beta |
 | **Demo audience** | First 10-50 real users |
 | **Estimated time** | S8a ~1.5 weeks (remote) + S8b on-site (TM) |
+| **Issues** | Parent [#186](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/186); S8a children #187–#199 |
 
 > **Reshaped 2026-06-09.** The original S8 plan assumed the TM ops/infra track was live. It is not: the founder is remote (China) and **geo-blocked from all TM hardware** — no OTP phones, no TM SIMs, no Proxy PC, no air-gap deploy, no TLS, no domains (only the Google Play account exists). Equally, a hands-on review found the **mobile app is not product-coherent enough for even 10 testers** (no logout, no Profile/Settings — the Services tab is five dead tiles, English-only past the auth screens, a dead Favorites tab). So S8 is **split**:
 > - **S8a — remote product-completeness** (do now, verifiable on a local dev stack): mobile completeness + compliance code.

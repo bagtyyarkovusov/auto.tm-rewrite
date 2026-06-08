@@ -19,10 +19,10 @@
 | | |
 |---|---|
 | **Sprint** | S8 — Private beta polish |
-| **Status** | ⚪ Pending |
-| **Started** | — (run `/create-sprint-issues 8`) |
+| **Status** | 🟡 In progress (S8a — remote; S8b on-site deferred) |
+| **Started** | 2026-06-09 |
 | **Phase** | 1 (MLP beta final) |
-| **Plan file** | Issues not yet created — run `/create-sprint-issues 8` |
+| **Plan file** | Parent [#186](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/186) + children #187–#199 (S8a); S8b not yet ticketed |
 | **Sprint doc** | [`sprints/sprint-08-private-beta-polish.md`](sprints/sprint-08-private-beta-polish.md) |
 | **Milestone** | M7 — Private beta |
 
@@ -53,7 +53,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S5 | [Search + listing detail](sprints/sprint-05-search-listing-detail.md) | 🟢 Shipped | 2026-06-06 | 2026-06-06 | M4 | 10-20 beta testers with seeded listings |
 | S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟢 Shipped | 2026-06-06 | 2026-06-07 | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | 🟢 Shipped | 2026-06-07 | 2026-06-08 | M6 | Internal admins |
-| S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | ⚪ Pending | — | — | M7 | First 10-50 real users |
+| S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | 🟡 In progress | 2026-06-09 | — | M7 | First 10-50 real users |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
 
