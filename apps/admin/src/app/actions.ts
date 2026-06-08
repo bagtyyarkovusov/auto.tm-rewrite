@@ -270,7 +270,9 @@ export async function requireAuthWithReturnTo(
   );
 
   if (!status) {
-    await clearAuthCookies();
+    // Note: cannot clearAuthCookies() here because this helper is called
+    // from Server Component layouts where cookies().set() is not allowed.
+    // Stale cookies are harmless — they will be replaced on next login.
     const safeReturnTo = validateReturnTo(returnTo);
     const url = new URL("/login", "http://localhost");
     if (safeReturnTo) url.searchParams.set("returnTo", safeReturnTo);

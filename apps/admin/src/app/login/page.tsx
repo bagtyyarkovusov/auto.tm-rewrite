@@ -183,7 +183,7 @@ export default function LoginPage() {
                   placeholder="+993XXXXXXXX"
                   defaultValue={step.phone}
                   required
-                  pattern="\\+993[67]\\d{7}"
+                  pattern="\\+993[67][0-9]{7}"
                   disabled={isPending}
                 />
               </div>
