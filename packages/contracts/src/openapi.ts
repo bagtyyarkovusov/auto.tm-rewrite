@@ -107,96 +107,96 @@ const S = (schema: z.ZodTypeAny) => schema as unknown as Record<string, unknown>
 export function buildOpenApiRegistry(): OpenAPIRegistry {
   const registry = new OpenAPIRegistry();
 
-  registry.registerComponent("schemas", "ErrorResponse", S(ErrorResponseSchema));
+  registry.register("ErrorResponse", ErrorResponseSchema);
 
   // Catalog read schemas
-  registry.registerComponent("schemas", "BrandSummary", S(BrandSummarySchema));
-  registry.registerComponent("schemas", "BrandDetail", S(BrandDetailSchema));
-  registry.registerComponent("schemas", "ModelSummary", S(ModelSummarySchema));
-  registry.registerComponent("schemas", "ModelDetail", S(ModelDetailSchema));
-  registry.registerComponent("schemas", "GenerationSummary", S(GenerationSummarySchema));
-  registry.registerComponent("schemas", "GenerationDetail", S(GenerationDetailSchema));
-  registry.registerComponent("schemas", "ColorSummary", S(ColorSummarySchema));
-  registry.registerComponent("schemas", "ColorDetail", S(ColorDetailSchema));
-  registry.registerComponent("schemas", "BodyTypeSummary", S(BodyTypeSummarySchema));
-  registry.registerComponent("schemas", "BodyTypeDetail", S(BodyTypeDetailSchema));
-  registry.registerComponent("schemas", "RegionSummary", S(RegionSummarySchema));
-  registry.registerComponent("schemas", "RegionDetail", S(RegionDetailSchema));
-  registry.registerComponent("schemas", "CitySummary", S(CitySummarySchema));
-  registry.registerComponent("schemas", "CityDetail", S(CityDetailSchema));
+  registry.register("BrandSummary", BrandSummarySchema);
+  registry.register("BrandDetail", BrandDetailSchema);
+  registry.register("ModelSummary", ModelSummarySchema);
+  registry.register("ModelDetail", ModelDetailSchema);
+  registry.register("GenerationSummary", GenerationSummarySchema);
+  registry.register("GenerationDetail", GenerationDetailSchema);
+  registry.register("ColorSummary", ColorSummarySchema);
+  registry.register("ColorDetail", ColorDetailSchema);
+  registry.register("BodyTypeSummary", BodyTypeSummarySchema);
+  registry.register("BodyTypeDetail", BodyTypeDetailSchema);
+  registry.register("RegionSummary", RegionSummarySchema);
+  registry.register("RegionDetail", RegionDetailSchema);
+  registry.register("CitySummary", CitySummarySchema);
+  registry.register("CityDetail", CityDetailSchema);
 
   // Catalog admin write schemas
-  registry.registerComponent("schemas", "CreateBrandRequest", S(CreateBrandRequestSchema));
-  registry.registerComponent("schemas", "UpdateBrandRequest", S(UpdateBrandRequestSchema));
-  registry.registerComponent("schemas", "DeleteBrandParam", S(DeleteBrandParamSchema));
-  registry.registerComponent("schemas", "CreateModelRequest", S(CreateModelRequestSchema));
-  registry.registerComponent("schemas", "UpdateModelRequest", S(UpdateModelRequestSchema));
-  registry.registerComponent("schemas", "DeleteModelParam", S(DeleteModelParamSchema));
+  registry.register("CreateBrandRequest", CreateBrandRequestSchema);
+  registry.register("UpdateBrandRequest", UpdateBrandRequestSchema);
+  registry.register("DeleteBrandParam", DeleteBrandParamSchema);
+  registry.register("CreateModelRequest", CreateModelRequestSchema);
+  registry.register("UpdateModelRequest", UpdateModelRequestSchema);
+  registry.register("DeleteModelParam", DeleteModelParamSchema);
 
   // Listings schemas
-  registry.registerComponent("schemas", "ListingSummary", S(ListingSummarySchema));
-  registry.registerComponent("schemas", "ListingDetail", S(ListingDetailSchema));
-  registry.registerComponent("schemas", "ListingMedia", S(ListingMediaSchema));
-  registry.registerComponent("schemas", "ListingDraft", S(ListingDraftSchema));
-  registry.registerComponent("schemas", "ListingDraftPayload", S(ListingDraftPayloadSchema));
-  registry.registerComponent("schemas", "CreateDraftRequest", S(CreateDraftRequestSchema));
-  registry.registerComponent("schemas", "UpdateDraftRequest", S(UpdateDraftRequestSchema));
-  registry.registerComponent("schemas", "PublishListingRequest", S(PublishListingRequestSchema));
-  registry.registerComponent("schemas", "EditListingRequest", S(EditListingRequestSchema));
-  registry.registerComponent("schemas", "AttachMediaRequest", S(AttachMediaRequestSchema));
-  registry.registerComponent("schemas", "ReorderMediaRequest", S(ReorderMediaRequestSchema));
-  registry.registerComponent("schemas", "FeedResponse", S(FeedResponseSchema));
-  registry.registerComponent("schemas", "MyListingsResponse", S(MyListingsResponseSchema));
-  registry.registerComponent("schemas", "MyDraftsResponse", S(MyDraftsResponseSchema));
+  registry.register("ListingSummary", ListingSummarySchema);
+  registry.register("ListingDetail", ListingDetailSchema);
+  registry.register("ListingMedia", ListingMediaSchema);
+  registry.register("ListingDraft", ListingDraftSchema);
+  registry.register("ListingDraftPayload", ListingDraftPayloadSchema);
+  registry.register("CreateDraftRequest", CreateDraftRequestSchema);
+  registry.register("UpdateDraftRequest", UpdateDraftRequestSchema);
+  registry.register("PublishListingRequest", PublishListingRequestSchema);
+  registry.register("EditListingRequest", EditListingRequestSchema);
+  registry.register("AttachMediaRequest", AttachMediaRequestSchema);
+  registry.register("ReorderMediaRequest", ReorderMediaRequestSchema);
+  registry.register("FeedResponse", FeedResponseSchema);
+  registry.register("MyListingsResponse", MyListingsResponseSchema);
+  registry.register("MyDraftsResponse", MyDraftsResponseSchema);
 
   // Uploads schemas
-  registry.registerComponent("schemas", "PresignRequest", S(PresignRequestSchema));
-  registry.registerComponent("schemas", "PresignResponse", S(PresignResponseSchema));
+  registry.register("PresignRequest", PresignRequestSchema);
+  registry.register("PresignResponse", PresignResponseSchema);
 
   // Exchange-rates schemas
-  registry.registerComponent("schemas", "ExchangeRate", S(ExchangeRateSchema));
-  registry.registerComponent("schemas", "ExchangeRatesResponse", S(ExchangeRatesResponseSchema));
+  registry.register("ExchangeRate", ExchangeRateSchema);
+  registry.register("ExchangeRatesResponse", ExchangeRatesResponseSchema);
 
   // Conversation schemas
-  registry.registerComponent("schemas", "OpenConversationRequest", S(OpenConversationRequestSchema));
-  registry.registerComponent("schemas", "OpenConversationResponse", S(OpenConversationResponseSchema));
-  registry.registerComponent("schemas", "ListConversationsResponse", S(ListConversationsResponseSchema));
-  registry.registerComponent("schemas", "ListMessagesQuery", S(ListMessagesQuerySchema));
-  registry.registerComponent("schemas", "ListMessagesResponse", S(ListMessagesResponseSchema));
-  registry.registerComponent("schemas", "SendTextMessageRequest", S(SendTextMessageRequestSchema));
-  registry.registerComponent("schemas", "SendTextMessageResponse", S(SendTextMessageResponseSchema));
-  registry.registerComponent("schemas", "ConversationSummary", S(ConversationSummarySchema));
-  registry.registerComponent("schemas", "MessageSummary", S(MessageSummarySchema));
-  registry.registerComponent("schemas", "ConversationListingCard", S(ConversationListingCardSchema));
+  registry.register("OpenConversationRequest", OpenConversationRequestSchema);
+  registry.register("OpenConversationResponse", OpenConversationResponseSchema);
+  registry.register("ListConversationsResponse", ListConversationsResponseSchema);
+  registry.register("ListMessagesQuery", ListMessagesQuerySchema);
+  registry.register("ListMessagesResponse", ListMessagesResponseSchema);
+  registry.register("SendTextMessageRequest", SendTextMessageRequestSchema);
+  registry.register("SendTextMessageResponse", SendTextMessageResponseSchema);
+  registry.register("ConversationSummary", ConversationSummarySchema);
+  registry.register("MessageSummary", MessageSummarySchema);
+  registry.register("ConversationListingCard", ConversationListingCardSchema);
 
   // Admin TOTP schemas
-  registry.registerComponent("schemas", "AdminTotpStatusResponse", S(AdminTotpStatusResponseSchema));
-  registry.registerComponent("schemas", "AdminTotpEnrollResponse", S(AdminTotpEnrollResponseSchema));
-  registry.registerComponent("schemas", "AdminTotpVerifyRequest", S(AdminTotpVerifyRequestSchema));
-  registry.registerComponent("schemas", "AdminTotpVerifyResponse", S(AdminTotpVerifyResponseSchema));
+  registry.register("AdminTotpStatusResponse", AdminTotpStatusResponseSchema);
+  registry.register("AdminTotpEnrollResponse", AdminTotpEnrollResponseSchema);
+  registry.register("AdminTotpVerifyRequest", AdminTotpVerifyRequestSchema);
+  registry.register("AdminTotpVerifyResponse", AdminTotpVerifyResponseSchema);
 
   // Admin report schemas
-  registry.registerComponent("schemas", "CreateReportRequest", S(CreateReportRequestSchema));
-  registry.registerComponent("schemas", "CreateReportResponse", S(CreateReportResponseSchema));
-  registry.registerComponent("schemas", "ReportListItem", S(ReportListItemSchema));
-  registry.registerComponent("schemas", "ListReportsResponse", S(ListReportsResponseSchema));
-  registry.registerComponent("schemas", "GetReportDetailResponse", S(GetReportDetailResponseSchema));
+  registry.register("CreateReportRequest", CreateReportRequestSchema);
+  registry.register("CreateReportResponse", CreateReportResponseSchema);
+  registry.register("ReportListItem", ReportListItemSchema);
+  registry.register("ListReportsResponse", ListReportsResponseSchema);
+  registry.register("GetReportDetailResponse", GetReportDetailResponseSchema);
 
   // Admin moderation schemas
-  registry.registerComponent("schemas", "DismissReportRequest", S(DismissReportRequestSchema));
-  registry.registerComponent("schemas", "DismissReportResponse", S(DismissReportResponseSchema));
-  registry.registerComponent("schemas", "BanListingRequest", S(BanListingRequestSchema));
-  registry.registerComponent("schemas", "BanListingResponse", S(BanListingResponseSchema));
-  registry.registerComponent("schemas", "UnbanListingRequest", S(UnbanListingRequestSchema));
-  registry.registerComponent("schemas", "UnbanListingResponse", S(UnbanListingResponseSchema));
-  registry.registerComponent("schemas", "SuspendUserRequest", S(SuspendUserRequestSchema));
-  registry.registerComponent("schemas", "SuspendUserResponse", S(SuspendUserResponseSchema));
-  registry.registerComponent("schemas", "UnsuspendUserRequest", S(UnsuspendUserRequestSchema));
-  registry.registerComponent("schemas", "UnsuspendUserResponse", S(UnsuspendUserResponseSchema));
+  registry.register("DismissReportRequest", DismissReportRequestSchema);
+  registry.register("DismissReportResponse", DismissReportResponseSchema);
+  registry.register("BanListingRequest", BanListingRequestSchema);
+  registry.register("BanListingResponse", BanListingResponseSchema);
+  registry.register("UnbanListingRequest", UnbanListingRequestSchema);
+  registry.register("UnbanListingResponse", UnbanListingResponseSchema);
+  registry.register("SuspendUserRequest", SuspendUserRequestSchema);
+  registry.register("SuspendUserResponse", SuspendUserResponseSchema);
+  registry.register("UnsuspendUserRequest", UnsuspendUserRequestSchema);
+  registry.register("UnsuspendUserResponse", UnsuspendUserResponseSchema);
 
   // Admin audit schemas
-  registry.registerComponent("schemas", "AuditLogListItem", S(AuditLogListItemSchema));
-  registry.registerComponent("schemas", "ListAuditEntriesResponse", S(ListAuditEntriesResponseSchema));
+  registry.register("AuditLogListItem", AuditLogListItemSchema);
+  registry.register("ListAuditEntriesResponse", ListAuditEntriesResponseSchema);
 
   registry.registerPath({
     method: "post",
