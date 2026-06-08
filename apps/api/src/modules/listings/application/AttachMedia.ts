@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { Inject, Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 
 import { ListingMedia } from "../domain/ListingMedia";
 import { LISTING_ERROR_CODES } from "../domain/types";
@@ -54,6 +54,12 @@ export class AttachMedia {
     const listing = await this.listings.findById(input.listingId);
     if (!listing || listing.sellerId !== input.userId || listing.deletedAt) {
       throw new NotFoundException("Listing not found");
+    }
+    if (listing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and media cannot be attached",
+      });
     }
 
     const existingMedia = await this.mediaRepo.findByListingId(input.listingId);

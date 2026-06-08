@@ -35,6 +35,10 @@ class FakeContentReportRepository implements ContentReportRepository {
   async countByReporter(_reporterUserId: string): Promise<number> {
     return 0;
   }
+
+  async updateStatus(): Promise<ContentReport> {
+    throw new Error("Not implemented");
+  }
 }
 
 class FakeListingsReadPort implements ListingsReadPort {

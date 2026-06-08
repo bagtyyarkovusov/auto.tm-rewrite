@@ -174,7 +174,7 @@ export class PrismaListingRepository implements ListingRepository {
     return Listing.create({
       id: row.id,
       sellerId: row.sellerId,
-      status: row.status as "active" | "sold" | "archived",
+      status: row.status as "active" | "sold" | "archived" | "banned",
       brandId: row.brandId,
       modelId: row.modelId,
       cityId: row.cityId,

@@ -16,6 +16,15 @@ export interface ContentReportRepository {
   }): Promise<{ items: ContentReport[]; total: number }>;
   countPendingByTarget(targetType: string, targetId: string): Promise<number>;
   countByReporter(reporterUserId: string): Promise<number>;
+  updateStatus(
+    id: string,
+    data: {
+      status: string;
+      reviewedById: string;
+      reviewedAt: Date;
+    },
+    tx?: unknown,
+  ): Promise<ContentReport>;
 }
 
 export const CONTENT_REPORT_REPOSITORY = Symbol("ContentReportRepository");

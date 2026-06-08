@@ -162,6 +162,15 @@ describe("MarkSold", () => {
     ).rejects.toThrow();
   });
 
+  it("throws ForbiddenException for banned listing", async () => {
+    seedActiveListing(repo, { status: "banned" });
+
+    const uc = makeUseCase(repo, prisma, events);
+    await expect(
+      uc.execute({ listingId: "listing-1", userId: "user-1" }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
   it("computes daysActive correctly in audit log", async () => {
     seedActiveListing(repo, {
       publishedAt: new Date("2026-05-10T00:00:00Z"),

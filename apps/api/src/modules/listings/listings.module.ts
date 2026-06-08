@@ -17,6 +17,7 @@ import { PrismaListingRepository } from "./infrastructure/PrismaListingRepositor
 import { PrismaListingMediaRepository } from "./infrastructure/PrismaListingMediaRepository";
 import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRateRepository";
 import { PrismaListingsReadRepository } from "./infrastructure/PrismaListingsReadRepository";
+import { PrismaListingsAdminRepository } from "./infrastructure/PrismaListingsAdminRepository";
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
@@ -49,6 +50,7 @@ import { IMAGE_VARIANT_GENERATOR } from "./domain/ports/ImageVariantGenerator";
 import { EXCHANGE_RATE_PORT } from "./domain/ports/ExchangeRatePort";
 import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
 import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
+import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
 
 @Module({
   imports: [PrismaModule, EventEmitterModule],
@@ -64,6 +66,7 @@ import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
     PrismaListingMediaRepository,
     PrismaExchangeRateRepository,
     PrismaListingsReadRepository,
+    PrismaListingsAdminRepository,
     MinioMediaStorageAdapter,
     SharpImageVariantGenerator,
 
@@ -112,6 +115,10 @@ import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
       provide: LISTINGS_READ_PORT,
       useClass: PrismaListingsReadRepository,
     },
+    {
+      provide: LISTINGS_ADMIN_PORT,
+      useClass: PrismaListingsAdminRepository,
+    },
 
     // Application use-cases
     CreateDraft,
@@ -146,6 +153,7 @@ import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
     EXCHANGE_RATE_PORT,
     MEDIA_STORAGE_PORT,
     LISTINGS_READ_PORT,
+    LISTINGS_ADMIN_PORT,
   ],
 })
 export class ListingsModule {}

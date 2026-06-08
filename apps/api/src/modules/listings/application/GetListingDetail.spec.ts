@@ -201,4 +201,23 @@ describe("GetListingDetail", () => {
       "https://media.auto.tm/listings/listing-1/media-1/video.mp4",
     );
   });
+
+  it("returns 404 for banned listing when requester is not owner", async () => {
+    seedListing({ status: "banned", sellerId: "user-1" });
+
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    await expect(
+      uc.execute({ listingId: "listing-1", requestingUserId: "user-2" }),
+    ).rejects.toThrow("Listing not found");
+  });
+
+  it("returns detail for banned listing when requester is owner", async () => {
+    seedListing({ status: "banned", sellerId: "user-1" });
+
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const result = await uc.execute({ listingId: "listing-1", requestingUserId: "user-1" });
+
+    expect(result.id).toBe("listing-1");
+    expect(result.status).toBe("banned");
+  });
 });

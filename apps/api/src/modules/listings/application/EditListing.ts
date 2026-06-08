@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
 import { Listing } from "../domain/Listing";
@@ -44,6 +44,12 @@ export class EditListing {
     const existing = await this.listings.findById(input.listingId);
     if (!existing || existing.sellerId !== input.userId || existing.deletedAt) {
       throw new NotFoundException("Listing not found");
+    }
+    if (existing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and cannot be edited",
+      });
     }
 
     const patch = input.patch;

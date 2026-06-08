@@ -33,6 +33,12 @@ export class ArchiveListing {
     if (existing.sellerId !== input.userId) {
       throw new ForbiddenException("Not the owner of this listing");
     }
+    if (existing.status === "banned") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Listing is banned and cannot be archived",
+      });
+    }
 
     const previousStatus = existing.status;
     const updated = existing.archive();
