@@ -32,13 +32,14 @@
     "fastify": "^5.8.5",
     "ioredis": "^5.4.2",
     "nestjs-pino": "^4.3.0",
+    "otplib": "^13.4.1",
     "pino-http": "^10.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.1",
     "slugify": "^1.6.9",
     "socket.io": "^4.8.1",
-    "zod": "^3.23.8",
-    "sharp": "^0.34.1"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@auto-tm/eslint-config": "workspace:*",
