@@ -183,7 +183,7 @@ export default function LoginPage() {
                   placeholder="+993XXXXXXXX"
                   defaultValue={step.phone}
                   required
-                  pattern="\\+993[67][0-9]{7}"
+                  pattern="[+]+993[67][0-9]{7}"
                   disabled={isPending}
                 />
               </div>
@@ -227,7 +227,7 @@ export default function LoginPage() {
                   maxLength={6}
                   placeholder="123456"
                   required
-                  pattern="\\d{6}"
+                  pattern="[0-9]{6}"
                   autoFocus
                   disabled={isPending}
                 />
