@@ -31,6 +31,7 @@ import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrott
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
 import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
+import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
 
 @Module({
   imports: [
@@ -61,7 +62,7 @@ import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
       useClass: PrismaIdentityCheckAdapter,
     },
     {
-      provide: IDENTITY_TOKENS.IdentityReadPort,
+      provide: IDENTITY_READ_PORT,
       useClass: PrismaIdentityReadAdapter,
     },
     {
@@ -125,7 +126,7 @@ import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,
-    IDENTITY_TOKENS.IdentityReadPort,
+    IDENTITY_READ_PORT,
     IDENTITY_TOKENS.SessionRepository,
     IDENTITY_TOKENS.ClockPort,
     IDENTITY_ADMIN_PORT,

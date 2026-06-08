@@ -1,3 +1,4 @@
+import { EventEmitterModule } from "@nestjs/event-emitter";
 import { Module } from "@nestjs/common";
 
 import { ListingsModule } from "../listings/listings.module";
@@ -23,7 +24,7 @@ import { CONTENT_REPORT_REPOSITORY } from "./domain/ports/ContentReportRepositor
 import { AUDIT_LOG_REPOSITORY } from "./domain/ports/AuditLogRepository";
 
 @Module({
-  imports: [ListingsModule, IdentityModule],
+  imports: [EventEmitterModule, ListingsModule, IdentityModule],
   controllers: [AdminController, ReportsController, AuditController, AdminModerationController, ConfigController],
   providers: [
     PrismaContentReportRepository,
