@@ -90,6 +90,22 @@ export class PrismaSessionRepository implements SessionRepository {
     return result.count === 1;
   }
 
+  async findById(id: string): Promise<Session | null> {
+    const row = await this.prisma.session.findUnique({ where: { id } });
+    if (!row) return null;
+    return this.toDomain(row);
+  }
+
+  async updateAdminTotpExpiresAt(
+    id: string,
+    adminTotpExpiresAt: Date | null,
+  ): Promise<void> {
+    await this.prisma.session.update({
+      where: { id },
+      data: { adminTotpExpiresAt },
+    });
+  }
+
   async delete(id: string): Promise<void> {
     await this.prisma.session.delete({ where: { id } });
   }
@@ -113,6 +129,7 @@ export class PrismaSessionRepository implements SessionRepository {
       expiresAt: row.expiresAt,
       createdAt: row.createdAt,
       lastSeenAt: row.lastSeenAt,
+      adminTotpExpiresAt: row.adminTotpExpiresAt ?? null,
     };
   }
 }

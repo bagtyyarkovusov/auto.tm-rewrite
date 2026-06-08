@@ -43,6 +43,17 @@ export interface SessionRepository {
     expiresAt: Date,
   ): Promise<boolean>;
 
+  /** Finds a session by its primary key. */
+  findById(id: string): Promise<Session | null>;
+
+  /**
+   * Updates the admin TOTP elevation expiry on a session row.
+   */
+  updateAdminTotpExpiresAt(
+    id: string,
+    adminTotpExpiresAt: Date | null,
+  ): Promise<void>;
+
   /** Deletes a single session by ID. */
   delete(id: string): Promise<void>;
 

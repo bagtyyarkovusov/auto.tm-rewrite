@@ -8,19 +8,31 @@ import {
 import type { FastifyRequest } from "fastify";
 
 import type { IdentityCheckPort } from "../modules/identity/domain/ports/IdentityCheckPort";
+import type { SessionRepository } from "../modules/identity/domain/ports/SessionRepository";
+import type { ClockPort } from "../modules/identity/domain/ports/ClockPort";
 import { IDENTITY_TOKENS } from "../modules/identity/identity.tokens";
+
+interface JwtPayload {
+  sub?: string;
+  sid?: string;
+  role?: string;
+}
 
 @Injectable()
 export class AdminGuard implements CanActivate {
   constructor(
     @Inject(IDENTITY_TOKENS.IdentityCheckPort)
     private readonly identityCheck: IdentityCheckPort,
+    @Inject(IDENTITY_TOKENS.SessionRepository)
+    private readonly sessionRepo: SessionRepository,
+    @Inject(IDENTITY_TOKENS.ClockPort)
+    private readonly clock: ClockPort,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<FastifyRequest & { user?: { sub: string } }>();
+      .getRequest<FastifyRequest & { user?: JwtPayload }>();
     const user = request.user;
 
     if (!user?.sub) {
@@ -32,6 +44,29 @@ export class AdminGuard implements CanActivate {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Admin role required",
+      });
+    }
+
+    if (!user.sid) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Admin TOTP elevation required",
+      });
+    }
+
+    const session = await this.sessionRepo.findById(user.sid);
+    if (!session) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Admin TOTP elevation required",
+      });
+    }
+
+    const now = this.clock.now();
+    if (!session.adminTotpExpiresAt || session.adminTotpExpiresAt <= now) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Admin TOTP elevation expired",
       });
     }
 

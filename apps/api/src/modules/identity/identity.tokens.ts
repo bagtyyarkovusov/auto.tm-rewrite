@@ -7,4 +7,9 @@ export const IDENTITY_TOKENS = {
   SessionRepository: "IDENTITY_SESSION_REPOSITORY",
   PasswordHasherPort: "IDENTITY_PASSWORD_HASHER_PORT",
   IdentityCheckPort: "IDENTITY_CHECK_PORT",
+  TotpSecretCipherPort: "IDENTITY_TOTP_SECRET_CIPHER_PORT",
+  TotpVerifierPort: "IDENTITY_TOTP_VERIFIER_PORT",
+  TotpEnrollmentRepository: "IDENTITY_TOTP_ENROLLMENT_REPOSITORY",
+  TotpThrottlePort: "IDENTITY_TOTP_THROTTLE_PORT",
+  SecurityLoggerPort: "IDENTITY_SECURITY_LOGGER_PORT",
 } as const;

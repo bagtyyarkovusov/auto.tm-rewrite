@@ -56,6 +56,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     expiresAt: new Date(NOW.getTime() + 30 * 24 * 60 * 60 * 1000),
     createdAt: NOW,
     lastSeenAt: NOW,
+    adminTotpExpiresAt: null,
     ...overrides,
   };
 }
@@ -165,6 +166,7 @@ class FakeSessionRepository implements SessionRepository {
       ...input,
       createdAt: NOW,
       lastSeenAt: NOW,
+      adminTotpExpiresAt: null,
     };
     this.sessions.push(session);
     return session;
@@ -215,6 +217,12 @@ class FakeSessionRepository implements SessionRepository {
     };
     return true;
   }
+
+  async findById(id: string): Promise<Session | null> {
+    return this.sessions.find((s) => s.id === id) ?? null;
+  }
+
+  async updateAdminTotpExpiresAt(_id: string, _adminTotpExpiresAt: Date | null): Promise<void> {}
 
   async delete(id: string): Promise<void> {
     this.sessions = this.sessions.filter((s) => s.id !== id);
@@ -529,6 +537,22 @@ describe("VerifyOtp", () => {
     // We can't decode the JWT here (no secret), but the token is a JWT string
     expect(result.accessToken).toMatch(/^eyJ/); // JWT prefix
     expect(result.accessToken.split(".")).toHaveLength(3);
+  });
+
+  it("includes sid claim in access token", async () => {
+    const otpRequest = makeOtpRequest();
+    otpRepo.addRecord(otpRequest);
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const result = await uc.execute({
+      phone: "+99361234567",
+      code: "123456",
+    });
+
+    const payload = JSON.parse(
+      Buffer.from(result.accessToken.split(".")[1]!, "base64url").toString("utf-8"),
+    );
+    expect(payload.sid).toBe(sessionRepo.sessions[0]!.id);
   });
 
   // --- Device label/server capture ---

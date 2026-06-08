@@ -63,6 +63,7 @@ export class RefreshSession {
 
     const accessToken = this.jwtService.sign({
       sub: lookup.userId,
+      sid: lookup.session.id,
       phone: lookup.phone,
       role: lookup.role,
     });

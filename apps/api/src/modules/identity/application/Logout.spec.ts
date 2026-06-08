@@ -17,6 +17,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     expiresAt: new Date(NOW.getTime() + 30 * 24 * 60 * 60 * 1000),
     createdAt: NOW,
     lastSeenAt: NOW,
+    adminTotpExpiresAt: null,
     ...overrides,
   };
 }
@@ -27,7 +28,7 @@ class FakeSessionRepository implements SessionRepository {
   deletedIds: string[] = [];
 
   async create(input: Parameters<SessionRepository["create"]>[0]): Promise<Session> {
-    const s: Session = { ...input, id: randomUUID(), createdAt: NOW, lastSeenAt: NOW };
+    const s: Session = { ...input, id: randomUUID(), createdAt: NOW, lastSeenAt: NOW, adminTotpExpiresAt: null };
     this.sessions.push(s);
     return s;
   }
@@ -46,6 +47,12 @@ class FakeSessionRepository implements SessionRepository {
   }
 
   async rotateRefreshToken(): Promise<boolean> { return true; }
+
+  async findById(id: string): Promise<Session | null> {
+    return this.sessions.find((s) => s.id === id) ?? null;
+  }
+
+  async updateAdminTotpExpiresAt(): Promise<void> {}
 
   async delete(id: string): Promise<void> {
     this.deletedIds.push(id);

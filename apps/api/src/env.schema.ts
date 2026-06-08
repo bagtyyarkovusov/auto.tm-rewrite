@@ -26,6 +26,17 @@ export const EnvSchema = z.object({
   RATE_LIMIT_OTP_PHONE_DAILY: z.coerce.number().int().positive().default(5),
   RATE_LIMIT_OTP_IP_HOURLY: z.coerce.number().int().positive().default(10),
 
+  TOTP_SECRET_ENCRYPTION_KEY: z.string().refine(
+    (val) => {
+      try {
+        return Buffer.from(val, "base64").length === 32;
+      } catch {
+        return false;
+      }
+    },
+    { message: "TOTP_SECRET_ENCRYPTION_KEY must be a 32-byte base64 string" },
+  ),
+
   MINIO_ENDPOINT: z.string().default("http://localhost:9000"),
   MINIO_PUBLIC_URL: z.string().default("http://localhost:9000"),
   MINIO_ACCESS_KEY: z.string().default("minioadmin"),

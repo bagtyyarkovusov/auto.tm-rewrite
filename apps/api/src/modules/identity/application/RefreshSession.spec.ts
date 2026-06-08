@@ -20,6 +20,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     expiresAt: new Date(NOW.getTime() + 30 * 24 * 60 * 60 * 1000),
     createdAt: new Date(NOW.getTime() - 5 * 24 * 60 * 60 * 1000),
     lastSeenAt: NOW,
+    adminTotpExpiresAt: null,
     ...overrides,
   };
 }
@@ -41,6 +42,7 @@ class FakeSessionRepository implements SessionRepository {
       ...input,
       createdAt: NOW,
       lastSeenAt: NOW,
+      adminTotpExpiresAt: null,
     };
     this.sessions.push(s);
     return s;
@@ -101,6 +103,12 @@ class FakeSessionRepository implements SessionRepository {
     };
     return true;
   }
+
+  async findById(id: string): Promise<Session | null> {
+    return this.sessions.find((s) => s.id === id) ?? null;
+  }
+
+  async updateAdminTotpExpiresAt(_id: string, _adminTotpExpiresAt: Date | null): Promise<void> {}
 
   async delete(_id: string): Promise<void> {}
 
@@ -311,5 +319,35 @@ describe("RefreshSession", () => {
     expect(payload.sub).toBe("user-42");
     expect(payload.phone).toBe("+99361234567");
     expect(payload.role).toBe("buyer");
+  });
+
+  it("includes sid claim in access token", async () => {
+    const session = makeSession({ refreshTokenHash: "hashed:token-1" });
+    sessionRepo.sessions.push(session);
+    sessionRepo.registerToken("token-1", session);
+
+    const uc = makeUseCase({ sessionRepo, hasher, clock });
+    const result = await uc.execute({ refreshToken: "token-1" });
+
+    const payload = JSON.parse(
+      Buffer.from(result.accessToken.split(".")[1]!, "base64url").toString("utf-8"),
+    );
+    expect(payload.sid).toBe(session.id);
+  });
+
+  it("preserves adminTotpExpiresAt without extending it", async () => {
+    const futureElevation = new Date(NOW.getTime() + 12 * 60 * 60 * 1000);
+    const session = makeSession({
+      refreshTokenHash: "hashed:token-1",
+      adminTotpExpiresAt: futureElevation,
+    });
+    sessionRepo.sessions.push(session);
+    sessionRepo.registerToken("token-1", session);
+
+    const uc = makeUseCase({ sessionRepo, hasher, clock });
+    await uc.execute({ refreshToken: "token-1" });
+
+    const updated = sessionRepo.sessions.find((s) => s.id === session.id)!;
+    expect(updated.adminTotpExpiresAt?.getTime()).toBe(futureElevation.getTime());
   });
 });

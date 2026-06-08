@@ -125,7 +125,7 @@ export class VerifyOtp {
       now.getTime() + REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000,
     );
 
-    await this.sessionRepo.create({
+    const session = await this.sessionRepo.create({
       userId: user.id,
       refreshTokenHash,
       deviceLabel: input.deviceLabel ?? null,
@@ -136,6 +136,7 @@ export class VerifyOtp {
     // Generate access token (JWT)
     const accessToken = this.jwtService.sign({
       sub: user.id,
+      sid: session.id,
       phone: user.phone,
       role: user.role,
     });

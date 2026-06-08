@@ -7,4 +7,5 @@ export interface Session {
   readonly expiresAt: Date;
   readonly createdAt: Date;
   readonly lastSeenAt: Date;
+  readonly adminTotpExpiresAt: Date | null;
 }
