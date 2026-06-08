@@ -6,12 +6,15 @@ import {
   NotFoundException,
   ForbiddenException,
 } from "@nestjs/common";
+import { AdminSchemas } from "@auto-tm/contracts";
 
 import type {
   ListingsReadPort,
   ListingSummary,
 } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
+import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
 import { Conversation } from "../domain/Conversation";
 import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import {
@@ -36,6 +39,8 @@ export class OpenConversation {
     private readonly conversations: ConversationRepository,
     @Inject(LISTINGS_READ_PORT)
     private readonly listings: ListingsReadPort,
+    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    private readonly identityCheck: IdentityCheckPort,
   ) {}
 
   async execute(input: OpenConversationInput): Promise<OpenConversationResult> {
@@ -78,6 +83,25 @@ export class OpenConversation {
         code: "FORBIDDEN",
         message: "Chat is disabled for this listing",
         details: { reason: CONVERSATION_ERROR_CODES.CHAT_DISABLED },
+      });
+    }
+
+    // Block if either participant is suspended
+    const buyerSuspended = await this.identityCheck.isSuspended(input.buyerId);
+    if (buyerSuspended) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "User is suspended",
+        details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
+      });
+    }
+
+    const sellerSuspended = await this.identityCheck.isSuspended(listing.sellerId);
+    if (sellerSuspended) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "User is suspended",
+        details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
       });
     }
 

@@ -24,6 +24,10 @@ class FakeIdentityCheckPort implements IdentityCheckPort {
   async isInDealership(): Promise<boolean> {
     return false;
   }
+
+  async isSuspended(): Promise<boolean> {
+    return false;
+  }
 }
 
 class FakeClock implements ClockPort {

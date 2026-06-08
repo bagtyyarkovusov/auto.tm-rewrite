@@ -11,10 +11,15 @@ import {
   Req,
   Query,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
+import { ListingsSchemas, AdminSchemas } from "@auto-tm/contracts";
+import type { z } from "zod";
 
 import { Public } from "../../../common/public.decorator";
+import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
+import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import { ArchiveListing } from "../application/ArchiveListing";
 import { DeleteListing } from "../application/DeleteListing";
 import { EditListing } from "../application/EditListing";
@@ -26,8 +31,6 @@ import { RemoveMedia } from "../application/RemoveMedia";
 import { ReorderMedia } from "../application/ReorderMedia";
 import { GetListingDetail } from "../application/GetListingDetail";
 import { ListFeed } from "../application/ListFeed";
-import { ListingsSchemas } from "@auto-tm/contracts";
-import type { z } from "zod";
 import { ListingFilter } from "../domain/ListingFilter";
 import { DomainError, type ListingFilterCriteria } from "../domain/types";
 
@@ -45,7 +48,20 @@ export class ListingsController {
     @Inject(ReorderMedia) private readonly reorderMediaUC: ReorderMedia,
     @Inject(GetListingDetail) private readonly getListingDetailUC: GetListingDetail,
     @Inject(ListFeed) private readonly listFeedUC: ListFeed,
+    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    private readonly identityCheck: IdentityCheckPort,
   ) {}
+
+  private async assertNotSuspended(userId: string): Promise<void> {
+    const suspended = await this.identityCheck.isSuspended(userId);
+    if (suspended) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "User is suspended",
+        details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
+      });
+    }
+  }
 
   @Public()
   @Get("ping")
@@ -120,6 +136,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
 
     const result = await this.publishListingUC.execute({ draftId, userId });
 
@@ -141,6 +158,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
 
     const result = await this.markSoldUC.execute({ listingId, userId });
 
@@ -157,6 +175,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
 
     const result = await this.archiveListingUC.execute({ listingId, userId });
 
@@ -172,6 +191,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
 
     const result = await this.republishListingUC.execute({ listingId, userId });
 
@@ -189,6 +209,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
     let parsed: typeof ListingsSchemas.EditListingRequestSchema._type;
     try {
       parsed = ListingsSchemas.EditListingRequestSchema.parse(body);
@@ -246,6 +267,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
 
     await this.deleteListingUC.execute({ listingId, userId });
 
@@ -259,6 +281,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
     let parsed: typeof ListingsSchemas.AttachMediaRequestSchema._type;
     try {
       parsed = ListingsSchemas.AttachMediaRequestSchema.parse(body);
@@ -301,6 +324,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
 
     await this.removeMediaUC.execute({ listingId, mediaId, userId });
 
@@ -314,6 +338,7 @@ export class ListingsController {
     @Req() req: FastifyRequest,
   ) {
     const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    await this.assertNotSuspended(userId);
     let parsed: typeof ListingsSchemas.ReorderMediaRequestSchema._type;
     try {
       parsed = ListingsSchemas.ReorderMediaRequestSchema.parse(body);

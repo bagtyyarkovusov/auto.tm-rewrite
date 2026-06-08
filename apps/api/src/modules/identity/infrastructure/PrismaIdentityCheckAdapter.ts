@@ -24,4 +24,12 @@ export class PrismaIdentityCheckAdapter implements IdentityCheckPort {
     });
     return row?.dealershipId === dealershipId;
   }
+
+  async isSuspended(userId: string): Promise<boolean> {
+    const row = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { suspendedAt: true },
+    });
+    return row?.suspendedAt != null;
+  }
 }
