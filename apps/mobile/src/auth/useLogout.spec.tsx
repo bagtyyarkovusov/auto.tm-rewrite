@@ -66,7 +66,7 @@ describe("useLogout", () => {
       { auth: false },
     );
     expect(mockClearAuthSession).toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith("/(tabs)/index");
+    expect(mockReplace).toHaveBeenCalledWith("/(tabs)");
   });
 
   it("still clears session and redirects when server logout fails", async () => {
@@ -86,7 +86,7 @@ describe("useLogout", () => {
 
     expect(mockPost).toHaveBeenCalled();
     expect(mockClearAuthSession).toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith("/(tabs)/index");
+    expect(mockReplace).toHaveBeenCalledWith("/(tabs)");
   });
 
   it("still clears session and redirects when no local session exists", async () => {
@@ -100,6 +100,6 @@ describe("useLogout", () => {
 
     expect(mockPost).not.toHaveBeenCalled();
     expect(mockClearAuthSession).toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith("/(tabs)/index");
+    expect(mockReplace).toHaveBeenCalledWith("/(tabs)");
   });
 });
