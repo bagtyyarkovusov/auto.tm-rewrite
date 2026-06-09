@@ -10,7 +10,7 @@ export class PrismaAccountDeletionListingsAdapter implements AccountDeletionList
     await this.prisma.listing.updateMany({
       where: {
         sellerId,
-        status: { in: ["active", "pending_review", "sold", "draft"] },
+        status: "active",
       },
       data: {
         status: "archived",

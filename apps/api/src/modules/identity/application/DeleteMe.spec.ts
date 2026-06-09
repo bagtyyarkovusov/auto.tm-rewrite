@@ -163,14 +163,15 @@ describe("DeleteMe", () => {
     ).rejects.toThrow("User not found");
   });
 
-  it("throws 'User not found' when the user row was already purged (tombstoned)", async () => {
+  it("is idempotent for a tombstoned user (re-schedules deletion)", async () => {
     const user = makeUser({ phone: "deleted:user-1" });
     userRepo.users.set(user.id, user);
 
     const uc = makeUseCase(userRepo, sessionRepo, listingsPort, clock);
-    // Tombstoned users are still found by ID, so scheduleDeletion proceeds
     await expect(
       uc.execute({ userId: "user-1" }),
     ).resolves.toBeUndefined();
+
+    expect(userRepo.scheduledDeletions.get("user-1")?.toISOString()).toBe(GRACE_30D.toISOString());
   });
 });

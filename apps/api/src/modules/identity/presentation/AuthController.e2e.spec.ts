@@ -1,6 +1,6 @@
 import "reflect-metadata";
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import {
   FastifyAdapter,
@@ -151,6 +151,10 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
     await prisma.otpRequest.deleteMany();
   });
 
+  afterEach(() => {
+    delete process.env["SIGNUPS_ENABLED"];
+  });
+
   async function requestOtp(phone: string): Promise<string> {
     const res = await request
       .post("/api/v1/auth/otp/request")
@@ -229,6 +233,58 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
       .expect(201);
 
     expect(res2.body.user.id).toBe(userId);
+  });
+
+  it("returns 403 FORBIDDEN when SIGNUPS_ENABLED=false and phone is new", async () => {
+    process.env["SIGNUPS_ENABLED"] = "false";
+
+    const testCode = await requestOtp("+99361234567");
+
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode })
+      .expect(403);
+
+    expect(res.body.code).toBe("FORBIDDEN");
+    expect(res.body.details?.reason).toBe("FEATURE_DISABLED");
+  });
+
+  it("allows existing user login when SIGNUPS_ENABLED=false", async () => {
+    process.env["SIGNUPS_ENABLED"] = "false";
+
+    const existingUser = await prisma.user.create({
+      data: { phone: "+99361234567" },
+    });
+
+    const testCode = await requestOtp("+99361234567");
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode })
+      .expect(201);
+
+    expect(res.body.user.id).toBe(existingUser.id);
+  });
+
+  it("recovers an account in deletion grace and clears deletionScheduledAt", async () => {
+    process.env["SIGNUPS_ENABLED"] = "false";
+
+    const existingUser = await prisma.user.create({
+      data: {
+        phone: "+99361234567",
+        deletionScheduledAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const testCode = await requestOtp("+99361234567");
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: testCode })
+      .expect(201);
+
+    expect(res.body.user.id).toBe(existingUser.id);
+
+    const userAfter = await prisma.user.findUnique({ where: { id: existingUser.id } });
+    expect(userAfter?.deletionScheduledAt).toBeNull();
   });
 });
 
@@ -518,6 +574,7 @@ describe("MeController e2e — GET /api/v1/me", () => {
     expect(res.body).toHaveProperty("avatarUrl");
     expect(res.body).toHaveProperty("locale");
     expect(res.body).toHaveProperty("createdAt");
+    expect(res.body).toHaveProperty("deletionScheduledAt");
   });
 
   it("returns the correct role for the authenticated user", async () => {

@@ -1,7 +1,9 @@
 #!/usr/bin/env tsx
 import "dotenv/config";
+
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
+
 import { PrismaClient } from "../generated/prisma/client/client";
 import { runPromoteAdmin } from "../src/promote-admin";
 
