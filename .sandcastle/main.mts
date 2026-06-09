@@ -297,7 +297,27 @@ const SANDCASTLE_PNPM = `${SANDCASTLE_ENV} pnpm`;
 // perf re-warm, not a correctness requirement. See docs/agents/sandcastle.md.
 const SANDCASTLE_INSTALL =
   `${SANDCASTLE_PNPM} install --prefer-offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`;
-const SANDCASTLE_INSTALL_TIMEOUT_MS = 600_000;
+// Bumped 10→20 min as headroom; the real fix for the parallel-install timeouts
+// is serializeInstall below (installs no longer contend for macOS bind-mount I/O).
+const SANDCASTLE_INSTALL_TIMEOUT_MS = 1_200_000;
+
+// Serialize the per-sandbox install (the onSandboxReady hook). pnpm materializes
+// ~1862 packages from the in-VM store into the bind-mounted worktree; on
+// Docker-for-Mac the hardlink import falls back to a cross-device COPY, and
+// running every planned issue's install at once saturates the file-sharing layer
+// so all of them blow the hook timeout (observed 2026-06-09: 3× parallel → all
+// three killed mid-link at "reused ~1500/1862", downloaded 0 — pure I/O, not
+// network). Gate ONLY the install; sandbox.run (the agent) still runs in
+// parallel, so AFK throughput is preserved while each install gets full I/O.
+let installChain: Promise<unknown> = Promise.resolve();
+const serializeInstall = <T>(fn: () => Promise<T>): Promise<T> => {
+  const run = installChain.then(fn, fn);
+  installChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+};
 const SANDCASTLE_GIT_AUTH = "gh auth setup-git";
 const IMPLEMENTER_IDLE_TIMEOUT_SECONDS = Number(
   HOST_ENV.SANDCASTLE_IMPLEMENTER_IDLE_TIMEOUT_SECONDS ?? 300,
@@ -416,11 +436,13 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       console.log(
         `[${issue.id}] creating sandbox and running offline setup for ${issue.branch}...`,
       );
-      const sandbox = await sandcastle.createSandbox({
-        branch: issue.branch,
-        sandbox: docker(),
-        hooks: implementerHooks,
-      });
+      const sandbox = await serializeInstall(() =>
+        sandcastle.createSandbox({
+          branch: issue.branch,
+          sandbox: docker(),
+          hooks: implementerHooks,
+        }),
+      );
       console.log(`[${issue.id}] sandbox ready in ${formatDuration(setupStartedAt)}.`);
 
       try {
