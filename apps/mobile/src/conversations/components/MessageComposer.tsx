@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { View, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useColorScheme } from "nativewind";
 import { Send } from "lucide-react-native";
 
@@ -22,6 +23,7 @@ export function MessageComposer({
   disabled = false,
 }: MessageComposerProps) {
   const [text, setText] = useState("");
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme ?? "light";
   const placeholderColor = `hsl(${THEME[scheme].mutedForeground})`;
@@ -44,20 +46,20 @@ export function MessageComposer({
         <View className="flex-1 rounded-2xl bg-muted px-4 py-2.5">
           <TextInput
             className="text-base text-foreground max-h-[120px]"
-            placeholder="Message"
+            placeholder={t("messageComposerPlaceholder")}
             placeholderTextColor={placeholderColor}
             value={text}
             onChangeText={setText}
             multiline
             maxLength={MAX_CHARS}
             editable={!disabled}
-            accessibilityLabel="Message input"
-            accessibilityHint="Type a message up to 1000 characters"
+            accessibilityLabel={t("sendMessage")}
+            accessibilityHint={t("messageInputHint")}
           />
           {isOverLimit && (
             <View className="pt-1">
               <Text className="text-xs text-destructive">
-                Message must be {MAX_CHARS} characters or less
+                {t("messageTooLong", { max: MAX_CHARS })}
               </Text>
             </View>
           )}
@@ -68,7 +70,7 @@ export function MessageComposer({
           className="rounded-full h-11 w-11"
           disabled={!canSend}
           onPress={handleSend}
-          accessibilityLabel="Send message"
+          accessibilityLabel={t("sendMessage")}
         >
           <Icon as={Send} className="size-5 text-primary-foreground" />
         </Button>

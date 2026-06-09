@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { parseYearInput } from "./yearRangeFilterLogic";
 import type { ListingFilter, UseListingFiltersReturn } from "./useListingFilters";
@@ -16,6 +17,7 @@ export function YearRangeFilterControl({
   draft,
   setField,
 }: YearRangeFilterControlProps) {
+  const { t } = useTranslation();
   const [minText, setMinText] = useState(draft.yearMin?.toString() ?? "");
   const [maxText, setMaxText] = useState(draft.yearMax?.toString() ?? "");
 
@@ -48,32 +50,32 @@ export function YearRangeFilterControl({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Year range</Text>
+      <Text className="text-sm font-medium text-foreground">{t("yearRange")}</Text>
       <View className="flex-row gap-3">
         <View className="flex-1">
           <Input
             value={minText}
             onChangeText={handleMinChange}
-            placeholder="From"
+            placeholder={t("from")}
             keyboardType="number-pad"
             maxLength={4}
-            accessibilityLabel="Minimum year"
+            accessibilityLabel={t("from")}
           />
         </View>
         <View className="flex-1">
           <Input
             value={maxText}
             onChangeText={handleMaxChange}
-            placeholder="To"
+            placeholder={t("to")}
             keyboardType="number-pad"
             maxLength={4}
-            accessibilityLabel="Maximum year"
+            accessibilityLabel={t("to")}
           />
         </View>
       </View>
       {isInvalid && (
         <Text className="text-sm text-destructive">
-          Minimum year cannot be greater than maximum year
+          {t("minYearExceedsMax")}
         </Text>
       )}
     </View>

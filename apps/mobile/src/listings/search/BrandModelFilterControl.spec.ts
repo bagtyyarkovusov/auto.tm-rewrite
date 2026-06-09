@@ -89,16 +89,16 @@ describe("BrandModelFilterControl picker states", () => {
 
   it("shows empty messages for both pickers", () => {
     expect(source).toContain("emptyMessage");
-    expect(source).toContain("No brands available");
-    expect(source).toContain("No models available");
+    expect(source).toContain('t("noBrandsAvailable")');
+    expect(source).toContain('t("noModelsAvailable")');
   });
 
   it("shows search-empty fallback for brands", () => {
-    expect(source).toContain("No brands match your search");
+    expect(source).toContain('t("noBrandsMatch")');
   });
 
   it("shows search-empty fallback for models", () => {
-    expect(source).toContain("No models match your search");
+    expect(source).toContain('t("noModelsMatch")');
   });
 });
 

@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import { Phone, MessageSquare } from "lucide-react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
@@ -73,13 +74,14 @@ function DescriptionInput({
   fieldErrors?: Record<string, string>;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   const descriptionLength = payload.description?.length ?? 0;
 
   return (
     <View className="gap-1.5">
       <View className="flex-row items-center justify-between">
         <Text className="text-sm font-medium text-foreground">
-          Description *
+          {t("description")} *
         </Text>
         <Text className="text-xs text-muted-foreground">
           {descriptionLength}/2000
@@ -91,13 +93,13 @@ function DescriptionInput({
           onChangeText={(text) =>
             onChange({ description: text || undefined })
           }
-          placeholder="Describe your vehicle..."
+          placeholder={t("descriptionPlaceholder")}
           multiline
           numberOfLines={4}
           editable={!disabled}
           className="h-auto min-h-[96px] py-2"
           maxLength={2000}
-          accessibilityLabel="Vehicle description"
+          accessibilityLabel={t("description")}
         />,
         disabled,
       )}
@@ -121,10 +123,11 @@ function ContactPhoneInput({
   disabled: boolean;
   defaultPhone: string;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
-        Contact phone
+        {t("contactPhone")}
       </Text>
       {wrapDisabled(
         <Input
@@ -132,10 +135,10 @@ function ContactPhoneInput({
           onChangeText={(text) =>
             onChange({ contactPhone: text || undefined })
           }
-          placeholder={defaultPhone ? `Default: ${defaultPhone}` : "Enter phone number"}
+          placeholder={defaultPhone ? `${t("defaultPhone")}: ${defaultPhone}` : t("enterPhoneNumber")}
           editable={!disabled}
           keyboardType="phone-pad"
-          accessibilityLabel="Contact phone number"
+          accessibilityLabel={t("contactPhone")}
         />,
         disabled,
       )}
@@ -152,6 +155,7 @@ function ContactMethods({
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   const allowCalls = payload.allowCalls ?? true;
   const allowChat = payload.allowChat ?? true;
   const hasContactMethod = allowCalls || allowChat;
@@ -160,7 +164,7 @@ function ContactMethods({
     <>
       <View className="rounded-xl border border-border p-4 gap-1">
         <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-          Contact methods
+          {t("contactMethods")}
         </Text>
 
         <View className="flex-row items-center justify-between py-1">
@@ -169,8 +173,8 @@ function ContactMethods({
               <Icon as={Phone} className="size-4 text-foreground" />
             </View>
             <View className="gap-0.5">
-              <Text className="text-base text-foreground">Phone calls</Text>
-              <Text className="text-xs text-muted-foreground">Buyers can call you directly</Text>
+              <Text className="text-base text-foreground">{t("phoneCalls")}</Text>
+              <Text className="text-xs text-muted-foreground">{t("callsAllowed")}</Text>
             </View>
           </View>
           <Switch
@@ -188,8 +192,8 @@ function ContactMethods({
               <Icon as={MessageSquare} className="size-4 text-foreground" />
             </View>
             <View className="gap-0.5">
-              <Text className="text-base text-foreground">In-app chat</Text>
-              <Text className="text-xs text-muted-foreground">Chat when messaging launches</Text>
+              <Text className="text-base text-foreground">{t("inAppChat")}</Text>
+              <Text className="text-xs text-muted-foreground">{t("chatAllowed")}</Text>
             </View>
           </View>
           <Switch
@@ -202,7 +206,7 @@ function ContactMethods({
 
       {!hasContactMethod && (
         <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-          Choose at least one contact method
+          {t("chooseAtLeastOneContact")}
         </Text>
       )}
     </>

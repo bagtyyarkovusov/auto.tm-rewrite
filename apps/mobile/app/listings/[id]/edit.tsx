@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { View } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
@@ -29,20 +30,16 @@ import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 
-const STEP_TITLES: Record<WizardSchemas.WizardStep, string> = {
-  vin: "VIN or chassis number",
-  photos: "Photos",
-  vehicle: "Vehicle",
-  specs: "Specs",
-  price: "Price",
-  location: "Car location",
-  contact: "Description & contact",
-  review: "Review",
+const STEP_KEY_MAP: Record<WizardSchemas.WizardStep, string> = {
+  vin: "vin",
+  photos: "photos",
+  vehicle: "vehicle",
+  specs: "specs",
+  price: "price",
+  location: "location",
+  contact: "contact",
+  review: "review",
 };
-
-function getStepTitle(step: WizardSchemas.WizardStep): string {
-  return STEP_TITLES[step] ?? step;
-}
 
 function listingToPayload(
   listing: ListingsSchemas.ListingDetail,
@@ -101,10 +98,11 @@ function EditSaveErrorBanner({
   opStates: Record<string, OpState>;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-2 rounded-lg bg-destructive/10 p-3">
       <Text className="text-sm font-medium text-destructive">
-        Couldn't save all changes
+        {t("couldNotSaveAllChanges")}
       </Text>
       {Object.entries(opStates).map(([opId, state]) => (
         <Text key={opId} className="text-xs text-muted-foreground">
@@ -120,13 +118,14 @@ function EditSaveErrorBanner({
         className="h-[52px] rounded-full"
         onPress={onRetry}
       >
-        <Text className="text-background">Retry</Text>
+        <Text className="text-background">{t("retry")}</Text>
       </Button>
     </View>
   );
 }
 
 export default function EditListingScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams();
   const { show } = useToast();
   const listingId = id as string;
@@ -205,7 +204,7 @@ export default function EditListingScreen() {
 
     try {
       await saveEdit.save();
-      show({ title: "Changes saved", variant: "success" });
+      show({ title: t("changesSaved"), variant: "success" });
       // Navigate to public detail; may 404 until downstream route ships
       router.replace(`/(public)/listings/${listingId}`);
     } catch {
@@ -220,7 +219,7 @@ export default function EditListingScreen() {
   if (!listing) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <Text className="text-muted-foreground">Loading...</Text>
+        <Text className="text-muted-foreground">{t("loadingEllipsis")}</Text>
       </View>
     );
   }
@@ -239,10 +238,10 @@ export default function EditListingScreen() {
   const disabledReason =
     ctx.isLastStep && !uploadQueue.publishGate.canPublish
       ? uploadStatus.failed > 0
-        ? `${uploadStatus.failed} failed — retry or remove`
+        ? t("photosFailedRetryOrRemove", { count: uploadStatus.failed })
         : uploadStatus.inflight > 0
-          ? `Wait for ${uploadStatus.inflight} photos to finish uploading`
-          : (uploadQueue.publishGate.blockers[0] ?? "Cannot save yet")
+          ? t("waitForPhotos", { count: uploadStatus.inflight })
+          : (uploadQueue.publishGate.blockers[0] ?? t("cannotSaveYet"))
       : !ctx.isLastStep &&
           !ctx.canContinue &&
           attemptedSteps[currentStep] &&
@@ -255,8 +254,8 @@ export default function EditListingScreen() {
 
   return (
     <WizardLayout
-      routeTitle="Edit listing"
-      stepTitle={getStepTitle(currentStep)}
+      routeTitle={t("editListing")}
+      stepTitle={t(STEP_KEY_MAP[currentStep] ?? currentStep)}
       stepNumber={ctx.stepNumber}
       stepCount={ctx.stepCount}
       onBack={() => {}}
@@ -271,14 +270,14 @@ export default function EditListingScreen() {
       canGoBack={ctx.canGoBack}
       isLastStep={ctx.isLastStep}
       saveStatus={saveStatus}
-      saveError={saveEdit.error ? "Couldn't save all changes" : null}
+      saveError={saveEdit.error ? t("couldNotSaveAllChanges") : null}
       onRetrySave={saveEdit.retry}
       progressPercent={ctx.progressPercent}
       disabledReason={disabledReason}
       uploadStatus={uploadStatus}
-      publishLabel="Save changes"
-      discardTitle="Leave edit mode?"
-      discardDescription="Any unsaved changes will be lost."
+      publishLabel={t("saveChanges")}
+      discardTitle={t("leaveEditMode")}
+      discardDescription={t("unsavedChangesLost")}
       isDiscarding={false}
       discardError={null}
     >

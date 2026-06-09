@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
@@ -30,6 +31,7 @@ export function ListingCard({
   modelName,
   cityName,
 }: ListingCardProps) {
+  const { t } = useTranslation();
   const imageUrl = listing.coverMediaKey
     ? buildVariantUrl(listing.coverMediaKey, "list")
     : null;
@@ -40,8 +42,8 @@ export function ListingCard({
 
   const titleParts = [
     listing.year ? String(listing.year) : null,
-    brandName ?? "Brand loading...",
-    modelName ?? "Model loading...",
+    brandName ?? t("loading"),
+    modelName ?? t("loading"),
   ].filter(Boolean);
 
   return (
@@ -62,7 +64,7 @@ export function ListingCard({
             />
           ) : (
             <View className="h-full w-full items-center justify-center">
-              <Text className="text-xs text-muted-foreground">No photo</Text>
+              <Text className="text-xs text-muted-foreground">{t("noPhoto")}</Text>
             </View>
           )}
         </View>
@@ -81,11 +83,11 @@ export function ListingCard({
           <View className="flex-row items-center gap-2">
             {listing.status === Enums.ListingStatus.Sold && (
               <Badge variant="secondary" className="px-2 py-0.5">
-                <Text className="text-xs text-secondary-foreground">Sold</Text>
+                <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
               </Badge>
             )}
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              {cityName ?? "City loading..."}
+              {cityName ?? t("loading")}
             </Text>
           </View>
         </View>

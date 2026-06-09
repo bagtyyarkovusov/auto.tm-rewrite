@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 
 import { useColors } from "../../api/catalog/useColors";
@@ -31,12 +32,13 @@ interface Step4SpecsProps {
 }
 
 function SheetCloseButton({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
   return (
     <Button
       variant="ghost"
       size="icon"
       onPress={onPress}
-      accessibilityLabel="Close"
+      accessibilityLabel={t("cancel")}
     >
       <Icon as={X} className="size-5 text-foreground" />
     </Button>
@@ -84,6 +86,7 @@ function SpecPickerSheet({
   isLoading?: boolean;
   isError?: boolean;
 }) {
+  const { t } = useTranslation();
   const showSearch = items.length > 12;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -94,7 +97,7 @@ function SpecPickerSheet({
         </SheetHeader>
         {showSearch && (
           <Input
-            placeholder="Search..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChangeText={onSearchChange}
             className="mb-2"
@@ -103,16 +106,16 @@ function SpecPickerSheet({
         {isLoading ? (
           <View className="py-4 items-center">
             <ActivityIndicator size="small" />
-            <Text className="mt-2 text-sm text-muted-foreground">Loading...</Text>
+            <Text className="mt-2 text-sm text-muted-foreground">{t("savingEllipsis")}</Text>
           </View>
         ) : isError ? (
           <View className="py-4 items-center">
             <Icon as={AlertCircle} className="size-6 text-destructive" />
-            <Text className="mt-2 text-sm text-destructive">Failed to load options</Text>
+            <Text className="mt-2 text-sm text-destructive">{t("failedToLoadOptions")}</Text>
           </View>
         ) : items.length === 0 ? (
           <View className="py-4 items-center">
-            <Text className="text-sm text-muted-foreground">No options available</Text>
+            <Text className="text-sm text-muted-foreground">{t("noOptionsAvailable")}</Text>
           </View>
         ) : (
           <ScrollView>
@@ -154,26 +157,27 @@ function ColorPickerSheet({
   isLoading?: boolean;
   isError?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent compact>
         <SheetHeader className="flex-row items-center justify-between">
-          <SheetTitle>Select color</SheetTitle>
+          <SheetTitle>{t("selectColor")}</SheetTitle>
           <SheetCloseButton onPress={() => onOpenChange(false)} />
         </SheetHeader>
         {isLoading ? (
           <View className="py-4 items-center">
             <ActivityIndicator size="small" />
-            <Text className="mt-2 text-sm text-muted-foreground">Loading...</Text>
+            <Text className="mt-2 text-sm text-muted-foreground">{t("savingEllipsis")}</Text>
           </View>
         ) : isError ? (
           <View className="py-4 items-center">
             <Icon as={AlertCircle} className="size-6 text-destructive" />
-            <Text className="mt-2 text-sm text-destructive">Failed to load colors</Text>
+            <Text className="mt-2 text-sm text-destructive">{t("failedToLoadColors")}</Text>
           </View>
         ) : colors.length === 0 ? (
           <View className="py-4 items-center">
-            <Text className="text-sm text-muted-foreground">No colors available</Text>
+            <Text className="text-sm text-muted-foreground">{t("noColorsAvailable")}</Text>
           </View>
         ) : (
           <ScrollView>
@@ -276,6 +280,7 @@ function SpecSheets({
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   specs: ReturnType<typeof useSpecsStep>;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <ColorPickerSheet
@@ -301,7 +306,7 @@ function SpecSheets({
           specs.bodyPicker.setOpen(open);
           if (!open) specs.bodyPicker.reset();
         }}
-        title="Select body type"
+        title={t("selectBodyType")}
         search={specs.bodyPicker.search}
         onSearchChange={specs.bodyPicker.setSearch}
         items={specs.bodyPicker.filtered}
@@ -321,7 +326,7 @@ function SpecSheets({
           specs.transmissionPicker.setOpen(open);
           if (!open) specs.transmissionPicker.reset();
         }}
-        title="Select transmission"
+        title={t("selectTransmission")}
         search={specs.transmissionPicker.search}
         onSearchChange={specs.transmissionPicker.setSearch}
         items={specs.transmissionPicker.filtered}
@@ -341,7 +346,7 @@ function SpecSheets({
           specs.drivePicker.setOpen(open);
           if (!open) specs.drivePicker.reset();
         }}
-        title="Select drive type"
+        title={t("selectDriveType")}
         search={specs.drivePicker.search}
         onSearchChange={specs.drivePicker.setSearch}
         items={specs.drivePicker.filtered}
@@ -361,7 +366,7 @@ function SpecSheets({
           specs.enginePicker.setOpen(open);
           if (!open) specs.enginePicker.reset();
         }}
-        title="Select engine type"
+        title={t("selectEngineType")}
         search={specs.enginePicker.search}
         onSearchChange={specs.enginePicker.setSearch}
         items={specs.enginePicker.filtered}
@@ -384,6 +389,7 @@ export default function Step4Specs({
   fieldErrors,
   disabled = false,
 }: Step4SpecsProps) {
+  const { t } = useTranslation();
   const specs = useSpecsStep(payload);
 
   return (
@@ -418,7 +424,7 @@ export default function Step4Specs({
       {/* Drivetrain group */}
       <View className="gap-5 rounded-xl border border-border p-4">
         <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Drivetrain
+          {t("drivetrain")}
         </Text>
         <TransmissionPicker
           selectedTransmission={specs.selectedTransmission}
@@ -435,7 +441,7 @@ export default function Step4Specs({
       {/* Engine group */}
       <View className="gap-5 rounded-xl border border-border p-4">
         <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Engine
+          {t("engine")}
         </Text>
         <EngineTypePicker
           selectedEngineType={specs.selectedEngineType}
@@ -463,9 +469,10 @@ function ConditionToggle({
   disabled: boolean;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Condition</Text>
+      <Text className="text-sm font-medium text-foreground">{t("condition")}</Text>
       <View className="flex-row rounded-lg bg-muted p-1">
         <Pressable
           onPress={() => {
@@ -477,7 +484,7 @@ function ConditionToggle({
           disabled={disabled}
           accessibilityRole="button"
           accessibilityState={{ selected: condition === Enums.ListingCondition.New }}
-          accessibilityLabel="New condition"
+          accessibilityLabel={t("new")}
           className={cn(
             "flex-1 items-center justify-center rounded-md py-2.5",
             condition === Enums.ListingCondition.New && "bg-card",
@@ -492,7 +499,7 @@ function ConditionToggle({
                 : "text-muted-foreground",
             )}
           >
-            New
+            {t("new")}
           </Text>
         </Pressable>
         <Pressable
@@ -502,7 +509,7 @@ function ConditionToggle({
           disabled={disabled}
           accessibilityRole="button"
           accessibilityState={{ selected: condition === Enums.ListingCondition.Used }}
-          accessibilityLabel="Used condition"
+          accessibilityLabel={t("used")}
           className={cn(
             "flex-1 items-center justify-center rounded-md py-2.5",
             condition === Enums.ListingCondition.Used && "bg-card",
@@ -517,7 +524,7 @@ function ConditionToggle({
                 : "text-muted-foreground",
             )}
           >
-            Used
+            {t("used")}
           </Text>
         </Pressable>
       </View>
@@ -536,10 +543,11 @@ function MileageInput({
   fieldErrors?: Record<string, string>;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
-        Mileage, km *
+        {t("mileage")} *
       </Text>
       {wrapDisabled(
         <Input
@@ -550,7 +558,7 @@ function MileageInput({
               mileageKm: Number.isNaN(num) ? undefined : num,
             });
           }}
-          placeholder="e.g. 50000"
+          placeholder={t("mileagePlaceholder")}
           keyboardType="number-pad"
           editable={!disabled}
         />,
@@ -574,9 +582,10 @@ function ColorPicker({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Color</Text>
+      <Text className="text-sm font-medium text-foreground">{t("color")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -595,7 +604,7 @@ function ColorPicker({
               selectedColor ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
-            {selectedColor?.name ?? "Select color"}
+            {selectedColor?.name ?? t("selectColor")}
           </Text>
         </Button>,
         disabled,
@@ -613,9 +622,10 @@ function BodyTypePicker({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Body type</Text>
+      <Text className="text-sm font-medium text-foreground">{t("bodyType")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -628,7 +638,7 @@ function BodyTypePicker({
               selectedBodyType ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
-            {selectedBodyType?.name ?? "Select body type"}
+            {selectedBodyType?.name ?? t("selectBodyType")}
           </Text>
         </Button>,
         disabled,
@@ -646,10 +656,11 @@ function TransmissionPicker({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
-        Transmission
+        {t("transmission")}
       </Text>
       {wrapDisabled(
         <Button
@@ -665,7 +676,7 @@ function TransmissionPicker({
                 : "text-muted-foreground"
             }
           >
-            {selectedTransmission?.name ?? "Select transmission"}
+            {selectedTransmission?.name ?? t("selectTransmission")}
           </Text>
         </Button>,
         disabled,
@@ -683,9 +694,10 @@ function DriveTypePicker({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Drive type</Text>
+      <Text className="text-sm font-medium text-foreground">{t("driveType")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -698,7 +710,7 @@ function DriveTypePicker({
               selectedDriveType ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
-            {selectedDriveType?.name ?? "Select drive type"}
+            {selectedDriveType?.name ?? t("selectDriveType")}
           </Text>
         </Button>,
         disabled,
@@ -716,9 +728,10 @@ function EngineTypePicker({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Engine type</Text>
+      <Text className="text-sm font-medium text-foreground">{t("engineType")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -731,7 +744,7 @@ function EngineTypePicker({
               selectedEngineType ? "text-foreground font-medium" : "text-muted-foreground"
             }
           >
-            {selectedEngineType?.name ?? "Select engine type"}
+            {selectedEngineType?.name ?? t("selectEngineType")}
           </Text>
         </Button>,
         disabled,
@@ -749,10 +762,11 @@ function EnginePowerInput({
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
-        Engine power (hp)
+        {t("enginePower")}
       </Text>
       {wrapDisabled(
         <Input
@@ -763,7 +777,7 @@ function EnginePowerInput({
               enginePower: Number.isNaN(num) ? undefined : num,
             });
           }}
-          placeholder="e.g. 150"
+          placeholder={t("enginePowerPlaceholder")}
           keyboardType="number-pad"
           editable={!disabled}
         />,

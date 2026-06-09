@@ -52,14 +52,14 @@ describe("PriceDisplay (public/buyer mode)", () => {
   it("renders seller term badges conditionally", () => {
     expect(priceDisplaySource).toContain("acceptsExchange");
     expect(priceDisplaySource).toContain("installmentAvailable");
-    expect(priceDisplaySource).toContain("Exchange possible");
-    expect(priceDisplaySource).toContain("Installment possible");
+    expect(priceDisplaySource).toContain('t("exchangePossible")');
+    expect(priceDisplaySource).toContain('t("installmentPossible")');
   });
 });
 
 describe("SellerBlock", () => {
   it("uses safe fallback copy for unavailable seller profile fields", () => {
-    expect(sellerBlockSource).toContain("Private seller");
+    expect(sellerBlockSource).toContain('t("privateSeller")');
     expect(sellerBlockSource).not.toContain("avatar");
     expect(sellerBlockSource).not.toContain("tenure");
     expect(sellerBlockSource).not.toContain("response time");
@@ -94,7 +94,7 @@ describe("ContactCtaBar", () => {
   });
 
   it("disables Favorite without implementing favorites behavior", () => {
-    expect(contactCtaSource).toContain("Favorite coming soon");
+    expect(contactCtaSource).toContain('t("favorite")');
     expect(contactCtaSource).toContain("Heart");
     expect(contactCtaSource).toContain("disabled");
   });
@@ -119,7 +119,7 @@ describe("PhotoGallery", () => {
   });
 
   it("renders no-media fallback", () => {
-    expect(photoGallerySource).toContain("No photos");
+    expect(photoGallerySource).toContain('t("noPhotos")');
     expect(photoGallerySource).toContain("media.length === 0");
   });
 
@@ -147,24 +147,24 @@ describe("ListingDetailView", () => {
 
   it("renders sold badge when status is sold", () => {
     expect(listingDetailSource).toContain("Enums.ListingStatus.Sold");
-    expect(listingDetailSource).toContain("Sold");
+    expect(listingDetailSource).toContain('t("sold")');
   });
 
   it("renders spec grid with conditional fields", () => {
-    expect(listingDetailSource).toContain("Year");
-    expect(listingDetailSource).toContain("Mileage");
-    expect(listingDetailSource).toContain("Transmission");
-    expect(listingDetailSource).toContain("Drive type");
-    expect(listingDetailSource).toContain("Engine");
-    expect(listingDetailSource).toContain("Color");
-    expect(listingDetailSource).toContain("Body type");
-    expect(listingDetailSource).toContain("VIN");
+    expect(listingDetailSource).toContain('t("year")');
+    expect(listingDetailSource).toContain('t("mileage")');
+    expect(listingDetailSource).toContain('t("transmission")');
+    expect(listingDetailSource).toContain('t("driveType")');
+    expect(listingDetailSource).toContain('t("engineType")');
+    expect(listingDetailSource).toContain('t("color")');
+    expect(listingDetailSource).toContain('t("bodyType")');
+    expect(listingDetailSource).toContain('t("vin")');
   });
 });
 
 describe("ListingDetailScreen", () => {
   it("renders unavailable state for missing/soft-deleted listings", () => {
-    expect(screenSource).toContain("This listing is no longer available");
+    expect(screenSource).toContain('t("notAvailable")');
     expect(screenSource).toContain('"status" in error');
   });
 

@@ -41,7 +41,7 @@ describe("ChatScreen", () => {
 
   it("shows loading state while auth is resolving", () => {
     expect(source).toContain("isAuthenticated === true");
-    expect(source).toContain("Loading…");
+    expect(source).toContain('t("loading")');
   });
 
   it("renders ConversationList for authenticated users", () => {
@@ -52,7 +52,7 @@ describe("ChatScreen", () => {
   });
 
   it("has a Messages header", () => {
-    expect(source).toContain("Messages");
+    expect(source).toContain('t("chat")');
     expect(source).toContain("text-2xl font-semibold");
   });
 });

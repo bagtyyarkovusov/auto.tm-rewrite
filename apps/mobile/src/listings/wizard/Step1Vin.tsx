@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
@@ -17,17 +18,18 @@ export default function Step1Vin({
   fieldErrors,
   disabled,
 }: Step1VinProps) {
+  const { t } = useTranslation();
   const vinError = fieldErrors?.vin;
 
   return (
     <View className="gap-5 py-5">
       <Text className="text-sm text-muted-foreground leading-relaxed">
-        Enter the 17-character VIN to auto-fill vehicle details, or skip and enter manually.
+        {t("enterVIN")}
       </Text>
 
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
-          VIN / chassis number
+          {t("vin")}
         </Text>
         <View className={disabled ? "opacity-50" : ""}>
           <Input
@@ -39,7 +41,7 @@ export default function Step1Vin({
             editable={!disabled}
             autoCapitalize="characters"
             maxLength={17}
-            accessibilityLabel="VIN or chassis number"
+            accessibilityLabel={t("vin")}
           />
         </View>
         {vinError && (

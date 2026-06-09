@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Play, Trash2 } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -63,6 +64,7 @@ export function DraftCard({
   isDiscarding,
 }: DraftCardProps) {
   const [showConfirm, setShowConfirm] = useState(false);
+  const { t } = useTranslation();
 
   const payload = draft.payload;
   const attachedPhotos = useMemo(
@@ -82,8 +84,8 @@ export function DraftCard({
   const identity = titleParts.length > 0
     ? titleParts.join(" ")
     : payload.brandId && payload.modelId
-      ? "Unnamed draft"
-      : "Untitled draft";
+      ? t("unnamedDraft")
+      : t("untitledDraft");
 
   // Approximate progress using the last completed numeric step (1-7).
   const lastStep = payload.currentStep ?? 0;
@@ -95,7 +97,7 @@ export function DraftCard({
         className="active:opacity-90"
         onPress={() => onResume(draft)}
         accessibilityRole="button"
-        accessibilityLabel={`Resume draft ${identity}`}
+        accessibilityLabel={`${t("continueListing")} ${identity}`}
       >
         <View className="flex-row gap-3 px-4 py-3">
           {/* Cover image */}
@@ -124,15 +126,15 @@ export function DraftCard({
                 {identity}
               </Text>
               <Text className="text-xs text-muted-foreground">
-                Updated {formatDate(draft.updatedAt)}
-                {photoCount > 0 ? ` · ${photoCount} photo${photoCount !== 1 ? "s" : ""}` : ""}
+                {t("updated")} {formatDate(draft.updatedAt)}
+                {photoCount > 0 ? ` · ${photoCount} ${t("photos")}` : ""}
               </Text>
             </View>
 
             <View className="gap-1.5">
               <View className="flex-row items-center justify-between">
                 <Text className="text-xs text-muted-foreground">
-                  Step {lastStep} of 7
+                  {t("stepCount", { step: lastStep })}
                 </Text>
                 <Text className="text-xs text-muted-foreground">
                   {progressPercent}%
@@ -149,7 +151,7 @@ export function DraftCard({
                 onPress={() => onResume(draft)}
               >
                 <Icon as={Play} className="size-4 text-primary-foreground" />
-                <Text>Resume</Text>
+                <Text>{t("continueListing")}</Text>
               </Button>
               <Button
                 variant="outline"
@@ -159,7 +161,7 @@ export function DraftCard({
                 disabled={isDiscarding}
               >
                 <Icon as={Trash2} className="size-4 text-destructive" />
-                <Text>Discard</Text>
+                <Text>{t("discard")}</Text>
               </Button>
             </View>
           </View>
@@ -169,15 +171,14 @@ export function DraftCard({
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard draft?</AlertDialogTitle>
+            <AlertDialogTitle>{t("discardListingTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete your draft and any staged photos.
-              This action cannot be undone.
+              {t("discardListingDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDiscarding} onPress={() => setShowConfirm(false)}>
-              <Text>Cancel</Text>
+              <Text>{t("cancel")}</Text>
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={isDiscarding}
@@ -188,7 +189,7 @@ export function DraftCard({
               className="bg-destructive"
             >
               <Text className="text-destructive-foreground">
-                {isDiscarding ? "Discarding..." : "Discard"}
+                {isDiscarding ? t("discarding") : t("discard")}
               </Text>
             </AlertDialogAction>
           </AlertDialogFooter>

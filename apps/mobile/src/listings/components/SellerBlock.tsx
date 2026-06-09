@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { MapPin, User } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -19,12 +20,13 @@ export function SellerBlock({
   contactPhone,
   allowCalls,
 }: SellerBlockProps) {
+  const { t } = useTranslation();
   const locationParts = [regionName, cityName, locationText].filter(Boolean);
 
   return (
     <View className="gap-3">
       <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Seller
+        {t("seller")}
       </Text>
 
       <View className="gap-2">
@@ -34,7 +36,7 @@ export function SellerBlock({
           </View>
           <View>
             <Text className="text-base font-medium text-foreground">
-              Private seller
+              {t("privateSeller")}
             </Text>
             {allowCalls && contactPhone && (
               <Text className="text-sm text-muted-foreground">

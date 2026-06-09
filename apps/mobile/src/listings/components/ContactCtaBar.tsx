@@ -3,6 +3,7 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../auth/useAuth";
 import { useAuthIntentStore } from "../../auth/intentStore";
@@ -30,6 +31,7 @@ export function ContactCtaBar({
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const openConversation = useOpenConversation();
+  const { t } = useTranslation();
 
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
@@ -87,7 +89,7 @@ export function ContactCtaBar({
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out this car on AutoTM`,
+        message: t("shareMessage"),
         url: `https://autotm.tm/listings/${listingId}`,
       });
     } catch {
@@ -105,7 +107,7 @@ export function ContactCtaBar({
         disabled={!canCall}
       >
         <Icon as={Phone} className="size-5" />
-        <Text>Call</Text>
+        <Text>{t("call")}</Text>
       </Button>
 
       <Button
@@ -113,7 +115,7 @@ export function ContactCtaBar({
         size="icon"
         disabled={!canMessage || openConversation.isPending}
         onPress={handleMessage}
-        accessibilityLabel={canMessage ? "Message seller" : "Message unavailable"}
+        accessibilityLabel={t("message")}
         accessibilityState={{ disabled: !canMessage || openConversation.isPending }}
       >
         <Icon
@@ -134,7 +136,7 @@ export function ContactCtaBar({
         variant="secondary"
         size="icon"
         disabled
-        accessibilityLabel="Favorite coming soon"
+        accessibilityLabel={t("favorite")}
         accessibilityState={{ disabled: true }}
       >
         <Icon as={Heart} className="size-5 text-muted-foreground" />

@@ -36,13 +36,13 @@ describe("CityFilterControl structure", () => {
 
 describe("CityFilterControl region drilldown", () => {
   it("renders a Region picker row", () => {
-    expect(source).toContain('label="Region"');
-    expect(source).toContain('placeholder="Select region"');
+    expect(source).toContain('label={t("region")}');
+    expect(source).toContain('placeholder={t("selectRegion")}');
   });
 
   it("renders a City picker row that depends on region selection", () => {
-    expect(source).toContain('label="City"');
-    expect(source).toContain('placeholder={selectedRegionId ? "Select city" : "Select region first"}');
+    expect(source).toContain('label={t("city")}');
+    expect(source).toContain('placeholder={selectedRegionId ? t("selectCity") : t("selectRegionFirst")}');
   });
 
   it("disables city picker when no region is selected and no cached city exists", () => {
@@ -107,7 +107,7 @@ describe("CityFilterControl external draft sync", () => {
 describe("CityFilterControl clearability", () => {
   it("renders a clear action when a city is selected", () => {
     expect(source).toContain("{draft.cityId && (");
-    expect(source).toContain("Clear city");
+    expect(source).toContain('t("clear")');
   });
 
   it("clears draft cityId and removes from cache on clear", () => {
@@ -135,14 +135,13 @@ describe("CityFilterControl picker states", () => {
   });
 
   it("provides empty messages for both pickers", () => {
-    expect(source).toContain('"No regions match your search"');
-    expect(source).toContain('"No regions available"');
-    expect(source).toContain('"No cities match your search"');
-    expect(source).toContain('"No cities available"');
+    expect(source).toContain('t("noRegionsMatch")');
+    expect(source).toContain('t("noRegionsAvailable")');
+    expect(source).toContain('t("noCitiesMatch")');
+    expect(source).toContain('t("noCitiesAvailable")');
   });
 
   it("provides search placeholders for both pickers", () => {
-    expect(source).toContain('searchPlaceholder="Search regions..."');
-    expect(source).toContain('searchPlaceholder="Search cities..."');
+    expect(source).toContain('searchPlaceholder={`${t("searchPlaceholder")}`}');
   });
 });

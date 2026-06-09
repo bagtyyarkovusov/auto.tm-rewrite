@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useGenerations } from "../../api/catalog/useGenerations";
@@ -153,9 +154,10 @@ function computeGenerationHelper(
   generationsError: boolean,
   generationCount: number,
 ) {
-  if (!modelId) return "Select a model first";
+  const { t } = useTranslation();
+  if (!modelId) return t("selectBrandFirst");
   if (!generationsLoading && !generationsError && generationCount === 0) {
-    return "No generations for this model yet.";
+    return t("noGenerationsAvailable");
   }
   return undefined;
 }
@@ -177,6 +179,7 @@ function YearInput({
   showErrors: boolean;
   touchedFields: Partial<Record<VehicleField, boolean>>;
 }) {
+  const { t } = useTranslation();
   const [yearText, setYearText] = useState(payload.year?.toString() ?? "");
 
   function handleYearChange(text: string) {
@@ -204,12 +207,12 @@ function YearInput({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">Year *</Text>
+      <Text className="text-sm font-medium text-foreground">{t("year")} *</Text>
       <View className={disabled ? "opacity-50" : undefined}>
         <Input
           value={yearText}
           onChangeText={handleYearChange}
-          placeholder="YYYY"
+          placeholder={t("yearPlaceholder")}
           keyboardType="number-pad"
           editable={!disabled}
           maxLength={4}
@@ -221,7 +224,7 @@ function YearInput({
       )}
       {disabled && (
         <Text className="text-sm text-muted-foreground">
-          This field cannot be changed after publishing.
+          {t("thisFieldCannotBeChanged")}
         </Text>
       )}
     </View>
@@ -235,6 +238,7 @@ function VehicleIdSheets({
   payload: WizardSchemas.WizardDraftPayload;
   picker: ReturnType<typeof useVehiclePicker>;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <CatalogPickerSheet
@@ -243,16 +247,16 @@ function VehicleIdSheets({
           picker.setBrandOpen(open);
           if (!open) picker.setBrandSearch("");
         }}
-        title="Select brand"
-        searchPlaceholder="Search brands..."
+        title={t("selectBrand")}
+        searchPlaceholder={t("searchPlaceholder")}
         search={picker.brandSearch}
         onSearchChange={picker.setBrandSearch}
         items={picker.filteredBrands}
         selectedId={payload.brandId}
         emptyMessage={
           picker.brandSearch
-            ? "No brands match your search"
-            : "No brands available"
+            ? t("noBrandsMatch")
+            : t("noBrandsAvailable")
         }
         isLoading={picker.brandsLoading}
         isError={picker.brandsError}
@@ -265,16 +269,16 @@ function VehicleIdSheets({
           picker.setModelOpen(open);
           if (!open) picker.setModelSearch("");
         }}
-        title="Select model"
-        searchPlaceholder="Search models..."
+        title={t("selectModel")}
+        searchPlaceholder={t("searchPlaceholder")}
         search={picker.modelSearch}
         onSearchChange={picker.setModelSearch}
         items={picker.filteredModels}
         selectedId={payload.modelId}
         emptyMessage={
           picker.modelSearch
-            ? "No models match your search"
-            : "No models available"
+            ? t("noModelsMatch")
+            : t("noModelsAvailable")
         }
         isLoading={picker.modelsLoading}
         isError={picker.modelsError}
@@ -287,16 +291,16 @@ function VehicleIdSheets({
           picker.setGenerationOpen(open);
           if (!open) picker.setGenerationSearch("");
         }}
-        title="Select generation"
-        searchPlaceholder="Search generations..."
+        title={t("selectGeneration")}
+        searchPlaceholder={t("searchPlaceholder")}
         search={picker.generationSearch}
         onSearchChange={picker.setGenerationSearch}
         items={picker.filteredGenerations}
         selectedId={payload.generationId}
         emptyMessage={
           picker.generationSearch
-            ? "No generations match your search"
-            : "No generations available"
+            ? t("noGenerationsMatch")
+            : t("noGenerationsAvailable")
         }
         isLoading={picker.generationsLoading}
         isError={picker.generationsError}
@@ -313,6 +317,7 @@ export default function Step3VehicleId({
   disabled = false,
   showErrors = false,
 }: Step3VehicleIdProps) {
+  const { t } = useTranslation();
   const [touchedFields, setTouchedFields] = useState<
     Partial<Record<VehicleField, boolean>>
   >({});
@@ -331,10 +336,10 @@ export default function Step3VehicleId({
   return (
     <View className="gap-5 py-5">
       <PickerRow
-        label="Brand"
+        label={t("brand")}
         required
         value={picker.selectedBrand?.name}
-        placeholder="Select brand"
+        placeholder={t("selectBrand")}
         disabled={disabled}
         locked={disabled}
         error={visibleError("brandId")}
@@ -345,10 +350,10 @@ export default function Step3VehicleId({
       />
 
       <PickerRow
-        label="Model"
+        label={t("model")}
         required
         value={picker.selectedModel?.name}
-        placeholder="Select model"
+        placeholder={t("selectModel")}
         disabled={disabled || !payload.brandId}
         locked={disabled}
         error={visibleError("modelId")}
@@ -359,9 +364,9 @@ export default function Step3VehicleId({
       />
 
       <PickerRow
-        label="Generation"
+        label={t("generation")}
         value={picker.selectedGeneration?.name}
-        placeholder="Select generation"
+        placeholder={t("selectGeneration")}
         disabled={disabled || !payload.modelId || picker.generationsLoading}
         locked={disabled}
         helper={picker.generationHelper}

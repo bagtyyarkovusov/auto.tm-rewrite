@@ -10,6 +10,7 @@ import {
 } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 type ListingStatus = ListingsSchemas.ListingDetail["status"];
 
@@ -33,10 +34,10 @@ import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
 type ConfirmAction =
-  | { kind: "markSold"; title: string; description: string }
-  | { kind: "archive"; title: string; description: string }
-  | { kind: "republish"; title: string; description: string }
-  | { kind: "delete"; title: string; description: string };
+  | { kind: "markSold"; titleKey: string; descriptionKey: string }
+  | { kind: "archive"; titleKey: string; descriptionKey: string }
+  | { kind: "republish"; titleKey: string; descriptionKey: string }
+  | { kind: "delete"; titleKey: string; descriptionKey: string };
 
 interface OwnerActionsProps {
   listingId: string;
@@ -45,6 +46,7 @@ interface OwnerActionsProps {
 
 export function OwnerActions({ listingId, status }: OwnerActionsProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   const markSold = useMarkSold();
@@ -113,7 +115,7 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
           disabled={isPending}
         >
           <Icon as={Pencil} className="size-4 text-foreground" />
-          <Text>Edit</Text>
+          <Text>{t("edit")}</Text>
         </Button>
 
         {isActive && (
@@ -124,15 +126,14 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
             onPress={() =>
               setConfirmAction({
                 kind: "markSold",
-                title: "Mark as sold",
-                description:
-                  "This car is sold. Is the buyer from AutoTM? This action cannot be undone from here.",
+                titleKey: "markAsSold",
+                descriptionKey: "markAsSoldDescription",
               })
             }
             disabled={isPending}
           >
             <Icon as={CheckCircle} className="size-4 text-foreground" />
-            <Text>Mark sold</Text>
+            <Text>{t("markAsSold")}</Text>
           </Button>
         )}
 
@@ -144,15 +145,14 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
             onPress={() =>
               setConfirmAction({
                 kind: "archive",
-                title: "Archive listing",
-                description:
-                  "Archiving hides this listing from the public feed. You can republish it later.",
+                titleKey: "archiveListing",
+                descriptionKey: "archiveListingDescription",
               })
             }
             disabled={isPending}
           >
             <Icon as={Archive} className="size-4 text-foreground" />
-            <Text>Archive</Text>
+            <Text>{t("archiveListing")}</Text>
           </Button>
         )}
 
@@ -164,15 +164,14 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
             onPress={() =>
               setConfirmAction({
                 kind: "republish",
-                title: "Republish listing",
-                description:
-                  "This will make your listing visible again in the public feed.",
+                titleKey: "republishListing",
+                descriptionKey: "republishListingDescription",
               })
             }
             disabled={isPending}
           >
             <Icon as={RotateCcw} className="size-4 text-foreground" />
-            <Text>Republish</Text>
+            <Text>{t("republishListing")}</Text>
           </Button>
         )}
       </View>
@@ -186,15 +185,14 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
           onPress={() =>
             setConfirmAction({
               kind: "delete",
-              title: "Delete listing",
-              description:
-                "This will permanently remove your listing. Photos and data cannot be recovered.",
+              titleKey: "deleteListing",
+              descriptionKey: "deleteListingDescription",
             })
           }
           disabled={isPending}
         >
           <Icon as={Trash2} className="size-4 text-destructive-foreground" />
-          <Text>Delete</Text>
+          <Text>{t("delete")}</Text>
         </Button>
       </View>
 
@@ -202,7 +200,7 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
       {(markSold.isError || archive.isError || republish.isError || deleteListing.isError) && (
         <View className="rounded-md bg-destructive/10 px-3 py-2">
           <Text className="text-sm text-destructive">
-            Action failed. Pull down to refresh or try again.
+            {t("actionFailed")}
           </Text>
         </View>
       )}
@@ -212,15 +210,15 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction?.title ?? ""}
+              {confirmAction ? t(confirmAction.titleKey) : ""}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction?.description ?? ""}
+              {confirmAction ? t(confirmAction.descriptionKey) : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending} onPress={closeDialog}>
-              <Text>Cancel</Text>
+              <Text>{t("cancel")}</Text>
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={isPending}
@@ -238,7 +236,7 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
                     : undefined
                 }
               >
-                {isPending ? "Working..." : "Confirm"}
+                {isPending ? t("working") : t("confirm")}
               </Text>
             </AlertDialogAction>
           </AlertDialogFooter>

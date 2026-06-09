@@ -35,7 +35,7 @@ describe("PriceRangeFilterControl validation", () => {
 
   it("shows text-destructive inline error when invalid", () => {
     expect(source).toContain("text-destructive");
-    expect(source).toContain("Minimum price cannot exceed maximum price");
+    expect(source).toContain('t("minPriceExceedsMax")');
   });
 
   it("signals validity via onValidityChange callback", () => {

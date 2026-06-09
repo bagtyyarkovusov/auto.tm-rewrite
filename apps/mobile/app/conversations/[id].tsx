@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import { useViewer } from "../../src/auth/useViewer";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
@@ -26,6 +27,7 @@ interface LocalMessage {
 }
 
 export default function ConversationDetailScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const router = useRouter();
   const rawId = params.id;
@@ -161,12 +163,12 @@ export default function ConversationDetailScreen() {
           variant="ghost"
           size="icon"
           onPress={() => router.back()}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("goBack")}
         >
           <Icon as={ArrowLeft} className="size-5 text-foreground" />
         </Button>
         <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
-          Messages
+          {t("messages")}
         </Text>
       </View>
 
@@ -195,13 +197,13 @@ export default function ConversationDetailScreen() {
           </View>
         ) : isError ? (
           <View className="flex-1 items-center justify-center px-6 gap-3">
-            <Text className="text-base text-foreground">Failed to load messages</Text>
+            <Text className="text-base text-foreground">{t("failedToLoadMessages")}</Text>
             <Button
               variant="outline"
               size="pill"
               onPress={() => messagesQuery.refetch()}
             >
-              <Text>Retry</Text>
+              <Text>{t("retry")}</Text>
             </Button>
           </View>
         ) : viewer?.userId ? (
@@ -213,7 +215,7 @@ export default function ConversationDetailScreen() {
         ) : (
           <View className="flex-1 items-center justify-center px-6">
             <Text className="text-sm text-muted-foreground">
-              Sign in to view messages
+              {t("signInToViewMessages")}
             </Text>
           </View>
         )}

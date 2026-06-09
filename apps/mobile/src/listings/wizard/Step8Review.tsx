@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Image, ScrollView, Pressable } from "react-native";
 import { Check, AlertCircle, Eye, ListChecks } from "lucide-react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
@@ -26,16 +27,19 @@ interface Step8ReviewProps {
   photos: StagedPhoto[];
 }
 
-const STEP_LABELS: Record<WizardSchemas.WizardStep, string> = {
-  vin: "VIN",
-  photos: "Photos",
-  vehicle: "Vehicle",
-  specs: "Specs",
-  price: "Price",
-  location: "Location",
-  contact: "Description & contact",
-  review: "Review",
-};
+function useStepLabels() {
+  const { t } = useTranslation();
+  return {
+    vin: t("vin"),
+    photos: t("photos"),
+    vehicle: t("vehicle"),
+    specs: t("specs"),
+    price: t("price"),
+    location: t("location"),
+    contact: t("contact"),
+    review: t("review"),
+  } as Record<WizardSchemas.WizardStep, string>;
+}
 
 type ViewMode = "checklist" | "preview";
 
@@ -45,7 +49,9 @@ export default function Step8Review({
   onGoToStep,
   photos,
 }: Step8ReviewProps) {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<ViewMode>("checklist");
+  const STEP_LABELS = useStepLabels();
 
   const { data: brandsData } = useBrands();
   const { data: modelsData } = useModels(payload.brandId ?? "");
@@ -85,7 +91,7 @@ export default function Step8Review({
         >
           <Icon as={ListChecks} className={`size-4 ${viewMode === "checklist" ? "text-foreground" : "text-muted-foreground"}`} />
           <Text className={`text-sm font-medium ${viewMode === "checklist" ? "text-foreground" : "text-muted-foreground"}`}>
-            Checklist
+            {t("checklist")}
           </Text>
         </Pressable>
         <Pressable
@@ -98,7 +104,7 @@ export default function Step8Review({
         >
           <Icon as={Eye} className={`size-4 ${viewMode === "preview" ? "text-foreground" : "text-muted-foreground"}`} />
           <Text className={`text-sm font-medium ${viewMode === "preview" ? "text-foreground" : "text-muted-foreground"}`}>
-            Preview
+            {t("preview")}
           </Text>
         </Pressable>
       </View>
@@ -118,6 +124,7 @@ export default function Step8Review({
           engineTypeName={engineTypeName}
           regionName={regionName}
           cityName={cityName}
+          stepLabels={STEP_LABELS}
         />
       ) : (
         <PreviewView
@@ -154,6 +161,7 @@ function ChecklistView({
   engineTypeName,
   regionName,
   cityName,
+  stepLabels,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   validatedSteps: WizardSchemas.WizardStep[];
@@ -168,66 +176,68 @@ function ChecklistView({
   engineTypeName?: string;
   regionName?: string;
   cityName?: string;
+  stepLabels: Record<WizardSchemas.WizardStep, string>;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-4">
       {/* Vehicle */}
       <ReviewSection
-        title={STEP_LABELS.vehicle}
+        title={stepLabels.vehicle}
         isValid={validatedSteps.includes("vehicle")}
         onEdit={() => onGoToStep("vehicle")}
       >
         <Text className="text-sm text-foreground">
-          {brandName && modelName ? `${payload.year} ${brandName} ${modelName}` : "Not set"}
+          {brandName && modelName ? `${payload.year} ${brandName} ${modelName}` : t("notSet")}
         </Text>
         {payload.generationId && (
-          <Text className="text-sm text-muted-foreground">Generation: {payload.generationId}</Text>
+          <Text className="text-sm text-muted-foreground">{t("generation")}: {payload.generationId}</Text>
         )}
       </ReviewSection>
 
       {/* Photos */}
       <ReviewSection
-        title={STEP_LABELS.photos}
+        title={stepLabels.photos}
         isValid={validatedSteps.includes("photos")}
         onEdit={() => onGoToStep("photos")}
       >
         <Text className="text-sm text-foreground">
-          {uploadedPhotos.length} photo{uploadedPhotos.length !== 1 ? "s" : ""} uploaded
+          {uploadedPhotos.length} {t("photo")}{uploadedPhotos.length !== 1 ? `s` : ""} {t("uploaded")}
         </Text>
       </ReviewSection>
 
       {/* Specs */}
       <ReviewSection
-        title={STEP_LABELS.specs}
+        title={stepLabels.specs}
         isValid={validatedSteps.includes("specs")}
         onEdit={() => onGoToStep("specs")}
       >
         <Text className="text-sm text-foreground">
-          {payload.condition === "new" ? "New" : `Used, ${payload.mileageKm?.toLocaleString()} km`}
+          {payload.condition === "new" ? t("new") : `${t("used")}, ${payload.mileageKm?.toLocaleString()} km`}
         </Text>
         {colorName && (
-          <Text className="text-sm text-muted-foreground">Color: {colorName}</Text>
+          <Text className="text-sm text-muted-foreground">{t("color")}: {colorName}</Text>
         )}
         {bodyTypeName && (
-          <Text className="text-sm text-muted-foreground">Body: {bodyTypeName}</Text>
+          <Text className="text-sm text-muted-foreground">{t("bodyType")}: {bodyTypeName}</Text>
         )}
         {transmissionName && (
-          <Text className="text-sm text-muted-foreground">Transmission: {transmissionName}</Text>
+          <Text className="text-sm text-muted-foreground">{t("transmission")}: {transmissionName}</Text>
         )}
         {driveTypeName && (
-          <Text className="text-sm text-muted-foreground">Drive: {driveTypeName}</Text>
+          <Text className="text-sm text-muted-foreground">{t("driveType")}: {driveTypeName}</Text>
         )}
         {engineTypeName && (
-          <Text className="text-sm text-muted-foreground">Engine: {engineTypeName}</Text>
+          <Text className="text-sm text-muted-foreground">{t("engineType")}: {engineTypeName}</Text>
         )}
         {payload.enginePower && (
-          <Text className="text-sm text-muted-foreground">Power: {payload.enginePower} hp</Text>
+          <Text className="text-sm text-muted-foreground">{t("enginePower")}: {payload.enginePower} hp</Text>
         )}
       </ReviewSection>
 
       {/* Price */}
       <ReviewSection
-        title={STEP_LABELS.price}
+        title={stepLabels.price}
         isValid={validatedSteps.includes("price")}
         onEdit={() => onGoToStep("price")}
       >
@@ -235,21 +245,21 @@ function ChecklistView({
           {payload.priceAmount?.toLocaleString()} {payload.priceCurrency}
         </Text>
         {payload.acceptsExchange && (
-          <Text className="text-sm text-muted-foreground">Exchange possible</Text>
+          <Text className="text-sm text-muted-foreground">{t("exchangePossible")}</Text>
         )}
         {payload.installmentAvailable && (
-          <Text className="text-sm text-muted-foreground">Installment available</Text>
+          <Text className="text-sm text-muted-foreground">{t("installmentAvailableLabel")}</Text>
         )}
       </ReviewSection>
 
       {/* Location */}
       <ReviewSection
-        title={STEP_LABELS.location}
+        title={stepLabels.location}
         isValid={validatedSteps.includes("location")}
         onEdit={() => onGoToStep("location")}
       >
         <Text className="text-sm text-foreground">
-          {regionName && cityName ? `${regionName}, ${cityName}` : "Not set"}
+          {regionName && cityName ? `${regionName}, ${cityName}` : t("notSet")}
         </Text>
         {payload.locationText && (
           <Text className="text-sm text-muted-foreground">{payload.locationText}</Text>
@@ -258,20 +268,20 @@ function ChecklistView({
 
       {/* Contact */}
       <ReviewSection
-        title={STEP_LABELS.contact}
+        title={stepLabels.contact}
         isValid={validatedSteps.includes("contact")}
         onEdit={() => onGoToStep("contact")}
       >
         <Text className="text-sm text-foreground" numberOfLines={2}>
-          {payload.description || "No description"}
+          {payload.description || t("noDescription")}
         </Text>
         <Text className="text-sm text-muted-foreground">
-          {payload.allowCalls ? "Calls allowed" : "No calls"} ·{" "}
-          {payload.allowChat ? "Chat allowed" : "No chat"}
+          {payload.allowCalls ? t("callsAllowed") : t("noCalls")} ·{" "}
+          {payload.allowChat ? t("chatAllowed") : t("noChat")}
         </Text>
         {payload.contactPhone && (
           <Text className="text-sm text-muted-foreground">
-            Phone: {payload.contactPhone}
+            {t("phone")}: {payload.contactPhone}
           </Text>
         )}
       </ReviewSection>
@@ -308,6 +318,7 @@ function PreviewView({
   uploadedPhotos: StagedPhoto[];
   hasPhotos: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-4">
       {/* Photo carousel */}
@@ -321,7 +332,7 @@ function PreviewView({
         ) : (
           <View className="w-full aspect-[4/3] items-center justify-center bg-muted">
             <Icon as={AlertCircle} className="size-8 text-muted-foreground" />
-            <Text className="mt-2 text-sm text-muted-foreground">No photos</Text>
+            <Text className="mt-2 text-sm text-muted-foreground">{t("noPhotos")}</Text>
           </View>
         )}
         {uploadedPhotos.length > 1 && (
@@ -348,19 +359,19 @@ function PreviewView({
         <Text className="text-2xl font-heading text-foreground">
           {brandName && modelName
             ? `${payload.year} ${brandName} ${modelName}`
-            : "Vehicle not specified"}
+            : t("vehicleNotSpecified")}
         </Text>
         <Text className="text-xl font-semibold text-primary">
           {payload.priceAmount
             ? `${payload.priceAmount.toLocaleString()} ${payload.priceCurrency}`
-            : "Price not set"}
+            : t("priceNotSet")}
         </Text>
       </View>
 
       {/* Location */}
       <View className="flex-row items-center gap-1.5">
         <Text className="text-sm text-muted-foreground">
-          {regionName && cityName ? `${regionName}, ${cityName}` : "Location not set"}
+          {regionName && cityName ? `${regionName}, ${cityName}` : t("locationNotSet")}
         </Text>
         {payload.locationText && (
           <Text className="text-sm text-muted-foreground">· {payload.locationText}</Text>
@@ -370,19 +381,19 @@ function PreviewView({
       {/* Specs grid */}
       <View className="rounded-xl border border-border p-4 gap-3">
         <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Specifications
+          {t("specs")}
         </Text>
         <View className="flex-row flex-wrap">
-          <SpecItem label="Condition" value={payload.condition === "new" ? "New" : "Used"} />
+          <SpecItem label={t("condition")} value={payload.condition === "new" ? t("new") : t("used")} />
           {payload.mileageKm !== undefined && payload.mileageKm !== null && (
-            <SpecItem label="Mileage" value={`${payload.mileageKm.toLocaleString()} km`} />
+            <SpecItem label={t("mileage")} value={`${payload.mileageKm.toLocaleString()} km`} />
           )}
-          {colorName && <SpecItem label="Color" value={colorName} colorHex={colorHex} />}
-          {bodyTypeName && <SpecItem label="Body" value={bodyTypeName} />}
-          {transmissionName && <SpecItem label="Transmission" value={transmissionName} />}
-          {driveTypeName && <SpecItem label="Drive" value={driveTypeName} />}
-          {engineTypeName && <SpecItem label="Engine" value={engineTypeName} />}
-          {payload.enginePower && <SpecItem label="Power" value={`${payload.enginePower} hp`} />}
+          {colorName && <SpecItem label={t("color")} value={colorName} colorHex={colorHex} />}
+          {bodyTypeName && <SpecItem label={t("bodyType")} value={bodyTypeName} />}
+          {transmissionName && <SpecItem label={t("transmission")} value={transmissionName} />}
+          {driveTypeName && <SpecItem label={t("driveType")} value={driveTypeName} />}
+          {engineTypeName && <SpecItem label={t("engineType")} value={engineTypeName} />}
+          {payload.enginePower && <SpecItem label={t("enginePower")} value={`${payload.enginePower} hp`} />}
         </View>
       </View>
 
@@ -390,7 +401,7 @@ function PreviewView({
       {payload.description && (
         <View className="rounded-xl border border-border p-4 gap-2">
           <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Description
+            {t("description")}
           </Text>
           <Text className="text-sm text-foreground leading-relaxed">
             {payload.description}
@@ -401,10 +412,10 @@ function PreviewView({
       {/* Contact */}
       <View className="rounded-xl border border-border p-4 gap-2">
         <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Contact
+          {t("contact")}
         </Text>
         <Text className="text-sm text-foreground">
-          {payload.allowCalls ? "Phone calls accepted" : "No phone calls"}
+          {payload.allowCalls ? t("callsAllowed") : t("noCalls")}
         </Text>
         {payload.contactPhone && (
           <Text className="text-sm text-muted-foreground">{payload.contactPhone}</Text>
@@ -416,19 +427,19 @@ function PreviewView({
         <View className="flex-row gap-2 flex-wrap">
           {payload.acceptsExchange && (
             <View className="rounded-full bg-muted px-3 py-1">
-              <Text className="text-xs font-medium text-foreground">Exchange possible</Text>
+              <Text className="text-xs font-medium text-foreground">{t("exchangePossible")}</Text>
             </View>
           )}
           {payload.installmentAvailable && (
             <View className="rounded-full bg-muted px-3 py-1">
-              <Text className="text-xs font-medium text-foreground">Installment</Text>
+              <Text className="text-xs font-medium text-foreground">{t("installment")}</Text>
             </View>
           )}
         </View>
       )}
 
       <Text className="text-xs text-muted-foreground text-center py-2">
-        This is how buyers will see your listing
+        {t("thisIsHowBuyersSee")}
       </Text>
     </View>
   );
@@ -472,6 +483,7 @@ function ReviewSection({
   onEdit: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="rounded-xl border border-border p-3">
       <View className="flex-row items-center justify-between">
@@ -483,8 +495,8 @@ function ReviewSection({
           )}
           <Text className="text-sm font-medium text-foreground">{title}</Text>
         </View>
-        <Button variant="ghost" size="sm" onPress={onEdit} accessibilityLabel={`Edit ${title}`}>
-          <Text className="text-sm text-primary font-medium">Edit</Text>
+        <Button variant="ghost" size="sm" onPress={onEdit} accessibilityLabel={`${t("edit")} ${title}`}>
+          <Text className="text-sm text-primary font-medium">{t("edit")}</Text>
         </Button>
       </View>
       <View className="mt-2 gap-0.5 pl-6">{children}</View>

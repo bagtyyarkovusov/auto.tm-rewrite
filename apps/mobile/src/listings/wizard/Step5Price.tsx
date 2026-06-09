@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { useExchangeRates } from "../../api/exchange-rates/useExchangeRates";
 
@@ -65,9 +66,10 @@ function PriceInput({
   fieldErrors?: Record<string, string>;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="gap-1.5 flex-1">
-      <Text className="text-sm font-medium text-foreground">Amount *</Text>
+      <Text className="text-sm font-medium text-foreground">{t("amount")} *</Text>
       {wrapDisabled(
         <Input
           value={payload.priceAmount?.toString() ?? ""}
@@ -81,7 +83,7 @@ function PriceInput({
             }
             onChange(updates);
           }}
-          placeholder="Enter amount"
+          placeholder={t("priceAmountPlaceholder")}
           keyboardType="number-pad"
           editable={!disabled}
         />,
@@ -105,13 +107,14 @@ function CurrencyPicker({
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   const { currencyOpen, setCurrencyOpen, selectedCurrencyLabel } =
     usePriceStep(payload);
 
   return (
     <>
       <View className="gap-1.5 w-[120px]">
-        <Text className="text-sm font-medium text-foreground">Currency</Text>
+        <Text className="text-sm font-medium text-foreground">{t("currency")}</Text>
         {wrapDisabled(
           <Button
             variant="outline"
@@ -128,13 +131,13 @@ function CurrencyPicker({
       <CatalogPickerSheet
         open={currencyOpen}
         onOpenChange={setCurrencyOpen}
-        title="Select currency"
-        searchPlaceholder="Search currencies..."
+        title={t("selectCurrency")}
+        searchPlaceholder={t("searchPlaceholder")}
         search=""
         onSearchChange={() => {}}
         items={CURRENCIES.map((c) => ({ id: c.value, name: c.label }))}
         selectedId={payload.priceCurrency}
-        emptyMessage="No currencies available"
+        emptyMessage={t("noOptionsAvailable")}
         isLoading={false}
         isError={false}
         onSelect={(id) => {
@@ -164,15 +167,16 @@ function SellerTerms({
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="rounded-xl border border-border p-4 gap-1">
       <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-        Seller terms
+        {t("sellerTerms")}
       </Text>
       <View className="flex-row items-center justify-between py-2">
         <View className="gap-0.5">
-          <Text className="text-base text-foreground">Exchange possible</Text>
-          <Text className="text-xs text-muted-foreground">Willing to trade for another vehicle</Text>
+          <Text className="text-base text-foreground">{t("exchangePossible")}</Text>
+          <Text className="text-xs text-muted-foreground">{t("willingToTrade")}</Text>
         </View>
         <Switch
           checked={payload.acceptsExchange ?? false}
@@ -183,8 +187,8 @@ function SellerTerms({
       <View className="h-px bg-border" />
       <View className="flex-row items-center justify-between py-2">
         <View className="gap-0.5">
-          <Text className="text-base text-foreground">Installment available</Text>
-          <Text className="text-xs text-muted-foreground">Buyer can pay in installments</Text>
+          <Text className="text-base text-foreground">{t("installmentAvailableLabel")}</Text>
+          <Text className="text-xs text-muted-foreground">{t("buyerCanPayInstallments")}</Text>
         </View>
         <Switch
           checked={payload.installmentAvailable ?? false}
@@ -207,7 +211,7 @@ export default function Step5Price({
   return (
     <View className="gap-5 py-5">
       <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">Price *</Text>
+        <Text className="text-sm font-medium text-foreground">{t("price")} *</Text>
         <View className="flex-row gap-3 items-start">
           <PriceInput
             payload={payload}

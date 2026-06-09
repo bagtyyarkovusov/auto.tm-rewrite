@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { useListings } from "../../src/api/listings/useListings";
 import { FeedEmpty } from "../../src/listings/feed/FeedEmpty";
@@ -23,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 
 export default function FeedScreen() {
+  const { t } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
   const filters = useListingFilters();
 
@@ -46,11 +48,11 @@ export default function FeedScreen() {
 
   const header = (
     <View className="px-4 pt-6 pb-3 flex-row items-center justify-between">
-      <Text className="text-2xl font-semibold text-foreground">Search</Text>
+      <Text className="text-2xl font-semibold text-foreground">{t("search")}</Text>
       <Pressable
         onPress={() => setSheetOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel="Open filters"
+        accessibilityLabel={t("filters")}
         className="flex-row items-center gap-2"
       >
         {filters.count > 0 ? (
@@ -58,7 +60,7 @@ export default function FeedScreen() {
             <Text>{filters.count}</Text>
           </Badge>
         ) : null}
-        <Text className="text-sm font-medium text-foreground">Filters</Text>
+        <Text className="text-sm font-medium text-foreground">{t("filters")}</Text>
       </Pressable>
     </View>
   );
@@ -135,7 +137,7 @@ export default function FeedScreen() {
           ) : !hasNextPage ? (
             <View className="py-4 items-center">
               <Text className="text-xs text-muted-foreground">
-                No more listings
+                {t("noMore")}
               </Text>
             </View>
           ) : null

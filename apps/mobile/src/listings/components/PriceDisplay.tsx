@@ -1,4 +1,5 @@
 import { View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
@@ -24,6 +25,7 @@ export function PriceDisplay({
   installmentAvailable,
   isOwner = false,
 }: PriceDisplayProps) {
+  const { t } = useTranslation();
   const showOriginal = isOwner && priceCurrency !== "TMT";
 
   return (
@@ -43,14 +45,14 @@ export function PriceDisplay({
           {acceptsExchange && (
             <Badge variant="secondary" className="px-2 py-0.5">
               <Text className="text-xs text-secondary-foreground">
-                Exchange possible
+                {t("exchangePossible")}
               </Text>
             </Badge>
           )}
           {installmentAvailable && (
             <Badge variant="secondary" className="px-2 py-0.5">
               <Text className="text-xs text-secondary-foreground">
-                Installment possible
+                {t("installmentPossible")}
               </Text>
             </Badge>
           )}

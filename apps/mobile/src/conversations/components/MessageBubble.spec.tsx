@@ -35,18 +35,18 @@ describe("MessageBubble", () => {
 
   it("shows pending status text", () => {
     expect(source).toContain('status === "pending"');
-    expect(source).toContain("Sending…");
+    expect(source).toContain('t("sending")');
   });
 
   it("shows failed status text with retry affordance", () => {
     expect(source).toContain('status === "failed"');
-    expect(source).toContain("Failed to send");
+    expect(source).toContain('t("failedToSend")');
     expect(source).toContain("RotateCcw");
     expect(source).toContain("onRetry");
   });
 
   it("has retry accessibility label", () => {
-    expect(source).toContain('accessibilityLabel="Retry sending message"');
+    expect(source).toContain('accessibilityLabel={t("retry")}');
   });
 
   it("uses hitSlop for retry tap target", () => {

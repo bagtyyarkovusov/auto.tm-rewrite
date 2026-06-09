@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import NetInfo from "@react-native-community/netinfo";
 import type { WizardSchemas } from "@auto-tm/contracts";
 
@@ -43,6 +44,7 @@ const SAVE_TIMEOUT_MS = 10_000;
 const SAVED_CLEAR_MS = 2_000;
 
 export function useWizardAutosave(draftId: string | undefined) {
+  const { t } = useTranslation();
   const updateDraft = useUpdateDraft();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -121,7 +123,7 @@ export function useWizardAutosave(draftId: string | undefined) {
       saveTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current && saveStatusRef.current === "saving") {
           setSaveStatus("error");
-          setSaveError("Save timed out. Please retry.");
+          setSaveError(t("saveTimedOut"));
         }
       }, SAVE_TIMEOUT_MS);
 
@@ -144,7 +146,7 @@ export function useWizardAutosave(draftId: string | undefined) {
         if (!isMountedRef.current) return;
 
         const message =
-          err instanceof Error ? err.message : "Failed to save draft";
+          err instanceof Error ? err.message : t("failedToSaveDraft");
 
         const isNetworkError =
           !isOnlineRef.current ||
@@ -154,7 +156,7 @@ export function useWizardAutosave(draftId: string | undefined) {
 
         if (isNetworkError) {
           setSaveStatus("error");
-          setSaveError("No internet connection. Will retry when online.");
+          setSaveError(t("noInternetWillRetry"));
           return;
         }
 
@@ -163,7 +165,7 @@ export function useWizardAutosave(draftId: string | undefined) {
           retryCountRef.current += 1;
 
           setSaveStatus("saving");
-          setSaveError(`Retrying... (${retryCountRef.current}/${MAX_RETRIES})`);
+          setSaveError(t("retryingCount", { current: retryCountRef.current, max: MAX_RETRIES }));
 
           setTimeout(() => {
             if (isMountedRef.current && pendingPayloadRef.current) {

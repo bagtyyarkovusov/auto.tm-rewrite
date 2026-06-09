@@ -73,8 +73,8 @@ describe("YearRangeFilterControl source", () => {
   });
 
   it("has accessibility labels for both inputs", () => {
-    expect(source).toContain('accessibilityLabel="Minimum year"');
-    expect(source).toContain('accessibilityLabel="Maximum year"');
+    expect(source).toContain('accessibilityLabel={t("from")}');
+    expect(source).toContain('accessibilityLabel={t("to")}');
   });
 
   it("writes yearMin and yearMax to the draft", () => {
@@ -106,7 +106,7 @@ describe("YearRangeFilterControl source", () => {
   });
 
   it("has a 'Year range' label", () => {
-    expect(source).toContain("Year range");
+    expect(source).toContain('t("yearRange")');
   });
 
   it("bound lower limit is 1900", () => {

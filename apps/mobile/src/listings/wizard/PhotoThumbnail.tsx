@@ -1,5 +1,6 @@
 import { View, Image } from "react-native";
 import { ImageIcon, MoreVertical } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import type { StagedPhoto } from "../uploadStaging/types";
 import { getPhotoUri } from "../uploadStaging/photoUri";
@@ -38,6 +39,7 @@ export function PhotoThumbnail({
   onMoveDown,
   onSetAsCover,
 }: PhotoThumbnailProps) {
+  const { t } = useTranslation();
   return (
     <View
       key={photo.photoId}
@@ -57,7 +59,7 @@ export function PhotoThumbnail({
 
       {index === 0 && (
         <View className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5">
-          <Text className="text-[10px] font-medium text-white">Cover</Text>
+          <Text className="text-[10px] font-medium text-white">{t("cover")}</Text>
         </View>
       )}
 
@@ -74,26 +76,26 @@ export function PhotoThumbnail({
             disabled={index === 0}
             onPress={() => onMoveUp(index)}
           >
-            <Text>Move up</Text>
+            <Text>{t("moveUp")}</Text>
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={index === total - 1}
             onPress={() => onMoveDown(index)}
           >
-            <Text>Move down</Text>
+            <Text>{t("moveDown")}</Text>
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={index === 0}
             onPress={() => onSetAsCover(index)}
           >
-            <Text>Set as cover</Text>
+            <Text>{t("setAsCover")}</Text>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
             onPress={() => onRemove(photo.photoId)}
           >
-            <Text>Remove</Text>
+            <Text>{t("remove")}</Text>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -7,15 +7,19 @@ const source = readFileSync(resolve(__dirname, "../../app/listings/manage.tsx"),
 
 describe("ManageListingsScreen structure", () => {
   it("renders four segmented tabs", () => {
-    expect(source).toContain('{ key: "active", label: "Active" }');
-    expect(source).toContain('{ key: "sold", label: "Sold" }');
-    expect(source).toContain('{ key: "archived", label: "Archived" }');
-    expect(source).toContain('{ key: "drafts", label: "Drafts" }');
+    expect(source).toContain('key: "active"');
+    expect(source).toContain('key: "sold"');
+    expect(source).toContain('key: "archived"');
+    expect(source).toContain('key: "drafts"');
+    expect(source).toContain('t("active")');
+    expect(source).toContain('t("sold")');
+    expect(source).toContain('t("archived")');
+    expect(source).toContain('t("drafts")');
   });
 
   it("uses auth-on-action for anonymous users", () => {
     expect(source).toContain("isAuthenticated === false");
-    expect(source).toContain("Sign in to manage your listings");
+    expect(source).toContain('t("signInToManage")');
     expect(source).toContain("<SignInDialog");
   });
 
@@ -61,10 +65,10 @@ describe("ManageListingsScreen structure", () => {
   });
 
   it("shows tailored empty states per tab", () => {
-    expect(source).toContain("No active listings");
-    expect(source).toContain("No sold listings");
-    expect(source).toContain("No archived listings");
-    expect(source).toContain("No drafts");
+    expect(source).toContain('t("noActiveListings")');
+    expect(source).toContain('t("noSoldListings")');
+    expect(source).toContain('t("noArchivedListings")');
+    expect(source).toContain('t("noDrafts")');
   });
 });
 

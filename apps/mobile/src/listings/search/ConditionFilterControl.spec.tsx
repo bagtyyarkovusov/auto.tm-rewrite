@@ -19,9 +19,9 @@ describe("ConditionFilterControl", () => {
   });
 
   it("renders three segments: Any, New, Used", () => {
-    expect(source).toContain('{ value: undefined, label: "Any" }');
-    expect(source).toContain('label: "New"');
-    expect(source).toContain('label: "Used"');
+    expect(source).toContain('value: undefined');
+    expect(source).toContain('t("new")');
+    expect(source).toContain('t("used")');
   });
 
   it("uses Enums.ListingCondition.New for New value", () => {
@@ -33,7 +33,7 @@ describe("ConditionFilterControl", () => {
   });
 
   it("calls onChange with undefined for Any (clears filter)", () => {
-    expect(source).toContain('{ value: undefined, label: "Any" }');
+    expect(source).toContain('{ value: undefined, label: t("any") }');
   });
 
   it("wires onPress to onChange for each segment", () => {
@@ -49,7 +49,7 @@ describe("ConditionFilterControl", () => {
   });
 
   it("has accessibilityLabel per segment", () => {
-    expect(source).toContain('accessibilityLabel={`${segment.label} condition`}');
+    expect(source).toContain('accessibilityLabel={`${segment.label} ${t("condition")}`}');
   });
 
   it("uses stable keys for each segment", () => {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
@@ -32,6 +33,7 @@ export function BrandModelFilterControl({
   draft,
   setField,
 }: BrandModelFilterControlProps) {
+  const { t } = useTranslation();
   const [brandOpen, setBrandOpen] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
   const [brandSearch, setBrandSearch] = useState("");
@@ -57,11 +59,11 @@ export function BrandModelFilterControl({
 
   let modelEmptyMessage: string;
   if (!draft.brandId) {
-    modelEmptyMessage = "Select a brand first";
+    modelEmptyMessage = t("selectBrandFirst");
   } else if (modelSearch) {
-    modelEmptyMessage = "No models match your search";
+    modelEmptyMessage = t("noModelsMatch");
   } else {
-    modelEmptyMessage = "No models available";
+    modelEmptyMessage = t("noModelsAvailable");
   }
 
   function handleSelectBrand(brandId: string) {
@@ -80,16 +82,16 @@ export function BrandModelFilterControl({
   return (
     <View className="gap-4">
       <PickerRow
-        label="Brand"
+        label={t("brand")}
         value={selectedBrand?.name}
-        placeholder="Select brand"
+        placeholder={t("selectBrand")}
         onPress={() => setBrandOpen(true)}
       />
 
       <PickerRow
-        label="Model"
+        label={t("model")}
         value={selectedModel?.name}
-        placeholder="Select model"
+        placeholder={t("selectModel")}
         disabled={!draft.brandId}
         onPress={() => setModelOpen(true)}
       />
@@ -100,16 +102,16 @@ export function BrandModelFilterControl({
           setBrandOpen(open);
           if (!open) setBrandSearch("");
         }}
-        title="Select brand"
-        searchPlaceholder="Search brands..."
+        title={t("selectBrand")}
+        searchPlaceholder={`${t("searchPlaceholder")}`}
         search={brandSearch}
         onSearchChange={setBrandSearch}
         items={filteredBrands}
         selectedId={draft.brandId}
         emptyMessage={
           brandSearch
-            ? "No brands match your search"
-            : "No brands available"
+            ? t("noBrandsMatch")
+            : t("noBrandsAvailable")
         }
         isLoading={brandsLoading}
         isError={brandsError}
@@ -122,8 +124,8 @@ export function BrandModelFilterControl({
           setModelOpen(open);
           if (!open) setModelSearch("");
         }}
-        title="Select model"
-        searchPlaceholder="Search models..."
+        title={t("selectModel")}
+        searchPlaceholder={`${t("searchPlaceholder")}`}
         search={modelSearch}
         onSearchChange={setModelSearch}
         items={filteredModels}

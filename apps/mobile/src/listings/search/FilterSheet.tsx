@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react-native";
 import { ScrollView, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
@@ -26,6 +27,7 @@ interface FilterSheetProps {
 }
 
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
+  const { t } = useTranslation();
   const { draft, setField, apply, reset, count, isValid } = filters;
   const [priceRangeValid, setPriceRangeValid] = useState(true);
   const isApplyDisabled = !isValid || !priceRangeValid;
@@ -43,12 +45,12 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="max-h-[85%]" style={{ height: "85%" }}>
         <SheetHeader className="flex-row items-center justify-between">
-          <SheetTitle>Filters</SheetTitle>
+          <SheetTitle>{t("filters")}</SheetTitle>
           <Button
             variant="ghost"
             size="icon"
             onPress={() => onOpenChange(false)}
-            accessibilityLabel="Close filters"
+            accessibilityLabel={t("close")}
           >
             <Icon as={X} className="size-5 text-foreground" />
           </Button>
@@ -83,9 +85,9 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             size="lg"
             className="flex-1"
             onPress={handleReset}
-            accessibilityLabel="Reset all filters"
+            accessibilityLabel={t("resetAll")}
           >
-            <Text>Reset all</Text>
+            <Text>{t("resetAll")}</Text>
           </Button>
           <Button
             variant="brand"
@@ -93,9 +95,9 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             className="flex-1"
             onPress={handleApply}
             disabled={isApplyDisabled}
-            accessibilityLabel="Apply filters"
+            accessibilityLabel={t("apply")}
           >
-            <Text>{count > 0 ? `Show results (${count})` : "Apply"}</Text>
+            <Text>{count > 0 ? t("showResultsCount", { count }) : t("apply")}</Text>
           </Button>
         </View>
       </SheetContent>

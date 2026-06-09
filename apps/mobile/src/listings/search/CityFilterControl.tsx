@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
@@ -32,6 +33,7 @@ function filterBySearch<T extends { name: string }>(items: T[], search: string) 
 }
 
 export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
+  const { t } = useTranslation();
   const cached = draft.cityId ? cityMetaCache.get(draft.cityId) : undefined;
 
   const [regionOpen, setRegionOpen] = useState(false);
@@ -131,20 +133,20 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">City</Text>
+      <Text className="text-sm font-medium text-foreground">{t("city")}</Text>
 
       <View className="gap-2">
         <PickerRow
-          label="Region"
+          label={t("region")}
           value={selectedRegion?.name}
-          placeholder="Select region"
+          placeholder={t("selectRegion")}
           onPress={() => setRegionOpen(true)}
         />
 
         <PickerRow
-          label="City"
+          label={t("city")}
           value={selectedCity?.name}
-          placeholder={selectedRegionId ? "Select city" : "Select region first"}
+          placeholder={selectedRegionId ? t("selectCity") : t("selectRegionFirst")}
           disabled={!canOpenCityPicker}
           onPress={() => setCityOpen(true)}
         />
@@ -154,10 +156,10 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
         <Pressable
           onPress={handleClearCity}
           accessibilityRole="button"
-          accessibilityLabel="Clear city filter"
+          accessibilityLabel={t("clear")}
           className="self-start py-1"
         >
-          <Text className="text-sm text-destructive">Clear city</Text>
+          <Text className="text-sm text-destructive">{t("clear")}</Text>
         </Pressable>
       )}
 
@@ -167,14 +169,14 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
           setRegionOpen(open);
           if (!open) setRegionSearch("");
         }}
-        title="Select region"
-        searchPlaceholder="Search regions..."
+        title={t("selectRegion")}
+        searchPlaceholder={`${t("searchPlaceholder")}`}
         search={regionSearch}
         onSearchChange={setRegionSearch}
         items={filteredRegions}
         selectedId={selectedRegionId}
         emptyMessage={
-          regionSearch ? "No regions match your search" : "No regions available"
+          regionSearch ? t("noRegionsMatch") : t("noRegionsAvailable")
         }
         isLoading={regionsLoading}
         isError={regionsError}
@@ -187,14 +189,14 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
           setCityOpen(open);
           if (!open) setCitySearch("");
         }}
-        title="Select city"
-        searchPlaceholder="Search cities..."
+        title={t("selectCity")}
+        searchPlaceholder={`${t("searchPlaceholder")}`}
         search={citySearch}
         onSearchChange={setCitySearch}
         items={filteredCities}
         selectedId={draft.cityId}
         emptyMessage={
-          citySearch ? "No cities match your search" : "No cities available"
+          citySearch ? t("noCitiesMatch") : t("noCitiesAvailable")
         }
         isLoading={citiesLoading}
         isError={citiesError}

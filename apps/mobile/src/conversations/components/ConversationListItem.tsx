@@ -1,6 +1,7 @@
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 
 import { Text } from "@/components/ui/text";
@@ -50,6 +51,7 @@ export function ConversationListItem({
   brandName,
   modelName,
 }: ConversationListItemProps) {
+  const { t } = useTranslation();
   const listing = conversation.listing;
 
   const title = listing
@@ -60,7 +62,7 @@ export function ConversationListItem({
       ]
         .filter(Boolean)
         .join(" ")
-    : "Conversation";
+    : t("chat");
 
   const priceText = listing
     ? `${listing.displayPriceTmt.toLocaleString("en-US")} ${listing.priceCurrency}`
@@ -97,7 +99,7 @@ export function ConversationListItem({
       onPress={handlePress}
       className="flex-row items-center gap-3 px-4 py-3 border-b border-border active:bg-muted/50"
       accessibilityRole="button"
-      accessibilityLabel={`Open conversation: ${title}`}
+      accessibilityLabel={`${t("chat")}: ${title}`}
     >
       {/* Cover image */}
       <View className="w-14 h-14 rounded-lg bg-muted overflow-hidden">
@@ -109,7 +111,7 @@ export function ConversationListItem({
           />
         ) : (
           <View className="w-full h-full items-center justify-center">
-            <Text className="text-xs text-muted-foreground">No image</Text>
+            <Text className="text-xs text-muted-foreground">{t("noImage")}</Text>
           </View>
         )}
       </View>
@@ -143,7 +145,7 @@ export function ConversationListItem({
 
         <View className="flex-row items-center gap-1.5">
           <Text className="text-xs text-muted-foreground capitalize">
-            {conversation.myRole === "buyer" ? "You are buyer" : "You are seller"}
+            {conversation.myRole === "buyer" ? t("youAreBuyer") : t("youAreSeller")}
           </Text>
           {listing && listing.status !== Enums.ListingStatus.Active && (
             <Text className="text-xs text-muted-foreground capitalize">
