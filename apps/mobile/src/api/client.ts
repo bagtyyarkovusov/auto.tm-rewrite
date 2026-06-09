@@ -6,6 +6,7 @@ import {
   loadAuthSession,
   storeAuthSession,
 } from "../auth/session";
+import { localeStore } from "../locale/localeStore";
 
 const BASE_URL = (
   process.env["EXPO_PUBLIC_API_URL"] ?? "http://localhost:3006/api/v1"
@@ -132,6 +133,9 @@ async function rawRequest<TResponse>(
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
+
+  const locale = localeStore.getState().locale ?? "ru";
+  headers["Accept-Language"] = locale;
 
   if (opts.body !== undefined) {
     headers["Content-Type"] = "application/json";

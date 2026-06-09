@@ -14,7 +14,7 @@ export function useEngineTypes(locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.engineTypes(locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/engine-types?locale=${locale}`,
+        `/catalog/engine-types`,
         EngineTypesListResponseSchema,
         { auth: false },
       ),

@@ -21,8 +21,8 @@ export const queryKeys = {
       [...queryKeys.catalog.all(), "drive-types", locale] as const,
     regions: (locale: string = "ru") =>
       [...queryKeys.catalog.all(), "regions", locale] as const,
-    cities: (regionId: string) =>
-      [...queryKeys.catalog.all(), "cities", regionId] as const,
+    cities: (regionId: string, locale: string = "ru") =>
+      [...queryKeys.catalog.all(), "cities", regionId, locale] as const,
   },
 
   listings: {

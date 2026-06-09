@@ -18,7 +18,7 @@ export function useGenerations(modelId: string, locale: "tk" | "ru" | "en" = "ru
     queryKey: queryKeys.catalog.generations(modelId, locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/models/${modelId}/generations?locale=${locale}&limit=${GENERATION_PAGE_SIZE}`,
+        `/catalog/models/${modelId}/generations?limit=${GENERATION_PAGE_SIZE}`,
         GenerationsListResponseSchema,
         { auth: false },
       ),

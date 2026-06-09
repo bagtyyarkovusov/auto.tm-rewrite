@@ -17,7 +17,10 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 
 - **`expo`** SDK 55 (`expo@55.0.26`), **`expo-router@55.0.16`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
 - **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 18 RNR components installed at `apps/mobile/components/ui/` (alert-dialog, avatar, badge, button, card, dialog, dropdown-menu, icon, input, native-only-animated-view, progress, separator, sheet, skeleton, switch, text, toast, tooltip). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{alert-dialog, avatar, checkbox, dialog, dropdown-menu, label, popover, portal, progress, separator, slot, switch, tooltip}` v1.4.0 wired.
-- **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`, `conversations.*`, `reports.*`). The wrapper uses `AbortController` with a 30-second default request timeout (15 seconds for refresh); timeouts throw `ApiError("NETWORK_ERROR", 0, "Request timed out")`.
+- **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`, `conversations.*`, `reports.*`). The wrapper uses `AbortController` with a 30-second default request timeout (15 seconds for refresh); timeouts throw `ApiError("NETWORK_ERROR", 0, "Request timed out")`. The wrapper sends `Accept-Language` from `localeStore` on every request.
+- **`react-i18next@^15.5.1`** + **`i18next@^24.2.3`** for UI localization. Namespaced per feature (`common`, `auth`, `account`, `listings`, `conversations`) with `tk`/`ru`/`en` resources. Init in `app/_layout.tsx` hydrates the locale store before rendering.
+- **`expo-localization@~16.1.1`** for device locale detection on first launch.
+- **`@react-native-async-storage/async-storage@^2.1.2`** for locale persistence (`localeStore`) and reserved for future TanStack Query cross-launch persistence.
 - **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
 - **`expo-secure-store`** for JWT access + refresh tokens (`src/auth/session.ts`).
 - **`expo-image`** for remote listing photos (feed cards + detail).
@@ -111,15 +114,15 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 - React state for local UI
 - TanStack Query v5 + custom `apiClient` wrapper at `src/api/client.ts` (single API entry point)
-- Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay)
+- Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay), `src/locale/localeStore.ts` (locale + AsyncStorage persistence)
 - `expo-secure-store` for JWT access + refresh tokens
-- `AsyncStorage` reserved for future TanStack Query cross-launch persistence; not wired today
+- `AsyncStorage` for locale persistence (`localeStore`) and reserved for future TanStack Query cross-launch persistence
 - Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
 - Wizard design system applied in #124 + #135: **`WizardHeader`** shows muted position-marker (`text-xs text-muted-foreground`) + **`text-2xl font-heading`** step title + progress bar. Step bodies open directly with form rows or brief `text-sm text-muted-foreground` orientation copy — no duplicate title. Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.
 
 Identity hooks live at `src/api/identity/*`. Viewer hook lives at `src/auth/useViewer.ts`.
-Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`).
+Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`). Catalog hooks no longer send `?locale=` query params; locale is transmitted via `Accept-Language` header from `localeStore`. Query keys still segment by locale so caches invalidate on locale change.
 Listings hooks live at `src/api/listings/*` (`useListings`, `useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useInfiniteMyListings`, `useInfiniteMyDrafts`, `useListingDetail`, `useEditListing`, `useAttachMedia`, `useRemoveMedia`, `useReorderMedia`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`). Owner mutations invalidate `detail`, `myListings`, `myListingsInfinite`, `myDrafts`, `myDraftsInfinite`, and `all` query keys on success.
 Uploads hook lives at `src/api/uploads/usePresignUpload`.
 Exchange-rate hook lives at `src/api/exchange-rates/useExchangeRates`.
@@ -156,9 +159,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the d
 - **Post-MLP rich chat** — `socket.io-client`, realtime chat routes, attachments, read receipts
 - **Post-MLP notifications** — `expo-notifications` for FCM/APNS device token registration
 - **Post-MLP mobile admin convenience** — add a native `/(auth)/totp` route only if admins ever need mobile admin login; S7 admin TOTP enrollment lives in `apps/admin`.
-- **i18n** —
-  - **`react-i18next`** dep (not in package.json today; sprint TBD — likely S5 alongside locale switcher UX)
-- **App-wide locale store + query-key invalidation on locale change** — ship in S5/S8 only if required for MLP locale behavior; otherwise post-MLP polish.
+- **i18n** — ✅ Shipped: `react-i18next` + `expo-localization` + `localeStore` (zustand + AsyncStorage). Device-detect → `ru` fallback. `Accept-Language` header sent from store on every API request. Catalog hooks dropped `?locale=` params; server resolves via header. Query keys include locale segment (fixed `cities`). `authCopy` subsumed into `auth` namespace. Per-feature namespaces: `common`, `auth`, `account`, `listings`, `conversations`.
 
 ## Known issues / workarounds
 

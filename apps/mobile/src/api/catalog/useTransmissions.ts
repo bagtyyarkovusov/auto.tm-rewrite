@@ -14,7 +14,7 @@ export function useTransmissions(locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.transmissions(locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/transmissions?locale=${locale}`,
+        `/catalog/transmissions`,
         TransmissionsListResponseSchema,
         { auth: false },
       ),

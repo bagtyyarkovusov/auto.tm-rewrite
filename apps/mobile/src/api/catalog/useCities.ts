@@ -11,12 +11,12 @@ const CitiesListResponseSchema = z.object({
   hasMore: z.boolean(),
 });
 
-export function useCities(regionId: string, locale: "tk" | "ru" | "en" = "ru") {
+export function useCities(regionId: string, _locale: "tk" | "ru" | "en" = "ru") {
   return useQuery({
     queryKey: queryKeys.catalog.cities(regionId),
     queryFn: () =>
       apiClient.get(
-        `/catalog/regions/${regionId}/cities?locale=${locale}`,
+        `/catalog/regions/${regionId}/cities`,
         CitiesListResponseSchema,
         { auth: false },
       ),

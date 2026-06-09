@@ -10,11 +10,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
+import { useTranslation } from "react-i18next";
 
 import { PhoneInput } from "../../components/auth/PhoneInput";
 import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
 import { ApiError } from "../../src/api/client";
-import { authCopy, type Locale, resolveLocale } from "../../src/auth/copy";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import {
@@ -45,20 +45,17 @@ function closeAuth() {
 export default function PhoneScreen() {
   const params = useLocalSearchParams<{
     phone?: string;
-    locale?: Locale;
   }>();
-  const initialLocale = resolveLocale(firstParam(params.locale));
   const initialPhone = firstParam(params.phone);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t, i18n } = useTranslation("auth");
 
-  const [locale, setLocale] = useState<Locale>(initialLocale);
   const [phoneDisplay, setPhoneDisplay] = useState(
     initialPhone ? displayPhoneFromCanonical(initialPhone) : "",
   );
   const [touched, setTouched] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
-  const copy = authCopy[locale];
 
   const { mutateAsync: requestOtp, isPending: isSubmitting } = useRequestOtp();
 
@@ -75,13 +72,13 @@ export default function PhoneScreen() {
     }
 
     if (!touched || phoneValidation === null) {
-      return copy.phoneInputHelper;
+      return t("phoneInputHelper");
     }
 
     return phoneValidation === "incomplete"
-      ? copy.phoneIncompleteError
-      : copy.phoneFormatError;
-  }, [copy, phoneValidation, requestError, touched]);
+      ? t("phoneIncompleteError")
+      : t("phoneFormatError");
+  }, [t, phoneValidation, requestError, touched]);
 
   const showError = useMemo(() => {
     if (requestError) return true;
@@ -115,7 +112,6 @@ export default function PhoneScreen() {
           phone: canonicalPhone,
           requestId: result.requestId,
           resendInSeconds: String(result.resendInSeconds),
-          locale,
           ...(result.testCode ? { testCode: result.testCode } : {}),
         },
       });
@@ -123,17 +119,17 @@ export default function PhoneScreen() {
       if (error instanceof ApiError) {
         setRequestError(
           error.code === "VALIDATION_FAILED"
-            ? copy.phoneFormatError
-            : error.message || copy.requestFailed,
+            ? t("phoneFormatError")
+            : error.message || t("requestFailed"),
         );
       } else {
-        setRequestError(copy.offline);
+        setRequestError(t("offline"));
       }
     }
   }
 
   function openLegalPage(kind: "terms" | "privacy") {
-    void Linking.openURL(`https://auto.tm/${locale}/legal/${kind}`);
+    void Linking.openURL(`https://auto.tm/${i18n.language}/legal/${kind}`);
   }
 
   return (
@@ -144,14 +140,14 @@ export default function PhoneScreen() {
       <SafeAreaView className="flex-1 px-4">
         <View className="flex-row items-center justify-between py-4">
           <Button
-            accessibilityLabel={copy.close}
+            accessibilityLabel={t("close")}
             size="icon"
             variant="ghost"
             onPress={closeAuth}
           >
             <Icon as={X} className="size-5 text-foreground" />
           </Button>
-          <LocaleSwitcher onChange={setLocale} value={locale} />
+          <LocaleSwitcher />
         </View>
 
         <View className="flex-1">
@@ -160,24 +156,24 @@ export default function PhoneScreen() {
 
             <View className="gap-2">
               <Text className="text-2xl font-semibold leading-snug text-foreground">
-                {copy.phoneTitle}
+                {t("phoneTitle")}
               </Text>
               <Text className="text-base leading-normal text-muted-foreground">
-                {copy.phoneHelper}
+                {t("phoneHelper")}
               </Text>
             </View>
 
             <View className="gap-2">
               <Text className="text-sm font-medium text-foreground">
-                {copy.phoneLabel}
+                {t("phoneLabel")}
               </Text>
               <PhoneInput
-                accessibilityLabel={copy.phoneLabel}
+                accessibilityLabel={t("phoneLabel")}
                 hasError={showError}
                 keyboardType="phone-pad"
                 onBlur={() => setTouched(true)}
                 onChangeText={handlePhoneChange}
-                placeholder={copy.phonePlaceholder}
+                placeholder={t("phonePlaceholder")}
                 textContentType="telephoneNumber"
                 value={phoneDisplay}
               />
@@ -203,25 +199,25 @@ export default function PhoneScreen() {
                   color={`hsl(${THEME[isDark ? "dark" : "light"].primaryForeground})`}
                 />
               ) : (
-                <Text>{copy.getCode}</Text>
+                <Text>{t("getCode")}</Text>
               )}
             </Button>
           </View>
 
           <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
-            {copy.legalPrefix}{" "}
+            {t("legalPrefix")}{" "}
             <Text
               className="font-medium text-info-500 underline"
               onPress={() => openLegalPage("terms")}
             >
-              {copy.terms}
+              {t("terms")}
             </Text>{" "}
-            {copy.legalAnd}{" "}
+            {t("legalAnd")}{" "}
             <Text
               className="font-medium text-info-500 underline"
               onPress={() => openLegalPage("privacy")}
             >
-              {copy.privacy}
+              {t("privacy")}
             </Text>
             .
           </Text>

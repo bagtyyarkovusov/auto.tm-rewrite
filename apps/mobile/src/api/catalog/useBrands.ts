@@ -13,7 +13,7 @@ export function useBrands(locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.brands(locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/brands?locale=${locale}&limit=${BRAND_PAGE_SIZE}`,
+        `/catalog/brands?limit=${BRAND_PAGE_SIZE}`,
         CatalogSchemas.BrandSummaryListResponseSchema,
         { auth: false },
       ),
