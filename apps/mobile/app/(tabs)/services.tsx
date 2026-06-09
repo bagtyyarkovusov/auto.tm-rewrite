@@ -19,7 +19,7 @@ import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
 const serviceItems = [
-  { icon: User, labelKey: "profile", route: "/profile" },
+  { icon: User, labelKey: "profile" },
   { icon: Wrench, labelKey: "garage" },
   { icon: Settings, labelKey: "settings" },
   { icon: FileText, labelKey: "blog" },
@@ -31,6 +31,7 @@ export default function ServicesScreen() {
   const { isAuthenticated } = useAuth();
 
   const handleProfilePress = () => {
+    if (isAuthenticated === null) return;
     if (isAuthenticated === false) {
       useAuthIntentStore.getState().setIntent({
         returnPath: "/profile",
@@ -78,7 +79,8 @@ export default function ServicesScreen() {
               className="w-[calc(50%-6px)] active:opacity-90"
               accessibilityRole="button"
               accessibilityLabel={t(item.labelKey)}
-              disabled={item.labelKey !== "profile"}
+              accessibilityState={{ disabled: item.labelKey !== "profile" || isAuthenticated === null }}
+              disabled={item.labelKey !== "profile" || isAuthenticated === null}
             >
               <Card className="w-full">
                 <CardContent className="items-center gap-2 py-6">
