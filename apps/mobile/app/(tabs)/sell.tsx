@@ -47,7 +47,7 @@ const STEP_KEY_MAP: Record<WizardSchemas.WizardStep, string> = {
   specs: "specs",
   price: "price",
   location: "location",
-  contact: "description",
+  contact: "contact",
   review: "review",
 };
 

@@ -206,6 +206,7 @@ export default function Step5Price({
   fieldErrors,
   disabled = false,
 }: Step5PriceProps) {
+  const { t } = useTranslation();
   const { tmtEquivalent } = usePriceStep(payload);
 
   return (

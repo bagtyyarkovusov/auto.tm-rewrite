@@ -423,6 +423,7 @@ export function WizardLayout({
   discardError = null,
   uploadStatus,
 }: WizardLayoutProps) {
+  const { t } = useTranslation();
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   return (

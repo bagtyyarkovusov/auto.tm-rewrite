@@ -213,7 +213,7 @@ function ChecklistView({
         onEdit={() => onGoToStep("specs")}
       >
         <Text className="text-sm text-foreground">
-          {payload.condition === "new" ? t("new") : `${t("used")}, ${payload.mileageKm?.toLocaleString()} km`}
+          {payload.condition === "new" ? t("new") : `${t("used")}, ${payload.mileageKm?.toLocaleString()} ${t("km")}`}
         </Text>
         {colorName && (
           <Text className="text-sm text-muted-foreground">{t("color")}: {colorName}</Text>
@@ -231,7 +231,7 @@ function ChecklistView({
           <Text className="text-sm text-muted-foreground">{t("engineType")}: {engineTypeName}</Text>
         )}
         {payload.enginePower && (
-          <Text className="text-sm text-muted-foreground">{t("enginePower")}: {payload.enginePower} hp</Text>
+          <Text className="text-sm text-muted-foreground">{t("enginePower")}: {payload.enginePower} {t("hp")}</Text>
         )}
       </ReviewSection>
 
@@ -386,14 +386,14 @@ function PreviewView({
         <View className="flex-row flex-wrap">
           <SpecItem label={t("condition")} value={payload.condition === "new" ? t("new") : t("used")} />
           {payload.mileageKm !== undefined && payload.mileageKm !== null && (
-            <SpecItem label={t("mileage")} value={`${payload.mileageKm.toLocaleString()} km`} />
+            <SpecItem label={t("mileage")} value={`${payload.mileageKm.toLocaleString()} ${t("km")}`} />
           )}
           {colorName && <SpecItem label={t("color")} value={colorName} colorHex={colorHex} />}
           {bodyTypeName && <SpecItem label={t("bodyType")} value={bodyTypeName} />}
           {transmissionName && <SpecItem label={t("transmission")} value={transmissionName} />}
           {driveTypeName && <SpecItem label={t("driveType")} value={driveTypeName} />}
           {engineTypeName && <SpecItem label={t("engineType")} value={engineTypeName} />}
-          {payload.enginePower && <SpecItem label={t("enginePower")} value={`${payload.enginePower} hp`} />}
+          {payload.enginePower && <SpecItem label={t("enginePower")} value={`${payload.enginePower} ${t("hp")}`} />}
         </View>
       </View>
 
