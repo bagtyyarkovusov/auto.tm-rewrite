@@ -368,7 +368,28 @@ const mergerHook = {
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
-  await checkGitHubBudget();
+  // Retry up to 3 times with a 10s back-off — a single TLS handshake timeout
+  // (common from behind the Great Firewall) should not abort the whole run.
+  let budgetChecked = false;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await checkGitHubBudget();
+      budgetChecked = true;
+      break;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isNetwork = /TLS|timeout|ECONNRESET|ENOTFOUND|network/i.test(msg);
+      if (isNetwork && attempt < 3) {
+        console.warn(
+          `[rate-limit] Network error on attempt ${attempt}/3, retrying in 10s: ${msg}`,
+        );
+        await new Promise((r) => setTimeout(r, 10_000));
+      } else {
+        throw err; // budget genuinely low, or 3rd network failure → abort
+      }
+    }
+  }
+  if (!budgetChecked) throw new Error("GitHub rate-limit check failed after 3 attempts.");
 
   // -------------------------------------------------------------------------
   // Phase 1: Plan
