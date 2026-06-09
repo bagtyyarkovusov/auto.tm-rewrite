@@ -2,6 +2,7 @@ import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import {
   AlertDialog,
@@ -85,13 +86,14 @@ function WizardHeader({
   saveStatus: WizardLayoutProps["saveStatus"];
   onRetrySave: () => void;
 }) {
+  const { t } = useTranslation();
   const saveStatusText =
     saveStatus === "saving"
-      ? "Saving…"
+      ? t("savingEllipsis")
       : saveStatus === "error"
-        ? "Could not save"
+        ? t("couldNotSave")
         : saveStatus === "saved"
-          ? "Saved"
+          ? t("saved")
           : null;
 
   const saveStatusClass =
@@ -111,11 +113,11 @@ function WizardHeader({
             size="sm"
             className="h-10 px-0 -ml-1"
             onPress={onBack}
-            accessibilityLabel="Go back"
+            accessibilityLabel={t("back")}
           >
             <View className="flex-row items-center gap-0.5">
               <Icon as={ChevronLeft} className="size-5 text-foreground" />
-              <Text className="text-sm font-medium text-foreground">Back</Text>
+              <Text className="text-sm font-medium text-foreground">{t("back")}</Text>
             </View>
           </Button>
         ) : (
@@ -124,7 +126,7 @@ function WizardHeader({
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
           <Text className="text-xs text-muted-foreground">
-            {routeTitle} · Step {stepNumber} of {stepCount}
+            {routeTitle} · {t("stepOf", { step: stepNumber, count: stepCount })}
           </Text>
           {saveStatusText && (
             <Text className={cn("text-xs", saveStatusClass)}>
@@ -138,7 +140,7 @@ function WizardHeader({
               className="h-auto px-0 py-0"
               onPress={onRetrySave}
             >
-              <Text className="text-xs text-destructive">Retry</Text>
+              <Text className="text-xs text-destructive">{t("retry")}</Text>
             </Button>
           )}
         </View>
@@ -148,9 +150,9 @@ function WizardHeader({
           size="sm"
           className="h-10 px-0 -mr-1"
           onPress={onOpenDiscard}
-          accessibilityLabel="Cancel and discard draft"
+          accessibilityLabel={t("discard")}
         >
-          <Text className="text-sm font-medium text-muted-foreground">Cancel</Text>
+          <Text className="text-sm font-medium text-muted-foreground">{t("cancel")}</Text>
         </Button>
       </View>
 
@@ -204,7 +206,7 @@ function WizardFooter({
   editDetourActive,
   disabledReason,
   secondaryAction,
-  publishLabel = "Publish",
+  publishLabel,
 }: {
   isLastStep: boolean;
   canContinue: boolean;
@@ -220,6 +222,7 @@ function WizardFooter({
   secondaryAction?: FooterAction;
   publishLabel?: string;
 }) {
+  const { t } = useTranslation();
   const primaryDisabled = isLastStep ? !canPublish : !canContinue;
   const showDisabledReason = primaryDisabled && Boolean(disabledReason);
   const isEditReview = mode === "edit" && isLastStep;
@@ -239,7 +242,7 @@ function WizardFooter({
           onPress={onReturnToReview}
           disabled={primaryDisabled || !onReturnToReview}
         >
-          <Text>Done</Text>
+          <Text>{t("done")}</Text>
         </Button>
       </View>
     );
@@ -260,7 +263,7 @@ function WizardFooter({
           onPress={onPublish}
           disabled={!canPublish}
         >
-          <Text>{publishLabel}</Text>
+          <Text>{publishLabel ?? t("publish")}</Text>
         </Button>
       </View>
     );
@@ -281,7 +284,7 @@ function WizardFooter({
             className="flex-1"
             onPress={onBack}
           >
-            <Text>Back</Text>
+            <Text>{t("back")}</Text>
           </Button>
         ) : secondaryAction ? (
           <Button
@@ -305,7 +308,7 @@ function WizardFooter({
             onPress={onPublish}
             disabled={!canPublish}
           >
-            <Text>{publishLabel}</Text>
+            <Text>{publishLabel ?? t("publish")}</Text>
           </Button>
         ) : (
           <Button
@@ -315,7 +318,7 @@ function WizardFooter({
             onPress={onContinue}
             disabled={!canContinue}
           >
-            <Text>Continue</Text>
+            <Text>{t("continue")}</Text>
           </Button>
         )}
       </View>
@@ -353,6 +356,7 @@ function DiscardConfirmationDialog({
   isDiscarding?: boolean;
   discardError?: string | null;
 }) {
+  const { t } = useTranslation();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -365,7 +369,7 @@ function DiscardConfirmationDialog({
         ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDiscarding} onPress={() => onOpenChange(false)}>
-            <Text>Keep editing</Text>
+            <Text>{t("keepEditing")}</Text>
           </AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive active:bg-destructive/90"
@@ -377,10 +381,10 @@ function DiscardConfirmationDialog({
             {isDiscarding ? (
               <View className="flex-row items-center gap-2">
                 <ActivityIndicator size="small" color="white" />
-                <Text className="text-destructive-foreground">Discarding…</Text>
+                <Text className="text-destructive-foreground">{t("discarding")}</Text>
               </View>
             ) : (
-              <Text className="text-destructive-foreground">Discard</Text>
+              <Text className="text-destructive-foreground">{t("discard")}</Text>
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -412,13 +416,14 @@ export function WizardLayout({
   children,
   disabledReason,
   secondaryAction,
-  publishLabel = "Publish",
-  discardTitle = "Discard listing?",
-  discardDescription = "Your draft and photos will be deleted. This cannot be undone.",
+  publishLabel,
+  discardTitle,
+  discardDescription,
   isDiscarding = false,
   discardError = null,
   uploadStatus,
 }: WizardLayoutProps) {
+  const { t } = useTranslation();
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   return (
@@ -456,7 +461,7 @@ export function WizardLayout({
                 <View className="flex-row items-center gap-1.5">
                   <ActivityIndicator size="small" />
                   <Text className="text-xs text-muted-foreground">
-                    {uploadStatus.inflight} uploading
+                    {uploadStatus.inflight} {t("uploading")}
                   </Text>
                 </View>
               )}
@@ -464,7 +469,7 @@ export function WizardLayout({
                 <View className="flex-row items-center gap-1.5">
                   <Icon as={AlertCircle} className="size-3.5 text-destructive" />
                   <Text className="text-xs text-destructive">
-                    {uploadStatus.failed} failed
+                    {uploadStatus.failed} {t("failed")}
                   </Text>
                 </View>
               )}
@@ -493,8 +498,8 @@ export function WizardLayout({
         open={showDiscardDialog}
         onOpenChange={setShowDiscardDialog}
         onDiscard={onDiscard}
-        discardTitle={discardTitle}
-        discardDescription={discardDescription}
+        discardTitle={discardTitle ?? t("discardListingTitle")}
+        discardDescription={discardDescription ?? t("discardListingDescription")}
         isDiscarding={isDiscarding}
         discardError={discardError}
       />

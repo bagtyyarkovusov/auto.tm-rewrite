@@ -4,6 +4,7 @@ import { NavigationContext } from "@react-navigation/native";
 import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { WizardSchemas } from "@auto-tm/contracts";
 
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
@@ -39,17 +40,15 @@ import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 
-const ROUTE_TITLE = "Sell car";
-
-const STEP_TITLES: Record<WizardSchemas.WizardStep, string> = {
-  vin: "VIN or chassis number",
-  photos: "Add photos",
-  vehicle: "Vehicle",
-  specs: "Specs",
-  price: "Price",
-  location: "Car location",
-  contact: "Description & contact",
-  review: "Review",
+const STEP_KEY_MAP: Record<WizardSchemas.WizardStep, string> = {
+  vin: "vin",
+  photos: "photos",
+  vehicle: "vehicle",
+  specs: "specs",
+  price: "price",
+  location: "location",
+  contact: "contact",
+  review: "review",
 };
 
 function buildPayloadPhotos(
@@ -65,6 +64,7 @@ function buildPayloadPhotos(
 }
 
 export default function SellScreen() {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const { show } = useToast();
   const navigation = useContext(NavigationContext);
@@ -197,7 +197,7 @@ export default function SellScreen() {
       },
       onError: (err) => {
         const message =
-          err instanceof Error ? err.message : "Failed to create draft";
+          err instanceof Error ? err.message : t("failedToCreateDraft");
         show({ title: message, variant: "destructive" });
       },
     });
@@ -239,7 +239,7 @@ export default function SellScreen() {
     } else {
       resumedRef.current = params.resumeDraftId;
       show({
-        title: "Draft not found. It may have been published or discarded.",
+        title: t("draftNotFound"),
         variant: "destructive",
       });
     }
@@ -298,13 +298,13 @@ export default function SellScreen() {
       const result = await publishDraft.mutateAsync(machineState.draftId);
       dispatch({ type: "PUBLISH_SUCCESS", listingId: result.id });
       show({
-        title: "Listing published",
+        title: t("listingPublished"),
         variant: "success",
       });
       router.replace(`/(public)/listings/${result.id}`);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to publish listing";
+        err instanceof Error ? err.message : t("failedToPublish");
       dispatch({ type: "PUBLISH_ERROR", error: message });
       show({ title: message, variant: "destructive" });
     }
@@ -323,7 +323,7 @@ export default function SellScreen() {
     // the request fails for any other reason, we don't block the user.
     discardDraft.mutate(id, {
       onError: (err) => {
-        const message = err instanceof Error ? err.message : "Failed to discard draft";
+        const message = err instanceof Error ? err.message : t("failedToDiscard");
         show({ title: message, variant: "destructive" });
       },
     });
@@ -339,7 +339,6 @@ export default function SellScreen() {
   // ── Wizard mode ──
   if (machineState.status !== "idle" && machineState.draftId) {
     const currentStep = ctx.state.currentStep;
-    const stepTitle = STEP_TITLES[currentStep] ?? currentStep;
 
     // Compute upload status counts for chip + publishGate reason
     const uploadStatus = {
@@ -354,11 +353,11 @@ export default function SellScreen() {
     let disabledReason: string | undefined;
     if (ctx.isLastStep && !uploadQueue.publishGate.canPublish) {
       if (uploadStatus.failed > 0) {
-        disabledReason = `${uploadStatus.failed} failed — retry or remove`;
+        disabledReason = t("failed");
       } else if (uploadStatus.inflight > 0) {
-        disabledReason = `Wait for ${uploadStatus.inflight} photos to finish uploading`;
+        disabledReason = t("waitForPhotos", { count: uploadStatus.inflight });
       } else {
-        disabledReason = uploadQueue.publishGate.blockers[0] ?? "Cannot publish yet";
+        disabledReason = uploadQueue.publishGate.blockers[0] ?? t("cannotPublishYet");
       }
     } else if (ctx.isLastStep && !ctx.canPublish) {
       const missing = WizardSchemas.WIZARD_STEPS.filter(
@@ -366,9 +365,7 @@ export default function SellScreen() {
           s !== "review" && !machineState.validatedSteps.includes(s),
       );
       if (missing.length > 0) {
-        disabledReason = `Complete ${missing.length} step${
-          missing.length === 1 ? "" : "s"
-        } before publishing.`;
+        disabledReason = t("completeStepsBeforePublish", { count: missing.length });
       }
     } else if (
       !ctx.isLastStep &&
@@ -381,13 +378,13 @@ export default function SellScreen() {
 
     const secondaryAction =
       currentStep === "vin" && !ctx.canGoBack
-        ? { label: "Skip", onPress: handleSkipVin }
+        ? { label: t("skip"), onPress: handleSkipVin }
         : undefined;
 
     return (
       <WizardLayout
-        routeTitle={ROUTE_TITLE}
-        stepTitle={stepTitle}
+        routeTitle={t("sellCar")}
+        stepTitle={t(STEP_KEY_MAP[currentStep] ?? currentStep)}
         stepNumber={ctx.stepNumber}
         stepCount={ctx.stepCount}
         onBack={handleBack}
@@ -486,37 +483,37 @@ export default function SellScreen() {
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 px-5 pt-3">
         <Text className="text-3xl font-heading leading-tight tracking-tight text-foreground">
-          Sell
+          {t("sell")}
         </Text>
 
         {hasDrafts && isAuthenticated && !draftsLoading ? (
           <View className="mt-6 w-full gap-4">
             <View className="gap-3 rounded-xl border border-border p-4">
               <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                Latest draft
+                {t("latestDraft")}
               </Text>
               <Text className="text-lg font-semibold text-foreground">
                 {draftBrandName && draftModelName
                   ? `${existingDraft.payload.year ?? ""} ${draftBrandName} ${draftModelName}`
                   : existingDraft.payload.brandId && existingDraft.payload.modelId
                     ? `${existingDraft.payload.year ?? ""} ${existingDraft.payload.brandId} ${existingDraft.payload.modelId}`
-                    : "Continue your listing"}
+                    : t("continueListing")}
               </Text>
               <Text className="text-sm text-muted-foreground">
                 {existingDraft.payload.photos?.length
-                  ? `${existingDraft.payload.photos.length} photo${existingDraft.payload.photos.length !== 1 ? "s" : ""}`
-                  : "No photos yet"}
+                  ? t("photos", { count: existingDraft.payload.photos.length })
+                  : t("noPhotos")}
                 {" · "}
                 {existingDraft.payload.priceAmount
                   ? `${existingDraft.payload.priceAmount.toLocaleString()} ${existingDraft.payload.priceCurrency ?? "TMT"}`
-                  : "Price missing"}
+                  : t("priceMissing")}
               </Text>
               <Button
                 variant="default"
                 size="pill"
                 onPress={() => handleContinueDraft(existingDraft)}
               >
-                <Text>Continue listing</Text>
+                <Text>{t("continueListing")}</Text>
               </Button>
             </View>
             <Button
@@ -524,7 +521,7 @@ export default function SellScreen() {
               size="pill"
               onPress={handleCreateNewDraft}
             >
-              <Text>New listing</Text>
+              <Text>{t("newListing")}</Text>
             </Button>
             <Button
               variant="ghost"
@@ -532,17 +529,17 @@ export default function SellScreen() {
               onPress={() => router.push("/listings/manage")}
             >
               <Icon as={List} className="size-4 text-foreground" />
-              <Text>My listings & drafts</Text>
+              <Text>{t("myListingsAndDrafts")}</Text>
             </Button>
           </View>
         ) : (
           <View className="flex-1 items-center justify-center px-4">
             <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
             <Text className="mt-4 text-lg font-semibold text-foreground">
-              Sell your car
+              {t("sellYourCar")}
             </Text>
             <Text className="mt-1 text-center text-sm text-muted-foreground">
-              List your vehicle on AutoTM
+              {t("listYourVehicle")}
             </Text>
             <Button
               variant="default"
@@ -550,7 +547,7 @@ export default function SellScreen() {
               className="mt-6 self-stretch"
               onPress={handleStartListing}
             >
-              <Text>Start listing</Text>
+              <Text>{t("startListing")}</Text>
             </Button>
             {isAuthenticated && (
               <Button
@@ -560,7 +557,7 @@ export default function SellScreen() {
                 onPress={() => router.push("/listings/manage")}
               >
                 <Icon as={List} className="size-4 text-foreground" />
-                <Text>My listings & drafts</Text>
+                <Text>{t("myListingsAndDrafts")}</Text>
               </Button>
             )}
           </View>
@@ -568,11 +565,11 @@ export default function SellScreen() {
       </View>
 
       <SignInDialog
-        actionLabel="Continue with phone"
-        description="Sign in to list your vehicle on AutoTM."
+        actionLabel={t("continueWithPhone")}
+        description={t("signInToSellDescription")}
         open={showSignIn}
         returnPath="/(tabs)/sell"
-        title="Sign in to sell"
+        title={t("signInToSellTitle")}
         onOpenChange={setShowSignIn}
       />
     </SafeAreaView>

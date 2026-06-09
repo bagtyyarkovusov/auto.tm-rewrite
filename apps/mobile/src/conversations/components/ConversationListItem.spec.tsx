@@ -44,8 +44,8 @@ describe("ConversationListItem", () => {
 
   it("shows user role in conversation", () => {
     expect(source).toContain("conversation.myRole");
-    expect(source).toContain("You are buyer");
-    expect(source).toContain("You are seller");
+    expect(source).toContain('t("youAreBuyer")');
+    expect(source).toContain('t("youAreSeller")');
   });
 
   it("shows listing status when not active", () => {
@@ -70,7 +70,7 @@ describe("ConversationListItem", () => {
   });
 
   it("handles null listing gracefully", () => {
-    expect(source).toContain('"Conversation"');
+    expect(source).toContain('t("chat")');
     expect(source).toContain("listing");
     expect(source).toContain("?");
   });

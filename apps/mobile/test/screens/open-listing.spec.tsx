@@ -46,16 +46,16 @@ describe("OpenListingConversationScreen", () => {
 
   it("shows loading state while opening", () => {
     expect(source).toContain("ActivityIndicator");
-    expect(source).toContain("Opening conversation…");
+    expect(source).toContain('t("openingConversation")');
   });
 
   it("shows error state with retry on failure", () => {
     expect(source).toContain("isError");
-    expect(source).toContain("Retry");
+    expect(source).toContain('t("retry")');
   });
 
   it("shows go back button on error", () => {
-    expect(source).toContain("Go back");
+    expect(source).toContain('t("goBack")');
     expect(source).toContain("router.back()");
   });
 });

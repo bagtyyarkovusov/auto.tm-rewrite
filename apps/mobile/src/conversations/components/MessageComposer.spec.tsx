@@ -42,7 +42,7 @@ describe("MessageComposer", () => {
   });
 
   it("shows Send button that calls onSend", () => {
-    expect(source).toContain('accessibilityLabel="Send message"');
+    expect(source).toContain('accessibilityLabel={t("sendMessage")}');
     expect(source).toContain("onPress={handleSend}");
     expect(source).toContain("onSend(trimmed)");
   });
@@ -54,8 +54,7 @@ describe("MessageComposer", () => {
   it("shows error text when over limit", () => {
     expect(source).toContain("isOverLimit &&");
     expect(source).toContain("text-destructive");
-    expect(source).toContain("Message must be");
-    expect(source).toContain("characters or less");
+    expect(source).toContain('t("messageTooLong"');
   });
 
   it("uses KeyboardAvoidingView for composer", () => {
@@ -63,7 +62,7 @@ describe("MessageComposer", () => {
   });
 
   it("has accessible input label", () => {
-    expect(source).toContain('accessibilityLabel="Message input"');
+    expect(source).toContain('accessibilityLabel={t("sendMessage")}');
   });
 });
 

@@ -2,6 +2,7 @@ import { ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { Flag } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import type { CatalogMaps } from "../detail/useCatalogMaps";
 
@@ -34,7 +35,7 @@ function buildTitle(listing: ListingDetail, maps: CatalogMaps): string {
       ? maps.generationName(listing.generationId) ?? listing.generationId
       : null,
   ].filter(Boolean);
-  return parts.join(" ") || "Listing";
+  return parts.join(" ") || "";
 }
 
 interface SpecItemProps {
@@ -53,59 +54,60 @@ function SpecItem({ label, value }: SpecItemProps) {
 }
 
 export function ListingDetailView({ listing, maps, isOwner = false, onReport }: ListingDetailProps) {
+  const { t } = useTranslation();
   const isSold = listing.status === Enums.ListingStatus.Sold;
 
   const specs: SpecItemProps[] = [
-    { label: "Year", value: listing.year ? String(listing.year) : undefined },
+    { label: t("year"), value: listing.year ? String(listing.year) : undefined },
     {
-      label: "Condition",
+      label: t("condition"),
       value: listing.condition
-        ? listing.condition.charAt(0).toUpperCase() + listing.condition.slice(1)
+        ? t(listing.condition === "new" ? "new" : "used")
         : undefined,
     },
     {
-      label: "Mileage",
+      label: t("mileage"),
       value:
         listing.mileageKm != null
-          ? `${listing.mileageKm.toLocaleString("en-US")} km`
+          ? `${listing.mileageKm.toLocaleString("en-US")} ${t("km")}`
           : undefined,
     },
     {
-      label: "Transmission",
+      label: t("transmission"),
       value: listing.transmissionId
         ? maps.transmissionName(listing.transmissionId)
         : undefined,
     },
     {
-      label: "Drive type",
+      label: t("driveType"),
       value: listing.driveTypeId
         ? maps.driveTypeName(listing.driveTypeId)
         : undefined,
     },
     {
-      label: "Engine",
+      label: t("engineType"),
       value: listing.engineTypeId
         ? maps.engineTypeName(listing.engineTypeId)
         : undefined,
     },
     {
-      label: "Power",
+      label: t("enginePower"),
       value:
         listing.enginePower != null
-          ? `${listing.enginePower} hp`
+          ? `${listing.enginePower} ${t("hp")}`
           : undefined,
     },
     {
-      label: "Color",
+      label: t("color"),
       value: listing.colorId ? maps.colorName(listing.colorId) : undefined,
     },
     {
-      label: "Body type",
+      label: t("bodyType"),
       value: listing.bodyTypeId
         ? maps.bodyTypeName(listing.bodyTypeId)
         : undefined,
     },
-    { label: "VIN", value: listing.vin || undefined },
+    { label: t("vin"), value: listing.vin || undefined },
   ];
 
   const visibleSpecs = specs.filter((s) => s.value);
@@ -119,11 +121,11 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
         <View className="gap-2">
           <View className="flex-row flex-wrap items-center gap-2">
             <Text className="text-2xl font-heading text-foreground flex-1">
-              {buildTitle(listing, maps)}
+              {buildTitle(listing, maps) || t("listing")}
             </Text>
             {isSold && (
               <Badge variant="secondary" className="px-2 py-0.5">
-                <Text className="text-xs text-secondary-foreground">Sold</Text>
+                <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
               </Badge>
             )}
           </View>
@@ -144,7 +146,7 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
             <Separator className="my-1" />
             <View className="gap-1">
               <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Specifications
+                {t("specifications")}
               </Text>
               <View className="flex-row flex-wrap">
                 {visibleSpecs.map((spec) => (
@@ -160,7 +162,7 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
             <Separator className="my-1" />
             <View className="gap-1">
               <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Description
+                {t("description")}
               </Text>
               <Text className="text-base text-foreground leading-5">
                 {listing.description}
@@ -195,7 +197,7 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
               onPress={onReport}
             >
               <Icon as={Flag} className="size-4 text-muted-foreground" />
-              <Text className="text-sm text-muted-foreground">Report</Text>
+              <Text className="text-sm text-muted-foreground">{t("report")}</Text>
             </Button>
           </>
         )}

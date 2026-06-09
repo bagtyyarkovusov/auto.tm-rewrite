@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
@@ -29,12 +30,14 @@ import { Text } from "@/components/ui/text";
 
 type ManageTab = "active" | "sold" | "archived" | "drafts";
 
-const TABS: { key: ManageTab; label: string }[] = [
-  { key: "active", label: "Active" },
-  { key: "sold", label: "Sold" },
-  { key: "archived", label: "Archived" },
-  { key: "drafts", label: "Drafts" },
-];
+function useManageTabs(t: (key: string) => string): { key: ManageTab; label: string }[] {
+  return [
+    { key: "active", label: t("active") },
+    { key: "sold", label: t("sold") },
+    { key: "archived", label: t("archived") },
+    { key: "drafts", label: t("drafts") },
+  ];
+}
 
 const STATUS_MAP: Record<Exclude<ManageTab, "drafts">, string> = {
   active: Enums.ListingStatus.Active,
@@ -49,24 +52,26 @@ function EmptyState({
   tab: ManageTab;
   onCreate?: () => void;
 }) {
+  const { t } = useTranslation();
+
   const copy: Record<ManageTab, { title: string; body: string; cta?: string }> = {
     active: {
-      title: "No active listings",
-      body: "List your first car and reach buyers today.",
-      cta: "List a car",
+      title: t("noActiveListings"),
+      body: t("beFirstToSell"),
+      cta: t("listACar"),
     },
     sold: {
-      title: "No sold listings",
-      body: "Sold cars will appear here for 14 days.",
+      title: t("noSoldListings"),
+      body: t("soldCarsAppearHere"),
     },
     archived: {
-      title: "No archived listings",
-      body: "Archived listings are hidden from the public feed.",
+      title: t("noArchivedListings"),
+      body: t("archivedListingsHidden"),
     },
     drafts: {
-      title: "No drafts",
-      body: "Start a new listing and save it as a draft to continue later.",
-      cta: "Start a draft",
+      title: t("noDrafts"),
+      body: t("startNewListing"),
+      cta: t("startListing"),
     },
   };
 
@@ -101,10 +106,13 @@ function SegmentedTabs({
   activeTab: ManageTab;
   onChange: (tab: ManageTab) => void;
 }) {
+  const { t } = useTranslation();
+  const tabs = useManageTabs(t);
+
   return (
     <View className="px-4 pb-3">
       <View className="flex-row rounded-lg bg-muted p-1">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
             <Pressable
@@ -134,6 +142,7 @@ function SegmentedTabs({
 }
 
 export default function ManageListingsScreen() {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<ManageTab>("active");
   const [showSignIn, setShowSignIn] = useState(false);
@@ -218,15 +227,15 @@ export default function ManageListingsScreen() {
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
           <Text className="text-2xl font-semibold text-foreground">
-            My listings
+            {t("myListings")}
           </Text>
         </View>
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-lg font-semibold text-foreground">
-            Sign in to manage your listings
+            {t("signInToManage")}
           </Text>
           <Text className="mt-1 text-center text-sm text-muted-foreground">
-            View your active, sold, and archived listings, plus any saved drafts.
+            {t("manageYourListings")}
           </Text>
           <Button
             variant="default"
@@ -234,15 +243,15 @@ export default function ManageListingsScreen() {
             className="mt-6"
             onPress={() => setShowSignIn(true)}
           >
-            <Text>Sign in</Text>
+            <Text>{t("signIn")}</Text>
           </Button>
         </View>
         <SignInDialog
-          actionLabel="Continue with phone"
-          description="Sign in to manage your listings and drafts."
+          actionLabel={t("continueWithPhone")}
+          description={t("signInToManageDescription")}
           open={showSignIn}
           returnPath="/listings/manage"
-          title="Sign in required"
+          title={t("signInToManageTitle")}
           onOpenChange={setShowSignIn}
         />
       </SafeAreaView>
@@ -264,7 +273,7 @@ export default function ManageListingsScreen() {
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
           <Text className="text-2xl font-semibold text-foreground">
-            My listings
+            {t("myListings")}
           </Text>
         </View>
       </View>
@@ -337,7 +346,7 @@ export default function ManageListingsScreen() {
             ) : !currentQuery.hasNextPage ? (
               <View className="py-4 items-center">
                 <Text className="text-xs text-muted-foreground">
-                  No more
+                  {t("noMore")}
                 </Text>
               </View>
             ) : null
@@ -373,7 +382,7 @@ export default function ManageListingsScreen() {
             ) : !currentQuery.hasNextPage ? (
               <View className="py-4 items-center">
                 <Text className="text-xs text-muted-foreground">
-                  No more
+                  {t("noMore")}
                 </Text>
               </View>
             ) : null

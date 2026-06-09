@@ -1,4 +1,5 @@
 import { Pressable, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { RotateCcw } from "lucide-react-native";
 
 import { Text } from "@/components/ui/text";
@@ -15,6 +16,7 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ text, isMine, status, onRetry }: MessageBubbleProps) {
+  const { t } = useTranslation();
   return (
     <View
       className={`flex-row ${isMine ? "justify-end" : "justify-start"} px-4 py-1`}
@@ -37,19 +39,19 @@ export function MessageBubble({ text, isMine, status, onRetry }: MessageBubblePr
           <View className="flex-row items-center justify-end gap-1.5 mt-1">
             {status === "pending" && (
               <Text className="text-xs text-primary-foreground/70">
-                Sending…
+                {t("sending")}
               </Text>
             )}
             {status === "failed" && (
               <>
                 <Text className="text-xs text-destructive-foreground">
-                  Failed to send
+                  {t("failedToSend")}
                 </Text>
                 {onRetry && (
                   <Pressable
                     onPress={onRetry}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityLabel="Retry sending message"
+                    accessibilityLabel={t("retry")}
                   >
                     <Icon as={RotateCcw} className="size-3.5 text-destructive-foreground" />
                   </Pressable>

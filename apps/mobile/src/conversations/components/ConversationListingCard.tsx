@@ -1,6 +1,7 @@
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 
 import { Text } from "@/components/ui/text";
@@ -25,6 +26,8 @@ export function ConversationListingCard({
   brandName,
   modelName,
 }: ConversationListingCardProps) {
+  const { t } = useTranslation();
+
   const title = [
     listing.year ? String(listing.year) : null,
     brandName ?? listing.brandId,
@@ -44,7 +47,7 @@ export function ConversationListingCard({
       onPress={() => router.push(`/(public)/listings/${listing.id}`)}
       className="flex-row items-center gap-3 px-4 py-3 border-b border-border active:bg-muted/50"
       accessibilityRole="button"
-      accessibilityLabel={`Open listing: ${title}`}
+      accessibilityLabel={`${t("open")}: ${title}`}
     >
       <View className="w-16 h-16 rounded-lg bg-muted overflow-hidden">
         {imageUrl ? (
@@ -55,7 +58,7 @@ export function ConversationListingCard({
           />
         ) : (
           <View className="w-full h-full items-center justify-center">
-            <Text className="text-xs text-muted-foreground">No image</Text>
+            <Text className="text-xs text-muted-foreground">{t("noImage")}</Text>
           </View>
         )}
       </View>

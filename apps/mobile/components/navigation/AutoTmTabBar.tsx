@@ -9,18 +9,22 @@ import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommonActions } from "@react-navigation/native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useTranslation } from "react-i18next";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
-const TAB_CONFIG = [
-  { name: "index", label: "Search", icon: Search },
-  { name: "favorites", label: "Favorites", icon: Heart },
-  { name: "sell", label: "Sell", icon: Plus },
-  { name: "chat", label: "Chat", icon: MessageSquare },
-  { name: "services", label: "Services", icon: LayoutGrid },
-] as const;
+function useTabConfig() {
+  const { t } = useTranslation();
+  return [
+    { name: "index", label: t("search"), icon: Search },
+    { name: "favorites", label: t("favorites"), icon: Heart },
+    { name: "sell", label: t("sell"), icon: Plus },
+    { name: "chat", label: t("chat"), icon: MessageSquare },
+    { name: "services", label: t("services"), icon: LayoutGrid },
+  ] as const;
+}
 
 export function AutoTmTabBar({
   state,
@@ -28,6 +32,7 @@ export function AutoTmTabBar({
   navigation,
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const TAB_CONFIG = useTabConfig();
 
   const currentRoute = state.routes[state.index];
   const currentDescriptor = currentRoute ? descriptors[currentRoute.key] : undefined;

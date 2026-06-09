@@ -4,6 +4,7 @@ import {
   Pressable,
 } from "react-native";
 import { Check, RefreshCw, X, AlertTriangle, WifiOff } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import type { StagedPhoto } from "../uploadStaging/types";
 
@@ -19,6 +20,8 @@ export function PhotoStateOverlay({
   photo,
   onRetry,
 }: PhotoStateOverlayProps) {
+  const { t } = useTranslation();
+
   if (photo.state === "selected") {
     return (
       <View className="absolute inset-0 items-center justify-center bg-black/40">
@@ -39,7 +42,7 @@ export function PhotoStateOverlay({
     return (
       <View className="absolute inset-0 items-center justify-center bg-black/40">
         <ActivityIndicator color="white" />
-        <Text className="mt-1 text-xs text-white">Uploading</Text>
+        <Text className="mt-1 text-xs text-white">{t("uploading")}</Text>
       </View>
     );
   }
@@ -66,12 +69,12 @@ export function PhotoStateOverlay({
           {photo.error?.retryable === false ? (
             <>
               <Icon as={X} className="size-6 text-destructive" />
-              <Text className="text-xs text-destructive">Failed</Text>
+              <Text className="text-xs text-destructive">{t("failed")}</Text>
             </>
           ) : (
             <>
               <Icon as={RefreshCw} className="size-6 text-white" />
-              <Text className="text-xs text-white">Retry</Text>
+              <Text className="text-xs text-white">{t("retry")}</Text>
             </>
           )}
           {photo.error && (
@@ -90,7 +93,7 @@ export function PhotoStateOverlay({
         <View className="items-center gap-1 rounded-md bg-background/90 px-2 py-1.5">
           <Icon as={WifiOff} className="size-5 text-warning-500" />
           <Text className="text-center text-[10px] font-medium text-muted-foreground">
-            Waiting for network
+            {t("waitingForNetwork")}
           </Text>
         </View>
       </View>
@@ -101,7 +104,7 @@ export function PhotoStateOverlay({
     return (
       <View className="absolute inset-0 items-center justify-center bg-black/40">
         <Icon as={AlertTriangle} className="size-6 text-warning-500" />
-        <Text className="mt-1 text-xs text-white">Lost</Text>
+        <Text className="mt-1 text-xs text-white">{t("lost")}</Text>
       </View>
     );
   }

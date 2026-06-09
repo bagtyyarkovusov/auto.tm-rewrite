@@ -23,21 +23,21 @@ describe("DraftCard structure", () => {
   });
 
   it("has Resume and Discard actions", () => {
-    expect(source).toContain("Resume");
-    expect(source).toContain("Discard");
+    expect(source).toContain('t("continueListing")');
+    expect(source).toContain('t("discard")');
     expect(source).toContain("onResume(draft)");
     expect(source).toContain("setShowConfirm(true)");
   });
 
   it("uses AlertDialog for destructive discard confirmation", () => {
     expect(source).toContain("<AlertDialog");
-    expect(source).toContain("Discard draft?");
+    expect(source).toContain('t("discardListingTitle")');
     expect(source).toContain("AlertDialogAction");
     expect(source).toContain('className="bg-destructive"');
   });
 
   it("falls back safely when brand/model are missing", () => {
-    expect(source).toContain('"Untitled draft"');
-    expect(source).toContain('"Unnamed draft"');
+    expect(source).toContain('t("untitledDraft")');
+    expect(source).toContain('t("unnamedDraft")');
   });
 });

@@ -63,7 +63,7 @@ describe("ContactCtaBar", () => {
   });
 
   it("has accessible labels for Message button", () => {
-    expect(source).toContain('accessibilityLabel={canMessage ? "Message seller" : "Message unavailable"}');
+    expect(source).toContain('accessibilityLabel={t("message")}');
     expect(source).toContain("accessibilityState={{ disabled: !canMessage || openConversation.isPending }}");
   });
 

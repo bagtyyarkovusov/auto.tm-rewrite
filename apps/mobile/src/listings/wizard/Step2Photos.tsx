@@ -11,6 +11,7 @@ import {
   AlertCircle,
   ImageIcon,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import type { StagedPhoto } from "../uploadStaging/types";
 
@@ -147,6 +148,7 @@ function PhotoActions({
   onTakePhoto: () => void;
   onPickFromLibrary: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row gap-3">
       <Button
@@ -154,20 +156,20 @@ function PhotoActions({
         className="flex-1 h-[52px] rounded-full"
         onPress={onTakePhoto}
         disabled={disabled || maxReached}
-        accessibilityLabel="Take a photo with camera"
+        accessibilityLabel={t("camera")}
       >
         <Icon as={Camera} className="size-4" />
-        <Text>Camera</Text>
+        <Text>{t("camera")}</Text>
       </Button>
       <Button
         variant="outline"
         className="flex-1 h-[52px] rounded-full"
         onPress={onPickFromLibrary}
         disabled={disabled || maxReached}
-        accessibilityLabel="Choose photos from library"
+        accessibilityLabel={t("library")}
       >
         <Icon as={ImagePlus} className="size-4" />
-        <Text>Library</Text>
+        <Text>{t("library")}</Text>
       </Button>
     </View>
   );
@@ -210,15 +212,16 @@ function PhotoGrid({
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <View className="items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 py-8 gap-3">
       <View className="h-12 w-12 items-center justify-center rounded-full bg-muted">
         <Icon as={ImageIcon} className="size-6 text-muted-foreground" />
       </View>
       <View className="items-center gap-1">
-        <Text className="text-sm font-medium text-foreground">No photos yet</Text>
+        <Text className="text-sm font-medium text-foreground">{t("noPhotos")}</Text>
         <Text className="text-xs text-muted-foreground text-center px-8">
-          Tap Camera or Library to add your first photo
+          {t("tapCameraOrLibrary")}
         </Text>
       </View>
     </View>
@@ -243,12 +246,13 @@ function StatusIndicator({
   isCompressing: boolean;
   isUploading: boolean;
 }) {
+  const { t } = useTranslation();
   if (!isCompressing && !isUploading) return null;
   return (
     <View className="flex-row items-center gap-2">
       <ActivityIndicator size="small" />
       <Text className="text-sm text-muted-foreground">
-        {isCompressing ? "Compressing…" : "Uploading…"}
+        {isCompressing ? t("compressing") : t("uploading")}
       </Text>
     </View>
   );
@@ -265,6 +269,7 @@ export default function Step2Photos({
   disabled,
   fieldErrors,
 }: Step2PhotosProps) {
+  const { t } = useTranslation();
   const { pickFromLibrary, takePhoto } = usePhotoPicker(onAddPhoto);
   const { handleMoveUp, handleMoveDown, handleSetAsCover } = usePhotoReorder(
     photos,
@@ -278,7 +283,7 @@ export default function Step2Photos({
   return (
     <View className="gap-5 py-5">
       <Text className="text-sm text-muted-foreground leading-relaxed">
-        Photos under 5 MB upload faster. Add up to 20 photos.
+        {t("photosUnder5MB")}
       </Text>
 
       <PhotoActions
@@ -292,7 +297,7 @@ export default function Step2Photos({
 
       {maxReached && (
         <Text className="text-sm text-muted-foreground">
-          Maximum 20 photos reached
+          {t("maxPhotosReached")}
         </Text>
       )}
 

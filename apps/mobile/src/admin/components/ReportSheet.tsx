@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Check, X } from "lucide-react-native";
 import type { AdminSchemas } from "@auto-tm/contracts";
 
@@ -14,17 +15,21 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
 
-const REASON_LABELS: Record<
-  AdminSchemas.CreateReportRequest["reason"],
-  string
-> = {
-  spam: "Spam",
-  scam: "Scam or fraud",
-  misleading: "Misleading information",
-  wrong_category: "Wrong category",
-  harassment: "Harassment",
-  other: "Other",
-};
+function useReasonLabels() {
+  const { t } = useTranslation();
+  const labels: Record<
+    AdminSchemas.CreateReportRequest["reason"],
+    string
+  > = {
+    spam: t("spam"),
+    scam: t("scam"),
+    misleading: t("misleading"),
+    wrong_category: t("wrongCategory"),
+    harassment: t("harassment"),
+    other: t("other"),
+  };
+  return labels;
+}
 
 const LISTING_REASONS: AdminSchemas.CreateReportRequest["reason"][] = [
   "spam",
@@ -55,9 +60,11 @@ export function ReportSheet({
   open,
   onOpenChange,
 }: ReportSheetProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const createReport = useCreateReport();
+  const REASON_LABELS = useReasonLabels();
 
   const [reason, setReason] = useState<
     AdminSchemas.CreateReportRequest["reason"] | null
@@ -130,7 +137,7 @@ export function ReportSheet({
       <SheetContent compact>
         <SheetHeader>
           <View className="flex-row items-center justify-between">
-            <SheetTitle>Report</SheetTitle>
+            <SheetTitle>{t("report")}</SheetTitle>
             <SheetClose asChild>
               <Button variant="ghost" size="icon">
                 <Icon as={X} className="size-5 text-foreground" />
@@ -139,8 +146,8 @@ export function ReportSheet({
           </View>
           <SheetDescription>
             {submitted
-              ? "Thanks, we received your report."
-              : "Select a reason for reporting this item."}
+              ? t("thanksWeReceived")
+              : t("selectReason")}
           </SheetDescription>
         </SheetHeader>
 
@@ -150,10 +157,10 @@ export function ReportSheet({
               <Icon as={Check} className="size-6 text-success-500" />
             </View>
             <Text className="text-center text-base text-foreground">
-              Thanks, we received your report.
+              {t("thanksWeReceived")}
             </Text>
             <Button variant="default" className="w-full" onPress={handleClose}>
-              <Text>Done</Text>
+              <Text>{t("done")}</Text>
             </Button>
           </View>
         ) : (
@@ -197,14 +204,14 @@ export function ReportSheet({
             {showDetailsInput && (
               <View className="gap-2">
                 <Text className="text-sm text-muted-foreground">
-                  Please provide details
+                  {t("pleaseProvideDetails")}
                 </Text>
                 <Input
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
                   className="h-24 py-2"
-                  placeholder="Describe the issue..."
+                  placeholder={t("describeIssue")}
                   value={details}
                   onChangeText={setDetails}
                   maxLength={1000}
@@ -218,7 +225,7 @@ export function ReportSheet({
             {/* Error */}
             {createReport.isError && (
               <Text className="text-center text-sm text-destructive">
-                {getErrorCopy(createReport.error)}
+                {getErrorCopy(createReport.error, t)}
               </Text>
             )}
 
@@ -230,7 +237,7 @@ export function ReportSheet({
               onPress={handleSubmit}
             >
               <Text>
-                {createReport.isPending ? "Submitting..." : "Submit report"}
+                {createReport.isPending ? t("submitting") : t("submitReport")}
               </Text>
             </Button>
           </View>
@@ -244,7 +251,7 @@ function cn(...classes: (string | false | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-function getErrorCopy(error: unknown): string {
+function getErrorCopy(error: unknown, t: (key: string) => string): string {
   if (
     typeof error === "object" &&
     error !== null &&
@@ -253,7 +260,7 @@ function getErrorCopy(error: unknown): string {
     (error as { details?: { reason?: string } }).details?.reason ===
       "REPORT_TARGET_NOT_REPORTABLE"
   ) {
-    return "This item is no longer available to report.";
+    return t("itemNoLongerAvailable");
   }
 
   if (
@@ -264,7 +271,7 @@ function getErrorCopy(error: unknown): string {
     (error as { details?: { reason?: string } }).details?.reason ===
       "SELF_REPORT_NOT_ALLOWED"
   ) {
-    return "This item is no longer available to report.";
+    return t("itemNoLongerAvailable");
   }
 
   if (
@@ -275,7 +282,7 @@ function getErrorCopy(error: unknown): string {
     (error as { details?: { reason?: string } }).details?.reason ===
       "USER_SUSPENDED"
   ) {
-    return "Your account is restricted.";
+    return t("accountRestricted");
   }
 
   if (
@@ -286,7 +293,7 @@ function getErrorCopy(error: unknown): string {
     (error as { details?: { reason?: string } }).details?.reason ===
       "FEATURE_DISABLED"
   ) {
-    return "This feature is currently unavailable.";
+    return t("featureUnavailable");
   }
 
   if (
@@ -295,8 +302,8 @@ function getErrorCopy(error: unknown): string {
     "status" in error &&
     (error as { status?: number }).status === 404
   ) {
-    return "This item is no longer available to report.";
+    return t("itemNoLongerAvailable");
   }
 
-  return "Something went wrong. Please try again.";
+  return t("somethingWentWrong");
 }

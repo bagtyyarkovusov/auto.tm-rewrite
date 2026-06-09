@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { FlatList, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { MessageBubble, type MessageStatus } from "./MessageBubble";
 
@@ -20,6 +21,8 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages, currentUserId, onRetry }: MessageListProps) {
+  const { t } = useTranslation();
+
   const renderItem = useCallback(
     ({ item }: { item: MessageItem }) => (
       <MessageBubble
@@ -49,7 +52,7 @@ export function MessageList({ messages, currentUserId, onRetry }: MessageListPro
           className="flex-1 items-center justify-center px-6 py-12"
         >
           <Text className="text-sm text-muted-foreground">
-            No messages yet. Start the conversation.
+            {t("noMessagesYet")}
           </Text>
         </View>
       }

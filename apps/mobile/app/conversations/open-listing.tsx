@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { useOpenConversation } from "../../src/api/conversations/useOpenConversation";
 
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 
 export default function OpenListingConversationScreen() {
+  const { t } = useTranslation();
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const router = useRouter();
   const {
@@ -55,13 +57,13 @@ export default function OpenListingConversationScreen() {
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center px-6 gap-4">
           <Text className="text-lg font-semibold text-foreground">
-            Could not open conversation
+            {t("couldNotOpenConversation")}
           </Text>
           <Text className="text-center text-sm text-muted-foreground">
-            Listing information is missing.
+            {t("listingInformationMissing")}
           </Text>
           <Button variant="ghost" onPress={() => router.back()}>
-            <Text>Go back</Text>
+            <Text>{t("goBack")}</Text>
           </Button>
         </View>
       </SafeAreaView>
@@ -73,12 +75,12 @@ export default function OpenListingConversationScreen() {
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center px-6 gap-4">
           <Text className="text-lg font-semibold text-foreground">
-            Could not open conversation
+            {t("couldNotOpenConversation")}
           </Text>
           <Text className="text-center text-sm text-muted-foreground">
             {error instanceof Error
               ? error.message
-              : "Something went wrong. Please try again."}
+              : t("somethingWentWrong")}
           </Text>
           <Button
             variant="brand"
@@ -87,10 +89,10 @@ export default function OpenListingConversationScreen() {
               mutate({ listingId });
             }}
           >
-            <Text>Retry</Text>
+            <Text>{t("retry")}</Text>
           </Button>
           <Button variant="ghost" onPress={() => router.back()}>
-            <Text>Go back</Text>
+            <Text>{t("goBack")}</Text>
           </Button>
         </View>
       </SafeAreaView>
@@ -101,7 +103,7 @@ export default function OpenListingConversationScreen() {
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 items-center justify-center gap-3">
         <ActivityIndicator />
-        <Text className="text-sm text-muted-foreground">Opening conversation…</Text>
+        <Text className="text-sm text-muted-foreground">{t("openingConversation")}</Text>
       </View>
     </SafeAreaView>
   );

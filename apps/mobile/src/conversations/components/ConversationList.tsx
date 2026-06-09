@@ -4,6 +4,7 @@ import {
   RefreshControl,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { useConversations } from "../../api/conversations/useConversations";
 
@@ -30,11 +31,12 @@ function LoadingSkeleton() {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <View className="flex-1 items-center justify-center px-6 gap-2">
-      <Text className="text-base text-foreground">No conversations yet</Text>
+      <Text className="text-base text-foreground">{t("noConversationsYet")}</Text>
       <Text className="text-sm text-muted-foreground text-center">
-        Start by messaging a seller from a listing
+        {t("startByMessaging")}
       </Text>
     </View>
   );
@@ -45,13 +47,14 @@ interface ErrorStateProps {
 }
 
 function ErrorState({ onRetry }: ErrorStateProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-1 items-center justify-center px-6 gap-3">
       <Text className="text-base text-foreground">
-        Could not load conversations
+        {t("couldNotLoadConversations")}
       </Text>
       <Button variant="outline" size="pill" onPress={onRetry}>
-        <Text>Retry</Text>
+        <Text>{t("retry")}</Text>
       </Button>
     </View>
   );

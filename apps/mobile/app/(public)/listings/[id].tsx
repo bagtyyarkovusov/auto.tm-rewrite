@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
 import { useCatalogMaps } from "../../../src/listings/detail/useCatalogMaps";
@@ -62,22 +63,23 @@ function DetailSkeleton() {
 
 function UnavailableState({ onRetry }: { onRetry?: () => void }) {
   const router = useRouter();
+  const { t } = useTranslation();
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 items-center justify-center px-6 gap-4">
         <Text className="text-lg font-semibold text-foreground">
-          This listing is no longer available
+          {t("notAvailable")}
         </Text>
         <Text className="text-center text-sm text-muted-foreground">
-          It may have been removed, sold, or archived.
+          {t("removedSoldOrArchived")}
         </Text>
         <View className="flex-row gap-3">
           <Button variant="outline" size="pill" onPress={() => router.back()}>
-            <Text>Go back</Text>
+            <Text>{t("goBack")}</Text>
           </Button>
           {onRetry && (
             <Button variant="default" size="pill" onPress={onRetry}>
-              <Text className="text-primary-foreground">Retry</Text>
+              <Text className="text-primary-foreground">{t("retry")}</Text>
             </Button>
           )}
         </View>

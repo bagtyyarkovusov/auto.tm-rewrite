@@ -18,15 +18,15 @@ describe("FilteredEmpty", () => {
   });
 
   it("renders 'No listings match' heading", () => {
-    expect(source).toContain("No listings match");
+    expect(source).toContain('t("noListingsMatch")');
   });
 
   it("renders 'Try adjusting filters' subtext", () => {
-    expect(source).toContain("Try adjusting filters");
+    expect(source).toContain('t("tryAdjustingFilters")');
   });
 
   it("has a Reset filters button", () => {
-    expect(source).toContain("Reset filters");
+    expect(source).toContain('t("resetFilters")');
   });
 
   it("calls onReset when the button is pressed", () => {

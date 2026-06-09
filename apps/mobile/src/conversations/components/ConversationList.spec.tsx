@@ -27,14 +27,14 @@ describe("ConversationList", () => {
   it("shows empty state when no conversations", () => {
     expect(source).toContain("conversations.length === 0");
     expect(source).toContain("EmptyState");
-    expect(source).toContain("No conversations yet");
+    expect(source).toContain('t("noConversationsYet")');
   });
 
   it("shows error state with retry", () => {
     expect(source).toContain("isError");
     expect(source).toContain("ErrorState");
-    expect(source).toContain("Could not load conversations");
-    expect(source).toContain("Retry");
+    expect(source).toContain('t("couldNotLoadConversations")');
+    expect(source).toContain('t("retry")');
   });
 
   it("uses FlatList for conversation items", () => {

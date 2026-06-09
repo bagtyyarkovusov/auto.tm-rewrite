@@ -11,6 +11,7 @@ import { Image } from "expo-image";
 import { X } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import type { ComponentProps } from "react";
+import { useTranslation } from "react-i18next";
 
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
@@ -58,6 +59,7 @@ function GalleryImage({
 }
 
 export function PhotoGallery({ media }: PhotoGalleryProps) {
+  const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
@@ -86,7 +88,7 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
   if (media.length === 0) {
     return (
       <View className="h-[240px] w-full items-center justify-center bg-muted">
-        <Text className="text-sm text-muted-foreground">No photos</Text>
+        <Text className="text-sm text-muted-foreground">{t("noPhotos")}</Text>
       </View>
     );
   }

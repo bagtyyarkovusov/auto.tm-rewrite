@@ -9,25 +9,28 @@ import {
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
-const serviceItems = [
-  { icon: User, label: "Profile" },
-  { icon: Wrench, label: "Garage" },
-  { icon: Settings, label: "Settings" },
-  { icon: FileText, label: "Blog" },
-  { icon: Info, label: "About" },
-] as const;
-
 export default function ServicesScreen() {
+  const { t } = useTranslation();
+
+  const serviceItems = [
+    { icon: User, label: t("account:profile") },
+    { icon: Wrench, label: t("garage") },
+    { icon: Settings, label: t("account:settings") },
+    { icon: FileText, label: t("blog") },
+    { icon: Info, label: t("about") },
+  ] as const;
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="px-4 pt-6 pb-3">
         <Text className="text-2xl font-semibold text-foreground">
-          Services
+          {t("services")}
         </Text>
       </View>
       <ScrollView className="px-4">
@@ -35,17 +38,17 @@ export default function ServicesScreen() {
           onPress={() => router.push("/listings/manage")}
           className="mb-3 active:opacity-90"
           accessibilityRole="button"
-          accessibilityLabel="My listings and drafts"
+          accessibilityLabel={t("myListingsAndDrafts")}
         >
           <Card className="w-full">
             <CardContent className="flex-row items-center gap-3 py-4">
               <Icon as={List} className="size-6 text-foreground" />
               <View className="flex-1">
                 <Text className="font-semibold text-foreground">
-                  My listings & drafts
+                  {t("myListingsAndDrafts")}
                 </Text>
                 <Text className="text-sm text-muted-foreground">
-                  Manage your active, sold, archived, and draft listings
+                  {t("manageYourListings")}
                 </Text>
               </View>
             </CardContent>

@@ -11,26 +11,26 @@ const source = readFileSync(
 describe("OwnerActions status-aware rendering", () => {
   it("shows Mark sold only for active listings", () => {
     expect(source).toContain('isActive = status === Enums.ListingStatus.Active');
-    expect(source).toContain("Mark sold");
+    expect(source).toContain('t("markAsSold")');
   });
 
   it("shows Archive for active or sold listings", () => {
     expect(source).toContain('{(isActive || isSold) && (');
-    expect(source).toContain("Archive");
+    expect(source).toContain('t("archiveListing")');
   });
 
   it("shows Republish only for archived listings", () => {
     expect(source).toContain('isArchived = status === Enums.ListingStatus.Archived');
-    expect(source).toContain("Republish");
+    expect(source).toContain('t("republishListing")');
   });
 
   it("shows Edit for all actionable statuses", () => {
-    expect(source).toContain("Edit");
+    expect(source).toContain('t("edit")');
     expect(source).toContain('router.push(`/listings/${listingId}/edit`)');
   });
 
   it("shows Delete for all statuses", () => {
-    expect(source).toContain("Delete");
+    expect(source).toContain('t("delete")');
     expect(source).toContain('variant="destructive"');
   });
 });
@@ -46,10 +46,10 @@ describe("OwnerActions confirmation flow", () => {
   });
 
   it("has distinct confirmation copy for each action", () => {
-    expect(source).toContain("Mark as sold");
-    expect(source).toContain("Archive listing");
-    expect(source).toContain("Republish listing");
-    expect(source).toContain("Delete listing");
+    expect(source).toContain('t("markAsSold")');
+    expect(source).toContain('t("archiveListing")');
+    expect(source).toContain('t("republishListing")');
+    expect(source).toContain('t("delete")');
   });
 
   it("delete confirmation is visually destructive", () => {
@@ -89,7 +89,7 @@ describe("OwnerActions mutation integration", () => {
     expect(source).toContain("archive.isError");
     expect(source).toContain("republish.isError");
     expect(source).toContain("deleteListing.isError");
-    expect(source).toContain("Action failed");
+    expect(source).toContain('t("actionFailed")');
   });
 
   it("navigates back on successful delete", () => {

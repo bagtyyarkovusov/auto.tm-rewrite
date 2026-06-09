@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { Pencil } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,14 +39,14 @@ function formatPrice(amount: number): string {
   return `${amount.toLocaleString("en-US")} TMT`;
 }
 
-function statusLabel(status: ListingStatus): string {
+function statusLabel(status: ListingStatus, t: (key: string) => string): string {
   switch (status) {
     case Enums.ListingStatus.Active:
-      return "Active";
+      return t("active");
     case Enums.ListingStatus.Sold:
-      return "Sold";
+      return t("sold");
     case Enums.ListingStatus.Archived:
-      return "Archived";
+      return t("archived");
     default:
       return status;
   }
@@ -71,6 +72,7 @@ export function OwnerListingCard({
   onOpen,
   onEdit,
 }: OwnerListingCardProps) {
+  const { t } = useTranslation();
   const imageUrl = listing.coverMediaKey
     ? buildVariantUrl(listing.coverMediaKey, "list")
     : null;
@@ -81,12 +83,14 @@ export function OwnerListingCard({
     listing.modelId,
   ].filter(Boolean);
 
+  const label = statusLabel(listing.status, t);
+
   return (
     <Pressable
       className="active:opacity-90"
       onPress={() => onOpen(listing.id)}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${statusLabel(listing.status).toLowerCase()} listing`}
+      accessibilityLabel={`${t("open")} ${label.toLowerCase()}`}
     >
       <View className="flex-row gap-3 px-4 py-3">
         {/* Cover image */}
@@ -100,7 +104,7 @@ export function OwnerListingCard({
             />
           ) : (
             <View className="h-full w-full items-center justify-center">
-              <Text className="text-xs text-muted-foreground">No photo</Text>
+              <Text className="text-xs text-muted-foreground">{t("noPhoto")}</Text>
             </View>
           )}
         </View>
@@ -121,7 +125,7 @@ export function OwnerListingCard({
 
           <View className="flex-row flex-wrap items-center gap-2">
             <Badge variant={statusBadgeVariant(listing.status)} className="px-2 py-0.5">
-              <Text className="text-xs">{statusLabel(listing.status)}</Text>
+              <Text className="text-xs">{label}</Text>
             </Badge>
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
               {listing.cityId}
@@ -135,7 +139,7 @@ export function OwnerListingCard({
               className="flex-1"
               onPress={() => onOpen(listing.id)}
             >
-              <Text>Open</Text>
+              <Text>{t("open")}</Text>
             </Button>
             <Button
               variant="outline"
@@ -144,7 +148,7 @@ export function OwnerListingCard({
               onPress={() => onEdit(listing.id)}
             >
               <Icon as={Pencil} className="size-4 text-foreground" />
-              <Text>Edit</Text>
+              <Text>{t("edit")}</Text>
             </Button>
           </View>
         </View>

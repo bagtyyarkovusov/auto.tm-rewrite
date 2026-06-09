@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { MapPin } from "lucide-react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
@@ -88,6 +89,7 @@ function LocationSheets({
   picker: ReturnType<typeof useLocationPicker>;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
 }) {
+  const { t } = useTranslation();
   function handleSelectRegion(regionId: string) {
     onChange({ regionId, cityId: undefined });
     picker.setRegionOpen(false);
@@ -108,16 +110,16 @@ function LocationSheets({
           picker.setRegionOpen(open);
           if (!open) picker.setRegionSearch("");
         }}
-        title="Select region"
-        searchPlaceholder="Search regions..."
+        title={t("selectRegion")}
+        searchPlaceholder={t("searchPlaceholder")}
         search={picker.regionSearch}
         onSearchChange={picker.setRegionSearch}
         items={picker.filteredRegions}
         selectedId={payload.regionId}
         emptyMessage={
           picker.regionSearch
-            ? "No regions match your search"
-            : "No regions available"
+            ? t("noRegionsMatch")
+            : t("noRegionsAvailable")
         }
         isLoading={picker.regionsLoading}
         isError={picker.regionsError}
@@ -130,16 +132,16 @@ function LocationSheets({
           picker.setCityOpen(open);
           if (!open) picker.setCitySearch("");
         }}
-        title="Select city"
-        searchPlaceholder="Search cities..."
+        title={t("selectCity")}
+        searchPlaceholder={t("searchPlaceholder")}
         search={picker.citySearch}
         onSearchChange={picker.setCitySearch}
         items={picker.filteredCities}
         selectedId={payload.cityId}
         emptyMessage={
           picker.citySearch
-            ? "No cities match your search"
-            : "No cities available"
+            ? t("noCitiesMatch")
+            : t("noCitiesAvailable")
         }
         isLoading={picker.citiesLoading}
         isError={picker.citiesError}
@@ -155,15 +157,16 @@ export default function Step6Location({
   fieldErrors,
   disabled = false,
 }: Step6LocationProps) {
+  const { t } = useTranslation();
   const picker = useLocationPicker(payload);
 
   return (
     <View className="gap-5 py-5">
       <PickerRow
-        label="Region"
+        label={t("region")}
         required
         value={picker.selectedRegion?.name}
-        placeholder="Select region"
+        placeholder={t("selectRegion")}
         disabled={disabled}
         locked={disabled}
         error={fieldErrors?.regionId}
@@ -171,10 +174,10 @@ export default function Step6Location({
       />
 
       <PickerRow
-        label="City"
+        label={t("city")}
         required
         value={picker.selectedCity?.name}
-        placeholder="Select city"
+        placeholder={t("selectCity")}
         disabled={disabled || !payload.regionId}
         locked={disabled}
         error={fieldErrors?.cityId}
@@ -183,7 +186,7 @@ export default function Step6Location({
 
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
-          Area / landmark
+          {t("area")}
         </Text>
         {wrapDisabled(
           <View className="relative">
@@ -195,7 +198,7 @@ export default function Step6Location({
               onChangeText={(text) =>
                 onChange({ locationText: text || undefined })
               }
-              placeholder="e.g. near Ashgabat Bazaar"
+              placeholder={t("areaPlaceholder")}
               editable={!disabled}
               className="pl-10"
             />
@@ -210,7 +213,7 @@ export default function Step6Location({
       </View>
 
       <Text className="text-sm text-muted-foreground leading-relaxed">
-        Choose where the car can be inspected. Do not enter your home address.
+        {t("thisIsHowBuyersSee")}
       </Text>
 
       <LocationSheets payload={payload} picker={picker} onChange={onChange} />

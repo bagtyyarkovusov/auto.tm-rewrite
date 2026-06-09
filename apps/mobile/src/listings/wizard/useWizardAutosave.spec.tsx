@@ -26,6 +26,19 @@ vi.mock("@react-native-community/netinfo", () => ({
   },
 }));
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string, options?: Record<string, unknown>) => {
+    if (options && typeof options === "object") {
+      let result = key;
+      for (const [k, v] of Object.entries(options)) {
+        result = result.replace(new RegExp(`{{${k}}}`, "g"), String(v));
+      }
+      return result;
+    }
+    return key;
+  } }),
+}));
+
 import { useWizardAutosave } from "./useWizardAutosave";
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -137,7 +150,7 @@ describe("useWizardAutosave", () => {
 
     // First failure triggers retry, so status is saving with retry message
     expect(result.current.saveStatus).toBe("saving");
-    expect(result.current.saveError).toContain("Retrying");
+    expect(result.current.saveError).toContain("retryingCount");
   });
 
   it("retrySave() attempts save with pending payload", async () => {
@@ -178,9 +191,7 @@ describe("useWizardAutosave", () => {
     // NETWORK_ERROR is treated as a connectivity issue: immediate error state
     // with "Will retry when online" instead of entering the retry loop
     expect(result.current.saveStatus).toBe("error");
-    expect(result.current.saveError).toBe(
-      "No internet connection. Will retry when online.",
-    );
+    expect(result.current.saveError).toBe("noInternetWillRetry");
   });
 
   it("does not call mutateAsync when draftId is empty", async () => {
@@ -249,6 +260,6 @@ describe("useWizardAutosave", () => {
     });
 
     expect(result.current.saveStatus).toBe("error");
-    expect(result.current.saveError).toBe("Save timed out. Please retry.");
+    expect(result.current.saveError).toBe("saveTimedOut");
   });
 });
