@@ -58,7 +58,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   favorites           Favorites + saved searches          — stub
   sell                Sell tab + inline 8-step create-listing wizard (S4) — WizardLayout overlays this route; tab bar hidden while wizard is open; now links to My listings & drafts management and supports `?resumeDraftId=<id>` to resume any draft (not just latest)
   chat                Conversation list                   — authenticated conversation list with loading, empty, error, retry, and pull-to-refresh; anonymous users see auth-on-action entry (#173)
-  services            Profile, garage, settings, blog     — now includes entry to My listings & drafts
+  services            Services screen with Profile, Garage, Settings, Blog, About tiles — Profile navigates to `/profile`; Garage/Settings/Blog/About are disabled stubs; includes entry to My listings & drafts
 
 /(auth)/
   phone               Phone entry                         — wired (S2), design-refactored (#124)
@@ -72,6 +72,9 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   open-listing        Auth-resume redirector               — #172; reads `listingId` from query params, calls `useOpenConversation`, then redirects to `/conversations/[id]` with listing card params
   [id]                Conversation detail (text thread)    — #172/#173; compact listing card at top (tap to open listing detail), message list with optimistic pending/confirmed/failed states and retry, composer with 1000-char limit; shared path for buyer send and seller reply; uses `useConversationMessages` (infinite query) and `useSendTextMessage`
 
+/profile
+  profile             Profile screen showing signed-in identity — phone, displayName, role, avatar, memberSince; uses `useMe`; auth-on-action for anonymous users via Services tile intercept
+
 /listings/
   manage              My Listings & Drafts management      — wired (S4 #147); segmented tabs for Active/Sold/Archived/Drafts; auth-on-action prompt for anonymous users; reuses feed ListingCard visual language via `OwnerListingCard`; `DraftCard` with Resume/Discard and destructive `AlertDialog` confirmation; pull-to-refresh + infinite scroll for both listings and drafts; resume any draft by navigating to `/(tabs)/sell?resumeDraftId=<id>`; links to detail (`/(public)/listings/[id]`) and edit (`/listings/[id]/edit`)
   [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes orchestrated via `useSaveListingEdit` (fields → attach → remove → reorder, fail-fast, retry-from-failure per ADR-0025); no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
@@ -82,7 +85,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
 
 There is **no** dedicated **`/sell/wizard`** Expo route — the create flow runs **inline** under `/(tabs)/sell`.
 
-No `/chat/[conversationId]`, no `/me/*` routes today — they ship with their owning sprints.
+No `/chat/[conversationId]` route today — ships with its owning sprint.
 
 ### Listing wizard — known implementation gaps
 
@@ -121,7 +124,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
 - Wizard design system applied in #124 + #135: **`WizardHeader`** shows muted position-marker (`text-xs text-muted-foreground`) + **`text-2xl font-heading`** step title + progress bar. Step bodies open directly with form rows or brief `text-sm text-muted-foreground` orientation copy — no duplicate title. Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.
 
-Identity hooks live at `src/api/identity/*`. Viewer hook lives at `src/auth/useViewer.ts`.
+Identity hooks live at `src/api/identity/*` (`useRequestOtp`, `useVerifyOtp`, `useRefreshSession`, `useMe`). Viewer hook lives at `src/auth/useViewer.ts`. `useMe` fetches `GET /api/v1/me` via TanStack Query and parses through `AuthSchemas.MeResponseSchema`.
 Catalog hooks live at `src/api/catalog/*` (`useBrands`, `useModels`, `useGenerations`, `useColors`, `useBodyTypes`, `useEngineTypes`, `useTransmissions`, `useDriveTypes`, `useRegions`, `useCities`). Catalog hooks no longer send `?locale=` query params; locale is transmitted via `Accept-Language` header from `localeStore`. Query keys still segment by locale so caches invalidate on locale change.
 Listings hooks live at `src/api/listings/*` (`useListings`, `useCreateDraft`, `useUpdateDraft`, `useDiscardDraft`, `usePublishDraft`, `useMyDrafts`, `useMyListings`, `useInfiniteMyListings`, `useInfiniteMyDrafts`, `useListingDetail`, `useEditListing`, `useAttachMedia`, `useRemoveMedia`, `useReorderMedia`, `useArchiveListing`, `useDeleteListing`, `useMarkSold`, `useRepublishListing`). Owner mutations invalidate `detail`, `myListings`, `myListingsInfinite`, `myDrafts`, `myDraftsInfinite`, and `all` query keys on success.
 Uploads hook lives at `src/api/uploads/usePresignUpload`.
