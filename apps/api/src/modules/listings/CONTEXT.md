@@ -24,6 +24,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 - `Price` — value object `{ amount: number; currency: Currency }`. Validates `amount > 0`.
 - `ListingFilter` — value object. `static create(criteria)` validates price range (`priceMin ≤ priceMax`), year range (`yearMin ≤ yearMax`), and condition (`new` | `used`). Immutable; `toCriteria()` returns a copy; `isEmpty()` when no field is set.
 - `ExchangeRate` — entity `{ fromCurrency, toCurrency, rate, updatedAt }`. Validates `rate > 0`.
+- `Favorite` — entity `{ id, userId, listingId, createdAt }`. Immutable. Created via `Favorite.create()`.
 - `ListingStatus` — `type ListingStatus = 'active' | 'sold' | 'archived' | 'banned'` + `canTransition(from, to)` helper. `banned` has no owner transitions; admin ban/unban bypasses `canTransition` via `ListingsAdminPort`.
 
 ## Invariants (enforced today)
@@ -44,19 +45,20 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 - **Locked fields post-publish**: `brandId`, `modelId`, `generationId`, `year`, `vin` cannot be edited after publish. Enforced via `Listing.canEditField()`; application layer rejects patches in `EditListing`.
 - **State machine transitions** (Phase 1): `active → sold`, `active → archived`, `sold → archived`, `archived → active` (republish). Enforced via `canTransition()` helper. `banned` has no owner transitions; admin ban/unban bypasses `canTransition` via `ListingsAdminPort`.
 - **Banned listing enforcement** (S7): `banned` listings are omitted from public feed/search/favorites (`ChronologicalRankingAdapter` and `PrismaListingsReadRepository` exclude `banned`). Non-owner public detail reads return `NOT_FOUND`. Owner-scoped surfaces (`/me/listings`, owner detail) show the listing with `status: "banned"` (frontend renders generic banned notice). Owner mutations (`EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`) are blocked with `FORBIDDEN` while banned. New contact/messages for banned listings are blocked via `conversations/` synchronous state checks (`getListingSummary` excludes `banned`).
-- **Suspended-user enforcement** (S7): authenticated marketplace mutations in `listings/` are blocked for suspended users (`CreateDraft`, `UpdateDraft`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`) via `IdentityCheckPort.isSuspended` checks in controllers. Returns HTTP 403 `FORBIDDEN` with `details.reason = "USER_SUSPENDED"`. Reads (`ListFeed`, `GetListingDetail`, `ListMyListings`, `ListMyDrafts`) remain available.
+- **Suspended-user enforcement** (S7): authenticated marketplace mutations in `listings/` are blocked for suspended users (`CreateDraft`, `UpdateDraft`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `EditListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `AddFavorite`, `RemoveFavorite`) via `IdentityCheckPort.isSuspended` checks in controllers. Returns HTTP 403 `FORBIDDEN` with `details.reason = "USER_SUSPENDED"`. Reads (`ListFeed`, `GetListingDetail`, `ListMyListings`, `ListMyDrafts`, `ListMyFavorites`) remain available.
 
 ## Module shape (today)
 
 - `apps/api/src/modules/listings/`:
-  - `domain/` — **6 entity/value-object classes + `ListingStatus` helper + types + 11 ports** (S4 #86, S5 #154)
-  - `application/` — 19 use-cases (S4 #88-#92): `CreateDraft`, `UpdateDraft`, `ValidateDraftStep`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`
-  - `infrastructure/` — 12 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (full implementation per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md); applies `ListingFilterCriteria` including FX-aware price filtering via injected `ExchangeRatePort`), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `PrismaListingsReadRepository` (cross-context read surface), `PrismaListingsAdminRepository` (S7 — transaction-scoped `ListingsAdminPort` adapter for admin ban/unban), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
+  - `domain/` — **7 entity/value-object classes + `ListingStatus` helper + types + 12 ports** (S4 #86, S5 #154, S8 #188)
+  - `application/` — 22 use-cases (S4 #88-#92, S8 #188): `CreateDraft`, `UpdateDraft`, `ValidateDraftStep`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`, `AddFavorite`, `RemoveFavorite`, `ListMyFavorites`
+  - `infrastructure/` — 13 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (full implementation per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md); applies `ListingFilterCriteria` including FX-aware price filtering via injected `ExchangeRatePort`), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `PrismaListingsReadRepository` (cross-context read surface), `PrismaListingsAdminRepository` (S7 — transaction-scoped `ListingsAdminPort` adapter for admin ban/unban), `PrismaFavoriteRepository` (S8 #188), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
   - `presentation/listings.controller.ts` — listings health check, public feed + detail, owner publish/state/edit/delete endpoints, and media attach/remove/reorder endpoints
   - `presentation/DraftsController.ts` — draft CRUD + validate-step + list my drafts
   - `presentation/UploadsController.ts` — presign upload endpoint
   - `presentation/MyListingsController.ts` — `/me/listings` (owner-scoped)
   - `presentation/ExchangeRatesController.ts` — `/exchange-rates` (public)
+  - `presentation/FavoritesController.ts` — `POST/DELETE /api/v1/listings/:id/favorite`, `GET /api/v1/favorites`
   - `listings.module.ts` — registers null/sync adapters, repositories, and use-cases with DI tokens; imports `IdentityModule` for `IdentityCheckPort.isSuspended` enforcement in controllers
 
 ## Ports exposed
@@ -80,6 +82,7 @@ Repository ports (consumed only within `listings/`):
 | `ListingRepository` | `LISTING_REPOSITORY` | `domain/ports/ListingRepository.ts` |
 | `ListingDraftRepository` | `LISTING_DRAFT_REPOSITORY` | `domain/ports/ListingDraftRepository.ts` |
 | `ListingMediaRepository` | `LISTING_MEDIA_REPOSITORY` | `domain/ports/ListingMediaRepository.ts` |
+| `FavoriteRepository` | `FAVORITE_REPOSITORY` | `domain/ports/FavoriteRepository.ts` |
 
 ## Ports consumed
 
@@ -102,6 +105,10 @@ Repository ports (consumed only within `listings/`):
 - `RemoveMedia` — hard-deletes `ListingMedia` row + all variant MinIO objects (best-effort)
 - `ReorderMedia` — bulk-updates `sortOrder` for owner-selected ordering in one Prisma transaction
 - `ValidateDraftStep` — validates a single wizard step payload against the shared step schema without persisting it; used for step-level guard logic before autosave or publish
+- `GetExchangeRates` — returns all stored exchange rates
+- `AddFavorite` — favorites an active listing; idempotent; returns 404 for non-existent, deleted, or non-active listings; increments `listing.favoriteCount`
+- `RemoveFavorite` — removes a favorite; idempotent; decrements `listing.favoriteCount`
+- `ListMyFavorites` — paginated list of the caller's favorited listings via `GET /api/v1/favorites`; excludes banned/deleted listings (filtered by `ListingsReadPort.getListingSummaries`)
 
 ## HTTP routes
 
@@ -127,6 +134,9 @@ Repository ports (consumed only within `listings/`):
 | POST | `/api/v1/listings/:id/media/attach` | Required (owner) | `AttachMedia` |
 | DELETE | `/api/v1/listings/:id/media/:mediaId` | Required (owner) | `RemoveMedia` |
 | PUT | `/api/v1/listings/:id/media/order` | Required (owner) | `ReorderMedia` |
+| POST | `/api/v1/listings/:id/favorite` | Required | `AddFavorite` | Active listings only; idempotent; 404 for missing/deleted/banned/non-active |
+| DELETE | `/api/v1/listings/:id/favorite` | Required | `RemoveFavorite` | Idempotent |
+| GET | `/api/v1/favorites` | Required | `ListMyFavorites` | Cursor pagination; excludes banned/deleted listings |
 
 ## Events emitted
 
