@@ -12,6 +12,7 @@ import { Logout } from "./application/Logout";
 import { LogoutAll } from "./application/LogoutAll";
 import { GetMe } from "./application/GetMe";
 import { DeleteMe } from "./application/DeleteMe";
+import { RecoverAccount } from "./application/RecoverAccount";
 import { GetAdminTotpStatus } from "./application/GetAdminTotpStatus";
 import { EnrollAdminTotp } from "./application/EnrollAdminTotp";
 import { VerifyAdminTotp } from "./application/VerifyAdminTotp";
@@ -29,9 +30,11 @@ import { AesGcmTotpSecretCipher } from "./infrastructure/AesGcmTotpSecretCipher"
 import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
+import { PrismaAccountDeletionListingsAdapter } from "./infrastructure/PrismaAccountDeletionListingsAdapter";
 import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
+import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
 
 @Module({
   imports: [
@@ -53,6 +56,11 @@ import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
     OtplibTotpVerifier,
     InMemoryTotpThrottleAdapter,
     PinoSecurityLoggerAdapter,
+    PrismaAccountDeletionListingsAdapter,
+    {
+      provide: ACCOUNT_DELETION_LISTINGS_PORT,
+      useClass: PrismaAccountDeletionListingsAdapter,
+    },
     {
       provide: IDENTITY_TOKENS.OtpTestMode,
       useFactory: () => process.env["OTP_TEST_MODE"] === "true",
@@ -120,6 +128,7 @@ import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
     LogoutAll,
     GetMe,
     DeleteMe,
+    RecoverAccount,
     GetAdminTotpStatus,
     EnrollAdminTotp,
     VerifyAdminTotp,

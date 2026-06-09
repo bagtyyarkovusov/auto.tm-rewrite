@@ -5,6 +5,7 @@ import {
   Post,
   BadRequestException,
   UnauthorizedException,
+  ForbiddenException,
   Req,
   Inject,
 } from "@nestjs/common";
@@ -131,6 +132,13 @@ export class AuthController {
         throw new BadRequestException({
           code: "OTP_NOT_FOUND",
           message: "No OTP request found. Please request a code first.",
+        });
+      }
+      if (err instanceof Error && err.message === "Signups are currently disabled") {
+        throw new ForbiddenException({
+          code: "FORBIDDEN",
+          message: "Signups are currently disabled. Please try again later.",
+          details: { reason: "FEATURE_DISABLED" },
         });
       }
       throw err;

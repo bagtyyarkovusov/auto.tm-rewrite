@@ -24,6 +24,7 @@ NestJS standalone worker. Consumes BullMQ queues from Redis and runs CPU-bound o
 - `src/queues/video-transcode.processor.ts` — stub processor (no ffmpeg integration yet)
 - `src/queues/notification-fanout.processor.ts` — stub processor (no saved-search match algorithm yet)
 - `src/queues/orphan-cleanup.processor.ts` — stub processor (no MinIO listing / DB scan yet)
+- `src/queues/account-purge.processor.ts` — daily repeatable job at 03:00 UTC. Finds users with `deletionScheduledAt <= now`, tombstones PII (`phone → deleted:<id>`, nulls `displayName`/`avatarUrl`), clears `deletionScheduledAt`, and prunes private rows: sessions, TOTP, FCM devices, notification history/preferences, saved searches, favorites, garage, blocked users, dealership memberships, listing drafts. Marketplace content (listings, conversations, messages, reports, audit logs) is retained.
 
 ### Other
 
@@ -46,6 +47,7 @@ None — worker is internal. Only Redis (queues) + Postgres + MinIO connections 
 
 Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
 
+- **S8 account-deletion purge** — shipped. Daily `account-purge` BullMQ repeatable job (`AccountPurgeProcessor` + `AccountPurgeScheduler`) runs `PurgeExpiredAccounts` use-case.
 - **MLP image reliability** — queued image variant generation may be shaped in S8 only if API-request lifecycle Sharp generation becomes a beta reliability problem:
   - New `src/queues/image-variants.processor.ts` processor
   - `sharp` dep for variant generation (thumbnail / list / detail / fullscreen × JPEG + WebP)

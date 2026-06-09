@@ -8,7 +8,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 
 ## Owns (entities + tables)
 
-- `User` — id, phone (unique), displayName?, avatarUrl?, locale (default "ru"), role (`UserRole` enum: buyer | seller | moderator | admin; default buyer), createdAt, updatedAt, suspendedAt?, suspendedById?, suspensionReason?
+- `User` — id, phone (unique), displayName?, avatarUrl?, locale (default "ru"), role (`UserRole` enum: buyer | seller | moderator | admin; default buyer), createdAt, updatedAt, suspendedAt?, suspendedById?, suspensionReason?, deletionScheduledAt?
 - `OtpRequest` — id, phone, codeHash, expiresAt, verifiedAt?, attempts, userId?, ip, createdAt, updatedAt
 - `Session` — id, userId, refreshTokenHash (unique, bcrypt), deviceLabel?, userAgent?, expiresAt, createdAt, lastSeenAt, adminTotpExpiresAt?. `onDelete: Cascade` on userId → User.id.
 - `TotpEnrollment` — id, userId (unique), encryptedSecret (AES-256-GCM), verifiedAt?, createdAt, updatedAt. `onDelete: Cascade` on userId → User.id.
@@ -74,26 +74,37 @@ SecurityLoggerPort         // structured security logging for TOTP failures
 ## Shipped use-cases
 
 - `RequestOtp` — validates TM phone, enforces rate limits, generates + sends OTP code, stores hashed record. Exposed as `POST /api/v1/auth/otp/request` (public).
-- `VerifyOtp` — validates OTP code against stored hash, creates or loads User, creates a multi-device Session with bcrypt-hashed refresh token, enforces 10-session cap with expired cleanup + FIFO eviction, issues JWT access token (15 min, includes `sid` = Session.id) and random refresh token (30-day sliding expiry). Emits `UserRegistered` on first login. Exposed as `POST /api/v1/auth/otp/verify` (public).
+- `VerifyOtp` — validates OTP code against stored hash, creates or loads User, creates a multi-device Session with bcrypt-hashed refresh token, enforces 10-session cap with expired cleanup + FIFO eviction, issues JWT access token (15 min, includes `sid` = Session.id) and random refresh token (30-day sliding expiry). Emits `UserRegistered` on first login. If the existing user is in a deletion grace period (`deletionScheduledAt` set), auto-recovers the account via `RecoverAccount` before continuing. Respects `SIGNUPS_ENABLED=false` by blocking new-user creation with `FEATURE_DISABLED` while preserving existing-user login and recovery. Exposed as `POST /api/v1/auth/otp/verify` (public).
 - `RefreshSession` — locates a session by bcrypt-scanning all session rows against the provided refresh token, validates expiry, rotates the refresh token hash in-place with optimistic locking (old-hash match via `updateMany`), bumps `lastSeenAt`, extends `expiresAt` to `now + 30 days`, preserves existing `adminTotpExpiresAt` without extending it, and issues a fresh JWT access token (includes `sid`). Rejects unknown, expired, and already-used tokens with 401. Exposed as `POST /api/v1/auth/refresh` (public).
 - `Logout` — locates the session matching the supplied refresh token via bcrypt comparison and deletes that single session row. Returns 204 on success; throws 401 when no match. Idempotent. Exposed as `POST /api/v1/auth/logout` (public).
 - `LogoutAll` — deletes every session for the authenticated user (identified by bearer JWT). Returns 204. Exposed as `POST /api/v1/auth/logout-all` (requires bearer auth).
-- `GetMe` — returns the contract user shape (id, phone, displayName, role, avatarUrl, locale, createdAt) for the authenticated user. Throws 404 if the user row was deleted after JWT issuance. Exposed as `GET /api/v1/me` (requires bearer auth).
-- `DeleteMe` — deletes the authenticated user's account and all per-user data via DB cascades. Returns 204. Cascading delete removes: sessions, owned vehicles, blocked-user relationships, dealership memberships, favorites, saved searches, FCM devices, notification history, notification preferences, conversation participants, buyer-side conversations, seller listings, and blog posts. `audit_log` records are preserved via `onDelete: SetNull` (actorId nullified). Exposed as `DELETE /api/v1/me` (requires bearer auth).
+- `GetMe` — returns the contract user shape (id, phone, displayName, role, avatarUrl, locale, createdAt, deletionScheduledAt) for the authenticated user. Throws 404 if the user row was deleted after JWT issuance. Exposed as `GET /api/v1/me` (requires bearer auth).
+- `DeleteMe` — starts a 30-day deletion grace period: sets `User.deletionScheduledAt = now + 30d`, revokes all sessions, and archives active listings tagged `archivedByDeletion`. Returns 204. Does NOT delete the User row. Exposed as `DELETE /api/v1/me` (requires bearer auth).
+- `RecoverAccount` — clears `User.deletionScheduledAt` and republishes `archivedByDeletion` listings to active status. Invoked automatically by `VerifyOtp` when an existing user in grace period logs in. Survives `SIGNUPS_ENABLED=false`.
 - `IsAdmin` (query) — thin wrapper over `IdentityCheckPort.isAdmin`. Used by `AdminGuard`.
 - `GetAdminTotpStatus` — returns `enrolled`, `elevated`, and optional `adminTotpExpiresAt` for the current admin session. No secret/backup material. Exposed as `GET /api/v1/auth/admin/totp/status` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 - `EnrollAdminTotp` — generates a new TOTP secret, encrypts it, creates a pending `TotpEnrollment`, and returns QR URI + plaintext secret. Verified re-enroll returns HTTP 409 `TOTP_ALREADY_ENROLLED`; pending unverified enrollment may be replaced. Exposed as `POST /api/v1/auth/admin/totp/enroll` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 - `VerifyAdminTotp` — verifies a TOTP code (first enrollment) or TOTP code/backup code (post-enrollment). On first success, marks enrollment verified, generates 10 backup codes (SHA-256 hashed, stored), sets `Session.adminTotpExpiresAt = now + 12h`, and returns `adminTotpExpiresAt` + plaintext backup codes exactly once. Post-enrollment returns `adminTotpExpiresAt` only. Implements 5-failure/10-min throttle, adjacent-step skew, atomic backup-code consumption, and structured security logging on failure. Exposed as `POST /api/v1/auth/admin/totp/verify` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 
-### Account deletion scope
+### Account deletion scope (S8 — 30-day grace + tombstone purge)
 
-Deleting a user via `DELETE /api/v1/me` cascades to:
-- `Session`, `OwnedVehicle`, `BlockedUser` (both directions), `DealershipMember`, `Favorite`, `SavedSearch`, `FcmDevice`, `NotificationHistory`, `NotificationPreference`, `ConversationParticipant`, `Conversation` (buyer-side), `Listing` (where user is seller), `BlogPost` (authored by user) — all `onDelete: Cascade`.
+`DELETE /api/v1/me` starts a **30-day grace period** rather than hard-deleting:
+1. Sets `User.deletionScheduledAt = now + 30d`.
+2. Revokes all sessions (`sessionRepo.deleteAllByUserId`).
+3. Archives active listings tagged `archivedByDeletion = true` via `AccountDeletionListingsPort`.
 
-Preserved (not deleted):
-- `AuditLog` — actorId set to NULL via `onDelete: SetNull`. Survives for legal/audit compliance.
-- `Message.senderId` — no FK constraint; messages survive with a dangling senderId.
-- `OtpRequest` — userId is nullable; records survive for rate-limit audit purposes.
+**Recovery during grace** — OTP login while `deletionScheduledAt` is set auto-invokes `RecoverAccount`, which:
+- Clears `deletionScheduledAt`.
+- Republishes `archivedByDeletion` listings to `active`.
+- Proceeds with normal session creation.
+- Unaffected by `SIGNUPS_ENABLED=false`.
+
+**Day-30 purge** (`apps/worker` BullMQ repeatable job) — finds `deletionScheduledAt <= now` and:
+- **Tombstones PII**: `phone → deleted:<id>`, `displayName → null`, `avatarUrl → null`, clears `deletionScheduledAt`.
+- **Prunes private rows**: `Session`, `TotpEnrollment` (+ backup codes), `FcmDevice`, `NotificationHistory`, `NotificationPreference`, `SavedSearch`, `Favorite`, `OwnedVehicle`, `BlockedUser` (both directions), `DealershipMember`, `ListingDraft`.
+- **Retains content**: `Listing` (left archived), `Conversation` + `Message`, `ContentReport` actor references (`reporterUserId` / `reviewedById` nullable via `SetNull`), `AuditLog` (`actorId` nullable via `SetNull`).
+
+The existing `onDelete: Cascade` relations remain as a safety net for a future admin true-erasure path; they do not fire during normal user-initiated deletion because the User row is never deleted.
 
 ### Session lookup detail
 
@@ -106,8 +117,8 @@ Refresh-token lookup scans all `Session` rows and bcrypt-compares the plaintext 
 ## Test layering
 
 - **Domain** (no Prisma, pure TS): `OtpCode.spec.ts`, `Phone.spec.ts`, `OtpAttemptLedger.spec.ts`.
-- **Application** (no HTTP, fakes for repos / clock / hasher): `RequestOtp.spec.ts`, `VerifyOtp.spec.ts`, `RefreshSession.spec.ts`, `Logout.spec.ts`, `LogoutAll.spec.ts`, `GetMe.spec.ts`, `DeleteMe.spec.ts`, `GetAdminTotpStatus.spec.ts`, `EnrollAdminTotp.spec.ts`, `VerifyAdminTotp.spec.ts`. All chaos scenarios live here.
-- **Presentation** (e2e Supertest against running compose Postgres): `AuthController.e2e.spec.ts` covers happy-path OTP request + verify, phone rate-limit response shape, logout / logout-all / GET me / DELETE me.
+- **Application** (no HTTP, fakes for repos / clock / hasher): `RequestOtp.spec.ts`, `VerifyOtp.spec.ts`, `RefreshSession.spec.ts`, `Logout.spec.ts`, `LogoutAll.spec.ts`, `GetMe.spec.ts`, `DeleteMe.spec.ts`, `RecoverAccount.spec.ts`, `GetAdminTotpStatus.spec.ts`, `EnrollAdminTotp.spec.ts`, `VerifyAdminTotp.spec.ts`. All chaos scenarios live here.
+- **Presentation** (e2e Supertest against running compose Postgres): `AuthController.e2e.spec.ts` covers happy-path OTP request + verify, phone rate-limit response shape, logout / logout-all / GET me / DELETE me (grace period), signup kill switch, and account recovery during grace.
 - **Infrastructure layer** — `AesGcmTotpSecretCipher.spec.ts`, `OtplibTotpVerifier.spec.ts`, `InMemoryTotpThrottleAdapter.spec.ts`. Testcontainers tests for `PrismaOtpRequestRepository` and `PrismaSessionRepository` were planned for S2 but deferred. Rationale: thin pass-throughs over `prisma.<model>.{create, findUnique, update, deleteMany}` indirectly exercised by `AuthController.e2e.spec.ts`. Add if a future bug surfaces inside an adapter.
 
 ## Events emitted
@@ -123,8 +134,7 @@ Refresh-token lookup scans all `Session` rows and bcrypt-compares the plaintext 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in this CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file.
 
 - **Post-MLP Garage** — `OwnedVehicle` gets `vin`, `mileage`, `nickname`, `status`, `photoUrl`, `isPublic`, `linkedListingId` columns (currently a thin schema with just brand/model/year strings). See `docs/prd/features/37-garage.md` and [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md).
-- **S8 account-deletion legal alignment** — Current S2 `DeleteMe` hard-deletes the user through cascades. Before private beta, S8 must align implementation with Feature 30 / Legal: start a 30-day deletion grace period, revoke refresh sessions, archive user listings, allow recovery by login during the grace period, and define the day-30 PII purge path. S8 deletion must preserve moderation/audit history: `AuditLog.actorId` and S7 `ContentReport.reporterUserId` / `reviewedById` use nullable-after-delete semantics, with no denormalized reporter/reviewer PII snapshots in reports. Reporter deletion or suspension does not invalidate existing S7 reports.
-- **S8/private-beta signup kill switch** — `SIGNUPS_ENABLED=false` blocks OTP verification from creating a new `User` while preserving OTP login, refresh, logout, and admin login for existing users. Because S2 uses phone OTP rather than a separate signup endpoint, the check belongs at the "create user from verified OTP" branch inside `VerifyOtp`; existing users with a matching phone continue through the normal session path. Disabled signup attempts return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and generic client copy; the API does not expose internal flag names.
+- **S8/private-beta signup kill switch** — Shipped. `SIGNUPS_ENABLED=false` blocks OTP verification from creating a new `User` while preserving OTP login, refresh, logout, and admin login for existing users. Recovery of grace-period accounts is also unaffected. Disabled signup attempts return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and generic client copy; the API does not expose internal flag names.
 - **Post-MLP admin/dealership hardening** —
   - `Dealership.verifiedAt` column for the dealership-verification flow used by listings + admin UI is post-MLP with showroom/dealer work.
   - `IdentityReadPort` interface (`getUserSummary`, `getDealershipSummary`, `isUserBlockedBy`) for other contexts (admin app, listings, conversations) to fetch user/dealership summaries without owning the data.

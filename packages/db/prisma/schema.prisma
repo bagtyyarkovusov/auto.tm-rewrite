@@ -33,6 +33,7 @@ model User {
   suspendedById    String?
   suspendedBy      User?    @relation("UserSuspensions", fields: [suspendedById], references: [id], onDelete: SetNull)
   suspensionReason String?
+  deletionScheduledAt DateTime?
 
   otpRequests                OtpRequest[]
   sessions                   Session[]
@@ -396,6 +397,7 @@ model Listing {
   allowChat            Boolean           @default(true)
   acceptsExchange      Boolean           @default(false)
   installmentAvailable Boolean           @default(false)
+  archivedByDeletion   Boolean           @default(false)
 
   media         ListingMedia[]
   favorites     Favorite[]

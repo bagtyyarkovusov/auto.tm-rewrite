@@ -14,6 +14,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     role: "buyer",
     createdAt: new Date("2026-05-14T12:00:00Z"),
     updatedAt: new Date("2026-05-14T12:00:00Z"),
+    deletionScheduledAt: null,
     ...overrides,
   };
 }
@@ -31,6 +32,10 @@ class FakeUserRepository implements UserRepository {
   }
 
   async delete(_id: string): Promise<void> {}
+  async scheduleDeletion(_userId: string, _deletionScheduledAt: Date): Promise<void> {}
+  async clearDeletionSchedule(_userId: string): Promise<void> {}
+  async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
+  async tombstoneUser(_userId: string): Promise<void> {}
 }
 
 function makeUseCase(userRepo?: FakeUserRepository) {

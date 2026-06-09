@@ -12,6 +12,7 @@ import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "../infrastructure/PrismaSessionRepository";
 import { BcryptHasherAdapter } from "../infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
+import { RecoverAccount } from "./RecoverAccount";
 
 const MAX_ATTEMPTS = 6;
 const MAX_SESSIONS = 10;
@@ -56,6 +57,8 @@ export class VerifyOtp {
     private readonly jwtService: JwtService,
     @Inject("EventBus")
     private readonly eventBus: { emit: (event: string, payload: unknown) => void },
+    @Inject(RecoverAccount)
+    private readonly recoverAccount: RecoverAccount,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
@@ -93,7 +96,19 @@ export class VerifyOtp {
     // Find or create user
     const existingUser = await this.userRepo.findByPhone(phone.value);
     const isNewUser = !existingUser;
+
+    if (isNewUser && process.env["SIGNUPS_ENABLED"] === "false") {
+      const err = new Error("Signups are currently disabled");
+      (err as Error & { code: string }).code = "FEATURE_DISABLED";
+      throw err;
+    }
+
     const user = existingUser ?? (await this.userRepo.create({ phone: phone.value }));
+
+    // Auto-recover account if in deletion grace period
+    if (user.deletionScheduledAt !== null) {
+      await this.recoverAccount.execute({ userId: user.id });
+    }
 
     // Mark OTP as verified
     await this.otpRequestRepo.markVerified(otpRequest.id, user.id);

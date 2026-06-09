@@ -9,7 +9,9 @@ import type { UserRepository } from "../domain/ports/UserRepository";
 import type { SessionRepository } from "../domain/ports/SessionRepository";
 import type { PasswordHasherPort } from "../domain/ports/PasswordHasherPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
+import type { AccountDeletionListingsPort } from "../domain/ports/AccountDeletionListingsPort";
 import { VerifyOtp } from "./VerifyOtp";
+import { RecoverAccount } from "./RecoverAccount";
 
 const NOW = new Date("2026-05-14T12:00:00Z");
 
@@ -42,6 +44,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     role: "buyer",
     createdAt: NOW,
     updatedAt: NOW,
+    deletionScheduledAt: null,
     ...overrides,
   };
 }
@@ -143,12 +146,17 @@ class FakeUserRepository implements UserRepository {
       role: "buyer",
       createdAt: NOW,
       updatedAt: NOW,
+      deletionScheduledAt: null,
     };
     this.users.push(user);
     return user;
   }
 
   async delete(_id: string): Promise<void> {}
+  async scheduleDeletion(_userId: string, _deletionScheduledAt: Date): Promise<void> {}
+  async clearDeletionSchedule(_userId: string): Promise<void> {}
+  async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
+  async tombstoneUser(_userId: string): Promise<void> {}
 }
 
 class FakeSessionRepository implements SessionRepository {
@@ -251,6 +259,15 @@ class FakeClock implements ClockPort {
   }
 }
 
+class FakeListingsPort implements AccountDeletionListingsPort {
+  republishedSellerId: string | null = null;
+
+  async archiveActiveListingsBySeller(_sellerId: string): Promise<void> {}
+  async republishArchivedByDeletionListingsBySeller(sellerId: string): Promise<void> {
+    this.republishedSellerId = sellerId;
+  }
+}
+
 const jwtService = new JwtService({
   secret: "test-secret",
   signOptions: { expiresIn: 15 * 60 },
@@ -263,9 +280,15 @@ interface MakeUseCaseOpts {
   hasher?: PasswordHasherPort;
   clock?: ClockPort;
   eventBus?: { emit: ReturnType<typeof vi.fn> };
+  listingsPort?: AccountDeletionListingsPort;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
+  const listingsPort = opts.listingsPort ?? new FakeListingsPort();
+  const recoverAccount = new RecoverAccount(
+    opts.userRepo ?? new FakeUserRepository(),
+    listingsPort,
+  );
   return new VerifyOtp(
     opts.otpRepo ?? new FakeOtpRequestRepository(),
     opts.userRepo ?? new FakeUserRepository(),
@@ -274,6 +297,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     opts.clock ?? new FakeClock(),
     jwtService,
     opts.eventBus ?? { emit: vi.fn() },
+    recoverAccount,
   );
 }
 
@@ -284,6 +308,7 @@ describe("VerifyOtp", () => {
   let hasher: FakePasswordHasher;
   let clock: FakeClock;
   let eventBus: { emit: ReturnType<typeof vi.fn> };
+  let listingsPort: FakeListingsPort;
 
   beforeEach(() => {
     otpRepo = new FakeOtpRequestRepository();
@@ -292,6 +317,8 @@ describe("VerifyOtp", () => {
     hasher = new FakePasswordHasher();
     clock = new FakeClock();
     eventBus = { emit: vi.fn() };
+    listingsPort = new FakeListingsPort();
+    delete process.env["SIGNUPS_ENABLED"];
   });
 
   // --- Happy path ---
@@ -300,7 +327,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     const result = await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -337,7 +364,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -355,7 +382,7 @@ describe("VerifyOtp", () => {
     });
     otpRepo.addRecord(expiredOtp);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await expect(
       uc.execute({ phone: "+99361234567", code: "123456" }),
     ).rejects.toThrow("OTP code has expired");
@@ -370,7 +397,7 @@ describe("VerifyOtp", () => {
     });
     otpRepo.addRecord(consumedOtp);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await expect(
       uc.execute({ phone: "+99361234567", code: "123456" }),
     ).rejects.toThrow("OTP code has already been used");
@@ -382,7 +409,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await expect(
       uc.execute({ phone: "+99361234567", code: "000000" }),
     ).rejects.toThrow("Invalid OTP code");
@@ -394,7 +421,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest({ attempts: 5 });
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await expect(
       uc.execute({ phone: "+99361234567", code: "000000" }),
     ).rejects.toThrow("Too many attempts");
@@ -409,7 +436,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     const result = await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -425,7 +452,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     const result = await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -459,7 +486,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -484,7 +511,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -516,7 +543,7 @@ describe("VerifyOtp", () => {
   // --- No OTP request for this phone ---
 
   it("fails when no OTP request exists for this phone", async () => {
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await expect(
       uc.execute({ phone: "+99361234567", code: "123456" }),
     ).rejects.toThrow("No OTP request found for this phone");
@@ -528,7 +555,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     const result = await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -543,7 +570,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     const result = await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -561,7 +588,7 @@ describe("VerifyOtp", () => {
     const otpRequest = makeOtpRequest();
     otpRepo.addRecord(otpRequest);
 
-    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await uc.execute({
       phone: "+99361234567",
       code: "123456",
@@ -572,5 +599,81 @@ describe("VerifyOtp", () => {
     const session = sessionRepo.sessions[0]!;
     expect(session.deviceLabel).toBe("iPhone 15 Pro");
     expect(session.userAgent).toBe("Mozilla/5.0 ...");
+  });
+
+  // --- Account recovery during grace ---
+
+  it("recovers an existing user in deletion grace period and republishes listings", async () => {
+    const existingUser = makeUser({
+      phone: "+99361234567",
+      deletionScheduledAt: new Date(NOW.getTime() + 15 * 24 * 60 * 60 * 1000),
+    });
+    userRepo.users.push(existingUser);
+
+    const otpRequest = makeOtpRequest();
+    otpRepo.addRecord(otpRequest);
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
+    const result = await uc.execute({
+      phone: "+99361234567",
+      code: "123456",
+    });
+
+    expect(result.user.id).toBe(existingUser.id);
+    expect(listingsPort.republishedSellerId).toBe(existingUser.id);
+  });
+
+  // --- Signup kill switch ---
+
+  it("blocks new user creation when SIGNUPS_ENABLED=false", async () => {
+    process.env["SIGNUPS_ENABLED"] = "false";
+
+    const otpRequest = makeOtpRequest();
+    otpRepo.addRecord(otpRequest);
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
+    await expect(
+      uc.execute({ phone: "+99361234567", code: "123456" }),
+    ).rejects.toThrow("Signups are currently disabled");
+  });
+
+  it("allows existing user login when SIGNUPS_ENABLED=false", async () => {
+    process.env["SIGNUPS_ENABLED"] = "false";
+
+    const existingUser = makeUser({ phone: "+99361234567" });
+    userRepo.users.push(existingUser);
+
+    const otpRequest = makeOtpRequest();
+    otpRepo.addRecord(otpRequest);
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
+    const result = await uc.execute({
+      phone: "+99361234567",
+      code: "123456",
+    });
+
+    expect(result.user.id).toBe(existingUser.id);
+  });
+
+  it("allows recovery of grace-period user when SIGNUPS_ENABLED=false", async () => {
+    process.env["SIGNUPS_ENABLED"] = "false";
+
+    const existingUser = makeUser({
+      phone: "+99361234567",
+      deletionScheduledAt: new Date(NOW.getTime() + 15 * 24 * 60 * 60 * 1000),
+    });
+    userRepo.users.push(existingUser);
+
+    const otpRequest = makeOtpRequest();
+    otpRepo.addRecord(otpRequest);
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
+    const result = await uc.execute({
+      phone: "+99361234567",
+      code: "123456",
+    });
+
+    expect(result.user.id).toBe(existingUser.id);
+    expect(listingsPort.republishedSellerId).toBe(existingUser.id);
   });
 });

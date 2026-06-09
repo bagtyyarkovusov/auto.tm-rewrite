@@ -7,6 +7,7 @@ export interface User {
   readonly role: UserRole;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly deletionScheduledAt: Date | null;
 }
 
 export type UserRole = "buyer" | "seller" | "moderator" | "admin";

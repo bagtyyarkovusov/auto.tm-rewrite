@@ -603,7 +603,7 @@ describe("MeController e2e — DELETE /api/v1/me", () => {
       .expect(401);
   });
 
-  it("returns 204 and deletes the authenticated user", async () => {
+  it("returns 204 and starts a 30-day deletion grace period", async () => {
     const { accessToken, userId } = await login("+99361234567");
 
     await request
@@ -611,12 +611,13 @@ describe("MeController e2e — DELETE /api/v1/me", () => {
       .set("Authorization", `Bearer ${accessToken}`)
       .expect(204);
 
-    // Verify user is gone
+    // Verify user row is retained with deletionScheduledAt set
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    expect(user).toBeNull();
+    expect(user).not.toBeNull();
+    expect(user!.deletionScheduledAt).not.toBeNull();
   });
 
-  it("returns 204 and deletes user sessions via cascade", async () => {
+  it("returns 204 and revokes all sessions", async () => {
     const { accessToken, userId } = await login("+99361234567");
 
     // Verify session exists before deletion
@@ -628,7 +629,7 @@ describe("MeController e2e — DELETE /api/v1/me", () => {
       .set("Authorization", `Bearer ${accessToken}`)
       .expect(204);
 
-    // Sessions are cascade-deleted with the user
+    // Sessions are explicitly deleted by DeleteMe, not cascaded
     const sessionsAfter = await prisma.session.count({ where: { userId } });
     expect(sessionsAfter).toBe(0);
   });

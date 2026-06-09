@@ -28,6 +28,38 @@ export class PrismaUserRepository implements UserRepository {
     await this.prisma.user.delete({ where: { id } });
   }
 
+  async scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { deletionScheduledAt },
+    });
+  }
+
+  async clearDeletionSchedule(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { deletionScheduledAt: null },
+    });
+  }
+
+  async findUsersWithExpiredDeletionGrace(now: Date): Promise<User[]> {
+    const rows = await this.prisma.user.findMany({
+      where: { deletionScheduledAt: { lte: now } },
+    });
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  async tombstoneUser(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        phone: `deleted:${userId}`,
+        displayName: null,
+        avatarUrl: null,
+      },
+    });
+  }
+
   private toDomain(
     row: Awaited<ReturnType<PrismaService["user"]["create"]>>,
   ): User {
@@ -40,6 +72,7 @@ export class PrismaUserRepository implements UserRepository {
       role: row.role as User["role"],
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      deletionScheduledAt: row.deletionScheduledAt ?? null,
     };
   }
 }

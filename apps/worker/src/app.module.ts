@@ -8,6 +8,9 @@ import { EnvSchema } from "./env.schema";
 import { VideoTranscodeProcessor } from "./queues/video-transcode.processor";
 import { NotificationFanoutProcessor } from "./queues/notification-fanout.processor";
 import { OrphanCleanupProcessor } from "./queues/orphan-cleanup.processor";
+import { AccountPurgeProcessor } from "./queues/account-purge.processor";
+import { AccountPurgeScheduler } from "./queues/account-purge.scheduler";
+import { PurgeExpiredAccounts } from "./jobs/PurgeExpiredAccounts";
 
 @Module({
   imports: [
@@ -30,12 +33,16 @@ import { OrphanCleanupProcessor } from "./queues/orphan-cleanup.processor";
       { name: "video-transcode" },
       { name: "notification-fanout" },
       { name: "orphan-cleanup" },
+      { name: "account-purge" },
     ),
   ],
   providers: [
     VideoTranscodeProcessor,
     NotificationFanoutProcessor,
     OrphanCleanupProcessor,
+    AccountPurgeProcessor,
+    AccountPurgeScheduler,
+    PurgeExpiredAccounts,
   ],
 })
 export class AppModule {}

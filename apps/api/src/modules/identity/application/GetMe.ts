@@ -14,6 +14,7 @@ export interface GetMeResult {
   avatarUrl: string | null;
   locale: string | null;
   createdAt: string;
+  deletionScheduledAt: string | null;
 }
 
 @Injectable()
@@ -37,6 +38,7 @@ export class GetMe {
       avatarUrl: user.avatarUrl,
       locale: user.locale,
       createdAt: user.createdAt.toISOString(),
+      deletionScheduledAt: user.deletionScheduledAt?.toISOString() ?? null,
     };
   }
 }
