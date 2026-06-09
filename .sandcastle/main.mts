@@ -290,8 +290,13 @@ const kimiClaudeAgent = (effort: "low" | "medium" = "low") =>
 // package contents stay in /home/agent/.pnpm-store.
 const SANDCASTLE_ENV = "CI=1 COREPACK_ENABLE_PROJECT_SPEC=0";
 const SANDCASTLE_PNPM = `${SANDCASTLE_ENV} pnpm`;
+// --prefer-offline (not --offline): serve everything cached from the warm store,
+// but fetch only NEW packages over the sandbox's default bridge network — so an
+// issue that adds a dependency, and its downstream issues, run AFK without an
+// image rebuild. --frozen-lockfile still pins exact versions. Rebuilds are now a
+// perf re-warm, not a correctness requirement. See docs/agents/sandcastle.md.
 const SANDCASTLE_INSTALL =
-  `${SANDCASTLE_PNPM} install --offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`;
+  `${SANDCASTLE_PNPM} install --prefer-offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`;
 const SANDCASTLE_INSTALL_TIMEOUT_MS = 600_000;
 const SANDCASTLE_GIT_AUTH = "gh auth setup-git";
 const IMPLEMENTER_IDLE_TIMEOUT_SECONDS = Number(

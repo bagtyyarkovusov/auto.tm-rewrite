@@ -51,8 +51,10 @@ macOS):
 docker image inspect "$(docker images --format '{{.Repository}}:{{.Tag}}' | grep sandcastle | head -1)" --format '{{.Config.User}}'
 ```
 
-**Rebuild the image whenever `pnpm-lock.yaml` changes** — the warm store goes
-stale otherwise, and per-worktree `pnpm install --offline` would miss new packages.
+**Rebuilding the image after `pnpm-lock.yaml` changes** re-warms the store so new
+packages install from disk instead of the network — a perf optimization. The hook
+uses `pnpm install --prefer-offline` (not `--offline`), so a stale store is no
+longer a correctness failure: missing packages are fetched over the bridge network.
 
 ## Trigger a run
 
@@ -144,7 +146,7 @@ back into the current host branch and the host orchestrator pushes that branch t
 - The image bakes a warm pnpm content-addressable store and global virtual store
   link graph (`pnpm fetch --config.enableGlobalVirtualStore=true`).
 - Each worktree runs
-  `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm install --offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`
+  `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm install --prefer-offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`
   (a `hooks.sandbox.onSandboxReady` command). `COREPACK_ENABLE_PROJECT_SPEC=0`
   is required because the root `packageManager` still points Corepack at pnpm 9.
   The Claude Code agent process also receives `CI=1` and
@@ -158,9 +160,11 @@ back into the current host branch and the host orchestrator pushes that branch t
   when the gate runs (per [ADR-0016](../adr/0016-typescript-runtime-boundaries.md));
   the hook also runs
   `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm --filter @auto-tm/db generate`.
-- If an issue **adds** a dependency, `--offline` will miss it. Rebuild the image
-  (re-warms the store) or, as a stop-gap, the sandbox's default bridge network
-  allows a non-offline install.
+- If an issue **adds** a dependency, `--prefer-offline` fetches just the new
+  packages over the sandbox's default bridge network (everything else still comes
+  from the warm store); **no image rebuild is required**. Rebuilding the image
+  re-warms the store so there is less to fetch — a perf optimization, not a
+  correctness gate.
 
 The implementer/reviewer/merger phases have explicit idle budgets so a stuck Kimi
 or Claude Code stream does not look like an infinite package-manager hang:
