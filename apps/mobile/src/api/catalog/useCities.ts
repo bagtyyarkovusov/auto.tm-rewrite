@@ -13,10 +13,10 @@ const CitiesListResponseSchema = z.object({
 
 export function useCities(regionId: string, locale: "tk" | "ru" | "en" = "ru") {
   return useQuery({
-    queryKey: queryKeys.catalog.cities(regionId),
+    queryKey: queryKeys.catalog.cities(regionId, locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/regions/${regionId}/cities?locale=${locale}`,
+        `/catalog/regions/${regionId}/cities`,
         CitiesListResponseSchema,
         { auth: false },
       ),

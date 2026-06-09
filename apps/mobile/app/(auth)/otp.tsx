@@ -9,12 +9,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
+import { useTranslation } from "react-i18next";
 
 import { OtpCells, type OtpCellsRef } from "../../components/auth/OtpCells";
 import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
 import { useVerifyOtp } from "../../src/api/identity/useVerifyOtp";
 import { ApiError } from "../../src/api/client";
-import { authCopy, type Locale, resolveLocale } from "../../src/auth/copy";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
@@ -46,16 +46,13 @@ export default function OtpScreen() {
     phone?: string;
     resendInSeconds?: string;
     testCode?: string;
-    locale?: Locale;
   }>();
   const otpRef = useRef<OtpCellsRef>(null);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation("auth");
 
   const phone = firstParam(params.phone);
-  const [locale, setLocale] = useState<Locale>(
-    resolveLocale(firstParam(params.locale)),
-  );
   const [code, setCode] = useState("");
   const [testCode, setTestCode] = useState(firstParam(params.testCode));
   const [secondsRemaining, setSecondsRemaining] = useState(
@@ -63,7 +60,6 @@ export default function OtpScreen() {
   );
   const [otpError, setOtpError] = useState<string | null>(null);
   const lastSubmittedCode = useRef<string | null>(null);
-  const copy = authCopy[locale];
 
   const { mutateAsync: verifyOtpMutate, isPending: isVerifying } =
     useVerifyOtp();
@@ -119,7 +115,6 @@ export default function OtpScreen() {
       pathname: "/(auth)/phone",
       params: {
         ...(canonicalPhone ? { phone: canonicalPhone } : {}),
-        locale,
       },
     });
   }
@@ -151,20 +146,20 @@ export default function OtpScreen() {
 
       if (error instanceof ApiError) {
         if (error.code === "INVALID_OTP") {
-          setOtpError(copy.wrongCode);
+          setOtpError(t("wrongCode"));
         } else if (error.code === "OTP_ALREADY_USED") {
-          setOtpError(copy.usedCode);
+          setOtpError(t("usedCode"));
         } else if (error.code === "OTP_EXPIRED" || error.code === "OTP_NOT_FOUND") {
-          setOtpError(copy.expiredCode);
+          setOtpError(t("expiredCode"));
         } else if (error.code === "OTP_LOCKED") {
-          setOtpError(copy.lockedCode);
+          setOtpError(t("lockedCode"));
         } else if (error.code === "RATE_LIMITED" || error.status === 429) {
-          setOtpError(copy.rateLimitedCode);
+          setOtpError(t("rateLimitedCode"));
         } else {
-          setOtpError(error.message || copy.verifyFailed);
+          setOtpError(error.message || t("verifyFailed"));
         }
       } else {
-        setOtpError(copy.offline);
+        setOtpError(t("offline"));
       }
     }
   }
@@ -185,9 +180,9 @@ export default function OtpScreen() {
       requestAnimationFrame(() => otpRef.current?.focus());
     } catch (error) {
       if (error instanceof ApiError) {
-        setOtpError(error.message || copy.verifyFailed);
+        setOtpError(error.message || t("verifyFailed"));
       } else {
-        setOtpError(copy.offline);
+        setOtpError(t("offline"));
       }
     }
   }
@@ -200,14 +195,14 @@ export default function OtpScreen() {
       <SafeAreaView className="flex-1 px-4">
         <View className="flex-row items-center justify-between py-4">
           <Button
-            accessibilityLabel={copy.back}
+            accessibilityLabel={t("back")}
             size="icon"
             variant="ghost"
             onPress={backToPhone}
           >
             <Icon as={ChevronLeft} className="size-5 text-foreground" />
           </Button>
-          <LocaleSwitcher onChange={setLocale} value={locale} />
+          <LocaleSwitcher />
         </View>
 
         <View className="mt-6 gap-6">
@@ -215,17 +210,17 @@ export default function OtpScreen() {
 
           <View className="gap-2">
             <Text className="text-2xl font-semibold leading-snug text-foreground">
-              {copy.otpTitle}
+              {t("otpTitle")}
             </Text>
             <Text className="text-base leading-normal text-muted-foreground">
-              {copy.otpSent(maskedPhone)}
+              {t("otpSent", { phone: maskedPhone })}
             </Text>
             <Button
               variant="link"
               className="self-start px-0"
               onPress={backToPhone}
             >
-              <Text>{copy.changeNumber}</Text>
+              <Text>{t("changeNumber")}</Text>
             </Button>
           </View>
 
@@ -255,10 +250,10 @@ export default function OtpScreen() {
           >
             <Text className={secondsRemaining > 0 || isResending ? "text-muted-foreground" : "text-foreground underline"}>
               {secondsRemaining > 0
-                ? copy.resendIn(secondsRemaining)
+                ? t("resendIn", { seconds: secondsRemaining })
                 : isResending
-                  ? copy.loading
-                  : copy.resendCode}
+                  ? t("loading")
+                  : t("resendCode")}
             </Text>
           </Button>
 
@@ -268,7 +263,7 @@ export default function OtpScreen() {
                 color={`hsl(${THEME[isDark ? "dark" : "light"].primary})`}
               />
               <Text className="text-sm text-muted-foreground">
-                {copy.loading}
+                {t("loading")}
               </Text>
             </View>
           ) : null}
@@ -283,7 +278,7 @@ export default function OtpScreen() {
                 setOtpError(null);
               }}
             >
-              <Text>{copy.devCode(testCode)}</Text>
+              <Text>{t("devCode", { code: testCode })}</Text>
             </Button>
           ) : null}
         </View>

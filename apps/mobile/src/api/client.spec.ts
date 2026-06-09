@@ -15,6 +15,13 @@ vi.mock("../auth/session", () => ({
   clearAuthSession: vi.fn(),
 }));
 
+vi.mock("../locale/localeStore", () => ({
+  localeStore: {
+    getState: vi.fn(() => ({ locale: "ru" })),
+    subscribe: vi.fn(),
+  },
+}));
+
 const mockedLoadAuthSession = vi.mocked(loadAuthSession);
 const mockedStoreAuthSession = vi.mocked(storeAuthSession);
 const mockedClearAuthSession = vi.mocked(clearAuthSession);
@@ -63,6 +70,28 @@ describe("apiClient", () => {
       const reqInit = call?.[1] as RequestInit | undefined;
       const reqHeaders = reqInit?.headers as Record<string, string>;
       expect(reqHeaders?.Authorization).toBe("Bearer token-123");
+    });
+
+    it("attaches Accept-Language header from locale store", async () => {
+      mockedLoadAuthSession.mockResolvedValue(null);
+
+      const { localeStore } = await import("../locale/localeStore");
+      vi.mocked(localeStore.getState).mockReturnValue({
+        locale: "tk",
+        setLocale: vi.fn(),
+        hydrate: vi.fn(),
+      });
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(() => Promise.resolve(jsonResponse({ ok: true })));
+
+      await apiClient.get("/test");
+
+      const call = fetchSpy.mock.calls[0];
+      const reqInit = call?.[1] as RequestInit | undefined;
+      const reqHeaders = reqInit?.headers as Record<string, string>;
+      expect(reqHeaders?.["Accept-Language"]).toBe("tk");
     });
 
     it("skips Authorization header when auth: false", async () => {

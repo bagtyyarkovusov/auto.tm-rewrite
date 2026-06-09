@@ -20,7 +20,7 @@ export function useModels(brandId: string, locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.models(brandId, locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/brands/${brandId}/models?locale=${locale}&limit=${MODEL_PAGE_SIZE}`,
+        `/catalog/brands/${brandId}/models?limit=${MODEL_PAGE_SIZE}`,
         ModelsListResponseSchema,
         { auth: false },
       ),

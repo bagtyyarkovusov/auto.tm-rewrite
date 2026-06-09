@@ -14,7 +14,7 @@ export function useBodyTypes(locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.bodyTypes(locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/body-types?locale=${locale}`,
+        `/catalog/body-types`,
         BodyTypesListResponseSchema,
         { auth: false },
       ),

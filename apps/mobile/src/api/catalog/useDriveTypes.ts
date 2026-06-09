@@ -14,7 +14,7 @@ export function useDriveTypes(locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.driveTypes(locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/drive-types?locale=${locale}`,
+        `/catalog/drive-types`,
         DriveTypesListResponseSchema,
         { auth: false },
       ),

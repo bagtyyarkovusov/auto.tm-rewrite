@@ -12,7 +12,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
@@ -24,6 +24,8 @@ import { useAuth } from "../src/auth/useAuth";
 import { useMyDrafts } from "../src/api/listings/useMyDrafts";
 import { useMyListings } from "../src/api/listings/useMyListings";
 import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanCleanup";
+import { initI18n } from "../src/i18n";
+import { localeStore } from "../src/locale/localeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -124,8 +126,8 @@ function OrphanCleanupOnBoot() {
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme ?? "light";
+  const [i18nReady, setI18nReady] = useState(false);
 
-   
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     "UberMove-Bold": require("../assets/fonts/UberMoveBold.otf"),
@@ -148,6 +150,14 @@ export default function RootLayout() {
         }
       : {}),
   });
+
+  useEffect(() => {
+    void localeStore.getState().hydrate().then(() => {
+      void initI18n().then(() => {
+        setI18nReady(true);
+      });
+    });
+  }, []);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", onAppStateChange);
@@ -186,7 +196,7 @@ export default function RootLayout() {
     return () => unsubscribe();
   }, []);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !i18nReady) {
     return null;
   }
 

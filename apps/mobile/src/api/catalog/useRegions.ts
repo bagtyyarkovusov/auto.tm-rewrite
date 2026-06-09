@@ -14,7 +14,7 @@ export function useRegions(locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.regions(locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/regions?locale=${locale}`,
+        `/catalog/regions`,
         RegionsListResponseSchema,
         { auth: false },
       ),

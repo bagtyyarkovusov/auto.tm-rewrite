@@ -14,7 +14,7 @@ export function useColors(locale: "tk" | "ru" | "en" = "ru") {
     queryKey: queryKeys.catalog.colors(locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/colors?locale=${locale}`,
+        `/catalog/colors`,
         ColorsListResponseSchema,
         { auth: false },
       ),
