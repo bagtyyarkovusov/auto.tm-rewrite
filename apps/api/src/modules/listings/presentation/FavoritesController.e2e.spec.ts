@@ -213,7 +213,6 @@ describe("FavoritesController e2e", () => {
     });
 
     it("returns 404 for non-existent listing", async () => {
-      await createUser("buyer-1");
       const buyerToken = await createUser("buyer-1");
 
       await request

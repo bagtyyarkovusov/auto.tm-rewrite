@@ -7,9 +7,11 @@ import {
   Post,
   Query,
   Req,
+  BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
+import { ZodError } from "zod";
 import { ListingsSchemas, AdminSchemas } from "@auto-tm/contracts";
 
 import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
@@ -17,6 +19,8 @@ import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityChec
 import { AddFavorite } from "../application/AddFavorite";
 import { RemoveFavorite } from "../application/RemoveFavorite";
 import { ListMyFavorites } from "../application/ListMyFavorites";
+
+type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
 @Controller()
 export class FavoritesController {
@@ -39,12 +43,33 @@ export class FavoritesController {
     }
   }
 
+  private userId(req: FastifyRequest): string {
+    return (req as AuthenticatedRequest).user?.sub as string;
+  }
+
+  private parseOrThrow<T>(schema: { parse: (data: unknown) => T }, data: unknown): T {
+    try {
+      return schema.parse(data);
+    } catch (err) {
+      if (err instanceof ZodError) {
+        // eslint-disable-next-line no-console
+        console.error("[Zod validation failed]", err.flatten(), "data:", JSON.stringify(data));
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "Request validation failed",
+          details: err.flatten(),
+        });
+      }
+      throw err;
+    }
+  }
+
   @Post("api/v1/listings/:id/favorite")
   async addFavorite(
     @Param("id") listingId: string,
     @Req() req: FastifyRequest,
   ) {
-    const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    const userId = this.userId(req);
     await this.assertNotSuspended(userId);
 
     return this.addFavoriteUC.execute({ userId, listingId });
@@ -55,7 +80,7 @@ export class FavoritesController {
     @Param("id") listingId: string,
     @Req() req: FastifyRequest,
   ) {
-    const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    const userId = this.userId(req);
     await this.assertNotSuspended(userId);
 
     return this.removeFavoriteUC.execute({ userId, listingId });
@@ -66,8 +91,8 @@ export class FavoritesController {
     @Query() query: { cursor?: string; limit?: number },
     @Req() req: FastifyRequest,
   ) {
-    const userId = (req as { user?: { sub: string } }).user?.sub as string;
-    const pagination = ListingsSchemas.FeedQuerySchema.parse(query);
+    const userId = this.userId(req);
+    const pagination = this.parseOrThrow(ListingsSchemas.FeedQuerySchema, query);
     return this.listMyFavoritesUC.execute({
       userId,
       ...(pagination.cursor !== undefined ? { cursor: pagination.cursor } : {}),
