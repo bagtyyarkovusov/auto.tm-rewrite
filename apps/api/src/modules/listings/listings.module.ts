@@ -9,6 +9,7 @@ import { DraftsController } from "./presentation/DraftsController";
 import { UploadsController } from "./presentation/UploadsController";
 import { MyListingsController } from "./presentation/MyListingsController";
 import { ExchangeRatesController } from "./presentation/ExchangeRatesController";
+import { FavoritesController } from "./presentation/FavoritesController";
 import { NullVinDecoder } from "./infrastructure/NullVinDecoder";
 import { NullContentClassifier } from "./infrastructure/NullContentClassifier";
 import { ChronologicalRankingAdapter } from "./infrastructure/ChronologicalRankingAdapter";
@@ -19,6 +20,7 @@ import { PrismaListingMediaRepository } from "./infrastructure/PrismaListingMedi
 import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRateRepository";
 import { PrismaListingsReadRepository } from "./infrastructure/PrismaListingsReadRepository";
 import { PrismaListingsAdminRepository } from "./infrastructure/PrismaListingsAdminRepository";
+import { PrismaFavoriteRepository } from "./infrastructure/PrismaFavoriteRepository";
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
@@ -40,6 +42,9 @@ import { GetListingDetail } from "./application/GetListingDetail";
 import { ListFeed } from "./application/ListFeed";
 import { ListMyListings } from "./application/ListMyListings";
 import { GetExchangeRates } from "./application/GetExchangeRates";
+import { AddFavorite } from "./application/AddFavorite";
+import { RemoveFavorite } from "./application/RemoveFavorite";
+import { ListMyFavorites } from "./application/ListMyFavorites";
 import { VIN_DECODER_PORT } from "./domain/ports/VinDecoderPort";
 import { MEDIA_CONTENT_CLASSIFIER_PORT } from "./domain/ports/MediaContentClassifierPort";
 import { FEED_RANKING_PORT } from "./domain/ports/FeedRankingPort";
@@ -52,10 +57,11 @@ import { EXCHANGE_RATE_PORT } from "./domain/ports/ExchangeRatePort";
 import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
 import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
 import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
+import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
 
 @Module({
   imports: [PrismaModule, EventEmitterModule, IdentityModule],
-  controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController],
+  controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController, FavoritesController],
   providers: [
     // Infrastructure adapters
     NullVinDecoder,
@@ -68,6 +74,7 @@ import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
     PrismaExchangeRateRepository,
     PrismaListingsReadRepository,
     PrismaListingsAdminRepository,
+    PrismaFavoriteRepository,
     MinioMediaStorageAdapter,
     SharpImageVariantGenerator,
 
@@ -120,6 +127,10 @@ import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
       provide: LISTINGS_ADMIN_PORT,
       useClass: PrismaListingsAdminRepository,
     },
+    {
+      provide: FAVORITE_REPOSITORY,
+      useClass: PrismaFavoriteRepository,
+    },
 
     // Application use-cases
     CreateDraft,
@@ -141,6 +152,9 @@ import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
     ListFeed,
     ListMyListings,
     GetExchangeRates,
+    AddFavorite,
+    RemoveFavorite,
+    ListMyFavorites,
   ],
   exports: [
     VIN_DECODER_PORT,
@@ -155,6 +169,7 @@ import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
     MEDIA_STORAGE_PORT,
     LISTINGS_READ_PORT,
     LISTINGS_ADMIN_PORT,
+    FAVORITE_REPOSITORY,
   ],
 })
 export class ListingsModule {}

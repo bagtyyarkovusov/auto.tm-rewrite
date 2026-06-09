@@ -309,6 +309,27 @@ export const MyDraftsResponseSchema = z.object({
 });
 export type MyDraftsResponse = z.infer<typeof MyDraftsResponseSchema>;
 
+// ── Favorite request / response ──
+
+export const AddFavoriteResponseSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  listingId: z.string().uuid(),
+  createdAt: z.string().datetime(),
+});
+export type AddFavoriteResponse = z.infer<typeof AddFavoriteResponseSchema>;
+
+export const RemoveFavoriteResponseSchema = z.object({
+  success: z.boolean(),
+});
+export type RemoveFavoriteResponse = z.infer<typeof RemoveFavoriteResponseSchema>;
+
+export const MyFavoritesResponseSchema = z.object({
+  items: z.array(ListingSummarySchema),
+  nextCursor: z.string().nullable(),
+});
+export type MyFavoritesResponse = z.infer<typeof MyFavoritesResponseSchema>;
+
 // ── Error codes ──
 
 export const ListingsErrorCode = {
