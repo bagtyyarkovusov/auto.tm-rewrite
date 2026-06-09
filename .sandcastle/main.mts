@@ -297,9 +297,11 @@ const SANDCASTLE_PNPM = `${SANDCASTLE_ENV} pnpm`;
 // perf re-warm, not a correctness requirement. See docs/agents/sandcastle.md.
 const SANDCASTLE_INSTALL =
   `${SANDCASTLE_PNPM} install --prefer-offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`;
-// Bumped 10→20 min as headroom; the real fix for the parallel-install timeouts
-// is serializeInstall below (installs no longer contend for macOS bind-mount I/O).
-const SANDCASTLE_INSTALL_TIMEOUT_MS = 1_200_000;
+// Bumped 10→20→40 min: with agents running in parallel and writing to bind-mounted
+// worktrees, Docker-for-Mac file-sharing I/O can slow even a serialized install past
+// 20 min in later waves. serializeInstall prevents contention between installs;
+// this timeout just needs to be generous enough to survive background agent I/O.
+const SANDCASTLE_INSTALL_TIMEOUT_MS = 2_400_000;
 
 // Serialize the per-sandbox install (the onSandboxReady hook). pnpm materializes
 // ~1862 packages from the in-VM store into the bind-mounted worktree; on
