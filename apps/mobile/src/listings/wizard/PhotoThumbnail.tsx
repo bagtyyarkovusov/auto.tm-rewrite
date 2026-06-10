@@ -1,4 +1,5 @@
-import { View, Image } from "react-native";
+import { View } from "react-native";
+import { Image } from "expo-image";
 import { ImageIcon, MoreVertical } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
@@ -49,7 +50,7 @@ export function PhotoThumbnail({
         <Image
           source={{ uri: getPhotoUri(photo) }}
           className="h-full w-full"
-          resizeMode="cover"
+          contentFit="cover"
         />
       ) : (
         <View className="h-full w-full items-center justify-center">

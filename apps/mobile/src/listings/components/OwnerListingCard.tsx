@@ -6,26 +6,12 @@ import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
+import { buildVariantUrl } from "../detail/buildVariantUrl";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-
-const MEDIA_URL = (
-  process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""
-).replace(/\/$/, "");
-
-function buildVariantUrl(
-  key: string,
-  variant: "thumbnail" | "list" | "detail" | "fullscreen",
-): string {
-  if (!MEDIA_URL) return "";
-  if (key.endsWith(".mp4") || key.endsWith(".mov")) {
-    return `${MEDIA_URL}/${key}`;
-  }
-  const base = key.replace(/\/original\.(jpg|webp|jpeg)$/, "");
-  return `${MEDIA_URL}/${base}/${variant}.jpg`;
-}
 
 type ListingSummary = ListingsSchemas.ListingSummary;
 type ListingStatus = ListingsSchemas.ListingSummary["status"];
@@ -39,8 +25,8 @@ interface OwnerListingCardProps {
   onEdit: (id: string) => void;
 }
 
-function formatPrice(amount: number): string {
-  return `${amount.toLocaleString("en-US")} TMT`;
+function formatPrice(amount: number, locale: string): string {
+  return `${amount.toLocaleString(locale)} TMT`;
 }
 
 function statusLabel(status: ListingStatus, t: (key: string) => string): string {
@@ -79,7 +65,7 @@ export function OwnerListingCard({
   onOpen,
   onEdit,
 }: OwnerListingCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = listing.coverMediaKey
     ? buildVariantUrl(listing.coverMediaKey, "list")
@@ -128,7 +114,7 @@ export function OwnerListingCard({
               {titleParts.join(" ")}
             </Text>
             <Text className="text-lg font-heading text-primary">
-              {formatPrice(listing.displayPriceTmt)}
+              {formatPrice(listing.displayPriceTmt, i18n.language)}
             </Text>
           </View>
 

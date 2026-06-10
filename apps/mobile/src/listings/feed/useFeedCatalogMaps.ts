@@ -3,6 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 import { CatalogSchemas } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 
 import { apiClient } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
@@ -29,10 +30,9 @@ function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean))).sort();
 }
 
-export function useFeedCatalogMaps(
-  listings: ListingSummary[],
-  locale: "tk" | "ru" | "en" = "ru",
-) {
+export function useFeedCatalogMaps(listings: ListingSummary[]) {
+  const { i18n } = useTranslation();
+  const locale = (i18n.language as "tk" | "ru" | "en") || "ru";
   const brands = useBrands(locale);
   const regions = useRegions(locale);
 
@@ -46,7 +46,7 @@ export function useFeedCatalogMaps(
       queryKey: queryKeys.catalog.models(brandId, locale),
       queryFn: () =>
         apiClient.get(
-          `/catalog/brands/${brandId}/models?locale=${locale}&limit=${MODEL_PAGE_SIZE}`,
+          `/catalog/brands/${brandId}/models?limit=${MODEL_PAGE_SIZE}`,
           ModelsListResponseSchema,
           { auth: false },
         ),
@@ -64,7 +64,7 @@ export function useFeedCatalogMaps(
       queryKey: queryKeys.catalog.cities(regionId),
       queryFn: () =>
         apiClient.get(
-          `/catalog/regions/${regionId}/cities?locale=${locale}`,
+          `/catalog/regions/${regionId}/cities`,
           CitiesListResponseSchema,
           { auth: false },
         ),

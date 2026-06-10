@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Image, ScrollView, Pressable } from "react-native";
+import { View, ScrollView, Pressable } from "react-native";
+import { Image } from "expo-image";
 import { Check, AlertCircle, Eye, ListChecks } from "lucide-react-native";
 import type { WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
@@ -327,7 +328,7 @@ function PreviewView({
           <Image
             source={{ uri: getPhotoUri(uploadedPhotos[0], "detail") }}
             className="w-full aspect-[4/3]"
-            resizeMode="cover"
+            contentFit="cover"
           />
         ) : (
           <View className="w-full aspect-[4/3] items-center justify-center bg-muted">
@@ -345,7 +346,7 @@ function PreviewView({
                     key={photo.photoId}
                     source={{ uri }}
                     className="h-16 w-16 rounded-lg"
-                    resizeMode="cover"
+                    contentFit="cover"
                   />
                 ) : null;
               })}
