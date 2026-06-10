@@ -39,6 +39,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0031](0031-mobile-i18n.md) | Mobile i18n runtime — locale store + Accept-Language transport + query-key cache (implements ADR-0007; supersedes its §catalog client-side rendering) | Accepted | 2026-06-09 |
 | [0032](0032-account-deletion-grace-period.md) | Account deletion — 30-day grace, tombstone-retain content, recoverable by login | Accepted | 2026-06-09 |
 | [0033](0033-sandcastle-copy-to-worktree-dependencies.md) | Sandcastle dependencies via copy-to-worktree — prebuilt Linux node_modules cloned per worktree (supersedes ADR-0028 §D3) | Accepted | 2026-06-10 |
+| [0034](0034-kolesa-ux-findability-reference.md) | Kolesa.kz as the UX / information-architecture reference (revises charter §1 auto.ru, findability scope only) | Accepted | 2026-06-10 |
 
 ## Per-app ADRs
 

@@ -13,7 +13,7 @@
   - **Phase 1** (~8-10 weeks) — Marketplace MVP: identity, listings, chat, notifications, garage, blog, public web, admin
   - **Phase 2** (~6-8 weeks) — Inspection reports + 3-tier system + PDF export + AutoTM-staffed pro media
   - **Phase 3** (~4-6 weeks) — 360° orbit photos + comparisons + polish
-- Reference design: auto.ru, simplified for TM market
+- Reference design: **Kolesa.kz** for UX / information-architecture / findability — *revised 2026-06-10, see [ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md) and §21* (was: auto.ru, simplified for TM market). Visual design system stays AutoTM's own — see §12.
 - Brand identity: red `#E60000` carried from previous Flutter app; rest of design fresh
 
 ## 2. Stack
@@ -315,6 +315,20 @@ Commit 16  docs/prd — README + 00-vision + 01-glossary + 02-phases stubs
 ```
 
 After commit 16: `pnpm dev` runs the local dev stack; `pnpm test` runs the pyramid; `pnpm build && make bundle` produces the air-gapped release tarball.
+
+### 2026-06-10 — Reference design swap to Kolesa.kz (ADR-0034)
+
+§1 "Reference design: auto.ru" is revised: **Kolesa.kz** is now the reference for **UX / information architecture / findability only** — its category/taxonomy structure, search→filter funnel, content hierarchy, and section placement. Kolesa is the dominant car marketplace in Kazakhstan, a market structurally close to TM.
+
+Scope and bounds (full record in [ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md)):
+
+- **UX/IA only — not visual.** §12's design system (AutoTM's own Uber-style tokens) is **unchanged**. Kolesa's *look* is not adopted.
+- **Bounded by the locked 5-tab IA ([20-information-architecture](docs/prd/20-information-architecture.md)), the [00-vision](docs/prd/00-vision.md) anti-goals, and MLP scope ([ADR-0027](docs/adr/0027-mlp-beta-scope.md)).** Kolesa's feature breadth (other verticals, loans, paid promotion, email/password auth, owner reviews, saved-search/push) is subtracted, not imported.
+- **Forward + opportunistic rollout** — new/upcoming screens are built to the Kolesa-findability bar; shipped screens are re-touched only when next edited.
+- Concrete adoptions: home = feed + within-cars quick-filter chips; minimal first-launch onboarding (language picker + 1–2 slides); owner/model reviews deferred to a post-MLP content bet.
+- **Agent-facing guide:** [`docs/prd/ui/kolesa-findability-reference.md`](docs/prd/ui/kolesa-findability-reference.md) — scraped 59-flow inventory + keep/defer map + per-surface patterns.
+
+auto.ru remains only as a historical label in early/shipped artifacts (not rewritten).
 
 ---
 
