@@ -88,6 +88,7 @@ export const ListingDetailSchema = z.object({
   media: z.array(ListingMediaSchema),
   viewCount: z.number().int().nonnegative(),
   favoriteCount: z.number().int().nonnegative(),
+  isFavorited: z.boolean().optional(),
   publishedAt: z.string().datetime(),
   soldAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),

@@ -156,6 +156,7 @@ export default function ListingDetailScreen() {
             allowCalls={data.allowCalls}
             allowChat={data.allowChat}
             status={data.status}
+            isFavorited={data.isFavorited ?? false}
           />
         </View>
       )}

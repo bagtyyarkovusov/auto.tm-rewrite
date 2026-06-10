@@ -3,8 +3,8 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
-import { useTranslation } from "react-i18next";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../auth/useAuth";
 import { useAuthIntentStore } from "../../auth/intentStore";

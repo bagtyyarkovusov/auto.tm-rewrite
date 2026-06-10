@@ -8,11 +8,7 @@ export function useListingDetail(id: string) {
   return useQuery({
     queryKey: queryKeys.listings.detail(id),
     queryFn: () =>
-      apiClient.get(
-        `/listings/${id}`,
-        ListingsSchemas.ListingDetailSchema,
-        { auth: false },
-      ),
+      apiClient.get(`/listings/${id}`, ListingsSchemas.ListingDetailSchema),
     enabled: !!id,
   });
 }
