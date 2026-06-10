@@ -37,6 +37,7 @@ export interface VerifyOtpResult {
     phone: string;
     displayName: string | null;
     role: string;
+    deletionScheduledAt: string | null;
   };
 }
 
@@ -106,7 +107,8 @@ export class VerifyOtp {
     const user = existingUser ?? (await this.userRepo.create({ phone: phone.value }));
 
     // Auto-recover account if in deletion grace period
-    if (user.deletionScheduledAt !== null) {
+    const deletionScheduledAt = user.deletionScheduledAt;
+    if (deletionScheduledAt !== null) {
       await this.recoverAccount.execute({ userId: user.id });
     }
 
@@ -164,6 +166,7 @@ export class VerifyOtp {
         phone: user.phone,
         displayName: user.displayName,
         role: user.role,
+        deletionScheduledAt: deletionScheduledAt?.toISOString() ?? null,
       },
     };
   }

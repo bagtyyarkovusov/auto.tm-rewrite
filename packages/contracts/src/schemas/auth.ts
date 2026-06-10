@@ -34,6 +34,7 @@ export const OtpVerifyResponseSchema = z.object({
     phone: PhoneTm,
     displayName: z.string().nullable(),
     role: z.nativeEnum(UserRole),
+    deletionScheduledAt: z.string().datetime().nullable().optional(),
   }),
 });
 export type OtpVerifyResponse = z.infer<typeof OtpVerifyResponseSchema>;
@@ -65,6 +66,7 @@ export const MeResponseSchema = z.object({
   avatarUrl: z.string().nullable(),
   locale: z.string().nullable(),
   createdAt: z.string().datetime(),
+  deletionScheduledAt: z.string().datetime().nullable(),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;
 
