@@ -40,7 +40,7 @@ export function MessageComposer({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View className="flex-row items-end gap-2 px-4 py-3 border-t border-border bg-background">
         <View className="flex-1 rounded-2xl bg-muted px-4 py-2.5">

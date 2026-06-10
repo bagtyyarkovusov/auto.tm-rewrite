@@ -20,8 +20,8 @@ interface ListingCardProps {
   cityName?: string;
 }
 
-function formatPrice(amount: number): string {
-  return `${amount.toLocaleString("en-US")} TMT`;
+function formatPrice(amount: number, locale: string): string {
+  return `${amount.toLocaleString(locale)} TMT`;
 }
 
 export function ListingCard({
@@ -31,7 +31,7 @@ export function ListingCard({
   modelName,
   cityName,
 }: ListingCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const imageUrl = listing.coverMediaKey
     ? buildVariantUrl(listing.coverMediaKey, "list")
     : null;
@@ -76,7 +76,7 @@ export function ListingCard({
               {titleParts.join(" ")}
             </Text>
             <Text className="text-lg font-heading text-primary">
-              {formatPrice(listing.displayPriceTmt)}
+              {formatPrice(listing.displayPriceTmt, i18n.language)}
             </Text>
           </View>
 

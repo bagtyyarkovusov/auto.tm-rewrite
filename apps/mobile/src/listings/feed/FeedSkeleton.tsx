@@ -19,7 +19,7 @@ function SkeletonRow() {
 
 export function FeedSkeleton() {
   return (
-    <View className="gap-1">
+    <View className="flex-1 gap-1">
       <SkeletonRow />
       <SkeletonRow />
       <SkeletonRow />

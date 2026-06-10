@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft, Trash2 } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { useDeleteAccount } from "../../src/api/identity/useDeleteAccount";
 import { clearAuthSession } from "../../src/auth/session";
 
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 function formatDeletionDate(locale: string): string {
   const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -38,6 +39,7 @@ export default function DeleteAccountScreen() {
   const deleteAccount = useDeleteAccount();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showScheduled, setShowScheduled] = useState(false);
+  const goBack = useSafeBack("/(tabs)/services");
 
   const locale = i18n.language ?? "ru";
   const deletionDate = useMemo(() => formatDeletionDate(locale), [locale]);
@@ -61,18 +63,19 @@ export default function DeleteAccountScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeScreen>
       {/* Header */}
-      <View className="px-4 pt-6 pb-3 flex-row items-center gap-2">
+      <View className="px-4 pb-3 flex-row items-center gap-2">
         <Button
           variant="ghost"
+          className="h-11 w-11"
           size="icon"
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityLabel={t("common:back", { defaultValue: "Back" })}
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-semibold text-foreground">
+        <Text className="text-2xl font-heading text-foreground">
           {t("deleteAccount")}
         </Text>
       </View>
@@ -154,6 +157,6 @@ export default function DeleteAccountScreen() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SafeAreaView>
+    </SafeScreen>
   );
 }

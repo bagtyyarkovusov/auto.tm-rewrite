@@ -1,10 +1,9 @@
 import { useMemo } from "react";
-import { router } from "expo-router";
 import { View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, User } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
+import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useMe } from "../src/api/identity/useMe";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +14,7 @@ import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 function LoadingState() {
   return (
@@ -55,6 +55,7 @@ function formatMemberSince(isoDate: string, locale: string): string {
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation(["account", "common"]);
   const { data, isPending, isError, refetch } = useMe();
+  const goBack = useSafeBack("/(tabs)/services");
 
   const roleLabel = useMemo(() => {
     if (!data) return "";
@@ -74,13 +75,13 @@ export default function ProfileScreen() {
   }, [data]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeScreen>
       {/* Header */}
-      <View className="px-4 pt-6 pb-3 flex-row items-center gap-2">
-        <Button variant="ghost" size="icon" onPress={() => router.back()}>
+      <View className="px-4 pb-3 flex-row items-center gap-2">
+        <Button variant="ghost" size="icon" className="h-11 w-11" onPress={goBack}>
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-semibold text-foreground">
+        <Text className="text-2xl font-heading text-foreground">
           {t("account:profile")}
         </Text>
       </View>
@@ -140,6 +141,6 @@ export default function ProfileScreen() {
           </Card>
         </View>
       ) : null}
-    </SafeAreaView>
+    </SafeScreen>
   );
 }

@@ -1,10 +1,7 @@
 import {
-  FileText,
-  Info,
   List,
   Settings,
   User,
-  Wrench,
 } from "lucide-react-native";
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
@@ -20,10 +17,7 @@ import { Text } from "@/components/ui/text";
 
 const serviceItems = [
   { icon: User, labelKey: "profile" },
-  { icon: Wrench, labelKey: "garage" },
   { icon: Settings, labelKey: "settings" },
-  { icon: FileText, labelKey: "blog" },
-  { icon: Info, labelKey: "about" },
 ] as const;
 
 export default function ServicesScreen() {
@@ -42,11 +36,6 @@ export default function ServicesScreen() {
     router.push("/profile");
   };
 
-  // Profile (A1) and Settings (A2) are wired; Garage/Blog/About remain inert
-  // until their destinations exist (dead-tile cleanup tracked in the S8a UI sweep).
-  const isInteractive = (labelKey: string) =>
-    labelKey === "profile" || labelKey === "settings";
-
   const handlePress = (labelKey: string) => {
     if (labelKey === "profile") {
       handleProfilePress();
@@ -58,7 +47,7 @@ export default function ServicesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-semibold text-foreground">
+        <Text className="text-2xl font-heading text-foreground">
           {t("services")}
         </Text>
       </View>
@@ -86,16 +75,11 @@ export default function ServicesScreen() {
 
         <View className="flex-row flex-wrap gap-3">
           {serviceItems.map((item) => {
-            const interactive = isInteractive(item.labelKey);
-            const disabled =
-              !interactive ||
-              (item.labelKey === "profile" && isAuthenticated === null);
+            const disabled = item.labelKey === "profile" && isAuthenticated === null;
             return (
               <Pressable
                 key={item.labelKey}
-                onPress={
-                  interactive ? () => handlePress(item.labelKey) : undefined
-                }
+                onPress={() => handlePress(item.labelKey)}
                 className="w-[calc(50%-6px)] active:opacity-90"
                 accessibilityRole="button"
                 accessibilityLabel={t(item.labelKey)}

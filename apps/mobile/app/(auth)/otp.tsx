@@ -7,7 +7,6 @@ import {
   Platform,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
 import type { AuthSchemas } from "@auto-tm/contracts";
@@ -22,6 +21,7 @@ import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -242,101 +242,106 @@ export default function OtpScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-background"
-    >
-      <SafeAreaView className="flex-1 px-4">
-        <View className="flex-row items-center justify-between py-4">
-          <Button
-            accessibilityLabel={t("back")}
-            size="icon"
-            variant="ghost"
-            onPress={backToPhone}
-          >
-            <Icon as={ChevronLeft} className="size-5 text-foreground" />
-          </Button>
-          <LocaleSwitcher />
-        </View>
-
-        <View className="mt-6 gap-6">
-          <BrandLogo />
-
-          <View className="gap-2">
-            <Text className="text-2xl font-semibold leading-snug text-foreground">
-              {t("otpTitle")}
-            </Text>
-            <Text className="text-base leading-normal text-muted-foreground">
-              {t("otpSent", { phone: maskedPhone })}
-            </Text>
-            <Button
-              variant="link"
-              className="self-start px-0"
-              onPress={backToPhone}
-            >
-              <Text>{t("changeNumber")}</Text>
-            </Button>
-          </View>
-
-          <OtpCells
-            ref={otpRef}
-            disabled={isVerifying || isResending}
-            hasError={otpError !== null}
-            length={OTP_LENGTH}
-            onChange={handleCodeChange}
-            value={code}
-          />
-
-          {otpError ? (
-            <View className="flex-row items-center gap-1.5">
-              <Icon as={AlertCircle} className="size-4 text-destructive" />
-              <Text className="text-sm leading-snug text-destructive">
-                {otpError}
-              </Text>
+    <>
+      <SafeScreen>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          className="flex-1"
+        >
+          <View className="flex-1 px-4">
+            <View className="flex-row items-center justify-between py-4">
+              <Button
+                accessibilityLabel={t("back")}
+                size="icon"
+                variant="ghost"
+                className="h-11 w-11"
+                onPress={backToPhone}
+              >
+                <Icon as={ChevronLeft} className="size-5 text-foreground" />
+              </Button>
+              <LocaleSwitcher />
             </View>
-          ) : null}
 
-          <Button
-            disabled={secondsRemaining > 0 || isResending}
-            variant="link"
-            className="self-start px-0"
-            onPress={resendCode}
-          >
-            <Text className={secondsRemaining > 0 || isResending ? "text-muted-foreground" : "text-foreground underline"}>
-              {secondsRemaining > 0
-                ? t("resendIn", { seconds: secondsRemaining })
-                : isResending
-                  ? t("loading")
-                  : t("resendCode")}
-            </Text>
-          </Button>
+            <View className="mt-6 gap-6">
+              <BrandLogo />
 
-          {isVerifying ? (
-            <View className="flex-row items-center gap-2">
-              <ActivityIndicator
-                color={`hsl(${THEME[isDark ? "dark" : "light"].primary})`}
+              <View className="gap-2">
+                <Text className="text-2xl font-semibold leading-snug text-foreground">
+                  {t("otpTitle")}
+                </Text>
+                <Text className="text-base leading-normal text-muted-foreground">
+                  {t("otpSent", { phone: maskedPhone })}
+                </Text>
+                <Button
+                  variant="link"
+                  className="self-start px-0"
+                  onPress={backToPhone}
+                >
+                  <Text>{t("changeNumber")}</Text>
+                </Button>
+              </View>
+
+              <OtpCells
+                ref={otpRef}
+                disabled={isVerifying || isResending}
+                hasError={otpError !== null}
+                length={OTP_LENGTH}
+                onChange={handleCodeChange}
+                value={code}
               />
-              <Text className="text-sm text-muted-foreground">
-                {t("loading")}
-              </Text>
-            </View>
-          ) : null}
 
-          {isDevBuild() && testCode ? (
-            <Button
-              className="self-start h-auto rounded-full px-3 py-1"
-              size="sm"
-              variant="secondary"
-              onPress={() => {
-                setCode(testCode);
-                setOtpError(null);
-              }}
-            >
-              <Text>{t("devCode", { code: testCode })}</Text>
-            </Button>
-          ) : null}
-        </View>
-      </SafeAreaView>
+              {otpError ? (
+                <View className="flex-row items-center gap-1.5">
+                  <Icon as={AlertCircle} className="size-4 text-destructive" />
+                  <Text className="text-sm leading-snug text-destructive">
+                    {otpError}
+                  </Text>
+                </View>
+              ) : null}
+
+              <Button
+                disabled={secondsRemaining > 0 || isResending}
+                variant="link"
+                className="self-start px-0"
+                onPress={resendCode}
+              >
+                <Text className={secondsRemaining > 0 || isResending ? "text-muted-foreground" : "text-foreground underline"}>
+                  {secondsRemaining > 0
+                    ? t("resendIn", { seconds: secondsRemaining })
+                    : isResending
+                      ? t("loading")
+                      : t("resendCode")}
+                </Text>
+              </Button>
+
+              {isVerifying ? (
+                <View className="flex-row items-center gap-2">
+                  <ActivityIndicator
+                    color={`hsl(${THEME[isDark ? "dark" : "light"].primary})`}
+                  />
+                  <Text className="text-sm text-muted-foreground">
+                    {t("loading")}
+                  </Text>
+                </View>
+              ) : null}
+
+              {isDevBuild() && testCode ? (
+                <Button
+                  className="self-start h-auto rounded-full px-3 py-1"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => {
+                    setCode(testCode);
+                    setOtpError(null);
+                  }}
+                >
+                  <Text>{t("devCode", { code: testCode })}</Text>
+                </Button>
+              ) : null}
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeScreen>
 
       {/* Account restoration prompt during deletion grace */}
       <AlertDialog open={showRestorePrompt} onOpenChange={setShowRestorePrompt}>
@@ -357,6 +362,6 @@ export default function OtpScreen() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </KeyboardAvoidingView>
+    </>
   );
 }

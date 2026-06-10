@@ -54,7 +54,7 @@ function SpecItem({ label, value }: SpecItemProps) {
 }
 
 export function ListingDetailView({ listing, maps, isOwner = false, onReport }: ListingDetailProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isSold = listing.status === Enums.ListingStatus.Sold;
 
   const specs: SpecItemProps[] = [
@@ -69,7 +69,7 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
       label: t("mileage"),
       value:
         listing.mileageKm != null
-          ? `${listing.mileageKm.toLocaleString("en-US")} ${t("km")}`
+          ? `${listing.mileageKm.toLocaleString(i18n.language)} ${t("km")}`
           : undefined,
     },
     {

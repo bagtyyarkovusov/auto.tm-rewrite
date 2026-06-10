@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
 import { useCatalogMaps } from "../../../src/listings/detail/useCatalogMaps";
+import { useSafeBack } from "../../../src/navigation/useSafeBack";
 import { ListingDetailView } from "../../../src/listings/components/ListingDetail";
 import { ContactCtaBar } from "../../../src/listings/components/ContactCtaBar";
 import { useViewer } from "../../../src/auth/useViewer";
@@ -18,79 +19,76 @@ import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
-function DetailSkeleton() {
+function DetailSkeleton({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1">
-        {/* Photo skeleton */}
-        <Skeleton className="h-[260px] w-full rounded-none" />
+    <View className="flex-1 bg-background" style={{ paddingBottom: insets.bottom }}>
+      {/* Photo skeleton — full-bleed to top edge */}
+      <Skeleton className="h-[260px] w-full rounded-none" />
 
-        <View className="px-5 py-4 gap-4">
-          {/* Title skeleton */}
-          <View className="gap-2">
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-6 w-1/3" />
-          </View>
+      <View className="px-5 py-4 gap-4">
+        {/* Title skeleton */}
+        <View className="gap-2">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-6 w-1/3" />
+        </View>
 
-          {/* Spec grid skeleton */}
-          <View className="flex-row flex-wrap gap-y-2">
-            <Skeleton className="h-10 w-[45%]" />
-            <Skeleton className="h-10 w-[45%]" />
-            <Skeleton className="h-10 w-[45%]" />
-            <Skeleton className="h-10 w-[45%]" />
-          </View>
+        {/* Spec grid skeleton */}
+        <View className="flex-row flex-wrap gap-y-2">
+          <Skeleton className="h-10 w-[45%]" />
+          <Skeleton className="h-10 w-[45%]" />
+          <Skeleton className="h-10 w-[45%]" />
+          <Skeleton className="h-10 w-[45%]" />
+        </View>
 
-          {/* Description skeleton */}
-          <View className="gap-1.5">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-2/3" />
-          </View>
+        {/* Description skeleton */}
+        <View className="gap-1.5">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </View>
 
-          {/* Seller skeleton */}
-          <View className="flex-row items-center gap-2">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <View className="gap-1">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-32" />
-            </View>
+        {/* Seller skeleton */}
+        <View className="flex-row items-center gap-2">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <View className="gap-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-32" />
           </View>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
-function UnavailableState({ onRetry }: { onRetry?: () => void }) {
-  const router = useRouter();
+function UnavailableState({ onRetry, insets }: { onRetry?: () => void; insets: ReturnType<typeof useSafeAreaInsets> }) {
   const { t } = useTranslation();
+  const goBack = useSafeBack();
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center px-6 gap-4">
-        <Text className="text-lg font-semibold text-foreground">
-          {t("notAvailable")}
-        </Text>
-        <Text className="text-center text-sm text-muted-foreground">
-          {t("removedSoldOrArchived")}
-        </Text>
-        <View className="flex-row gap-3">
-          <Button variant="outline" size="pill" onPress={() => router.back()}>
-            <Text>{t("goBack")}</Text>
+    <View className="flex-1 bg-background items-center justify-center px-6 gap-4" style={{ paddingBottom: insets.bottom }}>
+      <Text className="text-lg font-semibold text-foreground">
+        {t("notAvailable")}
+      </Text>
+      <Text className="text-center text-sm text-muted-foreground">
+        {t("removedSoldOrArchived")}
+      </Text>
+      <View className="flex-row gap-3">
+        <Button variant="outline" size="pill" onPress={goBack}>
+          <Text>{t("goBack")}</Text>
+        </Button>
+        {onRetry && (
+          <Button variant="default" size="pill" onPress={onRetry}>
+            <Text className="text-primary-foreground">{t("retry")}</Text>
           </Button>
-          {onRetry && (
-            <Button variant="default" size="pill" onPress={onRetry}>
-              <Text className="text-primary-foreground">{t("retry")}</Text>
-            </Button>
-          )}
-        </View>
+        )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const goBack = useSafeBack();
+  const insets = useSafeAreaInsets();
   const { data, isPending, error, refetch } = useListingDetail(id ?? "");
   const viewer = useViewer();
   const { data: config } = useConfig();
@@ -106,7 +104,7 @@ export default function ListingDetailScreen() {
     viewer != null && data != null && viewer.userId === data.sellerId;
 
   if (isPending) {
-    return <DetailSkeleton />;
+    return <DetailSkeleton insets={insets} />;
   }
 
   if (error || !data) {
@@ -116,25 +114,29 @@ export default function ListingDetailScreen() {
       "status" in error &&
       (error as { status?: number }).status === 404;
     return (
-      <UnavailableState onRetry={isNotFound ? undefined : () => refetch()} />
+      <UnavailableState onRetry={isNotFound ? undefined : () => refetch()} insets={insets} />
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["bottom"]}>
-      {/* Back button */}
-      <View className="absolute left-4 top-safe-offset-2 z-10">
+    <View className="flex-1 bg-background">
+      {/* Back button — positioned at safe-area top + 8px gap (HIG 44pt touch target) */}
+      <View
+        className="absolute left-4 z-10"
+        style={{ top: insets.top + 8 }}
+      >
         <Button
           variant="secondary"
           size="icon"
-          className="rounded-full bg-background/80"
-          onPress={() => router.back()}
+          className="rounded-full bg-background/80 h-11 w-11"
+          onPress={goBack}
         >
           <Icon as={ArrowLeft} className="size-5 text-foreground" />
         </Button>
       </View>
 
-      <View className="flex-1">
+      {/* Main content — bottom safe area only; photo goes full-bleed to top */}
+      <View className="flex-1" style={{ paddingBottom: insets.bottom }}>
         <ListingDetailView
           listing={data}
           maps={maps}
@@ -149,7 +151,7 @@ export default function ListingDetailScreen() {
 
       {/* Buyer CTAs only for non-owners */}
       {!isOwner && (
-        <View className="border-t border-border">
+        <View className="border-t border-border" style={{ paddingBottom: insets.bottom }}>
           <ContactCtaBar
             listingId={data.id}
             contactPhone={data.contactPhone}
@@ -167,6 +169,6 @@ export default function ListingDetailScreen() {
         open={reportOpen}
         onOpenChange={setReportOpen}
       />
-    </SafeAreaView>
+    </View>
   );
 }

@@ -16,7 +16,7 @@ import { Text } from "@/components/ui/text";
 
 function LoadingSkeleton() {
   return (
-    <View className="px-4 py-3 gap-3">
+    <View className="flex-1 px-4 py-3 gap-3">
       {Array.from({ length: 6 }).map((_, i) => (
         <View key={i} className="flex-row items-center gap-3">
           <Skeleton className="w-14 h-14 rounded-lg" />

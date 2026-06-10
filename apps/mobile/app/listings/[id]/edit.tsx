@@ -115,7 +115,7 @@ function EditSaveErrorBanner({
         </Text>
       ))}
       <Button
-        className="h-[52px] rounded-full"
+        size="pill"
         onPress={onRetry}
       >
         <Text className="text-background">{t("retry")}</Text>
@@ -212,9 +212,13 @@ export default function EditListingScreen() {
     }
   }, [ctx.canPublish, saveEdit, show, listingId]);
 
-  function handleDiscard() {
-    router.back();
-  }
+  const handleDiscard = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(`/(public)/listings/${listingId}`);
+    }
+  }, [router, listingId]);
 
   if (!listing) {
     return (
