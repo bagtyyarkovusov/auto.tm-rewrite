@@ -49,6 +49,10 @@ Five tabs. Center button is the visual "do something" CTA.
 /chat/[conversationId] Simple text contact thread
 ```
 
+### Tab 1 — category browse surface (multi-vertical seam)
+
+Tab 1 is structured as a self-contained **category browse surface** (today: cars), not a hardcoded "home." Per [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) and [ADR-0036](../adr/0036-multi-vertical-seam-resolutions-mlp.md), when a second vertical lands a home-hub can slot in front of it with no rebuild, and the browse body lives in a reusable `CategoryBrowse`-style surface reached through a **dedicated filter funnel — not feed chips**. In MLP the single cars category renders as the default surface; the hub appears with the second vertical. The browse-body extraction is owned by issue #200 (blocked pending S8a), not built ahead of it.
+
 ## Mobile navigation patterns
 
 - **Stack navigation** inside each tab via expo-router
