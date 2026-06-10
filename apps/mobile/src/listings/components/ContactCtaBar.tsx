@@ -1,4 +1,4 @@
-import { Share, View } from "react-native";
+import { ActivityIndicator, Share, View } from "react-native";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
@@ -171,14 +171,18 @@ export function ContactCtaBar({
         accessibilityLabel={t("favorite")}
         accessibilityState={{ disabled: isFavoritePending }}
       >
-        <Icon
-          as={Heart}
-          className={
-            optimisticFavorited
-              ? "size-5 text-brand-500 fill-current"
-              : "size-5 text-muted-foreground"
-          }
-        />
+        {isFavoritePending ? (
+          <ActivityIndicator size="small" />
+        ) : (
+          <Icon
+            as={Heart}
+            className={
+              optimisticFavorited
+                ? "size-5 text-brand-500 fill-current"
+                : "size-5 text-muted-foreground"
+            }
+          />
+        )}
       </Button>
     </View>
   );

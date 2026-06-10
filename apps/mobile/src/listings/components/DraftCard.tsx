@@ -36,9 +36,9 @@ function buildVariantUrl(
   return `${MEDIA_URL}/${base}/${variant}.jpg`;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("ru-RU", {
+  return d.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
   });
@@ -64,7 +64,8 @@ export function DraftCard({
   isDiscarding,
 }: DraftCardProps) {
   const [showConfirm, setShowConfirm] = useState(false);
-  const { t } = useTranslation();
+  const [imageFailed, setImageFailed] = useState(false);
+  const { t, i18n } = useTranslation();
 
   const payload = draft.payload;
   const attachedPhotos = useMemo(
@@ -102,12 +103,13 @@ export function DraftCard({
         <View className="flex-row gap-3 px-4 py-3">
           {/* Cover image */}
           <View className="h-[100px] w-[140px] overflow-hidden rounded-lg bg-muted">
-            {imageUrl ? (
+            {imageUrl && !imageFailed ? (
               <Image
                 source={{ uri: imageUrl }}
                 style={{ width: 140, height: 100 }}
                 contentFit="cover"
                 cachePolicy="memory-disk"
+                onError={() => setImageFailed(true)}
               />
             ) : (
               <View className="h-full w-full items-center justify-center">
@@ -126,7 +128,7 @@ export function DraftCard({
                 {identity}
               </Text>
               <Text className="text-xs text-muted-foreground">
-                {t("updated")} {formatDate(draft.updatedAt)}
+                {t("updated")} {formatDate(draft.updatedAt, i18n.language)}
                 {photoCount > 0 ? ` · ${photoCount} ${t("photos")}` : ""}
               </Text>
             </View>

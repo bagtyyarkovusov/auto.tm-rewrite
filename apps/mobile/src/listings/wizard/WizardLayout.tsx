@@ -126,7 +126,7 @@ function WizardHeader({
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
           <Text className="text-xs text-muted-foreground">
-            {routeTitle} · {t("stepOf", { step: stepNumber, count: stepCount })}
+            {routeTitle} · {t("stepOf", { step: stepNumber, total: stepCount })}
           </Text>
           {saveStatusText && (
             <Text className={cn("text-xs", saveStatusClass)}>

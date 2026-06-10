@@ -15,9 +15,9 @@ import { Text } from "@/components/ui/text";
 interface SignInDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title?: string;
-  description?: string;
-  actionLabel?: string;
+  title: string;
+  description: string;
+  actionLabel: string;
   /** Route to return to after auth completes */
   returnPath?: string;
   /** Optional callback to re-trigger the originally-intended action */
@@ -27,9 +27,9 @@ interface SignInDialogProps {
 export function SignInDialog({
   open,
   onOpenChange,
-  title = "Sign in required",
-  description = "Sign in to access this feature.",
-  actionLabel = "Continue with phone",
+  title,
+  description,
+  actionLabel,
   returnPath,
   replay,
 }: SignInDialogProps) {

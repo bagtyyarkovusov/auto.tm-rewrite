@@ -45,7 +45,7 @@ export default function ServicesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
       <View className="px-4 pt-6 pb-3">
         <Text className="text-2xl font-heading text-foreground">
           {t("services")}

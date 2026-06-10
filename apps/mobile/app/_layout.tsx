@@ -29,6 +29,7 @@ import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -208,7 +209,8 @@ export default function RootLayout() {
           <OrphanCleanupOnBoot />
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <SafeAreaProvider>
-            <Stack screenOptions={{ headerShown: false }}>
+              <ErrorBoundary>
+              <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="(public)" />
               <Stack.Screen name="profile" />
@@ -216,8 +218,9 @@ export default function RootLayout() {
               <Stack.Screen name="conversations/open-listing" />
               <Stack.Screen name="(auth)/phone" />
               <Stack.Screen name="(auth)/otp" />
-            </Stack>
-          </SafeAreaProvider>
+              </Stack>
+            </ErrorBoundary>
+            </SafeAreaProvider>
           <PortalHost />
         </ToastProvider>
       </ThemeProvider>

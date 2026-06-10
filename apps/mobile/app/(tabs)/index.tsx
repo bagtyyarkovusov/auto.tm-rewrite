@@ -48,7 +48,7 @@ export default function FeedScreen() {
 
   const header = (
     <View className="px-4 pt-6 pb-3 flex-row items-center justify-between">
-      <Text className="text-2xl font-semibold text-foreground">{t("search")}</Text>
+      <Text className="text-2xl font-heading text-foreground">{t("search")}</Text>
       <Pressable
         onPress={() => setSheetOpen(true)}
         accessibilityRole="button"
@@ -67,7 +67,7 @@ export default function FeedScreen() {
 
   if (isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
         {header}
         <FeedSkeleton />
         <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
@@ -77,7 +77,7 @@ export default function FeedScreen() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
         {header}
         <FeedError onRetry={() => refetch()} />
         <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
@@ -87,7 +87,7 @@ export default function FeedScreen() {
 
   if (allItems.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
         {header}
         {filters.count > 0 ? (
           <FilteredEmpty onReset={filters.reset} />
@@ -100,7 +100,7 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
       {header}
       <FlatList
         data={allItems}

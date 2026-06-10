@@ -69,7 +69,7 @@ const buttonTextVariants = cva(
       variant: {
         default: 'text-background disabled:text-muted-foreground',
         brand: 'text-primary-foreground disabled:text-muted-foreground',
-        destructive: 'text-white disabled:text-muted-foreground',
+        destructive: 'text-destructive-foreground disabled:text-muted-foreground',
         outline: cn(
           'text-foreground group-active:text-foreground disabled:text-muted-foreground',
           Platform.select({ web: 'group-hover:text-foreground' })

@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useConversations } from "../../api/conversations/useConversations";
 
 import { ConversationListItem } from "./ConversationListItem";
+import { useConversationCatalogMaps } from "./useConversationCatalogMaps";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,6 +74,9 @@ export function ConversationList() {
   } = useConversations();
 
   const conversations = data?.pages.flatMap((page) => page.items) ?? [];
+  const catalogMaps = useConversationCatalogMaps(
+    conversations.map((c) => c.listing),
+  );
 
   const handleRefresh = useCallback(() => {
     void refetch();
@@ -100,7 +104,13 @@ export function ConversationList() {
     <FlatList
       data={conversations}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <ConversationListItem conversation={item} />}
+      renderItem={({ item }) => (
+        <ConversationListItem
+          conversation={item}
+          brandName={item.listing ? catalogMaps.brandName(item.listing.brandId) : undefined}
+          modelName={item.listing ? catalogMaps.modelName(item.listing.modelId) : undefined}
+        />
+      )}
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
