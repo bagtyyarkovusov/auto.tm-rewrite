@@ -21,9 +21,13 @@ export function FeedSkeleton() {
   return (
     <View className="flex-1 gap-1">
       <SkeletonRow />
+      <View className="h-px mx-4 bg-border" />
       <SkeletonRow />
+      <View className="h-px mx-4 bg-border" />
       <SkeletonRow />
+      <View className="h-px mx-4 bg-border" />
       <SkeletonRow />
+      <View className="h-px mx-4 bg-border" />
       <SkeletonRow />
     </View>
   );

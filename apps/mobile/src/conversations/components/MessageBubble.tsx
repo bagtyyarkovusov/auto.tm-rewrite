@@ -44,7 +44,7 @@ export function MessageBubble({ text, isMine, status, onRetry }: MessageBubblePr
             )}
             {status === "failed" && (
               <>
-                <Text className="text-xs text-destructive-foreground">
+                <Text className={`text-xs ${isMine ? "text-destructive-foreground" : "text-destructive"}`}>
                   {t("failedToSend")}
                 </Text>
                 {onRetry && (
@@ -53,7 +53,7 @@ export function MessageBubble({ text, isMine, status, onRetry }: MessageBubblePr
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityLabel={t("retry")}
                   >
-                    <Icon as={RotateCcw} className="size-3.5 text-destructive-foreground" />
+                    <Icon as={RotateCcw} className={`size-3.5 ${isMine ? "text-destructive-foreground" : "text-destructive"}`} />
                   </Pressable>
                 )}
               </>

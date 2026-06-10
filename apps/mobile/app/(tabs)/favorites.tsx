@@ -158,7 +158,7 @@ export default function FavoritesScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
       <View className="px-4 pt-6 pb-3">
         <Text className="text-2xl font-heading text-foreground">
           {t("favorites")}
@@ -170,7 +170,8 @@ export default function FavoritesScreen() {
       ) : isAuthenticated === true ? (
         <FavoritesContent />
       ) : (
-        <View className="flex-1 items-center justify-center">
+        <View className="flex-1 items-center justify-center gap-3">
+          <ActivityIndicator />
           <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
         </View>
       )}

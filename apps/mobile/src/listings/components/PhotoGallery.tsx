@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import {
-  Dimensions,
   FlatList,
   Modal,
   Pressable,
   View,
+  useWindowDimensions,
   type ViewToken,
 } from "react-native";
 import { Image } from "expo-image";
@@ -17,10 +17,6 @@ import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-
-
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 type ListingMedia = ListingsSchemas.ListingMedia;
 type ExpoImageStyle = ComponentProps<typeof Image>["style"];
@@ -60,6 +56,7 @@ function GalleryImage({
 
 export function PhotoGallery({ media }: PhotoGalleryProps) {
   const { t } = useTranslation();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
@@ -100,7 +97,7 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
           onPress={() => setFullscreenIndex(index)}
           className="active:opacity-90"
         >
-          <View style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.65 }}>
+          <View style={{ width: screenWidth, height: screenWidth * 0.65 }}>
             <GalleryImage
               item={item}
               variant="detail"
@@ -111,7 +108,7 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
         </Pressable>
       );
     },
-    [],
+    [screenWidth],
   );
 
   return (
@@ -148,6 +145,7 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
         visible={fullscreenIndex !== null}
         transparent={false}
         animationType="fade"
+        statusBarTranslucent
         onRequestClose={() => setFullscreenIndex(null)}
       >
         <View className="flex-1 bg-black">
@@ -159,8 +157,8 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
             showsHorizontalScrollIndicator={false}
             initialScrollIndex={fullscreenIndex ?? 0}
             getItemLayout={(_, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
+              length: screenWidth,
+              offset: screenWidth * index,
               index,
             })}
             onViewableItemsChanged={onFullscreenViewableItemsChanged}
@@ -170,12 +168,12 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
                 <Pressable
                   onPress={() => setFullscreenIndex(null)}
                   className="flex-1 items-center justify-center"
-                  style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT }}
+                  style={{ width: screenWidth, height: screenHeight }}
                 >
                   <GalleryImage
                     item={item}
                     variant="fullscreen"
-                    style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT * 0.8 }}
+                    style={{ width: screenWidth, height: screenHeight * 0.8 }}
                     contentFit="contain"
                   />
                 </Pressable>
@@ -186,14 +184,14 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
           {/* Close button */}
           <Pressable
             onPress={() => setFullscreenIndex(null)}
-            className="absolute right-4 top-safe-offset-2 h-10 w-10 items-center justify-center rounded-full bg-black/50"
+            className="absolute right-4 top-12 h-10 w-10 items-center justify-center rounded-full bg-black/50"
           >
             <Icon as={X} className="size-5 text-white" />
           </Pressable>
 
           {/* Fullscreen page indicator */}
           {media.length > 1 && (
-            <View className="absolute bottom-safe-offset-2 left-0 right-0 flex-row items-center justify-center gap-1.5">
+            <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center gap-1.5">
               {media.map((_, i) => (
                 <View
                   key={i}

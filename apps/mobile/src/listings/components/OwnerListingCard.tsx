@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Pencil } from "lucide-react-native";
@@ -31,6 +32,9 @@ type ListingStatus = ListingsSchemas.ListingSummary["status"];
 
 interface OwnerListingCardProps {
   listing: ListingSummary;
+  brandName?: string;
+  modelName?: string;
+  cityName?: string;
   onOpen: (id: string) => void;
   onEdit: (id: string) => void;
 }
@@ -69,18 +73,22 @@ function statusBadgeVariant(
 
 export function OwnerListingCard({
   listing,
+  brandName,
+  modelName,
+  cityName,
   onOpen,
   onEdit,
 }: OwnerListingCardProps) {
   const { t } = useTranslation();
+  const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = listing.coverMediaKey
     ? buildVariantUrl(listing.coverMediaKey, "list")
     : null;
 
   const titleParts = [
     listing.year ? String(listing.year) : null,
-    listing.brandId,
-    listing.modelId,
+    brandName ?? listing.brandId,
+    modelName ?? listing.modelId,
   ].filter(Boolean);
 
   const label = statusLabel(listing.status, t);
@@ -95,12 +103,13 @@ export function OwnerListingCard({
       <View className="flex-row gap-3 px-4 py-3">
         {/* Cover image */}
         <View className="h-[100px] w-[140px] overflow-hidden rounded-lg bg-muted">
-          {imageUrl ? (
+          {imageUrl && !imageFailed ? (
             <Image
               source={{ uri: imageUrl }}
               style={{ width: 140, height: 100 }}
               contentFit="cover"
               cachePolicy="memory-disk"
+              onError={() => setImageFailed(true)}
             />
           ) : (
             <View className="h-full w-full items-center justify-center">
@@ -128,7 +137,7 @@ export function OwnerListingCard({
               <Text className="text-xs">{label}</Text>
             </Badge>
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              {listing.cityId}
+              {cityName ?? listing.cityId}
             </Text>
           </View>
 

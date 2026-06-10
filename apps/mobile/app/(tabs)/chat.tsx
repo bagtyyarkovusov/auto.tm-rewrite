@@ -1,5 +1,5 @@
 import { MessageSquare } from "lucide-react-native";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -45,7 +45,8 @@ function ChatContent({ isAuthenticated }: { isAuthenticated: boolean | null }) {
   }
 
   return (
-    <View className="flex-1 items-center justify-center">
+    <View className="flex-1 items-center justify-center gap-3">
+      <ActivityIndicator />
       <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
     </View>
   );
@@ -56,9 +57,9 @@ export default function ChatScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
       <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-semibold text-foreground">{t("chat")}</Text>
+        <Text className="text-2xl font-heading text-foreground">{t("chat")}</Text>
       </View>
 
       <ChatContent isAuthenticated={isAuthenticated} />

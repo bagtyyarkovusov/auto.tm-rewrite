@@ -480,7 +480,7 @@ export default function SellScreen() {
   const hasDrafts = !!existingDraft;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
       <View className="flex-1 px-5 pt-3">
         <Text className="text-3xl font-heading leading-tight tracking-tight text-foreground">
           {t("sell")}

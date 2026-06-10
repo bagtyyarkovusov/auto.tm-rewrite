@@ -81,6 +81,12 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
           />
         </ScrollView>
 
+        {isApplyDisabled && (
+          <Text className="px-1 pb-2 text-xs text-destructive">
+            {t("checkFilterValues")}
+          </Text>
+        )}
+
         <View className="flex-row gap-3 pt-2">
           <Button
             variant="ghost"

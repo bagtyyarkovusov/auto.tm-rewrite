@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react-native";
 import { FlatList, Pressable, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -47,6 +48,7 @@ export function CatalogPickerSheet({
   isError,
   onSelect,
 }: CatalogPickerSheetProps) {
+  const { t } = useTranslation();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="max-h-[85%]" style={{ height: "85%" }}>
@@ -75,7 +77,7 @@ export function CatalogPickerSheet({
           </View>
         ) : isError ? (
           <Text className="py-4 text-center text-sm text-destructive">
-            Failed to load. Please close and try again.
+            {t("actionFailed")}
           </Text>
         ) : items.length === 0 ? (
           <Text className="py-4 text-center text-sm text-muted-foreground">

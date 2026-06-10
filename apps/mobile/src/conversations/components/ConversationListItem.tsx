@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -30,17 +31,17 @@ interface ConversationListItemProps {
   modelName?: string;
 }
 
-function formatConversationTime(iso: string): string {
+function formatConversationTime(iso: string, locale: string): string {
   const d = new Date(iso);
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
   if (isToday) {
-    return d.toLocaleTimeString("ru-RU", {
+    return d.toLocaleTimeString(locale, {
       hour: "2-digit",
       minute: "2-digit",
     });
   }
-  return d.toLocaleDateString("ru-RU", {
+  return d.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
   });
@@ -51,7 +52,8 @@ export function ConversationListItem({
   brandName,
   modelName,
 }: ConversationListItemProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [imageFailed, setImageFailed] = useState(false);
   const listing = conversation.listing;
 
   const title = listing
@@ -103,11 +105,12 @@ export function ConversationListItem({
     >
       {/* Cover image */}
       <View className="w-14 h-14 rounded-lg bg-muted overflow-hidden">
-        {imageUrl ? (
+        {imageUrl && !imageFailed ? (
           <Image
             source={{ uri: imageUrl }}
             className="w-full h-full"
             contentFit="cover"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <View className="w-full h-full items-center justify-center">
@@ -126,7 +129,7 @@ export function ConversationListItem({
             {title}
           </Text>
           <Text className="text-xs text-muted-foreground shrink-0">
-            {formatConversationTime(conversation.updatedAt)}
+            {formatConversationTime(conversation.updatedAt, i18n.language)}
           </Text>
         </View>
 

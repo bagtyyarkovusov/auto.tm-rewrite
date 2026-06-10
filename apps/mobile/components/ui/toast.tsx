@@ -71,7 +71,7 @@ function ToastViewport() {
     <Portal name="toast-viewport">
       <View
         className={cn(
-          'absolute left-0 right-0 top-safe-offset-2 z-[100] flex-col items-center gap-2 px-4 pointer-events-none'
+          'absolute left-0 right-0 top-0 z-[100] flex-col items-center gap-2 px-4 pt-12 pointer-events-none'
         )}>
         {ctx.toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={() => ctx.dismiss(toast.id)} />

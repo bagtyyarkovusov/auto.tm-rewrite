@@ -22,6 +22,7 @@ import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { OwnerListingCard } from "../../src/listings/components/OwnerListingCard";
 import { DraftCard } from "../../src/listings/components/DraftCard";
 import { SignInDialog } from "../../components/auth/SignInDialog";
+import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -176,6 +177,8 @@ export default function ManageListingsScreen() {
   const isListingsTab = activeTab !== "drafts";
   const currentQuery = isListingsTab ? listingsQuery : draftsQuery;
 
+  const catalogMaps = useFeedCatalogMaps(filteredListings);
+
   const handleOpenListing = useCallback((id: string) => {
     router.push(`/(public)/listings/${id}`);
   }, []);
@@ -294,6 +297,7 @@ export default function ManageListingsScreen() {
           data={[]}
           keyExtractor={() => "empty"}
           renderItem={() => null}
+          contentContainerStyle={{ flexGrow: 1 }}
           refreshControl={
             <RefreshControl
               refreshing={currentQuery.isRefetching}
@@ -312,6 +316,7 @@ export default function ManageListingsScreen() {
           data={[]}
           keyExtractor={() => "empty"}
           renderItem={() => null}
+          contentContainerStyle={{ flexGrow: 1 }}
           refreshControl={
             <RefreshControl
               refreshing={currentQuery.isRefetching}
@@ -329,6 +334,9 @@ export default function ManageListingsScreen() {
           renderItem={({ item }: { item: ListingsSchemas.ListingSummary }) => (
             <OwnerListingCard
               listing={item}
+              brandName={catalogMaps.brandName(item.brandId)}
+              modelName={catalogMaps.modelName(item.modelId)}
+              cityName={catalogMaps.cityName(item.cityId)}
               onOpen={handleOpenListing}
               onEdit={handleEditListing}
             />
