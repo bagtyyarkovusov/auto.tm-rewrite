@@ -5,6 +5,8 @@ import { Play, Trash2 } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
+import { buildVariantUrl } from "../detail/buildVariantUrl";
+
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
@@ -19,22 +21,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-const MEDIA_URL = (
-  process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""
-).replace(/\/$/, "");
-
-function buildVariantUrl(
-  key: string,
-  variant: "thumbnail" | "list" | "detail" | "fullscreen",
-): string {
-  if (!MEDIA_URL) return "";
-  if (key.endsWith(".mp4") || key.endsWith(".mov")) {
-    return `${MEDIA_URL}/${key}`;
-  }
-  const base = key.replace(/\/original\.(jpg|webp|jpeg)$/, "");
-  return `${MEDIA_URL}/${base}/${variant}.jpg`;
-}
 
 function formatDate(iso: string, locale: string): string {
   const d = new Date(iso);

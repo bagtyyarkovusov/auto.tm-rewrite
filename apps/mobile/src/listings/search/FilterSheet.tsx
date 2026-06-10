@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react-native";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
@@ -28,6 +28,7 @@ interface FilterSheetProps {
 
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
   const { t } = useTranslation();
+  const { height: screenHeight } = useWindowDimensions();
   const { draft, setField, apply, reset, count, isValid } = filters;
   const [priceRangeValid, setPriceRangeValid] = useState(true);
   const isApplyDisabled = !isValid || !priceRangeValid;
@@ -41,9 +42,11 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
     reset();
   };
 
+  const sheetHeight = Math.min(screenHeight * 0.85, screenHeight - 80);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="max-h-[85%]" style={{ height: "85%" }}>
+      <SheetContent style={{ height: sheetHeight }}>
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>{t("filters")}</SheetTitle>
           <Button

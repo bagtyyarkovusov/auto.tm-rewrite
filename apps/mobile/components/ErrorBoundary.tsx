@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { View } from "react-native";
+import { withTranslation, type WithTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
@@ -9,13 +10,15 @@ interface Props {
   fallback?: ReactNode;
 }
 
+type ErrorBoundaryProps = Props & WithTranslation;
+
 interface State {
   hasError: boolean;
   error?: Error;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, State> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
@@ -33,6 +36,8 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
+    const { t } = this.props;
+
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
@@ -40,13 +45,13 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View className="flex-1 items-center justify-center px-6 gap-4 bg-background">
           <Text className="text-lg font-semibold text-foreground">
-            Something went wrong
+            {t("somethingWentWrong")}
           </Text>
           <Text className="text-center text-sm text-muted-foreground">
-            {this.state.error?.message ?? "An unexpected error occurred."}
+            {this.state.error?.message ?? t("unexpectedError")}
           </Text>
           <Button variant="brand" size="pill" onPress={this.handleReload}>
-            <Text>Try again</Text>
+            <Text>{t("tryAgain")}</Text>
           </Button>
         </View>
       );
@@ -55,3 +60,5 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
+export const ErrorBoundary = withTranslation()(ErrorBoundaryComponent);
