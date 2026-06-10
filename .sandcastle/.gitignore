@@ -2,3 +2,6 @@
 logs/
 worktrees/
 setup.log
+# Stage A output: prebuilt Linux node_modules (~1.9 GB+) cloned into each
+# worktree. Generated per-lockfile by materializeLinuxModules() in main.mts.
+linux-modules/

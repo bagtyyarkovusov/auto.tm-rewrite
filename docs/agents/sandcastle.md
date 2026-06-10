@@ -116,13 +116,13 @@ Per-phase logs stream to `.sandcastle/logs/` (gitignored). Worktrees live under
 run is interrupted, a worktree with uncommitted changes is preserved on disk —
 remove it manually once you've inspected it.
 
-The setup hook also writes `.sandcastle/setup.log` inside each issue worktree.
-Use that file to distinguish a dependency/bootstrap failure from a slow agent
-response:
-
-```bash
-tail -n 120 .sandcastle/worktrees/<issue-worktree>/.sandcastle/setup.log
-```
+Dependency setup is no longer a per-worktree install with its own `setup.log`.
+Stage A (`materializeLinuxModules()`) logs `[stage-a] …` lines to the
+orchestrator's own stdout (`.sandcastle/run.log` if you redirect it), and the
+per-worktree step is just a clone, so a "stuck setup" now shows up as a slow
+clone or a Stage C top-up failure in the phase log, not a separate file. The
+agent stream logs themselves are readable: tool output is collapsed to one-line
+`⤷` summaries (`✗` on error) instead of raw-JSON `tool_result` dumps.
 
 If an interrupted run left an empty branch/worktree, the next run resets that
 zero-commit Sandcastle branch to the current host `HEAD` before starting. Branches
@@ -139,35 +139,50 @@ agent emits `<promise>COMPLETE</promise>`, Sandcastle merges the temporary branc
 back into the current host branch and the host orchestrator pushes that branch to
 `origin` using `.sandcastle/.env` / `gh auth setup-git`.
 
-## Dependency model (why it's fast + offline)
+## Dependency model — copy-to-worktree (two-stage)
 
-- The repo remains pinned to pnpm 9 for normal development. The Sandcastle image
-  pins pnpm 10 for sandboxes only.
-- The image bakes a warm pnpm content-addressable store and global virtual store
-  link graph (`pnpm fetch --config.enableGlobalVirtualStore=true`).
-- Each worktree runs
-  `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm install --prefer-offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`
-  (a `hooks.sandbox.onSandboxReady` command). `COREPACK_ENABLE_PROJECT_SPEC=0`
-  is required because the root `packageManager` still points Corepack at pnpm 9.
-  The Claude Code agent process also receives `CI=1` and
-  `COREPACK_ENABLE_PROJECT_SPEC=0`, so even an agent-issued bare `pnpm` command
-  uses the image's pnpm 10 instead of making Corepack download pnpm 9. `CI=1`
-  keeps pnpm non-interactive when a reused worktree needs to purge stale
-  `node_modules`.
-  The host worktree's `node_modules` is mostly symlinks/metadata; package
-  contents stay in `/home/agent/.pnpm-store` inside Docker.
-- `dist/` for `@auto-tm/db` + `@auto-tm/contracts` is produced by turbo `^build`
-  when the gate runs (per [ADR-0016](../adr/0016-typescript-runtime-boundaries.md));
-  the hook also runs
-  `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm --filter @auto-tm/db generate`.
-- If an issue **adds** a dependency, `--prefer-offline` fetches just the new
-  packages over the sandbox's default bridge network (everything else still comes
-  from the warm store); **no image rebuild is required**. Rebuilding the image
-  re-warms the store so there is less to fetch — a perf optimization, not a
-  correctness gate.
+Locked in [ADR-0033](../adr/0033-sandcastle-copy-to-worktree-dependencies.md),
+which supersedes the old per-worktree `pnpm install` ([ADR-0028](../adr/0028-kimi-sandcastle-afk-orchestrator.md) §D3).
+That install materialized ~1,862 packages from the in-VM warm store **into the
+macOS bind-mounted worktree**; pnpm can't hardlink across that mount (`EXDEV`),
+so it fell back to a cross-device COPY through Docker-for-Mac file sharing and
+blew even a serialized 40-minute timeout. The fix is to never install against the
+bind mount:
+
+- **The repo stays on pnpm 9 for normal dev; the Sandcastle image pins pnpm 10**
+  and bakes a warm pnpm content-addressable store (`pnpm fetch`).
+- **Stage A — `materializeLinuxModules()` (once per lockfile).** `main.mts`
+  hashes `pnpm-lock.yaml` against `.sandcastle/linux-modules/.lockhash`. On a
+  miss it runs the warm-store image detached, `git archive HEAD | tar -x` the
+  committed tree in, runs `pnpm install --prefer-offline --frozen-lockfile` +
+  `pnpm --filter @auto-tm/db generate` **in-VM** (hardlinks from the warm store,
+  no EXDEV), then `tar`s the node_modules set (root + every workspace package)
+  out to the host at `.sandcastle/linux-modules/` (gitignored, ~1.9 GB+). It
+  needs a dummy `DATABASE_URL` for `prisma generate` (provided automatically).
+- **Stage B — copy into each worktree.** Implementers/reviewers (`createSandbox`)
+  and the merger (`run`) pass `copyToWorktree: <module paths>` +
+  `copyFromDir: ".sandcastle/linux-modules"`. The fork copies **host→host on the
+  same APFS volume** with `cp -cR` (clonefile, metadata-only), so there is no
+  cross-device copy and no bind-mount write — per-worktree setup is a fast clone,
+  not an install. Tune with `SANDCASTLE_COPY_CONCURRENCY` (default 5) and
+  `SANDCASTLE_COPY_TO_WORKTREE_MS` (default 900 000).
+- **Stage C — optional top-up.** A now-cheap
+  `CI=1 COREPACK_ENABLE_PROJECT_SPEC=0 pnpm install --prefer-offline --frozen-lockfile`
+  runs as `onSandboxReady` to reconcile a branch that **adds** a dependency (the
+  bulk is already cloned in, so pnpm only fetches the delta over the bridge
+  network). Default-on; set `SANDCASTLE_TOPUP_INSTALL=0` to skip.
+  `COREPACK_ENABLE_PROJECT_SPEC=0` is required because the root `packageManager`
+  still points Corepack at pnpm 9; the agent process also gets `CI=1` +
+  `COREPACK_ENABLE_PROJECT_SPEC=0` so even a bare `pnpm` uses the image's pnpm 10.
+- `dist/` for `@auto-tm/db` + `@auto-tm/contracts` and the Prisma client are
+  **not** copied; turbo `^build` regenerates them in-worktree when the gate runs
+  (per [ADR-0016](../adr/0016-typescript-runtime-boundaries.md)).
+- **Rebuild the image when `pnpm-lock.yaml` changes** — it is Stage A's build
+  substrate (the warm store goes stale otherwise). Stage A itself also rebuilds
+  `linux-modules/` automatically on a lockhash miss.
 
 The implementer/reviewer/merger phases have explicit idle budgets so a stuck Kimi
-or Claude Code stream does not look like an infinite package-manager hang:
+or Claude Code stream does not look like an infinite hang:
 `SANDCASTLE_IMPLEMENTER_IDLE_TIMEOUT_SECONDS` defaults to 300 seconds;
 reviewer/merger default to 180 seconds.
 
