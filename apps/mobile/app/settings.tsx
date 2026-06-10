@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import * as Linking from "expo-linking";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -23,8 +24,12 @@ import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 
+function openLegalPage(locale: string, kind: "terms" | "privacy") {
+  void Linking.openURL(`https://auto.tm/${locale}/legal/${kind}`);
+}
+
 export default function SettingsScreen() {
-  const { t } = useTranslation("account");
+  const { t, i18n } = useTranslation("account");
   const logout = useLogout();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -58,6 +63,42 @@ export default function SettingsScreen() {
           </Text>
           <LocaleSwitcher />
         </View>
+
+        <Separator className="bg-border" />
+
+        {/* Privacy Policy */}
+        <Pressable
+          onPress={() => openLegalPage(i18n.language, "privacy")}
+          className="flex-row items-center justify-between py-4 active:opacity-70"
+          accessibilityRole="button"
+          accessibilityLabel={t("privacyPolicy")}
+        >
+          <Text className="text-base text-foreground">
+            {t("privacyPolicy")}
+          </Text>
+          <Icon
+            as={ChevronRight}
+            className="size-5 text-muted-foreground"
+          />
+        </Pressable>
+
+        <Separator className="bg-border" />
+
+        {/* Terms of Service */}
+        <Pressable
+          onPress={() => openLegalPage(i18n.language, "terms")}
+          className="flex-row items-center justify-between py-4 active:opacity-70"
+          accessibilityRole="button"
+          accessibilityLabel={t("termsOfService")}
+        >
+          <Text className="text-base text-foreground">
+            {t("termsOfService")}
+          </Text>
+          <Icon
+            as={ChevronRight}
+            className="size-5 text-muted-foreground"
+          />
+        </Pressable>
 
         <Separator className="bg-border" />
 

@@ -26,6 +26,7 @@ Scope is intentionally **minimal** for MVP — full marketplace functionality st
 - `src/lib/utils.ts` — `cn()` helper
 - `src/components/ui/button.tsx` — first installed shadcn component
 - `@auto-tm/web` consuming `next@^16.2.2`, workspace deps `@auto-tm/contracts` + `@auto-tm/ui`
+- **Legal pages** — `/[locale]/legal/privacy` and `/[locale]/legal/terms` with RU/TK/EN content, print-friendly CSS, effective date, and static generation
 - No listing/dealer/blog routes yet; no SSR data fetching; no OG metadata logic; no Universal Links / App Links manifests
 
 ## Public API surface
@@ -45,7 +46,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the i
 - **Historical S4 web SSR slice** — issue #95 originally planned anonymous SSR feed/detail for S4, but it was deferred from S4 on 2026-05-29 and should not block S4 closure.
 - **S5 (Search + listing detail)** — mobile-first search and listing-detail polish; web search/browse remains out of scope unless the S5 sprint file is explicitly reshaped.
 - **S6 (Contact seller)** — listing-detail Message CTA points to the MLP contact flow
-- **S8 (Private beta polish)** — simple landing page, `/[locale]/legal/privacy`, `/[locale]/legal/terms`, listing-detail public metadata / OG behavior, and any beta-required link metadata
+- **S8 (Private beta polish)** — simple landing page ✅, `/[locale]/legal/privacy` ✅, `/[locale]/legal/terms` ✅, listing-detail public metadata / OG behavior, and any beta-required link metadata
 - **Post-MLP dealership bet** — `/[locale]/dealers/[slug]` public dealer showroom
 - **Post-MLP rich public web** — app-store badges, Universal Links / App Links polish, blog read-only pages (`/[locale]/blog/[id]`)
 

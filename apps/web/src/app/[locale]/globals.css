@@ -140,3 +140,34 @@ html, body {
     @apply font-sans;
   }
 }
+
+/* Print-friendly styles for legal pages */
+@media print {
+  @page {
+    margin: 2cm;
+  }
+
+  html {
+    background: white;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  h1, h2 {
+    color: black !important;
+  }
+
+  a {
+    color: black !important;
+    text-decoration: none !important;
+  }
+
+  footer a::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #444;
+  }
+}
