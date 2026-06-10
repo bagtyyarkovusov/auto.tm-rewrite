@@ -1,23 +1,6 @@
+import { buildVariantUrl } from "../detail/buildVariantUrl";
+
 import type { StagedPhoto } from "./types";
-
-const MEDIA_URL = (
-  process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""
-).replace(/\/$/, "");
-
-/**
- * Build a public image-variant URL from a storage key.
- * Mirrors the server-side `buildVariants` logic in GetListingDetail.ts.
- */
-function buildVariantUrl(key: string, variant: "thumbnail" | "list" | "detail" | "fullscreen"): string {
-  if (!MEDIA_URL) return "";
-
-  if (key.endsWith(".mp4") || key.endsWith(".mov")) {
-    return `${MEDIA_URL}/${key}`;
-  }
-
-  const base = key.replace(/\/original\.(jpg|webp|jpeg)$/, "");
-  return `${MEDIA_URL}/${base}/${variant}.jpg`;
-}
 
 /**
  * Return the best available URI for a staged photo.
