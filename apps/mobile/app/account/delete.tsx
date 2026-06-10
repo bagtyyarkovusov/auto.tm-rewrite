@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft, Trash2 } from "lucide-react-native";
@@ -40,7 +40,7 @@ export default function DeleteAccountScreen() {
   const [showScheduled, setShowScheduled] = useState(false);
 
   const locale = i18n.language ?? "ru";
-  const deletionDate = formatDeletionDate(locale);
+  const deletionDate = useMemo(() => formatDeletionDate(locale), [locale]);
 
   async function handleDelete() {
     setShowConfirm(false);

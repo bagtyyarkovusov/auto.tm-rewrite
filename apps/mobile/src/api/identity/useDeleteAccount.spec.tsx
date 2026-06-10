@@ -53,17 +53,9 @@ describe("useDeleteAccount", () => {
   });
 
   it("surfaces API errors", async () => {
+    const { ApiError } = await import("../client");
     mockDelete.mockRejectedValue(
-      new (class extends Error {
-        constructor(
-          public code: string,
-          public status: number,
-          message?: string,
-        ) {
-          super(message ?? code);
-          this.name = "ApiError";
-        }
-      })("USER_NOT_FOUND", 404, "User not found."),
+      new ApiError("USER_NOT_FOUND", 404, "User not found."),
     );
 
     const { result } = renderHook(() => useDeleteAccount(), { wrapper });

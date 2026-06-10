@@ -216,14 +216,20 @@ export default function OtpScreen() {
   }
 
   async function handleRestoreConfirm() {
-    setShowRestorePrompt(false);
-    if (pendingSession) {
+    if (!pendingSession) {
+      setShowRestorePrompt(false);
+      return;
+    }
+    try {
       await storeAuthSession(pendingSession);
       setPendingSession(null);
+      setShowRestorePrompt(false);
       router.dismissAll();
       await useAuthIntentStore
         .getState()
         .consumeAndReplay(router as { replace: (path: string) => void });
+    } catch {
+      // Keep prompt open so the user can retry if storage fails.
     }
   }
 
