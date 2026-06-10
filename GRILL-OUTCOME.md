@@ -325,10 +325,14 @@ Scope and bounds (full record in [ADR-0034](docs/adr/0034-kolesa-ux-findability-
 - **UX/IA only — not visual.** §12's design system (AutoTM's own Uber-style tokens) is **unchanged**. Kolesa's *look* is not adopted.
 - **Bounded by the locked 5-tab IA ([20-information-architecture](docs/prd/20-information-architecture.md)), the [00-vision](docs/prd/00-vision.md) anti-goals, and MLP scope ([ADR-0027](docs/adr/0027-mlp-beta-scope.md)).** Kolesa's feature breadth (other verticals, loans, paid promotion, email/password auth, owner reviews, saved-search/push) is subtracted, not imported.
 - **Forward + opportunistic rollout** — new/upcoming screens are built to the Kolesa-findability bar; shipped screens are re-touched only when next edited.
-- Concrete adoptions: home = feed + within-cars quick-filter chips; minimal first-launch onboarding (language picker + 1–2 slides); owner/model reviews deferred to a post-MLP content bet.
+- Concrete adoptions: home = cars browse + a dedicated, prominent filter page (vertical-shaped browse, **not** feed chips — refined 2026-06-11, see below); minimal first-launch onboarding (language picker + 1–2 slides); owner/model reviews deferred to a post-MLP content bet.
 - **Agent-facing guide:** [`docs/prd/ui/kolesa-findability-reference.md`](docs/prd/ui/kolesa-findability-reference.md) — scraped 59-flow inventory + keep/defer map + per-surface patterns.
 
 auto.ru remains only as a historical label in early/shipped artifacts (not rewritten).
+
+### 2026-06-11 — Multi-vertical platform direction (ADR-0035)
+
+AutoTM's long-term direction is recorded as a **multi-vertical platform** — vehicles (incl. **trucks/commercial**), **auto parts** (incl. compatibility matching), and **services** — with **cars as the MLP wedge**. **MLP stays cars-only**; [ADR-0027](docs/adr/0027-mlp-beta-scope.md) is unchanged and no vertical is built until shaped at the betting table. MLP work follows **anti-lock-in seam principles**: general naming (`Listing`, not `CarListing`); tab-1 cars browse as a self-contained *category* surface with a **dedicated filter page (not feed chips)**; per-category-configurable filter shape; a `Listing.category` discriminator added at the last responsible moment. Target IA = Kolesa's `hub → category → dedicated filter`. This **reverses the 2026-06-10 "feed + quick-filter chips" home sub-decision** in favour of the dedicated-filter vertical browse. Full record + expansion sequence: [ADR-0035](docs/adr/0035-multi-vertical-platform-direction.md).
 
 ---
 

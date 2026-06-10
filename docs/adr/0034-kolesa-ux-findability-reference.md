@@ -25,7 +25,7 @@ A full grilling session on 2026-06-10 walked the decision tree, using the comple
 
 4. **Rollout is forward + opportunistic** — new/upcoming screens are built to the Kolesa-findability bar from day one; already-shipped screens are re-touched only when next edited for another reason. There is **no dedicated re-skin pass** for the beta.
 
-5. **Concrete adoptions locked this session:** home = feed **+ within-cars quick-filter chips** (body-type / brand / price) deep-linking into the existing filter sheet; **minimal first-launch onboarding** (RU/TK/EN language picker + 1–2 skippable value-prop slides → anonymous feed); **owner/model reviews deferred** to a post-MLP content bet.
+5. **Concrete adoptions locked this session:** home = the **cars browse reached/refined through a dedicated, prominent filter page** (Kolesa's funnel), built as a **self-contained vertical/category browse surface** — **not** feed chips (refined 2026-06-11; see [ADR-0035](0035-multi-vertical-platform-direction.md)); **minimal first-launch onboarding** (RU/TK/EN language picker + 1–2 skippable value-prop slides → anonymous feed); **owner/model reviews deferred** to a post-MLP content bet.
 
 6. **The agent-facing source of truth** for *what to mirror and what to defer* is **`docs/prd/ui/kolesa-findability-reference.md`** — the scraped 59-flow inventory, the keep/defer map, and per-surface findability patterns. CLAUDE.md points agents to it before any mobile screen/findability work.
 
@@ -59,4 +59,5 @@ A full grilling session on 2026-06-10 walked the decision tree, using the comple
 - [docs/prd/00-vision.md](../prd/00-vision.md) — anti-goals (bounds what transfers)
 - [docs/prd/20-information-architecture.md](../prd/20-information-architecture.md) — the locked 5-tab IA
 - [docs/prd/ui/kolesa-findability-reference.md](../prd/ui/kolesa-findability-reference.md) — keep/defer map + per-surface patterns (agent-facing)
+- [ADR-0035](0035-multi-vertical-platform-direction.md) — multi-vertical direction; refines this ADR's home model to a dedicated-filter vertical browse (the "feed chips" sub-decision was reversed 2026-06-11)
 - Source: `scrn.gallery/app/kolesa` flows (59 flows / 248 screens, May 2026) + local Kolesa screen captures

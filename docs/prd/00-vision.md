@@ -4,6 +4,8 @@
 
 A **mobile-first, multilingual car marketplace for Turkmenistan**, with a built-in chat that makes buyer ↔ seller communication effortless and a 3-tier trust system (Phase 2) where AutoTM-staffed inspections back each listing's quality claim.
 
+> **Long-term direction — cars is the wedge.** The MLP and near-term roadmap are a **car** marketplace. The longer arc is a **multi-vertical platform** — vehicles (incl. trucks/commercial), **auto parts** (incl. compatibility matching), and **services** (structurally Kolesa Group's shape). Cars proves the loop first; further verticals are **betting-table-gated** and **MLP stays cars-only**. Recorded in [ADR-0035](../adr/0035-multi-vertical-platform-direction.md).
+
 ## Why it exists
 
 Turkmenistan's car-buying market has the same friction every emerging market has:

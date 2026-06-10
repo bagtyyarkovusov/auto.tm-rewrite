@@ -27,7 +27,7 @@ Tree with screen counts. **Legend:** ✅ keep (already built — Kolesa = polish
 Онбординг / Onboarding (7)                              ⏳ minimal version (see §13)
 Онбординг после регистрации (10)                        🚫 (anonymous-default; no heavy post-reg)
 
-Главный экран / Home (4)                                ✅ feed + quick-filter chips (§4)
+Главный экран / Home (4)                                ✅ cars browse + dedicated filter (§5)
 ├─ Просмотр новостей / News (4)                         ⏳ post-MLP (blog/Bortzhurnal)
 ├─ Просмотр промо-контента / Promo (6)                  ⏳ post-MLP (ad-sales bet)
 ├─ Просмотр автомобилей / View cars (4)                 ✅ your feed (§5)
@@ -91,7 +91,7 @@ Tree with screen counts. **Legend:** ✅ keep (already built — Kolesa = polish
 | Bucket | Flows | Decision |
 |---|---|---|
 | **Already built** — Kolesa = polish reference | feed, filter, sort, detail, contact/call/chat, messages, wizard, remove-from-sale, favorites, profile/settings/language, delete-profile, legal | Mirror findability; do not rebuild |
-| **Other verticals** | moto, motorcycles, parts, new-car catalog, services catalog | 🚫 cars-only |
+| **Other verticals** | moto, motorcycles, **parts**, new-car catalog, **services** (+ future **trucks/commercial**) | 🚫 cars-only for MLP; **parts / services / trucks are future verticals** per [ADR-0035](../../adr/0035-multi-vertical-platform-direction.md), not permanent non-goals |
 | **Monetization / wallet** | car loans + loan calculator, balance top-up, payment history, receipts, premium/PLUS, paid promotion (bump) | 🚫 post-MLP business bets; anti-goal bars pay-for-placement |
 | **Email+password auth** | registration, login, password recovery, change password, beta-signup | 🚫 you're **phone-OTP only** — biggest "defer the whole subtree" win |
 | **Post-MLP bets (ADR-0027)** | saved search / search-subscription, push-subscription, manage subscriptions, news, promo, stories, ads | ⏳ deferred; Kolesa's prominence is not on its own a reason to pull forward |
@@ -105,10 +105,14 @@ Tree with screen counts. **Legend:** ✅ keep (already built — Kolesa = polish
 ### 4. Bottom-tab model
 Kolesa: **Home · Favorites · Post(+) center · Messages · Cabinet**. AutoTM's 5 tabs map 1:1. **Note the label:** Kolesa's 5th tab is **"Кабинет" (Cabinet/Profile)**, not "Services." Our IA currently labels tab 5 "Сервисы/Services" but it is really a profile/cabinet surface — treat it as **Cabinet/Profile** in copy and IA (see §12). Center **+** is the post-listing CTA (matches your Sell tab).
 
-### 5. Home
-Kolesa home = **Stories strip → category tiles (verticals) → recommended feed**. The tiles are *verticals you don't have*. **AutoTM home = the chronological feed + a horizontal strip of WITHIN-cars quick-filter chips** (locked decision):
-- Quick-filter chips at top: **body-type** (Sedan / SUV / Crossover / …), optionally **price segments** and **popular brands**. Tapping a chip deep-links into the **existing filter sheet** pre-applied → results.
-- Keep the feed below as the default surface. **No Stories, no promo banner, no vertical tiles.**
+### 5. Home / cars browse
+Kolesa home = **Stories strip → category tiles (verticals) → recommended feed**, and tapping the **Cars** tile opens the cars browse with a dedicated **Фильтр / Filter** button → filter page → results. The tiles are *verticals you don't have yet*.
+
+Because AutoTM is **cars-only for MLP** (one vertical), Kolesa's home-hub collapses — a hub whose only tile is "Cars" is redundant. So **tab 1 ("Search") _is_ Kolesa's cars-browse page**: a feed of recent listings, reached/refined through a **dedicated, prominent Filter entry**. **Not feed chips** — chips don't survive the eventual `hub → category → filter` structure, whereas a vertical-shaped browse + dedicated filter does (see [ADR-0035](../../adr/0035-multi-vertical-platform-direction.md), the multi-vertical direction).
+
+- **Build it as a self-contained _category browse_ surface**, not a hardcoded "home," so a home-hub can slot in front when the second vertical (trucks) lands — no rebuild.
+- A **prominent Filter/Search entry** (Kolesa's "Фильтр" button; optionally a search bar on top) opens the dedicated filter page (§6).
+- Keep the recent-listings feed as the default body. **No Stories, no promo banner, no vertical tiles** for MLP.
 - Card pattern to mirror (see §5a).
 
 ### 5a. Listing card (feed + results + favorites all share it)
@@ -170,16 +174,17 @@ Skip the 10-screen post-registration onboarding entirely (anonymous-default).
 
 ---
 
-## 14. Locked decisions (2026-06-10 grilling session)
+## 14. Locked decisions (2026-06-10/11 grilling session)
 
 | # | Decision |
 |---|---|
 | 1 | Reference design auto.ru → **Kolesa**, **UX/IA/findability only** (not visual) — [ADR-0034](../../adr/0034-kolesa-ux-findability-reference.md) |
 | 2 | Rollout **forward + opportunistic** — new screens to the bar; shipped screens only when next touched |
-| 3 | Home = **feed + within-cars quick-filter chips** (§5) |
+| 3 | Home/browse = **cars browse + a dedicated, prominent filter page** (not feed chips), built as a vertical-shaped category surface (§5; [ADR-0035](../../adr/0035-multi-vertical-platform-direction.md)) |
 | 4 | Owner/model **reviews deferred** to post-MLP content bet |
 | 5 | **Minimal onboarding** — first-launch language picker + 1–2 slides (§13) |
 | 6 | Defer/N-A: other verticals · monetization+loans · email+password auth · saved-search+push · news/promo/stories/ads · car-history→Phase 2 |
+| 7 | **Multi-vertical direction** (2026-06-11) — cars is the MLP wedge of a vehicle+parts+services platform; cars-only now + anti-lock-in seams; target IA = Kolesa hub→category→filter ([ADR-0035](../../adr/0035-multi-vertical-platform-direction.md)) |
 
 ## 15. Maintenance
 

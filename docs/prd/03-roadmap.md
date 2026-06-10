@@ -79,6 +79,10 @@ These are not a backlog. They are candidates for shaping after beta learning. If
 | Inspection reports + tier | Trust, misrepresentation, or inspection demand becomes the bottleneck | [`features/50-reports-tier.md`](features/50-reports-tier.md) |
 | PDF reports | Reports exist and users need printable/shareable artifacts | [`features/51-pdf-export.md`](features/51-pdf-export.md) |
 | Video / 360 / comparisons | Visual inspection quality or comparison friction blocks purchases | [`features/52-orbit-photos.md`](features/52-orbit-photos.md) |
+| **Trucks / commercial vertical** | Cars marketplace loop is proven and commercial-vehicle demand is visible | [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) until a vertical PRD is shaped |
+| **Auto parts vertical** | Buyers/sellers ask for parts and the cars loop is healthy | [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) |
+| **Specialized parts-compatibility matching** | Parts vertical exists and fitment accuracy is the bottleneck | [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) — new bounded context + fitment data |
+| **Services vertical** | Repair / service demand surfaces alongside the marketplace | [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) |
 
 ---
 
