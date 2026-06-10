@@ -123,7 +123,7 @@ Repository ports (consumed only within `listings/`):
 | GET | `/api/v1/me/listings` | Required | `ListMyListings` |
 | POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
 | GET | `/api/v1/listings` | Public | `ListFeed` | Accepts `cursor`, `limit`, and MLP filters (`brandId`, `modelId`, `cityId`, `priceMin`, `priceMax`, `yearMin`, `yearMax`, `condition`). Includes `coverMediaKey` when listing has media |
-| GET | `/api/v1/listings/:id` | Public | `GetListingDetail` | Banned listings: non-owner → 404; owner → full detail with `status: "banned"` |
+| GET | `/api/v1/listings/:id` | Public (auth optional) | `GetListingDetail` | Banned listings: non-owner → 404; owner → full detail with `status: "banned"`. Includes `isFavorited` when caller is authenticated |
 | GET | `/api/v1/exchange-rates` | Public | `GetExchangeRates` |
 | POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |
 | PATCH | `/api/v1/listings/:id` | Required (owner) | `EditListing` |

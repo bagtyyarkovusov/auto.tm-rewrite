@@ -1,6 +1,6 @@
 # Vendored dependencies
 
-## `ai-hero-sandcastle-0.5.10-dc7dab2.tgz`
+## `ai-hero-sandcastle-0.5.10-d4b7db7.tgz`
 
 Prebuilt tarball of the Kimi-enabled `@ai-hero/sandcastle` fork, consumed as a
 **host-only** devDependency (`file:`) by the root `package.json`. Sandcastle runs
@@ -9,9 +9,14 @@ image or any deployed artifact, so it does not touch the air-gapped runtime.
 
 - **Upstream:** https://github.com/mattpocock/sandcastle (`@ai-hero/sandcastle`)
 - **Fork:** https://github.com/bagtyyarkovusov/sandcastle
-- **Branch / commit:** `feature/kimi-code-provider` @ `dc7dab2` (`kimiCode` agent provider + Claude Code stream-json parsing; setup hooks in `createSandbox` now fail on non-zero exit with stderr and managed worktree paths are canonicalized on macOS)
-- **Built:** 2026-06-07 via `npm run build && npm pack --ignore-scripts`
+- **Branch / commit:** `feature/kimi-code-provider` @ `d4b7db7` (adds `copyFromDir` source-root override to `copyToWorktree` for the copy-to-worktree dependency strategy — parallel copy via `SANDCASTLE_COPY_CONCURRENCY`, 600 s default batch timeout, `mkdir -p` of the dest parent — threaded through `createSandbox` / `createWorktree` / `run`; plus Claude Code log cleanup: `user`/`tool_result` dumps collapse to a compact `tool_result` event, `system` lifecycle chatter is dropped as `ignore`, and unrecognized-line telemetry is truncated. Built on `dc7dab2`: `kimiCode` provider + Claude Code stream-json parsing + setup hooks that fail on non-zero exit.)
+- **Built:** 2026-06-10 via `npm run build && npm pack --ignore-scripts`
   (tsgo build; `--ignore-scripts` skips the fork's `husky` + rebuild `prepare`).
+
+> The `d4b7db7` build was packed from a working tree that also carried an
+> unrelated, uncommitted `cursor` agent-provider WIP; that WIP was stashed before
+> the build, so this tarball reflects exactly the `d4b7db7` commit (copy-to-worktree
+> + log-cleanup) on top of `dc7dab2`.
 
 ### Why vendored (not a `github:` git dependency)
 

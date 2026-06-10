@@ -18,12 +18,16 @@
 // and a running Docker daemon. See docs/agents/sandcastle.md + ADR-0028.
 
 import * as sandcastle from "@ai-hero/sandcastle";
-import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
-import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { docker, defaultImageName } from "@ai-hero/sandcastle/sandboxes/docker";
+import { exec, execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import * as path from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
 const readSandcastleEnv = async () => {
   const content = await readFile(".sandcastle/.env", "utf8").catch(() => "");
@@ -282,45 +286,29 @@ const kimiClaudeAgent = (effort: "low" | "medium" = "low") =>
     env: CLAUDE_CODE_THINKING_ENV,
   });
 
-// Dependency strategy (Sandcastle-only pnpm 10 experiment).
-// Do not copy/clone node_modules or a per-worktree store onto the macOS bind mount:
-// that creates 1-2GB of host filesystem churn per agent. Instead, keep pnpm's store
-// inside Docker's Linux filesystem and opt only Sandcastle installs into pnpm's
-// global virtual store. The host worktree receives mostly symlinks in node_modules;
-// package contents stay in /home/agent/.pnpm-store.
+// ---------------------------------------------------------------------------
+// Dependency strategy: copy-to-worktree (two-stage). See ADR-0033 +
+// docs/agents/sandcastle.md.
+//
+// The old per-sandbox `pnpm install` materialized ~1,862 packages from the
+// in-VM warm store INTO the macOS bind-mounted worktree; pnpm's hardlink import
+// can't cross that mount (EXDEV) so it fell back to a cross-device COPY through
+// Docker-for-Mac file sharing, saturating I/O and blowing even a serialized
+// 40-min timeout. Instead:
+//   Stage A: build a Linux node_modules tree ONCE per lockfile inside the warm
+//            image (in-VM → real hardlinks, no EXDEV) and tar it out to
+//            .sandcastle/linux-modules/.
+//   Stage B: CoW-clone (APFS clonefile, metadata-only, host→host) that tree
+//            into each worktree via Sandcastle's copyToWorktree + copyFromDir —
+//            no install touches the bind mount.
+//   Stage C: an optional, now-cheap top-up `pnpm install` reconciles per-branch
+//            deltas (a branch that adds a dependency).
+// ---------------------------------------------------------------------------
+
 const SANDCASTLE_ENV = "CI=1 COREPACK_ENABLE_PROJECT_SPEC=0";
 const SANDCASTLE_PNPM = `${SANDCASTLE_ENV} pnpm`;
-// --prefer-offline (not --offline): serve everything cached from the warm store,
-// but fetch only NEW packages over the sandbox's default bridge network — so an
-// issue that adds a dependency, and its downstream issues, run AFK without an
-// image rebuild. --frozen-lockfile still pins exact versions. Rebuilds are now a
-// perf re-warm, not a correctness requirement. See docs/agents/sandcastle.md.
-const SANDCASTLE_INSTALL =
-  `${SANDCASTLE_PNPM} install --prefer-offline --frozen-lockfile --config.enableGlobalVirtualStore=true --package-import-method=hardlink`;
-// Bumped 10→20→40 min: with agents running in parallel and writing to bind-mounted
-// worktrees, Docker-for-Mac file-sharing I/O can slow even a serialized install past
-// 20 min in later waves. serializeInstall prevents contention between installs;
-// this timeout just needs to be generous enough to survive background agent I/O.
-const SANDCASTLE_INSTALL_TIMEOUT_MS = 2_400_000;
-
-// Serialize the per-sandbox install (the onSandboxReady hook). pnpm materializes
-// ~1862 packages from the in-VM store into the bind-mounted worktree; on
-// Docker-for-Mac the hardlink import falls back to a cross-device COPY, and
-// running every planned issue's install at once saturates the file-sharing layer
-// so all of them blow the hook timeout (observed 2026-06-09: 3× parallel → all
-// three killed mid-link at "reused ~1500/1862", downloaded 0 — pure I/O, not
-// network). Gate ONLY the install; sandbox.run (the agent) still runs in
-// parallel, so AFK throughput is preserved while each install gets full I/O.
-let installChain: Promise<unknown> = Promise.resolve();
-const serializeInstall = <T>(fn: () => Promise<T>): Promise<T> => {
-  const run = installChain.then(fn, fn);
-  installChain = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  return run;
-};
 const SANDCASTLE_GIT_AUTH = "gh auth setup-git";
+
 const IMPLEMENTER_IDLE_TIMEOUT_SECONDS = Number(
   HOST_ENV.SANDCASTLE_IMPLEMENTER_IDLE_TIMEOUT_SECONDS ?? 300,
 );
@@ -330,41 +318,174 @@ const REVIEWER_IDLE_TIMEOUT_SECONDS = Number(
 const MERGER_IDLE_TIMEOUT_SECONDS = Number(
   HOST_ENV.SANDCASTLE_MERGER_IDLE_TIMEOUT_SECONDS ?? 180,
 );
-const SETUP_LOG_COMMAND = `bash -lc 'set -euo pipefail; mkdir -p .sandcastle; { echo "[sandcastle-setup] $(date -Iseconds) install start"; ${SANDCASTLE_PNPM} config get store-dir; ${SANDCASTLE_INSTALL}; echo "[sandcastle-setup] $(date -Iseconds) db generate start"; ${SANDCASTLE_PNPM} --filter @auto-tm/db generate; echo "[sandcastle-setup] $(date -Iseconds) setup done"; } 2>&1 | tee .sandcastle/setup.log'`;
 
-const implementerHooks = {
-  sandbox: {
-    onSandboxReady: [
-      {
-        command: SETUP_LOG_COMMAND,
-        timeoutMs: SANDCASTLE_INSTALL_TIMEOUT_MS,
-      },
-    ],
-  },
+// --- Stage A: materialize a Linux node_modules tree, once per lockfile -------
+
+// The same image docker() resolves for this repo (e.g. sandcastle:auto.tm-rewrite),
+// which bakes a warm pnpm store. Stage A installs against that store in-VM.
+const WARM_IMAGE = defaultImageName(process.cwd());
+const LINUX_MODULES_DIR = ".sandcastle/linux-modules";
+const LOCKHASH_PATH = path.join(LINUX_MODULES_DIR, ".lockhash");
+// prisma generate (run in Stage A) needs DATABASE_URL even though it never
+// connects — a dummy satisfies prisma.config.ts. The real client is regenerated
+// in-worktree by turbo `^build` at gate time, so it need not be copied.
+const STAGE_A_DATABASE_URL =
+  HOST_ENV.DATABASE_URL ??
+  "postgresql://sandcastle:sandcastle@localhost:5432/sandcastle";
+
+const lockfileHash = async () =>
+  createHash("sha256")
+    .update(await readFile("pnpm-lock.yaml"))
+    .digest("hex");
+
+const dockerExecEnvFlags = (env: Record<string, string>) =>
+  Object.entries(env).flatMap(([k, v]) => ["-e", `${k}=${v}`]);
+
+/**
+ * Build (or refresh) .sandcastle/linux-modules/ — a self-contained Linux
+ * node_modules set (root + every workspace package, all symlinks relative) that
+ * Stage B clones into each worktree. No-ops when the lockfile is unchanged.
+ */
+const materializeLinuxModules = async (): Promise<void> => {
+  const wantHash = await lockfileHash();
+  const haveHash = (
+    await readFile(LOCKHASH_PATH, "utf8").catch(() => "")
+  ).trim();
+  if (
+    haveHash === wantHash &&
+    existsSync(path.join(LINUX_MODULES_DIR, "node_modules"))
+  ) {
+    console.log(
+      `[stage-a] linux-modules up to date (lock ${wantHash.slice(0, 12)}); skipping rebuild.`,
+    );
+    return;
+  }
+
+  console.log(
+    `[stage-a] building Linux node_modules (lock ${wantHash.slice(0, 12)})…`,
+  );
+  const startedAt = Date.now();
+  const BUILD = "/home/agent/build";
+
+  // The image ENTRYPOINT is `sleep infinity`, so no command is needed.
+  const { stdout: cidOut } = await execFileAsync(
+    "docker",
+    ["run", "-d", "--rm", WARM_IMAGE],
+    { env: HOST_ENV },
+  );
+  const cid = cidOut.trim();
+
+  try {
+    await execFileAsync(
+      "docker",
+      ["exec", cid, "bash", "-lc", `rm -rf ${BUILD} && mkdir -p ${BUILD}`],
+      { env: HOST_ENV },
+    );
+
+    // Seed the build dir with the committed tree (manifests + lockfile + vendor
+    // tgz + prisma schema). node_modules is gitignored, so the archive is small.
+    await execAsync(
+      `git archive HEAD | docker exec -i ${cid} tar -x -C ${BUILD}`,
+      { env: HOST_ENV, maxBuffer: 256 * 1024 * 1024 },
+    );
+
+    // Install offline against the warm store (in-VM → hardlinks, no EXDEV) and
+    // generate the prisma client so any engine artifacts land in node_modules.
+    await execFileAsync(
+      "docker",
+      [
+        "exec",
+        ...dockerExecEnvFlags({
+          CI: "1",
+          COREPACK_ENABLE_PROJECT_SPEC: "0",
+          DATABASE_URL: STAGE_A_DATABASE_URL,
+        }),
+        cid,
+        "bash",
+        "-lc",
+        `cd ${BUILD} && pnpm install --prefer-offline --frozen-lockfile && pnpm --filter @auto-tm/db generate`,
+      ],
+      { env: HOST_ENV, maxBuffer: 64 * 1024 * 1024 },
+    );
+
+    // Tar the node_modules set (root + each workspace's, pruning nested stores)
+    // out to the host. GNU tar (-T -) in the container → bsdtar on macOS.
+    await rm(LINUX_MODULES_DIR, { recursive: true, force: true });
+    await mkdir(LINUX_MODULES_DIR, { recursive: true });
+    await execAsync(
+      `docker exec ${cid} bash -lc "cd ${BUILD} && find . -maxdepth 3 -type d -name node_modules -prune -print0 | tar --null -cf - -T -" | tar -C ${LINUX_MODULES_DIR} -xf -`,
+      { env: HOST_ENV, maxBuffer: 256 * 1024 * 1024 },
+    );
+
+    await writeFile(LOCKHASH_PATH, wantHash + "\n");
+    console.log(
+      `[stage-a] linux-modules ready in ${((Date.now() - startedAt) / 1000).toFixed(0)}s.`,
+    );
+  } finally {
+    await execFileAsync("docker", ["rm", "-f", cid], { env: HOST_ENV }).catch(
+      () => {},
+    );
+  }
 };
 
-// The merger also runs the gate (typecheck), so it installs too. Run it in a
-// temporary Sandcastle worktree (branchStrategy below), never the root checkout:
-// pnpm 10 may purge incompatible node_modules layouts, and that is only safe
-// inside a throwaway worktree. Also wire GH_TOKEN into Git so the merge agent can
-// fetch/push over HTTPS without an interactive prompt.
+/** Relative paths under linux-modules to clone into each worktree: the root
+ *  node_modules plus every workspace package's node_modules. */
+const enumerateModulePaths = async (): Promise<string[]> => {
+  const paths: string[] = [];
+  if (existsSync(path.join(LINUX_MODULES_DIR, "node_modules"))) {
+    paths.push("node_modules");
+  }
+  for (const group of ["apps", "packages"]) {
+    const groupDir = path.join(LINUX_MODULES_DIR, group);
+    if (!existsSync(groupDir)) continue;
+    for (const name of await readdir(groupDir)) {
+      const rel = path.join(group, name, "node_modules");
+      if (existsSync(path.join(LINUX_MODULES_DIR, rel))) paths.push(rel);
+    }
+  }
+  return paths;
+};
+
+// --- Stage B/C: copy modules into each worktree + optional top-up ------------
+
+// Generous ceiling for the host-side CoW clone of the full module set.
+const COPY_TO_WORKTREE_MS = Number(
+  HOST_ENV.SANDCASTLE_COPY_TO_WORKTREE_MS ?? 900_000,
+);
+
+// Stage C top-up: a now-cheap `pnpm install` reconciling any per-branch delta on
+// top of the cloned-in modules. The bulk is already clonefiled in, so pnpm only
+// materializes what's missing. Default-on; set SANDCASTLE_TOPUP_INSTALL=0 to
+// skip (ADR-0033 decision #4).
+const TOPUP_INSTALL = HOST_ENV.SANDCASTLE_TOPUP_INSTALL !== "0";
+const TOPUP_TIMEOUT_MS = Number(
+  HOST_ENV.SANDCASTLE_TOPUP_TIMEOUT_MS ?? 600_000,
+);
+const topupHooks = TOPUP_INSTALL
+  ? [
+      {
+        command: `bash -lc 'set -euo pipefail; ${SANDCASTLE_PNPM} install --prefer-offline --frozen-lockfile'`,
+        timeoutMs: TOPUP_TIMEOUT_MS,
+      },
+    ]
+  : [];
+
+// Implementer/reviewer: just the optional top-up (modules arrive via the clone).
+const implementerHooks = { sandbox: { onSandboxReady: [...topupHooks] } };
+
+// Merger also runs the gate, so it gets the same modules; plus gh auth so it can
+// push the merged HEAD over HTTPS without an interactive prompt.
 const mergerHook = {
   sandbox: {
     onSandboxReady: [
-      {
-        command: SANDCASTLE_GIT_AUTH,
-        timeoutMs: 30_000,
-      },
-      {
-        command: SETUP_LOG_COMMAND,
-        timeoutMs: SANDCASTLE_INSTALL_TIMEOUT_MS,
-      },
+      { command: SANDCASTLE_GIT_AUTH, timeoutMs: 30_000 },
+      ...topupHooks,
     ],
   },
 };
 
 // The planner only reads issues via `gh`/`git`; it needs no dependencies, so it
-// runs without the install hook.
+// runs with neither the module clone nor a setup hook.
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
@@ -447,6 +568,22 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   }
 
   // -------------------------------------------------------------------------
+  // Stage A: build the Linux node_modules tree once (no-op when the lockfile is
+  // unchanged), then enumerate the dirs to clone into each worktree (Stage B).
+  // -------------------------------------------------------------------------
+  await materializeLinuxModules();
+  const MODULE_PATHS = await enumerateModulePaths();
+  if (MODULE_PATHS.length === 0) {
+    throw new Error(
+      `No node_modules found under ${LINUX_MODULES_DIR} after Stage A — ` +
+        "check the warm-store image and the Stage A logs above.",
+    );
+  }
+  console.log(
+    `[stage-a] cloning ${MODULE_PATHS.length} module dir(s) into each worktree.`,
+  );
+
+  // -------------------------------------------------------------------------
   // Phase 2: Execute + Review
   //
   // One sandbox per issue (implementer + reviewer share it on the same branch).
@@ -457,15 +594,18 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       await prepareIssueBranch(issue);
       const setupStartedAt = Date.now();
       console.log(
-        `[${issue.id}] creating sandbox and running offline setup for ${issue.branch}...`,
+        `[${issue.id}] creating sandbox + cloning modules for ${issue.branch}...`,
       );
-      const sandbox = await serializeInstall(() =>
-        sandcastle.createSandbox({
-          branch: issue.branch,
-          sandbox: docker(),
-          hooks: implementerHooks,
-        }),
-      );
+      // Stage B: CoW-clone the prebuilt Linux modules into the worktree (no
+      // install touches the bind mount). Stage C top-up runs via implementerHooks.
+      const sandbox = await sandcastle.createSandbox({
+        branch: issue.branch,
+        sandbox: docker(),
+        copyToWorktree: MODULE_PATHS,
+        copyFromDir: LINUX_MODULES_DIR,
+        timeouts: { copyToWorktreeMs: COPY_TO_WORKTREE_MS },
+        hooks: implementerHooks,
+      });
       console.log(`[${issue.id}] sandbox ready in ${formatDuration(setupStartedAt)}.`);
 
       try {
@@ -550,11 +690,16 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // One merger merges all completed branches into the current branch and closes
   // the child issues. Per D1 it relies on CI (pr-checks.yml / ci.yml on the
   // tm-proxy runner) for the Testcontainers e2e gate — no Docker-in-Docker here.
+  // merge-to-head runs in a throwaway worktree; Stage B clones the modules into
+  // it (copyToWorktree + copyFromDir) so the merger can run the gate.
   // -------------------------------------------------------------------------
   await sandcastle.run({
     hooks: mergerHook,
     sandbox: docker(),
     branchStrategy: { type: "merge-to-head" },
+    copyToWorktree: MODULE_PATHS,
+    copyFromDir: LINUX_MODULES_DIR,
+    timeouts: { copyToWorktreeMs: COPY_TO_WORKTREE_MS },
     name: "merger",
     maxIterations: 1,
     idleTimeoutSeconds: MERGER_IDLE_TIMEOUT_SECONDS,

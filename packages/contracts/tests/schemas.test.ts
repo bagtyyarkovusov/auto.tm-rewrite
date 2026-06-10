@@ -989,7 +989,7 @@ describe("ConversationListingCardSchema", () => {
   it("rejects invalid status", () => {
     const result = ConversationListingCardSchema.safeParse({
       ...validConversationListingCard,
-      status: "banned",
+      status: "invalid_status",
     });
     expect(result.success).toBe(false);
   });

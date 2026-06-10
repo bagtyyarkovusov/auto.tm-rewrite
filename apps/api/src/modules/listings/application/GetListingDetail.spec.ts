@@ -6,6 +6,7 @@ import type { ListingRepository } from "../domain/ports/ListingRepository";
 import type { ListingMediaRepository } from "../domain/ports/ListingMediaRepository";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
+import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -84,17 +85,39 @@ class FakeMediaStoragePort implements MediaStoragePort {
   async deleteObject(): Promise<void> {}
 }
 
+class FakeFavoriteRepository implements FavoriteRepository {
+  favorites: Set<string> = new Set();
+
+  async add(_userId: string, _listingId: string) {
+    return { id: "fav-1", userId: _userId, listingId: _listingId, createdAt: new Date() };
+  }
+
+  async remove(_userId: string, _listingId: string): Promise<boolean> {
+    return true;
+  }
+
+  async exists(userId: string, listingId: string): Promise<boolean> {
+    return this.favorites.has(`${userId}:${listingId}`);
+  }
+
+  async listByUserId(_userId: string) {
+    return { items: [] };
+  }
+}
+
 function makeUseCase(
   repo?: FakeListingRepository,
   mediaRepo?: FakeListingMediaRepository,
   exchangeRates?: FakeExchangeRatePort,
   storage?: FakeMediaStoragePort,
+  favorites?: FakeFavoriteRepository,
 ) {
   return new GetListingDetail(
     repo ?? new FakeListingRepository(),
     mediaRepo ?? new FakeListingMediaRepository(),
     exchangeRates ?? new FakeExchangeRatePort(),
     storage ?? new FakeMediaStoragePort(),
+    favorites ?? new FakeFavoriteRepository(),
   );
 }
 
@@ -103,12 +126,14 @@ describe("GetListingDetail", () => {
   let mediaRepo: FakeListingMediaRepository;
   let exchangeRates: FakeExchangeRatePort;
   let storage: FakeMediaStoragePort;
+  let favorites: FakeFavoriteRepository;
 
   beforeEach(() => {
     repo = new FakeListingRepository();
     mediaRepo = new FakeListingMediaRepository();
     exchangeRates = new FakeExchangeRatePort();
     storage = new FakeMediaStoragePort();
+    favorites = new FakeFavoriteRepository();
   });
 
   function seedListing(overrides?: Partial<Parameters<typeof Listing.create>[0]>) {
@@ -132,7 +157,7 @@ describe("GetListingDetail", () => {
 
   it("returns detail for an active listing", async () => {
     seedListing();
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     const result = await uc.execute({ listingId: "listing-1" });
 
     expect(result.id).toBe("listing-1");
@@ -144,12 +169,12 @@ describe("GetListingDetail", () => {
     const listing = seedListing();
     repo.listings = [listing.softDelete(new Date())];
 
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     await expect(uc.execute({ listingId: "listing-1" })).rejects.toThrow("Listing not found");
   });
 
   it("returns 404 for non-existent listing", async () => {
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     await expect(uc.execute({ listingId: "missing" })).rejects.toThrow("Listing not found");
   });
 
@@ -157,7 +182,7 @@ describe("GetListingDetail", () => {
     seedListing({ priceAmount: 1000, priceCurrency: "USD" });
     exchangeRates.rates["USD->TMT"] = 3.5;
 
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     const result = await uc.execute({ listingId: "listing-1" });
 
     expect(result.displayPriceTmt).toBe(3500);
@@ -174,7 +199,7 @@ describe("GetListingDetail", () => {
     });
     mediaRepo.media.push(media);
 
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     const result = await uc.execute({ listingId: "listing-1" });
 
     expect(result.media).toHaveLength(1);
@@ -194,7 +219,7 @@ describe("GetListingDetail", () => {
     });
     mediaRepo.media.push(media);
 
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     const result = await uc.execute({ listingId: "listing-1" });
 
     expect(result.media[0]!.variants.thumbnail).toBe(
@@ -205,7 +230,7 @@ describe("GetListingDetail", () => {
   it("returns 404 for banned listing when requester is not owner", async () => {
     seedListing({ status: "banned", sellerId: "user-1" });
 
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     await expect(
       uc.execute({ listingId: "listing-1", requestingUserId: "user-2" }),
     ).rejects.toThrow("Listing not found");
@@ -214,10 +239,40 @@ describe("GetListingDetail", () => {
   it("returns detail for banned listing when requester is owner", async () => {
     seedListing({ status: "banned", sellerId: "user-1" });
 
-    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage);
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     const result = await uc.execute({ listingId: "listing-1", requestingUserId: "user-1" });
 
     expect(result.id).toBe("listing-1");
     expect(result.status).toBe("banned");
+  });
+
+  it("returns isFavorited=false when no requestingUserId", async () => {
+    seedListing();
+    favorites.favorites.add("user-1:listing-1");
+
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+    const result = await uc.execute({ listingId: "listing-1" });
+
+    expect(result.isFavorited).toBe(false);
+  });
+
+  it("returns isFavorited=true when the user has favorited", async () => {
+    seedListing();
+    favorites.favorites.add("user-2:listing-1");
+
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+    const result = await uc.execute({ listingId: "listing-1", requestingUserId: "user-2" });
+
+    expect(result.isFavorited).toBe(true);
+  });
+
+  it("returns isFavorited=false when the user has not favorited", async () => {
+    seedListing();
+    favorites.favorites.add("user-2:listing-1");
+
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+    const result = await uc.execute({ listingId: "listing-1", requestingUserId: "user-3" });
+
+    expect(result.isFavorited).toBe(false);
   });
 });

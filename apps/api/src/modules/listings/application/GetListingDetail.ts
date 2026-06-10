@@ -20,6 +20,10 @@ import {
   MEDIA_STORAGE_PORT,
   type MediaStoragePort,
 } from "../domain/ports/MediaStoragePort";
+import {
+  FAVORITE_REPOSITORY,
+  type FavoriteRepository,
+} from "../domain/ports/FavoriteRepository";
 
 export interface GetListingDetailInput {
   listingId: string;
@@ -39,6 +43,8 @@ export class GetListingDetail {
     private readonly exchangeRates: ExchangeRatePort,
     @Inject(MEDIA_STORAGE_PORT)
     private readonly storage: MediaStoragePort,
+    @Inject(FAVORITE_REPOSITORY)
+    private readonly favorites: FavoriteRepository,
   ) {}
 
   async execute(input: GetListingDetailInput): Promise<ListingDetailDto> {
@@ -60,6 +66,9 @@ export class GetListingDetail {
       listing.priceAmount,
       listing.priceCurrency,
     );
+    const isFavorited = input.requestingUserId
+      ? await this.favorites.exists(input.requestingUserId, listing.id)
+      : false;
 
     return {
       id: listing.id,
@@ -103,6 +112,7 @@ export class GetListingDetail {
       })),
       viewCount: listing.viewCount,
       favoriteCount: listing.favoriteCount,
+      isFavorited,
       publishedAt: listing.publishedAt.toISOString(),
       soldAt: listing.soldAt?.toISOString(),
       createdAt: listing.createdAt.toISOString(),

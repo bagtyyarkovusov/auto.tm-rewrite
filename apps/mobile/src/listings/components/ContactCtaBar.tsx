@@ -3,11 +3,14 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../auth/useAuth";
 import { useAuthIntentStore } from "../../auth/intentStore";
 import { useOpenConversation } from "../../api/conversations/useOpenConversation";
+import { useFavoriteListing } from "../../api/listings/useFavoriteListing";
+import { useUnfavoriteListing } from "../../api/listings/useUnfavoriteListing";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -19,6 +22,7 @@ interface ContactCtaBarProps {
   allowCalls: boolean;
   allowChat: boolean;
   status: Enums.ListingStatus;
+  isFavorited?: boolean;
 }
 
 export function ContactCtaBar({
@@ -27,16 +31,22 @@ export function ContactCtaBar({
   allowCalls,
   allowChat,
   status,
+  isFavorited = false,
 }: ContactCtaBarProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const openConversation = useOpenConversation();
+  const favorite = useFavoriteListing();
+  const unfavorite = useUnfavoriteListing();
   const { t } = useTranslation();
+
+  const [optimisticFavorited, setOptimisticFavorited] = useState(isFavorited);
 
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
   const canCall = allowCalls && !!contactPhone && !isSold && !isArchived;
   const canMessage = allowChat && !isSold && !isArchived;
+  const isFavoritePending = favorite.isPending || unfavorite.isPending;
 
   const handleCall = async () => {
     if (!canCall || !contactPhone) return;
@@ -97,6 +107,27 @@ export function ContactCtaBar({
     }
   };
 
+  const handleFavorite = () => {
+    if (isAuthenticated === false) {
+      useAuthIntentStore.getState().setIntent({
+        returnPath: `/(public)/listings/${listingId}`,
+      });
+      router.push("/(auth)/phone");
+      return;
+    }
+
+    const next = !optimisticFavorited;
+    setOptimisticFavorited(next);
+
+    const mutation = next ? favorite : unfavorite;
+    mutation.mutate(listingId, {
+      onError: () => {
+        // Rollback on error
+        setOptimisticFavorited(!next);
+      },
+    });
+  };
+
   return (
     <View className="flex-row items-center gap-2 px-4 py-3">
       <Button
@@ -135,11 +166,19 @@ export function ContactCtaBar({
       <Button
         variant="secondary"
         size="icon"
-        disabled
+        disabled={isFavoritePending}
+        onPress={handleFavorite}
         accessibilityLabel={t("favorite")}
-        accessibilityState={{ disabled: true }}
+        accessibilityState={{ disabled: isFavoritePending }}
       >
-        <Icon as={Heart} className="size-5 text-muted-foreground" />
+        <Icon
+          as={Heart}
+          className={
+            optimisticFavorited
+              ? "size-5 text-brand-500 fill-current"
+              : "size-5 text-muted-foreground"
+          }
+        />
       </Button>
     </View>
   );
