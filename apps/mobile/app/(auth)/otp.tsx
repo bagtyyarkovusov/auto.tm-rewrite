@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
+import type { AuthSchemas } from "@auto-tm/contracts";
 
 import { OtpCells, type OtpCellsRef } from "../../components/auth/OtpCells";
 import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
@@ -25,6 +26,16 @@ import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const OTP_LENGTH = 6;
 
@@ -50,7 +61,7 @@ export default function OtpScreen() {
   const otpRef = useRef<OtpCellsRef>(null);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
 
   const phone = firstParam(params.phone);
   const [code, setCode] = useState("");
@@ -59,6 +70,10 @@ export default function OtpScreen() {
     parseInitialSeconds(firstParam(params.resendInSeconds)),
   );
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [showRestorePrompt, setShowRestorePrompt] = useState(false);
+  const [restoreDate, setRestoreDate] = useState<string | null>(null);
+  const [pendingSession, setPendingSession] =
+    useState<AuthSchemas.OtpVerifyResponse | null>(null);
   const lastSubmittedCode = useRef<string | null>(null);
 
   const { mutateAsync: verifyOtpMutate, isPending: isVerifying } =
@@ -133,6 +148,19 @@ export default function OtpScreen() {
         deviceLabel: Platform.OS === "ios" ? "iOS app" : "Android app",
       });
 
+      if (result.user.deletionScheduledAt) {
+        setPendingSession(result);
+        setRestoreDate(
+          new Intl.DateTimeFormat(i18n.language ?? "ru", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }).format(new Date(result.user.deletionScheduledAt)),
+        );
+        setShowRestorePrompt(true);
+        return;
+      }
+
       await storeAuthSession(result);
       router.dismissAll();
       await useAuthIntentStore
@@ -185,6 +213,32 @@ export default function OtpScreen() {
         setOtpError(t("offline"));
       }
     }
+  }
+
+  async function handleRestoreConfirm() {
+    if (!pendingSession) {
+      setShowRestorePrompt(false);
+      return;
+    }
+    try {
+      await storeAuthSession(pendingSession);
+      setPendingSession(null);
+      setShowRestorePrompt(false);
+      router.dismissAll();
+      await useAuthIntentStore
+        .getState()
+        .consumeAndReplay(router as { replace: (path: string) => void });
+    } catch {
+      // Keep prompt open so the user can retry if storage fails.
+    }
+  }
+
+  function handleRestoreCancel() {
+    setShowRestorePrompt(false);
+    setPendingSession(null);
+    setCode("");
+    lastSubmittedCode.current = null;
+    backToPhone();
   }
 
   return (
@@ -283,6 +337,26 @@ export default function OtpScreen() {
           ) : null}
         </View>
       </SafeAreaView>
+
+      {/* Account restoration prompt during deletion grace */}
+      <AlertDialog open={showRestorePrompt} onOpenChange={setShowRestorePrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("restoreAccountTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("restoreAccountMessage", { date: restoreDate ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onPress={handleRestoreCancel}>
+              <Text>{t("restoreAccountCancel")}</Text>
+            </AlertDialogCancel>
+            <AlertDialogAction onPress={handleRestoreConfirm}>
+              <Text>{t("restoreAccountConfirm")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </KeyboardAvoidingView>
   );
 }
