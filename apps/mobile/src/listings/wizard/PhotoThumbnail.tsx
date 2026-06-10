@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View } from "react-native";
 import { Image } from "expo-image";
 import { ImageIcon, MoreVertical } from "lucide-react-native";
@@ -41,16 +42,20 @@ export function PhotoThumbnail({
   onSetAsCover,
 }: PhotoThumbnailProps) {
   const { t } = useTranslation();
+  const [imageFailed, setImageFailed] = useState(false);
+  const uri = getPhotoUri(photo);
+
   return (
     <View
       key={photo.photoId}
       className="relative aspect-square w-[31.5%] overflow-hidden rounded-lg bg-muted"
     >
-      {getPhotoUri(photo) ? (
+      {uri && !imageFailed ? (
         <Image
-          source={{ uri: getPhotoUri(photo) }}
+          source={{ uri }}
           className="h-full w-full"
           contentFit="cover"
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <View className="h-full w-full items-center justify-center">
