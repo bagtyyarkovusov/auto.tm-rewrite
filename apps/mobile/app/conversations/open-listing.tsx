@@ -1,18 +1,20 @@
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { useOpenConversation } from "../../src/api/conversations/useOpenConversation";
+import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 export default function OpenListingConversationScreen() {
   const { t } = useTranslation();
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const router = useRouter();
+  const goBack = useSafeBack("/(tabs)/chat");
   const {
     mutate,
     isPending,
@@ -54,7 +56,7 @@ export default function OpenListingConversationScreen() {
 
   if (!listingId) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeScreen>
         <View className="flex-1 items-center justify-center px-6 gap-4">
           <Text className="text-lg font-semibold text-foreground">
             {t("couldNotOpenConversation")}
@@ -62,17 +64,17 @@ export default function OpenListingConversationScreen() {
           <Text className="text-center text-sm text-muted-foreground">
             {t("listingInformationMissing")}
           </Text>
-          <Button variant="ghost" onPress={() => router.back()}>
+          <Button variant="ghost" onPress={goBack}>
             <Text>{t("goBack")}</Text>
           </Button>
         </View>
-      </SafeAreaView>
+      </SafeScreen>
     );
   }
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
+      <SafeScreen>
         <View className="flex-1 items-center justify-center px-6 gap-4">
           <Text className="text-lg font-semibold text-foreground">
             {t("couldNotOpenConversation")}
@@ -91,20 +93,20 @@ export default function OpenListingConversationScreen() {
           >
             <Text>{t("retry")}</Text>
           </Button>
-          <Button variant="ghost" onPress={() => router.back()}>
+          <Button variant="ghost" onPress={goBack}>
             <Text>{t("goBack")}</Text>
           </Button>
         </View>
-      </SafeAreaView>
+      </SafeScreen>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeScreen>
       <View className="flex-1 items-center justify-center gap-3">
         <ActivityIndicator />
         <Text className="text-sm text-muted-foreground">{t("openingConversation")}</Text>
       </View>
-    </SafeAreaView>
+    </SafeScreen>
   );
 }

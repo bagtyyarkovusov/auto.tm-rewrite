@@ -60,6 +60,8 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
           className="min-h-0 flex-1"
           contentContainerClassName="gap-4 pb-2"
           keyboardShouldPersistTaps="handled"
+          alwaysBounceVertical={true}
+          nestedScrollEnabled={true}
         >
           <BrandModelFilterControl
             draft={filters.draft}

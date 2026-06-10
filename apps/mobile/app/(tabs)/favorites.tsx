@@ -160,7 +160,7 @@ export default function FavoritesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-semibold text-foreground">
+        <Text className="text-2xl font-heading text-foreground">
           {t("favorites")}
         </Text>
       </View>

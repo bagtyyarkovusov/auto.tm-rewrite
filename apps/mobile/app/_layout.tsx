@@ -14,6 +14,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
 
@@ -206,21 +207,17 @@ export default function RootLayout() {
         <ToastProvider>
           <OrphanCleanupOnBoot />
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(public)" />
-            <Stack.Screen name="profile" />
-            <Stack.Screen name="conversations/[id]" />
-            <Stack.Screen name="conversations/open-listing" />
-            <Stack.Screen
-              name="(auth)/phone"
-              options={{ presentation: "fullScreenModal" }}
-            />
-            <Stack.Screen
-              name="(auth)/otp"
-              options={{ presentation: "fullScreenModal" }}
-            />
-          </Stack>
+          <SafeAreaProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(public)" />
+              <Stack.Screen name="profile" />
+              <Stack.Screen name="conversations/[id]" />
+              <Stack.Screen name="conversations/open-listing" />
+              <Stack.Screen name="(auth)/phone" />
+              <Stack.Screen name="(auth)/otp" />
+            </Stack>
+          </SafeAreaProvider>
           <PortalHost />
         </ToastProvider>
       </ThemeProvider>

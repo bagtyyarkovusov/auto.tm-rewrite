@@ -68,6 +68,7 @@ function SheetContent({
             }),
             className
           )}
+          onStartShouldSetResponder={() => false}
           {...props}>
           <NativeOnlyAnimatedView
             entering={SlideInDown.duration(250)}

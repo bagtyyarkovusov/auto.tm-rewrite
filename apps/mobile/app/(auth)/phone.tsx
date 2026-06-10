@@ -8,7 +8,6 @@ import {
   Platform,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
 
@@ -24,6 +23,7 @@ import {
   validateTmPhone,
 } from "../../src/auth/phone";
 
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -133,96 +133,99 @@ export default function PhoneScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-background"
-    >
-      <SafeAreaView className="flex-1 px-4">
-        <View className="flex-row items-center justify-between py-4">
-          <Button
-            accessibilityLabel={t("close")}
-            size="icon"
-            variant="ghost"
-            onPress={closeAuth}
-          >
-            <Icon as={X} className="size-5 text-foreground" />
-          </Button>
-          <LocaleSwitcher />
-        </View>
-
-        <View className="flex-1">
-          <View className="mt-8 gap-8">
-            <BrandLogo />
-
-            <View className="gap-2">
-              <Text className="text-2xl font-semibold leading-snug text-foreground">
-                {t("phoneTitle")}
-              </Text>
-              <Text className="text-base leading-normal text-muted-foreground">
-                {t("phoneHelper")}
-              </Text>
-            </View>
-
-            <View className="gap-2">
-              <Text className="text-sm font-medium text-foreground">
-                {t("phoneLabel")}
-              </Text>
-              <PhoneInput
-                accessibilityLabel={t("phoneLabel")}
-                hasError={showError}
-                keyboardType="phone-pad"
-                onBlur={() => setTouched(true)}
-                onChangeText={handlePhoneChange}
-                placeholder={t("phonePlaceholder")}
-                textContentType="telephoneNumber"
-                value={phoneDisplay}
-              />
-              <Text
-                className={
-                  showError
-                    ? "text-sm leading-snug text-destructive"
-                    : "text-sm leading-snug text-muted-foreground"
-                }
-              >
-                {helperText}
-              </Text>
-            </View>
-
+    <SafeScreen>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        className="flex-1"
+      >
+        <View className="flex-1 px-4">
+          <View className="flex-row items-center justify-between py-4">
             <Button
-              disabled={!canSubmit}
-              size="lg"
-              variant="brand"
-              onPress={handleSubmit}
+              accessibilityLabel={t("close")}
+              size="icon"
+              variant="ghost"
+              className="h-11 w-11"
+              onPress={closeAuth}
             >
-              {isSubmitting ? (
-                <ActivityIndicator
-                  color={`hsl(${THEME[isDark ? "dark" : "light"].primaryForeground})`}
-                />
-              ) : (
-                <Text>{t("getCode")}</Text>
-              )}
+              <Icon as={X} className="size-5 text-foreground" />
             </Button>
+            <LocaleSwitcher />
           </View>
 
-          <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
-            {t("legalPrefix")}{" "}
-            <Text
-              className="font-medium text-info-500 underline"
-              onPress={() => openLegalPage("terms")}
-            >
-              {t("terms")}
-            </Text>{" "}
-            {t("legalAnd")}{" "}
-            <Text
-              className="font-medium text-info-500 underline"
-              onPress={() => openLegalPage("privacy")}
-            >
-              {t("privacy")}
+          <View className="flex-1">
+            <View className="mt-8 gap-8">
+              <BrandLogo />
+
+              <View className="gap-2">
+                <Text className="text-2xl font-semibold leading-snug text-foreground">
+                  {t("phoneTitle")}
+                </Text>
+                <Text className="text-base leading-normal text-muted-foreground">
+                  {t("phoneHelper")}
+                </Text>
+              </View>
+
+              <View className="gap-2">
+                <Text className="text-sm font-medium text-foreground">
+                  {t("phoneLabel")}
+                </Text>
+                <PhoneInput
+                  accessibilityLabel={t("phoneLabel")}
+                  hasError={showError}
+                  keyboardType="phone-pad"
+                  onBlur={() => setTouched(true)}
+                  onChangeText={handlePhoneChange}
+                  placeholder={t("phonePlaceholder")}
+                  textContentType="telephoneNumber"
+                  value={phoneDisplay}
+                />
+                <Text
+                  className={
+                    showError
+                      ? "text-sm leading-snug text-destructive"
+                      : "text-sm leading-snug text-muted-foreground"
+                  }
+                >
+                  {helperText}
+                </Text>
+              </View>
+
+              <Button
+                disabled={!canSubmit}
+                size="lg"
+                variant="brand"
+                onPress={handleSubmit}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator
+                    color={`hsl(${THEME[isDark ? "dark" : "light"].primaryForeground})`}
+                  />
+                ) : (
+                  <Text>{t("getCode")}</Text>
+                )}
+              </Button>
+            </View>
+
+            <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
+              {t("legalPrefix")}{" "}
+              <Text
+                className="font-medium text-info-500 underline"
+                onPress={() => openLegalPage("terms")}
+              >
+                {t("terms")}
+              </Text>{" "}
+              {t("legalAnd")}{" "}
+              <Text
+                className="font-medium text-info-500 underline"
+                onPress={() => openLegalPage("privacy")}
+              >
+                {t("privacy")}
+              </Text>
+              .
             </Text>
-            .
-          </Text>
+          </View>
         </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeScreen>
   );
 }

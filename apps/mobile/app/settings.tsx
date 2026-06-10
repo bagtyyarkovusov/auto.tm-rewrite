@@ -3,9 +3,9 @@ import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { useSafeBack } from "../src/navigation/useSafeBack";
 import { LocaleSwitcher } from "../src/auth/LocaleSwitcher";
 import { useLogout } from "../src/auth/useLogout";
 
@@ -23,6 +23,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 function openLegalPage(locale: string, kind: "terms" | "privacy") {
   void Linking.openURL(`https://auto.tm/${locale}/legal/${kind}`);
@@ -32,6 +33,7 @@ export default function SettingsScreen() {
   const { t, i18n } = useTranslation("account");
   const logout = useLogout();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const goBack = useSafeBack("/(tabs)/services");
 
   const handleLogout = () => {
     setShowLogoutConfirm(false);
@@ -39,18 +41,19 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeScreen>
       {/* Header */}
-      <View className="px-4 pt-6 pb-3 flex-row items-center gap-2">
+      <View className="px-4 pb-3 flex-row items-center gap-2">
         <Button
           variant="ghost"
+          className="h-11 w-11"
           size="icon"
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityLabel={t("common:back", { defaultValue: "Back" })}
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-semibold text-foreground">
+        <Text className="text-2xl font-heading text-foreground">
           {t("settings")}
         </Text>
       </View>
@@ -152,6 +155,6 @@ export default function SettingsScreen() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SafeAreaView>
+    </SafeScreen>
   );
 }

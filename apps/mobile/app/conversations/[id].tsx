@@ -1,13 +1,15 @@
 import { useCallback, useMemo, useState } from "react";
 import { View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useViewer } from "../../src/auth/useViewer";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
+import { useBrands } from "../../src/api/catalog/useBrands";
+import { useModels } from "../../src/api/catalog/useModels";
+import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { MessageList } from "../../src/conversations/components/MessageList";
 import { MessageComposer } from "../../src/conversations/components/MessageComposer";
@@ -17,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 interface LocalMessage {
   id: string;
@@ -29,10 +32,10 @@ interface LocalMessage {
 export default function ConversationDetailScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams();
-  const router = useRouter();
   const rawId = params.id;
   const conversationId = typeof rawId === "string" ? rawId : "";
   const viewer = useViewer();
+  const goBack = useSafeBack("/(tabs)/chat");
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
 
@@ -54,6 +57,19 @@ export default function ConversationDetailScreen() {
     };
   }, [params]);
 
+  const { data: brandsData } = useBrands();
+  const { data: modelsData } = useModels(listingCard?.brandId ?? "");
+
+  const brandName = useMemo(() => {
+    if (!listingCard?.brandId) return undefined;
+    return brandsData?.items.find((b) => b.id === listingCard.brandId)?.name;
+  }, [brandsData, listingCard?.brandId]);
+
+  const modelName = useMemo(() => {
+    if (!listingCard?.modelId) return undefined;
+    return modelsData?.items.find((m) => m.id === listingCard.modelId)?.name;
+  }, [modelsData, listingCard?.modelId]);
+
   const allMessages: LocalMessage[] = useMemo(() => {
     const serverMessages: LocalMessage[] =
       messagesQuery.data?.pages.flatMap(
@@ -67,9 +83,6 @@ export default function ConversationDetailScreen() {
           })),
       ) ?? [];
 
-    // Deduplicate: if a local pending message has the same text and sender as a confirmed message
-    // that arrived recently, prefer the confirmed one. This handles the brief window between
-    // onSuccess removal and invalidate refetch.
     const confirmedIds = new Set(serverMessages.map((m) => m.id));
     const pendingOrFailed = localMessages.filter(
       (lm) => !confirmedIds.has(lm.id) && lm.status !== "confirmed",
@@ -156,13 +169,14 @@ export default function ConversationDetailScreen() {
   const isError = messagesQuery.isError;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["bottom"]}>
+    <SafeScreen>
       {/* Header */}
       <View className="flex-row items-center gap-2 px-4 py-3 border-b border-border">
         <Button
           variant="ghost"
+          className="h-11 w-11"
           size="icon"
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityLabel={t("goBack")}
         >
           <Icon as={ArrowLeft} className="size-5 text-foreground" />
@@ -176,8 +190,8 @@ export default function ConversationDetailScreen() {
       {listingCard && (
         <ConversationListingCard
           listing={listingCard}
-          brandName={undefined}
-          modelName={undefined}
+          brandName={brandName}
+          modelName={modelName}
         />
       )}
 
@@ -228,6 +242,6 @@ export default function ConversationDetailScreen() {
           disabled={sendMessage.isPending}
         />
       )}
-    </SafeAreaView>
+    </SafeScreen>
   );
 }

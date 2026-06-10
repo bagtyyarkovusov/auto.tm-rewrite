@@ -7,7 +7,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
@@ -19,6 +18,7 @@ import { useInfiniteMyDrafts } from "../../src/api/listings/useInfiniteMyDrafts"
 import { useDiscardDraft } from "../../src/api/listings/useDiscardDraft";
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
+import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { OwnerListingCard } from "../../src/listings/components/OwnerListingCard";
 import { DraftCard } from "../../src/listings/components/DraftCard";
 import { SignInDialog } from "../../components/auth/SignInDialog";
@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
+import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 type ManageTab = "active" | "sold" | "archived" | "drafts";
 
@@ -146,6 +147,7 @@ export default function ManageListingsScreen() {
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<ManageTab>("active");
   const [showSignIn, setShowSignIn] = useState(false);
+  const goBack = useSafeBack("/(tabs)/sell");
 
   const listingsQuery = useInfiniteMyListings({
     enabled: isAuthenticated === true,
@@ -217,16 +219,17 @@ export default function ManageListingsScreen() {
   // Auth-on-action: anonymous users see a sign-in prompt instead of an API error.
   if (isAuthenticated === false) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
-        <View className="px-4 pt-6 pb-3 flex-row items-center gap-2">
+      <SafeScreen>
+        <View className="px-4 pb-3 flex-row items-center gap-2">
           <Button
             variant="ghost"
+            className="h-11 w-11"
             size="icon"
-            onPress={() => router.back()}
+            onPress={goBack}
           >
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
-          <Text className="text-2xl font-semibold text-foreground">
+          <Text className="text-2xl font-heading text-foreground">
             {t("myListings")}
           </Text>
         </View>
@@ -254,25 +257,26 @@ export default function ManageListingsScreen() {
           title={t("signInToManageTitle")}
           onOpenChange={setShowSignIn}
         />
-      </SafeAreaView>
+      </SafeScreen>
     );
   }
 
   const isPending = isAuthenticated === null || currentQuery.isPending;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeScreen>
       {/* Header */}
-      <View className="px-4 pt-6 pb-3 flex-row items-center justify-between">
+      <View className="px-4 pb-3 flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
           <Button
             variant="ghost"
+            className="h-11 w-11"
             size="icon"
-            onPress={() => router.back()}
+            onPress={goBack}
           >
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
-          <Text className="text-2xl font-semibold text-foreground">
+          <Text className="text-2xl font-heading text-foreground">
             {t("myListings")}
           </Text>
         </View>
@@ -389,7 +393,7 @@ export default function ManageListingsScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </SafeScreen>
   );
 }
 

@@ -26,7 +26,7 @@ export function ConversationListingCard({
   brandName,
   modelName,
 }: ConversationListingCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const title = [
     listing.year ? String(listing.year) : null,
@@ -36,7 +36,7 @@ export function ConversationListingCard({
     .filter(Boolean)
     .join(" ");
 
-  const priceText = `${listing.displayPriceTmt.toLocaleString("en-US")} ${listing.priceCurrency}`;
+  const priceText = `${listing.displayPriceTmt.toLocaleString(i18n.language)} ${listing.priceCurrency}`;
 
   const imageUrl = listing.coverMediaKey
     ? `${process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""}/${listing.coverMediaKey}`
