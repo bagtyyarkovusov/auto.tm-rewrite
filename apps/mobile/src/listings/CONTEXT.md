@@ -58,7 +58,7 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
     - `useWizardAutosave.spec.tsx` — tests for save lifecycle
     - `Step1Vin.tsx` … `Step8Review.tsx` — step UI bodies. Design system conventions: single-source-of-truth title in `WizardHeader` (`text-2xl font-heading`), body opens directly with form rows or brief `text-sm text-muted-foreground` orientation copy, body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons. `Step8Review.tsx` and `PhotoThumbnail.tsx` use `expo-image` (not `react-native Image`) for staged photos.
     - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`). Footer buttons are 52px pill-shaped (`h-[52px] rounded-full`). Overflow button opens `WizardOverflowMenu` sheet first; "Discard draft" inside the sheet opens `DiscardConfirmationDialog`. Dialog shows loading spinner + "Discarding…" and error text when discard mutation is pending or fails.
-    - `PhotoThumbnail.tsx` — photo grid item with state overlay and reorder menu
+    - `PhotoThumbnail.tsx` — photo grid item with state overlay, remove affordance, drag lifecycle handlers, and reorder menu fallback. Tiles use a numeric `useWindowDimensions()`-derived `width`/`height` rather than percentage width + `aspect-square`, because the NativeWind/flex-wrap combination can collapse uploaded-photo rows on iOS. The `expo-image` child uses native absolute-fill styling so the image itself fills the fixed-size tile. Uploaded/attached photos do not show a green success badge; each tile has a top-right `X` remove button.
     - `PhotoStateOverlay.tsx` — per-photo upload-state badge (compressing, uploading, failed, cover, etc.)
     - `PickerRow.tsx` — shared pressable picker row (`components/listings/wizard/`). 52px height, border, chevron/lock icon, label + error + helper text support.
   - `uploadStaging/` — media upload pipeline
@@ -145,6 +145,8 @@ ${documentDirectory}/
 ### Concurrency model
 
 - **Calls into `useUploadQueue.addPhoto`**: unbounded parallelism can be triggered concurrently from UI — gallery flow fans out `Promise.all` over temp copies invoking `addPhoto` per URI.
+- **Initialization race safety**: the init effect reconstructs the queue from `initialPayload` + disk (`listLocalPhotoIds`) asynchronously. If `addPhoto` runs before reconstruction completes, the in-flight photos are merged into the reconstructed queue instead of being overwritten. If navigation changes `stagingKey` while an older reconstruction is still pending, the stale result is ignored.
+- **Photo ordering UI**: Step 2 supports long-press drag ordering. `PhotoGrid` captures drag start/move/end, translates the active tile while dragging, computes the destination slot via `photoGridLayout.ts`, and calls `onReorderPhotos` with the reordered ids on release. The overflow menu still exposes Move up / Move down / Set as cover as an accessible fallback.
 - **`addPhoto` body**: sequentially compress → enqueue upload worker for that id (heavy CPU still overlaps across parallel invocations — watch device thermals during stress tests).
 - **Upload drain**: capped at **`MAX_CONCURRENT = 2`** binary PUT workers. `isUploading` is derived from a `useAsyncCounter` (ref-based increment/decrement) so parallel uploads do not incorrectly clear the uploading flag when one of two concurrent uploads finishes.
 - **`processUploadQueue`**: FIFO drain guarded by concurrency counter; completions chain via `.finally()` recursion.
@@ -189,6 +191,8 @@ Edit-session local removal: when an existing `attached` photo is removed in edit
 - Photo has `key` → state = `attached`
 - Photo has local file → state = `compressed` (re-enqueued for upload)
 - Neither → state = `lost` (unrecoverable)
+
+`getPhotoUri(photo, variant)` prefers `localUri`. When only a pending upload key remains (`pending/.../original.jpg`), it returns the original object URL instead of a generated variant URL because draft-stage uploads do not have `thumbnail/list/detail/fullscreen` derivatives yet.
 
 ## 2. Wizard state machine
 

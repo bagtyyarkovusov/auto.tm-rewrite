@@ -2,6 +2,7 @@ import { AuthSchemas } from "@auto-tm/contracts";
 import * as SecureStore from "expo-secure-store";
 
 const AUTH_SESSION_KEY = "auto_tm_auth_session";
+const sessionListeners = new Set<() => void>();
 
 export type StoredAuthSession = AuthSchemas.OtpVerifyResponse & {
   storedAt: string;
@@ -16,6 +17,7 @@ export async function storeAuthSession(
   };
 
   await SecureStore.setItemAsync(AUTH_SESSION_KEY, JSON.stringify(value));
+  notifySessionChanged();
 }
 
 export async function loadAuthSession(): Promise<StoredAuthSession | null> {
@@ -46,6 +48,18 @@ export async function loadAuthSession(): Promise<StoredAuthSession | null> {
   };
 }
 
-export function clearAuthSession(): Promise<void> {
-  return SecureStore.deleteItemAsync(AUTH_SESSION_KEY);
+export async function clearAuthSession(): Promise<void> {
+  await SecureStore.deleteItemAsync(AUTH_SESSION_KEY);
+  notifySessionChanged();
+}
+
+export function subscribeAuthSession(listener: () => void): () => void {
+  sessionListeners.add(listener);
+  return () => {
+    sessionListeners.delete(listener);
+  };
+}
+
+function notifySessionChanged(): void {
+  sessionListeners.forEach((listener) => listener());
 }

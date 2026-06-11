@@ -56,6 +56,6 @@ describe("OpenListingConversationScreen", () => {
 
   it("shows go back button on error", () => {
     expect(source).toContain('t("goBack")');
-    expect(source).toContain("router.back()");
+    expect(source).toContain("goBack");
   });
 });

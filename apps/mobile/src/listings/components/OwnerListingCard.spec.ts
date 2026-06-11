@@ -9,7 +9,7 @@ describe("OwnerListingCard structure", () => {
   it("renders a Pressable card with cover image and text content", () => {
     expect(source).toContain("<Pressable");
     expect(source).toContain("<Image");
-    expect(source).toContain("formatPrice(listing.displayPriceTmt)");
+    expect(source).toContain("formatPrice(listing.displayPriceTmt, i18n.language)");
   });
 
   it("displays status badges for active, sold, and archived", () => {

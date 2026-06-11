@@ -3,7 +3,7 @@ import {
   ActivityIndicator,
   Pressable,
 } from "react-native";
-import { Check, RefreshCw, X, AlertTriangle, WifiOff } from "lucide-react-native";
+import { RefreshCw, X, AlertTriangle, WifiOff } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { StagedPhoto } from "../uploadStaging/types";
@@ -48,11 +48,7 @@ export function PhotoStateOverlay({
   }
 
   if (photo.state === "uploaded" || photo.state === "attached") {
-    return (
-      <View className="absolute right-1 top-1 rounded-full bg-success-500 p-1">
-        <Icon as={Check} className="size-3 text-white" />
-      </View>
-    );
+    return null;
   }
 
   if (photo.state === "failed") {

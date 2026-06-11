@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { loadAuthSession } from "./session";
+import { loadAuthSession, subscribeAuthSession } from "./session";
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -16,9 +16,13 @@ export function useAuth() {
     }
 
     void check();
+    const unsubscribe = subscribeAuthSession(() => {
+      void check();
+    });
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 

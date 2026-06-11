@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { loadAuthSession } from "./session";
+import { loadAuthSession, subscribeAuthSession } from "./session";
 
 export interface Viewer {
   userId: string;
@@ -20,9 +20,13 @@ export function useViewer(): Viewer | null | undefined {
     }
 
     void check();
+    const unsubscribe = subscribeAuthSession(() => {
+      void check();
+    });
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 

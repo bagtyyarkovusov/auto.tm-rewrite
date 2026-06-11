@@ -451,7 +451,7 @@ export function WizardLayout({
           ScrollView without flex-1 so it shrinks to content height with no gap */}
       <View className="flex-1">
         <ScrollView>
-          <View className="px-5">{children}</View>
+          <View className="w-full px-5">{children}</View>
         </ScrollView>
 
         <View className="mt-auto">
