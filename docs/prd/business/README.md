@@ -24,6 +24,18 @@ These documents are **forward-looking strategy**, not commitments. They reflect 
 2. **Bias checks are explicit.** Each document has a "Biases to question" section. I'm pattern-matching against Western marketplaces; TM may behave differently.
 3. **Failure modes are first-class.** Each document includes "what kills this" sections. The goal is to be honestly prepared, not to manifest success.
 
+## Competitive landscape — TM incumbents
+
+> Added 2026-06-11 after the trust-wedge grilling ([ADR-0037](../../adr/0037-trust-inspection-competitive-wedge.md)). These docs previously benchmarked only **foreign** marketplaces and named **no Turkmen competitor** — the single biggest gap in the analysis. The real competition is domestic and already strong.
+
+| Competitor | Reach | Strengths | Gap = AutoTM's opening |
+|---|---|---|---|
+| **TMCARS** (`com.tm.tmcar`) | ~254K+ users; self-described #1 TM car marketplace; iOS + Android | Largest listing DB + model catalogs; search/filter; **already multi-category** (cars + real estate + electronics + household + news) | Cluttered everything-store; **no inspection / verified trust layer** |
+| **Teklip Cars** | Established; Android | Clean baseline; advanced filters; **buyer↔seller chat**; AI / price-average; imported-car (China / Korea / Dubai) listings | **No dealers, no garage, no inspection** |
+| Tmstore / Bildirishler | General classifieds | Broad ad inventory | Not car-focused |
+
+**Strategic read (full record in [ADR-0037](../../adr/0037-trust-inspection-competitive-wedge.md)):** TMCARS's 254K users **validate demand** — AutoTM's problem is *differentiation*, not market existence. Neither incumbent offers **vehicle inspection / a verified trust layer**, which is exactly AutoTM's documented moat ([inspection-program.md](inspection-program.md)). **Trust is the wedge.** Multi-vertical *breadth* ([ADR-0035](../../adr/0035-multi-vertical-platform-direction.md)) is *already held by TMCARS* — table stakes, not a differentiator.
+
 ## Source material referenced across docs
 
 - [`../00-vision.md`](../00-vision.md) — anti-goals, especially "no paid placement"
@@ -31,7 +43,8 @@ These documents are **forward-looking strategy**, not commitments. They reflect 
 - [`../03-roadmap.md`](../03-roadmap.md) — sprint sequence + milestones
 - [`../features/32-listings.md`](../features/32-listings.md) — listing capability (Open Questions section)
 - [`../features/`](../features/) — other feature PRDs as they're written
-- Comparable marketplaces: Auto.ru (RU), Auto.ria (UA), Kolesa.kz (KZ), Drom.ru (RU), CarGurus (US/UK), Carvana (US)
+- **TM incumbents (direct competition): TMCARS (`com.tm.tmcar`), Teklip Cars** — see "Competitive landscape — TM incumbents" above
+- Comparable (foreign) marketplaces: Auto.ru (RU), Auto.ria (UA), Kolesa.kz (KZ), Drom.ru (RU), CarGurus (US/UK), Carvana (US)
 
 ## Review cadence
 
