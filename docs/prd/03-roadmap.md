@@ -10,6 +10,8 @@
 >
 > [ADR-0027](../adr/0027-mlp-beta-scope.md) narrows the first release to an MLP beta. Deferred features are not abandoned; they return as post-MLP bets after real usage.
 >
+> **2026-06-11 — trust is the wedge ([ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md)).** Real TM incumbents (TMCARS, ~254K users, already multi-category; Teklip) make a *generic* beta pointless — a tidy clone gives no one a reason to leave them. So **"what's next after S8a" is no longer a generic 10-50 beta — it is the trust pilot.** Inspection/trust is **pulled forward from Phase 2** as the differentiator the incumbents lack; multi-vertical breadth ([ADR-0035](../adr/0035-multi-vertical-platform-direction.md)) is demoted (TMCARS already holds it). Near-term (remote, from China): finish S8a substrate + software trust-signals + an inspection-**demand fake-door**. On the ground in TM: a 5-10-person **free concierge inspection pilot** (`business/inspection-program.md` Phase 0) replaces the generic invites.
+>
 > Historical sprint labels in shipped or locked artifacts are not canonical after ADR-0027. References such as "S9 admin", "S6 Garage + Dealership", or "S8 notifications" in older sprint docs should be read as historical labels unless this roadmap, a current pending sprint file, or a mutable feature PRD explicitly re-scopes the work. Do not rewrite shipped sprint plans just to rename old labels; update the active sprint/context doc when stale placement affects implementation.
 
 ---
