@@ -9,6 +9,7 @@ const mockLoadAuthSession = vi.fn();
 
 vi.mock("./session", () => ({
   loadAuthSession: (...args: unknown[]) => mockLoadAuthSession(...args),
+  subscribeAuthSession: () => () => {},
 }));
 
 describe("useViewer", () => {

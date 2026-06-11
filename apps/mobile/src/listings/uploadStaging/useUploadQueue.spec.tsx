@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getInfoAsync, readDirectoryAsync, uploadAsync } from "expo-file-system/legacy";
 
 import { compressPhoto } from "./compressor";
-import { ensureDraftDir, getStagingPath } from "./stagingDir";
+import { ensureDraftDir, getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import { useUploadQueue } from "./useUploadQueue";
 
 vi.mock("expo-file-system/legacy", () => ({
@@ -73,6 +73,7 @@ const mockUploadAsync = vi.mocked(uploadAsync);
 const mockCompressPhoto = vi.mocked(compressPhoto);
 const mockEnsureDraftDir = vi.mocked(ensureDraftDir);
 const mockGetStagingPath = vi.mocked(getStagingPath);
+const mockListLocalPhotoIds = vi.mocked(listLocalPhotoIds);
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({
@@ -278,5 +279,92 @@ describe("useUploadQueue — parallel batch compression", () => {
       "draft-abc123",
       expect.any(String),
     );
+  });
+
+  it("does not drop photos added before async initialization finishes", async () => {
+    let resolveInit: ((value: string[]) => void) | undefined;
+    mockListLocalPhotoIds.mockImplementation(
+      () =>
+        new Promise<string[]>((resolve) => {
+          resolveInit = resolve;
+        }),
+    );
+    mockCompressPhoto.mockResolvedValue({
+      uri: "file:///doc/listing-staging/race/photo-id.jpg",
+      width: 100,
+      height: 100,
+      fileSize: 1024,
+    });
+
+    const initialPayload = { photos: [] };
+    const { result } = renderHook(
+      () => useUploadQueue("init-race", initialPayload),
+      { wrapper },
+    );
+
+    // Ensure init has started but not completed.
+    await waitFor(() =>
+      expect(mockListLocalPhotoIds).toHaveBeenCalledWith("init-race"),
+    );
+    expect(resolveInit).toBeDefined();
+
+    // Add a photo while initialization is still reading disk.
+    await act(async () => {
+      await result.current.addPhoto("file:///picker/photo.jpg");
+    });
+
+    // Complete initialization after the photo was added.
+    act(() => resolveInit?.([]));
+
+    // The photo must survive the merge and finish uploading.
+    await waitFor(() => expect(result.current.photos).toHaveLength(1));
+    expect(result.current.photos[0]?.state).toBe("uploaded");
+    expect(result.current.photos[0]?.localUri).toBe(
+      "file:///doc/listing-staging/race/photo-id.jpg",
+    );
+  });
+
+  it("ignores stale initialization from a previous staging key", async () => {
+    let resolveEmptyInit: ((value: string[]) => void) | undefined;
+    mockListLocalPhotoIds.mockImplementation((stagingKey: string) => {
+      if (stagingKey === "") {
+        return new Promise<string[]>((resolve) => {
+          resolveEmptyInit = resolve;
+        });
+      }
+      return Promise.resolve([]);
+    });
+    mockCompressPhoto.mockResolvedValue({
+      uri: "file:///doc/listing-staging/draft-live/photo-id.jpg",
+      width: 100,
+      height: 100,
+      fileSize: 1024,
+    });
+
+    const { result, rerender } = renderHook(
+      ({ stagingKey }) => useUploadQueue(stagingKey, { photos: [] }),
+      {
+        wrapper,
+        initialProps: { stagingKey: "" },
+      },
+    );
+
+    await waitFor(() => expect(mockListLocalPhotoIds).toHaveBeenCalledWith(""));
+    expect(resolveEmptyInit).toBeDefined();
+
+    rerender({ stagingKey: "draft-live" });
+    await waitFor(() =>
+      expect(mockListLocalPhotoIds).toHaveBeenCalledWith("draft-live"),
+    );
+
+    await act(async () => {
+      await result.current.addPhoto("file:///picker/photo.jpg");
+    });
+    await waitFor(() => expect(result.current.photos).toHaveLength(1));
+
+    act(() => resolveEmptyInit?.([]));
+
+    await waitFor(() => expect(result.current.photos).toHaveLength(1));
+    expect(result.current.photos[0]?.state).toBe("uploaded");
   });
 });

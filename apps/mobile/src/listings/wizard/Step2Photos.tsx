@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   View,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -16,6 +17,11 @@ import { useTranslation } from "react-i18next";
 import type { StagedPhoto } from "../uploadStaging/types";
 
 import { PhotoThumbnail } from "./PhotoThumbnail";
+import {
+  getDragTargetIndex,
+  getPhotoTileSize,
+  reorderPhotoIdsByIndex,
+} from "./photoGridLayout";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
@@ -180,6 +186,7 @@ function PhotoGrid({
   disabled,
   onRetry,
   onRemove,
+  onReorderPhotos,
   onMoveUp,
   onMoveDown,
   onSetAsCover,
@@ -188,12 +195,68 @@ function PhotoGrid({
   disabled: boolean;
   onRetry: (photoId: string) => void;
   onRemove: (photoId: string) => void;
+  onReorderPhotos: (photoIds: string[]) => void;
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
   onSetAsCover: (index: number) => void;
 }) {
+  const { width } = useWindowDimensions();
+  const tileSize = getPhotoTileSize(width);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragStart = useRef<{
+    index: number;
+    pageX: number;
+    pageY: number;
+  } | null>(null);
+  const dragLatest = useRef<{ pageX: number; pageY: number } | null>(null);
+
+  const handleDragStart = useCallback(
+    (index: number, pageX: number, pageY: number) => {
+      if (disabled) return;
+      dragStart.current = { index, pageX, pageY };
+      dragLatest.current = { pageX, pageY };
+      setDragOffset({ x: 0, y: 0 });
+      setDraggingIndex(index);
+    },
+    [disabled],
+  );
+
+  const handleDragMove = useCallback((pageX: number, pageY: number) => {
+    const start = dragStart.current;
+    if (!start) return;
+    dragLatest.current = { pageX, pageY };
+    setDragOffset({ x: pageX - start.pageX, y: pageY - start.pageY });
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    const start = dragStart.current;
+    const latest = dragLatest.current;
+    dragStart.current = null;
+    dragLatest.current = null;
+    setDraggingIndex(null);
+    setDragOffset({ x: 0, y: 0 });
+    if (!start || !latest) return;
+
+    const targetIndex = getDragTargetIndex({
+      fromIndex: start.index,
+      dx: latest.pageX - start.pageX,
+      dy: latest.pageY - start.pageY,
+      count: photos.length,
+      tileSize,
+    });
+    const reorderedIds = reorderPhotoIdsByIndex(
+      photos.map((photo) => photo.photoId),
+      start.index,
+      targetIndex,
+    );
+    if (targetIndex !== start.index) {
+      onReorderPhotos(reorderedIds);
+    }
+  }, [onReorderPhotos, photos, tileSize]);
+
   return (
-    <View className={`flex-row flex-wrap gap-2 ${disabled ? "opacity-50" : ""}`}>
+    <View className={`w-full flex-row flex-wrap gap-2 ${disabled ? "opacity-50" : ""}`}>
       {photos.map((photo, index) => (
         <PhotoThumbnail
           key={photo.photoId}
@@ -205,6 +268,11 @@ function PhotoGrid({
           onMoveUp={onMoveUp}
           onMoveDown={onMoveDown}
           onSetAsCover={onSetAsCover}
+          onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
+          isDragging={draggingIndex === index}
+          dragOffset={draggingIndex === index ? dragOffset : undefined}
         />
       ))}
     </View>
@@ -309,6 +377,7 @@ export default function Step2Photos({
           disabled={disabled ?? false}
           onRetry={onRetryPhoto}
           onRemove={onRemovePhoto}
+          onReorderPhotos={onReorderPhotos}
           onMoveUp={handleMoveUp}
           onMoveDown={handleMoveDown}
           onSetAsCover={handleSetAsCover}

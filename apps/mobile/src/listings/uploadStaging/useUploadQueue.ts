@@ -80,9 +80,11 @@ export function useUploadQueue(
   const { increment: startUpload, decrement: endUpload, isActive: isUploading } = useAsyncCounter();
 
   const initializedStagingKey = useRef<string | null>(null);
+  const activeStagingKey = useRef(stagingKey);
   const presignMutation = usePresignUpload();
   const queueRef = useRef(queue);
   queueRef.current = queue;
+  activeStagingKey.current = stagingKey;
 
   const MAX_CONCURRENT = 2;
   const runningUploads = useRef(0);
@@ -97,12 +99,26 @@ export function useUploadQueue(
     if (initializedStagingKey.current === stagingKey) return;
     async function init() {
       const localPhotoIds = await listLocalPhotoIds(stagingKey);
+      if (activeStagingKey.current !== stagingKey) return;
       const reconstructed = reconstructQueueFromDraft(
         stagingKey,
         initialPayload,
         localPhotoIds,
       );
-      setQueue(reconstructed);
+
+      // If the user added photos before disk scanning finished, merge them in
+      // so async initialization doesn't silently drop in-flight selections.
+      const existing = queueRef.current.photos;
+      const reconstructedIds = new Set(
+        reconstructed.photos.map((p) => p.photoId),
+      );
+      const merged = [
+        ...reconstructed.photos,
+        ...existing.filter((p) => !reconstructedIds.has(p.photoId)),
+      ].map((p, index) => ({ ...p, sortOrder: index }));
+
+      queueRef.current = { stagingKey, photos: merged };
+      setQueue(queueRef.current);
       initializedStagingKey.current = stagingKey;
     }
     void init();

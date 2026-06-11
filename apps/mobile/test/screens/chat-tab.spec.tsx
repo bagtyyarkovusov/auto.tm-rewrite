@@ -53,6 +53,6 @@ describe("ChatScreen", () => {
 
   it("has a Messages header", () => {
     expect(source).toContain('t("chat")');
-    expect(source).toContain("text-2xl font-semibold");
+    expect(source).toContain("text-2xl font-heading");
   });
 });

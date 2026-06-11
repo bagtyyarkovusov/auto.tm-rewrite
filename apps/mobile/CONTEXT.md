@@ -125,7 +125,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 - React state for local UI
 - TanStack Query v5 + custom `apiClient` wrapper at `src/api/client.ts` (single API entry point)
 - Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay), `src/locale/localeStore.ts` (locale + AsyncStorage persistence)
-- `expo-secure-store` for JWT access + refresh tokens
+- `expo-secure-store` for JWT access + refresh tokens. `src/auth/session.ts` publishes an in-process session-change event after store/clear so already-mounted `useAuth` and `useViewer` consumers update immediately after OTP login/logout without requiring an app reload.
 - `AsyncStorage` for locale persistence (`localeStore`) and reserved for future TanStack Query cross-launch persistence
 - Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`

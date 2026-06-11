@@ -13,7 +13,7 @@ describe("DraftCard structure", () => {
   });
 
   it("shows updated date and photo count", () => {
-    expect(source).toContain("formatDate(draft.updatedAt)");
+    expect(source).toContain("formatDate(draft.updatedAt, i18n.language)");
     expect(source).toContain("photoCount");
   });
 

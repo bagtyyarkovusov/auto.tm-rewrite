@@ -1,4 +1,4 @@
-import { buildVariantUrl } from "../detail/buildVariantUrl";
+import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
 import type { StagedPhoto } from "./types";
 
@@ -15,6 +15,10 @@ export function getPhotoUri(
     return photo.localUri;
   }
   if (photo.key) {
+    if (photo.key.startsWith("pending/")) {
+      const originalUrl = buildOriginalUrl(photo.key);
+      if (originalUrl) return originalUrl;
+    }
     const url = buildVariantUrl(photo.key, variant);
     if (url) return url;
   }

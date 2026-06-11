@@ -25,7 +25,7 @@ describe("ConversationsListScreen", () => {
   });
 
   it("has a back button in header", () => {
-    expect(source).toContain("router.back()");
+    expect(source).toContain("goBack");
     expect(source).toContain('accessibilityLabel={t("goBack")}');
     expect(source).toContain("ArrowLeft");
   });

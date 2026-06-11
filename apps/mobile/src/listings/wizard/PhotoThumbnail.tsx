@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type GestureResponderEvent,
+} from "react-native";
 import { Image } from "expo-image";
-import { ImageIcon, MoreVertical } from "lucide-react-native";
+import { ImageIcon, MoreVertical, X } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { StagedPhoto } from "../uploadStaging/types";
@@ -29,6 +35,11 @@ interface PhotoThumbnailProps {
   onMoveUp: (index: number) => void;
   onMoveDown: (index: number) => void;
   onSetAsCover: (index: number) => void;
+  onDragStart: (index: number, pageX: number, pageY: number) => void;
+  onDragMove: (pageX: number, pageY: number) => void;
+  onDragEnd: () => void;
+  isDragging?: boolean;
+  dragOffset?: { x: number; y: number };
 }
 
 export function PhotoThumbnail({
@@ -40,28 +51,69 @@ export function PhotoThumbnail({
   onMoveUp,
   onMoveDown,
   onSetAsCover,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  isDragging,
+  dragOffset = { x: 0, y: 0 },
 }: PhotoThumbnailProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
   const [imageFailed, setImageFailed] = useState(false);
   const uri = getPhotoUri(photo);
+  const tileSize = Math.max(
+    84,
+    Math.min(136, Math.floor((width - 56) / 3)),
+  );
+  const handleLongPress = (event: GestureResponderEvent) => {
+    const { pageX, pageY } = event.nativeEvent;
+    onDragStart(index, pageX, pageY);
+  };
+  const handleTouchMove = (event: GestureResponderEvent) => {
+    const touch = event.nativeEvent.touches[0];
+    if (!touch) return;
+    onDragMove(touch.pageX, touch.pageY);
+  };
 
   return (
     <View
       key={photo.photoId}
-      className="relative aspect-square w-[31.5%] overflow-hidden rounded-lg bg-muted"
+      className="relative overflow-hidden rounded-lg bg-muted"
+      style={[
+        { width: tileSize, height: tileSize },
+        isDragging
+          ? {
+              opacity: 0.85,
+              transform: [
+                { translateX: dragOffset.x },
+                { translateY: dragOffset.y },
+                { scale: 1.04 },
+              ],
+              zIndex: 10,
+            }
+          : null,
+      ]}
     >
-      {uri && !imageFailed ? (
-        <Image
-          source={{ uri }}
-          className="h-full w-full"
-          contentFit="cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <View className="h-full w-full items-center justify-center">
-          <Icon as={ImageIcon} className="size-6 text-muted-foreground" />
-        </View>
-      )}
+      <Pressable
+        delayLongPress={250}
+        onLongPress={handleLongPress}
+        onTouchMove={handleTouchMove}
+        onPressOut={onDragEnd}
+        style={StyleSheet.absoluteFillObject}
+      >
+        {uri && !imageFailed ? (
+          <Image
+            source={{ uri }}
+            style={StyleSheet.absoluteFillObject}
+            contentFit="cover"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <View className="h-full w-full items-center justify-center">
+            <Icon as={ImageIcon} className="size-6 text-muted-foreground" />
+          </View>
+        )}
+      </Pressable>
 
       {index === 0 && (
         <View className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5">
@@ -70,6 +122,14 @@ export function PhotoThumbnail({
       )}
 
       <PhotoStateOverlay photo={photo} onRetry={onRetry} />
+
+      <Pressable
+        accessibilityLabel={t("remove")}
+        className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-black/60"
+        onPress={() => onRemove(photo.photoId)}
+      >
+        <Icon as={X} className="size-4 text-white" />
+      </Pressable>
 
       <DropdownMenu>
         <DropdownMenuTrigger>
