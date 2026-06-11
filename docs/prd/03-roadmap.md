@@ -56,8 +56,11 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟢 Shipped | 2026-06-06 | 2026-06-07 | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | 🟢 Shipped | 2026-06-07 | 2026-06-08 | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | 🟡 In progress | 2026-06-09 | — | M7 | First 10-50 real users |
+| S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | ⚪ Pending | — | — | M8 | 5-10 inspection-pilot buyers (on-ground) |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
+
+> **S9 (Trust wedge) is post-MLP, pulled forward** per [ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md) — listed in this table to keep the sprint trajectory in one place. It builds the remote trust foundation (verified-seller, condition disclosure, VIN history, inspection **demand fake-door**) and runs a 5-10-person **free concierge inspection pilot** on the ground, replacing the generic beta as the real first test.
 
 ---
 
@@ -99,14 +102,15 @@ These are not a backlog. They are candidates for shaping after beta learning. If
 | **M5** I can contact the seller | S6 | Beta testers with real listings |
 | **M6** Admins can keep beta safe | S7 | Internal admins |
 | **M7** Private beta | S8 | First 10-50 real users |
+| **M8** Trust wedge / first inspection pilot | S9 | 5-10 buyers who get a free AutoTM inspection |
 
 ---
 
 ## Sprint dependencies
 
 ```
-S1 ────► S2 ────► S3 ────► S4 ────► S5 ────► S6 ────► S7 ────► S8
-          auth      catalog   listings  discovery contact   safety   beta
+S1 ────► S2 ────► S3 ────► S4 ────► S5 ────► S6 ────► S7 ────► S8 ────► S9
+          auth      catalog   listings  discovery contact   safety   beta    trust
 ```
 
 - **S2 unlocks authenticated actions** — contact seller, create listing, and admin elevation all depend on identity.
@@ -115,7 +119,8 @@ S1 ────► S2 ────► S3 ────► S4 ────► S5 �
 - **S5 unlocks buyer intent** — contact is meaningful only when buyers can find relevant listings.
 - **S6 unlocks real marketplace learning** — once buyers contact sellers, we can measure the loop.
 - **S7 comes before broader beta** — moderation must exist before 10-50 real users enter.
-- **S8 is last** — only polish the loop after the loop exists.
+- **S8 is last in the MLP loop** — only polish the loop after the loop exists.
+- **S9 is the trust wedge** ([ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md)) — pulled forward as the differentiator vs. TMCARS/Teklip; its on-ground concierge pilot shares S8b's TM-presence dependency.
 
 If a sprint slips, slide downstream rows by the same delta. Do not parallelize unless a shaped pitch proves the dependency is false.
 
