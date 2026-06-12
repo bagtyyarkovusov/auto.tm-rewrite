@@ -101,6 +101,18 @@ function EmptyState({
   );
 }
 
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <View className="flex-1 items-center justify-center gap-3 px-6">
+      <Text className="text-base text-foreground">{t("requestFailed")}</Text>
+      <Button variant="outline" size="pill" onPress={onRetry}>
+        <Text>{t("retry")}</Text>
+      </Button>
+    </View>
+  );
+}
+
 function SegmentedTabs({
   activeTab,
   onChange,
@@ -120,8 +132,13 @@ function SegmentedTabs({
             <Pressable
               key={tab.key}
               onPress={() => onChange(tab.key)}
-              className={`flex-1 items-center justify-center rounded-md py-1.5 ${
-                isActive ? "bg-background shadow-sm" : ""
+              // Keep the class shape stable between states: toggling a CSS-var
+              // class (e.g. shadow-sm) onto a mounted component triggers a
+              // css-interop upgrade that crashes the app in dev.
+              className={`flex-1 items-center justify-center rounded-md border py-1.5 ${
+                isActive
+                  ? "border-border bg-background"
+                  : "border-transparent bg-transparent"
               }`}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
@@ -292,6 +309,8 @@ export default function ManageListingsScreen() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator />
         </View>
+      ) : currentQuery.isError ? (
+        <ErrorState onRetry={handleRefresh} />
       ) : isListingsTab && filteredListings.length === 0 ? (
         <FlatList
           data={[]}

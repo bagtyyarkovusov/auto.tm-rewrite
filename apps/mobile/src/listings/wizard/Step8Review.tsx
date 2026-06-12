@@ -86,8 +86,13 @@ export default function Step8Review({
           onPress={() => setViewMode("checklist")}
           accessibilityRole="button"
           accessibilityState={{ selected: viewMode === "checklist" }}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-md py-2 ${
-            viewMode === "checklist" ? "bg-card shadow-sm" : "bg-transparent"
+          // Keep the class shape stable between states: toggling a CSS-var
+          // class (e.g. shadow-sm) onto a mounted component triggers a
+          // css-interop upgrade that crashes the app in dev.
+          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-md border py-2 ${
+            viewMode === "checklist"
+              ? "border-border bg-card"
+              : "border-transparent bg-transparent"
           }`}
         >
           <Icon as={ListChecks} className={`size-4 ${viewMode === "checklist" ? "text-foreground" : "text-muted-foreground"}`} />
@@ -99,8 +104,10 @@ export default function Step8Review({
           onPress={() => setViewMode("preview")}
           accessibilityRole="button"
           accessibilityState={{ selected: viewMode === "preview" }}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-md py-2 ${
-            viewMode === "preview" ? "bg-card shadow-sm" : "bg-transparent"
+          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-md border py-2 ${
+            viewMode === "preview"
+              ? "border-border bg-card"
+              : "border-transparent bg-transparent"
           }`}
         >
           <Icon as={Eye} className={`size-4 ${viewMode === "preview" ? "text-foreground" : "text-muted-foreground"}`} />
@@ -203,7 +210,7 @@ function ChecklistView({
         onEdit={() => onGoToStep("photos")}
       >
         <Text className="text-sm text-foreground">
-          {uploadedPhotos.length} {t("photo")}{uploadedPhotos.length !== 1 ? `s` : ""} {t("uploaded")}
+          {t("photosUploadedCount", { count: uploadedPhotos.length })}
         </Text>
       </ReviewSection>
 
@@ -325,10 +332,13 @@ function PreviewView({
       {/* Photo carousel */}
       <View className="rounded-xl overflow-hidden bg-muted">
         {hasPhotos && uploadedPhotos[0] && getPhotoUri(uploadedPhotos[0], "detail") ? (
+          // expo-image is not bridged with cssInterop — className is silently
+          // dropped, so sizing must go through the style prop.
           <Image
             source={{ uri: getPhotoUri(uploadedPhotos[0], "detail") }}
-            className="w-full aspect-[4/3]"
+            style={{ width: "100%", aspectRatio: 4 / 3 }}
             contentFit="cover"
+            cachePolicy="memory-disk"
           />
         ) : (
           <View className="w-full aspect-[4/3] items-center justify-center bg-muted">
@@ -345,8 +355,9 @@ function PreviewView({
                   <Image
                     key={photo.photoId}
                     source={{ uri }}
-                    className="h-16 w-16 rounded-lg"
+                    style={{ width: 64, height: 64, borderRadius: 8 }}
                     contentFit="cover"
+                    cachePolicy="memory-disk"
                   />
                 ) : null;
               })}
