@@ -68,9 +68,10 @@ export default function ProfileScreen() {
     return map[data.role] ?? data.role;
   }, [data, t]);
 
+  // Only a real name yields a meaningful initial — the first character of a
+  // phone number is "+", which reads as an add-photo affordance.
   const avatarInitial = useMemo(() => {
     if (data?.displayName) return data.displayName.charAt(0).toUpperCase();
-    if (data?.phone) return data.phone.charAt(0);
     return undefined;
   }, [data]);
 
@@ -110,7 +111,7 @@ export default function ProfileScreen() {
             </Avatar>
 
             <Text className="text-xl font-heading text-foreground">
-              {data.displayName ?? t("account:noName")}
+              {data.displayName ?? data.phone}
             </Text>
 
             <Badge variant="secondary">
@@ -119,7 +120,7 @@ export default function ProfileScreen() {
           </View>
 
           <Card>
-            <CardContent className="gap-1 py-4">
+            <CardContent className="gap-1">
               <View className="flex-row items-center justify-between py-2">
                 <Text className="text-sm text-muted-foreground">
                   {t("account:phone")}

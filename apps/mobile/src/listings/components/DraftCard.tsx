@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
-import { Play, Trash2 } from "lucide-react-native";
+import { ImageOff, Trash2 } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
-import { buildVariantUrl } from "../detail/buildVariantUrl";
+import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -60,7 +60,13 @@ export function DraftCard({
   );
   const photoCount = attachedPhotos.length;
   const coverKey = attachedPhotos[0]?.key;
-  const imageUrl = coverKey ? buildVariantUrl(coverKey, "list") : null;
+  // Draft photos still live under pending/ — sized variants only exist after
+  // publish, so pending keys must load the original upload.
+  const imageUrl = coverKey
+    ? coverKey.startsWith("pending/")
+      ? buildOriginalUrl(coverKey)
+      : buildVariantUrl(coverKey, "list")
+    : null;
 
   const titleParts = [
     payload.year ? String(payload.year) : null,
@@ -99,7 +105,7 @@ export function DraftCard({
               />
             ) : (
               <View className="h-full w-full items-center justify-center">
-                <Icon as={Play} className="size-6 text-muted-foreground" />
+                <Icon as={ImageOff} className="size-6 text-muted-foreground" />
               </View>
             )}
           </View>
@@ -115,7 +121,7 @@ export function DraftCard({
               </Text>
               <Text className="text-xs text-muted-foreground">
                 {t("updated")} {formatDate(draft.updatedAt, i18n.language)}
-                {photoCount > 0 ? ` · ${photoCount} ${t("photos")}` : ""}
+                {photoCount > 0 ? ` · ${t("photoCount", { count: photoCount })}` : ""}
               </Text>
             </View>
 
@@ -138,18 +144,16 @@ export function DraftCard({
                 className="flex-1"
                 onPress={() => onResume(draft)}
               >
-                <Icon as={Play} className="size-4 text-primary-foreground" />
-                <Text>{t("continueListing")}</Text>
+                <Text numberOfLines={1}>{t("continue")}</Text>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1"
                 onPress={() => setShowConfirm(true)}
                 disabled={isDiscarding}
+                accessibilityLabel={t("discard")}
               >
                 <Icon as={Trash2} className="size-4 text-destructive" />
-                <Text>{t("discard")}</Text>
               </Button>
             </View>
           </View>

@@ -73,14 +73,16 @@ export default function ServicesScreen() {
           </Card>
         </Pressable>
 
-        <View className="flex-row flex-wrap gap-3">
+        {/* calc() with mixed units is unsupported on native (silently dropped),
+            so the two-column grid uses flex-1 halves instead. */}
+        <View className="flex-row gap-3">
           {serviceItems.map((item) => {
             const disabled = item.labelKey === "profile" && isAuthenticated === null;
             return (
               <Pressable
                 key={item.labelKey}
                 onPress={() => handlePress(item.labelKey)}
-                className="w-[calc(50%-6px)] active:opacity-90"
+                className="flex-1 active:opacity-90"
                 accessibilityRole="button"
                 accessibilityLabel={t(item.labelKey)}
                 accessibilityState={{ disabled }}

@@ -97,9 +97,11 @@ export default function SellScreen() {
     });
   }, [inWizard, navigation]);
 
+  // 50 is the API's FeedQuerySchema max — anything higher 400s and breaks
+  // draft resume entirely.
   const { data: draftsData, isPending: draftsLoading } = useMyDrafts({
     enabled: !!isAuthenticated,
-    limit: params.resumeDraftId ? 500 : 20,
+    limit: params.resumeDraftId ? 50 : 20,
   });
 
   const createDraft = useCreateDraft();
@@ -501,7 +503,7 @@ export default function SellScreen() {
               </Text>
               <Text className="text-sm text-muted-foreground">
                 {existingDraft.payload.photos?.length
-                  ? t("photos", { count: existingDraft.payload.photos.length })
+                  ? t("photoCount", { count: existingDraft.payload.photos.length })
                   : t("noPhotos")}
                 {" · "}
                 {existingDraft.payload.priceAmount
