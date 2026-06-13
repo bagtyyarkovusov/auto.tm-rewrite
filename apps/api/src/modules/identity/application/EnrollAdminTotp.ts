@@ -36,14 +36,31 @@ export class EnrollAdminTotp {
     }
 
     if (existing != null) {
-      // Pending unverified enrollment may be replaced
-      await this.totpRepo.deleteByUserId(input.userId);
+      // Pending setup is idempotent: admins may scan the QR, leave before
+      // verification, then return with the same authenticator entry.
+      const secret = this.cipher.decrypt(existing.encryptedSecret);
+      const qrCodeUrl = this.verifier.generateAuthUri({
+        secret,
+        userId: input.userId,
+        issuer: "auto.tm Admin",
+      });
+
+      return { qrCodeUrl, secret };
     }
 
-    const secret = this.verifier.generateSecret();
-    const encryptedSecret = this.cipher.encrypt(secret);
+    const generatedSecret = this.verifier.generateSecret();
+    const encryptedSecret = this.cipher.encrypt(generatedSecret);
 
-    await this.totpRepo.createPending(input.userId, encryptedSecret);
+    const created = await this.totpRepo.createPending(
+      input.userId,
+      encryptedSecret,
+    );
+
+    // Use the stored secret rather than the locally generated one. If two
+    // concurrent calls race on the unique `userId` index, the loser receives
+    // the winner's row from createPending and must return that secret to stay
+    // idempotent instead of returning its own never-stored value.
+    const secret = this.cipher.decrypt(created.encryptedSecret);
 
     const qrCodeUrl = this.verifier.generateAuthUri({
       secret,

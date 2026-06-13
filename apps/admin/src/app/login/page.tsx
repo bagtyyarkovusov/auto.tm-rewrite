@@ -109,6 +109,14 @@ export default function LoginPage() {
           return;
         }
 
+        if (result.totpEnrolled) {
+          setStep({
+            kind: "totp-verify",
+            phone: formData.get("phone") as string,
+          });
+          return;
+        }
+
         // Need TOTP setup or verification
         const enrollResult = await enrollTotp();
         if (enrollResult.ok) {
@@ -117,12 +125,16 @@ export default function LoginPage() {
             phone: formData.get("phone") as string,
             qrCodeDataUrl: enrollResult.qrCodeDataUrl,
           });
-        } else {
-          // Already enrolled or error — go to verify
+        } else if (enrollResult.reason === "already-enrolled") {
           setStep({
             kind: "totp-verify",
             phone: formData.get("phone") as string,
-            ...(enrollResult.ok === false ? { error: enrollResult.error } : {}),
+          });
+        } else {
+          setStep({
+            kind: "totp-verify",
+            phone: formData.get("phone") as string,
+            error: enrollResult.error,
           });
         }
       });

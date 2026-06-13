@@ -59,7 +59,10 @@ class FakeCipher implements TotpSecretCipherPort {
 }
 
 class FakeVerifier implements TotpVerifierPort {
+  generateSecretCalls = 0;
+
   generateSecret(): string {
+    this.generateSecretCalls += 1;
     return "TESTSECRET12345678";
   }
 
@@ -95,15 +98,17 @@ describe("EnrollAdminTotp", () => {
     expect(totpRepo.enrollments[0]!.encryptedSecret).toBe("enc:TESTSECRET12345678");
   });
 
-  it("replaces a pending unverified enrollment", async () => {
+  it("returns an existing pending unverified enrollment without rotating the secret", async () => {
     await totpRepo.createPending("user-1", "enc:old");
 
     const uc = new EnrollAdminTotp(totpRepo, cipher, verifier);
     const result = await uc.execute({ userId: "user-1" });
 
     expect(totpRepo.enrollments).toHaveLength(1);
-    expect(totpRepo.enrollments[0]!.encryptedSecret).toBe("enc:TESTSECRET12345678");
-    expect(result.secret).toBe("TESTSECRET12345678");
+    expect(totpRepo.enrollments[0]!.encryptedSecret).toBe("enc:old");
+    expect(verifier.generateSecretCalls).toBe(0);
+    expect(result.secret).toBe("old");
+    expect(result.qrCodeUrl).toContain("old");
   });
 
   it("throws TOTP_ALREADY_ENROLLED when verified enrollment exists", async () => {
