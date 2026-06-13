@@ -126,6 +126,7 @@ export function PhotoThumbnail({
       <Pressable
         accessibilityLabel={t("remove")}
         className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-black/60"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         onPress={() => onRemove(photo.photoId)}
       >
         <Icon as={X} className="size-4 text-white" />
@@ -133,7 +134,7 @@ export function PhotoThumbnail({
 
       <DropdownMenu>
         <DropdownMenuTrigger>
-          <View className="absolute bottom-1.5 right-1.5 h-7 w-7 items-center justify-center rounded-full bg-black/40">
+          <View className="absolute bottom-1.5 right-1.5 h-11 w-11 items-center justify-center rounded-full bg-black/40">
             <Icon as={MoreVertical} className="size-3.5 text-white" />
           </View>
         </DropdownMenuTrigger>

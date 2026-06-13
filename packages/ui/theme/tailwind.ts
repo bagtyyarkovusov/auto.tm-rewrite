@@ -11,7 +11,9 @@ export const tailwindTheme = {
     success: { 500: palette.green[500] },
     warning: { 500: palette.amber[500] },
     error: { 500: palette.rose[500] },
-    info: { 500: palette.blue[500] },
+    info: Object.fromEntries(
+      Object.entries(palette.blue).map(([k, v]) => [k, v]),
+    ),
     primary: palette.red[500],
   },
   spacing: Object.fromEntries(

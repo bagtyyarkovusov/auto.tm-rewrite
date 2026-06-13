@@ -1,13 +1,15 @@
+import type { TFunction } from "i18next";
+
 import { ApiError } from "../../api/client";
 
 import { CompressionError } from "./compressor";
 import type { UploadError } from "./types";
 
-export function buildUploadError(err: unknown): UploadError {
+export function buildUploadError(err: unknown, t: TFunction): UploadError {
   if (err instanceof CompressionError) {
     return {
       code: "LOCAL_FILE_MISSING",
-      message: err.message,
+      message: t("uploadErrorLocalFileMissing"),
       retryable: false,
     };
   }
@@ -16,25 +18,25 @@ export function buildUploadError(err: unknown): UploadError {
     if (err.code === "NETWORK_ERROR") {
       return {
         code: "NETWORK_ERROR",
-        message: "No internet connection — will retry automatically",
+        message: t("uploadErrorNetwork"),
         retryable: true,
       };
     }
     if (err.status === 429) {
       return {
         code: "RATE_LIMITED",
-        message: "Too many uploads — please retry in a moment",
+        message: t("uploadErrorRateLimited"),
         retryable: true,
       };
     }
     return {
       code: "PRESIGN_FAILED",
-      message: "Server error getting upload URL — please retry",
+      message: t("uploadErrorPresignFailed"),
       retryable: true,
     };
   }
 
-  const message = err instanceof Error ? err.message : "Upload failed";
+  const message = err instanceof Error ? err.message : t("uploadErrorUnknown");
 
   // Network errors from fetch / expo-file-system typically contain "network" or are TypeErrors
   if (
@@ -45,7 +47,7 @@ export function buildUploadError(err: unknown): UploadError {
   ) {
     return {
       code: "NETWORK_ERROR",
-      message: "No internet connection — will retry automatically",
+      message: t("uploadErrorNetwork"),
       retryable: true,
     };
   }
@@ -54,7 +56,7 @@ export function buildUploadError(err: unknown): UploadError {
   if (message.includes("PUT failed")) {
     return {
       code: "PUT_FAILED",
-      message: "Upload server error — please retry",
+      message: t("uploadErrorPutFailed"),
       retryable: true,
     };
   }

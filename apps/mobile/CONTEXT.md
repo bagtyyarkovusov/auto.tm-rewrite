@@ -50,6 +50,14 @@ There are **no** `font-uber-move`, `font-uber-move-text`, or `font-uber-mono` ut
 
 Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first surfaces, 8px default radius, UberMove semantic font utilities, flat cards/inputs, and restrained brand red. `Button` default is high-contrast neutral (`bg-foreground`); `Button variant="brand"` is the red commit/action style. `Button size="pill"` (52px rounded-full) is the commit-button size used in the wizard footer and Sell entry screen. `variant` and `size` are orthogonal — callers combine them (e.g., `variant="brand" size="pill"`). Every variant bakes in `disabled:bg-muted disabled:border disabled:border-border` (container) and `disabled:text-muted-foreground` (text) so disabled buttons show a visible muted shell instead of fading via `opacity-50`. Status UI uses `success-500`, `warning-500`, `info-500`, and `destructive` instead of brand red. `Progress`, `Switch`, `Tooltip`, tabs, and photo cover badges use neutral tokens so red stays reserved for true brand or commit moments.
 
+### Shared error UI + accessibility pass (today)
+
+- **`components/ErrorState.tsx`** is the canonical error surface. It maps any `ApiError` to localized title/description/retryable copy via **`src/api/getErrorCopy.ts`** and renders either a full-screen centered state or a compact inline banner. It is used by the feed (`FeedError`), favorites, conversation list, conversation detail, profile, My Listings & Drafts, listing detail, `open-listing`, and `ContactCtaBar`.
+- **`src/api/getErrorCopy.ts`** recognizes `NETWORK_ERROR`, `UNAUTHENTICATED` (401), `RATE_LIMITED` (429), `NOT_FOUND` (404), `CONTRACT_VIOLATION`, contact-specific codes (`LISTING_NOT_CONTACTABLE`, `CHAT_DISABLED`, `SELF_CONTACT_NOT_ALLOWED`, `NOT_A_PARTICIPANT`), and `FORBIDDEN` reasons (`USER_SUSPENDED`, feature/kill-switch flags). Non-retryable errors hide the retry button.
+- **Upload error copy** in `src/listings/uploadStaging/uploadErrors.ts` is localized through `react-i18next` (`uploadErrorNetwork`, `uploadErrorRateLimited`, `uploadErrorPresignFailed`, `uploadErrorPutFailed`, `uploadErrorLocalFileMissing`, `uploadErrorUnknown`) and surfaced by `PhotoStateOverlay`.
+- **Minimum tap targets**: `Button size="icon"` renders at 44×44 pt. The remove/menu affordances on `PhotoThumbnail` use enlarged touch areas (`hitSlop` / 44 pt container) while keeping the visual icon small.
+- **Contrast fixes**: `Input` native placeholder raised to 70 % opacity; `MessageBubble` pending status text raised to 90 % opacity; `PhotoStateOverlay` failed-state message uses full-opacity white on the dark scrim; `Button variant="link"` uses `text-info-600` with `dark:text-info-400`; destructive buttons render `destructive-foreground` as near-black (`hsl(0 0% 9%)`) for readable contrast on the orange destructive surface.
+
 ### Routes (Phase 1, today)
 
 ```

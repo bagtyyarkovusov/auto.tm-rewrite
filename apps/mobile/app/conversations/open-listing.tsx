@@ -9,6 +9,7 @@ import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { ErrorState } from "@/components/ErrorState";
 
 export default function OpenListingConversationScreen() {
   const { t } = useTranslation();
@@ -75,28 +76,10 @@ export default function OpenListingConversationScreen() {
   if (isError) {
     return (
       <SafeScreen>
-        <View className="flex-1 items-center justify-center px-6 gap-4">
-          <Text className="text-lg font-semibold text-foreground">
-            {t("couldNotOpenConversation")}
-          </Text>
-          <Text className="text-center text-sm text-muted-foreground">
-            {error instanceof Error
-              ? error.message
-              : t("somethingWentWrong")}
-          </Text>
-          <Button
-            variant="brand"
-            size="pill"
-            onPress={() => {
-              mutate({ listingId });
-            }}
-          >
-            <Text>{t("retry")}</Text>
-          </Button>
-          <Button variant="ghost" onPress={goBack}>
-            <Text>{t("goBack")}</Text>
-          </Button>
-        </View>
+        <ErrorState
+          error={error}
+          onRetry={() => mutate({ listingId })}
+        />
       </SafeScreen>
     );
   }

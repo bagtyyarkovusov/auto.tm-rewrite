@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Heart, AlertTriangle } from "lucide-react-native";
+import { Heart } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../src/auth/useAuth";
@@ -12,6 +12,7 @@ import { ListingCard } from "../../src/listings/feed/ListingCard";
 import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 import { FeedSkeleton } from "../../src/listings/feed/FeedSkeleton";
 
+import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -38,26 +39,6 @@ function AnonymousFavoritesEntry() {
   );
 }
 
-function FavoritesError({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <View className="flex-1 items-center justify-center px-6 gap-4">
-      <Icon as={AlertTriangle} className="size-8 text-muted-foreground" />
-      <View className="items-center gap-1">
-        <Text className="text-base font-semibold text-foreground">
-          {t("couldNotLoadListings")}
-        </Text>
-        <Text className="text-center text-sm text-muted-foreground">
-          {t("checkConnection")}
-        </Text>
-      </View>
-      <Button variant="outline" size="pill" onPress={onRetry}>
-        <Text>{t("retry")}</Text>
-      </Button>
-    </View>
-  );
-}
-
 function FavoritesEmpty() {
   const { t } = useTranslation();
   return (
@@ -79,6 +60,7 @@ function FavoritesContent() {
     data,
     isPending,
     isError,
+    error,
     refetch,
     isRefetching,
     fetchNextPage,
@@ -101,7 +83,7 @@ function FavoritesContent() {
   }
 
   if (isError) {
-    return <FavoritesError onRetry={() => refetch()} />;
+    return <ErrorState error={error} onRetry={() => refetch()} />;
   }
 
   if (allItems.length === 0) {

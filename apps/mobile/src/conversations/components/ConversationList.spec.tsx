@@ -30,11 +30,11 @@ describe("ConversationList", () => {
     expect(source).toContain('t("noConversationsYet")');
   });
 
-  it("shows error state with retry", () => {
+  it("shows shared ErrorState with error prop on error", () => {
     expect(source).toContain("isError");
     expect(source).toContain("ErrorState");
-    expect(source).toContain('t("couldNotLoadConversations")');
-    expect(source).toContain('t("retry")');
+    expect(source).toContain("error={error}");
+    expect(source).toContain("onRetry={handleRefresh}");
   });
 
   it("uses FlatList for conversation items", () => {

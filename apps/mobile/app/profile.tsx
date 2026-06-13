@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { ErrorState } from "@/components/ErrorState";
 
 function LoadingState() {
   return (
@@ -25,20 +26,6 @@ function LoadingState() {
         <Skeleton className="h-4 w-32 rounded" />
       </View>
       <Skeleton className="h-24 w-full rounded-xl" />
-    </View>
-  );
-}
-
-function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation("common");
-  return (
-    <View className="flex-1 items-center justify-center px-6 gap-3">
-      <Text className="text-base text-foreground">
-        {t("requestFailed")}
-      </Text>
-      <Button variant="outline" size="pill" onPress={onRetry}>
-        <Text>{t("retry")}</Text>
-      </Button>
     </View>
   );
 }
@@ -54,7 +41,7 @@ function formatMemberSince(isoDate: string, locale: string): string {
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation(["account", "common"]);
-  const { data, isPending, isError, refetch } = useMe();
+  const { data, isPending, isError, error, refetch } = useMe();
   const goBack = useSafeBack("/(tabs)/services");
 
   const roleLabel = useMemo(() => {
@@ -90,7 +77,7 @@ export default function ProfileScreen() {
       {isPending ? (
         <LoadingState />
       ) : isError ? (
-        <ErrorState onRetry={() => refetch()} />
+        <ErrorState error={error} onRetry={() => refetch()} />
       ) : data ? (
         <View className="flex-1 px-4 pt-4 gap-4">
           {/* Identity card */}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as FileSystem from "expo-file-system/legacy";
+import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { usePresignUpload } from "../../api/uploads/usePresignUpload";
@@ -75,6 +76,7 @@ export function useUploadQueue(
   stagingKey: string,
   initialPayload: ListingsSchemas.ListingDraftPayload,
 ) {
+  const { t } = useTranslation("common");
   const [queue, setQueue] = useState<UploadQueue>({ stagingKey, photos: [] });
   const { increment: startCompression, decrement: endCompression, isActive: isCompressing } = useAsyncCounter();
   const { increment: startUpload, decrement: endUpload, isActive: isUploading } = useAsyncCounter();
@@ -177,7 +179,7 @@ export function useUploadQueue(
       if (!photo.localUri) {
         transitionToFailed(photoId, {
           code: "LOCAL_FILE_MISSING",
-          message: "Photo file missing — please remove and re-select",
+          message: t("uploadErrorLocalFileMissing"),
           retryable: false,
         });
         return;
@@ -187,7 +189,7 @@ export function useUploadQueue(
       if (!fileExists) {
         transitionToFailed(photoId, {
           code: "LOCAL_FILE_MISSING",
-          message: "Photo file missing — please remove and re-select",
+          message: t("uploadErrorLocalFileMissing"),
           retryable: false,
         });
         return;
@@ -218,7 +220,7 @@ export function useUploadQueue(
         await uploadFileToPresignedUrl(presignResult.uploadUrl, photo.localUri);
         transitionToUploaded(photoId, presignResult.key);
       } catch (err) {
-        const uploadError = buildUploadError(err);
+        const uploadError = buildUploadError(err, t);
         transitionToFailed(photoId, uploadError);
       } finally {
         endUpload();
@@ -289,7 +291,7 @@ export function useUploadQueue(
         uploadQueue.current.push(photoId);
         processUploadQueue();
       } catch (err) {
-        const uploadError = buildUploadError(err);
+        const uploadError = buildUploadError(err, t);
         queueRef.current = transitionPhotoToFailed(queueRef.current, photoId, uploadError);
         setQueue(queueRef.current);
       } finally {

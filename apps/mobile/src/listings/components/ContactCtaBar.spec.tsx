@@ -62,13 +62,25 @@ describe("ContactCtaBar", () => {
     expect(source).toContain('"size-5 text-muted-foreground"');
   });
 
-  it("has accessible labels for Message button", () => {
+  it("has accessible labels for icon-only CTA buttons", () => {
     expect(source).toContain('accessibilityLabel={t("message")}');
+    expect(source).toContain('accessibilityLabel={t("share")}');
+    expect(source).toContain('accessibilityLabel={t("favorite")}');
     expect(source).toContain("accessibilityState={{ disabled: !canMessage || openConversation.isPending }}");
   });
 
   it("disables Message while openConversation is pending", () => {
     expect(source).toContain("openConversation.isPending");
     expect(source).toContain("disabled={!canMessage || openConversation.isPending}");
+  });
+
+  it("imports ErrorState to surface openConversation errors", () => {
+    expect(source).toContain('import { ErrorState } from "@/components/ErrorState"');
+  });
+
+  it("renders compact ErrorState when openConversation.error exists", () => {
+    expect(source).toContain("openConversation.error");
+    expect(source).toContain("<ErrorState");
+    expect(source).toContain("compact");
   });
 });

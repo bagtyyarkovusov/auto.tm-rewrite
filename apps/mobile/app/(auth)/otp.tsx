@@ -208,7 +208,13 @@ export default function OtpScreen() {
       requestAnimationFrame(() => otpRef.current?.focus());
     } catch (error) {
       if (error instanceof ApiError) {
-        setOtpError(error.message || t("verifyFailed"));
+        if (error.code === "NETWORK_ERROR" || error.status === 0) {
+          setOtpError(t("offline"));
+        } else if (error.code === "RATE_LIMITED" || error.status === 429) {
+          setOtpError(t("rateLimitedCode"));
+        } else {
+          setOtpError(t("verifyFailed"));
+        }
       } else {
         setOtpError(t("offline"));
       }
