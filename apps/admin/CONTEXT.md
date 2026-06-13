@@ -43,7 +43,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
 
 ## Auth flow
 
-- Phone OTP → normal non-elevated session → TOTP status (`/auth/admin/totp/status`) → already-enrolled admins go directly to the TOTP verify form, while not-yet-enrolled admins call TOTP enroll and receive a QR data URL server-side (issuer `auto.tm Admin`) → first TOTP verify returns `adminTotpExpiresAt` plus 10 backup codes exactly once → screen-only backup-code display with copy-to-clipboard → later elevation accepts TOTP or one backup code and returns `adminTotpExpiresAt` only → 12-hour admin elevation on the same session → redirect to `/reports`. Refresh preserves but never extends elevation.
+- Phone OTP → normal non-elevated session → TOTP status (`/auth/admin/totp/status`) → already-enrolled admins go directly to the TOTP verify form, while not-yet-enrolled admins call TOTP enroll and receive a QR data URL server-side (issuer `auto.tm Admin`). Pending enrollment is idempotent across sessions until first verification, so an admin who scans the QR, leaves, and logs in again sees the same QR and can use the saved authenticator entry. First TOTP verify returns `adminTotpExpiresAt` plus 10 backup codes exactly once → screen-only backup-code display with copy-to-clipboard → later elevation accepts TOTP or one backup code and returns `adminTotpExpiresAt` only → 12-hour admin elevation on the same session → redirect to `/reports`. Refresh preserves but never extends elevation.
 - A `role = admin` user provisioned by the S7 bootstrap runbook/script without TOTP is a pending admin assignment; the admin app shows only the TOTP setup/verify path until `AdminGuard` access succeeds.
 
 ## Token bridge

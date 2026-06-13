@@ -175,4 +175,54 @@ describe("AdminAuthController e2e — admin TOTP", () => {
     expect(statusAfterTotp.body.enrolled).toBe(true);
     expect(statusAfterTotp.body.elevated).toBe(true);
   });
+
+  it("returns the same pending secret from a different admin session before first verify", async () => {
+    const firstLogin = await loginAdmin();
+
+    const enroll = await request
+      .post("/api/v1/auth/admin/totp/enroll")
+      .set("Authorization", `Bearer ${firstLogin.accessToken}`)
+      .expect(201);
+    const pendingSecret = enroll.body.secret as string;
+
+    const secondLogin = await loginAdmin();
+
+    const reEnroll = await request
+      .post("/api/v1/auth/admin/totp/enroll")
+      .set("Authorization", `Bearer ${secondLogin.accessToken}`)
+      .expect(201);
+
+    expect(reEnroll.body.secret).toBe(pendingSecret);
+    expect(reEnroll.body.qrCodeUrl).toBe(enroll.body.qrCodeUrl);
+
+    await request
+      .post("/api/v1/auth/admin/totp/verify")
+      .set("Authorization", `Bearer ${secondLogin.accessToken}`)
+      .send({ code: currentTotpCode(pendingSecret) })
+      .expect(201);
+  });
+
+  it("handles concurrent pending enroll calls without 500 and keeps the same secret", async () => {
+    const { accessToken, userId } = await loginAdmin();
+
+    const [first, second] = await Promise.all([
+      request
+        .post("/api/v1/auth/admin/totp/enroll")
+        .set("Authorization", `Bearer ${accessToken}`),
+      request
+        .post("/api/v1/auth/admin/totp/enroll")
+        .set("Authorization", `Bearer ${accessToken}`),
+    ]);
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+
+    const rows = await prisma.totpEnrollment.findMany({ where: { userId } });
+    expect(rows).toHaveLength(1);
+
+    const firstSecret = first.body.secret as string;
+    const secondSecret = second.body.secret as string;
+    expect(firstSecret).toBe(secondSecret);
+    expect(firstSecret.length).toBeGreaterThan(0);
+  });
 });

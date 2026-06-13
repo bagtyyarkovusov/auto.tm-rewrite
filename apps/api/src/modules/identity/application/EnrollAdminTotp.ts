@@ -48,10 +48,19 @@ export class EnrollAdminTotp {
       return { qrCodeUrl, secret };
     }
 
-    const secret = this.verifier.generateSecret();
-    const encryptedSecret = this.cipher.encrypt(secret);
+    const generatedSecret = this.verifier.generateSecret();
+    const encryptedSecret = this.cipher.encrypt(generatedSecret);
 
-    await this.totpRepo.createPending(input.userId, encryptedSecret);
+    const created = await this.totpRepo.createPending(
+      input.userId,
+      encryptedSecret,
+    );
+
+    // Use the stored secret rather than the locally generated one. If two
+    // concurrent calls race on the unique `userId` index, the loser receives
+    // the winner's row from createPending and must return that secret to stay
+    // idempotent instead of returning its own never-stored value.
+    const secret = this.cipher.decrypt(created.encryptedSecret);
 
     const qrCodeUrl = this.verifier.generateAuthUri({
       secret,

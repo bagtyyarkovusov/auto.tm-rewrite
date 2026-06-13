@@ -20,10 +20,28 @@ export class PrismaTotpEnrollmentRepository implements TotpEnrollmentRepository 
     userId: string,
     encryptedSecret: string,
   ): Promise<TotpEnrollment> {
-    const row = await this.prisma.totpEnrollment.create({
-      data: { userId, encryptedSecret },
-    });
-    return this.toDomain(row);
+    try {
+      const row = await this.prisma.totpEnrollment.create({
+        data: { userId, encryptedSecret },
+      });
+      return this.toDomain(row);
+    } catch (err: unknown) {
+      // Concurrent enroll calls for the same admin race on @@unique([userId]).
+      // The loser should return the existing pending enrollment so the setup
+      // remains idempotent rather than surfacing a 500.
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "code" in err &&
+        err.code === "P2002"
+      ) {
+        const existing = await this.prisma.totpEnrollment.findUnique({
+          where: { userId },
+        });
+        if (existing) return this.toDomain(existing);
+      }
+      throw err;
+    }
   }
 
   async markVerified(userId: string): Promise<void> {
