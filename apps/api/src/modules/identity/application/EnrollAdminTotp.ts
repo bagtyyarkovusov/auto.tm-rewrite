@@ -36,8 +36,16 @@ export class EnrollAdminTotp {
     }
 
     if (existing != null) {
-      // Pending unverified enrollment may be replaced
-      await this.totpRepo.deleteByUserId(input.userId);
+      // Pending setup is idempotent: admins may scan the QR, leave before
+      // verification, then return with the same authenticator entry.
+      const secret = this.cipher.decrypt(existing.encryptedSecret);
+      const qrCodeUrl = this.verifier.generateAuthUri({
+        secret,
+        userId: input.userId,
+        issuer: "auto.tm Admin",
+      });
+
+      return { qrCodeUrl, secret };
     }
 
     const secret = this.verifier.generateSecret();

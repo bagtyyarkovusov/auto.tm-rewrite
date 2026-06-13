@@ -52,7 +52,12 @@ export async function requestOtp(
 
 export type VerifyOtpResult =
   | { ok: false; error: string }
-  | { ok: true; next: "totp" | "reports"; backupCodes?: string[] };
+  | {
+      ok: true;
+      next: "totp" | "reports";
+      backupCodes?: string[];
+      totpEnrolled?: boolean;
+    };
 
 export async function verifyOtp(
   _prev: unknown,
@@ -105,7 +110,7 @@ export async function verifyOtp(
       return { ok: true, next: "reports" };
     }
 
-    return { ok: true, next: "totp" };
+    return { ok: true, next: "totp", totpEnrolled: totpStatus.enrolled };
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
@@ -159,7 +164,7 @@ export async function getTotpStatus(): Promise<TotpStatusResult> {
 }
 
 export type TotpEnrollResult =
-  | { ok: false; error: string }
+  | { ok: false; error: string; reason?: "already-enrolled" }
   | { ok: true; qrCodeDataUrl: string };
 
 export async function enrollTotp(): Promise<TotpEnrollResult> {
@@ -181,6 +186,7 @@ export async function enrollTotp(): Promise<TotpEnrollResult> {
       ) {
         return {
           ok: false,
+          reason: "already-enrolled",
           error: "Двухфакторная аутентификация уже настроена.",
         };
       }

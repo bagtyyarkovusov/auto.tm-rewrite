@@ -15,7 +15,7 @@ Internal admin dashboard. Next.js + shadcn/ui at `admin.auto.tm`. MLP beta uses 
 ## What it contains (today)
 
 - Next.js 16.x App Router scaffold under `src/app/` — `layout.tsx` + `globals.css` + `favicon.ico`
-- **Auth bridge (S7)** — server-side API fetch wrapper, HTTP-only cookie storage, refresh-on-401, TOTP enrollment/verify flow, auth gate
+- **Auth bridge (S7)** — server-side API fetch wrapper, HTTP-only cookie storage, refresh-on-401, TOTP status/enrollment/verify flow, auth gate
 - `middleware.ts` — fast-path redirect when access cookie is missing on protected routes
 - `src/lib/cookies.ts` — canonical cookie names/flags, set/clear helpers
 - `src/lib/validators.ts` — `validateReturnTo` (relative internal only), `validateOrigin`
@@ -43,7 +43,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
 
 ## Auth flow
 
-- Phone OTP → normal non-elevated session → TOTP status (`/auth/admin/totp/status`) → TOTP enroll returns QR data URL server-side (issuer `auto.tm Admin`) → first TOTP verify returns `adminTotpExpiresAt` plus 10 backup codes exactly once → screen-only backup-code display with copy-to-clipboard → later elevation accepts TOTP or one backup code and returns `adminTotpExpiresAt` only → 12-hour admin elevation on the same session → redirect to `/reports`. Refresh preserves but never extends elevation.
+- Phone OTP → normal non-elevated session → TOTP status (`/auth/admin/totp/status`) → already-enrolled admins go directly to the TOTP verify form, while not-yet-enrolled admins call TOTP enroll and receive a QR data URL server-side (issuer `auto.tm Admin`) → first TOTP verify returns `adminTotpExpiresAt` plus 10 backup codes exactly once → screen-only backup-code display with copy-to-clipboard → later elevation accepts TOTP or one backup code and returns `adminTotpExpiresAt` only → 12-hour admin elevation on the same session → redirect to `/reports`. Refresh preserves but never extends elevation.
 - A `role = admin` user provisioned by the S7 bootstrap runbook/script without TOTP is a pending admin assignment; the admin app shows only the TOTP setup/verify path until `AdminGuard` access succeeds.
 
 ## Token bridge
@@ -105,6 +105,9 @@ None — admin app calls `apps/api` only through server actions / route handlers
   - `dismissReport` / `banListing` / `unbanListing` / `suspendUser` / `unsuspendUser` success + conflict/policy error handling (REPORT_ALREADY_RESOLVED, MODERATION_TARGET_STATE_CONFLICT, ADMIN_TARGET_NOT_MODERATABLE, SELF_MODERATION_NOT_ALLOWED, FEATURE_DISABLED)
   - `getConfig` success + error paths
   - Operator-script actor rendering, audit entry fields
+- Admin auth server-action tests in `src/app/actions.spec.ts`:
+  - `verifyOtp` surfaces whether TOTP is already enrolled after OTP succeeds
+  - `enrollTotp` marks verified-enrollment conflicts with `reason = "already-enrolled"` so the login UI can show verify without an error banner
 
 ## Notable decisions
 
