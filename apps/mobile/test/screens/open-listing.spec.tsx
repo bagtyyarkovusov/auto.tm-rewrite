@@ -49,13 +49,9 @@ describe("OpenListingConversationScreen", () => {
     expect(source).toContain('t("openingConversation")');
   });
 
-  it("shows error state with retry on failure", () => {
+  it("shows shared ErrorState on failure", () => {
     expect(source).toContain("isError");
-    expect(source).toContain('t("retry")');
-  });
-
-  it("shows go back button on error", () => {
-    expect(source).toContain('t("goBack")');
-    expect(source).toContain("goBack");
+    expect(source).toContain("<ErrorState");
+    expect(source).toContain("error={error}");
   });
 });

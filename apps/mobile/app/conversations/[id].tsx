@@ -20,6 +20,7 @@ import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { ErrorState } from "@/components/ErrorState";
 
 interface LocalMessage {
   id: string;
@@ -210,16 +211,10 @@ export default function ConversationDetailScreen() {
             </View>
           </View>
         ) : isError ? (
-          <View className="flex-1 items-center justify-center px-6 gap-3">
-            <Text className="text-base text-foreground">{t("failedToLoadMessages")}</Text>
-            <Button
-              variant="outline"
-              size="pill"
-              onPress={() => messagesQuery.refetch()}
-            >
-              <Text>{t("retry")}</Text>
-            </Button>
-          </View>
+          <ErrorState
+            error={messagesQuery.error}
+            onRetry={() => messagesQuery.refetch()}
+          />
         ) : viewer?.userId ? (
           <MessageList
             messages={allMessages}

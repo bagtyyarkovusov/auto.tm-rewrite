@@ -44,7 +44,11 @@ export const palette = {
   green: { 500: "#10B981" }, // success
   amber: { 500: "#F59E0B" }, // warning
   rose:  { 500: "#F43F5E" }, // error (distinct from brand red)
-  blue:  { 500: "#3B82F6" }, // info / link
+  blue:  {
+    400: "#60A5FA",
+    500: "#3B82F6",
+    600: "#2563EB",
+  }, // info / link
 } as const;
 
 /**

@@ -14,6 +14,7 @@ import { useViewer } from "../../../src/auth/useViewer";
 import { useConfig } from "../../../src/api/admin/useConfig";
 import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
+import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,7 +61,7 @@ function DetailSkeleton({ insets }: { insets: ReturnType<typeof useSafeAreaInset
   );
 }
 
-function UnavailableState({ onRetry, insets }: { onRetry?: () => void; insets: ReturnType<typeof useSafeAreaInsets> }) {
+function UnavailableState({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
   const { t } = useTranslation();
   const goBack = useSafeBack();
   return (
@@ -71,16 +72,9 @@ function UnavailableState({ onRetry, insets }: { onRetry?: () => void; insets: R
       <Text className="text-center text-sm text-muted-foreground">
         {t("removedSoldOrArchived")}
       </Text>
-      <View className="flex-row gap-3">
-        <Button variant="outline" size="pill" onPress={goBack}>
-          <Text>{t("goBack")}</Text>
-        </Button>
-        {onRetry && (
-          <Button variant="default" size="pill" onPress={onRetry}>
-            <Text className="text-primary-foreground">{t("retry")}</Text>
-          </Button>
-        )}
-      </View>
+      <Button variant="outline" size="pill" onPress={goBack}>
+        <Text>{t("goBack")}</Text>
+      </Button>
     </View>
   );
 }
@@ -113,8 +107,15 @@ export default function ListingDetailScreen() {
       error !== null &&
       "status" in error &&
       (error as { status?: number }).status === 404;
+
+    if (isNotFound) {
+      return <UnavailableState insets={insets} />;
+    }
+
     return (
-      <UnavailableState onRetry={isNotFound ? undefined : () => refetch()} insets={insets} />
+      <View className="flex-1 bg-background" style={{ paddingBottom: insets.bottom }}>
+        <ErrorState error={error} onRetry={() => refetch()} />
+      </View>
     );
   }
 

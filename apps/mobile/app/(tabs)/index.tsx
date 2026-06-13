@@ -32,6 +32,7 @@ export default function FeedScreen() {
     data,
     isPending,
     isError,
+    error,
     refetch,
     isRefetching,
     fetchNextPage,
@@ -79,7 +80,7 @@ export default function FeedScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
         {header}
-        <FeedError onRetry={() => refetch()} />
+        <FeedError error={error} onRetry={() => refetch()} />
         <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
       </SafeAreaView>
     );

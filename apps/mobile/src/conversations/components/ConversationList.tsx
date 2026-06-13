@@ -11,7 +11,7 @@ import { useConversations } from "../../api/conversations/useConversations";
 import { ConversationListItem } from "./ConversationListItem";
 import { useConversationCatalogMaps } from "./useConversationCatalogMaps";
 
-import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
@@ -43,29 +43,12 @@ function EmptyState() {
   );
 }
 
-interface ErrorStateProps {
-  onRetry: () => void;
-}
-
-function ErrorState({ onRetry }: ErrorStateProps) {
-  const { t } = useTranslation();
-  return (
-    <View className="flex-1 items-center justify-center px-6 gap-3">
-      <Text className="text-base text-foreground">
-        {t("couldNotLoadConversations")}
-      </Text>
-      <Button variant="outline" size="pill" onPress={onRetry}>
-        <Text>{t("retry")}</Text>
-      </Button>
-    </View>
-  );
-}
-
 export function ConversationList() {
   const {
     data,
     isPending,
     isError,
+    error,
     refetch,
     isRefetching,
     fetchNextPage,
@@ -93,7 +76,7 @@ export function ConversationList() {
   }
 
   if (isError && !data) {
-    return <ErrorState onRetry={handleRefresh} />;
+    return <ErrorState error={error} onRetry={handleRefresh} />;
   }
 
   if (conversations.length === 0) {

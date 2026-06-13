@@ -74,7 +74,7 @@ export function PhotoStateOverlay({
             </>
           )}
           {photo.error && (
-            <Text className="px-2 text-center text-[10px] text-white/80">
+            <Text className="px-2 text-center text-[10px] text-white">
               {photo.error.message}
             </Text>
           )}

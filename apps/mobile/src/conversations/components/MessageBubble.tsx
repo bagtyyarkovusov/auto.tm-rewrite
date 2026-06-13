@@ -38,7 +38,7 @@ export function MessageBubble({ text, isMine, status, onRetry }: MessageBubblePr
         {status !== "confirmed" && (
           <View className="flex-row items-center justify-end gap-1.5 mt-1">
             {status === "pending" && (
-              <Text className="text-xs text-primary-foreground/70">
+              <Text className="text-xs text-primary-foreground/90">
                 {t("sending")}
               </Text>
             )}

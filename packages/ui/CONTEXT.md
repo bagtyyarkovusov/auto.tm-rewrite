@@ -36,7 +36,7 @@ packages/ui/
 
 | Token | What it controls |
 |---|---|
-| `palette` | Raw color values: `red[50-900]`, `neutral[0-950]`, `green/amber/rose/blue[500]` |
+| `palette` | Raw color values: `red[50-900]`, `neutral[0-950]`, `green/amber/rose[500]`, `blue[400/500/600]` |
 | `colors` | Semantic mappings: `primary`, `surface`, `textPrimary`, `error`, etc. — resolved by theme mode |
 | `type` | Font family (`Inter`), scale (xs/sm/base/lg/xl/2xl/3xl/4xl/5xl), weights (400/500/600/700), line-heights |
 | `spacing` | 4px-base grid: `0`, `1`, `2`, `3`, ... `16` (multiples of 4px) |

@@ -29,6 +29,7 @@ import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { ErrorState } from "@/components/ErrorState";
 
 type ManageTab = "active" | "sold" | "archived" | "drafts";
 
@@ -97,18 +98,6 @@ function EmptyState({
           <Text>{current.cta}</Text>
         </Button>
       )}
-    </View>
-  );
-}
-
-function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <View className="flex-1 items-center justify-center gap-3 px-6">
-      <Text className="text-base text-foreground">{t("requestFailed")}</Text>
-      <Button variant="outline" size="pill" onPress={onRetry}>
-        <Text>{t("retry")}</Text>
-      </Button>
     </View>
   );
 }
@@ -310,7 +299,7 @@ export default function ManageListingsScreen() {
           <ActivityIndicator />
         </View>
       ) : currentQuery.isError ? (
-        <ErrorState onRetry={handleRefresh} />
+        <ErrorState error={currentQuery.error} onRetry={handleRefresh} />
       ) : isListingsTab && filteredListings.length === 0 ? (
         <FlatList
           data={[]}

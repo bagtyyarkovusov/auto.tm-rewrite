@@ -12,6 +12,7 @@ import { useOpenConversation } from "../../api/conversations/useOpenConversation
 import { useFavoriteListing } from "../../api/listings/useFavoriteListing";
 import { useUnfavoriteListing } from "../../api/listings/useUnfavoriteListing";
 
+import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -129,61 +130,78 @@ export function ContactCtaBar({
   };
 
   return (
-    <View className="flex-row items-center gap-2 px-4 py-3">
-      <Button
-        variant={canCall ? "brand" : "secondary"}
-        size="lg"
-        className="flex-1"
-        onPress={handleCall}
-        disabled={!canCall}
-      >
-        <Icon as={Phone} className="size-5" />
-        <Text>{t("call")}</Text>
-      </Button>
+    <View>
+      <View className="flex-row items-center gap-2 px-4 py-3">
+        <Button
+          variant={canCall ? "brand" : "secondary"}
+          size="lg"
+          className="flex-1"
+          onPress={handleCall}
+          disabled={!canCall}
+        >
+          <Icon as={Phone} className="size-5" />
+          <Text>{t("call")}</Text>
+        </Button>
 
-      <Button
-        variant={canMessage ? "default" : "secondary"}
-        size="icon"
-        disabled={!canMessage || openConversation.isPending}
-        onPress={handleMessage}
-        accessibilityLabel={t("message")}
-        accessibilityState={{ disabled: !canMessage || openConversation.isPending }}
-      >
-        <Icon
-          as={MessageCircle}
-          className={
-            canMessage
-              ? "size-5 text-primary-foreground"
-              : "size-5 text-muted-foreground"
-          }
-        />
-      </Button>
-
-      <Button variant="secondary" size="icon" onPress={handleShare}>
-        <Icon as={Share2} className="size-5 text-foreground" />
-      </Button>
-
-      <Button
-        variant="secondary"
-        size="icon"
-        disabled={isFavoritePending}
-        onPress={handleFavorite}
-        accessibilityLabel={t("favorite")}
-        accessibilityState={{ disabled: isFavoritePending }}
-      >
-        {isFavoritePending ? (
-          <ActivityIndicator size="small" />
-        ) : (
+        <Button
+          variant={canMessage ? "default" : "secondary"}
+          size="icon"
+          disabled={!canMessage || openConversation.isPending}
+          onPress={handleMessage}
+          accessibilityLabel={t("message")}
+          accessibilityState={{ disabled: !canMessage || openConversation.isPending }}
+        >
           <Icon
-            as={Heart}
+            as={MessageCircle}
             className={
-              optimisticFavorited
-                ? "size-5 text-brand-500 fill-current"
+              canMessage
+                ? "size-5 text-primary-foreground"
                 : "size-5 text-muted-foreground"
             }
           />
-        )}
-      </Button>
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="icon"
+          onPress={handleShare}
+          accessibilityLabel={t("share")}
+        >
+          <Icon as={Share2} className="size-5 text-foreground" />
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="icon"
+          disabled={isFavoritePending}
+          onPress={handleFavorite}
+          accessibilityLabel={t("favorite")}
+          accessibilityState={{ disabled: isFavoritePending }}
+        >
+          {isFavoritePending ? (
+            <ActivityIndicator size="small" />
+          ) : (
+            <Icon
+              as={Heart}
+              className={
+                optimisticFavorited
+                  ? "size-5 text-brand-500 fill-current"
+                  : "size-5 text-muted-foreground"
+              }
+            />
+          )}
+        </Button>
+      </View>
+
+      {openConversation.error && (
+        <View className="px-4 pb-3">
+          <ErrorState
+            compact
+            error={openConversation.error}
+            onRetry={() => openConversation.mutate({ listingId })}
+          />
+        </View>
+      )}
     </View>
   );
 }

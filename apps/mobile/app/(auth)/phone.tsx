@@ -117,11 +117,7 @@ export default function PhoneScreen() {
       });
     } catch (error) {
       if (error instanceof ApiError) {
-        setRequestError(
-          error.code === "VALIDATION_FAILED"
-            ? t("phoneFormatError")
-            : error.message || t("requestFailed"),
-        );
+        setRequestError(getRequestOtpErrorCopy(error, t));
       } else {
         setRequestError(t("offline"));
       }
@@ -228,4 +224,20 @@ export default function PhoneScreen() {
       </KeyboardAvoidingView>
     </SafeScreen>
   );
+}
+
+function getRequestOtpErrorCopy(
+  error: ApiError,
+  t: (key: string) => string,
+): string {
+  if (error.code === "VALIDATION_FAILED") {
+    return t("phoneFormatError");
+  }
+  if (error.code === "NETWORK_ERROR" || error.status === 0) {
+    return t("offline");
+  }
+  if (error.code === "RATE_LIMITED" || error.status === 429) {
+    return t("rateLimitedCode");
+  }
+  return t("requestFailed");
 }

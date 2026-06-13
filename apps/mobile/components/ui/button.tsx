@@ -49,7 +49,7 @@ const buttonVariants = cva(
         sm: cn('h-9 gap-1.5 rounded-md px-3', Platform.select({ web: 'has-[>svg]:px-2.5' })),
         lg: cn('h-[52px] px-5 py-3', Platform.select({ web: 'has-[>svg]:px-4' })),
         pill: 'h-[52px] rounded-full px-5 py-3',
-        icon: 'h-10 w-10',
+        icon: 'h-11 w-11',
       },
     },
     defaultVariants: {
@@ -77,7 +77,7 @@ const buttonTextVariants = cva(
         secondary: 'text-foreground disabled:text-muted-foreground',
         ghost: 'text-foreground group-active:text-foreground disabled:text-muted-foreground',
         link: cn(
-          'text-info-500 group-active:underline disabled:text-muted-foreground',
+          'text-info-600 group-active:underline disabled:text-muted-foreground dark:text-info-400',
           Platform.select({ web: 'underline-offset-4 hover:underline group-hover:underline' })
         ),
       },
