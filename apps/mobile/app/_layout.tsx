@@ -5,7 +5,7 @@ import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import { useColorScheme } from "nativewind";
+import { useColorScheme as useNativeWindColorScheme } from "nativewind";
 import {
   focusManager,
   onlineManager,
@@ -13,7 +13,12 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { AppState, Platform, type AppStateStatus } from "react-native";
+import {
+  AppState,
+  Platform,
+  useColorScheme as useOsColorScheme,
+  type AppStateStatus,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
@@ -27,6 +32,7 @@ import { useMyListings } from "../src/api/listings/useMyListings";
 import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanCleanup";
 import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
+import { themeStore } from "../src/theme/themeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -132,8 +138,13 @@ function OrphanCleanupOnBoot() {
 }
 
 export default function RootLayout() {
-  const { colorScheme } = useColorScheme();
-  const scheme = colorScheme ?? "light";
+  const osColorScheme = useOsColorScheme();
+  const { setColorScheme } = useNativeWindColorScheme();
+  const theme = themeStore((state) => state.theme);
+  const hydrateTheme = themeStore((state) => state.hydrate);
+  const resolvedScheme =
+    theme === "system" ? (osColorScheme ?? "light") : theme;
+  const scheme = resolvedScheme === "dark" ? "dark" : "light";
   const [i18nReady, setI18nReady] = useState(false);
 
   const [fontsLoaded] = useFonts({
@@ -165,8 +176,12 @@ export default function RootLayout() {
         setI18nReady(true);
       });
     });
-  }, []);
+    void hydrateTheme();
+  }, [hydrateTheme]);
 
+  useEffect(() => {
+    setColorScheme(theme);
+  }, [theme, setColorScheme]);
   useEffect(() => {
     const sub = AppState.addEventListener("change", onAppStateChange);
     return () => sub.remove();

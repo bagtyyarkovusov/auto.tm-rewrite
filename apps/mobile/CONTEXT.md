@@ -20,7 +20,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `me`, `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`, `conversations.*`, `reports.*`, `favorites.*`). The wrapper uses `AbortController` with a 30-second default request timeout (15 seconds for refresh); timeouts throw `ApiError("NETWORK_ERROR", 0, "Request timed out")`. The wrapper sends `Accept-Language` from `localeStore` on every request.
 - **`react-i18next@^15.5.1`** + **`i18next@^24.2.3`** for UI localization. Namespaced per feature (`common`, `auth`, `account`, `listings`, `conversations`, `onboarding`) with `tk`/`ru`/`en` resources. Init in `app/_layout.tsx` hydrates the locale store before rendering.
 - **`expo-localization@~16.1.1`** for device locale detection on first launch.
-- **`@react-native-async-storage/async-storage@^2.1.2`** for locale persistence (`localeStore`) and reserved for future TanStack Query cross-launch persistence.
+- **`@react-native-async-storage/async-storage@^2.1.2`** for locale persistence (`localeStore`) and theme preference persistence (`themeStore`); reserved for future TanStack Query cross-launch persistence.
 - **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
 - **`expo-secure-store`** for JWT access + refresh tokens (`src/auth/session.ts`).
 - **`expo-image`** for remote listing photos (feed cards + detail).
@@ -71,7 +71,7 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   favorites           Favorites list                      — real infinite list via `useMyFavorites`; `ListingCard` reuse; loading/empty/error/retry; pull-to-refresh; infinite scroll; auth-on-action for anonymous users
   sell                Sell tab + inline 8-step create-listing wizard (S4) — WizardLayout overlays this route; tab bar hidden while wizard is open; now links to My listings & drafts management and supports `?resumeDraftId=<id>` to resume any draft (not just latest)
   chat                Conversation list                   — authenticated conversation list with loading, empty, error, retry, and pull-to-refresh; anonymous users see auth-on-action entry (#173)
-  services            Services screen with Profile, Garage, Settings, Blog, About tiles — Profile navigates to `/profile` (auth-on-action for anonymous users); Settings navigates to `/settings`; Garage/Blog/About are disabled stubs (dead-tile cleanup tracked in S8a UI sweep); includes entry to My listings & drafts
+  services            Cabinet/Profile surface              — tab 5 label is Cabinet/Profile; aggregates signed-in identity (name/phone/avatar), My listings & drafts, and Post CTA; anonymous users see sign-in prompt; gear navigates to `/settings`
 
 /(auth)/
   phone               Phone entry                         — wired (S2), design-refactored (#124)
@@ -86,14 +86,14 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
   [id]                Conversation detail (text thread)    — #172/#173; compact listing card at top (tap to open listing detail), message list with optimistic pending/confirmed/failed states and retry, composer with 1000-char limit; shared path for buyer send and seller reply; uses `useConversationMessages` (infinite query) and `useSendTextMessage`
 
 /profile
-  profile             Profile screen showing signed-in identity — phone, displayName, role, avatar, memberSince; uses `useMe`; auth-on-action for anonymous users via Services tile intercept
+  profile             Profile screen showing signed-in identity — phone, displayName, role, avatar, memberSince; uses `useMe`; reached from Cabinet identity card
 
 /listings/
   manage              My Listings & Drafts management      — wired (S4 #147); segmented tabs for Active/Sold/Archived/Drafts; auth-on-action prompt for anonymous users; reuses feed ListingCard visual language via `OwnerListingCard`; `DraftCard` with Resume/Discard and destructive `AlertDialog` confirmation; pull-to-refresh + infinite scroll for both listings and drafts; query-error state with retry; resume any draft by navigating to `/(tabs)/sell?resumeDraftId=<id>` (sell fetches drafts with `limit=50`, the API max); links to detail (`/(public)/listings/[id]`) and edit (`/listings/[id]/edit`)
   [id]/edit           Edit published listing               — wired (S4); converged on wizardMachine + WizardLayout; opens at Review (Step 8/8), section Edit affordances detour to shared steps, Done returns to Review, Save changes orchestrated via `useSaveListingEdit` (fields → attach → remove → reorder, fail-fast, retry-from-failure per ADR-0025); no edit draft/autosave; photos editable via `useUploadQueue('edit-' + listingId, payload)` with local staging (ADR-0024 compliant)
 
 /settings
-  index               Settings screen                      — wired (#192); language switch via `LocaleSwitcher`, delete-account entry navigates to `/account/delete`, logout with AlertDialog confirmation; logout calls `POST /auth/logout`, clears `expo-secure-store` session, clears TanStack Query cache, and redirects to `/(tabs)/index`
+  index               Settings screen                      — language switch via `LocaleSwitcher`, theme switcher (light/dark/system via `themeStore` + NativeWind), About legal links to Privacy/Terms, delete-account entry navigates to `/account/delete`, logout with AlertDialog confirmation; logout calls `POST /auth/logout`, clears `expo-secure-store` session, clears TanStack Query cache, and redirects to `/(tabs)/index`
 
 /account/
   delete              Delete account flow                  — wired (#197); destructive AlertDialog confirmation explaining 30-day grace period + scheduled deletion date, calls `DELETE /me`, clears session + query cache, shows post-delete "scheduled for deletion on <date>" messaging with Done button redirecting to `/(tabs)/index`
@@ -129,7 +129,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 ## Navigation chrome (today)
 
-- **Tab bar**: Custom `AutoTmTabBar` component at `components/navigation/AutoTmTabBar.tsx`. Replaces default Expo Router tab bar; renders 5 routes (Search, Favorites, Sell, Chat, Services) with active/inactive icon + label styling. Central Sell action (`PlusCircle`) has distinct visual treatment. Uses `lucide-react-native` icons via RNR `Icon` wrapper.
+- **Tab bar**: Custom `AutoTmTabBar` component at `components/navigation/AutoTmTabBar.tsx`. Replaces default Expo Router tab bar; renders 5 routes (Search, Favorites, Sell, Chat, Cabinet) with active/inactive icon + label styling. Central Sell action (`PlusCircle`) has distinct visual treatment. Uses `lucide-react-native` icons via RNR `Icon` wrapper.
 - **ErrorBoundary**: `components/ErrorBoundary.tsx` wraps the `<Stack>` in `app/_layout.tsx`; class component with `withTranslation` from `react-i18next` for localized fallback UI (`somethingWentWrong`, `unexpectedError`, `tryAgain`) and a reload button.
 - **Auth modals**: `/(auth)/phone` and `/(auth)/otp` render as `presentation: "fullScreenModal"` Stack screens. Both use `KeyboardAvoidingView` + `SafeAreaView` layout with `BrandLogo`, `LocaleSwitcher`, and `PhoneInput` / `OtpCells` components.
 
@@ -137,9 +137,9 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 
 - React state for local UI
 - TanStack Query v5 + custom `apiClient` wrapper at `src/api/client.ts` (single API entry point)
-- Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay), `src/locale/localeStore.ts` (locale + AsyncStorage persistence)
+- Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay), `src/locale/localeStore.ts` (locale + AsyncStorage persistence), `src/theme/themeStore.ts` (light/dark/system theme + AsyncStorage persistence)
 - `expo-secure-store` for JWT access + refresh tokens. `src/auth/session.ts` publishes an in-process session-change event after store/clear so already-mounted `useAuth` and `useViewer` consumers update immediately after OTP login/logout without requiring an app reload.
-- `AsyncStorage` for locale persistence (`localeStore`), onboarding completion flag (`src/onboarding/onboardingFlag.ts`), and reserved for future TanStack Query cross-launch persistence
+- `AsyncStorage` for locale persistence (`localeStore`), onboarding completion flag (`src/onboarding/onboardingFlag.ts`), and theme preference persistence (`themeStore`); reserved for future TanStack Query cross-launch persistence
 - Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
 - Wizard design system applied in #124 + #135: **`WizardHeader`** shows muted position-marker (`text-xs text-muted-foreground`) + **`text-2xl font-heading`** step title + progress bar. Step bodies open directly with form rows or brief `text-sm text-muted-foreground` orientation copy — no duplicate title. Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.

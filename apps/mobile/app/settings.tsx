@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { LocaleSwitcher } from "../src/auth/LocaleSwitcher";
 import { useLogout } from "../src/auth/useLogout";
+import { ThemeSwitcher } from "../src/theme/ThemeSwitcher";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,26 @@ import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 function openLegalPage(locale: string, kind: "terms" | "privacy") {
   void Linking.openURL(`https://auto.tm/${locale}/legal/${kind}`);
+}
+
+function LegalRow({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-row items-center justify-between py-4 active:opacity-70"
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Text className="text-base text-foreground">{label}</Text>
+      <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+    </Pressable>
+  );
 }
 
 export default function SettingsScreen() {
@@ -69,56 +90,50 @@ export default function SettingsScreen() {
 
         <Separator className="bg-border" />
 
-        {/* Privacy Policy */}
-        <Pressable
-          onPress={() => openLegalPage(i18n.language, "privacy")}
-          className="flex-row items-center justify-between py-4 active:opacity-70"
-          accessibilityRole="button"
-          accessibilityLabel={t("privacyPolicy")}
-        >
-          <Text className="text-base text-foreground">
-            {t("privacyPolicy")}
+        {/* Theme */}
+        <View className="gap-2 py-4">
+          <Text className="text-sm font-medium text-muted-foreground">
+            {t("theme")}
           </Text>
-          <Icon
-            as={ChevronRight}
-            className="size-5 text-muted-foreground"
-          />
-        </Pressable>
+          <ThemeSwitcher />
+        </View>
 
         <Separator className="bg-border" />
 
-        {/* Terms of Service */}
-        <Pressable
-          onPress={() => openLegalPage(i18n.language, "terms")}
-          className="flex-row items-center justify-between py-4 active:opacity-70"
-          accessibilityRole="button"
-          accessibilityLabel={t("termsOfService")}
-        >
-          <Text className="text-base text-foreground">
-            {t("termsOfService")}
+        {/* About / Legal */}
+        <View className="py-4">
+          <Text className="text-sm font-medium text-muted-foreground mb-2">
+            {t("about")}
           </Text>
-          <Icon
-            as={ChevronRight}
-            className="size-5 text-muted-foreground"
-          />
-        </Pressable>
+          <View className="rounded-lg bg-card">
+            <LegalRow
+              label={t("privacyPolicy")}
+              onPress={() => openLegalPage(i18n.language, "privacy")}
+            />
+            <Separator className="bg-border mx-4" />
+            <LegalRow
+              label={t("termsOfService")}
+              onPress={() => openLegalPage(i18n.language, "terms")}
+            />
+            <Separator className="bg-border mx-4" />
+            <LegalRow
+              label={t("postingRules")}
+              onPress={() => openLegalPage(i18n.language, "terms")}
+            />
+          </View>
+        </View>
 
         <Separator className="bg-border" />
 
-        {/* Delete account entry */}
+        {/* Delete account */}
         <Pressable
           onPress={() => router.push("/account/delete")}
           className="flex-row items-center justify-between py-4 active:opacity-70"
           accessibilityRole="button"
           accessibilityLabel={t("deleteAccount")}
         >
-          <Text className="text-base text-foreground">
-            {t("deleteAccount")}
-          </Text>
-          <Icon
-            as={ChevronRight}
-            className="size-5 text-muted-foreground"
-          />
+          <Text className="text-base text-foreground">{t("deleteAccount")}</Text>
+          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
         </Pressable>
 
         <Separator className="bg-border" />
