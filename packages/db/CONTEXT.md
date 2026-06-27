@@ -84,7 +84,9 @@ S7 additions (now in schema):
 S8 additions (now in schema):
 - `User.deletionScheduledAt` — 30-day grace period start timestamp; nullable. Indexed for the purge worker query.
 - `Listing.archivedByDeletion` — boolean flag (default `false`) set when `DeleteMe` archives a listing, so recovery can distinguish user-archived from deletion-archived listings.
-- Migration `20260609000000_account_deletion_grace` adds both fields + the `users_deletionScheduledAt_idx` index.
+- `Listing.favoriteCount` — denormalized count for saved-listing Favorites; default 0.
+- `Favorite` — saved-listing join table (`userId`, `listingId`, `createdAt`) with cascade FKs to `User` and `Listing`, unique on `(userId, listingId)`.
+- Migration `20260609000000_account_deletion_grace` adds the deletion-grace fields + the `users_deletionScheduledAt_idx` index; the Favorites table/counter already existed in schema and became active in S8.
 
 ## Foreign-key policy across contexts
 
@@ -153,7 +155,7 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
 - **S4 (Listings CRUD) — schema shipped in #85** (Listing additions, `ListingCondition` enum, `ListingStatus` extended, `ListingDraft`, `ListingMedia` rename `url`→`key` + new columns, `ExchangeRate` table). Remaining S4 work: domain entities, ports, use-cases, controllers, contracts (issues #86 onward).
 - **S6 (Contact seller)** — ships only schema additions required for simple text contact if current conversation schema is insufficient.
 - **S7 (Minimal admin + moderation) — schema, migration, bootstrap script, and fixtures shipped in #177.** The schema now includes `TotpEnrollment` (encrypted recoverable secret + `verifiedAt`), `TotpBackupCode` (one-way-hashed codes + `usedAt`), `Session.adminTotpExpiresAt`, `ContentReport` (polymorphic `targetType` + `targetId`, no DB FK, `reporterUserId` / `reviewedById` both nullable via `SetNull`), and `User` suspension fields (`suspendedAt`, `suspendedById`, `suspensionReason`). S7 indexes are committed: `content_reports(status, createdAt, id)`, `(targetType, targetId, status)`, `(reporterUserId, createdAt, id)`; `audit_logs(createdAt, id)`, `(action, createdAt, id)`, `(targetType, targetId, createdAt, id)`. The `packages/db/scripts/promote-admin.ts` operator script and `packages/db/prisma/seed/s7-moderation.fixture.ts` are checked in. Remaining S7 application work (TOTP crypto/use-cases, report/moderation use-cases, UI) is tracked in child issues #178–#185.
-- **S8 (Private beta polish)** — account deletion grace fields shipped. Favorites schema shipped separately.
+- **S8 (Private beta polish)** — account deletion grace fields shipped; the existing Favorites schema is active for saved-listing Favorites.
 - **Post-MLP rich chat** — adds `Conversation.lastMessageAt`/`lastMessageId`, `Message.deletedAt`, `ConversationParticipant.{mutedAt, lastReadAt}`, new `QuickReply` entity if shaped.
 - **Post-MLP notifications/subscriptions** — adds `FcmDevice` field additions, `NotificationHistory` broadcast fields, new `SavedSearchMatchHistory` entity.
 - **Post-MLP admin/dealership** — adds `Dealership.verifiedAt` and full dashboard support fields when shaped. Bulk moderation still uses the existing `AuditLog` target columns: one row per affected target with shared `details.batchId`/`details.batchReason`, not one row with a `targetIds` array.

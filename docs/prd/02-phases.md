@@ -55,7 +55,7 @@ Goal: deepen the product only where beta behavior proves a missing capability.
 
 Phase 2 is not a fixed sprint roster. The betting table chooses from these shaped candidates after Phase 1 learning:
 
-- **Favorites + better discovery** — if buyers revisit listings manually
+- **Better discovery beyond shipped Favorites** — if buyers cannot narrow or search listings well enough with the S8a Favorites list + MLP filters
 - **Saved searches** — if buyers repeat the same searches manually
 - **Direct-message push** — if contact usage proves notifications would materially improve response time
 - **Richer chat** — if users need image attachments, post-card messages, read receipts, or quick replies

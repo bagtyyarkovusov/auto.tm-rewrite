@@ -119,7 +119,6 @@ AutoTM is a two-sided marketplace. Full demand before supply creates disappointm
 
 ### Public soft-launch candidates, not private-beta requirements
 
-- Favorites.
 - Saved searches.
 - Direct-message push.
 - Dealer profiles and verified dealer badge.

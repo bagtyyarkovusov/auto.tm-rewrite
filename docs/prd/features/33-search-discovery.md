@@ -2,7 +2,7 @@
 
 ## Summary
 
-How buyers find listings. The MLP beta ships the feed, listing detail, and a small filter set. Favorites, saved searches, broad filter coverage, and free-text search are post-MLP bets unless beta usage proves they block the core loop.
+How buyers find listings. The MLP beta ships the feed, listing detail, a small filter set, and S8a Favorites for saved listings. Saved searches, broad filter coverage, and free-text search remain post-MLP bets unless beta usage proves they block the core loop.
 
 ## Why it exists
 
@@ -86,12 +86,14 @@ Search analytics are allowed for product planning and admin dashboard reporting,
 - Do not store raw GPS coordinates, exact device location, exact map pins, or home-city profile fields for analytics in MVP.
 - If a future "Use my location" action resolves GPS to a nearest catalog City, analytics stores the resolved City ID and the action source, not the coordinate.
 
-### Favorites (post-MLP bet)
+### Favorites (shipped in S8a)
 
 - Tap ♥ on any listing → added to Favorites
-- Favorites tab: thumbnails grid, tap to view
-- Favorites tab also surfaces saved searches and (Phase 3) comparisons
+- Favorites tab: saved-listing list, tap to view
+- Favorites is saved listings only in the MLP beta
 - Unfavorite: tap filled ♥ again
+
+Saved searches remain separate post-MLP work, and (Phase 3) comparisons can later reuse the Favorites surface if shaped.
 
 ### Saved searches (post-MLP bet)
 
@@ -127,11 +129,12 @@ Search analytics are allowed for product planning and admin dashboard reporting,
 - [ADR-0002](../../adr/0002-stack.md) — Postgres FTS (not Meilisearch in Phase 1)
 - [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first location search; explicit GPS only later
 - [ADR-0023](../../adr/0023-first-party-product-analytics.md) — First-party analytics only; search analytics stay in AutoTM-owned storage
-- [ADR-0027](../../adr/0027-mlp-beta-scope.md) — MLP beta scope; saved searches and favorites deferred
+- [ADR-0027](../../adr/0027-mlp-beta-scope.md) — MLP beta scope; saved searches deferred
+- [Sprint 8](../sprints/sprint-08-private-beta-polish.md) — Favorites pulled into S8a and shipped as saved listings
 
 ## Phase
 
-**Phase 1 MLP beta for basic filters and listing detail.** Favorites, saved searches, broad filters, and full free-text search are post-MLP bets.
+**Phase 1 MLP beta for basic filters, listing detail, and saved-listing Favorites.** Saved searches, broad filters, and full free-text search are post-MLP bets.
 
 ## Out of scope
 

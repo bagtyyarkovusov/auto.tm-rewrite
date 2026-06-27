@@ -93,7 +93,7 @@ The path from "MLP done" to public launch. Tracked here in the launch plan (inte
 - [ ] 10–50 real TM testers invited (real OTP); reviewer uses the bypass.
 - [ ] Iterate via self-hosted OTA (JS-only, no native changes mid-beta).
 - [ ] Feedback via dedicated Telegram group.
-- [ ] Parallel work limited to launch prep + Favorites (separate channel); engagement layer + expensive bets deferred to the Phase 1 retro (ADR-0027).
+- [ ] Parallel work limited to launch prep + trust-pilot prep; saved searches, engagement layer, and expensive bets deferred to the Phase 1 retro / betting table (ADR-0027, ADR-0037).
 
 **Public launch (after the Phase 1 retro picks bets)**
 
