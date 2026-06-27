@@ -28,6 +28,13 @@ describe("AdminModerationController e2e smoke", () => {
   let request: ReturnType<typeof supertest>;
   let prisma: PrismaService;
 
+  const reporterOneId = "00000000-0000-0000-0000-000000000101";
+  const sellerOneId = "00000000-0000-0000-0000-000000000102";
+  const adminOneId = "00000000-0000-0000-0000-000000000103";
+  const reporterTwoId = "00000000-0000-0000-0000-000000000201";
+  const sellerTwoId = "00000000-0000-0000-0000-000000000202";
+  const adminTwoId = "00000000-0000-0000-0000-000000000203";
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -58,10 +65,11 @@ describe("AdminModerationController e2e smoke", () => {
   });
 
   afterAll(async () => {
+    await cleanDatabase();
     await app.close();
   });
 
-  beforeEach(async () => {
+  async function cleanDatabase() {
     await prisma.auditLog.deleteMany();
     await prisma.contentReport.deleteMany();
     await prisma.listingMedia.deleteMany();
@@ -76,6 +84,10 @@ describe("AdminModerationController e2e smoke", () => {
     await prisma.region.deleteMany();
     await prisma.model.deleteMany();
     await prisma.brand.deleteMany();
+  }
+
+  beforeEach(async () => {
+    await cleanDatabase();
   });
 
   async function seedCatalog() {
@@ -173,9 +185,9 @@ describe("AdminModerationController e2e smoke", () => {
   describe("deterministic smoke: report → TOTP admin action → audit → enforcement", () => {
     it("report-backed ban flow with audit and public enforcement", async () => {
       // Arrange
-      const reporterId = "reporter-001";
-      const sellerId = "seller-001";
-      const adminId = "admin-001";
+      const reporterId = reporterOneId;
+      const sellerId = sellerOneId;
+      const adminId = adminOneId;
 
       await createUser(reporterId, "buyer");
       await createUser(sellerId, "buyer");
@@ -246,9 +258,9 @@ describe("AdminModerationController e2e smoke", () => {
     });
 
     it("dismiss flow with audit and no target mutation", async () => {
-      const reporterId = "reporter-002";
-      const sellerId = "seller-002";
-      const adminId = "admin-002";
+      const reporterId = reporterTwoId;
+      const sellerId = sellerTwoId;
+      const adminId = adminTwoId;
 
       await createUser(reporterId, "buyer");
       await createUser(sellerId, "buyer");
