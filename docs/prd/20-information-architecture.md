@@ -12,7 +12,7 @@ Five tabs. Center button is the visual "do something" CTA.
 | 2 | Избранное | Saýlanan | Favorites | Post-MLP; can be hidden in MLP beta |
 | 3 | + | + | + | Sell entry point |
 | 4 | Сообщения | Habarlar | Messages | Simple contact threads |
-| 5 | Сервисы | Hyzmatlar | Services | Profile + Settings + About |
+| 5 | Кабинет | Kabinet | Cabinet | Cabinet/Profile + Settings + About |
 
 ### Mobile route map
 
@@ -22,7 +22,7 @@ Five tabs. Center button is the visual "do something" CTA.
   favorites            Post-MLP favorites/saved searches
   sell                 Sell entry — New listing
   chat                 Simple contact thread list
-  services             Profile menu
+  services             Cabinet/Profile surface
 
 /(auth)/
   phone                Phone entry

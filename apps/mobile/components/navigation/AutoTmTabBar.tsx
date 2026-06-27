@@ -1,9 +1,9 @@
 import {
   Heart,
-  LayoutGrid,
   MessageSquare,
   Plus,
   Search,
+  User,
 } from "lucide-react-native";
 import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,7 +22,7 @@ function useTabConfig() {
     { name: "favorites", label: t("favorites"), icon: Heart },
     { name: "sell", label: t("sell"), icon: Plus },
     { name: "chat", label: t("chat"), icon: MessageSquare },
-    { name: "services", label: t("services"), icon: LayoutGrid },
+    { name: "services", label: t("cabinet"), icon: User },
   ] as const;
 }
 
