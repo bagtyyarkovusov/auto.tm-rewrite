@@ -181,6 +181,43 @@ describe("AdminGuard", () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
+  it("rejects admin with expired session for sid", async () => {
+    const sid = randomUUID();
+    fakePort.setAdmin("admin-1", true);
+    fakeSessionRepo.sessions.push(
+      makeSession({
+        id: sid,
+        userId: "admin-1",
+        expiresAt: new Date(NOW.getTime() - 60_000),
+        adminTotpExpiresAt: new Date(NOW.getTime() + 60_000),
+      }),
+    );
+
+    await expect(
+      guard.canActivate(
+        makeContext({ sub: "admin-1", sid, role: "admin" }),
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("rejects admin when the elevated sid belongs to another user", async () => {
+    const sid = randomUUID();
+    fakePort.setAdmin("admin-1", true);
+    fakeSessionRepo.sessions.push(
+      makeSession({
+        id: sid,
+        userId: "admin-2",
+        adminTotpExpiresAt: new Date(NOW.getTime() + 60_000),
+      }),
+    );
+
+    await expect(
+      guard.canActivate(
+        makeContext({ sub: "admin-1", sid, role: "admin" }),
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
   it("rejects admin with expired TOTP elevation", async () => {
     const sid = randomUUID();
     fakePort.setAdmin("admin-1", true);

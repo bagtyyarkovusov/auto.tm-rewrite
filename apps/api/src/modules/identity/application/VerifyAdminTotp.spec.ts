@@ -21,6 +21,9 @@ function hashCode(code: string): string {
 class FakeTotpEnrollmentRepository implements TotpEnrollmentRepository {
   enrollments: TotpEnrollment[] = [];
   backupCodes: TotpBackupCode[] = [];
+  throwOnMarkVerified = false;
+  elevateSession: (_sessionId: string, _adminTotpExpiresAt: Date | null) => Promise<void> =
+    async () => {};
 
   async findByUserId(userId: string): Promise<TotpEnrollment | null> {
     return this.enrollments.find((e) => e.userId === userId) ?? null;
@@ -40,6 +43,9 @@ class FakeTotpEnrollmentRepository implements TotpEnrollmentRepository {
   }
 
   async markVerified(userId: string): Promise<void> {
+    if (this.throwOnMarkVerified) {
+      throw new Error("mark verified failed");
+    }
     const idx = this.enrollments.findIndex((e) => e.userId === userId);
     if (idx !== -1) {
       this.enrollments[idx] = { ...this.enrollments[idx]!, verifiedAt: NOW };
@@ -67,6 +73,31 @@ class FakeTotpEnrollmentRepository implements TotpEnrollmentRepository {
     );
     if (idx === -1) return false;
     this.backupCodes[idx] = { ...this.backupCodes[idx]!, usedAt: NOW };
+    return true;
+  }
+
+  async completeFirstVerification(input: {
+    userId: string;
+    enrollmentId: string;
+    verifiedAt: Date;
+    codeHashes: string[];
+    sessionId: string;
+    adminTotpExpiresAt: Date;
+  }): Promise<void> {
+    await this.markVerified(input.userId);
+    await this.addBackupCodes(input.enrollmentId, input.codeHashes);
+    await this.elevateSession(input.sessionId, input.adminTotpExpiresAt);
+  }
+
+  async consumeBackupCodeAndElevate(input: {
+    enrollmentId: string;
+    codeHash: string;
+    sessionId: string;
+    adminTotpExpiresAt: Date;
+  }): Promise<boolean> {
+    const consumed = await this.consumeBackupCode(input.enrollmentId, input.codeHash);
+    if (!consumed) return false;
+    await this.elevateSession(input.sessionId, input.adminTotpExpiresAt);
     return true;
   }
 
@@ -199,6 +230,8 @@ describe("VerifyAdminTotp", () => {
   beforeEach(() => {
     totpRepo = new FakeTotpEnrollmentRepository();
     sessionRepo = new FakeSessionRepository();
+    totpRepo.elevateSession = (sessionId, adminTotpExpiresAt) =>
+      sessionRepo.updateAdminTotpExpiresAt(sessionId, adminTotpExpiresAt);
     cipher = new FakeCipher();
     verifier = new FakeVerifier();
     throttle = new FakeThrottle();
@@ -259,6 +292,28 @@ describe("VerifyAdminTotp", () => {
 
     expect(securityLogger.logs).toHaveLength(1);
     expect(securityLogger.logs[0]!.reason).toBe("Invalid TOTP or backup code");
+  });
+
+  it("does not elevate the session if first enrollment completion fails", async () => {
+    await totpRepo.createPending("user-1", cipher.encrypt("TESTSECRET12345678"));
+    totpRepo.throwOnMarkVerified = true;
+    const session = makeSession();
+    sessionRepo.sessions.push(session);
+
+    const uc = new VerifyAdminTotp(
+      totpRepo, sessionRepo, cipher, verifier, throttle, securityLogger, clock,
+    );
+
+    await expect(
+      uc.execute({
+        userId: "user-1",
+        sessionId: session.id,
+        code: "TESTSECRET12345678-VALID",
+      }),
+    ).rejects.toThrow("mark verified failed");
+
+    const storedSession = sessionRepo.sessions.find((s) => s.id === session.id)!;
+    expect(storedSession.adminTotpExpiresAt).toBeNull();
   });
 
   // --- Post-enrollment verify ---

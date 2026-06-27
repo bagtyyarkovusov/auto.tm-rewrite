@@ -43,6 +43,12 @@ class FakeTotpEnrollmentRepository implements TotpEnrollmentRepository {
     return false;
   }
 
+  async completeFirstVerification(): Promise<void> {}
+
+  async consumeBackupCodeAndElevate(): Promise<boolean> {
+    return false;
+  }
+
   async deleteByUserId(userId: string): Promise<void> {
     this.enrollments = this.enrollments.filter((e) => e.userId !== userId);
   }

@@ -83,6 +83,75 @@ export class PrismaTotpEnrollmentRepository implements TotpEnrollmentRepository 
     return result.count === 1;
   }
 
+  async completeFirstVerification(input: {
+    userId: string;
+    enrollmentId: string;
+    verifiedAt: Date;
+    codeHashes: string[];
+    sessionId: string;
+    adminTotpExpiresAt: Date;
+  }): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const marked = await tx.totpEnrollment.updateMany({
+        where: {
+          id: input.enrollmentId,
+          userId: input.userId,
+          verifiedAt: null,
+        },
+        data: { verifiedAt: input.verifiedAt },
+      });
+      if (marked.count !== 1) {
+        throw new Error("TOTP_ENROLLMENT_NOT_PENDING");
+      }
+
+      await tx.totpBackupCode.createMany({
+        data: input.codeHashes.map((codeHash) => ({
+          totpEnrollmentId: input.enrollmentId,
+          codeHash,
+        })),
+      });
+
+      const elevated = await tx.session.updateMany({
+        where: { id: input.sessionId, userId: input.userId },
+        data: { adminTotpExpiresAt: input.adminTotpExpiresAt },
+      });
+      if (elevated.count !== 1) {
+        throw new Error("SESSION_NOT_FOUND");
+      }
+    });
+  }
+
+  async consumeBackupCodeAndElevate(input: {
+    userId: string;
+    enrollmentId: string;
+    codeHash: string;
+    usedAt: Date;
+    sessionId: string;
+    adminTotpExpiresAt: Date;
+  }): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const consumed = await tx.totpBackupCode.updateMany({
+        where: {
+          totpEnrollmentId: input.enrollmentId,
+          codeHash: input.codeHash,
+          usedAt: null,
+        },
+        data: { usedAt: input.usedAt },
+      });
+      if (consumed.count !== 1) return false;
+
+      const elevated = await tx.session.updateMany({
+        where: { id: input.sessionId, userId: input.userId },
+        data: { adminTotpExpiresAt: input.adminTotpExpiresAt },
+      });
+      if (elevated.count !== 1) {
+        throw new Error("SESSION_NOT_FOUND");
+      }
+
+      return true;
+    });
+  }
+
   async deleteByUserId(userId: string): Promise<void> {
     await this.prisma.totpEnrollment.deleteMany({ where: { userId } });
   }
