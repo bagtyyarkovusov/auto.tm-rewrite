@@ -215,19 +215,19 @@ export default function RootLayout() {
           <OrphanCleanupOnBoot />
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <SafeAreaProvider>
-              <ErrorBoundary>
+            <ErrorBoundary>
               <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(onboarding)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(public)" />
-              <Stack.Screen name="profile" />
-              <Stack.Screen name="conversations/[id]" />
-              <Stack.Screen name="conversations/open-listing" />
-              <Stack.Screen name="(auth)/phone" />
-              <Stack.Screen name="(auth)/otp" />
+                <Stack.Screen name="(onboarding)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(public)" />
+                <Stack.Screen name="profile" />
+                <Stack.Screen name="conversations/[id]" />
+                <Stack.Screen name="conversations/open-listing" />
+                <Stack.Screen name="(auth)/phone" />
+                <Stack.Screen name="(auth)/otp" />
               </Stack>
             </ErrorBoundary>
-            </SafeAreaProvider>
+          </SafeAreaProvider>
           <PortalHost />
         </ToastProvider>
       </ThemeProvider>

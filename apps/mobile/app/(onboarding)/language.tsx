@@ -10,6 +10,7 @@ import { Text } from "@/components/ui/text";
 
 export default function LanguagePickerScreen() {
   const { t } = useTranslation("onboarding");
+  const continueLabel = t("common:continue", { defaultValue: "Continue" });
 
   return (
     <SafeScreen className="px-6 py-8">
@@ -30,9 +31,9 @@ export default function LanguagePickerScreen() {
         variant="brand"
         size="pill"
         onPress={() => router.push("/(onboarding)/value-prop")}
-        accessibilityLabel={t("common:continue", { defaultValue: "Continue" })}
+        accessibilityLabel={continueLabel}
       >
-        <Text>{t("common:continue", { defaultValue: "Continue" })}</Text>
+        <Text>{continueLabel}</Text>
       </Button>
     </SafeScreen>
   );

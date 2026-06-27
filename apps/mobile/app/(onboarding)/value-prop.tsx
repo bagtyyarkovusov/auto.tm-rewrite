@@ -30,8 +30,11 @@ export default function ValuePropScreen() {
   const { t } = useTranslation("onboarding");
   const { index, slideKey, isLast, next } = useSlides();
 
-  const title = t(`${slideKey}Title` as const);
-  const body = t(`${slideKey}Body` as const);
+  const title = t(`${slideKey}Title`);
+  const body = t(`${slideKey}Body`);
+  const buttonLabel = isLast
+    ? t("getStarted")
+    : t("common:next", { defaultValue: "Next" });
 
   return (
     <SafeScreen className="px-6 py-8">
@@ -56,6 +59,7 @@ export default function ValuePropScreen() {
                   : "w-1.5 bg-muted-foreground/40",
               )}
               accessibilityRole="progressbar"
+              accessibilityState={{ selected: i === index }}
               accessibilityLabel={`${i + 1} of ${SLIDES.length}`}
             />
           ))}
@@ -65,24 +69,16 @@ export default function ValuePropScreen() {
           variant="brand"
           size="pill"
           onPress={isLast ? finishOnboarding : next}
-          accessibilityLabel={
-            isLast
-              ? t("getStarted")
-              : t("common:next", { defaultValue: "Next" })
-          }
+          accessibilityLabel={buttonLabel}
         >
-          <Text>
-            {isLast
-              ? t("getStarted")
-              : t("common:next", { defaultValue: "Next" })}
-          </Text>
+          <Text>{buttonLabel}</Text>
         </Button>
 
         <Pressable
           onPress={finishOnboarding}
           accessibilityRole="button"
           accessibilityLabel={t("common:skip", { defaultValue: "Skip" })}
-          className="items-center py-2 active:opacity-70"
+          className="items-center justify-center min-h-[44px] active:opacity-70"
         >
           <Text className="text-sm text-muted-foreground">
             {t("common:skip", { defaultValue: "Skip" })}
