@@ -32,6 +32,12 @@ class FakeTotpEnrollmentRepository implements TotpEnrollmentRepository {
     return false;
   }
 
+  async completeFirstVerification(): Promise<void> {}
+
+  async consumeBackupCodeAndElevate(): Promise<boolean> {
+    return false;
+  }
+
   async deleteByUserId(): Promise<void> {}
 }
 

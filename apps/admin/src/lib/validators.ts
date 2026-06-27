@@ -1,3 +1,5 @@
+export const ADMIN_RETURN_TO_HEADER = "x-admin-return-to";
+
 /**
  * Validates a returnTo URL parameter.
  * Accepts only relative internal admin paths.
@@ -23,6 +25,13 @@ export function validateReturnTo(
 
   // Allow only safe characters in the path
   if (!/^\/[a-zA-Z0-9_\-/.?&=%]*$/.test(url)) return null;
+
+  const path = url.split("?")[0] ?? "";
+  const allowedPrefixes = ["/reports", "/audit", "/listings", "/users"];
+  const isAdminPath = allowedPrefixes.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+  if (!isAdminPath) return null;
 
   return url;
 }

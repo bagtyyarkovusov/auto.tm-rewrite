@@ -28,7 +28,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - Refresh rotates in-place on the same Session row: `refreshTokenHash` overwritten, `lastSeenAt` bumped, `expiresAt = lastSeenAt + 30 days` sliding. Per ADR-0012.
 - **Admin TOTP elevation** — `Session.adminTotpExpiresAt` stores a 12-hour elevation window created by successful admin TOTP verification. Refresh preserves but does not extend `adminTotpExpiresAt`. Per ADR-0006.
 - **TOTP secret encryption** — `TotpEnrollment.encryptedSecret` is encrypted with AES-256-GCM via `TOTP_SECRET_ENCRYPTION_KEY` (32-byte base64). Backup codes are stored one-way hashed with SHA-256, separately. Per ADR-0006.
-- **TOTP verification** — accepts the current 30-second step plus one adjacent step for small clock skew (`epochTolerance = period`). Backup codes are 16-character hex strings; 10 generated exactly once on first successful enrollment verify. Consumption is atomic (`updateMany` with `usedAt: null` check). Post-enrollment verify accepts either a TOTP code or one unused backup code.
+- **TOTP verification** — accepts the current 30-second step plus one adjacent step for small clock skew (`epochTolerance = period`). Backup codes are 16-character hex strings; 10 generated exactly once on first successful enrollment verify. First enrollment completion (mark verified + backup-code insert + session elevation) is one Prisma transaction. Backup-code consumption and session elevation are also one transaction, with atomic `usedAt: null` consumption. Post-enrollment verify accepts either a TOTP code or one unused backup code.
 - **TOTP throttling** — max 5 failed TOTP/backup-code attempts per admin user/session per 10 minutes. Wrong TOTP and wrong backup code return the same generic failure. Throttled attempts return rate-limit error. Successful verification resets the counter.
 - `OtpRequest.codeHash` is SHA-256; plaintext never stored.
 - `OtpRequest` expires after 5 minutes; max 5 attempts before invalidation (application-level).
@@ -49,7 +49,7 @@ interface IdentityCheckPort {
 
 - `IdentityCheckPort` is implemented by `PrismaIdentityCheckAdapter` and exported from `IdentityModule` under DI token `IDENTITY_TOKENS.IdentityCheckPort`.
 - `IdentityAdminPort` (`IDENTITY_ADMIN_PORT`) is implemented by `PrismaIdentityAdminRepository` and exported from `IdentityModule`. It exposes `suspendUser(userId, adminUserId, reason, tx?)`, `unsuspendUser(userId, tx?)`, and `isSuspended(userId)`. `suspendUser` and `unsuspendUser` participate in the caller's transaction (transaction-scoped) for S7 admin moderation; `isSuspended` is a standalone read.
-- `AdminGuard` (`apps/api/src/common/admin.guard.ts`) composes on top of `JwtAuthGuard` and requires: authenticated user, `role = admin`, and current TOTP elevation (`adminTotpExpiresAt > now`) loaded via `sid` claim.
+- `AdminGuard` (`apps/api/src/common/admin.guard.ts`) composes on top of `JwtAuthGuard` and requires: authenticated user, `role = admin`, `sid` owned by the JWT subject, an unexpired session row (`expiresAt > now`), and current TOTP elevation (`adminTotpExpiresAt > now`) loaded via that session.
 
 ## Internal ports (within identity context)
 
@@ -62,7 +62,7 @@ SessionRepository          // Session persistence (create, count, deleteExpired,
 UserRepository             // User persistence (findByPhone, create)
 TotpSecretCipherPort       // AES-256-GCM encrypt/decrypt for TOTP secrets
 TotpVerifierPort           // TOTP secret generation, otpauth URI generation, code verification with skew
-TotpEnrollmentRepository   // TotpEnrollment persistence (findByUserId, createPending, markVerified, addBackupCodes, findBackupCodes, consumeBackupCode, deleteByUserId)
+TotpEnrollmentRepository   // TotpEnrollment persistence (findByUserId, createPending, markVerified, addBackupCodes, findBackupCodes, consumeBackupCode, completeFirstVerification transaction, consumeBackupCodeAndElevate transaction, deleteByUserId)
 TotpThrottlePort           // failed-attempt counting per user/session with window expiry
 SecurityLoggerPort         // structured security logging for TOTP failures
 ```
@@ -84,7 +84,7 @@ SecurityLoggerPort         // structured security logging for TOTP failures
 - `IsAdmin` (query) — thin wrapper over `IdentityCheckPort.isAdmin`. Used by `AdminGuard`.
 - `GetAdminTotpStatus` — returns `enrolled`, `elevated`, and optional `adminTotpExpiresAt` for the current admin session. No secret/backup material. Exposed as `GET /api/v1/auth/admin/totp/status` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 - `EnrollAdminTotp` — generates a new TOTP secret, encrypts it, creates a pending `TotpEnrollment`, and returns QR URI + plaintext secret. Verified re-enroll returns HTTP 409 `TOTP_ALREADY_ENROLLED`; pending unverified enrollment is idempotent and returns the same encrypted secret/QR across calls and sessions for the same user so a scanned authenticator entry remains usable until first verification. The plaintext secret is decrypted server-side for this response (and again for verification); the tradeoff is recorded in ADR-0038. Concurrent `enroll` calls race on `TotpEnrollment.userId @@unique`; the loser returns the existing pending row instead of throwing. Exposed as `POST /api/v1/auth/admin/totp/enroll` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
-- `VerifyAdminTotp` — verifies a TOTP code (first enrollment) or TOTP code/backup code (post-enrollment). On first success, marks enrollment verified, generates 10 backup codes (SHA-256 hashed, stored), sets `Session.adminTotpExpiresAt = now + 12h`, and returns `adminTotpExpiresAt` + plaintext backup codes exactly once. Post-enrollment returns `adminTotpExpiresAt` only. Implements 5-failure/10-min throttle, adjacent-step skew, atomic backup-code consumption, and structured security logging on failure. Exposed as `POST /api/v1/auth/admin/totp/verify` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
+- `VerifyAdminTotp` — verifies a TOTP code (first enrollment) or TOTP code/backup code (post-enrollment). On first success, marks enrollment verified, generates 10 backup codes (SHA-256 hashed, stored), sets `Session.adminTotpExpiresAt = now + 12h`, and returns `adminTotpExpiresAt` + plaintext backup codes exactly once; first-enrollment persistence is atomic so a partial backup-code/enrollment failure cannot leave an elevated unverified session. Post-enrollment returns `adminTotpExpiresAt` only. Implements 5-failure/10-min throttle, adjacent-step skew, atomic backup-code consumption + elevation, and structured security logging on failure. Exposed as `POST /api/v1/auth/admin/totp/verify` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 
 ### Account deletion scope (S8 — 30-day grace + tombstone purge)
 

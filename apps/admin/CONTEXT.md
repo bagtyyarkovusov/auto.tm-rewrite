@@ -16,9 +16,9 @@ Internal admin dashboard. Next.js + shadcn/ui at `admin.auto.tm`. MLP beta uses 
 
 - Next.js 16.x App Router scaffold under `src/app/` — `layout.tsx` + `globals.css` + `favicon.ico`
 - **Auth bridge (S7)** — server-side API fetch wrapper, HTTP-only cookie storage, refresh-on-401, TOTP status/enrollment/verify flow, auth gate
-- `middleware.ts` — fast-path redirect when access cookie is missing on protected routes
+- `middleware.ts` — fast-path redirect when access cookie is missing on protected routes; preserves sanitized `pathname + search` as `returnTo` and forwards it to server layouts in `x-admin-return-to`
 - `src/lib/cookies.ts` — canonical cookie names/flags, set/clear helpers
-- `src/lib/validators.ts` — `validateReturnTo` (relative internal only), `validateOrigin`
+- `src/lib/validators.ts` — `validateReturnTo` (relative protected admin paths only), `validateOrigin`, shared `x-admin-return-to` header name
 - `src/lib/api-client.ts` — server-side fetch wrapper with refresh-on-401, cookie rotation, clear+redirect on failure
 - `src/lib/qrcode.ts` — server-side QR data URL generation (TOTP secret never reaches client bundle)
 - `src/app/actions.ts` — server actions for: request OTP, verify OTP, TOTP status/enroll/verify, logout, logout-all, auth gate helpers
@@ -63,12 +63,13 @@ None — admin app calls `apps/api` only through server actions / route handlers
 ## Auth gate
 
 - `middleware.ts`: fast-path redirect to `/login` when access cookie is missing on protected paths (`/reports`, `/audit`, `/listings`, `/users`).
-- `app/(admin)/layout.tsx`: full auth validation via `requireAuthWithReturnTo()` server action. Calls `/auth/admin/totp/status`, handles 401 refresh, redirects to `/login` or `/login?mode=totp` with preserved `returnTo`.
+- `app/(admin)/layout.tsx`: full auth validation via `requireAuthWithReturnTo()` server action. Calls `/auth/admin/totp/status`, handles 401 refresh, redirects to `/login` or `/login?mode=totp` with the middleware-provided sanitized `returnTo`.
 
 ## TOTP `returnTo`
 
-- Validated by `validateReturnTo`: accepts only relative internal admin paths (`/reports`, `/audit/...`, etc.).
+- Validated by `validateReturnTo`: accepts only relative protected admin paths (`/reports`, `/audit`, `/listings`, `/users`, including nested paths and query strings).
 - Rejects absolute URLs, protocol-relative URLs, cross-host redirects, and paths with dangerous characters.
+- The login page also re-validates the query-string `returnTo` before `router.push`; invalid values fall back to `/reports`.
 
 ## Non-admin on admin host
 
@@ -98,6 +99,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
 
 - Unit tests in `src/lib/`:
   - `validators.spec.ts` — `validateReturnTo` accepts/rejects paths, `validateOrigin` matches/rejects origins, no Referer fallback
+  - `middleware.spec.ts` — missing-cookie redirects preserve `pathname + search` in `returnTo`; protected requests with an access cookie forward sanitized `x-admin-return-to`
   - `cookies.spec.ts` — canonical names/flags, set/clear, no token leakage in logs
   - `api-client.spec.ts` — bearer forwarding, refresh-on-401 with retry, cookie rotation, clear+redirect on refresh failure, no token material in errors
 - Moderation server-action tests in `src/app/(admin)/actions.spec.ts`:

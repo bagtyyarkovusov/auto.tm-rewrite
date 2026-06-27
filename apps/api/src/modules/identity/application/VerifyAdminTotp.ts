@@ -75,45 +75,63 @@ export class VerifyAdminTotp {
     const secret = this.cipher.decrypt(enrollment.encryptedSecret);
     const isFirstVerify = enrollment.verifiedAt == null;
 
-    let valid = false;
+    const validTotp = this.verifier.verify(secret, input.code);
+    const backupCodeHash = !validTotp && !isFirstVerify
+      ? hashSha256(input.code)
+      : null;
 
-    if (this.verifier.verify(secret, input.code)) {
-      valid = true;
-    } else if (!isFirstVerify) {
-      // Post-enrollment: also accept backup codes
-      valid = await this.tryBackupCode(enrollment.id, input.code);
-    }
-
-    if (!valid) {
+    if (!validTotp && backupCodeHash == null) {
       this.securityLogger.logAdminTotpFailure(input.userId, input.sessionId, "Invalid TOTP or backup code");
       throw new Error("Invalid TOTP code");
     }
 
-    // Success: reset throttle and set elevation
-    await this.throttle.reset(input.userId, input.sessionId);
-
     const now = this.clock.now();
     const adminTotpExpiresAt = new Date(now.getTime() + ELEVATION_TTL_MS);
-    await this.sessionRepo.updateAdminTotpExpiresAt(input.sessionId, adminTotpExpiresAt);
 
     const result: VerifyAdminTotpResult = {
       adminTotpExpiresAt: adminTotpExpiresAt.toISOString(),
     };
 
     if (isFirstVerify) {
-      await this.totpRepo.markVerified(input.userId);
       const backupCodes = Array.from({ length: BACKUP_CODE_COUNT }, generateBackupCode);
       const codeHashes = backupCodes.map(hashSha256);
-      await this.totpRepo.addBackupCodes(enrollment.id, codeHashes);
+      await this.totpRepo.completeFirstVerification({
+        userId: input.userId,
+        enrollmentId: enrollment.id,
+        verifiedAt: now,
+        codeHashes,
+        sessionId: input.sessionId,
+        adminTotpExpiresAt,
+      });
+      await this.throttle.reset(input.userId, input.sessionId);
       result.backupCodes = backupCodes;
+      return result;
     }
 
-    return result;
-  }
+    if (validTotp) {
+      await this.sessionRepo.updateAdminTotpExpiresAt(input.sessionId, adminTotpExpiresAt);
+      await this.throttle.reset(input.userId, input.sessionId);
+      return result;
+    }
 
-  private async tryBackupCode(enrollmentId: string, code: string): Promise<boolean> {
-    const codeHash = hashSha256(code);
-    const consumed = await this.totpRepo.consumeBackupCode(enrollmentId, codeHash);
-    return consumed;
+    if (backupCodeHash == null) {
+      throw new Error("Invalid TOTP code");
+    }
+
+    const consumed = await this.totpRepo.consumeBackupCodeAndElevate({
+      userId: input.userId,
+      enrollmentId: enrollment.id,
+      codeHash: backupCodeHash,
+      usedAt: now,
+      sessionId: input.sessionId,
+      adminTotpExpiresAt,
+    });
+    if (!consumed) {
+      this.securityLogger.logAdminTotpFailure(input.userId, input.sessionId, "Invalid TOTP or backup code");
+      throw new Error("Invalid TOTP code");
+    }
+
+    await this.throttle.reset(input.userId, input.sessionId);
+    return result;
   }
 }

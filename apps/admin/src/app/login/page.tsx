@@ -12,6 +12,8 @@ import {
   verifyTotp,
 } from "../actions";
 
+import { validateReturnTo } from "@/lib/validators";
+
 type Step =
   | { kind: "phone"; phone: string; error?: string }
   | { kind: "otp"; phone: string; testCode?: string; error?: string }
@@ -51,7 +53,7 @@ function getDescription(step: Step): string {
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") ?? "/reports";
+  const returnTo = validateReturnTo(searchParams.get("returnTo")) ?? "/reports";
   const forcedMode = searchParams.get("mode"); // "totp" forces TOTP re-verify
 
   const [step, setStep] = useState<Step>({ kind: "phone", phone: "" });

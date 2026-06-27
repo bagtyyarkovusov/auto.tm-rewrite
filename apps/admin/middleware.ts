@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import {
+  ADMIN_RETURN_TO_HEADER,
+  validateReturnTo,
+} from "./src/lib/validators";
+
 const PROTECTED_PREFIXES = ["/reports", "/audit", "/listings", "/users"];
 
 function getAccessCookieName(): string {
@@ -11,6 +16,7 @@ function getAccessCookieName(): string {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const safeReturnTo = validateReturnTo(`${pathname}${request.nextUrl.search}`);
 
   // Skip static files, API routes, login page, and Next.js internals
   if (
@@ -30,13 +36,22 @@ export function middleware(request: NextRequest) {
   const hasAccessCookie = request.cookies.has(getAccessCookieName());
   if (!hasAccessCookie) {
     const loginUrl = new URL("/login", request.url);
-    if (pathname !== "/login") {
-      loginUrl.searchParams.set("returnTo", pathname);
+    if (safeReturnTo) {
+      loginUrl.searchParams.set("returnTo", safeReturnTo);
     }
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  if (safeReturnTo) {
+    requestHeaders.set(ADMIN_RETURN_TO_HEADER, safeReturnTo);
+  }
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {

@@ -14,5 +14,23 @@ export interface TotpEnrollmentRepository {
 
   consumeBackupCode(enrollmentId: string, codeHash: string): Promise<boolean>;
 
+  completeFirstVerification(input: {
+    userId: string;
+    enrollmentId: string;
+    verifiedAt: Date;
+    codeHashes: string[];
+    sessionId: string;
+    adminTotpExpiresAt: Date;
+  }): Promise<void>;
+
+  consumeBackupCodeAndElevate(input: {
+    userId: string;
+    enrollmentId: string;
+    codeHash: string;
+    usedAt: Date;
+    sessionId: string;
+    adminTotpExpiresAt: Date;
+  }): Promise<boolean>;
+
   deleteByUserId(userId: string): Promise<void>;
 }

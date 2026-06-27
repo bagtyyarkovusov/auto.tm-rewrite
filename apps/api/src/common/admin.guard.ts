@@ -55,7 +55,7 @@ export class AdminGuard implements CanActivate {
     }
 
     const session = await this.sessionRepo.findById(user.sid);
-    if (!session) {
+    if (!session || session.userId !== user.sub) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Admin TOTP elevation required",
@@ -63,6 +63,13 @@ export class AdminGuard implements CanActivate {
     }
 
     const now = this.clock.now();
+    if (session.expiresAt <= now) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Admin session expired",
+      });
+    }
+
     if (!session.adminTotpExpiresAt || session.adminTotpExpiresAt <= now) {
       throw new ForbiddenException({
         code: "FORBIDDEN",

@@ -15,6 +15,18 @@ describe("validateReturnTo", () => {
     expect(validateReturnTo("/reports/123")).toBe("/reports/123");
   });
 
+  it("accepts protected admin paths with query params", () => {
+    expect(validateReturnTo("/audit?action=LISTING_BAN&page=2")).toBe(
+      "/audit?action=LISTING_BAN&page=2",
+    );
+    expect(validateReturnTo("/listings/442332a0-97d2-4e22-91c0-08c3c81d5f84")).toBe(
+      "/listings/442332a0-97d2-4e22-91c0-08c3c81d5f84",
+    );
+    expect(validateReturnTo("/users/442332a0-97d2-4e22-91c0-08c3c81d5f84")).toBe(
+      "/users/442332a0-97d2-4e22-91c0-08c3c81d5f84",
+    );
+  });
+
   it("rejects absolute URLs", () => {
     expect(validateReturnTo("https://evil.com/reports")).toBeNull();
   });
@@ -43,6 +55,13 @@ describe("validateReturnTo", () => {
   it("rejects paths with dangerous characters", () => {
     expect(validateReturnTo("/reports<script>")).toBeNull();
     expect(validateReturnTo("/reports|pipe")).toBeNull();
+  });
+
+  it("rejects internal but non-admin destinations", () => {
+    expect(validateReturnTo("/login")).toBeNull();
+    expect(validateReturnTo("/api/v1/auth/logout")).toBeNull();
+    expect(validateReturnTo("/_next/static/chunk.js")).toBeNull();
+    expect(validateReturnTo("/dashboard")).toBeNull();
   });
 });
 
