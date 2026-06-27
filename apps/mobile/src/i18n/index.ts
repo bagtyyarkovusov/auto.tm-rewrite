@@ -24,7 +24,7 @@ export async function initI18n(initialLocale?: Locale) {
     interpolation: {
       escapeValue: false,
     },
-    ns: ["common", "auth", "account", "listings", "conversations"],
+    ns: ["common", "auth", "account", "listings", "conversations", "onboarding"],
     defaultNS: "common",
     react: {
       useSuspense: false,

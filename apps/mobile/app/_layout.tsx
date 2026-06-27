@@ -31,6 +31,12 @@ import { localeStore } from "../src/locale/localeStore";
 import { ToastProvider } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+// Start first-time users in the onboarding flow. Returning users are
+// redirected to the feed from the splash screen once the flag is read.
+export const unstable_settings = {
+  initialRouteName: "(onboarding)",
+};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -211,6 +217,7 @@ export default function RootLayout() {
           <SafeAreaProvider>
               <ErrorBoundary>
               <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(onboarding)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="(public)" />
               <Stack.Screen name="profile" />

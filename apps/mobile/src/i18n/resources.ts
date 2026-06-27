@@ -428,6 +428,17 @@ export const resources: Resource = {
       chat: "Сообщения",
       messagePlaceholder: "Напишите сообщение...",
     },
+    onboarding: {
+      chooseLanguage: "Выберите язык",
+      languageSubtitle: "Вы можете изменить язык позже в настройках",
+      valueProp1Title: "Найдите настоящие машины",
+      valueProp1Body:
+        "Смотрите объявления продавцов из Туркменистана и фильтруйте по марке, модели, цене и году.",
+      valueProp2Title: "Свяжитесь с продавцом безопасно",
+      valueProp2Body:
+        "Пишите и звоните продавцам прямо в приложении.",
+      getStarted: "Начать",
+    },
   },
   tk: {
     common: {
@@ -849,6 +860,17 @@ export const resources: Resource = {
       chat: "Habarlaşmalar",
       messagePlaceholder: "Habar ýazyň...",
     },
+    onboarding: {
+      chooseLanguage: "Dil saýlaň",
+      languageSubtitle: "Sazlamalarda soňrak üýtgedip bilersiňiz",
+      valueProp1Title: "Hakyky awtomobiller tapyň",
+      valueProp1Body:
+        "Türkmenistandaky satyjylaryň bildirişlerini görüň we marka, model, baha we ýyl boýunça süzüň.",
+      valueProp2Title: "Satyjy bilen howpsuz habarlaşyň",
+      valueProp2Body:
+        "Satyjylara programma arkaly ýazyň we jaň ediň.",
+      getStarted: "Başla",
+    },
   },
   en: {
     common: {
@@ -1247,6 +1269,17 @@ export const resources: Resource = {
     conversations: {
       chat: "Messages",
       messagePlaceholder: "Write a message...",
+    },
+    onboarding: {
+      chooseLanguage: "Choose language",
+      languageSubtitle: "You can change the language later in settings",
+      valueProp1Title: "Find real cars",
+      valueProp1Body:
+        "Browse listings from sellers in Turkmenistan and filter by make, model, price, and year.",
+      valueProp2Title: "Contact sellers safely",
+      valueProp2Body:
+        "Message and call sellers right inside the app.",
+      getStarted: "Get started",
     },
   },
 };

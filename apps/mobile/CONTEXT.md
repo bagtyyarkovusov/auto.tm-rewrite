@@ -18,7 +18,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`expo`** SDK 55 (`expo@55.0.26`), **`expo-router@55.0.16`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
 - **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 18 RNR components installed at `apps/mobile/components/ui/` (alert-dialog, avatar, badge, button, card, dialog, dropdown-menu, icon, input, native-only-animated-view, progress, separator, sheet, skeleton, switch, text, toast, tooltip). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{alert-dialog, avatar, checkbox, dialog, dropdown-menu, label, popover, portal, progress, separator, slot, switch, tooltip}` v1.4.0 wired.
 - **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `me`, `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`, `conversations.*`, `reports.*`, `favorites.*`). The wrapper uses `AbortController` with a 30-second default request timeout (15 seconds for refresh); timeouts throw `ApiError("NETWORK_ERROR", 0, "Request timed out")`. The wrapper sends `Accept-Language` from `localeStore` on every request.
-- **`react-i18next@^15.5.1`** + **`i18next@^24.2.3`** for UI localization. Namespaced per feature (`common`, `auth`, `account`, `listings`, `conversations`) with `tk`/`ru`/`en` resources. Init in `app/_layout.tsx` hydrates the locale store before rendering.
+- **`react-i18next@^15.5.1`** + **`i18next@^24.2.3`** for UI localization. Namespaced per feature (`common`, `auth`, `account`, `listings`, `conversations`, `onboarding`) with `tk`/`ru`/`en` resources. Init in `app/_layout.tsx` hydrates the locale store before rendering.
 - **`expo-localization@~16.1.1`** for device locale detection on first launch.
 - **`@react-native-async-storage/async-storage@^2.1.2`** for locale persistence (`localeStore`) and reserved for future TanStack Query cross-launch persistence.
 - **`zustand@^5.0.13`** for client state (auth intent, modal lifecycle, form state). See `src/auth/intentStore.ts`.
@@ -61,6 +61,11 @@ Mobile RNR primitives are customized as an **AutoTM Base** layer: neutral-first 
 ### Routes (Phase 1, today)
 
 ```
+/(onboarding)/
+  index                Splash + first-launch gate — redirects to feed if onboarding was already completed
+  language             First-launch language picker (RU/TK/EN); writes `localeStore`
+  value-prop           1–2 skippable value-prop slides; completing them marks onboarding done and routes to the anonymous feed
+
 /(tabs)/
   index               Feed (chronological listings)       — real feed via `useListings`; `expo-image` cards; pull-to-refresh; infinite scroll
   favorites           Favorites list                      — real infinite list via `useMyFavorites`; `ListingCard` reuse; loading/empty/error/retry; pull-to-refresh; infinite scroll; auth-on-action for anonymous users
@@ -134,7 +139,7 @@ Documented honestly so CONTEXT matches code. Planned fixes live in roadmap below
 - TanStack Query v5 + custom `apiClient` wrapper at `src/api/client.ts` (single API entry point)
 - Zustand stores: `src/auth/intentStore.ts` (auth-on-action deferred-replay), `src/locale/localeStore.ts` (locale + AsyncStorage persistence)
 - `expo-secure-store` for JWT access + refresh tokens. `src/auth/session.ts` publishes an in-process session-change event after store/clear so already-mounted `useAuth` and `useViewer` consumers update immediately after OTP login/logout without requiring an app reload.
-- `AsyncStorage` for locale persistence (`localeStore`) and reserved for future TanStack Query cross-launch persistence
+- `AsyncStorage` for locale persistence (`localeStore`), onboarding completion flag (`src/onboarding/onboardingFlag.ts`), and reserved for future TanStack Query cross-launch persistence
 - Upload staging state machine at `src/listings/uploadStaging/` — compress → presign → PUT → attach; `UploadError` discriminated union categorizes 7 error codes with retryable flag; file-existence checks via `getInfoAsync` at 3 checkpoints
 - Wizard autosave via debounced `PATCH /listings/drafts/:id`
 - Wizard design system applied in #124 + #135: **`WizardHeader`** shows muted position-marker (`text-xs text-muted-foreground`) + **`text-2xl font-heading`** step title + progress bar. Step bodies open directly with form rows or brief `text-sm text-muted-foreground` orientation copy — no duplicate title. Body spacing (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs (`h-[52px]`), pill buttons (`h-[52px] rounded-full`), picker rows match input height.
