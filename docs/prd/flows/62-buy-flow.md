@@ -4,7 +4,7 @@
 
 Maral wants to buy her first car. In the MLP beta, the journey is deliberately small: browse, filter, inspect a listing, contact the seller, and meet offline.
 
-Favorites, saved-search notifications, rich chat, dealer showrooms, public Garage trust signals, and post-purchase surveys are post-MLP bets.
+S8a adds saved-listing Favorites to this loop. Saved-search notifications, rich chat, dealer showrooms, public Garage trust signals, and post-purchase surveys remain post-MLP bets.
 
 ## Goal
 

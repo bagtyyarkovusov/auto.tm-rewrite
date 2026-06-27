@@ -9,7 +9,7 @@ Five tabs. Center button is the visual "do something" CTA.
 | Tab | Label (RU) | Label (TK) | Label (EN) | Default route |
 |---|---|---|---|---|
 | 1 | Поиск | Gözle | Search | Feed (latest listings + MLP filters) |
-| 2 | Избранное | Saýlanan | Favorites | Post-MLP; can be hidden in MLP beta |
+| 2 | Избранное | Saýlanan | Favorites | Favorites list (saved listings; S8a) |
 | 3 | + | + | + | Sell entry point |
 | 4 | Сообщения | Habarlar | Messages | Simple contact threads |
 | 5 | Кабинет | Kabinet | Cabinet | Cabinet/Profile + Settings + About |
@@ -19,7 +19,7 @@ Five tabs. Center button is the visual "do something" CTA.
 ```
 /(tabs)/
   index                Feed
-  favorites            Post-MLP favorites/saved searches
+  favorites            Favorites list (saved listings; saved searches post-MLP)
   sell                 Sell entry — New listing
   chat                 Simple contact thread list
   services             Cabinet/Profile surface
@@ -143,7 +143,7 @@ Each major surface has an explicit empty state — see [`ui/75-illustration-styl
 
 - Feed (anonymous, no recent views): "Find your next car"
 - Feed (authed, no preferences): "Personalize your feed" + filter CTA
-- Favorites: "Tap ♥ on listings you like" (post-MLP)
+- Favorites: "Tap ♥ on listings you like"
 - Conversations: "Start by messaging a seller"
 - Saved searches: "Save searches to get notified" (post-MLP)
 - My listings: "List your first car" + Sell CTA

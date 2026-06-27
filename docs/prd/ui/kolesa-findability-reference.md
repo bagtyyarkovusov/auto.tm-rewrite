@@ -153,7 +153,7 @@ Kolesa's posting flow is **41 screens** with deep equipment capture (interior ma
 Kolesa: a **Messages tab** (thread list) and a per-listing **Write to seller** thread reachable from detail. Matches your S6 design exactly (per-listing conversation, text). Mirror thread-list ordering by latest message. No new patterns needed; keep text-only per ADR-0027 (rich chat is post-MLP).
 
 ### 11. Favorites
-Same **listing-card** layout (§5a) in a saved list, with an explicit empty state ("Tap ♥ on listings you like"). Building in S8a (#193). Skip Kolesa's saved-**search** subscriptions here (post-MLP) — Favorites = saved *listings* only for MLP.
+Same **listing-card** layout (§5a) in a saved list, with an explicit empty state ("Tap ♥ on listings you like"). Shipped in S8a (#193). Skip Kolesa's saved-**search** subscriptions here (post-MLP) — Favorites = saved *listings* only for MLP.
 
 ### 12. Cabinet / Profile + Settings
 Kolesa **"Мой кабинет"** aggregates, top→bottom: **name → phone (→ edit) → [PLUS banner] → [Car-history] → [Account/balance] → "Мои объявления / My ads" → "Подать объявление / Post" CTA**, with a **gear → Settings** in the top-right.
