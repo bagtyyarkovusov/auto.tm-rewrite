@@ -1,7 +1,7 @@
 # Sprint 8 — Private beta polish — S8a closeout
 
 > Written by Codex on 2026-06-27 UTC for issue #199.
-> This closes the remote S8a documentation drift pass only. It is not the full S8 retrospective: S8b on-site distribution, real OTP, monitoring, and ops drills remain deferred to TM presence.
+> Updated 2026-07-05: the human decision is to close S8 as the shipped S8a remote slice and defer the former S8b on-site distribution, real OTP, monitoring, and ops drills to a future deployment/on-site cutover sprint.
 
 ## Outcome
 
@@ -30,7 +30,7 @@ All S8a child issues are closed:
 
 ### Roadmap and deferred ledger
 
-- `docs/prd/03-roadmap.md` now marks S8 as "S8a shipped; S8b deferred" rather than fully shipped.
+- `docs/prd/03-roadmap.md` now marks S8 as shipped on the S8a remote product-completeness outcome, with the former S8b hardware/deployment work deferred to a future deployment/on-site cutover sprint.
 - The S8a shipped-log entry captures the remote product-completeness slice and links back here.
 - Favorites is removed from the post-MLP bet table. The remaining discovery bet is broader filters / free-text search; saved searches remain in `features/35-subscriptions.md`.
 - `docs/prd/02-phases.md`, `docs/prd/features/33-search-discovery.md`, `docs/prd/20-information-architecture.md`, and launch-planning docs now distinguish shipped Favorites from still-deferred saved searches and discovery expansion.
@@ -71,7 +71,14 @@ No map row is missing for current implementation.
 
 The only current pending future-sprint file is `docs/prd/sprints/sprint-09-trust-wedge.md`, which is intentionally referenced by the roadmap after ADR-0037. Historical old-label references such as "S9 admin" or "S10 polish" remain in locked historical sprint/retro artifacts and are covered by the roadmap's historical-label note.
 
-## Remaining blockers outside S8a
+## Deferred deployment/on-site cutover
 
-- S8b on-site beta cutover: real OTP delivery, physical-device distribution, TLS/domains, monitoring/runbook drills, and first invites.
-- S9a may begin after a human decision as the remote trust foundation; S9b shares the same on-ground dependency as S8b.
+The following items are no longer treated as blockers to closing S8a. They should be shaped later as a deployment/on-site cutover sprint when TM presence or a trusted helper is available:
+
+- Real OTP delivery through TM phones/SIMs.
+- Physical-device distribution through TestFlight / Play internal track or documented equivalent, plus APK fallback.
+- Production-like deploy, TLS/domains, and air-gap transfer rehearsal.
+- Monitoring/runbook drills: alert delivery, rollback, backup restore, feature-pause flags, bad-moderation reversal.
+- The actual first-user invites.
+
+S9a may begin after a human start decision as the remote trust foundation. S9b shares this same on-ground dependency.

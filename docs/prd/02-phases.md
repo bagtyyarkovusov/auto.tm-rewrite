@@ -19,7 +19,7 @@ Goal: prove the core loop with real users.
 - **Contact seller** — simple per-listing buyer-to-seller contact; text-first, no rich chat requirements
 - **Minimal admin** — listing/user moderation, report queue, basic audit log, catalog data access where needed
 - **Public web essentials** — landing page, public listing detail with OG metadata, legal pages
-- **Private beta readiness** — internal TestFlight/Play track or equivalent distribution, smoke tests, first-user launch checklist
+- **Private beta software readiness** — localized, account-complete, moderated app loop; distribution, real OTP, prod-like deploy, monitoring drills, and first-user invites are deferred to a later deployment/on-site cutover sprint
 - **i18n essentials** — RU + TK + EN UI shell and trilingual catalog where already required
 
 ### Deferred out of MLP beta
@@ -47,7 +47,7 @@ Goal: prove the core loop with real users.
 | S5 | Search + listing detail — buyers can find relevant cars |
 | S6 | Contact seller — buyer and seller can communicate simply |
 | S7 | Minimal admin + moderation — bad content can be controlled |
-| S8 | Private beta polish — first 10-50 real users can use the loop safely |
+| S8 | Private beta polish — product-complete beta substrate; first-user invites require the deferred deployment/on-site cutover sprint |
 
 ## Phase 2 — Post-MLP marketplace bets
 

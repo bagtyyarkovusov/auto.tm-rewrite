@@ -44,7 +44,7 @@ Before announcing publicly, all of these must be green:
 - [ ] Report entry/admin moderation visibility pause flags are tested
 - [ ] AutoTM company phone / email for user support set up
 
-## Private beta phase (S8, before public launch)
+## Private beta phase (deployment/on-site cutover, before public launch)
 
 Goal: shake out bugs with a small known cohort before everyone arrives.
 
@@ -80,15 +80,21 @@ The path from "MLP done" to public launch. Tracked here in the launch plan (inte
 
 - [ ] Ship moderation / report / block — also the Apple Guideline 1.2 UGC gate for the public step.
 
-**S8 (private-beta sprint — already planned)**
+**S8a (private-beta software readiness — shipped 2026-06-27)**
+
+- [x] Legal pages RU/TK/EN + account-deletion grace period.
+- [x] Product-complete localized mobile loop, account surface, Favorites, broken-UI sweep, and MLP/admin smokes.
+
+**Deployment/on-site cutover sprint (deferred from former S8b)**
 
 - [ ] Self-hosted OTA server live (`updates.auto.tm`, code-signing keys, bundles in MinIO) — ADR-0029.
 - [ ] Hardened reviewer demo account (ADR-0030) + seeded demo content.
-- [ ] Legal pages RU/TK/EN + account-deletion grace period (S8 children #2/#3).
 - [ ] Binary built (EAS Build); Play closed track + TestFlight set up; APK fallback published.
+- [ ] Real TM OTP/SIM path verified.
+- [ ] Prod-like deploy, TLS/domains, monitoring drills, rollback, backup restore, and beta responder owner verified.
 - [ ] Beta cohort pinned to a stable OTA channel.
 
-**Closed beta (~2–4 weeks, after S8)**
+**Closed beta (~2–4 weeks, after the deployment/on-site cutover)**
 
 - [ ] 10–50 real TM testers invited (real OTP); reviewer uses the bypass.
 - [ ] Iterate via self-hosted OTA (JS-only, no native changes mid-beta).

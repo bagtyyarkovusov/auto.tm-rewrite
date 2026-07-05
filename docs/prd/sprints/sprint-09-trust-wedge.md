@@ -115,7 +115,7 @@ docs/prd/ops/87-concierge-pilot-runbook.md      # pilot runbook (T7)
 ## Previous-sprint dependencies
 
 - **S8a** — S9 builds on the product-complete, localized, account-complete substrate
-- The **S9b pilot shares S8b's TM-presence dependency** (founder on-ground or a trusted helper)
+- The **S9b pilot shares the deferred deployment/on-site cutover's TM-presence dependency** (founder on-ground or a trusted helper)
 
 ## No-gos
 
