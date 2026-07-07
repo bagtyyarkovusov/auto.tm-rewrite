@@ -21,10 +21,10 @@
 | | |
 |---|---|
 | **Sprint** | S9 — Trust wedge |
-| **Status** | ⚪ Pending (S8a closed; no S9 issues created yet) |
-| **Started** | — |
+| **Status** | 🟡 In progress |
+| **Started** | 2026-07-07 |
 | **Phase** | Post-MLP — trust wedge pulled forward |
-| **Plan file** | Pending parent/children; create only after explicit human start |
+| **Plan file** | GitHub parent [#219](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/219) + S9a children [#220](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/220)-[#228](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/228) |
 | **Sprint doc** | [`sprints/sprint-09-trust-wedge.md`](sprints/sprint-09-trust-wedge.md) |
 | **Milestone** | M8 — Trust wedge / first inspection pilot |
 
@@ -58,7 +58,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟢 Shipped | 2026-06-06 | 2026-06-07 | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | 🟢 Shipped | 2026-06-07 | 2026-06-08 | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | 🟢 Shipped (S8a; S8b deferred to deployment sprint) | 2026-06-09 | 2026-06-27 | M7 | Product-complete beta substrate; actual invites require deployment cutover |
-| S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | ⚪ Pending | — | — | M8 | 5-10 inspection-pilot buyers (on-ground) |
+| S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | 🟡 In progress | 2026-07-07 | — | M8 | 5-10 inspection-pilot buyers (on-ground) |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
 
