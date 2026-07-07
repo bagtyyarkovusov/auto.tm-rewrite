@@ -1,9 +1,9 @@
 import { router } from "expo-router";
+import { SlidersHorizontal } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   View,
 } from "react-native";
@@ -21,6 +21,8 @@ import { useListingFilters } from "../../src/listings/search/useListingFilters";
 import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
 export default function FeedScreen() {
@@ -38,7 +40,7 @@ export default function FeedScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useListings({ filters: filters.active })
+  } = useListings({ filters: filters.active });
 
   const handlePress = useCallback((id: string) => {
     router.push(`/(public)/listings/${id}`);
@@ -47,22 +49,52 @@ export default function FeedScreen() {
   const allItems = data?.pages.flatMap((page) => page.items) ?? [];
   const catalogMaps = useFeedCatalogMaps(allItems);
 
+  const activeFilterSummary =
+    filters.count > 0
+      ? t("activeFiltersCount", { count: filters.count })
+      : t("filterSearchCtaHint");
+
   const header = (
-    <View className="px-4 pt-6 pb-3 flex-row items-center justify-between">
-      <Text className="text-2xl font-heading text-foreground">{t("search")}</Text>
-      <Pressable
+    <View className="gap-4 px-4 pt-6 pb-4">
+      <View className="gap-1">
+        <Text className="text-2xl font-heading text-foreground">
+          {t("carsBrowseTitle")}
+        </Text>
+        <Text className="text-sm text-muted-foreground">
+          {t("carsBrowseSubtitle")}
+        </Text>
+      </View>
+
+      <Button
+        variant="outline"
+        size="lg"
         onPress={() => setSheetOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel={t("filters")}
-        className="flex-row items-center gap-2"
+        accessibilityLabel={t("openFilters")}
+        className="h-auto justify-between rounded-2xl border-border bg-card px-4 py-4 active:bg-muted"
       >
+        <View className="min-w-0 flex-1 flex-row items-center gap-3">
+          <View className="h-11 w-11 items-center justify-center rounded-full bg-primary/10">
+            <Icon as={SlidersHorizontal} className="size-5 text-primary" />
+          </View>
+          <View className="min-w-0 flex-1 gap-0.5">
+            <Text className="text-base font-semibold text-foreground">
+              {t("filterSearchCta")}
+            </Text>
+            <Text
+              className="text-sm text-muted-foreground"
+              numberOfLines={1}
+            >
+              {activeFilterSummary}
+            </Text>
+          </View>
+        </View>
+
         {filters.count > 0 ? (
-          <Badge variant="brand">
+          <Badge variant="brand" className="ml-3">
             <Text>{filters.count}</Text>
           </Badge>
         ) : null}
-        <Text className="text-sm font-medium text-foreground">{t("filters")}</Text>
-      </Pressable>
+      </Button>
     </View>
   );
 
