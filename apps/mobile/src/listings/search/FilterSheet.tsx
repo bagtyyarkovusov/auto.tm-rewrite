@@ -32,6 +32,8 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
   const { draft, setField, apply, reset, count, isValid } = filters;
   const [priceRangeValid, setPriceRangeValid] = useState(true);
   const isApplyDisabled = !isValid || !priceRangeValid;
+  const applyLabel =
+    count > 0 ? t("applyFiltersCount", { count }) : t("apply");
 
   const handleApply = () => {
     apply();
@@ -48,7 +50,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent style={{ height: sheetHeight }}>
         <SheetHeader className="flex-row items-center justify-between">
-          <SheetTitle>{t("filters")}</SheetTitle>
+          <SheetTitle>{t("filterSheetTitle")}</SheetTitle>
           <Button
             variant="ghost"
             size="icon"
@@ -66,21 +68,21 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
           alwaysBounceVertical={true}
           nestedScrollEnabled={true}
         >
+          <ConditionFilterControl
+            value={draft.condition}
+            onChange={(value) => setField("condition", value)}
+          />
+          <CityFilterControl draft={filters.draft} setField={filters.setField} />
           <BrandModelFilterControl
             draft={filters.draft}
             setField={filters.setField}
           />
-          <CityFilterControl draft={filters.draft} setField={filters.setField} />
+          <YearRangeFilterControl draft={filters.draft} setField={filters.setField} />
           <PriceRangeFilterControl
             priceMin={draft.priceMin}
             priceMax={draft.priceMax}
             setField={setField}
             onValidityChange={setPriceRangeValid}
-          />
-          <YearRangeFilterControl draft={filters.draft} setField={filters.setField} />
-          <ConditionFilterControl
-            value={draft.condition}
-            onChange={(value) => setField("condition", value)}
           />
         </ScrollView>
 
@@ -106,9 +108,9 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             className="flex-1"
             onPress={handleApply}
             disabled={isApplyDisabled}
-            accessibilityLabel={t("apply")}
+            accessibilityLabel={applyLabel}
           >
-            <Text>{count > 0 ? t("showResultsCount", { count }) : t("apply")}</Text>
+            <Text>{applyLabel}</Text>
           </Button>
         </View>
       </SheetContent>
