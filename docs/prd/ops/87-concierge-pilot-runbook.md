@@ -194,11 +194,13 @@ Ask every buyer after they receive the report:
 1. Did the report change your decision about this car? (yes / no / still deciding)
 2. If yes, how? (bought / negotiated price down / walked away / other: ___)
 3. Was anything in the report surprising?
-4. Would you have paid for this inspection if it cost **200 TMT** (~$6-7)? (yes / no / maybe)
-5. Would you have paid for this inspection if it cost **500 TMT** (~$14-15)? (yes / no / maybe)
+4. Would you have paid for this inspection if it cost **200 TMT** (~$23)? (yes / no / maybe)
+5. Would you have paid for this inspection if it cost **500 TMT** (~$57)? (yes / no / maybe)
 6. Would you recommend AutoTM's inspection to a friend buying a car? (0-10 scale)
 7. What was the main reason you did or did not find the inspection useful?
 8. What would make the report more useful?
+
+> **Note on price points:** 200 TMT and 500 TMT are learning probes, not the final Phase 2 pricing. Use them to map the demand curve; see [`business/inspection-program.md`](../business/inspection-program.md) for the planned seller-paid / buyer-paid tracks.
 
 ### Mechanic feedback metrics
 
@@ -274,7 +276,7 @@ After the pilot, produce a one-page summary in this exact format. The betting ta
 
 ### Decision impact
 - Decision changed by report: N / %
-- Of those: bought anyway / negotiated / walked away: N / N / N
+- Of those: bought / negotiated / walked away: N / N / N
 
 ### Top qualitative objections
 1. [objection from buyers or sellers]
