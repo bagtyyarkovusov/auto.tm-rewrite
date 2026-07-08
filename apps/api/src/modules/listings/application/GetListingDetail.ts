@@ -3,7 +3,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import type { Currency } from "../domain/types";
+import { VERIFIED_PHONE_TRUST, type Currency } from "../domain/types";
 import {
   LISTING_REPOSITORY,
   type ListingRepository,
@@ -117,7 +117,7 @@ export class GetListingDetail {
       soldAt: listing.soldAt?.toISOString(),
       createdAt: listing.createdAt.toISOString(),
       updatedAt: listing.updatedAt.toISOString(),
-      sellerTrust: { phoneVerified: true },
+      sellerTrust: VERIFIED_PHONE_TRUST,
     };
   }
 

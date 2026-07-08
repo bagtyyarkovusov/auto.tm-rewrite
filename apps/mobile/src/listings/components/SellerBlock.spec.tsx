@@ -20,6 +20,11 @@ describe("SellerBlock verified seller signal", () => {
     expect(source).toContain("phoneVerified &&");
   });
 
+  it("omits the verified-phone badge when phoneVerified is false or undefined", () => {
+    expect(source).toContain("phoneVerified?: boolean");
+    expect(source).not.toMatch(/verifiedPhone.*:.*true/);
+  });
+
   it("places the badge near the seller label without implying inspection status", () => {
     expect(source).toContain('t("seller")');
     expect(source).not.toContain("inspection");

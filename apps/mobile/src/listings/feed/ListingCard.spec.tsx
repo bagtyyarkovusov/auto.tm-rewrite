@@ -21,6 +21,11 @@ describe("ListingCard verified seller signal", () => {
     expect(source).toContain("listing.sellerTrust?.phoneVerified");
   });
 
+  it("omits the verified-phone badge when phoneVerified is false or undefined", () => {
+    expect(source).toContain("sellerTrust?.phoneVerified");
+    expect(source).not.toMatch(/verifiedPhone.*:.*true/);
+  });
+
   it("uses neutral badge styling", () => {
     expect(source).toContain('variant="default"');
   });

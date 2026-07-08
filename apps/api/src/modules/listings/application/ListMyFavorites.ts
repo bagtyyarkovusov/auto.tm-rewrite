@@ -3,6 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
+import { VERIFIED_PHONE_TRUST } from "../domain/types";
 import {
   FAVORITE_REPOSITORY,
   type FavoriteRepository,
@@ -68,7 +69,7 @@ export class ListMyFavorites {
         coverMediaKey: item.coverMediaKey,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
-        sellerTrust: { phoneVerified: true },
+        sellerTrust: VERIFIED_PHONE_TRUST,
       })),
       nextCursor: favoriteResult.nextCursor
         ? ListingsSchemas.encodeCursor(favoriteResult.nextCursor)

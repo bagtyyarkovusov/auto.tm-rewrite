@@ -3,7 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import type { Currency, ListingFilterCriteria } from "../domain/types";
+import { VERIFIED_PHONE_TRUST, type Currency, type ListingFilterCriteria } from "../domain/types";
 import {
   FEED_RANKING_PORT,
   type FeedRankingPort,
@@ -71,7 +71,7 @@ export class ListFeed {
         coverMediaKey: listing.coverMediaKey,
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
-        sellerTrust: { phoneVerified: true },
+        sellerTrust: VERIFIED_PHONE_TRUST,
       };
     });
 
