@@ -17,12 +17,13 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
 
 - `apps/mobile/src/listings/`
   - `feed/` — public feed card components
-    - `ListingCard.tsx` — cover image (`expo-image` `list` variant) + derived title + price + status badge + city
+    - `ListingCard.tsx` — cover image (`expo-image` `list` variant) + derived title + price + status badge + city + neutral `verifiedPhone` badge when `listing.sellerTrust.phoneVerified` is true
     - `useFeedCatalogMaps.ts` — hook that resolves brand/model/city IDs to display names for a batch of listings; uses `useBrands`/`useRegions` + batched `useQueries` for models/cities; derives locale from `i18n.language`; relies on `Accept-Language` header (no `?locale=` query params)
     - `FeedSkeleton.tsx` — skeleton rows for initial load
     - `FeedEmpty.tsx` — empty feed CTA to Sell tab (shown when no listings exist and no filters are active)
     - `FilteredEmpty.tsx` — zero-result state when active filters match nothing; shows "No listings match. Try adjusting filters." + Reset filters button that calls `useListingFilters().reset()`
     - `FilteredEmpty.spec.tsx` — source tests for zero-result copy and Reset action
+    - `ListingCard.spec.tsx` — source tests for the verified-phone badge
     - `FeedError.tsx` — retry affordance on network/API failure
   - `search/` — feed filter sheet + filter state hook
     - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, `count`, and `isValid`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both. `isValid` is `false` when `yearMin > yearMax`.
@@ -45,9 +46,10 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
   - `components/` — shared listing display components (used by feed + detail + management)
     - `PhotoGallery.tsx` — horizontal paging gallery (`FlatList` + `expo-image` `detail` variant) with dot indicator; tap opens fullscreen modal (`fullscreen` variant); uses `useWindowDimensions` so rotation updates layout; `statusBarTranslucent` on fullscreen modal; close button and page indicator use explicit top/bottom padding instead of safe-area utilities; no-media fallback renders "No photos"
     - `PriceDisplay.tsx` — public/buyer TMT-only price + owner asymmetric mode (TMT primary + original currency secondary for USD/AED) + conditional seller-term badges (`Exchange possible`, `Installment possible`)
-    - `SellerBlock.tsx` — private seller label + location context (region/city/locationText) + contact phone when calls enabled; no avatar/tenure/response time (backend lacks rich seller profile in S4)
+    - `SellerBlock.tsx` — private seller label + location context (region/city/locationText) + contact phone when calls enabled + neutral `verifiedPhone` badge when `phoneVerified` is true
+    - `SellerBlock.spec.tsx` — source tests for the verified-phone badge
     - `ContactCtaBar.tsx` — sticky bottom CTA bar: Call (`tel:` via `expo-linking`, disabled when sold/no-phone/allowCalls=false), Message (enabled for eligible non-owner active listings with `allowChat=true` via #172; anonymous tap stores auth intent and routes to OTP, authenticated tap calls `useOpenConversation` and navigates to `/conversations/[id]`), Share (`react-native` `Share`), Favorite (disabled, "Favorite coming soon")
-    - `ListingDetail.tsx` — full detail composition: title (year + brand + model + generation), sold badge, price block, spec grid (year, condition, mileage, transmission, drive, engine, power, color, body type, VIN — conditional on presence), description, seller block; branches between buyer (`SellerBlock`) and owner (`OwnerActions`) presentation via `isOwner` prop
+    - `ListingDetail.tsx` — full detail composition: title (year + brand + model + generation), sold badge, price block, spec grid (year, condition, mileage, transmission, drive, engine, power, color, body type, VIN — conditional on presence), description, seller block; branches between buyer (`SellerBlock`) and owner (`OwnerActions`) presentation via `isOwner` prop; passes `listing.sellerTrust?.phoneVerified` to `SellerBlock`
     - `OwnerActions.tsx` — status-aware owner controls on detail (Edit, Mark sold, Archive, Republish, Delete) with `AlertDialog` confirmations; disables while pending and invalidates feed/detail/management caches on success
     - `OwnerListingCard.tsx` — feed-card visual language adapted for owner management with status badge, Open and Edit actions; receives `brandName`/`modelName`/`cityName` props from `useFeedCatalogMaps` in parent; uses shared `buildVariantUrl` from `detail/buildVariantUrl.ts` for cover images (correctly routes `listing-videos` vs `listing-photos` buckets); cover image has `onError` fallback to placeholder
     - `DraftCard.tsx` — draft row/card with draft identity, progress, photo count, Resume CTA, and destructive Discard with `AlertDialog` confirmation; uses shared `buildVariantUrl` for cover images with `onError` fallback

@@ -183,6 +183,7 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
             locationText={listing.locationText}
             contactPhone={listing.contactPhone}
             allowCalls={listing.allowCalls}
+            phoneVerified={listing.sellerTrust?.phoneVerified}
           />
         )}
 

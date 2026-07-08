@@ -141,6 +141,16 @@ describe("ListMyFavorites", () => {
     expect(result.items[0]!.id).toBe("listing-1");
   });
 
+  it("includes sellerTrust.phoneVerified on favorite summaries", async () => {
+    seedSummary({ id: "listing-1" });
+    await favorites.add("user-1", "listing-1");
+
+    const uc = makeUseCase(favorites, listingsRead);
+    const result = await uc.execute({ userId: "user-1" });
+
+    expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
+  });
+
   it("excludes listings no longer visible (banned/deleted)", async () => {
     // favorite exists but read port returns nothing (listing banned/deleted)
     await favorites.add("user-1", "listing-1");

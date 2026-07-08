@@ -1,7 +1,7 @@
 import nodeConfig from "@auto-tm/eslint-config/node.mjs";
 
 export default [
-  { ignores: ["dist/**", "vitest.config.ts"] },
+  { ignores: ["dist/**", "vitest.config.ts", ".build.lock"] },
   ...nodeConfig,
   {
     files: ["scripts/**/*.cjs"],

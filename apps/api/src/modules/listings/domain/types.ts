@@ -1,5 +1,11 @@
 export type Currency = "TMT" | "USD" | "AED";
 
+export interface SellerTrust {
+  phoneVerified: boolean;
+}
+
+export const VERIFIED_PHONE_TRUST: SellerTrust = { phoneVerified: true };
+
 export type MediaKind = "image" | "video";
 
 export type FeedCursor = {

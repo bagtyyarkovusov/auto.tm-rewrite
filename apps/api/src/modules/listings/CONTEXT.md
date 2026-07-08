@@ -108,7 +108,10 @@ Repository ports (consumed only within `listings/`):
 - `GetExchangeRates` — returns all stored exchange rates
 - `AddFavorite` — favorites an active listing; idempotent; returns 404 for non-existent, deleted, or non-active listings; increments `listing.favoriteCount`
 - `RemoveFavorite` — removes a favorite; idempotent; decrements `listing.favoriteCount`
-- `ListMyFavorites` — paginated list of the caller's favorited listings via `GET /api/v1/favorites`; excludes banned/deleted listings (filtered by `ListingsReadPort.getListingSummaries`)
+- `ListMyFavorites` — paginated list of the caller's favorited listings via `GET /api/v1/favorites`; excludes banned/deleted listings (filtered by `ListingsReadPort.getListingSummaries`); returns `ListingSummary` DTOs with `sellerTrust.phoneVerified`
+- `ListMyListings` — paginated list of the caller's own listings via `GET /api/v1/me/listings`; returns `ListingSummary` DTOs with `sellerTrust.phoneVerified`
+- `ListFeed` — public chronological feed; returns `ListingSummary` DTOs with `coverMediaKey`, `displayPriceTmt`, and `sellerTrust.phoneVerified`
+- `GetListingDetail` — returns full detail DTO (specs, media variants, seller block, price, terms, `isFavorited`, `sellerTrust.phoneVerified`)
 
 ## HTTP routes
 
@@ -120,10 +123,10 @@ Repository ports (consumed only within `listings/`):
 | POST | `/api/v1/listings/drafts/:id/validate-step` | Required | `ValidateDraftStep` |
 | DELETE | `/api/v1/listings/drafts/:id` | Required | `DiscardDraft` |
 | GET | `/api/v1/me/drafts` | Required | `ListMyDrafts` |
-| GET | `/api/v1/me/listings` | Required | `ListMyListings` |
-| POST | `/api/v1/uploads/presign` | Required | `PresignUpload` |
-| GET | `/api/v1/listings` | Public | `ListFeed` | Accepts `cursor`, `limit`, and MLP filters (`brandId`, `modelId`, `cityId`, `priceMin`, `priceMax`, `yearMin`, `yearMax`, `condition`). Includes `coverMediaKey` when listing has media |
-| GET | `/api/v1/listings/:id` | Public (auth optional) | `GetListingDetail` | Banned listings: non-owner → 404; owner → full detail with `status: "banned"`. Includes `isFavorited` when caller is authenticated |
+| GET | `/api/v1/me/listings` | Required | `ListMyListings` | Cursor pagination; returns `ListingSummary` DTOs with `sellerTrust.phoneVerified` |
+| POST | `/api/v1/uploads/presign` | Required | `PresignUpload` | Generates presigned MinIO PUT URL |
+| GET | `/api/v1/listings` | Public | `ListFeed` | Accepts `cursor`, `limit`, and MLP filters (`brandId`, `modelId`, `cityId`, `priceMin`, `priceMax`, `yearMin`, `yearMax`, `condition`). Includes `coverMediaKey` when listing has media and `sellerTrust.phoneVerified` for every persisted listing |
+| GET | `/api/v1/listings/:id` | Public (auth optional) | `GetListingDetail` | Banned listings: non-owner → 404; owner → full detail with `status: "banned"`. Includes `isFavorited` when caller is authenticated and `sellerTrust.phoneVerified` for every persisted listing |
 | GET | `/api/v1/exchange-rates` | Public | `GetExchangeRates` |
 | POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |
 | PATCH | `/api/v1/listings/:id` | Required (owner) | `EditListing` |
@@ -136,7 +139,7 @@ Repository ports (consumed only within `listings/`):
 | PUT | `/api/v1/listings/:id/media/order` | Required (owner) | `ReorderMedia` |
 | POST | `/api/v1/listings/:id/favorite` | Required | `AddFavorite` | Active listings only; idempotent; 404 for missing/deleted/banned/non-active |
 | DELETE | `/api/v1/listings/:id/favorite` | Required | `RemoveFavorite` | Idempotent |
-| GET | `/api/v1/favorites` | Required | `ListMyFavorites` | Cursor pagination; excludes banned/deleted listings |
+| GET | `/api/v1/favorites` | Required | `ListMyFavorites` | Cursor pagination; excludes banned/deleted listings; returns `ListingSummary` DTOs with `sellerTrust.phoneVerified` |
 
 ## Events emitted
 

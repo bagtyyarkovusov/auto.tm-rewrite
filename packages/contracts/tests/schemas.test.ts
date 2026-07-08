@@ -107,6 +107,7 @@ const validListingSummary = {
   displayPriceTmt: 1890000,
   cityId: "550e8400-e29b-41d4-a716-446655440004",
   publishedAt: "2026-05-17T14:32:01Z",
+  sellerTrust: { phoneVerified: true },
 };
 
 describe("ListingSummarySchema", () => {
@@ -128,6 +129,13 @@ describe("ListingSummarySchema", () => {
       ...validListingSummary,
       status: "invalid",
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing sellerTrust", () => {
+    const withoutSellerTrust = { ...validListingSummary };
+    delete (withoutSellerTrust as Partial<typeof withoutSellerTrust>).sellerTrust;
+    const result = ListingSummarySchema.safeParse(withoutSellerTrust);
     expect(result.success).toBe(false);
   });
 });
@@ -162,6 +170,25 @@ describe("ListingDetailSchema", () => {
       createdAt: "2026-05-17T14:32:01Z",
       updatedAt: "2026-05-17T14:32:01Z",
       description: "a".repeat(2001),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing sellerTrust", () => {
+    const withoutSellerTrust = { ...validListingSummary };
+    delete (withoutSellerTrust as Partial<typeof withoutSellerTrust>).sellerTrust;
+    const result = ListingDetailSchema.safeParse({
+      ...withoutSellerTrust,
+      media: [],
+      allowCalls: true,
+      allowChat: true,
+      viewCount: 0,
+      favoriteCount: 0,
+      regionId: "550e8400-e29b-41d4-a716-446655440005",
+      createdAt: "2026-05-17T14:32:01Z",
+      updatedAt: "2026-05-17T14:32:01Z",
+      acceptsExchange: false,
+      installmentAvailable: false,
     });
     expect(result.success).toBe(false);
   });

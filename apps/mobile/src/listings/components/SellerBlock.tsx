@@ -1,7 +1,8 @@
 import { View } from "react-native";
-import { MapPin, User } from "lucide-react-native";
+import { MapPin, User, BadgeCheck } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
+import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
@@ -11,6 +12,7 @@ interface SellerBlockProps {
   locationText?: string;
   contactPhone?: string;
   allowCalls: boolean;
+  phoneVerified?: boolean;
 }
 
 export function SellerBlock({
@@ -19,15 +21,24 @@ export function SellerBlock({
   locationText,
   contactPhone,
   allowCalls,
+  phoneVerified,
 }: SellerBlockProps) {
   const { t } = useTranslation();
   const locationParts = [regionName, cityName, locationText].filter(Boolean);
 
   return (
     <View className="gap-3">
-      <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {t("seller")}
-      </Text>
+      <View className="flex-row items-center gap-2">
+        <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("seller")}
+        </Text>
+        {phoneVerified && (
+          <Badge variant="default" className="px-2 py-0.5">
+            <Icon as={BadgeCheck} className="size-3 text-foreground" />
+            <Text className="text-xs text-foreground">{t("verifiedPhone")}</Text>
+          </Badge>
+        )}
+      </View>
 
       <View className="gap-2">
         <View className="flex-row items-center gap-2">

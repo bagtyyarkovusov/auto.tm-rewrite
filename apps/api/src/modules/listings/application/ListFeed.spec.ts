@@ -168,6 +168,15 @@ describe("ListFeed", () => {
     expect(receivedCursor).toEqual({ timestamp: "2026-05-01T00:00:00Z", id: "00000000-0000-0000-0000-000000000001" });
   });
 
+  it("includes sellerTrust.phoneVerified on summary DTOs", async () => {
+    ranking.items = [seedListing({ id: "l1" })];
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    const result = await uc.execute({});
+
+    expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
+  });
+
   it("throws on missing exchange rate for non-TMT currency", async () => {
     ranking.items = [seedListing({ id: "l1", priceAmount: 1000, priceCurrency: "USD" })];
 
