@@ -49,6 +49,7 @@ export class ListMyListings {
         coverMediaKey: item.coverMediaKey,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
+        sellerTrust: { phoneVerified: true },
       })),
       nextCursor: result.nextCursor
         ? ListingsSchemas.encodeCursor(result.nextCursor)

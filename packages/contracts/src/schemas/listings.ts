@@ -13,6 +13,13 @@ export type CurrencyType = z.infer<typeof CurrencySchema>;
 export const ListingConditionSchema = z.nativeEnum(ListingCondition);
 export type ListingConditionType = z.infer<typeof ListingConditionSchema>;
 
+// ── Seller trust signal ──
+
+export const SellerTrustSchema = z.object({
+  phoneVerified: z.boolean(),
+});
+export type SellerTrust = z.infer<typeof SellerTrustSchema>;
+
 // ── ListingSummary (cross-context read surface) ──
 
 export const ListingSummarySchema = z.object({
@@ -28,6 +35,7 @@ export const ListingSummarySchema = z.object({
   coverMediaKey: z.string().optional(),
   cityId: z.string().uuid(),
   publishedAt: z.string().datetime(),
+  sellerTrust: SellerTrustSchema,
 });
 export type ListingSummary = z.infer<typeof ListingSummarySchema>;
 
@@ -93,6 +101,7 @@ export const ListingDetailSchema = z.object({
   soldAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  sellerTrust: SellerTrustSchema,
 });
 export type ListingDetail = z.infer<typeof ListingDetailSchema>;
 

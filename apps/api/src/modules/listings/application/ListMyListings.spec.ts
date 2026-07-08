@@ -73,6 +73,14 @@ describe("ListMyListings", () => {
     expect(result.items[0]!.id).toBe("listing-1");
   });
 
+  it("includes sellerTrust.phoneVerified on owner summaries", async () => {
+    seedSummary();
+    const uc = makeUseCase(port);
+    const result = await uc.execute({ userId: "user-1" });
+
+    expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
+  });
+
   it("returns encoded nextCursor", async () => {
     seedSummary();
     port.nextCursor = { timestamp: "2026-05-01T00:00:00Z", id: "listing-1" };

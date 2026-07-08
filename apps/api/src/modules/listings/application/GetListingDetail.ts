@@ -117,6 +117,7 @@ export class GetListingDetail {
       soldAt: listing.soldAt?.toISOString(),
       createdAt: listing.createdAt.toISOString(),
       updatedAt: listing.updatedAt.toISOString(),
+      sellerTrust: { phoneVerified: true },
     };
   }
 

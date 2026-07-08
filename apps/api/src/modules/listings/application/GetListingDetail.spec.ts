@@ -165,6 +165,14 @@ describe("GetListingDetail", () => {
     expect(result.displayPriceTmt).toBe(100000);
   });
 
+  it("includes sellerTrust.phoneVerified on detail DTO", async () => {
+    seedListing();
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+    const result = await uc.execute({ listingId: "listing-1" });
+
+    expect(result.sellerTrust).toEqual({ phoneVerified: true });
+  });
+
   it("returns 404 for soft-deleted listing", async () => {
     const listing = seedListing();
     repo.listings = [listing.softDelete(new Date())];

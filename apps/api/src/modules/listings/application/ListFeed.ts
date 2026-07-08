@@ -71,6 +71,7 @@ export class ListFeed {
         coverMediaKey: listing.coverMediaKey,
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
+        sellerTrust: { phoneVerified: true },
       };
     });
 

@@ -68,6 +68,7 @@ export class ListMyFavorites {
         coverMediaKey: item.coverMediaKey,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
+        sellerTrust: { phoneVerified: true },
       })),
       nextCursor: favoriteResult.nextCursor
         ? ListingsSchemas.encodeCursor(favoriteResult.nextCursor)

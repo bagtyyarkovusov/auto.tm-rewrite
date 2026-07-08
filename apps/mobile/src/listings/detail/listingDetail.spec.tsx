@@ -75,6 +75,13 @@ describe("SellerBlock", () => {
     expect(sellerBlockSource).toContain("regionName");
     expect(sellerBlockSource).toContain("locationText");
   });
+
+  it("renders verified-phone badge without implying inspection or dealer status", () => {
+    expect(sellerBlockSource).toContain("phoneVerified");
+    expect(sellerBlockSource).toContain('t("verifiedPhone")');
+    expect(sellerBlockSource).not.toContain("inspection");
+    expect(sellerBlockSource).not.toContain("dealer");
+  });
 });
 
 describe("ContactCtaBar", () => {
@@ -159,6 +166,11 @@ describe("ListingDetailView", () => {
     expect(listingDetailSource).toContain('t("color")');
     expect(listingDetailSource).toContain('t("bodyType")');
     expect(listingDetailSource).toContain('t("vin")');
+  });
+
+  it("passes sellerTrust.phoneVerified to SellerBlock", () => {
+    expect(listingDetailSource).toContain("sellerTrust?.phoneVerified");
+    expect(listingDetailSource).toContain("phoneVerified={listing.sellerTrust?.phoneVerified}");
   });
 });
 
