@@ -1,7 +1,8 @@
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, Pressable } from "react-native";
+import * as Linking from "expo-linking";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-import { Flag } from "lucide-react-native";
+import { ChevronRight, Flag, ShieldCheck } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { CatalogMaps } from "../detail/useCatalogMaps";
@@ -12,6 +13,7 @@ import { SellerBlock } from "./SellerBlock";
 import { OwnerActions } from "./OwnerActions";
 import { InspectionInterestCta } from "./InspectionInterestCta";
 
+import { resolveLocale } from "@/src/i18n/resources";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
@@ -238,6 +240,8 @@ export function ListingDetailView({
         )}
       </View>
 
+      <TrustInfoLink locale={resolveLocale(i18n.language)} />
+
       {/* Bottom padding for CTA or scroll breathing room */}
       <View className="h-4" />
     </ScrollView>
@@ -352,5 +356,26 @@ function DisclosureRow({ label, value }: { label: string; value: boolean }) {
         {value ? t("yes") : t("no")}
       </Text>
     </View>
+  );
+}
+
+function TrustInfoLink({ locale }: { locale: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <Pressable
+      onPress={() => void Linking.openURL(`https://auto.tm/${locale}/trust`)}
+      className="mx-5 flex-row items-center gap-3 rounded-2xl bg-muted p-3 active:opacity-70"
+      accessibilityRole="button"
+      accessibilityLabel={t("trustInfoTitle")}
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+        <Icon as={ShieldCheck} className="size-5 text-primary" />
+      </View>
+      <Text className="flex-1 text-sm font-semibold text-foreground">
+        {t("trustInfoTitle")}
+      </Text>
+      <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+    </Pressable>
   );
 }

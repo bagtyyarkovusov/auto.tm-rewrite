@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import type { Locale } from "@/i18n/locales";
-import { locales } from "@/i18n/locales";
+
 import { termsOfService } from "../content";
 import { LegalPage } from "../LegalPage";
+
+import type { Locale } from "@/i18n/locales";
+import { locales } from "@/i18n/locales";
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
