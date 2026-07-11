@@ -20,6 +20,10 @@ export class ConfigController {
         "ADMIN_MODERATION_ACTIONS_ENABLED",
         { infer: true },
       ),
+      inspectionInterestEnabled: this.config.get(
+        "INSPECTION_INTEREST_ENABLED",
+        { infer: true },
+      ),
     };
   }
 }

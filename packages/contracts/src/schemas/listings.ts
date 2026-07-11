@@ -31,6 +31,22 @@ export const ConditionDisclosureSchema = z.object({
 });
 export type ConditionDisclosure = z.infer<typeof ConditionDisclosureSchema>;
 
+// ── VIN history surfacing (S9a) ──
+
+export const VinHistorySchema = z.discriminatedUnion("decoded", [
+  z.object({ decoded: z.literal(false) }),
+  z.object({
+    decoded: z.literal(true),
+    brand: z.string().optional(),
+    model: z.string().optional(),
+    year: z.number().int().min(1900).max(2100).optional(),
+    bodyType: z.string().optional(),
+    engineType: z.string().optional(),
+    confidence: z.number().min(0).max(1),
+  }),
+]);
+export type VinHistory = z.infer<typeof VinHistorySchema>;
+
 // ── ListingSummary (cross-context read surface) ──
 
 export const ListingSummarySchema = z.object({
@@ -109,6 +125,7 @@ export const ListingDetailSchema = z.object({
   favoriteCount: z.number().int().nonnegative(),
   isFavorited: z.boolean().optional(),
   conditionDisclosure: ConditionDisclosureSchema.optional(),
+  vinHistory: VinHistorySchema.optional(),
   publishedAt: z.string().datetime(),
   soldAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),

@@ -687,7 +687,8 @@
               "active",
               "sold",
               "archived",
-              "rejected"
+              "rejected",
+              "banned"
             ]
           },
           "brandId": {
@@ -729,6 +730,17 @@
           "publishedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "sellerTrust": {
+            "type": "object",
+            "properties": {
+              "phoneVerified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "phoneVerified"
+            ]
           }
         },
         "required": [
@@ -741,7 +753,8 @@
           "priceCurrency",
           "displayPriceTmt",
           "cityId",
-          "publishedAt"
+          "publishedAt",
+          "sellerTrust"
         ]
       },
       "ListingDetail": {
@@ -763,7 +776,8 @@
               "active",
               "sold",
               "archived",
-              "rejected"
+              "rejected",
+              "banned"
             ]
           },
           "brandId": {
@@ -952,6 +966,37 @@
             "type": "integer",
             "minimum": 0
           },
+          "isFavorited": {
+            "type": "boolean"
+          },
+          "conditionDisclosure": {
+            "type": "object",
+            "properties": {
+              "accidentReported": {
+                "type": "boolean"
+              },
+              "mileageAccurate": {
+                "type": "boolean"
+              },
+              "ownerCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "serviceHistoryAvailable": {
+                "type": "boolean"
+              },
+              "knownIssuesText": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "accidentReported",
+              "mileageAccurate",
+              "serviceHistoryAvailable"
+            ]
+          },
           "publishedAt": {
             "type": "string",
             "format": "date-time"
@@ -967,6 +1012,17 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "sellerTrust": {
+            "type": "object",
+            "properties": {
+              "phoneVerified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "phoneVerified"
+            ]
           }
         },
         "required": [
@@ -989,7 +1045,8 @@
           "favoriteCount",
           "publishedAt",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "sellerTrust"
         ]
       },
       "ListingMedia": {
@@ -1204,6 +1261,34 @@
               "installmentAvailable": {
                 "type": "boolean"
               },
+              "conditionDisclosure": {
+                "type": "object",
+                "properties": {
+                  "accidentReported": {
+                    "type": "boolean"
+                  },
+                  "mileageAccurate": {
+                    "type": "boolean"
+                  },
+                  "ownerCount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "serviceHistoryAvailable": {
+                    "type": "boolean"
+                  },
+                  "knownIssuesText": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "accidentReported",
+                  "mileageAccurate",
+                  "serviceHistoryAvailable"
+                ]
+              },
               "validatedSteps": {
                 "type": "array",
                 "items": {
@@ -1359,6 +1444,34 @@
           "installmentAvailable": {
             "type": "boolean"
           },
+          "conditionDisclosure": {
+            "type": "object",
+            "properties": {
+              "accidentReported": {
+                "type": "boolean"
+              },
+              "mileageAccurate": {
+                "type": "boolean"
+              },
+              "ownerCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "serviceHistoryAvailable": {
+                "type": "boolean"
+              },
+              "knownIssuesText": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "accidentReported",
+              "mileageAccurate",
+              "serviceHistoryAvailable"
+            ]
+          },
           "validatedSteps": {
             "type": "array",
             "items": {
@@ -1500,6 +1613,34 @@
               "installmentAvailable": {
                 "type": "boolean"
               },
+              "conditionDisclosure": {
+                "type": "object",
+                "properties": {
+                  "accidentReported": {
+                    "type": "boolean"
+                  },
+                  "mileageAccurate": {
+                    "type": "boolean"
+                  },
+                  "ownerCount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "serviceHistoryAvailable": {
+                    "type": "boolean"
+                  },
+                  "knownIssuesText": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "accidentReported",
+                  "mileageAccurate",
+                  "serviceHistoryAvailable"
+                ]
+              },
               "validatedSteps": {
                 "type": "array",
                 "items": {
@@ -1640,6 +1781,34 @@
           "installmentAvailable": {
             "type": "boolean"
           },
+          "conditionDisclosure": {
+            "type": "object",
+            "properties": {
+              "accidentReported": {
+                "type": "boolean"
+              },
+              "mileageAccurate": {
+                "type": "boolean"
+              },
+              "ownerCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "serviceHistoryAvailable": {
+                "type": "boolean"
+              },
+              "knownIssuesText": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "accidentReported",
+              "mileageAccurate",
+              "serviceHistoryAvailable"
+            ]
+          },
           "validatedSteps": {
             "type": "array",
             "items": {
@@ -1733,6 +1902,34 @@
           },
           "installmentAvailable": {
             "type": "boolean"
+          },
+          "conditionDisclosure": {
+            "type": "object",
+            "properties": {
+              "accidentReported": {
+                "type": "boolean"
+              },
+              "mileageAccurate": {
+                "type": "boolean"
+              },
+              "ownerCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "serviceHistoryAvailable": {
+                "type": "boolean"
+              },
+              "knownIssuesText": {
+                "type": "string",
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "accidentReported",
+              "mileageAccurate",
+              "serviceHistoryAvailable"
+            ]
           }
         },
         "additionalProperties": false
@@ -1831,7 +2028,8 @@
                     "active",
                     "sold",
                     "archived",
-                    "rejected"
+                    "rejected",
+                    "banned"
                   ]
                 },
                 "brandId": {
@@ -1873,6 +2071,17 @@
                 "publishedAt": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "sellerTrust": {
+                  "type": "object",
+                  "properties": {
+                    "phoneVerified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "phoneVerified"
+                  ]
                 }
               },
               "required": [
@@ -1885,7 +2094,8 @@
                 "priceCurrency",
                 "displayPriceTmt",
                 "cityId",
-                "publishedAt"
+                "publishedAt",
+                "sellerTrust"
               ]
             }
           },
@@ -1923,7 +2133,8 @@
                     "active",
                     "sold",
                     "archived",
-                    "rejected"
+                    "rejected",
+                    "banned"
                   ]
                 },
                 "brandId": {
@@ -1965,6 +2176,17 @@
                 "publishedAt": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "sellerTrust": {
+                  "type": "object",
+                  "properties": {
+                    "phoneVerified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "phoneVerified"
+                  ]
                 }
               },
               "required": [
@@ -1977,7 +2199,8 @@
                 "priceCurrency",
                 "displayPriceTmt",
                 "cityId",
-                "publishedAt"
+                "publishedAt",
+                "sellerTrust"
               ]
             }
           },
@@ -2136,6 +2359,34 @@
                     },
                     "installmentAvailable": {
                       "type": "boolean"
+                    },
+                    "conditionDisclosure": {
+                      "type": "object",
+                      "properties": {
+                        "accidentReported": {
+                          "type": "boolean"
+                        },
+                        "mileageAccurate": {
+                          "type": "boolean"
+                        },
+                        "ownerCount": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 20
+                        },
+                        "serviceHistoryAvailable": {
+                          "type": "boolean"
+                        },
+                        "knownIssuesText": {
+                          "type": "string",
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "accidentReported",
+                        "mileageAccurate",
+                        "serviceHistoryAvailable"
+                      ]
                     },
                     "validatedSteps": {
                       "type": "array",
@@ -2372,7 +2623,8 @@
                   "active",
                   "sold",
                   "archived",
-                  "rejected"
+                  "rejected",
+                  "banned"
                 ]
               }
             },
@@ -2509,7 +2761,8 @@
                         "active",
                         "sold",
                         "archived",
-                        "rejected"
+                        "rejected",
+                        "banned"
                       ]
                     }
                   },
@@ -2773,7 +3026,8 @@
                   "active",
                   "sold",
                   "archived",
-                  "rejected"
+                  "rejected",
+                  "banned"
                 ]
               }
             },
@@ -2936,7 +3190,8 @@
               "active",
               "sold",
               "archived",
-              "rejected"
+              "rejected",
+              "banned"
             ]
           }
         },
@@ -3851,6 +4106,182 @@
           "pageSize",
           "totalPages"
         ]
+      },
+      "CreateInspectionInterestRequest": {
+        "type": "object",
+        "properties": {
+          "willingnessToPayTmt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        }
+      },
+      "CreateInspectionInterestResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "listingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requesterUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "seller"
+            ]
+          },
+          "willingnessToPayTmt": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reusedExisting": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "listingId",
+          "requesterUserId",
+          "side",
+          "willingnessToPayTmt",
+          "createdAt",
+          "updatedAt",
+          "reusedExisting"
+        ]
+      },
+      "InspectionInterestCountItem": {
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "totalInterest": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "buyerInterest": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sellerInterest": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "willingnessToPayTmtSum": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "willingnessToPayTmtCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "willingnessToPayTmtAvg": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "listingId",
+          "totalInterest",
+          "buyerInterest",
+          "sellerInterest",
+          "willingnessToPayTmtSum",
+          "willingnessToPayTmtCount",
+          "willingnessToPayTmtAvg"
+        ]
+      },
+      "ListInspectionInterestStatsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "listingId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "totalInterest": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "buyerInterest": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sellerInterest": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "willingnessToPayTmtSum": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "willingnessToPayTmtCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "willingnessToPayTmtAvg": {
+                  "type": "number",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "listingId",
+                "totalInterest",
+                "buyerInterest",
+                "sellerInterest",
+                "willingnessToPayTmtSum",
+                "willingnessToPayTmtCount",
+                "willingnessToPayTmtAvg"
+              ]
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize",
+          "totalPages"
+        ]
       }
     },
     "parameters": {}
@@ -3936,7 +4367,8 @@
                             "active",
                             "sold",
                             "archived",
-                            "rejected"
+                            "rejected",
+                            "banned"
                           ]
                         }
                       },
@@ -4205,7 +4637,8 @@
                                   "active",
                                   "sold",
                                   "archived",
-                                  "rejected"
+                                  "rejected",
+                                  "banned"
                                 ]
                               }
                             },
@@ -4853,6 +5286,11 @@
                             "moderator",
                             "admin"
                           ]
+                        },
+                        "deletionScheduledAt": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "date-time"
                         }
                       },
                       "required": [
@@ -5046,6 +5484,465 @@
         "responses": {
           "200": {
             "description": "Logged out"
+          }
+        }
+      }
+    },
+    "/api/v1/listings/{id}/inspection-interest": {
+      "post": {
+        "summary": "Register inspection interest (fake-door)",
+        "tags": [
+          "Reports"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "willingnessToPayTmt": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing interest returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "listingId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "requesterUserId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "side": {
+                      "type": "string",
+                      "enum": [
+                        "buyer",
+                        "seller"
+                      ]
+                    },
+                    "willingnessToPayTmt": {
+                      "type": "integer",
+                      "nullable": true,
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "reusedExisting": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "listingId",
+                    "requesterUserId",
+                    "side",
+                    "willingnessToPayTmt",
+                    "createdAt",
+                    "updatedAt",
+                    "reusedExisting"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Interest created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "listingId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "requesterUserId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "side": {
+                      "type": "string",
+                      "enum": [
+                        "buyer",
+                        "seller"
+                      ]
+                    },
+                    "willingnessToPayTmt": {
+                      "type": "integer",
+                      "nullable": true,
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "reusedExisting": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "listingId",
+                    "requesterUserId",
+                    "side",
+                    "willingnessToPayTmt",
+                    "createdAt",
+                    "updatedAt",
+                    "reusedExisting"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Feature disabled or user suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Listing not found or ineligible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/inspection-interests": {
+      "get": {
+        "summary": "List inspection interest statistics",
+        "tags": [
+          "Admin",
+          "Reports"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Interest statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "listingId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "totalInterest": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "buyerInterest": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "sellerInterest": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "willingnessToPayTmtSum": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "willingnessToPayTmtCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "willingnessToPayTmtAvg": {
+                            "type": "number",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "listingId",
+                          "totalInterest",
+                          "buyerInterest",
+                          "sellerInterest",
+                          "willingnessToPayTmtSum",
+                          "willingnessToPayTmtCount",
+                          "willingnessToPayTmtAvg"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "totalPages": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "pageSize",
+                    "totalPages"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
           }
         }
       }

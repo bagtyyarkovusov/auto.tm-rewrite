@@ -68,7 +68,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 |---|---|---|---|
 | `ListingsReadPort` | `LISTINGS_READ_PORT` | `domain/ports/ListingsReadPort.ts` | Cross-context: contact seller (S6), minimal admin (S7), post-MLP subscriptions/notifications |
 | `ListingsAdminPort` | `LISTINGS_ADMIN_PORT` | `domain/ports/ListingsAdminPort.ts` | Cross-context: `admin/` S7 moderation (`BanListing`, `UnbanListing`) — transaction-scoped `banActiveListing` / `unbanBannedListing` |
-| `VinDecoderPort` | `VIN_DECODER_PORT` | `domain/ports/VinDecoderPort.ts` | Internal: `PublishListing` use-case |
+| `VinDecoderPort` | `VIN_DECODER_PORT` | `domain/ports/VinDecoderPort.ts` | Internal: `PublishListing`, `GetListingDetail` |
 | `MediaContentClassifierPort` | `MEDIA_CONTENT_CLASSIFIER_PORT` | `domain/ports/MediaContentClassifierPort.ts` | Internal: `AttachMedia` use-case |
 | `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` | Internal: `AttachMedia` use-case |
 | `FeedRankingPort` | `FEED_RANKING_PORT` | `domain/ports/FeedRankingPort.ts` | Internal: `ListFeed` use-case |
@@ -88,6 +88,7 @@ Repository ports (consumed only within `listings/`):
 ## Ports consumed
 
 - `IdentityCheckPort` from `identity/` (via `IdentityModule` export) — used by controllers to verify ownership.
+- `ListingsReadPort` is consumed by `reports/` for the S9a `InspectionInterest` fake-door (listing eligibility + seller ownership inference).
 
 ## Shipped use-cases
 
@@ -112,7 +113,7 @@ Repository ports (consumed only within `listings/`):
 - `ListMyFavorites` — paginated list of the caller's favorited listings via `GET /api/v1/favorites`; excludes banned/deleted listings (filtered by `ListingsReadPort.getListingSummaries`); returns `ListingSummary` DTOs with `sellerTrust.phoneVerified`
 - `ListMyListings` — paginated list of the caller's own listings via `GET /api/v1/me/listings`; returns `ListingSummary` DTOs with `sellerTrust.phoneVerified`
 - `ListFeed` — public chronological feed; returns `ListingSummary` DTOs with `coverMediaKey`, `displayPriceTmt`, and `sellerTrust.phoneVerified`
-- `GetListingDetail` — returns full detail DTO (specs, media variants, seller block, price, terms, `isFavorited`, `sellerTrust.phoneVerified`). **S9a**: includes `conditionDisclosure` when present; older listings without disclosure return an honest absent state.
+- `GetListingDetail` — returns full detail DTO (specs, media variants, seller block, price, terms, `isFavorited`, `sellerTrust.phoneVerified`). **S9a**: includes `conditionDisclosure` when present; older listings without disclosure return an honest absent state. **S9a T3**: includes `vinHistory` when a VIN exists, calling `VinDecoderPort.decode` at read time; `NullVinDecoder` returns `{ decoded: false }`, surfaced as an honest "not decoded" state.
 
 ## HTTP routes
 

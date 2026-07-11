@@ -1,18 +1,30 @@
 # reports — CONTEXT
 
-> **Trust-bet context. Stubbed in the MLP beta** per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md): nothing in this file is in code today; everything described is planned work. The "planned" markers below explicitly signal the future state. Real work begins only after a post-MLP trust bet is shaped.
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). This context now contains the minimal S9a fake-door seed (`InspectionInterest`) only; the full Phase-2 reports context remains unbuilt.
 
 ## Purpose
 
-**Phase 2.** AutoTM-staffed vehicle inspection reports with a 3-tier rating system. Reports are PDF-exportable, viewable on the listing, and used as the "Trusted by AutoTM" signal.
+**Phase 2 target.** AutoTM-staffed vehicle inspection reports with a 3-tier rating system. Reports are PDF-exportable, viewable on the listing, and used as the "Trusted by AutoTM" signal.
 
-## Owns (entities + tables — planned, NOT in schema today)
+**S9a reality.** Only a flag-gated demand instrument (`InspectionInterest`) is implemented to measure inspection demand before operational spend. No reports, rubrics, PDFs, bookings, payments, inspectors, or tier badges exist.
 
-- `InspectionReport` — id, listingId, inspectorUserId, publishedAt?, tier (1 / 2 / 3), totalScore, scoresByCategory (JSON), notes, deletedAt?
-- `RubricTemplate` — id, version, name, sections (JSON), maxScore — admin-edited template; multiple versions over time
-- `ReportSection` — id, reportId, name, weight, score, notes?
-- `ReportItem` — id, sectionId, name, score, notes?, photoUrls (string[])
-- `PdfArtifact` — id, reportId, version, key (MinIO object), generatedAt
+## Owns (entities + tables)
+
+- `InspectionInterest` — id, listingId, requesterUserId, side (`buyer` | `seller`), willingnessToPayTmt (optional int 0–10000), createdAt, updatedAt. Unique on `(listingId, requesterUserId)`. Relations: `listing` (Cascade), `requester` (Cascade). Table `inspection_interests`. Indexes on `(listingId, createdAt)` and `(requesterUserId, createdAt)`.
+- `InspectionReport` — **planned only**, not in schema.
+- `RubricTemplate` — **planned only**, not in schema.
+- `ReportSection` — **planned only**, not in schema.
+- `ReportItem` — **planned only**, not in schema.
+- `PdfArtifact` — **planned only**, not in schema.
+
+## Invariants (enforced today)
+
+- `InspectionInterest.side` is inferred server-side: `seller` when `requesterUserId === Listing.sellerId`, otherwise `buyer`.
+- `InspectionInterest` is deduped at `(listingId, requesterUserId)`. A repeated request returns the existing row (HTTP 200) and updates `willingnessToPayTmt` when supplied; no duplicate rows are created.
+- `InspectionInterest` can only be created for active, non-deleted, non-banned listings. Missing/ineligible listings return `NOT_FOUND` and do not leak state.
+- `willingnessToPayTmt`, when present, is an integer between 0 and 10000 inclusive.
+- Suspended users are blocked from creating interest (`USER_SUSPENDED`).
+- The create route is gated by `INSPECTION_INTEREST_ENABLED=false` → HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"`. The admin read route remains available when the flag is off.
 
 ## Invariants (planned)
 
@@ -46,6 +58,11 @@ interface ReportsReadPort {
 }
 ```
 
+## Ports consumed (today)
+
+- `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `CreateInspectionInterest` to validate listing eligibility and infer seller ownership.
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `CreateInspectionInterest` to check requester suspension state.
+
 ## Ports consumed (planned)
 
 ```ts
@@ -59,6 +76,13 @@ MediaStoragePort   // PDFs and inspection photos
 - `InspectionReportPublished` → adds tier badge to listing, fires push to listing owner
 - `InspectionReportSuperseded` → on re-inspection
 
+## HTTP routes (today)
+
+| Method | Path | Auth | Handler |
+|---|---|---|---|
+| POST | `/api/v1/listings/:id/inspection-interest` | Required | `CreateInspectionInterest` — records buyer/seller interest; dedupes; gated by `INSPECTION_INTEREST_ENABLED` |
+| GET | `/api/v1/admin/inspection-interests` | AdminGuard | `ListInspectionInterestStats` — aggregate counts + willingness-to-pay by listing |
+
 ## PDF generation (planned)
 
 - Server-side via Puppeteer (Chromium headless) rendering an HTML template
@@ -68,7 +92,8 @@ MediaStoragePort   // PDFs and inspection photos
 ## Notable decisions
 
 - [ADR-0001](../../../../docs/adr/0001-architecture.md) — Reports is its own context
-- Phase 2 — depends on operational inspection rubric being defined first
+- [ADR-0037](../../../../docs/adr/0037-trust-inspection-competitive-wedge.md) — Trust/inspection pulled forward as wedge
+- S9a implements only the `InspectionInterest` fake-door; full Phase-2 context remains betting-table-gated on pilot demand
 
 ## Outstanding questions for Phase 2
 

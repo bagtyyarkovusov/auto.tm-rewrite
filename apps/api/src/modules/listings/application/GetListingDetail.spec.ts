@@ -7,6 +7,7 @@ import type { ListingMediaRepository } from "../domain/ports/ListingMediaReposit
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
+import type { VinDecoderPort } from "../domain/ports/VinDecoderPort";
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -105,12 +106,21 @@ class FakeFavoriteRepository implements FavoriteRepository {
   }
 }
 
+class FakeVinDecoder implements VinDecoderPort {
+  result: { decoded: false } | { decoded: true; brand?: string; model?: string; year?: number; bodyType?: string; engineType?: string; confidence: number } = { decoded: false };
+
+  async decode(_vin: string) {
+    return this.result;
+  }
+}
+
 function makeUseCase(
   repo?: FakeListingRepository,
   mediaRepo?: FakeListingMediaRepository,
   exchangeRates?: FakeExchangeRatePort,
   storage?: FakeMediaStoragePort,
   favorites?: FakeFavoriteRepository,
+  vinDecoder?: FakeVinDecoder,
 ) {
   return new GetListingDetail(
     repo ?? new FakeListingRepository(),
@@ -118,6 +128,7 @@ function makeUseCase(
     exchangeRates ?? new FakeExchangeRatePort(),
     storage ?? new FakeMediaStoragePort(),
     favorites ?? new FakeFavoriteRepository(),
+    vinDecoder ?? new FakeVinDecoder(),
   );
 }
 
@@ -127,6 +138,7 @@ describe("GetListingDetail", () => {
   let exchangeRates: FakeExchangeRatePort;
   let storage: FakeMediaStoragePort;
   let favorites: FakeFavoriteRepository;
+  let vinDecoder: FakeVinDecoder;
 
   beforeEach(() => {
     repo = new FakeListingRepository();
@@ -134,6 +146,7 @@ describe("GetListingDetail", () => {
     exchangeRates = new FakeExchangeRatePort();
     storage = new FakeMediaStoragePort();
     favorites = new FakeFavoriteRepository();
+    vinDecoder = new FakeVinDecoder();
   });
 
   function seedListing(overrides?: Partial<Parameters<typeof Listing.create>[0]>) {
@@ -282,5 +295,46 @@ describe("GetListingDetail", () => {
     const result = await uc.execute({ listingId: "listing-1", requestingUserId: "user-3" });
 
     expect(result.isFavorited).toBe(false);
+  });
+
+  it("omits vinHistory when listing has no VIN", async () => {
+    seedListing();
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder);
+
+    const result = await uc.execute({ listingId: "listing-1" });
+
+    expect(result.vinHistory).toBeUndefined();
+  });
+
+  it("returns decoded=false vinHistory when decoder cannot decode", async () => {
+    seedListing({ vin: "WBA1234567890VIN" });
+    vinDecoder.result = { decoded: false };
+
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder);
+    const result = await uc.execute({ listingId: "listing-1" });
+
+    expect(result.vinHistory).toEqual({ decoded: false });
+  });
+
+  it("returns decoded vinHistory with only fields the decoder provides", async () => {
+    seedListing({ vin: "WBA1234567890VIN" });
+    vinDecoder.result = {
+      decoded: true,
+      brand: "BMW",
+      model: "X5",
+      year: 2018,
+      confidence: 0.92,
+    };
+
+    const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder);
+    const result = await uc.execute({ listingId: "listing-1" });
+
+    expect(result.vinHistory).toEqual({
+      decoded: true,
+      brand: "BMW",
+      model: "X5",
+      year: 2018,
+      confidence: 0.92,
+    });
   });
 });

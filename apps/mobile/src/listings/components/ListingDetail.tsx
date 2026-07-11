@@ -178,6 +178,10 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
 
         <Separator className="my-1" />
 
+        <VinHistorySection vin={listing.vin} vinHistory={listing.vinHistory} />
+
+        <Separator className="my-1" />
+
         {/* Owner actions or seller block */}
         {isOwner ? (
           <OwnerActions listingId={listing.id} status={listing.status} />
@@ -212,6 +216,69 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
       {/* Bottom padding for CTA or scroll breathing room */}
       <View className="h-4" />
     </ScrollView>
+  );
+}
+
+function VinHistorySection({
+  vin,
+  vinHistory,
+}: {
+  vin: string | undefined;
+  vinHistory: ListingsSchemas.ListingDetail["vinHistory"];
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <View className="gap-1">
+      <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {t("vinHistory")}
+      </Text>
+      <VinHistoryBody vin={vin} vinHistory={vinHistory} />
+    </View>
+  );
+}
+
+function VinHistoryBody({
+  vin,
+  vinHistory,
+}: {
+  vin: string | undefined;
+  vinHistory: ListingsSchemas.ListingDetail["vinHistory"];
+}) {
+  const { t } = useTranslation();
+
+  if (!vin) {
+    return <Text className="text-base text-muted-foreground">{t("vinNotProvided")}</Text>;
+  }
+
+  if (!vinHistory || vinHistory.decoded === false) {
+    return <Text className="text-base text-muted-foreground">{t("vinNotDecoded")}</Text>;
+  }
+
+  return (
+    <View className="gap-1">
+      {vinHistory.brand && <VinHistoryRow label={t("brand")} value={vinHistory.brand} />}
+      {vinHistory.model && <VinHistoryRow label={t("model")} value={vinHistory.model} />}
+      {vinHistory.year !== undefined && (
+        <VinHistoryRow label={t("year")} value={String(vinHistory.year)} />
+      )}
+      {vinHistory.bodyType && <VinHistoryRow label={t("bodyType")} value={vinHistory.bodyType} />}
+      {vinHistory.engineType && (
+        <VinHistoryRow label={t("engineType")} value={vinHistory.engineType} />
+      )}
+      <Text className="text-sm text-muted-foreground">
+        {t("vinConfidence", { value: Math.round(vinHistory.confidence * 100) })}
+      </Text>
+    </View>
+  );
+}
+
+function VinHistoryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row items-center gap-2">
+      <Text className="text-base text-foreground">{label}:</Text>
+      <Text className="text-base font-medium text-foreground">{value}</Text>
+    </View>
   );
 }
 

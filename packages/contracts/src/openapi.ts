@@ -8,6 +8,7 @@ import { z } from "zod";
 extendZodWithOpenApi(z);
 
 import { ErrorResponseSchema } from "./errors";
+import { AdminTablePaginationRequestSchema } from "./pagination";
 import {
   OtpRequestRequestSchema,
   OtpRequestResponseSchema,
@@ -99,6 +100,12 @@ import {
   MessageSummarySchema,
   ConversationListingCardSchema,
 } from "./schemas/conversations";
+import {
+  CreateInspectionInterestRequestSchema,
+  CreateInspectionInterestResponseSchema,
+  InspectionInterestCountItemSchema,
+  ListInspectionInterestStatsResponseSchema,
+} from "./schemas/reports";
 
 // exactOptionalPropertyTypes: true in tsconfig conflicts with zod-to-openapi's
 // SchemaObject type (Zod nullable() method vs SchemaObject nullable: boolean).
@@ -197,6 +204,21 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   // Admin audit schemas
   registry.register("AuditLogListItem", AuditLogListItemSchema);
   registry.register("ListAuditEntriesResponse", ListAuditEntriesResponseSchema);
+
+  // Reports fake-door schemas
+  registry.register(
+    "CreateInspectionInterestRequest",
+    CreateInspectionInterestRequestSchema,
+  );
+  registry.register(
+    "CreateInspectionInterestResponse",
+    CreateInspectionInterestResponseSchema,
+  );
+  registry.register("InspectionInterestCountItem", InspectionInterestCountItemSchema);
+  registry.register(
+    "ListInspectionInterestStatsResponse",
+    ListInspectionInterestStatsResponseSchema,
+  );
 
   registry.registerPath({
     method: "post",
@@ -380,6 +402,77 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
     },
     responses: {
       200: { description: "Logged out" },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/listings/{id}/inspection-interest",
+    summary: "Register inspection interest (fake-door)",
+    tags: ["Reports"],
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+      body: {
+        content: {
+          "application/json": {
+            schema: S(CreateInspectionInterestRequestSchema),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Interest created",
+        content: {
+          "application/json": {
+            schema: S(CreateInspectionInterestResponseSchema),
+          },
+        },
+      },
+      200: {
+        description: "Existing interest returned",
+        content: {
+          "application/json": {
+            schema: S(CreateInspectionInterestResponseSchema),
+          },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      403: {
+        description: "Feature disabled or user suspended",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Listing not found or ineligible",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/admin/inspection-interests",
+    summary: "List inspection interest statistics",
+    tags: ["Admin", "Reports"],
+    request: {
+      query: AdminTablePaginationRequestSchema,
+    },
+    responses: {
+      200: {
+        description: "Interest statistics",
+        content: {
+          "application/json": {
+            schema: S(ListInspectionInterestStatsResponseSchema),
+          },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
     },
   });
 

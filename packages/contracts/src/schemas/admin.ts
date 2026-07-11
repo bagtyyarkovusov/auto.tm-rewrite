@@ -286,5 +286,6 @@ export type ListAuditEntriesResponse = z.infer<
 export const ConfigResponseSchema = z.object({
   reportEntryEnabled: z.boolean(),
   adminModerationActionsEnabled: z.boolean(),
+  inspectionInterestEnabled: z.boolean(),
 });
 export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;

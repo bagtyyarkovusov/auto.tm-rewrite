@@ -52,6 +52,11 @@ export const EnvSchema = z.object({
     .string()
     .transform((v) => v === "true")
     .default("true"),
+
+  INSPECTION_INTEREST_ENABLED: z
+    .string()
+    .transform((v) => v === "true")
+    .default("false"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

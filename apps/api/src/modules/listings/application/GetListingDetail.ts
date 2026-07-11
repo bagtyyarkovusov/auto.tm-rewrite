@@ -24,6 +24,10 @@ import {
   FAVORITE_REPOSITORY,
   type FavoriteRepository,
 } from "../domain/ports/FavoriteRepository";
+import {
+  VIN_DECODER_PORT,
+  type VinDecoderPort,
+} from "../domain/ports/VinDecoderPort";
 
 export interface GetListingDetailInput {
   listingId: string;
@@ -45,6 +49,8 @@ export class GetListingDetail {
     private readonly storage: MediaStoragePort,
     @Inject(FAVORITE_REPOSITORY)
     private readonly favorites: FavoriteRepository,
+    @Inject(VIN_DECODER_PORT)
+    private readonly vinDecoder: VinDecoderPort,
   ) {}
 
   async execute(input: GetListingDetailInput): Promise<ListingDetailDto> {
@@ -69,6 +75,9 @@ export class GetListingDetail {
     const isFavorited = input.requestingUserId
       ? await this.favorites.exists(input.requestingUserId, listing.id)
       : false;
+    const vinHistory = listing.vin
+      ? await this.vinDecoder.decode(listing.vin)
+      : undefined;
 
     return {
       id: listing.id,
@@ -114,6 +123,7 @@ export class GetListingDetail {
       favoriteCount: listing.favoriteCount,
       isFavorited,
       conditionDisclosure: listing.conditionDisclosure,
+      vinHistory,
       publishedAt: listing.publishedAt.toISOString(),
       soldAt: listing.soldAt?.toISOString(),
       createdAt: listing.createdAt.toISOString(),

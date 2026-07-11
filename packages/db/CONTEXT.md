@@ -92,7 +92,9 @@ S9a additions (now in schema):
 - `Listing.accidentReported`, `Listing.mileageAccurate`, `Listing.serviceHistoryAvailable` — nullable boolean disclosure fields.
 - `Listing.ownerCount` — nullable integer, constrained 1–20.
 - `Listing.knownIssuesText` — nullable text for seller-entered plain-text notes.
+- `InspectionInterest` — reports-context fake-door seed: `listingId`, `requesterUserId`, `side` (`buyer` | `seller`), optional `willingnessToPayTmt` (int 0–10000), `createdAt`, `updatedAt`. Unique on `(listingId, requesterUserId)`. FKs cascade on delete. Indexes on `(listingId, createdAt)` and `(requesterUserId, createdAt)`. Table `inspection_interests`.
 - Migration `20260711000000_add_condition_disclosure_to_listing` adds the S9a disclosure columns + the `listings_ownerCount_check` constraint.
+- Migration `20260711100000_add_inspection_interest` adds the `inspection_interests` table + indexes + FKs.
 
 ## Foreign-key policy across contexts
 
