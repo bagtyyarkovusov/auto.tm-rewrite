@@ -249,6 +249,8 @@ export const resources: Resource = {
       goBack: "Назад",
       privateSeller: "Частный продавец",
       verifiedPhone: "Телефон подтверждён",
+      trustInfoTitle: "Как AutoTM защищает покупателей",
+      trustInfoSubtitle: "Подтверждённые телефоны, честное состояние, VIN — и скоро проверки AutoTM.",
       addPhotos: "Добавьте фото",
       tapCameraOrLibrary: "Нажмите Камера или Галерея, чтобы добавить первое фото",
       maximumPhotosReached: "Достигнут лимит фото",
@@ -479,6 +481,9 @@ export const resources: Resource = {
       valueProp2Title: "Свяжитесь с продавцом безопасно",
       valueProp2Body:
         "Пишите и звоните продавцам прямо в приложении.",
+      valueProp3Title: "Покупайте увереннее",
+      valueProp3Body:
+        "Продавцы с подтверждёнными телефонами, честные данные о состоянии и VIN — а проверки AutoTM уже в пилоте.",
       getStarted: "Начать",
     },
   },
@@ -723,6 +728,8 @@ export const resources: Resource = {
       goBack: "Yza",
       privateSeller: "Şahsy satyjy",
       verifiedPhone: "Telefon tassyklanan",
+      trustInfoTitle: "AutoTM sizi nählet howpsuz saklaýar",
+      trustInfoSubtitle: "Tassyklanan telefonlar, çynsy ýagdaý, VIN taryhy — we AutoTM barlaglary ýakyn wagtda.",
       addPhotos: "Surat goşuň",
       tapCameraOrLibrary: "Birinji suraty goşmak üçin Kamera ýa-da Galereýa basyň",
       maximumPhotosReached: "Surat çägine ýetildi",
@@ -953,6 +960,9 @@ export const resources: Resource = {
       valueProp2Title: "Satyjy bilen howpsuz habarlaşyň",
       valueProp2Body:
         "Satyjylara programma arkaly ýazyň we jaň ediň.",
+      valueProp3Title: "Has ynam bilen satyn alyň",
+      valueProp3Body:
+        "Tassyklanan telefon satyjylar, çynsy ýagdaý maglumatlary we VIN — AutoTM barlaglary bolsa pilotda.",
       getStarted: "Başla",
     },
   },
@@ -1197,6 +1207,8 @@ export const resources: Resource = {
       goBack: "Go back",
       privateSeller: "Private seller",
       verifiedPhone: "Verified phone",
+      trustInfoTitle: "How AutoTM keeps you safe",
+      trustInfoSubtitle: "Verified phones, honest condition, VIN history — and AutoTM inspections are coming.",
       addPhotos: "Add photos",
       tapCameraOrLibrary: "Tap Camera or Library to add your first photo",
       maximumPhotosReached: "Maximum photos reached",
@@ -1405,6 +1417,9 @@ export const resources: Resource = {
       valueProp2Title: "Contact sellers safely",
       valueProp2Body:
         "Message and call sellers right inside the app.",
+      valueProp3Title: "Buy with more confidence",
+      valueProp3Body:
+        "Verified-phone sellers, honest condition disclosures, and VIN history — with AutoTM inspections coming in pilot.",
       getStarted: "Get started",
     },
   },

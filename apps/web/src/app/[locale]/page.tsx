@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@auto-tm/ui/components";
 
 import type { Locale } from "@/i18n/locales";
@@ -6,6 +7,12 @@ const subtitle: Record<Locale, string> = {
   ru: "Автомаркет Туркменистана — покупайте и продавайте автомобили",
   tk: "Türkmenistanyň awtobazary — awtoulaglary satyn alyň we satyň",
   en: "Turkmenistan's auto marketplace — buy and sell cars",
+};
+
+const trustLinkLabel: Record<Locale, string> = {
+  ru: "Как AutoTM защищает покупателей",
+  tk: "AutoTM sizi nählet howpsuz saklaýar",
+  en: "How AutoTM keeps you safe",
 };
 
 export default async function LandingPage({
@@ -30,6 +37,14 @@ export default async function LandingPage({
                 ? "Browse listings"
                 : "Смотреть объявления"}
           </Button>
+        </div>
+        <div className="mt-4">
+          <Link
+            href={`/${locale}/trust`}
+            className="text-sm text-brand-600 underline hover:text-brand-700"
+          >
+            {trustLinkLabel[locale as Locale] ?? trustLinkLabel.ru}
+          </Link>
         </div>
       </div>
     </main>

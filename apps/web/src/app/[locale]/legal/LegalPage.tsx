@@ -1,5 +1,6 @@
-import type { Locale } from "@/i18n/locales";
 import type { LegalDocument } from "./content";
+
+import type { Locale } from "@/i18n/locales";
 
 interface LegalPageProps {
   locale: Locale;

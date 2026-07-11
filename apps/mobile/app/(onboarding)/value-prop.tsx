@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { ShieldCheck } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
@@ -7,10 +8,11 @@ import { setOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { Text } from "@/components/ui/text";
 
-const SLIDES = ["valueProp1", "valueProp2"] as const;
+const SLIDES = ["valueProp1", "valueProp2", "valueProp3"] as const;
 
 function useSlides() {
   const [index, setIndex] = useState(0);
@@ -40,6 +42,11 @@ export default function ValuePropScreen() {
     <SafeScreen className="px-6 py-8">
       <View className="flex-1 justify-center gap-6">
         <View className="gap-3">
+          {slideKey === "valueProp3" && (
+            <View className="mb-2 h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <Icon as={ShieldCheck} className="size-7 text-primary" />
+            </View>
+          )}
           <Text className="text-3xl font-heading text-foreground">{title}</Text>
           <Text className="text-base leading-relaxed text-muted-foreground">
             {body}

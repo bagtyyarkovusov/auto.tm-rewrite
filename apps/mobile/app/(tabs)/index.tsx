@@ -1,9 +1,11 @@
 import { router } from "expo-router";
-import { SlidersHorizontal } from "lucide-react-native";
+import * as Linking from "expo-linking";
+import { ChevronRight, ShieldCheck, SlidersHorizontal } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   View,
 } from "react-native";
@@ -25,8 +27,38 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
-export default function FeedScreen() {
+function openTrustPage(locale: string) {
+  void Linking.openURL(`https://auto.tm/${locale}/trust`);
+}
+
+function TrustBanner({ locale }: { locale: string }) {
   const { t } = useTranslation();
+
+  return (
+    <Pressable
+      onPress={() => openTrustPage(locale)}
+      className="mx-4 mb-4 flex-row items-center gap-3 rounded-2xl bg-muted p-3 active:opacity-70"
+      accessibilityRole="button"
+      accessibilityLabel={t("trustInfoTitle")}
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+        <Icon as={ShieldCheck} className="size-5 text-primary" />
+      </View>
+      <View className="flex-1">
+        <Text className="text-sm font-semibold text-foreground">
+          {t("trustInfoTitle")}
+        </Text>
+        <Text className="text-xs text-muted-foreground" numberOfLines={2}>
+          {t("trustInfoSubtitle")}
+        </Text>
+      </View>
+      <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+    </Pressable>
+  );
+}
+
+export default function FeedScreen() {
+  const { t, i18n } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
   const filters = useListingFilters();
 
@@ -95,6 +127,8 @@ export default function FeedScreen() {
           </Badge>
         ) : null}
       </Button>
+
+      <TrustBanner locale={i18n.language} />
     </View>
   );
 
