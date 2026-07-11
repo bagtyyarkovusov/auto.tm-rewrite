@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -43,6 +43,15 @@ export function InspectionInterestCta({
   const [wtpText, setWtpText] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const parsedWtp = parseWillingnessToPay(wtpText);
   const hasInputError = validationError !== null;
@@ -56,11 +65,15 @@ export function InspectionInterestCta({
   const handleClose = () => {
     onOpenChange(false);
     // Reset after the sheet close animation so the reset is not visible.
-    setTimeout(() => {
+    if (resetTimeoutRef.current) {
+      clearTimeout(resetTimeoutRef.current);
+    }
+    resetTimeoutRef.current = setTimeout(() => {
       setWtpText("");
       setSubmitted(false);
       setValidationError(null);
       createInterest.reset();
+      resetTimeoutRef.current = null;
     }, 300);
   };
 
