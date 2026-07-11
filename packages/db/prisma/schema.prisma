@@ -399,6 +399,13 @@ model Listing {
   installmentAvailable Boolean           @default(false)
   archivedByDeletion   Boolean           @default(false)
 
+  // S9a additions — structured condition disclosure
+  accidentReported      Boolean?
+  mileageAccurate       Boolean?
+  ownerCount            Int?
+  serviceHistoryAvailable Boolean?
+  knownIssuesText       String?
+
   media         ListingMedia[]
   favorites     Favorite[]
   conversations Conversation[]

@@ -11,6 +11,7 @@ import { PriceDisplay } from "./PriceDisplay";
 import { SellerBlock } from "./SellerBlock";
 import { OwnerActions } from "./OwnerActions";
 
+import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -173,6 +174,10 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
 
         <Separator className="my-1" />
 
+        <ConditionDisclosureSection disclosure={listing.conditionDisclosure} />
+
+        <Separator className="my-1" />
+
         {/* Owner actions or seller block */}
         {isOwner ? (
           <OwnerActions listingId={listing.id} status={listing.status} />
@@ -207,5 +212,53 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
       {/* Bottom padding for CTA or scroll breathing room */}
       <View className="h-4" />
     </ScrollView>
+  );
+}
+
+function ConditionDisclosureSection({
+  disclosure,
+}: {
+  disclosure: ListingsSchemas.ListingDetail["conditionDisclosure"];
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <View className="gap-1">
+      <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {t("conditionDisclosure")}
+      </Text>
+      {disclosure ? (
+        <View className="gap-1">
+          <DisclosureRow label={t("accidentReported")} value={disclosure.accidentReported} />
+          <DisclosureRow label={t("mileageAccurate")} value={disclosure.mileageAccurate} />
+          {disclosure.ownerCount !== undefined && (
+            <Text className="text-base text-foreground">
+              {t("ownerCountValue", { count: disclosure.ownerCount })}
+            </Text>
+          )}
+          <DisclosureRow label={t("serviceHistoryAvailable")} value={disclosure.serviceHistoryAvailable} />
+          {disclosure.knownIssuesText && (
+            <View className="gap-0.5">
+              <Text className="text-sm text-muted-foreground">{t("knownIssuesText")}</Text>
+              <Text className="text-base text-foreground">{disclosure.knownIssuesText}</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <Text className="text-base text-muted-foreground">{t("noConditionDisclosure")}</Text>
+      )}
+    </View>
+  );
+}
+
+function DisclosureRow({ label, value }: { label: string; value: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <View className="flex-row items-center gap-2">
+      <Text className="text-base text-foreground">{label}:</Text>
+      <Text className={cn("text-base font-medium", value ? "text-foreground" : "text-muted-foreground")}>
+        {value ? t("yes") : t("no")}
+      </Text>
+    </View>
   );
 }

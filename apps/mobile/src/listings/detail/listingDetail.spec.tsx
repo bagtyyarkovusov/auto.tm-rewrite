@@ -205,6 +205,57 @@ describe("ListingDetailScreen", () => {
   });
 });
 
+const step4SpecsSource = readFileSync(
+  resolve(__dirname, "../wizard/Step4Specs.tsx"),
+  "utf-8",
+);
+
+describe("ListingDetailView condition disclosure", () => {
+  it("renders a structured condition disclosure section", () => {
+    expect(listingDetailSource).toContain("ConditionDisclosureSection");
+    expect(listingDetailSource).toContain("conditionDisclosure");
+    expect(listingDetailSource).toContain('t("conditionDisclosure")');
+  });
+
+  it("shows honest empty state when disclosure is absent", () => {
+    expect(listingDetailSource).toContain('t("noConditionDisclosure")');
+    expect(listingDetailSource).toContain("disclosure ?");
+  });
+
+  it("renders all disclosure fields when present", () => {
+    expect(listingDetailSource).toContain('t("accidentReported")');
+    expect(listingDetailSource).toContain('t("mileageAccurate")');
+    expect(listingDetailSource).toContain('t("ownerCountValue"');
+    expect(listingDetailSource).toContain('t("serviceHistoryAvailable")');
+    expect(listingDetailSource).toContain('t("knownIssuesText")');
+  });
+});
+
+describe("Step4Specs condition disclosure inputs", () => {
+  it("captures accident, mileage accuracy, service history, owners, and known issues", () => {
+    expect(step4SpecsSource).toContain("ConditionDisclosureSection");
+    expect(step4SpecsSource).toContain("accidentReported");
+    expect(step4SpecsSource).toContain("mileageAccurate");
+    expect(step4SpecsSource).toContain("serviceHistoryAvailable");
+    expect(step4SpecsSource).toContain("ownerCount");
+    expect(step4SpecsSource).toContain("knownIssuesText");
+  });
+
+  it("uses a Switch for boolean disclosure fields", () => {
+    expect(step4SpecsSource).toContain("BooleanRow");
+    expect(step4SpecsSource).toContain("Switch");
+  });
+
+  it("caps known issues text at 1000 characters", () => {
+    expect(step4SpecsSource).toContain("maxLength={1000}");
+    expect(step4SpecsSource).toContain("knownIssuesText");
+  });
+
+  it("accepts numeric owner count", () => {
+    expect(step4SpecsSource).toContain("ownerCount");
+    expect(step4SpecsSource).toContain('keyboardType="number-pad"');
+  });
+});
 describe("ListingDetailView owner branching", () => {
   it("renders OwnerActions when isOwner is true", () => {
     expect(listingDetailSource).toContain("isOwner ? (");

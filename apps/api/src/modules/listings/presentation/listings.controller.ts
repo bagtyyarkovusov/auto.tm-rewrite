@@ -255,6 +255,7 @@ export class ListingsController {
       mileageKm: result.listing.mileageKm,
       locationText: result.listing.locationText,
       description: result.listing.description,
+      conditionDisclosure: result.listing.conditionDisclosure,
       publishedAt: result.listing.publishedAt.toISOString(),
       soldAt: result.listing.soldAt?.toISOString(),
       updatedAt: result.listing.updatedAt.toISOString(),

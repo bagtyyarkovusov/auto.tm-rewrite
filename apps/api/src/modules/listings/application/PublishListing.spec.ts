@@ -129,6 +129,11 @@ class FakePrisma {
         description: d["description"] as string | null,
         acceptsExchange: d["acceptsExchange"] as boolean,
         installmentAvailable: d["installmentAvailable"] as boolean,
+        accidentReported: d["accidentReported"] as boolean | null,
+        mileageAccurate: d["mileageAccurate"] as boolean | null,
+        ownerCount: d["ownerCount"] as number | null,
+        serviceHistoryAvailable: d["serviceHistoryAvailable"] as boolean | null,
+        knownIssuesText: d["knownIssuesText"] as string | null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -214,6 +219,13 @@ describe("PublishListing", () => {
     allowCalls: true,
     allowChat: true,
     photos: [{ photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 }],
+    conditionDisclosure: {
+      accidentReported: false,
+      mileageAccurate: true,
+      ownerCount: 2,
+      serviceHistoryAvailable: true,
+      knownIssuesText: "Small scratch on rear bumper",
+    },
   };
 
   it("publishes a valid draft", async () => {
@@ -224,7 +236,15 @@ describe("PublishListing", () => {
 
     expect(result.listing.status).toBe("active");
     expect(result.listing.brandId).toBe(validPayload.brandId);
+    expect(result.listing.conditionDisclosure).toMatchObject(validPayload.conditionDisclosure);
     expect(prisma.createdListings).toHaveLength(1);
+    expect(prisma.createdListings[0]).toMatchObject({
+      accidentReported: validPayload.conditionDisclosure.accidentReported,
+      mileageAccurate: validPayload.conditionDisclosure.mileageAccurate,
+      ownerCount: validPayload.conditionDisclosure.ownerCount,
+      serviceHistoryAvailable: validPayload.conditionDisclosure.serviceHistoryAvailable,
+      knownIssuesText: validPayload.conditionDisclosure.knownIssuesText,
+    });
     expect(prisma.createdMedia).toHaveLength(1);
     expect(variantGenerator.generated).toEqual(["photo1.jpg"]);
     expect(prisma.deletedDrafts).toContain("draft-1");
@@ -368,5 +388,59 @@ describe("PublishListing", () => {
 
     expect(prisma.createdMedia).toHaveLength(2);
     expect(variantGenerator.generated).toEqual(["p1.jpg", "p2.jpg"]);
+  });
+
+  it("publishes without conditionDisclosure for backward compatibility", async () => {
+    const { conditionDisclosure: _, ...payloadWithoutDisclosure } = validPayload;
+    seedDraft(draftRepo, payloadWithoutDisclosure);
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
+    const result = await uc.execute({ draftId: "draft-1", userId: "user-1" });
+
+    expect(result.listing.status).toBe("active");
+    expect(result.listing.conditionDisclosure).toBeUndefined();
+    expect(prisma.createdListings[0]).toMatchObject({
+      accidentReported: null,
+      mileageAccurate: null,
+      ownerCount: null,
+      serviceHistoryAvailable: null,
+      knownIssuesText: null,
+    });
+  });
+
+  it("throws BadRequestException when ownerCount is below 1", async () => {
+    seedDraft(draftRepo, {
+      ...validPayload,
+      conditionDisclosure: { ...validPayload.conditionDisclosure, ownerCount: 0 },
+    });
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await expect(
+      uc.execute({ draftId: "draft-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("throws BadRequestException when ownerCount is above 20", async () => {
+    seedDraft(draftRepo, {
+      ...validPayload,
+      conditionDisclosure: { ...validPayload.conditionDisclosure, ownerCount: 21 },
+    });
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await expect(
+      uc.execute({ draftId: "draft-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("throws BadRequestException when knownIssuesText exceeds 1000 characters", async () => {
+    seedDraft(draftRepo, {
+      ...validPayload,
+      conditionDisclosure: { ...validPayload.conditionDisclosure, knownIssuesText: "x".repeat(1001) },
+    });
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await expect(
+      uc.execute({ draftId: "draft-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
   });
 });

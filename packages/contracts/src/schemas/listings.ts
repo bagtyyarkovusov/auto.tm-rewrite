@@ -20,6 +20,17 @@ export const SellerTrustSchema = z.object({
 });
 export type SellerTrust = z.infer<typeof SellerTrustSchema>;
 
+// ── Structured condition disclosure (S9a) ──
+
+export const ConditionDisclosureSchema = z.object({
+  accidentReported: z.boolean(),
+  mileageAccurate: z.boolean(),
+  ownerCount: z.number().int().min(1).max(20).optional(),
+  serviceHistoryAvailable: z.boolean(),
+  knownIssuesText: z.string().trim().max(1000).optional(),
+});
+export type ConditionDisclosure = z.infer<typeof ConditionDisclosureSchema>;
+
 // ── ListingSummary (cross-context read surface) ──
 
 export const ListingSummarySchema = z.object({
@@ -97,6 +108,7 @@ export const ListingDetailSchema = z.object({
   viewCount: z.number().int().nonnegative(),
   favoriteCount: z.number().int().nonnegative(),
   isFavorited: z.boolean().optional(),
+  conditionDisclosure: ConditionDisclosureSchema.optional(),
   publishedAt: z.string().datetime(),
   soldAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
@@ -141,6 +153,7 @@ export const ListingDraftPayloadSchema = z.object({
   allowChat: z.boolean().optional(),
   acceptsExchange: z.boolean().optional(),
   installmentAvailable: z.boolean().optional(),
+  conditionDisclosure: ConditionDisclosureSchema.optional(),
   validatedSteps: z.array(z.string()).optional(),
 });
 export type ListingDraftPayload = z.infer<typeof ListingDraftPayloadSchema>;
@@ -192,6 +205,7 @@ export const EditListingRequestSchema = z
     allowChat: z.boolean().optional(),
     acceptsExchange: z.boolean().optional(),
     installmentAvailable: z.boolean().optional(),
+    conditionDisclosure: ConditionDisclosureSchema.optional(),
   })
   .strict();
 export type EditListingRequest = z.infer<typeof EditListingRequestSchema>;

@@ -3,6 +3,7 @@ import { PrismaService } from "@auto-tm/db";
 
 import { Listing } from "../domain/Listing";
 import { DomainError, LISTING_ERROR_CODES, LOCKED_FIELDS } from "../domain/types";
+import type { ConditionDisclosure } from "../domain/types";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import {
   LISTING_REPOSITORY,
@@ -96,6 +97,11 @@ export class EditListing {
     const oldPriceAmount = existing.priceAmount;
     const oldPriceCurrency = existing.priceCurrency;
 
+    const nextConditionDisclosure = mergeConditionDisclosure(
+      existing.conditionDisclosure,
+      patch.conditionDisclosure,
+    );
+
     // Build updated listing data
     const updatedData: Parameters<typeof Listing.create>[0] = {
       id: existing.id,
@@ -149,6 +155,7 @@ export class EditListing {
       ...(patch.allowChat !== undefined && { allowChat: patch.allowChat }),
       ...(patch.acceptsExchange !== undefined && { acceptsExchange: patch.acceptsExchange }),
       ...(patch.installmentAvailable !== undefined && { installmentAvailable: patch.installmentAvailable }),
+      ...(nextConditionDisclosure !== undefined && { conditionDisclosure: nextConditionDisclosure }),
     };
 
     let updated: Listing;
@@ -192,4 +199,33 @@ export class EditListing {
 
     return { listing: saved };
   }
+}
+
+function mergeConditionDisclosure(
+  existing: ConditionDisclosure | undefined,
+  patch: ConditionDisclosure | undefined,
+): ConditionDisclosure | undefined {
+  if (!existing && !patch) return undefined;
+  if (!existing) return patch;
+  if (!patch) return existing;
+
+  const merged: ConditionDisclosure = {
+    accidentReported: patch.accidentReported,
+    mileageAccurate: patch.mileageAccurate,
+    serviceHistoryAvailable: patch.serviceHistoryAvailable,
+  };
+
+  if (patch.ownerCount !== undefined) {
+    merged.ownerCount = patch.ownerCount;
+  } else if (existing.ownerCount !== undefined) {
+    merged.ownerCount = existing.ownerCount;
+  }
+
+  if (patch.knownIssuesText !== undefined) {
+    merged.knownIssuesText = patch.knownIssuesText;
+  } else if (existing.knownIssuesText !== undefined) {
+    merged.knownIssuesText = existing.knownIssuesText;
+  }
+
+  return merged;
 }

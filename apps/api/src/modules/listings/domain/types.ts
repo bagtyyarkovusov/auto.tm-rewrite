@@ -6,6 +6,14 @@ export interface SellerTrust {
 
 export const VERIFIED_PHONE_TRUST: SellerTrust = { phoneVerified: true };
 
+export interface ConditionDisclosure {
+  accidentReported: boolean;
+  mileageAccurate: boolean;
+  ownerCount?: number | undefined;
+  serviceHistoryAvailable: boolean;
+  knownIssuesText?: string | undefined;
+}
+
 export type MediaKind = "image" | "video";
 
 export type FeedCursor = {

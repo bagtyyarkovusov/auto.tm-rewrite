@@ -47,6 +47,11 @@ export class PrismaListingRepository implements ListingRepository {
         installmentAvailable: listing.installmentAvailable,
         viewCount: listing.viewCount,
         favoriteCount: listing.favoriteCount,
+        accidentReported: n(listing.conditionDisclosure?.accidentReported),
+        mileageAccurate: n(listing.conditionDisclosure?.mileageAccurate),
+        ownerCount: n(listing.conditionDisclosure?.ownerCount),
+        serviceHistoryAvailable: n(listing.conditionDisclosure?.serviceHistoryAvailable),
+        knownIssuesText: n(listing.conditionDisclosure?.knownIssuesText),
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
       },
@@ -123,6 +128,11 @@ export class PrismaListingRepository implements ListingRepository {
         installmentAvailable: listing.installmentAvailable,
         viewCount: listing.viewCount,
         favoriteCount: listing.favoriteCount,
+        accidentReported: n(listing.conditionDisclosure?.accidentReported),
+        mileageAccurate: n(listing.conditionDisclosure?.mileageAccurate),
+        ownerCount: n(listing.conditionDisclosure?.ownerCount),
+        serviceHistoryAvailable: n(listing.conditionDisclosure?.serviceHistoryAvailable),
+        knownIssuesText: n(listing.conditionDisclosure?.knownIssuesText),
       },
     });
     return this.toDomain(row);
@@ -168,6 +178,11 @@ export class PrismaListingRepository implements ListingRepository {
     favoriteCount: number;
     acceptsExchange: boolean;
     installmentAvailable: boolean;
+    accidentReported: boolean | null;
+    mileageAccurate: boolean | null;
+    ownerCount: number | null;
+    serviceHistoryAvailable: boolean | null;
+    knownIssuesText: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): Listing {
@@ -206,6 +221,19 @@ export class PrismaListingRepository implements ListingRepository {
       ...(row.description ? { description: row.description } : {}),
       acceptsExchange: row.acceptsExchange,
       installmentAvailable: row.installmentAvailable,
+      ...(row.accidentReported !== null &&
+      row.mileageAccurate !== null &&
+      row.serviceHistoryAvailable !== null
+        ? {
+            conditionDisclosure: {
+              accidentReported: row.accidentReported,
+              mileageAccurate: row.mileageAccurate,
+              serviceHistoryAvailable: row.serviceHistoryAvailable,
+              ...(row.ownerCount !== null ? { ownerCount: row.ownerCount } : {}),
+              ...(row.knownIssuesText !== null ? { knownIssuesText: row.knownIssuesText } : {}),
+            },
+          }
+        : {}),
     });
   }
 }

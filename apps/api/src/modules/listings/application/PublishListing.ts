@@ -167,6 +167,11 @@ export class PublishListing {
             description: payload.description,
             acceptsExchange: payload.acceptsExchange ?? false,
             installmentAvailable: payload.installmentAvailable ?? false,
+            accidentReported: payload.conditionDisclosure?.accidentReported ?? null,
+            mileageAccurate: payload.conditionDisclosure?.mileageAccurate ?? null,
+            ownerCount: payload.conditionDisclosure?.ownerCount ?? null,
+            serviceHistoryAvailable: payload.conditionDisclosure?.serviceHistoryAvailable ?? null,
+            knownIssuesText: payload.conditionDisclosure?.knownIssuesText ?? null,
           },
         }),
         ...attachedPhotos.map((photo) =>
@@ -229,6 +234,19 @@ export class PublishListing {
         ...(listingRow.description ? { description: listingRow.description } : {}),
         acceptsExchange: listingRow.acceptsExchange,
         installmentAvailable: listingRow.installmentAvailable,
+        ...(listingRow.accidentReported !== null &&
+        listingRow.mileageAccurate !== null &&
+        listingRow.serviceHistoryAvailable !== null
+          ? {
+              conditionDisclosure: {
+                accidentReported: listingRow.accidentReported,
+                mileageAccurate: listingRow.mileageAccurate,
+                serviceHistoryAvailable: listingRow.serviceHistoryAvailable,
+                ...(listingRow.ownerCount ? { ownerCount: listingRow.ownerCount } : {}),
+                ...(listingRow.knownIssuesText ? { knownIssuesText: listingRow.knownIssuesText } : {}),
+              },
+            }
+          : {}),
       });
 
       await this.events.emit({

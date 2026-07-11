@@ -88,6 +88,12 @@ S8 additions (now in schema):
 - `Favorite` — saved-listing join table (`userId`, `listingId`, `createdAt`) with cascade FKs to `User` and `Listing`, unique on `(userId, listingId)`.
 - Migration `20260609000000_account_deletion_grace` adds the deletion-grace fields + the `users_deletionScheduledAt_idx` index; the Favorites table/counter already existed in schema and became active in S8.
 
+S9a additions (now in schema):
+- `Listing.accidentReported`, `Listing.mileageAccurate`, `Listing.serviceHistoryAvailable` — nullable boolean disclosure fields.
+- `Listing.ownerCount` — nullable integer, constrained 1–20.
+- `Listing.knownIssuesText` — nullable text for seller-entered plain-text notes.
+- Migration `20260711000000_add_condition_disclosure_to_listing` adds the S9a disclosure columns + the `listings_ownerCount_check` constraint.
+
 ## Foreign-key policy across contexts
 
 - **Cross-context FKs ARE allowed** in `schema.prisma` (e.g., `Listing.brandId → Brand.id`)

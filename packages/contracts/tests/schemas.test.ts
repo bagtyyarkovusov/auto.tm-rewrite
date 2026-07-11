@@ -16,6 +16,7 @@ import {
   ListingFilterSchema,
   encodeCursor,
   decodeCursor,
+  ConditionDisclosureSchema,
 } from "../src/schemas/listings";
 import {
   PresignRequestSchema,
@@ -444,6 +445,65 @@ describe("ListingFilterSchema", () => {
   it("rejects invalid condition", () => {
     const result = ListingFilterSchema.safeParse({ condition: "repaired" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("ConditionDisclosureSchema", () => {
+  const validDisclosure = {
+    accidentReported: false,
+    mileageAccurate: true,
+    ownerCount: 2,
+    serviceHistoryAvailable: true,
+    knownIssuesText: "Small scratch",
+  };
+
+  it("accepts a valid full disclosure", () => {
+    const result = ConditionDisclosureSchema.safeParse(validDisclosure);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts minimal disclosure without optional fields", () => {
+    const result = ConditionDisclosureSchema.safeParse({
+      accidentReported: false,
+      mileageAccurate: true,
+      serviceHistoryAvailable: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects ownerCount below 1", () => {
+    const result = ConditionDisclosureSchema.safeParse({
+      ...validDisclosure,
+      ownerCount: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects ownerCount above 20", () => {
+    const result = ConditionDisclosureSchema.safeParse({
+      ...validDisclosure,
+      ownerCount: 21,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects knownIssuesText over 1000 characters", () => {
+    const result = ConditionDisclosureSchema.safeParse({
+      ...validDisclosure,
+      knownIssuesText: "x".repeat(1001),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("trims knownIssuesText whitespace", () => {
+    const result = ConditionDisclosureSchema.safeParse({
+      ...validDisclosure,
+      knownIssuesText: "  small scratch  ",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.knownIssuesText).toBe("small scratch");
+    }
   });
 });
 
