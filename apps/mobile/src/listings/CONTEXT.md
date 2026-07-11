@@ -58,7 +58,7 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
     - `useWizardAutosave.ts` — debounced PATCH with exponential-backoff retry
     - `wizardMachine.spec.ts` — unit tests for reducer
     - `useWizardAutosave.spec.tsx` — tests for save lifecycle
-    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI bodies. Design system conventions: single-source-of-truth title in `WizardHeader` (`text-2xl font-heading`), body opens directly with form rows or brief `text-sm text-muted-foreground` orientation copy, body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons. `Step8Review.tsx` and `PhotoThumbnail.tsx` use `expo-image` (not `react-native Image`) for staged photos.
+    - `Step1Vin.tsx` … `Step8Review.tsx` — step UI bodies. Design system conventions: single-source-of-truth title in `WizardHeader` (`text-2xl font-heading`), body opens directly with form rows or brief `text-sm text-muted-foreground` orientation copy, body (`gap-5 py-5`), field groups (`gap-1.5`), 52px inputs, pill-shaped buttons. `Step4Specs.tsx` captures vehicle specs and **S9a structured condition disclosure**. `Step8Review.tsx` and `PhotoThumbnail.tsx` use `expo-image` (not `react-native Image`) for staged photos; review shows condition disclosure summary when present.
     - `WizardLayout.tsx` — shell with Next/Back navigation (sub-components: `WizardHeader`, `SaveStatusIndicator`, `SaveErrorBanner`, `WizardFooter`, `DiscardConfirmationDialog`). Footer buttons are 52px pill-shaped (`h-[52px] rounded-full`). Overflow button opens `WizardOverflowMenu` sheet first; "Discard draft" inside the sheet opens `DiscardConfirmationDialog`. Dialog shows loading spinner + "Discarding…" and error text when discard mutation is pending or fails.
     - `PhotoThumbnail.tsx` — photo grid item with state overlay, remove affordance, drag lifecycle handlers, and reorder menu fallback. Tiles use a numeric `useWindowDimensions()`-derived `width`/`height` rather than percentage width + `aspect-square`, because the NativeWind/flex-wrap combination can collapse uploaded-photo rows on iOS. The `expo-image` child uses native absolute-fill styling so the image itself fills the fixed-size tile. Uploaded/attached photos do not show a green success badge; each tile has a top-right `X` remove button.
     - `PhotoStateOverlay.tsx` — per-photo upload-state badge (compressing, uploading, failed, cover, etc.)
@@ -216,7 +216,7 @@ The wizard ships eight steps in the contract enum: seven data steps + a final `r
 | 0 | `vin` | `vin?` (optional) | max 17 chars |
 | 1 | `photos` | `photos[]` with `key` | ≥1 uploaded photo |
 | 2 | `vehicle` | `brandId`, `modelId`, `year` | all required + valid UUIDs; `generationId` optional |
-| 3 | `specs` | `condition` | `mileageKm` required when `condition='used'`; color/body/transmission/drive/engine/power optional |
+| 3 | `specs` | `condition` | `mileageKm` required when `condition='used'`; color/body/transmission/drive/engine/power optional. **S9a**: structured `conditionDisclosure` (accident, mileage accuracy, owners, service history, known issues) is also part of this step. |
 | 4 | `price` | `priceAmount`, `priceCurrency` | amount > 0, ≤ 999,999,999 |
 | 5 | `location` | `regionId`, `cityId` | both required; `locationText` optional |
 | 6 | `contact` | `description`, contact prefs | description 1–2000 chars; `allowCalls \|\| allowChat` |

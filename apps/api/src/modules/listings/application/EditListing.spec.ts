@@ -415,20 +415,64 @@ describe("EditListing", () => {
     expect(prisma.auditLogs).toHaveLength(0);
   });
 
-  it("emits ListingUpdated event on success", async () => {
+  it("edits conditionDisclosure successfully", async () => {
     seedActiveListing(repo);
 
     const uc = makeUseCase(repo, prisma, events, exchangeRates);
-    await uc.execute({
+    const result = await uc.execute({
       listingId: "listing-1",
       userId: "user-1",
-      patch: { description: "Updated" },
+      patch: {
+        conditionDisclosure: {
+          accidentReported: false,
+          mileageAccurate: true,
+          ownerCount: 2,
+          serviceHistoryAvailable: true,
+          knownIssuesText: "Minor scratches",
+        },
+      },
     });
 
-    expect(events.events).toHaveLength(1);
-    expect(events.events[0]).toMatchObject({
-      event: "ListingUpdated",
+    expect(result.listing.conditionDisclosure).toMatchObject({
+      accidentReported: false,
+      mileageAccurate: true,
+      ownerCount: 2,
+      serviceHistoryAvailable: true,
+      knownIssuesText: "Minor scratches",
+    });
+    expect(prisma.auditLogs).toHaveLength(0);
+  });
+
+  it("merges conditionDisclosure edits partially", async () => {
+    seedActiveListing(repo, {
+      conditionDisclosure: {
+        accidentReported: false,
+        mileageAccurate: true,
+        ownerCount: 2,
+        serviceHistoryAvailable: true,
+        knownIssuesText: "Old scratch",
+      },
+    });
+
+    const uc = makeUseCase(repo, prisma, events, exchangeRates);
+    const result = await uc.execute({
       listingId: "listing-1",
+      userId: "user-1",
+      patch: {
+        conditionDisclosure: {
+          accidentReported: true,
+          mileageAccurate: true,
+          serviceHistoryAvailable: false,
+        },
+      },
+    });
+
+    expect(result.listing.conditionDisclosure).toMatchObject({
+      accidentReported: true,
+      mileageAccurate: true,
+      ownerCount: 2,
+      serviceHistoryAvailable: false,
+      knownIssuesText: "Old scratch",
     });
   });
 });

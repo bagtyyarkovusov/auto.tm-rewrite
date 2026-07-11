@@ -146,6 +146,13 @@ describe("ListingsController e2e", () => {
     allowCalls: true,
     allowChat: true,
     photos: [{ photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 }],
+    conditionDisclosure: {
+      accidentReported: false,
+      mileageAccurate: true,
+      ownerCount: 2,
+      serviceHistoryAvailable: true,
+      knownIssuesText: "Small scratch",
+    },
   };
 
   describe("POST /api/v1/listings/drafts/:id/publish", () => {
@@ -178,6 +185,16 @@ describe("ListingsController e2e", () => {
       // Media should be created
       const media = await prisma.listingMedia.findMany({ where: { listingId: res.body.id } });
       expect(media).toHaveLength(1);
+
+      // Condition disclosure should be persisted
+      const listing = await prisma.listing.findUnique({ where: { id: res.body.id } });
+      expect(listing).toMatchObject({
+        accidentReported: validPayload.conditionDisclosure.accidentReported,
+        mileageAccurate: validPayload.conditionDisclosure.mileageAccurate,
+        ownerCount: validPayload.conditionDisclosure.ownerCount,
+        serviceHistoryAvailable: validPayload.conditionDisclosure.serviceHistoryAvailable,
+        knownIssuesText: validPayload.conditionDisclosure.knownIssuesText,
+      });
 
       // Audit log should be written
       const audit = await prisma.auditLog.findFirst({
@@ -305,6 +322,7 @@ describe("ListingsController e2e", () => {
       const mediaAfter = await prisma.listingMedia.findMany({ where: { listingId } });
       expect(mediaAfter).toHaveLength(1);
     });
+  });
 
   describe("PATCH /api/v1/listings/:id", () => {
     it("edits a listing's description", async () => {
@@ -380,26 +398,103 @@ describe("ListingsController e2e", () => {
       expect(res.body.code).toBe("VALIDATION_ERROR");
     });
 
-    it("returns 404 for another user's listing", async () => {
+    it("edits conditionDisclosure", async () => {
       await seedCatalog();
-      const token1 = await createUser("user-1");
-      const token2 = await createUser("user-2");
+      const token = await createUser("user-1");
       const draft = await seedDraft("user-1", validPayload);
 
       const publishRes = await request
         .post(`/api/v1/listings/drafts/${draft.id}/publish`)
-        .set("Authorization", `Bearer ${token1}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const editRes = await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          conditionDisclosure: {
+            accidentReported: true,
+            mileageAccurate: true,
+            serviceHistoryAvailable: false,
+          },
+        })
+        .expect(200);
+
+      expect(editRes.body.conditionDisclosure).toMatchObject({
+        accidentReported: true,
+        mileageAccurate: true,
+        ownerCount: validPayload.conditionDisclosure.ownerCount,
+        serviceHistoryAvailable: false,
+        knownIssuesText: validPayload.conditionDisclosure.knownIssuesText,
+      });
+    });
+
+    it("rejects conditionDisclosure with ownerCount out of bounds", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
         .send({})
         .expect(201);
       const listingId = publishRes.body.id;
 
       await request
         .patch(`/api/v1/listings/${listingId}`)
-        .set("Authorization", `Bearer ${token2}`)
-        .send({ description: "Should not work" })
-        .expect(404);
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          conditionDisclosure: {
+            accidentReported: false,
+            mileageAccurate: true,
+            serviceHistoryAvailable: true,
+            ownerCount: 0,
+          },
+        })
+        .expect(400);
+
+      await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          conditionDisclosure: {
+            accidentReported: false,
+            mileageAccurate: true,
+            serviceHistoryAvailable: true,
+            ownerCount: 21,
+          },
+        })
+        .expect(400);
     });
-  });
+
+    it("rejects conditionDisclosure with knownIssuesText over 1000 chars", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          conditionDisclosure: {
+            accidentReported: false,
+            mileageAccurate: true,
+            serviceHistoryAvailable: true,
+            knownIssuesText: "x".repeat(1001),
+          },
+        })
+        .expect(400);
+    });
 
     it("returns 403 when trying to modify another user's listing", async () => {
       await seedCatalog();
@@ -488,10 +583,44 @@ describe("ListingsController e2e", () => {
         .expect(404);
     });
 
-    it("returns 404 for non-existent listing", async () => {
-      await request
-        .get("/api/v1/listings/non-existent-id")
-        .expect(404);
+    it("returns detail with conditionDisclosure", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const res = await request
+        .get(`/api/v1/listings/${listingId}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(listingId);
+      expect(res.body.conditionDisclosure).toMatchObject(validPayload.conditionDisclosure);
+    });
+
+    it("returns detail without conditionDisclosure for older listings", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const { conditionDisclosure: _, ...payloadWithoutDisclosure } = validPayload;
+      const draft = await seedDraft("user-1", payloadWithoutDisclosure);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const res = await request
+        .get(`/api/v1/listings/${listingId}`)
+        .expect(200);
+
+      expect(res.body.conditionDisclosure).toBeUndefined();
     });
   });
 

@@ -113,6 +113,7 @@ export class GetListingDetail {
       viewCount: listing.viewCount,
       favoriteCount: listing.favoriteCount,
       isFavorited,
+      conditionDisclosure: listing.conditionDisclosure,
       publishedAt: listing.publishedAt.toISOString(),
       soldAt: listing.soldAt?.toISOString(),
       createdAt: listing.createdAt.toISOString(),

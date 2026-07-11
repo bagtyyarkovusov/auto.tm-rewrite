@@ -5,6 +5,7 @@ import {
   CurrencySchema,
   ListingConditionSchema,
   DraftPhotoSchema,
+  ConditionDisclosureSchema,
 } from "./listings";
 
 // ── Wizard step enum ──
@@ -76,6 +77,7 @@ export const StepSpecsSchema = z
     driveTypeId: z.string().uuid().optional(),
     engineTypeId: z.string().uuid().optional(),
     enginePower: z.number().int().positive("Engine power must be greater than zero").optional(),
+    conditionDisclosure: ConditionDisclosureSchema.optional(),
   })
   .refine(
     (data) => {
@@ -162,6 +164,7 @@ const FIELD_TO_STEP: Record<string, WizardStep> = {
   year: "vehicle",
   condition: "specs",
   mileageKm: "specs",
+  conditionDisclosure: "specs",
   colorId: "specs",
   bodyTypeId: "specs",
   transmissionId: "specs",

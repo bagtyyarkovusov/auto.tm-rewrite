@@ -1,8 +1,8 @@
 import { AlertCircle, X } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
-import type { WizardSchemas } from "@auto-tm/contracts";
+import type { WizardSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 
@@ -23,6 +23,7 @@ import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Switch } from "@/components/ui/switch";
 
 interface Step4SpecsProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -455,6 +456,14 @@ export default function Step4Specs({
         />
       </View>
 
+      {/* Condition disclosure group */}
+      <ConditionDisclosureSection
+        payload={payload}
+        onChange={onChange}
+        fieldErrors={fieldErrors}
+        disabled={disabled}
+      />
+
       <SpecSheets payload={payload} onChange={onChange} specs={specs} />
     </View>
   );
@@ -786,3 +795,141 @@ function EnginePowerInput({
     </View>
   );
 }
+
+function ConditionDisclosureSection({
+  payload,
+  onChange,
+  fieldErrors,
+  disabled,
+}: {
+  payload: WizardSchemas.WizardDraftPayload;
+  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  fieldErrors?: Record<string, string>;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation();
+  const disclosure = payload.conditionDisclosure;
+
+  const updateDisclosure = useCallback(
+    (patch: Partial<ListingsSchemas.ConditionDisclosure>) => {
+      onChange({
+        conditionDisclosure: {
+          accidentReported: disclosure?.accidentReported ?? false,
+          mileageAccurate: disclosure?.mileageAccurate ?? false,
+          serviceHistoryAvailable: disclosure?.serviceHistoryAvailable ?? false,
+          ...disclosure,
+          ...patch,
+        },
+      });
+    },
+    [disclosure, onChange],
+  );
+
+  return (
+    <View className="gap-5 rounded-xl border border-border p-4">
+      <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {t("conditionDisclosure")}
+      </Text>
+
+      <BooleanRow
+        label={t("accidentReported")}
+        value={disclosure?.accidentReported ?? false}
+        onChange={(accidentReported) => updateDisclosure({ accidentReported })}
+        disabled={disabled}
+      />
+
+      <BooleanRow
+        label={t("mileageAccurate")}
+        value={disclosure?.mileageAccurate ?? false}
+        onChange={(mileageAccurate) => updateDisclosure({ mileageAccurate })}
+        disabled={disabled}
+      />
+
+      <View className="gap-1.5">
+        <Text className="text-sm font-medium text-foreground">
+          {t("ownerCount")}
+        </Text>
+        {wrapDisabled(
+          <Input
+            value={disclosure?.ownerCount?.toString() ?? ""}
+            onChangeText={(text) => {
+              const num = parseInt(text, 10);
+              updateDisclosure({
+                ownerCount: Number.isNaN(num) ? undefined : num,
+              });
+            }}
+            placeholder={t("ownerCountPlaceholder")}
+            keyboardType="number-pad"
+            editable={!disabled}
+          />,
+          disabled,
+        )}
+        {fieldErrors?.["conditionDisclosure.ownerCount"] && (
+          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+            {fieldErrors["conditionDisclosure.ownerCount"]}
+          </Text>
+        )}
+      </View>
+
+      <BooleanRow
+        label={t("serviceHistoryAvailable")}
+        value={disclosure?.serviceHistoryAvailable ?? false}
+        onChange={(serviceHistoryAvailable) =>
+          updateDisclosure({ serviceHistoryAvailable })
+        }
+        disabled={disabled}
+      />
+
+      <View className="gap-1.5">
+        <Text className="text-sm font-medium text-foreground">
+          {t("knownIssuesText")}
+        </Text>
+        {wrapDisabled(
+          <Input
+            value={disclosure?.knownIssuesText ?? ""}
+            onChangeText={(text) => {
+              updateDisclosure({ knownIssuesText: text || undefined });
+            }}
+            placeholder={t("knownIssuesPlaceholder")}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            maxLength={1000}
+            editable={!disabled}
+            className="h-auto min-h-[100px] py-3"
+          />,
+          disabled,
+        )}
+        {fieldErrors?.["conditionDisclosure.knownIssuesText"] && (
+          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+            {fieldErrors["conditionDisclosure.knownIssuesText"]}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function BooleanRow({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Text className="text-sm font-medium text-foreground">{label}</Text>
+      <Switch
+        checked={value}
+        onCheckedChange={onChange}
+        disabled={disabled}
+      />
+    </View>
+  );
+}
+

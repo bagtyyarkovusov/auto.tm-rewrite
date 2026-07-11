@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { Check, AlertCircle, Eye, ListChecks } from "lucide-react-native";
-import type { WizardSchemas } from "@auto-tm/contracts";
+import type { WizardSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
@@ -241,6 +241,9 @@ function ChecklistView({
         {payload.enginePower && (
           <Text className="text-sm text-muted-foreground">{t("enginePower")}: {payload.enginePower} {t("hp")}</Text>
         )}
+        {payload.conditionDisclosure && (
+          <ConditionDisclosureSummary disclosure={payload.conditionDisclosure} />
+        )}
       </ReviewSection>
 
       {/* Price */}
@@ -409,6 +412,16 @@ function PreviewView({
         </View>
       </View>
 
+      {/* Condition disclosure */}
+      {payload.conditionDisclosure && (
+        <View className="rounded-xl border border-border p-4 gap-3">
+          <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            {t("conditionDisclosure")}
+          </Text>
+          <ConditionDisclosureSummary disclosure={payload.conditionDisclosure} />
+        </View>
+      )}
+
       {/* Description */}
       {payload.description && (
         <View className="rounded-xl border border-border p-4 gap-2">
@@ -512,6 +525,37 @@ function ReviewSection({
         </Button>
       </View>
       <View className="mt-2 gap-0.5 pl-6">{children}</View>
+    </View>
+  );
+}
+
+function ConditionDisclosureSummary({
+  disclosure,
+}: {
+  disclosure: ListingsSchemas.ConditionDisclosure;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View className="gap-1">
+      <Text className="text-sm text-foreground">
+        {t("accidentReported")}: {disclosure.accidentReported ? t("yes") : t("no")}
+      </Text>
+      <Text className="text-sm text-foreground">
+        {t("mileageAccurate")}: {disclosure.mileageAccurate ? t("yes") : t("no")}
+      </Text>
+      {disclosure.ownerCount !== undefined && (
+        <Text className="text-sm text-foreground">
+          {t("ownerCount")}: {disclosure.ownerCount}
+        </Text>
+      )}
+      <Text className="text-sm text-foreground">
+        {t("serviceHistoryAvailable")}: {disclosure.serviceHistoryAvailable ? t("yes") : t("no")}
+      </Text>
+      {disclosure.knownIssuesText && (
+        <Text className="text-sm text-foreground" numberOfLines={2}>
+          {t("knownIssuesText")}: {disclosure.knownIssuesText}
+        </Text>
+      )}
     </View>
   );
 }

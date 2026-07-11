@@ -1,5 +1,5 @@
 import { DomainError, LISTING_ERROR_CODES, LOCKED_FIELDS } from "./types";
-import type { Currency } from "./types";
+import type { Currency, ConditionDisclosure } from "./types";
 import { canTransition, type ListingStatus } from "./ListingStatus";
 
 export class Listing {
@@ -37,6 +37,7 @@ export class Listing {
     readonly acceptsExchange: boolean,
     readonly installmentAvailable: boolean,
     readonly coverMediaKey: string | undefined,
+    readonly conditionDisclosure: ConditionDisclosure | undefined,
     readonly createdAt: Date,
     readonly updatedAt: Date,
   ) {
@@ -82,6 +83,7 @@ export class Listing {
     acceptsExchange?: boolean;
     installmentAvailable?: boolean;
     coverMediaKey?: string;
+    conditionDisclosure?: ConditionDisclosure;
     createdAt?: Date;
     updatedAt?: Date;
   }): Listing {
@@ -119,6 +121,7 @@ export class Listing {
       data.acceptsExchange ?? false,
       data.installmentAvailable ?? false,
       data.coverMediaKey,
+      data.conditionDisclosure,
       data.createdAt ?? new Date(),
       data.updatedAt ?? new Date(),
     );
@@ -169,6 +172,7 @@ export class Listing {
       this.acceptsExchange,
       this.installmentAvailable,
       this.coverMediaKey,
+      this.conditionDisclosure,
       this.createdAt,
       new Date(),
     );
@@ -215,6 +219,7 @@ export class Listing {
       this.acceptsExchange,
       this.installmentAvailable,
       this.coverMediaKey,
+      this.conditionDisclosure,
       this.createdAt,
       new Date(),
     );
@@ -261,6 +266,7 @@ export class Listing {
       this.acceptsExchange,
       this.installmentAvailable,
       this.coverMediaKey,
+      this.conditionDisclosure,
       this.createdAt,
       new Date(),
     );
@@ -301,6 +307,7 @@ export class Listing {
       this.acceptsExchange,
       this.installmentAvailable,
       this.coverMediaKey,
+      this.conditionDisclosure,
       this.createdAt,
       new Date(),
     );
