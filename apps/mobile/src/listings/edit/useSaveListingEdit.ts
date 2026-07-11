@@ -106,6 +106,7 @@ const EDITABLE_FIELDS: (keyof ListingsSchemas.EditListingRequest)[] = [
   "allowChat",
   "acceptsExchange",
   "installmentAvailable",
+  "conditionDisclosure",
 ];
 
 export function buildFieldsPatch(

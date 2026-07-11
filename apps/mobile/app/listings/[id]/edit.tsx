@@ -69,6 +69,7 @@ function listingToPayload(
     allowChat: listing.allowChat,
     acceptsExchange: listing.acceptsExchange,
     installmentAvailable: listing.installmentAvailable,
+    conditionDisclosure: listing.conditionDisclosure,
     photos: listing.media.map((m, i) => ({
       photoId: m.id,
       key: m.key,
