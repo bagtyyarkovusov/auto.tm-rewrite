@@ -64,5 +64,7 @@ export const queryKeys = {
 
   reports: {
     all: () => ["reports"] as const,
+    inspectionInterest: (listingId: string) =>
+      [...queryKeys.reports.all(), "inspection-interest", listingId] as const,
   },
 };

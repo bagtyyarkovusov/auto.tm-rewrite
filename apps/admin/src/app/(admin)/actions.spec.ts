@@ -30,6 +30,7 @@ import {
   unsuspendUser,
   listAuditEntries,
   getConfig,
+  listInspectionInterestStats,
 } from "./actions";
 
 const mockCookieStore = mockState.cookieStore;
@@ -454,6 +455,71 @@ describe("moderation server actions", () => {
       });
 
       const result = await getConfig();
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe("INTERNAL_ERROR");
+      }
+    });
+  });
+
+  describe("listInspectionInterestStats", () => {
+    it("returns interest stats on success", async () => {
+      const payload = {
+        items: [
+          {
+            listingId: "l1",
+            totalInterest: 5,
+            buyerInterest: 3,
+            sellerInterest: 2,
+            willingnessToPayTmtSum: 1500,
+            willingnessToPayTmtCount: 2,
+            willingnessToPayTmtAvg: 750,
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 50,
+        totalPages: 1,
+      };
+      mockFetchSuccess(payload);
+
+      const result = await listInspectionInterestStats({});
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.items).toHaveLength(1);
+        expect(result.data.items[0]?.totalInterest).toBe(5);
+        expect(result.data.items[0]?.willingnessToPayTmtAvg).toBe(750);
+      }
+    });
+
+    it("forwards pagination params to the API", async () => {
+      mockFetchSuccess({
+        items: [],
+        total: 0,
+        page: 2,
+        pageSize: 25,
+        totalPages: 0,
+      });
+
+      await listInspectionInterestStats({ page: 2, pageSize: 25 });
+
+      const [url] = (global.fetch as Mock).mock.calls[0] ?? [null];
+      expect(String(url)).toContain("page=2");
+      expect(String(url)).toContain("pageSize=25");
+    });
+
+    it("returns error on API failure", async () => {
+      mockFetchError(500, {
+        statusCode: 500,
+        code: "INTERNAL_ERROR",
+        message: "Server error",
+        timestamp: "2026-01-01T00:00:00Z",
+        requestId: "req-1",
+      });
+
+      const result = await listInspectionInterestStats({});
 
       expect(result.ok).toBe(false);
       if (!result.ok) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -80,13 +80,18 @@ function UnavailableState({ insets }: { insets: ReturnType<typeof useSafeAreaIns
 }
 
 export default function ListingDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, inspectionInterest } = useLocalSearchParams<{
+    id: string;
+    inspectionInterest?: string;
+  }>();
   const goBack = useSafeBack();
   const insets = useSafeAreaInsets();
   const { data, isPending, error, refetch } = useListingDetail(id ?? "");
   const viewer = useViewer();
   const { data: config } = useConfig();
   const [reportOpen, setReportOpen] = useState(false);
+  const [interestOpen, setInterestOpen] = useState(false);
+  const interestAutoOpened = useRef(false);
 
   const { maps } = useCatalogMaps(
     data?.brandId,
@@ -96,6 +101,18 @@ export default function ListingDetailScreen() {
 
   const isOwner =
     viewer != null && data != null && viewer.userId === data.sellerId;
+
+  useEffect(() => {
+    if (
+      !interestAutoOpened.current &&
+      inspectionInterest &&
+      isOwner &&
+      data?.id
+    ) {
+      interestAutoOpened.current = true;
+      setInterestOpen(true);
+    }
+  }, [inspectionInterest, isOwner, data?.id]);
 
   if (isPending) {
     return <DetailSkeleton insets={insets} />;
@@ -147,6 +164,9 @@ export default function ListingDetailScreen() {
               ? () => setReportOpen(true)
               : undefined
           }
+          inspectionInterestEnabled={config?.inspectionInterestEnabled !== false}
+          inspectionInterestOpen={interestOpen}
+          onInspectionInterestOpenChange={setInterestOpen}
         />
       </View>
 

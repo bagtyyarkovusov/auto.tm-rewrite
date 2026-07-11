@@ -30,6 +30,11 @@ const listingDetailSource = readFileSync(
   "utf-8",
 );
 
+const inspectionInterestCtaSource = readFileSync(
+  resolve(__dirname, "../components/InspectionInterestCta.tsx"),
+  "utf-8",
+);
+
 const screenSource = readFileSync(
   resolve(__dirname, "../../../app/(public)/listings/[id].tsx"),
   "utf-8",
@@ -256,6 +261,42 @@ describe("Step4Specs condition disclosure inputs", () => {
     expect(step4SpecsSource).toContain('keyboardType="number-pad"');
   });
 });
+describe("ListingDetailView inspection interest", () => {
+  it("renders InspectionInterestCta for active listings", () => {
+    expect(listingDetailSource).toContain("<InspectionInterestCta");
+    expect(listingDetailSource).toContain("Enums.ListingStatus.Active");
+  });
+
+  it("passes inspectionInterestEnabled from screen to CTA", () => {
+    expect(listingDetailSource).toContain("inspectionInterestEnabled");
+    expect(screenSource).toContain("inspectionInterestEnabled={config?.inspectionInterestEnabled !== false}");
+  });
+
+  it("wires open state from screen through ListingDetailView", () => {
+    expect(listingDetailSource).toContain("inspectionInterestOpen");
+    expect(listingDetailSource).toContain("onInspectionInterestOpenChange");
+    expect(screenSource).toContain("const [interestOpen, setInterestOpen] = useState(false)");
+  });
+
+  it("inspection CTA supports disabled state and auth-on-action", () => {
+    expect(inspectionInterestCtaSource).toContain("disabled={disabled}");
+    expect(inspectionInterestCtaSource).toContain("useAuthIntentStore");
+    expect(inspectionInterestCtaSource).toContain("isAuthenticated === false");
+  });
+
+  it("inspection CTA handles success and error states", () => {
+    expect(inspectionInterestCtaSource).toContain("submitted");
+    expect(inspectionInterestCtaSource).toContain("errorCopy");
+    expect(inspectionInterestCtaSource).toContain("mapErrorToCopy");
+  });
+
+  it("auto-opens inspection interest sheet for owner after publish", () => {
+    expect(screenSource).toContain("inspectionInterest");
+    expect(screenSource).toContain("interestAutoOpened");
+    expect(screenSource).toContain("setInterestOpen(true)");
+  });
+});
+
 describe("ListingDetailView owner branching", () => {
   it("renders OwnerActions when isOwner is true", () => {
     expect(listingDetailSource).toContain("isOwner ? (");

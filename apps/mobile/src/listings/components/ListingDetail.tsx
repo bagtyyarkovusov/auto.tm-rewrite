@@ -10,6 +10,7 @@ import { PhotoGallery } from "./PhotoGallery";
 import { PriceDisplay } from "./PriceDisplay";
 import { SellerBlock } from "./SellerBlock";
 import { OwnerActions } from "./OwnerActions";
+import { InspectionInterestCta } from "./InspectionInterestCta";
 
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
@@ -25,6 +26,9 @@ interface ListingDetailProps {
   maps: CatalogMaps;
   isOwner?: boolean;
   onReport?: () => void;
+  inspectionInterestEnabled?: boolean;
+  inspectionInterestOpen?: boolean;
+  onInspectionInterestOpenChange?: (open: boolean) => void;
 }
 
 function buildTitle(listing: ListingDetail, maps: CatalogMaps): string {
@@ -54,7 +58,15 @@ function SpecItem({ label, value }: SpecItemProps) {
   );
 }
 
-export function ListingDetailView({ listing, maps, isOwner = false, onReport }: ListingDetailProps) {
+export function ListingDetailView({
+  listing,
+  maps,
+  isOwner = false,
+  onReport,
+  inspectionInterestEnabled = true,
+  inspectionInterestOpen = false,
+  onInspectionInterestOpenChange,
+}: ListingDetailProps) {
   const { t, i18n } = useTranslation();
   const isSold = listing.status === Enums.ListingStatus.Sold;
 
@@ -209,6 +221,19 @@ export function ListingDetailView({ listing, maps, isOwner = false, onReport }: 
               <Icon as={Flag} className="size-4 text-muted-foreground" />
               <Text className="text-sm text-muted-foreground">{t("report")}</Text>
             </Button>
+          </>
+        )}
+
+        {/* Inspection interest fake-door for active listings */}
+        {listing.status === Enums.ListingStatus.Active && (
+          <>
+            <Separator className="my-1" />
+            <InspectionInterestCta
+              listingId={listing.id}
+              open={inspectionInterestOpen}
+              onOpenChange={onInspectionInterestOpenChange ?? (() => {})}
+              disabled={!inspectionInterestEnabled}
+            />
           </>
         )}
       </View>

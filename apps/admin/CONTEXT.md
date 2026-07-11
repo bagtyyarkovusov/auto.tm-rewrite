@@ -22,9 +22,11 @@ Internal admin dashboard. Next.js + shadcn/ui at `admin.auto.tm`. MLP beta uses 
 - `src/lib/api-client.ts` — server-side fetch wrapper with refresh-on-401, cookie rotation, clear+redirect on failure
 - `src/lib/qrcode.ts` — server-side QR data URL generation (TOTP secret never reaches client bundle)
 - `src/app/actions.ts` — server actions for: request OTP, verify OTP, TOTP status/enroll/verify, logout, logout-all, auth gate helpers
+- `src/app/(admin)/actions.ts` — server actions for moderation (`listReports`, `getReportDetail`, `dismissReport`, `banListing`, `unbanListing`, `suspendUser`, `unsuspendUser`), audit (`listAuditEntries`), config (`getConfig`), and **S9a inspection-interest stats (`listInspectionInterestStats`)**
 - `src/app/login/page.tsx` — OTP entry → TOTP enroll/verify UI with backup codes display
 - `src/app/(admin)/layout.tsx` — protected layout with full auth+elevation check via API
 - `src/app/(admin)/reports/page.tsx` — reports list (pending default, status/targetType filters, pagination, empty state, invalid-filter reset)
+- `src/app/(admin)/reports/inspection-interests/page.tsx` — S9a inspection-interest counts surface; lists aggregate interest per listing (total, buyer, seller) plus willingness-to-pay sum/count/average; paginated, dense operational table with deep-links to listing action pages
 - `src/app/(admin)/reports/[id]/page.tsx` — report detail with reporter/target summaries, live counts, dismiss/ban/suspend action forms with required reason; conditionally hides action forms when `ADMIN_MODERATION_ACTIONS_ENABLED=false`
 - `src/app/(admin)/listings/[id]/page.tsx` — listing deep-link action page (direct ban/unban); conditionally hides forms when `ADMIN_MODERATION_ACTIONS_ENABLED=false`
 - `src/app/(admin)/users/[id]/page.tsx` — user deep-link action page (direct suspend/unsuspend); conditionally hides forms when `ADMIN_MODERATION_ACTIONS_ENABLED=false`
@@ -89,6 +91,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
 
 - `/login` — OTP entry + TOTP enrollment/verify
 - `/reports` — MLP moderation queue (pending default, filters, pagination, empty state)
+- `/reports/inspection-interests` — S9a inspection-interest counts and willingness-to-pay summary
 - `/reports/:id` — report detail with action forms (dismiss, ban, suspend)
 - `/listings/:id` — direct listing ban/unban action page
 - `/users/:id` — direct user suspend/unsuspend action page
@@ -106,6 +109,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
   - `listReports` / `getReportDetail` / `listAuditEntries` success + error paths
   - `dismissReport` / `banListing` / `unbanListing` / `suspendUser` / `unsuspendUser` success + conflict/policy error handling (REPORT_ALREADY_RESOLVED, MODERATION_TARGET_STATE_CONFLICT, ADMIN_TARGET_NOT_MODERATABLE, SELF_MODERATION_NOT_ALLOWED, FEATURE_DISABLED)
   - `getConfig` success + error paths
+  - `listInspectionInterestStats` success + error paths and pagination forwarding
   - Operator-script actor rendering, audit entry fields
 - Admin auth server-action tests in `src/app/actions.spec.ts`:
   - `verifyOtp` surfaces whether TOTP is already enrolled after OTP succeeds

@@ -1,6 +1,6 @@
 "use server";
 
-import type { AdminSchemas } from "@auto-tm/contracts";
+import type { AdminSchemas, ReportsSchemas } from "@auto-tm/contracts";
 
 import { apiFetch, ApiError } from "@/lib/api-client";
 
@@ -13,6 +13,7 @@ type SuspendUserResponse = AdminSchemas.SuspendUserResponse;
 type UnsuspendUserResponse = AdminSchemas.UnsuspendUserResponse;
 type ListAuditEntriesResponse = AdminSchemas.ListAuditEntriesResponse;
 type ConfigResponse = AdminSchemas.ConfigResponse;
+type ListInspectionInterestStatsResponse = ReportsSchemas.ListInspectionInterestStatsResponse;
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -180,6 +181,26 @@ export async function listAuditEntries(params: {
   try {
     const data = await apiFetch<ListAuditEntriesResponse>(
       `/admin/audit?${searchParams.toString()}`,
+    );
+    return { ok: true, data };
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+// ─── Inspection interests ───
+
+export async function listInspectionInterestStats(params: {
+  page?: number;
+  pageSize?: number;
+}): Promise<ActionResult<ListInspectionInterestStatsResponse>> {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
+
+  try {
+    const data = await apiFetch<ListInspectionInterestStatsResponse>(
+      `/admin/inspection-interests?${searchParams.toString()}`,
     );
     return { ok: true, data };
   } catch (err) {

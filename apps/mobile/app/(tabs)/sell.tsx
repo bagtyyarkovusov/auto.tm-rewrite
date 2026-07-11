@@ -303,7 +303,7 @@ export default function SellScreen() {
         title: t("listingPublished"),
         variant: "success",
       });
-      router.replace(`/(public)/listings/${result.id}`);
+      router.replace(`/(public)/listings/${result.id}?inspectionInterest=1`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : t("failedToPublish");
