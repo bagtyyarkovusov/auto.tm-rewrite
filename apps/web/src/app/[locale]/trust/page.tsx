@@ -13,8 +13,29 @@ import { Card, CardHeader } from "@auto-tm/ui/components";
 import { trustInfo, type TrustSection } from "./content";
 
 import type { Locale } from "@/i18n/locales";
-import { locales } from "@/i18n/locales";
+import { defaultLocale, locales } from "@/i18n/locales";
 
+function resolvePageLocale(locale: string): Locale {
+  return locales.includes(locale as Locale) ? (locale as Locale) : defaultLocale;
+}
+
+const trustMetaDescription: Record<Locale, string> = {
+  tk: "AutoTM howpsuzlyk we ynam baradady",
+  ru: "Как AutoTM защищает покупателей",
+  en: "How AutoTM keeps buyers safe",
+};
+
+const trustFooterEmailPrefix: Record<Locale, string> = {
+  tk: "Soraglaryňyz bar bolsa ",
+  ru: "Если есть вопросы, напишите нам на ",
+  en: "Questions? Reach us at ",
+};
+
+const trustBackHomeLabel: Record<Locale, string> = {
+  tk: "Baş sahypa gaýdym",
+  ru: "Вернуться на главную",
+  en: "Back to home",
+};
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -26,16 +47,12 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const doc = trustInfo[locale as Locale] ?? trustInfo.ru;
+  const pageLocale = resolvePageLocale(locale);
+  const doc = trustInfo[pageLocale];
 
   return {
     title: `${doc.title} — AutoTM`,
-    description:
-      locale === "tk"
-        ? "AutoTM howpsuzlyk we ynam baradady"
-        : locale === "ru"
-          ? "Как AutoTM защищает покупателей"
-          : "How AutoTM keeps buyers safe",
+    description: trustMetaDescription[pageLocale],
   };
 }
 
@@ -76,7 +93,8 @@ export default async function TrustPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const doc = trustInfo[locale as Locale] ?? trustInfo.ru;
+  const pageLocale = resolvePageLocale(locale);
+  const doc = trustInfo[pageLocale];
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 md:py-16">
@@ -98,11 +116,7 @@ export default async function TrustPage({
 
       <footer className="mt-12 border-t border-border pt-6 text-sm text-muted-foreground">
         <p>
-          {locale === "tk"
-            ? "Soraglaryňyz bar bolsa "
-            : locale === "ru"
-              ? "Если есть вопросы, напишите нам на "
-              : "Questions? Reach us at "}
+          {trustFooterEmailPrefix[pageLocale]}
           <a
             href="mailto:trust@auto.tm"
             className="text-brand-600 underline hover:text-brand-700"
@@ -113,14 +127,10 @@ export default async function TrustPage({
         </p>
         <p className="mt-4">
           <Link
-            href={`/${locale}`}
+            href={`/${pageLocale}`}
             className="text-brand-600 underline hover:text-brand-700"
           >
-            {locale === "tk"
-              ? "Baş sahypa gaýdym"
-              : locale === "ru"
-                ? "Вернуться на главную"
-                : "Back to home"}
+            {trustBackHomeLabel[pageLocale]}
           </Link>
         </p>
       </footer>

@@ -13,6 +13,7 @@ import { SellerBlock } from "./SellerBlock";
 import { OwnerActions } from "./OwnerActions";
 import { InspectionInterestCta } from "./InspectionInterestCta";
 
+import { resolveLocale } from "@/src/i18n/resources";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
@@ -239,7 +240,7 @@ export function ListingDetailView({
         )}
       </View>
 
-      <TrustInfoLink locale={i18n.language} />
+      <TrustInfoLink locale={resolveLocale(i18n.language)} />
 
       {/* Bottom padding for CTA or scroll breathing room */}
       <View className="h-4" />
@@ -364,7 +365,7 @@ function TrustInfoLink({ locale }: { locale: string }) {
   return (
     <Pressable
       onPress={() => void Linking.openURL(`https://auto.tm/${locale}/trust`)}
-      className="flex-row items-center gap-3 rounded-2xl bg-muted p-3 active:opacity-70"
+      className="mx-5 flex-row items-center gap-3 rounded-2xl bg-muted p-3 active:opacity-70"
       accessibilityRole="button"
       accessibilityLabel={t("trustInfoTitle")}
     >

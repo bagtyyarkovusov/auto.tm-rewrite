@@ -23,6 +23,7 @@ import { useListingFilters } from "../../src/listings/search/useListingFilters";
 import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 
 import { Badge } from "@/components/ui/badge";
+import { resolveLocale } from "@/src/i18n/resources";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -128,7 +129,7 @@ export default function FeedScreen() {
         ) : null}
       </Button>
 
-      <TrustBanner locale={i18n.language} />
+      <TrustBanner locale={resolveLocale(i18n.language)} />
     </View>
   );
 
