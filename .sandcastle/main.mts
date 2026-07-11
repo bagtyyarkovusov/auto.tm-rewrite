@@ -260,31 +260,65 @@ const HOST_ENV = { ...process.env, ...(await readSandcastleEnv()) };
 //   MAX_ITERATIONS=1 pnpm sandcastle
 const MAX_ITERATIONS = Number(HOST_ENV.MAX_ITERATIONS ?? 10);
 
-// Agent: Claude Code (the `claude` CLI) pointed at Kimi's Anthropic-compatible
-// endpoint. ANTHROPIC_BASE_URL=https://api.kimi.com/coding/ + ANTHROPIC_API_KEY are
-// forwarded into each sandbox from .sandcastle/.env (see EnvResolver). The model id
-// matches the one the native Kimi config used.
-const MODEL = "kimi-k2.6";
+// Agent: native Kimi Code CLI (the `kimi` npm package), not Claude Code pointed at
+// Kimi's Anthropic-compatible endpoint. The CLI's documented KIMI_MODEL_* channel
+// lets us inject the key at runtime without writing secrets into config.toml.
+const MODEL = "kimi-for-coding";
 
-// Kimi K2.6 reasons by default, and the Claude Code stream-json parser now surfaces
-// those `thinking` blocks as first-class events (and silences the high-frequency
-// `thinking_tokens` progress counter) — see the vendored fork's AgentProvider. So
-// enable thinking for every phase with a 16K budget: Kimi's docs recommend
-// max_tokens >= 16000 for K2-thinking to avoid truncating reasoning + final answer.
-// (`CLAUDE_CODE_DISABLE_THINKING` was a no-op — not a real Claude Code env var — so
-// it's gone; `MAX_THINKING_TOKENS` is the real lever, and the Anthropic API forces
-// temperature=1.0 whenever thinking is on, which matches Kimi's recommendation.)
-const CLAUDE_CODE_THINKING_ENV = {
+const KIMI_CODE_ENV = {
   CI: "1",
   COREPACK_ENABLE_PROJECT_SPEC: "0",
-  MAX_THINKING_TOKENS: "16000",
+  KIMI_DISABLE_TELEMETRY: "1",
+  KIMI_CODE_HOME: "/home/agent/.kimi",
+  KIMI_MODEL_NAME: MODEL,
+  KIMI_MODEL_PROVIDER_TYPE: "kimi",
+  KIMI_MODEL_BASE_URL: "https://api.kimi.com/coding/v1",
+  KIMI_MODEL_MAX_CONTEXT_SIZE: "262144",
+  KIMI_MODEL_CAPABILITIES: "thinking,tool_use,image_in",
+  ...(HOST_ENV.KIMI_MODEL_API_KEY
+    ? { KIMI_MODEL_API_KEY: HOST_ENV.KIMI_MODEL_API_KEY }
+    : HOST_ENV.KIMI_API_KEY
+      ? { KIMI_MODEL_API_KEY: HOST_ENV.KIMI_API_KEY }
+      : {}),
 };
 
-const kimiClaudeAgent = (effort: "low" | "medium" = "low") =>
-  sandcastle.claudeCode(MODEL, {
-    effort,
-    env: CLAUDE_CODE_THINKING_ENV,
-  });
+process.env.KIMI_MODEL_NAME = process.env.KIMI_MODEL_NAME || MODEL;
+process.env.KIMI_MODEL_PROVIDER_TYPE =
+  process.env.KIMI_MODEL_PROVIDER_TYPE || "kimi";
+process.env.KIMI_MODEL_BASE_URL =
+  process.env.KIMI_MODEL_BASE_URL || "https://api.kimi.com/coding/v1";
+process.env.KIMI_MODEL_MAX_CONTEXT_SIZE =
+  process.env.KIMI_MODEL_MAX_CONTEXT_SIZE || "262144";
+process.env.KIMI_MODEL_CAPABILITIES =
+  process.env.KIMI_MODEL_CAPABILITIES || "thinking,tool_use,image_in";
+process.env.KIMI_MODEL_API_KEY =
+  process.env.KIMI_MODEL_API_KEY ||
+  HOST_ENV.KIMI_MODEL_API_KEY ||
+  HOST_ENV.KIMI_API_KEY;
+
+const shellEscape = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+
+const kimiAgent = (_effort: "low" | "medium" = "low") =>
+  ({
+    ...sandcastle.kimiCode(MODEL, {
+      thinking: true,
+      env: KIMI_CODE_ENV,
+    }),
+    buildPrintCommand({ prompt, resumeSession }) {
+      const resumeFlag = resumeSession
+        ? ` --session ${shellEscape(resumeSession)}`
+        : "";
+      return {
+        command: `kimi -p ${shellEscape(prompt)} --output-format stream-json${resumeFlag}`,
+      };
+    },
+    buildInteractiveArgs({ prompt, dangerouslySkipPermissions }) {
+      const args = ["kimi"];
+      if (dangerouslySkipPermissions) args.push("--yolo");
+      if (prompt) args.push(prompt);
+      return args;
+    },
+  }) satisfies sandcastle.AgentProvider;
 
 // ---------------------------------------------------------------------------
 // Dependency strategy: copy-to-worktree (two-stage). See ADR-0033 +
@@ -523,7 +557,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     sandbox: docker(),
     name: "planner",
     maxIterations: 1,
-    agent: kimiClaudeAgent("low"),
+    agent: kimiAgent("low"),
     promptFile: "./.sandcastle/plan-prompt.md",
   });
 
@@ -616,7 +650,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
           name: "implementer",
           maxIterations: 100,
           idleTimeoutSeconds: IMPLEMENTER_IDLE_TIMEOUT_SECONDS,
-          agent: kimiClaudeAgent("medium"),
+          agent: kimiAgent("medium"),
           promptFile: "./.sandcastle/implement-prompt.md",
           promptArgs: {
             TASK_ID: issue.id,
@@ -634,7 +668,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
             name: "reviewer",
             maxIterations: 1,
             idleTimeoutSeconds: REVIEWER_IDLE_TIMEOUT_SECONDS,
-            agent: kimiClaudeAgent("low"),
+            agent: kimiAgent("low"),
             promptFile: "./.sandcastle/review-prompt.md",
             promptArgs: {
               BRANCH: issue.branch,
@@ -703,7 +737,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     name: "merger",
     maxIterations: 1,
     idleTimeoutSeconds: MERGER_IDLE_TIMEOUT_SECONDS,
-    agent: kimiClaudeAgent("low"),
+    agent: kimiAgent("low"),
     promptFile: "./.sandcastle/merge-prompt.md",
     promptArgs: {
       BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),

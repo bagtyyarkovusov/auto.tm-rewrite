@@ -13,11 +13,16 @@
 # shipped to the air-gapped runtime. It bakes a warm pnpm store so per-worktree
 # installs run offline + fast (see .sandcastle/main.mts install hook).
 
-FROM node:22-bookworm
+FROM node:22.19-bookworm
 
 # 1. System deps. (No Playwright/browser libs — the in-sandbox gate is
 #    typecheck + lint + Docker-free unit tests only; e2e runs on CI. See ADR-0028.)
-RUN apt-get update && apt-get install -y \
+RUN for attempt in 1 2 3 4 5; do \
+      apt-get update && break; \
+      if [ "$attempt" = "5" ]; then exit 1; fi; \
+      sleep 5; \
+    done && \
+    apt-get install -y \
       git \
       curl \
       jq \
@@ -63,12 +68,18 @@ RUN corepack prepare pnpm@10.33.2 --activate
 # `pnpm install --offline` at run time agree on a single content-addressable store.
 RUN pnpm config set store-dir /home/agent/.pnpm-store --global
 
-# 6. Kimi Code CLI. The API key is injected at run time via the KIMI_API_KEY env
-#    var (sandcastle forwards it from .sandcastle/.env), so api_key stays empty here.
-RUN export PATH="/home/agent/.local/bin:$PATH" && curl -LsSf https://code.kimi.com/install.sh | bash
+# 6. Kimi Code CLI. Official npm package install, not the curl installer.
+#    The API key is injected at run time through KIMI_MODEL_* env vars in
+#    .sandcastle/main.mts, so config.toml never bakes secrets into the image.
+RUN mkdir -p /home/agent/.local && \
+    NPM_CONFIG_PREFIX=/home/agent/.local npm install -g @moonshot-ai/kimi-code
+
+# Keep Kimi's runtime data under ~/.kimi so the vendored sandcastle kimiCode
+# provider's session capture path and the CLI's KIMI_CODE_HOME agree.
+ENV KIMI_CODE_HOME="/home/agent/.kimi"
 
 RUN mkdir -p /home/agent/.kimi && \
-    printf 'default_model = "kimi-k2.6"\n\n[providers.kimi]\ntype = "kimi"\nbase_url = "https://api.kimi.com/coding/v1"\napi_key = ""\n\n[models."kimi-k2.6"]\nprovider = "kimi"\nmodel = "kimi-k2.6"\nmax_context_size = 262144\n' > /home/agent/.kimi/config.toml && \
+    printf 'default_model = "kimi-for-coding"\ndefault_permission_mode = "auto"\ndefault_plan_mode = false\ntelemetry = false\n\n[thinking]\nenabled = true\neffort = "high"\nkeep = "all"\n\n[loop_control]\nreserved_context_size = 50000\n\n[background]\nkeep_alive_on_exit = true\nprint_wait_ceiling_s = 3600\n' > /home/agent/.kimi/config.toml && \
     printf '{"mcpServers":{"context7":{"command":"npx","args":["-y","@upstash/context7-mcp"]}}}\n' > /home/agent/.kimi/mcp.json
 
 ENV PATH="/home/agent/.local/bin:${PATH}"
@@ -93,16 +104,5 @@ RUN pnpm config set fetch-retries 5 \
 
 WORKDIR /home/agent
 
-# 8. Claude Code CLI. The planner/implementer/reviewer/merger now run the `claude`
-#    CLI against Kimi's Anthropic-compatible endpoint — ANTHROPIC_BASE_URL +
-#    ANTHROPIC_API_KEY are forwarded from .sandcastle/.env at run time (EnvResolver).
-#    The Kimi CLI above is kept so the kimiCode provider still works if we revert.
-RUN mkdir -p /home/agent/.local && \
-    NPM_CONFIG_PREFIX=/home/agent/.local npm install -g @anthropic-ai/claude-code
-
-# Register Context7 MCP for Claude Code at user scope (ADR-0017), mirroring the kimi
-# mcp.json above. CONTEXT7_API_KEY is forwarded from .env at run time.
-RUN printf '{"mcpServers":{"context7":{"command":"npx","args":["-y","@upstash/context7-mcp"]}}}\n' > /home/agent/.claude.json
-
-# sandcastle drives commands into the running container; keep it alive.
+# 8. Sandcastle drives commands into the running container; keep it alive.
 ENTRYPOINT ["sleep", "infinity"]

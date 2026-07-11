@@ -74,19 +74,27 @@ defaults: 50), the run stops before creating more worktrees. This avoids the
 half-started state where the planner succeeds but implementer/reviewer `gh`
 calls later fail under a shared 5,000/hour quota.
 
-## Agent reasoning mode
+## Agent runtime
 
-Sandcastle runs Claude Code against Kimi's Anthropic-compatible coding endpoint.
-`kimi-k2.6` enables thinking by default, and this workflow now keeps thinking on
-with a 16K budget:
+Sandcastle runs the native **Kimi Code CLI** (`kimi`) inside each Docker sandbox,
+not Claude Code pointed at Kimi's Anthropic-compatible endpoint. The sandbox image
+installs the official npm package:
 
 ```bash
-MAX_THINKING_TOKENS=16000
+npm install -g @moonshot-ai/kimi-code
 ```
 
-Planner, reviewer, and merger run with low effort; implementer runs with medium
-effort. The vendored fork parses Claude Code `thinking` blocks, normal tool
-calls, and suppresses high-frequency `thinking_tokens` progress records in logs.
+Do not use the curl installer in this repo's Dockerfile. The image pins Node
+22.19+ because the npm package requires it.
+
+At run time, `.sandcastle/main.mts` maps `.sandcastle/.env` `KIMI_API_KEY` into
+Kimi Code CLI's documented `KIMI_MODEL_*` environment channel, so the image never
+bakes the API key into `config.toml`. The active model id is `kimi-for-coding`
+with a 262k context window and thinking/tool-use capabilities enabled.
+
+Planner, reviewer, and merger use the same native Kimi Code provider as the
+implementer. The vendored fork parses Kimi stream-json output for text,
+thinking, tool calls, and session capture.
 
 ## The gate (D1)
 
@@ -182,7 +190,7 @@ bind mount:
   `linux-modules/` automatically on a lockhash miss.
 
 The implementer/reviewer/merger phases have explicit idle budgets so a stuck Kimi
-or Claude Code stream does not look like an infinite hang:
+Code stream does not look like an infinite hang:
 `SANDCASTLE_IMPLEMENTER_IDLE_TIMEOUT_SECONDS` defaults to 300 seconds;
 reviewer/merger default to 180 seconds.
 
@@ -198,7 +206,7 @@ To pick up fork changes, rebuild + re-vendor per `vendor/README.md`, bump the
 |---|---|---|
 | Mode | synchronous, 1 issue, in your CC session | AFK, N issues in parallel |
 | Branch | `agent/issue-<N>` | `sandcastle/issue-<N>-<slug>` |
-| Agent | Claude Code (you) | Kimi K2 in Docker sandboxes |
+| Agent | Claude Code (you) | Kimi Code CLI in Docker sandboxes |
 | e2e gate | local + CI | CI only (D1) |
 | Mobile gate | you run it | deferred to you post-merge (D2) |
 
