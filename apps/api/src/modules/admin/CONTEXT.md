@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Cross-cutting admin operations: audit log, moderation actions, staff media attribution, broadcast notification tooling. Surfaces consumed by `apps/admin` (the Next.js dashboard, currently stub-only). MLP beta builds moderation essentials in S7; full dashboard expansion is post-MLP.
+Cross-cutting admin operations: audit log and moderation actions today. Staff media attribution, broadcast notification tooling, and the broader dashboard remain post-MLP. `apps/admin` consumes these admin routes plus the S9a inspection-interest aggregate route owned by `reports/`.
 
 ## Owns (entities + tables)
 
@@ -22,7 +22,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 - `ContentReport.reason` enum values: `spam`, `scam`, `misleading`, `wrong_category` (listing-only), `harassment` (user-only), `other` (requires non-empty trimmed details ≤ 1000 chars).
 - `ContentReportCreated` event is emitted from `admin/` after a new report row commits. Duplicate reuse emits no event. S7 has no in-process consumers.
 - Public report routes (`POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report`) are authenticated with `JwtAuthGuard` (not `AdminGuard`). The public response shape is exactly `{ reportId, status, createdAt, reusedExisting }`.
-- **Launch-safety flags** (S7 closeout): `REPORT_ENTRY_ENABLED=false` blocks public report writes at the controller level (403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"`) while admin report/audit reads remain available. `ADMIN_MODERATION_ACTIONS_ENABLED=false` blocks dismiss/ban/unban/suspend/unsuspend writes at the controller level (same 403 shape) while admin login, report list/detail, and audit list remain readable. Flag checks are server-side environment config injected via `ConfigService`; disabled responses do not leak internal flag names.
+- **Launch-safety flags** (S7/S9a closeout): `REPORT_ENTRY_ENABLED=false` blocks public report writes at the controller level (403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"`) while admin report/audit reads remain available. `ADMIN_MODERATION_ACTIONS_ENABLED=false` blocks dismiss/ban/unban/suspend/unsuspend writes at the controller level (same 403 shape) while admin login, report list/detail, and audit list remain readable. `INSPECTION_INTEREST_ENABLED=false` is enforced in `reports/` for `POST /api/v1/listings/:id/inspection-interest`; `admin/` only exposes its public config flag. Flag checks are server-side environment config injected via `ConfigService`; disabled responses do not leak internal flag names.
 
 ## Module shape (today)
 
@@ -52,7 +52,7 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
   - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report` and `POST /api/v1/users/:id/report` (JwtAuthGuard, not AdminGuard); admin `GET /api/v1/admin/reports` and `GET /api/v1/admin/reports/:id` (AdminGuard)
   - `presentation/AuditController.ts` — admin `GET /api/v1/admin/audit` (AdminGuard)
   - `presentation/AdminModerationController.ts` — admin `POST /api/v1/admin/reports/:id/dismiss`, `POST /api/v1/admin/listings/:id/ban`, `POST /api/v1/admin/listings/:id/unban`, `POST /api/v1/admin/users/:id/suspend`, and `POST /api/v1/admin/users/:id/unsuspend` (AdminGuard)
-  - `presentation/ConfigController.ts` — public `GET /api/v1/config` returning `{ reportEntryEnabled, adminModerationActionsEnabled }`
+  - `presentation/ConfigController.ts` — public `GET /api/v1/config` returning `{ reportEntryEnabled, adminModerationActionsEnabled, inspectionInterestEnabled }`
   - `presentation/admin.controller.ts` — stub ping endpoint
   - `admin.module.ts` — registers repositories, use-cases, and controllers; imports `ListingsModule` + `IdentityModule`
   - `presentation/ReportsController.spec.ts` — controller-level tests for `REPORT_ENTRY_ENABLED` guard
@@ -100,7 +100,9 @@ Cross-cutting admin operations: audit log, moderation actions, staff media attri
 | POST | `/api/v1/admin/listings/:id/unban` | AdminGuard | `UnbanListing` — unban a banned listing |
 | POST | `/api/v1/admin/users/:id/suspend` | AdminGuard | `SuspendUser` — suspend an unsuspended user (direct or report-backed) |
 | POST | `/api/v1/admin/users/:id/unsuspend` | AdminGuard | `UnsuspendUser` — unsuspend a suspended user |
-| GET | `/api/v1/config` | Public | `ConfigController.getConfig` — returns launch-safety flag state |
+| GET | `/api/v1/config` | Public | `ConfigController.getConfig` — returns launch-safety flag state (`reportEntryEnabled`, `adminModerationActionsEnabled`, `inspectionInterestEnabled`) |
+
+The admin-facing `GET /api/v1/admin/inspection-interests` route is implemented by `reports/` (`ReportsController`) because `InspectionInterest` belongs to that bounded context, even though `apps/admin` renders the table under `/reports/inspection-interests`.
 
 ## Events consumed
 
@@ -117,7 +119,7 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 - **S7 DB/query shape** stays small and index-backed: report pending queue uses `(status, createdAt, id)`, report target count/detail uses `(targetType, targetId, status)`, reporter history count uses `(reporterUserId, createdAt, id)`, audit default list uses `(createdAt, id)`, audit action filter uses `(action, createdAt, id)`, and audit target filter uses `(targetType, targetId, createdAt, id)`. S7 does not query `AuditLog.details` JSON or report details JSON, so it does not add JSON/GIN indexes for those fields. Duplicate pending report dedupe remains application-level; no partial unique index ships in S7.
 - **S7 contract/runtime alignment**: API code imports S7 admin constants and schemas from `@auto-tm/contracts` instead of duplicating strings for report reasons, content-report statuses, audit actions, and `details.reason` values. Route-level validation may refine the shared offset pagination schema to enforce the S7 admin max page size of 100. API response timestamps are ISO strings matching contracts, not raw `Date` objects.
 - **S7 transaction boundary**: `admin/` owns the moderation write transaction because it owns `ContentReport` resolution and `AuditLog`. Report-backed ban/suspend and direct ban/unban/suspend/unsuspend run report status updates, target mutation, and audit write inside one Prisma transaction. `ListingsAdminPort` and `IdentityAdminPort` keep target-state ownership but must participate in the caller's transaction or expose transaction-scoped adapters for S7 admin moderation; they must not open independent write transactions for these calls.
-- **S7/private-beta kill switches** are server-side environment/deployment config, not admin-managed DB state in the MLP. `REPORT_ENTRY_ENABLED=false` blocks public `POST /listings/:id/report` and `POST /users/:id/report` writes while admin report/audit reads remain available. `ADMIN_MODERATION_ACTIONS_ENABLED=false` blocks dismiss, ban, unban, suspend, and unsuspend writes while admin login, report list/detail, and audit list remain readable. Disabled writes return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and must not leak internal flag names. UI hiding/disabled states are secondary; API enforcement is authoritative.
+- **S7/S9a private-beta kill switches** are server-side environment/deployment config, not admin-managed DB state in the MLP. `REPORT_ENTRY_ENABLED=false` blocks public `POST /listings/:id/report` and `POST /users/:id/report` writes while admin report/audit reads remain available. `ADMIN_MODERATION_ACTIONS_ENABLED=false` blocks dismiss, ban, unban, suspend, and unsuspend writes while admin login, report list/detail, and audit list remain readable. `INSPECTION_INTEREST_ENABLED=false` blocks the S9a fake-door create route in `reports/` while admin aggregate reads remain available. Disabled writes return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and must not leak internal flag names. UI hiding/disabled states are secondary; API enforcement is authoritative.
 - **`StaffMediaAttribution` entity** (Phase 2 — pro photos/videos feature): { mediaKey, uploadedByStaff: bool, uploadedByUserId, uploadedAt, note? } — tracks media uploaded by AutoTM staff on behalf of sellers.
 - **Application-level invariants**:
   - Every admin action that mutates user-visible state writes an `AuditLog` entry using a canonical string action constant
