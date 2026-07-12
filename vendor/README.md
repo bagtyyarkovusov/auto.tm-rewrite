@@ -1,6 +1,6 @@
 # Vendored dependencies
 
-## `ai-hero-sandcastle-0.5.10-d4b7db7-kimi-prompt-json.tgz`
+## `ai-hero-sandcastle-0.5.10-d4b7db7-kimi-prompt-json-no-session-capture.tgz`
 
 Prebuilt tarball of the Kimi-enabled `@ai-hero/sandcastle` fork, consumed as a
 **host-only** devDependency (`file:`) by the root `package.json`. Sandcastle runs
@@ -14,13 +14,15 @@ image or any deployed artifact, so it does not touch the air-gapped runtime.
   `dist/AgentProvider.js` so native Kimi Code prompt-mode stream-json records
   (`role:"assistant"` `tool_calls`, `role:"tool"`, and `role:"meta"`) parse into
   normal Sandcastle log events instead of `[debug] [kimi-code] Unrecognized line`
-  dumps. Covered by `pnpm test:sandcastle-parser`.
+  dumps, and so Kimi prompt-mode does not attempt fatal Claude-style
+  `context.jsonl` session capture by default. Covered by
+  `pnpm test:sandcastle-parser`.
 
 > The `d4b7db7` build was packed from a working tree that also carried an
 > unrelated, uncommitted `cursor` agent-provider WIP; that WIP was stashed before
 > the build, so this tarball reflects exactly the `d4b7db7` commit (copy-to-worktree
-> + log-cleanup) on top of `dc7dab2`. The `kimi-prompt-json` tarball adds only the
-> local parser repack described above.
+> + log-cleanup) on top of `dc7dab2`. The `kimi-prompt-json-no-session-capture`
+> tarball adds only the local parser/session-capture repack described above.
 
 ### Why vendored (not a `github:` git dependency)
 

@@ -34,9 +34,13 @@ try {
     join(tempDir, "package", "dist", "AgentProvider.js"),
   ).href;
   const { kimiCode } = await import(agentProviderUrl);
-  const parse = kimiCode("kimi-for-coding", {
-    captureSessions: false,
-  }).parseStreamLine;
+  const defaultProvider = kimiCode("kimi-for-coding");
+  assert.equal(
+    defaultProvider.captureSessions,
+    false,
+    "Kimi prompt-mode should not fatal on missing context.jsonl session files",
+  );
+  const parse = defaultProvider.parseStreamLine;
   const parseObject = (value) => parse(JSON.stringify(value));
 
   assert.deepEqual(parseObject({ role: "assistant", content: "Done." }), [
