@@ -5,15 +5,15 @@ import { ListingsSchemas } from "@auto-tm/contracts";
 import { apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
-interface UseListingCountOptions {
-  filters?: ListingsSchemas.ListingFilter;
+interface UseListingModelCountsOptions {
+  filters?: ListingsSchemas.ListingModelCountQuery;
   enabled?: boolean;
 }
 
 const DEBOUNCE_MS = 300;
 
-function buildCountParams(
-  filters: ListingsSchemas.ListingFilter | undefined,
+export function buildSearchParams(
+  filters: ListingsSchemas.ListingModelCountQuery | undefined,
 ): URLSearchParams {
   const params = new URLSearchParams();
 
@@ -38,9 +38,12 @@ function buildCountParams(
   return params;
 }
 
-export function useListingCount({ filters, enabled = true }: UseListingCountOptions) {
+export function useListingModelCounts({
+  filters,
+  enabled = true,
+}: UseListingModelCountsOptions) {
   const [debouncedFilters, setDebouncedFilters] =
-    useState<ListingsSchemas.ListingFilter | undefined>(filters);
+    useState<ListingsSchemas.ListingModelCountQuery | undefined>(filters);
 
   useEffect(() => {
     if (!enabled) {
@@ -56,14 +59,14 @@ export function useListingCount({ filters, enabled = true }: UseListingCountOpti
   }, [filters, enabled]);
 
   return useQuery({
-    queryKey: queryKeys.listings.count(debouncedFilters),
+    queryKey: queryKeys.listings.modelCounts(debouncedFilters),
     queryFn: () =>
       apiClient.get(
-        `/listings/count?${buildCountParams(debouncedFilters).toString()}`,
-        ListingsSchemas.ListingCountResponseSchema,
+        `/listings/filter-options/models?${buildSearchParams(debouncedFilters).toString()}`,
+        ListingsSchemas.ListingModelCountResponseSchema,
         { auth: false },
       ),
-    enabled,
+    enabled: enabled && !!debouncedFilters?.brandId,
     staleTime: 30_000,
   });
 }

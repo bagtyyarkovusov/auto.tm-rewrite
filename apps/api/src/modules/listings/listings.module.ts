@@ -25,6 +25,7 @@ import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdap
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
 import { CountListings } from "./application/CountListings";
+import { CountListingModels } from "./application/CountListingModels";
 import { UpdateDraft } from "./application/UpdateDraft";
 import { ValidateDraftStep } from "./application/ValidateDraftStep";
 import { ListMyDrafts } from "./application/ListMyDrafts";
@@ -136,6 +137,7 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     // Application use-cases
     CreateDraft,
     CountListings,
+    CountListingModels,
     UpdateDraft,
     ValidateDraftStep,
     ListMyDrafts,

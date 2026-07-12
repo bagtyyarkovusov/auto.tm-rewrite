@@ -16,6 +16,10 @@ class FakeFeedRankingPort implements FeedRankingPort {
     this.lastCountFilters = query.filters;
     return this.countResult;
   }
+
+  async modelCounts(): Promise<Array<{ modelId: string; totalMatching: number }>> {
+    return [];
+  }
 }
 
 function makeUseCase(ranking?: FakeFeedRankingPort) {

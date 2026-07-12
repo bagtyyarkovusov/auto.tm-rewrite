@@ -25,6 +25,20 @@ export class ListingFilter {
       );
     }
 
+    if (criteria.modelId !== undefined && criteria.modelIds !== undefined && criteria.modelIds.length > 0) {
+      throw new DomainError(
+        LISTING_ERROR_CODES.INVALID_FILTER_RANGE,
+        "Cannot specify both modelId and modelIds",
+      );
+    }
+
+    if (criteria.modelIds !== undefined && criteria.modelIds.length > 0 && !criteria.brandId) {
+      throw new DomainError(
+        LISTING_ERROR_CODES.INVALID_FILTER_RANGE,
+        "modelIds requires brandId",
+      );
+    }
+
     return new ListingFilter({ ...criteria });
   }
 
@@ -36,6 +50,7 @@ export class ListingFilter {
     return (
       this.criteria.brandId === undefined &&
       this.criteria.modelId === undefined &&
+      (this.criteria.modelIds === undefined || this.criteria.modelIds.length === 0) &&
       this.criteria.cityId === undefined &&
       this.criteria.priceMin === undefined &&
       this.criteria.priceMax === undefined &&

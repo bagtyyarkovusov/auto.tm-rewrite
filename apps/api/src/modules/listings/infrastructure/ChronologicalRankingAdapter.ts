@@ -61,6 +61,28 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     return this.prisma.listing.count({ where });
   }
 
+  async modelCounts(query: {
+    filters: ListingFilterCriteria & { brandId: string };
+  }): Promise<Array<{ modelId: string; totalMatching: number }>> {
+    const countFilters: ListingFilterCriteria = { ...query.filters };
+    delete countFilters.modelId;
+    delete countFilters.modelIds;
+
+    const where = await this.buildWhere(countFilters, undefined);
+
+    const rows = await this.prisma.listing.groupBy({
+      by: ["modelId"],
+      where,
+      _count: { modelId: true },
+      orderBy: [{ _count: { modelId: "desc" } }, { modelId: "asc" }],
+    });
+
+    return rows.map((row) => ({
+      modelId: row.modelId,
+      totalMatching: row._count.modelId,
+    }));
+  }
+
   private async buildWhere(
     filters: ListingFilterCriteria | undefined,
     cursor: FeedCursor | undefined,
@@ -81,6 +103,9 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     }
     if (filters?.modelId) {
       conditions.push({ modelId: filters.modelId });
+    }
+    if (filters?.modelIds && filters.modelIds.length > 0) {
+      conditions.push({ modelId: { in: filters.modelIds } });
     }
     if (filters?.cityId) {
       conditions.push({ cityId: filters.cityId });

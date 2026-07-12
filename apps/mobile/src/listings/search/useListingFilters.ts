@@ -23,12 +23,22 @@ export interface UseListingFiltersReturn {
   isValid: boolean;
 }
 
+function isNonEmptyFilterValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  return true;
+}
+
 function countActiveFields(filter: ListingFilter): number {
   let count = 0;
   for (const _key of Object.keys(filter)) {
     const key = _key as FilterKey;
     const value = filter[key];
-    if (value !== undefined && value !== null && value !== "") {
+    if (isNonEmptyFilterValue(value)) {
       count++;
     }
   }
@@ -52,7 +62,7 @@ export function useListingFilters(): UseListingFiltersReturn {
     for (const _key of Object.keys(currentDraft)) {
       const key = _key as FilterKey;
       const value = currentDraft[key];
-      if (value !== undefined && value !== null && value !== "") {
+      if (isNonEmptyFilterValue(value)) {
         (next as Record<FilterKey, ListingFilter[FilterKey]>)[key] = value;
       }
     }
@@ -73,6 +83,15 @@ export function useListingFilters(): UseListingFiltersReturn {
     ) {
       return false;
     }
+
+    if (
+      draft.modelIds != null &&
+      draft.modelIds.length > 0 &&
+      !draft.brandId
+    ) {
+      return false;
+    }
+
     return true;
   }, [draft]);
 

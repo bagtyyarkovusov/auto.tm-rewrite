@@ -15,6 +15,10 @@ export interface FeedRankingPort {
   count(query: {
     filters?: ListingFilterCriteria;
   }): Promise<number>;
+
+  modelCounts(query: {
+    filters: ListingFilterCriteria & { brandId: string };
+  }): Promise<Array<{ modelId: string; totalMatching: number }>>;
 }
 
 export const FEED_RANKING_PORT = Symbol("FeedRankingPort");

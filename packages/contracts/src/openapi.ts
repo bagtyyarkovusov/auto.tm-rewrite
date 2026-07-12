@@ -59,6 +59,8 @@ import {
   FeedResponseSchema,
   ListingCountQuerySchema,
   ListingCountResponseSchema,
+  ListingModelCountQuerySchema,
+  ListingModelCountResponseSchema,
   MyListingsResponseSchema,
   MyDraftsResponseSchema,
 } from "./schemas/listings";
@@ -157,6 +159,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("FeedResponse", FeedResponseSchema);
   registry.register("ListingCountQuery", ListingCountQuerySchema);
   registry.register("ListingCountResponse", ListingCountResponseSchema);
+  registry.register("ListingModelCountQuery", ListingModelCountQuerySchema);
+  registry.register("ListingModelCountResponse", ListingModelCountResponseSchema);
   registry.register("MyListingsResponse", MyListingsResponseSchema);
   registry.register("MyDraftsResponse", MyDraftsResponseSchema);
 
@@ -493,6 +497,28 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         description: "Total matching listings",
         content: {
           "application/json": { schema: S(ListingCountResponseSchema) },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/listings/filter-options/models",
+    summary: "Model-level counts for a selected brand",
+    tags: ["Listings"],
+    request: {
+      query: ListingModelCountQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Models with feed-eligible listing counts",
+        content: {
+          "application/json": { schema: S(ListingModelCountResponseSchema) },
         },
       },
       400: {

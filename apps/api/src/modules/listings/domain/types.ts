@@ -25,6 +25,7 @@ export interface ListingFilterCriteria {
   // Forward-defined for S5 / #92 — S4 always passes empty filters
   brandId?: string;
   modelId?: string;
+  modelIds?: string[];
   cityId?: string;
   priceMin?: number;
   priceMax?: number;

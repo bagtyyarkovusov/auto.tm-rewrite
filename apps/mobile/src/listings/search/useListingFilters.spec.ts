@@ -158,4 +158,40 @@ describe("useListingFilters", () => {
     expect(result.current.active.condition).toBeUndefined();
     expect(result.current.count).toBe(0);
   });
+
+  it("counts modelIds as a single active filter", () => {
+    const { result } = renderHook(() => useListingFilters());
+
+    act(() => {
+      result.current.setField("brandId", "brand-1");
+      result.current.setField("modelIds", ["model-1", "model-2"]);
+      result.current.apply();
+    });
+
+    expect(result.current.active.modelIds).toEqual(["model-1", "model-2"]);
+    expect(result.current.count).toBe(2);
+  });
+
+  it("does not count an empty modelIds array", () => {
+    const { result } = renderHook(() => useListingFilters());
+
+    act(() => {
+      result.current.setField("brandId", "brand-1");
+      result.current.setField("modelIds", []);
+      result.current.apply();
+    });
+
+    expect(result.current.active.modelIds).toBeUndefined();
+    expect(result.current.count).toBe(1);
+  });
+
+  it("is invalid when modelIds are set without a brand", () => {
+    const { result } = renderHook(() => useListingFilters());
+
+    act(() => {
+      result.current.setField("modelIds", ["model-1"]);
+    });
+
+    expect(result.current.isValid).toBe(false);
+  });
 });

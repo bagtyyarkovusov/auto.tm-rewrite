@@ -9,14 +9,19 @@ const source = readFileSync(
 );
 
 describe("BrandModelFilterControl structure", () => {
-  it("imports catalog hooks", () => {
+  it("imports catalog and listing hooks", () => {
     expect(source).toContain('import { useBrands }');
     expect(source).toContain('import { useModels }');
+    expect(source).toContain('import { useListingModelCounts }');
   });
 
-  it("imports reusable picker components", () => {
+  it("imports reusable UI picker components", () => {
     expect(source).toContain('import { CatalogPickerSheet }');
     expect(source).toContain('import { PickerRow }');
+  });
+
+  it("imports checkbox for multi-select", () => {
+    expect(source).toContain('import { Checkbox }');
   });
 
   it("accepts draft and setField props", () => {
@@ -26,8 +31,8 @@ describe("BrandModelFilterControl structure", () => {
 });
 
 describe("BrandModelFilterControl brand behavior", () => {
-  it("calls useBrands with default locale", () => {
-    expect(source).toContain("useBrands()");
+  it("calls useBrands with resolved locale", () => {
+    expect(source).toContain("useBrands(locale)");
   });
 
   it("writes brandId to draft on selection", () => {
@@ -41,64 +46,58 @@ describe("BrandModelFilterControl brand behavior", () => {
 });
 
 describe("BrandModelFilterControl model behavior", () => {
-  it("calls useModels with brandId from draft", () => {
-    expect(source).toContain("useModels(draft.brandId ?? \"\")");
+  it("calls useModels with brandId and locale from draft", () => {
+    expect(source).toContain('useModels(draft.brandId ?? "", locale)');
+  });
+
+  it("fetches model counts from listing-owned endpoint", () => {
+    expect(source).toContain("useListingModelCounts");
+    expect(source).toContain("buildModelCountFilters(draft)");
   });
 
   it("disables model row until brand is selected", () => {
     expect(source).toContain('disabled={!draft.brandId}');
   });
 
-  it("writes modelId to draft on selection", () => {
-    expect(source).toContain('setField("modelId", modelId)');
+  it("writes modelIds array to draft on confirm", () => {
+    expect(source).toContain('setField("modelIds",');
   });
 
-  it("shows selected model name on the row", () => {
-    expect(source).toContain("selectedModel?.name");
-    expect(source).toContain('value={selectedModel?.name}');
+  it("shows selected model name or count on the row", () => {
+    expect(source).toContain("selectedModelNames");
+    expect(source).toContain("modelsSelected");
   });
 });
 
 describe("BrandModelFilterControl cascade rule", () => {
-  it("clears modelId when a brand is selected", () => {
+  it("clears modelId and modelIds when a brand is selected", () => {
     expect(source).toContain('setField("modelId", undefined)');
+    expect(source).toContain('setField("modelIds", undefined)');
     expect(source).toContain("handleSelectBrand");
   });
 });
 
-describe("BrandModelFilterControl picker states", () => {
-  it("passes loading state to brand picker", () => {
-    expect(source).toContain("brandsLoading");
-    expect(source).toContain("isLoading={brandsLoading}");
+describe("BrandModelFilterControl multi-select sheet", () => {
+  it("renders ModelMultiSelectSheet", () => {
+    expect(source).toContain("ModelMultiSelectSheet");
   });
 
-  it("passes error state to brand picker", () => {
-    expect(source).toContain("brandsError");
-    expect(source).toContain("isError={brandsError}");
+  it("renders checkboxes for model rows", () => {
+    expect(source).toContain("<Checkbox");
   });
 
-  it("passes loading state to model picker", () => {
-    expect(source).toContain("modelsLoading");
-    expect(source).toContain("isLoading={modelsLoading}");
+  it("sections models into popular and all groups", () => {
+    expect(source).toContain('t("popularModels")');
+    expect(source).toContain('t("allModels")');
   });
 
-  it("passes error state to model picker", () => {
-    expect(source).toContain("modelsError");
-    expect(source).toContain("isError={modelsError}");
+  it("shows selected count and confirm button", () => {
+    expect(source).toContain('t("modelsSelected"');
+    expect(source).toContain('t("selectNModels"');
   });
 
-  it("shows empty messages for both pickers", () => {
-    expect(source).toContain("emptyMessage");
-    expect(source).toContain('t("noBrandsAvailable")');
-    expect(source).toContain('t("noModelsAvailable")');
-  });
-
-  it("shows search-empty fallback for brands", () => {
-    expect(source).toContain('t("noBrandsMatch")');
-  });
-
-  it("shows search-empty fallback for models", () => {
-    expect(source).toContain('t("noModelsMatch")');
+  it("supports clearing selected models", () => {
+    expect(source).toContain("handleClear");
   });
 });
 
@@ -109,14 +108,12 @@ describe("BrandModelFilterControl search", () => {
     expect(source).toContain("filteredBrands");
   });
 
-  it("filters models by search text", () => {
-    expect(source).toContain("modelSearch");
-    expect(source).toContain("setModelSearch");
+  it("filters models by search text in multi-select sheet", () => {
+    expect(source).toContain("setSearch");
     expect(source).toContain("filteredModels");
   });
 
-  it("resets search when picker closes", () => {
+  it("resets brand search when brand picker closes", () => {
     expect(source).toContain('if (!open) setBrandSearch("")');
-    expect(source).toContain('if (!open) setModelSearch("")');
   });
 });

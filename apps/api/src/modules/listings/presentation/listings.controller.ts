@@ -22,6 +22,7 @@ import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import { ArchiveListing } from "../application/ArchiveListing";
 import { CountListings } from "../application/CountListings";
+import { CountListingModels } from "../application/CountListingModels";
 import { DeleteListing } from "../application/DeleteListing";
 import { EditListing } from "../application/EditListing";
 import { MarkSold } from "../application/MarkSold";
@@ -50,6 +51,7 @@ export class ListingsController {
     @Inject(GetListingDetail) private readonly getListingDetailUC: GetListingDetail,
     @Inject(ListFeed) private readonly listFeedUC: ListFeed,
     @Inject(CountListings) private readonly countListingsUC: CountListings,
+    @Inject(CountListingModels) private readonly countListingModelsUC: CountListingModels,
     @Inject(IDENTITY_TOKENS.IdentityCheckPort)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
@@ -77,6 +79,9 @@ export class ListingsController {
     const filters: ListingFilterCriteria = {};
     if (filterFields.brandId !== undefined) filters.brandId = filterFields.brandId;
     if (filterFields.modelId !== undefined) filters.modelId = filterFields.modelId;
+    if (filterFields.modelIds !== undefined && filterFields.modelIds.length > 0) {
+      filters.modelIds = filterFields.modelIds;
+    }
     if (filterFields.cityId !== undefined) filters.cityId = filterFields.cityId;
     if (filterFields.priceMin !== undefined) filters.priceMin = filterFields.priceMin;
     if (filterFields.priceMax !== undefined) filters.priceMax = filterFields.priceMax;
@@ -142,6 +147,23 @@ export class ListingsController {
     const filters = this.parseAndValidateFilters(parsed);
 
     return this.countListingsUC.execute({
+      ...(filters !== undefined ? { filters } : {}),
+    });
+  }
+
+  @Public()
+  @Get("filter-options/models")
+  async countModels(@Query() query: unknown) {
+    const parsed = this.parseZodQuery(ListingsSchemas.ListingModelCountQuerySchema, query);
+    const { brandId, ...scalarFilters } = parsed;
+
+    const filters = this.parseAndValidateFilters({
+      ...scalarFilters,
+      brandId,
+    } as ListingsSchemas.ListingFilter);
+
+    return this.countListingModelsUC.execute({
+      brandId,
       ...(filters !== undefined ? { filters } : {}),
     });
   }

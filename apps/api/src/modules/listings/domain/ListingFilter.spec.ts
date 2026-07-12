@@ -80,4 +80,28 @@ describe("ListingFilter", () => {
     const filter = ListingFilter.create({ yearMin: 2020, yearMax: 2020 });
     expect(filter.toCriteria()).toEqual({ yearMin: 2020, yearMax: 2020 });
   });
+
+  it("accepts modelIds under a brand", () => {
+    const filter = ListingFilter.create({ brandId: "b1", modelIds: ["m1", "m2"] });
+    expect(filter.toCriteria()).toEqual({ brandId: "b1", modelIds: ["m1", "m2"] });
+    expect(filter.isEmpty()).toBe(false);
+  });
+
+  it("treats empty modelIds as no model filter", () => {
+    const filter = ListingFilter.create({ brandId: "b1", modelIds: [] });
+    expect(filter.isEmpty()).toBe(false);
+    expect(filter.toCriteria()).toEqual({ brandId: "b1", modelIds: [] });
+  });
+
+  it("rejects modelIds without brandId", () => {
+    expect(() => ListingFilter.create({ modelIds: ["m1"] })).toThrowError(
+      LISTING_ERROR_CODES.INVALID_FILTER_RANGE,
+    );
+  });
+
+  it("rejects both modelId and modelIds", () => {
+    expect(() =>
+      ListingFilter.create({ brandId: "b1", modelId: "m1", modelIds: ["m2"] }),
+    ).toThrowError(LISTING_ERROR_CODES.INVALID_FILTER_RANGE);
+  });
 });

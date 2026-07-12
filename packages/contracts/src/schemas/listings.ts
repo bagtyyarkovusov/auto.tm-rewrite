@@ -306,11 +306,21 @@ export function decodeCursor(token: string): {
     .parse(JSON.parse(json));
 }
 
+const ModelIdsFilterSchema = z.preprocess(
+  (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === "string") return [val];
+    return val;
+  },
+  z.array(z.string().uuid()).max(50).optional(),
+);
+
 // ── Feed filters ──
 
-export const ListingFilterSchema = z.object({
+export const ListingFilterFieldsSchema = z.object({
   brandId: z.string().uuid().optional(),
   modelId: z.string().uuid().optional(),
+  modelIds: ModelIdsFilterSchema,
   cityId: z.string().uuid().optional(),
   priceMin: z.coerce.number().positive().optional(),
   priceMax: z.coerce.number().positive().optional(),
@@ -318,6 +328,20 @@ export const ListingFilterSchema = z.object({
   yearMax: z.coerce.number().int().min(1900).max(2100).optional(),
   condition: ListingConditionSchema.optional(),
 });
+
+export const ListingFilterSchema = ListingFilterFieldsSchema.refine(
+  (data) => !(data.modelId && data.modelIds && data.modelIds.length > 0),
+  {
+    message: "Cannot specify both modelId and modelIds",
+    path: ["modelIds"],
+  },
+).refine(
+  (data) => !(data.modelIds && data.modelIds.length > 0 && !data.brandId),
+  {
+    message: "modelIds requires brandId",
+    path: ["modelIds"],
+  },
+);
 export type ListingFilter = z.infer<typeof ListingFilterSchema>;
 
 // ── Feed query / response ──
@@ -327,7 +351,21 @@ export const FeedQuerySchema = z
     cursor: z.string().optional(),
     limit: z.coerce.number().int().min(1).max(50).default(20),
   })
-  .merge(ListingFilterSchema);
+  .merge(ListingFilterFieldsSchema)
+  .refine(
+    (data) => !(data.modelId && data.modelIds && data.modelIds.length > 0),
+    {
+      message: "Cannot specify both modelId and modelIds",
+      path: ["modelIds"],
+    },
+  )
+  .refine(
+    (data) => !(data.modelIds && data.modelIds.length > 0 && !data.brandId),
+    {
+      message: "modelIds requires brandId",
+      path: ["modelIds"],
+    },
+  );
 export type FeedQuery = z.infer<typeof FeedQuerySchema>;
 
 export const FeedResponseSchema = z.object({
@@ -345,6 +383,31 @@ export const ListingCountResponseSchema = z.object({
   totalMatching: z.number().int().nonnegative(),
 });
 export type ListingCountResponse = z.infer<typeof ListingCountResponseSchema>;
+
+// ── Model count / filter-options query / response ──
+
+export const ListingModelCountQuerySchema = ListingFilterFieldsSchema.omit({
+  modelId: true,
+  modelIds: true,
+})
+  .merge(
+    z.object({
+      brandId: z.string().uuid(),
+    }),
+  )
+  .strict();
+export type ListingModelCountQuery = z.infer<typeof ListingModelCountQuerySchema>;
+
+export const ListingModelCountItemSchema = z.object({
+  modelId: z.string().uuid(),
+  totalMatching: z.number().int().nonnegative(),
+});
+export type ListingModelCountItem = z.infer<typeof ListingModelCountItemSchema>;
+
+export const ListingModelCountResponseSchema = z.object({
+  items: z.array(ListingModelCountItemSchema),
+});
+export type ListingModelCountResponse = z.infer<typeof ListingModelCountResponseSchema>;
 
 // ── My listings / drafts responses ──
 

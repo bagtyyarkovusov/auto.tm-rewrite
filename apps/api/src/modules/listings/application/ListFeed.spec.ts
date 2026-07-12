@@ -26,6 +26,10 @@ class FakeFeedRankingPort implements FeedRankingPort {
   async count(): Promise<number> {
     return this.items.length;
   }
+
+  async modelCounts(): Promise<Array<{ modelId: string; totalMatching: number }>> {
+    return [];
+  }
 }
 
 class FakeExchangeRatePort implements ExchangeRatePort {
@@ -163,6 +167,9 @@ describe("ListFeed", () => {
       async count() {
         return 0;
       },
+      async modelCounts() {
+        return [];
+      },
     };
 
     const uc = new ListFeed(spyRanking, exchangeRates, new FakeMediaStoragePort());
@@ -201,6 +208,9 @@ describe("ListFeed", () => {
       },
       async count() {
         return 0;
+      },
+      async modelCounts() {
+        return [];
       },
     };
 
