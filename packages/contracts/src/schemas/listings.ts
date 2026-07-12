@@ -329,43 +329,47 @@ export const ListingFilterFieldsSchema = z.object({
   condition: ListingConditionSchema.optional(),
 });
 
-export const ListingFilterSchema = ListingFilterFieldsSchema.refine(
-  (data) => !(data.modelId && data.modelIds && data.modelIds.length > 0),
-  {
-    message: "Cannot specify both modelId and modelIds",
-    path: ["modelIds"],
-  },
-).refine(
-  (data) => !(data.modelIds && data.modelIds.length > 0 && !data.brandId),
-  {
-    message: "modelIds requires brandId",
-    path: ["modelIds"],
-  },
-);
+function refineListingFilter<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
+  return schema
+    .refine(
+      (data) =>
+        !(
+          data["modelId"] &&
+          data["modelIds"] &&
+          data["modelIds"].length > 0
+        ),
+      {
+        message: "Cannot specify both modelId and modelIds",
+        path: ["modelIds"],
+      },
+    )
+    .refine(
+      (data) =>
+        !(
+          data["modelIds"] &&
+          data["modelIds"].length > 0 &&
+          !data["brandId"]
+        ),
+      {
+        message: "modelIds requires brandId",
+        path: ["modelIds"],
+      },
+    );
+}
+
+export const ListingFilterSchema = refineListingFilter(ListingFilterFieldsSchema);
 export type ListingFilter = z.infer<typeof ListingFilterSchema>;
 
 // ── Feed query / response ──
 
-export const FeedQuerySchema = z
-  .object({
-    cursor: z.string().optional(),
-    limit: z.coerce.number().int().min(1).max(50).default(20),
-  })
-  .merge(ListingFilterFieldsSchema)
-  .refine(
-    (data) => !(data.modelId && data.modelIds && data.modelIds.length > 0),
-    {
-      message: "Cannot specify both modelId and modelIds",
-      path: ["modelIds"],
-    },
-  )
-  .refine(
-    (data) => !(data.modelIds && data.modelIds.length > 0 && !data.brandId),
-    {
-      message: "modelIds requires brandId",
-      path: ["modelIds"],
-    },
-  );
+export const FeedQuerySchema = refineListingFilter(
+  z
+    .object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(50).default(20),
+    })
+    .merge(ListingFilterFieldsSchema),
+);
 export type FeedQuery = z.infer<typeof FeedQuerySchema>;
 
 export const FeedResponseSchema = z.object({

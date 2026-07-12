@@ -182,10 +182,7 @@ function ModelMultiSelectSheet({
         accessibilityState={{ checked: isSelected }}
         className="flex-row items-center gap-3 py-3 active:bg-muted/60"
       >
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={() => toggleModel(item.id)}
-        />
+        <Checkbox checked={isSelected} pointerEvents="none" />
         <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
           {item.name}
         </Text>
@@ -404,7 +401,7 @@ export function BrandModelFilterControl({
         open={modelOpen}
         onOpenChange={setModelOpen}
         title={t("selectModel")}
-        searchPlaceholder={`${t("searchPlaceholder")}`}
+        searchPlaceholder={t("searchPlaceholder")}
         emptyMessage={modelEmptyMessage}
         models={modelsWithCounts}
         selectedIds={draft.modelIds ?? []}
