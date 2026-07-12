@@ -57,6 +57,8 @@ import {
   AttachMediaRequestSchema,
   ReorderMediaRequestSchema,
   FeedResponseSchema,
+  ListingCountQuerySchema,
+  ListingCountResponseSchema,
   MyListingsResponseSchema,
   MyDraftsResponseSchema,
 } from "./schemas/listings";
@@ -153,6 +155,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("AttachMediaRequest", AttachMediaRequestSchema);
   registry.register("ReorderMediaRequest", ReorderMediaRequestSchema);
   registry.register("FeedResponse", FeedResponseSchema);
+  registry.register("ListingCountQuery", ListingCountQuerySchema);
+  registry.register("ListingCountResponse", ListingCountResponseSchema);
   registry.register("MyListingsResponse", MyListingsResponseSchema);
   registry.register("MyDraftsResponse", MyDraftsResponseSchema);
 
@@ -467,6 +471,28 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
           "application/json": {
             schema: S(ListInspectionInterestStatsResponseSchema),
           },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/listings/count",
+    summary: "Count listings matching public feed filters",
+    tags: ["Listings"],
+    request: {
+      query: ListingCountQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Total matching listings",
+        content: {
+          "application/json": { schema: S(ListingCountResponseSchema) },
         },
       },
       400: {

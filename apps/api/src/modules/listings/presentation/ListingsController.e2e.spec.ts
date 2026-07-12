@@ -895,6 +895,186 @@ describe("ListingsController e2e", () => {
     });
   });
 
+  describe("GET /api/v1/listings/count", () => {
+    it("returns zero when no listings exist", async () => {
+      const res = await request
+        .get("/api/v1/listings/count")
+        .expect(200);
+
+      expect(res.body.totalMatching).toBe(0);
+    });
+
+    it("counts all eligible listings with no filters", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+
+      for (let i = 0; i < 3; i++) {
+        const draft = await seedDraft("user-1", {
+          ...validPayload,
+          photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
+        });
+        await request
+          .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+          .set("Authorization", `Bearer ${token}`)
+          .send({})
+          .expect(201);
+      }
+
+      const res = await request
+        .get("/api/v1/listings/count")
+        .expect(200);
+
+      expect(res.body.totalMatching).toBe(3);
+    });
+
+    it("counts listings matching brand filter", async () => {
+      await seedCatalog();
+      const brand2 = await prisma.brand.create({
+        data: {
+          id: "00000000-0000-0000-0000-000000000010",
+          slug: "test-brand-2",
+          nameRu: "Test Brand 2",
+          nameTk: "Test Brand 2",
+          nameEn: "Test Brand 2",
+        },
+      });
+      await prisma.model.create({
+        data: {
+          id: "00000000-0000-0000-0000-000000000011",
+          brandId: brand2.id,
+          slug: "test-model-2",
+          nameRu: "Test Model 2",
+          nameTk: "Test Model 2",
+          nameEn: "Test Model 2",
+        },
+      });
+
+      const token = await createUser("user-1");
+
+      const draft1 = await seedDraft("user-1", validPayload);
+      const draft2 = await seedDraft("user-1", {
+        ...validPayload,
+        brandId: brand2.id,
+        modelId: "00000000-0000-0000-0000-000000000011",
+      });
+
+      await request
+        .post(`/api/v1/listings/drafts/${draft1.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      await request
+        .post(`/api/v1/listings/drafts/${draft2.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const res = await request
+        .get("/api/v1/listings/count")
+        .query({ brandId: validPayload.brandId })
+        .expect(200);
+
+      expect(res.body.totalMatching).toBe(1);
+    });
+
+    it("excludes soft-deleted listings from count", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .delete(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(200);
+
+      const res = await request
+        .get("/api/v1/listings/count")
+        .expect(200);
+
+      expect(res.body.totalMatching).toBe(0);
+    });
+
+    it("includes sold listings within 14 days in count", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .post(`/api/v1/listings/${listingId}/sold`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const res = await request
+        .get("/api/v1/listings/count")
+        .expect(200);
+
+      expect(res.body.totalMatching).toBe(1);
+
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { soldAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) },
+      });
+
+      const resAfter = await request
+        .get("/api/v1/listings/count")
+        .expect(200);
+
+      expect(resAfter.body.totalMatching).toBe(0);
+    });
+
+    it("respects FX-aware price filters", async () => {
+      await seedCatalog();
+      await seedExchangeRate("USD", "TMT", 3.5);
+      const token = await createUser("user-1");
+
+      const draftTmt = await seedDraft("user-1", { ...validPayload, priceAmount: 100000, priceCurrency: "TMT" });
+      const draftUsd = await seedDraft("user-1", { ...validPayload, priceAmount: 20000, priceCurrency: "USD" });
+
+      await request
+        .post(`/api/v1/listings/drafts/${draftTmt.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      await request
+        .post(`/api/v1/listings/drafts/${draftUsd.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const res = await request
+        .get("/api/v1/listings/count")
+        .query({ priceMin: 50000, priceMax: 80000 })
+        .expect(200);
+
+      expect(res.body.totalMatching).toBe(1);
+    });
+
+    it("returns 400 VALIDATION_ERROR for invalid filter range", async () => {
+      const res = await request
+        .get("/api/v1/listings/count")
+        .query({ priceMin: 200000, priceMax: 100000 })
+        .expect(400);
+
+      expect(res.body.code).toBe("VALIDATION_ERROR");
+    });
+  });
+
   describe("GET /api/v1/me/listings", () => {
     it("returns 401 without bearer token", async () => {
       await request

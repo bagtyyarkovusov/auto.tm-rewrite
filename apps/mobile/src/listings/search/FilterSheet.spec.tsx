@@ -30,8 +30,8 @@ describe("FilterSheet funnel order", () => {
     expect(source).toContain('t("checkFilterValues")');
   });
 
-  it("does not claim a live listing result count on Apply", () => {
-    expect(source).toContain('t("applyFiltersCount", { count })');
-    expect(source).not.toContain('t("showResultsCount"');
+  it("shows a live listing result count on Apply from the count endpoint", () => {
+    expect(source).toContain("useListingCount");
+    expect(source).toContain('t("showResultsCount", { count: countData.totalMatching })');
   });
 });

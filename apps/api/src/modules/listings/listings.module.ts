@@ -24,6 +24,7 @@ import { PrismaFavoriteRepository } from "./infrastructure/PrismaFavoriteReposit
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
+import { CountListings } from "./application/CountListings";
 import { UpdateDraft } from "./application/UpdateDraft";
 import { ValidateDraftStep } from "./application/ValidateDraftStep";
 import { ListMyDrafts } from "./application/ListMyDrafts";
@@ -134,6 +135,7 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
 
     // Application use-cases
     CreateDraft,
+    CountListings,
     UpdateDraft,
     ValidateDraftStep,
     ListMyDrafts,

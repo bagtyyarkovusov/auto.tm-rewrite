@@ -52,7 +52,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 
 - `apps/api/src/modules/listings/`:
   - `domain/` — **7 entity/value-object classes + `ListingStatus` helper + types + 12 ports** (S4 #86, S5 #154, S8 #188)
-  - `application/` — 22 use-cases (S4 #88-#92, S8 #188): `CreateDraft`, `UpdateDraft`, `ValidateDraftStep`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `ListMyListings`, `GetExchangeRates`, `AddFavorite`, `RemoveFavorite`, `ListMyFavorites`
+  - `application/` — 23 use-cases (S4 #88-#92, S8 #188, #216): `CreateDraft`, `UpdateDraft`, `ValidateDraftStep`, `ListMyDrafts`, `DiscardDraft`, `PresignUpload`, `PublishListing`, `MarkSold`, `ArchiveListing`, `RepublishListing`, `DeleteListing`, `EditListing`, `AttachMedia`, `RemoveMedia`, `ReorderMedia`, `GetListingDetail`, `ListFeed`, `CountListings`, `ListMyListings`, `GetExchangeRates`, `AddFavorite`, `RemoveFavorite`, `ListMyFavorites`
   - `infrastructure/` — 13 adapters: `NullVinDecoder`, `NullContentClassifier`, `ChronologicalRankingAdapter` (full implementation per [ADR-0021](../../../../../docs/adr/0021-feed-ranking-port.md); applies `ListingFilterCriteria` including FX-aware price filtering via injected `ExchangeRatePort`), `EventEmitterListingEventPublisher` (S4 #86), `PrismaListingDraftRepository`, `PrismaListingRepository` (S4 #89), `PrismaListingMediaRepository` (S4 #91), `PrismaExchangeRateRepository` (S4 #89), `PrismaListingsReadRepository` (cross-context read surface), `PrismaListingsAdminRepository` (S7 — transaction-scoped `ListingsAdminPort` adapter for admin ban/unban), `PrismaFavoriteRepository` (S8 #188), `MinioMediaStorageAdapter` (S4 #88), `SharpImageVariantGenerator` (S4 #91)
   - `presentation/listings.controller.ts` — listings health check, public feed + detail, owner publish/state/edit/delete endpoints, and media attach/remove/reorder endpoints
   - `presentation/DraftsController.ts` — draft CRUD + validate-step + list my drafts
@@ -71,7 +71,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 | `VinDecoderPort` | `VIN_DECODER_PORT` | `domain/ports/VinDecoderPort.ts` | Internal: `PublishListing`, `GetListingDetail` |
 | `MediaContentClassifierPort` | `MEDIA_CONTENT_CLASSIFIER_PORT` | `domain/ports/MediaContentClassifierPort.ts` | Internal: `AttachMedia` use-case |
 | `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` | Internal: `AttachMedia` use-case |
-| `FeedRankingPort` | `FEED_RANKING_PORT` | `domain/ports/FeedRankingPort.ts` | Internal: `ListFeed` use-case |
+| `FeedRankingPort` | `FEED_RANKING_PORT` | `domain/ports/FeedRankingPort.ts` | Internal: `ListFeed` and `CountListings` use-cases; exposes `rank()` and `count()` |
 | `ExchangeRatePort` | `EXCHANGE_RATE_PORT` | `domain/ports/ExchangeRatePort.ts` | Internal: `PublishListing`, `ListFeed`, `GetListingDetail`, `GetExchangeRates` |
 | `MediaStoragePort` | `MEDIA_STORAGE_PORT` | `domain/ports/MediaStoragePort.ts` | Internal: `PresignUpload`, `AttachMedia` |
 | `ListingEventPublisher` | `LISTING_EVENT_PUBLISHER` | `domain/ports/ListingEventPublisher.ts` | Internal: state-transition use-cases |
@@ -113,6 +113,7 @@ Repository ports (consumed only within `listings/`):
 - `ListMyFavorites` — paginated list of the caller's favorited listings via `GET /api/v1/favorites`; excludes banned/deleted listings (filtered by `ListingsReadPort.getListingSummaries`); returns `ListingSummary` DTOs with `sellerTrust.phoneVerified`
 - `ListMyListings` — paginated list of the caller's own listings via `GET /api/v1/me/listings`; returns `ListingSummary` DTOs with `sellerTrust.phoneVerified`
 - `ListFeed` — public chronological feed; returns `ListingSummary` DTOs with `coverMediaKey`, `displayPriceTmt`, and `sellerTrust.phoneVerified`
+- `CountListings` — public `GET /api/v1/listings/count`; returns `{ totalMatching }` for the same filter set and public-feed eligibility rules (active + sold-within-14-days, no deleted/banned, FX-aware price filtering) as `ListFeed`
 - `GetListingDetail` — returns full detail DTO (specs, media variants, seller block, price, terms, `isFavorited`, `sellerTrust.phoneVerified`). **S9a**: includes `conditionDisclosure` when present; older listings without disclosure return an honest absent state. **S9a T3**: includes `vinHistory` when a VIN exists, calling `VinDecoderPort.decode` at read time; `NullVinDecoder` returns `{ decoded: false }`, surfaced as an honest "not decoded" state.
 
 ## HTTP routes
@@ -128,6 +129,7 @@ Repository ports (consumed only within `listings/`):
 | GET | `/api/v1/me/listings` | Required | `ListMyListings` | Cursor pagination; returns `ListingSummary` DTOs with `sellerTrust.phoneVerified` |
 | POST | `/api/v1/uploads/presign` | Required | `PresignUpload` | Generates presigned MinIO PUT URL |
 | GET | `/api/v1/listings` | Public | `ListFeed` | Accepts `cursor`, `limit`, and MLP filters (`brandId`, `modelId`, `cityId`, `priceMin`, `priceMax`, `yearMin`, `yearMax`, `condition`). Includes `coverMediaKey` when listing has media and `sellerTrust.phoneVerified` for every persisted listing |
+| GET | `/api/v1/listings/count` | Public | `CountListings` | Accepts the same MLP filters as `ListFeed` (no `cursor`/`limit`). Returns `{ totalMatching }` using the same public-feed eligibility and FX-aware price semantics as `ListFeed` |
 | GET | `/api/v1/listings/:id` | Public (auth optional) | `GetListingDetail` | Banned listings: non-owner → 404; owner → full detail with `status: "banned"`. Includes `isFavorited` when caller is authenticated and `sellerTrust.phoneVerified` for every persisted listing |
 | GET | `/api/v1/exchange-rates` | Public | `GetExchangeRates` |
 | POST | `/api/v1/listings/drafts/:id/publish` | Required | `PublishListing` |

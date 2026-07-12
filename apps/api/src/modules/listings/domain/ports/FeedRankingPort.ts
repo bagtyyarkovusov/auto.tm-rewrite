@@ -11,6 +11,10 @@ export interface FeedRankingPort {
     items: Listing[];
     nextCursor?: FeedCursor;
   }>;
+
+  count(query: {
+    filters?: ListingFilterCriteria;
+  }): Promise<number>;
 }
 
 export const FEED_RANKING_PORT = Symbol("FeedRankingPort");

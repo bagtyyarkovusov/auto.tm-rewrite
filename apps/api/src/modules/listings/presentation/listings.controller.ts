@@ -21,6 +21,7 @@ import { Public } from "../../../common/public.decorator";
 import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import { ArchiveListing } from "../application/ArchiveListing";
+import { CountListings } from "../application/CountListings";
 import { DeleteListing } from "../application/DeleteListing";
 import { EditListing } from "../application/EditListing";
 import { MarkSold } from "../application/MarkSold";
@@ -48,6 +49,7 @@ export class ListingsController {
     @Inject(ReorderMedia) private readonly reorderMediaUC: ReorderMedia,
     @Inject(GetListingDetail) private readonly getListingDetailUC: GetListingDetail,
     @Inject(ListFeed) private readonly listFeedUC: ListFeed,
+    @Inject(CountListings) private readonly countListingsUC: CountListings,
     @Inject(IDENTITY_TOKENS.IdentityCheckPort)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
@@ -69,26 +71,9 @@ export class ListingsController {
     return { context: "listings", status: "ok" };
   }
 
-  @Public()
-  @Get()
-  async listFeed(@Query() query: unknown) {
-    let parsed: typeof ListingsSchemas.FeedQuerySchema._type;
-    try {
-      parsed = ListingsSchemas.FeedQuerySchema.parse(query);
-    } catch (err) {
-      if (err && typeof err === "object" && "issues" in err) {
-        const zodError = err as z.ZodError;
-        throw new BadRequestException({
-          code: "VALIDATION_ERROR",
-          message: "Invalid query parameters",
-          details: zodError.flatten(),
-        });
-      }
-      throw err;
-    }
-
-    const { cursor, limit, ...filterFields } = parsed;
-
+  private parseAndValidateFilters(
+    filterFields: ListingsSchemas.ListingFilter,
+  ): ListingFilterCriteria | undefined {
     const filters: ListingFilterCriteria = {};
     if (filterFields.brandId !== undefined) filters.brandId = filterFields.brandId;
     if (filterFields.modelId !== undefined) filters.modelId = filterFields.modelId;
@@ -114,10 +99,50 @@ export class ListingsController {
       }
     }
 
+    return Object.keys(filters).length > 0 ? filters : undefined;
+  }
+
+  private parseZodQuery<TSchema extends z.ZodTypeAny>(
+    schema: TSchema,
+    query: unknown,
+  ): z.infer<TSchema> {
+    try {
+      return schema.parse(query);
+    } catch (err) {
+      if (err && typeof err === "object" && "issues" in err) {
+        const zodError = err as z.ZodError;
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+          details: zodError.flatten(),
+        });
+      }
+      throw err;
+    }
+  }
+
+  @Public()
+  @Get()
+  async listFeed(@Query() query: unknown) {
+    const parsed = this.parseZodQuery(ListingsSchemas.FeedQuerySchema, query);
+    const { cursor, limit, ...filterFields } = parsed;
+    const filters = this.parseAndValidateFilters(filterFields);
+
     return this.listFeedUC.execute({
       ...(cursor !== undefined ? { cursor } : {}),
       limit,
-      ...(Object.keys(filters).length > 0 ? { filters } : {}),
+      ...(filters !== undefined ? { filters } : {}),
+    });
+  }
+
+  @Public()
+  @Get("count")
+  async countListings(@Query() query: unknown) {
+    const parsed = this.parseZodQuery(ListingsSchemas.ListingCountQuerySchema, query);
+    const filters = this.parseAndValidateFilters(parsed);
+
+    return this.countListingsUC.execute({
+      ...(filters !== undefined ? { filters } : {}),
     });
   }
 

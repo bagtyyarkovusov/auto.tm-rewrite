@@ -3,6 +3,8 @@ import { X } from "lucide-react-native";
 import { ScrollView, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { useListingCount } from "../../api/listings/useListingCount";
+
 import type { UseListingFiltersReturn } from "./useListingFilters";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
 import { CityFilterControl } from "./CityFilterControl";
@@ -29,11 +31,23 @@ interface FilterSheetProps {
 export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
   const { t } = useTranslation();
   const { height: screenHeight } = useWindowDimensions();
-  const { draft, setField, apply, reset, count, isValid } = filters;
+  const { draft, setField, apply, reset, isValid } = filters;
   const [priceRangeValid, setPriceRangeValid] = useState(true);
   const isApplyDisabled = !isValid || !priceRangeValid;
-  const applyLabel =
-    count > 0 ? t("applyFiltersCount", { count }) : t("apply");
+  const countEnabled = isValid && priceRangeValid;
+  const { data: countData, isPending: isCountPending } = useListingCount({
+    filters: draft,
+    enabled: countEnabled,
+  });
+
+  let applyLabel = t("apply");
+  if (countEnabled) {
+    if (isCountPending && countData === undefined) {
+      applyLabel = t("loadingEllipsis");
+    } else if (countData !== undefined) {
+      applyLabel = t("showResultsCount", { count: countData.totalMatching });
+    }
+  }
 
   const handleApply = () => {
     apply();

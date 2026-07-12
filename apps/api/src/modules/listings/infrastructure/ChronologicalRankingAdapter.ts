@@ -24,9 +24,7 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     limit: number;
   }): Promise<{ items: Listing[]; nextCursor?: FeedCursor }> {
     const take = query.limit + 1;
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-
-    const where = await this.buildWhere(query.filters, query.cursor, fourteenDaysAgo);
+    const where = await this.buildWhere(query.filters, query.cursor);
 
     const rows = await this.prisma.listing.findMany({
       where,
@@ -58,11 +56,16 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     return result;
   }
 
+  async count(query: { filters?: ListingFilterCriteria }): Promise<number> {
+    const where = await this.buildWhere(query.filters, undefined);
+    return this.prisma.listing.count({ where });
+  }
+
   private async buildWhere(
     filters: ListingFilterCriteria | undefined,
     cursor: FeedCursor | undefined,
-    fourteenDaysAgo: Date,
   ): Promise<Prisma.ListingWhereInput> {
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
     const conditions: Prisma.ListingWhereInput[] = [
       { deletedAt: null },
       {

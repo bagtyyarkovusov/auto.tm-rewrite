@@ -29,6 +29,8 @@ export const queryKeys = {
     all: () => ["listings"] as const,
     list: (filters: unknown) =>
       [...queryKeys.listings.all(), "list", filters] as const,
+    count: (filters: unknown) =>
+      [...queryKeys.listings.all(), "count", filters] as const,
     detail: (id: string) =>
       [...queryKeys.listings.all(), "detail", id] as const,
     myListings: () => [...queryKeys.listings.all(), "my-listings"] as const,

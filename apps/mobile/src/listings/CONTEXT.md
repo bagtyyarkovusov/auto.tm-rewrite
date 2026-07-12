@@ -28,7 +28,7 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
   - `search/` — feed filter sheet + filter state hook
     - `useListingFilters.ts` — hook managing `draft` (in-progress edits), `active` (committed filters), `setField`, `apply`, `reset`, `count`, and `isValid`. Filter type inferred from `@auto-tm/contracts` `ListingFilterSchema`. Apply commits draft → active; reset clears both. `isValid` is `false` when `yearMin > yearMax`.
     - `useListingFilters.spec.ts` — unit tests for apply/reset/count transitions, draft/active isolation, and `isValid` logic.
-    - `FilterSheet.tsx` — RNR `Sheet` shell hosting `ConditionFilterControl`, `CityFilterControl`, `BrandModelFilterControl`, `YearRangeFilterControl`, and `PriceRangeFilterControl` in the Kolesa funnel order: Condition → City → Make/Model → Year → Price. Apply closes the sheet and is disabled when `isValid` is `false` or any control reports invalid (price-range min > max); Reset clears all filters. Active-filter count is surfaced on the Search tab's prominent Filter/Search entry via a `Badge`. Sheet height is computed from `useWindowDimensions` (`Math.min(screenHeight * 0.85, screenHeight - 80)`) so it never overflows on small screens. Shows inline `t("checkFilterValues")` error when Apply is disabled.
+    - `FilterSheet.tsx` — RNR `Sheet` shell hosting `ConditionFilterControl`, `CityFilterControl`, `BrandModelFilterControl`, `YearRangeFilterControl`, and `PriceRangeFilterControl` in the Kolesa funnel order: Condition → City → Make/Model → Year → Price. Apply closes the sheet and is disabled when `isValid` is `false` or any control reports invalid (price-range min > max); Reset clears all filters. Active-filter count is surfaced on the Search tab's prominent Filter/Search entry via a `Badge`. Sheet height is computed from `useWindowDimensions` (`Math.min(screenHeight * 0.85, screenHeight - 80)`) so it never overflows on small screens. Shows inline `t("checkFilterValues")` error when Apply is disabled. **Live result count:** `FilterSheet` consumes `useListingCount({ filters: draft })` to show the estimated number of matching listings on the Apply button; the count is debounced 300 ms, fetched anonymously via `GET /api/v1/listings/count`, and falls back to the static `t("apply")` label while loading, on error, or when the draft is invalid.
     - `BrandModelFilterControl.tsx` — Brand→Model filter control: two `PickerRow`s + two `CatalogPickerSheet`s. Reuses `useBrands()` and `useModels(brandId)` with hardcoded `"ru"` locale. Model row disabled until brand selected; selecting a brand clears any previously selected model. Writes `brandId`/`modelId` to filter draft via `setField`.
     - `BrandModelFilterControl.spec.ts` — static source tests verifying picker wiring, cascade rule, and loading/error/empty states.
     - `CityFilterControl.tsx` — Region → City drilldown control for the filter sheet. Uses `useRegions` + `useCities(regionId)` to populate searchable `CatalogPickerSheet`s. Only `cityId` is written to the draft; regionId is local state used solely to fetch the city list. A module-level `cityMetaCache` preserves the selected city name across sheet close/open cycles.
@@ -397,12 +397,33 @@ open sheet → edit draft → Reset → clear draft + active → useListings ref
 
 `useListings({ filters })` (`apps/mobile/src/api/listings/useListings.ts`) builds `URLSearchParams` from defined filter fields + `limit` + `cursor`, keys the infinite query through `queryKeys.listings.list({ ...filters, limit })`, and parses the response with `@auto-tm/contracts` `FeedResponseSchema`. Only defined filter values are appended; `undefined`/`null`/empty-string fields are omitted. Each distinct filter set gets its own cache entry; changing `active` triggers a refetch. The Search tab passes `filters.active` into the hook.
 
+### Live result count
+
+`useListingCount({ filters: draft })` (`apps/mobile/src/api/listings/useListingCount.ts`) provides a debounced, anonymous estimate of how many listings match the in-progress draft.
+
+| Behavior | Value |
+|---|---|
+| Debounce | 300 ms after the draft stops changing |
+| Auth | `auth: false` so anonymous users see the count |
+| Params | Omits `undefined` / `null` / empty-string filter fields |
+| Query key | `queryKeys.listings.count(debouncedFilters)` |
+| Stale time | 30 s |
+| Enabled | Only when `isValid && priceRangeValid` are both true |
+
+`FilterSheet` consumes the hook and updates the Apply button label:
+
+- While enabled and loading (no prior data): `t("loadingEllipsis")` → `"Загрузка..."` / `"Loading..."` / `"Ýüklenýär..."`.
+- When `totalMatching` returns: `t("showResultsCount", { count })` → `"Показать {{count}} объявлений"` / `"Show {{count}} listings"` / `"{{count}} bildirişi görkez"`.
+- On error, while loading without data, or when disabled by invalid values: falls back to `t("apply")`.
+
+The count does not block Apply; it is a UX hint. The actual feed query still runs with the committed `active` filters after the user presses Apply.
+
 ### UI contract
 
 - The Search tab trigger shows a brand `Badge` with `count` when `count > 0`.
 - When `allItems.length === 0` after a successful query, the Search tab branches: `filters.count > 0` → `FilteredEmpty` with Reset action; otherwise → `FeedEmpty` with Sell CTA.
 - `FilterSheet` hosts `BrandModelFilterControl`, `CityFilterControl`, `PriceRangeFilterControl`, `YearRangeFilterControl`, and `ConditionFilterControl`. All filter controls from #158–#162 are wired in.
-- Apply button label adapts: `"Apply"` when no active filters, `"Show results ({count})"` when filters are active.
+- Apply button label adapts: `"Apply"` when no active filters or when the live count is unavailable, `"Show results ({count})"` when the live count returns.
 - Reset button is always visible and uses `variant="ghost"`; Apply uses `variant="brand" size="pill"`.
 
 ## 6. Platform invariants — DO NOT REMOVE

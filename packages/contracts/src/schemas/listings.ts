@@ -336,6 +336,16 @@ export const FeedResponseSchema = z.object({
 });
 export type FeedResponse = z.infer<typeof FeedResponseSchema>;
 
+// ── Listing count query / response ──
+
+export const ListingCountQuerySchema = ListingFilterSchema;
+export type ListingCountQuery = z.infer<typeof ListingCountQuerySchema>;
+
+export const ListingCountResponseSchema = z.object({
+  totalMatching: z.number().int().nonnegative(),
+});
+export type ListingCountResponse = z.infer<typeof ListingCountResponseSchema>;
+
 // ── My listings / drafts responses ──
 
 export const MyListingsResponseSchema = z.object({
