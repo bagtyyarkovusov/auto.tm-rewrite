@@ -4,18 +4,13 @@
 
 ## Purpose
 
-**Phase 2 target.** AutoTM-staffed vehicle inspection reports with a 3-tier rating system. Reports are PDF-exportable, viewable on the listing, and used as the "Trusted by AutoTM" signal.
+Measure inspection demand before operational spend. Today this context contains only the S9a flag-gated fake-door seed (`InspectionInterest`).
 
-**S9a reality.** Only a flag-gated demand instrument (`InspectionInterest`) is implemented to measure inspection demand before operational spend. No reports, rubrics, PDFs, bookings, payments, inspectors, or tier badges exist.
+No inspection reports, rubrics, PDFs, bookings, payments, inspectors, tier badges, or listing-tier filters exist in code today.
 
 ## Owns (entities + tables)
 
 - `InspectionInterest` — id, listingId, requesterUserId, side (`buyer` | `seller`), willingnessToPayTmt (optional int 0–10000), createdAt, updatedAt. Unique on `(listingId, requesterUserId)`. Relations: `listing` (Cascade), `requester` (Cascade). Table `inspection_interests`. Indexes on `(listingId, createdAt)` and `(requesterUserId, createdAt)`.
-- `InspectionReport` — **planned only**, not in schema.
-- `RubricTemplate` — **planned only**, not in schema.
-- `ReportSection` — **planned only**, not in schema.
-- `ReportItem` — **planned only**, not in schema.
-- `PdfArtifact` — **planned only**, not in schema.
 
 ## Invariants (enforced today)
 
@@ -26,55 +21,29 @@
 - Suspended users are blocked from creating interest (`USER_SUSPENDED`).
 - The create route is gated by `INSPECTION_INTEREST_ENABLED=false` → HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"`. The admin read route remains available when the flag is off.
 
-## Invariants (planned)
+## Module shape (today)
 
-- `InspectionReport.tier` is **computed** from `totalScore` against fixed bands — never editable directly
-- `InspectionReport.publishedAt` is null until admin reviews and approves
-- A `Listing` can have at most one *published* `InspectionReport`. Re-inspection creates a new report; old report archived but kept for history.
-- `PdfArtifact` is regenerated on every publish event — old PDFs preserved with version increments
+- `domain/InspectionInterest.ts` — demand-interest entity and willingness-to-pay bounds.
+- `domain/types.ts` — reports-domain error codes.
+- `domain/ports/InspectionInterestRepository.ts` — repository port for save, update, lookup, and aggregate stats.
+- `application/CreateInspectionInterest.ts` — authenticated interest creation; validates requester, listing eligibility, side inference, dedupe, and willingness-to-pay.
+- `application/ListInspectionInterestStats.ts` — admin aggregate read model with offset pagination.
+- `infrastructure/PrismaInspectionInterestRepository.ts` — Prisma persistence adapter.
+- `presentation/reports.controller.ts` — public create route plus admin aggregate route.
+- `reports.module.ts` — imports `ListingsModule` and `IdentityModule`, registers the repository and two use-cases.
 
-## Tier computation (planned)
+## Ports exposed (today)
 
-```
-totalScore  >=  85  →  Tier 1 (Gold, "Trusted by AutoTM")
-totalScore  >=  65  →  Tier 2 (Silver, "Inspected")
-totalScore  >=  40  →  Tier 3 (Bronze, "Basic check")
-totalScore  <   40  →  No tier (not eligible)
-```
-
-Bands fixed in code; rubric weights are data (admin-editable).
-
-## Anti-pay-for-placement guarantee
-
-- Default feed sort is recency (chronological) — **not** by tier
-- Tier is a **filter** ("Show only Trusted by AutoTM cars") — opt-in
-- The UI explicitly shows the sort label so users see "Sort: newest" — full transparency
-
-## Ports exposed (planned)
-
-```ts
-interface ReportsReadPort {
-  getReportSummary(listingId): Promise<{ tier, publishedAt, pdfUrl? } | null>
-}
-```
+- (none)
 
 ## Ports consumed (today)
 
 - `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `CreateInspectionInterest` to validate listing eligibility and infer seller ownership.
 - `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `CreateInspectionInterest` to check requester suspension state.
 
-## Ports consumed (planned)
+## Events emitted (today)
 
-```ts
-ListingsReadPort
-IdentityReadPort
-MediaStoragePort   // PDFs and inspection photos
-```
-
-## Events emitted (planned)
-
-- `InspectionReportPublished` → adds tier badge to listing, fires push to listing owner
-- `InspectionReportSuperseded` → on re-inspection
+- (none)
 
 ## HTTP routes (today)
 
@@ -83,19 +52,21 @@ MediaStoragePort   // PDFs and inspection photos
 | POST | `/api/v1/listings/:id/inspection-interest` | Required | `CreateInspectionInterest` — records buyer/seller interest; dedupes; gated by `INSPECTION_INTEREST_ENABLED` |
 | GET | `/api/v1/admin/inspection-interests` | AdminGuard | `ListInspectionInterestStats` — aggregate counts + willingness-to-pay by listing |
 
-## PDF generation (planned)
-
-- Server-side via Puppeteer (Chromium headless) rendering an HTML template
-- Same template renders to admin preview AND PDF artifact
-- Stored in MinIO `inspection-reports` bucket with versioned key
-
 ## Notable decisions
 
-- [ADR-0001](../../../../docs/adr/0001-architecture.md) — Reports is its own context
-- [ADR-0037](../../../../docs/adr/0037-trust-inspection-competitive-wedge.md) — Trust/inspection pulled forward as wedge
+- [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Reports is its own context
+- [ADR-0037](../../../../../docs/adr/0037-trust-inspection-competitive-wedge.md) — Trust/inspection pulled forward as wedge
 - S9a implements only the `InspectionInterest` fake-door; full Phase-2 context remains betting-table-gated on pilot demand
 
-## Outstanding questions for Phase 2
+## Planned additions (not implemented)
+
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), these items are not current state. Their target shape belongs in the future inspection/report PRD, [ADR-0037](../../../../../docs/adr/0037-trust-inspection-competitive-wedge.md), and [`docs/prd/business/inspection-program.md`](../../../../../docs/prd/business/inspection-program.md).
+
+- Full inspection-report context (`InspectionReport`, `RubricTemplate`, `ReportSection`, `ReportItem`, `PdfArtifact`) remains betting-table-gated on pilot demand.
+- Report tier computation, PDF generation, report-published events, listing trust-tier filters, and anti-pay-for-placement UI rules are future work.
+- Pricing model, inspector hiring/training/SLA, and final rubric weights require a later product/ops decision.
+
+## Outstanding questions for S9b / Phase 2
 
 - Final rubric: which sections, which items, which weights — needs sign-off from a real mechanic
 - Pricing model: free for sellers? paid per inspection? subsidized?
