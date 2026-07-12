@@ -341,7 +341,6 @@ export const resources: Resource = {
       filterSearchCta: "Фильтр и поиск",
       filterSearchCtaHint: "Марка, город, год, цена",
       activeFiltersCount: "{{count}} фильтр(а) включено",
-      applyFiltersCount: "Применить фильтры ({{count}})",
       filterSheetTitle: "Фильтр автомобилей",
       openFilters: "Открыть фильтры",
 
@@ -820,7 +819,6 @@ export const resources: Resource = {
       filterSearchCta: "Filtr we gözleg",
       filterSearchCtaHint: "Marka, şäher, ýyl, baha",
       activeFiltersCount: "{{count}} filtr ulanylýar",
-      applyFiltersCount: "Filtrleri ulan ({{count}})",
       filterSheetTitle: "Awtomobil filtrleri",
       openFilters: "Filtrleri aç",
 
@@ -1299,7 +1297,6 @@ export const resources: Resource = {
       filterSearchCta: "Filter and search",
       filterSearchCtaHint: "Make, city, year, price",
       activeFiltersCount: "{{count}} active filter(s)",
-      applyFiltersCount: "Apply filters ({{count}})",
       filterSheetTitle: "Car filters",
       openFilters: "Open filters",
       editListing: "Edit listing",
