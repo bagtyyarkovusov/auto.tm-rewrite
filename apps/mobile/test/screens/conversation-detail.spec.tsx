@@ -119,6 +119,8 @@ describe("ConversationDetailScreen realtime text send", () => {
   });
 
   it("keeps the composer usable while socket connects", () => {
-    expect(source).toContain("disabled={false}");
+    expect(source).toContain("<MessageComposer");
+    expect(source).toContain("disabled={");
+    expect(source).not.toContain("disabled={true}");
   });
 });

@@ -7,6 +7,7 @@ import type { ConversationRepository } from "../domain/ports/ConversationReposit
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { MessageEventPublisher } from "../domain/ports/MessageEventPublisher";
 
 import { SendMessage } from "./SendMessage";
 
@@ -185,17 +186,41 @@ class FakeIdentityReadPort implements IdentityReadPort {
   }
 }
 
+class FakeMessageEventPublisher implements MessageEventPublisher {
+  events: Array<{
+    event: "MessageSent";
+    conversationId: string;
+    messageId: string;
+    senderId: string;
+    recipientId: string;
+    sentAt: string;
+  }> = [];
+
+  async emitMessageSent(event: {
+    event: "MessageSent";
+    conversationId: string;
+    messageId: string;
+    senderId: string;
+    recipientId: string;
+    sentAt: string;
+  }): Promise<void> {
+    this.events.push(event);
+  }
+}
+
 function makeUseCase(
   repo?: FakeConversationRepository,
   listings?: FakeListingsReadPort,
   identityCheck?: FakeIdentityCheckPort,
   identityRead?: FakeIdentityReadPort,
+  messageEvents?: FakeMessageEventPublisher,
 ) {
   return new SendMessage(
     repo ?? new FakeConversationRepository(),
     listings ?? new FakeListingsReadPort(),
     identityCheck ?? new FakeIdentityCheckPort(),
     identityRead ?? new FakeIdentityReadPort(),
+    messageEvents ?? new FakeMessageEventPublisher(),
   );
 }
 
@@ -264,6 +289,29 @@ describe("SendMessage", () => {
     expect(result.message.body).toBe("Hello");
     expect(result.message.clientMessageId).toBe("client-1");
     expect(repo.messages).toHaveLength(1);
+  });
+
+  it("emits MessageSent after saving", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const events = new FakeMessageEventPublisher();
+    const uc = makeUseCase(repo, listings, undefined, undefined, events);
+
+    const result = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "text",
+      text: "Hello",
+    });
+
+    expect(events.events).toHaveLength(1);
+    expect(events.events[0]).toMatchObject({
+      event: "MessageSent",
+      conversationId: "conv-1",
+      messageId: result.message.id,
+      senderId: "buyer-1",
+      recipientId: "seller-1",
+    });
   });
 
   it("sends an image message", async () => {

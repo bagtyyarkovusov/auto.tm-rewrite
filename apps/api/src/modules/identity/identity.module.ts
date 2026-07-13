@@ -16,6 +16,9 @@ import { RecoverAccount } from "./application/RecoverAccount";
 import { GetAdminTotpStatus } from "./application/GetAdminTotpStatus";
 import { EnrollAdminTotp } from "./application/EnrollAdminTotp";
 import { VerifyAdminTotp } from "./application/VerifyAdminTotp";
+import { BlockUser } from "./application/BlockUser";
+import { UnblockUser } from "./application/UnblockUser";
+import { IsBlocked } from "./application/IsBlocked";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -26,6 +29,7 @@ import { SystemClockAdapter } from "./infrastructure/SystemClockAdapter";
 import { PrismaIdentityCheckAdapter } from "./infrastructure/PrismaIdentityCheckAdapter";
 import { PrismaIdentityReadAdapter } from "./infrastructure/PrismaIdentityReadAdapter";
 import { PrismaIdentityAdminRepository } from "./infrastructure/PrismaIdentityAdminRepository";
+import { PrismaBlockedUserRepository } from "./infrastructure/PrismaBlockedUserRepository";
 import { AesGcmTotpSecretCipher } from "./infrastructure/AesGcmTotpSecretCipher";
 import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
@@ -35,6 +39,7 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
 import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
+import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 
 @Module({
   imports: [
@@ -52,6 +57,7 @@ import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionLi
     PrismaIdentityCheckAdapter,
     PrismaIdentityReadAdapter,
     PrismaIdentityAdminRepository,
+    PrismaBlockedUserRepository,
     AesGcmTotpSecretCipher,
     OtplibTotpVerifier,
     InMemoryTotpThrottleAdapter,
@@ -76,6 +82,10 @@ import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionLi
     {
       provide: IDENTITY_ADMIN_PORT,
       useClass: PrismaIdentityAdminRepository,
+    },
+    {
+      provide: BLOCKED_USER_REPOSITORY,
+      useClass: PrismaBlockedUserRepository,
     },
     {
       provide: IDENTITY_TOKENS.ClockPort,
@@ -132,6 +142,9 @@ import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionLi
     GetAdminTotpStatus,
     EnrollAdminTotp,
     VerifyAdminTotp,
+    BlockUser,
+    UnblockUser,
+    IsBlocked,
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,

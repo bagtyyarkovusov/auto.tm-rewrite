@@ -10,6 +10,8 @@ import { Text } from "@/components/ui/text";
 interface ConversationListItemProps {
   conversation: {
     id: string;
+    buyerId: string;
+    sellerId: string;
     listing: {
       id: string;
       brandId: string;
@@ -90,6 +92,9 @@ export function ConversationListItem({
       params.coverMediaKey = listing.coverMediaKey ?? "";
       params.status = listing.status;
     }
+
+    params.buyerId = conversation.buyerId;
+    params.sellerId = conversation.sellerId;
 
     router.push({
       pathname: "/conversations/[id]",

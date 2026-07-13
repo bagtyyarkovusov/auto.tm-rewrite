@@ -40,6 +40,8 @@ export default function OpenListingConversationScreen() {
         pathname: "/conversations/[id]",
         params: {
           id: data.id,
+          buyerId: data.buyerId,
+          sellerId: data.sellerId,
           listingId: listing?.id ?? "",
           brandId: listing?.brandId ?? "",
           modelId: listing?.modelId ?? "",

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 
 import { ListingsModule } from "../listings/listings.module";
 import { IdentityModule } from "../identity/identity.module";
@@ -17,16 +18,22 @@ import { MuteConversation } from "./application/MuteConversation";
 import { DeleteMessage } from "./application/DeleteMessage";
 import { ValidateConversationAccess } from "./application/ValidateConversationAccess";
 import { PrismaConversationRepository } from "./infrastructure/PrismaConversationRepository";
+import { EventEmitterMessageEventPublisher } from "./infrastructure/EventEmitterMessageEventPublisher";
 import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
+import { MESSAGE_EVENT_PUBLISHER } from "./domain/ports/MessageEventPublisher";
 
 @Module({
-  imports: [ListingsModule, IdentityModule],
+  imports: [EventEmitterModule, ListingsModule, IdentityModule],
   controllers: [ConversationsController],
   providers: [
     PrismaConversationRepository,
     {
       provide: CONVERSATION_REPOSITORY,
       useClass: PrismaConversationRepository,
+    },
+    {
+      provide: MESSAGE_EVENT_PUBLISHER,
+      useClass: EventEmitterMessageEventPublisher,
     },
     OpenConversation,
     ListMyConversations,

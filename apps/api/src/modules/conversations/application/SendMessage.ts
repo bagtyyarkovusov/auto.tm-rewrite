@@ -28,6 +28,10 @@ import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
+import type {
+  MessageEventPublisher,
+} from "../domain/ports/MessageEventPublisher";
+import { MESSAGE_EVENT_PUBLISHER } from "../domain/ports/MessageEventPublisher";
 
 export type SendMessageInput =
   | {
@@ -61,6 +65,8 @@ export class SendMessage {
     private readonly identityCheck: IdentityCheckPort,
     @Inject(IDENTITY_READ_PORT)
     private readonly identityRead: IdentityReadPort,
+    @Inject(MESSAGE_EVENT_PUBLISHER)
+    private readonly messageEvents: MessageEventPublisher,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
@@ -145,8 +151,29 @@ export class SendMessage {
     }
 
     await this.conversations.saveMessage(message);
+    await this.emitMessageSent(input.senderId, conversation, message);
 
     return { message, listing };
+  }
+
+  private async emitMessageSent(
+    senderId: string,
+    conversation: { id: string; buyerId: string; sellerId: string },
+    message: Message,
+  ): Promise<void> {
+    const recipientId =
+      conversation.buyerId === senderId
+        ? conversation.sellerId
+        : conversation.buyerId;
+
+    await this.messageEvents.emitMessageSent({
+      event: "MessageSent",
+      conversationId: conversation.id,
+      messageId: message.id,
+      senderId,
+      recipientId,
+      sentAt: message.createdAt.toISOString(),
+    });
   }
 
   private createMessage(input: SendMessageInput): Message {
