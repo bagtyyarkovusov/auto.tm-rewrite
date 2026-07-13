@@ -392,7 +392,7 @@ export class ConversationSocket {
             message: ConversationsSchemas.MessageSummarySchema,
           }).safeParse(ack);
           if (wrapped.success) {
-            resolve({ ok: true, message: wrapped.data });
+            resolve(wrapped.data);
             return;
           }
 
