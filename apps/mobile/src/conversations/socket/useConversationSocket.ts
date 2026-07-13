@@ -77,13 +77,16 @@ export function useConversationSocket(
     });
 
     const unsubscribeMessage = socket.subscribeMessage((event) => {
+      if (event.message.conversationId !== conversationId) {
+        return;
+      }
+
       handleMessageNew(queryClient, event);
-      if (
-        currentUserId &&
-        event.message.senderId !== currentUserId &&
-        event.message.conversationId === conversationId
-      ) {
-        void socket.markDelivered(conversationId, new Date().toISOString());
+      if (currentUserId && event.message.senderId !== currentUserId) {
+        void socket.markDelivered(
+          event.message.conversationId,
+          new Date().toISOString(),
+        );
       }
     });
 

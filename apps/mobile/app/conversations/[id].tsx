@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
@@ -40,15 +40,18 @@ function generateClientMessageId(): string {
   return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function getPeerWatermark(
-  queryClient: ReturnType<typeof useQueryClient>,
+type ConversationListData = {
+  pages: Array<{
+    items: ConversationsSchemas.ConversationSummary[];
+    nextCursor: string | null;
+  }>;
+};
+
+function findPeerWatermark(
+  data: ConversationListData | undefined,
   conversationId: string,
 ): { peerLastReadAt?: string; peerLastDeliveredAt?: string } {
-  const listData = queryClient.getQueryData<{
-    pages: Array<{ items: ConversationsSchemas.ConversationSummary[] }>;
-  }>(queryKeys.conversations.list());
-
-  const conversation = listData?.pages
+  const conversation = data?.pages
     .flatMap((page) => page.items)
     .find((item) => item.id === conversationId);
 
@@ -131,9 +134,18 @@ export default function ConversationDetailScreen() {
     return modelsData?.items.find((m) => m.id === listingCard.modelId)?.name;
   }, [modelsData, listingCard?.modelId]);
 
+  const { data: conversationsData } = useQuery({
+    queryKey: queryKeys.conversations.list(),
+    queryFn: () =>
+      queryClient.getQueryData<ConversationListData | undefined>(
+        queryKeys.conversations.list(),
+      ) ?? null,
+    enabled: false,
+  });
+
   const peerWatermark = useMemo(
-    () => getPeerWatermark(queryClient, conversationId),
-    [queryClient, conversationId],
+    () => findPeerWatermark(conversationsData ?? undefined, conversationId),
+    [conversationsData, conversationId],
   );
 
   const allMessages: LocalMessage[] = useMemo(() => {

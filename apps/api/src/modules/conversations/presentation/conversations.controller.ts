@@ -403,7 +403,6 @@ export class ConversationsController {
       createdAt: message.createdAt.toISOString(),
       deletedAt: message.deletedAt?.toISOString(),
       clientMessageId: message.clientMessageId ?? undefined,
-      deliveryStatus: undefined,
     };
   }
 

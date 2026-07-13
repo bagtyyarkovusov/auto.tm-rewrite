@@ -16,16 +16,21 @@ interface MessageBubbleProps {
 }
 
 function StatusIcon({ status, isMine }: { status: MessageStatus; isMine: boolean }) {
-  const colorClass = isMine ? "text-primary-foreground/80" : "text-muted-foreground";
+  const readColorClass = isMine
+    ? "text-primary-foreground"
+    : "text-foreground";
+  const defaultColorClass = isMine
+    ? "text-primary-foreground/80"
+    : "text-muted-foreground";
 
   if (status === "read") {
-    return <Icon as={CheckCheck} className={`size-3.5 ${colorClass}`} />;
+    return <Icon as={CheckCheck} className={`size-3.5 ${readColorClass}`} />;
   }
   if (status === "delivered") {
-    return <Icon as={Check} className={`size-3.5 ${colorClass}`} />;
+    return <Icon as={CheckCheck} className={`size-3.5 ${defaultColorClass}`} />;
   }
   if (status === "sent") {
-    return <Icon as={Check} className={`size-3.5 ${colorClass}`} />;
+    return <Icon as={Check} className={`size-3.5 ${defaultColorClass}`} />;
   }
   return null;
 }

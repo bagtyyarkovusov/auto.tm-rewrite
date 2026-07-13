@@ -224,9 +224,14 @@ export class ConversationGateway {
       };
     }
 
-    const timestamp = opts.field === "lastReadAt"
-      ? payload.lastReadAt ?? new Date().toISOString()
-      : payload.lastDeliveredAt ?? new Date().toISOString();
+    const timestamp =
+      opts.field === "lastReadAt"
+        ? (payload.lastReadAt ?? new Date().toISOString())
+        : (payload.lastDeliveredAt ?? new Date().toISOString());
+    const update =
+      opts.field === "lastReadAt"
+        ? { lastReadAt: timestamp }
+        : { lastDeliveredAt: timestamp };
 
     try {
       await this.validateAccess.execute({
@@ -241,19 +246,19 @@ export class ConversationGateway {
       const result = await this.updateWatermark.execute({
         userId: user.sub,
         conversationId: payload.conversationId,
-        ...(opts.field === "lastReadAt"
-          ? { lastReadAt: timestamp }
-          : { lastDeliveredAt: timestamp }),
+        ...update,
       });
 
       const event: ConversationsSchemas.WatermarkEvent = {
         conversationId: payload.conversationId,
         userId: user.sub,
-        ...(result.lastReadAt ? { lastReadAt: result.lastReadAt.toISOString() } : {}),
-        ...(result.lastDeliveredAt
-          ? { lastDeliveredAt: result.lastDeliveredAt.toISOString() }
-          : {}),
       };
+      if (result.lastReadAt) {
+        event.lastReadAt = result.lastReadAt.toISOString();
+      }
+      if (result.lastDeliveredAt) {
+        event.lastDeliveredAt = result.lastDeliveredAt.toISOString();
+      }
 
       this.server
         .to(conversationRoom(payload.conversationId))
