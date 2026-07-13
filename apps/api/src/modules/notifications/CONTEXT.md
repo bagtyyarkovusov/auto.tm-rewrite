@@ -1,10 +1,10 @@
 # notifications — CONTEXT
 
-> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational notification-platform content lives in `docs/prd/features/36-notifications.md`. Per [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md), the full notification platform is post-MLP; direct-message push may be shaped first after contact usage proves the need.
+> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational notification-platform content lives in `docs/prd/features/36-notifications.md`. Per [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md), the full notification platform (dispatch, transport, feed, broadcasts) is post-MLP; direct-message push-token registration shipped first.
 
 ## Purpose
 
-All push delivery + in-app notification feed + admin broadcast tooling. Schema-only today; the dispatch + transport layer is post-MLP.
+All push delivery + in-app notification feed + admin broadcast tooling. Push-token registration for direct-message push is implemented; the dispatch + transport layer is post-MLP.
 
 ## Owns (entities + tables)
 
@@ -14,30 +14,57 @@ All push delivery + in-app notification feed + admin broadcast tooling. Schema-o
 
 ## Invariants (enforced today)
 
-- `FcmDevice.token` is globally unique (a token can be registered to at most one device row).
+- `FcmDevice.token` is globally unique (a token maps to at most one device row).
 - `FcmDevice.userId` references an existing User (FK; deletes cascade).
 - `NotificationHistory.userId` references an existing User (FK; deletes cascade).
 - `NotificationPreference.userId` is unique (one preference row per user).
+- Registering a token that already belongs to the same user reactivates/touches the row.
+- Registering a token that belongs to a different user reassigns the unique row to the current user (`invalidatedPrevious: true`).
+- Revoking a token is idempotent and no-ops when the token is missing, already invalidated, or owned by another user.
 
 ## Module shape (today)
 
 - `apps/api/src/modules/notifications/`:
-  - `domain/`, `application/`, `infrastructure/` — empty
-  - `presentation/` — empty
-  - `notifications.module.ts` — empty module
+  - `domain/PushToken.ts` — domain entity with validation, `touch()`, `reassignTo()`, `invalidate()`.
+  - `domain/types.ts` — `PushPlatform`, error codes, `PushTokenDomainError`.
+  - `domain/ports/PushTokenRepository.ts` — repository port.
+  - `application/RegisterPushToken.ts` — register or re-register a token.
+  - `application/RevokePushToken.ts` — invalidate a token.
+  - `application/ListPushTokens.ts` — list active tokens for the current user.
+  - `infrastructure/PrismaPushTokenRepository.ts` — Prisma-backed repository adapter.
+  - `presentation/notifications.controller.ts` — HTTP routes.
+  - `notifications.module.ts` — NestJS module wiring.
 - No dispatch layer, no transport adapters, no event consumers.
 
 ## Ports exposed
 
-- (none today — post-MLP notification work adds `NotificationsDispatchPort` and `PushPort`)
+- `PushTokenRepository` (`domain/ports/PushTokenRepository.ts`):
+  ```ts
+  interface PushTokenRepository {
+    findByToken(token: string): Promise<PushToken | null>
+    findById(id: string): Promise<PushToken | null>
+    listActiveForUser(userId: string): Promise<PushToken[]>
+    save(token: PushToken): Promise<void>
+    update(token: PushToken): Promise<void>
+  }
+  ```
 
 ## Ports consumed
 
-- (none today)
+- `PrismaService` (via `@auto-tm/db`) — `PrismaPushTokenRepository` maps `FcmDevice` rows to/from `PushToken`.
 
 ## Shipped use-cases
 
-- (none today)
+- `RegisterPushToken` — validates token + platform, handles same-user re-registration, cross-user reassignment, and inserts/upserts the row.
+- `RevokePushToken` — soft-invalidates the token for the authenticated user; idempotent.
+- `ListPushTokens` — returns active tokens ordered by `lastUsedAt DESC`.
+
+## HTTP routes
+
+- `POST /api/v1/notifications/tokens` — register/update a push token. Body: `{ token, platform, deviceId? }`. Response: `{ registered: true, invalidatedPrevious?: boolean, token: PushTokenSummary }`.
+- `GET /api/v1/notifications/tokens` — list active tokens for the authenticated user. Response: `{ items: PushTokenSummary[] }`.
+- `DELETE /api/v1/notifications/tokens/:token` — revoke a token. Response: `{ revoked: boolean }`.
+- `GET /api/v1/notifications/ping` — public health/ping route.
 
 ## Events emitted
 

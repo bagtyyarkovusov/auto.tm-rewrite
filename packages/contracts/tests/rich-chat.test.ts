@@ -309,6 +309,14 @@ describe("Push-token schemas", () => {
     const result = RegisterPushTokenResponseSchema.safeParse({
       registered: true,
       invalidatedPrevious: false,
+      token: {
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        token: "fcm-native-token",
+        platform: PushPlatform.Android,
+        deviceId: "device-1",
+        createdAt: "2026-07-13T00:00:00.000Z",
+        lastSeenAt: "2026-07-13T00:00:00.000Z",
+      },
     });
     expect(result.success).toBe(true);
   });
