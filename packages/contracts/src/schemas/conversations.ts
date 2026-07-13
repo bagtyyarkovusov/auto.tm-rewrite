@@ -283,8 +283,17 @@ export const ChatMessageEventSchema = z.object({
 });
 export type ChatMessageEvent = z.infer<typeof ChatMessageEventSchema>;
 
+export const DeleteMessageSocketRequestSchema = z.object({
+  conversationId: z.string().uuid(),
+  messageId: z.string().uuid(),
+});
+export type DeleteMessageSocketRequest = z.infer<
+  typeof DeleteMessageSocketRequestSchema
+>;
+
 export const MessageDeletedEventSchema = z.object({
   messageId: z.string().uuid(),
+  conversationId: z.string().uuid(),
   deletedAt: z.string().datetime(),
 });
 export type MessageDeletedEvent = z.infer<typeof MessageDeletedEventSchema>;

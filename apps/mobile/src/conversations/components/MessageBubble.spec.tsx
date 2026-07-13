@@ -33,16 +33,28 @@ describe("MessageBubble", () => {
     expect(source).toContain("onRetry?: () => void");
   });
 
+  it("accepts delete affordance props", () => {
+    expect(source).toContain("deletedAt?: string | null");
+    expect(source).toContain("canDelete?: boolean");
+    expect(source).toContain("onDelete?: () => void");
+  });
+
   it("aligns own messages to the right", () => {
     expect(source).toContain('isMine ? "justify-end" : "justify-start"');
   });
 
   it("uses primary background for own messages", () => {
-    expect(source).toContain('isMine\n            ? "bg-primary rounded-br-md"');
+    expect(source).toContain('isMine\n              ? "bg-primary rounded-br-md"');
   });
 
   it("uses muted background for peer messages", () => {
     expect(source).toContain(': "bg-muted rounded-bl-md"');
+  });
+
+  it("renders deleted state with muted style", () => {
+    expect(source).toContain("isDeleted");
+    expect(source).toContain('"bg-muted/60 rounded-md"');
+    expect(source).toContain('t("messageDeleted")');
   });
 
   it("shows pending status text", () => {

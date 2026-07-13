@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Per-listing scoped 1:1 conversations between buyer and seller. The MLP beta ships simple text contact in S6. S10 expands the application layer to support rich messages (text, image, post_ref), participant watermarks, unread counts, per-conversation mute, and own-message soft delete.
+Per-listing scoped 1:1 conversations between buyer and seller. The MLP beta ships simple text contact in S6. S10 expands the application layer to support rich messages (text, image, post_ref), participant watermarks, unread counts, per-conversation mute, block/unblock integration, and own-message soft delete.
 
 ## Owns (entities + tables)
 
@@ -40,6 +40,8 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - **Unread count** — `ListMyConversations` returns `unreadCount` derived from the participant's `lastReadAt` and non-deleted messages from the other participant.
 - **Mute** — `MuteConversation` sets or clears `ConversationParticipant.mutedAt` for the authenticated participant. Mute suppresses native push (push decision lives in `notifications/`, issue #244).
 - **Realtime room join rules** — `ConversationGateway` on namespace `/ws/chat` accepts `conversation:join` and `conversation:leave` events. A socket may join `conversation:{conversationId}` only when its authenticated user is a participant, neither participant is suspended, and neither user has blocked the other. `ValidateConversationAccess` enforces these rules by reusing the same participant, suspension, and block checks as the HTTP write path. Joins are idempotent; explicit leave removes the socket from the room. Socket.IO automatically evicts disconnected sockets from all rooms.
+- **Realtime watermark fanout** — `ConversationGateway` handles `message:delivered`, `message:read`, and `conversation:read` on `/ws/chat`, persists through `UpdateWatermark`, and fans out `watermark` to `conversation:{conversationId}`. Both participants receive the event and update their local watermark state without requiring a full refetch; HTTP refetch remains authoritative on reconnect.
+- **Realtime delete fanout** — `ConversationGateway.handleDeleteMessage` accepts `message:delete` on `/ws/chat`, delegates persistence to `DeleteMessage`, and fans out `message:deleted` to `conversation:{conversationId}`. Both participants receive the event and update their local thread without requiring a full refetch; HTTP refetch remains authoritative on reconnect.
 
 ## Module shape (today)
 
@@ -48,7 +50,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
   - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, `SendMessage.ts`, `SendPostRefMessage.ts`, `PresignChatAttachmentUpload.ts`, `UpdateWatermark.ts`, `MuteConversation.ts`, `DeleteMessage.ts`, `ValidateConversationAccess.ts`, plus matching `.spec.ts` unit tests
   - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, watermark/mute/delete/unread queries), `MessageMapper.ts` (Prisma row ↔ domain mapping + redaction), `PostRefSnapshotMapper.ts` (builds post-reference snapshots from `ListingSummary` and computes current availability). Chat attachments are stored in the shared MinIO-backed `MediaStoragePort` (`listings/`); the `chat-attachments` bucket is created by `MinioMediaStorageAdapter`.
   - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages/rich`, `POST /api/v1/conversations/:id/messages/post-ref`, `POST /api/v1/conversations/:id/attachments/presign`, `POST /api/v1/conversations/:id/watermark`, `POST /api/v1/conversations/:id/mute`, `DELETE /api/v1/conversations/:id/messages/:messageId`, plus health-check ping
-  - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join`, `conversation:leave`, `message:send`, `message:delivered`, `message:read`, and `conversation:read` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`; `message:send` reuses the `SendMessage` application use-case, acks the sender with the durable `MessageSummary` or a contract-shaped error, and fans out `message:new` to the conversation room. Watermark events persist through `UpdateWatermark` and fan out `watermark` to the room.
+  - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join`, `conversation:leave`, `message:send`, `message:delivered`, `message:read`, `conversation:read`, and `message:delete` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`; `message:send` reuses the `SendMessage` application use-case, acks the sender with the durable `MessageSummary` or a contract-shaped error, and fans out `message:new` to the conversation room. Watermark events persist through `UpdateWatermark` and fan out `watermark` to the room. Delete events persist through `DeleteMessage` and fan out `message:deleted` to the room.
   - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `EventEmitterModule` for `MessageEventPublisher`, `ListingsModule` for `ListingsReadPort`, and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`
 
 ## Ports exposed
@@ -59,8 +61,8 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Ports consumed
 
 - `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `OpenConversation`, `ListMyConversations`, `SendTextMessage`, and `SendMessage` to validate listing state and embed listing card fields in responses.
-- `IdentityCheckPort` (`IDENTITY_TOKENS.IdentityCheckPort`) from `identity/` — used by `OpenConversation`, `SendTextMessage`, `SendMessage`, and `PresignChatAttachmentUpload` to enforce suspended-user blocking when either participant is suspended.
-- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `OpenConversation`, `SendTextMessage`, and `SendMessage` for block checks (`isUserBlockedBy`).
+- `IdentityCheckPort` (`IDENTITY_TOKENS.IdentityCheckPort`) from `identity/` — used by `OpenConversation`, `SendTextMessage`, `SendMessage`, `ValidateConversationAccess`, and `PresignChatAttachmentUpload` to enforce suspended-user blocking when either participant is suspended.
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `OpenConversation`, `SendTextMessage`, `SendMessage`, and `ValidateConversationAccess` for block checks (`isUserBlockedBy`).
 - `MediaStoragePort` (`MEDIA_STORAGE_PORT`) from `listings/` — used by `PresignChatAttachmentUpload` to generate presigned PUT URLs for `chat-attachments` objects.
 
 ## Shipped use-cases
@@ -77,6 +79,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `DeleteMessage` — soft-deletes the authenticated user's own message within the 5-minute window.
 - `ValidateConversationAccess` — shared participant/suspension/block check used by the realtime gateway to authorize joining or leaving a `conversation:{conversationId}` room. Returns the `Conversation` on success; throws `NotFoundException` or `ForbiddenException` on failure.
 - `ConversationGateway.handleSendMessage` — realtime text-send entry point on `/ws/chat`. Validates the socket payload, delegates persistence to `SendMessage`, idempotently returns the durable message for duplicate `clientMessageId` retries, and fans out `message:new` to the joined conversation room.
+- `ConversationGateway.handleDeleteMessage` — realtime delete entry point on `/ws/chat`. Validates the socket payload, delegates persistence to `DeleteMessage`, and fans out `message:deleted` to the joined conversation room.
 
 ## Events emitted
 
@@ -109,17 +112,19 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 | `conversation:join` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleJoin` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
 | `conversation:leave` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleLeave` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
 | `message:send` | Client → Server | Required (via middleware) | `{ conversationId: uuid, kind: "text", text: string, clientMessageId?: string }` | `ConversationGateway.handleSendMessage` → `{ ok: true, message: MessageSummary }` or `{ ok: false, code, message }` |
-| `message:delivered` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid, messageId: uuid }` | `ConversationGateway.handleDelivered` → persists `lastDeliveredAt` via `UpdateWatermark`, then broadcasts `watermark` |
-| `message:read` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid, messageId: uuid }` | `ConversationGateway.handleRead` → persists `lastReadAt` via `UpdateWatermark`, then broadcasts `watermark` |
+| `message:delivered` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid, lastDeliveredAt?: iso }` | `ConversationGateway.handleMessageDelivered` → persists `lastDeliveredAt` via `UpdateWatermark`, then broadcasts `watermark` |
+| `message:read` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid, lastReadAt?: iso }` | `ConversationGateway.handleMessageRead` → persists `lastReadAt` via `UpdateWatermark`, then broadcasts `watermark` |
 | `conversation:read` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid }` | `ConversationGateway.handleConversationRead` → persists `lastReadAt` via `UpdateWatermark` with the current time, then broadcasts `watermark` |
+| `message:delete` | Client → Server | Required (via middleware) | `{ conversationId: uuid, messageId: uuid }` | `ConversationGateway.handleDeleteMessage` → `{ ok: true, messageId, conversationId, deletedAt }` or `{ ok: false, code, message }` |
 | `message:new` | Server → Client | Required (via room membership) | `{ message: MessageSummary }` | Broadcast to `conversation:{conversationId}` after a successful `message:send` |
+| `message:deleted` | Server → Client | Required (via room membership) | `{ messageId: uuid, conversationId: uuid, deletedAt: iso }` | Broadcast to `conversation:{conversationId}` after a successful `message:delete` |
 | `watermark` | Server → Client | Required (via room membership) | `{ conversationId: uuid, userId: uuid, lastReadAt?: ISO8601, lastDeliveredAt?: ISO8601 }` | Broadcast to `conversation:{conversationId}` after a watermark event is persisted |
 
 ## Planned additions (future sprints)
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the named sprint file or feature PRD:
 - **S6 (Contact seller) — shipped** — text-only per-listing thread creation and message send/list endpoints
-- **S10 (Rich chat) — partially shipped** — rich message send/list, watermarks, unread counts, mute, soft delete, and Socket.IO conversation room join/leave (#235). Remaining S10 chat slices (realtime send/ack, typing/presence, push decision/delivery, block/unblock UI, reports) live in child issues #236-#253.
+- **S10 (Rich chat) — partially shipped** — rich message send/list, watermarks, unread counts, mute, soft delete, block/unblock integration, and Socket.IO conversation room join/leave (#235). Remaining S10 chat slices (typing/presence, push decision/delivery, reports) live in child issues #236-#253.
 - **Post-MLP rich chat** — `QuickReply` entity if shaped, `ConversationsReadPort`, and push consumers.
 
 ## Notable decisions

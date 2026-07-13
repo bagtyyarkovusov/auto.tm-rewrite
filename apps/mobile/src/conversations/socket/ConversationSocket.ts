@@ -37,6 +37,7 @@ export interface SendTextMessageAck {
 }
 
 export type MessageNewEvent = ConversationsSchemas.ChatMessageEvent;
+export type MessageDeletedEvent = ConversationsSchemas.MessageDeletedEvent;
 
 export type WatermarkEvent = ConversationsSchemas.WatermarkEvent;
 
@@ -56,6 +57,9 @@ export class ConversationSocket {
   private statusListeners = new Set<(status: ConversationSocketStatus) => void>();
   private messageListeners = new Set<(event: MessageNewEvent) => void>();
   private watermarkListeners = new Set<(event: WatermarkEvent) => void>();
+  private deletedMessageListeners = new Set<
+    (event: MessageDeletedEvent) => void
+  >();
   private currentRoom: string | null = null;
 
   constructor(private readonly options: ConversationSocketOptions = {}) {}
@@ -86,6 +90,15 @@ export class ConversationSocket {
     this.watermarkListeners.add(listener);
     return () => {
       this.watermarkListeners.delete(listener);
+    };
+  }
+
+  subscribeDeletedMessage(
+    listener: (event: MessageDeletedEvent) => void,
+  ): () => void {
+    this.deletedMessageListeners.add(listener);
+    return () => {
+      this.deletedMessageListeners.delete(listener);
     };
   }
 
@@ -134,6 +147,16 @@ export class ConversationSocket {
       const parsed = ConversationsSchemas.WatermarkEventSchema.safeParse(event);
       if (parsed.success) {
         this.watermarkListeners.forEach((listener) => listener(parsed.data));
+      }
+    });
+
+    this.socket.on("message:deleted", (event: unknown) => {
+      const parsed =
+        ConversationsSchemas.MessageDeletedEventSchema.safeParse(event);
+      if (parsed.success) {
+        this.deletedMessageListeners.forEach((listener) =>
+          listener(parsed.data),
+        );
       }
     });
   }
@@ -279,6 +302,66 @@ export class ConversationSocket {
     });
   }
 
+  async deleteMessage(payload: {
+    conversationId: string;
+    messageId: string;
+  }): Promise<
+    | { ok: true; messageId: string; conversationId: string; deletedAt: string }
+    | { ok: false; code: string; message: string }
+  > {
+    if (!this.socket?.connected) {
+      return {
+        ok: false,
+        code: SOCKET_CLIENT_ERROR_CODES.NOT_CONNECTED,
+        message: "Socket is not connected",
+      };
+    }
+
+    const socket = this.socket;
+
+    return new Promise((resolve) => {
+      socket.emit(
+        "message:delete",
+        {
+          conversationId: payload.conversationId,
+          messageId: payload.messageId,
+        },
+        (ack: unknown) => {
+          const wrapped = z
+            .object({
+              ok: z.literal(true),
+              messageId: z.string().uuid(),
+              conversationId: z.string().uuid(),
+              deletedAt: z.string().datetime(),
+            })
+            .safeParse(ack);
+          if (wrapped.success) {
+            resolve({
+              ok: true,
+              messageId: wrapped.data.messageId,
+              conversationId: wrapped.data.conversationId,
+              deletedAt: wrapped.data.deletedAt,
+            });
+            return;
+          }
+
+          const errorParsed =
+            ConversationsSchemas.ConversationSocketErrorSchema.safeParse(ack);
+          if (errorParsed.success) {
+            resolve(errorParsed.data);
+            return;
+          }
+
+          resolve({
+            ok: false,
+            code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
+            message: "Invalid delete response",
+          });
+        },
+      );
+    });
+  }
+
   async sendTextMessage(payload: {
     conversationId: string;
     text: string;
@@ -309,7 +392,7 @@ export class ConversationSocket {
             message: ConversationsSchemas.MessageSummarySchema,
           }).safeParse(ack);
           if (wrapped.success) {
-            resolve({ ok: true, message: wrapped.data.message });
+            resolve({ ok: true, message: wrapped.data });
             return;
           }
 

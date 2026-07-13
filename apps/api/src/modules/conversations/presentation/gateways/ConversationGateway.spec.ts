@@ -9,6 +9,7 @@ import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 import type { SendMessage, SendMessageResult } from "../../application/SendMessage";
 import type { UpdateWatermark, UpdateWatermarkResult } from "../../application/UpdateWatermark";
+import type { DeleteMessage } from "../../application/DeleteMessage";
 
 import { ConversationGateway } from "./ConversationGateway";
 
@@ -58,6 +59,15 @@ function buildUpdateWatermark(
   } as unknown as UpdateWatermark;
 }
 
+function buildDeleteMessage(
+  overrides: Partial<DeleteMessage> = {},
+): DeleteMessage {
+  return {
+    execute: vi.fn(),
+    ...overrides,
+  } as unknown as DeleteMessage;
+}
+
 function buildServer(): Server {
   return {
     to: vi.fn(() => ({
@@ -70,21 +80,25 @@ function buildGateway(
   validateAccess?: ValidateConversationAccess,
   sendMessage?: SendMessage,
   updateWatermark?: UpdateWatermark,
+  deleteMessage?: DeleteMessage,
 ): {
   gateway: ConversationGateway;
   validateAccess: ValidateConversationAccess;
   sendMessage: SendMessage;
   updateWatermark: UpdateWatermark;
+  deleteMessage: DeleteMessage;
 } {
   const access = validateAccess ?? buildValidateAccess();
   const send = sendMessage ?? buildSendMessage();
   const watermark = updateWatermark ?? buildUpdateWatermark();
-  const gateway = new ConversationGateway(access, send, watermark);
-  return { gateway, validateAccess: access, sendMessage: send, updateWatermark: watermark };
+  const del = deleteMessage ?? buildDeleteMessage();
+  const gateway = new ConversationGateway(access, send, watermark, del);
+  return { gateway, validateAccess: access, sendMessage: send, updateWatermark: watermark, deleteMessage: del };
 }
 
 const CONV_1 = "550e8400-e29b-41d4-a716-446655440001";
 const CONV_2 = "550e8400-e29b-41d4-a716-446655440002";
+const MSG_ID = "550e8400-e29b-41d4-a716-446655440004";
 const LISTING_1 = "550e8400-e29b-41d4-a716-446655440003";
 
 function seedConversation(id = CONV_1): Conversation {
@@ -605,6 +619,127 @@ describe("ConversationGateway", () => {
         code: "FORBIDDEN",
         message: "You are not a participant in this conversation",
       });
+    });
+  });
+
+  describe("message:delete", () => {
+    it("acks sender and fans out message:deleted to the conversation room", async () => {
+      const deletedAt = new Date("2026-06-01T12:05:00.000Z");
+      const deleteMessage = buildDeleteMessage({
+        execute: vi.fn().mockResolvedValue({
+          messageId: MSG_ID,
+          deletedAt,
+        }),
+      });
+      const { gateway, deleteMessage: deleteMessageUC } = buildGateway(
+        undefined,
+        undefined,
+        undefined,
+        deleteMessage,
+      );
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
+
+      const result = await gateway.handleDeleteMessage(
+        {
+          conversationId: CONV_1,
+          messageId: MSG_ID,
+        },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        messageId: MSG_ID,
+        conversationId: CONV_1,
+        deletedAt: deletedAt.toISOString(),
+      });
+      expect(deleteMessageUC.execute).toHaveBeenCalledWith({
+        userId: "buyer-1",
+        conversationId: CONV_1,
+        messageId: MSG_ID,
+      });
+      expect(toMock).toHaveBeenCalledWith(conversationRoom(CONV_1));
+      expect(emitMock).toHaveBeenCalledWith("message:deleted", {
+        messageId: MSG_ID,
+        conversationId: CONV_1,
+        deletedAt: deletedAt.toISOString(),
+      });
+    });
+
+    it("rejects delete for unauthenticated sockets", async () => {
+      const { gateway } = buildGateway();
+      const socket = buildSocket({ user: null });
+
+      const result = await gateway.handleDeleteMessage(
+        {
+          conversationId: CONV_1,
+          messageId: MSG_ID,
+        },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: CONVERSATION_SOCKET_ERROR_CODES.MISSING_AUTH_TOKEN,
+        message: "Authentication required",
+      });
+    });
+
+    it("rejects delete with validation error for malformed payload", async () => {
+      const { gateway } = buildGateway();
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      const result = await gateway.handleDeleteMessage(
+        { notId: CONV_1, messageId: MSG_ID },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: "VALIDATION_FAILED",
+        message: "Invalid message delete payload",
+      });
+    });
+
+    it("returns business errors from DeleteMessage without fanout", async () => {
+      const deleteMessage = buildDeleteMessage({
+        execute: vi.fn().mockRejectedValue({
+          response: {
+            code: "FORBIDDEN",
+            message: "You can only delete your own messages",
+          },
+        }),
+      });
+      const { gateway } = buildGateway(undefined, undefined, undefined, deleteMessage);
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+      const emitMock = vi.fn();
+      gateway.server = {
+        to: vi.fn().mockReturnValue({ emit: emitMock }),
+      } as unknown as Server;
+
+      const result = await gateway.handleDeleteMessage(
+        {
+          conversationId: CONV_1,
+          messageId: MSG_ID,
+        },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: "FORBIDDEN",
+        message: "You can only delete your own messages",
+      });
+      expect(emitMock).not.toHaveBeenCalled();
     });
   });
 });

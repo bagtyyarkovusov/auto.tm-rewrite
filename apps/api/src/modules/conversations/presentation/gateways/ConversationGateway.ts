@@ -20,6 +20,7 @@ import type { SendMessageResult } from "../../application/SendMessage";
 import { SendMessage } from "../../application/SendMessage";
 import { UpdateWatermark } from "../../application/UpdateWatermark";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
+import { DeleteMessage } from "../../application/DeleteMessage";
 import type { Message } from "../../domain/Message";
 
 type JoinPayload = {
@@ -85,6 +86,18 @@ function parseWatermarkPayload(
   }
 }
 
+function parseDeleteMessagePayload(
+  body: unknown,
+): ConversationsSchemas.DeleteMessageSocketRequest | null {
+  try {
+    const parsed =
+      ConversationsSchemas.DeleteMessageSocketRequestSchema.parse(body);
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 @WebSocketGateway({
   namespace: REALTIME_NAMESPACE,
@@ -100,6 +113,8 @@ export class ConversationGateway {
     private readonly sendMessage: SendMessage,
     @Inject(UpdateWatermark)
     private readonly updateWatermark: UpdateWatermark,
+    @Inject(DeleteMessage)
+    private readonly deleteMessage: DeleteMessage,
   ) {}
 
   @SubscribeMessage("conversation:join")
@@ -307,6 +322,51 @@ export class ConversationGateway {
     return {
       ok: true,
       message,
+    };
+  }
+
+  @SubscribeMessage("message:delete")
+  async handleDeleteMessage(
+    @MessageBody() body: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<SocketAck<{ ok: true } & ConversationsSchemas.MessageDeletedEvent>> {
+    const user = this.authenticatedUser(client);
+    if (!user) {
+      return this.unauthenticatedError();
+    }
+
+    const payload = parseDeleteMessagePayload(body);
+    if (!payload) {
+      return {
+        ok: false,
+        code: ErrorCode.ValidationFailed,
+        message: "Invalid message delete payload",
+      };
+    }
+
+    let result: { messageId: string; deletedAt: Date };
+    try {
+      result = await this.deleteMessage.execute({
+        userId: user.sub,
+        conversationId: payload.conversationId,
+        messageId: payload.messageId,
+      });
+    } catch (err) {
+      return this.toSocketError(err);
+    }
+
+    const room = conversationRoom(payload.conversationId);
+    this.server.to(room).emit("message:deleted", {
+      messageId: result.messageId,
+      conversationId: payload.conversationId,
+      deletedAt: result.deletedAt.toISOString(),
+    });
+
+    return {
+      ok: true,
+      messageId: result.messageId,
+      conversationId: payload.conversationId,
+      deletedAt: result.deletedAt.toISOString(),
     };
   }
 
