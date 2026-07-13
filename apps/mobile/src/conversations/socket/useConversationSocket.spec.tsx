@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { queryKeys } from "../../api/queryKeys";
@@ -17,14 +17,21 @@ const mockSocket = {
   joinConversation: vi.fn(),
   leaveConversation: vi.fn(),
   sendTextMessage: vi.fn(),
+  sendTypingStart: vi.fn(),
+  sendTypingStop: vi.fn(),
   markDelivered: vi.fn(),
   markRead: vi.fn(),
   markConversationRead: vi.fn(),
   deleteMessage: vi.fn(),
-  subscribeStatus: vi.fn().mockReturnValue(() => {}),
+  subscribeStatus: vi.fn().mockImplementation((handler) => {
+    handler(mockSocket.getStatus());
+    return () => {};
+  }),
   subscribeMessage: vi.fn().mockReturnValue(() => {}),
   subscribeWatermark: vi.fn().mockReturnValue(() => {}),
   subscribeDeletedMessage: vi.fn().mockReturnValue(() => {}),
+  subscribeTyping: vi.fn().mockReturnValue(() => {}),
+  subscribePresence: vi.fn().mockReturnValue(() => {}),
   getStatus: vi.fn().mockReturnValue("idle"),
   isConnected: vi.fn().mockReturnValue(false),
 };
@@ -46,6 +53,10 @@ describe("useConversationSocket", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSocket.getStatus.mockReturnValue("idle");
+    mockSocket.subscribeStatus.mockImplementation((handler) => {
+      handler(mockSocket.getStatus());
+      return () => {};
+    });
   });
 
   it("connects and joins the conversation room", async () => {
@@ -178,8 +189,10 @@ describe("useConversationSocket", () => {
       wrapper: customWrapper,
     });
 
-    statusHandler("disconnected");
-    statusHandler("connected");
+    act(() => {
+      statusHandler("disconnected");
+      statusHandler("connected");
+    });
 
     await waitFor(() => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
@@ -392,5 +405,215 @@ describe("useConversationSocket", () => {
       expect(item?.text).toBeNull();
       expect(item?.metadata).toBeUndefined();
     });
+  });
+
+  describe("typing", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("sends typing:start on first signal and debounces typing:stop", async () => {
+      mockSocket.joinConversation.mockResolvedValue({
+        ok: true,
+        room: "conversation:conv-1",
+      });
+      mockSocket.getStatus.mockReturnValue("connected");
+
+      const { result } = renderHook(
+        () => useConversationSocket(CONV_ID, USER_ID),
+        { wrapper },
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockSocket.joinConversation).toHaveBeenCalledWith(CONV_ID);
+
+      act(() => {
+        result.current.signalTyping();
+      });
+
+      expect(mockSocket.sendTypingStart).toHaveBeenCalledWith(CONV_ID);
+      expect(mockSocket.sendTypingStop).not.toHaveBeenCalled();
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(mockSocket.sendTypingStop).toHaveBeenCalledWith(CONV_ID);
+    });
+
+    it("resets the stop timer on repeated typing signals", async () => {
+      mockSocket.joinConversation.mockResolvedValue({
+        ok: true,
+        room: "conversation:conv-1",
+      });
+      mockSocket.getStatus.mockReturnValue("connected");
+
+      const { result } = renderHook(
+        () => useConversationSocket(CONV_ID, USER_ID),
+        { wrapper },
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockSocket.joinConversation).toHaveBeenCalledWith(CONV_ID);
+
+      act(() => {
+        result.current.signalTyping();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+        result.current.signalTyping();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(mockSocket.sendTypingStop).not.toHaveBeenCalled();
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(mockSocket.sendTypingStop).toHaveBeenCalledWith(CONV_ID);
+    });
+
+    it("sends typing:stop immediately when stopTyping is called", async () => {
+      mockSocket.joinConversation.mockResolvedValue({
+        ok: true,
+        room: "conversation:conv-1",
+      });
+      mockSocket.getStatus.mockReturnValue("connected");
+
+      const { result } = renderHook(
+        () => useConversationSocket(CONV_ID, USER_ID),
+        { wrapper },
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockSocket.joinConversation).toHaveBeenCalledWith(CONV_ID);
+
+      act(() => {
+        result.current.signalTyping();
+      });
+
+      act(() => {
+        result.current.stopTyping();
+      });
+
+      expect(mockSocket.sendTypingStop).toHaveBeenCalledWith(CONV_ID);
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(mockSocket.sendTypingStop).toHaveBeenCalledTimes(1);
+    });
+
+    it("reflects peer typing state from typing:peer events", async () => {
+      let typingHandler: (event: unknown) => void = () => {};
+      mockSocket.subscribeTyping.mockImplementation((handler) => {
+        typingHandler = handler;
+        return () => {};
+      });
+
+      const { result } = renderHook(
+        () => useConversationSocket(CONV_ID, USER_ID),
+        { wrapper },
+      );
+
+      act(() => {
+        typingHandler({
+          conversationId: CONV_ID,
+          userId: "peer-user",
+          isTyping: true,
+        });
+      });
+
+      expect(result.current.peerTyping).toBe(true);
+
+      act(() => {
+        typingHandler({
+          conversationId: CONV_ID,
+          userId: "peer-user",
+          isTyping: false,
+        });
+      });
+
+      expect(result.current.peerTyping).toBe(false);
+    });
+  });
+
+  it("reflects peer presence state from presence events", async () => {
+    let presenceHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribePresence.mockImplementation((handler) => {
+      presenceHandler = handler;
+      return () => {};
+    });
+
+    const { result } = renderHook(
+      () => useConversationSocket(CONV_ID, USER_ID),
+      { wrapper },
+    );
+
+    act(() => {
+      presenceHandler({
+        conversationId: CONV_ID,
+        userId: "peer-user",
+        online: false,
+        lastSeenAt: "2026-06-01T12:00:00.000Z",
+      });
+    });
+
+    expect(result.current.peerPresence).toEqual({
+      userId: "peer-user",
+      online: false,
+      lastSeenAt: "2026-06-01T12:00:00.000Z",
+    });
+  });
+
+  it("ignores typing and presence events for other conversations", async () => {
+    let typingHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribeTyping.mockImplementation((handler) => {
+      typingHandler = handler;
+      return () => {};
+    });
+
+    let presenceHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribePresence.mockImplementation((handler) => {
+      presenceHandler = handler;
+      return () => {};
+    });
+
+    const { result } = renderHook(
+      () => useConversationSocket(CONV_ID, USER_ID),
+      { wrapper },
+    );
+
+    act(() => {
+      typingHandler({
+        conversationId: "other-conversation",
+        userId: "peer-user",
+        isTyping: true,
+      });
+      presenceHandler({
+        conversationId: "other-conversation",
+        userId: "peer-user",
+        online: true,
+      });
+    });
+
+    expect(result.current.peerTyping).toBe(false);
+    expect(result.current.peerPresence.online).toBe(false);
   });
 });

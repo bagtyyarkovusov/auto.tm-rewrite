@@ -6,6 +6,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from "@nestjs/websockets";
+import type { OnGatewayDisconnect } from "@nestjs/websockets";
 import { ConversationsSchemas, ErrorCode } from "@auto-tm/contracts";
 import { z } from "zod";
 import type { Server, Socket } from "socket.io";
@@ -15,6 +16,7 @@ import {
   REALTIME_NAMESPACE,
 } from "../../../realtime/infrastructure/realtime.config";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
+import { PRESENCE_PORT, type PresencePort } from "../../../realtime/domain/ports/PresencePort";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { SendMessageResult } from "../../application/SendMessage";
 import { SendMessage } from "../../application/SendMessage";
@@ -22,6 +24,7 @@ import { UpdateWatermark } from "../../application/UpdateWatermark";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 import { DeleteMessage } from "../../application/DeleteMessage";
 import type { Message } from "../../domain/Message";
+import type { Conversation } from "../../domain/Conversation";
 
 type JoinPayload = {
   conversationId: string;
@@ -40,6 +43,17 @@ function parseJoinPayload(body: unknown): JoinPayload | null {
     const parsed = ConversationsSchemas.JoinConversationRequestSchema.parse(
       body,
     );
+    return { conversationId: parsed.conversationId };
+  } catch {
+    return null;
+  }
+}
+
+function parseTypingPayload(
+  body: unknown,
+): { conversationId: string } | null {
+  try {
+    const parsed = ConversationsSchemas.TypingStartRequestSchema.parse(body);
     return { conversationId: parsed.conversationId };
   } catch {
     return null;
@@ -102,9 +116,11 @@ function parseDeleteMessagePayload(
 @WebSocketGateway({
   namespace: REALTIME_NAMESPACE,
 })
-export class ConversationGateway {
+export class ConversationGateway implements OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
+
+  private readonly userRoomCounts = new Map<string, Map<string, number>>();
 
   constructor(
     @Inject(ValidateConversationAccess)
@@ -115,6 +131,8 @@ export class ConversationGateway {
     private readonly updateWatermark: UpdateWatermark,
     @Inject(DeleteMessage)
     private readonly deleteMessage: DeleteMessage,
+    @Inject(PRESENCE_PORT)
+    private readonly presence: PresencePort,
   ) {}
 
   @SubscribeMessage("conversation:join")
@@ -142,8 +160,9 @@ export class ConversationGateway {
       };
     }
 
+    let conversation: Conversation;
     try {
-      await this.validateAccess.execute({
+      conversation = await this.validateAccess.execute({
         userId: user.sub,
         conversationId: payload.conversationId,
       });
@@ -153,6 +172,39 @@ export class ConversationGateway {
 
     const room = conversationRoom(payload.conversationId);
     await client.join(room);
+
+    const previousCount = this.getRoomCount(user.sub, room);
+    this.incrementRoomCount(user.sub, room);
+    if (previousCount === 0) {
+      // Notify the peer that this user is now present in this conversation.
+      const ownPresence: ConversationsSchemas.PresenceEvent = {
+        conversationId: payload.conversationId,
+        userId: user.sub,
+        online: true,
+      };
+      client.to(room).emit("presence", ownPresence);
+    }
+
+    // Send the joining user the current presence of each peer participant.
+    for (const participantId of [
+      conversation.buyerId,
+      conversation.sellerId,
+    ]) {
+      if (participantId === user.sub) continue;
+
+      const online = this.presence.isUserOnline(participantId);
+      const lastSeenAt = online
+        ? undefined
+        : this.presence.getLastSeenAt(participantId)?.toISOString();
+
+      const peerPresence: ConversationsSchemas.PresenceEvent = {
+        conversationId: payload.conversationId,
+        userId: participantId,
+        online,
+        lastSeenAt,
+      };
+      client.emit("presence", peerPresence);
+    }
 
     return {
       ok: true,
@@ -187,13 +239,109 @@ export class ConversationGateway {
     }
 
     const room = conversationRoom(payload.conversationId);
-    await client.leave(room);
+
+    const countBefore = this.getRoomCount(user.sub, room);
+    if (countBefore > 0) {
+      await client.leave(room);
+      const countAfter = this.decrementRoomCount(user.sub, room);
+      if (countAfter === 0) {
+        const presence: ConversationsSchemas.PresenceEvent = {
+          conversationId: payload.conversationId,
+          userId: user.sub,
+          online: false,
+          lastSeenAt: new Date().toISOString(),
+        };
+        client.to(room).emit("presence", presence);
+      }
+    } else {
+      await client.leave(room);
+    }
 
     return {
       ok: true,
       conversationId: payload.conversationId,
       room,
     };
+  }
+
+  @SubscribeMessage("typing:start")
+  async handleTypingStart(
+    @MessageBody() body: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<SocketAck<{ ok: true; conversationId: string }>> {
+    return this.handleTyping(body, client, true);
+  }
+
+  @SubscribeMessage("typing:stop")
+  async handleTypingStop(
+    @MessageBody() body: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<SocketAck<{ ok: true; conversationId: string }>> {
+    return this.handleTyping(body, client, false);
+  }
+
+  private async handleTyping(
+    body: unknown,
+    client: Socket,
+    isTyping: boolean,
+  ): Promise<SocketAck<{ ok: true; conversationId: string }>> {
+    const user = this.authenticatedUser(client);
+    if (!user) {
+      return this.unauthenticatedError();
+    }
+
+    const payload = parseTypingPayload(body);
+    if (!payload) {
+      return {
+        ok: false,
+        code: ErrorCode.ValidationFailed,
+        message: "conversationId is required",
+      };
+    }
+
+    try {
+      await this.validateAccess.execute({
+        userId: user.sub,
+        conversationId: payload.conversationId,
+      });
+    } catch (err) {
+      return this.toSocketError(err);
+    }
+
+    const room = conversationRoom(payload.conversationId);
+    const event: ConversationsSchemas.TypingEvent = {
+      conversationId: payload.conversationId,
+      userId: user.sub,
+      isTyping,
+    };
+
+    // Fan out to other participants in the room, not back to the sender.
+    client.to(room).emit("typing:peer", event);
+
+    return { ok: true, conversationId: payload.conversationId };
+  }
+
+  handleDisconnect(client: Socket): void {
+    const user = this.authenticatedUser(client);
+    if (!user) {
+      return;
+    }
+
+    for (const room of client.rooms) {
+      if (!room.startsWith("conversation:")) continue;
+
+      const countAfter = this.decrementRoomCount(user.sub, room);
+      if (countAfter === 0) {
+        const conversationId = room.replace("conversation:", "");
+        const presence: ConversationsSchemas.PresenceEvent = {
+          conversationId,
+          userId: user.sub,
+          online: false,
+          lastSeenAt: new Date().toISOString(),
+        };
+        this.server.to(room).emit("presence", presence);
+      }
+    }
   }
 
   @SubscribeMessage("message:delivered")
@@ -429,5 +577,32 @@ export class ConversationGateway {
         ? { clientMessageId: message.clientMessageId }
         : {}),
     } as ConversationsSchemas.MessageSummary;
+  }
+
+  private getRoomCount(userId: string, room: string): number {
+    return this.userRoomCounts.get(userId)?.get(room) ?? 0;
+  }
+
+  private incrementRoomCount(userId: string, room: string): void {
+    const rooms = this.userRoomCounts.get(userId) ?? new Map<string, number>();
+    rooms.set(room, (rooms.get(room) ?? 0) + 1);
+    this.userRoomCounts.set(userId, rooms);
+  }
+
+  private decrementRoomCount(userId: string, room: string): number {
+    const rooms = this.userRoomCounts.get(userId);
+    if (!rooms) return 0;
+
+    const count = (rooms.get(room) ?? 1) - 1;
+    if (count <= 0) {
+      rooms.delete(room);
+      if (rooms.size === 0) {
+        this.userRoomCounts.delete(userId);
+      }
+      return 0;
+    }
+
+    rooms.set(room, count);
+    return count;
   }
 }

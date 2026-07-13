@@ -8,8 +8,10 @@ import {
   type ConversationSocketStatus,
   type MessageDeletedEvent,
   type MessageNewEvent,
+  type PresenceEvent,
   type SendTextMessageAck,
   type SocketErrorAck,
+  type TypingEvent,
   type WatermarkEvent,
 } from "./ConversationSocket";
 
@@ -22,14 +24,27 @@ function getSharedSocket(): ConversationSocket {
   return sharedSocket;
 }
 
+const TYPING_DEBOUNCE_MS = 3000;
+const PEER_TYPING_TIMEOUT_MS = 5000;
+
+export interface PeerPresence {
+  userId?: string;
+  online: boolean;
+  lastSeenAt?: string;
+}
+
 export interface UseConversationSocketReturn {
   status: ConversationSocketStatus;
   isConnected: boolean;
+  peerTyping: boolean;
+  peerPresence: PeerPresence;
   sendTextMessage: (input: {
     conversationId: string;
     text: string;
     clientMessageId: string;
   }) => Promise<SendTextMessageAck | SocketErrorAck>;
+  signalTyping: () => void;
+  stopTyping: () => void;
   markDelivered: (conversationId: string, timestamp?: string) => Promise<SocketErrorAck | { ok: true; conversationId: string }>;
   markRead: (conversationId: string, timestamp?: string) => Promise<SocketErrorAck | { ok: true; conversationId: string }>;
   deleteMessage: (input: {
@@ -51,8 +66,50 @@ export function useConversationSocket(
   const [status, setStatus] = useState<ConversationSocketStatus>(
     socketRef.current.getStatus(),
   );
+  const [peerTyping, setPeerTyping] = useState(false);
+  const [peerPresence, setPeerPresence] = useState<PeerPresence>({
+    online: false,
+  });
+
+  const typingStartSentRef = useRef(false);
+  const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const peerTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isConnected = status === "connected";
+
+  const signalTyping = useCallback(() => {
+    const socket = socketRef.current;
+    if (!isConnected || !joinedRef.current) return;
+
+    if (!typingStartSentRef.current) {
+      typingStartSentRef.current = true;
+      void socket.sendTypingStart(conversationId);
+    }
+
+    if (typingStopTimerRef.current) {
+      clearTimeout(typingStopTimerRef.current);
+    }
+
+    typingStopTimerRef.current = setTimeout(() => {
+      typingStopTimerRef.current = null;
+      if (typingStartSentRef.current) {
+        typingStartSentRef.current = false;
+        void socket.sendTypingStop(conversationId);
+      }
+    }, TYPING_DEBOUNCE_MS);
+  }, [conversationId, isConnected]);
+
+  const stopTyping = useCallback(() => {
+    if (typingStopTimerRef.current) {
+      clearTimeout(typingStopTimerRef.current);
+      typingStopTimerRef.current = null;
+    }
+
+    if (typingStartSentRef.current) {
+      typingStartSentRef.current = false;
+      void socketRef.current.sendTypingStop(conversationId);
+    }
+  }, [conversationId]);
 
   useEffect(() => {
     const socket = socketRef.current;
@@ -71,6 +128,10 @@ export function useConversationSocket(
       }
       if (next === "disconnected") {
         joinedRef.current = false;
+        // Best-effort cleanup of any in-flight typing state.
+        if (typingStartSentRef.current) {
+          typingStartSentRef.current = false;
+        }
       }
       if (
         previousStatus === "disconnected" &&
@@ -106,15 +167,49 @@ export function useConversationSocket(
       handleMessageDeleted(queryClient, event);
     });
 
+    const unsubscribeTyping = socket.subscribeTyping((event: TypingEvent) => {
+      if (event.conversationId !== conversationId) return;
+      if (currentUserId && event.userId === currentUserId) return;
+
+      setPeerTyping(event.isTyping);
+
+      if (event.isTyping) {
+        if (peerTypingTimerRef.current) {
+          clearTimeout(peerTypingTimerRef.current);
+        }
+        peerTypingTimerRef.current = setTimeout(() => {
+          peerTypingTimerRef.current = null;
+          setPeerTyping(false);
+        }, PEER_TYPING_TIMEOUT_MS);
+      } else if (peerTypingTimerRef.current) {
+        clearTimeout(peerTypingTimerRef.current);
+        peerTypingTimerRef.current = null;
+      }
+    });
+
+    const unsubscribePresence = socket.subscribePresence((event: PresenceEvent) => {
+      if (event.conversationId !== conversationId) return;
+      if (currentUserId && event.userId === currentUserId) return;
+
+      setPeerPresence({
+        userId: event.userId,
+        online: event.online,
+        lastSeenAt: event.lastSeenAt,
+      });
+    });
+
     return () => {
       unsubscribeStatus();
       unsubscribeMessage();
       unsubscribeWatermark();
       unsubscribeDeleted();
+      unsubscribeTyping();
+      unsubscribePresence();
+      stopTyping();
       void socket.leaveConversation(conversationId);
       joinedRef.current = false;
     };
-  }, [conversationId, currentUserId, queryClient]);
+  }, [conversationId, currentUserId, queryClient, stopTyping]);
 
   const sendTextMessage = useCallback(
     async (input: {
@@ -154,7 +249,7 @@ export function useConversationSocket(
     [],
   );
 
-  return { status, isConnected, sendTextMessage, markDelivered, markRead, deleteMessage };
+  return { status, isConnected, peerTyping, peerPresence, sendTextMessage, signalTyping, stopTyping, markDelivered, markRead, deleteMessage };
 }
 
 function handleMessageNew(

@@ -384,4 +384,138 @@ describe("ConversationSocket", () => {
 
     expect(listener).toHaveBeenCalledWith(event);
   });
+
+  it("emits typing:start and returns ack", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    mockSocket.emit.mockImplementation(
+      (_event: string, _payload: unknown, callback: (ack: unknown) => void) => {
+        callback({ ok: true, conversationId: CONV_ID });
+      },
+    );
+
+    const result = await socket.sendTypingStart(CONV_ID);
+
+    expect(result).toEqual({ ok: true, conversationId: CONV_ID });
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      "typing:start",
+      { conversationId: CONV_ID },
+      expect.any(Function),
+    );
+  });
+
+  it("emits typing:stop and returns ack", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    mockSocket.emit.mockImplementation(
+      (_event: string, _payload: unknown, callback: (ack: unknown) => void) => {
+        callback({ ok: true, conversationId: CONV_ID });
+      },
+    );
+
+    const result = await socket.sendTypingStop(CONV_ID);
+
+    expect(result).toEqual({ ok: true, conversationId: CONV_ID });
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      "typing:stop",
+      { conversationId: CONV_ID },
+      expect.any(Function),
+    );
+  });
+
+  it("returns NOT_CONNECTED when sending typing event while disconnected", async () => {
+    mockSocket.connected = false;
+    mockSocket.on.mockImplementation(() => {
+      // do not trigger connect
+    });
+
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const result = await socket.sendTypingStart(CONV_ID);
+
+    expect(result).toEqual({
+      ok: false,
+      code: "NOT_CONNECTED",
+      message: "Socket is not connected",
+    });
+  });
+
+  it("forwards typing:peer events to listeners", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const listener = vi.fn();
+    socket.subscribeTyping(listener);
+
+    const typingHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "typing:peer",
+    )?.[1] as (event: unknown) => void;
+
+    const event = {
+      conversationId: CONV_ID,
+      userId: USER_ID,
+      isTyping: true,
+    };
+
+    typingHandler(event);
+
+    expect(listener).toHaveBeenCalledWith(event);
+  });
+
+  it("ignores malformed typing:peer events", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const listener = vi.fn();
+    socket.subscribeTyping(listener);
+
+    const typingHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "typing:peer",
+    )?.[1] as (event: unknown) => void;
+
+    typingHandler({ invalid: true });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("forwards presence events to listeners", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const listener = vi.fn();
+    socket.subscribePresence(listener);
+
+    const presenceHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "presence",
+    )?.[1] as (event: unknown) => void;
+
+    const event = {
+      conversationId: CONV_ID,
+      userId: USER_ID,
+      online: true,
+    };
+
+    presenceHandler(event);
+
+    expect(listener).toHaveBeenCalledWith(event);
+  });
+
+  it("ignores malformed presence events", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const listener = vi.fn();
+    socket.subscribePresence(listener);
+
+    const presenceHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "presence",
+    )?.[1] as (event: unknown) => void;
+
+    presenceHandler({ online: "yes" });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
 });

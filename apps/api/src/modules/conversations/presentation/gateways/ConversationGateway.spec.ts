@@ -3,6 +3,7 @@ import type { Server, Socket } from "socket.io";
 
 import { conversationRoom } from "../../../realtime/infrastructure/realtime.config";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
+import type { PresencePort } from "../../../realtime/domain/ports/PresencePort";
 import { Conversation } from "../../domain/Conversation";
 import { Message } from "../../domain/Message";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
@@ -19,6 +20,7 @@ function buildSocket(overrides: {
   rooms?: Set<string>;
 } = {}): Socket {
   const rooms = overrides.rooms ?? new Set<string>();
+  const toMock = vi.fn().mockReturnValue({ emit: vi.fn() });
   return {
     id: overrides.id ?? "socket-1",
     data: overrides.user === null ? {} : { user: overrides.user ?? { sub: "user-1", sid: "sid-1", phone: "+993", role: "user" } },
@@ -28,6 +30,8 @@ function buildSocket(overrides: {
     leave: vi.fn(async (room: string) => {
       rooms.delete(room);
     }),
+    to: toMock,
+    emit: vi.fn(),
     rooms,
   } as unknown as Socket;
 }
@@ -68,6 +72,18 @@ function buildDeleteMessage(
   } as unknown as DeleteMessage;
 }
 
+function buildPresencePort(
+  overrides: Partial<PresencePort> = {},
+): PresencePort {
+  return {
+    isUserOnline: vi.fn().mockReturnValue(false),
+    getSocketCountForUser: vi.fn().mockReturnValue(0),
+    getOnlineUserCount: vi.fn().mockReturnValue(0),
+    getLastSeenAt: vi.fn().mockReturnValue(undefined),
+    ...overrides,
+  } as unknown as PresencePort;
+}
+
 function buildServer(): Server {
   return {
     to: vi.fn(() => ({
@@ -81,19 +97,22 @@ function buildGateway(
   sendMessage?: SendMessage,
   updateWatermark?: UpdateWatermark,
   deleteMessage?: DeleteMessage,
+  presence?: PresencePort,
 ): {
   gateway: ConversationGateway;
   validateAccess: ValidateConversationAccess;
   sendMessage: SendMessage;
   updateWatermark: UpdateWatermark;
   deleteMessage: DeleteMessage;
+  presence: PresencePort;
 } {
   const access = validateAccess ?? buildValidateAccess();
   const send = sendMessage ?? buildSendMessage();
   const watermark = updateWatermark ?? buildUpdateWatermark();
   const del = deleteMessage ?? buildDeleteMessage();
-  const gateway = new ConversationGateway(access, send, watermark, del);
-  return { gateway, validateAccess: access, sendMessage: send, updateWatermark: watermark, deleteMessage: del };
+  const pres = presence ?? buildPresencePort();
+  const gateway = new ConversationGateway(access, send, watermark, del, pres);
+  return { gateway, validateAccess: access, sendMessage: send, updateWatermark: watermark, deleteMessage: del, presence: pres };
 }
 
 const CONV_1 = "550e8400-e29b-41d4-a716-446655440001";
@@ -740,6 +759,199 @@ describe("ConversationGateway", () => {
         message: "You can only delete your own messages",
       });
       expect(emitMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("typing events", () => {
+    it("fans out typing:start to the conversation room but not back to sender", async () => {
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockResolvedValue(seedConversation()),
+      });
+      const { gateway } = buildGateway(validateAccess);
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      const result = await gateway.handleTypingStart(
+        { conversationId: CONV_1 },
+        socket,
+      );
+
+      expect(result).toEqual({ ok: true, conversationId: CONV_1 });
+      expect(socket.to).toHaveBeenCalledWith(conversationRoom(CONV_1));
+      expect(
+        (socket.to as ReturnType<typeof vi.fn>).mock.results[0]?.value.emit,
+      ).toHaveBeenCalledWith("typing:peer", {
+        conversationId: CONV_1,
+        userId: "buyer-1",
+        isTyping: true,
+      });
+    });
+
+    it("fans out typing:stop to the conversation room", async () => {
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockResolvedValue(seedConversation()),
+      });
+      const { gateway } = buildGateway(validateAccess);
+      const socket = buildSocket({
+        user: { sub: "seller-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      const result = await gateway.handleTypingStop(
+        { conversationId: CONV_1 },
+        socket,
+      );
+
+      expect(result).toEqual({ ok: true, conversationId: CONV_1 });
+      expect(
+        (socket.to as ReturnType<typeof vi.fn>).mock.results[0]?.value.emit,
+      ).toHaveBeenCalledWith("typing:peer", {
+        conversationId: CONV_1,
+        userId: "seller-1",
+        isTyping: false,
+      });
+    });
+
+    it("rejects typing events for unauthenticated sockets", async () => {
+      const { gateway } = buildGateway();
+      const socket = buildSocket({ user: null });
+
+      const result = await gateway.handleTypingStart(
+        { conversationId: CONV_1 },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: CONVERSATION_SOCKET_ERROR_CODES.MISSING_AUTH_TOKEN,
+        message: "Authentication required",
+      });
+      expect(socket.to).not.toHaveBeenCalled();
+    });
+
+    it("rejects typing events when validateAccess throws", async () => {
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockRejectedValue({
+          response: {
+            code: "FORBIDDEN",
+            message: "You are not a participant in this conversation",
+          },
+        }),
+      });
+      const { gateway } = buildGateway(validateAccess);
+      const socket = buildSocket({
+        user: { sub: "random-user", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      const result = await gateway.handleTypingStart(
+        { conversationId: CONV_1 },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: "FORBIDDEN",
+        message: "You are not a participant in this conversation",
+      });
+      expect(socket.to).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("presence events", () => {
+    it("emits own online presence to the room on join and sends peer presence to the client", async () => {
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockResolvedValue(seedConversation()),
+      });
+      const presence = buildPresencePort({
+        isUserOnline: vi.fn().mockReturnValueOnce(true),
+        getLastSeenAt: vi.fn().mockReturnValue(undefined),
+      });
+      const { gateway } = buildGateway(
+        validateAccess,
+        undefined,
+        undefined,
+        undefined,
+        presence,
+      );
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      await gateway.handleJoin({ conversationId: CONV_1 }, socket);
+
+      expect(socket.to).toHaveBeenCalledWith(conversationRoom(CONV_1));
+      expect(
+        (socket.to as ReturnType<typeof vi.fn>).mock.results[0]?.value.emit,
+      ).toHaveBeenCalledWith("presence", {
+        conversationId: CONV_1,
+        userId: "buyer-1",
+        online: true,
+      });
+      expect(socket.emit).toHaveBeenCalledWith("presence", {
+        conversationId: CONV_1,
+        userId: "seller-1",
+        online: true,
+      });
+    });
+
+    it("sends peer offline presence with lastSeenAt when the peer is not online", async () => {
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockResolvedValue(seedConversation()),
+      });
+      const lastSeen = new Date("2026-06-01T12:00:00.000Z");
+      const presence = buildPresencePort({
+        isUserOnline: vi.fn().mockReturnValueOnce(false),
+        getLastSeenAt: vi.fn().mockReturnValue(lastSeen),
+      });
+      const { gateway } = buildGateway(
+        validateAccess,
+        undefined,
+        undefined,
+        undefined,
+        presence,
+      );
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      await gateway.handleJoin({ conversationId: CONV_1 }, socket);
+
+      expect(socket.emit).toHaveBeenCalledWith("presence", {
+        conversationId: CONV_1,
+        userId: "seller-1",
+        online: false,
+        lastSeenAt: lastSeen.toISOString(),
+      });
+    });
+
+    it("broadcasts offline presence on disconnect", async () => {
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockResolvedValue(seedConversation()),
+      });
+      const { gateway } = buildGateway(validateAccess);
+      const socket = buildSocket({
+        id: "socket-1",
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+        rooms: new Set([conversationRoom(CONV_1)]),
+      });
+
+      await gateway.handleJoin({ conversationId: CONV_1 }, socket);
+
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
+
+      gateway.handleDisconnect(socket);
+
+      expect(toMock).toHaveBeenCalledWith(conversationRoom(CONV_1));
+      expect(emitMock).toHaveBeenCalledWith(
+        "presence",
+        expect.objectContaining({
+          conversationId: CONV_1,
+          userId: "buyer-1",
+          online: false,
+        }),
+      );
     });
   });
 });

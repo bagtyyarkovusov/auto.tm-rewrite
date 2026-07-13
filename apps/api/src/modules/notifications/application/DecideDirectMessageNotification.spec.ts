@@ -75,6 +75,10 @@ class FakePresence implements PresencePort {
   getOnlineUserCount(): number {
     return 0;
   }
+
+  getLastSeenAt(): Date | undefined {
+    return undefined;
+  }
 }
 
 class FakeConversationState implements ConversationStatePort {
