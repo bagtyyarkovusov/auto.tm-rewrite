@@ -91,6 +91,29 @@ class FakeConversationRepository implements ConversationRepository {
     return this.watermarks[this.key(userId, conversationId)] ?? null;
   }
 
+  async getParticipantStatesForConversations(
+    conversationIds: string[],
+  ): Promise<
+    Map<string, Array<{ userId: string; mutedAt: Date | null; lastReadAt: Date | null; lastDeliveredAt: Date | null }>>
+  > {
+    const map = new Map<
+      string,
+      Array<{ userId: string; mutedAt: Date | null; lastReadAt: Date | null; lastDeliveredAt: Date | null }>
+    >();
+    for (const conversationId of conversationIds) {
+      const entries = Object.entries(this.watermarks)
+        .filter(([key]) => key.endsWith(`:${conversationId}`))
+        .map(([key, state]) => {
+          const userId = key.replace(`:${conversationId}`, "");
+          return { userId, ...state };
+        });
+      if (entries.length > 0) {
+        map.set(conversationId, entries);
+      }
+    }
+    return map;
+  }
+
   async muteConversation(): Promise<{
     mutedAt: Date | null;
     lastReadAt: Date | null;

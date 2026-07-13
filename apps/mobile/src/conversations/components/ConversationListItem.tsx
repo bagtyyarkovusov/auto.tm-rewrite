@@ -26,6 +26,7 @@ interface ConversationListItemProps {
       createdAt: string;
     };
     updatedAt: string;
+    unreadCount?: number;
   };
   brandName?: string;
   modelName?: string;
@@ -137,14 +138,27 @@ export function ConversationListItem({
           <Text className="text-sm text-muted-foreground">{priceText}</Text>
         )}
 
-        {conversation.lastMessage && (
-          <Text
-            className="text-sm text-muted-foreground"
-            numberOfLines={1}
-          >
-            {conversation.lastMessage.text ?? ""}
-          </Text>
-        )}
+        <View className="flex-row items-center gap-2">
+          {conversation.lastMessage && (
+            <Text
+              className={`text-sm flex-1 ${
+                (conversation.unreadCount ?? 0) > 0
+                  ? "text-foreground font-medium"
+                  : "text-muted-foreground"
+              }`}
+              numberOfLines={1}
+            >
+              {conversation.lastMessage.text ?? ""}
+            </Text>
+          )}
+          {(conversation.unreadCount ?? 0) > 0 && (
+            <View className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary items-center justify-center">
+              <Text className="text-xs text-primary-foreground font-medium">
+                {(conversation.unreadCount ?? 0) > 99 ? "99+" : conversation.unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
 
         <View className="flex-row items-center gap-1.5">
           <Text className="text-xs text-muted-foreground capitalize">

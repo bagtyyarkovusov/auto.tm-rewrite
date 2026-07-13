@@ -227,6 +227,8 @@ export const ConversationSummarySchema = z.object({
   lastMessage: MessageSummarySchema.optional(),
   updatedAt: z.string().datetime(),
   unreadCount: z.number().int().nonnegative().default(0),
+  peerLastReadAt: z.string().datetime().optional(),
+  peerLastDeliveredAt: z.string().datetime().optional(),
 });
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 

@@ -247,6 +247,34 @@ export class PrismaConversationRepository implements ConversationRepository {
     };
   }
 
+  async getParticipantStatesForConversations(
+    conversationIds: string[],
+  ): Promise<Map<string, Array<{ userId: string } & ParticipantState>>> {
+    if (conversationIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.prisma.conversationParticipant.findMany({
+      where: {
+        conversationId: { in: conversationIds },
+      },
+    });
+
+    const map = new Map<string, Array<{ userId: string } & ParticipantState>>();
+    for (const row of rows) {
+      const existing = map.get(row.conversationId) ?? [];
+      existing.push({
+        userId: row.userId,
+        mutedAt: row.mutedAt,
+        lastReadAt: row.lastReadAt,
+        lastDeliveredAt: row.lastDeliveredAt,
+      });
+      map.set(row.conversationId, existing);
+    }
+
+    return map;
+  }
+
   async muteConversation(
     userId: string,
     conversationId: string,

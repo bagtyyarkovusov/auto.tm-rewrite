@@ -8,6 +8,7 @@ import { Message } from "../../domain/Message";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 import type { SendMessage, SendMessageResult } from "../../application/SendMessage";
+import type { UpdateWatermark, UpdateWatermarkResult } from "../../application/UpdateWatermark";
 
 import { ConversationGateway } from "./ConversationGateway";
 
@@ -48,6 +49,15 @@ function buildSendMessage(
   } as unknown as SendMessage;
 }
 
+function buildUpdateWatermark(
+  overrides: Partial<UpdateWatermark> = {},
+): UpdateWatermark {
+  return {
+    execute: vi.fn(),
+    ...overrides,
+  } as unknown as UpdateWatermark;
+}
+
 function buildServer(): Server {
   return {
     to: vi.fn(() => ({
@@ -59,15 +69,18 @@ function buildServer(): Server {
 function buildGateway(
   validateAccess?: ValidateConversationAccess,
   sendMessage?: SendMessage,
+  updateWatermark?: UpdateWatermark,
 ): {
   gateway: ConversationGateway;
   validateAccess: ValidateConversationAccess;
   sendMessage: SendMessage;
+  updateWatermark: UpdateWatermark;
 } {
   const access = validateAccess ?? buildValidateAccess();
   const send = sendMessage ?? buildSendMessage();
-  const gateway = new ConversationGateway(access, send);
-  return { gateway, validateAccess: access, sendMessage: send };
+  const watermark = updateWatermark ?? buildUpdateWatermark();
+  const gateway = new ConversationGateway(access, send, watermark);
+  return { gateway, validateAccess: access, sendMessage: send, updateWatermark: watermark };
 }
 
 const CONV_1 = "550e8400-e29b-41d4-a716-446655440001";
@@ -439,6 +452,151 @@ describe("ConversationGateway", () => {
           text: "Hello",
           clientMessageId: "client-1",
         },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: "FORBIDDEN",
+        message: "You are not a participant in this conversation",
+      });
+    });
+  });
+
+  describe("watermark events", () => {
+    it("updates lastDeliveredAt on message:delivered and fans out watermark", async () => {
+      const updateWatermark = buildUpdateWatermark({
+        execute: vi.fn().mockResolvedValue({
+          conversationId: CONV_1,
+          lastReadAt: null,
+          lastDeliveredAt: new Date("2026-06-01T12:00:00.000Z"),
+        } as UpdateWatermarkResult),
+      });
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockResolvedValue(seedConversation()),
+      });
+      const { gateway, updateWatermark: watermarkUC } = buildGateway(
+        validateAccess,
+        undefined,
+        updateWatermark,
+      );
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
+
+      const result = await gateway.handleMessageDelivered(
+        { conversationId: CONV_1, lastDeliveredAt: "2026-06-01T12:00:00.000Z" },
+        socket,
+      );
+
+      expect(result).toEqual({ ok: true, conversationId: CONV_1 });
+      expect(watermarkUC.execute).toHaveBeenCalledWith({
+        userId: "buyer-1",
+        conversationId: CONV_1,
+        lastDeliveredAt: "2026-06-01T12:00:00.000Z",
+      });
+      expect(toMock).toHaveBeenCalledWith(conversationRoom(CONV_1));
+      expect(emitMock).toHaveBeenCalledWith("watermark", {
+        conversationId: CONV_1,
+        userId: "buyer-1",
+        lastDeliveredAt: "2026-06-01T12:00:00.000Z",
+      });
+    });
+
+    it("updates lastReadAt on conversation:read and fans out watermark", async () => {
+      const updateWatermark = buildUpdateWatermark({
+        execute: vi.fn().mockResolvedValue({
+          conversationId: CONV_1,
+          lastReadAt: new Date("2026-06-01T12:05:00.000Z"),
+          lastDeliveredAt: null,
+        } as UpdateWatermarkResult),
+      });
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockResolvedValue(seedConversation()),
+      });
+      const { gateway, updateWatermark: watermarkUC } = buildGateway(
+        validateAccess,
+        undefined,
+        updateWatermark,
+      );
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
+
+      const result = await gateway.handleConversationRead(
+        { conversationId: CONV_1, lastReadAt: "2026-06-01T12:05:00.000Z" },
+        socket,
+      );
+
+      expect(result).toEqual({ ok: true, conversationId: CONV_1 });
+      expect(watermarkUC.execute).toHaveBeenCalledWith({
+        userId: "buyer-1",
+        conversationId: CONV_1,
+        lastReadAt: "2026-06-01T12:05:00.000Z",
+      });
+      expect(emitMock).toHaveBeenCalledWith("watermark", {
+        conversationId: CONV_1,
+        userId: "buyer-1",
+        lastReadAt: "2026-06-01T12:05:00.000Z",
+      });
+    });
+
+    it("rejects watermark events for unauthenticated sockets", async () => {
+      const { gateway } = buildGateway();
+      const socket = buildSocket({ user: null });
+
+      const result = await gateway.handleMessageRead(
+        { conversationId: CONV_1 },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: CONVERSATION_SOCKET_ERROR_CODES.MISSING_AUTH_TOKEN,
+        message: "Authentication required",
+      });
+    });
+
+    it("rejects watermark events with malformed payload", async () => {
+      const { gateway } = buildGateway();
+      const socket = buildSocket({
+        user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      const result = await gateway.handleMessageDelivered(
+        { notId: CONV_1 },
+        socket,
+      );
+
+      expect(result).toEqual({
+        ok: false,
+        code: "VALIDATION_FAILED",
+        message: "Invalid watermark payload",
+      });
+    });
+
+    it("rejects watermark events when validateAccess throws", async () => {
+      const validateAccess = buildValidateAccess({
+        execute: vi.fn().mockRejectedValue({
+          response: {
+            code: "FORBIDDEN",
+            message: "You are not a participant in this conversation",
+          },
+        }),
+      });
+      const { gateway } = buildGateway(validateAccess);
+      const socket = buildSocket({
+        user: { sub: "random-user", sid: "sid-1", phone: "+993", role: "user" },
+      });
+
+      const result = await gateway.handleConversationRead(
+        { conversationId: CONV_1, lastReadAt: "2026-06-01T12:05:00.000Z" },
         socket,
       );
 

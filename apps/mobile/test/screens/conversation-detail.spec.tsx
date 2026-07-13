@@ -58,8 +58,8 @@ describe("ConversationDetailScreen optimistic states", () => {
     expect(source).toContain('status: "pending"');
   });
 
-  it("marks pending as confirmed on send success", () => {
-    expect(source).toContain('status: "confirmed"');
+  it("marks pending as sent on send success", () => {
+    expect(source).toContain('status: "sent"');
     expect(source).toContain("onSuccess");
   });
 

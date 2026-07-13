@@ -7,6 +7,7 @@ import {
   WebSocketServer,
 } from "@nestjs/websockets";
 import { ConversationsSchemas, ErrorCode } from "@auto-tm/contracts";
+import { z } from "zod";
 import type { Server, Socket } from "socket.io";
 
 import {
@@ -17,11 +18,18 @@ import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/S
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { SendMessageResult } from "../../application/SendMessage";
 import { SendMessage } from "../../application/SendMessage";
+import { UpdateWatermark } from "../../application/UpdateWatermark";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 import type { Message } from "../../domain/Message";
 
 type JoinPayload = {
   conversationId: string;
+};
+
+type WatermarkPayload = {
+  conversationId: string;
+  lastReadAt?: string | undefined;
+  lastDeliveredAt?: string | undefined;
 };
 
 type SocketAck<T> = T | { ok: false; code: string; message: string };
@@ -50,6 +58,33 @@ function parseSendMessagePayload(
   }
 }
 
+const WatermarkSocketPayloadSchema = z.object({
+  conversationId: z.string().uuid(),
+  lastReadAt: z.string().datetime().optional(),
+  lastDeliveredAt: z.string().datetime().optional(),
+}).refine(
+  (data) => data.lastReadAt !== undefined || data.lastDeliveredAt !== undefined,
+  {
+    message: "At least one watermark timestamp is required",
+    path: [],
+  },
+);
+
+function parseWatermarkPayload(
+  body: unknown,
+): WatermarkPayload | null {
+  try {
+    const parsed = WatermarkSocketPayloadSchema.parse(body);
+    return {
+      conversationId: parsed.conversationId,
+      lastReadAt: parsed.lastReadAt,
+      lastDeliveredAt: parsed.lastDeliveredAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 @WebSocketGateway({
   namespace: REALTIME_NAMESPACE,
@@ -63,6 +98,8 @@ export class ConversationGateway {
     private readonly validateAccess: ValidateConversationAccess,
     @Inject(SendMessage)
     private readonly sendMessage: SendMessage,
+    @Inject(UpdateWatermark)
+    private readonly updateWatermark: UpdateWatermark,
   ) {}
 
   @SubscribeMessage("conversation:join")
@@ -142,6 +179,90 @@ export class ConversationGateway {
       conversationId: payload.conversationId,
       room,
     };
+  }
+
+  @SubscribeMessage("message:delivered")
+  async handleMessageDelivered(
+    @MessageBody() body: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<SocketAck<{ ok: true; conversationId: string }>> {
+    return this.handleWatermark(body, client, { field: "lastDeliveredAt" });
+  }
+
+  @SubscribeMessage("message:read")
+  async handleMessageRead(
+    @MessageBody() body: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<SocketAck<{ ok: true; conversationId: string }>> {
+    return this.handleWatermark(body, client, { field: "lastReadAt" });
+  }
+
+  @SubscribeMessage("conversation:read")
+  async handleConversationRead(
+    @MessageBody() body: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<SocketAck<{ ok: true; conversationId: string }>> {
+    return this.handleWatermark(body, client, { field: "lastReadAt" });
+  }
+
+  private async handleWatermark(
+    body: unknown,
+    client: Socket,
+    opts: { field: "lastReadAt" | "lastDeliveredAt" },
+  ): Promise<SocketAck<{ ok: true; conversationId: string }>> {
+    const user = this.authenticatedUser(client);
+    if (!user) {
+      return this.unauthenticatedError();
+    }
+
+    const payload = parseWatermarkPayload(body);
+    if (!payload) {
+      return {
+        ok: false,
+        code: ErrorCode.ValidationFailed,
+        message: "Invalid watermark payload",
+      };
+    }
+
+    const timestamp = opts.field === "lastReadAt"
+      ? payload.lastReadAt ?? new Date().toISOString()
+      : payload.lastDeliveredAt ?? new Date().toISOString();
+
+    try {
+      await this.validateAccess.execute({
+        userId: user.sub,
+        conversationId: payload.conversationId,
+      });
+    } catch (err) {
+      return this.toSocketError(err);
+    }
+
+    try {
+      const result = await this.updateWatermark.execute({
+        userId: user.sub,
+        conversationId: payload.conversationId,
+        ...(opts.field === "lastReadAt"
+          ? { lastReadAt: timestamp }
+          : { lastDeliveredAt: timestamp }),
+      });
+
+      const event: ConversationsSchemas.WatermarkEvent = {
+        conversationId: payload.conversationId,
+        userId: user.sub,
+        ...(result.lastReadAt ? { lastReadAt: result.lastReadAt.toISOString() } : {}),
+        ...(result.lastDeliveredAt
+          ? { lastDeliveredAt: result.lastDeliveredAt.toISOString() }
+          : {}),
+      };
+
+      this.server
+        .to(conversationRoom(payload.conversationId))
+        .emit("watermark", event);
+
+      return { ok: true, conversationId: payload.conversationId };
+    } catch (err) {
+      return this.toSocketError(err);
+    }
   }
 
   @SubscribeMessage("message:send")

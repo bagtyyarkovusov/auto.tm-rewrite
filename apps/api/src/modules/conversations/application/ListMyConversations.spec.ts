@@ -124,6 +124,37 @@ class FakeConversationRepository implements ConversationRepository {
   async countUnreadMessages(): Promise<number> {
     return 0;
   }
+
+  async getParticipantStatesForConversations(
+    conversationIds: string[],
+  ): Promise<
+    Map<string, Array<{ userId: string; mutedAt: Date | null; lastReadAt: Date | null; lastDeliveredAt: Date | null }>>
+  > {
+    const map = new Map<
+      string,
+      Array<{ userId: string; mutedAt: Date | null; lastReadAt: Date | null; lastDeliveredAt: Date | null }>
+    >();
+    for (const conversationId of conversationIds) {
+      const conversation = this.conversations.find((c) => c.id === conversationId);
+      if (conversation) {
+        map.set(conversationId, [
+          {
+            userId: conversation.buyerId,
+            mutedAt: null,
+            lastReadAt: new Date("2026-06-01T10:00:00.000Z"),
+            lastDeliveredAt: new Date("2026-06-01T09:00:00.000Z"),
+          },
+          {
+            userId: conversation.sellerId,
+            mutedAt: null,
+            lastReadAt: new Date("2026-06-01T11:00:00.000Z"),
+            lastDeliveredAt: new Date("2026-06-01T09:30:00.000Z"),
+          },
+        ]);
+      }
+    }
+    return map;
+  }
 }
 
 class FakeListingsReadPort implements ListingsReadPort {
@@ -363,5 +394,20 @@ describe("ListMyConversations", () => {
 
     expect(result.items[0]!.lastMessage).not.toBeNull();
     expect(result.items[0]!.lastMessage!.id).toBe("msg-1");
+  });
+
+  it("includes peer watermark timestamps", async () => {
+    seedListing();
+    seedConversation({ id: "conv-1", buyerId: "buyer-1", sellerId: "seller-1" });
+
+    const uc = makeUseCase(repo, listings);
+    const result = await uc.execute({ userId: "buyer-1" });
+
+    expect(result.items[0]!.peerLastReadAt).toEqual(
+      new Date("2026-06-01T11:00:00.000Z"),
+    );
+    expect(result.items[0]!.peerLastDeliveredAt).toEqual(
+      new Date("2026-06-01T09:30:00.000Z"),
+    );
   });
 });

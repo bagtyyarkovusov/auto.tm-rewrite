@@ -125,6 +125,8 @@ export class ConversationsController {
           item.lastMessage,
           item.unreadCount,
           availabilityMap,
+          item.peerLastReadAt,
+          item.peerLastDeliveredAt,
         ),
       ),
       nextCursor: result.nextCursor,
@@ -354,6 +356,8 @@ export class ConversationsController {
     lastMessage?: Message | null,
     unreadCount?: number,
     availabilityMap?: Map<string, boolean>,
+    peerLastReadAt?: Date | null,
+    peerLastDeliveredAt?: Date | null,
   ) {
     return {
       id: conversation.id,
@@ -380,6 +384,8 @@ export class ConversationsController {
         ? this.toMessageSummary(lastMessage, availabilityMap)
         : undefined,
       unreadCount: unreadCount ?? 0,
+      peerLastReadAt: peerLastReadAt?.toISOString(),
+      peerLastDeliveredAt: peerLastDeliveredAt?.toISOString(),
     };
   }
 

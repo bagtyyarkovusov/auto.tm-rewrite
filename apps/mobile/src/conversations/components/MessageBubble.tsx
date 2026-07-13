@@ -1,11 +1,11 @@
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { RotateCcw } from "lucide-react-native";
+import { Check, CheckCheck, RotateCcw } from "lucide-react-native";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 
-export type MessageStatus = "confirmed" | "pending" | "failed";
+export type MessageStatus = "pending" | "failed" | "sent" | "delivered" | "read";
 
 interface MessageBubbleProps {
   text: string;
@@ -13,6 +13,21 @@ interface MessageBubbleProps {
   status: MessageStatus;
   createdAt: string;
   onRetry?: () => void;
+}
+
+function StatusIcon({ status, isMine }: { status: MessageStatus; isMine: boolean }) {
+  const colorClass = isMine ? "text-primary-foreground/80" : "text-muted-foreground";
+
+  if (status === "read") {
+    return <Icon as={CheckCheck} className={`size-3.5 ${colorClass}`} />;
+  }
+  if (status === "delivered") {
+    return <Icon as={Check} className={`size-3.5 ${colorClass}`} />;
+  }
+  if (status === "sent") {
+    return <Icon as={Check} className={`size-3.5 ${colorClass}`} />;
+  }
+  return null;
 }
 
 export function MessageBubble({ text, isMine, status, onRetry }: MessageBubbleProps) {
@@ -35,7 +50,7 @@ export function MessageBubble({ text, isMine, status, onRetry }: MessageBubblePr
         >
           {text}
         </Text>
-        {status !== "confirmed" && (
+        {(status === "pending" || status === "failed") && (
           <View className="flex-row items-center justify-end gap-1.5 mt-1">
             {status === "pending" && (
               <Text className="text-xs text-primary-foreground/90">
@@ -58,6 +73,11 @@ export function MessageBubble({ text, isMine, status, onRetry }: MessageBubblePr
                 )}
               </>
             )}
+          </View>
+        )}
+        {isMine && status !== "pending" && status !== "failed" && (
+          <View className="flex-row items-center justify-end gap-1 mt-1">
+            <StatusIcon status={status} isMine={isMine} />
           </View>
         )}
       </View>

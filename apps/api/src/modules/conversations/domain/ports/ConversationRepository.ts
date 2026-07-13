@@ -60,6 +60,10 @@ export interface ConversationRepository {
     conversationId: string,
   ): Promise<ParticipantState | null>;
 
+  getParticipantStatesForConversations(
+    conversationIds: string[],
+  ): Promise<Map<string, Array<{ userId: string } & ParticipantState>>>;
+
   muteConversation(
     userId: string,
     conversationId: string,

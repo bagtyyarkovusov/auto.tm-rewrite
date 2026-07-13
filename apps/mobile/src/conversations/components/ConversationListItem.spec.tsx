@@ -37,6 +37,15 @@ describe("ConversationListItem", () => {
     expect(source).toContain('numberOfLines={1}');
   });
 
+  it("accepts unread count in conversation prop", () => {
+    expect(source).toContain("unreadCount?: number");
+  });
+
+  it("renders an unread badge when unreadCount is greater than zero", () => {
+    expect(source).toContain("unreadCount");
+    expect(source).toContain("bg-primary");
+  });
+
   it("shows conversation updated time", () => {
     expect(source).toContain("formatConversationTime");
     expect(source).toContain("conversation.updatedAt");

@@ -9,6 +9,7 @@ import {
   type MessageNewEvent,
   type SendTextMessageAck,
   type SocketErrorAck,
+  type WatermarkEvent,
 } from "./ConversationSocket";
 
 let sharedSocket: ConversationSocket | null = null;
@@ -28,10 +29,13 @@ export interface UseConversationSocketReturn {
     text: string;
     clientMessageId: string;
   }) => Promise<SendTextMessageAck | SocketErrorAck>;
+  markDelivered: (conversationId: string, timestamp?: string) => Promise<SocketErrorAck | { ok: true; conversationId: string }>;
+  markRead: (conversationId: string, timestamp?: string) => Promise<SocketErrorAck | { ok: true; conversationId: string }>;
 }
 
 export function useConversationSocket(
   conversationId: string,
+  currentUserId?: string,
 ): UseConversationSocketReturn {
   const queryClient = useQueryClient();
   const socketRef = useRef(getSharedSocket());
@@ -74,15 +78,27 @@ export function useConversationSocket(
 
     const unsubscribeMessage = socket.subscribeMessage((event) => {
       handleMessageNew(queryClient, event);
+      if (
+        currentUserId &&
+        event.message.senderId !== currentUserId &&
+        event.message.conversationId === conversationId
+      ) {
+        void socket.markDelivered(conversationId, new Date().toISOString());
+      }
+    });
+
+    const unsubscribeWatermark = socket.subscribeWatermark((event) => {
+      handleWatermark(queryClient, event);
     });
 
     return () => {
       unsubscribeStatus();
       unsubscribeMessage();
+      unsubscribeWatermark();
       void socket.leaveConversation(conversationId);
       joinedRef.current = false;
     };
-  }, [conversationId, queryClient]);
+  }, [conversationId, currentUserId, queryClient]);
 
   const sendTextMessage = useCallback(
     async (input: {
@@ -95,7 +111,21 @@ export function useConversationSocket(
     [],
   );
 
-  return { status, isConnected, sendTextMessage };
+  const markDelivered = useCallback(
+    async (id: string, timestamp = new Date().toISOString()) => {
+      return socketRef.current.markDelivered(id, timestamp);
+    },
+    [],
+  );
+
+  const markRead = useCallback(
+    async (id: string, timestamp = new Date().toISOString()) => {
+      return socketRef.current.markConversationRead(id, timestamp);
+    },
+    [],
+  );
+
+  return { status, isConnected, sendTextMessage, markDelivered, markRead };
 }
 
 function handleMessageNew(
@@ -133,5 +163,19 @@ function handleMessageNew(
 
   void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.list(),
+  });
+}
+
+function handleWatermark(
+  queryClient: ReturnType<typeof useQueryClient>,
+  event: WatermarkEvent,
+): void {
+  // Another participant updated their watermark; refresh the conversation list
+  // so unread counts and last-seen state reflect the change.
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.list(),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.detail(event.conversationId),
   });
 }

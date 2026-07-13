@@ -38,6 +38,13 @@ export interface SendTextMessageAck {
 
 export type MessageNewEvent = ConversationsSchemas.ChatMessageEvent;
 
+export type WatermarkEvent = ConversationsSchemas.WatermarkEvent;
+
+export interface UpdateWatermarkAck {
+  ok: true;
+  conversationId: string;
+}
+
 export interface ConversationSocketOptions {
   url?: string;
   token?: string;
@@ -48,6 +55,7 @@ export class ConversationSocket {
   private status: ConversationSocketStatus = "idle";
   private statusListeners = new Set<(status: ConversationSocketStatus) => void>();
   private messageListeners = new Set<(event: MessageNewEvent) => void>();
+  private watermarkListeners = new Set<(event: WatermarkEvent) => void>();
   private currentRoom: string | null = null;
 
   constructor(private readonly options: ConversationSocketOptions = {}) {}
@@ -71,6 +79,13 @@ export class ConversationSocket {
     this.messageListeners.add(listener);
     return () => {
       this.messageListeners.delete(listener);
+    };
+  }
+
+  subscribeWatermark(listener: (event: WatermarkEvent) => void): () => void {
+    this.watermarkListeners.add(listener);
+    return () => {
+      this.watermarkListeners.delete(listener);
     };
   }
 
@@ -112,6 +127,13 @@ export class ConversationSocket {
       const parsed = ConversationsSchemas.ChatMessageEventSchema.safeParse(event);
       if (parsed.success) {
         this.messageListeners.forEach((listener) => listener(parsed.data));
+      }
+    });
+
+    this.socket.on("watermark", (event: unknown) => {
+      const parsed = ConversationsSchemas.WatermarkEventSchema.safeParse(event);
+      if (parsed.success) {
+        this.watermarkListeners.forEach((listener) => listener(parsed.data));
       }
     });
   }
@@ -177,6 +199,84 @@ export class ConversationSocket {
 
     this.socket.emit("conversation:leave", { conversationId });
     this.currentRoom = null;
+  }
+
+  async markDelivered(
+    conversationId: string,
+    lastDeliveredAt?: string,
+  ): Promise<UpdateWatermarkAck | SocketErrorAck> {
+    return this.emitWatermark(conversationId, "message:delivered", {
+      lastDeliveredAt,
+    });
+  }
+
+  async markRead(
+    conversationId: string,
+    lastReadAt?: string,
+  ): Promise<UpdateWatermarkAck | SocketErrorAck> {
+    return this.emitWatermark(conversationId, "message:read", {
+      lastReadAt,
+    });
+  }
+
+  async markConversationRead(
+    conversationId: string,
+    lastReadAt?: string,
+  ): Promise<UpdateWatermarkAck | SocketErrorAck> {
+    return this.emitWatermark(conversationId, "conversation:read", {
+      lastReadAt,
+    });
+  }
+
+  private async emitWatermark(
+    conversationId: string,
+    event: "message:delivered" | "message:read" | "conversation:read",
+    timestamps: { lastReadAt?: string; lastDeliveredAt?: string },
+  ): Promise<UpdateWatermarkAck | SocketErrorAck> {
+    if (!this.socket?.connected) {
+      return {
+        ok: false,
+        code: SOCKET_CLIENT_ERROR_CODES.NOT_CONNECTED,
+        message: "Socket is not connected",
+      };
+    }
+
+    const socket = this.socket;
+
+    return new Promise((resolve) => {
+      socket.emit(
+        event,
+        { conversationId, ...timestamps },
+        (ack: unknown) => {
+          const parsed = z
+            .object({
+              ok: z.literal(true),
+              conversationId: z.string().uuid(),
+            })
+            .safeParse(ack);
+          if (parsed.success) {
+            resolve({
+              ok: true,
+              conversationId: parsed.data.conversationId,
+            });
+            return;
+          }
+
+          const errorParsed =
+            ConversationsSchemas.ConversationSocketErrorSchema.safeParse(ack);
+          if (errorParsed.success) {
+            resolve(errorParsed.data);
+            return;
+          }
+
+          resolve({
+            ok: false,
+            code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
+            message: "Invalid watermark response",
+          });
+        },
+      );
+    });
   }
 
   async sendTextMessage(payload: {

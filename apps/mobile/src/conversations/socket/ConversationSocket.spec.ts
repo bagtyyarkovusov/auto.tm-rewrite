@@ -223,4 +223,86 @@ describe("ConversationSocket", () => {
     expect(mockSocket.disconnect).toHaveBeenCalled();
     expect(socket.getStatus()).toBe("idle");
   });
+
+  it("emits message:delivered and returns ack", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    mockSocket.emit.mockImplementation(
+      (_event: string, _payload: unknown, callback: (ack: unknown) => void) => {
+        callback({ ok: true, conversationId: CONV_ID });
+      },
+    );
+
+    const result = await socket.markDelivered(CONV_ID, "2026-06-01T12:00:00.000Z");
+
+    expect(result).toEqual({ ok: true, conversationId: CONV_ID });
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      "message:delivered",
+      { conversationId: CONV_ID, lastDeliveredAt: "2026-06-01T12:00:00.000Z" },
+      expect.any(Function),
+    );
+  });
+
+  it("emits conversation:read and returns ack", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    mockSocket.emit.mockImplementation(
+      (_event: string, _payload: unknown, callback: (ack: unknown) => void) => {
+        callback({ ok: true, conversationId: CONV_ID });
+      },
+    );
+
+    const result = await socket.markConversationRead(
+      CONV_ID,
+      "2026-06-01T12:00:00.000Z",
+    );
+
+    expect(result).toEqual({ ok: true, conversationId: CONV_ID });
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      "conversation:read",
+      { conversationId: CONV_ID, lastReadAt: "2026-06-01T12:00:00.000Z" },
+      expect.any(Function),
+    );
+  });
+
+  it("forwards watermark events to listeners", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const listener = vi.fn();
+    socket.subscribeWatermark(listener);
+
+    const watermarkHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "watermark",
+    )?.[1] as (event: unknown) => void;
+
+    const event = {
+      conversationId: CONV_ID,
+      userId: USER_ID,
+      lastReadAt: "2026-06-01T12:00:00.000Z",
+    };
+    watermarkHandler(event);
+
+    expect(listener).toHaveBeenCalledWith(event);
+  });
+
+  it("returns NOT_CONNECTED when marking delivered while disconnected", async () => {
+    mockSocket.connected = false;
+    mockSocket.on.mockImplementation(() => {
+      // do not trigger connect
+    });
+
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const result = await socket.markDelivered(CONV_ID);
+
+    expect(result).toEqual({
+      ok: false,
+      code: "NOT_CONNECTED",
+      message: "Socket is not connected",
+    });
+  });
 });

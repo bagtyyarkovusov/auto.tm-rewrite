@@ -17,6 +17,18 @@ describe("MessageBubble", () => {
     expect(source).toContain("createdAt: string");
   });
 
+  it("supports sent, delivered, and read statuses", () => {
+    expect(source).toContain('"sent"');
+    expect(source).toContain('"delivered"');
+    expect(source).toContain('"read"');
+  });
+
+  it("renders a delivered/read check icon for own messages", () => {
+    expect(source).toContain("StatusIcon");
+    expect(source).toContain("Check");
+    expect(source).toContain("CheckCheck");
+  });
+
   it("accepts onRetry callback for failed messages", () => {
     expect(source).toContain("onRetry?: () => void");
   });

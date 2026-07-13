@@ -1,12 +1,16 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
+import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { useViewer } from "../../src/auth/useViewer";
+import { queryKeys } from "../../src/api/queryKeys";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
+import { useUpdateWatermark } from "../../src/api/conversations/useUpdateWatermark";
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
@@ -36,19 +40,55 @@ function generateClientMessageId(): string {
   return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function getPeerWatermark(
+  queryClient: ReturnType<typeof useQueryClient>,
+  conversationId: string,
+): { peerLastReadAt?: string; peerLastDeliveredAt?: string } {
+  const listData = queryClient.getQueryData<{
+    pages: Array<{ items: ConversationsSchemas.ConversationSummary[] }>;
+  }>(queryKeys.conversations.list());
+
+  const conversation = listData?.pages
+    .flatMap((page) => page.items)
+    .find((item) => item.id === conversationId);
+
+  return {
+    peerLastReadAt: conversation?.peerLastReadAt,
+    peerLastDeliveredAt: conversation?.peerLastDeliveredAt,
+  };
+}
+
+function computeOutgoingStatus(
+  messageCreatedAt: string,
+  peerLastReadAt?: string,
+  peerLastDeliveredAt?: string,
+): Extract<MessageStatus, "sent" | "delivered" | "read"> {
+  const created = new Date(messageCreatedAt).getTime();
+  if (peerLastReadAt && new Date(peerLastReadAt).getTime() >= created) {
+    return "read";
+  }
+  if (peerLastDeliveredAt && new Date(peerLastDeliveredAt).getTime() >= created) {
+    return "delivered";
+  }
+  return "sent";
+}
+
 export default function ConversationDetailScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams();
+  const queryClient = useQueryClient();
   const rawId = params.id;
   const conversationId = typeof rawId === "string" ? rawId : "";
   const viewer = useViewer();
   const goBack = useSafeBack("/(tabs)/chat");
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
+  const readMarkedRef = useRef(false);
 
   const messagesQuery = useConversationMessages({ conversationId });
   const sendHttpMessage = useSendTextMessage();
-  const socket = useConversationSocket(conversationId);
+  const updateWatermark = useUpdateWatermark();
+  const socket = useConversationSocket(conversationId, viewer?.userId);
 
   const listingCard = useMemo(() => {
     const listingId =
@@ -91,7 +131,14 @@ export default function ConversationDetailScreen() {
     return modelsData?.items.find((m) => m.id === listingCard.modelId)?.name;
   }, [modelsData, listingCard?.modelId]);
 
+  const peerWatermark = useMemo(
+    () => getPeerWatermark(queryClient, conversationId),
+    [queryClient, conversationId],
+  );
+
   const allMessages: LocalMessage[] = useMemo(() => {
+    const { peerLastReadAt, peerLastDeliveredAt } = peerWatermark;
+
     const serverMessages: LocalMessage[] =
       messagesQuery.data?.pages.flatMap(
         (page) =>
@@ -101,7 +148,14 @@ export default function ConversationDetailScreen() {
             senderId: m.senderId,
             text: m.text ?? "",
             createdAt: m.createdAt,
-            status: "confirmed" as MessageStatus,
+            status:
+              m.senderId === viewer?.userId
+                ? computeOutgoingStatus(
+                    m.createdAt,
+                    peerLastReadAt,
+                    peerLastDeliveredAt,
+                  )
+                : ("sent" as MessageStatus),
           })),
       ) ?? [];
 
@@ -111,7 +165,9 @@ export default function ConversationDetailScreen() {
     );
     const pendingOrFailed = localMessages.filter(
       (lm) =>
-        lm.status !== "confirmed" &&
+        lm.status !== "sent" &&
+        lm.status !== "delivered" &&
+        lm.status !== "read" &&
         !serverIds.has(lm.id) &&
         !serverClientIds.has(lm.clientMessageId),
     );
@@ -120,13 +176,49 @@ export default function ConversationDetailScreen() {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [messagesQuery.data, localMessages]);
+  }, [messagesQuery.data, localMessages, peerWatermark, viewer?.userId]);
+
+  const markRead = useCallback(
+    async (timestamp = new Date().toISOString()) => {
+      if (!viewer?.userId || !conversationId || readMarkedRef.current) return;
+      readMarkedRef.current = true;
+
+      const result = await socket.markRead(conversationId, timestamp);
+      if (!result.ok) {
+        // Fallback to HTTP if socket is not connected.
+        updateWatermark.mutate({
+          conversationId,
+          lastReadAt: timestamp,
+        });
+      }
+    },
+    [conversationId, socket, updateWatermark, viewer?.userId],
+  );
+
+  // Mark conversation read once messages have loaded and the user is viewing it.
+  useEffect(() => {
+    if (
+      !messagesQuery.isPending &&
+      !messagesQuery.isError &&
+      viewer?.userId &&
+      conversationId &&
+      !readMarkedRef.current
+    ) {
+      void markRead();
+    }
+  }, [
+    messagesQuery.isPending,
+    messagesQuery.isError,
+    viewer?.userId,
+    conversationId,
+    markRead,
+  ]);
 
   const markConfirmed = useCallback((clientMessageId: string, serverId: string) => {
     setLocalMessages((prev) =>
       prev.map((m) =>
         m.clientMessageId === clientMessageId
-          ? { ...m, id: serverId, status: "confirmed" }
+          ? { ...m, id: serverId, status: "sent" }
           : m,
       ),
     );

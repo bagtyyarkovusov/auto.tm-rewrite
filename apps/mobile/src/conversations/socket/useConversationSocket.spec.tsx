@@ -17,8 +17,12 @@ const mockSocket = {
   joinConversation: vi.fn(),
   leaveConversation: vi.fn(),
   sendTextMessage: vi.fn(),
+  markDelivered: vi.fn(),
+  markRead: vi.fn(),
+  markConversationRead: vi.fn(),
   subscribeStatus: vi.fn().mockReturnValue(() => {}),
   subscribeMessage: vi.fn().mockReturnValue(() => {}),
+  subscribeWatermark: vi.fn().mockReturnValue(() => {}),
   getStatus: vi.fn().mockReturnValue("idle"),
   isConnected: vi.fn().mockReturnValue(false),
 };
@@ -178,6 +182,129 @@ describe("useConversationSocket", () => {
     await waitFor(() => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.conversations.messages(CONV_ID),
+      });
+    });
+  });
+
+  it("provides markDelivered and markRead functions that delegate to the socket", async () => {
+    mockSocket.markDelivered.mockResolvedValue({
+      ok: true,
+      conversationId: CONV_ID,
+    });
+    mockSocket.markConversationRead.mockResolvedValue({
+      ok: true,
+      conversationId: CONV_ID,
+    });
+
+    const { result } = renderHook(
+      () => useConversationSocket(CONV_ID),
+      { wrapper },
+    );
+
+    const deliveredResponse = await result.current.markDelivered(CONV_ID);
+    expect(mockSocket.markDelivered).toHaveBeenCalledWith(
+      CONV_ID,
+      expect.any(String),
+    );
+    expect(deliveredResponse.ok).toBe(true);
+
+    const readResponse = await result.current.markRead(CONV_ID);
+    expect(mockSocket.markConversationRead).toHaveBeenCalledWith(
+      CONV_ID,
+      expect.any(String),
+    );
+    expect(readResponse.ok).toBe(true);
+  });
+
+  it("marks peer messages delivered automatically when currentUserId is provided", async () => {
+    let messageHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribeMessage.mockImplementation((handler) => {
+      messageHandler = handler;
+      return () => {};
+    });
+
+    renderHook(() => useConversationSocket(CONV_ID, USER_ID), {
+      wrapper,
+    });
+
+    messageHandler({
+      message: {
+        id: MSG_ID,
+        conversationId: CONV_ID,
+        senderId: "peer-user",
+        kind: "text",
+        text: "Hi",
+        createdAt: "2026-06-01T12:00:00.000Z",
+      },
+    });
+
+    await waitFor(() => {
+      expect(mockSocket.markDelivered).toHaveBeenCalledWith(
+        CONV_ID,
+        expect.any(String),
+      );
+    });
+  });
+
+  it("does not auto-mark delivered for own messages", async () => {
+    let messageHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribeMessage.mockImplementation((handler) => {
+      messageHandler = handler;
+      return () => {};
+    });
+
+    renderHook(() => useConversationSocket(CONV_ID, USER_ID), {
+      wrapper,
+    });
+
+    messageHandler({
+      message: {
+        id: MSG_ID,
+        conversationId: CONV_ID,
+        senderId: USER_ID,
+        kind: "text",
+        text: "Hi",
+        createdAt: "2026-06-01T12:00:00.000Z",
+      },
+    });
+
+    await waitFor(() => {
+      expect(mockSocket.markDelivered).not.toHaveBeenCalled();
+    });
+  });
+
+  it("invalidates conversation list and detail on watermark events", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const customWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const invalidateQueriesSpy = vi.spyOn(client, "invalidateQueries");
+
+    let watermarkHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribeWatermark.mockImplementation((handler) => {
+      watermarkHandler = handler;
+      return () => {};
+    });
+
+    renderHook(() => useConversationSocket(CONV_ID), {
+      wrapper: customWrapper,
+    });
+
+    watermarkHandler({
+      conversationId: CONV_ID,
+      userId: "peer-user",
+      lastReadAt: "2026-06-01T12:00:00.000Z",
+    });
+
+    await waitFor(() => {
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.conversations.list(),
+      });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.conversations.detail(CONV_ID),
       });
     });
   });

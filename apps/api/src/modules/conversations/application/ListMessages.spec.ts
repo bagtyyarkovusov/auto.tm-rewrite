@@ -100,6 +100,14 @@ class FakeConversationRepository implements ConversationRepository {
     return null;
   }
 
+  async getParticipantStatesForConversations(
+    _conversationIds: string[],
+  ): Promise<
+    Map<string, Array<{ userId: string; mutedAt: Date | null; lastReadAt: Date | null; lastDeliveredAt: Date | null }>>
+  > {
+    return new Map();
+  }
+
   async countUnreadMessages(): Promise<number> {
     return 0;
   }

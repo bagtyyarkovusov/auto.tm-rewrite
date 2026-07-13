@@ -24,6 +24,8 @@ export interface ListMyConversationsResult {
     listing: ListingSummary | null;
     lastMessage: Message | null;
     unreadCount: number;
+    peerLastReadAt: Date | null;
+    peerLastDeliveredAt: Date | null;
   }>;
   nextCursor: string | null;
 }
@@ -53,17 +55,29 @@ export class ListMyConversations {
         : [];
     const listingMap = new Map(listingSummaries.map((l) => [l.id, l]));
 
+    const conversationIds = items.map((item) => item.conversation.id);
+    const participantStates =
+      await this.conversations.getParticipantStatesForConversations(
+        conversationIds,
+      );
+
     const enriched = await Promise.all(
       items.map(async (item) => {
         const unreadCount = await this.conversations.countUnreadMessages(
           input.userId,
           item.conversation.id,
         );
+        const states = participantStates.get(item.conversation.id) ?? [];
+        const peerState = states.find(
+          (state) => state.userId !== input.userId,
+        );
         return {
           conversation: item.conversation,
           listing: listingMap.get(item.conversation.listingId) ?? null,
           lastMessage: item.lastMessage,
           unreadCount,
+          peerLastReadAt: peerState?.lastReadAt ?? null,
+          peerLastDeliveredAt: peerState?.lastDeliveredAt ?? null,
         };
       }),
     );
