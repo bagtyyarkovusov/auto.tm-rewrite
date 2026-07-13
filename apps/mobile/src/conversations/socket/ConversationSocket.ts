@@ -31,7 +31,7 @@ export interface JoinConversationAck {
   room: string;
 }
 
-export interface SendTextMessageAck {
+export interface SendMessageAck {
   ok: true;
   message: ConversationsSchemas.MessageSummary;
 }
@@ -405,7 +405,7 @@ export class ConversationSocket {
     conversationId: string;
     text: string;
     clientMessageId: string;
-  }): Promise<SendTextMessageAck | SocketErrorAck> {
+  }): Promise<SendMessageAck | SocketErrorAck> {
     return this.sendMessage({
       conversationId: payload.conversationId,
       kind: "text",
@@ -418,7 +418,7 @@ export class ConversationSocket {
     conversationId: string;
     metadata: ConversationsSchemas.ImageMessageMetadata;
     clientMessageId: string;
-  }): Promise<SendTextMessageAck | SocketErrorAck> {
+  }): Promise<SendMessageAck | SocketErrorAck> {
     return this.sendMessage({
       conversationId: payload.conversationId,
       kind: "image",
@@ -441,7 +441,7 @@ export class ConversationSocket {
           metadata: ConversationsSchemas.ImageMessageMetadata;
           clientMessageId: string;
         },
-  ): Promise<SendTextMessageAck | SocketErrorAck> {
+  ): Promise<SendMessageAck | SocketErrorAck> {
     if (!this.socket?.connected) {
       return {
         ok: false,

@@ -213,7 +213,6 @@ describe("uploadChatImageToPresignedUrl", () => {
       uploadType: expect.anything(),
       headers: {
         "Content-Type": "image/jpeg",
-        "Content-Length": "1024",
       },
     });
   });

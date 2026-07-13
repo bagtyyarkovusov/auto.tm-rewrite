@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
@@ -10,7 +10,7 @@ import {
   type MessageDeletedEvent,
   type MessageNewEvent,
   type PresenceEvent,
-  type SendTextMessageAck,
+  type SendMessageAck,
   type SocketErrorAck,
   type TypingEvent,
   type WatermarkEvent,
@@ -43,12 +43,12 @@ export interface UseConversationSocketReturn {
     conversationId: string;
     text: string;
     clientMessageId: string;
-  }) => Promise<SendTextMessageAck | SocketErrorAck>;
+  }) => Promise<SendMessageAck | SocketErrorAck>;
   sendImageMessage: (input: {
     conversationId: string;
     metadata: ConversationsSchemas.ImageMessageMetadata;
     clientMessageId: string;
-  }) => Promise<SendTextMessageAck | SocketErrorAck>;
+  }) => Promise<SendMessageAck | SocketErrorAck>;
   signalTyping: () => void;
   stopTyping: () => void;
   markDelivered: (conversationId: string, timestamp?: string) => Promise<SocketErrorAck | { ok: true; conversationId: string }>;
@@ -226,7 +226,7 @@ export function useConversationSocket(
       conversationId: string;
       text: string;
       clientMessageId: string;
-    }): Promise<SendTextMessageAck | SocketErrorAck> => {
+    }): Promise<SendMessageAck | SocketErrorAck> => {
       return socketRef.current.sendTextMessage(input);
     },
     [],
@@ -237,7 +237,7 @@ export function useConversationSocket(
       conversationId: string;
       metadata: ConversationsSchemas.ImageMessageMetadata;
       clientMessageId: string;
-    }): Promise<SendTextMessageAck | SocketErrorAck> => {
+    }): Promise<SendMessageAck | SocketErrorAck> => {
       return socketRef.current.sendImageMessage(input);
     },
     [],
@@ -270,7 +270,34 @@ export function useConversationSocket(
     [],
   );
 
-  return { status, isConnected, peerTyping, peerPresence, sendTextMessage, sendImageMessage, signalTyping, stopTyping, markDelivered, markRead, deleteMessage };
+  return useMemo(
+    () => ({
+      status,
+      isConnected,
+      peerTyping,
+      peerPresence,
+      sendTextMessage,
+      sendImageMessage,
+      signalTyping,
+      stopTyping,
+      markDelivered,
+      markRead,
+      deleteMessage,
+    }),
+    [
+      status,
+      isConnected,
+      peerTyping,
+      peerPresence,
+      sendTextMessage,
+      sendImageMessage,
+      signalTyping,
+      stopTyping,
+      markDelivered,
+      markRead,
+      deleteMessage,
+    ],
+  );
 }
 
 function handleMessageNew(

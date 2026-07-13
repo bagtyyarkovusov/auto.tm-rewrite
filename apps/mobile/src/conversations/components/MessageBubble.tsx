@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { Check, CheckCheck, RotateCcw, Trash2 } from "lucide-react-native";
+import { Check, CheckCheck, ImageOff, RotateCcw, Trash2 } from "lucide-react-native";
 import { Image } from "expo-image";
 
 import { buildChatImageUrl } from "../upload/buildChatImageUrl";
@@ -83,7 +83,7 @@ function ImageBubble({
           className="items-center justify-center bg-muted"
           style={{ width: BUBBLE_MAX_WIDTH, height: DEFAULT_IMAGE_HEIGHT }}
         >
-          <Icon as={Trash2} className="size-6 text-muted-foreground" />
+          <Icon as={ImageOff} className="size-6 text-muted-foreground" />
         </View>
       ) : (
         <Image
@@ -94,6 +94,60 @@ function ImageBubble({
         />
       )}
     </Pressable>
+  );
+}
+
+interface BubbleContentProps {
+  isDeleted: boolean;
+  isImage: boolean;
+  imageUri?: string;
+  text: string;
+  metadata?: ImageMessageMetadata;
+  isMine: boolean;
+  onImagePress?: () => void;
+}
+
+function BubbleContent({
+  isDeleted,
+  isImage,
+  imageUri,
+  text,
+  metadata,
+  isMine,
+  onImagePress,
+}: BubbleContentProps) {
+  const { t } = useTranslation();
+
+  if (isDeleted) {
+    return (
+      <View className="flex-row items-center gap-1.5">
+        <Icon as={Trash2} className="size-4 text-muted-foreground" />
+        <Text className="text-sm italic text-muted-foreground">
+          {t("messageDeleted")}
+        </Text>
+      </View>
+    );
+  }
+
+  if (isImage && imageUri) {
+    return (
+      <ImageBubble
+        uri={imageUri}
+        width={metadata?.width}
+        height={metadata?.height}
+        onPress={onImagePress}
+      />
+    );
+  }
+
+  return (
+    <Text
+      className={`text-base leading-5 ${
+        isMine ? "text-primary-foreground" : "text-foreground"
+      }`}
+    >
+      {text}
+    </Text>
   );
 }
 
@@ -140,32 +194,15 @@ export function MessageBubble({
               : "bg-muted rounded-bl-md"
         }`}
       >
-        {isDeleted ? (
-          <View className="flex-row items-center gap-1.5">
-            <Icon
-              as={Trash2}
-              className="size-4 text-muted-foreground"
-            />
-            <Text className="text-sm italic text-muted-foreground">
-              {t("messageDeleted")}
-            </Text>
-          </View>
-        ) : isImage && imageUri ? (
-          <ImageBubble
-            uri={imageUri}
-            width={metadata?.width}
-            height={metadata?.height}
-            onPress={onImagePress}
-          />
-        ) : (
-          <Text
-            className={`text-base leading-5 ${
-              isMine ? "text-primary-foreground" : "text-foreground"
-            }`}
-          >
-            {text}
-          </Text>
-        )}
+        <BubbleContent
+          isDeleted={isDeleted}
+          isImage={isImage}
+          imageUri={imageUri}
+          text={text}
+          metadata={metadata}
+          isMine={isMine}
+          onImagePress={onImagePress}
+        />
 
         {(status === "pending" || status === "failed") && !isDeleted && (
           <View className="flex-row items-center justify-end gap-1.5 mt-1">

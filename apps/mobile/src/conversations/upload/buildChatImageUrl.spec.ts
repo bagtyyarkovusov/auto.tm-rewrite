@@ -17,12 +17,16 @@ describe("buildChatImageUrl", () => {
   it("builds a URL from the media URL and key", async () => {
     process.env["EXPO_PUBLIC_MEDIA_URL"] = "https://cdn.example.com";
     const { buildChatImageUrl } = await import("./buildChatImageUrl");
-    expect(buildChatImageUrl("abc.jpg")).toBe("https://cdn.example.com/chat-attachments/abc.jpg");
+    expect(buildChatImageUrl("chat-attachments/conv-1/key/original.jpg")).toBe(
+      "https://cdn.example.com/chat-attachments/conv-1/key/original.jpg",
+    );
   });
 
   it("strips a trailing slash from the media URL", async () => {
     process.env["EXPO_PUBLIC_MEDIA_URL"] = "https://cdn.example.com/";
     const { buildChatImageUrl } = await import("./buildChatImageUrl");
-    expect(buildChatImageUrl("abc.jpg")).toBe("https://cdn.example.com/chat-attachments/abc.jpg");
+    expect(buildChatImageUrl("chat-attachments/conv-1/key/original.jpg")).toBe(
+      "https://cdn.example.com/chat-attachments/conv-1/key/original.jpg",
+    );
   });
 });

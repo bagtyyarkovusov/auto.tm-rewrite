@@ -153,14 +153,11 @@ export async function uploadChatImageToPresignedUrl(
     );
   }
 
-  const fileSize = "size" in fileInfo ? fileInfo.size : 0;
-
   const uploadResult = await FileSystem.uploadAsync(uploadUrl, localUri, {
     httpMethod: "PUT",
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     headers: {
       "Content-Type": "image/jpeg",
-      "Content-Length": String(fileSize),
     },
   });
 

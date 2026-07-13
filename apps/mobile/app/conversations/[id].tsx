@@ -67,6 +67,8 @@ interface LocalMessage {
   metadata?: { key: string; width?: number; height?: number };
   localImageUri?: string;
   imageFileSize?: number;
+  imageWidth?: number;
+  imageHeight?: number;
   createdAt: string;
   status: MessageStatus;
   deletedAt?: string | null;
@@ -142,7 +144,10 @@ export default function ConversationDetailScreen() {
     peerPresence,
     signalTyping,
     stopTyping,
-    ...socket
+    sendTextMessage,
+    sendImageMessage,
+    markRead: socketMarkRead,
+    deleteMessage,
   } = useConversationSocket(conversationId, viewer?.userId);
 
   const blockUser = useBlockUser();
@@ -301,7 +306,7 @@ export default function ConversationDetailScreen() {
       if (!viewer?.userId || !conversationId || readMarkedRef.current) return;
       readMarkedRef.current = true;
 
-      const result = await socket.markRead(conversationId, timestamp);
+      const result = await socketMarkRead(conversationId, timestamp);
       if (!result.ok) {
         // Fallback to HTTP if socket is not connected.
         updateWatermark.mutate({
@@ -310,7 +315,7 @@ export default function ConversationDetailScreen() {
         });
       }
     },
-    [conversationId, socket, updateWatermark, viewer?.userId],
+    [conversationId, socketMarkRead, updateWatermark, viewer?.userId],
   );
 
   // Mark conversation read once messages have loaded and the user is viewing it.
@@ -427,7 +432,7 @@ export default function ConversationDetailScreen() {
 
       setLocalMessages((prev) => [...prev, pendingMessage]);
 
-      const result = await socket.sendTextMessage({
+      const result = await sendTextMessage({
         conversationId,
         text,
         clientMessageId,
@@ -447,7 +452,7 @@ export default function ConversationDetailScreen() {
       markConfirmed,
       markFailed,
       sendViaHttp,
-      socket,
+      sendTextMessage,
       viewer?.userId,
     ],
   );
@@ -466,6 +471,8 @@ export default function ConversationDetailScreen() {
         text: "",
         localImageUri: attachment.uri,
         imageFileSize: attachment.fileSize,
+        imageWidth: attachment.width,
+        imageHeight: attachment.height,
         createdAt: new Date().toISOString(),
         status: "pending",
         canDelete: false,
@@ -493,7 +500,7 @@ export default function ConversationDetailScreen() {
           height: attachment.height,
         };
 
-        const result = await socket.sendImageMessage({
+        const result = await sendImageMessage({
           conversationId,
           metadata,
           clientMessageId,
@@ -529,7 +536,7 @@ export default function ConversationDetailScreen() {
       markFailed,
       presignChatAttachment,
       sendImageViaHttp,
-      socket,
+      sendImageMessage,
       viewer?.userId,
     ],
   );
@@ -571,9 +578,11 @@ export default function ConversationDetailScreen() {
 
           const metadata: ConversationsSchemas.ImageMessageMetadata = {
             key: presignResponse.key,
+            width: msg.imageWidth,
+            height: msg.imageHeight,
           };
 
-          const result = await socket.sendImageMessage({
+          const result = await sendImageMessage({
             conversationId,
             metadata,
             clientMessageId: msg.clientMessageId,
@@ -595,7 +604,7 @@ export default function ConversationDetailScreen() {
         return;
       }
 
-      const result = await socket.sendTextMessage({
+      const result = await sendTextMessage({
         conversationId,
         text: msg.text,
         clientMessageId: msg.clientMessageId,
@@ -615,9 +624,10 @@ export default function ConversationDetailScreen() {
       markConfirmed,
       markFailed,
       presignChatAttachment,
+      sendImageMessage,
       sendImageViaHttp,
+      sendTextMessage,
       sendViaHttp,
-      socket,
     ],
   );
 
@@ -633,7 +643,7 @@ export default function ConversationDetailScreen() {
       if (!conversationId || !viewer?.userId) return;
       setMessageToDelete(null);
 
-      const result = await socket.deleteMessage({
+      const result = await deleteMessage({
         conversationId,
         messageId,
       });
@@ -642,7 +652,7 @@ export default function ConversationDetailScreen() {
         deleteViaHttp(messageId);
       }
     },
-    [conversationId, deleteViaHttp, socket, viewer?.userId],
+    [conversationId, deleteMessage, deleteViaHttp, viewer?.userId],
   );
 
   const confirmDeleteMessage = useCallback((messageId: string) => {

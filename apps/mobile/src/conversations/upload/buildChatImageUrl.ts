@@ -4,5 +4,5 @@ const MEDIA_URL = (
 
 export function buildChatImageUrl(key: string): string {
   if (!MEDIA_URL) return "";
-  return `${MEDIA_URL}/chat-attachments/${key}`;
+  return `${MEDIA_URL}/${key}`;
 }
