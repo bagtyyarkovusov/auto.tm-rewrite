@@ -3,7 +3,7 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../auth/useAuth";
@@ -42,6 +42,11 @@ export function ContactCtaBar({
   const { t } = useTranslation();
 
   const [optimisticFavorited, setOptimisticFavorited] = useState(isFavorited);
+
+  // Sync local optimistic state with server truth when detail refetches.
+  useEffect(() => {
+    setOptimisticFavorited(isFavorited);
+  }, [isFavorited]);
 
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
@@ -101,7 +106,7 @@ export function ContactCtaBar({
     try {
       await Share.share({
         message: t("shareMessage"),
-        url: `https://autotm.tm/listings/${listingId}`,
+        url: `https://auto.tm/listings/${listingId}`,
       });
     } catch {
       // Silently ignore share cancellation or errors
@@ -140,7 +145,7 @@ export function ContactCtaBar({
           disabled={!canCall}
         >
           <Icon as={Phone} className="size-5" />
-          <Text>{t("call")}</Text>
+          <Text numberOfLines={1}>{t("call")}</Text>
         </Button>
 
         <Button

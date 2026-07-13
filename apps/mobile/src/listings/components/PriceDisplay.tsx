@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
+import { localeTag } from "@/src/i18n/resources";
 
-function formatPrice(amount: number): string {
-  return `${amount.toLocaleString("en-US")} TMT`;
+function formatPrice(amount: number, locale: string): string {
+  return `${amount.toLocaleString(localeTag(locale))} TMT`;
 }
 
 interface PriceDisplayProps {
@@ -25,18 +26,18 @@ export function PriceDisplay({
   installmentAvailable,
   isOwner = false,
 }: PriceDisplayProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const showOriginal = isOwner && priceCurrency !== "TMT";
 
   return (
     <View className="gap-2">
-      <Text className="text-3xl font-heading text-primary">
-        {formatPrice(displayPriceTmt)}
+      <Text className="text-3xl font-heading text-primary" numberOfLines={1}>
+        {formatPrice(displayPriceTmt, i18n.language)}
       </Text>
 
       {showOriginal && (
-        <Text className="text-sm text-muted-foreground">
-          {priceAmount.toLocaleString("en-US")} {priceCurrency}
+        <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+          {priceAmount.toLocaleString(localeTag(i18n.language))} {priceCurrency}
         </Text>
       )}
 

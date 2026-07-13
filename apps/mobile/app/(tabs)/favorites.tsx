@@ -29,9 +29,11 @@ function AnonymousFavoritesEntry() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center px-6 gap-4">
-      <Icon as={Heart} className="size-8 text-muted-foreground" />
-      <Text className="text-base text-foreground">{t("signInToSee")}</Text>
+    <View className="flex-1 items-center justify-center px-6 gap-5">
+      <View className="size-16 items-center justify-center rounded-full bg-muted">
+        <Icon as={Heart} className="size-8 text-muted-foreground" />
+      </View>
+      <Text className="text-lg font-semibold text-foreground">{t("signInToSee")}</Text>
       <Button variant="brand" size="pill" onPress={handleSignIn}>
         <Text>{t("signIn")}</Text>
       </Button>
@@ -42,9 +44,11 @@ function AnonymousFavoritesEntry() {
 function FavoritesEmpty() {
   const { t } = useTranslation();
   return (
-    <View className="flex-1 items-center justify-center px-6 gap-3">
-      <Icon as={Heart} className="size-8 text-muted-foreground" />
-      <Text className="text-base text-foreground">{t("noFavoritesYet")}</Text>
+    <View className="flex-1 items-center justify-center px-6 gap-4">
+      <View className="size-16 items-center justify-center rounded-full bg-muted">
+        <Icon as={Heart} className="size-8 text-muted-foreground" />
+      </View>
+      <Text className="text-lg font-semibold text-foreground">{t("noFavoritesYet")}</Text>
       <Text className="text-center text-sm text-muted-foreground">
         {t("favoritesSaveLater")}
       </Text>

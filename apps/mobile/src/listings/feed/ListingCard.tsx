@@ -11,6 +11,7 @@ import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { localeTag } from "@/src/i18n/resources";
 
 type ListingSummary = ListingsSchemas.ListingSummary;
 
@@ -23,7 +24,7 @@ interface ListingCardProps {
 }
 
 function formatPrice(amount: number, locale: string): string {
-  return `${amount.toLocaleString(locale)} TMT`;
+  return `${amount.toLocaleString(localeTag(locale))} TMT`;
 }
 
 export function ListingCard({
@@ -55,11 +56,11 @@ export function ListingCard({
     >
       <View className="flex-row gap-3 px-4 py-3">
         {/* Cover image */}
-        <View className="h-[100px] w-[140px] overflow-hidden rounded-lg bg-muted">
+        <View className="h-[100px] w-[140px] shrink-0 overflow-hidden rounded-lg bg-muted">
           {imageUrl ? (
             <Image
               source={{ uri: useOriginalImage && fallbackImageUrl ? fallbackImageUrl : imageUrl }}
-              style={{ width: 140, height: 100 }}
+              className="h-[100px] w-[140px]"
               contentFit="cover"
               cachePolicy="memory-disk"
               onError={() => setUseOriginalImage(true)}
@@ -72,29 +73,29 @@ export function ListingCard({
         </View>
 
         {/* Text content */}
-        <View className="flex-1 justify-between py-0.5">
+        <View className="min-w-0 flex-1 justify-between py-0.5">
           <View className="gap-1">
             <Text className="text-base font-semibold text-foreground leading-5" numberOfLines={2}>
               {titleParts.join(" ")}
             </Text>
-            <Text className="text-lg font-heading text-primary">
+            <Text className="text-lg font-heading text-primary" numberOfLines={1}>
               {formatPrice(listing.displayPriceTmt, i18n.language)}
             </Text>
           </View>
 
-          <View className="flex-row items-center gap-2">
+          <View className="flex-row flex-wrap items-center gap-2">
             {listing.status === Enums.ListingStatus.Sold && (
-              <Badge variant="secondary" className="px-2 py-0.5">
+              <Badge variant="secondary" className="shrink-0 px-2 py-0.5">
                 <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
               </Badge>
             )}
             {listing.sellerTrust?.phoneVerified && (
-              <Badge variant="default" className="px-2 py-0.5">
+              <Badge variant="default" className="shrink-0 px-2 py-0.5">
                 <Icon as={BadgeCheck} className="size-3 text-foreground" />
                 <Text className="text-xs text-foreground">{t("verifiedPhone")}</Text>
               </Badge>
             )}
-            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+            <Text className="min-w-0 flex-1 text-xs text-muted-foreground" numberOfLines={1}>
               {cityName ?? t("loading")}
             </Text>
           </View>

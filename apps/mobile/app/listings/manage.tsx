@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, List } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -81,18 +81,23 @@ function EmptyState({
   const current = copy[tab];
 
   return (
-    <View className="items-center justify-center px-6 py-12">
-      <Text className="text-lg font-semibold text-foreground">
-        {current.title}
-      </Text>
-      <Text className="mt-1 text-center text-sm text-muted-foreground">
-        {current.body}
-      </Text>
+    <View className="items-center justify-center px-6 py-12 gap-4">
+      <View className="size-16 items-center justify-center rounded-full bg-muted">
+        <Icon as={List} className="size-8 text-muted-foreground" />
+      </View>
+      <View className="items-center gap-1">
+        <Text className="text-lg font-semibold text-foreground">
+          {current.title}
+        </Text>
+        <Text className="text-center text-sm text-muted-foreground">
+          {current.body}
+        </Text>
+      </View>
       {current.cta && onCreate && (
         <Button
           variant="default"
           size="pill"
-          className="mt-6"
+          className="mt-2"
           onPress={onCreate}
         >
           <Text>{current.cta}</Text>
