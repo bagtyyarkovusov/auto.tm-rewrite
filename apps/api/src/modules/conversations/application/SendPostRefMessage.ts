@@ -19,7 +19,6 @@ import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
 import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
 import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
 import { Message } from "../domain/Message";
-import type { ImageMessageMetadata } from "../domain/types";
 import {
   CONVERSATION_ERROR_CODES,
   ConversationDomainError,
@@ -28,30 +27,22 @@ import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
+import { buildPostRefSnapshot } from "../infrastructure/PostRefSnapshotMapper";
 
-export type SendMessageInput =
-  | {
-      senderId: string;
-      conversationId: string;
-      kind: "text";
-      text: string;
-      clientMessageId?: string | undefined;
-    }
-  | {
-      senderId: string;
-      conversationId: string;
-      kind: "image";
-      metadata: ImageMessageMetadata;
-      clientMessageId?: string | undefined;
-    };
+export interface SendPostRefMessageInput {
+  senderId: string;
+  conversationId: string;
+  metadata: { listingId: string };
+  clientMessageId?: string | undefined;
+}
 
-export interface SendMessageResult {
+export interface SendPostRefMessageResult {
   message: Message;
   listing: ListingSummary | null;
 }
 
 @Injectable()
-export class SendMessage {
+export class SendPostRefMessage {
   constructor(
     @Inject(CONVERSATION_REPOSITORY)
     private readonly conversations: ConversationRepository,
@@ -63,7 +54,9 @@ export class SendMessage {
     private readonly identityRead: IdentityReadPort,
   ) {}
 
-  async execute(input: SendMessageInput): Promise<SendMessageResult> {
+  async execute(
+    input: SendPostRefMessageInput,
+  ): Promise<SendPostRefMessageResult> {
     const conversation = await this.conversations.findById(
       input.conversationId,
     );
@@ -83,11 +76,11 @@ export class SendMessage {
       });
     }
 
-    const listing = await this.listings.getListingSummary(
+    const parentListing = await this.listings.getListingSummary(
       conversation.listingId,
     );
 
-    if (!listing) {
+    if (!parentListing) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Listing is no longer available for contact",
@@ -95,7 +88,7 @@ export class SendMessage {
       });
     }
 
-    if (listing.status !== "active") {
+    if (parentListing.status !== "active") {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Listing is not available for contact",
@@ -103,7 +96,7 @@ export class SendMessage {
       });
     }
 
-    if (!listing.allowChat) {
+    if (!parentListing.allowChat) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Chat is disabled for this listing",
@@ -119,6 +112,20 @@ export class SendMessage {
     await this.guardSuspended(input.senderId, otherParticipantId);
     await this.guardBlocked(input.senderId, otherParticipantId);
 
+    const referencedListing = await this.listings.getListingSummary(
+      input.metadata.listingId,
+    );
+
+    if (!referencedListing || referencedListing.status !== "active") {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Referenced listing is not available",
+        details: {
+          reason: CONVERSATION_ERROR_CODES.LISTING_REFERENCE_NOT_VISIBLE,
+        },
+      });
+    }
+
     if (input.clientMessageId) {
       const existing = await this.conversations.findMessageByClientMessageId(
         input.conversationId,
@@ -126,13 +133,19 @@ export class SendMessage {
         input.clientMessageId,
       );
       if (existing) {
-        return { message: existing, listing };
+        return { message: existing, listing: parentListing };
       }
     }
 
     let message: Message;
     try {
-      message = this.createMessage(input);
+      message = Message.createPostRef({
+        id: randomUUID(),
+        conversationId: input.conversationId,
+        senderId: input.senderId,
+        clientMessageId: input.clientMessageId,
+        metadata: buildPostRefSnapshot(referencedListing),
+      });
     } catch (err) {
       if (err instanceof ConversationDomainError) {
         throw new BadRequestException({
@@ -146,34 +159,7 @@ export class SendMessage {
 
     await this.conversations.saveMessage(message);
 
-    return { message, listing };
-  }
-
-  private createMessage(input: SendMessageInput): Message {
-    const base = {
-      id: randomUUID(),
-      conversationId: input.conversationId,
-      senderId: input.senderId,
-      clientMessageId: input.clientMessageId,
-    };
-
-    switch (input.kind) {
-      case "text":
-        return Message.createText({
-          ...base,
-          text: input.text,
-        });
-      case "image":
-        return Message.createImage({
-          ...base,
-          metadata: input.metadata,
-        });
-      default:
-        throw new ConversationDomainError(
-          CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
-          "Message kind not supported",
-        );
-    }
+    return { message, listing: parentListing };
   }
 
   private async guardSuspended(

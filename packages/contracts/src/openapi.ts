@@ -104,6 +104,7 @@ import {
   SendTextMessageResponseSchema,
   SendMessageRequestSchema,
   SendMessageResponseSchema,
+  SendPostRefMessageRequestSchema,
   ConversationSummarySchema,
   MessageSummarySchema,
   ConversationListingCardSchema,
@@ -205,6 +206,10 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("SendTextMessageResponse", SendTextMessageResponseSchema);
   registry.register("SendMessageRequest", SendMessageRequestSchema);
   registry.register("SendMessageResponse", SendMessageResponseSchema);
+  registry.register(
+    "SendPostRefMessageRequest",
+    SendPostRefMessageRequestSchema,
+  );
   registry.register("ConversationSummary", ConversationSummarySchema);
   registry.register("MessageSummary", MessageSummarySchema);
   registry.register("ConversationListingCard", ConversationListingCardSchema);

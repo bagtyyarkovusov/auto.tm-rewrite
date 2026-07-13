@@ -2,6 +2,7 @@ export const CONVERSATION_ERROR_CODES = {
   SELF_CONTACT_NOT_ALLOWED: "SELF_CONTACT_NOT_ALLOWED",
   NOT_A_PARTICIPANT: "NOT_A_PARTICIPANT",
   LISTING_NOT_CONTACTABLE: "LISTING_NOT_CONTACTABLE",
+  LISTING_REFERENCE_NOT_VISIBLE: "LISTING_REFERENCE_NOT_VISIBLE",
   CHAT_DISABLED: "CHAT_DISABLED",
   MESSAGE_TEXT_BLANK: "MESSAGE_TEXT_BLANK",
   MESSAGE_TEXT_TOO_LONG: "MESSAGE_TEXT_TOO_LONG",
@@ -36,8 +37,21 @@ export type ImageMessageMetadata = {
   height?: number | undefined;
 };
 
+export type PostRefListingStatus =
+  | "active"
+  | "sold"
+  | "archived"
+  | "banned";
+
 export type PostRefMessageMetadata = {
   listingId: string;
+  brandId: string;
+  modelId: string;
+  year?: number;
+  displayPriceTmt: number;
+  priceCurrency: "TMT" | "USD" | "AED";
+  coverMediaKey?: string;
+  status: PostRefListingStatus;
 };
 
 export type MessageMetadata = ImageMessageMetadata | PostRefMessageMetadata;

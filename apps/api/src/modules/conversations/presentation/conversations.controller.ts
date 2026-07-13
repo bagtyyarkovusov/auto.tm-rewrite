@@ -14,18 +14,25 @@ import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { ConversationsSchemas } from "@auto-tm/contracts";
 
-import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
+import type {
+  ListingSummary,
+  ListingsReadPort,
+} from "../../listings/domain/ports/ListingsReadPort";
+import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
 import { Public } from "../../../common/public.decorator";
 import { OpenConversation } from "../application/OpenConversation";
 import { ListMyConversations } from "../application/ListMyConversations";
 import { ListMessages } from "../application/ListMessages";
 import { SendTextMessage } from "../application/SendTextMessage";
 import { SendMessage } from "../application/SendMessage";
+import { SendPostRefMessage } from "../application/SendPostRefMessage";
 import { UpdateWatermark } from "../application/UpdateWatermark";
 import { MuteConversation } from "../application/MuteConversation";
 import { DeleteMessage } from "../application/DeleteMessage";
 import type { Conversation } from "../domain/Conversation";
 import type { Message } from "../domain/Message";
+import type { PostRefMessageMetadata } from "../domain/types";
+import { availabilityMapForListingSummaries } from "../infrastructure/PostRefSnapshotMapper";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -42,12 +49,16 @@ export class ConversationsController {
     private readonly sendTextMessageUC: SendTextMessage,
     @Inject(SendMessage)
     private readonly sendMessageUC: SendMessage,
+    @Inject(SendPostRefMessage)
+    private readonly sendPostRefMessageUC: SendPostRefMessage,
     @Inject(UpdateWatermark)
     private readonly updateWatermarkUC: UpdateWatermark,
     @Inject(MuteConversation)
     private readonly muteConversationUC: MuteConversation,
     @Inject(DeleteMessage)
     private readonly deleteMessageUC: DeleteMessage,
+    @Inject(LISTINGS_READ_PORT)
+    private readonly listings: ListingsReadPort,
   ) {}
 
   @Public()
@@ -96,6 +107,12 @@ export class ConversationsController {
       limit: parsed.limit,
     });
 
+    const availabilityMap = await this.buildPostRefAvailabilityMap(
+      result.items
+        .map((item) => item.lastMessage)
+        .filter((m): m is Message => m !== null && m !== undefined),
+    );
+
     return {
       items: result.items.map((item) =>
         this.toConversationSummaryResponse(
@@ -104,6 +121,7 @@ export class ConversationsController {
           userId,
           item.lastMessage,
           item.unreadCount,
+          availabilityMap,
         ),
       ),
       nextCursor: result.nextCursor,
@@ -129,8 +147,10 @@ export class ConversationsController {
       limit: parsed.limit,
     });
 
+    const availabilityMap = await this.buildPostRefAvailabilityMap(result.items);
+
     return {
-      items: result.items.map((m) => this.toMessageSummary(m)),
+      items: result.items.map((m) => this.toMessageSummary(m, availabilityMap)),
       nextCursor: result.nextCursor,
     };
   }
@@ -175,6 +195,32 @@ export class ConversationsController {
     });
 
     return this.toMessageSummary(result.message);
+  }
+
+  @Post(":id/messages/post-ref")
+  async sendPostRefMessage(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.SendPostRefMessageRequestSchema,
+      body,
+    );
+
+    const result = await this.sendPostRefMessageUC.execute({
+      senderId: userId,
+      conversationId,
+      metadata: parsed.metadata,
+      clientMessageId: parsed.clientMessageId,
+    });
+
+    const availabilityMap = await this.buildPostRefAvailabilityMap([
+      result.message,
+    ]);
+
+    return this.toMessageSummary(result.message, availabilityMap);
   }
 
   @Post(":id/watermark")
@@ -277,6 +323,7 @@ export class ConversationsController {
     userId: string,
     lastMessage?: Message | null,
     unreadCount?: number,
+    availabilityMap?: Map<string, boolean>,
   ) {
     return {
       id: conversation.id,
@@ -299,23 +346,68 @@ export class ConversationsController {
             status: listing.status,
           }
         : null,
-      lastMessage: lastMessage ? this.toMessageSummary(lastMessage) : undefined,
+      lastMessage: lastMessage
+        ? this.toMessageSummary(lastMessage, availabilityMap)
+        : undefined,
       unreadCount: unreadCount ?? 0,
     };
   }
 
-  private toMessageSummary(message: Message) {
+  private toMessageSummary(
+    message: Message,
+    availabilityMap?: Map<string, boolean>,
+  ) {
     return {
       id: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
       kind: message.kind,
       text: message.body,
-      metadata: message.metadata ?? undefined,
+      metadata: this.enrichMetadata(message, availabilityMap),
       createdAt: message.createdAt.toISOString(),
       deletedAt: message.deletedAt?.toISOString(),
       clientMessageId: message.clientMessageId ?? undefined,
       deliveryStatus: undefined,
     };
+  }
+
+  private enrichMetadata(
+    message: Message,
+    availabilityMap?: Map<string, boolean>,
+  ): unknown | undefined {
+    if (!message.metadata) {
+      return undefined;
+    }
+
+    if (message.kind === "post_ref") {
+      const metadata = message.metadata as PostRefMessageMetadata;
+      return {
+        ...metadata,
+        available:
+          availabilityMap?.get(metadata.listingId) ??
+          // If we did not preload availability, treat the snapshot as available.
+          // This keeps individual sends simple; list endpoints always preload.
+          true,
+      };
+    }
+
+    return message.metadata;
+  }
+
+  private async buildPostRefAvailabilityMap(
+    messages: Message[],
+  ): Promise<Map<string, boolean>> {
+    const listingIds = messages
+      .filter((m) => m.kind === "post_ref" && m.metadata !== null)
+      .map((m) => (m.metadata as PostRefMessageMetadata).listingId);
+
+    const uniqueIds = [...new Set(listingIds)];
+
+    if (uniqueIds.length === 0) {
+      return new Map();
+    }
+
+    const summaries = await this.listings.getListingSummaries(uniqueIds);
+    return availabilityMapForListingSummaries(summaries);
   }
 }

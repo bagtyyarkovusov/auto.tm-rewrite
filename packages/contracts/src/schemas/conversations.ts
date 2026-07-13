@@ -37,6 +37,14 @@ export type ImageMessageMetadata = z.infer<typeof ImageMessageMetadataSchema>;
 
 export const PostRefMessageMetadataSchema = z.object({
   listingId: z.string().uuid(),
+  brandId: z.string().uuid(),
+  modelId: z.string().uuid(),
+  year: z.number().int().min(1900).max(2100).optional(),
+  displayPriceTmt: z.number().nonnegative(),
+  priceCurrency: z.enum(["TMT", "USD", "AED"]),
+  coverMediaKey: z.string().optional(),
+  status: ListingStatusSchema,
+  available: z.boolean().default(true),
 });
 export type PostRefMessageMetadata = z.infer<
   typeof PostRefMessageMetadataSchema
@@ -61,13 +69,22 @@ export const SendMessageRequestSchema = z.discriminatedUnion("kind", [
     metadata: ImageMessageMetadataSchema,
     clientMessageId: z.string().optional(),
   }),
-  z.object({
-    kind: z.literal(MessageKind.PostRef),
-    metadata: PostRefMessageMetadataSchema,
-    clientMessageId: z.string().optional(),
-  }),
 ]);
 export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;
+
+export const SendPostRefMessageRequestSchema = z
+  .object({
+    metadata: z
+      .object({
+        listingId: z.string().uuid(),
+      })
+      .strict(),
+    clientMessageId: z.string().optional(),
+  })
+  .strict();
+export type SendPostRefMessageRequest = z.infer<
+  typeof SendPostRefMessageRequestSchema
+>;
 
 // ── Listing card embedded in conversation responses ──
 

@@ -7,9 +7,11 @@ import type { ListMyConversations } from "../application/ListMyConversations";
 import type { ListMessages } from "../application/ListMessages";
 import type { SendTextMessage } from "../application/SendTextMessage";
 import type { SendMessage } from "../application/SendMessage";
+import type { SendPostRefMessage } from "../application/SendPostRefMessage";
 import type { UpdateWatermark } from "../application/UpdateWatermark";
 import type { MuteConversation } from "../application/MuteConversation";
 import type { DeleteMessage } from "../application/DeleteMessage";
+import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import { Message } from "../domain/Message";
 import { Conversation } from "../domain/Conversation";
 
@@ -19,9 +21,11 @@ function buildController(overrides: {
   listMessages?: ListMessages;
   sendTextMessage?: SendTextMessage;
   sendMessage?: SendMessage;
+  sendPostRefMessage?: SendPostRefMessage;
   updateWatermark?: UpdateWatermark;
   muteConversation?: MuteConversation;
   deleteMessage?: DeleteMessage;
+  listings?: ListingsReadPort;
 } = {}) {
   return new ConversationsController(
     overrides.openConversation ?? ({} as OpenConversation),
@@ -29,9 +33,11 @@ function buildController(overrides: {
     overrides.listMessages ?? ({} as ListMessages),
     overrides.sendTextMessage ?? ({} as SendTextMessage),
     overrides.sendMessage ?? ({} as SendMessage),
+    overrides.sendPostRefMessage ?? ({} as SendPostRefMessage),
     overrides.updateWatermark ?? ({} as UpdateWatermark),
     overrides.muteConversation ?? ({} as MuteConversation),
     overrides.deleteMessage ?? ({} as DeleteMessage),
+    overrides.listings ?? ({ getListingSummaries: vi.fn().mockResolvedValue([]) } as unknown as ListingsReadPort),
   );
 }
 
@@ -99,21 +105,109 @@ describe("ConversationsController rich message routes", () => {
       id: "msg-ref",
       conversationId: "conv-1",
       senderId: "buyer-1",
-      metadata: { listingId },
+      metadata: {
+        listingId,
+        brandId: "brand-1",
+        modelId: "model-1",
+        year: 2021,
+        displayPriceTmt: 200000,
+        priceCurrency: "TMT",
+        coverMediaKey: "cover.jpg",
+        status: "active",
+      },
     });
-    const sendMessage = {
+    const sendPostRefMessage = {
       execute: vi.fn().mockResolvedValue({ message, listing: null }),
-    } as unknown as SendMessage;
-    const controller = buildController({ sendMessage });
+    } as unknown as SendPostRefMessage;
+    const listings = {
+      getListingSummaries: vi.fn().mockResolvedValue([
+        {
+          id: listingId,
+          sellerId: "seller-2",
+          status: "active",
+          brandId: "brand-1",
+          modelId: "model-1",
+          year: 2021,
+          priceAmount: 200000,
+          priceCurrency: "TMT",
+          displayPriceTmt: 200000,
+          coverMediaKey: "cover.jpg",
+          cityId: "city-2",
+          publishedAt: new Date("2026-05-01T00:00:00Z"),
+          allowChat: true,
+        },
+      ]),
+    } as unknown as ListingsReadPort;
+    const controller = buildController({ sendPostRefMessage, listings });
 
-    const result = await controller.sendMessage(
+    const result = await controller.sendPostRefMessage(
       "conv-1",
-      { kind: "post_ref", metadata: { listingId } },
+      { metadata: { listingId } },
       authReq("buyer-1") as never,
     );
 
     expect(result.kind).toBe("post_ref");
-    expect(result.metadata).toEqual({ listingId });
+    expect(result.metadata).toMatchObject({ listingId, available: true });
+    expect(sendPostRefMessage.execute).toHaveBeenCalledWith({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      metadata: { listingId },
+      clientMessageId: undefined,
+    });
+  });
+
+  it("marks a post_ref card unavailable when the referenced listing is no longer active", async () => {
+    const listingId = "550e8400-e29b-41d4-a716-446655440002";
+    const message = Message.createPostRef({
+      id: "msg-ref",
+      conversationId: "conv-1",
+      senderId: "buyer-1",
+      metadata: {
+        listingId,
+        brandId: "brand-1",
+        modelId: "model-1",
+        year: 2021,
+        displayPriceTmt: 200000,
+        priceCurrency: "TMT",
+        coverMediaKey: "cover.jpg",
+        status: "active",
+      },
+    });
+    const listMessages = {
+      execute: vi.fn().mockResolvedValue({ items: [message], nextCursor: null }),
+    } as unknown as ListMessages;
+    const listings = {
+      getListingSummaries: vi.fn().mockResolvedValue([
+        {
+          id: listingId,
+          sellerId: "seller-2",
+          status: "sold",
+          brandId: "brand-1",
+          modelId: "model-1",
+          year: 2021,
+          priceAmount: 200000,
+          priceCurrency: "TMT",
+          displayPriceTmt: 200000,
+          coverMediaKey: "cover.jpg",
+          cityId: "city-2",
+          publishedAt: new Date("2026-05-01T00:00:00Z"),
+          allowChat: true,
+        },
+      ]),
+    } as unknown as ListingsReadPort;
+    const controller = buildController({ listMessages, listings });
+
+    const result = await controller.listMessages(
+      "conv-1",
+      {},
+      authReq("buyer-1") as never,
+    );
+
+    expect(result.items[0]!.metadata).toMatchObject({
+      listingId,
+      status: "active",
+      available: false,
+    });
   });
 
   it("rejects an invalid rich message payload", async () => {

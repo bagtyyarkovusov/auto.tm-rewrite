@@ -3,6 +3,7 @@ import type {
   ImageMessageMetadata,
   MessageKind,
   MessageMetadata,
+  PostRefListingStatus,
   PostRefMessageMetadata,
 } from "../domain/types";
 
@@ -48,7 +49,7 @@ function parseMetadata(value: unknown): MessageMetadata | null {
     return value as ImageMessageMetadata;
   }
 
-  if (hasListingId(value)) {
+  if (isPostRefMetadata(value)) {
     return value as PostRefMessageMetadata;
   }
 
@@ -59,10 +60,47 @@ function hasKey(value: object): value is { key: string } {
   return "key" in value && typeof value.key === "string" && value.key.length > 0;
 }
 
+const POST_REF_CURRENCIES = ["TMT", "USD", "AED"] as const;
+const POST_REF_STATUSES = ["active", "sold", "archived", "banned"] as const;
+
+function isPostRefMetadata(value: object): value is PostRefMessageMetadata {
+  const v = value as Record<string, unknown>;
+
+  return (
+    hasListingId(value) &&
+    typeof v["brandId"] === "string" &&
+    v["brandId"].length > 0 &&
+    typeof v["modelId"] === "string" &&
+    v["modelId"].length > 0 &&
+    typeof v["displayPriceTmt"] === "number" &&
+    v["displayPriceTmt"] >= 0 &&
+    isPostRefCurrency(v["priceCurrency"]) &&
+    isPostRefStatus(v["status"]) &&
+    (v["year"] === undefined || typeof v["year"] === "number") &&
+    (v["coverMediaKey"] === undefined ||
+      (typeof v["coverMediaKey"] === "string" &&
+        v["coverMediaKey"].length > 0))
+  );
+}
+
 function hasListingId(value: object): value is { listingId: string } {
   return (
     "listingId" in value &&
     typeof value.listingId === "string" &&
     value.listingId.length > 0
+  );
+}
+
+function isPostRefCurrency(value: unknown): value is "TMT" | "USD" | "AED" {
+  return (
+    typeof value === "string" &&
+    (POST_REF_CURRENCIES as readonly string[]).includes(value)
+  );
+}
+
+function isPostRefStatus(value: unknown): value is PostRefListingStatus {
+  return (
+    typeof value === "string" &&
+    (POST_REF_STATUSES as readonly string[]).includes(value)
   );
 }
