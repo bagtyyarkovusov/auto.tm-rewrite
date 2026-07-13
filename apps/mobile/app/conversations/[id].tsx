@@ -78,7 +78,7 @@ export default function ConversationDetailScreen() {
           page.items.map((m) => ({
             id: m.id,
             senderId: m.senderId,
-            text: m.text,
+            text: m.text ?? "",
             createdAt: m.createdAt,
             status: "confirmed" as MessageStatus,
           })),

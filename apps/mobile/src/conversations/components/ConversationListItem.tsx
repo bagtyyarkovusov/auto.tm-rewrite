@@ -22,7 +22,7 @@ interface ConversationListItemProps {
     } | null;
     myRole: "buyer" | "seller";
     lastMessage?: {
-      text: string;
+      text: string | null;
       createdAt: string;
     };
     updatedAt: string;
@@ -142,7 +142,7 @@ export function ConversationListItem({
             className="text-sm text-muted-foreground"
             numberOfLines={1}
           >
-            {conversation.lastMessage.text}
+            {conversation.lastMessage.text ?? ""}
           </Text>
         )}
 
