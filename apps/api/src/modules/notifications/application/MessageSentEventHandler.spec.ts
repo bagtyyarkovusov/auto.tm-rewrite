@@ -1,16 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { EvaluateDirectMessagePush } from "./EvaluateDirectMessagePush";
+import type { MessageSentEvent } from "../../conversations/domain/ports/MessageEventPublisher";
+import type { DecideDirectMessageNotification } from "./DecideDirectMessageNotification";
 import { MessageSentEventHandler } from "./MessageSentEventHandler";
 
 function makeHandler(
-  decision: Awaited<ReturnType<EvaluateDirectMessagePush["execute"]>>,
+  result: Awaited<ReturnType<DecideDirectMessageNotification["execute"]>>,
 ) {
-  const evaluatePush = {
-    execute: vi.fn().mockResolvedValue(decision),
-  } as unknown as EvaluateDirectMessagePush;
+  const decideNotification = {
+    execute: vi.fn().mockResolvedValue(result),
+  } as unknown as DecideDirectMessageNotification;
 
-  return { handler: new MessageSentEventHandler(evaluatePush), evaluatePush };
+  return { handler: new MessageSentEventHandler(decideNotification), decideNotification };
+}
+
+function makeEvent(overrides?: Partial<MessageSentEvent>): MessageSentEvent {
+  return {
+    event: "MessageSent",
+    conversationId: "conv-1",
+    messageId: "msg-1",
+    senderId: "user-a",
+    recipientId: "user-b",
+    sentAt: new Date().toISOString(),
+    messageKind: "text",
+    messageBody: "Hello",
+    messageMetadata: null,
+    messageDeletedAt: null,
+    ...overrides,
+  };
 }
 
 describe("MessageSentEventHandler", () => {
@@ -18,48 +35,21 @@ describe("MessageSentEventHandler", () => {
     vi.clearAllMocks();
   });
 
-  it("evaluates push eligibility for a valid MessageSent event", async () => {
-    const { handler, evaluatePush } = makeHandler({ shouldSend: true });
+  it("delegates a valid MessageSent event to the decision use-case", async () => {
+    const { handler, decideNotification } = makeHandler({ enqueued: true });
+    const event = makeEvent();
 
-    await handler.handleMessageSent({
-      conversationId: "conv-1",
-      messageId: "msg-1",
-      senderId: "user-a",
-      recipientId: "user-b",
-      sentAt: new Date().toISOString(),
-    });
+    await handler.handleMessageSent(event);
 
-    expect(evaluatePush.execute).toHaveBeenCalledWith({
-      senderId: "user-a",
-      recipientId: "user-b",
-    });
+    expect(decideNotification.execute).toHaveBeenCalledWith(event);
   });
 
-  it("short-circuits when recipient is missing", async () => {
-    const { handler, evaluatePush } = makeHandler({ shouldSend: true });
+  it("delegates events with missing recipient", async () => {
+    const { handler, decideNotification } = makeHandler({ enqueued: false });
+    const event = makeEvent({ recipientId: "" });
 
-    await handler.handleMessageSent({
-      conversationId: "conv-1",
-      messageId: "msg-1",
-      senderId: "user-a",
-      recipientId: "",
-      sentAt: new Date().toISOString(),
-    });
+    await handler.handleMessageSent(event);
 
-    expect(evaluatePush.execute).not.toHaveBeenCalled();
-  });
-
-  it("short-circuits when sender is missing", async () => {
-    const { handler, evaluatePush } = makeHandler({ shouldSend: true });
-
-    await handler.handleMessageSent({
-      conversationId: "conv-1",
-      messageId: "msg-1",
-      senderId: "",
-      recipientId: "user-b",
-      sentAt: new Date().toISOString(),
-    });
-
-    expect(evaluatePush.execute).not.toHaveBeenCalled();
+    expect(decideNotification.execute).toHaveBeenCalledWith(event);
   });
 });

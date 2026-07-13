@@ -173,6 +173,10 @@ export class SendMessage {
       senderId,
       recipientId,
       sentAt: message.createdAt.toISOString(),
+      messageKind: message.kind,
+      messageBody: message.body,
+      messageMetadata: message.metadata,
+      messageDeletedAt: message.deletedAt?.toISOString() ?? null,
     });
   }
 

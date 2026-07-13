@@ -17,3 +17,28 @@ export class PushTokenDomainError extends Error {
     this.name = "PushTokenDomainError";
   }
 }
+
+export const DIRECT_MESSAGE_NOTIFICATION_CATEGORY = "direct_messages" as const;
+
+export const DIRECT_MESSAGE_NOTIFICATION_TITLE = "Новое сообщение";
+
+export const DIRECT_MESSAGE_PREVIEW_IMAGE = "Фото";
+
+export const DIRECT_MESSAGE_PREVIEW_POST_REF = "Объявление";
+
+export const DIRECT_MESSAGE_PREVIEW_DELETED = "Сообщение удалено";
+
+export const DIRECT_MESSAGE_PREVIEW_FALLBACK = "Новое сообщение";
+
+export const DIRECT_MESSAGE_PREVIEW_MAX_LENGTH = 100;
+
+export const DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS = {
+  SELF_MESSAGE: "SELF_MESSAGE",
+  RECIPIENT_ONLINE: "RECIPIENT_ONLINE",
+  CONVERSATION_MUTED: "CONVERSATION_MUTED",
+  BLOCKED: "BLOCKED",
+  NO_TOKENS: "NO_TOKENS",
+} as const;
+
+export type DirectMessagePushSuppressionReason =
+  (typeof DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS)[keyof typeof DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS];

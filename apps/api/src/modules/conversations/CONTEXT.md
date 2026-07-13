@@ -51,11 +51,12 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
   - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, watermark/mute/delete/unread queries), `MessageMapper.ts` (Prisma row ↔ domain mapping + redaction), `PostRefSnapshotMapper.ts` (builds post-reference snapshots from `ListingSummary` and computes current availability). Chat attachments are stored in the shared MinIO-backed `MediaStoragePort` (`listings/`); the `chat-attachments` bucket is created by `MinioMediaStorageAdapter`.
   - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages/rich`, `POST /api/v1/conversations/:id/messages/post-ref`, `POST /api/v1/conversations/:id/attachments/presign`, `POST /api/v1/conversations/:id/watermark`, `POST /api/v1/conversations/:id/mute`, `DELETE /api/v1/conversations/:id/messages/:messageId`, plus health-check ping
   - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join`, `conversation:leave`, `message:send`, `message:delivered`, `message:read`, `conversation:read`, and `message:delete` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`; `message:send` reuses the `SendMessage` application use-case, acks the sender with the durable `MessageSummary` or a contract-shaped error, and fans out `message:new` to the conversation room. Watermark events persist through `UpdateWatermark` and fan out `watermark` to the room. Delete events persist through `DeleteMessage` and fan out `message:deleted` to the room.
-  - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `EventEmitterModule` for `MessageEventPublisher`, `ListingsModule` for `ListingsReadPort`, and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`
+  - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `EventEmitterModule` for `MessageEventPublisher`, `ListingsModule` for `ListingsReadPort`, and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`. Also provides `CONVERSATION_STATE_PORT` (using the conversation repository implementation) and exports it for cross-context consumers.
 
 ## Ports exposed
 
 - `ConversationRepository` (`CONVERSATION_REPOSITORY`) — implemented by `PrismaConversationRepository`. Methods: `findById`, `findByListingAndBuyer`, `save`, `listForUser`, `listMessages`, `findMessageById`, `findMessageByClientMessageId`, `saveMessage`, `updateWatermark`, `getParticipantState`, `getParticipantStatesForConversations`, `muteConversation`, `softDeleteMessage`, `countUnreadMessages`.
+- `ConversationStatePort` (`CONVERSATION_STATE_PORT`) — implemented by `PrismaConversationRepository`. Methods: `isMuted(conversationId, userId)`. Exported so `notifications/` can read per-conversation mute state without direct repository access.
 - `MessageEventPublisher` (`MESSAGE_EVENT_PUBLISHER`) — implemented by `EventEmitterMessageEventPublisher`. Emits domain facts (e.g., `MessageSent`) via NestJS `EventEmitter2` so other bounded contexts (notifications) can react without direct imports.
 
 ## Ports consumed
@@ -72,7 +73,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `ListMessages` — returns paginated messages for a conversation, participant-only. Existing history remains readable even when the listing is sold, archived, or unavailable. Deleted messages are redacted.
 - `SendTextMessage` — creates and persists a text message in a conversation after validating participant status, current listing contactability, suspension, and block state. Updates conversation activity in the same transaction and emits `MessageSent` for push evaluation.
 - `SendMessage` — rich-message send supporting text and image kinds with optional `clientMessageId` for idempotency. Same validation as `SendTextMessage`. Emits `MessageSent` after persistence.
-- `SendPostRefMessage` — dedicated post-reference send. Validates the referenced listing is active/visible, builds an immutable snapshot from `ListingsReadPort`, persists the message, and enforces the same participant/suspension/block guards as `SendMessage`.
+- `SendPostRefMessage` — dedicated post-reference send. Validates the referenced listing is active/visible, builds an immutable snapshot from `ListingsReadPort`, persists the message, emits `MessageSent`, and enforces the same participant/suspension/block guards as `SendMessage`.
 - `PresignChatAttachmentUpload` — conversation-scoped presigned upload for a single image. Validates participant access, suspended-user state, content type (`image/jpeg`/`image/webp`), and 5 MB size cap. Returns `uploadUrl`, `key`, `expiresIn`, and `maxSizeBytes`.
 - `UpdateWatermark` — updates `lastReadAt` and/or `lastDeliveredAt` for the authenticated participant with monotonic checks.
 - `MuteConversation` — sets or clears `mutedAt` for the authenticated participant.
@@ -83,7 +84,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 ## Events emitted
 
-- `MessageSent` — fired by `SendTextMessage` and `SendMessage` after a message is durably persisted. Payload: `{ event: "MessageSent", conversationId, messageId, senderId, recipientId, sentAt }`. Consumed by `notifications/` to evaluate direct-message push eligibility.
+- `MessageSent` — fired by `SendTextMessage`, `SendMessage`, and `SendPostRefMessage` after a message is durably persisted. Payload: `{ event: "MessageSent", conversationId, messageId, senderId, recipientId, sentAt, messageKind, messageBody, messageMetadata, messageDeletedAt }`. Consumed by `notifications/` to evaluate direct-message push eligibility and build a lock-screen-safe preview.
 
 ## Events consumed
 

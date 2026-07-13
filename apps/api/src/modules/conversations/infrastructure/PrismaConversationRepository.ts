@@ -8,10 +8,13 @@ import type {
   ConversationRepository,
   ParticipantState,
 } from "../domain/ports/ConversationRepository";
+import type { ConversationStatePort } from "../domain/ports/ConversationStatePort";
 import { toDomainMessage, toRawMetadata } from "./MessageMapper";
 
 @Injectable()
-export class PrismaConversationRepository implements ConversationRepository {
+export class PrismaConversationRepository
+  implements ConversationRepository, ConversationStatePort
+{
   constructor(
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
@@ -245,6 +248,22 @@ export class PrismaConversationRepository implements ConversationRepository {
       lastReadAt: row.lastReadAt,
       lastDeliveredAt: row.lastDeliveredAt,
     };
+  }
+
+  async isMuted(
+    conversationId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const row = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      select: { mutedAt: true },
+    });
+    return row?.mutedAt != null;
   }
 
   async getParticipantStatesForConversations(

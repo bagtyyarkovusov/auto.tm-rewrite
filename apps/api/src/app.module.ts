@@ -5,6 +5,7 @@ import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { JwtModule } from "@nestjs/jwt";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { BullModule } from "@nestjs/bullmq";
 import { LoggerModule } from "nestjs-pino";
 
 // import { PrismaModule } from "./common/prisma.module";
@@ -47,6 +48,11 @@ import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
       },
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    BullModule.forRoot({
+      connection: {
+        url: process.env["REDIS_URL"] ?? "redis://localhost:6379",
+      },
+    }),
     IdentityModule,
     CatalogModule,
     ListingsModule,

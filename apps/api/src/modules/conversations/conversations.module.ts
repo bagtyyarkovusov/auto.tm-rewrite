@@ -21,6 +21,7 @@ import { PrismaConversationRepository } from "./infrastructure/PrismaConversatio
 import { EventEmitterMessageEventPublisher } from "./infrastructure/EventEmitterMessageEventPublisher";
 import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
 import { MESSAGE_EVENT_PUBLISHER } from "./domain/ports/MessageEventPublisher";
+import { CONVERSATION_STATE_PORT } from "./domain/ports/ConversationStatePort";
 
 @Module({
   imports: [EventEmitterModule, ListingsModule, IdentityModule],
@@ -30,6 +31,10 @@ import { MESSAGE_EVENT_PUBLISHER } from "./domain/ports/MessageEventPublisher";
     {
       provide: CONVERSATION_REPOSITORY,
       useClass: PrismaConversationRepository,
+    },
+    {
+      provide: CONVERSATION_STATE_PORT,
+      useExisting: CONVERSATION_REPOSITORY,
     },
     {
       provide: MESSAGE_EVENT_PUBLISHER,
@@ -48,5 +53,6 @@ import { MESSAGE_EVENT_PUBLISHER } from "./domain/ports/MessageEventPublisher";
     ValidateConversationAccess,
     ConversationGateway,
   ],
+  exports: [CONVERSATION_STATE_PORT],
 })
 export class ConversationsModule {}

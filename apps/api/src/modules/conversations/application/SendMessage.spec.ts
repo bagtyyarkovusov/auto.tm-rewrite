@@ -7,7 +7,7 @@ import type { ConversationRepository } from "../domain/ports/ConversationReposit
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import type { MessageEventPublisher } from "../domain/ports/MessageEventPublisher";
+import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/MessageEventPublisher";
 
 import { SendMessage } from "./SendMessage";
 
@@ -187,23 +187,9 @@ class FakeIdentityReadPort implements IdentityReadPort {
 }
 
 class FakeMessageEventPublisher implements MessageEventPublisher {
-  events: Array<{
-    event: "MessageSent";
-    conversationId: string;
-    messageId: string;
-    senderId: string;
-    recipientId: string;
-    sentAt: string;
-  }> = [];
+  events: MessageSentEvent[] = [];
 
-  async emitMessageSent(event: {
-    event: "MessageSent";
-    conversationId: string;
-    messageId: string;
-    senderId: string;
-    recipientId: string;
-    sentAt: string;
-  }): Promise<void> {
+  async emitMessageSent(event: MessageSentEvent): Promise<void> {
     this.events.push(event);
   }
 }

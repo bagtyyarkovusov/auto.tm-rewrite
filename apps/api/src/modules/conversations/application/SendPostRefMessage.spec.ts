@@ -11,6 +11,7 @@ import type { ConversationRepository } from "../domain/ports/ConversationReposit
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/MessageEventPublisher";
 
 import { SendPostRefMessage } from "./SendPostRefMessage";
 
@@ -187,17 +188,27 @@ class FakeIdentityReadPort implements IdentityReadPort {
   }
 }
 
+class FakeMessageEventPublisher implements MessageEventPublisher {
+  events: MessageSentEvent[] = [];
+
+  async emitMessageSent(event: MessageSentEvent): Promise<void> {
+    this.events.push(event);
+  }
+}
+
 function makeUseCase(
   repo?: FakeConversationRepository,
   listings?: FakeListingsReadPort,
   identityCheck?: FakeIdentityCheckPort,
   identityRead?: FakeIdentityReadPort,
+  messageEvents?: FakeMessageEventPublisher,
 ) {
   return new SendPostRefMessage(
     repo ?? new FakeConversationRepository(),
     listings ?? new FakeListingsReadPort(),
     identityCheck ?? new FakeIdentityCheckPort(),
     identityRead ?? new FakeIdentityReadPort(),
+    messageEvents ?? new FakeMessageEventPublisher(),
   );
 }
 
@@ -299,6 +310,30 @@ describe("SendPostRefMessage", () => {
     });
     expect(result.message.clientMessageId).toBe("client-ref-1");
     expect(repo.messages).toHaveLength(1);
+  });
+
+  it("emits MessageSent after saving a post reference", async () => {
+    seedConversation(repo);
+    seedParentListing(listings);
+    const referenced = seedReferencedListing(listings);
+    const events = new FakeMessageEventPublisher();
+    const uc = makeUseCase(repo, listings, undefined, undefined, events);
+
+    const result = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      metadata: { listingId: referenced.id },
+    });
+
+    expect(events.events).toHaveLength(1);
+    expect(events.events[0]).toMatchObject({
+      event: "MessageSent",
+      conversationId: "conv-1",
+      messageId: result.message.id,
+      senderId: "buyer-1",
+      recipientId: "seller-1",
+      messageKind: "post_ref",
+    });
   });
 
   it("rejects a hidden/deleted referenced listing", async () => {

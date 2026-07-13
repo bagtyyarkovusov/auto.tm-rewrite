@@ -27,6 +27,10 @@ import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
+import type {
+  MessageEventPublisher,
+} from "../domain/ports/MessageEventPublisher";
+import { MESSAGE_EVENT_PUBLISHER } from "../domain/ports/MessageEventPublisher";
 import { buildPostRefSnapshot } from "../infrastructure/PostRefSnapshotMapper";
 
 export interface SendPostRefMessageInput {
@@ -52,6 +56,8 @@ export class SendPostRefMessage {
     private readonly identityCheck: IdentityCheckPort,
     @Inject(IDENTITY_READ_PORT)
     private readonly identityRead: IdentityReadPort,
+    @Inject(MESSAGE_EVENT_PUBLISHER)
+    private readonly messageEvents: MessageEventPublisher,
   ) {}
 
   async execute(
@@ -158,8 +164,33 @@ export class SendPostRefMessage {
     }
 
     await this.conversations.saveMessage(message);
+    await this.emitMessageSent(input.senderId, conversation, message);
 
     return { message, listing: parentListing };
+  }
+
+  private async emitMessageSent(
+    senderId: string,
+    conversation: { id: string; buyerId: string; sellerId: string },
+    message: Message,
+  ): Promise<void> {
+    const recipientId =
+      conversation.buyerId === senderId
+        ? conversation.sellerId
+        : conversation.buyerId;
+
+    await this.messageEvents.emitMessageSent({
+      event: "MessageSent",
+      conversationId: conversation.id,
+      messageId: message.id,
+      senderId,
+      recipientId,
+      sentAt: message.createdAt.toISOString(),
+      messageKind: message.kind,
+      messageBody: message.body,
+      messageMetadata: message.metadata,
+      messageDeletedAt: message.deletedAt?.toISOString() ?? null,
+    });
   }
 
   private async guardSuspended(

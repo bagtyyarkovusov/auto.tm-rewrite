@@ -39,7 +39,7 @@ Every bounded context under `src/modules/<context>/` has four layers:
 
 ## Cross-context communication
 
-- **Ports (synchronous)** — small TS interfaces injected via NestJS DI; one context exposes, others consume. `realtime/` exposes `PresencePort` (`isUserOnline`) for cross-context online checks.
+- **Ports (synchronous)** — small TS interfaces injected via NestJS DI; one context exposes, others consume. `realtime/` exposes `PresencePort` (`isUserOnline`) for cross-context online checks; `conversations/` exposes `ConversationStatePort` (`isMuted`) for cross-context mute checks. `notifications/` consumes both ports when deciding direct-message pushes.
 - **Events (asynchronous)** — `@nestjs/event-emitter` for fire-and-forget notifications. Used heavily for `ListingCreated → subscriptions/`, `MessageSent → notifications/`, etc.
 
 ## Dependencies
