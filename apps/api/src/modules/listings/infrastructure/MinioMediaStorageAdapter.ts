@@ -70,8 +70,15 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
   }
 
   resolvePublicUrl(key: string): string {
-    // Caddy serves at https://media.auto.tm/<bucket>/<key>
-    return `${this.publicUrl}/${this.inferBucket(key)}/${key}`;
+    const bucket = this.inferBucket(key);
+    // Keys that already include the bucket prefix (e.g. "chat-attachments/...")
+    // must not get the bucket prepended again; otherwise Caddy would serve
+    // /<bucket>/<bucket>/<key>. Listing keys omit the bucket prefix, so the
+    // bucket is prepended to form the path-style S3 URL.
+    if (key.startsWith(`${bucket}/`)) {
+      return `${this.publicUrl}/${key}`;
+    }
+    return `${this.publicUrl}/${bucket}/${key}`;
   }
 
   async deleteObject(key: string): Promise<void> {

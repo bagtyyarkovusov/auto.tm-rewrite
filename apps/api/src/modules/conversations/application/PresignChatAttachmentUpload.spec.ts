@@ -271,4 +271,18 @@ describe("PresignChatAttachmentUpload", () => {
       }),
     ).rejects.toThrow(BadRequestException);
   });
+
+  it("rejects non-positive size", async () => {
+    seedConversation(repo);
+    const uc = makeUseCase(repo, storage, identityCheck);
+
+    await expect(
+      uc.execute({
+        userId: "buyer-1",
+        conversationId: "conv-1",
+        contentType: "image/jpeg",
+        sizeBytes: 0,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
 });

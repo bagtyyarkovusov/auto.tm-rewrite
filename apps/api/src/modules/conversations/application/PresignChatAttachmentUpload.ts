@@ -27,9 +27,10 @@ export interface PresignChatAttachmentUploadResult {
   maxSizeBytes: number;
 }
 
-const CAP = {
+const CHAT_ATTACHMENT_CONSTRAINTS = {
   maxSizeBytes: 5 * 1024 * 1024, // 5 MB
-  allowedTypes: ["image/jpeg", "image/webp"],
+  allowedTypes: ["image/jpeg", "image/webp"] as const,
+  presignExpirySeconds: 600,
 };
 
 @Injectable()
@@ -72,17 +73,17 @@ export class PresignChatAttachmentUpload {
       });
     }
 
-    if (!CAP.allowedTypes.includes(input.contentType)) {
+    if (!CHAT_ATTACHMENT_CONSTRAINTS.allowedTypes.some((type) => type === input.contentType)) {
       throw new BadRequestException({
         code: "VALIDATION_FAILED",
-        message: `Invalid content type. Allowed: ${CAP.allowedTypes.join(", ")}`,
+        message: `Invalid content type. Allowed: ${CHAT_ATTACHMENT_CONSTRAINTS.allowedTypes.join(", ")}`,
       });
     }
 
-    if (input.sizeBytes > CAP.maxSizeBytes) {
+    if (input.sizeBytes <= 0 || input.sizeBytes > CHAT_ATTACHMENT_CONSTRAINTS.maxSizeBytes) {
       throw new BadRequestException({
         code: "VALIDATION_FAILED",
-        message: `File too large. Max ${CAP.maxSizeBytes} bytes`,
+        message: `Invalid size. Must be between 1 and ${CHAT_ATTACHMENT_CONSTRAINTS.maxSizeBytes} bytes`,
       });
     }
 
@@ -93,14 +94,14 @@ export class PresignChatAttachmentUpload {
       key,
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
-      expirySeconds: 600,
+      expirySeconds: CHAT_ATTACHMENT_CONSTRAINTS.presignExpirySeconds,
     });
 
     return {
       uploadUrl: url,
       key,
-      expiresIn: 600,
-      maxSizeBytes: CAP.maxSizeBytes,
+      expiresIn: CHAT_ATTACHMENT_CONSTRAINTS.presignExpirySeconds,
+      maxSizeBytes: CHAT_ATTACHMENT_CONSTRAINTS.maxSizeBytes,
     };
   }
 }
