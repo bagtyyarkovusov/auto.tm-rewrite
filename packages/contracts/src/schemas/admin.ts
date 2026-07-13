@@ -79,12 +79,9 @@ const CreateReportBaseSchema = z.object({
   details: z.string().trim().max(1000).optional(),
 });
 
-type ReportReasonInput = {
-  reason: ReportReason;
-  details?: string | undefined;
-};
-
-const requireDetailsWhenOther = (data: ReportReasonInput) => {
+const requireDetailsWhenOther = (
+  data: z.infer<typeof CreateReportBaseSchema>,
+) => {
   if (data.reason === ReportReason.Other) {
     return typeof data.details === "string" && data.details.trim().length > 0;
   }
@@ -125,7 +122,7 @@ export const ReportListItemSchema = z.object({
   status: z.nativeEnum(ContentReportStatus),
   createdAt: z.string().datetime(),
   reason: z.nativeEnum(ReportReason),
-  targetType: z.enum([ReportTargetType.Listing, ReportTargetType.User, ReportTargetType.Message]),
+  targetType: z.nativeEnum(ReportTargetType),
   targetId: z.string(),
   targetSummary: TargetSummarySchema,
 });
@@ -150,11 +147,7 @@ export const ReporterSummarySchema = z.object({
 export type ReporterSummary = z.infer<typeof ReporterSummarySchema>;
 
 export const ReportDetailTargetSchema = z.object({
-  targetType: z.enum([
-    ReportTargetType.Listing,
-    ReportTargetType.User,
-    ReportTargetType.Message,
-  ]),
+  targetType: z.nativeEnum(ReportTargetType),
   available: z.boolean(),
   label: z.string(),
   targetId: z.string(),

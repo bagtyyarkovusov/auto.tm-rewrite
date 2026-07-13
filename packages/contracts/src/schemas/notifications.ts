@@ -41,12 +41,21 @@ export type RegisterPushTokenResponse = z.infer<
 
 // ── Per-category opt-outs (direct_messages is not globally disableable) ──
 
-export const NotificationPreferenceOptOutSchema = z.enum([
-  "push",
-  "digest",
-  "none",
-]);
-export type NotificationPreferenceOptOut = z.infer<
+export const NotificationPreferenceOptOut = {
+  Push: "push",
+  Digest: "digest",
+  None: "none",
+} as const;
+export type NotificationPreferenceOptOut =
+  (typeof NotificationPreferenceOptOut)[keyof typeof NotificationPreferenceOptOut];
+
+export const NotificationPreferenceOptOutSchema = z.enum(
+  Object.values(NotificationPreferenceOptOut) as [
+    NotificationPreferenceOptOut,
+    ...NotificationPreferenceOptOut[],
+  ],
+);
+export type NotificationPreferenceOptOutType = z.infer<
   typeof NotificationPreferenceOptOutSchema
 >;
 

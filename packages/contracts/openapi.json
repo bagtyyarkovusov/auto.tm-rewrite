@@ -4398,7 +4398,8 @@
             "enum": [
               "listing",
               "user",
-              "message"
+              "message",
+              "content_report"
             ]
           },
           "targetId": {
@@ -4484,7 +4485,8 @@
                   "enum": [
                     "listing",
                     "user",
-                    "message"
+                    "message",
+                    "content_report"
                   ]
                 },
                 "targetId": {
@@ -4639,7 +4641,8 @@
                 "enum": [
                   "listing",
                   "user",
-                  "message"
+                  "message",
+                  "content_report"
                 ]
               },
               "available": {
