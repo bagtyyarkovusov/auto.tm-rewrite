@@ -81,6 +81,26 @@ describe("MessageComposer", () => {
   it("forwards disabled state to QuickReplies", () => {
     expect(source).toContain("disabled={disabled}");
   });
+
+  it("accepts onTyping callback for typing indicators", () => {
+    expect(source).toContain("onTyping?: () => void");
+  });
+
+  it("accepts onStopTyping callback to clear typing state", () => {
+    expect(source).toContain("onStopTyping?: () => void");
+  });
+
+  it("calls onTyping while the user is entering text", () => {
+    expect(source).toContain("onTyping?.()");
+  });
+
+  it("calls onStopTyping when the input is cleared", () => {
+    expect(source).toContain("onStopTyping?.()");
+  });
+
+  it("calls onStopTyping when the input loses focus", () => {
+    expect(source).toContain("onBlur={handleBlur}");
+  });
 });
 
 describe("MessageComposer state transitions", () => {

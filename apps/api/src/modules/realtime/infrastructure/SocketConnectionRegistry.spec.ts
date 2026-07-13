@@ -60,4 +60,36 @@ describe("SocketConnectionRegistry", () => {
     expect(registry.isUserOnline("user-1")).toBe(true);
     expect(registry.isUserOnline("user-2")).toBe(true);
   });
+
+  it("records last-seen when the last socket disconnects", () => {
+    registry.register("socket-1", "user-1");
+
+    const before = new Date();
+    registry.unregister("socket-1");
+    const after = new Date();
+
+    expect(registry.isUserOnline("user-1")).toBe(false);
+    const lastSeen = registry.getLastSeenAt("user-1");
+    expect(lastSeen).toBeDefined();
+    expect(lastSeen!.getTime()).toBeGreaterThanOrEqual(before.getTime());
+    expect(lastSeen!.getTime()).toBeLessThanOrEqual(after.getTime());
+  });
+
+  it("clears last-seen when a user comes back online", () => {
+    registry.register("socket-1", "user-1");
+    registry.unregister("socket-1");
+    expect(registry.getLastSeenAt("user-1")).toBeDefined();
+
+    registry.register("socket-2", "user-1");
+    expect(registry.getLastSeenAt("user-1")).toBeUndefined();
+  });
+
+  it("does not record last-seen while the user still has other sockets", () => {
+    registry.register("socket-1", "user-1");
+    registry.register("socket-2", "user-1");
+
+    registry.unregister("socket-1");
+    expect(registry.isUserOnline("user-1")).toBe(true);
+    expect(registry.getLastSeenAt("user-1")).toBeUndefined();
+  });
 });

@@ -41,7 +41,16 @@ export type MessageDeletedEvent = ConversationsSchemas.MessageDeletedEvent;
 
 export type WatermarkEvent = ConversationsSchemas.WatermarkEvent;
 
+export type TypingEvent = ConversationsSchemas.TypingEvent;
+
+export type PresenceEvent = ConversationsSchemas.PresenceEvent;
+
 export interface UpdateWatermarkAck {
+  ok: true;
+  conversationId: string;
+}
+
+export interface TypingAck {
   ok: true;
   conversationId: string;
 }
@@ -60,6 +69,8 @@ export class ConversationSocket {
   private deletedMessageListeners = new Set<
     (event: MessageDeletedEvent) => void
   >();
+  private typingListeners = new Set<(event: TypingEvent) => void>();
+  private presenceListeners = new Set<(event: PresenceEvent) => void>();
   private currentRoom: string | null = null;
 
   constructor(private readonly options: ConversationSocketOptions = {}) {}
@@ -99,6 +110,20 @@ export class ConversationSocket {
     this.deletedMessageListeners.add(listener);
     return () => {
       this.deletedMessageListeners.delete(listener);
+    };
+  }
+
+  subscribeTyping(listener: (event: TypingEvent) => void): () => void {
+    this.typingListeners.add(listener);
+    return () => {
+      this.typingListeners.delete(listener);
+    };
+  }
+
+  subscribePresence(listener: (event: PresenceEvent) => void): () => void {
+    this.presenceListeners.add(listener);
+    return () => {
+      this.presenceListeners.delete(listener);
     };
   }
 
@@ -157,6 +182,20 @@ export class ConversationSocket {
         this.deletedMessageListeners.forEach((listener) =>
           listener(parsed.data),
         );
+      }
+    });
+
+    this.socket.on("typing:peer", (event: unknown) => {
+      const parsed = ConversationsSchemas.TypingEventSchema.safeParse(event);
+      if (parsed.success) {
+        this.typingListeners.forEach((listener) => listener(parsed.data));
+      }
+    });
+
+    this.socket.on("presence", (event: unknown) => {
+      const parsed = ConversationsSchemas.PresenceEventSchema.safeParse(event);
+      if (parsed.success) {
+        this.presenceListeners.forEach((listener) => listener(parsed.data));
       }
     });
   }
@@ -407,6 +446,64 @@ export class ConversationSocket {
             ok: false,
             code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
             message: "Invalid send response",
+          });
+        },
+      );
+    });
+  }
+
+  async sendTypingStart(conversationId: string): Promise<TypingAck | SocketErrorAck> {
+    return this.emitTyping(conversationId, "typing:start");
+  }
+
+  async sendTypingStop(conversationId: string): Promise<TypingAck | SocketErrorAck> {
+    return this.emitTyping(conversationId, "typing:stop");
+  }
+
+  private async emitTyping(
+    conversationId: string,
+    event: "typing:start" | "typing:stop",
+  ): Promise<TypingAck | SocketErrorAck> {
+    if (!this.socket?.connected) {
+      return {
+        ok: false,
+        code: SOCKET_CLIENT_ERROR_CODES.NOT_CONNECTED,
+        message: "Socket is not connected",
+      };
+    }
+
+    const socket = this.socket;
+
+    return new Promise((resolve) => {
+      socket.emit(
+        event,
+        { conversationId },
+        (ack: unknown) => {
+          const parsed = z
+            .object({
+              ok: z.literal(true),
+              conversationId: z.string().uuid(),
+            })
+            .safeParse(ack);
+          if (parsed.success) {
+            resolve({
+              ok: true,
+              conversationId: parsed.data.conversationId,
+            });
+            return;
+          }
+
+          const errorParsed =
+            ConversationsSchemas.ConversationSocketErrorSchema.safeParse(ack);
+          if (errorParsed.success) {
+            resolve(errorParsed.data);
+            return;
+          }
+
+          resolve({
+            ok: false,
+            code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
+            message: "Invalid typing response",
           });
         },
       );

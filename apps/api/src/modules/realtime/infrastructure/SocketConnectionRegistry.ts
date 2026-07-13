@@ -6,6 +6,7 @@ import type { PresencePort } from "../domain/ports/PresencePort";
 export class SocketConnectionRegistry implements PresencePort {
   private readonly socketToUser = new Map<string, string>();
   private readonly userSocketCounts = new Map<string, number>();
+  private readonly lastSeenAt = new Map<string, Date>();
 
   register(socketId: string, userId: string): void {
     if (this.socketToUser.has(socketId)) {
@@ -13,7 +14,13 @@ export class SocketConnectionRegistry implements PresencePort {
     }
 
     this.socketToUser.set(socketId, userId);
-    this.userSocketCounts.set(userId, (this.userSocketCounts.get(userId) ?? 0) + 1);
+    const previousCount = this.userSocketCounts.get(userId) ?? 0;
+    this.userSocketCounts.set(userId, previousCount + 1);
+
+    if (previousCount === 0) {
+      // User is coming online; the stored last-seen timestamp is no longer current.
+      this.lastSeenAt.delete(userId);
+    }
   }
 
   unregister(socketId: string): void {
@@ -26,6 +33,7 @@ export class SocketConnectionRegistry implements PresencePort {
     const count = (this.userSocketCounts.get(userId) ?? 1) - 1;
     if (count <= 0) {
       this.userSocketCounts.delete(userId);
+      this.lastSeenAt.set(userId, new Date());
     } else {
       this.userSocketCounts.set(userId, count);
     }
@@ -41,5 +49,9 @@ export class SocketConnectionRegistry implements PresencePort {
 
   getOnlineUserCount(): number {
     return this.userSocketCounts.size;
+  }
+
+  getLastSeenAt(userId: string): Date | undefined {
+    return this.lastSeenAt.get(userId);
   }
 }

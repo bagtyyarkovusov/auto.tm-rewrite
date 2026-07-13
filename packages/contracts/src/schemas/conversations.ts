@@ -298,12 +298,30 @@ export const MessageDeletedEventSchema = z.object({
 });
 export type MessageDeletedEvent = z.infer<typeof MessageDeletedEventSchema>;
 
+export const TypingStartRequestSchema = z.object({
+  conversationId: z.string().uuid(),
+});
+export type TypingStartRequest = z.infer<typeof TypingStartRequestSchema>;
+
+export const TypingStopRequestSchema = z.object({
+  conversationId: z.string().uuid(),
+});
+export type TypingStopRequest = z.infer<typeof TypingStopRequestSchema>;
+
 export const TypingEventSchema = z.object({
   conversationId: z.string().uuid(),
   userId: z.string().uuid(),
   isTyping: z.boolean(),
 });
 export type TypingEvent = z.infer<typeof TypingEventSchema>;
+
+export const PresenceEventSchema = z.object({
+  conversationId: z.string().uuid(),
+  userId: z.string().uuid(),
+  online: z.boolean(),
+  lastSeenAt: z.string().datetime().optional(),
+});
+export type PresenceEvent = z.infer<typeof PresenceEventSchema>;
 
 export const WatermarkEventSchema = z.object({
   conversationId: z.string().uuid(),

@@ -22,6 +22,8 @@ import { useIsBlocked } from "../../src/api/identity/useIsBlocked";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { MessageList } from "../../src/conversations/components/MessageList";
 import { MessageComposer } from "../../src/conversations/components/MessageComposer";
+import { TypingIndicator } from "../../src/conversations/components/TypingIndicator";
+import { PeerPresenceLabel } from "../../src/conversations/components/PeerPresenceLabel";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
 import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
 
@@ -100,7 +102,7 @@ function computeOutgoingStatus(
 }
 
 export default function ConversationDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams();
   const queryClient = useQueryClient();
   const rawId = params.id;
@@ -120,7 +122,13 @@ export default function ConversationDetailScreen() {
   const sendHttpMessage = useSendTextMessage();
   const updateWatermark = useUpdateWatermark();
   const deleteHttpMessage = useDeleteMessage();
-  const socket = useConversationSocket(conversationId, viewer?.userId);
+  const {
+    peerTyping,
+    peerPresence,
+    signalTyping,
+    stopTyping,
+    ...socket
+  } = useConversationSocket(conversationId, viewer?.userId);
 
   const blockUser = useBlockUser();
   const unblockUser = useUnblockUser();
@@ -476,12 +484,18 @@ export default function ConversationDetailScreen() {
           >
             <Icon as={ArrowLeft} className="size-5 text-foreground" />
           </Button>
-          <Text
-            className="text-lg font-semibold text-foreground"
-            numberOfLines={1}
-          >
-            {t("messages")}
-          </Text>
+          <View className="flex-1">
+            <Text
+              className="text-lg font-semibold text-foreground"
+              numberOfLines={1}
+            >
+              {t("messages")}
+            </Text>
+            <PeerPresenceLabel
+              presence={peerPresence}
+              locale={i18n.language}
+            />
+          </View>
         </View>
 
         {otherUserId && (
@@ -580,6 +594,9 @@ export default function ConversationDetailScreen() {
         </View>
       )}
 
+      {/* Typing indicator */}
+      <TypingIndicator visible={peerTyping} />
+
       {/* Composer */}
       {viewer?.userId && (
         <MessageComposer
@@ -588,6 +605,8 @@ export default function ConversationDetailScreen() {
           showQuickReplies={
             !isLoading && !isError && !isBlocked && allMessages.length === 0
           }
+          onTyping={signalTyping}
+          onStopTyping={stopTyping}
         />
       )}
 

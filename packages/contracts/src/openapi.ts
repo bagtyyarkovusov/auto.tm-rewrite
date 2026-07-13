@@ -120,7 +120,10 @@ import {
   DeleteMessageResponseSchema,
   ChatMessageEventSchema,
   MessageDeletedEventSchema,
+  TypingStartRequestSchema,
+  TypingStopRequestSchema,
   TypingEventSchema,
+  PresenceEventSchema,
   WatermarkEventSchema,
 } from "./schemas/conversations";
 import {
@@ -233,7 +236,10 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("DeleteMessageResponse", DeleteMessageResponseSchema);
   registry.register("ChatMessageEvent", ChatMessageEventSchema);
   registry.register("MessageDeletedEvent", MessageDeletedEventSchema);
+  registry.register("TypingStartRequest", TypingStartRequestSchema);
+  registry.register("TypingStopRequest", TypingStopRequestSchema);
   registry.register("TypingEvent", TypingEventSchema);
+  registry.register("PresenceEvent", PresenceEventSchema);
   registry.register("WatermarkEvent", WatermarkEventSchema);
 
   // Admin TOTP schemas

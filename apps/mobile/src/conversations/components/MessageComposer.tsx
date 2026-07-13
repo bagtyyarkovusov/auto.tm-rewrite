@@ -19,12 +19,16 @@ interface MessageComposerProps {
   onSend: (text: string) => void;
   disabled?: boolean;
   showQuickReplies?: boolean;
+  onTyping?: () => void;
+  onStopTyping?: () => void;
 }
 
 export function MessageComposer({
   onSend,
   disabled = false,
   showQuickReplies = false,
+  onTyping,
+  onStopTyping,
 }: MessageComposerProps) {
   const [text, setText] = useState("");
   const { t } = useTranslation();
@@ -36,11 +40,25 @@ export function MessageComposer({
   const isOverLimit = text.length > MAX_CHARS;
   const canSend = trimmed.length > 0 && !isOverLimit && !disabled;
 
+  const handleTextChange = useCallback((value: string) => {
+    setText(value);
+    if (value.trim().length > 0) {
+      onTyping?.();
+    } else {
+      onStopTyping?.();
+    }
+  }, [onTyping, onStopTyping]);
+
   const handleSend = useCallback(() => {
     if (!canSend) return;
     onSend(trimmed);
     setText("");
-  }, [canSend, trimmed, onSend]);
+    onStopTyping?.();
+  }, [canSend, trimmed, onSend, onStopTyping]);
+
+  const handleBlur = useCallback(() => {
+    onStopTyping?.();
+  }, [onStopTyping]);
 
   return (
     <KeyboardAvoidingView
@@ -56,7 +74,8 @@ export function MessageComposer({
             placeholder={t("messageComposerPlaceholder")}
             placeholderTextColor={placeholderColor}
             value={text}
-            onChangeText={setText}
+            onChangeText={handleTextChange}
+            onBlur={handleBlur}
             multiline
             maxLength={MAX_CHARS}
             editable={!disabled}
