@@ -44,6 +44,7 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
     await Promise.all([
       this.ensurePublicReadBucket("listing-photos"),
       this.ensurePublicReadBucket("listing-videos"),
+      this.ensurePublicReadBucket("chat-attachments"),
     ]);
   }
 
@@ -53,11 +54,7 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
     sizeBytes: number;
     expirySeconds?: number;
   }): Promise<{ url: string; key: string }> {
-    const bucket = data.key.startsWith("pending/")
-      ? data.key.includes(".mp4")
-        ? "listing-videos"
-        : "listing-photos"
-      : "listing-photos";
+    const bucket = this.inferBucket(data.key);
 
     const command = new PutObjectCommand({
       Bucket: bucket,
@@ -89,6 +86,9 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
   }
 
   private inferBucket(key: string): string {
+    if (key.startsWith("chat-attachments/")) {
+      return "chat-attachments";
+    }
     return key.includes(".mp4") || key.includes(".mov")
       ? "listing-videos"
       : "listing-photos";

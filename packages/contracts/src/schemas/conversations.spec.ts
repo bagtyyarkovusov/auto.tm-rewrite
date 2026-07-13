@@ -4,6 +4,8 @@ import {
   PostRefMessageMetadataSchema,
   SendPostRefMessageRequestSchema,
   SendMessageRequestSchema,
+  PresignChatAttachmentRequestSchema,
+  PresignChatAttachmentResponseSchema,
 } from "./conversations";
 
 describe("PostRefMessageMetadataSchema", () => {
@@ -106,5 +108,58 @@ describe("SendMessageRequestSchema", () => {
         metadata: { listingId: "550e8400-e29b-41d4-a716-446655440000" },
       }),
     ).toThrow();
+  });
+});
+
+describe("PresignChatAttachmentRequestSchema", () => {
+  it("accepts a valid jpeg request", () => {
+    const parsed = PresignChatAttachmentRequestSchema.parse({
+      contentType: "image/jpeg",
+      sizeBytes: 1024,
+    });
+
+    expect(parsed.contentType).toBe("image/jpeg");
+    expect(parsed.sizeBytes).toBe(1024);
+  });
+
+  it("accepts webp", () => {
+    const parsed = PresignChatAttachmentRequestSchema.parse({
+      contentType: "image/webp",
+      sizeBytes: 1024,
+    });
+
+    expect(parsed.contentType).toBe("image/webp");
+  });
+
+  it("rejects unsupported content types", () => {
+    expect(() =>
+      PresignChatAttachmentRequestSchema.parse({
+        contentType: "image/png",
+        sizeBytes: 1024,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects oversized requests", () => {
+    expect(() =>
+      PresignChatAttachmentRequestSchema.parse({
+        contentType: "image/jpeg",
+        sizeBytes: 6 * 1024 * 1024,
+      }),
+    ).toThrow();
+  });
+});
+
+describe("PresignChatAttachmentResponseSchema", () => {
+  it("accepts a valid response", () => {
+    const parsed = PresignChatAttachmentResponseSchema.parse({
+      uploadUrl: "https://media.auto.tm/presigned/chat-attachments/conv-1/uuid/original.jpg",
+      key: "chat-attachments/conv-1/uuid/original.jpg",
+      expiresIn: 600,
+      maxSizeBytes: 5 * 1024 * 1024,
+    });
+
+    expect(parsed.key).toBe("chat-attachments/conv-1/uuid/original.jpg");
+    expect(parsed.expiresIn).toBe(600);
   });
 });

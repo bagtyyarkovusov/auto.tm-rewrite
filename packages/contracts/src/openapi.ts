@@ -105,6 +105,8 @@ import {
   SendMessageRequestSchema,
   SendMessageResponseSchema,
   SendPostRefMessageRequestSchema,
+  PresignChatAttachmentRequestSchema,
+  PresignChatAttachmentResponseSchema,
   ConversationSummarySchema,
   MessageSummarySchema,
   ConversationListingCardSchema,
@@ -209,6 +211,14 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register(
     "SendPostRefMessageRequest",
     SendPostRefMessageRequestSchema,
+  );
+  registry.register(
+    "PresignChatAttachmentRequest",
+    PresignChatAttachmentRequestSchema,
+  );
+  registry.register(
+    "PresignChatAttachmentResponse",
+    PresignChatAttachmentResponseSchema,
   );
   registry.register("ConversationSummary", ConversationSummarySchema);
   registry.register("MessageSummary", MessageSummarySchema);
