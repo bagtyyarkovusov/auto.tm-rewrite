@@ -13,6 +13,7 @@ import type { Server, Socket } from "socket.io";
 
 import {
   conversationRoom,
+  CONVERSATION_ROOM_PREFIX,
   REALTIME_NAMESPACE,
 } from "../../../realtime/infrastructure/realtime.config";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
@@ -121,6 +122,7 @@ export class ConversationGateway implements OnGatewayDisconnect {
   server!: Server;
 
   private readonly userRoomCounts = new Map<string, Map<string, number>>();
+  private readonly socketRooms = new Map<string, Set<string>>();
 
   constructor(
     @Inject(ValidateConversationAccess)
@@ -172,6 +174,7 @@ export class ConversationGateway implements OnGatewayDisconnect {
 
     const room = conversationRoom(payload.conversationId);
     await client.join(room);
+    this.trackSocketRoom(client.id, room);
 
     const previousCount = this.getRoomCount(user.sub, room);
     this.incrementRoomCount(user.sub, room);
@@ -243,18 +246,20 @@ export class ConversationGateway implements OnGatewayDisconnect {
     const countBefore = this.getRoomCount(user.sub, room);
     if (countBefore > 0) {
       await client.leave(room);
+      this.untrackSocketRoom(client.id, room);
       const countAfter = this.decrementRoomCount(user.sub, room);
       if (countAfter === 0) {
         const presence: ConversationsSchemas.PresenceEvent = {
           conversationId: payload.conversationId,
           userId: user.sub,
           online: false,
-          lastSeenAt: new Date().toISOString(),
+          lastSeenAt: this.presence.getLastSeenAt(user.sub)?.toISOString() ?? new Date().toISOString(),
         };
         client.to(room).emit("presence", presence);
       }
     } else {
       await client.leave(room);
+      this.untrackSocketRoom(client.id, room);
     }
 
     return {
@@ -327,21 +332,24 @@ export class ConversationGateway implements OnGatewayDisconnect {
       return;
     }
 
-    for (const room of client.rooms) {
-      if (!room.startsWith("conversation:")) continue;
+    const rooms = this.getSocketRooms(client.id);
+    for (const room of rooms) {
+      if (!room.startsWith(CONVERSATION_ROOM_PREFIX)) continue;
 
       const countAfter = this.decrementRoomCount(user.sub, room);
       if (countAfter === 0) {
-        const conversationId = room.replace("conversation:", "");
+        const conversationId = room.slice(CONVERSATION_ROOM_PREFIX.length);
         const presence: ConversationsSchemas.PresenceEvent = {
           conversationId,
           userId: user.sub,
           online: false,
-          lastSeenAt: new Date().toISOString(),
+          lastSeenAt: this.presence.getLastSeenAt(user.sub)?.toISOString() ?? new Date().toISOString(),
         };
         this.server.to(room).emit("presence", presence);
       }
     }
+
+    this.clearSocketRooms(client.id);
   }
 
   @SubscribeMessage("message:delivered")
@@ -604,5 +612,29 @@ export class ConversationGateway implements OnGatewayDisconnect {
 
     rooms.set(room, count);
     return count;
+  }
+
+  private trackSocketRoom(socketId: string, room: string): void {
+    const rooms = this.socketRooms.get(socketId) ?? new Set<string>();
+    rooms.add(room);
+    this.socketRooms.set(socketId, rooms);
+  }
+
+  private untrackSocketRoom(socketId: string, room: string): void {
+    const rooms = this.socketRooms.get(socketId);
+    if (!rooms) return;
+
+    rooms.delete(room);
+    if (rooms.size === 0) {
+      this.socketRooms.delete(socketId);
+    }
+  }
+
+  private getSocketRooms(socketId: string): Set<string> {
+    return this.socketRooms.get(socketId) ?? new Set<string>();
+  }
+
+  private clearSocketRooms(socketId: string): void {
+    this.socketRooms.delete(socketId);
   }
 }

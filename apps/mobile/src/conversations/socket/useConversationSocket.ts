@@ -206,6 +206,10 @@ export function useConversationSocket(
       unsubscribeTyping();
       unsubscribePresence();
       stopTyping();
+      if (peerTypingTimerRef.current) {
+        clearTimeout(peerTypingTimerRef.current);
+        peerTypingTimerRef.current = null;
+      }
       void socket.leaveConversation(conversationId);
       joinedRef.current = false;
     };
