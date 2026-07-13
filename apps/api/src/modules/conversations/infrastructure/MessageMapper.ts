@@ -1,10 +1,13 @@
 import { Message } from "../domain/Message";
-import type {
-  ImageMessageMetadata,
-  MessageKind,
-  MessageMetadata,
-  PostRefListingStatus,
-  PostRefMessageMetadata,
+import {
+  CURRENCY_CODES,
+  POST_REF_LISTING_STATUSES,
+  type CurrencyCode,
+  type ImageMessageMetadata,
+  type MessageKind,
+  type MessageMetadata,
+  type PostRefListingStatus,
+  type PostRefMessageMetadata,
 } from "../domain/types";
 
 type MessageRow = {
@@ -60,9 +63,6 @@ function hasKey(value: object): value is { key: string } {
   return "key" in value && typeof value.key === "string" && value.key.length > 0;
 }
 
-const POST_REF_CURRENCIES = ["TMT", "USD", "AED"] as const;
-const POST_REF_STATUSES = ["active", "sold", "archived", "banned"] as const;
-
 function isPostRefMetadata(value: object): value is PostRefMessageMetadata {
   const v = value as Record<string, unknown>;
 
@@ -91,16 +91,16 @@ function hasListingId(value: object): value is { listingId: string } {
   );
 }
 
-function isPostRefCurrency(value: unknown): value is "TMT" | "USD" | "AED" {
+function isPostRefCurrency(value: unknown): value is CurrencyCode {
   return (
     typeof value === "string" &&
-    (POST_REF_CURRENCIES as readonly string[]).includes(value)
+    (CURRENCY_CODES as readonly string[]).includes(value)
   );
 }
 
 function isPostRefStatus(value: unknown): value is PostRefListingStatus {
   return (
     typeof value === "string" &&
-    (POST_REF_STATUSES as readonly string[]).includes(value)
+    (POST_REF_LISTING_STATUSES as readonly string[]).includes(value)
   );
 }

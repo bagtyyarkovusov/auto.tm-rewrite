@@ -8,9 +8,7 @@ import {
 } from "./PostRefSnapshotMapper";
 import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
 
-function makeListing(
-  overrides?: Partial<ListingSummary>,
-): ListingSummary {
+function makeListing(overrides?: Partial<ListingSummary>): ListingSummary {
   return {
     id: "listing-1",
     sellerId: "seller-1",

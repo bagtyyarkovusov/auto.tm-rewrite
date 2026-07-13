@@ -37,11 +37,16 @@ export type ImageMessageMetadata = {
   height?: number | undefined;
 };
 
-export type PostRefListingStatus =
-  | "active"
-  | "sold"
-  | "archived"
-  | "banned";
+export const CURRENCY_CODES = ["TMT", "USD", "AED"] as const;
+export type CurrencyCode = (typeof CURRENCY_CODES)[number];
+
+export const POST_REF_LISTING_STATUSES = [
+  "active",
+  "sold",
+  "archived",
+  "banned",
+] as const;
+export type PostRefListingStatus = (typeof POST_REF_LISTING_STATUSES)[number];
 
 export type PostRefMessageMetadata = {
   listingId: string;
@@ -49,7 +54,7 @@ export type PostRefMessageMetadata = {
   modelId: string;
   year?: number;
   displayPriceTmt: number;
-  priceCurrency: "TMT" | "USD" | "AED";
+  priceCurrency: CurrencyCode;
   coverMediaKey?: string;
   status: PostRefListingStatus;
 };

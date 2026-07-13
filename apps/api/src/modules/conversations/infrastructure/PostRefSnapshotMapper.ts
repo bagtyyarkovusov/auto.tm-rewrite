@@ -1,11 +1,5 @@
-import type {
-  ListingsReadPort,
-  ListingSummary,
-} from "../../listings/domain/ports/ListingsReadPort";
-import type {
-  PostRefListingStatus,
-  PostRefMessageMetadata,
-} from "../domain/types";
+import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
+import type { PostRefMessageMetadata } from "../domain/types";
 
 export function buildPostRefSnapshot(
   listing: ListingSummary,
@@ -16,7 +10,7 @@ export function buildPostRefSnapshot(
     modelId: listing.modelId,
     displayPriceTmt: listing.displayPriceTmt,
     priceCurrency: listing.priceCurrency,
-    status: listing.status as PostRefListingStatus,
+    status: listing.status,
   };
 
   if (listing.year !== undefined) {
@@ -49,34 +43,10 @@ export function availabilityMapForListingSummaries(
 
 export function withAvailabilityFallback(
   metadata: PostRefMessageMetadata,
-  listings: ListingsReadPort,
-): Promise<PostRefMessageMetadata & { available: boolean }>;
-export function withAvailabilityFallback(
-  metadata: PostRefMessageMetadata,
   availabilityMap: Map<string, boolean>,
-): PostRefMessageMetadata & { available: boolean };
-export function withAvailabilityFallback(
-  metadata: PostRefMessageMetadata,
-  source: ListingsReadPort | Map<string, boolean>,
-):
-  | Promise<PostRefMessageMetadata & { available: boolean }>
-  | (PostRefMessageMetadata & { available: boolean }) {
-  if (isAvailabilityMap(source)) {
-    return {
-      ...metadata,
-      available: source.get(metadata.listingId) ?? false,
-    };
-  }
-
-  return source
-    .getListingSummaries([metadata.listingId])
-    .then((summaries) =>
-      withAvailabilityFallback(metadata, availabilityMapForListingSummaries(summaries)),
-    );
-}
-
-function isAvailabilityMap(
-  source: ListingsReadPort | Map<string, boolean>,
-): source is Map<string, boolean> {
-  return source instanceof Map;
+): PostRefMessageMetadata & { available: boolean } {
+  return {
+    ...metadata,
+    available: availabilityMap.get(metadata.listingId) ?? false,
+  };
 }

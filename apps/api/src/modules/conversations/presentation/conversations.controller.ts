@@ -379,8 +379,8 @@ export class ConversationsController {
       return undefined;
     }
 
-    if (message.kind === "post_ref") {
-      const metadata = message.metadata as PostRefMessageMetadata;
+    if (this.isPostRefMessage(message)) {
+      const metadata = message.metadata;
       return {
         ...metadata,
         available:
@@ -398,8 +398,8 @@ export class ConversationsController {
     messages: Message[],
   ): Promise<Map<string, boolean>> {
     const listingIds = messages
-      .filter((m) => m.kind === "post_ref" && m.metadata !== null)
-      .map((m) => (m.metadata as PostRefMessageMetadata).listingId);
+      .filter(this.isPostRefMessage)
+      .map((m) => m.metadata.listingId);
 
     const uniqueIds = [...new Set(listingIds)];
 
@@ -409,5 +409,11 @@ export class ConversationsController {
 
     const summaries = await this.listings.getListingSummaries(uniqueIds);
     return availabilityMapForListingSummaries(summaries);
+  }
+
+  private isPostRefMessage(
+    message: Message,
+  ): message is Message & { kind: "post_ref"; metadata: PostRefMessageMetadata } {
+    return message.kind === "post_ref" && message.metadata !== null;
   }
 }

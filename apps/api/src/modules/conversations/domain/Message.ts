@@ -1,7 +1,9 @@
 import {
   ConversationDomainError,
   CONVERSATION_ERROR_CODES,
+  CURRENCY_CODES,
   DELETE_WINDOW_MS,
+  POST_REF_LISTING_STATUSES,
   SYSTEM_SENDER_ID,
 } from "./types";
 import type {
@@ -130,7 +132,7 @@ export class Message {
 
     if (
       !metadata.priceCurrency ||
-      !(["TMT", "USD", "AED"] as const).includes(metadata.priceCurrency)
+      !CURRENCY_CODES.includes(metadata.priceCurrency)
     ) {
       throw new ConversationDomainError(
         CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
@@ -140,9 +142,7 @@ export class Message {
 
     if (
       !metadata.status ||
-      !(["active", "sold", "archived", "banned"] as const).includes(
-        metadata.status,
-      )
+      !POST_REF_LISTING_STATUSES.includes(metadata.status)
     ) {
       throw new ConversationDomainError(
         CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
