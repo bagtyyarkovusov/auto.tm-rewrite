@@ -48,7 +48,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
   - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, `SendMessage.ts`, `SendPostRefMessage.ts`, `PresignChatAttachmentUpload.ts`, `UpdateWatermark.ts`, `MuteConversation.ts`, `DeleteMessage.ts`, `ValidateConversationAccess.ts`, plus matching `.spec.ts` unit tests
   - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, watermark/mute/delete/unread queries), `MessageMapper.ts` (Prisma row ↔ domain mapping + redaction), `PostRefSnapshotMapper.ts` (builds post-reference snapshots from `ListingSummary` and computes current availability). Chat attachments are stored in the shared MinIO-backed `MediaStoragePort` (`listings/`); the `chat-attachments` bucket is created by `MinioMediaStorageAdapter`.
   - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages/rich`, `POST /api/v1/conversations/:id/messages/post-ref`, `POST /api/v1/conversations/:id/attachments/presign`, `POST /api/v1/conversations/:id/watermark`, `POST /api/v1/conversations/:id/mute`, `DELETE /api/v1/conversations/:id/messages/:messageId`, plus health-check ping
-  - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join` and `conversation:leave` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`
+  - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join`, `conversation:leave`, and `message:send` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`; `message:send` reuses the `SendMessage` application use-case, acks the sender with the durable `MessageSummary` or a contract-shaped error, and fans out `message:new` to the conversation room
   - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `ListingsModule` for `ListingsReadPort` and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`
 
 ## Ports exposed
@@ -75,6 +75,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `MuteConversation` — sets or clears `mutedAt` for the authenticated participant.
 - `DeleteMessage` — soft-deletes the authenticated user's own message within the 5-minute window.
 - `ValidateConversationAccess` — shared participant/suspension/block check used by the realtime gateway to authorize joining or leaving a `conversation:{conversationId}` room. Returns the `Conversation` on success; throws `NotFoundException` or `ForbiddenException` on failure.
+- `ConversationGateway.handleSendMessage` — realtime text-send entry point on `/ws/chat`. Validates the socket payload, delegates persistence to `SendMessage`, idempotently returns the durable message for duplicate `clientMessageId` retries, and fans out `message:new` to the joined conversation room.
 
 ## Events emitted
 
@@ -106,6 +107,8 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 |---|---|---|---|---|
 | `conversation:join` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleJoin` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
 | `conversation:leave` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleLeave` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
+| `message:send` | Client → Server | Required (via middleware) | `{ conversationId: uuid, kind: "text", text: string, clientMessageId?: string }` | `ConversationGateway.handleSendMessage` → `{ ok: true, message: MessageSummary }` or `{ ok: false, code, message }` |
+| `message:new` | Server → Client | Required (via room membership) | `{ message: MessageSummary }` | Broadcast to `conversation:{conversationId}` after a successful `message:send` |
 
 ## Planned additions (future sprints)
 

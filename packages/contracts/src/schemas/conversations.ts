@@ -72,6 +72,24 @@ export const SendMessageRequestSchema = z.discriminatedUnion("kind", [
 ]);
 export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;
 
+export const SendMessageSocketRequestSchema = z.discriminatedUnion("kind", [
+  z.object({
+    conversationId: z.string().uuid(),
+    kind: z.literal(MessageKind.Text),
+    text: z.string().min(1).max(1000),
+    clientMessageId: z.string().optional(),
+  }),
+  z.object({
+    conversationId: z.string().uuid(),
+    kind: z.literal(MessageKind.Image),
+    metadata: ImageMessageMetadataSchema,
+    clientMessageId: z.string().optional(),
+  }),
+]);
+export type SendMessageSocketRequest = z.infer<
+  typeof SendMessageSocketRequestSchema
+>;
+
 export const SendPostRefMessageRequestSchema = z
   .object({
     metadata: z

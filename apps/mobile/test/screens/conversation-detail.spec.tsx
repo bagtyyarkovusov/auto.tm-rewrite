@@ -74,7 +74,8 @@ describe("ConversationDetailScreen optimistic states", () => {
   });
 
   it("deduplicates server and local messages", () => {
-    expect(source).toContain("confirmedIds");
+    expect(source).toContain("serverIds");
+    expect(source).toContain("serverClientIds");
     expect(source).toContain("pendingOrFailed");
   });
 });

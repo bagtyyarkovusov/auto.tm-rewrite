@@ -10,6 +10,7 @@ import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessa
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
+import { useConversationSocket } from "../../src/conversations/socket/useConversationSocket";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { MessageList } from "../../src/conversations/components/MessageList";
 import { MessageComposer } from "../../src/conversations/components/MessageComposer";
@@ -24,10 +25,15 @@ import { ErrorState } from "@/components/ErrorState";
 
 interface LocalMessage {
   id: string;
+  clientMessageId: string;
   senderId: string;
   text: string;
   createdAt: string;
   status: MessageStatus;
+}
+
+function generateClientMessageId(): string {
+  return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export default function ConversationDetailScreen() {
@@ -41,20 +47,34 @@ export default function ConversationDetailScreen() {
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
 
   const messagesQuery = useConversationMessages({ conversationId });
-  const sendMessage = useSendTextMessage();
+  const sendHttpMessage = useSendTextMessage();
+  const socket = useConversationSocket(conversationId);
 
   const listingCard = useMemo(() => {
-    const listingId = typeof params.listingId === "string" ? params.listingId : undefined;
+    const listingId =
+      typeof params.listingId === "string" ? params.listingId : undefined;
     if (!listingId) return null;
     return {
       id: listingId,
-      brandId: typeof params.brandId === "string" ? params.brandId : "",
-      modelId: typeof params.modelId === "string" ? params.modelId : "",
+      brandId:
+        typeof params.brandId === "string" ? params.brandId : "",
+      modelId:
+        typeof params.modelId === "string" ? params.modelId : "",
       year: typeof params.year === "string" ? Number(params.year) : undefined,
-      displayPriceTmt: typeof params.displayPriceTmt === "string" ? Number(params.displayPriceTmt) : 0,
-      priceCurrency: typeof params.priceCurrency === "string" ? params.priceCurrency : "TMT",
-      coverMediaKey: typeof params.coverMediaKey === "string" ? params.coverMediaKey : undefined,
-      status: typeof params.status === "string" ? params.status : "active",
+      displayPriceTmt:
+        typeof params.displayPriceTmt === "string"
+          ? Number(params.displayPriceTmt)
+          : 0,
+      priceCurrency:
+        typeof params.priceCurrency === "string"
+          ? params.priceCurrency
+          : "TMT",
+      coverMediaKey:
+        typeof params.coverMediaKey === "string"
+          ? params.coverMediaKey
+          : undefined,
+      status:
+        typeof params.status === "string" ? params.status : "active",
     };
   }, [params]);
 
@@ -77,6 +97,7 @@ export default function ConversationDetailScreen() {
         (page) =>
           page.items.map((m) => ({
             id: m.id,
+            clientMessageId: m.clientMessageId ?? m.id,
             senderId: m.senderId,
             text: m.text ?? "",
             createdAt: m.createdAt,
@@ -84,9 +105,15 @@ export default function ConversationDetailScreen() {
           })),
       ) ?? [];
 
-    const confirmedIds = new Set(serverMessages.map((m) => m.id));
+    const serverIds = new Set(serverMessages.map((m) => m.id));
+    const serverClientIds = new Set(
+      serverMessages.map((m) => m.clientMessageId).filter(Boolean),
+    );
     const pendingOrFailed = localMessages.filter(
-      (lm) => !confirmedIds.has(lm.id) && lm.status !== "confirmed",
+      (lm) =>
+        lm.status !== "confirmed" &&
+        !serverIds.has(lm.id) &&
+        !serverClientIds.has(lm.clientMessageId),
     );
 
     return [...serverMessages, ...pendingOrFailed].sort(
@@ -95,13 +122,50 @@ export default function ConversationDetailScreen() {
     );
   }, [messagesQuery.data, localMessages]);
 
+  const markConfirmed = useCallback((clientMessageId: string, serverId: string) => {
+    setLocalMessages((prev) =>
+      prev.map((m) =>
+        m.clientMessageId === clientMessageId
+          ? { ...m, id: serverId, status: "confirmed" }
+          : m,
+      ),
+    );
+  }, []);
+
+  const markFailed = useCallback((clientMessageId: string) => {
+    setLocalMessages((prev) =>
+      prev.map((m) =>
+        m.clientMessageId === clientMessageId ? { ...m, status: "failed" } : m,
+      ),
+    );
+  }, []);
+
+  const sendViaHttp = useCallback(
+    (clientMessageId: string, text: string) => {
+      sendHttpMessage.mutate(
+        { conversationId, text },
+        {
+          onSuccess: (data) => {
+            markConfirmed(clientMessageId, data.id);
+          },
+          onError: () => {
+            markFailed(clientMessageId);
+          },
+        },
+      );
+    },
+    [conversationId, markConfirmed, markFailed, sendHttpMessage],
+  );
+
   const handleSend = useCallback(
-    (text: string) => {
+    async (text: string) => {
       if (!viewer?.userId || !conversationId) return;
 
-      const tempId = `pending-${Date.now()}-${Math.random()}`;
+      const clientMessageId = generateClientMessageId();
+      const tempId = `pending-${clientMessageId}`;
       const pendingMessage: LocalMessage = {
         id: tempId,
+        clientMessageId,
         senderId: viewer.userId,
         text,
         createdAt: new Date().toISOString(),
@@ -110,60 +174,50 @@ export default function ConversationDetailScreen() {
 
       setLocalMessages((prev) => [...prev, pendingMessage]);
 
-      sendMessage.mutate(
-        { conversationId, text },
-        {
-          onSuccess: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "confirmed" } : m,
-              ),
-            );
-          },
-          onError: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "failed" } : m,
-              ),
-            );
-          },
-        },
-      );
+      const result = await socket.sendTextMessage({
+        conversationId,
+        text,
+        clientMessageId,
+      });
+
+      if (result.ok) {
+        markConfirmed(clientMessageId, result.message.id);
+      } else if (result.code === "NOT_CONNECTED") {
+        sendViaHttp(clientMessageId, text);
+      } else {
+        markFailed(clientMessageId);
+      }
     },
-    [conversationId, sendMessage, viewer?.userId],
+    [conversationId, markConfirmed, markFailed, sendViaHttp, socket, viewer?.userId],
   );
 
   const handleRetry = useCallback(
-    (tempId: string) => {
+    async (tempId: string) => {
       if (!conversationId) return;
       const msg = localMessages.find((m) => m.id === tempId);
       if (!msg || msg.status !== "failed") return;
 
       setLocalMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...m, status: "pending" } : m)),
+        prev.map((m) =>
+          m.id === tempId ? { ...m, status: "pending" } : m,
+        ),
       );
 
-      sendMessage.mutate(
-        { conversationId, text: msg.text },
-        {
-          onSuccess: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "confirmed" } : m,
-              ),
-            );
-          },
-          onError: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "failed" } : m,
-              ),
-            );
-          },
-        },
-      );
+      const result = await socket.sendTextMessage({
+        conversationId,
+        text: msg.text,
+        clientMessageId: msg.clientMessageId,
+      });
+
+      if (result.ok) {
+        markConfirmed(msg.clientMessageId, result.message.id);
+      } else if (result.code === "NOT_CONNECTED") {
+        sendViaHttp(msg.clientMessageId, msg.text);
+      } else {
+        markFailed(msg.clientMessageId);
+      }
     },
-    [conversationId, localMessages, sendMessage],
+    [conversationId, localMessages, markConfirmed, markFailed, sendViaHttp, socket],
   );
 
   const isLoading = messagesQuery.isPending;
@@ -182,7 +236,10 @@ export default function ConversationDetailScreen() {
         >
           <Icon as={ArrowLeft} className="size-5 text-foreground" />
         </Button>
-        <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
+        <Text
+          className="text-lg font-semibold text-foreground"
+          numberOfLines={1}
+        >
           {t("messages")}
         </Text>
       </View>
@@ -234,7 +291,7 @@ export default function ConversationDetailScreen() {
       {viewer?.userId && (
         <MessageComposer
           onSend={handleSend}
-          disabled={sendMessage.isPending}
+          disabled={false}
         />
       )}
     </SafeScreen>

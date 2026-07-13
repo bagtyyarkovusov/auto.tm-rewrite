@@ -4,9 +4,10 @@ import {
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
+  WebSocketServer,
 } from "@nestjs/websockets";
 import { ConversationsSchemas, ErrorCode } from "@auto-tm/contracts";
-import type { Socket } from "socket.io";
+import type { Server, Socket } from "socket.io";
 
 import {
   conversationRoom,
@@ -14,7 +15,10 @@ import {
 } from "../../../realtime/infrastructure/realtime.config";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
+import type { SendMessageResult } from "../../application/SendMessage";
+import { SendMessage } from "../../application/SendMessage";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
+import type { Message } from "../../domain/Message";
 
 type JoinPayload = {
   conversationId: string;
@@ -33,14 +37,32 @@ function parseJoinPayload(body: unknown): JoinPayload | null {
   }
 }
 
+function parseSendMessagePayload(
+  body: unknown,
+): ConversationsSchemas.SendMessageSocketRequest | null {
+  try {
+    const parsed = ConversationsSchemas.SendMessageSocketRequestSchema.parse(
+      body,
+    );
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 @WebSocketGateway({
   namespace: REALTIME_NAMESPACE,
 })
 export class ConversationGateway {
+  @WebSocketServer()
+  server!: Server;
+
   constructor(
     @Inject(ValidateConversationAccess)
     private readonly validateAccess: ValidateConversationAccess,
+    @Inject(SendMessage)
+    private readonly sendMessage: SendMessage,
   ) {}
 
   @SubscribeMessage("conversation:join")
@@ -122,6 +144,46 @@ export class ConversationGateway {
     };
   }
 
+  @SubscribeMessage("message:send")
+  async handleSendMessage(
+    @MessageBody() body: unknown,
+    @ConnectedSocket() client: Socket,
+  ): Promise<SocketAck<{ ok: true; message: ConversationsSchemas.MessageSummary }>> {
+    const user = this.authenticatedUser(client);
+    if (!user) {
+      return this.unauthenticatedError();
+    }
+
+    const payload = parseSendMessagePayload(body);
+    if (!payload) {
+      return {
+        ok: false,
+        code: ErrorCode.ValidationFailed,
+        message: "Invalid message send payload",
+      };
+    }
+
+    let result: SendMessageResult;
+    try {
+      result = await this.sendMessage.execute({
+        senderId: user.sub,
+        ...payload,
+      });
+    } catch (err) {
+      return this.toSocketError(err);
+    }
+
+    const message = this.toMessageSummary(result.message);
+
+    const room = conversationRoom(payload.conversationId);
+    this.server.to(room).emit("message:new", { message });
+
+    return {
+      ok: true,
+      message,
+    };
+  }
+
   private authenticatedUser(client: Socket): AuthenticatedSocketUser | null {
     const user = client.data.user;
     if (!user?.sub) return null;
@@ -161,5 +223,25 @@ export class ConversationGateway {
     }
 
     return { ok: false, code: ErrorCode.Internal, message: "Access denied" };
+  }
+
+  private toMessageSummary(
+    message: Message,
+  ): ConversationsSchemas.MessageSummary {
+    return {
+      id: message.id,
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+      kind: message.kind,
+      text: message.body,
+      metadata: message.metadata ?? undefined,
+      createdAt: message.createdAt.toISOString(),
+      ...(message.deletedAt
+        ? { deletedAt: message.deletedAt.toISOString() }
+        : {}),
+      ...(message.clientMessageId
+        ? { clientMessageId: message.clientMessageId }
+        : {}),
+    } as ConversationsSchemas.MessageSummary;
   }
 }
