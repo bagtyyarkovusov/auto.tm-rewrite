@@ -8,6 +8,10 @@ import { OpenConversation } from "./application/OpenConversation";
 import { ListMyConversations } from "./application/ListMyConversations";
 import { ListMessages } from "./application/ListMessages";
 import { SendTextMessage } from "./application/SendTextMessage";
+import { SendMessage } from "./application/SendMessage";
+import { UpdateWatermark } from "./application/UpdateWatermark";
+import { MuteConversation } from "./application/MuteConversation";
+import { DeleteMessage } from "./application/DeleteMessage";
 import { PrismaConversationRepository } from "./infrastructure/PrismaConversationRepository";
 import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
 
@@ -24,6 +28,10 @@ import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
     ListMyConversations,
     ListMessages,
     SendTextMessage,
+    SendMessage,
+    UpdateWatermark,
+    MuteConversation,
+    DeleteMessage,
   ],
 })
 export class ConversationsModule {}

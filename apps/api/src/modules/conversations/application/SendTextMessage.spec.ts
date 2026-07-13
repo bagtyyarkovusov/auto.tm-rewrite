@@ -6,6 +6,7 @@ import { Message } from "../domain/Message";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
 
 import { SendTextMessage } from "./SendTextMessage";
 
@@ -26,7 +27,7 @@ class FakeConversationRepository implements ConversationRepository {
   }
 
   async listForUser(): Promise<{
-    items: Conversation[];
+    items: Array<{ conversation: Conversation; lastMessage: Message | null }>;
     nextCursor: string | null;
   }> {
     return { items: [], nextCursor: null };
@@ -39,8 +40,59 @@ class FakeConversationRepository implements ConversationRepository {
     return { items: [], nextCursor: null };
   }
 
+  async findMessageById(id: string): Promise<Message | null> {
+    return this.messages.find((m) => m.id === id) ?? null;
+  }
+
+  async findMessageByClientMessageId(
+    conversationId: string,
+    senderId: string,
+    clientMessageId: string,
+  ): Promise<Message | null> {
+    return (
+      this.messages.find(
+        (m) =>
+          m.conversationId === conversationId &&
+          m.senderId === senderId &&
+          m.clientMessageId === clientMessageId,
+      ) ?? null
+    );
+  }
+
   async saveMessage(message: Message): Promise<void> {
     this.messages.push(message);
+  }
+
+  async updateWatermark(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async getParticipantState(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  } | null> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async muteConversation(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async softDeleteMessage(): Promise<Message | null> {
+    return null;
+  }
+
+  async countUnreadMessages(): Promise<number> {
+    return 0;
   }
 }
 
@@ -105,15 +157,37 @@ class FakeIdentityCheckPort implements IdentityCheckPort {
   }
 }
 
+class FakeIdentityReadPort implements IdentityReadPort {
+  blockedPairs = new Set<string>();
+
+  async findUserById(): Promise<null> {
+    return null;
+  }
+
+  async findUsersByIds(): Promise<[]> {
+    return [];
+  }
+
+  async isUserBlockedBy(blockerId: string, blockedId: string): Promise<boolean> {
+    return this.blockedPairs.has(`${blockerId}:${blockedId}`);
+  }
+
+  block(blockerId: string, blockedId: string) {
+    this.blockedPairs.add(`${blockerId}:${blockedId}`);
+  }
+}
+
 function makeUseCase(
   repo?: FakeConversationRepository,
   listings?: FakeListingsReadPort,
   identityCheck?: FakeIdentityCheckPort,
+  identityRead?: FakeIdentityReadPort,
 ) {
   return new SendTextMessage(
     repo ?? new FakeConversationRepository(),
     listings ?? new FakeListingsReadPort(),
     identityCheck ?? new FakeIdentityCheckPort(),
+    identityRead ?? new FakeIdentityReadPort(),
   );
 }
 
@@ -176,7 +250,7 @@ describe("SendTextMessage", () => {
       text: "Hello, is it still available?",
     });
 
-    expect(result.message.text).toBe("Hello, is it still available?");
+    expect(result.message.body).toBe("Hello, is it still available?");
     expect(result.message.senderId).toBe("buyer-1");
     expect(result.message.conversationId).toBe("conv-1");
     expect(result.listing).not.toBeNull();
@@ -209,7 +283,7 @@ describe("SendTextMessage", () => {
       text: "  Hello world  ",
     });
 
-    expect(result.message.text).toBe("Hello world");
+    expect(result.message.body).toBe("Hello world");
   });
 
   it("preserves internal line breaks", async () => {
@@ -224,7 +298,7 @@ describe("SendTextMessage", () => {
       text,
     });
 
-    expect(result.message.text).toBe(text);
+    expect(result.message.body).toBe(text);
   });
 
   it("rejects non-existent conversation", async () => {
@@ -306,7 +380,7 @@ describe("SendTextMessage", () => {
       text: "a".repeat(1000),
     });
 
-    expect(result.message.text).toBe("a".repeat(1000));
+    expect(result.message.body).toBe("a".repeat(1000));
   });
 
   it("blocks sends when listing is sold", async () => {
@@ -401,6 +475,38 @@ describe("SendTextMessage", () => {
     const identity = new FakeIdentityCheckPort();
     identity.suspend("seller-1");
     const uc = makeUseCase(repo, listings, identity);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        text: "Hello",
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks sends when sender is blocked by recipient", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const identityRead = new FakeIdentityReadPort();
+    identityRead.block("seller-1", "buyer-1");
+    const uc = makeUseCase(repo, listings, undefined, identityRead);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        text: "Hello",
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks sends when sender has blocked recipient", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const identityRead = new FakeIdentityReadPort();
+    identityRead.block("buyer-1", "seller-1");
+    const uc = makeUseCase(repo, listings, undefined, identityRead);
 
     await expect(
       uc.execute({

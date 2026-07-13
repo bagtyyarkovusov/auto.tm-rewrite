@@ -15,6 +15,8 @@ import type {
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
+import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
 import { Conversation } from "../domain/Conversation";
 import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import {
@@ -41,6 +43,8 @@ export class OpenConversation {
     private readonly listings: ListingsReadPort,
     @Inject(IDENTITY_TOKENS.IdentityCheckPort)
     private readonly identityCheck: IdentityCheckPort,
+    @Inject(IDENTITY_READ_PORT)
+    private readonly identityRead: IdentityReadPort,
   ) {}
 
   async execute(input: OpenConversationInput): Promise<OpenConversationResult> {
@@ -102,6 +106,31 @@ export class OpenConversation {
         code: "FORBIDDEN",
         message: "User is suspended",
         details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
+      });
+    }
+
+    // Block new contact if either user has blocked the other
+    const blockedBySeller = await this.identityRead.isUserBlockedBy(
+      listing.sellerId,
+      input.buyerId,
+    );
+    if (blockedBySeller) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "You are blocked by this user",
+        details: { reason: CONVERSATION_ERROR_CODES.BLOCKED_BY_USER },
+      });
+    }
+
+    const blockedByBuyer = await this.identityRead.isUserBlockedBy(
+      input.buyerId,
+      listing.sellerId,
+    );
+    if (blockedByBuyer) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "You have blocked this user",
+        details: { reason: CONVERSATION_ERROR_CODES.USER_BLOCKED },
       });
     }
 

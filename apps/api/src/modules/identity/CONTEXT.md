@@ -48,6 +48,7 @@ interface IdentityCheckPort {
 ```
 
 - `IdentityCheckPort` is implemented by `PrismaIdentityCheckAdapter` and exported from `IdentityModule` under DI token `IDENTITY_TOKENS.IdentityCheckPort`.
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) is implemented by `PrismaIdentityReadAdapter` and exported from `IdentityModule`. It exposes `findUserById`, `findUsersByIds`, and `isUserBlockedBy(blockerId, blockedId)`. `isUserBlockedBy` is consumed by `conversations/` (S10) to enforce block checks before new contact or message sends.
 - `IdentityAdminPort` (`IDENTITY_ADMIN_PORT`) is implemented by `PrismaIdentityAdminRepository` and exported from `IdentityModule`. It exposes `suspendUser(userId, adminUserId, reason, tx?)`, `unsuspendUser(userId, tx?)`, and `isSuspended(userId)`. `suspendUser` and `unsuspendUser` participate in the caller's transaction (transaction-scoped) for S7 admin moderation; `isSuspended` is a standalone read.
 - `AdminGuard` (`apps/api/src/common/admin.guard.ts`) composes on top of `JwtAuthGuard` and requires: authenticated user, `role = admin`, `sid` owned by the JWT subject, an unexpired session row (`expiresAt > now`), and current TOTP elevation (`adminTotpExpiresAt > now`) loaded via that session.
 
@@ -137,7 +138,7 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 - **S8/private-beta signup kill switch** — Shipped. `SIGNUPS_ENABLED=false` blocks OTP verification from creating a new `User` while preserving OTP login, refresh, logout, and admin login for existing users. Recovery of grace-period accounts is also unaffected. Disabled signup attempts return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and generic client copy; the API does not expose internal flag names.
 - **Post-MLP admin/dealership hardening** —
   - `Dealership.verifiedAt` column for the dealership-verification flow used by listings + admin UI is post-MLP with showroom/dealer work.
-  - `IdentityReadPort` interface (`getUserSummary`, `getDealershipSummary`, `isUserBlockedBy`) for other contexts (admin app, listings, conversations) to fetch user/dealership summaries without owning the data.
+  - `IdentityReadPort` interface for other contexts to read user/dealership summaries and relationship state without owning the data. Currently exposes `findUserById`, `findUsersByIds`, and `isUserBlockedBy(blockerId, blockedId)`. Consumed by `conversations/` (S10 block checks in `OpenConversation`, `SendTextMessage`, and `SendMessage`).
   - `DealershipVerified` is post-MLP with dealership verification.
 
 ## Notable decisions

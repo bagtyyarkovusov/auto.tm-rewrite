@@ -2,8 +2,12 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
 import { Conversation } from "../domain/Conversation";
-import { Message } from "../domain/Message";
-import type { ConversationRepository } from "../domain/ports/ConversationRepository";
+import type { Message } from "../domain/Message";
+import type {
+  ConversationRepository,
+  ParticipantState,
+} from "../domain/ports/ConversationRepository";
+import { toDomainMessage, toRawMetadata } from "./MessageMapper";
 
 @Injectable()
 export class PrismaConversationRepository implements ConversationRepository {
@@ -61,7 +65,10 @@ export class PrismaConversationRepository implements ConversationRepository {
   async listForUser(
     userId: string,
     query: { cursor?: string; limit?: number },
-  ): Promise<{ items: Conversation[]; nextCursor: string | null }> {
+  ): Promise<{
+    items: Array<{ conversation: Conversation; lastMessage: Message | null }>;
+    nextCursor: string | null;
+  }> {
     const take = (query.limit ?? 20) + 1;
 
     const rows = await this.prisma.conversation.findMany({
@@ -82,8 +89,28 @@ export class PrismaConversationRepository implements ConversationRepository {
     const items = hasMore ? rows.slice(0, -1) : rows;
     const last = items[items.length - 1];
 
+    const lastMessageIds = items
+      .map((r) => r.lastMessageId)
+      .filter((id): id is string => id !== null && id !== undefined);
+
+    const lastMessages =
+      lastMessageIds.length > 0
+        ? await this.prisma.message.findMany({
+            where: { id: { in: lastMessageIds } },
+          })
+        : [];
+
+    const lastMessageMap = new Map(
+      lastMessages.map((r) => [r.id, toDomainMessage(r)]),
+    );
+
     return {
-      items: items.map((r: { id: string; listingId: string; buyerId: string; sellerId: string; createdAt: Date; updatedAt: Date }) => this.toDomain(r)),
+      items: items.map((r) => ({
+        conversation: this.toDomain(r),
+        lastMessage: r.lastMessageId
+          ? (lastMessageMap.get(r.lastMessageId) ?? null)
+          : null,
+      })),
       nextCursor: hasMore && last ? last.id : null,
     };
   }
@@ -97,7 +124,6 @@ export class PrismaConversationRepository implements ConversationRepository {
     const rows = await this.prisma.message.findMany({
       where: {
         conversationId,
-        kind: "text",
       },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take,
@@ -114,28 +140,180 @@ export class PrismaConversationRepository implements ConversationRepository {
     const last = items[items.length - 1];
 
     return {
-      items: items.map((r) => this.toDomainMessage(r)),
+      items: items.map((r) => toDomainMessage(r)),
       nextCursor: hasMore && last ? last.id : null,
     };
   }
 
+  async findMessageById(id: string): Promise<Message | null> {
+    const row = await this.prisma.message.findUnique({
+      where: { id },
+    });
+    if (!row) return null;
+    return toDomainMessage(row as Parameters<typeof toDomainMessage>[0]);
+  }
+
+  async findMessageByClientMessageId(
+    conversationId: string,
+    senderId: string,
+    clientMessageId: string,
+  ): Promise<Message | null> {
+    const row = await this.prisma.message.findUnique({
+      where: {
+        conversationId_senderId_clientMessageId: {
+          conversationId,
+          senderId,
+          clientMessageId,
+        },
+      },
+    });
+    if (!row) return null;
+    return toDomainMessage(row as Parameters<typeof toDomainMessage>[0]);
+  }
+
   async saveMessage(message: Message): Promise<void> {
+    const now = new Date();
     await this.prisma.$transaction([
       this.prisma.message.create({
         data: {
           id: message.id,
           conversationId: message.conversationId,
           senderId: message.senderId,
-          kind: "text",
-          body: message.text,
+          kind: message.kind,
+          body: message.body,
+          metadata: toRawMetadata(message.metadata) as never,
           createdAt: message.createdAt,
+          clientMessageId: message.clientMessageId ?? null,
         },
       }),
       this.prisma.conversation.update({
         where: { id: message.conversationId },
-        data: { updatedAt: new Date() },
+        data: {
+          updatedAt: now,
+          lastMessageAt: message.createdAt,
+          lastMessageId: message.id,
+        },
       }),
     ]);
+  }
+
+  async updateWatermark(
+    userId: string,
+    conversationId: string,
+    data: { lastReadAt?: Date; lastDeliveredAt?: Date },
+  ): Promise<ParticipantState> {
+    const row = await this.prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        ...(data.lastReadAt !== undefined
+          ? { lastReadAt: data.lastReadAt }
+          : {}),
+        ...(data.lastDeliveredAt !== undefined
+          ? { lastDeliveredAt: data.lastDeliveredAt }
+          : {}),
+      },
+    });
+
+    return {
+      mutedAt: row.mutedAt,
+      lastReadAt: row.lastReadAt,
+      lastDeliveredAt: row.lastDeliveredAt,
+    };
+  }
+
+  async getParticipantState(
+    userId: string,
+    conversationId: string,
+  ): Promise<ParticipantState | null> {
+    const row = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+    if (!row) return null;
+    return {
+      mutedAt: row.mutedAt,
+      lastReadAt: row.lastReadAt,
+      lastDeliveredAt: row.lastDeliveredAt,
+    };
+  }
+
+  async muteConversation(
+    userId: string,
+    conversationId: string,
+    muted: boolean,
+  ): Promise<ParticipantState> {
+    const row = await this.prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        mutedAt: muted ? new Date() : null,
+      },
+    });
+
+    return {
+      mutedAt: row.mutedAt,
+      lastReadAt: row.lastReadAt,
+      lastDeliveredAt: row.lastDeliveredAt,
+    };
+  }
+
+  async softDeleteMessage(
+    messageId: string,
+    userId: string,
+    deletedAt: Date,
+  ): Promise<Message | null> {
+    const result = await this.prisma.message.updateMany({
+      where: {
+        id: messageId,
+        senderId: userId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt,
+      },
+    });
+
+    if (result.count === 0) return null;
+
+    return this.findMessageById(messageId);
+  }
+
+  async countUnreadMessages(
+    userId: string,
+    conversationId: string,
+  ): Promise<number> {
+    const participant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+
+    const lastReadAt = participant?.lastReadAt ?? new Date(0);
+
+    return this.prisma.message.count({
+      where: {
+        conversationId,
+        senderId: { not: userId },
+        deletedAt: null,
+        createdAt: { gt: lastReadAt },
+      },
+    });
   }
 
   private toDomain(row: {
@@ -153,22 +331,6 @@ export class PrismaConversationRepository implements ConversationRepository {
       sellerId: row.sellerId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    });
-  }
-
-  private toDomainMessage(row: {
-    id: string;
-    conversationId: string;
-    senderId: string;
-    body: string | null;
-    createdAt: Date;
-  }): Message {
-    return Message.create({
-      id: row.id,
-      conversationId: row.conversationId,
-      senderId: row.senderId,
-      text: row.body ?? "",
-      createdAt: row.createdAt,
     });
   }
 }

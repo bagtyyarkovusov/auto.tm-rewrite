@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { NotFoundException, ForbiddenException } from "@nestjs/common";
+import { NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 
 import { Conversation } from "../domain/Conversation";
 import { Message } from "../domain/Message";
@@ -8,24 +8,18 @@ import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadP
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
 
-import { OpenConversation } from "./OpenConversation";
+import { SendMessage } from "./SendMessage";
 
 class FakeConversationRepository implements ConversationRepository {
   conversations: Conversation[] = [];
+  messages: Message[] = [];
 
   async findById(id: string): Promise<Conversation | null> {
     return this.conversations.find((c) => c.id === id) ?? null;
   }
 
-  async findByListingAndBuyer(
-    listingId: string,
-    buyerId: string,
-  ): Promise<Conversation | null> {
-    return (
-      this.conversations.find(
-        (c) => c.listingId === listingId && c.buyerId === buyerId,
-      ) ?? null
-    );
+  async findByListingAndBuyer(): Promise<Conversation | null> {
+    return null;
   }
 
   async save(conversation: Conversation): Promise<void> {
@@ -40,21 +34,34 @@ class FakeConversationRepository implements ConversationRepository {
   }
 
   async listMessages(): Promise<{
-    items: import("../domain/Message").Message[];
+    items: Message[];
     nextCursor: string | null;
   }> {
     return { items: [], nextCursor: null };
   }
 
-  async findMessageById(): Promise<null> {
-    return null;
+  async findMessageById(id: string): Promise<Message | null> {
+    return this.messages.find((m) => m.id === id) ?? null;
   }
 
-  async findMessageByClientMessageId(): Promise<null> {
-    return null;
+  async findMessageByClientMessageId(
+    conversationId: string,
+    senderId: string,
+    clientMessageId: string,
+  ): Promise<Message | null> {
+    return (
+      this.messages.find(
+        (m) =>
+          m.conversationId === conversationId &&
+          m.senderId === senderId &&
+          m.clientMessageId === clientMessageId,
+      ) ?? null
+    );
   }
 
-  async saveMessage(): Promise<void> {}
+  async saveMessage(message: Message): Promise<void> {
+    this.messages.push(message);
+  }
 
   async updateWatermark(): Promise<{
     mutedAt: Date | null;
@@ -80,7 +87,7 @@ class FakeConversationRepository implements ConversationRepository {
     return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
   }
 
-  async softDeleteMessage(): Promise<null> {
+  async softDeleteMessage(): Promise<Message | null> {
     return null;
   }
 
@@ -176,12 +183,27 @@ function makeUseCase(
   identityCheck?: FakeIdentityCheckPort,
   identityRead?: FakeIdentityReadPort,
 ) {
-  return new OpenConversation(
+  return new SendMessage(
     repo ?? new FakeConversationRepository(),
     listings ?? new FakeListingsReadPort(),
     identityCheck ?? new FakeIdentityCheckPort(),
     identityRead ?? new FakeIdentityReadPort(),
   );
+}
+
+function seedConversation(
+  repo: FakeConversationRepository,
+  overrides?: Partial<Conversation>,
+) {
+  const c = Conversation.create({
+    id: "conv-1",
+    listingId: "listing-1",
+    buyerId: "buyer-1",
+    sellerId: "seller-1",
+    ...overrides,
+  });
+  repo.conversations.push(c);
+  return c;
 }
 
 function seedListing(
@@ -208,7 +230,7 @@ function seedListing(
   return listing;
 }
 
-describe("OpenConversation", () => {
+describe("SendMessage", () => {
   let repo: FakeConversationRepository;
   let listings: FakeListingsReadPort;
 
@@ -217,153 +239,179 @@ describe("OpenConversation", () => {
     listings = new FakeListingsReadPort();
   });
 
-  it("creates a conversation for a valid non-owner active listing", async () => {
+  it("sends a text message with clientMessageId", async () => {
+    seedConversation(repo);
     seedListing(listings);
     const uc = makeUseCase(repo, listings);
 
     const result = await uc.execute({
-      buyerId: "buyer-1",
-      listingId: "listing-1",
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "text",
+      text: "Hello",
+      clientMessageId: "client-1",
     });
 
-    expect(result.conversation.listingId).toBe("listing-1");
-    expect(result.conversation.buyerId).toBe("buyer-1");
-    expect(result.conversation.sellerId).toBe("seller-1");
-    expect(result.listing.id).toBe("listing-1");
-    expect(repo.conversations).toHaveLength(1);
+    expect(result.message.kind).toBe("text");
+    expect(result.message.body).toBe("Hello");
+    expect(result.message.clientMessageId).toBe("client-1");
+    expect(repo.messages).toHaveLength(1);
   });
 
-  it("returns the same conversation on duplicate open", async () => {
+  it("sends an image message", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const uc = makeUseCase(repo, listings);
+
+    const result = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "image",
+      metadata: { key: "chat/image.jpg", width: 800, height: 600 },
+    });
+
+    expect(result.message.kind).toBe("image");
+    expect(result.message.metadata).toEqual({
+      key: "chat/image.jpg",
+      width: 800,
+      height: 600,
+    });
+  });
+
+  it("sends a post_ref message", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const uc = makeUseCase(repo, listings);
+
+    const result = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "post_ref",
+      metadata: { listingId: "listing-2" },
+    });
+
+    expect(result.message.kind).toBe("post_ref");
+    expect(result.message.metadata).toEqual({ listingId: "listing-2" });
+  });
+
+  it("returns existing message for duplicate clientMessageId", async () => {
+    seedConversation(repo);
     seedListing(listings);
     const uc = makeUseCase(repo, listings);
 
     const first = await uc.execute({
-      buyerId: "buyer-1",
-      listingId: "listing-1",
-    });
-    const second = await uc.execute({
-      buyerId: "buyer-1",
-      listingId: "listing-1",
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "text",
+      text: "First",
+      clientMessageId: "client-1",
     });
 
-    expect(second.conversation.id).toBe(first.conversation.id);
-    expect(repo.conversations).toHaveLength(1);
+    const second = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "text",
+      text: "Second",
+      clientMessageId: "client-1",
+    });
+
+    expect(second.message.id).toBe(first.message.id);
+    expect(repo.messages).toHaveLength(1);
   });
 
-  it("rejects seller self-contact", async () => {
+  it("rejects non-participant sender", async () => {
+    seedConversation(repo);
     seedListing(listings);
     const uc = makeUseCase(repo, listings);
 
     await expect(
-      uc.execute({ buyerId: "seller-1", listingId: "listing-1" }),
+      uc.execute({
+        senderId: "random-user",
+        conversationId: "conv-1",
+        kind: "text",
+        text: "Hello",
+      }),
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it("rejects non-existent listing", async () => {
+  it("rejects invalid text", async () => {
+    seedConversation(repo);
+    seedListing(listings);
     const uc = makeUseCase(repo, listings);
 
     await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "missing" }),
-    ).rejects.toThrow(NotFoundException);
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        kind: "text",
+        text: "",
+      }),
+    ).rejects.toThrow(BadRequestException);
   });
 
-  it("rejects sold listing for new contact", async () => {
+  it("blocks sends when listing is sold", async () => {
+    seedConversation(repo);
     seedListing(listings, { status: "sold" });
     const uc = makeUseCase(repo, listings);
 
     await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        kind: "text",
+        text: "Hello",
+      }),
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it("rejects archived listing for new contact", async () => {
-    seedListing(listings, { status: "archived" });
-    const uc = makeUseCase(repo, listings);
-
-    await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
-    ).rejects.toThrow(ForbiddenException);
-  });
-
-  it("returns NOT_FOUND for banned listing (hidden by getListingSummary)", async () => {
-    seedListing(listings, { status: "banned" });
-    const uc = makeUseCase(repo, listings);
-
-    await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
-    ).rejects.toThrow(NotFoundException);
-  });
-
-  it("rejects listing with allowChat = false", async () => {
-    seedListing(listings, { allowChat: false });
-    const uc = makeUseCase(repo, listings);
-
-    await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
-    ).rejects.toThrow(ForbiddenException);
-  });
-
-  it("returns the existing conversation even when listing is now sold", async () => {
-    seedListing(listings);
-    const uc = makeUseCase(repo, listings);
-
-    const first = await uc.execute({
-      buyerId: "buyer-1",
-      listingId: "listing-1",
-    });
-
-    // Simulate listing becoming sold
-    listings.listings[0]!.status = "sold";
-
-    const second = await uc.execute({
-      buyerId: "buyer-1",
-      listingId: "listing-1",
-    });
-
-    expect(second.conversation.id).toBe(first.conversation.id);
-  });
-
-  it("blocks new contact when buyer is suspended", async () => {
+  it("blocks sends when sender is suspended", async () => {
+    seedConversation(repo);
     seedListing(listings);
     const identity = new FakeIdentityCheckPort();
     identity.suspend("buyer-1");
     const uc = makeUseCase(repo, listings, identity);
 
     await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        kind: "text",
+        text: "Hello",
+      }),
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it("blocks new contact when seller is suspended", async () => {
-    seedListing(listings);
-    const identity = new FakeIdentityCheckPort();
-    identity.suspend("seller-1");
-    const uc = makeUseCase(repo, listings, identity);
-
-    await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
-    ).rejects.toThrow(ForbiddenException);
-  });
-
-  it("blocks new contact when buyer is blocked by seller", async () => {
-    seedListing(listings);
-    const identityRead = new FakeIdentityReadPort();
-    identityRead.block("seller-1", "buyer-1");
-    const uc = makeUseCase(repo, listings, undefined, identityRead);
-
-    await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
-    ).rejects.toThrow(ForbiddenException);
-  });
-
-  it("blocks new contact when buyer has blocked seller", async () => {
+  it("blocks sends when recipient is blocked by sender", async () => {
+    seedConversation(repo);
     seedListing(listings);
     const identityRead = new FakeIdentityReadPort();
     identityRead.block("buyer-1", "seller-1");
     const uc = makeUseCase(repo, listings, undefined, identityRead);
 
     await expect(
-      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        kind: "text",
+        text: "Hello",
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks sends when sender is blocked by recipient", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const identityRead = new FakeIdentityReadPort();
+    identityRead.block("seller-1", "buyer-1");
+    const uc = makeUseCase(repo, listings, undefined, identityRead);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        kind: "text",
+        text: "Hello",
+      }),
     ).rejects.toThrow(ForbiddenException);
   });
 });

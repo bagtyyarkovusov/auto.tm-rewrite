@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
 import { Conversation } from "../domain/Conversation";
+import { Message } from "../domain/Message";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 
@@ -8,6 +9,7 @@ import { ListMyConversations } from "./ListMyConversations";
 
 class FakeConversationRepository implements ConversationRepository {
   conversations: Conversation[] = [];
+  messages: Message[] = [];
 
   async findById(id: string): Promise<Conversation | null> {
     return this.conversations.find((c) => c.id === id) ?? null;
@@ -31,12 +33,13 @@ class FakeConversationRepository implements ConversationRepository {
   async listForUser(
     userId: string,
     query: { cursor?: string; limit?: number },
-  ): Promise<{ items: Conversation[]; nextCursor: string | null }> {
+  ): Promise<{
+    items: Array<{ conversation: Conversation; lastMessage: Message | null }>;
+    nextCursor: string | null;
+  }> {
     const userConversations = this.conversations
       .filter((c) => c.buyerId === userId || c.sellerId === userId)
-      .sort(
-        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-      );
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
     const limit = query.limit ?? 20;
     let startIndex = 0;
@@ -54,8 +57,19 @@ class FakeConversationRepository implements ConversationRepository {
     const hasMore = userConversations.length > startIndex + limit;
     const last = items[items.length - 1];
 
+    const lastMessageMap = new Map<string, Message | null>();
+    for (const conv of items) {
+      const lastMsg = this.messages
+        .filter((m) => m.conversationId === conv.id)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+      lastMessageMap.set(conv.id, lastMsg ?? null);
+    }
+
     return {
-      items,
+      items: items.map((c) => ({
+        conversation: c,
+        lastMessage: lastMessageMap.get(c.id) ?? null,
+      })),
       nextCursor: hasMore && last ? last.id : null,
     };
   }
@@ -67,7 +81,49 @@ class FakeConversationRepository implements ConversationRepository {
     return { items: [], nextCursor: null };
   }
 
-  async saveMessage(): Promise<void> {}
+  async findMessageById(): Promise<null> {
+    return null;
+  }
+
+  async findMessageByClientMessageId(): Promise<null> {
+    return null;
+  }
+
+  async saveMessage(message: Message): Promise<void> {
+    this.messages.push(message);
+  }
+
+  async updateWatermark(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async getParticipantState(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  } | null> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async muteConversation(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async softDeleteMessage(): Promise<null> {
+    return null;
+  }
+
+  async countUnreadMessages(): Promise<number> {
+    return 0;
+  }
 }
 
 class FakeListingsReadPort implements ListingsReadPort {
@@ -289,5 +345,23 @@ describe("ListMyConversations", () => {
     expect(second.items).toHaveLength(1);
     expect(second.items[0]!.conversation.id).toBe("conv-2");
     expect(second.nextCursor).toBe("conv-2");
+  });
+
+  it("includes last message for each conversation", async () => {
+    seedListing();
+    seedConversation({ id: "conv-1" });
+    const msg = Message.createText({
+      id: "msg-1",
+      conversationId: "conv-1",
+      senderId: "buyer-1",
+      text: "Hello",
+    });
+    repo.saveMessage(msg);
+
+    const uc = makeUseCase(repo, listings);
+    const result = await uc.execute({ userId: "buyer-1" });
+
+    expect(result.items[0]!.lastMessage).not.toBeNull();
+    expect(result.items[0]!.lastMessage!.id).toBe("msg-1");
   });
 });
