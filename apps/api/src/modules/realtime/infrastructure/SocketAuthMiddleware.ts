@@ -1,7 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import type { ExtendedError } from "socket.io/dist/namespace";
 import type { Socket } from "socket.io";
+
+import { REALTIME_ERROR_CODES } from "../domain/types";
 
 export interface AuthenticatedSocketUser {
   sub: string;
@@ -17,14 +18,20 @@ declare module "socket.io" {
   }
 }
 
+interface SocketAuthError extends Error {
+  data: Record<string, unknown>;
+}
+
 function middlewareError(
   message: string,
   data: Record<string, unknown>,
-): ExtendedError {
-  const err = new Error(message) as ExtendedError;
+): SocketAuthError {
+  const err = new Error(message) as SocketAuthError;
   err.data = data;
   return err;
 }
+
+const BEARER_PREFIX = "Bearer ";
 
 @Injectable()
 export class SocketAuthMiddleware {
@@ -33,11 +40,11 @@ export class SocketAuthMiddleware {
     private readonly jwtService: JwtService,
   ) {}
 
-  use(socket: Socket, next: (err?: ExtendedError) => void): void {
+  use(socket: Socket, next: (err?: Error) => void): void {
     const token = this.extractToken(socket);
     if (!token) {
       next(middlewareError("Missing authentication token", {
-        code: "MISSING_AUTH_TOKEN",
+        code: REALTIME_ERROR_CODES.MISSING_AUTH_TOKEN,
       }));
       return;
     }
@@ -46,7 +53,7 @@ export class SocketAuthMiddleware {
       const payload = this.jwtService.verify<AuthenticatedSocketUser>(token);
       if (!payload.sub) {
         next(middlewareError("Invalid authentication token payload", {
-          code: "INVALID_TOKEN_PAYLOAD",
+          code: REALTIME_ERROR_CODES.INVALID_TOKEN_PAYLOAD,
         }));
         return;
       }
@@ -54,7 +61,7 @@ export class SocketAuthMiddleware {
       next();
     } catch {
       next(middlewareError("Invalid or expired authentication token", {
-        code: "INVALID_TOKEN",
+        code: REALTIME_ERROR_CODES.INVALID_TOKEN,
       }));
     }
   }
@@ -66,8 +73,8 @@ export class SocketAuthMiddleware {
     }
 
     const header = socket.handshake.headers.authorization;
-    if (typeof header === "string" && header.startsWith("Bearer ")) {
-      return header.slice(7);
+    if (typeof header === "string" && header.startsWith(BEARER_PREFIX)) {
+      return header.slice(BEARER_PREFIX.length);
     }
 
     return undefined;

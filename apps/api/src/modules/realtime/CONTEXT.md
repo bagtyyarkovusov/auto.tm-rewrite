@@ -15,7 +15,9 @@ Authenticated Socket.IO foundation for the API. Provides the server adapter, con
 
 ## Domain layer
 
-No domain entities. The only domain artifact is the `PresencePort` interface (`domain/ports/PresencePort.ts`) so other contexts can ask whether a user is currently socket-online without importing Socket.IO internals.
+No domain entities. Domain artifacts:
+- `PresencePort` interface (`domain/ports/PresencePort.ts`) so other contexts can ask whether a user is currently socket-online without importing Socket.IO internals.
+- `REALTIME_ERROR_CODES` (`domain/types.ts`) — canonical error codes returned by the socket auth middleware.
 
 ## Ports exposed
 
@@ -28,6 +30,7 @@ No domain entities. The only domain artifact is the `PresencePort` interface (`d
 ## Module shape
 
 - `apps/api/src/modules/realtime/`:
+  - `domain/types.ts`
   - `domain/ports/PresencePort.ts`
   - `infrastructure/RealtimeIoAdapter.ts`
   - `infrastructure/SocketAuthMiddleware.ts`

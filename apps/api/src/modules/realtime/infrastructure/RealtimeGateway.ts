@@ -18,9 +18,6 @@ import { REALTIME_NAMESPACE, userRoom } from "./realtime.config";
 @Injectable()
 @WebSocketGateway({
   namespace: REALTIME_NAMESPACE,
-  cors: {
-    origin: process.env["SOCKET_IO_CORS_ORIGIN"] ?? "*",
-  },
 })
 export class RealtimeGateway
   implements

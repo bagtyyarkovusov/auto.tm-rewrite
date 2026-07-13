@@ -24,7 +24,9 @@ async function bootstrap() {
 
   const config = app.get(ConfigService);
   const realtimeAdapter = new RealtimeIoAdapter(app, {
-    redisAdapterEnabled: config.get<boolean>("SOCKET_IO_REDIS_ADAPTER_ENABLED") ?? false,
+    corsOrigin: config.get<string>("SOCKET_IO_CORS_ORIGIN") ?? "*",
+    redisAdapterEnabled:
+      config.get<boolean>("SOCKET_IO_REDIS_ADAPTER_ENABLED") ?? false,
     redisUrl: config.get<string>("REDIS_URL"),
   });
   await realtimeAdapter.configure();

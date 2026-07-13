@@ -37,8 +37,8 @@ export const EnvSchema = z.object({
     { message: "TOTP_SECRET_ENCRYPTION_KEY must be a 32-byte base64 string" },
   ),
 
-  SOCKET_IO_NAMESPACE: z.string().default("/ws/chat"),
-  SOCKET_IO_CORS_ORIGIN: z.string().default("*"),
+  SOCKET_IO_NAMESPACE: z.string().min(1).default("/ws/chat"),
+  SOCKET_IO_CORS_ORIGIN: z.string().min(1).default("*"),
   SOCKET_IO_REDIS_ADAPTER_ENABLED: z
     .string()
     .transform((v) => v === "true")

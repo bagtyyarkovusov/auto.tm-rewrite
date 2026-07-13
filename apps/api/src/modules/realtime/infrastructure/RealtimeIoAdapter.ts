@@ -5,6 +5,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import type { Server, ServerOptions } from "socket.io";
 
 export interface RealtimeIoAdapterOptions {
+  corsOrigin: string;
   redisAdapterEnabled: boolean;
   redisUrl: string | undefined;
 }
@@ -36,7 +37,12 @@ export class RealtimeIoAdapter extends IoAdapter {
   }
 
   override createIOServer(port: number, options?: ServerOptions): Server {
-    const server = super.createIOServer(port, options) as Server;
+    const server = super.createIOServer(port, {
+      ...options,
+      cors: {
+        origin: this.options.corsOrigin,
+      },
+    }) as Server;
     if (this.adapterConstructor) {
       server.adapter(this.adapterConstructor);
     }

@@ -30,12 +30,21 @@ describe("EnvSchema socket defaults", () => {
     expect(env.SOCKET_IO_REDIS_ADAPTER_ENABLED).toBe(true);
   });
 
-  it("falls back to REDIS_URL when the Redis adapter is enabled", () => {
+  it("preserves REDIS_URL when the Redis adapter is enabled", () => {
     const env = EnvSchema.parse({
       ...baseEnv,
       SOCKET_IO_REDIS_ADAPTER_ENABLED: "true",
     });
 
     expect(env.REDIS_URL).toBe("redis://localhost:6379");
+  });
+
+  it("applies a custom Socket.IO namespace", () => {
+    const env = EnvSchema.parse({
+      ...baseEnv,
+      SOCKET_IO_NAMESPACE: "/custom",
+    });
+
+    expect(env.SOCKET_IO_NAMESPACE).toBe("/custom");
   });
 });
