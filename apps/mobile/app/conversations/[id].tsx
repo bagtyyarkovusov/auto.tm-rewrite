@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, MoreVertical } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useViewer } from "../../src/auth/useViewer";
@@ -11,6 +11,9 @@ import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { useConversationSocket } from "../../src/conversations/socket/useConversationSocket";
+import { useBlockUser } from "../../src/api/identity/useBlockUser";
+import { useUnblockUser } from "../../src/api/identity/useUnblockUser";
+import { useIsBlocked } from "../../src/api/identity/useIsBlocked";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { MessageList } from "../../src/conversations/components/MessageList";
 import { MessageComposer } from "../../src/conversations/components/MessageComposer";
@@ -22,6 +25,22 @@ import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { ErrorState } from "@/components/ErrorState";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface LocalMessage {
   id: string;
@@ -45,10 +64,16 @@ export default function ConversationDetailScreen() {
   const goBack = useSafeBack("/(tabs)/chat");
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
+  const [confirmAction, setConfirmAction] = useState<
+    "block" | "unblock" | null
+  >(null);
 
   const messagesQuery = useConversationMessages({ conversationId });
   const sendHttpMessage = useSendTextMessage();
   const socket = useConversationSocket(conversationId);
+
+  const blockUser = useBlockUser();
+  const unblockUser = useUnblockUser();
 
   const listingCard = useMemo(() => {
     const listingId =
@@ -56,25 +81,20 @@ export default function ConversationDetailScreen() {
     if (!listingId) return null;
     return {
       id: listingId,
-      brandId:
-        typeof params.brandId === "string" ? params.brandId : "",
-      modelId:
-        typeof params.modelId === "string" ? params.modelId : "",
+      brandId: typeof params.brandId === "string" ? params.brandId : "",
+      modelId: typeof params.modelId === "string" ? params.modelId : "",
       year: typeof params.year === "string" ? Number(params.year) : undefined,
       displayPriceTmt:
         typeof params.displayPriceTmt === "string"
           ? Number(params.displayPriceTmt)
           : 0,
       priceCurrency:
-        typeof params.priceCurrency === "string"
-          ? params.priceCurrency
-          : "TMT",
+        typeof params.priceCurrency === "string" ? params.priceCurrency : "TMT",
       coverMediaKey:
         typeof params.coverMediaKey === "string"
           ? params.coverMediaKey
           : undefined,
-      status:
-        typeof params.status === "string" ? params.status : "active",
+      status: typeof params.status === "string" ? params.status : "active",
     };
   }, [params]);
 
@@ -90,6 +110,45 @@ export default function ConversationDetailScreen() {
     if (!listingCard?.modelId) return undefined;
     return modelsData?.items.find((m) => m.id === listingCard.modelId)?.name;
   }, [modelsData, listingCard?.modelId]);
+
+  const otherUserId = useMemo(() => {
+    if (!viewer?.userId) return undefined;
+    const buyerId = typeof params.buyerId === "string" ? params.buyerId : "";
+    const sellerId =
+      typeof params.sellerId === "string" ? params.sellerId : "";
+    if (!buyerId || !sellerId) return undefined;
+    return viewer.userId === buyerId ? sellerId : buyerId;
+  }, [viewer?.userId, params.buyerId, params.sellerId]);
+
+  const isBlockedQuery = useIsBlocked(otherUserId ?? "", {
+    enabled: !!otherUserId,
+  });
+
+  const isBlocked = isBlockedQuery.data?.blocked ?? false;
+
+  const handleBlock = useCallback(() => {
+    if (!otherUserId) return;
+    blockUser.mutate(
+      { userId: otherUserId },
+      {
+        onSuccess: () => {
+          setConfirmAction(null);
+        },
+      },
+    );
+  }, [blockUser, otherUserId]);
+
+  const handleUnblock = useCallback(() => {
+    if (!otherUserId) return;
+    unblockUser.mutate(
+      { userId: otherUserId },
+      {
+        onSuccess: () => {
+          setConfirmAction(null);
+        },
+      },
+    );
+  }, [unblockUser, otherUserId]);
 
   const allMessages: LocalMessage[] = useMemo(() => {
     const serverMessages: LocalMessage[] =
@@ -122,15 +181,18 @@ export default function ConversationDetailScreen() {
     );
   }, [messagesQuery.data, localMessages]);
 
-  const markConfirmed = useCallback((clientMessageId: string, serverId: string) => {
-    setLocalMessages((prev) =>
-      prev.map((m) =>
-        m.clientMessageId === clientMessageId
-          ? { ...m, id: serverId, status: "confirmed" }
-          : m,
-      ),
-    );
-  }, []);
+  const markConfirmed = useCallback(
+    (clientMessageId: string, serverId: string) => {
+      setLocalMessages((prev) =>
+        prev.map((m) =>
+          m.clientMessageId === clientMessageId
+            ? { ...m, id: serverId, status: "confirmed" }
+            : m,
+        ),
+      );
+    },
+    [],
+  );
 
   const markFailed = useCallback((clientMessageId: string) => {
     setLocalMessages((prev) =>
@@ -159,7 +221,7 @@ export default function ConversationDetailScreen() {
 
   const handleSend = useCallback(
     async (text: string) => {
-      if (!viewer?.userId || !conversationId) return;
+      if (!viewer?.userId || !conversationId || isBlocked) return;
 
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
@@ -188,19 +250,25 @@ export default function ConversationDetailScreen() {
         markFailed(clientMessageId);
       }
     },
-    [conversationId, markConfirmed, markFailed, sendViaHttp, socket, viewer?.userId],
+    [
+      conversationId,
+      isBlocked,
+      markConfirmed,
+      markFailed,
+      sendViaHttp,
+      socket,
+      viewer?.userId,
+    ],
   );
 
   const handleRetry = useCallback(
     async (tempId: string) => {
-      if (!conversationId) return;
+      if (!conversationId || isBlocked) return;
       const msg = localMessages.find((m) => m.id === tempId);
       if (!msg || msg.status !== "failed") return;
 
       setLocalMessages((prev) =>
-        prev.map((m) =>
-          m.id === tempId ? { ...m, status: "pending" } : m,
-        ),
+        prev.map((m) => (m.id === tempId ? { ...m, status: "pending" } : m)),
       );
 
       const result = await socket.sendTextMessage({
@@ -217,31 +285,74 @@ export default function ConversationDetailScreen() {
         markFailed(msg.clientMessageId);
       }
     },
-    [conversationId, localMessages, markConfirmed, markFailed, sendViaHttp, socket],
+    [conversationId, isBlocked, localMessages, markConfirmed, markFailed, sendViaHttp, socket],
   );
 
   const isLoading = messagesQuery.isPending;
   const isError = messagesQuery.isError;
 
+  const confirmDialogOpen = confirmAction !== null;
+  const confirmTitle =
+    confirmAction === "block"
+      ? t("blockUserConfirmTitle")
+      : t("unblockUserConfirmTitle");
+  const confirmDescription =
+    confirmAction === "block"
+      ? t("blockUserConfirmDescription")
+      : t("unblockUserConfirmDescription");
+  const confirmActionLabel =
+    confirmAction === "block"
+      ? t("blockUserConfirmAction")
+      : t("unblockUserConfirmAction");
+  const onConfirm = confirmAction === "block" ? handleBlock : handleUnblock;
+
   return (
     <SafeScreen>
       {/* Header */}
-      <View className="flex-row items-center gap-2 px-4 py-3 border-b border-border">
-        <Button
-          variant="ghost"
-          className="h-11 w-11"
-          size="icon"
-          onPress={goBack}
-          accessibilityLabel={t("goBack")}
-        >
-          <Icon as={ArrowLeft} className="size-5 text-foreground" />
-        </Button>
-        <Text
-          className="text-lg font-semibold text-foreground"
-          numberOfLines={1}
-        >
-          {t("messages")}
-        </Text>
+      <View className="flex-row items-center justify-between gap-2 px-4 py-3 border-b border-border">
+        <View className="flex-row items-center gap-2 flex-1">
+          <Button
+            variant="ghost"
+            className="h-11 w-11"
+            size="icon"
+            onPress={goBack}
+            accessibilityLabel={t("goBack")}
+          >
+            <Icon as={ArrowLeft} className="size-5 text-foreground" />
+          </Button>
+          <Text
+            className="text-lg font-semibold text-foreground"
+            numberOfLines={1}
+          >
+            {t("messages")}
+          </Text>
+        </View>
+
+        {otherUserId && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-11 w-11"
+                size="icon"
+                accessibilityLabel={t("details")}
+              >
+                <Icon as={MoreVertical} className="size-5 text-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {isBlocked ? (
+                <DropdownMenuItem onPress={() => setConfirmAction("unblock")}>
+                  {t("unblockUser")}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onPress={() => setConfirmAction("block")}>
+                  {t("blockUser")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </View>
 
       {/* Listing card */}
@@ -287,13 +398,58 @@ export default function ConversationDetailScreen() {
         )}
       </View>
 
+      {/* Blocked state banner */}
+      {isBlocked && (
+        <View className="px-4 py-3 border-t border-border bg-muted">
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-foreground">
+                {t("blockedStateTitle")}
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                {t("blockedStateDescription")}
+              </Text>
+            </View>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => setConfirmAction("unblock")}
+              disabled={unblockUser.isPending}
+            >
+              {t("blockedStateUnblock")}
+            </Button>
+          </View>
+        </View>
+      )}
+
       {/* Composer */}
       {viewer?.userId && (
         <MessageComposer
           onSend={handleSend}
-          disabled={false}
+          disabled={isBlocked || blockUser.isPending || unblockUser.isPending}
         />
       )}
+
+      {/* Block / Unblock confirmation */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={() => setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onPress={() => setConfirmAction(null)}>
+              {t("cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onPress={onConfirm}
+              disabled={blockUser.isPending || unblockUser.isPending}
+            >
+              {confirmActionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SafeScreen>
   );
 }

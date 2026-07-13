@@ -31,10 +31,11 @@ All push delivery + in-app notification feed + admin broadcast tooling. Push-tok
   - `application/RegisterPushToken.ts` — register or re-register a token.
   - `application/RevokePushToken.ts` — invalidate a token.
   - `application/ListPushTokens.ts` — list active tokens for the current user.
+  - `application/EvaluateDirectMessagePush.ts` — decides whether a direct-message push should be sent by checking block state in both directions and active token presence.
+  - `application/MessageSentEventHandler.ts` — `@OnEvent("MessageSent")` handler that delegates to `EvaluateDirectMessagePush`; suppresses push when blocked or no tokens. Actual transport dispatch is deferred to the push-worker slice.
   - `infrastructure/PrismaPushTokenRepository.ts` — Prisma-backed repository adapter.
   - `presentation/notifications.controller.ts` — HTTP routes.
-  - `notifications.module.ts` — NestJS module wiring.
-- No dispatch layer, no transport adapters, no event consumers.
+  - `notifications.module.ts` — NestJS module wiring; imports `EventEmitterModule` and `IdentityModule`.
 
 ## Ports exposed
 
@@ -52,12 +53,15 @@ All push delivery + in-app notification feed + admin broadcast tooling. Push-tok
 ## Ports consumed
 
 - `PrismaService` (via `@auto-tm/db`) — `PrismaPushTokenRepository` maps `FcmDevice` rows to/from `PushToken`.
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `EvaluateDirectMessagePush` for bidirectional block checks (`isUserBlockedBy`).
 
 ## Shipped use-cases
 
 - `RegisterPushToken` — validates token + platform, handles same-user re-registration, cross-user reassignment, and inserts/upserts the row.
 - `RevokePushToken` — soft-invalidates the token for the authenticated user; idempotent.
 - `ListPushTokens` — returns active tokens ordered by `lastUsedAt DESC`.
+- `EvaluateDirectMessagePush` — returns `shouldSend: true` only when the recipient has not blocked the sender, the sender has not blocked the recipient, and the recipient has at least one active push token. Otherwise returns `shouldSend: false` with reason `BLOCKED` or `NO_TOKENS`.
+- `MessageSentEventHandler` — listens for `MessageSent` from `conversations/` and suppresses push via `EvaluateDirectMessagePush` when ineligible. Does not dispatch transport; that remains post-MLP.
 
 ## HTTP routes
 
@@ -72,7 +76,7 @@ All push delivery + in-app notification feed + admin broadcast tooling. Push-tok
 
 ## Events consumed
 
-- (none today)
+- `MessageSent` (from `conversations/`) — triggers `EvaluateDirectMessagePush` and suppresses push for blocked or no-token cases.
 
 ## Planned additions (post-MLP notification platform)
 

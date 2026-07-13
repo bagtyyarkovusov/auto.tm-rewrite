@@ -16,7 +16,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - `Dealership` — id, slug (unique), name, logoUrl?, cityId?, createdAt, updatedAt
 - `DealershipMember` — id, dealershipId, userId (unique — at most one dealership per user), role (`DealershipMemberRole` enum: owner | sales), createdAt
 - `OwnedVehicle` (Garage entry) — id, userId, dealershipId?, brand (String), model (String), year?, createdAt, updatedAt
-- `BlockedUser` — id, blockerId, blockedId, createdAt; unique on `(blockerId, blockedId)`
+- `BlockedUser` — id, blockerId, blockedId, createdAt; unique on `(blockerId, blockedId)`. One-way relationship: a block by A on B does not imply a block by B on A.
 
 ## Invariants
 
@@ -34,7 +34,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - `OtpRequest` expires after 5 minutes; max 5 attempts before invalidation (application-level).
 - Rate limits: 5 OTP requests per phone per 24h; 10 per IP per hour. Exponential backoff: `60 × 2^N` seconds where N is the count of prior requests.
 - `SMS_DRIVER=mock` (default) logs the OTP code; `SMS_DRIVER=gateway` sends via SMS gateway. `OTP_TEST_MODE=true` returns the plaintext code in the API response.
-- `BlockedUser` is one-way (block by A on B). If both want, both must block.
+- `BlockedUser` is one-way (block by A on B). If both want, both must block. Self-blocking is rejected at the application layer (`BlockUser`) and the domain entity (`BlockedUser`).
 - **S7 user suspension enforcement** — `User.suspendedAt` blocks authenticated marketplace mutations across `listings/` (create/edit/publish/media/state), `conversations/` (new contact/send when either participant is suspended), and `admin/` (report creation). Suspended users may still authenticate, log out, browse public surfaces, view their generic suspension state, and delete their account. Enforcement is synchronous via `IdentityCheckPort.isSuspended` (no event side effects). `IdentityAdminPort` owns the suspension field writes and participates in the caller's transaction for S7 admin moderation.
 
 ## Ports exposed (consumed by other contexts)
@@ -66,6 +66,7 @@ TotpVerifierPort           // TOTP secret generation, otpauth URI generation, co
 TotpEnrollmentRepository   // TotpEnrollment persistence (findByUserId, createPending, markVerified, addBackupCodes, findBackupCodes, consumeBackupCode, completeFirstVerification transaction, consumeBackupCodeAndElevate transaction, deleteByUserId)
 TotpThrottlePort           // failed-attempt counting per user/session with window expiry
 SecurityLoggerPort         // structured security logging for TOTP failures
+BlockedUserRepository      // one-way block/unblock persistence and check
 ```
 
 ## Ports consumed (from other contexts)
@@ -86,6 +87,9 @@ SecurityLoggerPort         // structured security logging for TOTP failures
 - `GetAdminTotpStatus` — returns `enrolled`, `elevated`, and optional `adminTotpExpiresAt` for the current admin session. No secret/backup material. Exposed as `GET /api/v1/auth/admin/totp/status` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 - `EnrollAdminTotp` — generates a new TOTP secret, encrypts it, creates a pending `TotpEnrollment`, and returns QR URI + plaintext secret. Verified re-enroll returns HTTP 409 `TOTP_ALREADY_ENROLLED`; pending unverified enrollment is idempotent and returns the same encrypted secret/QR across calls and sessions for the same user so a scanned authenticator entry remains usable until first verification. The plaintext secret is decrypted server-side for this response (and again for verification); the tradeoff is recorded in ADR-0038. Concurrent `enroll` calls race on `TotpEnrollment.userId @@unique`; the loser returns the existing pending row instead of throwing. Exposed as `POST /api/v1/auth/admin/totp/enroll` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
 - `VerifyAdminTotp` — verifies a TOTP code (first enrollment) or TOTP code/backup code (post-enrollment). On first success, marks enrollment verified, generates 10 backup codes (SHA-256 hashed, stored), sets `Session.adminTotpExpiresAt = now + 12h`, and returns `adminTotpExpiresAt` + plaintext backup codes exactly once; first-enrollment persistence is atomic so a partial backup-code/enrollment failure cannot leave an elevated unverified session. Post-enrollment returns `adminTotpExpiresAt` only. Implements 5-failure/10-min throttle, adjacent-step skew, atomic backup-code consumption + elevation, and structured security logging on failure. Exposed as `POST /api/v1/auth/admin/totp/verify` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
+- `BlockUser` — creates or confirms a one-way `BlockedUser` relationship from the authenticated user to the target user. Rejects self-blocking with `FORBIDDEN`. Idempotent. Exposed as `POST /api/v1/me/blocked-users` (requires bearer auth).
+- `UnblockUser` — removes the one-way `BlockedUser` relationship from the authenticated user to the target user. Idempotent no-op when no relationship exists. Exposed as `DELETE /api/v1/me/blocked-users/:userId` (requires bearer auth).
+- `IsBlocked` — returns `{ blocked: boolean }` indicating whether the authenticated user has blocked the target user. Exposed as `GET /api/v1/me/blocked-users/:userId` (requires bearer auth).
 
 ### Account deletion scope (S8 — 30-day grace + tombstone purge)
 
