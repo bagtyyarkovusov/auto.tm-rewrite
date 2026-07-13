@@ -6,34 +6,41 @@ import { MessageBubble, type MessageStatus } from "./MessageBubble";
 
 import { Text } from "@/components/ui/text";
 
-interface MessageItem {
+export interface MessageItem {
   id: string;
   senderId: string;
   text: string;
   createdAt: string;
   status: MessageStatus;
+  deletedAt?: string | null;
+  canDelete?: boolean;
 }
 
 interface MessageListProps {
   messages: MessageItem[];
   currentUserId: string;
   onRetry?: (tempId: string) => void;
+  onDelete?: (messageId: string) => void;
 }
 
-export function MessageList({ messages, currentUserId, onRetry }: MessageListProps) {
+export function MessageList({ messages, currentUserId, onRetry, onDelete }: MessageListProps) {
   const { t } = useTranslation();
 
   const renderItem = useCallback(
     ({ item }: { item: MessageItem }) => (
       <MessageBubble
+        id={item.id}
         text={item.text}
         isMine={item.senderId === currentUserId}
         status={item.status}
         createdAt={item.createdAt}
+        deletedAt={item.deletedAt}
+        canDelete={item.canDelete}
         onRetry={item.status === "failed" ? () => onRetry?.(item.id) : undefined}
+        onDelete={item.canDelete && !item.deletedAt ? () => onDelete?.(item.id) : undefined}
       />
     ),
-    [currentUserId, onRetry],
+    [currentUserId, onRetry, onDelete],
   );
 
   const keyExtractor = useCallback((item: MessageItem) => item.id, []);

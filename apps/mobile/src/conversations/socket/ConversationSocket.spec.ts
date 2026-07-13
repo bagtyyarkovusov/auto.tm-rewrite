@@ -223,4 +223,83 @@ describe("ConversationSocket", () => {
     expect(mockSocket.disconnect).toHaveBeenCalled();
     expect(socket.getStatus()).toBe("idle");
   });
+
+  it("deletes a message and returns the durable ack", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    mockSocket.emit.mockImplementation(
+      (_event: string, _payload: unknown, callback: (ack: unknown) => void) => {
+        callback({
+          ok: true,
+          messageId: MSG_ID,
+          conversationId: CONV_ID,
+          deletedAt: "2026-06-01T12:05:00.000Z",
+        });
+      },
+    );
+
+    const result = await socket.deleteMessage({
+      conversationId: CONV_ID,
+      messageId: MSG_ID,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      messageId: MSG_ID,
+      conversationId: CONV_ID,
+      deletedAt: "2026-06-01T12:05:00.000Z",
+    });
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      "message:delete",
+      {
+        conversationId: CONV_ID,
+        messageId: MSG_ID,
+      },
+      expect.any(Function),
+    );
+  });
+
+  it("returns NOT_CONNECTED when deleting while disconnected", async () => {
+    mockSocket.connected = false;
+    mockSocket.on.mockImplementation(() => {
+      // do not trigger connect
+    });
+
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const result = await socket.deleteMessage({
+      conversationId: CONV_ID,
+      messageId: MSG_ID,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "NOT_CONNECTED",
+      message: "Socket is not connected",
+    });
+  });
+
+  it("forwards message:deleted events to listeners", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const listener = vi.fn();
+    socket.subscribeDeletedMessage(listener);
+
+    const deletedHandler = mockSocket.on.mock.calls.find(
+      (call) => call[0] === "message:deleted",
+    )?.[1] as (event: unknown) => void;
+
+    const event = {
+      messageId: MSG_ID,
+      conversationId: CONV_ID,
+      deletedAt: "2026-06-01T12:05:00.000Z",
+    };
+
+    deletedHandler(event);
+
+    expect(listener).toHaveBeenCalledWith(event);
+  });
 });

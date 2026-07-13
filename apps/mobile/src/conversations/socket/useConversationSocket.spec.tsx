@@ -17,8 +17,10 @@ const mockSocket = {
   joinConversation: vi.fn(),
   leaveConversation: vi.fn(),
   sendTextMessage: vi.fn(),
+  deleteMessage: vi.fn(),
   subscribeStatus: vi.fn().mockReturnValue(() => {}),
   subscribeMessage: vi.fn().mockReturnValue(() => {}),
+  subscribeDeletedMessage: vi.fn().mockReturnValue(() => {}),
   getStatus: vi.fn().mockReturnValue("idle"),
   isConnected: vi.fn().mockReturnValue(false),
 };
@@ -179,6 +181,89 @@ describe("useConversationSocket", () => {
       expect(invalidateQueriesSpy).toHaveBeenCalledWith({
         queryKey: queryKeys.conversations.messages(CONV_ID),
       });
+    });
+  });
+
+  it("provides a deleteMessage function that delegates to the socket", async () => {
+    mockSocket.deleteMessage.mockResolvedValue({
+      ok: true,
+      messageId: MSG_ID,
+      conversationId: CONV_ID,
+      deletedAt: "2026-06-01T12:05:00.000Z",
+    });
+
+    const { result } = renderHook(
+      () => useConversationSocket(CONV_ID),
+      { wrapper },
+    );
+
+    const response = await result.current.deleteMessage({
+      conversationId: CONV_ID,
+      messageId: MSG_ID,
+    });
+
+    expect(mockSocket.deleteMessage).toHaveBeenCalledWith({
+      conversationId: CONV_ID,
+      messageId: MSG_ID,
+    });
+    expect(response.ok).toBe(true);
+  });
+
+  it("patches the messages query cache on message:deleted", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const customWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    client.setQueryData(queryKeys.conversations.messages(CONV_ID), {
+      pages: [
+        {
+          items: [
+            {
+              id: MSG_ID,
+              conversationId: CONV_ID,
+              senderId: USER_ID,
+              kind: "text",
+              text: "Existing",
+              createdAt: "2026-06-01T11:00:00.000Z",
+            },
+          ],
+          nextCursor: null,
+        },
+      ],
+      pageParams: [null],
+    });
+
+    let deletedHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribeDeletedMessage.mockImplementation((handler) => {
+      deletedHandler = handler;
+      return () => {};
+    });
+
+    renderHook(() => useConversationSocket(CONV_ID), {
+      wrapper: customWrapper,
+    });
+
+    deletedHandler({
+      messageId: MSG_ID,
+      conversationId: CONV_ID,
+      deletedAt: "2026-06-01T12:05:00.000Z",
+    });
+
+    await waitFor(() => {
+      const data = client.getQueryData<{
+        pages: Array<{ items: unknown[]; nextCursor: string | null }>;
+      }>(queryKeys.conversations.messages(CONV_ID));
+      const item = data?.pages[0]?.items[0] as {
+        deletedAt?: string;
+        text?: string | null;
+        metadata?: unknown;
+      };
+      expect(item?.deletedAt).toBe("2026-06-01T12:05:00.000Z");
+      expect(item?.text).toBeNull();
+      expect(item?.metadata).toBeUndefined();
     });
   });
 });

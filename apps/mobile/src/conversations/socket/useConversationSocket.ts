@@ -6,6 +6,7 @@ import { queryKeys } from "../../api/queryKeys";
 import {
   ConversationSocket,
   type ConversationSocketStatus,
+  type MessageDeletedEvent,
   type MessageNewEvent,
   type SendTextMessageAck,
   type SocketErrorAck,
@@ -28,6 +29,13 @@ export interface UseConversationSocketReturn {
     text: string;
     clientMessageId: string;
   }) => Promise<SendTextMessageAck | SocketErrorAck>;
+  deleteMessage: (input: {
+    conversationId: string;
+    messageId: string;
+  }) => Promise<
+    | { ok: true; messageId: string; conversationId: string; deletedAt: string }
+    | { ok: false; code: string; message: string }
+  >;
 }
 
 export function useConversationSocket(
@@ -76,9 +84,14 @@ export function useConversationSocket(
       handleMessageNew(queryClient, event);
     });
 
+    const unsubscribeDeleted = socket.subscribeDeletedMessage((event) => {
+      handleMessageDeleted(queryClient, event);
+    });
+
     return () => {
       unsubscribeStatus();
       unsubscribeMessage();
+      unsubscribeDeleted();
       void socket.leaveConversation(conversationId);
       joinedRef.current = false;
     };
@@ -95,7 +108,20 @@ export function useConversationSocket(
     [],
   );
 
-  return { status, isConnected, sendTextMessage };
+  const deleteMessage = useCallback(
+    async (input: {
+      conversationId: string;
+      messageId: string;
+    }): Promise<
+      | { ok: true; messageId: string; conversationId: string; deletedAt: string }
+      | { ok: false; code: string; message: string }
+    > => {
+      return socketRef.current.deleteMessage(input);
+    },
+    [],
+  );
+
+  return { status, isConnected, sendTextMessage, deleteMessage };
 }
 
 function handleMessageNew(
@@ -126,6 +152,45 @@ function handleMessageNew(
         if (exists) return page;
         return { ...page, items: [message, ...page.items] };
       });
+
+      return { ...old, pages };
+    },
+  );
+
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.list(),
+  });
+}
+
+function handleMessageDeleted(
+  queryClient: ReturnType<typeof useQueryClient>,
+  event: MessageDeletedEvent,
+): void {
+  const { messageId, conversationId, deletedAt } = event;
+
+  queryClient.setQueryData(
+    queryKeys.conversations.messages(conversationId),
+    (old: { pages: Array<{ items: unknown[]; nextCursor: string | null }> } | undefined) => {
+      if (!old) return old;
+
+      const pages = old.pages.map((page) => ({
+        ...page,
+        items: page.items.map((item) => {
+          const existing = item as {
+            id?: string;
+            deletedAt?: string;
+            text?: string | null;
+            metadata?: unknown;
+          };
+          if (existing.id !== messageId) return item;
+          return {
+            ...(item as Record<string, unknown>),
+            deletedAt,
+            text: null,
+            metadata: undefined,
+          };
+        }),
+      }));
 
       return { ...old, pages };
     },

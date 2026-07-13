@@ -40,6 +40,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - **Unread count** — `ListMyConversations` returns `unreadCount` derived from the participant's `lastReadAt` and non-deleted messages from the other participant.
 - **Mute** — `MuteConversation` sets or clears `ConversationParticipant.mutedAt` for the authenticated participant. Mute suppresses native push (push decision lives in `notifications/`, issue #244).
 - **Realtime room join rules** — `ConversationGateway` on namespace `/ws/chat` accepts `conversation:join` and `conversation:leave` events. A socket may join `conversation:{conversationId}` only when its authenticated user is a participant, neither participant is suspended, and neither user has blocked the other. `ValidateConversationAccess` enforces these rules by reusing the same participant, suspension, and block checks as the HTTP write path. Joins are idempotent; explicit leave removes the socket from the room. Socket.IO automatically evicts disconnected sockets from all rooms.
+- **Realtime delete fanout** — `ConversationGateway.handleDeleteMessage` accepts `message:delete` on `/ws/chat`, delegates persistence to `DeleteMessage`, and fans out `message:deleted` to `conversation:{conversationId}`. Both participants receive the event and update their local thread without requiring a full refetch; HTTP refetch remains authoritative on reconnect.
 
 ## Module shape (today)
 
@@ -108,7 +109,9 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 | `conversation:join` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleJoin` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
 | `conversation:leave` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleLeave` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
 | `message:send` | Client → Server | Required (via middleware) | `{ conversationId: uuid, kind: "text", text: string, clientMessageId?: string }` | `ConversationGateway.handleSendMessage` → `{ ok: true, message: MessageSummary }` or `{ ok: false, code, message }` |
+| `message:delete` | Client → Server | Required (via middleware) | `{ conversationId: uuid, messageId: uuid }` | `ConversationGateway.handleDeleteMessage` → `{ ok: true, messageId, conversationId, deletedAt }` or `{ ok: false, code, message }` |
 | `message:new` | Server → Client | Required (via room membership) | `{ message: MessageSummary }` | Broadcast to `conversation:{conversationId}` after a successful `message:send` |
+| `message:deleted` | Server → Client | Required (via room membership) | `{ messageId: uuid, conversationId: uuid, deletedAt: iso }` | Broadcast to `conversation:{conversationId}` after a successful `message:delete` |
 
 ## Planned additions (future sprints)
 

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useViewer } from "../../src/auth/useViewer";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
+import { useDeleteMessage } from "../../src/api/conversations/useDeleteMessage";
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
@@ -22,6 +23,16 @@ import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { ErrorState } from "@/components/ErrorState";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface LocalMessage {
   id: string;
@@ -30,6 +41,7 @@ interface LocalMessage {
   text: string;
   createdAt: string;
   status: MessageStatus;
+  deletedAt?: string | null;
 }
 
 function generateClientMessageId(): string {
@@ -45,9 +57,11 @@ export default function ConversationDetailScreen() {
   const goBack = useSafeBack("/(tabs)/chat");
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
 
   const messagesQuery = useConversationMessages({ conversationId });
   const sendHttpMessage = useSendTextMessage();
+  const deleteHttpMessage = useDeleteMessage();
   const socket = useConversationSocket(conversationId);
 
   const listingCard = useMemo(() => {
@@ -92,6 +106,10 @@ export default function ConversationDetailScreen() {
   }, [modelsData, listingCard?.modelId]);
 
   const allMessages: LocalMessage[] = useMemo(() => {
+    const viewerId = viewer?.userId;
+    const now = Date.now();
+    const deleteWindowMs = 5 * 60 * 1000;
+
     const serverMessages: LocalMessage[] =
       messagesQuery.data?.pages.flatMap(
         (page) =>
@@ -102,6 +120,11 @@ export default function ConversationDetailScreen() {
             text: m.text ?? "",
             createdAt: m.createdAt,
             status: "confirmed" as MessageStatus,
+            deletedAt: m.deletedAt,
+            canDelete:
+              m.senderId === viewerId &&
+              !m.deletedAt &&
+              now - new Date(m.createdAt).getTime() <= deleteWindowMs,
           })),
       ) ?? [];
 
@@ -120,7 +143,7 @@ export default function ConversationDetailScreen() {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [messagesQuery.data, localMessages]);
+  }, [messagesQuery.data, localMessages, viewer?.userId]);
 
   const markConfirmed = useCallback((clientMessageId: string, serverId: string) => {
     setLocalMessages((prev) =>
@@ -220,6 +243,38 @@ export default function ConversationDetailScreen() {
     [conversationId, localMessages, markConfirmed, markFailed, sendViaHttp, socket],
   );
 
+  const deleteViaHttp = useCallback(
+    (messageId: string) => {
+      deleteHttpMessage.mutate({ conversationId, messageId });
+    },
+    [conversationId, deleteHttpMessage],
+  );
+
+  const handleDelete = useCallback(
+    async (messageId: string) => {
+      if (!conversationId || !viewer?.userId) return;
+      setMessageToDelete(null);
+
+      const result = await socket.deleteMessage({
+        conversationId,
+        messageId,
+      });
+
+      if (!result.ok) {
+        deleteViaHttp(messageId);
+      }
+    },
+    [conversationId, deleteViaHttp, socket, viewer?.userId],
+  );
+
+  const confirmDeleteMessage = useCallback((messageId: string) => {
+    setMessageToDelete(messageId);
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    setMessageToDelete(null);
+  }, []);
+
   const isLoading = messagesQuery.isPending;
   const isError = messagesQuery.isError;
 
@@ -277,6 +332,7 @@ export default function ConversationDetailScreen() {
             messages={allMessages}
             currentUserId={viewer.userId}
             onRetry={handleRetry}
+            onDelete={confirmDeleteMessage}
           />
         ) : (
           <View className="flex-1 items-center justify-center px-6">
@@ -294,6 +350,29 @@ export default function ConversationDetailScreen() {
           disabled={false}
         />
       )}
+
+      <AlertDialog open={!!messageToDelete} onOpenChange={cancelDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("deleteMessageTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("deleteMessageDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onPress={cancelDelete}>
+              <Text>{t("cancel")}</Text>
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onPress={() =>
+                messageToDelete && handleDelete(messageToDelete)
+              }
+            >
+              <Text>{t("delete")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SafeScreen>
   );
 }

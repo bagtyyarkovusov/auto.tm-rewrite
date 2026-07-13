@@ -485,6 +485,9 @@ export const resources: Resource = {
     conversations: {
       chat: "Сообщения",
       messagePlaceholder: "Напишите сообщение...",
+      deleteMessageTitle: "Удалить сообщение?",
+      deleteMessageDescription: "Сообщение будет удалено для всех участников. Это действие нельзя отменить.",
+      messageDeleted: "Сообщение удалено",
     },
     onboarding: {
       chooseLanguage: "Выберите язык",
@@ -967,6 +970,9 @@ export const resources: Resource = {
     conversations: {
       chat: "Habarlaşmalar",
       messagePlaceholder: "Habar ýazyň...",
+      deleteMessageTitle: "Habary poz?",
+      deleteMessageDescription: "Habar ähli gatnaşyjylar üçin pozular. Bu hereket yzyna alynp bilmez.",
+      messageDeleted: "Habar pozuldy",
     },
     onboarding: {
       chooseLanguage: "Dil saýlaň",
@@ -1427,6 +1433,9 @@ export const resources: Resource = {
     conversations: {
       chat: "Messages",
       messagePlaceholder: "Write a message...",
+      deleteMessageTitle: "Delete message?",
+      deleteMessageDescription: "The message will be deleted for all participants. This action cannot be undone.",
+      messageDeleted: "Message deleted",
     },
     onboarding: {
       chooseLanguage: "Choose language",

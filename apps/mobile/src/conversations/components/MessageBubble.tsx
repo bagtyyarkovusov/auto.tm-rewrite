@@ -1,6 +1,6 @@
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { RotateCcw } from "lucide-react-native";
+import { RotateCcw, Trash2 } from "lucide-react-native";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -8,34 +8,63 @@ import { Icon } from "@/components/ui/icon";
 export type MessageStatus = "confirmed" | "pending" | "failed";
 
 interface MessageBubbleProps {
+  id: string;
   text: string;
   isMine: boolean;
   status: MessageStatus;
   createdAt: string;
+  deletedAt?: string | null;
+  canDelete?: boolean;
   onRetry?: () => void;
+  onDelete?: () => void;
 }
 
-export function MessageBubble({ text, isMine, status, onRetry }: MessageBubbleProps) {
+export function MessageBubble({
+  text,
+  isMine,
+  status,
+  deletedAt,
+  canDelete,
+  onRetry,
+  onDelete,
+}: MessageBubbleProps) {
   const { t } = useTranslation();
+  const isDeleted = !!deletedAt;
+
   return (
     <View
       className={`flex-row ${isMine ? "justify-end" : "justify-start"} px-4 py-1`}
     >
-      <View
+      <Pressable
+        onLongPress={canDelete && !isDeleted ? onDelete : undefined}
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-          isMine
-            ? "bg-primary rounded-br-md"
-            : "bg-muted rounded-bl-md"
+          isDeleted
+            ? "bg-muted/60 rounded-md"
+            : isMine
+              ? "bg-primary rounded-br-md"
+              : "bg-muted rounded-bl-md"
         }`}
       >
-        <Text
-          className={`text-base leading-5 ${
-            isMine ? "text-primary-foreground" : "text-foreground"
-          }`}
-        >
-          {text}
-        </Text>
-        {status !== "confirmed" && (
+        {isDeleted ? (
+          <View className="flex-row items-center gap-1.5">
+            <Icon
+              as={Trash2}
+              className="size-4 text-muted-foreground"
+            />
+            <Text className="text-sm italic text-muted-foreground">
+              {t("messageDeleted")}
+            </Text>
+          </View>
+        ) : (
+          <Text
+            className={`text-base leading-5 ${
+              isMine ? "text-primary-foreground" : "text-foreground"
+            }`}
+          >
+            {text}
+          </Text>
+        )}
+        {status !== "confirmed" && !isDeleted && (
           <View className="flex-row items-center justify-end gap-1.5 mt-1">
             {status === "pending" && (
               <Text className="text-xs text-primary-foreground/90">
@@ -60,7 +89,7 @@ export function MessageBubble({ text, isMine, status, onRetry }: MessageBubblePr
             )}
           </View>
         )}
-      </View>
+      </Pressable>
     </View>
   );
 }
