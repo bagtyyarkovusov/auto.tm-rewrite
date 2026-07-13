@@ -376,8 +376,6 @@ describe("Message-report schemas", () => {
   it("accepts a message report creation request", () => {
     const result = CreateMessageReportRequestSchema.safeParse({
       reason: "harassment",
-      messageId: validUuid,
-      conversationId: validUuid,
     });
     expect(result.success).toBe(true);
   });
@@ -385,8 +383,6 @@ describe("Message-report schemas", () => {
   it("requires details when reason is other", () => {
     const result = CreateMessageReportRequestSchema.safeParse({
       reason: "other",
-      messageId: validUuid,
-      conversationId: validUuid,
     });
     expect(result.success).toBe(false);
   });

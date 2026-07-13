@@ -118,12 +118,7 @@ export class GetReportDetail {
         : Promise.resolve(undefined),
     ]);
 
-    const target =
-      report.targetType === "listing"
-        ? this.buildListingTarget(listings[0], report.targetId)
-        : report.targetType === "user"
-          ? this.buildUserTarget(users[0], report.targetId)
-          : this.buildMessageTarget(report);
+    const target = this.buildTarget(report, listings[0], users[0]);
 
     let targetModerationState: GetReportDetailResult["targetModerationState"];
     if (report.targetType === "listing" && listings[0]) {
@@ -230,6 +225,24 @@ export class GetReportDetail {
       targetId: user.id,
       role: user.role,
     };
+  }
+
+  private buildTarget(
+    report: {
+      targetType: string;
+      targetId: string;
+      messageContext: { messageId: string; conversationId: string; listingId: string; buyerId: string; sellerId: string; senderId: string; createdAt: Date; body: string | null; deletedAt: Date | null } | null;
+    },
+    listing: { id: string; sellerId: string; status: string; year: number | null; brandName: string; modelName: string } | undefined,
+    user: { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | undefined,
+  ): GetReportDetailResult["target"] {
+    if (report.targetType === "listing") {
+      return this.buildListingTarget(listing, report.targetId);
+    }
+    if (report.targetType === "user") {
+      return this.buildUserTarget(user, report.targetId);
+    }
+    return this.buildMessageTarget(report);
   }
 
   private buildMessageTarget(report: {

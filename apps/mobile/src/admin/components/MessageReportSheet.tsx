@@ -21,6 +21,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 function useReasonLabels() {
   const { t } = useTranslation();
@@ -226,10 +227,6 @@ export function MessageReportSheet({
       </SheetContent>
     </Sheet>
   );
-}
-
-function cn(...classes: (string | false | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }
 
 function getErrorCopy(error: unknown, t: (key: string) => string): string {

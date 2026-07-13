@@ -197,7 +197,14 @@ export class ReportsController {
   }
 
   private userId(req: FastifyRequest): string {
-    return (req as AuthenticatedRequest).user?.sub as string;
+    const userId = (req as AuthenticatedRequest).user?.sub;
+    if (!userId) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "User id is required",
+      });
+    }
+    return userId;
   }
 
   private parseOrThrow<T>(

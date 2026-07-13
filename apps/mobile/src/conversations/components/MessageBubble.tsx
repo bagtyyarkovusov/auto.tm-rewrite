@@ -55,18 +55,21 @@ export function MessageBubble({
   const { t } = useTranslation();
   const isDeleted = !!deletedAt;
 
+  let longPressAction: (() => void) | undefined;
+  if (!isDeleted) {
+    if (canDelete) {
+      longPressAction = onDelete;
+    } else if (canReport) {
+      longPressAction = onReport;
+    }
+  }
+
   return (
     <View
       className={`flex-row ${isMine ? "justify-end" : "justify-start"} px-4 py-1`}
     >
       <Pressable
-        onLongPress={
-          canDelete && !isDeleted
-            ? onDelete
-            : canReport && !isDeleted
-              ? onReport
-              : undefined
-        }
+        onLongPress={longPressAction}
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
           isDeleted
             ? "bg-muted/60 rounded-md"

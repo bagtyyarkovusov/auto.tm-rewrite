@@ -116,8 +116,6 @@ export const CreateMessageReportRequestSchema = z
   .object({
     reason: z.nativeEnum(MessageReportReason),
     details: z.string().trim().max(1000).optional(),
-    messageId: z.string().uuid(),
-    conversationId: z.string().uuid(),
   })
   .refine(
     (data) => {
@@ -179,7 +177,7 @@ export const ReportDetailTargetSchema = z.object({
   senderId: z.string().uuid().optional(),
   messageCreatedAt: z.string().datetime().optional(),
   messageBody: z.string().optional(),
-  messageDeletedAt: z.string().datetime().optional(),
+  messageDeletedAt: z.string().datetime().nullish(),
 });
 export type ReportDetailTarget = z.infer<typeof ReportDetailTargetSchema>;
 
@@ -187,7 +185,7 @@ export const SurroundingMessageSchema = z.object({
   id: z.string().uuid(),
   senderId: z.string().uuid(),
   createdAt: z.string().datetime(),
-  body: z.string().optional(),
+  body: z.string().nullish(),
   deletedAt: z.string().datetime().optional(),
 });
 export type SurroundingMessage = z.infer<typeof SurroundingMessageSchema>;

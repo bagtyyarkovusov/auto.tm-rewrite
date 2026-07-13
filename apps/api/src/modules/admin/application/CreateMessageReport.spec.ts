@@ -146,8 +146,6 @@ function makeRequest(
   opts: { details?: string } = {},
 ): AdminSchemas.CreateMessageReportRequest {
   return {
-    conversationId: "conv-1",
-    messageId: "msg-1",
     reason,
     ...(opts.details ? { details: opts.details } : {}),
   };
@@ -381,10 +379,8 @@ describe("CreateMessageReport", () => {
         conversationId: "conv-1",
         messageId: "msg-1",
         request: {
-        conversationId: "conv-1",
-        messageId: "msg-1",
-        reason: "wrong_category" as unknown as AdminSchemas.MessageReportReason,
-      },
+          reason: "wrong_category" as unknown as AdminSchemas.MessageReportReason,
+        },
       }),
     ).rejects.toThrow(BadRequestException);
   });
