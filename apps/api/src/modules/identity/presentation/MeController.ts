@@ -10,6 +10,7 @@ import {
   Req,
   Body,
   BadRequestException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
@@ -111,7 +112,14 @@ export class MeController {
   }
 
   private userId(req: FastifyRequest): string {
-    return (req as AuthenticatedRequest).user?.sub as string;
+    const sub = (req as AuthenticatedRequest).user?.sub;
+    if (!sub) {
+      throw new UnauthorizedException({
+        code: "UNAUTHENTICATED",
+        message: "Authentication required",
+      });
+    }
+    return sub;
   }
 
   private parseOrThrow<T>(

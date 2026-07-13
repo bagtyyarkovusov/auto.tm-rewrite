@@ -16,7 +16,7 @@ export function useUnblockUser() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.me() });
       void queryClient.invalidateQueries({
-        queryKey: [...queryKeys.me(), "blocked", variables.userId],
+        queryKey: queryKeys.meBlocked(variables.userId),
       });
     },
   });

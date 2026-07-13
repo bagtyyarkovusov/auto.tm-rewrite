@@ -6,7 +6,7 @@ import { queryKeys } from "../queryKeys";
 
 export function useIsBlocked(userId: string, options: { enabled?: boolean } = {}) {
   return useQuery({
-    queryKey: [...queryKeys.me(), "blocked", userId],
+    queryKey: queryKeys.meBlocked(userId),
     queryFn: () =>
       apiClient.get(
         `/me/blocked-users/${userId}`,

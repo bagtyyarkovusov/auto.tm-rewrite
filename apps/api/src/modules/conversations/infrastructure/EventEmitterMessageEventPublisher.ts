@@ -13,6 +13,6 @@ export class EventEmitterMessageEventPublisher
   constructor(private readonly emitter: EventEmitter2) {}
 
   async emitMessageSent(event: MessageSentEvent): Promise<void> {
-    this.emitter.emit(event.event, event);
+    await this.emitter.emitAsync(event.event, event);
   }
 }
