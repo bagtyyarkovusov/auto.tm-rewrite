@@ -38,7 +38,6 @@ No domain entities. Domain artifacts:
   - `infrastructure/SocketConnectionRegistry.ts`
   - `infrastructure/realtime.config.ts`
   - `realtime.module.ts`
-  - `realtime.tokens.ts`
 
 ## Configuration
 
