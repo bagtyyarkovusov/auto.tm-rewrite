@@ -64,6 +64,23 @@ describe("MessageComposer", () => {
   it("has accessible input label", () => {
     expect(source).toContain('accessibilityLabel={t("sendMessage")}');
   });
+
+  it("accepts showQuickReplies prop", () => {
+    expect(source).toContain("showQuickReplies?: boolean");
+  });
+
+  it("renders QuickReplies when showQuickReplies is true", () => {
+    expect(source).toContain("showQuickReplies &&");
+    expect(source).toContain("<QuickReplies");
+  });
+
+  it("fills composer text when a quick reply is selected", () => {
+    expect(source).toContain("onSelect={setText}");
+  });
+
+  it("forwards disabled state to QuickReplies", () => {
+    expect(source).toContain("disabled={disabled}");
+  });
 });
 
 describe("MessageComposer state transitions", () => {
