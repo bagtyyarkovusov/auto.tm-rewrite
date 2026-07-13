@@ -64,3 +64,9 @@ export type MessageMetadata = ImageMessageMetadata | PostRefMessageMetadata;
 export const DELETE_WINDOW_MS = 5 * 60 * 1000;
 
 export const SYSTEM_SENDER_ID = "system" as const;
+
+export const CONVERSATION_SOCKET_ERROR_CODES = {
+  MISSING_AUTH_TOKEN: "MISSING_AUTH_TOKEN",
+} as const;
+export type ConversationSocketErrorCode =
+  (typeof CONVERSATION_SOCKET_ERROR_CODES)[keyof typeof CONVERSATION_SOCKET_ERROR_CODES];

@@ -4,17 +4,16 @@ import {
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
-  WebSocketServer,
 } from "@nestjs/websockets";
-import { ConversationsSchemas } from "@auto-tm/contracts";
-import type { Server, Socket } from "socket.io";
+import { ConversationsSchemas, ErrorCode } from "@auto-tm/contracts";
+import type { Socket } from "socket.io";
 
 import {
   conversationRoom,
   REALTIME_NAMESPACE,
 } from "../../../realtime/infrastructure/realtime.config";
-import { REALTIME_ERROR_CODES } from "../../../realtime/domain/types";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
+import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 
 type JoinPayload = {
@@ -39,9 +38,6 @@ function parseJoinPayload(body: unknown): JoinPayload | null {
   namespace: REALTIME_NAMESPACE,
 })
 export class ConversationGateway {
-  @WebSocketServer()
-  server!: Server;
-
   constructor(
     @Inject(ValidateConversationAccess)
     private readonly validateAccess: ValidateConversationAccess,
@@ -67,7 +63,7 @@ export class ConversationGateway {
     if (!payload) {
       return {
         ok: false,
-        code: "VALIDATION_FAILED",
+        code: ErrorCode.ValidationFailed,
         message: "conversationId is required",
       };
     }
@@ -111,7 +107,7 @@ export class ConversationGateway {
     if (!payload) {
       return {
         ok: false,
-        code: "VALIDATION_FAILED",
+        code: ErrorCode.ValidationFailed,
         message: "conversationId is required",
       };
     }
@@ -135,7 +131,7 @@ export class ConversationGateway {
   private unauthenticatedError(): { ok: false; code: string; message: string } {
     return {
       ok: false,
-      code: REALTIME_ERROR_CODES.MISSING_AUTH_TOKEN,
+      code: CONVERSATION_SOCKET_ERROR_CODES.MISSING_AUTH_TOKEN,
       message: "Authentication required",
     };
   }
@@ -151,7 +147,7 @@ export class ConversationGateway {
         const code =
           typeof response["code"] === "string"
             ? response["code"]
-            : "FORBIDDEN";
+            : ErrorCode.Forbidden;
         const message =
           typeof response["message"] === "string"
             ? response["message"]
@@ -161,9 +157,9 @@ export class ConversationGateway {
     }
 
     if (err instanceof Error) {
-      return { ok: false, code: "INTERNAL_ERROR", message: err.message };
+      return { ok: false, code: ErrorCode.Internal, message: err.message };
     }
 
-    return { ok: false, code: "INTERNAL_ERROR", message: "Access denied" };
+    return { ok: false, code: ErrorCode.Internal, message: "Access denied" };
   }
 }

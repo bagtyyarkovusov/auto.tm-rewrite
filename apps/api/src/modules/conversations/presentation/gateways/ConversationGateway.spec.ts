@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from "vitest";
 import type { Socket } from "socket.io";
 
 import { conversationRoom } from "../../../realtime/infrastructure/realtime.config";
-import { REALTIME_ERROR_CODES } from "../../../realtime/domain/types";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
 import { Conversation } from "../../domain/Conversation";
+import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 
 import { ConversationGateway } from "./ConversationGateway";
@@ -95,7 +95,7 @@ describe("ConversationGateway", () => {
 
     expect(result).toEqual({
       ok: false,
-      code: REALTIME_ERROR_CODES.MISSING_AUTH_TOKEN,
+      code: CONVERSATION_SOCKET_ERROR_CODES.MISSING_AUTH_TOKEN,
       message: "Authentication required",
     });
     expect(socket.join).not.toHaveBeenCalled();
@@ -191,7 +191,7 @@ describe("ConversationGateway", () => {
 
     expect(result).toEqual({
       ok: false,
-      code: REALTIME_ERROR_CODES.MISSING_AUTH_TOKEN,
+      code: CONVERSATION_SOCKET_ERROR_CODES.MISSING_AUTH_TOKEN,
       message: "Authentication required",
     });
     expect(socket.leave).not.toHaveBeenCalled();
