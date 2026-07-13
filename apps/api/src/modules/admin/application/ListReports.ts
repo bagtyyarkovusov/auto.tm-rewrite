@@ -105,7 +105,10 @@ export class ListReports {
       });
     }
 
-    if (targetType !== undefined && !["listing", "user"].includes(targetType)) {
+    if (
+      targetType !== undefined &&
+      !["listing", "user", "message"].includes(targetType)
+    ) {
       throw new BadRequestException({
         code: "VALIDATION_FAILED",
         message: "Invalid targetType filter",
@@ -132,7 +135,11 @@ export class ListReports {
   }
 
   private async resolveTargetSummaries(
-    reports: Array<{ targetType: string; targetId: string }>,
+    reports: Array<{
+      targetType: string;
+      targetId: string;
+      messageContext: { messageId: string; conversationId: string; deletedAt: Date | null } | null;
+    }>,
   ): Promise<Map<string, { available: boolean; label: string; targetType: string; targetId: string }>> {
     const listingIds: string[] = [];
     const userIds: string[] = [];
@@ -171,6 +178,23 @@ export class ListReports {
         targetType: "user",
         targetId: u.id,
       });
+    }
+
+    for (const r of reports) {
+      if (r.targetType === "message") {
+        const ctx = r.messageContext;
+        const label = ctx
+          ? ctx.deletedAt
+            ? `Deleted message in conversation ${ctx.conversationId.slice(0, 8)}`
+            : `Message in conversation ${ctx.conversationId.slice(0, 8)}`
+          : "Unavailable target";
+        map.set(this.targetKey("message", r.targetId), {
+          available: ctx != null,
+          label,
+          targetType: "message",
+          targetId: r.targetId,
+        });
+      }
     }
 
     return map;

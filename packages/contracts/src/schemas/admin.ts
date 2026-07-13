@@ -12,6 +12,16 @@ export const ReportReason = {
 } as const;
 export type ReportReason = (typeof ReportReason)[keyof typeof ReportReason];
 
+export const MessageReportReason = {
+  Spam: "spam",
+  Scam: "scam",
+  Misleading: "misleading",
+  Harassment: "harassment",
+  Other: "other",
+} as const;
+export type MessageReportReason =
+  (typeof MessageReportReason)[keyof typeof MessageReportReason];
+
 export const ContentReportStatus = {
   Pending: "pending",
   Actioned: "actioned",
@@ -102,15 +112,22 @@ export const CreateReportResponseSchema = z.object({
 });
 export type CreateReportResponse = z.infer<typeof CreateReportResponseSchema>;
 
-export const CreateMessageReportRequestSchema = CreateReportBaseSchema
-  .extend({
+export const CreateMessageReportRequestSchema = z
+  .object({
+    reason: z.nativeEnum(MessageReportReason),
+    details: z.string().trim().max(1000).optional(),
     messageId: z.string().uuid(),
     conversationId: z.string().uuid(),
   })
-  .refine(requireDetailsWhenOther, {
-    message: "Details required when reason is other",
-    path: ["details"],
-  });
+  .refine(
+    (data) => {
+      if (data.reason === MessageReportReason.Other) {
+        return typeof data.details === "string" && data.details.trim().length > 0;
+      }
+      return true;
+    },
+    { message: "Details required when reason is other", path: ["details"] },
+  );
 export type CreateMessageReportRequest = z.infer<
   typeof CreateMessageReportRequestSchema
 >;
@@ -158,6 +175,7 @@ export const ReportDetailTargetSchema = z.object({
   status: z.string().optional(),
   role: z.string().optional(),
   conversationId: z.string().uuid().optional(),
+  listingId: z.string().uuid().optional(),
   senderId: z.string().uuid().optional(),
   messageCreatedAt: z.string().datetime().optional(),
   messageBody: z.string().optional(),
@@ -165,14 +183,24 @@ export const ReportDetailTargetSchema = z.object({
 });
 export type ReportDetailTarget = z.infer<typeof ReportDetailTargetSchema>;
 
+export const SurroundingMessageSchema = z.object({
+  id: z.string().uuid(),
+  senderId: z.string().uuid(),
+  createdAt: z.string().datetime(),
+  body: z.string().optional(),
+  deletedAt: z.string().datetime().optional(),
+});
+export type SurroundingMessage = z.infer<typeof SurroundingMessageSchema>;
+
 export const MessageReportContextSchema = z.object({
   conversationId: z.string().uuid(),
   messageId: z.string().uuid(),
+  listingId: z.string().uuid(),
   senderId: z.string().uuid(),
   messageCreatedAt: z.string().datetime(),
   messageBody: z.string().optional(),
   messageDeletedAt: z.string().datetime().optional(),
-  surroundingMessageIds: z.array(z.string().uuid()),
+  surroundingMessages: z.array(SurroundingMessageSchema),
 });
 export type MessageReportContext = z.infer<typeof MessageReportContextSchema>;
 
@@ -194,6 +222,7 @@ export const GetReportDetailResponseSchema = z.object({
       suspensionReason: z.string().nullable().optional(),
     })
     .optional(),
+  messageContext: MessageReportContextSchema.optional(),
   reportsSubmittedByReporterCount: z.number().int().nonnegative().optional(),
   pendingReportsOnTargetCount: z.number().int().nonnegative(),
 });

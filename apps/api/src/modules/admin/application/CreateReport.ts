@@ -155,6 +155,7 @@ export class CreateReport {
         targetId: input.targetId,
         reason: input.request.reason,
         details: input.request.details ?? null,
+        messageContext: null,
       });
     } catch (err) {
       if (err instanceof DomainError) {

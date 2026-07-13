@@ -193,6 +193,7 @@ function makeReport(
     reviewedById: null,
     reviewedAt: null,
     createdAt: new Date("2026-01-01T00:00:00Z"),
+    messageContext: null,
   });
 }
 

@@ -9,11 +9,18 @@ import type {
   ParticipantState,
 } from "../domain/ports/ConversationRepository";
 import type { ConversationStatePort } from "../domain/ports/ConversationStatePort";
+import type {
+  ConversationReportContextPort,
+  MessageReportContext,
+} from "../domain/ports/ConversationReportContextPort";
 import { toDomainMessage, toRawMetadata } from "./MessageMapper";
 
 @Injectable()
 export class PrismaConversationRepository
-  implements ConversationRepository, ConversationStatePort
+  implements
+    ConversationRepository,
+    ConversationStatePort,
+    ConversationReportContextPort
 {
   constructor(
     @Inject(PrismaService)
@@ -362,6 +369,106 @@ export class PrismaConversationRepository
         createdAt: { gt: lastReadAt },
       },
     });
+  }
+
+  async getMessageReportContext(input: {
+    conversationId: string;
+    messageId: string;
+  }): Promise<MessageReportContext | null> {
+    const [conversation, message] = await Promise.all([
+      this.prisma.conversation.findUnique({
+        where: { id: input.conversationId },
+      }),
+      this.prisma.message.findUnique({
+        where: { id: input.messageId },
+      }),
+    ]);
+
+    if (!conversation || !message) {
+      return null;
+    }
+
+    if (message.conversationId !== conversation.id) {
+      return null;
+    }
+
+    // Fetch a window of up to 10 messages before and after the reported
+    // message, keeping the reported message itself for positioning.
+    const beforeRows = await this.prisma.message.findMany({
+      where: {
+        conversationId: input.conversationId,
+        OR: [
+          { createdAt: { lt: message.createdAt } },
+          {
+            createdAt: { equals: message.createdAt },
+            id: { lt: message.id },
+          },
+        ],
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 10,
+    });
+
+    const afterRows = await this.prisma.message.findMany({
+      where: {
+        conversationId: input.conversationId,
+        OR: [
+          { createdAt: { gt: message.createdAt } },
+          {
+            createdAt: { equals: message.createdAt },
+            id: { gt: message.id },
+          },
+        ],
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: 10,
+    });
+
+    const contextRows = [
+      ...beforeRows.reverse(),
+      message,
+      ...afterRows,
+    ].sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() ||
+        a.id.localeCompare(b.id),
+    );
+
+    return {
+      messageId: message.id,
+      conversationId: conversation.id,
+      listingId: conversation.listingId,
+      buyerId: conversation.buyerId,
+      sellerId: conversation.sellerId,
+      senderId: message.senderId,
+      createdAt: message.createdAt,
+      body: message.body,
+      deletedAt: message.deletedAt,
+      surroundingMessages: contextRows
+        .filter((m) => m.id !== message.id)
+        .map((m) => ({
+          id: m.id,
+          senderId: m.senderId,
+          createdAt: m.createdAt,
+          body: m.body,
+          deletedAt: m.deletedAt,
+        })),
+    };
+  }
+
+  async isParticipant(
+    conversationId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const participant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+    return participant != null;
   }
 
   private toDomain(row: {

@@ -21,6 +21,7 @@ import { AdminSchemas } from "@auto-tm/contracts";
 import { AdminGuard } from "../../../common/admin.guard";
 import type { Env } from "../../../env.schema";
 import { CreateReport } from "../application/CreateReport";
+import { CreateMessageReport } from "../application/CreateMessageReport";
 import { ListReports } from "../application/ListReports";
 import { GetReportDetail } from "../application/GetReportDetail";
 
@@ -31,6 +32,8 @@ export class ReportsController {
   constructor(
     @Inject(CreateReport)
     private readonly createReportUC: CreateReport,
+    @Inject(CreateMessageReport)
+    private readonly createMessageReportUC: CreateMessageReport,
     @Inject(ListReports)
     private readonly listReportsUC: ListReports,
     @Inject(GetReportDetail)
@@ -96,6 +99,32 @@ export class ReportsController {
     return this.toResponse(result.report, result.reusedExisting);
   }
 
+  @Post("conversations/:conversationId/messages/:messageId/report")
+  async reportMessage(
+    @Param("conversationId") conversationId: string,
+    @Param("messageId") messageId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) res: FastifyReply,
+  ) {
+    this.assertReportEntryEnabled();
+    const reporterUserId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      AdminSchemas.CreateMessageReportRequestSchema,
+      body,
+    );
+
+    const result = await this.createMessageReportUC.execute({
+      reporterUserId,
+      conversationId,
+      messageId,
+      request: parsed,
+    });
+
+    res.status(result.reusedExisting ? HttpStatus.OK : HttpStatus.CREATED);
+    return this.toResponse(result.report, result.reusedExisting);
+  }
+
   // ── Admin report reads ──
 
   @Get("admin/reports")
@@ -139,11 +168,27 @@ export class ReportsController {
       reviewedAt: result.reviewedAt?.toISOString(),
       reporter: result.reporter,
       reviewer: result.reviewer,
-      target: result.target,
+      target: {
+        ...result.target,
+        messageCreatedAt: result.target.messageCreatedAt?.toISOString(),
+        messageDeletedAt: result.target.messageDeletedAt?.toISOString() ?? null,
+      },
       targetModerationState: result.targetModerationState
         ? {
             ...result.targetModerationState,
             suspendedAt: result.targetModerationState.suspendedAt?.toISOString() ?? null,
+          }
+        : undefined,
+      messageContext: result.messageContext
+        ? {
+            ...result.messageContext,
+            messageCreatedAt: result.messageContext.messageCreatedAt.toISOString(),
+            messageDeletedAt: result.messageContext.messageDeletedAt?.toISOString(),
+            surroundingMessages: result.messageContext.surroundingMessages.map((m) => ({
+              ...m,
+              createdAt: m.createdAt.toISOString(),
+              deletedAt: m.deletedAt?.toISOString(),
+            })),
           }
         : undefined,
       reportsSubmittedByReporterCount: result.reportsSubmittedByReporterCount,

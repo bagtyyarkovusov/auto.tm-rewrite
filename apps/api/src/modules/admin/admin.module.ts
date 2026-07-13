@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 
 import { ListingsModule } from "../listings/listings.module";
 import { IdentityModule } from "../identity/identity.module";
+import { ConversationsModule } from "../conversations/conversations.module";
 
 import { AdminController } from "./presentation/admin.controller";
 import { ReportsController } from "./presentation/ReportsController";
@@ -10,6 +11,7 @@ import { AuditController } from "./presentation/AuditController";
 import { AdminModerationController } from "./presentation/AdminModerationController";
 import { ConfigController } from "./presentation/ConfigController";
 import { CreateReport } from "./application/CreateReport";
+import { CreateMessageReport } from "./application/CreateMessageReport";
 import { ListReports } from "./application/ListReports";
 import { GetReportDetail } from "./application/GetReportDetail";
 import { ListAuditEntries } from "./application/ListAuditEntries";
@@ -24,7 +26,7 @@ import { CONTENT_REPORT_REPOSITORY } from "./domain/ports/ContentReportRepositor
 import { AUDIT_LOG_REPOSITORY } from "./domain/ports/AuditLogRepository";
 
 @Module({
-  imports: [EventEmitterModule, ListingsModule, IdentityModule],
+  imports: [EventEmitterModule, ListingsModule, IdentityModule, ConversationsModule],
   controllers: [AdminController, ReportsController, AuditController, AdminModerationController, ConfigController],
   providers: [
     PrismaContentReportRepository,
@@ -38,6 +40,7 @@ import { AUDIT_LOG_REPOSITORY } from "./domain/ports/AuditLogRepository";
       useClass: PrismaAuditLogRepository,
     },
     CreateReport,
+    CreateMessageReport,
     ListReports,
     GetReportDetail,
     ListAuditEntries,

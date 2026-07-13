@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaService } from "@auto-tm/db";
+import { PrismaService, Prisma } from "@auto-tm/db";
 
 import { ContentReport } from "../domain/ContentReport";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
@@ -21,6 +21,10 @@ export class PrismaContentReportRepository implements ContentReportRepository {
         reviewedById: report.reviewedById,
         reviewedAt: report.reviewedAt,
         createdAt: report.createdAt,
+        messageContext:
+          report.messageContext === null
+            ? Prisma.JsonNull
+            : (report.messageContext as unknown as Prisma.InputJsonValue),
       },
     });
 
@@ -131,7 +135,7 @@ export class PrismaContentReportRepository implements ContentReportRepository {
     return ContentReport.reconstruct({
       id: row.id,
       reporterUserId: row.reporterUserId,
-      targetType: row.targetType as "listing" | "user",
+      targetType: row.targetType as "listing" | "user" | "message",
       targetId: row.targetId,
       reason: row.reason as ContentReport["reason"],
       details: row.details,
@@ -139,6 +143,7 @@ export class PrismaContentReportRepository implements ContentReportRepository {
       reviewedById: row.reviewedById,
       reviewedAt: row.reviewedAt,
       createdAt: row.createdAt,
+      messageContext: (row.messageContext as ContentReport["messageContext"]) ?? null,
     });
   }
 }

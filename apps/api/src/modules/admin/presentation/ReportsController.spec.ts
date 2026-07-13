@@ -4,6 +4,7 @@ import type { ConfigService } from "@nestjs/config";
 
 import { ReportsController } from "./ReportsController";
 import type { CreateReport, CreateReportResult } from "../application/CreateReport";
+import type { CreateMessageReport, CreateMessageReportResult } from "../application/CreateMessageReport";
 import type { ListReports } from "../application/ListReports";
 import type { GetReportDetail } from "../application/GetReportDetail";
 import type { Env } from "../../../env.schema";
@@ -21,10 +22,26 @@ function makeController(opts: {
         targetId: "listing-1",
         reason: "spam",
         details: null,
+        messageContext: null,
       }),
       reusedExisting: false,
     } as CreateReportResult),
   } as unknown as CreateReport;
+
+  const createMessageReportUC = {
+    execute: vi.fn().mockResolvedValue({
+      report: ContentReport.create({
+        id: "report-2",
+        reporterUserId: "user-1",
+        targetType: "message",
+        targetId: "message-1",
+        reason: "spam",
+        details: null,
+        messageContext: null,
+      }),
+      reusedExisting: false,
+    } as CreateMessageReportResult),
+  } as unknown as CreateMessageReport;
 
   const listReportsUC = {
     execute: vi.fn().mockResolvedValue({
@@ -56,8 +73,8 @@ function makeController(opts: {
     }),
   } as unknown as ConfigService<Env, true>;
 
-  const controller = new ReportsController(createReportUC, listReportsUC, getReportDetailUC, config);
-  return { controller, createReportUC, listReportsUC, getReportDetailUC, config };
+  const controller = new ReportsController(createReportUC, createMessageReportUC, listReportsUC, getReportDetailUC, config);
+  return { controller, createReportUC, createMessageReportUC, listReportsUC, getReportDetailUC, config };
 }
 
 describe("ReportsController", () => {

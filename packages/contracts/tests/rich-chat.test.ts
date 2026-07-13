@@ -395,10 +395,18 @@ describe("Message-report schemas", () => {
     const result = MessageReportContextSchema.safeParse({
       conversationId: validUuid,
       messageId: validUuid,
+      listingId: validUuid,
       senderId: validUuid,
       messageCreatedAt: iso,
       messageBody: "Offensive text",
-      surroundingMessageIds: [validUuid],
+      surroundingMessages: [
+        {
+          id: validUuid,
+          senderId: validUuid,
+          createdAt: iso,
+          body: "Earlier message",
+        },
+      ],
     });
     expect(result.success).toBe(true);
   });

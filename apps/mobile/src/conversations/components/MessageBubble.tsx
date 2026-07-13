@@ -15,8 +15,10 @@ interface MessageBubbleProps {
   createdAt: string;
   deletedAt?: string | null;
   canDelete?: boolean;
+  canReport?: boolean;
   onRetry?: () => void;
   onDelete?: () => void;
+  onReport?: () => void;
 }
 
 function StatusIcon({ status, isMine }: { status: MessageStatus; isMine: boolean }) {
@@ -45,8 +47,10 @@ export function MessageBubble({
   status,
   deletedAt,
   canDelete,
+  canReport,
   onRetry,
   onDelete,
+  onReport,
 }: MessageBubbleProps) {
   const { t } = useTranslation();
   const isDeleted = !!deletedAt;
@@ -56,7 +60,13 @@ export function MessageBubble({
       className={`flex-row ${isMine ? "justify-end" : "justify-start"} px-4 py-1`}
     >
       <Pressable
-        onLongPress={canDelete && !isDeleted ? onDelete : undefined}
+        onLongPress={
+          canDelete && !isDeleted
+            ? onDelete
+            : canReport && !isDeleted
+              ? onReport
+              : undefined
+        }
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
           isDeleted
             ? "bg-muted/60 rounded-md"

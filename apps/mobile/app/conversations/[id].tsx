@@ -23,6 +23,7 @@ import { ConversationListingCard } from "../../src/conversations/components/Conv
 import { MessageList } from "../../src/conversations/components/MessageList";
 import { MessageComposer } from "../../src/conversations/components/MessageComposer";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
+import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -113,6 +114,7 @@ export default function ConversationDetailScreen() {
     "block" | "unblock" | null
   >(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [messageToReport, setMessageToReport] = useState<string | null>(null);
 
   const messagesQuery = useConversationMessages({ conversationId });
   const sendHttpMessage = useSendTextMessage();
@@ -434,6 +436,14 @@ export default function ConversationDetailScreen() {
     setMessageToDelete(null);
   }, []);
 
+  const confirmReportMessage = useCallback((messageId: string) => {
+    setMessageToReport(messageId);
+  }, []);
+
+  const cancelReport = useCallback(() => {
+    setMessageToReport(null);
+  }, []);
+
   const isLoading = messagesQuery.isPending;
   const isError = messagesQuery.isError;
 
@@ -535,6 +545,7 @@ export default function ConversationDetailScreen() {
             currentUserId={viewer.userId}
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}
+            onReport={confirmReportMessage}
           />
         ) : (
           <View className="flex-1 items-center justify-center px-6">
@@ -624,6 +635,16 @@ export default function ConversationDetailScreen() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Report message sheet */}
+      <MessageReportSheet
+        conversationId={conversationId}
+        messageId={messageToReport ?? ""}
+        open={!!messageToReport}
+        onOpenChange={(open) => {
+          if (!open) cancelReport();
+        }}
+      />
     </SafeScreen>
   );
 }

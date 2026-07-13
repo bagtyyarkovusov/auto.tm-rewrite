@@ -22,6 +22,7 @@ import { EventEmitterMessageEventPublisher } from "./infrastructure/EventEmitter
 import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
 import { MESSAGE_EVENT_PUBLISHER } from "./domain/ports/MessageEventPublisher";
 import { CONVERSATION_STATE_PORT } from "./domain/ports/ConversationStatePort";
+import { CONVERSATION_REPORT_CONTEXT_PORT } from "./domain/ports/ConversationReportContextPort";
 
 @Module({
   imports: [EventEmitterModule, ListingsModule, IdentityModule],
@@ -34,6 +35,10 @@ import { CONVERSATION_STATE_PORT } from "./domain/ports/ConversationStatePort";
     },
     {
       provide: CONVERSATION_STATE_PORT,
+      useExisting: CONVERSATION_REPOSITORY,
+    },
+    {
+      provide: CONVERSATION_REPORT_CONTEXT_PORT,
       useExisting: CONVERSATION_REPOSITORY,
     },
     {
@@ -53,6 +58,6 @@ import { CONVERSATION_STATE_PORT } from "./domain/ports/ConversationStatePort";
     ValidateConversationAccess,
     ConversationGateway,
   ],
-  exports: [CONVERSATION_STATE_PORT],
+  exports: [CONVERSATION_STATE_PORT, CONVERSATION_REPORT_CONTEXT_PORT],
 })
 export class ConversationsModule {}
