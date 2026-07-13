@@ -21,6 +21,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ContentModule } from "./modules/content/content.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { AdminModule } from "./modules/admin/admin.module";
+import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
 
 @Module({
@@ -55,6 +56,7 @@ import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
     ContentModule,
     ReportsModule,
     AdminModule,
+    RealtimeModule,
   ],
   controllers: [HealthController],
   providers: [

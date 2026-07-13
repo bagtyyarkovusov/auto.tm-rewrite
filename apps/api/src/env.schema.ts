@@ -37,6 +37,13 @@ export const EnvSchema = z.object({
     { message: "TOTP_SECRET_ENCRYPTION_KEY must be a 32-byte base64 string" },
   ),
 
+  SOCKET_IO_NAMESPACE: z.string().default("/ws/chat"),
+  SOCKET_IO_CORS_ORIGIN: z.string().default("*"),
+  SOCKET_IO_REDIS_ADAPTER_ENABLED: z
+    .string()
+    .transform((v) => v === "true")
+    .default("false"),
+
   MINIO_ENDPOINT: z.string().default("http://localhost:9000"),
   MINIO_PUBLIC_URL: z.string().default("http://localhost:9000"),
   MINIO_ACCESS_KEY: z.string().default("minioadmin"),

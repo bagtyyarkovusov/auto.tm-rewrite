@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { ListingsModule } from "../listings/listings.module";
 import { IdentityModule } from "../identity/identity.module";
+import { RealtimeModule } from "../realtime/realtime.module";
 
 import { ConversationsController } from "./presentation/conversations.controller";
 import { OpenConversation } from "./application/OpenConversation";
@@ -16,7 +17,7 @@ import { PrismaConversationRepository } from "./infrastructure/PrismaConversatio
 import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
 
 @Module({
-  imports: [ListingsModule, IdentityModule],
+  imports: [ListingsModule, IdentityModule, RealtimeModule],
   controllers: [ConversationsController],
   providers: [
     PrismaConversationRepository,

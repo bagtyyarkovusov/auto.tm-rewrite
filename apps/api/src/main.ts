@@ -7,9 +7,11 @@ import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
+import { ConfigService } from "@nestjs/config";
 import { Logger } from "nestjs-pino";
 
 import { AppModule } from "./app.module";
+import { RealtimeIoAdapter } from "./modules/realtime/infrastructure/RealtimeIoAdapter";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -19,6 +21,14 @@ async function bootstrap() {
   );
 
   app.useLogger(app.get(Logger));
+
+  const config = app.get(ConfigService);
+  const realtimeAdapter = new RealtimeIoAdapter(app, {
+    redisAdapterEnabled: config.get<boolean>("SOCKET_IO_REDIS_ADAPTER_ENABLED") ?? false,
+    redisUrl: config.get<string>("REDIS_URL"),
+  });
+  await realtimeAdapter.configure();
+  app.useWebSocketAdapter(realtimeAdapter);
 
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.getInstance().addHook("onRequest", (_req, _reply, done) => {

@@ -19,14 +19,14 @@ Every bounded context under `src/modules/<context>/` has four layers:
 
 ## What it contains
 
-- 9 bounded-context modules under `src/modules/` (admin, catalog, content, conversations, identity, listings, notifications, reports, subscriptions) — only `identity` has shipped use-cases today; the rest are skeletons
+- 10 modules under `src/modules/` (admin, catalog, content, conversations, identity, listings, notifications, realtime, reports, subscriptions) — `identity` and `conversations` have shipped use-cases; `realtime` provides authenticated Socket.IO infrastructure
 - Global `JwtAuthGuard` + `@Public()` decorator at `src/common/` for auth-gating + anonymous-browsing escape hatch. The API auth boundary is bearer-token only; browser cookie storage belongs to `apps/admin`, which forwards `Authorization: Bearer <accessToken>` server-side.
 - `AdminGuard` at `src/common/admin.guard.ts` composing on top of `JwtAuthGuard` (gates admin-only routes via `IdentityCheckPort.isAdmin`)
 - Global throttler (`@nestjs/throttler`) — 60 req/min/IP default; per-route override via `@Throttle()`. S7 public report routes use this global throttler only; no report-specific quota store or custom report throttling rule ships in the MLP.
 - Prisma client via `PrismaService` (PrismaModule is currently commented out in `app.module.ts` pending API ESM migration — issue #16)
 - Swagger / OpenAPI docs generated from Zod contracts
-- `ConfigModule` with Zod-validated env schema (`src/env.schema.ts`), including `PORT=3006` (see ADR-0018). S7 adds required `TOTP_SECRET_ENCRYPTION_KEY` for encrypted admin TOTP secrets; it must decode to 32 bytes from base64 and fail startup if missing/invalid.
-- `socket.io` package installed but no `IoAdapter` attached today; no WebSocket gateways — rich chat namespace is post-MLP (`conversations` module)
+- `ConfigModule` with Zod-validated env schema (`src/env.schema.ts`), including `PORT=3006` (see ADR-0018) and `SOCKET_IO_NAMESPACE`, `SOCKET_IO_CORS_ORIGIN`, `SOCKET_IO_REDIS_ADAPTER_ENABLED` (default `false`) for the Socket.IO foundation.
+- `socket.io` package installed; `RealtimeIoAdapter` attached in `main.ts` with optional `@socket.io/redis-adapter` readiness; `RealtimeGateway` exposes the `/ws/chat` namespace with JWT-auth middleware, user rooms (`user:{userId}`), and an in-memory online registry. No chat event handlers or conversation rooms yet (issue #235).
 
 ## Public API surface (today)
 
@@ -34,11 +34,12 @@ Every bounded context under `src/modules/<context>/` has four layers:
 - REST: `/api/v1/catalog/*` — catalog stub controller (full surface in S3)
 - REST stubs: `/api/v1/listings`, `/api/v1/conversations`, etc. — controllers exist but no real handlers
 - Health: `/healthz` (liveness)
-- Push, WS (`/ws/chat`), Metrics (`/metrics`) — planned, not yet attached
+- WebSocket: `/ws/chat` namespace (Socket.IO) — authenticated connections only
+- Push, Metrics (`/metrics`) — planned, not yet attached
 
 ## Cross-context communication
 
-- **Ports (synchronous)** — small TS interfaces injected via NestJS DI; one context exposes, others consume
+- **Ports (synchronous)** — small TS interfaces injected via NestJS DI; one context exposes, others consume. `realtime/` exposes `PresencePort` (`isUserOnline`) for cross-context online checks.
 - **Events (asynchronous)** — `@nestjs/event-emitter` for fire-and-forget notifications. Used heavily for `ListingCreated → subscriptions/`, `MessageSent → notifications/`, etc.
 
 ## Dependencies
