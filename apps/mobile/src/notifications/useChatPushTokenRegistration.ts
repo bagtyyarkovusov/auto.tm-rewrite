@@ -12,17 +12,6 @@ import { setDirectMessageChannel } from "./setDirectMessageChannel";
 
 const ASKED_KEY = "notifications.permissionAsked";
 
-function useFirstMount() {
-  const isFirst = useRef(true);
-
-  if (isFirst.current) {
-    isFirst.current = false;
-    return true;
-  }
-
-  return false;
-}
-
 async function hasAskedBefore(): Promise<boolean> {
   try {
     const value = await AsyncStorage.getItem(ASKED_KEY);
@@ -49,12 +38,13 @@ async function markAsked(): Promise<void> {
  */
 export function useChatPushTokenRegistration(enabled: boolean) {
   const { mutate: registerPushToken } = useRegisterPushToken();
-  const isFirstMount = useFirstMount();
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    if (!enabled || !isFirstMount) {
+    if (!enabled || hasRun.current) {
       return;
     }
+    hasRun.current = true;
 
     let cancelled = false;
 
@@ -98,5 +88,5 @@ export function useChatPushTokenRegistration(enabled: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, isFirstMount, registerPushToken]);
+  }, [enabled, registerPushToken]);
 }

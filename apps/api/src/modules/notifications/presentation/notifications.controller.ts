@@ -8,6 +8,7 @@ import {
   Req,
   BadRequestException,
   Inject,
+  UnauthorizedException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
@@ -85,7 +86,11 @@ export class NotificationsController {
   }
 
   private userId(req: FastifyRequest): string {
-    return (req as AuthenticatedRequest).user?.sub as string;
+    const userId = (req as AuthenticatedRequest).user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException("Missing authenticated user");
+    }
+    return userId;
   }
 
   private parseOrThrow<T>(

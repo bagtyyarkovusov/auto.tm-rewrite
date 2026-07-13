@@ -1,6 +1,9 @@
-import { PushTokenDomainError, PUSH_TOKEN_ERROR_CODES, type PushPlatform } from "./types";
-
-const VALID_PLATFORMS: readonly PushPlatform[] = ["android", "ios", "web"];
+import {
+  PushTokenDomainError,
+  PUSH_TOKEN_ERROR_CODES,
+  VALID_PLATFORMS,
+  type PushPlatform,
+} from "./types";
 
 export class PushToken {
   private constructor(

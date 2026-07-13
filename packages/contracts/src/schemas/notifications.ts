@@ -31,14 +31,6 @@ export type RegisterPushTokenRequest = z.infer<
   typeof RegisterPushTokenRequestSchema
 >;
 
-export const RegisterPushTokenResponseSchema = z.object({
-  registered: z.boolean(),
-  invalidatedPrevious: z.boolean().optional(),
-});
-export type RegisterPushTokenResponse = z.infer<
-  typeof RegisterPushTokenResponseSchema
->;
-
 export const PushTokenSummarySchema = z.object({
   id: z.string().uuid(),
   token: z.string(),
@@ -48,6 +40,15 @@ export const PushTokenSummarySchema = z.object({
   lastSeenAt: z.string().datetime(),
 });
 export type PushTokenSummary = z.infer<typeof PushTokenSummarySchema>;
+
+export const RegisterPushTokenResponseSchema = z.object({
+  registered: z.boolean(),
+  invalidatedPrevious: z.boolean().optional(),
+  token: PushTokenSummarySchema,
+});
+export type RegisterPushTokenResponse = z.infer<
+  typeof RegisterPushTokenResponseSchema
+>;
 
 export const ListPushTokensResponseSchema = z.object({
   items: z.array(PushTokenSummarySchema),

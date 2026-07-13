@@ -18,9 +18,15 @@ export async function getNativePushToken(): Promise<NativePushToken | null> {
 
     const platform = getPlatform();
 
+    // getDevicePushTokenAsync only yields native FCM/APNS tokens on iOS/Android.
+    // Web is not a native push target for this flow, so treat it as unavailable.
+    if (platform === "web") {
+      return null;
+    }
+
     return {
       token: deviceToken.data,
-      platform: platform === "web" ? "android" : platform,
+      platform,
     };
   } catch {
     return null;

@@ -35,9 +35,9 @@ vi.mock("expo-notifications", () => ({
   getDevicePushTokenAsync: vi.fn(),
   setNotificationChannelAsync: vi.fn(),
   PermissionStatus: {
-    GRANTED: 2,
-    DENIED: 3,
-    UNDETERMINED: 0,
+    GRANTED: "granted",
+    DENIED: "denied",
+    UNDETERMINED: "undetermined",
   },
   AndroidImportance: {
     HIGH: 5,
