@@ -26,7 +26,6 @@ import { MuteConversation } from "../application/MuteConversation";
 import { DeleteMessage } from "../application/DeleteMessage";
 import type { Conversation } from "../domain/Conversation";
 import type { Message } from "../domain/Message";
-import type { MessageMetadata } from "../domain/types";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -172,13 +171,7 @@ export class ConversationsController {
     const result = await this.sendMessageUC.execute({
       senderId: userId,
       conversationId,
-      kind: parsed.kind,
-      text: parsed.kind === "text" ? parsed.text : undefined,
-      metadata:
-        parsed.kind === "image" || parsed.kind === "post_ref"
-          ? (parsed.metadata as MessageMetadata)
-          : undefined,
-      clientMessageId: parsed.clientMessageId,
+      ...parsed,
     });
 
     return this.toMessageSummary(result.message);
@@ -322,7 +315,7 @@ export class ConversationsController {
       createdAt: message.createdAt.toISOString(),
       deletedAt: message.deletedAt?.toISOString(),
       clientMessageId: message.clientMessageId ?? undefined,
-      deliveryStatus: undefined as "pending" | "sent" | "failed" | undefined,
+      deliveryStatus: undefined,
     };
   }
 }

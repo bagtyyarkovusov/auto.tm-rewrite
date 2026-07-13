@@ -32,8 +32,8 @@ export type MessageKind = "text" | "image" | "post_ref" | "system";
 
 export type ImageMessageMetadata = {
   key: string;
-  width?: number;
-  height?: number;
+  width?: number | undefined;
+  height?: number | undefined;
 };
 
 export type PostRefMessageMetadata = {
@@ -43,3 +43,5 @@ export type PostRefMessageMetadata = {
 export type MessageMetadata = ImageMessageMetadata | PostRefMessageMetadata;
 
 export const DELETE_WINDOW_MS = 5 * 60 * 1000;
+
+export const SYSTEM_SENDER_ID = "system" as const;

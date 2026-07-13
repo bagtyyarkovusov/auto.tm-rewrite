@@ -67,7 +67,6 @@ describe("ConversationsController rich message routes", () => {
       conversationId: "conv-1",
       kind: "text",
       text: "Hello",
-      metadata: undefined,
       clientMessageId: "client-1",
     });
   });

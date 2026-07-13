@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
+import type { Prisma } from "@auto-tm/db";
 
 import { Conversation } from "../domain/Conversation";
 import type { Message } from "../domain/Message";
@@ -150,7 +151,7 @@ export class PrismaConversationRepository implements ConversationRepository {
       where: { id },
     });
     if (!row) return null;
-    return toDomainMessage(row as Parameters<typeof toDomainMessage>[0]);
+    return toDomainMessage(row);
   }
 
   async findMessageByClientMessageId(
@@ -168,7 +169,7 @@ export class PrismaConversationRepository implements ConversationRepository {
       },
     });
     if (!row) return null;
-    return toDomainMessage(row as Parameters<typeof toDomainMessage>[0]);
+    return toDomainMessage(row);
   }
 
   async saveMessage(message: Message): Promise<void> {
@@ -181,7 +182,7 @@ export class PrismaConversationRepository implements ConversationRepository {
           senderId: message.senderId,
           kind: message.kind,
           body: message.body,
-          metadata: toRawMetadata(message.metadata) as never,
+          metadata: toRawMetadata(message.metadata) as Prisma.InputJsonValue,
           createdAt: message.createdAt,
           clientMessageId: message.clientMessageId ?? null,
         },

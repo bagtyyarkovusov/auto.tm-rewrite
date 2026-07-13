@@ -1,5 +1,10 @@
 import { Message } from "../domain/Message";
-import type { MessageKind, MessageMetadata } from "../domain/types";
+import type {
+  ImageMessageMetadata,
+  MessageKind,
+  MessageMetadata,
+  PostRefMessageMetadata,
+} from "../domain/types";
 
 type MessageRow = {
   id: string;
@@ -38,5 +43,26 @@ export function toRawMetadata(
 function parseMetadata(value: unknown): MessageMetadata | null {
   if (value === null || value === undefined) return null;
   if (typeof value !== "object") return null;
-  return value as MessageMetadata;
+
+  if (hasKey(value)) {
+    return value as ImageMessageMetadata;
+  }
+
+  if (hasListingId(value)) {
+    return value as PostRefMessageMetadata;
+  }
+
+  return null;
+}
+
+function hasKey(value: object): value is { key: string } {
+  return "key" in value && typeof value.key === "string" && value.key.length > 0;
+}
+
+function hasListingId(value: object): value is { listingId: string } {
+  return (
+    "listingId" in value &&
+    typeof value.listingId === "string" &&
+    value.listingId.length > 0
+  );
 }

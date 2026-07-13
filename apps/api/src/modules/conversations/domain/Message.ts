@@ -2,8 +2,14 @@ import {
   ConversationDomainError,
   CONVERSATION_ERROR_CODES,
   DELETE_WINDOW_MS,
+  SYSTEM_SENDER_ID,
 } from "./types";
-import type { MessageKind, MessageMetadata } from "./types";
+import type {
+  ImageMessageMetadata,
+  MessageKind,
+  MessageMetadata,
+  PostRefMessageMetadata,
+} from "./types";
 
 const MAX_MESSAGE_TEXT_LENGTH = 1000;
 
@@ -58,12 +64,11 @@ export class Message {
     id: string;
     conversationId: string;
     senderId: string;
-    metadata: MessageMetadata;
+    metadata: ImageMessageMetadata;
     clientMessageId?: string | undefined;
     createdAt?: Date | undefined;
   }): Message {
-    const metadata = data.metadata as { key: string };
-    if (!metadata.key || metadata.key.length === 0) {
+    if (!data.metadata.key || data.metadata.key.length === 0) {
       throw new ConversationDomainError(
         CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
         "Image message requires a non-empty key",
@@ -86,12 +91,11 @@ export class Message {
     id: string;
     conversationId: string;
     senderId: string;
-    metadata: MessageMetadata;
+    metadata: PostRefMessageMetadata;
     clientMessageId?: string | undefined;
     createdAt?: Date | undefined;
   }): Message {
-    const metadata = data.metadata as { listingId: string };
-    if (!metadata.listingId || metadata.listingId.length === 0) {
+    if (!data.metadata.listingId || data.metadata.listingId.length === 0) {
       throw new ConversationDomainError(
         CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
         "Post reference message requires a listingId",
@@ -119,7 +123,7 @@ export class Message {
     return new Message(
       data.id,
       data.conversationId,
-      "system",
+      SYSTEM_SENDER_ID,
       "system",
       data.body,
       null,

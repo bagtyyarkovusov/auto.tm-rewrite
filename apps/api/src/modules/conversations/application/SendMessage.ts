@@ -19,7 +19,10 @@ import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
 import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
 import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
 import { Message } from "../domain/Message";
-import type { MessageMetadata } from "../domain/types";
+import type {
+  ImageMessageMetadata,
+  PostRefMessageMetadata,
+} from "../domain/types";
 import {
   CONVERSATION_ERROR_CODES,
   ConversationDomainError,
@@ -29,14 +32,28 @@ import {
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
 
-export interface SendMessageInput {
-  senderId: string;
-  conversationId: string;
-  kind: "text" | "image" | "post_ref";
-  text?: string | undefined;
-  metadata?: MessageMetadata | undefined;
-  clientMessageId?: string | undefined;
-}
+export type SendMessageInput =
+  | {
+      senderId: string;
+      conversationId: string;
+      kind: "text";
+      text: string;
+      clientMessageId?: string | undefined;
+    }
+  | {
+      senderId: string;
+      conversationId: string;
+      kind: "image";
+      metadata: ImageMessageMetadata;
+      clientMessageId?: string | undefined;
+    }
+  | {
+      senderId: string;
+      conversationId: string;
+      kind: "post_ref";
+      metadata: PostRefMessageMetadata;
+      clientMessageId?: string | undefined;
+    };
 
 export interface SendMessageResult {
   message: Message;
@@ -154,22 +171,22 @@ export class SendMessage {
       case "text":
         return Message.createText({
           ...base,
-          text: input.text ?? "",
+          text: input.text,
         });
       case "image":
         return Message.createImage({
           ...base,
-          metadata: input.metadata ?? { key: "" },
+          metadata: input.metadata,
         });
       case "post_ref":
         return Message.createPostRef({
           ...base,
-          metadata: input.metadata ?? { listingId: "" },
+          metadata: input.metadata,
         });
       default:
         throw new ConversationDomainError(
           CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
-          `Message kind not supported`,
+          "Message kind not supported",
         );
     }
   }

@@ -2869,7 +2869,8 @@
                 "default": "text"
               },
               "text": {
-                "type": "string"
+                "type": "string",
+                "nullable": true
               },
               "metadata": {
                 "anyOf": [
@@ -2938,6 +2939,11 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "unreadCount": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
           }
         },
         "required": [
@@ -3060,7 +3066,8 @@
                       "default": "text"
                     },
                     "text": {
-                      "type": "string"
+                      "type": "string",
+                      "nullable": true
                     },
                     "metadata": {
                       "anyOf": [
@@ -3129,6 +3136,11 @@
                 "updatedAt": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "unreadCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 0
                 }
               },
               "required": [
@@ -3196,7 +3208,8 @@
                   "default": "text"
                 },
                 "text": {
-                  "type": "string"
+                  "type": "string",
+                  "nullable": true
                 },
                 "metadata": {
                   "anyOf": [
@@ -3312,7 +3325,8 @@
             "default": "text"
           },
           "text": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "metadata": {
             "anyOf": [
@@ -3499,7 +3513,8 @@
             "default": "text"
           },
           "text": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "metadata": {
             "anyOf": [
@@ -3671,7 +3686,8 @@
                 "default": "text"
               },
               "text": {
-                "type": "string"
+                "type": "string",
+                "nullable": true
               },
               "metadata": {
                 "anyOf": [
@@ -3740,6 +3756,11 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "unreadCount": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
           }
         },
         "required": [
@@ -3777,7 +3798,8 @@
             "default": "text"
           },
           "text": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "metadata": {
             "anyOf": [
@@ -4076,7 +4098,8 @@
                 "default": "text"
               },
               "text": {
-                "type": "string"
+                "type": "string",
+                "nullable": true
               },
               "metadata": {
                 "anyOf": [
@@ -5751,7 +5774,8 @@
                           "default": "text"
                         },
                         "text": {
-                          "type": "string"
+                          "type": "string",
+                          "nullable": true
                         },
                         "metadata": {
                           "anyOf": [
@@ -5820,6 +5844,11 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "unreadCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
                     }
                   },
                   "required": [
@@ -6074,7 +6103,8 @@
                                 "default": "text"
                               },
                               "text": {
-                                "type": "string"
+                                "type": "string",
+                                "nullable": true
                               },
                               "metadata": {
                                 "anyOf": [
@@ -6143,6 +6173,11 @@
                           "updatedAt": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "unreadCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "default": 0
                           }
                         },
                         "required": [
@@ -6243,7 +6278,8 @@
                             "default": "text"
                           },
                           "text": {
-                            "type": "string"
+                            "type": "string",
+                            "nullable": true
                           },
                           "metadata": {
                             "anyOf": [
@@ -6439,7 +6475,8 @@
                       "default": "text"
                     },
                     "text": {
-                      "type": "string"
+                      "type": "string",
+                      "nullable": true
                     },
                     "metadata": {
                       "anyOf": [

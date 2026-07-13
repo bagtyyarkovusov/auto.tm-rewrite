@@ -101,7 +101,7 @@ export const MessageSummarySchema = z.object({
   conversationId: z.string().uuid(),
   senderId: z.string().uuid(),
   kind: MessageKindSchema.default(MessageKind.Text),
-  text: z.string(),
+  text: z.string().nullable(),
   metadata: MessageMetadataSchema.optional(),
   createdAt: z.string().datetime(),
   deletedAt: z.string().datetime().optional(),
@@ -171,6 +171,7 @@ export const ConversationSummarySchema = z.object({
   myRole: ParticipantRoleSchema,
   lastMessage: MessageSummarySchema.optional(),
   updatedAt: z.string().datetime(),
+  unreadCount: z.number().int().nonnegative().default(0),
 });
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 
