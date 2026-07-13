@@ -134,12 +134,12 @@ export function ListingDetailView({
       <View className="px-5 py-4 gap-3">
         {/* Title + status */}
         <View className="gap-2">
-          <View className="flex-row flex-wrap items-center gap-2">
-            <Text className="text-2xl font-heading text-foreground flex-1">
+          <View className="flex-row flex-wrap items-start gap-2">
+            <Text className="min-w-0 flex-1 text-2xl font-heading text-foreground" numberOfLines={2}>
               {buildTitle(listing, maps) || t("listing")}
             </Text>
             {isSold && (
-              <Badge variant="secondary" className="px-2 py-0.5">
+              <Badge variant="secondary" className="shrink-0 px-2 py-0.5">
                 <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
               </Badge>
             )}
@@ -304,9 +304,11 @@ function VinHistoryBody({
 
 function VinHistoryRow({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row items-center gap-2">
+    <View className="flex-row items-start gap-2">
       <Text className="text-base text-foreground">{label}:</Text>
-      <Text className="text-base font-medium text-foreground">{value}</Text>
+      <Text className="min-w-0 flex-1 text-base font-medium text-foreground" numberOfLines={1}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -350,9 +352,9 @@ function ConditionDisclosureSection({
 function DisclosureRow({ label, value }: { label: string; value: boolean }) {
   const { t } = useTranslation();
   return (
-    <View className="flex-row items-center gap-2">
+    <View className="flex-row items-start gap-2">
       <Text className="text-base text-foreground">{label}:</Text>
-      <Text className={cn("text-base font-medium", value ? "text-foreground" : "text-muted-foreground")}>
+      <Text className={cn("min-w-0 flex-1 text-base font-medium", value ? "text-foreground" : "text-muted-foreground")}>
         {value ? t("yes") : t("no")}
       </Text>
     </View>
@@ -372,10 +374,10 @@ function TrustInfoLink({ locale }: { locale: string }) {
       <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
         <Icon as={ShieldCheck} className="size-5 text-primary" />
       </View>
-      <Text className="flex-1 text-sm font-semibold text-foreground">
+      <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground" numberOfLines={2}>
         {t("trustInfoTitle")}
       </Text>
-      <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+      <Icon as={ChevronRight} className="size-5 shrink-0 text-muted-foreground" />
     </Pressable>
   );
 }

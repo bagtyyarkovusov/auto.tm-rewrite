@@ -64,7 +64,7 @@ function buildPayloadPhotos(
 }
 
 export default function SellScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isAuthenticated } = useAuth();
   const { show } = useToast();
   const navigation = useContext(NavigationContext);
@@ -494,20 +494,20 @@ export default function SellScreen() {
               <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 {t("latestDraft")}
               </Text>
-              <Text className="text-lg font-semibold text-foreground">
+              <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
                 {draftBrandName && draftModelName
                   ? `${existingDraft.payload.year ?? ""} ${draftBrandName} ${draftModelName}`
                   : existingDraft.payload.brandId && existingDraft.payload.modelId
                     ? `${existingDraft.payload.year ?? ""} ${existingDraft.payload.brandId} ${existingDraft.payload.modelId}`
                     : t("continueListing")}
               </Text>
-              <Text className="text-sm text-muted-foreground">
+              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
                 {existingDraft.payload.photos?.length
                   ? t("photoCount", { count: existingDraft.payload.photos.length })
                   : t("noPhotos")}
                 {" · "}
                 {existingDraft.payload.priceAmount
-                  ? `${existingDraft.payload.priceAmount.toLocaleString()} ${existingDraft.payload.priceCurrency ?? "TMT"}`
+                  ? `${existingDraft.payload.priceAmount.toLocaleString(i18n.language)} ${existingDraft.payload.priceCurrency ?? "TMT"}`
                   : t("priceMissing")}
               </Text>
               <Button

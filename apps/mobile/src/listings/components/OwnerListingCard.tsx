@@ -88,11 +88,11 @@ export function OwnerListingCard({
     >
       <View className="flex-row gap-3 px-4 py-3">
         {/* Cover image */}
-        <View className="h-[100px] w-[140px] overflow-hidden rounded-lg bg-muted">
+        <View className="h-[100px] w-[140px] shrink-0 overflow-hidden rounded-lg bg-muted">
           {imageUrl && !imageFailed ? (
             <Image
               source={{ uri: imageUrl }}
-              style={{ width: 140, height: 100 }}
+              className="h-[100px] w-[140px]"
               contentFit="cover"
               cachePolicy="memory-disk"
               onError={() => setImageFailed(true)}
@@ -105,7 +105,7 @@ export function OwnerListingCard({
         </View>
 
         {/* Text content */}
-        <View className="flex-1 justify-between py-0.5">
+        <View className="min-w-0 flex-1 justify-between py-0.5">
           <View className="gap-1">
             <Text
               className="text-base font-semibold text-foreground leading-5"
@@ -113,16 +113,16 @@ export function OwnerListingCard({
             >
               {titleParts.join(" ")}
             </Text>
-            <Text className="text-lg font-heading text-primary">
+            <Text className="text-lg font-heading text-primary" numberOfLines={1}>
               {formatPrice(listing.displayPriceTmt, i18n.language)}
             </Text>
           </View>
 
           <View className="flex-row flex-wrap items-center gap-2">
-            <Badge variant={statusBadgeVariant(listing.status)} className="px-2 py-0.5">
+            <Badge variant={statusBadgeVariant(listing.status)} className="shrink-0 px-2 py-0.5">
               <Text className="text-xs">{label}</Text>
             </Badge>
-            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+            <Text className="min-w-0 flex-1 text-xs text-muted-foreground" numberOfLines={1}>
               {cityName ?? listing.cityId}
             </Text>
           </View>
@@ -134,7 +134,7 @@ export function OwnerListingCard({
               className="flex-1"
               onPress={() => onOpen(listing.id)}
             >
-              <Text>{t("open")}</Text>
+              <Text numberOfLines={1}>{t("open")}</Text>
             </Button>
             <Button
               variant="outline"
@@ -143,7 +143,7 @@ export function OwnerListingCard({
               onPress={() => onEdit(listing.id)}
             >
               <Icon as={Pencil} className="size-4 text-foreground" />
-              <Text>{t("edit")}</Text>
+              <Text numberOfLines={1}>{t("edit")}</Text>
             </Button>
           </View>
         </View>

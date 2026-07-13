@@ -94,11 +94,11 @@ export function DraftCard({
       >
         <View className="flex-row gap-3 px-4 py-3">
           {/* Cover image */}
-          <View className="h-[100px] w-[140px] overflow-hidden rounded-lg bg-muted">
+          <View className="h-[100px] w-[140px] shrink-0 overflow-hidden rounded-lg bg-muted">
             {imageUrl && !imageFailed ? (
               <Image
                 source={{ uri: imageUrl }}
-                style={{ width: 140, height: 100 }}
+                className="h-[100px] w-[140px]"
                 contentFit="cover"
                 cachePolicy="memory-disk"
                 onError={() => setImageFailed(true)}
@@ -111,7 +111,7 @@ export function DraftCard({
           </View>
 
           {/* Text content */}
-          <View className="flex-1 justify-between py-0.5">
+          <View className="min-w-0 flex-1 justify-between py-0.5">
             <View className="gap-1">
               <Text
                 className="text-base font-semibold text-foreground leading-5"

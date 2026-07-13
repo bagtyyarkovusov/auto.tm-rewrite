@@ -124,7 +124,7 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
             disabled={isApplyDisabled}
             accessibilityLabel={applyLabel}
           >
-            <Text>{applyLabel}</Text>
+            <Text numberOfLines={1}>{applyLabel}</Text>
           </Button>
         </View>
       </SheetContent>

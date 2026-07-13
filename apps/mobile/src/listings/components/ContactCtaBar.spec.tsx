@@ -83,4 +83,18 @@ describe("ContactCtaBar", () => {
     expect(source).toContain("<ErrorState");
     expect(source).toContain("compact");
   });
+
+  it("shares the canonical auto.tm listing URL", () => {
+    expect(source).toContain("`https://auto.tm/listings/${listingId}`");
+  });
+
+  it("syncs optimistic favorite state with the isFavorited prop", () => {
+    expect(source).toContain("useEffect");
+    expect(source).toContain("setOptimisticFavorited(isFavorited)");
+  });
+
+  it("prevents Call button text from overflowing on narrow screens", () => {
+    expect(source).toContain('numberOfLines={1}');
+    expect(source).toContain('>{t("call")}</Text>');
+  });
 });

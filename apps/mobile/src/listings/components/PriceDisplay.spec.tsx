@@ -33,4 +33,14 @@ describe("PriceDisplay owner mode", () => {
     expect(source).toContain("displayPriceTmt");
     expect(source).toContain("TMT");
   });
+
+  it("formats prices using the active i18n locale", () => {
+    expect(source).toContain("const { t, i18n } = useTranslation()");
+    expect(source).toContain("i18n.language");
+    expect(source).toContain("toLocaleString(i18n.language)");
+  });
+
+  it("keeps the primary price on a single line to avoid layout breaks", () => {
+    expect(source).toContain('numberOfLines={1}');
+  });
 });

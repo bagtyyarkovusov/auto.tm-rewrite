@@ -32,11 +32,20 @@ function LoadingState() {
 
 function formatMemberSince(isoDate: string, locale: string): string {
   const d = new Date(isoDate);
-  return d.toLocaleDateString(locale === "tk" ? "tk-TM" : locale === "en" ? "en-US" : "ru-RU", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const localeTag = locale === "tk" ? "tk-TM" : locale === "en" ? "en-US" : "ru-RU";
+  try {
+    return d.toLocaleDateString(localeTag, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch {
+    return d.toLocaleDateString("ru-RU", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }
 }
 
 export default function ProfileScreen() {
