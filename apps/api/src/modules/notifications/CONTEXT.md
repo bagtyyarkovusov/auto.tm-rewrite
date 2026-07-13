@@ -9,7 +9,7 @@ All push delivery + in-app notification feed + admin broadcast tooling. Push-tok
 ## Owns (entities + tables)
 
 - `FcmDevice` — id, userId (FK → User, Cascade), token (unique), platform (`PushPlatform` enum: android | ios | web), createdAt, updatedAt, deviceId?, registeredAt, lastUsedAt, invalidatedAt?. Indexes on `userId` and `(userId, invalidatedAt)`.
-- `NotificationHistory` — id, userId (FK → User, Cascade), category (`NotificationCategory` enum: direct_messages | saved_search_matches | listing_activity | admin_announcements | blog_activity | marketing), title, body, data? (JSON), readAt?, createdAt. Index on `(userId, createdAt DESC)`.
+- `NotificationHistory` — id, userId (FK → User, Cascade), category (`NotificationCategory` enum), status (`NotificationHistoryStatus` enum: pending | delivered | failed, default pending), title, body, data? (JSON), deliveryDetails? (JSON), readAt?, createdAt. Index on `(userId, createdAt DESC)`.
 - `NotificationPreference` — id, userId (FK → User, Cascade, unique), optOuts (JSON). One row per user.
 
 ## Domain layer
@@ -35,7 +35,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - **Block suppression rule** — push is suppressed when either user has blocked the other (via `IdentityReadPort.isUserBlockedBy`).
 - **No-token suppression rule** — push is suppressed when the recipient has zero active `FcmDevice` rows.
 - **Self-message suppression rule** — push is suppressed when `senderId === recipientId`.
-- **History recording rule** — because `NotificationHistory` has no `status` column, a row is written only for successfully enqueued decisions. Skipped cases are tested but leave no history row.
+- **History status rule** — `NotificationHistory.status` is `pending` when the API records an eligible decision, and the worker updates it to `delivered` or `failed`. Skipped cases are tested but leave no history row.
 - **Preview safety rule** — text messages use the message body truncated to 100 characters; image, post_ref, and deleted messages use generic lock-screen copy (`Фото`, `Объявление`, `Сообщение удалено`) so the payload is safe for lock screens.
 - **Deep-link rule** — every direct-message notification carries deep link `/conversations/{conversationId}` inside both the enqueue payload and `NotificationHistory.data`.
 
@@ -75,13 +75,13 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `NotificationHistoryRepository` (`domain/ports/NotificationHistoryRepository.ts`):
   ```ts
   interface NotificationHistoryRepository {
-    save(notification: DirectMessageNotification): Promise<void>
+    save(notification: DirectMessageNotification): Promise<{ id: string }>
   }
   ```
 - `PushQueuePort` (`domain/ports/PushQueuePort.ts`):
   ```ts
   interface PushQueuePort {
-    enqueue(notification: DirectMessageNotification): Promise<void>
+    enqueue(notification: DirectMessageNotification, historyId: string): Promise<void>
   }
   ```
 
@@ -118,8 +118,8 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 ## Worker integration
 
-- Direct-message pushes are enqueued on the BullMQ queue `notification-fanout` with job name `direct-message` and payload `{ category, recipientUserId, title, body, deepLink, data }`.
-- The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; that slice is #245.
+- Direct-message pushes are enqueued on the BullMQ queue `notification-fanout` with job name `direct-message` and payload `{ category, recipientUserId, historyId, title, body, deepLink, data }`. The `historyId` lets the worker update the corresponding `NotificationHistory` row.
+- The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; it validates the payload with `DirectMessagePushJobSchema` and calls `ProcessDirectMessagePush`.
 
 ## Planned additions (post-MLP notification platform)
 

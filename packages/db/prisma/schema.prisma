@@ -598,16 +598,24 @@ enum NotificationCategory {
   marketing
 }
 
+enum NotificationHistoryStatus {
+  pending
+  delivered
+  failed
+}
+
 model NotificationHistory {
-  id        String               @id @default(uuid())
-  userId    String
-  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category  NotificationCategory
-  title     String
-  body      String
-  data      Json?
-  readAt    DateTime?
-  createdAt DateTime             @default(now())
+  id              String                    @id @default(uuid())
+  userId          String
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        NotificationCategory
+  status          NotificationHistoryStatus @default(pending)
+  title           String
+  body            String
+  data            Json?
+  deliveryDetails Json?
+  readAt          DateTime?
+  createdAt       DateTime                  @default(now())
 
   @@index([userId, createdAt(sort: Desc)])
   @@map("notification_history")

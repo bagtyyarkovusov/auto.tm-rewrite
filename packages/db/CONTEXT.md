@@ -103,6 +103,7 @@ S10 additions (rich-chat schema + contract foundation, now in schema):
 - `FcmDevice.deviceId`, `FcmDevice.registeredAt`, `FcmDevice.lastUsedAt`, `FcmDevice.invalidatedAt` — native FCM/APNS push-token registration metadata. Index on `(userId, invalidatedAt)`.
 - `ContentReport.messageContext` — JSONB surrounding context for message-target reports.
 - Migration `20260713000000_s10_rich_chat_foundation` adds the columns and indexes above. No behavior, WebSocket, push delivery, upload, report, or mobile UI code ships in this slice.
+- `NotificationHistoryStatus` enum (`pending` | `delivered` | `failed`) and `NotificationHistory.status` (default `pending`) plus `NotificationHistory.deliveryDetails` (JSONB) — added by migration `20260713170000_add_notification_history_status` so the worker can record direct-message push delivery outcomes.
 
 ## Foreign-key policy across contexts
 

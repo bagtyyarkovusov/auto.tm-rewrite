@@ -64,6 +64,19 @@ export type RevokePushTokenResponse = z.infer<
   typeof RevokePushTokenResponseSchema
 >;
 
+// ── Worker direct-message push job payload (API → worker) ──
+
+export const DirectMessagePushJobSchema = z.object({
+  category: NotificationCategorySchema,
+  recipientUserId: z.string().uuid(),
+  historyId: z.string().uuid(),
+  title: z.string(),
+  body: z.string(),
+  deepLink: z.string(),
+  data: z.record(z.unknown()),
+});
+export type DirectMessagePushJob = z.infer<typeof DirectMessagePushJobSchema>;
+
 // ── Per-category opt-outs (direct_messages is not globally disableable) ──
 
 export const NotificationPreferenceOptOut = {

@@ -5,6 +5,7 @@ import { LoggerModule } from "nestjs-pino";
 
 import { PrismaModule } from "./common/prisma.module";
 import { EnvSchema } from "./env.schema";
+import { PushModule } from "./push/push.module";
 import { VideoTranscodeProcessor } from "./queues/video-transcode.processor";
 import { NotificationFanoutProcessor } from "./queues/notification-fanout.processor";
 import { OrphanCleanupProcessor } from "./queues/orphan-cleanup.processor";
@@ -24,6 +25,7 @@ import { PurgeExpiredAccounts } from "./jobs/PurgeExpiredAccounts";
       },
     }),
     PrismaModule,
+    PushModule,
     BullModule.forRoot({
       connection: {
         url: process.env["REDIS_URL"] ?? "redis://localhost:6379",

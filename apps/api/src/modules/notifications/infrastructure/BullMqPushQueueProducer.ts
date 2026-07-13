@@ -14,10 +14,14 @@ export class BullMqPushQueueProducer implements PushQueuePort {
     private readonly queue: Queue,
   ) {}
 
-  async enqueue(notification: DirectMessageNotification): Promise<void> {
+  async enqueue(
+    notification: DirectMessageNotification,
+    historyId: string,
+  ): Promise<void> {
     await this.queue.add("direct-message", {
       category: notification.category,
       recipientUserId: notification.userId,
+      historyId,
       title: notification.title,
       body: notification.body,
       deepLink: notification.deepLink,
