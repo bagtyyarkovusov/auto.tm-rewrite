@@ -42,6 +42,7 @@ interface LocalMessage {
   createdAt: string;
   status: MessageStatus;
   deletedAt?: string | null;
+  canDelete?: boolean;
 }
 
 function generateClientMessageId(): string {

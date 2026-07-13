@@ -291,6 +291,7 @@ describe("Socket event schemas", () => {
   it("accepts message deleted event", () => {
     const result = MessageDeletedEventSchema.safeParse({
       messageId: validUuid,
+      conversationId: validUuid,
       deletedAt: iso,
     });
     expect(result.success).toBe(true);
