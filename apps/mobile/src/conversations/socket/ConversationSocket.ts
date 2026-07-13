@@ -7,6 +7,11 @@ import { loadAuthSession } from "../../auth/session";
 const DEFAULT_WS_URL =
   process.env["EXPO_PUBLIC_WS_URL"] ?? "ws://localhost:3006/ws/chat";
 
+const SOCKET_CLIENT_ERROR_CODES = {
+  NOT_CONNECTED: "NOT_CONNECTED",
+  INVALID_ACK: "INVALID_ACK",
+} as const;
+
 export type ConversationSocketStatus =
   | "idle"
   | "connecting"
@@ -124,7 +129,7 @@ export class ConversationSocket {
     if (!this.socket?.connected) {
       return {
         ok: false,
-        code: "NOT_CONNECTED",
+        code: SOCKET_CLIENT_ERROR_CODES.NOT_CONNECTED,
         message: "Socket is not connected",
       };
     }
@@ -157,7 +162,7 @@ export class ConversationSocket {
 
           resolve({
             ok: false,
-            code: "INVALID_ACK",
+            code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
             message: "Invalid join response",
           });
         },
@@ -182,7 +187,7 @@ export class ConversationSocket {
     if (!this.socket?.connected) {
       return {
         ok: false,
-        code: "NOT_CONNECTED",
+        code: SOCKET_CLIENT_ERROR_CODES.NOT_CONNECTED,
         message: "Socket is not connected",
       };
     }
@@ -199,20 +204,10 @@ export class ConversationSocket {
           clientMessageId: payload.clientMessageId,
         },
         (ack: unknown) => {
-          const success =
-            ConversationsSchemas.SendMessageResponseSchema.safeParse(ack);
-          if (success.success) {
-            resolve({ ok: true, message: success.data });
-            return;
-          }
-
-          // Server ack wraps the durable message in { ok: true, message }.
-          const wrapped = z
-            .object({
-              ok: z.literal(true),
-              message: ConversationsSchemas.MessageSummarySchema,
-            })
-            .safeParse(ack);
+          const wrapped = z.object({
+            ok: z.literal(true),
+            message: ConversationsSchemas.MessageSummarySchema,
+          }).safeParse(ack);
           if (wrapped.success) {
             resolve({ ok: true, message: wrapped.data.message });
             return;
@@ -227,7 +222,7 @@ export class ConversationSocket {
 
           resolve({
             ok: false,
-            code: "INVALID_ACK",
+            code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
             message: "Invalid send response",
           });
         },
