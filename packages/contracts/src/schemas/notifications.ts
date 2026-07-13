@@ -39,6 +39,30 @@ export type RegisterPushTokenResponse = z.infer<
   typeof RegisterPushTokenResponseSchema
 >;
 
+export const PushTokenSummarySchema = z.object({
+  id: z.string().uuid(),
+  token: z.string(),
+  platform: PushPlatformSchema,
+  deviceId: z.string().optional(),
+  createdAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime(),
+});
+export type PushTokenSummary = z.infer<typeof PushTokenSummarySchema>;
+
+export const ListPushTokensResponseSchema = z.object({
+  items: z.array(PushTokenSummarySchema),
+});
+export type ListPushTokensResponse = z.infer<
+  typeof ListPushTokensResponseSchema
+>;
+
+export const RevokePushTokenResponseSchema = z.object({
+  revoked: z.boolean(),
+});
+export type RevokePushTokenResponse = z.infer<
+  typeof RevokePushTokenResponseSchema
+>;
+
 // ── Per-category opt-outs (direct_messages is not globally disableable) ──
 
 export const NotificationPreferenceOptOut = {
