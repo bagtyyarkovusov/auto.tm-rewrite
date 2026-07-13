@@ -40,7 +40,7 @@ export class DecideDirectMessageNotification {
     if (!event.senderId || !event.recipientId) {
       return {
         enqueued: false,
-        reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.SELF_MESSAGE,
+        reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.MISSING_PARTICIPANT,
       };
     }
 
@@ -89,8 +89,8 @@ export class DecideDirectMessageNotification {
       messageDeletedAt: event.messageDeletedAt,
     });
 
-    await this.history.save(notification);
     await this.queue.enqueue(notification);
+    await this.history.save(notification);
 
     return { enqueued: true };
   }

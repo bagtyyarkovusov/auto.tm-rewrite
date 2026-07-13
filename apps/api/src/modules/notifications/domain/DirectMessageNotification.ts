@@ -15,7 +15,7 @@ export interface DirectMessageNotificationData {
   messageId: string;
   preview: {
     kind: MessageSentEvent["messageKind"];
-    text?: string;
+    text: string;
   };
   sentAt: string;
 }

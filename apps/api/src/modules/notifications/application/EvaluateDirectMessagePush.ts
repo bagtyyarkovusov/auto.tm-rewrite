@@ -4,6 +4,7 @@ import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadP
 import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
 import type { PushTokenRepository } from "../domain/ports/PushTokenRepository";
 import { PUSH_TOKEN_REPOSITORY } from "../domain/ports/PushTokenRepository";
+import { DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS } from "../domain/types";
 
 export interface EvaluateDirectMessagePushInput {
   senderId: string;
@@ -31,7 +32,10 @@ export class EvaluateDirectMessagePush {
       input.senderId,
     );
     if (recipientBlockedSender) {
-      return { shouldSend: false, reason: "BLOCKED" };
+      return {
+        shouldSend: false,
+        reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.BLOCKED,
+      };
     }
 
     const senderBlockedRecipient = await this.identityRead.isUserBlockedBy(
@@ -39,12 +43,18 @@ export class EvaluateDirectMessagePush {
       input.recipientId,
     );
     if (senderBlockedRecipient) {
-      return { shouldSend: false, reason: "BLOCKED" };
+      return {
+        shouldSend: false,
+        reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.BLOCKED,
+      };
     }
 
     const activeTokens = await this.tokens.listActiveForUser(input.recipientId);
     if (activeTokens.length === 0) {
-      return { shouldSend: false, reason: "NO_TOKENS" };
+      return {
+        shouldSend: false,
+        reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.NO_TOKENS,
+      };
     }
 
     return { shouldSend: true };

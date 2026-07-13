@@ -21,6 +21,7 @@ export class PrismaNotificationHistoryRepository
         category: notification.category,
         title: notification.title,
         body: notification.body,
+        // The value object is built from JSON-serializable primitives only.
         data: notification.data as unknown as Prisma.InputJsonValue,
       },
     });

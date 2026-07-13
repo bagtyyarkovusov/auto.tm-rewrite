@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
 import type { PushToken } from "../domain/PushToken";
 import type { PushTokenRepository } from "../domain/ports/PushTokenRepository";
+import { DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS } from "../domain/types";
 import { EvaluateDirectMessagePush } from "./EvaluateDirectMessagePush";
 
 class FakeIdentityRead implements IdentityReadPort {
@@ -104,7 +105,10 @@ describe("EvaluateDirectMessagePush", () => {
       recipientId: "recipient",
     });
 
-    expect(result).toEqual({ shouldSend: false, reason: "BLOCKED" });
+    expect(result).toEqual({
+      shouldSend: false,
+      reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.BLOCKED,
+    });
   });
 
   it("suppresses push when sender has blocked recipient", async () => {
@@ -117,7 +121,10 @@ describe("EvaluateDirectMessagePush", () => {
       recipientId: "recipient",
     });
 
-    expect(result).toEqual({ shouldSend: false, reason: "BLOCKED" });
+    expect(result).toEqual({
+      shouldSend: false,
+      reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.BLOCKED,
+    });
   });
 
   it("suppresses push when recipient has no active tokens", async () => {
@@ -128,6 +135,9 @@ describe("EvaluateDirectMessagePush", () => {
       recipientId: "recipient",
     });
 
-    expect(result).toEqual({ shouldSend: false, reason: "NO_TOKENS" });
+    expect(result).toEqual({
+      shouldSend: false,
+      reason: DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS.NO_TOKENS,
+    });
   });
 });
