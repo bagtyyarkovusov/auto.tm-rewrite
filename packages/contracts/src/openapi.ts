@@ -75,9 +75,11 @@ import {
 import {
   CreateReportRequestSchema,
   CreateReportResponseSchema,
+  CreateMessageReportRequestSchema,
   ReportListItemSchema,
   ListReportsResponseSchema,
   GetReportDetailResponseSchema,
+  MessageReportContextSchema,
   DismissReportRequestSchema,
   DismissReportResponseSchema,
   BanListingRequestSchema,
@@ -100,10 +102,31 @@ import {
   ListMessagesResponseSchema,
   SendTextMessageRequestSchema,
   SendTextMessageResponseSchema,
+  SendMessageRequestSchema,
+  SendMessageResponseSchema,
   ConversationSummarySchema,
   MessageSummarySchema,
   ConversationListingCardSchema,
+  ImageMessageMetadataSchema,
+  PostRefMessageMetadataSchema,
+  MessageMetadataSchema,
+  UpdateWatermarkRequestSchema,
+  UpdateWatermarkResponseSchema,
+  MuteConversationRequestSchema,
+  MuteConversationResponseSchema,
+  DeleteMessageResponseSchema,
+  ChatMessageEventSchema,
+  MessageDeletedEventSchema,
+  TypingEventSchema,
+  WatermarkEventSchema,
 } from "./schemas/conversations";
+import {
+  RegisterPushTokenRequestSchema,
+  RegisterPushTokenResponseSchema,
+  NotificationPreferencesSchema,
+  UpdateNotificationPreferencesRequestSchema,
+  UpdateNotificationPreferencesResponseSchema,
+} from "./schemas/notifications";
 import {
   CreateInspectionInterestRequestSchema,
   CreateInspectionInterestResponseSchema,
@@ -180,9 +203,23 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("ListMessagesResponse", ListMessagesResponseSchema);
   registry.register("SendTextMessageRequest", SendTextMessageRequestSchema);
   registry.register("SendTextMessageResponse", SendTextMessageResponseSchema);
+  registry.register("SendMessageRequest", SendMessageRequestSchema);
+  registry.register("SendMessageResponse", SendMessageResponseSchema);
   registry.register("ConversationSummary", ConversationSummarySchema);
   registry.register("MessageSummary", MessageSummarySchema);
   registry.register("ConversationListingCard", ConversationListingCardSchema);
+  registry.register("ImageMessageMetadata", ImageMessageMetadataSchema);
+  registry.register("PostRefMessageMetadata", PostRefMessageMetadataSchema);
+  registry.register("MessageMetadata", MessageMetadataSchema);
+  registry.register("UpdateWatermarkRequest", UpdateWatermarkRequestSchema);
+  registry.register("UpdateWatermarkResponse", UpdateWatermarkResponseSchema);
+  registry.register("MuteConversationRequest", MuteConversationRequestSchema);
+  registry.register("MuteConversationResponse", MuteConversationResponseSchema);
+  registry.register("DeleteMessageResponse", DeleteMessageResponseSchema);
+  registry.register("ChatMessageEvent", ChatMessageEventSchema);
+  registry.register("MessageDeletedEvent", MessageDeletedEventSchema);
+  registry.register("TypingEvent", TypingEventSchema);
+  registry.register("WatermarkEvent", WatermarkEventSchema);
 
   // Admin TOTP schemas
   registry.register("AdminTotpStatusResponse", AdminTotpStatusResponseSchema);
@@ -193,9 +230,11 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   // Admin report schemas
   registry.register("CreateReportRequest", CreateReportRequestSchema);
   registry.register("CreateReportResponse", CreateReportResponseSchema);
+  registry.register("CreateMessageReportRequest", CreateMessageReportRequestSchema);
   registry.register("ReportListItem", ReportListItemSchema);
   registry.register("ListReportsResponse", ListReportsResponseSchema);
   registry.register("GetReportDetailResponse", GetReportDetailResponseSchema);
+  registry.register("MessageReportContext", MessageReportContextSchema);
 
   // Admin moderation schemas
   registry.register("DismissReportRequest", DismissReportRequestSchema);
@@ -226,6 +265,19 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register(
     "ListInspectionInterestStatsResponse",
     ListInspectionInterestStatsResponseSchema,
+  );
+
+  // Notification / push-token schemas
+  registry.register("RegisterPushTokenRequest", RegisterPushTokenRequestSchema);
+  registry.register("RegisterPushTokenResponse", RegisterPushTokenResponseSchema);
+  registry.register("NotificationPreferences", NotificationPreferencesSchema);
+  registry.register(
+    "UpdateNotificationPreferencesRequest",
+    UpdateNotificationPreferencesRequestSchema,
+  );
+  registry.register(
+    "UpdateNotificationPreferencesResponse",
+    UpdateNotificationPreferencesResponseSchema,
   );
 
   registry.registerPath({

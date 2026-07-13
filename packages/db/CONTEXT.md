@@ -96,6 +96,14 @@ S9a additions (now in schema):
 - Migration `20260711000000_add_condition_disclosure_to_listing` adds the S9a disclosure columns + the `listings_ownerCount_check` constraint.
 - Migration `20260711100000_add_inspection_interest` adds the `inspection_interests` table + indexes + FKs.
 
+S10 additions (rich-chat schema + contract foundation, now in schema):
+- `Conversation.lastMessageAt`, `Conversation.lastMessageId` — conversation-level sort/preview anchors. Index on `lastMessageAt`.
+- `ConversationParticipant.mutedAt`, `ConversationParticipant.lastReadAt`, `ConversationParticipant.lastDeliveredAt` — per-conversation mute and participant watermarks. Indexes on `(userId, lastReadAt)` and `(userId, lastDeliveredAt)`.
+- `Message.deletedAt`, `Message.clientMessageId` — own-message soft-delete and idempotency key scoped to `(conversationId, senderId, clientMessageId)`. Partial-unique index on that tuple (Postgres treats nulls as distinct).
+- `FcmDevice.deviceId`, `FcmDevice.registeredAt`, `FcmDevice.lastUsedAt`, `FcmDevice.invalidatedAt` — native FCM/APNS push-token registration metadata. Index on `(userId, invalidatedAt)`.
+- `ContentReport.messageContext` — JSONB surrounding context for message-target reports.
+- Migration `20260713000000_s10_rich_chat_foundation` adds the columns and indexes above. No behavior, WebSocket, push delivery, upload, report, or mobile UI code ships in this slice.
+
 ## Foreign-key policy across contexts
 
 - **Cross-context FKs ARE allowed** in `schema.prisma` (e.g., `Listing.brandId → Brand.id`)

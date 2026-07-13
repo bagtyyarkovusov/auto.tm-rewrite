@@ -47,12 +47,21 @@ export const AdminErrorReason = {
 export type AdminErrorReason =
   (typeof AdminErrorReason)[keyof typeof AdminErrorReason];
 
+export const ReportTargetType = {
+  Listing: "listing",
+  User: "user",
+  Message: "message",
+  ContentReport: "content_report",
+} as const;
+export type ReportTargetType =
+  (typeof ReportTargetType)[keyof typeof ReportTargetType];
+
 // ── Shared summary DTOs ──
 
 export const TargetSummarySchema = z.object({
   available: z.boolean(),
   label: z.string(),
-  targetType: z.enum(["listing", "user", "content_report"]),
+  targetType: z.nativeEnum(ReportTargetType),
   targetId: z.string(),
 });
 export type TargetSummary = z.infer<typeof TargetSummarySchema>;
@@ -65,22 +74,27 @@ export type ActorSummary = z.infer<typeof ActorSummarySchema>;
 
 // ── Report creation ──
 
-export const CreateReportRequestSchema = z
-  .object({
-    reason: z.nativeEnum(ReportReason),
-    details: z.string().trim().max(1000).optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.reason === ReportReason.Other) {
-        return (
-          typeof data.details === "string" && data.details.trim().length > 0
-        );
-      }
-      return true;
-    },
-    { message: "Details required when reason is other", path: ["details"] },
-  );
+const CreateReportBaseSchema = z.object({
+  reason: z.nativeEnum(ReportReason),
+  details: z.string().trim().max(1000).optional(),
+});
+
+type ReportReasonInput = {
+  reason: ReportReason;
+  details?: string | undefined;
+};
+
+const requireDetailsWhenOther = (data: ReportReasonInput) => {
+  if (data.reason === ReportReason.Other) {
+    return typeof data.details === "string" && data.details.trim().length > 0;
+  }
+  return true;
+};
+
+export const CreateReportRequestSchema = CreateReportBaseSchema.refine(
+  requireDetailsWhenOther,
+  { message: "Details required when reason is other", path: ["details"] },
+);
 export type CreateReportRequest = z.infer<typeof CreateReportRequestSchema>;
 
 export const CreateReportResponseSchema = z.object({
@@ -91,6 +105,19 @@ export const CreateReportResponseSchema = z.object({
 });
 export type CreateReportResponse = z.infer<typeof CreateReportResponseSchema>;
 
+export const CreateMessageReportRequestSchema = CreateReportBaseSchema
+  .extend({
+    messageId: z.string().uuid(),
+    conversationId: z.string().uuid(),
+  })
+  .refine(requireDetailsWhenOther, {
+    message: "Details required when reason is other",
+    path: ["details"],
+  });
+export type CreateMessageReportRequest = z.infer<
+  typeof CreateMessageReportRequestSchema
+>;
+
 // ── Report list ──
 
 export const ReportListItemSchema = z.object({
@@ -98,7 +125,7 @@ export const ReportListItemSchema = z.object({
   status: z.nativeEnum(ContentReportStatus),
   createdAt: z.string().datetime(),
   reason: z.nativeEnum(ReportReason),
-  targetType: z.enum(["listing", "user"]),
+  targetType: z.enum([ReportTargetType.Listing, ReportTargetType.User, ReportTargetType.Message]),
   targetId: z.string(),
   targetSummary: TargetSummarySchema,
 });
@@ -123,7 +150,11 @@ export const ReporterSummarySchema = z.object({
 export type ReporterSummary = z.infer<typeof ReporterSummarySchema>;
 
 export const ReportDetailTargetSchema = z.object({
-  targetType: z.enum(["listing", "user"]),
+  targetType: z.enum([
+    ReportTargetType.Listing,
+    ReportTargetType.User,
+    ReportTargetType.Message,
+  ]),
   available: z.boolean(),
   label: z.string(),
   targetId: z.string(),
@@ -133,8 +164,24 @@ export const ReportDetailTargetSchema = z.object({
   model: z.string().optional(),
   status: z.string().optional(),
   role: z.string().optional(),
+  conversationId: z.string().uuid().optional(),
+  senderId: z.string().uuid().optional(),
+  messageCreatedAt: z.string().datetime().optional(),
+  messageBody: z.string().optional(),
+  messageDeletedAt: z.string().datetime().optional(),
 });
 export type ReportDetailTarget = z.infer<typeof ReportDetailTargetSchema>;
+
+export const MessageReportContextSchema = z.object({
+  conversationId: z.string().uuid(),
+  messageId: z.string().uuid(),
+  senderId: z.string().uuid(),
+  messageCreatedAt: z.string().datetime(),
+  messageBody: z.string().optional(),
+  messageDeletedAt: z.string().datetime().optional(),
+  surroundingMessageIds: z.array(z.string().uuid()),
+});
+export type MessageReportContext = z.infer<typeof MessageReportContextSchema>;
 
 export const GetReportDetailResponseSchema = z.object({
   id: z.string().uuid(),

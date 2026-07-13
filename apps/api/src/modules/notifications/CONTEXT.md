@@ -8,7 +8,7 @@ All push delivery + in-app notification feed + admin broadcast tooling. Schema-o
 
 ## Owns (entities + tables)
 
-- `FcmDevice` — id, userId (FK → User, Cascade), token (unique), platform (`PushPlatform` enum: android | ios | web), createdAt, updatedAt. Index on `userId`.
+- `FcmDevice` — id, userId (FK → User, Cascade), token (unique), platform (`PushPlatform` enum: android | ios | web), createdAt, updatedAt, deviceId?, registeredAt, lastUsedAt, invalidatedAt?. Indexes on `userId` and `(userId, invalidatedAt)`.
 - `NotificationHistory` — id, userId (FK → User, Cascade), category (`NotificationCategory` enum: direct_messages | saved_search_matches | listing_activity | admin_announcements | blog_activity | marketing), title, body, data? (JSON), readAt?, createdAt. Index on `(userId, createdAt DESC)`.
 - `NotificationPreference` — id, userId (FK → User, Cascade, unique), optOuts (JSON). One row per user.
 
@@ -51,7 +51,6 @@ All push delivery + in-app notification feed + admin broadcast tooling. Schema-o
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in `docs/prd/features/36-notifications.md` and must be shaped into a sprint before implementation. [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) defers this work out of the MLP beta.
 
-- **Schema additions to `FcmDevice`** (rename to `PushToken` may be considered): `deviceId`, `registeredAt`, `lastUsedAt`, `invalidatedAt?` for token-invalidation handling
 - **Schema additions to `NotificationHistory`** for broadcast support: `recipientGroup?` (e.g., "all-admins"), `sentByUserId?` (admin-initiated), `deliveryDetails` (JSON per-token success/fail), `totalRecipients`, `successfulDeliveries`, `failedDeliveries` (broadcast metrics)
 - **`NotificationsDispatchPort`** interface:
 

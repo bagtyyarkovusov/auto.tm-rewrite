@@ -1,11 +1,14 @@
 import { z } from "zod";
 
-import { ListingStatus } from "../enums";
+import { ListingStatus, MessageKind } from "../enums";
 
 // ── Shared enums as Zod schemas ──
 
 export const ListingStatusSchema = z.nativeEnum(ListingStatus);
 export type ListingStatusType = z.infer<typeof ListingStatusSchema>;
+
+export const MessageKindSchema = z.nativeEnum(MessageKind);
+export type MessageKindType = z.infer<typeof MessageKindSchema>;
 
 // ── Request DTOs ──
 
@@ -22,6 +25,49 @@ export const SendTextMessageRequestSchema = z.object({
 export type SendTextMessageRequest = z.infer<
   typeof SendTextMessageRequestSchema
 >;
+
+// ── Rich message metadata ──
+
+export const ImageMessageMetadataSchema = z.object({
+  key: z.string().min(1),
+  width: z.number().int().nonnegative().optional(),
+  height: z.number().int().nonnegative().optional(),
+});
+export type ImageMessageMetadata = z.infer<typeof ImageMessageMetadataSchema>;
+
+export const PostRefMessageMetadataSchema = z.object({
+  listingId: z.string().uuid(),
+});
+export type PostRefMessageMetadata = z.infer<
+  typeof PostRefMessageMetadataSchema
+>;
+
+export const MessageMetadataSchema = z.union([
+  ImageMessageMetadataSchema,
+  PostRefMessageMetadataSchema,
+]);
+export type MessageMetadata = z.infer<typeof MessageMetadataSchema>;
+
+// ── Rich send/receive DTOs ──
+
+export const SendMessageRequestSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal(MessageKind.Text),
+    text: z.string().min(1).max(1000),
+    clientMessageId: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal(MessageKind.Image),
+    metadata: ImageMessageMetadataSchema,
+    clientMessageId: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal(MessageKind.PostRef),
+    metadata: PostRefMessageMetadataSchema,
+    clientMessageId: z.string().optional(),
+  }),
+]);
+export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;
 
 // ── Listing card embedded in conversation responses ──
 
@@ -54,11 +100,63 @@ export const MessageSummarySchema = z.object({
   id: z.string().uuid(),
   conversationId: z.string().uuid(),
   senderId: z.string().uuid(),
+  kind: MessageKindSchema.default(MessageKind.Text),
   text: z.string(),
+  metadata: MessageMetadataSchema.optional(),
   createdAt: z.string().datetime(),
+  deletedAt: z.string().datetime().optional(),
+  clientMessageId: z.string().optional(),
   deliveryStatus: MessageDeliveryStatusSchema.optional(),
 });
 export type MessageSummary = z.infer<typeof MessageSummarySchema>;
+
+export const DeleteMessageResponseSchema = z.object({
+  messageId: z.string().uuid(),
+  deletedAt: z.string().datetime(),
+});
+export type DeleteMessageResponse = z.infer<typeof DeleteMessageResponseSchema>;
+
+// ── Watermarks / mute ──
+
+export const UpdateWatermarkRequestSchema = z
+  .object({
+    lastReadAt: z.string().datetime().optional(),
+    lastDeliveredAt: z.string().datetime().optional(),
+  })
+  .refine(
+    (data) => data.lastReadAt !== undefined || data.lastDeliveredAt !== undefined,
+    {
+      message: "At least one watermark timestamp is required",
+      path: [],
+    },
+  );
+export type UpdateWatermarkRequest = z.infer<
+  typeof UpdateWatermarkRequestSchema
+>;
+
+export const UpdateWatermarkResponseSchema = z.object({
+  conversationId: z.string().uuid(),
+  lastReadAt: z.string().datetime().optional(),
+  lastDeliveredAt: z.string().datetime().optional(),
+});
+export type UpdateWatermarkResponse = z.infer<
+  typeof UpdateWatermarkResponseSchema
+>;
+
+export const MuteConversationRequestSchema = z.object({
+  muted: z.boolean(),
+});
+export type MuteConversationRequest = z.infer<
+  typeof MuteConversationRequestSchema
+>;
+
+export const MuteConversationResponseSchema = z.object({
+  conversationId: z.string().uuid(),
+  mutedAt: z.string().datetime().nullable(),
+});
+export type MuteConversationResponse = z.infer<
+  typeof MuteConversationResponseSchema
+>;
 
 // ── Conversation summary ──
 
@@ -116,3 +214,34 @@ export const SendTextMessageResponseSchema = MessageSummarySchema;
 export type SendTextMessageResponse = z.infer<
   typeof SendTextMessageResponseSchema
 >;
+
+export const SendMessageResponseSchema = MessageSummarySchema;
+export type SendMessageResponse = z.infer<typeof SendMessageResponseSchema>;
+
+// ── Socket event payloads ──
+
+export const ChatMessageEventSchema = z.object({
+  message: MessageSummarySchema,
+});
+export type ChatMessageEvent = z.infer<typeof ChatMessageEventSchema>;
+
+export const MessageDeletedEventSchema = z.object({
+  messageId: z.string().uuid(),
+  deletedAt: z.string().datetime(),
+});
+export type MessageDeletedEvent = z.infer<typeof MessageDeletedEventSchema>;
+
+export const TypingEventSchema = z.object({
+  conversationId: z.string().uuid(),
+  userId: z.string().uuid(),
+  isTyping: z.boolean(),
+});
+export type TypingEvent = z.infer<typeof TypingEventSchema>;
+
+export const WatermarkEventSchema = z.object({
+  conversationId: z.string().uuid(),
+  userId: z.string().uuid(),
+  lastReadAt: z.string().datetime().optional(),
+  lastDeliveredAt: z.string().datetime().optional(),
+});
+export type WatermarkEvent = z.infer<typeof WatermarkEventSchema>;

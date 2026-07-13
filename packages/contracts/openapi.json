@@ -997,6 +997,61 @@
               "serviceHistoryAvailable"
             ]
           },
+          "vinHistory": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "decoded": {
+                    "type": "boolean",
+                    "enum": [
+                      false
+                    ]
+                  }
+                },
+                "required": [
+                  "decoded"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "decoded": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "brand": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 2100
+                  },
+                  "bodyType": {
+                    "type": "string"
+                  },
+                  "engineType": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "decoded",
+                  "confidence"
+                ]
+              }
+            ]
+          },
           "publishedAt": {
             "type": "string",
             "format": "date-time"
@@ -2109,6 +2164,142 @@
           "nextCursor"
         ]
       },
+      "ListingCountQuery": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 50
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceMin": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceMax": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "yearMin": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "yearMax": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          }
+        }
+      },
+      "ListingCountResponse": {
+        "type": "object",
+        "properties": {
+          "totalMatching": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "totalMatching"
+        ]
+      },
+      "ListingModelCountQuery": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceMin": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceMax": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "yearMin": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "yearMax": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          }
+        },
+        "required": [
+          "brandId"
+        ],
+        "additionalProperties": false
+      },
+      "ListingModelCountResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "totalMatching": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "modelId",
+                "totalMatching"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "MyListingsResponse": {
         "type": "object",
         "properties": {
@@ -2667,12 +2858,65 @@
                 "type": "string",
                 "format": "uuid"
               },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "image",
+                  "post_ref",
+                  "system"
+                ],
+                "default": "text"
+              },
               "text": {
                 "type": "string"
+              },
+              "metadata": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "listingId": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "listingId"
+                    ]
+                  }
+                ]
               },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "deletedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "clientMessageId": {
+                "type": "string"
               },
               "deliveryStatus": {
                 "type": "string",
@@ -2805,12 +3049,65 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "image",
+                        "post_ref",
+                        "system"
+                      ],
+                      "default": "text"
+                    },
                     "text": {
                       "type": "string"
+                    },
+                    "metadata": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "width": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "height": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "key"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "listingId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "listingId"
+                          ]
+                        }
+                      ]
                     },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "deletedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "clientMessageId": {
+                      "type": "string"
                     },
                     "deliveryStatus": {
                       "type": "string",
@@ -2888,12 +3185,65 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "image",
+                    "post_ref",
+                    "system"
+                  ],
+                  "default": "text"
+                },
                 "text": {
                   "type": "string"
+                },
+                "metadata": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "width": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "height": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "key"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "listingId": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "listingId"
+                      ]
+                    }
+                  ]
                 },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "deletedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "clientMessageId": {
+                  "type": "string"
                 },
                 "deliveryStatus": {
                   "type": "string",
@@ -2951,12 +3301,252 @@
             "type": "string",
             "format": "uuid"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "post_ref",
+              "system"
+            ],
+            "default": "text"
+          },
           "text": {
             "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "listingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "listingId"
+                ]
+              }
+            ]
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clientMessageId": {
+            "type": "string"
+          },
+          "deliveryStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderId",
+          "text",
+          "createdAt"
+        ]
+      },
+      "SendMessageRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "clientMessageId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "image"
+                ]
+              },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              },
+              "clientMessageId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "metadata"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "post_ref"
+                ]
+              },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "listingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "listingId"
+                ]
+              },
+              "clientMessageId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "metadata"
+            ]
+          }
+        ]
+      },
+      "SendMessageResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "post_ref",
+              "system"
+            ],
+            "default": "text"
+          },
+          "text": {
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "listingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "listingId"
+                ]
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clientMessageId": {
+            "type": "string"
           },
           "deliveryStatus": {
             "type": "string",
@@ -3070,12 +3660,65 @@
                 "type": "string",
                 "format": "uuid"
               },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "image",
+                  "post_ref",
+                  "system"
+                ],
+                "default": "text"
+              },
               "text": {
                 "type": "string"
+              },
+              "metadata": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "listingId": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "listingId"
+                    ]
+                  }
+                ]
               },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "deletedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "clientMessageId": {
+                "type": "string"
               },
               "deliveryStatus": {
                 "type": "string",
@@ -3123,12 +3766,65 @@
             "type": "string",
             "format": "uuid"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "post_ref",
+              "system"
+            ],
+            "default": "text"
+          },
           "text": {
             "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "listingId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "listingId"
+                ]
+              }
+            ]
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clientMessageId": {
+            "type": "string"
           },
           "deliveryStatus": {
             "type": "string",
@@ -3202,6 +3898,316 @@
           "displayPriceTmt",
           "priceCurrency",
           "status"
+        ]
+      },
+      "ImageMessageMetadata": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "PostRefMessageMetadata": {
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "listingId"
+        ]
+      },
+      "MessageMetadata": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "key"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "listingId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "listingId"
+            ]
+          }
+        ]
+      },
+      "UpdateWatermarkRequest": {
+        "type": "object",
+        "properties": {
+          "lastReadAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastDeliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateWatermarkResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lastReadAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastDeliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "conversationId"
+        ]
+      },
+      "MuteConversationRequest": {
+        "type": "object",
+        "properties": {
+          "muted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "muted"
+        ]
+      },
+      "MuteConversationResponse": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mutedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "conversationId",
+          "mutedAt"
+        ]
+      },
+      "DeleteMessageResponse": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "messageId",
+          "deletedAt"
+        ]
+      },
+      "ChatMessageEvent": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "image",
+                  "post_ref",
+                  "system"
+                ],
+                "default": "text"
+              },
+              "text": {
+                "type": "string"
+              },
+              "metadata": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "listingId": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "listingId"
+                    ]
+                  }
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "deletedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "clientMessageId": {
+                "type": "string"
+              },
+              "deliveryStatus": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "sent",
+                  "failed"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "conversationId",
+              "senderId",
+              "text",
+              "createdAt"
+            ]
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "MessageDeletedEvent": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "messageId",
+          "deletedAt"
+        ]
+      },
+      "TypingEvent": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isTyping": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "conversationId",
+          "userId",
+          "isTyping"
+        ]
+      },
+      "WatermarkEvent": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lastReadAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastDeliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "conversationId",
+          "userId"
         ]
       },
       "AdminTotpStatusResponse": {
@@ -3324,6 +4330,39 @@
           "reusedExisting"
         ]
       },
+      "CreateMessageReportRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "spam",
+              "scam",
+              "misleading",
+              "wrong_category",
+              "harassment",
+              "other"
+            ]
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "reason",
+          "messageId",
+          "conversationId"
+        ]
+      },
       "ReportListItem": {
         "type": "object",
         "properties": {
@@ -3358,7 +4397,8 @@
             "type": "string",
             "enum": [
               "listing",
-              "user"
+              "user",
+              "message"
             ]
           },
           "targetId": {
@@ -3378,6 +4418,7 @@
                 "enum": [
                   "listing",
                   "user",
+                  "message",
                   "content_report"
                 ]
               },
@@ -3442,7 +4483,8 @@
                   "type": "string",
                   "enum": [
                     "listing",
-                    "user"
+                    "user",
+                    "message"
                   ]
                 },
                 "targetId": {
@@ -3462,6 +4504,7 @@
                       "enum": [
                         "listing",
                         "user",
+                        "message",
                         "content_report"
                       ]
                     },
@@ -3595,7 +4638,8 @@
                 "type": "string",
                 "enum": [
                   "listing",
-                  "user"
+                  "user",
+                  "message"
                 ]
               },
               "available": {
@@ -3624,6 +4668,25 @@
               },
               "role": {
                 "type": "string"
+              },
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "messageCreatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "messageBody": {
+                "type": "string"
+              },
+              "messageDeletedAt": {
+                "type": "string",
+                "format": "date-time"
               }
             },
             "required": [
@@ -3672,6 +4735,48 @@
           "reporter",
           "target",
           "pendingReportsOnTargetCount"
+        ]
+      },
+      "MessageReportContext": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageCreatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messageBody": {
+            "type": "string"
+          },
+          "messageDeletedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "surroundingMessageIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "conversationId",
+          "messageId",
+          "senderId",
+          "messageCreatedAt",
+          "surroundingMessageIds"
         ]
       },
       "DismissReportRequest": {
@@ -4282,6 +5387,227 @@
           "pageSize",
           "totalPages"
         ]
+      },
+      "RegisterPushTokenRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "ios",
+              "web"
+            ]
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "platform"
+        ]
+      },
+      "RegisterPushTokenResponse": {
+        "type": "object",
+        "properties": {
+          "registered": {
+            "type": "boolean"
+          },
+          "invalidatedPrevious": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "registered"
+        ]
+      },
+      "NotificationPreferences": {
+        "type": "object",
+        "properties": {
+          "optOuts": {
+            "type": "object",
+            "properties": {
+              "direct_messages": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "saved_search_matches": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "listing_activity": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "admin_announcements": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "blog_activity": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "marketing": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "optOuts"
+        ]
+      },
+      "UpdateNotificationPreferencesRequest": {
+        "type": "object",
+        "properties": {
+          "optOuts": {
+            "type": "object",
+            "properties": {
+              "direct_messages": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "saved_search_matches": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "listing_activity": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "admin_announcements": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "blog_activity": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "marketing": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "optOuts"
+        ]
+      },
+      "UpdateNotificationPreferencesResponse": {
+        "type": "object",
+        "properties": {
+          "optOuts": {
+            "type": "object",
+            "properties": {
+              "direct_messages": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "saved_search_matches": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "listing_activity": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "admin_announcements": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "blog_activity": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              },
+              "marketing": {
+                "type": "string",
+                "enum": [
+                  "push",
+                  "digest",
+                  "none"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "optOuts"
+        ]
       }
     },
     "parameters": {}
@@ -4411,12 +5737,65 @@
                           "type": "string",
                           "format": "uuid"
                         },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "text",
+                            "image",
+                            "post_ref",
+                            "system"
+                          ],
+                          "default": "text"
+                        },
                         "text": {
                           "type": "string"
+                        },
+                        "metadata": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "height": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "key"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "listingId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                }
+                              },
+                              "required": [
+                                "listingId"
+                              ]
+                            }
+                          ]
                         },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "deletedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "clientMessageId": {
+                          "type": "string"
                         },
                         "deliveryStatus": {
                           "type": "string",
@@ -4681,12 +6060,65 @@
                                 "type": "string",
                                 "format": "uuid"
                               },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "text",
+                                  "image",
+                                  "post_ref",
+                                  "system"
+                                ],
+                                "default": "text"
+                              },
                               "text": {
                                 "type": "string"
+                              },
+                              "metadata": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "key": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "width": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      "height": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "key"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "listingId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      }
+                                    },
+                                    "required": [
+                                      "listingId"
+                                    ]
+                                  }
+                                ]
                               },
                               "createdAt": {
                                 "type": "string",
                                 "format": "date-time"
+                              },
+                              "deletedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "clientMessageId": {
+                                "type": "string"
                               },
                               "deliveryStatus": {
                                 "type": "string",
@@ -4797,12 +6229,65 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "text",
+                              "image",
+                              "post_ref",
+                              "system"
+                            ],
+                            "default": "text"
+                          },
                           "text": {
                             "type": "string"
+                          },
+                          "metadata": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "width": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "height": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "key"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "listingId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "required": [
+                                  "listingId"
+                                ]
+                              }
+                            ]
                           },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "deletedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "clientMessageId": {
+                            "type": "string"
                           },
                           "deliveryStatus": {
                             "type": "string",
@@ -4940,12 +6425,65 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "image",
+                        "post_ref",
+                        "system"
+                      ],
+                      "default": "text"
+                    },
                     "text": {
                       "type": "string"
+                    },
+                    "metadata": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "width": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "height": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "key"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "listingId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "listingId"
+                          ]
+                        }
+                      ]
                     },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "deletedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "clientMessageId": {
+                      "type": "string"
                     },
                     "deliveryStatus": {
                       "type": "string",
@@ -5891,6 +7429,342 @@
                     "page",
                     "pageSize",
                     "totalPages"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings/count": {
+      "get": {
+        "summary": "Count listings matching public feed filters",
+        "tags": [
+          "Listings"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "modelId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "maxItems": 50
+            },
+            "required": false,
+            "name": "modelIds",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "cityId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "priceMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "priceMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "yearMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "yearMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "used"
+              ]
+            },
+            "required": false,
+            "name": "condition",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Total matching listings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalMatching": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "totalMatching"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings/filter-options/models": {
+      "get": {
+        "summary": "Model-level counts for a selected brand",
+        "tags": [
+          "Listings"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "cityId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "priceMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "priceMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "yearMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "yearMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "used"
+              ]
+            },
+            "required": false,
+            "name": "condition",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Models with feed-eligible listing counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "modelId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "totalMatching": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "modelId",
+                          "totalMatching"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
                   ]
                 }
               }

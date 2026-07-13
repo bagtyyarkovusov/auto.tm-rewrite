@@ -52,6 +52,13 @@ export const NotificationCategory = {
 export type NotificationCategory =
   (typeof NotificationCategory)[keyof typeof NotificationCategory];
 
+export const PushPlatform = {
+  Android: "android",
+  Ios: "ios",
+  Web: "web",
+} as const;
+export type PushPlatform = (typeof PushPlatform)[keyof typeof PushPlatform];
+
 export const Locale = {
   Ru: "ru",
   Tk: "tk",

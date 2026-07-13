@@ -8,9 +8,9 @@ Per-listing scoped 1:1 conversations between buyer and seller. The MLP beta ship
 
 ## Owns (entities + tables)
 
-- `Conversation` — id, listingId (FK → Listing, Cascade), buyerId (FK → User as "Buyer", Cascade), sellerId (FK → User as "Seller", Cascade), createdAt, updatedAt. Unique on `(listingId, buyerId)`. Index on `sellerId`.
-- `ConversationParticipant` — id, conversationId (FK → Conversation, Cascade), userId (FK → User, Cascade), createdAt. Unique on `(conversationId, userId)`.
-- `Message` — id, conversationId (FK → Conversation, Cascade), senderId (no FK constraint), kind (`MessageKind` enum: text | image | post_ref | system), body?, metadata? (JSON), createdAt. Index on `(conversationId, createdAt)`.
+- `Conversation` — id, listingId (FK → Listing, Cascade), buyerId (FK → User as "Buyer", Cascade), sellerId (FK → User as "Seller", Cascade), createdAt, updatedAt, lastMessageAt?, lastMessageId?. Unique on `(listingId, buyerId)`. Index on `sellerId` and `lastMessageAt`.
+- `ConversationParticipant` — id, conversationId (FK → Conversation, Cascade), userId (FK → User, Cascade), createdAt, mutedAt?, lastReadAt?, lastDeliveredAt?. Unique on `(conversationId, userId)`. Indexes on `(userId, lastReadAt)` and `(userId, lastDeliveredAt)`.
+- `Message` — id, conversationId (FK → Conversation, Cascade), senderId (no FK constraint), kind (`MessageKind` enum: text | image | post_ref | system), body?, metadata? (JSON), createdAt, deletedAt?, clientMessageId?. Index on `(conversationId, createdAt)`. Partial unique on `(conversationId, senderId, clientMessageId)` (nulls are distinct).
 
 ## Domain layer (S6 — #168, #170)
 
@@ -87,10 +87,7 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
   - No Socket.IO, no image messages, no post-card messages, no read receipts, no typing, no presence, no push, no report-from-thread unless S6 is explicitly reshaped before it starts
 
 - **Post-MLP rich chat** — `docs/prd/features/34-conversations.md`. Owns:
-  - Schema additions to `Conversation`: `lastMessageAt`, `lastMessageId?` for sort + preview
-  - Schema additions to `ConversationParticipant`: `mutedAt?`, `lastReadAt?` for unread counts + mute UX
-  - Schema additions to `Message`: `deletedAt?` for soft-delete (preserve chat history for disputes)
-  - New `QuickReply` entity (system-defined seed list of localized canned replies: "Hello", "Is it still available?", "Can I see it today?", "Will you take ${price}?", ...)
+  - New `QuickReply` entity (system-defined seed list of localized canned replies: "Hello", "Is it still available?", "Can I see it today?", "Will you take ${price}?", ...) if shaped into a sprint
   - `ConversationsReadPort` (`getConversationSummary`, `getUnreadCountForUser`)
   - WebSocket gateway on Socket.IO namespace `/ws/chat` with events: `message:send`, `message:received`, `message:read`, `typing:start`, `typing:stop`, `typing:peer`, `presence:peer`
   - Use-cases: `StartConversation`, `SendMessage`, `MarkAsRead`, `DeleteMessage`, `MuteConversation`, `BlockInConversation`
