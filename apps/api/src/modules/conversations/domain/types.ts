@@ -2,6 +2,7 @@ export const CONVERSATION_ERROR_CODES = {
   SELF_CONTACT_NOT_ALLOWED: "SELF_CONTACT_NOT_ALLOWED",
   NOT_A_PARTICIPANT: "NOT_A_PARTICIPANT",
   LISTING_NOT_CONTACTABLE: "LISTING_NOT_CONTACTABLE",
+  LISTING_REFERENCE_NOT_VISIBLE: "LISTING_REFERENCE_NOT_VISIBLE",
   CHAT_DISABLED: "CHAT_DISABLED",
   MESSAGE_TEXT_BLANK: "MESSAGE_TEXT_BLANK",
   MESSAGE_TEXT_TOO_LONG: "MESSAGE_TEXT_TOO_LONG",
@@ -36,8 +37,26 @@ export type ImageMessageMetadata = {
   height?: number | undefined;
 };
 
+export const CURRENCY_CODES = ["TMT", "USD", "AED"] as const;
+export type CurrencyCode = (typeof CURRENCY_CODES)[number];
+
+export const POST_REF_LISTING_STATUSES = [
+  "active",
+  "sold",
+  "archived",
+  "banned",
+] as const;
+export type PostRefListingStatus = (typeof POST_REF_LISTING_STATUSES)[number];
+
 export type PostRefMessageMetadata = {
   listingId: string;
+  brandId: string;
+  modelId: string;
+  year?: number;
+  displayPriceTmt: number;
+  priceCurrency: CurrencyCode;
+  coverMediaKey?: string;
+  status: PostRefListingStatus;
 };
 
 export type MessageMetadata = ImageMessageMetadata | PostRefMessageMetadata;

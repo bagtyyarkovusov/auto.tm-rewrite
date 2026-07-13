@@ -68,16 +68,36 @@ describe("ImageMessageMetadataSchema", () => {
 });
 
 describe("PostRefMessageMetadataSchema", () => {
-  it("accepts a valid listing reference", () => {
+  it("accepts a valid listing reference snapshot", () => {
+    const result = PostRefMessageMetadataSchema.safeParse({
+      listingId: validUuid,
+      brandId: validUuid,
+      modelId: validUuid,
+      year: 2021,
+      displayPriceTmt: 200000,
+      priceCurrency: "TMT",
+      coverMediaKey: "cover.jpg",
+      status: "active",
+      available: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a listing reference missing required snapshot fields", () => {
     const result = PostRefMessageMetadataSchema.safeParse({
       listingId: validUuid,
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("rejects non-uuid listing id", () => {
     const result = PostRefMessageMetadataSchema.safeParse({
       listingId: "not-a-uuid",
+      brandId: validUuid,
+      modelId: validUuid,
+      displayPriceTmt: 200000,
+      priceCurrency: "TMT",
+      status: "active",
     });
     expect(result.success).toBe(false);
   });
@@ -118,7 +138,15 @@ describe("MessageSummarySchema", () => {
       senderId: validUuid,
       kind: MessageKind.PostRef,
       text: "",
-      metadata: { listingId: validUuid },
+      metadata: {
+        listingId: validUuid,
+        brandId: validUuid,
+        modelId: validUuid,
+        displayPriceTmt: 200000,
+        priceCurrency: "TMT",
+        status: "active",
+        available: false,
+      },
       createdAt: iso,
     });
     expect(result.success).toBe(true);
@@ -168,12 +196,12 @@ describe("SendMessageRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts a post_ref send request", () => {
+  it("rejects a post_ref send request through the generic rich route", () => {
     const result = SendMessageRequestSchema.safeParse({
       kind: MessageKind.PostRef,
       metadata: { listingId: validUuid },
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("rejects text send without text", () => {
@@ -395,6 +423,7 @@ describe("OpenAPI document — S10 rich-chat schemas", () => {
     };
     expect(doc.components.schemas).toHaveProperty("SendMessageRequest");
     expect(doc.components.schemas).toHaveProperty("SendMessageResponse");
+    expect(doc.components.schemas).toHaveProperty("SendPostRefMessageRequest");
     expect(doc.components.schemas).toHaveProperty("ImageMessageMetadata");
     expect(doc.components.schemas).toHaveProperty("PostRefMessageMetadata");
     expect(doc.components.schemas).toHaveProperty("UpdateWatermarkRequest");

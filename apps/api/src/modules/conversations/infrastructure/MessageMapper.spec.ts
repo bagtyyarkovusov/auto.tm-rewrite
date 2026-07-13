@@ -61,7 +61,42 @@ describe("MessageMapper", () => {
     });
   });
 
-  it("maps a post_ref message with listingId", () => {
+  it("maps a post_ref message with full snapshot", () => {
+    const message = toDomainMessage({
+      id: "msg-ref",
+      conversationId: "conv-1",
+      senderId: "sender-1",
+      kind: "post_ref",
+      body: null,
+      metadata: {
+        listingId: "listing-2",
+        brandId: "brand-1",
+        modelId: "model-1",
+        year: 2020,
+        displayPriceTmt: 100000,
+        priceCurrency: "TMT",
+        coverMediaKey: "cover.jpg",
+        status: "active",
+      },
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+      deletedAt: null,
+      clientMessageId: null,
+    });
+
+    expect(message.kind).toBe("post_ref");
+    expect(message.metadata).toEqual({
+      listingId: "listing-2",
+      brandId: "brand-1",
+      modelId: "model-1",
+      year: 2020,
+      displayPriceTmt: 100000,
+      priceCurrency: "TMT",
+      coverMediaKey: "cover.jpg",
+      status: "active",
+    });
+  });
+
+  it("falls back to null metadata for legacy post_ref rows missing snapshot fields", () => {
     const message = toDomainMessage({
       id: "msg-ref",
       conversationId: "conv-1",
@@ -75,6 +110,6 @@ describe("MessageMapper", () => {
     });
 
     expect(message.kind).toBe("post_ref");
-    expect(message.metadata).toEqual({ listingId: "listing-2" });
+    expect(message.metadata).toBeNull();
   });
 });

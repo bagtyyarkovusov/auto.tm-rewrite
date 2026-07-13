@@ -1,7 +1,9 @@
 import {
   ConversationDomainError,
   CONVERSATION_ERROR_CODES,
+  CURRENCY_CODES,
   DELETE_WINDOW_MS,
+  POST_REF_LISTING_STATUSES,
   SYSTEM_SENDER_ID,
 } from "./types";
 import type {
@@ -95,12 +97,59 @@ export class Message {
     clientMessageId?: string | undefined;
     createdAt?: Date | undefined;
   }): Message {
-    if (!data.metadata.listingId || data.metadata.listingId.length === 0) {
+    const { metadata } = data;
+
+    if (!metadata.listingId || metadata.listingId.length === 0) {
       throw new ConversationDomainError(
         CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
         "Post reference message requires a listingId",
       );
     }
+
+    if (!metadata.brandId || metadata.brandId.length === 0) {
+      throw new ConversationDomainError(
+        CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
+        "Post reference message requires a brandId",
+      );
+    }
+
+    if (!metadata.modelId || metadata.modelId.length === 0) {
+      throw new ConversationDomainError(
+        CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
+        "Post reference message requires a modelId",
+      );
+    }
+
+    if (
+      typeof metadata.displayPriceTmt !== "number" ||
+      metadata.displayPriceTmt < 0
+    ) {
+      throw new ConversationDomainError(
+        CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
+        "Post reference message requires a non-negative displayPriceTmt",
+      );
+    }
+
+    if (
+      !metadata.priceCurrency ||
+      !CURRENCY_CODES.includes(metadata.priceCurrency)
+    ) {
+      throw new ConversationDomainError(
+        CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
+        "Post reference message requires a valid priceCurrency",
+      );
+    }
+
+    if (
+      !metadata.status ||
+      !POST_REF_LISTING_STATUSES.includes(metadata.status)
+    ) {
+      throw new ConversationDomainError(
+        CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
+        "Post reference message requires a valid status",
+      );
+    }
+
     return new Message(
       data.id,
       data.conversationId,

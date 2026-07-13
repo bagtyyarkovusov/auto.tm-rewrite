@@ -96,16 +96,37 @@ describe("Message", () => {
     });
   });
 
+  function makePostRefMetadata(
+    overrides: Partial<{
+      listingId: string;
+      brandId: string;
+      modelId: string;
+      displayPriceTmt: number;
+      priceCurrency: "TMT" | "USD" | "AED";
+      status: "active" | "sold" | "archived" | "banned";
+    }> = {},
+  ) {
+    return {
+      listingId: "listing-1",
+      brandId: "brand-1",
+      modelId: "model-1",
+      displayPriceTmt: 100000,
+      priceCurrency: "TMT" as const,
+      status: "active" as const,
+      ...overrides,
+    };
+  }
+
   describe("post_ref creation", () => {
-    it("creates a post_ref message with listingId", () => {
+    it("creates a post_ref message with a full snapshot", () => {
       const msg = Message.createPostRef({
         id: "msg-ref",
         conversationId: "conv-1",
         senderId: "sender-1",
-        metadata: { listingId: "listing-1" },
+        metadata: makePostRefMetadata(),
       });
       expect(msg.kind).toBe("post_ref");
-      expect(msg.metadata).toEqual({ listingId: "listing-1" });
+      expect(msg.metadata).toEqual(makePostRefMetadata());
     });
 
     it("rejects a post_ref message without a listingId", () => {
@@ -114,7 +135,31 @@ describe("Message", () => {
           id: "msg-ref",
           conversationId: "conv-1",
           senderId: "sender-1",
-          metadata: { listingId: "" },
+          metadata: makePostRefMetadata({ listingId: "" }),
+        }),
+      ).toThrowError(CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED);
+    });
+
+    it("rejects a post_ref message with a negative price", () => {
+      expect(() =>
+        Message.createPostRef({
+          id: "msg-ref",
+          conversationId: "conv-1",
+          senderId: "sender-1",
+          metadata: makePostRefMetadata({ displayPriceTmt: -1 }),
+        }),
+      ).toThrowError(CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED);
+    });
+
+    it("rejects a post_ref message with an invalid currency", () => {
+      expect(() =>
+        Message.createPostRef({
+          id: "msg-ref",
+          conversationId: "conv-1",
+          senderId: "sender-1",
+          metadata: makePostRefMetadata({
+            priceCurrency: "EUR" as "TMT",
+          }),
         }),
       ).toThrowError(CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED);
     });
