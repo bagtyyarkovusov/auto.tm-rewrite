@@ -8,6 +8,7 @@ import type { ListMessages } from "../application/ListMessages";
 import type { SendTextMessage } from "../application/SendTextMessage";
 import type { SendMessage } from "../application/SendMessage";
 import type { SendPostRefMessage } from "../application/SendPostRefMessage";
+import type { PresignChatAttachmentUpload } from "../application/PresignChatAttachmentUpload";
 import type { UpdateWatermark } from "../application/UpdateWatermark";
 import type { MuteConversation } from "../application/MuteConversation";
 import type { DeleteMessage } from "../application/DeleteMessage";
@@ -22,6 +23,7 @@ function buildController(overrides: {
   sendTextMessage?: SendTextMessage;
   sendMessage?: SendMessage;
   sendPostRefMessage?: SendPostRefMessage;
+  presignChatAttachmentUpload?: PresignChatAttachmentUpload;
   updateWatermark?: UpdateWatermark;
   muteConversation?: MuteConversation;
   deleteMessage?: DeleteMessage;
@@ -34,6 +36,7 @@ function buildController(overrides: {
     overrides.sendTextMessage ?? ({} as SendTextMessage),
     overrides.sendMessage ?? ({} as SendMessage),
     overrides.sendPostRefMessage ?? ({} as SendPostRefMessage),
+    overrides.presignChatAttachmentUpload ?? ({} as PresignChatAttachmentUpload),
     overrides.updateWatermark ?? ({} as UpdateWatermark),
     overrides.muteConversation ?? ({} as MuteConversation),
     overrides.deleteMessage ?? ({} as DeleteMessage),
@@ -220,6 +223,33 @@ describe("ConversationsController rich message routes", () => {
         authReq("buyer-1") as never,
       ),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it("presigns a chat attachment upload", async () => {
+    const presignChatAttachmentUpload = {
+      execute: vi.fn().mockResolvedValue({
+        uploadUrl: "https://media.auto.tm/presigned/chat-attachments/conv-1/uuid/original.jpg",
+        key: "chat-attachments/conv-1/uuid/original.jpg",
+        expiresIn: 600,
+        maxSizeBytes: 5 * 1024 * 1024,
+      }),
+    } as unknown as PresignChatAttachmentUpload;
+    const controller = buildController({ presignChatAttachmentUpload });
+
+    const result = await controller.presignChatAttachment(
+      "conv-1",
+      { contentType: "image/jpeg", sizeBytes: 1024 },
+      authReq("buyer-1") as never,
+    );
+
+    expect(result.key).toBe("chat-attachments/conv-1/uuid/original.jpg");
+    expect(result.uploadUrl).toContain("presigned");
+    expect(presignChatAttachmentUpload.execute).toHaveBeenCalledWith({
+      userId: "buyer-1",
+      conversationId: "conv-1",
+      contentType: "image/jpeg",
+      sizeBytes: 1024,
+    });
   });
 });
 

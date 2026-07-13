@@ -26,6 +26,7 @@ import { ListMessages } from "../application/ListMessages";
 import { SendTextMessage } from "../application/SendTextMessage";
 import { SendMessage } from "../application/SendMessage";
 import { SendPostRefMessage } from "../application/SendPostRefMessage";
+import { PresignChatAttachmentUpload } from "../application/PresignChatAttachmentUpload";
 import { UpdateWatermark } from "../application/UpdateWatermark";
 import { MuteConversation } from "../application/MuteConversation";
 import { DeleteMessage } from "../application/DeleteMessage";
@@ -51,6 +52,8 @@ export class ConversationsController {
     private readonly sendMessageUC: SendMessage,
     @Inject(SendPostRefMessage)
     private readonly sendPostRefMessageUC: SendPostRefMessage,
+    @Inject(PresignChatAttachmentUpload)
+    private readonly presignChatAttachmentUploadUC: PresignChatAttachmentUpload,
     @Inject(UpdateWatermark)
     private readonly updateWatermarkUC: UpdateWatermark,
     @Inject(MuteConversation)
@@ -221,6 +224,33 @@ export class ConversationsController {
     ]);
 
     return this.toMessageSummary(result.message, availabilityMap);
+  }
+
+  @Post(":id/attachments/presign")
+  async presignChatAttachment(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.PresignChatAttachmentRequestSchema,
+      body,
+    );
+
+    const result = await this.presignChatAttachmentUploadUC.execute({
+      userId,
+      conversationId,
+      contentType: parsed.contentType,
+      sizeBytes: parsed.sizeBytes,
+    });
+
+    return {
+      uploadUrl: result.uploadUrl,
+      key: result.key,
+      expiresIn: result.expiresIn,
+      maxSizeBytes: result.maxSizeBytes,
+    };
   }
 
   @Post(":id/watermark")

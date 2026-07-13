@@ -86,6 +86,26 @@ export type SendPostRefMessageRequest = z.infer<
   typeof SendPostRefMessageRequestSchema
 >;
 
+// ── Chat attachment upload ──
+
+export const PresignChatAttachmentRequestSchema = z.object({
+  contentType: z.enum(["image/jpeg", "image/webp"]),
+  sizeBytes: z.number().int().positive().max(5 * 1024 * 1024),
+});
+export type PresignChatAttachmentRequest = z.infer<
+  typeof PresignChatAttachmentRequestSchema
+>;
+
+export const PresignChatAttachmentResponseSchema = z.object({
+  uploadUrl: z.string().url(),
+  key: z.string(),
+  expiresIn: z.number().int().positive(),
+  maxSizeBytes: z.number().int().positive(),
+});
+export type PresignChatAttachmentResponse = z.infer<
+  typeof PresignChatAttachmentResponseSchema
+>;
+
 // ── Listing card embedded in conversation responses ──
 
 export const ConversationListingCardSchema = z.object({

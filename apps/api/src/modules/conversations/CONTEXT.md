@@ -32,9 +32,10 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `Message.kind` is one of text | image | post_ref | system. S6 text messages persist as `kind = text`; S10 adds image and post_ref payloads through `SendMessage`.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
 - `Message` text is trimmed at creation; blank-after-trim and >1000 chars after trim are rejected by the domain layer.
+- **Image upload staging** — `PresignChatAttachmentUpload` issues a presigned MinIO PUT URL for a single image per call, scoped to the conversation (`chat-attachments/{conversationId}/{uuid}/original.{ext}`). It enforces participant-only access, a 5 MB size cap, and `image/jpeg`/`image/webp` content types. Suspended users are rejected.
 - **Conversation activity update on send** — `PrismaConversationRepository.saveMessage` updates the parent `Conversation.updatedAt`, `lastMessageAt`, and `lastMessageId` in the same Prisma transaction as the message insert, so `ListMyConversations` sort by `updatedAt DESC` reflects the latest message.
 - **Idempotent sends** — `SendMessage` accepts an optional `clientMessageId` scoped to `(conversationId, senderId, clientMessageId)`. A duplicate `clientMessageId` returns the existing message instead of creating a new row.
-- **Soft delete** — `DeleteMessage` allows a sender to mark their own message deleted within 5 minutes of `createdAt`. Deleted messages are redacted (body/metadata null) when read through `listMessages` or as a conversation's `lastMessage`.
+- **Soft delete** — `DeleteMessage` allows a sender to mark their own message deleted within 5 minutes of `createdAt`. Deleted messages are redacted (body/metadata null) when read through `listMessages` or as a conversation's `lastMessage`. Image messages lose their metadata (including the storage key) on redaction while the row is retained for audit/report context.
 - **Watermarks** — `UpdateWatermark` updates `lastReadAt` and/or `lastDeliveredAt` for the authenticated participant; timestamps must move monotonically forward.
 - **Unread count** — `ListMyConversations` returns `unreadCount` derived from the participant's `lastReadAt` and non-deleted messages from the other participant.
 - **Mute** — `MuteConversation` sets or clears `ConversationParticipant.mutedAt` for the authenticated participant. Mute suppresses native push (push decision lives in `notifications/`, issue #244).
@@ -44,9 +45,9 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 - `apps/api/src/modules/conversations/`:
   - `domain/` — `Conversation.ts`, `Message.ts`, `types.ts`, `ports/ConversationRepository.ts`
-  - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, `SendMessage.ts`, `SendPostRefMessage.ts`, `UpdateWatermark.ts`, `MuteConversation.ts`, `DeleteMessage.ts`, `ValidateConversationAccess.ts`, plus matching `.spec.ts` unit tests
-  - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, watermark/mute/delete/unread queries), `MessageMapper.ts` (Prisma row ↔ domain mapping + redaction), `PostRefSnapshotMapper.ts` (builds post-reference snapshots from `ListingSummary` and computes current availability)
-  - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages/rich`, `POST /api/v1/conversations/:id/messages/post-ref`, `POST /api/v1/conversations/:id/watermark`, `POST /api/v1/conversations/:id/mute`, `DELETE /api/v1/conversations/:id/messages/:messageId`, plus health-check ping
+  - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, `SendMessage.ts`, `SendPostRefMessage.ts`, `PresignChatAttachmentUpload.ts`, `UpdateWatermark.ts`, `MuteConversation.ts`, `DeleteMessage.ts`, `ValidateConversationAccess.ts`, plus matching `.spec.ts` unit tests
+  - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, watermark/mute/delete/unread queries), `MessageMapper.ts` (Prisma row ↔ domain mapping + redaction), `PostRefSnapshotMapper.ts` (builds post-reference snapshots from `ListingSummary` and computes current availability). Chat attachments are stored in the shared MinIO-backed `MediaStoragePort` (`listings/`); the `chat-attachments` bucket is created by `MinioMediaStorageAdapter`.
+  - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages/rich`, `POST /api/v1/conversations/:id/messages/post-ref`, `POST /api/v1/conversations/:id/attachments/presign`, `POST /api/v1/conversations/:id/watermark`, `POST /api/v1/conversations/:id/mute`, `DELETE /api/v1/conversations/:id/messages/:messageId`, plus health-check ping
   - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join` and `conversation:leave` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`
   - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `ListingsModule` for `ListingsReadPort` and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`
 
@@ -57,8 +58,9 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Ports consumed
 
 - `ListingsReadPort` (`LISTINGS_READ_PORT`) from `listings/` — used by `OpenConversation`, `ListMyConversations`, `SendTextMessage`, and `SendMessage` to validate listing state and embed listing card fields in responses.
-- `IdentityCheckPort` (`IDENTITY_TOKENS.IdentityCheckPort`) from `identity/` — used by `OpenConversation`, `SendTextMessage`, and `SendMessage` to enforce suspended-user blocking when either participant is suspended.
+- `IdentityCheckPort` (`IDENTITY_TOKENS.IdentityCheckPort`) from `identity/` — used by `OpenConversation`, `SendTextMessage`, `SendMessage`, and `PresignChatAttachmentUpload` to enforce suspended-user blocking when either participant is suspended.
 - `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `OpenConversation`, `SendTextMessage`, and `SendMessage` for block checks (`isUserBlockedBy`).
+- `MediaStoragePort` (`MEDIA_STORAGE_PORT`) from `listings/` — used by `PresignChatAttachmentUpload` to generate presigned PUT URLs for `chat-attachments` objects.
 
 ## Shipped use-cases
 
@@ -68,6 +70,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `SendTextMessage` — creates and persists a text message in a conversation after validating participant status, current listing contactability, suspension, and block state. Updates conversation activity in the same transaction.
 - `SendMessage` — rich-message send supporting text and image kinds with optional `clientMessageId` for idempotency. Same validation as `SendTextMessage`.
 - `SendPostRefMessage` — dedicated post-reference send. Validates the referenced listing is active/visible, builds an immutable snapshot from `ListingsReadPort`, persists the message, and enforces the same participant/suspension/block guards as `SendMessage`.
+- `PresignChatAttachmentUpload` — conversation-scoped presigned upload for a single image. Validates participant access, suspended-user state, content type (`image/jpeg`/`image/webp`), and 5 MB size cap. Returns `uploadUrl`, `key`, `expiresIn`, and `maxSizeBytes`.
 - `UpdateWatermark` — updates `lastReadAt` and/or `lastDeliveredAt` for the authenticated participant with monotonic checks.
 - `MuteConversation` — sets or clears `mutedAt` for the authenticated participant.
 - `DeleteMessage` — soft-deletes the authenticated user's own message within the 5-minute window.
@@ -92,6 +95,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 | POST | `/api/v1/conversations/:id/messages` | Required | `SendTextMessage` — body `{ text }` |
 | POST | `/api/v1/conversations/:id/messages/rich` | Required | `SendMessage` — body `{ kind, text?, metadata?, clientMessageId? }` |
 | POST | `/api/v1/conversations/:id/messages/post-ref` | Required | `SendPostRefMessage` — body `{ metadata: { listingId }, clientMessageId? }` |
+| POST | `/api/v1/conversations/:id/attachments/presign` | Required | `PresignChatAttachmentUpload` — body `{ contentType, sizeBytes }` |
 | POST | `/api/v1/conversations/:id/watermark` | Required | `UpdateWatermark` — body `{ lastReadAt?, lastDeliveredAt? }` |
 | POST | `/api/v1/conversations/:id/mute` | Required | `MuteConversation` — body `{ muted }` |
 | DELETE | `/api/v1/conversations/:id/messages/:messageId` | Required | `DeleteMessage` |

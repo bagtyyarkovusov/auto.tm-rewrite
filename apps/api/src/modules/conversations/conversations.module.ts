@@ -11,6 +11,7 @@ import { ListMessages } from "./application/ListMessages";
 import { SendTextMessage } from "./application/SendTextMessage";
 import { SendMessage } from "./application/SendMessage";
 import { SendPostRefMessage } from "./application/SendPostRefMessage";
+import { PresignChatAttachmentUpload } from "./application/PresignChatAttachmentUpload";
 import { UpdateWatermark } from "./application/UpdateWatermark";
 import { MuteConversation } from "./application/MuteConversation";
 import { DeleteMessage } from "./application/DeleteMessage";
@@ -33,6 +34,7 @@ import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
     SendTextMessage,
     SendMessage,
     SendPostRefMessage,
+    PresignChatAttachmentUpload,
     UpdateWatermark,
     MuteConversation,
     DeleteMessage,

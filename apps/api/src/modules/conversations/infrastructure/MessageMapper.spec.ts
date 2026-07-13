@@ -112,4 +112,22 @@ describe("MessageMapper", () => {
     expect(message.kind).toBe("post_ref");
     expect(message.metadata).toBeNull();
   });
+
+  it("redacts image metadata for a deleted image message", () => {
+    const message = toDomainMessage({
+      id: "msg-img-del",
+      conversationId: "conv-1",
+      senderId: "sender-1",
+      kind: "image",
+      body: null,
+      metadata: { key: "chat-attachments/conv-1/uuid/original.jpg", width: 800, height: 600 },
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+      deletedAt: new Date("2026-01-01T00:01:00Z"),
+      clientMessageId: null,
+    });
+
+    expect(message.isDeleted()).toBe(true);
+    expect(message.body).toBeNull();
+    expect(message.metadata).toBeNull();
+  });
 });
