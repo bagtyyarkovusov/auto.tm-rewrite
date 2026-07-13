@@ -263,3 +263,46 @@ export const WatermarkEventSchema = z.object({
   lastDeliveredAt: z.string().datetime().optional(),
 });
 export type WatermarkEvent = z.infer<typeof WatermarkEventSchema>;
+
+// ── Socket room join/leave ──
+
+export const JoinConversationRequestSchema = z.object({
+  conversationId: z.string().uuid(),
+});
+export type JoinConversationRequest = z.infer<
+  typeof JoinConversationRequestSchema
+>;
+
+export const JoinConversationResponseSchema = z.object({
+  ok: z.literal(true),
+  conversationId: z.string().uuid(),
+  room: z.string().min(1),
+});
+export type JoinConversationResponse = z.infer<
+  typeof JoinConversationResponseSchema
+>;
+
+export const LeaveConversationRequestSchema = z.object({
+  conversationId: z.string().uuid(),
+});
+export type LeaveConversationRequest = z.infer<
+  typeof LeaveConversationRequestSchema
+>;
+
+export const LeaveConversationResponseSchema = z.object({
+  ok: z.literal(true),
+  conversationId: z.string().uuid(),
+  room: z.string().min(1),
+});
+export type LeaveConversationResponse = z.infer<
+  typeof LeaveConversationResponseSchema
+>;
+
+export const ConversationSocketErrorSchema = z.object({
+  ok: z.literal(false),
+  code: z.string(),
+  message: z.string(),
+});
+export type ConversationSocketError = z.infer<
+  typeof ConversationSocketErrorSchema
+>;

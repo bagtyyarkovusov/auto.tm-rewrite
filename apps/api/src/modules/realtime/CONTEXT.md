@@ -12,6 +12,7 @@ Authenticated Socket.IO foundation for the API. Provides the server adapter, con
 - `SocketAuthMiddleware` — verifies the JWT from `handshake.auth.token` (or `Authorization` header) and attaches the payload to `socket.data.user`.
 - `RealtimeGateway` — NestJS WebSocket gateway on namespace `SOCKET_IO_NAMESPACE` (default `/ws/chat`); registers auth middleware, joins authenticated sockets to `user:{userId}`, and updates the connection registry.
 - `SocketConnectionRegistry` — in-memory map of socket IDs to user IDs plus per-user active-socket counts. Implements `PresencePort`.
+- `realtime.config.ts` — shared socket infrastructure constants: `REALTIME_NAMESPACE`, `userRoom(userId)`, and `conversationRoom(conversationId)`. Conversation room join/leave handlers live in `conversations/`.
 
 ## Domain layer
 

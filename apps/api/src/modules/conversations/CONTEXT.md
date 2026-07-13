@@ -24,7 +24,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 - A `Conversation` is uniquely identified by `(listingId, buyerId)` — only one conversation per buyer per listing (`@@unique([listingId, buyerId])`).
 - **Same-user-cannot-chat-themselves** — enforced at domain layer in `Conversation` constructor and at application layer in `OpenConversation`.
-- **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller. Enforced by `ListMessages`, `SendTextMessage`, `SendMessage`, `UpdateWatermark`, `MuteConversation`, and `DeleteMessage`.
+- **Participant-only access** — `Conversation.isParticipant(userId)` returns `true` only for buyer or seller. Enforced by `ListMessages`, `SendTextMessage`, `SendMessage`, `SendPostRefMessage`, `UpdateWatermark`, `MuteConversation`, `DeleteMessage`, and `ValidateConversationAccess`.
 - **New contact restrictions** — `OpenConversation` rejects self-contact first (`FORBIDDEN` with `SELF_CONTACT_NOT_ALLOWED`), returns an existing conversation if one exists (regardless of subsequent listing state changes), then for new conversations rejects non-existent or banned listings (`NOT_FOUND`), sold/archived listings (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), and listings with `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`). New contact is also blocked when either participant is suspended (`FORBIDDEN` with `USER_SUSPENDED` via `IdentityCheckPort.isSuspended`) and when either user has blocked the other (`FORBIDDEN` with `BLOCKED_BY_USER` or `USER_BLOCKED` via `IdentityReadPort.isUserBlockedBy`).
 - **Send restrictions** — `SendTextMessage` and `SendMessage` block sends when the parent listing is unavailable (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), sold (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), archived (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), banned (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), has `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`), or when the sender is not a participant (`FORBIDDEN` with `NOT_A_PARTICIPANT`). Send is also blocked when either participant is suspended (`FORBIDDEN` with `USER_SUSPENDED` via `IdentityCheckPort.isSuspended`) and when either user has blocked the other (`FORBIDDEN` with `BLOCKED_BY_USER` or `USER_BLOCKED` via `IdentityReadPort.isUserBlockedBy`). Existing history remains readable in all read-only states.
 - **Post-reference send restrictions** — `SendPostRefMessage` enforces the same participant, parent-listing, suspension, and block guards as `SendMessage`. In addition, the referenced listing must be visible and `active` at send time; hidden, deleted, sold, archived, banned, or otherwise invisible referenced listings are rejected (`FORBIDDEN` with `LISTING_REFERENCE_NOT_VISIBLE`). The snapshot stored in `Message.metadata` is built from `ListingsReadPort.getListingSummary` and is immutable for the life of the message.
@@ -38,16 +38,17 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - **Watermarks** — `UpdateWatermark` updates `lastReadAt` and/or `lastDeliveredAt` for the authenticated participant; timestamps must move monotonically forward.
 - **Unread count** — `ListMyConversations` returns `unreadCount` derived from the participant's `lastReadAt` and non-deleted messages from the other participant.
 - **Mute** — `MuteConversation` sets or clears `ConversationParticipant.mutedAt` for the authenticated participant. Mute suppresses native push (push decision lives in `notifications/`, issue #244).
+- **Realtime room join rules** — `ConversationGateway` on namespace `/ws/chat` accepts `conversation:join` and `conversation:leave` events. A socket may join `conversation:{conversationId}` only when its authenticated user is a participant, neither participant is suspended, and neither user has blocked the other. `ValidateConversationAccess` enforces these rules by reusing the same participant, suspension, and block checks as the HTTP write path. Joins are idempotent; explicit leave removes the socket from the room. Socket.IO automatically evicts disconnected sockets from all rooms.
 
 ## Module shape (today)
 
 - `apps/api/src/modules/conversations/`:
   - `domain/` — `Conversation.ts`, `Message.ts`, `types.ts`, `ports/ConversationRepository.ts`
-  - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, `SendMessage.ts`, `SendPostRefMessage.ts`, `UpdateWatermark.ts`, `MuteConversation.ts`, `DeleteMessage.ts`, plus matching `.spec.ts` unit tests
+  - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, `SendMessage.ts`, `SendPostRefMessage.ts`, `UpdateWatermark.ts`, `MuteConversation.ts`, `DeleteMessage.ts`, `ValidateConversationAccess.ts`, plus matching `.spec.ts` unit tests
   - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, watermark/mute/delete/unread queries), `MessageMapper.ts` (Prisma row ↔ domain mapping + redaction), `PostRefSnapshotMapper.ts` (builds post-reference snapshots from `ListingSummary` and computes current availability)
   - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages/rich`, `POST /api/v1/conversations/:id/messages/post-ref`, `POST /api/v1/conversations/:id/watermark`, `POST /api/v1/conversations/:id/mute`, `DELETE /api/v1/conversations/:id/messages/:messageId`, plus health-check ping
-  - `conversations.module.ts` — registers controller, use-cases, repository port, imports `ListingsModule` for `ListingsReadPort` and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`
-- No WebSocket gateway, no Socket.IO server — realtime path is issue #234+.
+  - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join` and `conversation:leave` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`
+  - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `ListingsModule` for `ListingsReadPort` and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`
 
 ## Ports exposed
 
@@ -70,6 +71,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `UpdateWatermark` — updates `lastReadAt` and/or `lastDeliveredAt` for the authenticated participant with monotonic checks.
 - `MuteConversation` — sets or clears `mutedAt` for the authenticated participant.
 - `DeleteMessage` — soft-deletes the authenticated user's own message within the 5-minute window.
+- `ValidateConversationAccess` — shared participant/suspension/block check used by the realtime gateway to authorize joining or leaving a `conversation:{conversationId}` room. Returns the `Conversation` on success; throws `NotFoundException` or `ForbiddenException` on failure.
 
 ## Events emitted
 
@@ -94,12 +96,19 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 | POST | `/api/v1/conversations/:id/mute` | Required | `MuteConversation` — body `{ muted }` |
 | DELETE | `/api/v1/conversations/:id/messages/:messageId` | Required | `DeleteMessage` |
 
+## WebSocket events (`/ws/chat` namespace)
+
+| Event | Direction | Auth | Body / Response | Handler |
+|---|---|---|---|---|
+| `conversation:join` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleJoin` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
+| `conversation:leave` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleLeave` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
+
 ## Planned additions (future sprints)
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the named sprint file or feature PRD:
 - **S6 (Contact seller) — shipped** — text-only per-listing thread creation and message send/list endpoints
-- **S10 (Rich chat) — partially shipped** — rich message send/list, watermarks, unread counts, mute, soft delete. Remaining S10 chat slices (Socket.IO gateway, realtime send/ack, typing/presence, push decision/delivery, block/unblock UI, reports) live in child issues #234-#253.
-- **Post-MLP rich chat** — `QuickReply` entity if shaped, `ConversationsReadPort`, Socket.IO namespace `/ws/chat`, events, and push consumers.
+- **S10 (Rich chat) — partially shipped** — rich message send/list, watermarks, unread counts, mute, soft delete, and Socket.IO conversation room join/leave (#235). Remaining S10 chat slices (realtime send/ack, typing/presence, push decision/delivery, block/unblock UI, reports) live in child issues #236-#253.
+- **Post-MLP rich chat** — `QuickReply` entity if shaped, `ConversationsReadPort`, and push consumers.
 
 ## Notable decisions
 

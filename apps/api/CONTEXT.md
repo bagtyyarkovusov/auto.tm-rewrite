@@ -26,7 +26,7 @@ Every bounded context under `src/modules/<context>/` has four layers:
 - Prisma client via `PrismaService` (PrismaModule is currently commented out in `app.module.ts` pending API ESM migration — issue #16)
 - Swagger / OpenAPI docs generated from Zod contracts
 - `ConfigModule` with Zod-validated env schema (`src/env.schema.ts`), including `PORT=3006` (see ADR-0018) and `SOCKET_IO_NAMESPACE`, `SOCKET_IO_CORS_ORIGIN`, `SOCKET_IO_REDIS_ADAPTER_ENABLED` (default `false`) for the Socket.IO foundation.
-- `socket.io` package installed; `RealtimeIoAdapter` attached in `main.ts` with optional `@socket.io/redis-adapter` readiness; `RealtimeGateway` exposes the `/ws/chat` namespace with JWT-auth middleware, user rooms (`user:{userId}`), and an in-memory online registry. No chat event handlers or conversation rooms yet (issue #235).
+- `socket.io` package installed; `RealtimeIoAdapter` attached in `main.ts` with optional `@socket.io/redis-adapter` readiness; `RealtimeGateway` exposes the `/ws/chat` namespace with JWT-auth middleware, user rooms (`user:{userId}`), and an in-memory online registry. `conversations/` adds `ConversationGateway` on the same namespace for `conversation:join` / `conversation:leave` events and deterministic `conversation:{conversationId}` rooms (#235).
 
 ## Public API surface (today)
 
@@ -34,7 +34,7 @@ Every bounded context under `src/modules/<context>/` has four layers:
 - REST: `/api/v1/catalog/*` — catalog stub controller (full surface in S3)
 - REST stubs: `/api/v1/listings`, `/api/v1/conversations`, etc. — controllers exist but no real handlers
 - Health: `/healthz` (liveness)
-- WebSocket: `/ws/chat` namespace (Socket.IO) — authenticated connections only
+- WebSocket: `/ws/chat` namespace (Socket.IO) — authenticated connections only; `conversation:join` / `conversation:leave` events in `conversations/` gateway
 - Push, Metrics (`/metrics`) — planned, not yet attached
 
 ## Cross-context communication
