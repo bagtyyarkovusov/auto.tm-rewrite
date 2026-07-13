@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useMe } from "../src/api/identity/useMe";
+import { localeTag } from "../src/i18n/resources";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +33,9 @@ function LoadingState() {
 
 function formatMemberSince(isoDate: string, locale: string): string {
   const d = new Date(isoDate);
-  const localeTag = locale === "tk" ? "tk-TM" : locale === "en" ? "en-US" : "ru-RU";
+  const tag = localeTag(locale);
   try {
-    return d.toLocaleDateString(localeTag, {
+    return d.toLocaleDateString(tag, {
       year: "numeric",
       month: "long",
       day: "numeric",

@@ -7,6 +7,17 @@ export function resolveLocale(value: unknown): Locale {
   return locales.includes(value as Locale) ? (value as Locale) : "ru";
 }
 
+/**
+ * Maps an AutoTM locale code to a BCP 47 tag suitable for Intl formatting APIs.
+ * Using full tags (e.g. "tk-TM") is more reliable on React Native/Hermes than
+ * bare language codes (e.g. "tk") because some devices resolve bare codes to
+ * the default locale instead of the intended regional variant.
+ */
+export function localeTag(language: string): string {
+  const locale = resolveLocale(language);
+  return locale === "tk" ? "tk-TM" : locale === "en" ? "en-US" : "ru-RU";
+}
+
 export const resources: Resource = {
   ru: {
     common: {

@@ -39,6 +39,7 @@ import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { localeTag } from "@/src/i18n/resources";
 
 const STEP_KEY_MAP: Record<WizardSchemas.WizardStep, string> = {
   vin: "vin",
@@ -507,7 +508,7 @@ export default function SellScreen() {
                   : t("noPhotos")}
                 {" · "}
                 {existingDraft.payload.priceAmount
-                  ? `${existingDraft.payload.priceAmount.toLocaleString(i18n.language)} ${existingDraft.payload.priceCurrency ?? "TMT"}`
+                  ? `${existingDraft.payload.priceAmount.toLocaleString(localeTag(i18n.language))} ${existingDraft.payload.priceCurrency ?? "TMT"}`
                   : t("priceMissing")}
               </Text>
               <Button

@@ -11,6 +11,7 @@ import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { localeTag } from "@/src/i18n/resources";
 
 type ListingSummary = ListingsSchemas.ListingSummary;
 
@@ -23,7 +24,7 @@ interface ListingCardProps {
 }
 
 function formatPrice(amount: number, locale: string): string {
-  return `${amount.toLocaleString(locale)} TMT`;
+  return `${amount.toLocaleString(localeTag(locale))} TMT`;
 }
 
 export function ListingCard({

@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
+import { localeTag } from "@/src/i18n/resources";
 
 function formatPrice(amount: number, locale: string): string {
-  return `${amount.toLocaleString(locale)} TMT`;
+  return `${amount.toLocaleString(localeTag(locale))} TMT`;
 }
 
 interface PriceDisplayProps {
@@ -36,7 +37,7 @@ export function PriceDisplay({
 
       {showOriginal && (
         <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-          {priceAmount.toLocaleString(i18n.language)} {priceCurrency}
+          {priceAmount.toLocaleString(localeTag(i18n.language))} {priceCurrency}
         </Text>
       )}
 

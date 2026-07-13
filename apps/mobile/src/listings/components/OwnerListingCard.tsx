@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { localeTag } from "@/src/i18n/resources";
 
 type ListingSummary = ListingsSchemas.ListingSummary;
 type ListingStatus = ListingsSchemas.ListingSummary["status"];
@@ -26,7 +27,7 @@ interface OwnerListingCardProps {
 }
 
 function formatPrice(amount: number, locale: string): string {
-  return `${amount.toLocaleString(locale)} TMT`;
+  return `${amount.toLocaleString(localeTag(locale))} TMT`;
 }
 
 function statusLabel(status: ListingStatus, t: (key: string) => string): string {

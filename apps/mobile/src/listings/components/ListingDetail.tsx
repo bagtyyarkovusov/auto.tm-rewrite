@@ -13,7 +13,7 @@ import { SellerBlock } from "./SellerBlock";
 import { OwnerActions } from "./OwnerActions";
 import { InspectionInterestCta } from "./InspectionInterestCta";
 
-import { resolveLocale } from "@/src/i18n/resources";
+import { localeTag, resolveLocale } from "@/src/i18n/resources";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
@@ -84,7 +84,7 @@ export function ListingDetailView({
       label: t("mileage"),
       value:
         listing.mileageKm != null
-          ? `${listing.mileageKm.toLocaleString(i18n.language)} ${t("km")}`
+          ? `${listing.mileageKm.toLocaleString(localeTag(i18n.language))} ${t("km")}`
           : undefined,
     },
     {
