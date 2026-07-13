@@ -6,6 +6,8 @@ import { Send } from "lucide-react-native";
 
 import { THEME } from "../../../lib/theme";
 
+import { QuickReplies } from "./QuickReplies";
+
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -16,11 +18,13 @@ const MAX_CHARS = 1000;
 interface MessageComposerProps {
   onSend: (text: string) => void;
   disabled?: boolean;
+  showQuickReplies?: boolean;
 }
 
 export function MessageComposer({
   onSend,
   disabled = false,
+  showQuickReplies = false,
 }: MessageComposerProps) {
   const [text, setText] = useState("");
   const { t } = useTranslation();
@@ -42,6 +46,9 @@ export function MessageComposer({
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {showQuickReplies && (
+        <QuickReplies onSelect={setText} disabled={disabled} />
+      )}
       <View className="flex-row items-end gap-2 px-4 py-3 border-t border-border bg-background">
         <View className="flex-1 rounded-2xl bg-muted px-4 py-2.5">
           <TextInput

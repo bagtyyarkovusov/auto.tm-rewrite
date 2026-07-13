@@ -501,6 +501,10 @@ export const resources: Resource = {
       deleteMessageTitle: "Удалить сообщение?",
       deleteMessageDescription: "Сообщение будет удалено для всех участников. Это действие нельзя отменить.",
       messageDeleted: "Сообщение удалено",
+      quickReplyAvailable: "Автомобиль ещё в продаже?",
+      quickReplySeeIt: "Можно посмотреть машину?",
+      quickReplyFinalPrice: "Конечная цена?",
+      quickReplyCondition: "Какое состояние машины?",
     },
     onboarding: {
       chooseLanguage: "Выберите язык",
@@ -999,6 +1003,10 @@ export const resources: Resource = {
       deleteMessageTitle: "Habary poz?",
       deleteMessageDescription: "Habar ähli gatnaşyjylar üçin pozular. Bu hereket yzyna alynp bilmez.",
       messageDeleted: "Habar pozuldy",
+      quickReplyAvailable: "Awtomobil heniz satlykmy?",
+      quickReplySeeIt: "Maşyny görmek bolýarmy?",
+      quickReplyFinalPrice: "Soňky baha näçe?",
+      quickReplyCondition: "Awtomobiliň ýagdaýy nähili?",
     },
     onboarding: {
       chooseLanguage: "Dil saýlaň",
@@ -1475,6 +1483,10 @@ export const resources: Resource = {
       deleteMessageTitle: "Delete message?",
       deleteMessageDescription: "The message will be deleted for all participants. This action cannot be undone.",
       messageDeleted: "Message deleted",
+      quickReplyAvailable: "Is the car still available?",
+      quickReplySeeIt: "Can I see the car?",
+      quickReplyFinalPrice: "What is the final price?",
+      quickReplyCondition: "What is the condition of the car?",
     },
     onboarding: {
       chooseLanguage: "Choose language",

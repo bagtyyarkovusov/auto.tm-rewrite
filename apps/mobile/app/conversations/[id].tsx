@@ -574,6 +574,9 @@ export default function ConversationDetailScreen() {
         <MessageComposer
           onSend={handleSend}
           disabled={isBlocked || blockUser.isPending || unblockUser.isPending}
+          showQuickReplies={
+            !isLoading && !isError && !isBlocked && allMessages.length === 0
+          }
         />
       )}
 
