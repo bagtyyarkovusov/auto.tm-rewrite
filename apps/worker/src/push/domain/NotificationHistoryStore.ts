@@ -1,4 +1,6 @@
-export type NotificationHistoryStatus = "pending" | "delivered" | "failed";
+import type { NotificationHistoryStatus } from "./types";
+
+export type { NotificationHistoryStatus };
 
 export interface NotificationHistoryStore {
   updateStatus(

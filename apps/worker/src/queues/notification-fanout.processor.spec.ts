@@ -2,13 +2,15 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Job } from "bullmq";
 
 import type { DirectMessagePushInput } from "../push/domain/DirectMessagePushInput";
+import { DIRECT_MESSAGE_PUSH_JOB_NAME } from "../push/domain/types";
+import type { ProcessDirectMessagePush } from "../push/application/ProcessDirectMessagePush";
 
 import { NotificationFanoutProcessor } from "./notification-fanout.processor";
 
-function makeJob(data: unknown): Job {
+function makeJob(data: unknown, name: string = DIRECT_MESSAGE_PUSH_JOB_NAME): Job {
   return {
     id: "job-1",
-    name: "direct-message",
+    name,
     data,
   } as unknown as Job;
 }
@@ -23,8 +25,8 @@ describe("NotificationFanoutProcessor", () => {
       execute: vi.fn(async (input: DirectMessagePushInput) => {
         calls.push(input);
       }),
-    };
-    processor = new NotificationFanoutProcessor(fakeUseCase as never);
+    } as unknown as ProcessDirectMessagePush;
+    processor = new NotificationFanoutProcessor(fakeUseCase);
   });
 
   it("consumes a direct-message job and forwards the payload", async () => {
@@ -58,8 +60,7 @@ describe("NotificationFanoutProcessor", () => {
   });
 
   it("silently skips unhandled job names", async () => {
-    const job = makeJob({ category: "saved_search_matches" });
-    job.name = "saved-search-match";
+    const job = makeJob({ category: "saved_search_matches" }, "saved-search-match");
 
     await processor.process(job);
 

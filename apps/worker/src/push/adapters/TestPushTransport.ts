@@ -10,14 +10,10 @@ export class TestPushTransport implements PushPort {
   private behaviors = new Map<string, PushResult>();
   private defaultResult: PushResult = { ok: true };
 
-  recordDelivery(payload: PushPayload): void {
-    const result = this.behaviors.get(payload.deviceToken) ?? this.defaultResult;
-    this.deliveries.push({ payload, result });
-  }
-
   async send(payload: PushPayload): Promise<PushResult> {
-    this.recordDelivery(payload);
-    return this.behaviors.get(payload.deviceToken) ?? this.defaultResult;
+    const result = this.resolveResult(payload.deviceToken);
+    this.deliveries.push({ payload, result });
+    return result;
   }
 
   setResult(token: string, result: PushResult): void {
@@ -32,5 +28,9 @@ export class TestPushTransport implements PushPort {
     this.deliveries = [];
     this.behaviors.clear();
     this.defaultResult = { ok: true };
+  }
+
+  private resolveResult(token: string): PushResult {
+    return this.behaviors.get(token) ?? this.defaultResult;
   }
 }

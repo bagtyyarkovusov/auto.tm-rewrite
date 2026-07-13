@@ -7,6 +7,7 @@ import { TestPushTransport } from "./adapters/TestPushTransport";
 import { PUSH_PORT } from "./domain/PushPort";
 import { PUSH_DEVICE_STORE } from "./domain/PushDeviceStore";
 import { NOTIFICATION_HISTORY_STORE } from "./domain/NotificationHistoryStore";
+import { PUSH_TRANSPORT } from "./domain/types";
 import { PrismaPushDeviceStore } from "./infrastructure/PrismaPushDeviceStore";
 import { PrismaNotificationHistoryStore } from "./infrastructure/PrismaNotificationHistoryStore";
 
@@ -27,7 +28,9 @@ import { PrismaNotificationHistoryStore } from "./infrastructure/PrismaNotificat
       provide: PUSH_PORT,
       useFactory: (config: ConfigService) => {
         const transport = config.get<string>("PUSH_TRANSPORT");
-        return transport === "test" ? new TestPushTransport() : new FcmApnsPushTransport();
+        return transport === PUSH_TRANSPORT.Test
+          ? new TestPushTransport()
+          : new FcmApnsPushTransport();
       },
       inject: [ConfigService],
     },

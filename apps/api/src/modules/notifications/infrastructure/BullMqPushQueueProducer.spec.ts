@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import type { Queue } from "bullmq";
 import { NotificationsSchemas } from "@auto-tm/contracts";
 
 import { DirectMessageNotification } from "../domain/DirectMessageNotification";
@@ -7,8 +8,9 @@ import { BullMqPushQueueProducer } from "./BullMqPushQueueProducer";
 class FakeQueue {
   jobs: Array<{ name: string; data: unknown }> = [];
 
-  async add(name: string, data: unknown): Promise<void> {
+  async add(name: string, data: unknown, opts?: unknown): Promise<void> {
     this.jobs.push({ name, data });
+    return Promise.resolve();
   }
 }
 
@@ -18,7 +20,7 @@ describe("BullMqPushQueueProducer", () => {
 
   beforeEach(() => {
     queue = new FakeQueue();
-    producer = new BullMqPushQueueProducer(queue as never);
+    producer = new BullMqPushQueueProducer(queue as unknown as Queue);
   });
 
   it("enqueues a direct-message job that matches the worker contract", async () => {
@@ -41,7 +43,9 @@ describe("BullMqPushQueueProducer", () => {
     expect(queue.jobs).toHaveLength(1);
 
     const [job] = queue.jobs;
-    expect(job?.name).toBe("direct-message");
+    expect(job?.name).toBe(
+      NotificationsSchemas.DIRECT_MESSAGE_PUSH_JOB_NAME,
+    );
 
     const parsed = NotificationsSchemas.DirectMessagePushJobSchema.safeParse(
       job?.data,

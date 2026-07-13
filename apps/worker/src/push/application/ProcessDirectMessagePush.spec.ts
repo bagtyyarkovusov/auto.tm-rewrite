@@ -5,6 +5,11 @@ import type {
   NotificationHistoryStatus,
   NotificationHistoryStore,
 } from "../domain/NotificationHistoryStore";
+import {
+  NO_ACTIVE_PUSH_TOKENS_REASON,
+  NOTIFICATION_HISTORY_STATUS,
+  PUSH_RESULT_REASON,
+} from "../domain/types";
 import { TestPushTransport } from "../adapters/TestPushTransport";
 
 import {
@@ -41,21 +46,16 @@ class FakeNotificationHistoryStore implements NotificationHistoryStore {
   }
 }
 
-function makeInput(overrides?: Partial<{
+interface TestInput {
   historyId: string;
   recipientUserId: string;
   title: string;
   body: string;
   deepLink: string;
   data: Record<string, unknown>;
-}>): {
-  historyId: string;
-  recipientUserId: string;
-  title: string;
-  body: string;
-  deepLink: string;
-  data: Record<string, unknown>;
-} {
+}
+
+function makeInput(overrides?: Partial<TestInput>): TestInput {
   return {
     historyId: "history-1",
     recipientUserId: "user-1",
@@ -100,7 +100,7 @@ describe("ProcessDirectMessagePush", () => {
 
     expect(historyStore.updates).toHaveLength(1);
     const [update] = historyStore.updates;
-    expect(update?.status).toBe("delivered");
+    expect(update?.status).toBe(NOTIFICATION_HISTORY_STATUS.Delivered);
     expect(update?.details?.["results"]).toEqual([
       { token: "token-a", success: true },
       { token: "token-b", success: true },
@@ -124,16 +124,19 @@ describe("ProcessDirectMessagePush", () => {
 
   it("records failed status and invalidates the token on permanent token failure", async () => {
     deviceStore.devices = [{ token: "bad-token", platform: "ios" }];
-    pushPort.setResult("bad-token", { ok: false, reason: "INVALID_TOKEN" });
+    pushPort.setResult("bad-token", {
+      ok: false,
+      reason: PUSH_RESULT_REASON.InvalidToken,
+    });
 
     await useCase.execute(makeInput());
 
     expect(deviceStore.invalidatedTokens).toEqual(["bad-token"]);
 
     const [update] = historyStore.updates;
-    expect(update?.status).toBe("failed");
+    expect(update?.status).toBe(NOTIFICATION_HISTORY_STATUS.Failed);
     expect(update?.details?.["results"]).toEqual([
-      { token: "bad-token", success: false, error: "INVALID_TOKEN" },
+      { token: "bad-token", success: false, error: PUSH_RESULT_REASON.InvalidToken },
     ]);
   });
 
@@ -141,16 +144,16 @@ describe("ProcessDirectMessagePush", () => {
     deviceStore.devices = [{ token: "token-a", platform: "ios" }];
     pushPort.setResult("token-a", {
       ok: false,
-      reason: "PERMANENT",
+      reason: PUSH_RESULT_REASON.Permanent,
       cause: new Error("bad configuration"),
     });
 
     await useCase.execute(makeInput());
 
     const [update] = historyStore.updates;
-    expect(update?.status).toBe("failed");
+    expect(update?.status).toBe(NOTIFICATION_HISTORY_STATUS.Failed);
     expect(update?.details?.["results"]).toEqual([
-      { token: "token-a", success: false, error: "PERMANENT" },
+      { token: "token-a", success: false, error: PUSH_RESULT_REASON.Permanent },
     ]);
   });
 
@@ -158,7 +161,7 @@ describe("ProcessDirectMessagePush", () => {
     deviceStore.devices = [{ token: "token-a", platform: "ios" }];
     pushPort.setResult("token-a", {
       ok: false,
-      reason: "RETRYABLE",
+      reason: PUSH_RESULT_REASON.Retryable,
       cause: new Error("network timeout"),
     });
 
@@ -167,9 +170,9 @@ describe("ProcessDirectMessagePush", () => {
     );
 
     const [update] = historyStore.updates;
-    expect(update?.status).toBe("pending");
+    expect(update?.status).toBe(NOTIFICATION_HISTORY_STATUS.Pending);
     expect(update?.details?.["results"]).toEqual([
-      { token: "token-a", success: false, error: "RETRYABLE" },
+      { token: "token-a", success: false, error: PUSH_RESULT_REASON.Retryable },
     ]);
   });
 
@@ -182,8 +185,8 @@ describe("ProcessDirectMessagePush", () => {
     const [update] = historyStore.updates;
     expect(update).toEqual({
       historyId: "history-1",
-      status: "failed",
-      details: { reason: "NO_TOKENS" },
+      status: NOTIFICATION_HISTORY_STATUS.Failed,
+      details: { reason: NO_ACTIVE_PUSH_TOKENS_REASON },
     });
   });
 
@@ -192,13 +195,35 @@ describe("ProcessDirectMessagePush", () => {
       { token: "good-token", platform: "ios" },
       { token: "bad-token", platform: "android" },
     ];
-    pushPort.setResult("bad-token", { ok: false, reason: "INVALID_TOKEN" });
+    pushPort.setResult("bad-token", {
+      ok: false,
+      reason: PUSH_RESULT_REASON.InvalidToken,
+    });
 
     await useCase.execute(makeInput());
 
     expect(deviceStore.invalidatedTokens).toEqual(["bad-token"]);
 
     const [update] = historyStore.updates;
-    expect(update?.status).toBe("delivered");
+    expect(update?.status).toBe(NOTIFICATION_HISTORY_STATUS.Delivered);
+  });
+
+  it("leaves history pending and retries when one device succeeds but another is retryable", async () => {
+    deviceStore.devices = [
+      { token: "good-token", platform: "ios" },
+      { token: "flaky-token", platform: "android" },
+    ];
+    pushPort.setResult("flaky-token", {
+      ok: false,
+      reason: PUSH_RESULT_REASON.Retryable,
+      cause: new Error("network timeout"),
+    });
+
+    await expect(useCase.execute(makeInput())).rejects.toBeInstanceOf(
+      RetryablePushError,
+    );
+
+    const [update] = historyStore.updates;
+    expect(update?.status).toBe(NOTIFICATION_HISTORY_STATUS.Pending);
   });
 });

@@ -10,6 +10,11 @@ import type { PushDeviceStore } from "../domain/PushDeviceStore";
 import { PUSH_DEVICE_STORE } from "../domain/PushDeviceStore";
 import type { PushPort, PushResult } from "../domain/PushPort";
 import { PUSH_PORT } from "../domain/PushPort";
+import {
+  NO_ACTIVE_PUSH_TOKENS_REASON,
+  NOTIFICATION_HISTORY_STATUS,
+  PUSH_RESULT_REASON,
+} from "../domain/types";
 
 export class RetryablePushError extends Error {
   constructor(
@@ -44,9 +49,13 @@ export class ProcessDirectMessagePush {
     );
 
     if (devices.length === 0) {
-      await this.historyStore.updateStatus(input.historyId, "failed", {
-        reason: "NO_TOKENS",
-      });
+      await this.historyStore.updateStatus(
+        input.historyId,
+        NOTIFICATION_HISTORY_STATUS.Failed,
+        {
+          reason: NO_ACTIVE_PUSH_TOKENS_REASON,
+        },
+      );
       return;
     }
 
@@ -62,14 +71,14 @@ export class ProcessDirectMessagePush {
         data: input.data,
       });
 
-      if (!result.ok && result.reason === "INVALID_TOKEN") {
+      if (!result.ok && result.reason === PUSH_RESULT_REASON.InvalidToken) {
         await this.deviceStore.invalidateToken(device.token);
       }
 
       const tokenResult = this.handleResult(device.token, result);
       results.push(tokenResult);
 
-      if (!tokenResult.success && tokenResult.error === "RETRYABLE") {
+      if (!tokenResult.success && tokenResult.error === PUSH_RESULT_REASON.Retryable) {
         hasRetryable = true;
       }
     }
@@ -87,16 +96,17 @@ export class ProcessDirectMessagePush {
     }
   }
 
-  private handleResult(
-    token: string,
-    result: PushResult,
-  ): TokenResult {
+  private handleResult(token: string, result: PushResult): TokenResult {
     if (result.ok) {
       return { token, success: true };
     }
 
-    if (result.reason === "INVALID_TOKEN") {
-      return { token, success: false, error: "INVALID_TOKEN" };
+    if (result.reason === PUSH_RESULT_REASON.InvalidToken) {
+      return {
+        token,
+        success: false,
+        error: PUSH_RESULT_REASON.InvalidToken,
+      };
     }
 
     return { token, success: false, error: result.reason };
@@ -106,14 +116,14 @@ export class ProcessDirectMessagePush {
     results: TokenResult[],
     hasRetryable: boolean,
   ): NotificationHistoryStatus {
-    if (results.some((r) => r.success)) {
-      return "delivered";
-    }
-
     if (hasRetryable) {
-      return "pending";
+      return NOTIFICATION_HISTORY_STATUS.Pending;
     }
 
-    return "failed";
+    if (results.some((r) => r.success)) {
+      return NOTIFICATION_HISTORY_STATUS.Delivered;
+    }
+
+    return NOTIFICATION_HISTORY_STATUS.Failed;
   }
 }

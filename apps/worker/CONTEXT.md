@@ -52,7 +52,7 @@ None — worker is internal. Only Redis (queues) + Postgres + MinIO connections 
 - `REDIS_URL` — Redis connection string for BullMQ
 - `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` — object storage (used by future media pipelines)
 - `PUSH_TRANSPORT` — `test` (S10 default), `fcm-apns`, or `ntfy`
-- Optional production transport env names (not consumed until credentials are wired): `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_SIGNING_KEY`
+- Optional production transport env names (not consumed until credentials are wired): `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`
 
 ## Dependencies
 

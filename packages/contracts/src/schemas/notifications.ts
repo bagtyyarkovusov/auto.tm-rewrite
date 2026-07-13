@@ -66,6 +66,8 @@ export type RevokePushTokenResponse = z.infer<
 
 // ── Worker direct-message push job payload (API → worker) ──
 
+export const DIRECT_MESSAGE_PUSH_JOB_NAME = "direct-message" as const;
+
 export const DirectMessagePushJobSchema = z.object({
   category: NotificationCategorySchema,
   recipientUserId: z.string().uuid(),
