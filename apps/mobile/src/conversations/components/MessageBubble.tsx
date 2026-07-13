@@ -1,15 +1,28 @@
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Check, CheckCheck, RotateCcw, Trash2 } from "lucide-react-native";
+import { Image } from "expo-image";
+
+import { buildChatImageUrl } from "../upload/buildChatImageUrl";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 
 export type MessageStatus = "pending" | "failed" | "sent" | "delivered" | "read";
 
+export interface ImageMessageMetadata {
+  key: string;
+  width?: number;
+  height?: number;
+}
+
 interface MessageBubbleProps {
   id: string;
   text: string;
+  kind?: "text" | "image";
+  metadata?: ImageMessageMetadata;
+  localImageUri?: string;
   isMine: boolean;
   status: MessageStatus;
   createdAt: string;
@@ -19,7 +32,11 @@ interface MessageBubbleProps {
   onRetry?: () => void;
   onDelete?: () => void;
   onReport?: () => void;
+  onImagePress?: () => void;
 }
+
+const BUBBLE_MAX_WIDTH = 256;
+const DEFAULT_IMAGE_HEIGHT = 192;
 
 function StatusIcon({ status, isMine }: { status: MessageStatus; isMine: boolean }) {
   const readColorClass = isMine
@@ -41,19 +58,64 @@ function StatusIcon({ status, isMine }: { status: MessageStatus; isMine: boolean
   return null;
 }
 
+function ImageBubble({
+  uri,
+  width,
+  height,
+  onPress,
+}: {
+  uri: string;
+  width?: number;
+  height?: number;
+  onPress?: () => void;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  const displayHeight =
+    width && height && width > 0
+      ? Math.min(DEFAULT_IMAGE_HEIGHT, Math.round((height / width) * BUBBLE_MAX_WIDTH))
+      : DEFAULT_IMAGE_HEIGHT;
+
+  return (
+    <Pressable onPress={onPress} className="overflow-hidden rounded-xl">
+      {failed ? (
+        <View
+          className="items-center justify-center bg-muted"
+          style={{ width: BUBBLE_MAX_WIDTH, height: DEFAULT_IMAGE_HEIGHT }}
+        >
+          <Icon as={Trash2} className="size-6 text-muted-foreground" />
+        </View>
+      ) : (
+        <Image
+          source={{ uri }}
+          style={{ width: BUBBLE_MAX_WIDTH, height: displayHeight }}
+          contentFit="cover"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </Pressable>
+  );
+}
+
 export function MessageBubble({
   text,
   isMine,
   status,
+  kind = "text",
+  metadata,
+  localImageUri,
   deletedAt,
   canDelete,
   canReport,
   onRetry,
   onDelete,
   onReport,
+  onImagePress,
 }: MessageBubbleProps) {
   const { t } = useTranslation();
   const isDeleted = !!deletedAt;
+  const isImage = kind === "image" && !isDeleted;
+  const imageUri = localImageUri ?? (metadata?.key ? buildChatImageUrl(metadata.key) : undefined);
 
   let longPressAction: (() => void) | undefined;
   if (!isDeleted) {
@@ -88,6 +150,13 @@ export function MessageBubble({
               {t("messageDeleted")}
             </Text>
           </View>
+        ) : isImage && imageUri ? (
+          <ImageBubble
+            uri={imageUri}
+            width={metadata?.width}
+            height={metadata?.height}
+            onPress={onImagePress}
+          />
         ) : (
           <Text
             className={`text-base leading-5 ${
@@ -97,6 +166,7 @@ export function MessageBubble({
             {text}
           </Text>
         )}
+
         {(status === "pending" || status === "failed") && !isDeleted && (
           <View className="flex-row items-center justify-end gap-1.5 mt-1">
             {status === "pending" && (

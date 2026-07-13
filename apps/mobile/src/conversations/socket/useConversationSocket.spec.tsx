@@ -17,6 +17,7 @@ const mockSocket = {
   joinConversation: vi.fn(),
   leaveConversation: vi.fn(),
   sendTextMessage: vi.fn(),
+  sendImageMessage: vi.fn(),
   sendTypingStart: vi.fn(),
   sendTypingStop: vi.fn(),
   markDelivered: vi.fn(),
@@ -98,6 +99,41 @@ describe("useConversationSocket", () => {
     expect(mockSocket.sendTextMessage).toHaveBeenCalledWith({
       conversationId: CONV_ID,
       text: "Hello",
+      clientMessageId: "client-1",
+    });
+    expect(response.ok).toBe(true);
+  });
+
+  it("provides a sendImageMessage function that delegates to the socket", async () => {
+    mockSocket.sendImageMessage.mockResolvedValue({
+      ok: true,
+      message: {
+        id: MSG_ID,
+        conversationId: CONV_ID,
+        senderId: USER_ID,
+        kind: "image",
+        text: null,
+        metadata: { key: "chat-attachments/conv-1/msg-1/original.jpg" },
+        createdAt: "2026-06-01T12:00:00.000Z",
+        clientMessageId: "client-1",
+      },
+    });
+
+    const { result } = renderHook(
+      () => useConversationSocket(CONV_ID),
+      { wrapper },
+    );
+
+    const metadata = { key: "chat-attachments/conv-1/msg-1/original.jpg", width: 800, height: 600 };
+    const response = await result.current.sendImageMessage({
+      conversationId: CONV_ID,
+      metadata,
+      clientMessageId: "client-1",
+    });
+
+    expect(mockSocket.sendImageMessage).toHaveBeenCalledWith({
+      conversationId: CONV_ID,
+      metadata,
       clientMessageId: "client-1",
     });
     expect(response.ok).toBe(true);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { queryKeys } from "../../api/queryKeys";
 
@@ -41,6 +42,11 @@ export interface UseConversationSocketReturn {
   sendTextMessage: (input: {
     conversationId: string;
     text: string;
+    clientMessageId: string;
+  }) => Promise<SendTextMessageAck | SocketErrorAck>;
+  sendImageMessage: (input: {
+    conversationId: string;
+    metadata: ConversationsSchemas.ImageMessageMetadata;
     clientMessageId: string;
   }) => Promise<SendTextMessageAck | SocketErrorAck>;
   signalTyping: () => void;
@@ -226,6 +232,17 @@ export function useConversationSocket(
     [],
   );
 
+  const sendImageMessage = useCallback(
+    async (input: {
+      conversationId: string;
+      metadata: ConversationsSchemas.ImageMessageMetadata;
+      clientMessageId: string;
+    }): Promise<SendTextMessageAck | SocketErrorAck> => {
+      return socketRef.current.sendImageMessage(input);
+    },
+    [],
+  );
+
   const markDelivered = useCallback(
     async (id: string, timestamp = new Date().toISOString()) => {
       return socketRef.current.markDelivered(id, timestamp);
@@ -253,7 +270,7 @@ export function useConversationSocket(
     [],
   );
 
-  return { status, isConnected, peerTyping, peerPresence, sendTextMessage, signalTyping, stopTyping, markDelivered, markRead, deleteMessage };
+  return { status, isConnected, peerTyping, peerPresence, sendTextMessage, sendImageMessage, signalTyping, stopTyping, markDelivered, markRead, deleteMessage };
 }
 
 function handleMessageNew(

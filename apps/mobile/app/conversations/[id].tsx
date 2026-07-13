@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, MoreVertical } from "lucide-react-native";
@@ -10,6 +11,8 @@ import { useViewer } from "../../src/auth/useViewer";
 import { queryKeys } from "../../src/api/queryKeys";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
+import { useSendImageMessage } from "../../src/api/conversations/useSendImageMessage";
+import { usePresignChatAttachment } from "../../src/api/conversations/usePresignChatAttachment";
 import { useUpdateWatermark } from "../../src/api/conversations/useUpdateWatermark";
 import { useDeleteMessage } from "../../src/api/conversations/useDeleteMessage";
 import { useBrands } from "../../src/api/catalog/useBrands";
@@ -21,11 +24,16 @@ import { useUnblockUser } from "../../src/api/identity/useUnblockUser";
 import { useIsBlocked } from "../../src/api/identity/useIsBlocked";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { MessageList } from "../../src/conversations/components/MessageList";
-import { MessageComposer } from "../../src/conversations/components/MessageComposer";
+import { MessageComposer, type ComposerAttachment } from "../../src/conversations/components/MessageComposer";
 import { TypingIndicator } from "../../src/conversations/components/TypingIndicator";
 import { PeerPresenceLabel } from "../../src/conversations/components/PeerPresenceLabel";
+import { ImagePreviewModal } from "../../src/conversations/components/ImagePreviewModal";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
 import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
+import {
+  uploadChatImageToPresignedUrl,
+  ChatImageUploadError,
+} from "../../src/conversations/upload/chatImageUpload";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -54,7 +62,11 @@ interface LocalMessage {
   id: string;
   clientMessageId: string;
   senderId: string;
+  kind: "text" | "image";
   text: string;
+  metadata?: { key: string; width?: number; height?: number };
+  localImageUri?: string;
+  imageFileSize?: number;
   createdAt: string;
   status: MessageStatus;
   deletedAt?: string | null;
@@ -117,9 +129,12 @@ export default function ConversationDetailScreen() {
   >(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [messageToReport, setMessageToReport] = useState<string | null>(null);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const messagesQuery = useConversationMessages({ conversationId });
   const sendHttpMessage = useSendTextMessage();
+  const sendHttpImageMessage = useSendImageMessage();
+  const presignChatAttachment = usePresignChatAttachment();
   const updateWatermark = useUpdateWatermark();
   const deleteHttpMessage = useDeleteMessage();
   const {
@@ -235,7 +250,16 @@ export default function ConversationDetailScreen() {
             id: m.id,
             clientMessageId: m.clientMessageId ?? m.id,
             senderId: m.senderId,
+            kind: m.kind === "image" ? ("image" as const) : ("text" as const),
             text: m.text ?? "",
+            metadata:
+              m.kind === "image" && m.metadata && "key" in m.metadata
+                ? {
+                    key: m.metadata.key,
+                    width: m.metadata.width,
+                    height: m.metadata.height,
+                  }
+                : undefined,
             createdAt: m.createdAt,
             status:
               m.senderId === viewerId
@@ -308,13 +332,30 @@ export default function ConversationDetailScreen() {
     markRead,
   ]);
 
-  const markConfirmed = useCallback((clientMessageId: string, serverId: string) => {
+  const markConfirmed = useCallback((
+    clientMessageId: string,
+    serverId: string,
+    kind: "text" | "image" = "text",
+    metadata?: { key: string; width?: number; height?: number },
+  ) => {
     setLocalMessages((prev) =>
-      prev.map((m) =>
-        m.clientMessageId === clientMessageId
-          ? { ...m, id: serverId, status: "sent" }
-          : m,
-      ),
+      prev.map((m) => {
+        if (m.clientMessageId !== clientMessageId) return m;
+        if (m.localImageUri) {
+          FileSystem.deleteAsync(m.localImageUri, { idempotent: true }).catch(
+            () => {},
+          );
+        }
+        return {
+          ...m,
+          id: serverId,
+          status: "sent",
+          kind,
+          metadata,
+          localImageUri: undefined,
+          imageFileSize: undefined,
+        };
+      }),
     );
   }, []);
 
@@ -343,6 +384,30 @@ export default function ConversationDetailScreen() {
     [conversationId, markConfirmed, markFailed, sendHttpMessage],
   );
 
+  const sendImageViaHttp = useCallback(
+    (
+      clientMessageId: string,
+      metadata: ConversationsSchemas.ImageMessageMetadata,
+      localUri: string,
+    ) => {
+      sendHttpImageMessage.mutate(
+        { conversationId, metadata, clientMessageId },
+        {
+          onSuccess: (data) => {
+            markConfirmed(clientMessageId, data.id, "image", metadata);
+            FileSystem.deleteAsync(localUri, { idempotent: true }).catch(
+              () => {},
+            );
+          },
+          onError: () => {
+            markFailed(clientMessageId);
+          },
+        },
+      );
+    },
+    [conversationId, markConfirmed, markFailed, sendHttpImageMessage],
+  );
+
   const handleSend = useCallback(
     async (text: string) => {
       if (!viewer?.userId || !conversationId || isBlocked) return;
@@ -353,6 +418,7 @@ export default function ConversationDetailScreen() {
         id: tempId,
         clientMessageId,
         senderId: viewer.userId,
+        kind: "text",
         text,
         createdAt: new Date().toISOString(),
         status: "pending",
@@ -386,6 +452,88 @@ export default function ConversationDetailScreen() {
     ],
   );
 
+  const handleSendImage = useCallback(
+    async (attachment: ComposerAttachment) => {
+      if (!viewer?.userId || !conversationId || isBlocked) return;
+
+      const clientMessageId = generateClientMessageId();
+      const tempId = `pending-${clientMessageId}`;
+      const pendingMessage: LocalMessage = {
+        id: tempId,
+        clientMessageId,
+        senderId: viewer.userId,
+        kind: "image",
+        text: "",
+        localImageUri: attachment.uri,
+        imageFileSize: attachment.fileSize,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        canDelete: false,
+      };
+
+      setLocalMessages((prev) => [...prev, pendingMessage]);
+
+      try {
+        const presignResponse = await presignChatAttachment.mutateAsync({
+          conversationId,
+          request: {
+            contentType: "image/jpeg",
+            sizeBytes: attachment.fileSize,
+          },
+        });
+
+        await uploadChatImageToPresignedUrl(
+          presignResponse.uploadUrl,
+          attachment.uri,
+        );
+
+        const metadata: ConversationsSchemas.ImageMessageMetadata = {
+          key: presignResponse.key,
+          width: attachment.width,
+          height: attachment.height,
+        };
+
+        const result = await socket.sendImageMessage({
+          conversationId,
+          metadata,
+          clientMessageId,
+        });
+
+        if (result.ok) {
+          markConfirmed(clientMessageId, result.message.id, "image", metadata);
+          FileSystem.deleteAsync(attachment.uri, { idempotent: true }).catch(
+            () => {},
+          );
+        } else if (result.code === "NOT_CONNECTED") {
+          sendImageViaHttp(clientMessageId, metadata, attachment.uri);
+        } else {
+          markFailed(clientMessageId);
+        }
+      } catch (err) {
+        const uploadError =
+          err instanceof ChatImageUploadError
+            ? err
+            : new ChatImageUploadError(
+                err instanceof Error ? err.message : "Image upload failed",
+                "put_failed",
+                true,
+              );
+        markFailed(clientMessageId);
+        console.warn("Image message send failed", uploadError);
+      }
+    },
+    [
+      conversationId,
+      isBlocked,
+      markConfirmed,
+      markFailed,
+      presignChatAttachment,
+      sendImageViaHttp,
+      socket,
+      viewer?.userId,
+    ],
+  );
+
   const handleRetry = useCallback(
     async (tempId: string) => {
       if (!conversationId || isBlocked) return;
@@ -395,6 +543,57 @@ export default function ConversationDetailScreen() {
       setLocalMessages((prev) =>
         prev.map((m) => (m.id === tempId ? { ...m, status: "pending" } : m)),
       );
+
+      if (msg.kind === "image" && msg.localImageUri) {
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(msg.localImageUri);
+          if (!fileInfo.exists) {
+            throw new ChatImageUploadError(
+              "Local image file is missing",
+              "file_missing",
+              false,
+            );
+          }
+          const fileSize = "size" in fileInfo ? fileInfo.size : (msg.imageFileSize ?? 0);
+
+          const presignResponse = await presignChatAttachment.mutateAsync({
+            conversationId,
+            request: {
+              contentType: "image/jpeg",
+              sizeBytes: fileSize,
+            },
+          });
+
+          await uploadChatImageToPresignedUrl(
+            presignResponse.uploadUrl,
+            msg.localImageUri,
+          );
+
+          const metadata: ConversationsSchemas.ImageMessageMetadata = {
+            key: presignResponse.key,
+          };
+
+          const result = await socket.sendImageMessage({
+            conversationId,
+            metadata,
+            clientMessageId: msg.clientMessageId,
+          });
+
+          if (result.ok) {
+            markConfirmed(msg.clientMessageId, result.message.id, "image", metadata);
+            FileSystem.deleteAsync(msg.localImageUri, { idempotent: true }).catch(
+              () => {},
+            );
+          } else if (result.code === "NOT_CONNECTED") {
+            sendImageViaHttp(msg.clientMessageId, metadata, msg.localImageUri);
+          } else {
+            markFailed(msg.clientMessageId);
+          }
+        } catch {
+          markFailed(msg.clientMessageId);
+        }
+        return;
+      }
 
       const result = await socket.sendTextMessage({
         conversationId,
@@ -409,7 +608,17 @@ export default function ConversationDetailScreen() {
       } else {
         markFailed(msg.clientMessageId);
       }
-    }, [conversationId, isBlocked, localMessages, markConfirmed, markFailed, sendViaHttp, socket],
+    }, [
+      conversationId,
+      isBlocked,
+      localMessages,
+      markConfirmed,
+      markFailed,
+      presignChatAttachment,
+      sendImageViaHttp,
+      sendViaHttp,
+      socket,
+    ],
   );
 
   const deleteViaHttp = useCallback(
@@ -560,6 +769,7 @@ export default function ConversationDetailScreen() {
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}
             onReport={confirmReportMessage}
+            onImagePress={(uri) => setPreviewUri(uri)}
           />
         ) : (
           <View className="flex-1 items-center justify-center px-6">
@@ -601,12 +811,14 @@ export default function ConversationDetailScreen() {
       {viewer?.userId && (
         <MessageComposer
           onSend={handleSend}
+          onSendImage={handleSendImage}
           disabled={isBlocked || blockUser.isPending || unblockUser.isPending}
           showQuickReplies={
             !isLoading && !isError && !isBlocked && allMessages.length === 0
           }
           onTyping={signalTyping}
           onStopTyping={stopTyping}
+          conversationId={conversationId}
         />
       )}
 
@@ -663,6 +875,12 @@ export default function ConversationDetailScreen() {
         onOpenChange={(open) => {
           if (!open) cancelReport();
         }}
+      />
+
+      {/* Fullscreen image preview */}
+      <ImagePreviewModal
+        uri={previewUri}
+        onClose={() => setPreviewUri(null)}
       />
     </SafeScreen>
   );

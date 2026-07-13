@@ -77,3 +77,31 @@ describe("MessageBubble", () => {
     expect(source).toContain("hitSlop");
   });
 });
+
+describe("MessageBubble image support", () => {
+  it("accepts kind prop for text or image messages", () => {
+    expect(source).toContain('kind?: "text" | "image"');
+  });
+
+  it("accepts image metadata", () => {
+    expect(source).toContain("metadata?: ImageMessageMetadata");
+    expect(source).toContain("key: string");
+  });
+
+  it("accepts local image URI for pending/failed previews", () => {
+    expect(source).toContain("localImageUri?: string");
+  });
+
+  it("accepts image press callback", () => {
+    expect(source).toContain("onImagePress?: () => void");
+  });
+
+  it("renders an image bubble for image kind", () => {
+    expect(source).toContain("<ImageBubble");
+    expect(source).toContain('contentFit="cover"');
+  });
+
+  it("builds remote image URL from metadata key", () => {
+    expect(source).toContain("buildChatImageUrl");
+  });
+});

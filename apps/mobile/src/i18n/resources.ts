@@ -512,6 +512,7 @@ export const resources: Resource = {
       lastSeenHours: "был(а) {{count}} ч назад",
       lastSeenYesterday: "был(а) вчера",
       lastSeenDate: "был(а) {{date}}",
+      attachImage: "Прикрепить фото",
     },
     onboarding: {
       chooseLanguage: "Выберите язык",
@@ -1021,6 +1022,7 @@ export const resources: Resource = {
       lastSeenHours: "{{count}} sag öň",
       lastSeenYesterday: "düýn",
       lastSeenDate: "{{date}}",
+      attachImage: "Surat goş",
     },
     onboarding: {
       chooseLanguage: "Dil saýlaň",
@@ -1508,6 +1510,7 @@ export const resources: Resource = {
       lastSeenHours: "last seen {{count}} h ago",
       lastSeenYesterday: "last seen yesterday",
       lastSeenDate: "last seen {{date}}",
+      attachImage: "Attach photo",
     },
     onboarding: {
       chooseLanguage: "Choose language",

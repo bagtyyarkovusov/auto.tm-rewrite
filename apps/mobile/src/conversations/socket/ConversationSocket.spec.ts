@@ -167,6 +167,47 @@ describe("ConversationSocket", () => {
     );
   });
 
+  it("sends an image message and returns the durable ack", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    const message = ConversationsSchemas.MessageSummarySchema.parse({
+      id: MSG_ID,
+      conversationId: CONV_ID,
+      senderId: USER_ID,
+      kind: "image",
+      text: null,
+      metadata: { key: "chat-attachments/conv-1/msg-1/original.jpg" },
+      createdAt: "2026-06-01T12:00:00.000Z",
+      clientMessageId: "client-1",
+    });
+
+    mockSocket.emit.mockImplementation(
+      (_event: string, _payload: unknown, callback: (ack: unknown) => void) => {
+        callback({ ok: true, message });
+      },
+    );
+
+    const metadata = { key: "chat-attachments/conv-1/msg-1/original.jpg", width: 800, height: 600 };
+    const result = await socket.sendImageMessage({
+      conversationId: CONV_ID,
+      metadata,
+      clientMessageId: "client-1",
+    });
+
+    expect(result).toEqual({ ok: true, message });
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      "message:send",
+      {
+        conversationId: CONV_ID,
+        kind: "image",
+        metadata,
+        clientMessageId: "client-1",
+      },
+      expect.any(Function),
+    );
+  });
+
   it("returns NOT_CONNECTED when sending while disconnected", async () => {
     mockSocket.connected = false;
     mockSocket.on.mockImplementation(() => {

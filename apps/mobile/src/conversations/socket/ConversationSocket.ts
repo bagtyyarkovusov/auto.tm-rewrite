@@ -406,6 +406,42 @@ export class ConversationSocket {
     text: string;
     clientMessageId: string;
   }): Promise<SendTextMessageAck | SocketErrorAck> {
+    return this.sendMessage({
+      conversationId: payload.conversationId,
+      kind: "text",
+      text: payload.text,
+      clientMessageId: payload.clientMessageId,
+    });
+  }
+
+  async sendImageMessage(payload: {
+    conversationId: string;
+    metadata: ConversationsSchemas.ImageMessageMetadata;
+    clientMessageId: string;
+  }): Promise<SendTextMessageAck | SocketErrorAck> {
+    return this.sendMessage({
+      conversationId: payload.conversationId,
+      kind: "image",
+      metadata: payload.metadata,
+      clientMessageId: payload.clientMessageId,
+    });
+  }
+
+  private async sendMessage(
+    payload:
+      | {
+          conversationId: string;
+          kind: "text";
+          text: string;
+          clientMessageId: string;
+        }
+      | {
+          conversationId: string;
+          kind: "image";
+          metadata: ConversationsSchemas.ImageMessageMetadata;
+          clientMessageId: string;
+        },
+  ): Promise<SendTextMessageAck | SocketErrorAck> {
     if (!this.socket?.connected) {
       return {
         ok: false,
@@ -419,12 +455,7 @@ export class ConversationSocket {
     return new Promise((resolve) => {
       socket.emit(
         "message:send",
-        {
-          conversationId: payload.conversationId,
-          kind: "text",
-          text: payload.text,
-          clientMessageId: payload.clientMessageId,
-        },
+        payload,
         (ack: unknown) => {
           const wrapped = z.object({
             ok: z.literal(true),
