@@ -25,7 +25,7 @@ export function QuickReplies({ onSelect, disabled = false }: QuickRepliesProps) 
   const { t } = useTranslation("conversations");
 
   return (
-    <View className="border-t border-border bg-background">
+    <View className="bg-background">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
