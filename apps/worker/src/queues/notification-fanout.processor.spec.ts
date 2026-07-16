@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Job } from "bullmq";
+import { NotificationsSchemas } from "@auto-tm/contracts";
 
 import type { DirectMessagePushInput } from "../push/domain/DirectMessagePushInput";
-import { DIRECT_MESSAGE_PUSH_JOB_NAME } from "../push/domain/types";
 import type { ProcessDirectMessagePush } from "../push/application/ProcessDirectMessagePush";
 
 import { NotificationFanoutProcessor } from "./notification-fanout.processor";
+
+const DIRECT_MESSAGE_PUSH_JOB_NAME =
+  NotificationsSchemas.DIRECT_MESSAGE_PUSH_JOB_NAME;
 
 function makeJob(data: unknown, name: string = DIRECT_MESSAGE_PUSH_JOB_NAME): Job {
   return {

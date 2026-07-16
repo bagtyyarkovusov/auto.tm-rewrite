@@ -21,6 +21,4 @@ export const PUSH_TRANSPORT = {
 } as const;
 export type PushTransport = (typeof PUSH_TRANSPORT)[keyof typeof PUSH_TRANSPORT];
 
-export const DIRECT_MESSAGE_PUSH_JOB_NAME = "direct-message" as const;
-
 export const NO_ACTIVE_PUSH_TOKENS_REASON = "NO_TOKENS" as const;

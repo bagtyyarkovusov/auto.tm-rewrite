@@ -4,7 +4,6 @@ import type { Job } from "bullmq";
 import { NotificationsSchemas } from "@auto-tm/contracts";
 
 import { ProcessDirectMessagePush } from "../push/application/ProcessDirectMessagePush";
-import { DIRECT_MESSAGE_PUSH_JOB_NAME } from "../push/domain/types";
 
 @Processor("notification-fanout")
 export class NotificationFanoutProcessor extends WorkerHost {
@@ -22,7 +21,7 @@ export class NotificationFanoutProcessor extends WorkerHost {
       `[notification-fanout] received job ${job.id} name ${job.name}`,
     );
 
-    if (job.name === DIRECT_MESSAGE_PUSH_JOB_NAME) {
+    if (job.name === NotificationsSchemas.DIRECT_MESSAGE_PUSH_JOB_NAME) {
       const parsed = NotificationsSchemas.DirectMessagePushJobSchema.safeParse(
         job.data,
       );
