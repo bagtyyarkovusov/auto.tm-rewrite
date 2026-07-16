@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, MoreVertical } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
@@ -28,6 +28,7 @@ import { MessageComposer, type ComposerAttachment } from "../../src/conversation
 import { TypingIndicator } from "../../src/conversations/components/TypingIndicator";
 import { PeerPresenceLabel } from "../../src/conversations/components/PeerPresenceLabel";
 import { ImagePreviewModal } from "../../src/conversations/components/ImagePreviewModal";
+import { useConversationCatalogMaps } from "../../src/conversations/components/useConversationCatalogMaps";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
 import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
 import {
@@ -62,9 +63,11 @@ interface LocalMessage {
   id: string;
   clientMessageId: string;
   senderId: string;
-  kind: "text" | "image";
+  kind: "text" | "image" | "post_ref";
   text: string;
-  metadata?: { key: string; width?: number; height?: number };
+  metadata?:
+    | { key: string; width?: number; height?: number }
+    | ConversationsSchemas.PostRefMessageMetadata;
   localImageUri?: string;
   imageFileSize?: number;
   imageWidth?: number;
@@ -73,6 +76,8 @@ interface LocalMessage {
   status: MessageStatus;
   deletedAt?: string | null;
   canDelete?: boolean;
+  postRefBrandName?: string;
+  postRefModelName?: string;
 }
 
 function generateClientMessageId(): string {
@@ -122,6 +127,7 @@ export default function ConversationDetailScreen() {
   const rawId = params.id;
   const conversationId = typeof rawId === "string" ? rawId : "";
   const viewer = useViewer();
+  const router = useRouter();
   const goBack = useSafeBack("/(tabs)/chat");
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
@@ -189,6 +195,29 @@ export default function ConversationDetailScreen() {
     return modelsData?.items.find((m) => m.id === listingCard.modelId)?.name;
   }, [modelsData, listingCard?.modelId]);
 
+  const postRefListings = useMemo(
+    () =>
+      messagesQuery.data?.pages
+        .flatMap((page) => page.items)
+        .filter(
+          (
+            m,
+          ): m is ConversationsSchemas.MessageSummary & {
+            metadata: ConversationsSchemas.PostRefMessageMetadata;
+          } =>
+            m.kind === "post_ref" &&
+            m.metadata != null &&
+            "listingId" in m.metadata,
+        )
+        .map((m) => ({
+          brandId: m.metadata.brandId,
+          modelId: m.metadata.modelId,
+        })) ?? [],
+    [messagesQuery.data],
+  );
+
+  const postRefCatalogMaps = useConversationCatalogMaps(postRefListings);
+
   const { data: conversationsData } = useQuery({
     queryKey: queryKeys.conversations.list(),
     queryFn: () =>
@@ -251,35 +280,69 @@ export default function ConversationDetailScreen() {
     const serverMessages: LocalMessage[] =
       messagesQuery.data?.pages.flatMap(
         (page) =>
-          page.items.map((m) => ({
-            id: m.id,
-            clientMessageId: m.clientMessageId ?? m.id,
-            senderId: m.senderId,
-            kind: m.kind === "image" ? ("image" as const) : ("text" as const),
-            text: m.text ?? "",
-            metadata:
-              m.kind === "image" && m.metadata && "key" in m.metadata
-                ? {
-                    key: m.metadata.key,
-                    width: m.metadata.width,
-                    height: m.metadata.height,
-                  }
+          page.items.map((m) => {
+            const kind: LocalMessage["kind"] =
+              m.kind === "image" || m.kind === "post_ref" ? m.kind : "text";
+
+            let metadata: LocalMessage["metadata"];
+            if (kind === "image" && m.metadata && "key" in m.metadata) {
+              metadata = {
+                key: m.metadata.key,
+                width: m.metadata.width,
+                height: m.metadata.height,
+              };
+            } else if (
+              kind === "post_ref" &&
+              m.metadata &&
+              "listingId" in m.metadata
+            ) {
+              metadata = {
+                listingId: m.metadata.listingId,
+                brandId: m.metadata.brandId,
+                modelId: m.metadata.modelId,
+                year: m.metadata.year,
+                displayPriceTmt: m.metadata.displayPriceTmt,
+                priceCurrency: m.metadata.priceCurrency,
+                coverMediaKey: m.metadata.coverMediaKey,
+                status: m.metadata.status,
+                available: m.metadata.available ?? true,
+              };
+            }
+
+            const postRefMeta =
+              kind === "post_ref" && metadata && "listingId" in metadata
+                ? metadata
+                : undefined;
+
+            return {
+              id: m.id,
+              clientMessageId: m.clientMessageId ?? m.id,
+              senderId: m.senderId,
+              kind,
+              text: m.text ?? "",
+              metadata,
+              createdAt: m.createdAt,
+              status:
+                m.senderId === viewerId
+                  ? computeOutgoingStatus(
+                      m.createdAt,
+                      peerLastReadAt,
+                      peerLastDeliveredAt,
+                    )
+                  : ("sent" as MessageStatus),
+              deletedAt: m.deletedAt,
+              canDelete:
+                m.senderId === viewerId &&
+                !m.deletedAt &&
+                now - new Date(m.createdAt).getTime() <= deleteWindowMs,
+              postRefBrandName: postRefMeta
+                ? postRefCatalogMaps.brandName(postRefMeta.brandId)
                 : undefined,
-            createdAt: m.createdAt,
-            status:
-              m.senderId === viewerId
-                ? computeOutgoingStatus(
-                    m.createdAt,
-                    peerLastReadAt,
-                    peerLastDeliveredAt,
-                  )
-                : ("sent" as MessageStatus),
-            deletedAt: m.deletedAt,
-            canDelete:
-              m.senderId === viewerId &&
-              !m.deletedAt &&
-              now - new Date(m.createdAt).getTime() <= deleteWindowMs,
-          })),
+              postRefModelName: postRefMeta
+                ? postRefCatalogMaps.modelName(postRefMeta.modelId)
+                : undefined,
+            };
+          }),
       ) ?? [];
 
     const serverIds = new Set(serverMessages.map((m) => m.id));
@@ -299,7 +362,13 @@ export default function ConversationDetailScreen() {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [messagesQuery.data, localMessages, peerWatermark, viewer?.userId]);
+  }, [
+    messagesQuery.data,
+    localMessages,
+    peerWatermark,
+    viewer?.userId,
+    postRefCatalogMaps,
+  ]);
 
   const markRead = useCallback(
     async (timestamp = new Date().toISOString()) => {
@@ -780,6 +849,9 @@ export default function ConversationDetailScreen() {
             onDelete={confirmDeleteMessage}
             onReport={confirmReportMessage}
             onImagePress={(uri) => setPreviewUri(uri)}
+            onPostRefPress={(listingId) =>
+              router.push(`/(public)/listings/${listingId}`)
+            }
           />
         ) : (
           <View className="flex-1 items-center justify-center px-6">
