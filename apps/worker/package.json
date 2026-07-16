@@ -9,6 +9,7 @@
     "start": "node dist/main",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run --passWithNoTests",
+    "test:unit": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

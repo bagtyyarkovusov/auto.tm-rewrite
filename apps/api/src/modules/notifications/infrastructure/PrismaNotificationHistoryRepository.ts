@@ -14,16 +14,19 @@ export class PrismaNotificationHistoryRepository
     private readonly prisma: PrismaService,
   ) {}
 
-  async save(notification: DirectMessageNotification): Promise<void> {
-    await this.prisma.notificationHistory.create({
+  async save(notification: DirectMessageNotification): Promise<{ id: string }> {
+    const row = await this.prisma.notificationHistory.create({
       data: {
         userId: notification.userId,
         category: notification.category,
+        status: "pending",
         title: notification.title,
         body: notification.body,
         // The value object is built from JSON-serializable primitives only.
         data: notification.data as unknown as Prisma.InputJsonValue,
       },
     });
+
+    return { id: row.id };
   }
 }

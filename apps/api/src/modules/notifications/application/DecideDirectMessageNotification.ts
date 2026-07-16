@@ -89,8 +89,8 @@ export class DecideDirectMessageNotification {
       messageDeletedAt: event.messageDeletedAt,
     });
 
-    await this.queue.enqueue(notification);
-    await this.history.save(notification);
+    const { id: historyId } = await this.history.save(notification);
+    await this.queue.enqueue(notification, historyId);
 
     return { enqueued: true };
   }

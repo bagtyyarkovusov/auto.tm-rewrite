@@ -98,17 +98,25 @@ class FakeNotificationHistoryRepository
   implements NotificationHistoryRepository
 {
   rows: DirectMessageNotification[] = [];
+  nextId = 1;
 
-  async save(notification: DirectMessageNotification): Promise<void> {
+  async save(notification: DirectMessageNotification): Promise<{ id: string }> {
     this.rows.push(notification);
+    return { id: `history-${this.nextId++}` };
   }
 }
 
 class FakePushQueue implements PushQueuePort {
-  jobs: DirectMessageNotification[] = [];
+  jobs: Array<{
+    notification: DirectMessageNotification;
+    historyId: string;
+  }> = [];
 
-  async enqueue(notification: DirectMessageNotification): Promise<void> {
-    this.jobs.push(notification);
+  async enqueue(
+    notification: DirectMessageNotification,
+    historyId: string,
+  ): Promise<void> {
+    this.jobs.push({ notification, historyId });
   }
 }
 
@@ -366,7 +374,7 @@ describe("DecideDirectMessageNotification", () => {
       }),
     );
 
-    expect(queue.jobs[0]!.body).toBe(DIRECT_MESSAGE_PREVIEW_IMAGE);
+    expect(queue.jobs[0]!.notification.body).toBe(DIRECT_MESSAGE_PREVIEW_IMAGE);
     expect(history.rows[0]!.body).toBe(DIRECT_MESSAGE_PREVIEW_IMAGE);
     expect(history.rows[0]!.data.preview).toEqual({
       kind: "image",
@@ -393,7 +401,9 @@ describe("DecideDirectMessageNotification", () => {
       }),
     );
 
-    expect(queue.jobs[0]!.body).toBe(DIRECT_MESSAGE_PREVIEW_POST_REF);
+    expect(queue.jobs[0]!.notification.body).toBe(
+      DIRECT_MESSAGE_PREVIEW_POST_REF,
+    );
     expect(history.rows[0]!.body).toBe(DIRECT_MESSAGE_PREVIEW_POST_REF);
     expect(history.rows[0]!.data.preview).toEqual({
       kind: "post_ref",
@@ -419,7 +429,9 @@ describe("DecideDirectMessageNotification", () => {
       }),
     );
 
-    expect(queue.jobs[0]!.body).toBe(DIRECT_MESSAGE_PREVIEW_DELETED);
+    expect(queue.jobs[0]!.notification.body).toBe(
+      DIRECT_MESSAGE_PREVIEW_DELETED,
+    );
     expect(history.rows[0]!.body).toBe(DIRECT_MESSAGE_PREVIEW_DELETED);
     expect(history.rows[0]!.data.preview.text).toBe(
       DIRECT_MESSAGE_PREVIEW_DELETED,
