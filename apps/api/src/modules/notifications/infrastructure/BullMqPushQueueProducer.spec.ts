@@ -3,13 +3,16 @@ import type { Queue } from "bullmq";
 import { NotificationsSchemas } from "@auto-tm/contracts";
 
 import { DirectMessageNotification } from "../domain/DirectMessageNotification";
-import { BullMqPushQueueProducer } from "./BullMqPushQueueProducer";
+import {
+  BullMqPushQueueProducer,
+  DIRECT_MESSAGE_PUSH_JOB_OPTIONS,
+} from "./BullMqPushQueueProducer";
 
 class FakeQueue {
-  jobs: Array<{ name: string; data: unknown }> = [];
+  jobs: Array<{ name: string; data: unknown; opts?: unknown }> = [];
 
   async add(name: string, data: unknown, opts?: unknown): Promise<void> {
-    this.jobs.push({ name, data });
+    this.jobs.push({ name, data, opts });
     return Promise.resolve();
   }
 }
@@ -46,6 +49,7 @@ describe("BullMqPushQueueProducer", () => {
     expect(job?.name).toBe(
       NotificationsSchemas.DIRECT_MESSAGE_PUSH_JOB_NAME,
     );
+    expect(job?.opts).toEqual(DIRECT_MESSAGE_PUSH_JOB_OPTIONS);
 
     const parsed = NotificationsSchemas.DirectMessagePushJobSchema.safeParse(
       job?.data,

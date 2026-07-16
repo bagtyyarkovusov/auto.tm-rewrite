@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
 import type { ActivePushDevice, PushDeviceStore } from "../domain/PushDeviceStore";
+import type { DirectMessagePushInput } from "../domain/DirectMessagePushInput";
 import type {
   NotificationHistoryStatus,
   NotificationHistoryStore,
@@ -46,16 +47,9 @@ class FakeNotificationHistoryStore implements NotificationHistoryStore {
   }
 }
 
-interface TestInput {
-  historyId: string;
-  recipientUserId: string;
-  title: string;
-  body: string;
-  deepLink: string;
-  data: Record<string, unknown>;
-}
-
-function makeInput(overrides?: Partial<TestInput>): TestInput {
+function makeInput(
+  overrides?: Partial<DirectMessagePushInput>,
+): DirectMessagePushInput {
   return {
     historyId: "history-1",
     recipientUserId: "user-1",

@@ -118,7 +118,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 ## Worker integration
 
-- Direct-message pushes are enqueued on the BullMQ queue `notification-fanout` with job name `direct-message` and payload `{ category, recipientUserId, historyId, title, body, deepLink, data }`. The `historyId` lets the worker update the corresponding `NotificationHistory` row.
+- Direct-message pushes are enqueued on the BullMQ queue `notification-fanout` with job name `direct-message` and payload `{ category, recipientUserId, historyId, title, body, deepLink, data }`. The `historyId` lets the worker update the corresponding `NotificationHistory` row. Jobs are enqueued with `attempts: 3` and exponential backoff so the worker can retry transient (`RETRYABLE`) transport failures.
 - The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; it validates the payload with `DirectMessagePushJobSchema` and calls `ProcessDirectMessagePush`.
 
 ## Planned additions (post-MLP notification platform)

@@ -60,7 +60,6 @@ export class ProcessDirectMessagePush {
     }
 
     const results: TokenResult[] = [];
-    let hasRetryable = false;
 
     for (const device of devices) {
       const result = await this.pushPort.send({
@@ -75,14 +74,12 @@ export class ProcessDirectMessagePush {
         await this.deviceStore.invalidateToken(device.token);
       }
 
-      const tokenResult = this.handleResult(device.token, result);
-      results.push(tokenResult);
-
-      if (!tokenResult.success && tokenResult.error === PUSH_RESULT_REASON.Retryable) {
-        hasRetryable = true;
-      }
+      results.push(this.handleResult(device.token, result));
     }
 
+    const hasRetryable = results.some(
+      (r) => r.error === PUSH_RESULT_REASON.Retryable,
+    );
     const status = this.resolveStatus(results, hasRetryable);
     await this.historyStore.updateStatus(input.historyId, status, {
       results,
@@ -99,14 +96,6 @@ export class ProcessDirectMessagePush {
   private handleResult(token: string, result: PushResult): TokenResult {
     if (result.ok) {
       return { token, success: true };
-    }
-
-    if (result.reason === PUSH_RESULT_REASON.InvalidToken) {
-      return {
-        token,
-        success: false,
-        error: PUSH_RESULT_REASON.InvalidToken,
-      };
     }
 
     return { token, success: false, error: result.reason };
