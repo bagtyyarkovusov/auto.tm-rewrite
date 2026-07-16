@@ -10,6 +10,7 @@ import { ListMyConversations } from "./ListMyConversations";
 class FakeConversationRepository implements ConversationRepository {
   conversations: Conversation[] = [];
   messages: Message[] = [];
+  mutedByUser: Map<string, Date> = new Map();
 
   async findById(id: string): Promise<Conversation | null> {
     return this.conversations.find((c) => c.id === id) ?? null;
@@ -140,13 +141,13 @@ class FakeConversationRepository implements ConversationRepository {
         map.set(conversationId, [
           {
             userId: conversation.buyerId,
-            mutedAt: null,
+            mutedAt: this.mutedByUser.get(conversation.buyerId) ?? null,
             lastReadAt: new Date("2026-06-01T10:00:00.000Z"),
             lastDeliveredAt: new Date("2026-06-01T09:00:00.000Z"),
           },
           {
             userId: conversation.sellerId,
-            mutedAt: null,
+            mutedAt: this.mutedByUser.get(conversation.sellerId) ?? null,
             lastReadAt: new Date("2026-06-01T11:00:00.000Z"),
             lastDeliveredAt: new Date("2026-06-01T09:30:00.000Z"),
           },
@@ -409,5 +410,29 @@ describe("ListMyConversations", () => {
     expect(result.items[0]!.peerLastDeliveredAt).toEqual(
       new Date("2026-06-01T09:30:00.000Z"),
     );
+  });
+
+  it("includes the viewer's own mutedAt when the conversation is muted", async () => {
+    seedListing();
+    seedConversation({ id: "conv-1", buyerId: "buyer-1", sellerId: "seller-1" });
+    repo.mutedByUser.set("buyer-1", new Date("2026-06-05T12:00:00.000Z"));
+
+    const uc = makeUseCase(repo, listings);
+    const result = await uc.execute({ userId: "buyer-1" });
+
+    expect(result.items[0]!.mutedAt).toEqual(
+      new Date("2026-06-05T12:00:00.000Z"),
+    );
+  });
+
+  it("returns null mutedAt when the viewer has not muted the conversation", async () => {
+    seedListing();
+    seedConversation({ id: "conv-1", buyerId: "buyer-1", sellerId: "seller-1" });
+    repo.mutedByUser.set("seller-1", new Date("2026-06-05T12:00:00.000Z"));
+
+    const uc = makeUseCase(repo, listings);
+    const result = await uc.execute({ userId: "buyer-1" });
+
+    expect(result.items[0]!.mutedAt).toBeNull();
   });
 });

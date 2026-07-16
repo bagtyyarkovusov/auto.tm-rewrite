@@ -72,7 +72,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Shipped use-cases
 
 - `OpenConversation` — for an authenticated buyer and a `listingId`, fetches the listing summary, rejects self-contact, returns an existing conversation if one exists, then validates the listing is active/chat-enabled and no block/suspension exists before creating the `Conversation` and its two `ConversationParticipant` rows.
-- `ListMyConversations` — returns paginated conversations where the authenticated user is buyer or seller, sorted by `updatedAt DESC`. Embeds listing summaries, last message (redacted if deleted), unread count, and peer watermark timestamps (`peerLastReadAt`, `peerLastDeliveredAt`).
+- `ListMyConversations` — returns paginated conversations where the authenticated user is buyer or seller, sorted by `updatedAt DESC`. Embeds listing summaries, last message (redacted if deleted), unread count, peer watermark timestamps (`peerLastReadAt`, `peerLastDeliveredAt`), and the viewer's own `mutedAt` participant state.
 - `ListMessages` — returns paginated messages for a conversation, participant-only. Existing history remains readable even when the listing is sold, archived, or unavailable. Deleted messages are redacted.
 - `SendTextMessage` — creates and persists a text message in a conversation after validating participant status, current listing contactability, suspension, and block state. Updates conversation activity in the same transaction and emits `MessageSent` for push evaluation.
 - `SendMessage` — rich-message send supporting text and image kinds with optional `clientMessageId` for idempotency. Same validation as `SendTextMessage`. Emits `MessageSent` after persistence.

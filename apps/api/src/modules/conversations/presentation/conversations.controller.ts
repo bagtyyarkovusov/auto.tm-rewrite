@@ -127,6 +127,7 @@ export class ConversationsController {
           availabilityMap,
           item.peerLastReadAt,
           item.peerLastDeliveredAt,
+          item.mutedAt,
         ),
       ),
       nextCursor: result.nextCursor,
@@ -358,6 +359,7 @@ export class ConversationsController {
     availabilityMap?: Map<string, boolean>,
     peerLastReadAt?: Date | null,
     peerLastDeliveredAt?: Date | null,
+    mutedAt?: Date | null,
   ) {
     return {
       id: conversation.id,
@@ -386,6 +388,7 @@ export class ConversationsController {
       unreadCount: unreadCount ?? 0,
       peerLastReadAt: peerLastReadAt?.toISOString(),
       peerLastDeliveredAt: peerLastDeliveredAt?.toISOString(),
+      mutedAt: mutedAt?.toISOString() ?? null,
     };
   }
 

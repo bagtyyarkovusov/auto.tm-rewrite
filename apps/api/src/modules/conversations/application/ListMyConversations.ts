@@ -26,6 +26,7 @@ export interface ListMyConversationsResult {
     unreadCount: number;
     peerLastReadAt: Date | null;
     peerLastDeliveredAt: Date | null;
+    mutedAt: Date | null;
   }>;
   nextCursor: string | null;
 }
@@ -71,6 +72,9 @@ export class ListMyConversations {
         const peerState = states.find(
           (state) => state.userId !== input.userId,
         );
+        const ownState = states.find(
+          (state) => state.userId === input.userId,
+        );
         return {
           conversation: item.conversation,
           listing: listingMap.get(item.conversation.listingId) ?? null,
@@ -78,6 +82,7 @@ export class ListMyConversations {
           unreadCount,
           peerLastReadAt: peerState?.lastReadAt ?? null,
           peerLastDeliveredAt: peerState?.lastDeliveredAt ?? null,
+          mutedAt: ownState?.mutedAt ?? null,
         };
       }),
     );

@@ -20,3 +20,25 @@ describe("ConversationDetailScreen quick replies", () => {
     expect(source).toContain("!isBlocked");
   });
 });
+
+describe("ConversationDetailScreen conversation mute", () => {
+  it("wires the mute mutation hook", () => {
+    expect(source).toContain("useMuteConversation");
+    expect(source).toContain("handleToggleMute");
+  });
+
+  it("exposes mute and unmute menu items in the thread header", () => {
+    expect(source).toContain('t("muteConversation")');
+    expect(source).toContain('t("unmuteConversation")');
+  });
+
+  it("shows an understated muted indicator in the header", () => {
+    expect(source).toContain("BellOff");
+    expect(source).toContain('t("conversationMuted")');
+  });
+
+  it("surfaces mute failures as a destructive toast", () => {
+    expect(source).toContain('t("muteConversationError")');
+    expect(source).toContain('variant: "destructive"');
+  });
+});

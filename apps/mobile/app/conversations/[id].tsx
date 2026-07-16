@@ -3,7 +3,7 @@ import { View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MoreVertical } from "lucide-react-native";
+import { ArrowLeft, BellOff, MoreVertical } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
@@ -15,6 +15,7 @@ import { useSendImageMessage } from "../../src/api/conversations/useSendImageMes
 import { usePresignChatAttachment } from "../../src/api/conversations/usePresignChatAttachment";
 import { useUpdateWatermark } from "../../src/api/conversations/useUpdateWatermark";
 import { useDeleteMessage } from "../../src/api/conversations/useDeleteMessage";
+import { useMuteConversation } from "../../src/api/conversations/useMuteConversation";
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
@@ -42,6 +43,7 @@ import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { ErrorState } from "@/components/ErrorState";
+import { useToast } from "@/components/ui/toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,18 +93,13 @@ type ConversationListData = {
   }>;
 };
 
-function findPeerWatermark(
+function findConversationSummary(
   data: ConversationListData | undefined,
   conversationId: string,
-): { peerLastReadAt?: string; peerLastDeliveredAt?: string } {
-  const conversation = data?.pages
+): ConversationsSchemas.ConversationSummary | undefined {
+  return data?.pages
     .flatMap((page) => page.items)
     .find((item) => item.id === conversationId);
-
-  return {
-    peerLastReadAt: conversation?.peerLastReadAt,
-    peerLastDeliveredAt: conversation?.peerLastDeliveredAt,
-  };
 }
 
 function computeOutgoingStatus(
@@ -158,6 +155,8 @@ export default function ConversationDetailScreen() {
 
   const blockUser = useBlockUser();
   const unblockUser = useUnblockUser();
+  const muteConversation = useMuteConversation();
+  const { show: showToast } = useToast();
 
   const listingCard = useMemo(() => {
     const listingId =
@@ -227,19 +226,39 @@ export default function ConversationDetailScreen() {
     enabled: false,
   });
 
-  const peerWatermark = useMemo(
-    () => findPeerWatermark(conversationsData ?? undefined, conversationId),
+  const conversationSummary = useMemo(
+    () => findConversationSummary(conversationsData ?? undefined, conversationId),
     [conversationsData, conversationId],
   );
 
+  const peerWatermark = useMemo(
+    () => ({
+      peerLastReadAt: conversationSummary?.peerLastReadAt,
+      peerLastDeliveredAt: conversationSummary?.peerLastDeliveredAt,
+    }),
+    [conversationSummary],
+  );
+
+  const isMuted = conversationSummary?.mutedAt != null;
+
   const otherUserId = useMemo(() => {
     if (!viewer?.userId) return undefined;
-    const buyerId = typeof params.buyerId === "string" ? params.buyerId : "";
+    const buyerId =
+      typeof params.buyerId === "string" && params.buyerId
+        ? params.buyerId
+        : (conversationSummary?.buyerId ?? "");
     const sellerId =
-      typeof params.sellerId === "string" ? params.sellerId : "";
+      typeof params.sellerId === "string" && params.sellerId
+        ? params.sellerId
+        : (conversationSummary?.sellerId ?? "");
     if (!buyerId || !sellerId) return undefined;
     return viewer.userId === buyerId ? sellerId : buyerId;
-  }, [viewer?.userId, params.buyerId, params.sellerId]);
+  }, [
+    viewer?.userId,
+    params.buyerId,
+    params.sellerId,
+    conversationSummary,
+  ]);
 
   const isBlockedQuery = useIsBlocked(otherUserId ?? "", {
     enabled: !!otherUserId,
@@ -270,6 +289,21 @@ export default function ConversationDetailScreen() {
       },
     );
   }, [unblockUser, otherUserId]);
+
+  const handleToggleMute = useCallback(() => {
+    if (!conversationId) return;
+    muteConversation.mutate(
+      { conversationId, muted: !isMuted },
+      {
+        onError: () => {
+          showToast({
+            title: t("muteConversationError"),
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  }, [conversationId, isMuted, muteConversation, showToast, t]);
 
   const allMessages: LocalMessage[] = useMemo(() => {
     const { peerLastReadAt, peerLastDeliveredAt } = peerWatermark;
@@ -773,12 +807,21 @@ export default function ConversationDetailScreen() {
             <Icon as={ArrowLeft} className="size-5 text-foreground" />
           </Button>
           <View className="flex-1">
-            <Text
-              className="text-lg font-semibold text-foreground"
-              numberOfLines={1}
-            >
-              {t("messages")}
-            </Text>
+            <View className="flex-row items-center gap-1.5">
+              <Text
+                className="text-lg font-semibold text-foreground"
+                numberOfLines={1}
+              >
+                {t("messages")}
+              </Text>
+              {isMuted && (
+                <Icon
+                  as={BellOff}
+                  className="size-4 text-muted-foreground"
+                  accessibilityLabel={t("conversationMuted")}
+                />
+              )}
+            </View>
             <PeerPresenceLabel
               presence={peerPresence}
               locale={i18n.language}
@@ -798,7 +841,13 @@ export default function ConversationDetailScreen() {
                 <Icon as={MoreVertical} className="size-5 text-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onPress={handleToggleMute}
+                disabled={muteConversation.isPending}
+              >
+                {isMuted ? t("unmuteConversation") : t("muteConversation")}
+              </DropdownMenuItem>
               {isBlocked ? (
                 <DropdownMenuItem onPress={() => setConfirmAction("unblock")}>
                   {t("unblockUser")}

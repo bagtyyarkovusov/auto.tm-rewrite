@@ -32,6 +32,7 @@ import { useMyListings } from "../src/api/listings/useMyListings";
 import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanCleanup";
 import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
+import { useDirectMessagePushRouting } from "../src/notifications/useDirectMessagePushRouting";
 import { themeStore } from "../src/theme/themeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
@@ -146,6 +147,11 @@ export default function RootLayout() {
     theme === "system" ? (osColorScheme ?? "light") : theme;
   const scheme = resolvedScheme === "dark" ? "dark" : "light";
   const [i18nReady, setI18nReady] = useState(false);
+
+  // Direct-message push taps (foreground, background, cold start) route to
+  // the target conversation from the app shell. Registered before any early
+  // return so a cold-start response is never missed.
+  useDirectMessagePushRouting();
 
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports

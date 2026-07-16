@@ -229,6 +229,7 @@ export const ConversationSummarySchema = z.object({
   unreadCount: z.number().int().nonnegative().default(0),
   peerLastReadAt: z.string().datetime().optional(),
   peerLastDeliveredAt: z.string().datetime().optional(),
+  mutedAt: z.string().datetime().nullable().optional(),
 });
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 

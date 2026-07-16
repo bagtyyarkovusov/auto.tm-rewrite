@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  ConversationSummarySchema,
   PostRefMessageMetadataSchema,
   SendPostRefMessageRequestSchema,
   SendMessageRequestSchema,
@@ -161,5 +162,35 @@ describe("PresignChatAttachmentResponseSchema", () => {
 
     expect(parsed.key).toBe("chat-attachments/conv-1/uuid/original.jpg");
     expect(parsed.expiresIn).toBe(600);
+  });
+});
+
+describe("ConversationSummarySchema", () => {
+  const baseSummary = {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    listing: null,
+    buyerId: "550e8400-e29b-41d4-a716-4466554400b1",
+    sellerId: "550e8400-e29b-41d4-a716-4466554400b2",
+    myRole: "buyer" as const,
+    updatedAt: "2026-07-01T10:00:00.000Z",
+  };
+
+  it("accepts a summary without mutedAt (pre-#246 servers)", () => {
+    const parsed = ConversationSummarySchema.parse(baseSummary);
+
+    expect(parsed.mutedAt).toBeUndefined();
+  });
+
+  it("accepts a summary with a null or timestamped mutedAt", () => {
+    expect(
+      ConversationSummarySchema.parse({ ...baseSummary, mutedAt: null })
+        .mutedAt,
+    ).toBeNull();
+    expect(
+      ConversationSummarySchema.parse({
+        ...baseSummary,
+        mutedAt: "2026-07-10T08:00:00.000Z",
+      }).mutedAt,
+    ).toBe("2026-07-10T08:00:00.000Z");
   });
 });
