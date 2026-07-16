@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { Check, CheckCheck, ImageOff, RotateCcw, Trash2 } from "lucide-react-native";
+import { Check, CheckCheck, Flag, ImageOff, RotateCcw, Trash2 } from "lucide-react-native";
 import { Image } from "expo-image";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
@@ -34,6 +34,7 @@ interface MessageBubbleProps {
   deletedAt?: string | null;
   canDelete?: boolean;
   canReport?: boolean;
+  reported?: boolean;
   onRetry?: () => void;
   onDelete?: () => void;
   onReport?: () => void;
@@ -204,6 +205,7 @@ export function MessageBubble({
   deletedAt,
   canDelete,
   canReport,
+  reported,
   onRetry,
   onDelete,
   onReport,
@@ -216,6 +218,7 @@ export function MessageBubble({
   const isDeleted = !!deletedAt;
   const isImage = kind === "image" && !isDeleted;
   const isPostRef = kind === "post_ref" && !isDeleted;
+  const isReported = !!reported;
   const imageUri =
     localImageUri ??
     (metadata && "key" in metadata && metadata.key
@@ -223,7 +226,7 @@ export function MessageBubble({
       : undefined);
 
   let longPressAction: (() => void) | undefined;
-  if (!isDeleted) {
+  if (!isDeleted && !isReported) {
     if (canDelete) {
       longPressAction = onDelete;
     } else if (canReport) {
@@ -287,6 +290,28 @@ export function MessageBubble({
         {isMine && status !== "pending" && status !== "failed" && !isDeleted && (
           <View className="flex-row items-center justify-end gap-1 mt-1">
             <StatusIcon status={status} isMine={isMine} />
+          </View>
+        )}
+
+        {isReported && !isDeleted && (
+          <View
+            className={`flex-row items-center gap-1 mt-1 ${
+              isMine ? "justify-end" : "justify-start"
+            }`}
+          >
+            <Icon
+              as={Flag}
+              className={`size-3.5 ${
+                isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+              }`}
+            />
+            <Text
+              className={`text-xs ${
+                isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+              }`}
+            >
+              {t("reported")}
+            </Text>
           </View>
         )}
       </Pressable>

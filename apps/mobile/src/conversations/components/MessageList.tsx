@@ -31,6 +31,7 @@ export interface MessageItem {
 interface MessageListProps {
   messages: MessageItem[];
   currentUserId: string;
+  reportedMessageIds?: Set<string>;
   onRetry?: (tempId: string) => void;
   onDelete?: (messageId: string) => void;
   onReport?: (messageId: string) => void;
@@ -41,6 +42,7 @@ interface MessageListProps {
 export function MessageList({
   messages,
   currentUserId,
+  reportedMessageIds,
   onRetry,
   onDelete,
   onReport,
@@ -48,6 +50,7 @@ export function MessageList({
   onPostRefPress,
 }: MessageListProps) {
   const { t } = useTranslation();
+  const reported = reportedMessageIds ?? new Set<string>();
 
   const renderItem = useCallback(
     ({ item }: { item: MessageItem }) => (
@@ -63,6 +66,7 @@ export function MessageList({
         deletedAt={item.deletedAt}
         canDelete={item.canDelete}
         canReport={item.senderId !== currentUserId && !item.deletedAt}
+        reported={reported.has(item.id)}
         postRefBrandName={item.postRefBrandName}
         postRefModelName={item.postRefModelName}
         onRetry={item.status === "failed" ? () => onRetry?.(item.id) : undefined}
@@ -77,7 +81,7 @@ export function MessageList({
         onPostRefPress={item.kind === "post_ref" && !item.deletedAt ? onPostRefPress : undefined}
       />
     ),
-    [currentUserId, onRetry, onDelete, onReport, onImagePress, onPostRefPress],
+    [currentUserId, reported, onRetry, onDelete, onReport, onImagePress, onPostRefPress],
   );
 
   const keyExtractor = useCallback((item: MessageItem) => item.id, []);

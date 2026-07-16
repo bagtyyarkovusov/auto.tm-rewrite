@@ -134,6 +134,9 @@ export default function ConversationDetailScreen() {
   >(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [messageToReport, setMessageToReport] = useState<string | null>(null);
+  const [reportedMessageIds, setReportedMessageIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const messagesQuery = useConversationMessages({ conversationId });
@@ -774,6 +777,10 @@ export default function ConversationDetailScreen() {
     setMessageToReport(null);
   }, []);
 
+  const handleReported = useCallback((messageId: string) => {
+    setReportedMessageIds((prev) => new Set(prev).add(messageId));
+  }, []);
+
   const isLoading = messagesQuery.isPending;
   const isError = messagesQuery.isError;
 
@@ -894,6 +901,7 @@ export default function ConversationDetailScreen() {
           <MessageList
             messages={allMessages}
             currentUserId={viewer.userId}
+            reportedMessageIds={reportedMessageIds}
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}
             onReport={confirmReportMessage}
@@ -1006,6 +1014,7 @@ export default function ConversationDetailScreen() {
         onOpenChange={(open) => {
           if (!open) cancelReport();
         }}
+        onReported={handleReported}
       />
 
       {/* Fullscreen image preview */}

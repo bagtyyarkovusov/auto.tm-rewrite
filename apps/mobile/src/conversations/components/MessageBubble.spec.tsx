@@ -76,6 +76,20 @@ describe("MessageBubble", () => {
   it("uses hitSlop for retry tap target", () => {
     expect(source).toContain("hitSlop");
   });
+
+  it("accepts a reported prop", () => {
+    expect(source).toContain("reported?: boolean");
+  });
+
+  it("renders a reported indicator when reported is true", () => {
+    expect(source).toContain("isReported");
+    expect(source).toContain("as={Flag}");
+    expect(source).toContain('t("reported")');
+  });
+
+  it("does not offer report long-press when the message is already reported", () => {
+    expect(source).toContain("!isReported");
+  });
 });
 
 describe("MessageBubble image support", () => {
