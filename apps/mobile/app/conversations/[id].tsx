@@ -282,34 +282,32 @@ export default function ConversationDetailScreen() {
         (page) =>
           page.items.map((m) => {
             const kind: LocalMessage["kind"] =
-              m.kind === "image"
-                ? ("image" as const)
-                : m.kind === "post_ref"
-                  ? ("post_ref" as const)
-                  : ("text" as const);
+              m.kind === "image" || m.kind === "post_ref" ? m.kind : "text";
 
-            const metadata: LocalMessage["metadata"] =
-              m.kind === "image" && m.metadata && "key" in m.metadata
-                ? {
-                    key: m.metadata.key,
-                    width: m.metadata.width,
-                    height: m.metadata.height,
-                  }
-                : m.kind === "post_ref" &&
-                    m.metadata &&
-                    "listingId" in m.metadata
-                  ? {
-                      listingId: m.metadata.listingId,
-                      brandId: m.metadata.brandId,
-                      modelId: m.metadata.modelId,
-                      year: m.metadata.year,
-                      displayPriceTmt: m.metadata.displayPriceTmt,
-                      priceCurrency: m.metadata.priceCurrency,
-                      coverMediaKey: m.metadata.coverMediaKey,
-                      status: m.metadata.status,
-                      available: m.metadata.available ?? true,
-                    }
-                  : undefined;
+            let metadata: LocalMessage["metadata"];
+            if (kind === "image" && m.metadata && "key" in m.metadata) {
+              metadata = {
+                key: m.metadata.key,
+                width: m.metadata.width,
+                height: m.metadata.height,
+              };
+            } else if (
+              kind === "post_ref" &&
+              m.metadata &&
+              "listingId" in m.metadata
+            ) {
+              metadata = {
+                listingId: m.metadata.listingId,
+                brandId: m.metadata.brandId,
+                modelId: m.metadata.modelId,
+                year: m.metadata.year,
+                displayPriceTmt: m.metadata.displayPriceTmt,
+                priceCurrency: m.metadata.priceCurrency,
+                coverMediaKey: m.metadata.coverMediaKey,
+                status: m.metadata.status,
+                available: m.metadata.available ?? true,
+              };
+            }
 
             const postRefMeta =
               kind === "post_ref" && metadata && "listingId" in metadata

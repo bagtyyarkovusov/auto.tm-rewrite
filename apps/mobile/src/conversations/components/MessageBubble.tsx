@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Check, CheckCheck, ImageOff, RotateCcw, Trash2 } from "lucide-react-native";
 import { Image } from "expo-image";
-import type { Enums, ConversationsSchemas } from "@auto-tm/contracts";
+import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { buildChatImageUrl } from "../upload/buildChatImageUrl";
 
@@ -174,7 +174,7 @@ function BubbleContent({
         displayPriceTmt={metadata.displayPriceTmt}
         priceCurrency={metadata.priceCurrency}
         coverMediaKey={metadata.coverMediaKey}
-        status={metadata.status as Enums.ListingStatus}
+        status={metadata.status}
         available={metadata.available}
         brandName={postRefBrandName}
         modelName={postRefModelName}

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import type { ConversationsSchemas } from "@auto-tm/contracts";
+import type { z } from "zod";
 
 import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
@@ -18,6 +20,13 @@ function generateClientMessageId(): string {
   return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// apiClient types responses with the zod input side, so schema-defaulted
+// fields (e.g. unreadCount) are optional here even though the parsed
+// response always contains them.
+type OpenedConversation = z.input<
+  typeof ConversationsSchemas.OpenConversationResponseSchema
+>;
+
 export default function ShareListingScreen() {
   const { t } = useTranslation();
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
@@ -27,25 +36,15 @@ export default function ShareListingScreen() {
   const openConversation = useOpenConversation();
   const sendPostRef = useSendPostRefMessage();
   const clientMessageId = useMemo(() => generateClientMessageId(), []);
+  // One-shot guard for the auto-run effect below: the mutation objects get a
+  // new identity every render, so without this the effect would re-fire and
+  // resend. Retries go through handleRetry, not the effect, so the guard is
+  // never reset.
   const sentRef = useRef(false);
   const [error, setError] = useState<unknown>(null);
 
   const navigateToConversation = useCallback(
-    (conversation: {
-      id: string;
-      buyerId: string;
-      sellerId: string;
-      listing: {
-        id: string;
-        brandId: string;
-        modelId: string;
-        year?: number;
-        displayPriceTmt: number;
-        priceCurrency: string;
-        coverMediaKey?: string;
-        status: string;
-      } | null;
-    }) => {
+    (conversation: OpenedConversation) => {
       const listing = conversation.listing;
       router.replace({
         pathname: "/conversations/[id]",
@@ -70,9 +69,7 @@ export default function ShareListingScreen() {
   );
 
   const sendReference = useCallback(
-    (
-      conversation: Parameters<typeof navigateToConversation>[0],
-    ) => {
+    (conversation: OpenedConversation) => {
       sendPostRef.mutate(
         {
           conversationId: conversation.id,
@@ -85,7 +82,6 @@ export default function ShareListingScreen() {
           },
           onError: (err) => {
             setError(err);
-            sentRef.current = false;
           },
         },
       );
@@ -106,7 +102,6 @@ export default function ShareListingScreen() {
         },
         onError: (err) => {
           setError(err);
-          sentRef.current = false;
         },
       },
     );

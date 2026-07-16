@@ -60,6 +60,13 @@ export function PostRefCard({
 
   const isUnavailable = !available || status !== Enums.ListingStatus.Active;
 
+  let unavailableLabel = t("unavailable");
+  if (status === Enums.ListingStatus.Sold) {
+    unavailableLabel = t("sold");
+  } else if (status === Enums.ListingStatus.Archived) {
+    unavailableLabel = t("archived");
+  }
+
   if (loading) {
     return (
       <View className="flex-row items-center gap-3 w-full">
@@ -111,21 +118,20 @@ export function PostRefCard({
         </Text>
         <Text className="text-sm text-muted-foreground">{priceText}</Text>
         <View className="flex-row items-center gap-2">
-          {isUnavailable ? (
-            <Badge variant="secondary" className="px-1.5 py-0">
-              <Text className="text-xs text-secondary-foreground">
-                {status === Enums.ListingStatus.Sold
-                  ? t("sold")
-                  : status === Enums.ListingStatus.Archived
-                    ? t("archived")
-                    : t("unavailable")}
-              </Text>
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="px-1.5 py-0">
-              <Text className="text-xs text-foreground">{t("active")}</Text>
-            </Badge>
-          )}
+          <Badge
+            variant={isUnavailable ? "secondary" : "outline"}
+            className="px-1.5 py-0"
+          >
+            <Text
+              className={`text-xs ${
+                isUnavailable
+                  ? "text-secondary-foreground"
+                  : "text-foreground"
+              }`}
+            >
+              {isUnavailable ? unavailableLabel : t("active")}
+            </Text>
+          </Badge>
         </View>
       </View>
     </View>
