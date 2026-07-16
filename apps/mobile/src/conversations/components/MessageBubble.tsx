@@ -3,8 +3,11 @@ import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Check, CheckCheck, ImageOff, RotateCcw, Trash2 } from "lucide-react-native";
 import { Image } from "expo-image";
+import type { Enums, ConversationsSchemas } from "@auto-tm/contracts";
 
 import { buildChatImageUrl } from "../upload/buildChatImageUrl";
+
+import { PostRefCard } from "./PostRefCard";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -17,11 +20,13 @@ export interface ImageMessageMetadata {
   height?: number;
 }
 
+export type PostRefMessageMetadata = ConversationsSchemas.PostRefMessageMetadata;
+
 interface MessageBubbleProps {
   id: string;
   text: string;
-  kind?: "text" | "image";
-  metadata?: ImageMessageMetadata;
+  kind?: "text" | "image" | "post_ref";
+  metadata?: ImageMessageMetadata | PostRefMessageMetadata;
   localImageUri?: string;
   isMine: boolean;
   status: MessageStatus;
@@ -33,6 +38,9 @@ interface MessageBubbleProps {
   onDelete?: () => void;
   onReport?: () => void;
   onImagePress?: () => void;
+  postRefBrandName?: string;
+  postRefModelName?: string;
+  onPostRefPress?: (listingId: string) => void;
 }
 
 const BUBBLE_MAX_WIDTH = 256;
@@ -100,21 +108,35 @@ function ImageBubble({
 interface BubbleContentProps {
   isDeleted: boolean;
   isImage: boolean;
+  isPostRef: boolean;
   imageUri?: string;
   text: string;
-  metadata?: ImageMessageMetadata;
+  metadata?: ImageMessageMetadata | PostRefMessageMetadata;
   isMine: boolean;
   onImagePress?: () => void;
+  postRefBrandName?: string;
+  postRefModelName?: string;
+  onPostRefPress?: (listingId: string) => void;
+}
+
+function isPostRefMetadata(
+  metadata: ImageMessageMetadata | PostRefMessageMetadata | undefined,
+): metadata is PostRefMessageMetadata {
+  return metadata != null && "listingId" in metadata;
 }
 
 function BubbleContent({
   isDeleted,
   isImage,
+  isPostRef,
   imageUri,
   text,
   metadata,
   isMine,
   onImagePress,
+  postRefBrandName,
+  postRefModelName,
+  onPostRefPress,
 }: BubbleContentProps) {
   const { t } = useTranslation();
 
@@ -130,12 +152,33 @@ function BubbleContent({
   }
 
   if (isImage && imageUri) {
+    const imageMeta =
+      metadata && "key" in metadata ? metadata : undefined;
     return (
       <ImageBubble
         uri={imageUri}
-        width={metadata?.width}
-        height={metadata?.height}
+        width={imageMeta?.width}
+        height={imageMeta?.height}
         onPress={onImagePress}
+      />
+    );
+  }
+
+  if (isPostRef && isPostRefMetadata(metadata)) {
+    return (
+      <PostRefCard
+        listingId={metadata.listingId}
+        brandId={metadata.brandId}
+        modelId={metadata.modelId}
+        year={metadata.year}
+        displayPriceTmt={metadata.displayPriceTmt}
+        priceCurrency={metadata.priceCurrency}
+        coverMediaKey={metadata.coverMediaKey}
+        status={metadata.status as Enums.ListingStatus}
+        available={metadata.available}
+        brandName={postRefBrandName}
+        modelName={postRefModelName}
+        onPress={onPostRefPress}
       />
     );
   }
@@ -165,11 +208,19 @@ export function MessageBubble({
   onDelete,
   onReport,
   onImagePress,
+  postRefBrandName,
+  postRefModelName,
+  onPostRefPress,
 }: MessageBubbleProps) {
   const { t } = useTranslation();
   const isDeleted = !!deletedAt;
   const isImage = kind === "image" && !isDeleted;
-  const imageUri = localImageUri ?? (metadata?.key ? buildChatImageUrl(metadata.key) : undefined);
+  const isPostRef = kind === "post_ref" && !isDeleted;
+  const imageUri =
+    localImageUri ??
+    (metadata && "key" in metadata && metadata.key
+      ? buildChatImageUrl(metadata.key)
+      : undefined);
 
   let longPressAction: (() => void) | undefined;
   if (!isDeleted) {
@@ -197,11 +248,15 @@ export function MessageBubble({
         <BubbleContent
           isDeleted={isDeleted}
           isImage={isImage}
+          isPostRef={isPostRef}
           imageUri={imageUri}
           text={text}
           metadata={metadata}
           isMine={isMine}
           onImagePress={onImagePress}
+          postRefBrandName={postRefBrandName}
+          postRefModelName={postRefModelName}
+          onPostRefPress={onPostRefPress}
         />
 
         {(status === "pending" || status === "failed") && !isDeleted && (

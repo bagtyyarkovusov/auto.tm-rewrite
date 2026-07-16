@@ -4,21 +4,28 @@ import { useTranslation } from "react-i18next";
 
 import { buildChatImageUrl } from "../upload/buildChatImageUrl";
 
-import { MessageBubble, type MessageStatus, type ImageMessageMetadata } from "./MessageBubble";
+import {
+  MessageBubble,
+  type MessageStatus,
+  type ImageMessageMetadata,
+  type PostRefMessageMetadata,
+} from "./MessageBubble";
 
 import { Text } from "@/components/ui/text";
 
 export interface MessageItem {
   id: string;
   senderId: string;
-  kind?: "text" | "image";
+  kind?: "text" | "image" | "post_ref";
   text: string;
-  metadata?: ImageMessageMetadata;
+  metadata?: ImageMessageMetadata | PostRefMessageMetadata;
   localImageUri?: string;
   createdAt: string;
   status: MessageStatus;
   deletedAt?: string | null;
   canDelete?: boolean;
+  postRefBrandName?: string;
+  postRefModelName?: string;
 }
 
 interface MessageListProps {
@@ -28,9 +35,18 @@ interface MessageListProps {
   onDelete?: (messageId: string) => void;
   onReport?: (messageId: string) => void;
   onImagePress?: (uri: string) => void;
+  onPostRefPress?: (listingId: string) => void;
 }
 
-export function MessageList({ messages, currentUserId, onRetry, onDelete, onReport, onImagePress }: MessageListProps) {
+export function MessageList({
+  messages,
+  currentUserId,
+  onRetry,
+  onDelete,
+  onReport,
+  onImagePress,
+  onPostRefPress,
+}: MessageListProps) {
   const { t } = useTranslation();
 
   const renderItem = useCallback(
@@ -47,16 +63,21 @@ export function MessageList({ messages, currentUserId, onRetry, onDelete, onRepo
         deletedAt={item.deletedAt}
         canDelete={item.canDelete}
         canReport={item.senderId !== currentUserId && !item.deletedAt}
+        postRefBrandName={item.postRefBrandName}
+        postRefModelName={item.postRefModelName}
         onRetry={item.status === "failed" ? () => onRetry?.(item.id) : undefined}
         onDelete={item.canDelete && !item.deletedAt ? () => onDelete?.(item.id) : undefined}
         onReport={item.senderId !== currentUserId && !item.deletedAt ? () => onReport?.(item.id) : undefined}
         onImagePress={item.kind === "image" && !item.deletedAt ? () => {
-          const uri = item.localImageUri ?? (item.metadata?.key ? buildChatImageUrl(item.metadata.key) : undefined);
+          const uri = item.localImageUri ?? (item.metadata && "key" in item.metadata && item.metadata.key
+            ? buildChatImageUrl(item.metadata.key)
+            : undefined);
           if (uri) onImagePress?.(uri);
         } : undefined}
+        onPostRefPress={item.kind === "post_ref" && !item.deletedAt ? onPostRefPress : undefined}
       />
     ),
-    [currentUserId, onRetry, onDelete, onReport, onImagePress],
+    [currentUserId, onRetry, onDelete, onReport, onImagePress, onPostRefPress],
   );
 
   const keyExtractor = useCallback((item: MessageItem) => item.id, []);

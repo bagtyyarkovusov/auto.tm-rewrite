@@ -79,13 +79,17 @@ describe("MessageBubble", () => {
 });
 
 describe("MessageBubble image support", () => {
-  it("accepts kind prop for text or image messages", () => {
-    expect(source).toContain('kind?: "text" | "image"');
+  it("accepts kind prop for text, image, or post_ref messages", () => {
+    expect(source).toContain('kind?: "text" | "image" | "post_ref"');
   });
 
   it("accepts image metadata", () => {
-    expect(source).toContain("metadata?: ImageMessageMetadata");
+    expect(source).toContain("metadata?: ImageMessageMetadata | PostRefMessageMetadata");
     expect(source).toContain("key: string");
+  });
+
+  it("accepts post_ref card callbacks", () => {
+    expect(source).toContain("onPostRefPress?: (listingId: string) => void");
   });
 
   it("accepts local image URI for pending/failed previews", () => {
