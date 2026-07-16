@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -9,9 +9,10 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useColorScheme } from "nativewind";
-import { Send, Paperclip, X } from "lucide-react-native";
+import { Send, Paperclip, X, AlertCircle } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import * as Linking from "expo-linking";
 import { Image } from "expo-image";
 
 import { THEME } from "../../../lib/theme";
@@ -60,10 +61,19 @@ export function MessageComposer({
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionError, setCompressionError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [mediaPermission, requestMediaPermission] =
+    ImagePicker.useMediaLibraryPermissions();
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme ?? "light";
   const placeholderColor = `hsl(${THEME[scheme].mutedForeground})`;
+
+  useEffect(() => {
+    if (mediaPermission?.granted) {
+      setPermissionDenied(false);
+    }
+  }, [mediaPermission?.granted]);
 
   const trimmed = text.trim();
   const isOverLimit = text.length > MAX_CHARS;
@@ -94,22 +104,34 @@ export function MessageComposer({
     if (disabled || isCompressing || !conversationId) return;
 
     setCompressionError(null);
+    setPermissionDenied(false);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsMultipleSelection: false,
-      quality: 1,
-    });
-
-    if (result.canceled || !result.assets[0]) {
-      return;
-    }
-
-    const asset = result.assets[0];
-    const sourceUri = asset.uri;
-
-    setIsCompressing(true);
     try {
+      if (mediaPermission && !mediaPermission.granted && mediaPermission.canAskAgain) {
+        const response = await requestMediaPermission();
+        if (!response.granted) {
+          setPermissionDenied(true);
+          return;
+        }
+      } else if (mediaPermission && !mediaPermission.granted && !mediaPermission.canAskAgain) {
+        setPermissionDenied(true);
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+
+      if (result.canceled || !result.assets[0]) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const sourceUri = asset.uri;
+
+      setIsCompressing(true);
       await ensureChatStagingDir(conversationId);
       const tempClientId = `picker-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const destinationUri = getChatImageStagingPath(conversationId, tempClientId);
@@ -125,7 +147,14 @@ export function MessageComposer({
     } finally {
       setIsCompressing(false);
     }
-  }, [disabled, isCompressing, conversationId, t]);
+  }, [
+    disabled,
+    isCompressing,
+    conversationId,
+    mediaPermission,
+    requestMediaPermission,
+    t,
+  ]);
 
   const handleSend = useCallback(() => {
     if (!canSend) return;
@@ -179,6 +208,25 @@ export function MessageComposer({
       {compressionError && (
         <View className="px-4 pt-1 pb-1 bg-background">
           <Text className="text-xs text-destructive">{compressionError}</Text>
+        </View>
+      )}
+
+      {permissionDenied && (
+        <View className="px-4 py-2 bg-background border-t border-border">
+          <View className="flex-row items-center gap-2">
+            <Icon as={AlertCircle} className="size-4 text-destructive shrink-0" />
+            <Text className="text-xs text-muted-foreground flex-1">
+              {t("photoPermissionDenied")}
+            </Text>
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={() => void Linking.openSettings()}
+              accessibilityLabel={t("openSettings")}
+            >
+              <Text>{t("openSettings")}</Text>
+            </Button>
+          </View>
         </View>
       )}
 

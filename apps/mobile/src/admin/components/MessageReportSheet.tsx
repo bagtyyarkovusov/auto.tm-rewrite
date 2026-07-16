@@ -51,6 +51,7 @@ interface MessageReportSheetProps {
   messageId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onReported?: (messageId: string) => void;
 }
 
 export function MessageReportSheet({
@@ -58,6 +59,7 @@ export function MessageReportSheet({
   messageId,
   open,
   onOpenChange,
+  onReported,
 }: MessageReportSheetProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -105,6 +107,7 @@ export function MessageReportSheet({
       {
         onSuccess: () => {
           setSubmitted(true);
+          onReported?.(messageId);
         },
       },
     );
