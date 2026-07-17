@@ -4,7 +4,7 @@
 
 ## Purpose
 
-All push delivery + in-app notification feed + admin broadcast tooling. Push-token registration and direct-message push decision/history/enqueue are implemented; external transport dispatch lives in `apps/worker` and is wired in #245.
+Native push-token registration plus the API-side direct-message notification decision, history, and worker-enqueue path. The API does not expose an in-app notification feed or admin broadcast tooling today; per-token delivery and transport selection live in `apps/worker`.
 
 ## Owns (entities + tables)
 
@@ -121,55 +121,15 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - Direct-message pushes are enqueued on the BullMQ queue `notification-fanout` with job name `direct-message` and payload `{ category, recipientUserId, historyId, title, body, deepLink, data }`. The `historyId` lets the worker update the corresponding `NotificationHistory` row. Jobs are enqueued with `attempts: 3` and exponential backoff so the worker can retry transient (`RETRYABLE`) transport failures.
 - The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; it validates the payload with `DirectMessagePushJobSchema` and calls `ProcessDirectMessagePush`.
 
-## Planned additions (post-MLP notification platform)
+## Planned additions (future shaped bets)
 
-Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in `docs/prd/features/36-notifications.md` and must be shaped into a sprint before implementation. [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) defers this work out of the MLP beta.
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), only capability absent from code is listed here. The target remains in `docs/prd/features/36-notifications.md` and requires a shaped sprint.
 
-- Schema additions to `NotificationHistory` for broadcast support: `recipientGroup?` (e.g., "all-admins"), `sentByUserId?` (admin-initiated), `deliveryDetails` (JSON per-token success/fail), `totalRecipients`, `successfulDeliveries`, `failedDeliveries` (broadcast metrics)
-- **`NotificationsDispatchPort`** interface:
-
-  ```ts
-  interface NotificationsDispatchPort {
-    send(input: {
-      recipientUserId: string
-      category: NotificationCategory
-      title: string
-      body: string
-      payload?: Record<string, unknown>
-      deepLink?: string
-    }): Promise<void>
-  }
-  ```
-
-- **`PushPort`** transport abstraction (FCM, APNS, ntfy, test):
-
-  ```ts
-  interface PushPort {
-    send(deviceToken: string, payload: PushPayload): Promise<PushResult>
-  }
-  ```
-
-- Push transport selection via `PUSH_TRANSPORT` env var:
-  - `fcm-apns` (default production) — both platforms via firebase-admin + APNS HTTP/2
-  - `ntfy` (fallback) — self-hosted, limited foreground-style notifications
-  - `test` (CI / dev) — in-memory, no real delivery
-  - On "token invalid" response → mark `FcmDevice.invalidatedAt` (after schema addition) and skip future sends
-
-- Invariants to enforce at application layer:
-  - User MUST have at least one valid `FcmDevice` to receive push (else notification stays in-app feed only)
-  - `NotificationHistory` is append-only (admin can hide from feed but row persists for audit)
-  - `direct_messages` category cannot be globally disabled — only per-conversation mute (UI-enforced)
-  - `NotificationPreference.optOuts` JSON shape: `{ [category]: 'push' | 'digest' | 'none' }`
-
-- Events emitted: `NotificationDelivered` (analytics), `NotificationFailed` (analytics + retry)
-- Events consumed:
-  - `MessageSent` (from `conversations/`) — fires push to offline recipient
-  - `SavedSearchMatched` (from `subscriptions/`) — fires push (debounced)
-  - `ListingFavorited` (from `listings/`) — digestable activity push
-  - `ContentReportCreated` (from `admin/`) — future admin notification; emitted only for newly inserted report rows, not duplicate pending reuse; not consumed in S7
-  - `DealershipVerified` (from `identity/` or `admin/`) — congrats push to dealership members
-  - S7 moderation events such as `ListingBanned`, `ListingUnbanned`, `UserSuspended`, and `UserUnsuspended` are not consumed for user-facing notifications in the MLP. Moderation feedback notifications require explicit future PRD coverage and must not expose admin free-text reasons.
-- Ports consumed: `IdentityReadPort` (resolve user + admin check for broadcasts), `ListingsReadPort` (hydrate match notification body)
+- Production FCM/APNS credentials and a real `FcmApnsPushTransport`; S10's non-test adapter is an explicit permanent-failure shell.
+- In-app notification feed/read APIs, a notification center UI, admin broadcasts, and broadcast-recipient metrics.
+- Saved-search, listing-activity, admin, blog, marketing, digest, and quiet-hours delivery policies.
+- A user-facing category preference center; only per-conversation direct-message mute is enforced in S10.
+- Analytics events such as `NotificationDelivered` and `NotificationFailed` if a future observability bet needs them.
 
 ## Notable decisions
 

@@ -4,13 +4,13 @@
 
 ## Purpose
 
-Per-listing scoped 1:1 conversations between buyer and seller. The MLP beta ships simple text contact in S6. S10 expands the application layer to support rich messages (text, image, post_ref), participant watermarks, unread counts, per-conversation mute, block/unblock integration, and own-message soft delete.
+Per-listing scoped 1:1 conversations between buyer and seller. S6 shipped simple text contact; S10 adds rich messages (text, image, post_ref), realtime delivery, participant watermarks, unread counts, per-conversation mute, block/unblock integration, message reports, and own-message soft delete.
 
 ## Owns (entities + tables)
 
 - `Conversation` — id, listingId (FK → Listing, Cascade), buyerId (FK → User as "Buyer", Cascade), sellerId (FK → User as "Seller", Cascade), createdAt, updatedAt, lastMessageAt?, lastMessageId?. Unique on `(listingId, buyerId)`. Index on `sellerId` and `lastMessageAt`.
 - `ConversationParticipant` — id, conversationId (FK → Conversation, Cascade), userId (FK → User, Cascade), createdAt, mutedAt?, lastReadAt?, lastDeliveredAt?. Unique on `(conversationId, userId)`. Indexes on `(userId, lastReadAt)` and `(userId, lastDeliveredAt)`.
-- `Message` — id, conversationId (FK → Conversation, Cascade), senderId (no FK constraint), kind (`MessageKind` enum: text | image | post_ref | system), body?, metadata? (JSON), createdAt, deletedAt?, clientMessageId?. Index on `(conversationId, createdAt)`. Partial unique on `(conversationId, senderId, clientMessageId)` (nulls are distinct).
+- `Message` — id, conversationId (FK → Conversation, Cascade), senderId (no FK constraint), kind (`MessageKind` enum: text | image | post_ref | system), body?, metadata? (JSON), createdAt, deletedAt?, clientMessageId?. Index on `(conversationId, createdAt)`. Unique index on `(conversationId, senderId, clientMessageId)`; Postgres permits multiple null `clientMessageId` values.
 
 ## Domain layer
 
@@ -29,7 +29,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - **Send restrictions** — `SendTextMessage` and `SendMessage` block sends when the parent listing is unavailable (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), sold (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), archived (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), banned (`FORBIDDEN` with `LISTING_NOT_CONTACTABLE`), has `allowChat = false` (`FORBIDDEN` with `CHAT_DISABLED`), or when the sender is not a participant (`FORBIDDEN` with `NOT_A_PARTICIPANT`). Send is also blocked when either participant is suspended (`FORBIDDEN` with `USER_SUSPENDED` via `IdentityCheckPort.isSuspended`) and when either user has blocked the other (`FORBIDDEN` with `BLOCKED_BY_USER` or `USER_BLOCKED` via `IdentityReadPort.isUserBlockedBy`). Existing history remains readable in all read-only states.
 - **Post-reference send restrictions** — `SendPostRefMessage` enforces the same participant, parent-listing, suspension, and block guards as `SendMessage`. In addition, the referenced listing must be visible and `active` at send time; hidden, deleted, sold, archived, banned, or otherwise invisible referenced listings are rejected (`FORBIDDEN` with `LISTING_REFERENCE_NOT_VISIBLE`). The snapshot stored in `Message.metadata` is built from `ListingsReadPort.getListingSummary` and is immutable for the life of the message.
 - **Post-reference degradation** — When messages are read through `ListMessages` or as a conversation's `lastMessage`, post-reference cards overlay a current `available` flag. The flag is `true` only when the referenced listing is still returned by `ListingsReadPort.getListingSummaries` with `status = active`; sold, archived, banned, deleted, or missing listings render `available: false`. The stored snapshot (brand/model/year/price/currency/cover/status at send time) remains intact so the card never breaks the thread.
-- `Message.kind` is one of text | image | post_ref | system. S6 text messages persist as `kind = text`; S10 adds image and post_ref payloads through `SendMessage`.
+- `Message.kind` is one of text | image | post_ref | system. S6 text messages persist as `kind = text`; S10 adds image payloads through `SendMessage` and listing-card payloads through `SendPostRefMessage`.
 - `Message.senderId` is NOT FK-constrained — messages survive if the sender user is deleted (dangling senderId, by design per identity/CONTEXT account-deletion scope).
 - `Message` text is trimmed at creation; blank-after-trim and >1000 chars after trim are rejected by the domain layer.
 - **Image upload staging** — `PresignChatAttachmentUpload` issues a presigned MinIO PUT URL for a single image per call, scoped to the conversation (`chat-attachments/{conversationId}/{uuid}/original.{ext}`). It enforces participant-only access, a 5 MB size cap, and `image/jpeg`/`image/webp` content types. Suspended users are rejected.
@@ -48,17 +48,18 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Module shape (today)
 
 - `apps/api/src/modules/conversations/`:
-  - `domain/` — `Conversation.ts`, `Message.ts`, `types.ts`, `ports/ConversationRepository.ts`
+  - `domain/` — `Conversation.ts`, `Message.ts`, `types.ts`, and ports for persistence, mute state, report context, and message event publishing
   - `application/` — `OpenConversation.ts`, `ListMyConversations.ts`, `ListMessages.ts`, `SendTextMessage.ts`, `SendMessage.ts`, `SendPostRefMessage.ts`, `PresignChatAttachmentUpload.ts`, `UpdateWatermark.ts`, `MuteConversation.ts`, `DeleteMessage.ts`, `ValidateConversationAccess.ts`, plus matching `.spec.ts` unit tests
   - `infrastructure/` — `PrismaConversationRepository.ts` (transactional conversation + participant persistence, message persistence with activity update, watermark/mute/delete/unread queries), `MessageMapper.ts` (Prisma row ↔ domain mapping + redaction), `PostRefSnapshotMapper.ts` (builds post-reference snapshots from `ListingSummary` and computes current availability). Chat attachments are stored in the shared MinIO-backed `MediaStoragePort` (`listings/`); the `chat-attachments` bucket is created by `MinioMediaStorageAdapter`.
   - `presentation/conversations.controller.ts` — authenticated `POST /api/v1/conversations`, `GET /api/v1/conversations`, `GET /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages`, `POST /api/v1/conversations/:id/messages/rich`, `POST /api/v1/conversations/:id/messages/post-ref`, `POST /api/v1/conversations/:id/attachments/presign`, `POST /api/v1/conversations/:id/watermark`, `POST /api/v1/conversations/:id/mute`, `DELETE /api/v1/conversations/:id/messages/:messageId`, plus health-check ping
   - `presentation/gateways/ConversationGateway.ts` — Socket.IO namespace `/ws/chat`; handles `conversation:join`, `conversation:leave`, `message:send`, `message:delivered`, `message:read`, `conversation:read`, `message:delete`, `typing:start`, and `typing:stop` events; joins/leaves deterministic `conversation:{conversationId}` rooms after delegating authorization to `ValidateConversationAccess`; `message:send` reuses the `SendMessage` application use-case, acks the sender with the durable `MessageSummary` or a contract-shaped error, and fans out `message:new` to the conversation room. Watermark events persist through `UpdateWatermark` and fan out `watermark` to the room. Delete events persist through `DeleteMessage` and fan out `message:deleted` to the room. Typing events are ephemeral and fan out `typing:peer` to the room excluding the sender. Presence events (`presence`) are broadcast to the room when a peer joins, leaves, or disconnects, and sent to a joining socket on entry.
-  - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `EventEmitterModule` for `MessageEventPublisher`, `ListingsModule` for `ListingsReadPort`, and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`. Also provides `CONVERSATION_STATE_PORT` (using the conversation repository implementation) and exports it for cross-context consumers.
+  - `conversations.module.ts` — registers controller, gateway, use-cases, repository port, imports `EventEmitterModule` for `MessageEventPublisher`, `ListingsModule` for `ListingsReadPort`, and `IdentityModule` for `IdentityCheckPort` and `IdentityReadPort`. It exports `CONVERSATION_STATE_PORT` to `notifications/` and `CONVERSATION_REPORT_CONTEXT_PORT` to `admin/`.
 
 ## Ports exposed
 
 - `ConversationRepository` (`CONVERSATION_REPOSITORY`) — implemented by `PrismaConversationRepository`. Methods: `findById`, `findByListingAndBuyer`, `save`, `listForUser`, `listMessages`, `findMessageById`, `findMessageByClientMessageId`, `saveMessage`, `updateWatermark`, `getParticipantState`, `getParticipantStatesForConversations`, `muteConversation`, `softDeleteMessage`, `countUnreadMessages`.
 - `ConversationStatePort` (`CONVERSATION_STATE_PORT`) — implemented by `PrismaConversationRepository`. Methods: `isMuted(conversationId, userId)`. Exported so `notifications/` can read per-conversation mute state without direct repository access.
+- `ConversationReportContextPort` (`CONVERSATION_REPORT_CONTEXT_PORT`) — implemented by `PrismaConversationRepository`. Methods: `getMessageReportContext({ conversationId, messageId })` and `isParticipant(conversationId, userId)`. Exported so `admin/` can validate message reporters and persist stable surrounding context without importing conversation persistence details.
 - `MessageEventPublisher` (`MESSAGE_EVENT_PUBLISHER`) — implemented by `EventEmitterMessageEventPublisher`. Emits domain facts (e.g., `MessageSent`) via NestJS `EventEmitter2` so other bounded contexts (notifications) can react without direct imports.
 
 ## Ports consumed
@@ -117,7 +118,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 |---|---|---|---|---|
 | `conversation:join` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleJoin` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
 | `conversation:leave` | Client → Server | Required (via middleware) | `{ conversationId: uuid }` | `ConversationGateway.handleLeave` → `{ ok: true, conversationId, room }` or `{ ok: false, code, message }` |
-| `message:send` | Client → Server | Required (via middleware) | `{ conversationId: uuid, kind: "text", text: string, clientMessageId?: string }` | `ConversationGateway.handleSendMessage` → `{ ok: true, message: MessageSummary }` or `{ ok: false, code, message }` |
+| `message:send` | Client → Server | Required (via middleware) | text `{ conversationId, kind: "text", text, clientMessageId? }` or image `{ conversationId, kind: "image", metadata, clientMessageId? }` | `ConversationGateway.handleSendMessage` → `{ ok: true, message: MessageSummary }` or `{ ok: false, code, message }` |
 | `message:delivered` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid, lastDeliveredAt?: iso }` | `ConversationGateway.handleMessageDelivered` → persists `lastDeliveredAt` via `UpdateWatermark`, then broadcasts `watermark` |
 | `message:read` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid, lastReadAt?: iso }` | `ConversationGateway.handleMessageRead` → persists `lastReadAt` via `UpdateWatermark`, then broadcasts `watermark` |
 | `conversation:read` | Client → Server | Required (via middleware + room membership) | `{ conversationId: uuid }` | `ConversationGateway.handleConversationRead` → persists `lastReadAt` via `UpdateWatermark` with the current time, then broadcasts `watermark` |
@@ -132,10 +133,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 
 ## Planned additions (future sprints)
 
-Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are tracked in the named sprint file or feature PRD:
-- **S6 (Contact seller) — shipped** — text-only per-listing thread creation and message send/list endpoints
-- **S10 (Rich chat) — partially shipped** — rich message send/list, watermarks, unread counts, mute, soft delete, block/unblock integration, and Socket.IO conversation room join/leave (#235). Remaining S10 chat slices (typing/presence, push decision/delivery, reports) live in child issues #236-#253.
-- **Post-MLP rich chat** — `QuickReply` entity if shaped, `ConversationsReadPort`, and push consumers.
+Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), only capabilities not present in code belong here. Video/voice/group chat, arbitrary link previews, and a persisted/admin-managed `QuickReply` entity require a future shaped sprint; S10's quick replies are static localized mobile copy.
 
 ## Notable decisions
 
