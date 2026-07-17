@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 In progress (locked 2026-07-13) |
+| **Status** | 🟢 Shipped 2026-07-17 (locked 2026-07-13) |
 | **Phase** | Post-MLP marketplace bet |
 | **Milestone** | M9 - Rich chat and launch polish |
 | **Demo audience** | Founder local stack, two signed-in mobile users, and Sandcastle/AFK agents |
@@ -10,6 +10,8 @@
 | **Issues** | GitHub parent [#231](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/231) + children [#232](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/232)-[#253](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/253) |
 
 > **Why this sprint exists.** S8a shipped the product-complete beta substrate and S9a shipped the remote trust-wedge foundation. S9b remains an on-ground concierge inspection pilot, not a code sprint. S10 is the next remote code sprint: it turns text-only contact into rich marketplace chat, adds direct-message native push, and performs broad launch-visible mobile polish before wider deployment.
+
+> **Closeout (2026-07-17).** All children #232-#253 are closed and the integrated sprint merged to `main` through [PR #256](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/256). The API/mobile/worker/contracts/database gate passed 17/17 tasks; Expo dependency validation, cleared iOS export, and an Expo Go simulator boot passed. Production FCM/APNS delivery remains a deployment follow-up, consistent with the locked `PUSH_TRANSPORT=test` closure boundary. See the [retrospective](sprint-10-rich-chat-notifications-mobile-polish-retro.md).
 
 ## Goal
 
@@ -66,35 +68,35 @@ Make AutoTM's buyer-seller communication feel real and launch-worthy: realtime t
 
 ## Acceptance criteria (DoD)
 
-- [ ] Socket.IO gateway authenticates JWT and rejects unauthenticated sockets.
-- [ ] Authenticated sockets join `user:{userId}`.
-- [ ] Active conversation sockets join `conversation:{conversationId}` only after participant validation.
-- [ ] Redis Socket.IO adapter can be enabled through config, while default single-node mode still boots.
-- [ ] Existing HTTP chat endpoints remain functional and tested.
-- [ ] Socket text send persists first, acks sender with the saved message, emits `message:new`, and dedupes by `clientMessageId`.
-- [ ] HTTP refetch recovers missed events after reconnect.
-- [ ] Delivery/read watermarks update monotonically and render in mobile.
-- [ ] Conversation unread count clears when opened.
-- [ ] Typing indicator works and auto-expires.
-- [ ] Chat-scoped online/last-seen works in chat surfaces only.
-- [ ] Image messages upload, persist, render as bubbles, open full-screen, and respect deleted/report semantics.
-- [ ] Listing-reference messages persist, render compact listing cards, and open listing detail, including sold/unavailable safe states.
-- [ ] Native push token registration stores native FCM/APNS tokens and does not rely on Expo Push Tokens for production.
-- [ ] Direct-message notification decision suppresses online, muted, blocked, and no-token cases.
-- [ ] Push worker test transport records a delivery attempt and handles failure/token invalidation shape.
-- [ ] Push tap deep-links to the conversation in mobile tests or smoke.
-- [ ] Per-conversation mute UI works and suppresses native push.
-- [ ] Block/unblock works from chat, preserves history, suppresses push, and does not reveal block state to the blocked user.
-- [ ] Own-message soft delete works within 5 minutes and emits `message:deleted`.
-- [ ] Message reports create admin-reviewable report detail with surrounding context.
-- [ ] Admin can dismiss message reports and suspend the message sender through existing moderation policy.
-- [ ] Static quick replies fill the composer and are localized RU/TK/EN.
-- [ ] Chat list/thread/composer/rich states pass the manual mobile chat checklist.
-- [ ] Broad mobile polish checklist passes across feed, filters, listings, sell/edit, favorites, cabinet/settings, empty/loading/error/offline states, and RU/TK/EN copy.
-- [ ] Relevant `CONTEXT.md` files are updated by implementation PRs when domain invariants, ports, events, routes, package structure, or Prisma fields change.
-- [ ] Prisma migration is committed if schema changes occur.
-- [ ] Contracts compile and consumers parse updated DTOs.
-- [ ] Mobile, API, worker, db, and contracts typechecks/tests pass as relevant to touched workspaces.
+- [x] Socket.IO gateway authenticates JWT and rejects unauthenticated sockets.
+- [x] Authenticated sockets join `user:{userId}`.
+- [x] Active conversation sockets join `conversation:{conversationId}` only after participant validation.
+- [x] Redis Socket.IO adapter can be enabled through config, while default single-node mode still boots.
+- [x] Existing HTTP chat endpoints remain functional and tested.
+- [x] Socket text send persists first, acks sender with the saved message, emits `message:new`, and dedupes by `clientMessageId`.
+- [x] HTTP refetch recovers missed events after reconnect.
+- [x] Delivery/read watermarks update monotonically and render in mobile.
+- [x] Conversation unread count clears when opened.
+- [x] Typing indicator works and auto-expires.
+- [x] Chat-scoped online/last-seen works in chat surfaces only.
+- [x] Image messages upload, persist, render as bubbles, open full-screen, and respect deleted/report semantics.
+- [x] Listing-reference messages persist, render compact listing cards, and open listing detail, including sold/unavailable safe states.
+- [x] Native push token registration stores native FCM/APNS tokens and does not rely on Expo Push Tokens for production.
+- [x] Direct-message notification decision suppresses online, muted, blocked, and no-token cases.
+- [x] Push worker test transport records a delivery attempt and handles failure/token invalidation shape.
+- [x] Push tap deep-links to the conversation in mobile tests or smoke.
+- [x] Per-conversation mute UI works and suppresses native push.
+- [x] Block/unblock works from chat, preserves history, suppresses push, and does not reveal block state to the blocked user.
+- [x] Own-message soft delete works within 5 minutes and emits `message:deleted`.
+- [x] Message reports create admin-reviewable report detail with surrounding context.
+- [x] Admin can dismiss message reports and suspend the message sender through existing moderation policy.
+- [x] Static quick replies fill the composer and are localized RU/TK/EN.
+- [x] Chat list/thread/composer/rich states pass the manual mobile chat checklist.
+- [x] Broad mobile polish checklist passes across feed, filters, listings, sell/edit, favorites, cabinet/settings, empty/loading/error/offline states, and RU/TK/EN copy.
+- [x] Relevant `CONTEXT.md` files are updated by implementation PRs when domain invariants, ports, events, routes, package structure, or Prisma fields change.
+- [x] Prisma migration is committed if schema changes occur.
+- [x] Contracts compile and consumers parse updated DTOs.
+- [x] Mobile, API, worker, db, and contracts typechecks/tests pass as relevant to touched workspaces.
 
 ## Created child issue map
 

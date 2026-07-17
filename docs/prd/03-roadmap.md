@@ -20,19 +20,21 @@
 
 | | |
 |---|---|
-| **Sprint** | S10 — Rich chat + direct-message notifications + mobile polish |
-| **Status** | 🟡 In progress |
-| **Started** | 2026-07-13 |
-| **Phase** | Post-MLP marketplace bet |
-| **Plan file** | GitHub parent [#231](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/231) + children [#232](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/232)-[#253](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/253) |
-| **Sprint doc** | [`sprints/sprint-10-rich-chat-notifications-mobile-polish.md`](sprints/sprint-10-rich-chat-notifications-mobile-polish.md) |
-| **Milestone** | M9 — Rich chat and launch polish |
+| **Sprint** | Next post-MLP bet — not yet shaped or numbered |
+| **Status** | ⚪ Pending human betting-table decision |
+| **Started** | — |
+| **Phase** | Phase 2 — Post-MLP marketplace bets |
+| **Plan file** | Not created |
+| **Sprint doc** | Not created |
+| **Milestone** | Not assigned |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 >
 > **2026-07-05 S8 closure decision:** S8 closes as the shipped S8a remote product-completeness slice; see [`sprints/sprint-08-private-beta-polish-s8a-closeout.md`](sprints/sprint-08-private-beta-polish-s8a-closeout.md). The former S8b on-site distribution / real-OTP / ops cutover is deferred out of S8 and should be shaped later as a deployment/on-site cutover sprint when TM presence or a trusted helper is available.
 >
 > **2026-07-13 S10 start decision:** S9a's remote code/issues are complete. S9b remains deferred on-ground concierge-pilot work with no code issues and does not block S10. S10 is now the active remote code sprint with GitHub parent [#231](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/231) and children [#232](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/232)-[#253](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/253).
+>
+> **2026-07-17 S10 close decision:** S10 shipped through [PR #256](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/256); see the [retrospective](sprints/sprint-10-rich-chat-notifications-mobile-polish-retro.md). There is no pre-shaped S11. The next sprint is chosen through the Phase 2 betting table after beta/pilot learning rather than inferred from the old candidate list.
 
 ---
 
@@ -61,13 +63,13 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | 🟢 Shipped | 2026-06-07 | 2026-06-08 | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | 🟢 Shipped (S8a; S8b deferred to deployment sprint) | 2026-06-09 | 2026-06-27 | M7 | Product-complete beta substrate; actual invites require deployment cutover |
 | S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | 🟢 Shipped (S9a remote code; S9b deferred on-ground) | 2026-07-07 | 2026-07-13 | M8 | Remote trust foundation shipped; concierge pilot deferred |
-| S10 | [Rich chat + direct-message notifications + mobile polish](sprints/sprint-10-rich-chat-notifications-mobile-polish.md) | 🟡 In progress | 2026-07-13 | — | M9 | Two signed-in mobile users can verify rich realtime chat, direct-message push path, and launch-visible mobile polish |
+| S10 | [Rich chat + direct-message notifications + mobile polish](sprints/sprint-10-rich-chat-notifications-mobile-polish.md) | 🟢 Shipped | 2026-07-13 | 2026-07-17 | M9 | Two signed-in mobile users can verify rich realtime chat, direct-message push path, and launch-visible mobile polish |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
 
 > **S9 (Trust wedge) is post-MLP, pulled forward** per [ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md) — listed in this table to keep the sprint trajectory in one place. It builds the remote trust foundation (verified-seller, condition disclosure, VIN history, inspection **demand fake-door**) and runs a 5-10-person **free concierge inspection pilot** on the ground, replacing the generic beta as the real first test.
 >
-> **S10 (Rich chat + direct-message notifications + mobile polish)** is the next prepared remote code sprint after S9a. It does not execute S9b and does not build the full notification platform or Phase 2 inspection workflows.
+> **S10 (Rich chat + direct-message notifications + mobile polish)** shipped as the remote code sprint after S9a. It did not execute S9b or build the full notification platform or Phase 2 inspection workflows.
 
 ---
 
@@ -79,8 +81,6 @@ These are not a backlog. They are candidates for shaping after beta learning. If
 |---|---|---|
 | Better discovery filters + free-text search | Buyers cannot narrow or search listings well enough with the S8a Favorites list + MLP filters | [`features/33-search-discovery.md`](features/33-search-discovery.md) |
 | Saved searches | Buyers repeat the same search manually across days | [`features/35-subscriptions.md`](features/35-subscriptions.md) |
-| Direct-message push | Contact usage is high enough that response delay hurts conversion | [`features/36-notifications.md`](features/36-notifications.md) |
-| Rich chat | Text-only contact cannot support negotiation or trust needs | [`features/34-conversations.md`](features/34-conversations.md) |
 | Dealership showroom | Dealers actively post inventory and need a shareable storefront | [`features/38-showroom.md`](features/38-showroom.md) |
 | Garage | Repeat sellers or profile trust need a vehicle ownership surface | [`features/37-garage.md`](features/37-garage.md) |
 | Blog / Bortzhurnal | Marketplace activity exists and content/community pull is visible | [`features/39-content-blogs.md`](features/39-content-blogs.md) |
@@ -129,7 +129,7 @@ S1 ────► S2 ────► S3 ────► S4 ────► S5 �
 - **S7 comes before broader beta** — moderation must exist before 10-50 real users enter.
 - **S8 is last in the MLP software loop** — the product-complete beta substrate is shipped; real-user invites now depend on the deferred deployment/on-site cutover sprint.
 - **S9 is the trust wedge** ([ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md)) — pulled forward as the differentiator vs. TMCARS/Teklip; its on-ground concierge pilot shares the deferred deployment sprint's TM-presence dependency.
-- **S10 is rich chat + direct-message notifications + mobile polish** — prepared as the next remote code sprint after S9a; S9b remains manual/on-ground and is not a blocker for S10 code issue creation.
+- **S10 shipped rich chat + direct-message notifications + mobile polish** — S9b remains manual/on-ground and the next code bet is not yet shaped.
 
 If a sprint slips, slide downstream rows by the same delta. Do not parallelize unless a shaped pitch proves the dependency is false.
 
@@ -151,6 +151,7 @@ Once per sprint:
 
 > One-line entries, newest first.
 
+- 2026-07-17 — S10 Rich chat + direct-message notifications + mobile polish (M9). Shipped authenticated Socket.IO chat with HTTP recovery, text/image/listing-reference messages, delivery/read watermarks, typing/presence, mute/block/delete/report safety, native-token direct-message push decisions through worker `PushPort` test transport, RU/TK/EN quick replies, and launch-visible mobile polish. The five-workspace gate passed 17/17 tasks; Expo SDK 55 dependencies, cleared iOS export, and Expo Go simulator boot passed. Production FCM/APNS credentials remain a deployment follow-up. Retro: [`sprints/sprint-10-rich-chat-notifications-mobile-polish-retro.md`](sprints/sprint-10-rich-chat-notifications-mobile-polish-retro.md).
 - 2026-06-27 — S8a Private beta polish remote slice. The remotely verifiable beta substrate is closed: mobile i18n (RU/TK/EN with `Accept-Language` + locale-keyed cache), first-launch onboarding, Cabinet/Profile + Settings/logout/language, 30-day account deletion grace + recovery + worker purge, Favorites API/UI, broken-UI sweep, top-5 error/a11y pass, RU/TK/EN legal pages, AFK MLP e2e smoke, admin moderation smoke, and real browser/admin TOTP closeout. `CONTEXT.md` drift reconciled for mobile, identity, listings, worker, web, admin, DB/contracts as applicable; Favorites removed from the post-MLP bet table. On 2026-07-05, the former S8b on-site distribution / real OTP / monitoring drill scope was deferred to a future deployment/on-site cutover sprint, so S8 closes as S8a. Closeout: [`sprints/sprint-08-private-beta-polish-s8a-closeout.md`](sprints/sprint-08-private-beta-polish-s8a-closeout.md).
 - 2026-06-08 — S7 Minimal admin + moderation (M6). Internal admins can run the private beta safely: authenticated report → TOTP-elevated admin review → ban / dismiss / suspend → audit → synchronous public enforcement. Hardened `AdminGuard` (role + 12h TOTP elevation loaded via JWT `sid`); admin TOTP enroll/verify/status with AES-256-GCM secret, SHA-256 backup codes, 5-fail/10-min throttle, adjacent-step skew (`otplib`); `apps/admin` HTTP-only-cookie server-action bridge with refresh-on-401 retry + relative-`returnTo` validation. `ContentReport` (listing/user polymorphic targets, reason enum, `other`-requires-details, application-level pending dedupe, self-report + suspended-reporter blocks) owned by `admin/` behind resource-shaped `POST /api/v1/listings|users/:id/report`. Admin report queue/detail + audit reads (offset 50/100, live target/actor summaries, deleted-user/operator-script provenance). Listing ban/unban (`ListingsAdminPort`) and user suspend/unsuspend (`IdentityAdminPort`) as **transaction-scoped cross-context ports** — report resolution + target mutation + audit write commit in one `admin/`-owned Prisma transaction; enforcement is synchronous state checks (banned listings leave public feed/search/detail + block new contact/messages; `User.suspendedAt` blocks marketplace mutations across listings/conversations/admin with `USER_SUSPENDED`). Six `apps/admin` pages (login, reports, report detail, listing/user action, audit). Launch-safety kill switches `REPORT_ENTRY_ENABLED` / `ADMIN_MODERATION_ACTIONS_ENABLED` (disabled writes → 403 `FEATURE_DISABLED`). First admin via checked-in `packages/db/scripts/promote-admin.ts` + `ops/86-admin-bootstrap-runbook.md`. One migration `20260608010000_s7_admin_moderation`. Built AFK via Kimi-Sandcastle as direct branch merges (#176–#185); all four touched `CONTEXT.md` files updated in-sprint. Outstanding human gate before beta invites: real-authenticator TOTP, admin browser walkthrough, mobile report-entry, e2e smoke (folds into S8). Retro: [`sprints/sprint-07-minimal-admin-retro.md`](sprints/sprint-07-minimal-admin-retro.md).
 - 2026-06-07 — S6 Contact seller (M5). Simplest buyer↔seller text-contact loop shipped per [ADR-0027](../adr/0027-mlp-beta-scope.md) — no Socket.IO, no rich-chat fields. Per-listing `Conversation` + `ConversationParticipant` + text `Message` (unique on `(listingId, buyerId)`, self-contact rejected, participant-only access, explicit sold/archived read-only-thread behavior with banned/suspended hooks pre-documented for S7). Four use-cases (`OpenConversation`, `ListMyConversations`, `ListMessages`, `SendTextMessage`) behind `POST/GET /api/v1/conversations` + `GET/POST /api/v1/conversations/:id/messages`, consuming `listings/` only through `ListingsReadPort` (extended with `allowChat`); message insert + conversation-activity bump run in one Prisma transaction so the list sorts by latest message. Mobile: anonymous Message CTA → OTP resume → conversation detail with optimistic send/retry, plus the seller Chat-tab conversation list; TanStack Query refetch-on-focus, no WebSocket. Built AFK via Kimi-Sandcastle as direct branch merges (#168–#174); 52/52 conversations domain+application unit tests green; **zero schema migrations** (conversation models pre-provisioned). Outstanding: human Expo Go simulator smoke of the end-to-end contact flow before the M5 beta demo (sandcastle cannot run the simulator). Retro: [`sprints/sprint-06-contact-seller-retro.md`](sprints/sprint-06-contact-seller-retro.md).
