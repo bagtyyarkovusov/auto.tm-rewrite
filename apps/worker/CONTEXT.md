@@ -1,6 +1,6 @@
 # apps/worker — CONTEXT
 
-> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Most worker jobs are stub processors today; full video transcode, push delivery, and broad orphan-cleanup pipelines are post-MLP unless required by a shaped beta reliability issue.
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Video transcode and broad orphan-cleanup processors remain stubs. S10 ships direct-message push delivery through the test transport; production FCM/APNS credentials remain future work.
 
 ## Purpose
 

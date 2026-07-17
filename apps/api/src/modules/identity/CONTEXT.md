@@ -139,10 +139,8 @@ Refresh-token lookup scans all `Session` rows and bcrypt-compares the plaintext 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in this CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file.
 
 - **Post-MLP Garage** — `OwnedVehicle` gets `vin`, `mileage`, `nickname`, `status`, `photoUrl`, `isPublic`, `linkedListingId` columns (currently a thin schema with just brand/model/year strings). See `docs/prd/features/37-garage.md` and [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md).
-- **S8/private-beta signup kill switch** — Shipped. `SIGNUPS_ENABLED=false` blocks OTP verification from creating a new `User` while preserving OTP login, refresh, logout, and admin login for existing users. Recovery of grace-period accounts is also unaffected. Disabled signup attempts return HTTP 403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"` and generic client copy; the API does not expose internal flag names.
 - **Post-MLP admin/dealership hardening** —
   - `Dealership.verifiedAt` column for the dealership-verification flow used by listings + admin UI is post-MLP with showroom/dealer work.
-  - `IdentityReadPort` interface for other contexts to read user/dealership summaries and relationship state without owning the data. Currently exposes `findUserById`, `findUsersByIds`, and `isUserBlockedBy(blockerId, blockedId)`. Consumed by `conversations/` (S10 block checks in `OpenConversation`, `SendTextMessage`, and `SendMessage`).
   - `DealershipVerified` is post-MLP with dealership verification.
 
 ## Notable decisions

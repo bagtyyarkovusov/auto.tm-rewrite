@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Authenticated Socket.IO foundation for the API. Provides the server adapter, connection authentication, user-scoped rooms, and an in-memory online registry that later chat gateway slices use. No chat business logic lives here.
+Authenticated Socket.IO foundation for the API. Provides the server adapter, connection authentication, user-scoped rooms, and an in-memory online/last-seen registry used by the S10 conversation gateway and direct-message push suppression. No chat business logic lives here.
 
 ## Owns
 
@@ -57,11 +57,11 @@ When `SOCKET_IO_REDIS_ADAPTER_ENABLED=false` (default), the adapter boots in sin
 - Unauthenticated sockets are rejected at the middleware layer with `connect_error`.
 - The access-token secret and verification semantics match the HTTP JWT routes (`JwtAuthGuard`).
 
-## Out of scope / planned elsewhere
+## Integration today
 
-- Conversation rooms and participant validation — issue #235 (`conversations/`).
-- Message send/read/typing events — issues #236-#238 (`conversations/` gateway).
-- Push notification decisions — issue #244 (`notifications/`).
+- `conversations/` owns participant-validated conversation rooms and message/watermark/delete/typing/presence events on this namespace.
+- `notifications/` consumes `PresencePort.isUserOnline()` to suppress direct-message push while a recipient has an active socket.
+- The in-memory registry is single-node state. The Redis adapter distributes Socket.IO traffic when enabled, but no distributed presence registry ships in S10.
 
 ## Notable decisions
 
