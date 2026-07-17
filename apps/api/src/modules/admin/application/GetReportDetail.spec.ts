@@ -80,6 +80,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     return ids.map((id) => this.users[id]).filter((x): x is { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } => !!x);
   }
 
+  async isUserBlockedBy(): Promise<boolean> {
+    return false;
+  }
+
   seed(id: string, user: { displayName?: string | null; role?: string; suspendedAt?: Date | null; suspendedById?: string | null; suspensionReason?: string | null }) {
     this.users[id] = {
       id,
@@ -94,9 +98,9 @@ class FakeIdentityReadPort implements IdentityReadPort {
 
 function makeReport(
   id: string,
-  targetType: "listing" | "user",
+  targetType: "listing" | "user" | "message",
   targetId: string,
-  opts: { status?: string; reporterUserId?: string | null; reviewedById?: string; reason?: string; details?: string } = {},
+  opts: { status?: string; reporterUserId?: string | null; reviewedById?: string; reason?: string; details?: string; messageContext?: ContentReport["messageContext"] } = {},
 ) {
   return ContentReport.reconstruct({
     id,
@@ -109,6 +113,7 @@ function makeReport(
     reviewedById: opts.reviewedById ?? null,
     reviewedAt: opts.reviewedById ? new Date("2026-01-02T00:00:00Z") : null,
     createdAt: new Date("2026-01-01T00:00:00Z"),
+    messageContext: opts.messageContext ?? null,
   });
 }
 
@@ -258,5 +263,45 @@ describe("GetReportDetail", () => {
     expect(result.targetModerationState?.suspendedAt).toEqual(new Date("2026-01-01T00:00:00Z"));
     expect(result.targetModerationState?.suspendedById).toBe("admin-1");
     expect(result.targetModerationState?.suspensionReason).toBe("Spam");
+  });
+
+  it("returns message report detail with surrounding context", async () => {
+    repo.reports = [
+      makeReport("r1", "message", "msg-1", {
+        messageContext: {
+          messageId: "msg-1",
+          conversationId: "conv-1",
+          listingId: "listing-1",
+          buyerId: "buyer-1",
+          sellerId: "seller-1",
+          senderId: "user-1",
+          createdAt: new Date("2026-01-01T12:00:00Z"),
+          body: "Reported message",
+          deletedAt: null,
+          surroundingMessages: [
+            {
+              id: "msg-0",
+              senderId: "user-2",
+              createdAt: new Date("2026-01-01T11:59:00Z"),
+              body: "Before",
+              deletedAt: null,
+            },
+          ],
+        },
+      }),
+    ];
+    identity.seed("reporter-1", { displayName: "Alice" });
+
+    const uc = makeUseCase(repo, listings, identity);
+    const result = await uc.execute({ reportId: "r1" });
+
+    expect(result.target.targetType).toBe("message");
+    expect(result.target.available).toBe(true);
+    expect(result.target.conversationId).toBe("conv-1");
+    expect(result.target.listingId).toBe("listing-1");
+    expect(result.target.senderId).toBe("user-1");
+    expect(result.target.messageBody).toBe("Reported message");
+    expect(result.messageContext?.surroundingMessages).toHaveLength(1);
+    expect(result.messageContext?.surroundingMessages[0]?.body).toBe("Before");
   });
 });

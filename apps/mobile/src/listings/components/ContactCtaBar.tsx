@@ -1,9 +1,9 @@
 import { ActivityIndicator, Share, View } from "react-native";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
+import { Phone, MessageCircle, Share2, Heart, Forward } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../auth/useAuth";
@@ -42,6 +42,11 @@ export function ContactCtaBar({
   const { t } = useTranslation();
 
   const [optimisticFavorited, setOptimisticFavorited] = useState(isFavorited);
+
+  // Sync local optimistic state with server truth when detail refetches.
+  useEffect(() => {
+    setOptimisticFavorited(isFavorited);
+  }, [isFavorited]);
 
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
@@ -97,11 +102,26 @@ export function ContactCtaBar({
     }
   };
 
+  const handleShareToChat = () => {
+    if (isAuthenticated === false) {
+      useAuthIntentStore.getState().setIntent({
+        returnPath: `/conversations/share-listing?listingId=${listingId}`,
+      });
+      router.push("/(auth)/phone");
+      return;
+    }
+
+    router.push({
+      pathname: "/conversations/share-listing",
+      params: { listingId },
+    });
+  };
+
   const handleShare = async () => {
     try {
       await Share.share({
         message: t("shareMessage"),
-        url: `https://autotm.tm/listings/${listingId}`,
+        url: `https://auto.tm/listings/${listingId}`,
       });
     } catch {
       // Silently ignore share cancellation or errors
@@ -140,7 +160,7 @@ export function ContactCtaBar({
           disabled={!canCall}
         >
           <Icon as={Phone} className="size-5" />
-          <Text>{t("call")}</Text>
+          <Text numberOfLines={1}>{t("call")}</Text>
         </Button>
 
         <Button
@@ -156,6 +176,24 @@ export function ContactCtaBar({
             className={
               canMessage
                 ? "size-5 text-primary-foreground"
+                : "size-5 text-muted-foreground"
+            }
+          />
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="icon"
+          disabled={!canMessage}
+          onPress={handleShareToChat}
+          accessibilityLabel={t("shareToChat")}
+          accessibilityState={{ disabled: !canMessage }}
+        >
+          <Icon
+            as={Forward}
+            className={
+              canMessage
+                ? "size-5 text-foreground"
                 : "size-5 text-muted-foreground"
             }
           />

@@ -13,10 +13,12 @@ interface FilteredEmptyProps {
 export function FilteredEmpty({ onReset }: FilteredEmptyProps) {
   const { t } = useTranslation();
   return (
-    <View className="flex-1 items-center justify-center px-6 gap-4">
-      <Icon as={SlidersHorizontal} className="size-8 text-muted-foreground" />
+    <View className="flex-1 items-center justify-center px-6 gap-5">
+      <View className="size-16 items-center justify-center rounded-full bg-muted">
+        <Icon as={SlidersHorizontal} className="size-8 text-muted-foreground" />
+      </View>
       <View className="items-center gap-1">
-        <Text className="text-base font-semibold text-foreground">
+        <Text className="text-lg font-semibold text-foreground">
           {t("noListingsMatch")}
         </Text>
         <Text className="text-center text-sm text-muted-foreground">

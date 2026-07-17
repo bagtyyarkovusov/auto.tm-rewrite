@@ -34,7 +34,8 @@ describe("MessageComposer", () => {
   });
 
   it("disables send when text is empty", () => {
-    expect(source).toContain("const canSend = trimmed.length > 0");
+    expect(source).toContain("const canSendText = trimmed.length > 0");
+    expect(source).toContain("const canSend = canSendText || canSendImage");
   });
 
   it("disables send when over character limit", () => {
@@ -48,7 +49,7 @@ describe("MessageComposer", () => {
   });
 
   it("clears input after send", () => {
-    expect(source).toContain("setText(\"\")");
+    expect(source).toContain('setText("")');
   });
 
   it("shows error text when over limit", () => {
@@ -63,6 +64,70 @@ describe("MessageComposer", () => {
 
   it("has accessible input label", () => {
     expect(source).toContain('accessibilityLabel={t("sendMessage")}');
+  });
+
+  it("accepts showQuickReplies prop", () => {
+    expect(source).toContain("showQuickReplies?: boolean");
+  });
+
+  it("renders QuickReplies when showQuickReplies is true", () => {
+    expect(source).toContain("showQuickReplies &&");
+    expect(source).toContain("<QuickReplies");
+  });
+
+  it("fills composer text when a quick reply is selected", () => {
+    expect(source).toContain("onSelect={setText}");
+  });
+
+  it("forwards disabled state to QuickReplies", () => {
+    expect(source).toContain("disabled={disabled}");
+  });
+
+  it("accepts onTyping callback for typing indicators", () => {
+    expect(source).toContain("onTyping?: () => void");
+  });
+
+  it("accepts onStopTyping callback to clear typing state", () => {
+    expect(source).toContain("onStopTyping?: () => void");
+  });
+
+  it("calls onTyping while the user is entering text", () => {
+    expect(source).toContain("onTyping?.()");
+  });
+
+  it("calls onStopTyping when the input is cleared", () => {
+    expect(source).toContain("onStopTyping?.()");
+  });
+
+  it("calls onStopTyping when the input loses focus", () => {
+    expect(source).toContain("onBlur={handleBlur}");
+  });
+});
+
+describe("MessageComposer image attachment", () => {
+  it("accepts onSendImage callback prop", () => {
+    expect(source).toContain("onSendImage?: (attachment: ComposerAttachment) => void");
+  });
+
+  it("accepts conversationId for staging", () => {
+    expect(source).toContain("conversationId?: string");
+  });
+
+  it("has an attachment picker button", () => {
+    expect(source).toContain("handlePickImage");
+    expect(source).toContain('accessibilityLabel={t("attachImage")}');
+  });
+
+  it("disables send when neither text nor image is available", () => {
+    expect(source).toContain("const canSend = canSendText || canSendImage");
+  });
+
+  it("enables send when an image attachment is present", () => {
+    expect(source).toContain("const canSendImage = !!attachment && !disabled");
+  });
+
+  it("calls onSendImage when send is pressed with an attachment", () => {
+    expect(source).toContain("onSendImage(attachment)");
   });
 });
 

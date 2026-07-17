@@ -39,12 +39,34 @@ export interface GetReportDetailResult {
     model?: string | undefined;
     status?: string | undefined;
     role?: string | undefined;
+    conversationId?: string | undefined;
+    listingId?: string | undefined;
+    senderId?: string | undefined;
+    messageCreatedAt?: Date | undefined;
+    messageBody?: string | undefined;
+    messageDeletedAt?: Date | null | undefined;
   };
   targetModerationState?: {
     status?: string | undefined;
     suspendedAt: Date | null;
     suspendedById: string | null;
     suspensionReason: string | null;
+  } | undefined;
+  messageContext?: {
+    conversationId: string;
+    messageId: string;
+    listingId: string;
+    senderId: string;
+    messageCreatedAt: Date;
+    messageBody: string | undefined;
+    messageDeletedAt: Date | null;
+    surroundingMessages: Array<{
+      id: string;
+      senderId: string;
+      createdAt: Date;
+      body: string | null;
+      deletedAt: Date | null;
+    }>;
   } | undefined;
   reportsSubmittedByReporterCount?: number | undefined;
   pendingReportsOnTargetCount: number;
@@ -96,10 +118,7 @@ export class GetReportDetail {
         : Promise.resolve(undefined),
     ]);
 
-    const target =
-      report.targetType === "listing"
-        ? this.buildListingTarget(listings[0], report.targetId)
-        : this.buildUserTarget(users[0], report.targetId);
+    const target = this.buildTarget(report, listings[0], users[0]);
 
     let targetModerationState: GetReportDetailResult["targetModerationState"];
     if (report.targetType === "listing" && listings[0]) {
@@ -119,6 +138,20 @@ export class GetReportDetail {
       targetModerationState = undefined;
     }
 
+    const messageContext =
+      report.targetType === "message" && report.messageContext
+        ? {
+            conversationId: report.messageContext.conversationId,
+            messageId: report.messageContext.messageId,
+            listingId: report.messageContext.listingId,
+            senderId: report.messageContext.senderId,
+            messageCreatedAt: report.messageContext.createdAt,
+            messageBody: report.messageContext.body ?? undefined,
+            messageDeletedAt: report.messageContext.deletedAt,
+            surroundingMessages: report.messageContext.surroundingMessages,
+          }
+        : undefined;
+
     return {
       id: report.id,
       status: report.status,
@@ -136,6 +169,7 @@ export class GetReportDetail {
         : undefined,
       target,
       targetModerationState,
+      messageContext,
       reportsSubmittedByReporterCount,
       pendingReportsOnTargetCount,
     };
@@ -190,6 +224,56 @@ export class GetReportDetail {
       label: user.displayName ?? `User ${user.id.slice(0, 8)}`,
       targetId: user.id,
       role: user.role,
+    };
+  }
+
+  private buildTarget(
+    report: {
+      targetType: string;
+      targetId: string;
+      messageContext: { messageId: string; conversationId: string; listingId: string; buyerId: string; sellerId: string; senderId: string; createdAt: Date; body: string | null; deletedAt: Date | null } | null;
+    },
+    listing: { id: string; sellerId: string; status: string; year: number | null; brandName: string; modelName: string } | undefined,
+    user: { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | undefined,
+  ): GetReportDetailResult["target"] {
+    if (report.targetType === "listing") {
+      return this.buildListingTarget(listing, report.targetId);
+    }
+    if (report.targetType === "user") {
+      return this.buildUserTarget(user, report.targetId);
+    }
+    return this.buildMessageTarget(report);
+  }
+
+  private buildMessageTarget(report: {
+    targetId: string;
+    messageContext: { messageId: string; conversationId: string; listingId: string; buyerId: string; sellerId: string; senderId: string; createdAt: Date; body: string | null; deletedAt: Date | null } | null;
+  }): GetReportDetailResult["target"] {
+    const ctx = report.messageContext;
+    if (!ctx) {
+      return {
+        targetType: "message",
+        available: false,
+        label: "Unavailable target",
+        targetId: report.targetId,
+      };
+    }
+
+    const label = ctx.deletedAt
+      ? `Deleted message in conversation ${ctx.conversationId.slice(0, 8)}`
+      : `Message in conversation ${ctx.conversationId.slice(0, 8)}`;
+
+    return {
+      targetType: "message",
+      available: true,
+      label,
+      targetId: ctx.messageId,
+      conversationId: ctx.conversationId,
+      listingId: ctx.listingId,
+      senderId: ctx.senderId,
+      messageCreatedAt: ctx.createdAt,
+      messageBody: ctx.body ?? undefined,
+      messageDeletedAt: ctx.deletedAt,
     };
   }
 }

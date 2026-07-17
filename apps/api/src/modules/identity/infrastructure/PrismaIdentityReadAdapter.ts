@@ -58,4 +58,19 @@ export class PrismaIdentityReadAdapter implements IdentityReadPort {
       suspensionReason: row.suspensionReason,
     }));
   }
+
+  async isUserBlockedBy(
+    blockerId: string,
+    blockedId: string,
+  ): Promise<boolean> {
+    const row = await this.prisma.blockedUser.findUnique({
+      where: {
+        blockerId_blockedId: {
+          blockerId,
+          blockedId,
+        },
+      },
+    });
+    return row !== null;
+  }
 }

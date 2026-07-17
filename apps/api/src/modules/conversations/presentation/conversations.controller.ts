@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Req,
   Query,
@@ -10,17 +11,29 @@ import {
   Inject,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-import { ZodError } from "zod";
+import type { z } from "zod";
 import { ConversationsSchemas } from "@auto-tm/contracts";
 
-import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
+import type {
+  ListingSummary,
+  ListingsReadPort,
+} from "../../listings/domain/ports/ListingsReadPort";
+import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
 import { Public } from "../../../common/public.decorator";
 import { OpenConversation } from "../application/OpenConversation";
 import { ListMyConversations } from "../application/ListMyConversations";
 import { ListMessages } from "../application/ListMessages";
 import { SendTextMessage } from "../application/SendTextMessage";
+import { SendMessage } from "../application/SendMessage";
+import { SendPostRefMessage } from "../application/SendPostRefMessage";
+import { PresignChatAttachmentUpload } from "../application/PresignChatAttachmentUpload";
+import { UpdateWatermark } from "../application/UpdateWatermark";
+import { MuteConversation } from "../application/MuteConversation";
+import { DeleteMessage } from "../application/DeleteMessage";
 import type { Conversation } from "../domain/Conversation";
 import type { Message } from "../domain/Message";
+import type { PostRefMessageMetadata } from "../domain/types";
+import { availabilityMapForListingSummaries } from "../infrastructure/PostRefSnapshotMapper";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -35,6 +48,20 @@ export class ConversationsController {
     private readonly listMessagesUC: ListMessages,
     @Inject(SendTextMessage)
     private readonly sendTextMessageUC: SendTextMessage,
+    @Inject(SendMessage)
+    private readonly sendMessageUC: SendMessage,
+    @Inject(SendPostRefMessage)
+    private readonly sendPostRefMessageUC: SendPostRefMessage,
+    @Inject(PresignChatAttachmentUpload)
+    private readonly presignChatAttachmentUploadUC: PresignChatAttachmentUpload,
+    @Inject(UpdateWatermark)
+    private readonly updateWatermarkUC: UpdateWatermark,
+    @Inject(MuteConversation)
+    private readonly muteConversationUC: MuteConversation,
+    @Inject(DeleteMessage)
+    private readonly deleteMessageUC: DeleteMessage,
+    @Inject(LISTINGS_READ_PORT)
+    private readonly listings: ListingsReadPort,
   ) {}
 
   @Public()
@@ -83,12 +110,24 @@ export class ConversationsController {
       limit: parsed.limit,
     });
 
+    const availabilityMap = await this.buildPostRefAvailabilityMap(
+      result.items
+        .map((item) => item.lastMessage)
+        .filter((m): m is Message => m !== null && m !== undefined),
+    );
+
     return {
       items: result.items.map((item) =>
         this.toConversationSummaryResponse(
           item.conversation,
           item.listing,
           userId,
+          item.lastMessage,
+          item.unreadCount,
+          availabilityMap,
+          item.peerLastReadAt,
+          item.peerLastDeliveredAt,
+          item.mutedAt,
         ),
       ),
       nextCursor: result.nextCursor,
@@ -114,8 +153,10 @@ export class ConversationsController {
       limit: parsed.limit,
     });
 
+    const availabilityMap = await this.buildPostRefAvailabilityMap(result.items);
+
     return {
-      items: result.items.map((m) => this.toMessageSummary(m)),
+      items: result.items.map((m) => this.toMessageSummary(m, availabilityMap)),
       nextCursor: result.nextCursor,
     };
   }
@@ -141,6 +182,152 @@ export class ConversationsController {
     return this.toMessageSummary(result.message);
   }
 
+  @Post(":id/messages/rich")
+  async sendMessage(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.SendMessageRequestSchema,
+      body,
+    );
+
+    const result = await this.sendMessageUC.execute({
+      senderId: userId,
+      conversationId,
+      ...parsed,
+    });
+
+    return this.toMessageSummary(result.message);
+  }
+
+  @Post(":id/messages/post-ref")
+  async sendPostRefMessage(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.SendPostRefMessageRequestSchema,
+      body,
+    );
+
+    const result = await this.sendPostRefMessageUC.execute({
+      senderId: userId,
+      conversationId,
+      metadata: parsed.metadata,
+      clientMessageId: parsed.clientMessageId,
+    });
+
+    const availabilityMap = await this.buildPostRefAvailabilityMap([
+      result.message,
+    ]);
+
+    return this.toMessageSummary(result.message, availabilityMap);
+  }
+
+  @Post(":id/attachments/presign")
+  async presignChatAttachment(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.PresignChatAttachmentRequestSchema,
+      body,
+    );
+
+    const result = await this.presignChatAttachmentUploadUC.execute({
+      userId,
+      conversationId,
+      contentType: parsed.contentType,
+      sizeBytes: parsed.sizeBytes,
+    });
+
+    return {
+      uploadUrl: result.uploadUrl,
+      key: result.key,
+      expiresIn: result.expiresIn,
+      maxSizeBytes: result.maxSizeBytes,
+    };
+  }
+
+  @Post(":id/watermark")
+  async updateWatermark(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.UpdateWatermarkRequestSchema,
+      body,
+    );
+
+    const result = await this.updateWatermarkUC.execute({
+      userId,
+      conversationId,
+      ...(parsed.lastReadAt ? { lastReadAt: parsed.lastReadAt } : {}),
+      ...(parsed.lastDeliveredAt
+        ? { lastDeliveredAt: parsed.lastDeliveredAt }
+        : {}),
+    });
+
+    return {
+      conversationId: result.conversationId,
+      lastReadAt: result.lastReadAt?.toISOString(),
+      lastDeliveredAt: result.lastDeliveredAt?.toISOString(),
+    };
+  }
+
+  @Post(":id/mute")
+  async muteConversation(
+    @Param("id") conversationId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(
+      ConversationsSchemas.MuteConversationRequestSchema,
+      body,
+    );
+
+    const result = await this.muteConversationUC.execute({
+      userId,
+      conversationId,
+      muted: parsed.muted,
+    });
+
+    return {
+      conversationId: result.conversationId,
+      mutedAt: result.mutedAt?.toISOString() ?? null,
+    };
+  }
+
+  @Delete(":id/messages/:messageId")
+  async deleteMessage(
+    @Param("id") conversationId: string,
+    @Param("messageId") messageId: string,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+
+    const result = await this.deleteMessageUC.execute({
+      userId,
+      conversationId,
+      messageId,
+    });
+
+    return {
+      messageId: result.messageId,
+      deletedAt: result.deletedAt.toISOString(),
+    };
+  }
+
   private userId(req: FastifyRequest): string {
     return (req as AuthenticatedRequest).user?.sub as string;
   }
@@ -152,11 +339,11 @@ export class ConversationsController {
     try {
       return schema.parse(data);
     } catch (err) {
-      if (err instanceof ZodError) {
+      if (err && typeof err === "object" && "issues" in err) {
         throw new BadRequestException({
           code: "VALIDATION_FAILED",
           message: "Invalid request",
-          details: err.flatten(),
+          details: (err as z.ZodError).flatten(),
         });
       }
       throw err;
@@ -167,6 +354,12 @@ export class ConversationsController {
     conversation: Pick<Conversation, "id" | "buyerId" | "sellerId" | "updatedAt">,
     listing: ListingSummary | null,
     userId: string,
+    lastMessage?: Message | null,
+    unreadCount?: number,
+    availabilityMap?: Map<string, boolean>,
+    peerLastReadAt?: Date | null,
+    peerLastDeliveredAt?: Date | null,
+    mutedAt?: Date | null,
   ) {
     return {
       id: conversation.id,
@@ -189,16 +382,76 @@ export class ConversationsController {
             status: listing.status,
           }
         : null,
+      lastMessage: lastMessage
+        ? this.toMessageSummary(lastMessage, availabilityMap)
+        : undefined,
+      unreadCount: unreadCount ?? 0,
+      peerLastReadAt: peerLastReadAt?.toISOString(),
+      peerLastDeliveredAt: peerLastDeliveredAt?.toISOString(),
+      mutedAt: mutedAt?.toISOString() ?? null,
     };
   }
 
-  private toMessageSummary(message: Message) {
+  private toMessageSummary(
+    message: Message,
+    availabilityMap?: Map<string, boolean>,
+  ) {
     return {
       id: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
-      text: message.text,
+      kind: message.kind,
+      text: message.body,
+      metadata: this.enrichMetadata(message, availabilityMap),
       createdAt: message.createdAt.toISOString(),
+      deletedAt: message.deletedAt?.toISOString(),
+      clientMessageId: message.clientMessageId ?? undefined,
     };
+  }
+
+  private enrichMetadata(
+    message: Message,
+    availabilityMap?: Map<string, boolean>,
+  ): unknown | undefined {
+    if (!message.metadata) {
+      return undefined;
+    }
+
+    if (this.isPostRefMessage(message)) {
+      const metadata = message.metadata;
+      return {
+        ...metadata,
+        available:
+          availabilityMap?.get(metadata.listingId) ??
+          // If we did not preload availability, treat the snapshot as available.
+          // This keeps individual sends simple; list endpoints always preload.
+          true,
+      };
+    }
+
+    return message.metadata;
+  }
+
+  private async buildPostRefAvailabilityMap(
+    messages: Message[],
+  ): Promise<Map<string, boolean>> {
+    const listingIds = messages
+      .filter(this.isPostRefMessage)
+      .map((m) => m.metadata.listingId);
+
+    const uniqueIds = [...new Set(listingIds)];
+
+    if (uniqueIds.length === 0) {
+      return new Map();
+    }
+
+    const summaries = await this.listings.getListingSummaries(uniqueIds);
+    return availabilityMapForListingSummaries(summaries);
+  }
+
+  private isPostRefMessage(
+    message: Message,
+  ): message is Message & { kind: "post_ref"; metadata: PostRefMessageMetadata } {
+    return message.kind === "post_ref" && message.metadata !== null;
   }
 }

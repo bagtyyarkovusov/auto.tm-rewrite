@@ -1,19 +1,41 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, BellOff, MoreVertical } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
+import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { useViewer } from "../../src/auth/useViewer";
+import { queryKeys } from "../../src/api/queryKeys";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
+import { useSendImageMessage } from "../../src/api/conversations/useSendImageMessage";
+import { usePresignChatAttachment } from "../../src/api/conversations/usePresignChatAttachment";
+import { useUpdateWatermark } from "../../src/api/conversations/useUpdateWatermark";
+import { useDeleteMessage } from "../../src/api/conversations/useDeleteMessage";
+import { useMuteConversation } from "../../src/api/conversations/useMuteConversation";
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
+import { useConversationSocket } from "../../src/conversations/socket/useConversationSocket";
+import { useBlockUser } from "../../src/api/identity/useBlockUser";
+import { useUnblockUser } from "../../src/api/identity/useUnblockUser";
+import { useIsBlocked } from "../../src/api/identity/useIsBlocked";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { MessageList } from "../../src/conversations/components/MessageList";
-import { MessageComposer } from "../../src/conversations/components/MessageComposer";
+import { MessageComposer, type ComposerAttachment } from "../../src/conversations/components/MessageComposer";
+import { TypingIndicator } from "../../src/conversations/components/TypingIndicator";
+import { PeerPresenceLabel } from "../../src/conversations/components/PeerPresenceLabel";
+import { ImagePreviewModal } from "../../src/conversations/components/ImagePreviewModal";
+import { useConversationCatalogMaps } from "../../src/conversations/components/useConversationCatalogMaps";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
+import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
+import {
+  uploadChatImageToPresignedUrl,
+  ChatImageUploadError,
+} from "../../src/conversations/upload/chatImageUpload";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -21,39 +43,143 @@ import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { ErrorState } from "@/components/ErrorState";
+import { useToast } from "@/components/ui/toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface LocalMessage {
   id: string;
+  clientMessageId: string;
   senderId: string;
+  kind: "text" | "image" | "post_ref";
   text: string;
+  metadata?:
+    | { key: string; width?: number; height?: number }
+    | ConversationsSchemas.PostRefMessageMetadata;
+  localImageUri?: string;
+  imageFileSize?: number;
+  imageWidth?: number;
+  imageHeight?: number;
   createdAt: string;
   status: MessageStatus;
+  deletedAt?: string | null;
+  canDelete?: boolean;
+  postRefBrandName?: string;
+  postRefModelName?: string;
+}
+
+function generateClientMessageId(): string {
+  return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+type ConversationListData = {
+  pages: Array<{
+    items: ConversationsSchemas.ConversationSummary[];
+    nextCursor: string | null;
+  }>;
+};
+
+function findConversationSummary(
+  data: ConversationListData | undefined,
+  conversationId: string,
+): ConversationsSchemas.ConversationSummary | undefined {
+  return data?.pages
+    .flatMap((page) => page.items)
+    .find((item) => item.id === conversationId);
+}
+
+function computeOutgoingStatus(
+  messageCreatedAt: string,
+  peerLastReadAt?: string,
+  peerLastDeliveredAt?: string,
+): Extract<MessageStatus, "sent" | "delivered" | "read"> {
+  const created = new Date(messageCreatedAt).getTime();
+  if (peerLastReadAt && new Date(peerLastReadAt).getTime() >= created) {
+    return "read";
+  }
+  if (peerLastDeliveredAt && new Date(peerLastDeliveredAt).getTime() >= created) {
+    return "delivered";
+  }
+  return "sent";
 }
 
 export default function ConversationDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams();
+  const queryClient = useQueryClient();
   const rawId = params.id;
   const conversationId = typeof rawId === "string" ? rawId : "";
   const viewer = useViewer();
+  const router = useRouter();
   const goBack = useSafeBack("/(tabs)/chat");
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
+  const readMarkedRef = useRef(false);
+  const [confirmAction, setConfirmAction] = useState<
+    "block" | "unblock" | null
+  >(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [messageToReport, setMessageToReport] = useState<string | null>(null);
+  const [reportedMessageIds, setReportedMessageIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const messagesQuery = useConversationMessages({ conversationId });
-  const sendMessage = useSendTextMessage();
+  const sendHttpMessage = useSendTextMessage();
+  const sendHttpImageMessage = useSendImageMessage();
+  const presignChatAttachment = usePresignChatAttachment();
+  const updateWatermark = useUpdateWatermark();
+  const deleteHttpMessage = useDeleteMessage();
+  const {
+    peerTyping,
+    peerPresence,
+    signalTyping,
+    stopTyping,
+    sendTextMessage,
+    sendImageMessage,
+    markRead: socketMarkRead,
+    deleteMessage,
+  } = useConversationSocket(conversationId, viewer?.userId);
+
+  const blockUser = useBlockUser();
+  const unblockUser = useUnblockUser();
+  const muteConversation = useMuteConversation();
+  const { show: showToast } = useToast();
 
   const listingCard = useMemo(() => {
-    const listingId = typeof params.listingId === "string" ? params.listingId : undefined;
+    const listingId =
+      typeof params.listingId === "string" ? params.listingId : undefined;
     if (!listingId) return null;
     return {
       id: listingId,
       brandId: typeof params.brandId === "string" ? params.brandId : "",
       modelId: typeof params.modelId === "string" ? params.modelId : "",
       year: typeof params.year === "string" ? Number(params.year) : undefined,
-      displayPriceTmt: typeof params.displayPriceTmt === "string" ? Number(params.displayPriceTmt) : 0,
-      priceCurrency: typeof params.priceCurrency === "string" ? params.priceCurrency : "TMT",
-      coverMediaKey: typeof params.coverMediaKey === "string" ? params.coverMediaKey : undefined,
+      displayPriceTmt:
+        typeof params.displayPriceTmt === "string"
+          ? Number(params.displayPriceTmt)
+          : 0,
+      priceCurrency:
+        typeof params.priceCurrency === "string" ? params.priceCurrency : "TMT",
+      coverMediaKey:
+        typeof params.coverMediaKey === "string"
+          ? params.coverMediaKey
+          : undefined,
       status: typeof params.status === "string" ? params.status : "active",
     };
   }, [params]);
@@ -71,71 +197,459 @@ export default function ConversationDetailScreen() {
     return modelsData?.items.find((m) => m.id === listingCard.modelId)?.name;
   }, [modelsData, listingCard?.modelId]);
 
+  const postRefListings = useMemo(
+    () =>
+      messagesQuery.data?.pages
+        .flatMap((page) => page.items)
+        .filter(
+          (
+            m,
+          ): m is ConversationsSchemas.MessageSummary & {
+            metadata: ConversationsSchemas.PostRefMessageMetadata;
+          } =>
+            m.kind === "post_ref" &&
+            m.metadata != null &&
+            "listingId" in m.metadata,
+        )
+        .map((m) => ({
+          brandId: m.metadata.brandId,
+          modelId: m.metadata.modelId,
+        })) ?? [],
+    [messagesQuery.data],
+  );
+
+  const postRefCatalogMaps = useConversationCatalogMaps(postRefListings);
+
+  const { data: conversationsData } = useQuery({
+    queryKey: queryKeys.conversations.list(),
+    queryFn: () =>
+      queryClient.getQueryData<ConversationListData | undefined>(
+        queryKeys.conversations.list(),
+      ) ?? null,
+    enabled: false,
+  });
+
+  const conversationSummary = useMemo(
+    () => findConversationSummary(conversationsData ?? undefined, conversationId),
+    [conversationsData, conversationId],
+  );
+
+  const peerWatermark = useMemo(
+    () => ({
+      peerLastReadAt: conversationSummary?.peerLastReadAt,
+      peerLastDeliveredAt: conversationSummary?.peerLastDeliveredAt,
+    }),
+    [conversationSummary],
+  );
+
+  const isMuted = conversationSummary?.mutedAt != null;
+
+  const otherUserId = useMemo(() => {
+    if (!viewer?.userId) return undefined;
+    const buyerId =
+      typeof params.buyerId === "string" && params.buyerId
+        ? params.buyerId
+        : (conversationSummary?.buyerId ?? "");
+    const sellerId =
+      typeof params.sellerId === "string" && params.sellerId
+        ? params.sellerId
+        : (conversationSummary?.sellerId ?? "");
+    if (!buyerId || !sellerId) return undefined;
+    return viewer.userId === buyerId ? sellerId : buyerId;
+  }, [
+    viewer?.userId,
+    params.buyerId,
+    params.sellerId,
+    conversationSummary,
+  ]);
+
+  const isBlockedQuery = useIsBlocked(otherUserId ?? "", {
+    enabled: !!otherUserId,
+  });
+
+  const isBlocked = isBlockedQuery.data?.blocked ?? false;
+
+  const handleBlock = useCallback(() => {
+    if (!otherUserId) return;
+    blockUser.mutate(
+      { userId: otherUserId },
+      {
+        onSuccess: () => {
+          setConfirmAction(null);
+        },
+      },
+    );
+  }, [blockUser, otherUserId]);
+
+  const handleUnblock = useCallback(() => {
+    if (!otherUserId) return;
+    unblockUser.mutate(
+      { userId: otherUserId },
+      {
+        onSuccess: () => {
+          setConfirmAction(null);
+        },
+      },
+    );
+  }, [unblockUser, otherUserId]);
+
+  const handleToggleMute = useCallback(() => {
+    if (!conversationId) return;
+    muteConversation.mutate(
+      { conversationId, muted: !isMuted },
+      {
+        onError: () => {
+          showToast({
+            title: t("muteConversationError"),
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  }, [conversationId, isMuted, muteConversation, showToast, t]);
+
   const allMessages: LocalMessage[] = useMemo(() => {
+    const { peerLastReadAt, peerLastDeliveredAt } = peerWatermark;
+    const viewerId = viewer?.userId;
+    const now = Date.now();
+    const deleteWindowMs = 5 * 60 * 1000;
+
     const serverMessages: LocalMessage[] =
       messagesQuery.data?.pages.flatMap(
         (page) =>
-          page.items.map((m) => ({
-            id: m.id,
-            senderId: m.senderId,
-            text: m.text,
-            createdAt: m.createdAt,
-            status: "confirmed" as MessageStatus,
-          })),
+          page.items.map((m) => {
+            const kind: LocalMessage["kind"] =
+              m.kind === "image" || m.kind === "post_ref" ? m.kind : "text";
+
+            let metadata: LocalMessage["metadata"];
+            if (kind === "image" && m.metadata && "key" in m.metadata) {
+              metadata = {
+                key: m.metadata.key,
+                width: m.metadata.width,
+                height: m.metadata.height,
+              };
+            } else if (
+              kind === "post_ref" &&
+              m.metadata &&
+              "listingId" in m.metadata
+            ) {
+              metadata = {
+                listingId: m.metadata.listingId,
+                brandId: m.metadata.brandId,
+                modelId: m.metadata.modelId,
+                year: m.metadata.year,
+                displayPriceTmt: m.metadata.displayPriceTmt,
+                priceCurrency: m.metadata.priceCurrency,
+                coverMediaKey: m.metadata.coverMediaKey,
+                status: m.metadata.status,
+                available: m.metadata.available ?? true,
+              };
+            }
+
+            const postRefMeta =
+              kind === "post_ref" && metadata && "listingId" in metadata
+                ? metadata
+                : undefined;
+
+            return {
+              id: m.id,
+              clientMessageId: m.clientMessageId ?? m.id,
+              senderId: m.senderId,
+              kind,
+              text: m.text ?? "",
+              metadata,
+              createdAt: m.createdAt,
+              status:
+                m.senderId === viewerId
+                  ? computeOutgoingStatus(
+                      m.createdAt,
+                      peerLastReadAt,
+                      peerLastDeliveredAt,
+                    )
+                  : ("sent" as MessageStatus),
+              deletedAt: m.deletedAt,
+              canDelete:
+                m.senderId === viewerId &&
+                !m.deletedAt &&
+                now - new Date(m.createdAt).getTime() <= deleteWindowMs,
+              postRefBrandName: postRefMeta
+                ? postRefCatalogMaps.brandName(postRefMeta.brandId)
+                : undefined,
+              postRefModelName: postRefMeta
+                ? postRefCatalogMaps.modelName(postRefMeta.modelId)
+                : undefined,
+            };
+          }),
       ) ?? [];
 
-    const confirmedIds = new Set(serverMessages.map((m) => m.id));
+    const serverIds = new Set(serverMessages.map((m) => m.id));
+    const serverClientIds = new Set(
+      serverMessages.map((m) => m.clientMessageId).filter(Boolean),
+    );
     const pendingOrFailed = localMessages.filter(
-      (lm) => !confirmedIds.has(lm.id) && lm.status !== "confirmed",
+      (lm) =>
+        lm.status !== "sent" &&
+        lm.status !== "delivered" &&
+        lm.status !== "read" &&
+        !serverIds.has(lm.id) &&
+        !serverClientIds.has(lm.clientMessageId),
     );
 
     return [...serverMessages, ...pendingOrFailed].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [messagesQuery.data, localMessages]);
+  }, [
+    messagesQuery.data,
+    localMessages,
+    peerWatermark,
+    viewer?.userId,
+    postRefCatalogMaps,
+  ]);
 
-  const handleSend = useCallback(
-    (text: string) => {
-      if (!viewer?.userId || !conversationId) return;
+  const markRead = useCallback(
+    async (timestamp = new Date().toISOString()) => {
+      if (!viewer?.userId || !conversationId || readMarkedRef.current) return;
+      readMarkedRef.current = true;
 
-      const tempId = `pending-${Date.now()}-${Math.random()}`;
-      const pendingMessage: LocalMessage = {
-        id: tempId,
-        senderId: viewer.userId,
-        text,
-        createdAt: new Date().toISOString(),
-        status: "pending",
-      };
+      const result = await socketMarkRead(conversationId, timestamp);
+      if (!result.ok) {
+        // Fallback to HTTP if socket is not connected.
+        updateWatermark.mutate({
+          conversationId,
+          lastReadAt: timestamp,
+        });
+      }
+    },
+    [conversationId, socketMarkRead, updateWatermark, viewer?.userId],
+  );
 
-      setLocalMessages((prev) => [...prev, pendingMessage]);
+  // Mark conversation read once messages have loaded and the user is viewing it.
+  useEffect(() => {
+    if (
+      !messagesQuery.isPending &&
+      !messagesQuery.isError &&
+      viewer?.userId &&
+      conversationId &&
+      !readMarkedRef.current
+    ) {
+      void markRead();
+    }
+  }, [
+    messagesQuery.isPending,
+    messagesQuery.isError,
+    viewer?.userId,
+    conversationId,
+    markRead,
+  ]);
 
-      sendMessage.mutate(
+  const markConfirmed = useCallback((
+    clientMessageId: string,
+    serverId: string,
+    kind: "text" | "image" = "text",
+    metadata?: { key: string; width?: number; height?: number },
+  ) => {
+    setLocalMessages((prev) =>
+      prev.map((m) => {
+        if (m.clientMessageId !== clientMessageId) return m;
+        if (m.localImageUri) {
+          FileSystem.deleteAsync(m.localImageUri, { idempotent: true }).catch(
+            () => {},
+          );
+        }
+        return {
+          ...m,
+          id: serverId,
+          status: "sent",
+          kind,
+          metadata,
+          localImageUri: undefined,
+          imageFileSize: undefined,
+        };
+      }),
+    );
+  }, []);
+
+  const markFailed = useCallback((clientMessageId: string) => {
+    setLocalMessages((prev) =>
+      prev.map((m) =>
+        m.clientMessageId === clientMessageId ? { ...m, status: "failed" } : m,
+      ),
+    );
+  }, []);
+
+  const sendViaHttp = useCallback(
+    (clientMessageId: string, text: string) => {
+      sendHttpMessage.mutate(
         { conversationId, text },
         {
-          onSuccess: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "confirmed" } : m,
-              ),
-            );
+          onSuccess: (data) => {
+            markConfirmed(clientMessageId, data.id);
           },
           onError: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "failed" } : m,
-              ),
-            );
+            markFailed(clientMessageId);
           },
         },
       );
     },
-    [conversationId, sendMessage, viewer?.userId],
+    [conversationId, markConfirmed, markFailed, sendHttpMessage],
+  );
+
+  const sendImageViaHttp = useCallback(
+    (
+      clientMessageId: string,
+      metadata: ConversationsSchemas.ImageMessageMetadata,
+      localUri: string,
+    ) => {
+      sendHttpImageMessage.mutate(
+        { conversationId, metadata, clientMessageId },
+        {
+          onSuccess: (data) => {
+            markConfirmed(clientMessageId, data.id, "image", metadata);
+            FileSystem.deleteAsync(localUri, { idempotent: true }).catch(
+              () => {},
+            );
+          },
+          onError: () => {
+            markFailed(clientMessageId);
+          },
+        },
+      );
+    },
+    [conversationId, markConfirmed, markFailed, sendHttpImageMessage],
+  );
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (!viewer?.userId || !conversationId || isBlocked) return;
+
+      const clientMessageId = generateClientMessageId();
+      const tempId = `pending-${clientMessageId}`;
+      const pendingMessage: LocalMessage = {
+        id: tempId,
+        clientMessageId,
+        senderId: viewer.userId,
+        kind: "text",
+        text,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        canDelete: false,
+      };
+
+      setLocalMessages((prev) => [...prev, pendingMessage]);
+
+      const result = await sendTextMessage({
+        conversationId,
+        text,
+        clientMessageId,
+      });
+
+      if (result.ok) {
+        markConfirmed(clientMessageId, result.message.id);
+      } else if (result.code === "NOT_CONNECTED") {
+        sendViaHttp(clientMessageId, text);
+      } else {
+        markFailed(clientMessageId);
+      }
+    },
+    [
+      conversationId,
+      isBlocked,
+      markConfirmed,
+      markFailed,
+      sendViaHttp,
+      sendTextMessage,
+      viewer?.userId,
+    ],
+  );
+
+  const handleSendImage = useCallback(
+    async (attachment: ComposerAttachment) => {
+      if (!viewer?.userId || !conversationId || isBlocked) return;
+
+      const clientMessageId = generateClientMessageId();
+      const tempId = `pending-${clientMessageId}`;
+      const pendingMessage: LocalMessage = {
+        id: tempId,
+        clientMessageId,
+        senderId: viewer.userId,
+        kind: "image",
+        text: "",
+        localImageUri: attachment.uri,
+        imageFileSize: attachment.fileSize,
+        imageWidth: attachment.width,
+        imageHeight: attachment.height,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        canDelete: false,
+      };
+
+      setLocalMessages((prev) => [...prev, pendingMessage]);
+
+      try {
+        const presignResponse = await presignChatAttachment.mutateAsync({
+          conversationId,
+          request: {
+            contentType: "image/jpeg",
+            sizeBytes: attachment.fileSize,
+          },
+        });
+
+        await uploadChatImageToPresignedUrl(
+          presignResponse.uploadUrl,
+          attachment.uri,
+        );
+
+        const metadata: ConversationsSchemas.ImageMessageMetadata = {
+          key: presignResponse.key,
+          width: attachment.width,
+          height: attachment.height,
+        };
+
+        const result = await sendImageMessage({
+          conversationId,
+          metadata,
+          clientMessageId,
+        });
+
+        if (result.ok) {
+          markConfirmed(clientMessageId, result.message.id, "image", metadata);
+          FileSystem.deleteAsync(attachment.uri, { idempotent: true }).catch(
+            () => {},
+          );
+        } else if (result.code === "NOT_CONNECTED") {
+          sendImageViaHttp(clientMessageId, metadata, attachment.uri);
+        } else {
+          markFailed(clientMessageId);
+        }
+      } catch (err) {
+        const uploadError =
+          err instanceof ChatImageUploadError
+            ? err
+            : new ChatImageUploadError(
+                err instanceof Error ? err.message : "Image upload failed",
+                "put_failed",
+                true,
+              );
+        markFailed(clientMessageId);
+        console.warn("Image message send failed", uploadError);
+      }
+    },
+    [
+      conversationId,
+      isBlocked,
+      markConfirmed,
+      markFailed,
+      presignChatAttachment,
+      sendImageViaHttp,
+      sendImageMessage,
+      viewer?.userId,
+    ],
   );
 
   const handleRetry = useCallback(
-    (tempId: string) => {
-      if (!conversationId) return;
+    async (tempId: string) => {
+      if (!conversationId || isBlocked) return;
       const msg = localMessages.find((m) => m.id === tempId);
       if (!msg || msg.status !== "failed") return;
 
@@ -143,48 +657,216 @@ export default function ConversationDetailScreen() {
         prev.map((m) => (m.id === tempId ? { ...m, status: "pending" } : m)),
       );
 
-      sendMessage.mutate(
-        { conversationId, text: msg.text },
-        {
-          onSuccess: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "confirmed" } : m,
-              ),
+      if (msg.kind === "image" && msg.localImageUri) {
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(msg.localImageUri);
+          if (!fileInfo.exists) {
+            throw new ChatImageUploadError(
+              "Local image file is missing",
+              "file_missing",
+              false,
             );
-          },
-          onError: () => {
-            setLocalMessages((prev) =>
-              prev.map((m) =>
-                m.id === tempId ? { ...m, status: "failed" } : m,
-              ),
+          }
+          const fileSize = "size" in fileInfo ? fileInfo.size : (msg.imageFileSize ?? 0);
+
+          const presignResponse = await presignChatAttachment.mutateAsync({
+            conversationId,
+            request: {
+              contentType: "image/jpeg",
+              sizeBytes: fileSize,
+            },
+          });
+
+          await uploadChatImageToPresignedUrl(
+            presignResponse.uploadUrl,
+            msg.localImageUri,
+          );
+
+          const metadata: ConversationsSchemas.ImageMessageMetadata = {
+            key: presignResponse.key,
+            width: msg.imageWidth,
+            height: msg.imageHeight,
+          };
+
+          const result = await sendImageMessage({
+            conversationId,
+            metadata,
+            clientMessageId: msg.clientMessageId,
+          });
+
+          if (result.ok) {
+            markConfirmed(msg.clientMessageId, result.message.id, "image", metadata);
+            FileSystem.deleteAsync(msg.localImageUri, { idempotent: true }).catch(
+              () => {},
             );
-          },
-        },
-      );
-    },
-    [conversationId, localMessages, sendMessage],
+          } else if (result.code === "NOT_CONNECTED") {
+            sendImageViaHttp(msg.clientMessageId, metadata, msg.localImageUri);
+          } else {
+            markFailed(msg.clientMessageId);
+          }
+        } catch {
+          markFailed(msg.clientMessageId);
+        }
+        return;
+      }
+
+      const result = await sendTextMessage({
+        conversationId,
+        text: msg.text,
+        clientMessageId: msg.clientMessageId,
+      });
+
+      if (result.ok) {
+        markConfirmed(msg.clientMessageId, result.message.id);
+      } else if (result.code === "NOT_CONNECTED") {
+        sendViaHttp(msg.clientMessageId, msg.text);
+      } else {
+        markFailed(msg.clientMessageId);
+      }
+    }, [
+      conversationId,
+      isBlocked,
+      localMessages,
+      markConfirmed,
+      markFailed,
+      presignChatAttachment,
+      sendImageMessage,
+      sendImageViaHttp,
+      sendTextMessage,
+      sendViaHttp,
+    ],
   );
+
+  const deleteViaHttp = useCallback(
+    (messageId: string) => {
+      deleteHttpMessage.mutate({ conversationId, messageId });
+    },
+    [conversationId, deleteHttpMessage],
+  );
+
+  const handleDelete = useCallback(
+    async (messageId: string) => {
+      if (!conversationId || !viewer?.userId) return;
+      setMessageToDelete(null);
+
+      const result = await deleteMessage({
+        conversationId,
+        messageId,
+      });
+
+      if (!result.ok) {
+        deleteViaHttp(messageId);
+      }
+    },
+    [conversationId, deleteMessage, deleteViaHttp, viewer?.userId],
+  );
+
+  const confirmDeleteMessage = useCallback((messageId: string) => {
+    setMessageToDelete(messageId);
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    setMessageToDelete(null);
+  }, []);
+
+  const confirmReportMessage = useCallback((messageId: string) => {
+    setMessageToReport(messageId);
+  }, []);
+
+  const cancelReport = useCallback(() => {
+    setMessageToReport(null);
+  }, []);
+
+  const handleReported = useCallback((messageId: string) => {
+    setReportedMessageIds((prev) => new Set(prev).add(messageId));
+  }, []);
 
   const isLoading = messagesQuery.isPending;
   const isError = messagesQuery.isError;
 
+  const confirmDialogOpen = confirmAction !== null;
+  const confirmTitle =
+    confirmAction === "block"
+      ? t("blockUserConfirmTitle")
+      : t("unblockUserConfirmTitle");
+  const confirmDescription =
+    confirmAction === "block"
+      ? t("blockUserConfirmDescription")
+      : t("unblockUserConfirmDescription");
+  const confirmActionLabel =
+    confirmAction === "block"
+      ? t("blockUserConfirmAction")
+      : t("unblockUserConfirmAction");
+  const onConfirm = confirmAction === "block" ? handleBlock : handleUnblock;
+
   return (
     <SafeScreen>
       {/* Header */}
-      <View className="flex-row items-center gap-2 px-4 py-3 border-b border-border">
-        <Button
-          variant="ghost"
-          className="h-11 w-11"
-          size="icon"
-          onPress={goBack}
-          accessibilityLabel={t("goBack")}
-        >
-          <Icon as={ArrowLeft} className="size-5 text-foreground" />
-        </Button>
-        <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
-          {t("messages")}
-        </Text>
+      <View className="flex-row items-center justify-between gap-2 px-4 py-3 border-b border-border">
+        <View className="flex-row items-center gap-2 flex-1">
+          <Button
+            variant="ghost"
+            className="h-11 w-11"
+            size="icon"
+            onPress={goBack}
+            accessibilityLabel={t("goBack")}
+          >
+            <Icon as={ArrowLeft} className="size-5 text-foreground" />
+          </Button>
+          <View className="flex-1">
+            <View className="flex-row items-center gap-1.5">
+              <Text
+                className="text-lg font-semibold text-foreground"
+                numberOfLines={1}
+              >
+                {t("messages")}
+              </Text>
+              {isMuted && (
+                <Icon
+                  as={BellOff}
+                  className="size-4 text-muted-foreground"
+                  accessibilityLabel={t("conversationMuted")}
+                />
+              )}
+            </View>
+            <PeerPresenceLabel
+              presence={peerPresence}
+              locale={i18n.language}
+            />
+          </View>
+        </View>
+
+        {otherUserId && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-11 w-11"
+                size="icon"
+                accessibilityLabel={t("details")}
+              >
+                <Icon as={MoreVertical} className="size-5 text-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onPress={handleToggleMute}
+                disabled={muteConversation.isPending}
+              >
+                {isMuted ? t("unmuteConversation") : t("muteConversation")}
+              </DropdownMenuItem>
+              {isBlocked ? (
+                <DropdownMenuItem onPress={() => setConfirmAction("unblock")}>
+                  {t("unblockUser")}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onPress={() => setConfirmAction("block")}>
+                  {t("blockUser")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </View>
 
       {/* Listing card */}
@@ -219,7 +901,14 @@ export default function ConversationDetailScreen() {
           <MessageList
             messages={allMessages}
             currentUserId={viewer.userId}
+            reportedMessageIds={reportedMessageIds}
             onRetry={handleRetry}
+            onDelete={confirmDeleteMessage}
+            onReport={confirmReportMessage}
+            onImagePress={(uri) => setPreviewUri(uri)}
+            onPostRefPress={(listingId) =>
+              router.push(`/(public)/listings/${listingId}`)
+            }
           />
         ) : (
           <View className="flex-1 items-center justify-center px-6">
@@ -230,13 +919,109 @@ export default function ConversationDetailScreen() {
         )}
       </View>
 
+      {/* Blocked state banner */}
+      {isBlocked && (
+        <View className="px-4 py-3 border-t border-border bg-muted">
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-foreground">
+                {t("blockedStateTitle")}
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                {t("blockedStateDescription")}
+              </Text>
+            </View>
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => setConfirmAction("unblock")}
+              disabled={unblockUser.isPending}
+            >
+              {t("blockedStateUnblock")}
+            </Button>
+          </View>
+        </View>
+      )}
+
+      {/* Typing indicator */}
+      <TypingIndicator visible={peerTyping} />
+
       {/* Composer */}
       {viewer?.userId && (
         <MessageComposer
           onSend={handleSend}
-          disabled={sendMessage.isPending}
+          onSendImage={handleSendImage}
+          disabled={isBlocked || blockUser.isPending || unblockUser.isPending}
+          showQuickReplies={
+            !isLoading && !isError && !isBlocked && allMessages.length === 0
+          }
+          onTyping={signalTyping}
+          onStopTyping={stopTyping}
+          conversationId={conversationId}
         />
       )}
+
+      {/* Block / Unblock confirmation */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={() => setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onPress={() => setConfirmAction(null)}>
+              {t("cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onPress={onConfirm}
+              disabled={blockUser.isPending || unblockUser.isPending}
+            >
+              {confirmActionLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete message confirmation */}
+      <AlertDialog open={!!messageToDelete} onOpenChange={cancelDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("deleteMessageTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("deleteMessageDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onPress={cancelDelete}>
+              <Text>{t("cancel")}</Text>
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onPress={() =>
+                messageToDelete && handleDelete(messageToDelete)
+              }
+            >
+              <Text>{t("delete")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Report message sheet */}
+      <MessageReportSheet
+        conversationId={conversationId}
+        messageId={messageToReport ?? ""}
+        open={!!messageToReport}
+        onOpenChange={(open) => {
+          if (!open) cancelReport();
+        }}
+        onReported={handleReported}
+      />
+
+      {/* Fullscreen image preview */}
+      <ImagePreviewModal
+        uri={previewUri}
+        onClose={() => setPreviewUri(null)}
+      />
     </SafeScreen>
   );
 }

@@ -1,6 +1,6 @@
 import { DomainError, CONTENT_REPORT_ERROR_CODES } from "./types";
 
-export type ReportTargetType = "listing" | "user";
+export type ReportTargetType = "listing" | "user" | "message";
 
 export type ReportReason =
   | "spam"
@@ -11,6 +11,27 @@ export type ReportReason =
   | "other";
 
 export type ContentReportStatus = "pending" | "actioned" | "dismissed";
+
+export interface SurroundingMessage {
+  id: string;
+  senderId: string;
+  createdAt: Date;
+  body: string | null;
+  deletedAt: Date | null;
+}
+
+export interface MessageReportContext {
+  messageId: string;
+  conversationId: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  senderId: string;
+  createdAt: Date;
+  body: string | null;
+  deletedAt: Date | null;
+  surroundingMessages: SurroundingMessage[];
+}
 
 export interface ContentReportProps {
   id: string;
@@ -23,6 +44,7 @@ export interface ContentReportProps {
   reviewedById: string | null;
   reviewedAt: Date | null;
   createdAt: Date;
+  messageContext: MessageReportContext | null;
 }
 
 export class ContentReport {
@@ -36,6 +58,7 @@ export class ContentReport {
   readonly reviewedById: string | null;
   readonly reviewedAt: Date | null;
   readonly createdAt: Date;
+  readonly messageContext: MessageReportContext | null;
 
   private constructor(props: ContentReportProps) {
     this.id = props.id;
@@ -48,6 +71,7 @@ export class ContentReport {
     this.reviewedById = props.reviewedById;
     this.reviewedAt = props.reviewedAt;
     this.createdAt = props.createdAt;
+    this.messageContext = props.messageContext;
   }
 
   static create(props: {
@@ -58,6 +82,7 @@ export class ContentReport {
     reason: ReportReason;
     details?: string | null;
     createdAt?: Date;
+    messageContext?: MessageReportContext | null;
   }): ContentReport {
     if (props.reporterUserId === null) {
       throw new DomainError(
@@ -77,6 +102,7 @@ export class ContentReport {
       reviewedById: null,
       reviewedAt: null,
       createdAt: props.createdAt ?? new Date(),
+      messageContext: props.messageContext ?? null,
     });
   }
 
@@ -88,10 +114,14 @@ export class ContentReport {
         "wrong_category is only valid for listing reports",
       );
     }
-    if (props.reason === "harassment" && props.targetType !== "user") {
+    if (
+      props.reason === "harassment" &&
+      props.targetType !== "user" &&
+      props.targetType !== "message"
+    ) {
       throw new DomainError(
         CONTENT_REPORT_ERROR_CODES.INVALID_REASON_FOR_TARGET,
-        "harassment is only valid for user reports",
+        "harassment is only valid for user or message reports",
       );
     }
 
@@ -125,6 +155,7 @@ export class ContentReport {
       reviewedById: props.reviewedById,
       reviewedAt: props.reviewedAt,
       createdAt: props.createdAt,
+      messageContext: props.messageContext ?? null,
     });
   }
 }

@@ -93,6 +93,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     return [];
   }
 
+  async isUserBlockedBy(): Promise<boolean> {
+    return false;
+  }
+
   seed(id: string, user: { displayName?: string | null; role?: string; suspendedAt?: Date | null; suspendedById?: string | null; suspensionReason?: string | null }) {
     this.users[id] = {
       id,

@@ -4,12 +4,16 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
+import { Image as ImageIcon, Trash2, Car } from "lucide-react-native";
 
 import { Text } from "@/components/ui/text";
+import { Icon } from "@/components/ui/icon";
 
 interface ConversationListItemProps {
   conversation: {
     id: string;
+    buyerId: string;
+    sellerId: string;
     listing: {
       id: string;
       brandId: string;
@@ -22,13 +26,70 @@ interface ConversationListItemProps {
     } | null;
     myRole: "buyer" | "seller";
     lastMessage?: {
-      text: string;
+      text: string | null;
       createdAt: string;
+      kind?: "text" | "image" | "post_ref" | "system";
+      deletedAt?: string | null;
     };
     updatedAt: string;
+    unreadCount?: number;
   };
   brandName?: string;
   modelName?: string;
+}
+
+function LastMessagePreview({
+  lastMessage,
+  isUnread,
+}: {
+  lastMessage: NonNullable<ConversationListItemProps["conversation"]["lastMessage"]>;
+  isUnread: boolean;
+}) {
+  const { t } = useTranslation();
+  const { t: tConv } = useTranslation("conversations");
+
+  const textClass = isUnread
+    ? "text-sm flex-1 text-foreground font-medium"
+    : "text-sm flex-1 text-muted-foreground";
+
+  if (lastMessage.deletedAt) {
+    return (
+      <View className="flex-row items-center gap-1.5 flex-1">
+        <Icon as={Trash2} className="size-3.5 text-muted-foreground shrink-0" />
+        <Text className={`${textClass} italic`} numberOfLines={1}>
+          {tConv("messageDeleted")}
+        </Text>
+      </View>
+    );
+  }
+
+  if (lastMessage.kind === Enums.MessageKind.Image) {
+    return (
+      <View className="flex-row items-center gap-1.5 flex-1">
+        <Icon as={ImageIcon} className="size-3.5 text-muted-foreground shrink-0" />
+        <Text className={textClass} numberOfLines={1}>
+          {t("photo")}
+        </Text>
+      </View>
+    );
+  }
+
+  if (lastMessage.kind === Enums.MessageKind.PostRef) {
+    return (
+      <View className="flex-row items-center gap-1.5 flex-1">
+        <Icon as={Car} className="size-3.5 text-muted-foreground shrink-0" />
+        <Text className={textClass} numberOfLines={1}>
+          {t("listing")}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <Text className={textClass} numberOfLines={1}>
+      {lastMessage.text ?? ""}
+    </Text>
+  );
 }
 
 function formatConversationTime(iso: string, locale: string): string {
@@ -90,6 +151,9 @@ export function ConversationListItem({
       params.status = listing.status;
     }
 
+    params.buyerId = conversation.buyerId;
+    params.sellerId = conversation.sellerId;
+
     router.push({
       pathname: "/conversations/[id]",
       params,
@@ -137,14 +201,25 @@ export function ConversationListItem({
           <Text className="text-sm text-muted-foreground">{priceText}</Text>
         )}
 
-        {conversation.lastMessage && (
-          <Text
-            className="text-sm text-muted-foreground"
-            numberOfLines={1}
-          >
-            {conversation.lastMessage.text}
-          </Text>
-        )}
+        <View className="flex-row items-center gap-2">
+          {conversation.lastMessage ? (
+            <LastMessagePreview
+              lastMessage={conversation.lastMessage}
+              isUnread={(conversation.unreadCount ?? 0) > 0}
+            />
+          ) : (
+            <Text className="text-sm flex-1 text-muted-foreground" numberOfLines={1}>
+              {t("noMessagesYet")}
+            </Text>
+          )}
+          {(conversation.unreadCount ?? 0) > 0 && (
+            <View className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary items-center justify-center">
+              <Text className="text-xs text-primary-foreground font-medium">
+                {(conversation.unreadCount ?? 0) > 99 ? "99+" : conversation.unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
 
         <View className="flex-row items-center gap-1.5">
           <Text className="text-xs text-muted-foreground capitalize">

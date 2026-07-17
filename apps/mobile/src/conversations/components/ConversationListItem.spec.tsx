@@ -33,8 +33,36 @@ describe("ConversationListItem", () => {
 
   it("shows last message preview when available", () => {
     expect(source).toContain("conversation.lastMessage");
-    expect(source).toContain("conversation.lastMessage.text");
+    expect(source).toContain("lastMessage.text");
     expect(source).toContain('numberOfLines={1}');
+  });
+
+  it("handles deleted last message preview", () => {
+    expect(source).toContain("lastMessage.deletedAt");
+    expect(source).toContain("messageDeleted");
+  });
+
+  it("shows image label for image-kind last message", () => {
+    expect(source).toContain('Enums.MessageKind.Image');
+    expect(source).toContain('t("photo")');
+  });
+
+  it("shows listing label for post_ref-kind last message", () => {
+    expect(source).toContain('Enums.MessageKind.PostRef');
+    expect(source).toContain('t("listing")');
+  });
+
+  it("supports system-kind last message", () => {
+    expect(source).toContain('"system"');
+  });
+
+  it("accepts unread count in conversation prop", () => {
+    expect(source).toContain("unreadCount?: number");
+  });
+
+  it("renders an unread badge when unreadCount is greater than zero", () => {
+    expect(source).toContain("unreadCount");
+    expect(source).toContain("bg-primary");
   });
 
   it("shows conversation updated time", () => {

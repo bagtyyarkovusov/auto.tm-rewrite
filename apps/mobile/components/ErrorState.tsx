@@ -41,12 +41,14 @@ export function ErrorState({ error, onRetry, compact = false }: ErrorStateProps)
       accessibilityRole="alert"
       className="flex-1 items-center justify-center px-6 gap-4"
     >
-      <Icon as={AlertTriangle} className="size-8 text-muted-foreground" />
+      <View className="size-16 items-center justify-center rounded-full bg-destructive/10">
+        <Icon as={AlertTriangle} className="size-8 text-destructive" />
+      </View>
       <View className="items-center gap-1">
-        <Text className="text-center text-base font-semibold text-foreground">
+        <Text className="text-center text-base font-semibold text-foreground" numberOfLines={2}>
           {copy.title}
         </Text>
-        <Text className="text-center text-sm text-muted-foreground">
+        <Text className="text-center text-sm text-muted-foreground" numberOfLines={3}>
           {copy.description}
         </Text>
       </View>

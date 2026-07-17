@@ -20,17 +20,19 @@
 
 | | |
 |---|---|
-| **Sprint** | S9 — Trust wedge |
+| **Sprint** | S10 — Rich chat + direct-message notifications + mobile polish |
 | **Status** | 🟡 In progress |
-| **Started** | 2026-07-07 |
-| **Phase** | Post-MLP — trust wedge pulled forward |
-| **Plan file** | GitHub parent [#219](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/219) + S9a children [#220](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/220)-[#228](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/228) |
-| **Sprint doc** | [`sprints/sprint-09-trust-wedge.md`](sprints/sprint-09-trust-wedge.md) |
-| **Milestone** | M8 — Trust wedge / first inspection pilot |
+| **Started** | 2026-07-13 |
+| **Phase** | Post-MLP marketplace bet |
+| **Plan file** | GitHub parent [#231](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/231) + children [#232](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/232)-[#253](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/253) |
+| **Sprint doc** | [`sprints/sprint-10-rich-chat-notifications-mobile-polish.md`](sprints/sprint-10-rich-chat-notifications-mobile-polish.md) |
+| **Milestone** | M9 — Rich chat and launch polish |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 >
 > **2026-07-05 S8 closure decision:** S8 closes as the shipped S8a remote product-completeness slice; see [`sprints/sprint-08-private-beta-polish-s8a-closeout.md`](sprints/sprint-08-private-beta-polish-s8a-closeout.md). The former S8b on-site distribution / real-OTP / ops cutover is deferred out of S8 and should be shaped later as a deployment/on-site cutover sprint when TM presence or a trusted helper is available.
+>
+> **2026-07-13 S10 start decision:** S9a's remote code/issues are complete. S9b remains deferred on-ground concierge-pilot work with no code issues and does not block S10. S10 is now the active remote code sprint with GitHub parent [#231](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/231) and children [#232](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/232)-[#253](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/253).
 
 ---
 
@@ -58,11 +60,14 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S6 | [Contact seller](sprints/sprint-06-contact-seller.md) | 🟢 Shipped | 2026-06-06 | 2026-06-07 | M5 | Beta testers with real listings |
 | S7 | [Minimal admin + moderation](sprints/sprint-07-minimal-admin.md) | 🟢 Shipped | 2026-06-07 | 2026-06-08 | M6 | Internal admins |
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | 🟢 Shipped (S8a; S8b deferred to deployment sprint) | 2026-06-09 | 2026-06-27 | M7 | Product-complete beta substrate; actual invites require deployment cutover |
-| S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | 🟡 In progress | 2026-07-07 | — | M8 | 5-10 inspection-pilot buyers (on-ground) |
+| S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | 🟢 Shipped (S9a remote code; S9b deferred on-ground) | 2026-07-07 | 2026-07-13 | M8 | Remote trust foundation shipped; concierge pilot deferred |
+| S10 | [Rich chat + direct-message notifications + mobile polish](sprints/sprint-10-rich-chat-notifications-mobile-polish.md) | 🟡 In progress | 2026-07-13 | — | M9 | Two signed-in mobile users can verify rich realtime chat, direct-message push path, and launch-visible mobile polish |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
 
 > **S9 (Trust wedge) is post-MLP, pulled forward** per [ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md) — listed in this table to keep the sprint trajectory in one place. It builds the remote trust foundation (verified-seller, condition disclosure, VIN history, inspection **demand fake-door**) and runs a 5-10-person **free concierge inspection pilot** on the ground, replacing the generic beta as the real first test.
+>
+> **S10 (Rich chat + direct-message notifications + mobile polish)** is the next prepared remote code sprint after S9a. It does not execute S9b and does not build the full notification platform or Phase 2 inspection workflows.
 
 ---
 
@@ -105,14 +110,15 @@ These are not a backlog. They are candidates for shaping after beta learning. If
 | **M6** Admins can keep beta safe | S7 | Internal admins |
 | **M7** Private beta substrate | S8 | Product-complete, localized, beta-safe marketplace loop |
 | **M8** Trust wedge / first inspection pilot | S9 | 5-10 buyers who get a free AutoTM inspection |
+| **M9** Rich chat and launch polish | S10 | Rich realtime chat, direct-message push path, and launch-visible mobile polish |
 
 ---
 
 ## Sprint dependencies
 
 ```
-S1 ────► S2 ────► S3 ────► S4 ────► S5 ────► S6 ────► S7 ────► S8 ────► S9
-          auth      catalog   listings  discovery contact   safety   beta    trust
+S1 ────► S2 ────► S3 ────► S4 ────► S5 ────► S6 ────► S7 ────► S8 ────► S9 ────► S10
+          auth      catalog   listings  discovery contact   safety   beta    trust   rich chat
 ```
 
 - **S2 unlocks authenticated actions** — contact seller, create listing, and admin elevation all depend on identity.
@@ -123,6 +129,7 @@ S1 ────► S2 ────► S3 ────► S4 ────► S5 �
 - **S7 comes before broader beta** — moderation must exist before 10-50 real users enter.
 - **S8 is last in the MLP software loop** — the product-complete beta substrate is shipped; real-user invites now depend on the deferred deployment/on-site cutover sprint.
 - **S9 is the trust wedge** ([ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md)) — pulled forward as the differentiator vs. TMCARS/Teklip; its on-ground concierge pilot shares the deferred deployment sprint's TM-presence dependency.
+- **S10 is rich chat + direct-message notifications + mobile polish** — prepared as the next remote code sprint after S9a; S9b remains manual/on-ground and is not a blocker for S10 code issue creation.
 
 If a sprint slips, slide downstream rows by the same delta. Do not parallelize unless a shaped pitch proves the dependency is false.
 

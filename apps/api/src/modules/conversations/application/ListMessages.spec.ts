@@ -24,7 +24,7 @@ class FakeConversationRepository implements ConversationRepository {
   }
 
   async listForUser(): Promise<{
-    items: Conversation[];
+    items: Array<{ conversation: Conversation; lastMessage: Message | null }>;
     nextCursor: string | null;
   }> {
     return { items: [], nextCursor: null };
@@ -60,8 +60,56 @@ class FakeConversationRepository implements ConversationRepository {
     };
   }
 
+  async findMessageById(id: string): Promise<Message | null> {
+    return this.messages.find((m) => m.id === id) ?? null;
+  }
+
+  async findMessageByClientMessageId(): Promise<Message | null> {
+    return null;
+  }
+
   async saveMessage(message: Message): Promise<void> {
     this.messages.push(message);
+  }
+
+  async updateWatermark(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async getParticipantState(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  } | null> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async muteConversation(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async softDeleteMessage(): Promise<Message | null> {
+    return null;
+  }
+
+  async getParticipantStatesForConversations(
+    _conversationIds: string[],
+  ): Promise<
+    Map<string, Array<{ userId: string; mutedAt: Date | null; lastReadAt: Date | null; lastDeliveredAt: Date | null }>>
+  > {
+    return new Map();
+  }
+
+  async countUnreadMessages(): Promise<number> {
+    return 0;
   }
 }
 
@@ -87,11 +135,17 @@ function seedConversation(
 function seedMessages(
   repo: FakeConversationRepository,
   count: number,
-  overrides?: Partial<Message>,
+  overrides?: Partial<{
+    id: string;
+    conversationId: string;
+    senderId: string;
+    text: string;
+    createdAt: Date;
+  }>,
 ) {
   const messages: Message[] = [];
   for (let i = 0; i < count; i++) {
-    const m = Message.create({
+    const m = Message.createText({
       id: `msg-${i + 1}`,
       conversationId: "conv-1",
       senderId: "buyer-1",

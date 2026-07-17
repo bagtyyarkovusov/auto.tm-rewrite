@@ -95,6 +95,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     return ids.map((id) => this.users[id]).filter((x): x is { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } => !!x);
   }
 
+  async isUserBlockedBy(): Promise<boolean> {
+    return false;
+  }
+
   seed(id: string, user: { displayName?: string | null; role?: string; suspendedAt?: Date | null }) {
     this.users[id] = {
       id,
@@ -107,7 +111,7 @@ class FakeIdentityReadPort implements IdentityReadPort {
   }
 }
 
-function makeReport(id: string, targetType: "listing" | "user", targetId: string, status = "pending", reason = "spam", createdAt = new Date("2026-01-01T00:00:00Z")) {
+function makeReport(id: string, targetType: "listing" | "user" | "message", targetId: string, status = "pending", reason = "spam", createdAt = new Date("2026-01-01T00:00:00Z"), messageContext: ContentReport["messageContext"] = null) {
   return ContentReport.reconstruct({
     id,
     reporterUserId: "reporter-1",
@@ -119,6 +123,7 @@ function makeReport(id: string, targetType: "listing" | "user", targetId: string
     reviewedById: null,
     reviewedAt: null,
     createdAt,
+    messageContext,
   });
 }
 
@@ -298,5 +303,42 @@ describe("ListReports", () => {
     const result = await uc.execute({});
 
     expect(result.items[0]!.targetSummary.label).toBe("Toyota Camry");
+  });
+
+  it("resolves message target summary from stored context", async () => {
+    repo.reports = [
+      makeReport("r1", "message", "msg-1", "pending", "spam", new Date("2026-01-01T00:00:00Z"), {
+        messageId: "msg-1",
+        conversationId: "conv-1",
+        listingId: "listing-1",
+        buyerId: "buyer-1",
+        sellerId: "seller-1",
+        senderId: "user-1",
+        createdAt: new Date("2026-01-01T12:00:00Z"),
+        body: "Hello",
+        deletedAt: null,
+        surroundingMessages: [],
+      }),
+    ];
+
+    const uc = makeUseCase(repo, listings, identity);
+    const result = await uc.execute({});
+
+    expect(result.items[0]!.targetSummary.available).toBe(true);
+    expect(result.items[0]!.targetSummary.targetType).toBe("message");
+    expect(result.items[0]!.targetSummary.label).toContain("conv-1");
+  });
+
+  it("allows filtering by message targetType", async () => {
+    repo.reports = [
+      makeReport("r1", "message", "msg-1"),
+      makeReport("r2", "listing", "l1"),
+    ];
+
+    const uc = makeUseCase(repo, listings, identity);
+    const result = await uc.execute({ targetType: "message" });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]!.targetType).toBe("message");
   });
 });

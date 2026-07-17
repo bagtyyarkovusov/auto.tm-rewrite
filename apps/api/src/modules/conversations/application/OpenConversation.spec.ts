@@ -2,9 +2,11 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { NotFoundException, ForbiddenException } from "@nestjs/common";
 
 import { Conversation } from "../domain/Conversation";
+import { Message } from "../domain/Message";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
 
 import { OpenConversation } from "./OpenConversation";
 
@@ -31,7 +33,7 @@ class FakeConversationRepository implements ConversationRepository {
   }
 
   async listForUser(): Promise<{
-    items: Conversation[];
+    items: Array<{ conversation: Conversation; lastMessage: Message | null }>;
     nextCursor: string | null;
   }> {
     return { items: [], nextCursor: null };
@@ -44,7 +46,55 @@ class FakeConversationRepository implements ConversationRepository {
     return { items: [], nextCursor: null };
   }
 
+  async findMessageById(): Promise<null> {
+    return null;
+  }
+
+  async findMessageByClientMessageId(): Promise<null> {
+    return null;
+  }
+
   async saveMessage(): Promise<void> {}
+
+  async updateWatermark(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async getParticipantState(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  } | null> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async muteConversation(): Promise<{
+    mutedAt: Date | null;
+    lastReadAt: Date | null;
+    lastDeliveredAt: Date | null;
+  }> {
+    return { mutedAt: null, lastReadAt: null, lastDeliveredAt: null };
+  }
+
+  async softDeleteMessage(): Promise<null> {
+    return null;
+  }
+
+  async getParticipantStatesForConversations(
+    _conversationIds: string[],
+  ): Promise<
+    Map<string, Array<{ userId: string; mutedAt: Date | null; lastReadAt: Date | null; lastDeliveredAt: Date | null }>>
+  > {
+    return new Map();
+  }
+
+  async countUnreadMessages(): Promise<number> {
+    return 0;
+  }
 }
 
 class FakeListingsReadPort implements ListingsReadPort {
@@ -108,15 +158,37 @@ class FakeIdentityCheckPort implements IdentityCheckPort {
   }
 }
 
+class FakeIdentityReadPort implements IdentityReadPort {
+  blockedPairs = new Set<string>();
+
+  async findUserById(): Promise<null> {
+    return null;
+  }
+
+  async findUsersByIds(): Promise<[]> {
+    return [];
+  }
+
+  async isUserBlockedBy(blockerId: string, blockedId: string): Promise<boolean> {
+    return this.blockedPairs.has(`${blockerId}:${blockedId}`);
+  }
+
+  block(blockerId: string, blockedId: string) {
+    this.blockedPairs.add(`${blockerId}:${blockedId}`);
+  }
+}
+
 function makeUseCase(
   repo?: FakeConversationRepository,
   listings?: FakeListingsReadPort,
   identityCheck?: FakeIdentityCheckPort,
+  identityRead?: FakeIdentityReadPort,
 ) {
   return new OpenConversation(
     repo ?? new FakeConversationRepository(),
     listings ?? new FakeListingsReadPort(),
     identityCheck ?? new FakeIdentityCheckPort(),
+    identityRead ?? new FakeIdentityReadPort(),
   );
 }
 
@@ -275,6 +347,28 @@ describe("OpenConversation", () => {
     const identity = new FakeIdentityCheckPort();
     identity.suspend("seller-1");
     const uc = makeUseCase(repo, listings, identity);
+
+    await expect(
+      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks new contact when buyer is blocked by seller", async () => {
+    seedListing(listings);
+    const identityRead = new FakeIdentityReadPort();
+    identityRead.block("seller-1", "buyer-1");
+    const uc = makeUseCase(repo, listings, undefined, identityRead);
+
+    await expect(
+      uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks new contact when buyer has blocked seller", async () => {
+    seedListing(listings);
+    const identityRead = new FakeIdentityReadPort();
+    identityRead.block("buyer-1", "seller-1");
+    const uc = makeUseCase(repo, listings, undefined, identityRead);
 
     await expect(
       uc.execute({ buyerId: "buyer-1", listingId: "listing-1" }),

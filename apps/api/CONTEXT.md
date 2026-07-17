@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The NestJS API. Hosts all bounded contexts, exposes REST endpoints, runs Prisma against Postgres. The single source of business logic — mobile, admin, and web are thin clients. MLP contact ships as a simple REST text thread in S6; WebSocket chat and push dispatch are post-MLP. SMS gateway driver shipped in S2 via `apps/sms-gateway`.
+The NestJS API. Hosts all bounded contexts, exposes REST and Socket.IO endpoints, and runs Prisma against Postgres. The single source of business logic — mobile, admin, and web are thin clients. S10 adds rich realtime chat plus the API-side direct-message push decision/history/enqueue path; external push delivery runs in `apps/worker`. SMS gateway delivery remains in `apps/sms-gateway`.
 
 ## Layer rules (Level 2 architecture)
 
@@ -19,27 +19,27 @@ Every bounded context under `src/modules/<context>/` has four layers:
 
 ## What it contains
 
-- 9 bounded-context modules under `src/modules/` (admin, catalog, content, conversations, identity, listings, notifications, reports, subscriptions) — only `identity` has shipped use-cases today; the rest are skeletons
+- 10 modules under `src/modules/` (admin, catalog, content, conversations, identity, listings, notifications, realtime, reports, subscriptions); `realtime` is an infrastructure module that provides authenticated Socket.IO and presence state to the business contexts
 - Global `JwtAuthGuard` + `@Public()` decorator at `src/common/` for auth-gating + anonymous-browsing escape hatch. The API auth boundary is bearer-token only; browser cookie storage belongs to `apps/admin`, which forwards `Authorization: Bearer <accessToken>` server-side.
 - `AdminGuard` at `src/common/admin.guard.ts` composing on top of `JwtAuthGuard` (gates admin-only routes via `IdentityCheckPort.isAdmin`)
 - Global throttler (`@nestjs/throttler`) — 60 req/min/IP default; per-route override via `@Throttle()`. S7 public report routes use this global throttler only; no report-specific quota store or custom report throttling rule ships in the MLP.
 - Prisma client via `PrismaService` (PrismaModule is currently commented out in `app.module.ts` pending API ESM migration — issue #16)
 - Swagger / OpenAPI docs generated from Zod contracts
-- `ConfigModule` with Zod-validated env schema (`src/env.schema.ts`), including `PORT=3006` (see ADR-0018). S7 adds required `TOTP_SECRET_ENCRYPTION_KEY` for encrypted admin TOTP secrets; it must decode to 32 bytes from base64 and fail startup if missing/invalid.
-- `socket.io` package installed but no `IoAdapter` attached today; no WebSocket gateways — rich chat namespace is post-MLP (`conversations` module)
+- `ConfigModule` with Zod-validated env schema (`src/env.schema.ts`), including `PORT=3006` (see ADR-0018) and `SOCKET_IO_NAMESPACE`, `SOCKET_IO_CORS_ORIGIN`, `SOCKET_IO_REDIS_ADAPTER_ENABLED` (default `false`) for the Socket.IO foundation.
+- `socket.io` package installed; `RealtimeIoAdapter` attached in `main.ts` with optional `@socket.io/redis-adapter` readiness; `RealtimeGateway` exposes the `/ws/chat` namespace with JWT-auth middleware, user rooms (`user:{userId}`), and an in-memory online registry. `conversations/` adds `ConversationGateway` on the same namespace for `conversation:join` / `conversation:leave` events and deterministic `conversation:{conversationId}` rooms (#235).
 
 ## Public API surface (today)
 
 - REST: `/api/v1/auth/*`, `/api/v1/me` — identity context (S2 shipped)
-- REST: `/api/v1/catalog/*` — catalog stub controller (full surface in S3)
-- REST stubs: `/api/v1/listings`, `/api/v1/conversations`, etc. — controllers exist but no real handlers
+- REST: `/api/v1/catalog/*`, `/api/v1/listings/*`, `/api/v1/conversations/*`, `/api/v1/notifications/*`, `/api/v1/admin/*`, and the per-context routes documented in their local `CONTEXT.md` files
 - Health: `/healthz` (liveness)
-- Push, WS (`/ws/chat`), Metrics (`/metrics`) — planned, not yet attached
+- WebSocket: `/ws/chat` namespace (Socket.IO) — authenticated user/conversation rooms with text/image send, watermarks, delete, typing, and chat-scoped presence events
+- Direct-message push: native token registration and API-side eligibility/history/enqueue are live; the worker's `test` transport is the S10 delivery path. Production FCM/APNS credentials and `/metrics` remain unwired.
 
 ## Cross-context communication
 
-- **Ports (synchronous)** — small TS interfaces injected via NestJS DI; one context exposes, others consume
-- **Events (asynchronous)** — `@nestjs/event-emitter` for fire-and-forget notifications. Used heavily for `ListingCreated → subscriptions/`, `MessageSent → notifications/`, etc.
+- **Ports (synchronous)** — small TS interfaces injected via NestJS DI; one context exposes, others consume. `realtime/` exposes `PresencePort` (`isUserOnline`, `getLastSeenAt`) for cross-context online and last-seen checks; `conversations/` exposes `ConversationStatePort` (`isMuted`) for cross-context mute checks. `notifications/` consumes both ports when deciding direct-message pushes.
+- **Events (asynchronous)** — `@nestjs/event-emitter` for fire-and-forget facts. The current S10 path is `MessageSent` from `conversations/` to `notifications/`; other emitted/consumed events are documented by their owning contexts.
 
 ## Dependencies
 

@@ -1,6 +1,12 @@
 import type { Conversation } from "../Conversation";
 import type { Message } from "../Message";
 
+export interface ParticipantState {
+  mutedAt: Date | null;
+  lastReadAt: Date | null;
+  lastDeliveredAt: Date | null;
+}
+
 export interface ConversationRepository {
   findById(id: string): Promise<Conversation | null>;
   findByListingAndBuyer(
@@ -16,7 +22,7 @@ export interface ConversationRepository {
       limit?: number;
     },
   ): Promise<{
-    items: Conversation[];
+    items: Array<{ conversation: Conversation; lastMessage: Message | null }>;
     nextCursor: string | null;
   }>;
 
@@ -31,7 +37,49 @@ export interface ConversationRepository {
     nextCursor: string | null;
   }>;
 
+  findMessageById(id: string): Promise<Message | null>;
+  findMessageByClientMessageId(
+    conversationId: string,
+    senderId: string,
+    clientMessageId: string,
+  ): Promise<Message | null>;
+
   saveMessage(message: Message): Promise<void>;
+
+  updateWatermark(
+    userId: string,
+    conversationId: string,
+    data: {
+      lastReadAt?: Date;
+      lastDeliveredAt?: Date;
+    },
+  ): Promise<ParticipantState>;
+
+  getParticipantState(
+    userId: string,
+    conversationId: string,
+  ): Promise<ParticipantState | null>;
+
+  getParticipantStatesForConversations(
+    conversationIds: string[],
+  ): Promise<Map<string, Array<{ userId: string } & ParticipantState>>>;
+
+  muteConversation(
+    userId: string,
+    conversationId: string,
+    muted: boolean,
+  ): Promise<ParticipantState>;
+
+  softDeleteMessage(
+    messageId: string,
+    userId: string,
+    deletedAt: Date,
+  ): Promise<Message | null>;
+
+  countUnreadMessages(
+    userId: string,
+    conversationId: string,
+  ): Promise<number>;
 }
 
 export const CONVERSATION_REPOSITORY = Symbol("ConversationRepository");

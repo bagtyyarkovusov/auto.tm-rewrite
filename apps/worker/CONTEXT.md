@@ -1,6 +1,6 @@
 # apps/worker — CONTEXT
 
-> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Most worker jobs are stub processors today; full video transcode, push delivery, and broad orphan-cleanup pipelines are post-MLP unless required by a shaped beta reliability issue.
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Video transcode and broad orphan-cleanup processors remain stubs. S10 ships direct-message push delivery through the test transport; production FCM/APNS credentials remain future work.
 
 ## Purpose
 
@@ -22,24 +22,43 @@ NestJS standalone worker. Consumes BullMQ queues from Redis and runs CPU-bound o
 ### Queue processors (today)
 
 - `src/queues/video-transcode.processor.ts` — stub processor (no ffmpeg integration yet)
-- `src/queues/notification-fanout.processor.ts` — stub processor (no saved-search match algorithm yet)
+- `src/queues/notification-fanout.processor.ts` — handles `direct-message` jobs from the `notification-fanout` queue. Validates the payload against `DirectMessagePushJobSchema`, fetches the recipient's active `FcmDevice` rows, calls the configured `PushPort` per token, records per-token results in `NotificationHistory.deliveryDetails`, and sets `NotificationHistory.status` to `delivered` (at least one token succeeded) or `failed`. On retryable transport failures it leaves the status `pending` and rethrows so BullMQ retries the job (the API enqueues with `attempts: 3`, exponential backoff). Saved-search match evaluation remains post-MLP.
 - `src/queues/orphan-cleanup.processor.ts` — stub processor (no MinIO listing / DB scan yet)
 - `src/queues/account-purge.processor.ts` — daily repeatable job at 03:00 UTC. Finds users with `deletionScheduledAt <= now`, tombstones PII (`phone → deleted:<id>`, nulls `displayName`/`avatarUrl`), clears `deletionScheduledAt`, and prunes private rows: sessions, TOTP, FCM devices, notification history/preferences, saved searches, favorites, garage, blocked users, dealership memberships, listing drafts. Marketplace content (listings, conversations, messages, reports, audit logs) is retained.
+
+### Push transport (`src/push/`)
+
+- `domain/PushPort.ts` — `PushPort` interface (`send(payload) → PushResult`) and `PUSH_PORT` token. Results are `ok`, `INVALID_TOKEN` (permanent, token should be invalidated), `RETRYABLE`, or `PERMANENT`.
+- `application/ProcessDirectMessagePush.ts` — pure use-case that fans out a direct-message push to active device tokens, handles `INVALID_TOKEN` invalidation, updates history status, and throws `RetryablePushError` for retryable failures so BullMQ can retry.
+- `adapters/TestPushTransport.ts` — `PUSH_TRANSPORT=test` implementation. Records every `send()` call in memory and can be configured per-token or with a default result. No external network calls.
+- `adapters/FcmApnsPushTransport.ts` — production shell that returns `PERMANENT` failure because FCM/APNS credentials are not wired in S10.
+- `infrastructure/PrismaPushDeviceStore.ts` — reads active `FcmDevice` rows and invalidates dead tokens.
+- `infrastructure/PrismaNotificationHistoryStore.ts` — updates `NotificationHistory.status` and `deliveryDetails`.
+- `push.module.ts` — wires the push layer. `PUSH_PORT` resolves to `TestPushTransport` when `PUSH_TRANSPORT=test` (the S10 default) and to `FcmApnsPushTransport` otherwise.
 
 ### Other
 
 - `src/main.ts` boots NestJS worker app
-- `src/app.module.ts` wires modules
-- `src/common/prisma.module.ts` — Prisma access module (currently commented out at the consumer level per issue #16)
+- `src/app.module.ts` wires modules, including `PushModule`
+- `src/common/prisma.module.ts` — Prisma access module
 
 ## Public surface
 
 None — worker is internal. Only Redis (queues) + Postgres + MinIO connections (MinIO when image+video pipelines actually ship).
 
+## Environment variables
+
+- `DATABASE_URL` — Postgres connection string
+- `REDIS_URL` — Redis connection string for BullMQ
+- `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` — object storage (used by future media pipelines)
+- `PUSH_TRANSPORT` — `test` (S10 default), `fcm-apns`, or `ntfy`
+- Optional production transport env names (not consumed until credentials are wired): `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`
+
 ## Dependencies
 
-- `apps/api` (shared Prisma models via `packages/db`; emits events that worker consumes)
+- `apps/api` (shared Prisma models via `packages/db`; emits events that worker consumes; API owns the direct-message push decision/enqueue)
 - `packages/db`
+- `@auto-tm/contracts` (validates the `direct-message` job payload via `DirectMessagePushJobSchema`)
 - Redis (BullMQ)
 - MinIO (S3 SDK — to be added when image+video pipelines ship)
 
@@ -57,11 +76,10 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
   - `ffmpeg-static` dep + ffmpeg toolchain
   - Pull source from `listing-videos` MinIO bucket → produce HLS at 320p + 720p + poster at 2s
   - Add any required video processing status fields in the sprint that owns video UX
-- **Post-MLP notifications** — Push delivery + notification fan-out:
-  - New `src/queues/push.processor.ts` processor
-  - `firebase-admin` dep for FCM (and APNS HTTP/2 layer)
-  - Saved-search match fan-out (extend existing `notification-fanout` stub):
-    - Consume `ListingCreated` events / queue jobs → query `SavedSearch` table → respect per-search debounce → enqueue per-recipient push jobs
+- **Post-MLP notifications** — Saved-search match fan-out and broadcast notifications:
+  - `firebase-admin` dep for FCM (and APNS HTTP/2 layer) when production credentials are wired
+  - Saved-search match fan-out (extend existing `notification-fanout`):
+    - Consume `ListingCreated` events / queue jobs → query `SavedSearch` table → respect per-search debounce → enqueue per-recipient direct-message-style push jobs
 - **Phase 2 — orphan media cleanup pipeline** (extend existing stub):
   - Nightly cron at 03:00 TM time
   - Lists MinIO objects with no DB reference > 24h → deletes them

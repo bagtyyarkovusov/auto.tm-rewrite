@@ -12,14 +12,10 @@ Single source of truth for the database schema. Owns `schema.prisma`, all migrat
 packages/db/
 ├── prisma/
 │   ├── schema.prisma         The schema — all bounded contexts' tables, grouped by /// section comments
-│   ├── migrations/           Timestamped SQL files
-│   │   ├── 20260513201407_init/
-│   │   ├── 20260514090000_multi_device_sessions_and_role_split/
-│   │   ├── 20260514100000_otp_request_ip/
-│   │   ├── 20260514104615_delete_me_cascades/
-│   │   ├── 20260518081943_add_engine_type_transmission_drive_type/
-│   │   ├── 20260518083234_s4_listings_crud/
-│   │   ├── 20260518180741_add_seller_terms_to_listing/
+│   ├── migrations/           Forward-only timestamped SQL history through S10
+│   │   ├── ...               Earlier migrations remain immutable
+│   │   ├── 20260713000000_s10_rich_chat_foundation/
+│   │   ├── 20260713170000_add_notification_history_status/
 │   │   └── migration_lock.toml
 │   └── seed/
 │       ├── _legacy/cars.brands.json   Monolingual snapshot from old backend; historical port source
@@ -96,6 +92,15 @@ S9a additions (now in schema):
 - Migration `20260711000000_add_condition_disclosure_to_listing` adds the S9a disclosure columns + the `listings_ownerCount_check` constraint.
 - Migration `20260711100000_add_inspection_interest` adds the `inspection_interests` table + indexes + FKs.
 
+S10 additions (rich-chat schema + contract foundation, now in schema):
+- `Conversation.lastMessageAt`, `Conversation.lastMessageId` — conversation-level sort/preview anchors. Index on `lastMessageAt`.
+- `ConversationParticipant.mutedAt`, `ConversationParticipant.lastReadAt`, `ConversationParticipant.lastDeliveredAt` — per-conversation mute and participant watermarks. Indexes on `(userId, lastReadAt)` and `(userId, lastDeliveredAt)`.
+- `Message.deletedAt`, `Message.clientMessageId` — own-message soft-delete and idempotency key scoped to `(conversationId, senderId, clientMessageId)`. Unique index on that tuple; PostgreSQL permits multiple rows where `clientMessageId` is null.
+- `FcmDevice.deviceId`, `FcmDevice.registeredAt`, `FcmDevice.lastUsedAt`, `FcmDevice.invalidatedAt` — native FCM/APNS push-token registration metadata. Index on `(userId, invalidatedAt)`.
+- `ContentReport.messageContext` — JSONB surrounding context for message-target reports.
+- Migration `20260713000000_s10_rich_chat_foundation` adds the columns and indexes above. No behavior, WebSocket, push delivery, upload, report, or mobile UI code ships in this slice.
+- `NotificationHistoryStatus` enum (`pending` | `delivered` | `failed`) and `NotificationHistory.status` (default `pending`) plus `NotificationHistory.deliveryDetails` (JSONB) — added by migration `20260713170000_add_notification_history_status` so the worker can record direct-message push delivery outcomes.
+
 ## Foreign-key policy across contexts
 
 - **Cross-context FKs ARE allowed** in `schema.prisma` (e.g., `Listing.brandId → Brand.id`)
@@ -157,17 +162,12 @@ Generated Prisma output and built CommonJS output are outside package lint scope
 
 ## Planned additions (future sprints)
 
-Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
+Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), these are not in the current schema and require a shaped owning sprint:
 
-- **S3 (Catalog)** — catalog API repositories/controllers/admin write flow shipped; Generation seed stays empty per S3 sprint file.
-- **S4 (Listings CRUD) — schema shipped in #85** (Listing additions, `ListingCondition` enum, `ListingStatus` extended, `ListingDraft`, `ListingMedia` rename `url`→`key` + new columns, `ExchangeRate` table). Remaining S4 work: domain entities, ports, use-cases, controllers, contracts (issues #86 onward).
-- **S6 (Contact seller)** — ships only schema additions required for simple text contact if current conversation schema is insufficient.
-- **S7 (Minimal admin + moderation) — schema, migration, bootstrap script, and fixtures shipped in #177.** The schema now includes `TotpEnrollment` (encrypted recoverable secret + `verifiedAt`), `TotpBackupCode` (one-way-hashed codes + `usedAt`), `Session.adminTotpExpiresAt`, `ContentReport` (polymorphic `targetType` + `targetId`, no DB FK, `reporterUserId` / `reviewedById` both nullable via `SetNull`), and `User` suspension fields (`suspendedAt`, `suspendedById`, `suspensionReason`). S7 indexes are committed: `content_reports(status, createdAt, id)`, `(targetType, targetId, status)`, `(reporterUserId, createdAt, id)`; `audit_logs(createdAt, id)`, `(action, createdAt, id)`, `(targetType, targetId, createdAt, id)`. The `packages/db/scripts/promote-admin.ts` operator script and `packages/db/prisma/seed/s7-moderation.fixture.ts` are checked in. Remaining S7 application work (TOTP crypto/use-cases, report/moderation use-cases, UI) is tracked in child issues #178–#185.
-- **S8 (Private beta polish)** — account deletion grace fields shipped; the existing Favorites schema is active for saved-listing Favorites.
-- **Post-MLP rich chat** — adds `Conversation.lastMessageAt`/`lastMessageId`, `Message.deletedAt`, `ConversationParticipant.{mutedAt, lastReadAt}`, new `QuickReply` entity if shaped.
-- **Post-MLP notifications/subscriptions** — adds `FcmDevice` field additions, `NotificationHistory` broadcast fields, new `SavedSearchMatchHistory` entity.
-- **Post-MLP admin/dealership** — adds `Dealership.verifiedAt` and full dashboard support fields when shaped. Bulk moderation still uses the existing `AuditLog` target columns: one row per affected target with shared `details.batchId`/`details.batchReason`, not one row with a `targetIds` array.
-- **Trust / content bets** — adds `InspectionReport`, `RubricTemplate`, `ReportSection`, `ReportItem`, `PdfArtifact`; full Bortzhurnal entities (`BlogMedia`, `BlogLike`, `BlogFollow`, `BlogTag`, `BlogPostTag` + `BlogPost` field additions).
+- A persisted/admin-managed `QuickReply` entity if static mobile quick replies are replaced.
+- Broadcast-oriented `NotificationHistory` fields and a `SavedSearchMatchHistory` entity if notification-center or saved-search delivery is shaped.
+- `Dealership.verifiedAt` and full dealership dashboard support fields.
+- Trust/content entities such as `InspectionReport`, rubric/report-section models, PDF artifacts, and full Bortzhurnal social/content models.
 
 ## Notable decisions
 

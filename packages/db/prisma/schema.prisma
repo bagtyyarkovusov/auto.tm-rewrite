@@ -506,47 +506,58 @@ enum MessageKind {
 }
 
 model Conversation {
-  id        String   @id @default(uuid())
-  listingId String
-  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  buyerId   String
-  buyer     User     @relation("Buyer", fields: [buyerId], references: [id], onDelete: Cascade)
-  sellerId  String
-  seller    User     @relation("Seller", fields: [sellerId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(uuid())
+  listingId     String
+  listing       Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId       String
+  buyer         User      @relation("Buyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId      String
+  seller        User      @relation("Seller", fields: [sellerId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastMessageAt DateTime?
+  lastMessageId String?
 
   participants ConversationParticipant[]
   messages     Message[]
 
   @@unique([listingId, buyerId])
   @@index([sellerId])
+  @@index([lastMessageAt])
   @@map("conversations")
 }
 
 model ConversationParticipant {
-  id             String       @id @default(uuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
+  id              String       @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime     @default(now())
+  mutedAt         DateTime?
+  lastReadAt      DateTime?
+  lastDeliveredAt DateTime?
 
   @@unique([conversationId, userId])
+  @@index([userId, lastReadAt])
+  @@index([userId, lastDeliveredAt])
   @@map("conversation_participants")
 }
 
 model Message {
-  id             String       @id @default(uuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId       String
-  kind           MessageKind
-  body           String?
-  metadata       Json?
-  createdAt      DateTime     @default(now())
+  id              String       @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  kind            MessageKind
+  body            String?
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+  deletedAt       DateTime?
+  clientMessageId String?
 
   @@index([conversationId, createdAt])
+  @@unique([conversationId, senderId, clientMessageId])
   @@map("messages")
 }
 
@@ -561,15 +572,20 @@ enum PushPlatform {
 }
 
 model FcmDevice {
-  id        String       @id @default(uuid())
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String       @unique
-  platform  PushPlatform
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id            String       @id @default(uuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token         String       @unique
+  platform      PushPlatform
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deviceId      String?
+  registeredAt  DateTime     @default(now())
+  lastUsedAt    DateTime     @default(now())
+  invalidatedAt DateTime?
 
   @@index([userId])
+  @@index([userId, invalidatedAt])
   @@map("fcm_devices")
 }
 
@@ -582,16 +598,24 @@ enum NotificationCategory {
   marketing
 }
 
+enum NotificationHistoryStatus {
+  pending
+  delivered
+  failed
+}
+
 model NotificationHistory {
-  id        String               @id @default(uuid())
-  userId    String
-  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category  NotificationCategory
-  title     String
-  body      String
-  data      Json?
-  readAt    DateTime?
-  createdAt DateTime             @default(now())
+  id              String                    @id @default(uuid())
+  userId          String
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        NotificationCategory
+  status          NotificationHistoryStatus @default(pending)
+  title           String
+  body            String
+  data            Json?
+  deliveryDetails Json?
+  readAt          DateTime?
+  createdAt       DateTime                  @default(now())
 
   @@index([userId, createdAt(sort: Desc)])
   @@map("notification_history")
@@ -662,6 +686,7 @@ model ContentReport {
   reviewedBy     User?     @relation("Reviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewedAt     DateTime?
   createdAt      DateTime  @default(now())
+  messageContext Json?
 
   @@index([status, createdAt, id])
   @@index([targetType, targetId, status])

@@ -41,11 +41,12 @@ Agents working in this repo read these files **before** the per-context `CONTEXT
 | catalog | [`catalog/CONTEXT.md`](apps/api/src/modules/catalog/CONTEXT.md) | 1 | Brand, Model, Generation, Color, BodyType, Region, City |
 | listings | [`listings/CONTEXT.md`](apps/api/src/modules/listings/CONTEXT.md) | 1 | Listing, ListingMedia, Favorite, Draft |
 | subscriptions | [`subscriptions/CONTEXT.md`](apps/api/src/modules/subscriptions/CONTEXT.md) | Post-MLP | SavedSearch + match algorithm |
-| conversations | [`conversations/CONTEXT.md`](apps/api/src/modules/conversations/CONTEXT.md) | MLP S6 + post-MLP | Conversation, Message; rich chat later |
-| notifications | [`notifications/CONTEXT.md`](apps/api/src/modules/notifications/CONTEXT.md) | Post-MLP | Push transport, in-app feed, history |
+| conversations | [`conversations/CONTEXT.md`](apps/api/src/modules/conversations/CONTEXT.md) | MLP S6 + post-MLP S10 | Per-listing rich chat, messages, participant watermarks, mute, delete, report context |
+| realtime | [`realtime/CONTEXT.md`](apps/api/src/modules/realtime/CONTEXT.md) | Post-MLP S10 | Authenticated Socket.IO adapter, user rooms, online/last-seen presence port |
+| notifications | [`notifications/CONTEXT.md`](apps/api/src/modules/notifications/CONTEXT.md) | Post-MLP S10 | Native device tokens, direct-message push decision/history, worker enqueue |
 | content | [`content/CONTEXT.md`](apps/api/src/modules/content/CONTEXT.md) | Post-MLP | BlogPost (Bortzhurnal) |
 | reports | [`reports/CONTEXT.md`](apps/api/src/modules/reports/CONTEXT.md) | Trust bet | InspectionReport, Tier, PDF artifacts |
-| admin | [`admin/CONTEXT.md`](apps/api/src/modules/admin/CONTEXT.md) | MLP S7 + post-MLP | Audit log, moderation, staff-media attribution |
+| admin | [`admin/CONTEXT.md`](apps/api/src/modules/admin/CONTEXT.md) | MLP S7 + post-MLP S10 | Audit log, listing/user/message reports, moderation |
 
 ## Mobile feature modules (inside `apps/mobile/src/`)
 

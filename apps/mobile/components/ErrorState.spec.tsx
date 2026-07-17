@@ -37,4 +37,14 @@ describe("ErrorState", () => {
     expect(source).toContain("{copy.title}");
     expect(source).toContain("{copy.description}");
   });
+
+  it("renders the full-screen error icon inside a destructive circle", () => {
+    expect(source).toContain("size-16 items-center justify-center rounded-full bg-destructive/10");
+    expect(source).toContain('className="size-8 text-destructive"');
+  });
+
+  it("truncates the full-screen title and description to avoid overflow", () => {
+    expect(source).toContain('numberOfLines={2}>\n          {copy.title}');
+    expect(source).toContain('numberOfLines={3}>\n          {copy.description}');
+  });
 });
