@@ -2,12 +2,8 @@ import type { MessageSentEvent } from "../../conversations/domain/ports/MessageE
 
 import {
   DIRECT_MESSAGE_NOTIFICATION_CATEGORY,
-  DIRECT_MESSAGE_NOTIFICATION_TITLE,
-  DIRECT_MESSAGE_PREVIEW_DELETED,
-  DIRECT_MESSAGE_PREVIEW_FALLBACK,
-  DIRECT_MESSAGE_PREVIEW_IMAGE,
   DIRECT_MESSAGE_PREVIEW_MAX_LENGTH,
-  DIRECT_MESSAGE_PREVIEW_POST_REF,
+  directMessageCopy,
 } from "./types";
 
 export interface DirectMessageNotificationData {
@@ -39,17 +35,20 @@ export class DirectMessageNotification {
     messageBody: string | null;
     messageMetadata: MessageSentEvent["messageMetadata"];
     messageDeletedAt: string | null;
+    recipientLocale?: string;
   }): DirectMessageNotification {
+    const copy = directMessageCopy(input.recipientLocale);
     const body = buildPreviewBody(
       input.messageKind,
       input.messageBody,
       input.messageDeletedAt != null,
+      copy,
     );
 
     return new DirectMessageNotification(
       input.recipientId,
       DIRECT_MESSAGE_NOTIFICATION_CATEGORY,
-      DIRECT_MESSAGE_NOTIFICATION_TITLE,
+      copy.title,
       body,
       `/conversations/${input.conversationId}`,
       {
@@ -69,9 +68,10 @@ function buildPreviewBody(
   kind: MessageSentEvent["messageKind"],
   body: string | null,
   isDeleted: boolean,
+  copy = directMessageCopy("ru"),
 ): string {
   if (isDeleted) {
-    return DIRECT_MESSAGE_PREVIEW_DELETED;
+    return copy.deleted;
   }
 
   if (kind === "text" && body) {
@@ -81,12 +81,12 @@ function buildPreviewBody(
   }
 
   if (kind === "image") {
-    return DIRECT_MESSAGE_PREVIEW_IMAGE;
+    return copy.image;
   }
 
   if (kind === "post_ref") {
-    return DIRECT_MESSAGE_PREVIEW_POST_REF;
+    return copy.postRef;
   }
 
-  return DIRECT_MESSAGE_PREVIEW_FALLBACK;
+  return copy.fallback;
 }

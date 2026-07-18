@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService, Prisma } from "@auto-tm/db";
 
 import { ContentReport } from "../domain/ContentReport";
+import type { MessageReportContext } from "../domain/ContentReport";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
 
 @Injectable()
@@ -143,7 +144,39 @@ export class PrismaContentReportRepository implements ContentReportRepository {
       reviewedById: row.reviewedById,
       reviewedAt: row.reviewedAt,
       createdAt: row.createdAt,
-      messageContext: (row.messageContext as ContentReport["messageContext"]) ?? null,
+      messageContext: rehydrateMessageContext(row.messageContext),
     });
   }
+}
+
+export function rehydrateMessageContext(value: unknown): MessageReportContext | null {
+  if (value === null || typeof value !== "object") {
+    return null;
+  }
+
+  const context = value as Omit<
+    MessageReportContext,
+    "createdAt" | "deletedAt" | "surroundingMessages"
+  > & {
+    createdAt: string | Date;
+    deletedAt: string | Date | null;
+    surroundingMessages: Array<
+      Omit<MessageReportContext["surroundingMessages"][number], "createdAt" | "deletedAt"> & {
+        createdAt: string | Date;
+        deletedAt: string | Date | null;
+      }
+    >;
+  };
+
+  return {
+    ...context,
+    createdAt: new Date(context.createdAt),
+    deletedAt: context.deletedAt === null ? null : new Date(context.deletedAt),
+    surroundingMessages: context.surroundingMessages.map((message) => ({
+      ...message,
+      createdAt: new Date(message.createdAt),
+      deletedAt:
+        message.deletedAt === null ? null : new Date(message.deletedAt),
+    })),
+  };
 }

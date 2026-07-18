@@ -3,6 +3,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
 
 import { ListingsModule } from "../listings/listings.module";
 import { IdentityModule } from "../identity/identity.module";
+import { RealtimeModule } from "../realtime/realtime.module";
 
 import { ConversationsController } from "./presentation/conversations.controller";
 import { ConversationGateway } from "./presentation/gateways/ConversationGateway";
@@ -25,7 +26,7 @@ import { CONVERSATION_STATE_PORT } from "./domain/ports/ConversationStatePort";
 import { CONVERSATION_REPORT_CONTEXT_PORT } from "./domain/ports/ConversationReportContextPort";
 
 @Module({
-  imports: [EventEmitterModule, ListingsModule, IdentityModule],
+  imports: [EventEmitterModule, ListingsModule, IdentityModule, RealtimeModule],
   controllers: [ConversationsController],
   providers: [
     PrismaConversationRepository,

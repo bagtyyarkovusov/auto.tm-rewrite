@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Test } from "@nestjs/testing";
 
 import type { MessageSentEvent } from "../../conversations/domain/ports/MessageEventPublisher";
-import type { DecideDirectMessageNotification } from "./DecideDirectMessageNotification";
+import { DecideDirectMessageNotification } from "./DecideDirectMessageNotification";
 import { MessageSentEventHandler } from "./MessageSentEventHandler";
 
 function makeHandler(
@@ -51,5 +52,21 @@ describe("MessageSentEventHandler", () => {
     await handler.handleMessageSent(event);
 
     expect(decideNotification.execute).toHaveBeenCalledWith(event);
+  });
+
+  it("resolves the decision use-case through Nest dependency injection", async () => {
+    const decideNotification = { execute: vi.fn().mockResolvedValue({ enqueued: true }) };
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        MessageSentEventHandler,
+        { provide: DecideDirectMessageNotification, useValue: decideNotification },
+      ],
+    }).compile();
+    const event = makeEvent();
+
+    await moduleRef.get(MessageSentEventHandler).handleMessageSent(event);
+
+    expect(decideNotification.execute).toHaveBeenCalledWith(event);
+    await moduleRef.close();
   });
 });

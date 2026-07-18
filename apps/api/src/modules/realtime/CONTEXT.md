@@ -10,7 +10,7 @@ Authenticated Socket.IO foundation for the API. Provides the server adapter, con
 
 - `RealtimeIoAdapter` — extends NestJS `IoAdapter`; creates the Socket.IO server and optionally attaches the `@socket.io/redis-adapter` when `SOCKET_IO_REDIS_ADAPTER_ENABLED=true`.
 - `SocketAuthMiddleware` — verifies the JWT from `handshake.auth.token` (or `Authorization` header) and attaches the payload to `socket.data.user`.
-- `RealtimeGateway` — NestJS WebSocket gateway on namespace `SOCKET_IO_NAMESPACE` (default `/ws/chat`); registers auth middleware, joins authenticated sockets to `user:{userId}`, and updates the connection registry.
+- `RealtimeGateway` — NestJS WebSocket gateway whose server property is the Socket.IO `Namespace` at `SOCKET_IO_NAMESPACE` (default `/ws/chat`); registers auth middleware, joins authenticated sockets to `user:{userId}`, and updates the connection registry. Nest/Socket.IO owns namespace lifecycle; the gateway does not call a nonexistent namespace `close()` hook during shutdown.
 - `SocketConnectionRegistry` — in-memory map of socket IDs to user IDs plus per-user active-socket counts. Implements `PresencePort`. Records a per-user `lastSeenAt` timestamp when the user's final socket disconnects and clears it when a socket reconnects, so consumers can render "last seen" labels.
 - `realtime.config.ts` — shared socket infrastructure constants: `REALTIME_NAMESPACE`, `userRoom(userId)`, and `conversationRoom(conversationId)`. Conversation room join/leave handlers live in `conversations/`.
 

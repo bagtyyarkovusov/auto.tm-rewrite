@@ -33,6 +33,14 @@ describe("ConversationDetailScreen", () => {
     );
   });
 
+  it("observes the conversation-list cache with its infinite-query hook", () => {
+    expect(source).toContain(
+      'import { useConversations } from "../../src/api/conversations/useConversations"',
+    );
+    expect(source).toContain("const { data: conversationsData } = useConversations()");
+    expect(source).not.toContain("useQuery({\n    queryKey: queryKeys.conversations.list()");
+  });
+
   it("uses useSendTextMessage for sending", () => {
     expect(source).toContain(
       'import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage"',
@@ -77,6 +85,19 @@ describe("ConversationDetailScreen optimistic states", () => {
     expect(source).toContain("serverIds");
     expect(source).toContain("serverClientIds");
     expect(source).toContain("pendingOrFailed");
+  });
+});
+
+describe("ConversationDetailScreen controls menu", () => {
+  it("renders native menu labels inside Text components", () => {
+    expect(source).toContain('<Text>{t("unblockUser")}</Text>');
+    expect(source).toContain('<Text>{t("blockUser")}</Text>');
+    expect(source).toContain(
+      '{isMuted ? t("unmuteConversation") : t("muteConversation")}',
+    );
+    expect(source).toContain('<Text>{t("cancel")}</Text>');
+    expect(source).toContain("<Text>{confirmActionLabel}</Text>");
+    expect(source).toContain('<Text>{t("blockedStateUnblock")}</Text>');
   });
 });
 

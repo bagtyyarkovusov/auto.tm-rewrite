@@ -2,6 +2,7 @@ export interface IdentityUserSummary {
   id: string;
   displayName: string | null;
   role: string;
+  locale?: string;
   suspendedAt: Date | null;
   suspendedById: string | null;
   suspensionReason: string | null;

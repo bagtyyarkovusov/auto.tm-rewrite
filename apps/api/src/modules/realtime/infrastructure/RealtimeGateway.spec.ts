@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { Server, Socket } from "socket.io";
+import type { Namespace, Socket } from "socket.io";
 
 import { RealtimeGateway } from "./RealtimeGateway";
 import { SocketAuthMiddleware } from "./SocketAuthMiddleware";
@@ -34,12 +34,18 @@ function buildGateway(): {
 describe("RealtimeGateway", () => {
   it("registers the auth middleware when initialized", () => {
     const { gateway, middleware } = buildGateway();
-    const server = { use: vi.fn() } as unknown as Server;
+    const server = { use: vi.fn() } as unknown as Namespace;
 
     gateway.afterInit(server);
 
     expect(server.use).toHaveBeenCalledOnce();
     expect(middleware.use).not.toHaveBeenCalled();
+  });
+
+  it("leaves namespace shutdown to the Nest Socket.IO adapter", () => {
+    const { gateway } = buildGateway();
+
+    expect("onApplicationShutdown" in gateway).toBe(false);
   });
 
   it("joins the user room and registers the socket on connection", () => {

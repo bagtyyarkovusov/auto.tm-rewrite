@@ -146,7 +146,7 @@ function BubbleContent({
       <View className="flex-row items-center gap-1.5">
         <Icon as={Trash2} className="size-4 text-muted-foreground" />
         <Text className="text-sm italic text-muted-foreground">
-          {t("messageDeleted")}
+          {t("conversations:messageDeleted")}
         </Text>
       </View>
     );

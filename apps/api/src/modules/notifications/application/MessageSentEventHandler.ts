@@ -1,12 +1,13 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { OnEvent } from "@nestjs/event-emitter";
 
 import type { MessageSentEvent } from "../../conversations/domain/ports/MessageEventPublisher";
-import type { DecideDirectMessageNotification } from "./DecideDirectMessageNotification";
+import { DecideDirectMessageNotification } from "./DecideDirectMessageNotification";
 
 @Injectable()
 export class MessageSentEventHandler {
   constructor(
+    @Inject(DecideDirectMessageNotification)
     private readonly decideNotification: DecideDirectMessageNotification,
   ) {}
 

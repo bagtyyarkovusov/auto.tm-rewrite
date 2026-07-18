@@ -13,6 +13,8 @@ import type { PushQueuePort } from "../domain/ports/PushQueuePort";
 import { PUSH_QUEUE_PORT } from "../domain/ports/PushQueuePort";
 import { DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS } from "../domain/types";
 import { EvaluateDirectMessagePush } from "./EvaluateDirectMessagePush";
+import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
 
 export interface DecideDirectMessageNotificationResult {
   enqueued: boolean;
@@ -32,6 +34,8 @@ export class DecideDirectMessageNotification {
     private readonly history: NotificationHistoryRepository,
     @Inject(PUSH_QUEUE_PORT)
     private readonly queue: PushQueuePort,
+    @Inject(IDENTITY_READ_PORT)
+    private readonly identityRead: IdentityReadPort,
   ) {}
 
   async execute(
@@ -78,6 +82,7 @@ export class DecideDirectMessageNotification {
       return { enqueued: false, reason: eligibility.reason };
     }
 
+    const recipient = await this.identityRead.findUserById(event.recipientId);
     const notification = DirectMessageNotification.create({
       recipientId: event.recipientId,
       conversationId: event.conversationId,
@@ -87,6 +92,7 @@ export class DecideDirectMessageNotification {
       messageBody: event.messageBody,
       messageMetadata: event.messageMetadata,
       messageDeletedAt: event.messageDeletedAt,
+      ...(recipient?.locale ? { recipientLocale: recipient.locale } : {}),
     });
 
     const { id: historyId } = await this.history.save(notification);

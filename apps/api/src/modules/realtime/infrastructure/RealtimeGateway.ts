@@ -1,7 +1,6 @@
 import {
   Inject,
   Injectable,
-  type OnApplicationShutdown,
 } from "@nestjs/common";
 import type {
   OnGatewayConnection,
@@ -9,7 +8,7 @@ import type {
   OnGatewayInit,
 } from "@nestjs/websockets";
 import { WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
-import type { Server, Socket } from "socket.io";
+import type { Namespace, Socket } from "socket.io";
 
 import { SocketAuthMiddleware } from "./SocketAuthMiddleware";
 import { SocketConnectionRegistry } from "./SocketConnectionRegistry";
@@ -23,11 +22,10 @@ export class RealtimeGateway
   implements
     OnGatewayInit,
     OnGatewayConnection,
-    OnGatewayDisconnect,
-    OnApplicationShutdown
+    OnGatewayDisconnect
 {
   @WebSocketServer()
-  server!: Server;
+  server!: Namespace;
 
   constructor(
     @Inject(SocketAuthMiddleware)
@@ -36,7 +34,7 @@ export class RealtimeGateway
     private readonly registry: SocketConnectionRegistry,
   ) {}
 
-  afterInit(server: Server): void {
+  afterInit(server: Namespace): void {
     server.use((socket, next) => this.authMiddleware.use(socket, next));
   }
 
@@ -53,9 +51,5 @@ export class RealtimeGateway
 
   handleDisconnect(client: Socket): void {
     this.registry.unregister(client.id);
-  }
-
-  onApplicationShutdown(): void {
-    this.server?.close();
   }
 }

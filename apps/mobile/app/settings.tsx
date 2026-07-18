@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { LocaleSwitcher } from "../src/auth/LocaleSwitcher";
+import { useAuth } from "../src/auth/useAuth";
 import { useLogout } from "../src/auth/useLogout";
 import { ThemeSwitcher } from "../src/theme/ThemeSwitcher";
 
@@ -52,6 +53,7 @@ function LegalRow({
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation("account");
+  const { isAuthenticated } = useAuth();
   const logout = useLogout();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const goBack = useSafeBack("/(tabs)/services");
@@ -123,36 +125,45 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <Separator className="bg-border" />
+        {isAuthenticated === true ? (
+          <>
+            <Separator className="bg-border" />
 
-        {/* Delete account */}
-        <Pressable
-          onPress={() => router.push("/account/delete")}
-          className="flex-row items-center justify-between py-4 active:opacity-70"
-          accessibilityRole="button"
-          accessibilityLabel={t("deleteAccount")}
-        >
-          <Text className="text-base text-foreground">{t("deleteAccount")}</Text>
-          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
-        </Pressable>
+            {/* Delete account */}
+            <Pressable
+              onPress={() => router.push("/account/delete")}
+              className="flex-row items-center justify-between py-4 active:opacity-70"
+              accessibilityRole="button"
+              accessibilityLabel={t("deleteAccount")}
+            >
+              <Text className="text-base text-foreground">
+                {t("deleteAccount")}
+              </Text>
+              <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+            </Pressable>
 
-        <Separator className="bg-border" />
+            <Separator className="bg-border" />
 
-        {/* Logout */}
-        <View className="py-6">
-          <Button
-            variant="destructive"
-            size="pill"
-            onPress={() => setShowLogoutConfirm(true)}
-            accessibilityLabel={t("logout")}
-          >
-            <Text>{t("logout")}</Text>
-          </Button>
-        </View>
+            {/* Logout */}
+            <View className="py-6">
+              <Button
+                variant="destructive"
+                size="pill"
+                onPress={() => setShowLogoutConfirm(true)}
+                accessibilityLabel={t("logout")}
+              >
+                <Text>{t("logout")}</Text>
+              </Button>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
 
       {/* Logout confirmation */}
-      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+      <AlertDialog
+        open={isAuthenticated === true && showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("logoutConfirmTitle")}</AlertDialogTitle>

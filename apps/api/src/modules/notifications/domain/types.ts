@@ -32,6 +32,22 @@ export const DIRECT_MESSAGE_PREVIEW_FALLBACK = "Новое сообщение";
 
 export const DIRECT_MESSAGE_PREVIEW_MAX_LENGTH = 100;
 
+export function directMessageCopy(locale: string | undefined) {
+  if (locale === "en") {
+    return { title: "New message", image: "Photo", postRef: "Listing", deleted: "Message deleted", fallback: "New message" };
+  }
+  if (locale === "tk") {
+    return { title: "Täze habar", image: "Surat", postRef: "Bildiriş", deleted: "Habar pozuldy", fallback: "Täze habar" };
+  }
+  return {
+    title: DIRECT_MESSAGE_NOTIFICATION_TITLE,
+    image: DIRECT_MESSAGE_PREVIEW_IMAGE,
+    postRef: DIRECT_MESSAGE_PREVIEW_POST_REF,
+    deleted: DIRECT_MESSAGE_PREVIEW_DELETED,
+    fallback: DIRECT_MESSAGE_PREVIEW_FALLBACK,
+  };
+}
+
 export const DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS = {
   MISSING_PARTICIPANT: "MISSING_PARTICIPANT",
   SELF_MESSAGE: "SELF_MESSAGE",

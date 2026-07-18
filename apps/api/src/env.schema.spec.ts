@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { EnvSchema } from "./env.schema";
 
@@ -46,5 +48,15 @@ describe("EnvSchema socket defaults", () => {
     });
 
     expect(env.SOCKET_IO_NAMESPACE).toBe("/custom");
+  });
+});
+
+describe("API environment template", () => {
+  it("documents the required TOTP secret encryption key", () => {
+    const template = readFileSync(resolve(__dirname, "../.env.template"), "utf8");
+    const match = template.match(/^TOTP_SECRET_ENCRYPTION_KEY=([^\s#]+)/m);
+
+    expect(match?.[1]).toBeDefined();
+    expect(Buffer.from(match?.[1] ?? "", "base64")).toHaveLength(32);
   });
 });
