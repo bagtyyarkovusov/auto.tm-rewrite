@@ -1,0 +1,10 @@
+-- No physical database changes.
+--
+-- This migration records a Prisma metadata-only alignment with database objects
+-- already created by immutable migrations:
+-- - 20260609000000_account_deletion_grace created the users(deletionScheduledAt) index.
+-- - 20260711100000_add_inspection_interest created snake_case inspection-interest columns.
+--
+-- schema.prisma now declares that existing index and maps its camelCase client
+-- fields to the existing snake_case columns. Keeping this migration intentionally
+-- empty satisfies ADR-0004 without renaming or recreating deployed objects.

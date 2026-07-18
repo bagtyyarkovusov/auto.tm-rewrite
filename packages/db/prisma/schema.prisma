@@ -59,6 +59,7 @@ model User {
   inspectionInterestsRequested InspectionInterest[]      @relation("InspectionInterestRequester")
   suspendedUsers               User[]                    @relation("UserSuspensions")
 
+  @@index([deletionScheduledAt])
   @@map("users")
 }
 
