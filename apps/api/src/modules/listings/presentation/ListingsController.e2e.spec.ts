@@ -20,6 +20,7 @@ import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
 import { testUserId } from "../../../../test/helpers/testUserId";
+import { IMAGE_VARIANT_GENERATOR } from "../domain/ports/ImageVariantGenerator";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
 
 describe("ListingsController e2e", () => {
@@ -40,6 +41,17 @@ describe("ListingsController e2e", () => {
         }),
       ],
     })
+      .overrideProvider(IMAGE_VARIANT_GENERATOR)
+      .useValue({
+        generate: async (originalKey: string) => ({
+          variants: {
+            thumbnail: `${originalKey}/thumbnail.jpg`,
+            list: `${originalKey}/list.jpg`,
+            detail: `${originalKey}/detail.jpg`,
+            fullscreen: `${originalKey}/fullscreen.jpg`,
+          },
+        }),
+      })
       .overrideProvider(LISTING_EVENT_PUBLISHER)
       .useValue({ emit: async () => {} })
       .compile();
@@ -810,6 +822,13 @@ describe("ListingsController e2e", () => {
         ...validPayload,
         brandId: brand2.id,
         modelId: "00000000-0000-0000-0000-000000000011",
+        photos: [
+          {
+            photoId: "00000000-0000-0000-0000-000000000006",
+            key: "photo2.jpg",
+            sortOrder: 0,
+          },
+        ],
       });
 
       const publish1 = await request
@@ -982,6 +1001,13 @@ describe("ListingsController e2e", () => {
         ...validPayload,
         brandId: brand2.id,
         modelId: "00000000-0000-0000-0000-000000000011",
+        photos: [
+          {
+            photoId: "00000000-0000-0000-0000-000000000006",
+            key: "photo2.jpg",
+            sortOrder: 0,
+          },
+        ],
       });
 
       await request
@@ -1070,7 +1096,18 @@ describe("ListingsController e2e", () => {
       const token = await createUser("user-1");
 
       const draftTmt = await seedDraft("user-1", { ...validPayload, priceAmount: 100000, priceCurrency: "TMT" });
-      const draftUsd = await seedDraft("user-1", { ...validPayload, priceAmount: 20000, priceCurrency: "USD" });
+      const draftUsd = await seedDraft("user-1", {
+        ...validPayload,
+        priceAmount: 20000,
+        priceCurrency: "USD",
+        photos: [
+          {
+            photoId: "00000000-0000-0000-0000-000000000006",
+            key: "photo2.jpg",
+            sortOrder: 0,
+          },
+        ],
+      });
 
       await request
         .post(`/api/v1/listings/drafts/${draftTmt.id}/publish`)
