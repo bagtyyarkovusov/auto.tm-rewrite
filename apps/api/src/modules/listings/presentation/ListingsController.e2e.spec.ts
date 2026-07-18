@@ -10,6 +10,7 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
+import { ListingsSchemas } from "@auto-tm/contracts";
 import { PrismaService } from "@auto-tm/db";
 import type { Prisma } from "@auto-tm/db";
 
@@ -18,6 +19,7 @@ import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
+import { testUserId } from "../../../../test/helpers/testUserId";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
 
 describe("ListingsController e2e", () => {
@@ -71,7 +73,8 @@ describe("ListingsController e2e", () => {
     await prisma.brand.deleteMany();
   });
 
-  async function createUser(userId: string): Promise<string> {
+  async function createUser(alias: Parameters<typeof testUserId>[0]): Promise<string> {
+    const userId = testUserId(alias);
     await prisma.user.create({
       data: { id: userId, phone: `+9936${userId.slice(-8)}`, role: "buyer" },
     });
@@ -119,9 +122,9 @@ describe("ListingsController e2e", () => {
     });
   }
 
-  async function seedDraft(userId: string, payload: Record<string, unknown>) {
+  async function seedDraft(alias: Parameters<typeof testUserId>[0], payload: Record<string, unknown>) {
     const draft = await prisma.listingDraft.create({
-      data: { userId, payload: payload as Prisma.InputJsonValue },
+      data: { userId: testUserId(alias), payload: payload as Prisma.InputJsonValue },
     });
     return draft;
   }
@@ -632,6 +635,29 @@ describe("ListingsController e2e", () => {
 
       expect(res.body.items).toHaveLength(0);
       expect(res.body.nextCursor).toBeNull();
+    });
+
+    it("returns a response that matches the shared feed contract", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      await prisma.listing.create({
+        data: {
+          sellerId: testUserId("user-1"),
+          status: "active",
+          brandId: validPayload.brandId,
+          modelId: validPayload.modelId,
+          cityId: validPayload.cityId,
+          year: validPayload.year,
+          priceAmount: validPayload.priceAmount,
+          priceCurrency: "TMT",
+          publishedAt: new Date("2026-07-18T12:00:00.000Z"),
+        },
+      });
+
+      const feed = await request.get("/api/v1/listings").expect(200);
+      const parsed = ListingsSchemas.FeedResponseSchema.parse(feed.body);
+
+      expect(parsed.items).toHaveLength(1);
     });
 
     it("returns coverMediaKey for published listings with media", async () => {
