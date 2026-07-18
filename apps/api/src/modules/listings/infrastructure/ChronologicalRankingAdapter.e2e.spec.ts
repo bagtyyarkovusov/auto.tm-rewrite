@@ -468,8 +468,8 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       cursor = page.nextCursor;
     } while (cursor);
 
-    expect(all).toHaveLength(3); // l1, l3, l5
-    expect(all.map((i) => i.id)).toEqual(["l1", "l3", "l5"]);
+    expect(all).toHaveLength(3); // newest tie-breaker first: l5, l3, l1
+    expect(all.map((i) => i.id)).toEqual(["l5", "l3", "l1"]);
   });
 
   it("returns no results when filter matches nothing", async () => {

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { JwtModule, JwtService } from "@nestjs/jwt";
 import { EventEmitterModule } from "@nestjs/event-emitter";
@@ -31,6 +31,7 @@ describe("ReportsController e2e", () => {
   let app: NestFastifyApplication;
   let request: ReturnType<typeof supertest>;
   let prisma: PrismaService;
+  let config: ConfigService;
 
   beforeAll(async () => {
     process.env["INSPECTION_INTEREST_ENABLED"] = "true";
@@ -78,6 +79,7 @@ describe("ReportsController e2e", () => {
     await app.getHttpAdapter().getInstance().ready();
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
+    config = app.get(ConfigService);
   }, 60_000);
 
   afterAll(async () => {
@@ -324,7 +326,7 @@ describe("ReportsController e2e", () => {
 
   describe("INSPECTION_INTEREST_ENABLED=false", () => {
     it("returns 403 FEATURE_DISABLED", async () => {
-      process.env["INSPECTION_INTEREST_ENABLED"] = "false";
+      config.set("INSPECTION_INTEREST_ENABLED", false);
 
       await seedCatalog();
       const sellerToken = await createUser("seller-1");
@@ -346,7 +348,7 @@ describe("ReportsController e2e", () => {
 
       expect(res.body.details).toMatchObject({ reason: "FEATURE_DISABLED" });
 
-      process.env["INSPECTION_INTEREST_ENABLED"] = "true";
+      config.set("INSPECTION_INTEREST_ENABLED", true);
     });
   });
 
