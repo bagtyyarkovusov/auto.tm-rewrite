@@ -18,7 +18,15 @@ describe("buildChatImageUrl", () => {
     process.env["EXPO_PUBLIC_MEDIA_URL"] = "https://cdn.example.com";
     const { buildChatImageUrl } = await import("./buildChatImageUrl");
     expect(buildChatImageUrl("chat-attachments/conv-1/key/original.jpg")).toBe(
-      "https://cdn.example.com/chat-attachments/chat-attachments/conv-1/key/original.jpg",
+      "https://cdn.example.com/chat-attachments/conv-1/key/original.jpg",
+    );
+  });
+
+  it("does not double the bucket prefix on presign-shaped keys", async () => {
+    process.env["EXPO_PUBLIC_MEDIA_URL"] = "https://cdn.example.com";
+    const { buildChatImageUrl } = await import("./buildChatImageUrl");
+    expect(buildChatImageUrl("conv-1/key/original.jpg")).toBe(
+      "https://cdn.example.com/chat-attachments/conv-1/key/original.jpg",
     );
   });
 
@@ -26,7 +34,7 @@ describe("buildChatImageUrl", () => {
     process.env["EXPO_PUBLIC_MEDIA_URL"] = "https://cdn.example.com/";
     const { buildChatImageUrl } = await import("./buildChatImageUrl");
     expect(buildChatImageUrl("chat-attachments/conv-1/key/original.jpg")).toBe(
-      "https://cdn.example.com/chat-attachments/chat-attachments/conv-1/key/original.jpg",
+      "https://cdn.example.com/chat-attachments/conv-1/key/original.jpg",
     );
   });
 });

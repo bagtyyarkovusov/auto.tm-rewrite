@@ -5,5 +5,11 @@ const CHAT_ATTACHMENTS_BUCKET = "chat-attachments";
 
 export function buildChatImageUrl(key: string): string {
   if (!MEDIA_URL) return "";
-  return `${MEDIA_URL}/${CHAT_ATTACHMENTS_BUCKET}/${key}`;
+  // Keys coming from presign already include the bucket prefix
+  // ("chat-attachments/..."); prepend only for keys that omit it, mirroring
+  // MinioMediaStorageAdapter.resolvePublicUrl on the API side.
+  const path = key.startsWith(`${CHAT_ATTACHMENTS_BUCKET}/`)
+    ? key
+    : `${CHAT_ATTACHMENTS_BUCKET}/${key}`;
+  return `${MEDIA_URL}/${path}`;
 }
