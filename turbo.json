@@ -2,7 +2,20 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local", "tsconfig.base.json"],
   "globalEnv": ["NODE_ENV", "LOG_LEVEL"],
-  "globalPassThroughEnv": ["DATABASE_URL"],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "REDIS_URL",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
+    "TOTP_SECRET_ENCRYPTION_KEY",
+    "MINIO_ENDPOINT",
+    "MINIO_PUBLIC_URL",
+    "MINIO_ACCESS_KEY",
+    "MINIO_SECRET_KEY",
+    "MINIO_REGION",
+    "REPORT_ENTRY_ENABLED",
+    "ADMIN_MODERATION_ACTIONS_ENABLED"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

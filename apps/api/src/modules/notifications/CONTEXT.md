@@ -36,7 +36,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - **No-token suppression rule** — push is suppressed when the recipient has zero active `FcmDevice` rows.
 - **Self-message suppression rule** — push is suppressed when `senderId === recipientId`.
 - **History status rule** — `NotificationHistory.status` is `pending` when the API records an eligible decision, and the worker updates it to `delivered` or `failed`. Skipped cases are tested but leave no history row.
-- **Preview safety rule** — text messages use the message body truncated to 100 characters; image, post_ref, and deleted messages use generic lock-screen copy (`Фото`, `Объявление`, `Сообщение удалено`) so the payload is safe for lock screens.
+- **Preview safety rule** — text messages use the message body truncated to 100 characters; image, post_ref, and deleted messages use generic lock-screen copy localized to the recipient's stored `en`, `ru`, or `tk` locale so the payload is safe for lock screens. Unknown locale values fall back to Russian.
 - **Deep-link rule** — every direct-message notification carries deep link `/conversations/{conversationId}` inside both the enqueue payload and `NotificationHistory.data`.
 
 ## Module shape (today)
@@ -88,7 +88,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Ports consumed
 
 - `PrismaService` (via `@auto-tm/db`) — `PrismaPushTokenRepository` and `PrismaNotificationHistoryRepository` map Prisma rows to/from domain objects.
-- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `EvaluateDirectMessagePush` for bidirectional block checks (`isUserBlockedBy`).
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `EvaluateDirectMessagePush` for bidirectional block checks (`isUserBlockedBy`) and by `DecideDirectMessageNotification` to load the recipient locale before building lock-screen copy.
 - `PresencePort` (`PRESENCE_PORT`) from `realtime/` — used by `DecideDirectMessageNotification` to suppress push when the recipient is socket-online.
 - `ConversationStatePort` (`CONVERSATION_STATE_PORT`) from `conversations/` — used by `DecideDirectMessageNotification` to read per-conversation mute state.
 

@@ -73,7 +73,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 | `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` | Internal: `AttachMedia` use-case |
 | `FeedRankingPort` | `FEED_RANKING_PORT` | `domain/ports/FeedRankingPort.ts` | Internal: `ListFeed`, `CountListings`, and `CountListingModels` use-cases; exposes `rank()`, `count()`, and `modelCounts()` |
 | `ExchangeRatePort` | `EXCHANGE_RATE_PORT` | `domain/ports/ExchangeRatePort.ts` | Internal: `PublishListing`, `ListFeed`, `GetListingDetail`, `GetExchangeRates` |
-| `MediaStoragePort` | `MEDIA_STORAGE_PORT` | `domain/ports/MediaStoragePort.ts` | Internal: `PresignUpload`, `AttachMedia`; also consumed by `conversations/` `PresignChatAttachmentUpload` for `chat-attachments` objects |
+| `MediaStoragePort` | `MEDIA_STORAGE_PORT` | `domain/ports/MediaStoragePort.ts` | Bound with `useExisting` to the module's single `MinioMediaStorageAdapter` instance so bucket initialization runs once. Internal: `PresignUpload`, `AttachMedia`; also consumed by `conversations/` `PresignChatAttachmentUpload` for `chat-attachments` objects. |
 | `ListingEventPublisher` | `LISTING_EVENT_PUBLISHER` | `domain/ports/ListingEventPublisher.ts` | Internal: state-transition use-cases |
 
 Repository ports (consumed only within `listings/`):

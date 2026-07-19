@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { JwtModule, JwtService } from "@nestjs/jwt";
 import { EventEmitterModule } from "@nestjs/event-emitter";
@@ -26,11 +26,13 @@ import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { EnvSchema } from "../../../env.schema";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
 import { mintAdminJwt } from "../../../../test/helpers/mintAdminJwt";
+import { testUserId } from "../../../../test/helpers/testUserId";
 
 describe("ReportsController e2e", () => {
   let app: NestFastifyApplication;
   let request: ReturnType<typeof supertest>;
   let prisma: PrismaService;
+  let config: ConfigService;
 
   beforeAll(async () => {
     process.env["INSPECTION_INTEREST_ENABLED"] = "true";
@@ -78,6 +80,7 @@ describe("ReportsController e2e", () => {
     await app.getHttpAdapter().getInstance().ready();
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
+    config = app.get(ConfigService);
   }, 60_000);
 
   afterAll(async () => {
@@ -100,7 +103,8 @@ describe("ReportsController e2e", () => {
     await prisma.brand.deleteMany();
   });
 
-  async function createUser(userId: string, role: "buyer" | "admin" = "buyer"): Promise<string> {
+  async function createUser(alias: Parameters<typeof testUserId>[0], role: "buyer" | "admin" = "buyer"): Promise<string> {
+    const userId = testUserId(alias);
     await prisma.user.create({
       data: { id: userId, phone: `+9936${userId.slice(-8)}`, role },
     });
@@ -108,7 +112,7 @@ describe("ReportsController e2e", () => {
   }
 
   async function createElevatedAdmin(): Promise<{ adminId: string; token: string }> {
-    const adminId = `admin-${randomUUID()}`;
+    const adminId = randomUUID();
     await prisma.user.create({
       data: { id: adminId, phone: `+9936${adminId.slice(-8)}`, role: "admin" },
     });
@@ -170,9 +174,9 @@ describe("ReportsController e2e", () => {
     return { brand, model, region, city };
   }
 
-  async function seedDraft(userId: string, payload: Record<string, unknown>) {
+  async function seedDraft(alias: Parameters<typeof testUserId>[0], payload: Record<string, unknown>) {
     return prisma.listingDraft.create({
-      data: { userId, payload: payload as Prisma.InputJsonValue },
+      data: { userId: testUserId(alias), payload: payload as Prisma.InputJsonValue },
     });
   }
 
@@ -226,7 +230,7 @@ describe("ReportsController e2e", () => {
         .expect(201);
 
       expect(res.body.listingId).toBe(listingId);
-      expect(res.body.requesterUserId).toBe("buyer-1");
+      expect(res.body.requesterUserId).toBe(testUserId("buyer-1"));
       expect(res.body.side).toBe("buyer");
       expect(res.body.willingnessToPayTmt).toBe(5000);
       expect(res.body.reusedExisting).toBe(false);
@@ -324,7 +328,7 @@ describe("ReportsController e2e", () => {
 
   describe("INSPECTION_INTEREST_ENABLED=false", () => {
     it("returns 403 FEATURE_DISABLED", async () => {
-      process.env["INSPECTION_INTEREST_ENABLED"] = "false";
+      config.set("INSPECTION_INTEREST_ENABLED", false);
 
       await seedCatalog();
       const sellerToken = await createUser("seller-1");
@@ -346,7 +350,7 @@ describe("ReportsController e2e", () => {
 
       expect(res.body.details).toMatchObject({ reason: "FEATURE_DISABLED" });
 
-      process.env["INSPECTION_INTEREST_ENABLED"] = "true";
+      config.set("INSPECTION_INTEREST_ENABLED", true);
     });
   });
 

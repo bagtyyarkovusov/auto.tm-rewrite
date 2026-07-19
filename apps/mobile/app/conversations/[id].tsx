@@ -2,14 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, BellOff, MoreVertical } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { useViewer } from "../../src/auth/useViewer";
-import { queryKeys } from "../../src/api/queryKeys";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
+import { useConversations } from "../../src/api/conversations/useConversations";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
 import { useSendImageMessage } from "../../src/api/conversations/useSendImageMessage";
 import { usePresignChatAttachment } from "../../src/api/conversations/usePresignChatAttachment";
@@ -86,17 +85,26 @@ function generateClientMessageId(): string {
   return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+type ConversationSummaryForDetail = Pick<
+  ConversationsSchemas.ConversationSummary,
+  | "id"
+  | "buyerId"
+  | "sellerId"
+  | "mutedAt"
+  | "peerLastReadAt"
+  | "peerLastDeliveredAt"
+>;
+
 type ConversationListData = {
   pages: Array<{
-    items: ConversationsSchemas.ConversationSummary[];
-    nextCursor: string | null;
+    items: ConversationSummaryForDetail[];
   }>;
 };
 
 function findConversationSummary(
   data: ConversationListData | undefined,
   conversationId: string,
-): ConversationsSchemas.ConversationSummary | undefined {
+): ConversationSummaryForDetail | undefined {
   return data?.pages
     .flatMap((page) => page.items)
     .find((item) => item.id === conversationId);
@@ -120,7 +128,6 @@ function computeOutgoingStatus(
 export default function ConversationDetailScreen() {
   const { t, i18n } = useTranslation();
   const params = useLocalSearchParams();
-  const queryClient = useQueryClient();
   const rawId = params.id;
   const conversationId = typeof rawId === "string" ? rawId : "";
   const viewer = useViewer();
@@ -220,17 +227,13 @@ export default function ConversationDetailScreen() {
 
   const postRefCatalogMaps = useConversationCatalogMaps(postRefListings);
 
-  const { data: conversationsData } = useQuery({
-    queryKey: queryKeys.conversations.list(),
-    queryFn: () =>
-      queryClient.getQueryData<ConversationListData | undefined>(
-        queryKeys.conversations.list(),
-      ) ?? null,
-    enabled: false,
-  });
+  // Observe the list cache through the same infinite-query shape that owns it.
+  // A plain useQuery observer on this key can replace the infinite-query behavior
+  // while the tab screen remains mounted underneath this route.
+  const { data: conversationsData } = useConversations();
 
   const conversationSummary = useMemo(
-    () => findConversationSummary(conversationsData ?? undefined, conversationId),
+    () => findConversationSummary(conversationsData, conversationId),
     [conversationsData, conversationId],
   );
 
@@ -853,15 +856,17 @@ export default function ConversationDetailScreen() {
                 onPress={handleToggleMute}
                 disabled={muteConversation.isPending}
               >
-                {isMuted ? t("unmuteConversation") : t("muteConversation")}
+                <Text>
+                  {isMuted ? t("unmuteConversation") : t("muteConversation")}
+                </Text>
               </DropdownMenuItem>
               {isBlocked ? (
                 <DropdownMenuItem onPress={() => setConfirmAction("unblock")}>
-                  {t("unblockUser")}
+                  <Text>{t("unblockUser")}</Text>
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem onPress={() => setConfirmAction("block")}>
-                  {t("blockUser")}
+                  <Text>{t("blockUser")}</Text>
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -937,7 +942,7 @@ export default function ConversationDetailScreen() {
               onPress={() => setConfirmAction("unblock")}
               disabled={unblockUser.isPending}
             >
-              {t("blockedStateUnblock")}
+              <Text>{t("blockedStateUnblock")}</Text>
             </Button>
           </View>
         </View>
@@ -970,13 +975,13 @@ export default function ConversationDetailScreen() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onPress={() => setConfirmAction(null)}>
-              {t("cancel")}
+              <Text>{t("cancel")}</Text>
             </AlertDialogCancel>
             <AlertDialogAction
               onPress={onConfirm}
               disabled={blockUser.isPending || unblockUser.isPending}
             >
-              {confirmActionLabel}
+              <Text>{confirmActionLabel}</Text>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

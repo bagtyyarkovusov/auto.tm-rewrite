@@ -115,7 +115,7 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     },
     {
       provide: MEDIA_STORAGE_PORT,
-      useClass: MinioMediaStorageAdapter,
+      useExisting: MinioMediaStorageAdapter,
     },
     {
       provide: IMAGE_VARIANT_GENERATOR,

@@ -54,7 +54,7 @@ describe("MessageBubble", () => {
   it("renders deleted state with muted style", () => {
     expect(source).toContain("isDeleted");
     expect(source).toContain('"bg-muted/60 rounded-md"');
-    expect(source).toContain('t("messageDeleted")');
+    expect(source).toContain('t("conversations:messageDeleted")');
   });
 
   it("shows pending status text", () => {

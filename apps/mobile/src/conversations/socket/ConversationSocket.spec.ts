@@ -3,6 +3,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ConversationsSchemas } from "@auto-tm/contracts";
 
+import { loadAuthSession } from "../../auth/session";
+
 import { ConversationSocket } from "./ConversationSocket";
 
 const CONV_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -30,9 +32,14 @@ vi.mock("../../auth/session", () => ({
   }),
 }));
 
+const mockLoadAuthSession = vi.mocked(loadAuthSession);
+
 describe("ConversationSocket", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLoadAuthSession.mockResolvedValue({
+      accessToken: "test-token",
+    } as Awaited<ReturnType<typeof loadAuthSession>>);
     mockSocket.connected = false;
     mockSocket.on.mockImplementation((event: string, handler: () => void) => {
       if (event === "connect") {
@@ -51,6 +58,25 @@ describe("ConversationSocket", () => {
       expect.objectContaining({
         auth: { token: "test-token" },
         transports: ["websocket"],
+      }),
+    );
+  });
+
+  it("reconnects with the current token when the signed-in user changes", async () => {
+    const socket = new ConversationSocket();
+    await socket.connect();
+
+    mockLoadAuthSession.mockResolvedValue({
+      accessToken: "seller-token",
+    } as Awaited<ReturnType<typeof loadAuthSession>>);
+
+    await socket.connect();
+
+    expect(mockSocket.disconnect).toHaveBeenCalledTimes(1);
+    expect(mockIo).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        auth: { token: "seller-token" },
       }),
     );
   });

@@ -62,6 +62,7 @@ export interface ConversationSocketOptions {
 
 export class ConversationSocket {
   private socket: Socket | null = null;
+  private authToken: string | null = null;
   private status: ConversationSocketStatus = "idle";
   private statusListeners = new Set<(status: ConversationSocketStatus) => void>();
   private messageListeners = new Set<(event: MessageNewEvent) => void>();
@@ -128,16 +129,25 @@ export class ConversationSocket {
   }
 
   async connect(): Promise<void> {
-    if (this.socket?.connected) {
-      return;
-    }
-
     const token = this.options.token ?? (await loadAuthSession())?.accessToken;
     if (!token) {
+      this.socket?.disconnect();
+      this.socket = null;
+      this.authToken = null;
+      this.currentRoom = null;
       this.setStatus("error");
       return;
     }
 
+    if (this.socket?.connected && this.authToken === token) {
+      return;
+    }
+
+    // Socket.IO applies auth during the connection handshake. A socket that
+    // survives an account switch otherwise keeps sending as the previous user.
+    this.socket?.disconnect();
+    this.socket = null;
+    this.authToken = token;
     this.setStatus("connecting");
 
     this.socket = io(this.options.url ?? DEFAULT_WS_URL, {
@@ -204,6 +214,7 @@ export class ConversationSocket {
     this.currentRoom = null;
     this.socket?.disconnect();
     this.socket = null;
+    this.authToken = null;
     this.setStatus("idle");
   }
 

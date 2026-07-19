@@ -17,6 +17,7 @@ import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
+import { testUserId } from "../../../../test/helpers/testUserId";
 
 describe("DraftsController e2e", () => {
   let app: NestFastifyApplication;
@@ -59,7 +60,8 @@ describe("DraftsController e2e", () => {
     await prisma.user.deleteMany();
   });
 
-  async function createUser(userId: string): Promise<string> {
+  async function createUser(alias: Parameters<typeof testUserId>[0]): Promise<string> {
+    const userId = testUserId(alias);
     await prisma.user.create({
       data: { id: userId, phone: `+9936${userId.slice(-8)}`, role: "buyer" },
     });
@@ -79,7 +81,7 @@ describe("DraftsController e2e", () => {
         .send({})
         .expect(201);
 
-      expect(res.body.userId).toBe("user-1");
+      expect(res.body.userId).toBe(testUserId("user-1"));
       expect(res.body.payload).toEqual({});
       expect(res.body.id).toBeDefined();
     });

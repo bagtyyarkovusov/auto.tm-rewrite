@@ -23,9 +23,10 @@ import { DecideDirectMessageNotification } from "./DecideDirectMessageNotificati
 
 class FakeIdentityRead implements IdentityReadPort {
   blocks: Array<{ blockerId: string; blockedId: string }> = [];
+  locale = "ru";
 
   async findUserById() {
-    return null;
+    return { id: "user-b", displayName: null, role: "buyer", locale: this.locale, suspendedAt: null, suspendedById: null, suspensionReason: null };
   }
 
   async findUsersByIds() {
@@ -172,6 +173,7 @@ function makeUseCase(deps?: {
     evaluate,
     deps?.history ?? new FakeNotificationHistoryRepository(),
     deps?.queue ?? new FakePushQueue(),
+    identityRead,
   );
 }
 
@@ -219,6 +221,17 @@ describe("DecideDirectMessageNotification", () => {
       kind: "text",
       text: "Hello",
     });
+  });
+
+  it("localizes push chrome for the recipient locale", async () => {
+    identityRead.locale = "en";
+    tokens.tokens = [makeToken("user-b")];
+    const uc = makeUseCase({ identityRead, tokens, history, queue });
+
+    await uc.execute(makeTextEvent({ messageKind: "image", messageBody: null }));
+
+    expect(history.rows[0]?.title).toBe("New message");
+    expect(history.rows[0]?.body).toBe("Photo");
   });
 
   it("suppresses push when the sender is the recipient", async () => {

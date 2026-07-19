@@ -22,6 +22,14 @@ describe("buildChatImageUrl", () => {
     );
   });
 
+  it("does not double the bucket prefix on presign-shaped keys", async () => {
+    process.env["EXPO_PUBLIC_MEDIA_URL"] = "https://cdn.example.com";
+    const { buildChatImageUrl } = await import("./buildChatImageUrl");
+    expect(buildChatImageUrl("conv-1/key/original.jpg")).toBe(
+      "https://cdn.example.com/chat-attachments/conv-1/key/original.jpg",
+    );
+  });
+
   it("strips a trailing slash from the media URL", async () => {
     process.env["EXPO_PUBLIC_MEDIA_URL"] = "https://cdn.example.com/";
     const { buildChatImageUrl } = await import("./buildChatImageUrl");

@@ -59,6 +59,7 @@ model User {
   inspectionInterestsRequested InspectionInterest[]      @relation("InspectionInterestRequester")
   suspendedUsers               User[]                    @relation("UserSuspensions")
 
+  @@index([deletionScheduledAt])
   @@map("users")
 }
 
@@ -700,12 +701,12 @@ model ContentReport {
 
 model InspectionInterest {
   id                  String   @id @default(uuid())
-  listingId           String
-  requesterUserId     String
+  listingId           String   @map("listing_id")
+  requesterUserId     String   @map("requester_user_id")
   side                String
-  willingnessToPayTmt Int?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  willingnessToPayTmt Int?     @map("willingness_to_pay_tmt")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
   requester User    @relation("InspectionInterestRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)

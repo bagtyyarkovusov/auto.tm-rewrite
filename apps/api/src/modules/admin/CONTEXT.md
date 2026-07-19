@@ -9,7 +9,7 @@ Cross-cutting admin operations: audit log and moderation actions today. Staff me
 ## Owns (entities + tables)
 
 - `AuditLog` — id, actorId? (FK → User, onDelete: SetNull — admin user who performed the action; nullable to preserve audit history when an admin user is deleted), action (String — not yet an enum), targetType (String), targetId (String), details? (JSON), createdAt. Indexes on `(targetType, targetId)` and `(actorId, createdAt)`.
-- `ContentReport` — id, reporterUserId? (FK → User, onDelete: SetNull — nullable after account deletion), targetType (String), targetId (String), reason (String), details? (String), status (String, default "pending"), reviewedById? (FK → User, onDelete: SetNull), reviewedAt? (DateTime), messageContext? (JSON), createdAt. Indexes on `(status, createdAt, id)`, `(targetType, targetId, status)`, and `(reporterUserId, createdAt, id)`. The `message` targetType is supported and populated through `CreateMessageReport` with surrounding conversation context.
+- `ContentReport` — id, reporterUserId? (FK → User, onDelete: SetNull — nullable after account deletion), targetType (String), targetId (String), reason (String), details? (String), status (String, default "pending"), reviewedById? (FK → User, onDelete: SetNull), reviewedAt? (DateTime), messageContext? (JSON), createdAt. Indexes on `(status, createdAt, id)`, `(targetType, targetId, status)`, and `(reporterUserId, createdAt, id)`. The `message` targetType is supported and populated through `CreateMessageReport` with surrounding conversation context. Prisma JSON reads rehydrate the persisted ISO strings for reported/surrounding message `createdAt` and optional `deletedAt` fields back to `Date` instances at the repository boundary.
 
 ## Invariants (enforced today)
 

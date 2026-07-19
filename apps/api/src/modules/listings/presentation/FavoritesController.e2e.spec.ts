@@ -18,6 +18,8 @@ import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
+import { testUserId } from "../../../../test/helpers/testUserId";
+import { IMAGE_VARIANT_GENERATOR } from "../domain/ports/ImageVariantGenerator";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
 
 describe("FavoritesController e2e", () => {
@@ -38,6 +40,17 @@ describe("FavoritesController e2e", () => {
         }),
       ],
     })
+      .overrideProvider(IMAGE_VARIANT_GENERATOR)
+      .useValue({
+        generate: async (originalKey: string) => ({
+          variants: {
+            thumbnail: `${originalKey}/thumbnail.jpg`,
+            list: `${originalKey}/list.jpg`,
+            detail: `${originalKey}/detail.jpg`,
+            fullscreen: `${originalKey}/fullscreen.jpg`,
+          },
+        }),
+      })
       .overrideProvider(LISTING_EVENT_PUBLISHER)
       .useValue({ emit: async () => {} })
       .compile();
@@ -71,7 +84,8 @@ describe("FavoritesController e2e", () => {
     await prisma.brand.deleteMany();
   });
 
-  async function createUser(userId: string): Promise<string> {
+  async function createUser(alias: Parameters<typeof testUserId>[0]): Promise<string> {
+    const userId = testUserId(alias);
     await prisma.user.create({
       data: { id: userId, phone: `+9936${userId.slice(-8)}`, role: "buyer" },
     });
@@ -119,9 +133,9 @@ describe("FavoritesController e2e", () => {
     });
   }
 
-  async function seedDraft(userId: string, payload: Record<string, unknown>) {
+  async function seedDraft(alias: Parameters<typeof testUserId>[0], payload: Record<string, unknown>) {
     const draft = await prisma.listingDraft.create({
-      data: { userId, payload: payload as Prisma.InputJsonValue },
+      data: { userId: testUserId(alias), payload: payload as Prisma.InputJsonValue },
     });
     return draft;
   }
@@ -170,10 +184,10 @@ describe("FavoritesController e2e", () => {
         .expect(201);
 
       expect(res.body.listingId).toBe(listingId);
-      expect(res.body.userId).toBe("buyer-1");
+      expect(res.body.userId).toBe(testUserId("buyer-1"));
 
       const favRow = await prisma.favorite.findFirst({
-        where: { userId: "buyer-1", listingId },
+        where: { userId: testUserId("buyer-1"), listingId },
       });
       expect(favRow).not.toBeNull();
 
@@ -252,8 +266,6 @@ describe("FavoritesController e2e", () => {
       await seedCatalog();
       const sellerToken = await createUser("seller-1");
       const buyerToken = await createUser("buyer-1");
-      const adminToken = await createUser("admin-1");
-      await prisma.user.update({ where: { id: "admin-1" }, data: { role: "admin" } });
       const draft = await seedDraft("seller-1", validPayload);
 
       const publishRes = await request
@@ -263,11 +275,10 @@ describe("FavoritesController e2e", () => {
         .expect(201);
       const listingId = publishRes.body.id;
 
-      await request
-        .post(`/api/v1/admin/moderation/listings/${listingId}/ban`)
-        .set("Authorization", `Bearer ${adminToken}`)
-        .send({ reason: "Test ban" })
-        .expect(200);
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { status: "banned" },
+      });
 
       await request
         .post(`/api/v1/listings/${listingId}/favorite`)
@@ -311,7 +322,7 @@ describe("FavoritesController e2e", () => {
       expect(res.body.success).toBe(true);
 
       const favRow = await prisma.favorite.findFirst({
-        where: { userId: "buyer-1", listingId },
+        where: { userId: testUserId("buyer-1"), listingId },
       });
       expect(favRow).toBeNull();
 
@@ -381,8 +392,6 @@ describe("FavoritesController e2e", () => {
       await seedCatalog();
       const sellerToken = await createUser("seller-1");
       const buyerToken = await createUser("buyer-1");
-      const adminToken = await createUser("admin-1");
-      await prisma.user.update({ where: { id: "admin-1" }, data: { role: "admin" } });
       const draft = await seedDraft("seller-1", validPayload);
 
       const publishRes = await request
@@ -399,11 +408,10 @@ describe("FavoritesController e2e", () => {
         .expect(201);
 
       // Ban the listing
-      await request
-        .post(`/api/v1/admin/moderation/listings/${listingId}/ban`)
-        .set("Authorization", `Bearer ${adminToken}`)
-        .send({ reason: "Test ban" })
-        .expect(200);
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { status: "banned" },
+      });
 
       const res = await request
         .get("/api/v1/favorites")

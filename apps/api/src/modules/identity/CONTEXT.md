@@ -48,7 +48,7 @@ interface IdentityCheckPort {
 ```
 
 - `IdentityCheckPort` is implemented by `PrismaIdentityCheckAdapter` and exported from `IdentityModule` under DI token `IDENTITY_TOKENS.IdentityCheckPort`.
-- `IdentityReadPort` (`IDENTITY_READ_PORT`) is implemented by `PrismaIdentityReadAdapter` and exported from `IdentityModule`. It exposes `findUserById`, `findUsersByIds`, and `isUserBlockedBy(blockerId, blockedId)`. `isUserBlockedBy` is consumed by `conversations/` (S10) to enforce block checks before new contact or message sends.
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) is implemented by `PrismaIdentityReadAdapter` and exported from `IdentityModule`. It exposes `findUserById`, `findUsersByIds`, and `isUserBlockedBy(blockerId, blockedId)`; user summaries include the stored `locale` so cross-context user-directed copy can be localized. `isUserBlockedBy` is consumed by `conversations/` (S10) to enforce block checks before new contact or message sends, while `notifications/` reads the recipient locale for direct-message push copy.
 - `IdentityAdminPort` (`IDENTITY_ADMIN_PORT`) is implemented by `PrismaIdentityAdminRepository` and exported from `IdentityModule`. It exposes `suspendUser(userId, adminUserId, reason, tx?)`, `unsuspendUser(userId, tx?)`, and `isSuspended(userId)`. `suspendUser` and `unsuspendUser` participate in the caller's transaction (transaction-scoped) for S7 admin moderation; `isSuspended` is a standalone read.
 - `AdminGuard` (`apps/api/src/common/admin.guard.ts`) composes on top of `JwtAuthGuard` and requires: authenticated user, `role = admin`, `sid` owned by the JWT subject, an unexpired session row (`expiresAt > now`), and current TOTP elevation (`adminTotpExpiresAt > now`) loaded via that session.
 
