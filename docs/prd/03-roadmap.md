@@ -35,6 +35,8 @@
 > **2026-07-13 S10 start decision:** S9a's remote code/issues are complete. S9b remains deferred on-ground concierge-pilot work with no code issues and does not block S10. S10 is now the active remote code sprint with GitHub parent [#231](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/231) and children [#232](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/232)-[#253](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/253).
 >
 > **2026-07-17 S10 close decision:** S10 shipped through [PR #256](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/256); see the [retrospective](sprints/sprint-10-rich-chat-notifications-mobile-polish-retro.md). There is no pre-shaped S11. The next sprint is chosen through the Phase 2 betting table after beta/pilot learning rather than inferred from the old candidate list.
+>
+> **2026-07-20 hosting re-sequencing decision ([ADR-0039](../adr/0039-phased-cloud-first-hosting.md)):** AutoTM deploys **cloud-first on Railway** (staging + production) until App Store + Google Play verification passes, then cuts over to the [ADR-0005](../adr/0005-hosting.md) TM air-gapped topology. The TM-presence gate moved — it now gates the cutover, not the first deploy. CI gates stay on the `tm-build-mac` GitHub Actions runner; Railway owns build + deploy after CI green. Store-era auth runs `SMS_DRIVER=mock` with 3–5 flag-gated reviewer demo accounts (supersedes [ADR-0030](../adr/0030-reviewer-demo-account-otp-bypass.md)'s "exactly one" scoping). Registering `auto.tm` (or best fallback) is a hard gate before the first store-binary submission, making cutover a pure DNS flip. S11 shapes as the Railway deployment sprint.
 
 ---
 
