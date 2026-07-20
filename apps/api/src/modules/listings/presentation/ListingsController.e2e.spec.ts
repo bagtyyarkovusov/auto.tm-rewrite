@@ -19,9 +19,17 @@ import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
-import { testUserId } from "../../../../test/helpers/testUserId";
+import {
+  cleanSuiteFixtures,
+  defineE2eSuite,
+  seedSuiteCatalog,
+} from "../../../../test/helpers/e2eSuite";
 import { IMAGE_VARIANT_GENERATOR } from "../domain/ports/ImageVariantGenerator";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
+
+const suite = defineE2eSuite("listings-controller");
+type SuiteUser = "user-1" | "user-2";
+const SUITE_USERS: readonly SuiteUser[] = ["user-1", "user-2"];
 
 describe("ListingsController e2e", () => {
   let app: NestFastifyApplication;
@@ -74,84 +82,46 @@ describe("ListingsController e2e", () => {
   });
 
   beforeEach(async () => {
-    await prisma.listingMedia.deleteMany();
-    await prisma.listing.deleteMany();
-    await prisma.listingDraft.deleteMany();
-    await prisma.exchangeRate.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.city.deleteMany();
-    await prisma.region.deleteMany();
-    await prisma.model.deleteMany();
-    await prisma.brand.deleteMany();
+    // Only this suite owns the USD→TMT pair; the EXCHANGE_RATE_MISSING test
+    // depends on its absence at test start. TMT→TMT is shared with other
+    // suites — seeded via upsert, never deleted (see e2eSuite helper).
+    await cleanSuiteFixtures(prisma, suite, {
+      userAliases: SUITE_USERS,
+      exchangeRatePairs: [{ from: "USD", to: "TMT" }],
+    });
   });
 
-  async function createUser(alias: Parameters<typeof testUserId>[0]): Promise<string> {
-    const userId = testUserId(alias);
+  async function createUser(alias: SuiteUser): Promise<string> {
     await prisma.user.create({
-      data: { id: userId, phone: `+9936${userId.slice(-8)}`, role: "buyer" },
+      data: { id: suite.id(alias), phone: suite.phone(alias), role: "buyer" },
     });
-    return mintUserJwt(userId);
+    return mintUserJwt(suite.id(alias));
   }
 
   async function seedCatalog() {
-    const brand = await prisma.brand.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000001",
-        slug: "test-brand",
-        nameRu: "Test Brand",
-        nameTk: "Test Brand",
-        nameEn: "Test Brand",
-      },
-    });
-    await prisma.model.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000002",
-        brandId: brand.id,
-        slug: "test-model",
-        nameRu: "Test Model",
-        nameTk: "Test Model",
-        nameEn: "Test Model",
-      },
-    });
-    const region = await prisma.region.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000004",
-        slug: "test-region",
-        nameRu: "Test Region",
-        nameTk: "Test Region",
-        nameEn: "Test Region",
-      },
-    });
-    await prisma.city.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000003",
-        regionId: region.id,
-        slug: "test-city",
-        nameRu: "Test City",
-        nameTk: "Test City",
-        nameEn: "Test City",
-      },
-    });
+    return seedSuiteCatalog(prisma, suite);
   }
 
-  async function seedDraft(alias: Parameters<typeof testUserId>[0], payload: Record<string, unknown>) {
+  async function seedDraft(alias: SuiteUser, payload: Record<string, unknown>) {
     const draft = await prisma.listingDraft.create({
-      data: { userId: testUserId(alias), payload: payload as Prisma.InputJsonValue },
+      data: { userId: suite.id(alias), payload: payload as Prisma.InputJsonValue },
     });
     return draft;
   }
 
-  async function seedExchangeRate(from: string, to: string, rate: number) {
-    await prisma.exchangeRate.create({
-      data: { fromCurrency: from as "TMT" | "USD" | "AED", toCurrency: to as "TMT" | "USD" | "AED", rate },
+  async function seedExchangeRate(from: "TMT" | "USD" | "AED", to: "TMT" | "USD" | "AED", rate: number) {
+    await prisma.exchangeRate.upsert({
+      where: { fromCurrency_toCurrency: { fromCurrency: from, toCurrency: to } },
+      create: { fromCurrency: from, toCurrency: to, rate },
+      update: { rate },
     });
   }
 
   const validPayload = {
-    brandId: "00000000-0000-0000-0000-000000000001",
-    modelId: "00000000-0000-0000-0000-000000000002",
-    cityId: "00000000-0000-0000-0000-000000000003",
-    regionId: "00000000-0000-0000-0000-000000000004",
+    brandId: suite.catalog.brandId,
+    modelId: suite.catalog.modelId,
+    cityId: suite.catalog.cityId,
+    regionId: suite.catalog.regionId,
     priceAmount: 100000,
     priceCurrency: "TMT",
     year: 2020,
@@ -160,7 +130,7 @@ describe("ListingsController e2e", () => {
     description: "Great car",
     allowCalls: true,
     allowChat: true,
-    photos: [{ photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 }],
+    photos: [{ photoId: suite.id("photo-1"), key: "photo1.jpg", sortOrder: 0 }],
     conditionDisclosure: {
       accidentReported: false,
       mileageAccurate: true,
@@ -641,8 +611,11 @@ describe("ListingsController e2e", () => {
 
   describe("GET /api/v1/listings", () => {
     it("returns empty feed when no listings", async () => {
+      // Scoped to this suite's brand: concurrent e2e suites share the dev
+      // stack, so a global empty-feed assertion is not meaningful.
       const res = await request
         .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(res.body.items).toHaveLength(0);
@@ -654,7 +627,7 @@ describe("ListingsController e2e", () => {
       await createUser("user-1");
       await prisma.listing.create({
         data: {
-          sellerId: testUserId("user-1"),
+          sellerId: suite.id("user-1"),
           status: "active",
           brandId: validPayload.brandId,
           modelId: validPayload.modelId,
@@ -666,7 +639,7 @@ describe("ListingsController e2e", () => {
         },
       });
 
-      const feed = await request.get("/api/v1/listings").expect(200);
+      const feed = await request.get("/api/v1/listings").query({ brandId: suite.catalog.brandId }).expect(200);
       const parsed = ListingsSchemas.FeedResponseSchema.parse(feed.body);
 
       expect(parsed.items).toHaveLength(1);
@@ -701,7 +674,7 @@ describe("ListingsController e2e", () => {
       for (let i = 0; i < 25; i++) {
         const draft = await seedDraft("user-1", {
           ...validPayload,
-          photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
         });
         await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -713,6 +686,7 @@ describe("ListingsController e2e", () => {
       // First page
       const page1 = await request
         .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(page1.body.items).toHaveLength(20);
@@ -721,7 +695,7 @@ describe("ListingsController e2e", () => {
       // Second page
       const page2 = await request
         .get("/api/v1/listings")
-        .query({ cursor: page1.body.nextCursor })
+        .query({ brandId: suite.catalog.brandId, cursor: page1.body.nextCursor })
         .expect(200);
 
       expect(page2.body.items).toHaveLength(5);
@@ -797,8 +771,8 @@ describe("ListingsController e2e", () => {
       await seedCatalog();
       const brand2 = await prisma.brand.create({
         data: {
-          id: "00000000-0000-0000-0000-000000000010",
-          slug: "test-brand-2",
+          id: suite.id("brand-2"),
+          slug: suite.slugFor("brand-2"),
           nameRu: "Test Brand 2",
           nameTk: "Test Brand 2",
           nameEn: "Test Brand 2",
@@ -806,9 +780,9 @@ describe("ListingsController e2e", () => {
       });
       await prisma.model.create({
         data: {
-          id: "00000000-0000-0000-0000-000000000011",
+          id: suite.id("model-2"),
           brandId: brand2.id,
-          slug: "test-model-2",
+          slug: suite.slugFor("model-2"),
           nameRu: "Test Model 2",
           nameTk: "Test Model 2",
           nameEn: "Test Model 2",
@@ -821,10 +795,10 @@ describe("ListingsController e2e", () => {
       const draft2 = await seedDraft("user-1", {
         ...validPayload,
         brandId: brand2.id,
-        modelId: "00000000-0000-0000-0000-000000000011",
+        modelId: suite.id("model-2"),
         photos: [
           {
-            photoId: "00000000-0000-0000-0000-000000000006",
+            photoId: suite.id("photo-2"),
             key: "photo2.jpg",
             sortOrder: 0,
           },
@@ -877,8 +851,8 @@ describe("ListingsController e2e", () => {
       await seedCatalog();
       const brand2 = await prisma.brand.create({
         data: {
-          id: "00000000-0000-0000-0000-000000000010",
-          slug: "test-brand-2",
+          id: suite.id("brand-2"),
+          slug: suite.slugFor("brand-2"),
           nameRu: "Test Brand 2",
           nameTk: "Test Brand 2",
           nameEn: "Test Brand 2",
@@ -886,9 +860,9 @@ describe("ListingsController e2e", () => {
       });
       await prisma.model.create({
         data: {
-          id: "00000000-0000-0000-0000-000000000011",
+          id: suite.id("model-2"),
           brandId: brand2.id,
-          slug: "test-model-2",
+          slug: suite.slugFor("model-2"),
           nameRu: "Test Model 2",
           nameTk: "Test Model 2",
           nameEn: "Test Model 2",
@@ -902,8 +876,8 @@ describe("ListingsController e2e", () => {
         const draft = await seedDraft("user-1", {
           ...validPayload,
           brandId: i % 2 === 0 ? validPayload.brandId : brand2.id,
-          modelId: i % 2 === 0 ? validPayload.modelId : "00000000-0000-0000-0000-000000000011",
-          photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
+          modelId: i % 2 === 0 ? validPayload.modelId : suite.id("model-2"),
+          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
         });
         await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -942,21 +916,23 @@ describe("ListingsController e2e", () => {
 
   describe("GET /api/v1/listings/count", () => {
     it("returns zero when no listings exist", async () => {
+      // Scoped to this suite's brand — see the empty-feed note above.
       const res = await request
         .get("/api/v1/listings/count")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(res.body.totalMatching).toBe(0);
     });
 
-    it("counts all eligible listings with no filters", async () => {
+    it("counts all eligible listings", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
 
       for (let i = 0; i < 3; i++) {
         const draft = await seedDraft("user-1", {
           ...validPayload,
-          photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
         });
         await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -967,6 +943,7 @@ describe("ListingsController e2e", () => {
 
       const res = await request
         .get("/api/v1/listings/count")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(res.body.totalMatching).toBe(3);
@@ -976,8 +953,8 @@ describe("ListingsController e2e", () => {
       await seedCatalog();
       const brand2 = await prisma.brand.create({
         data: {
-          id: "00000000-0000-0000-0000-000000000010",
-          slug: "test-brand-2",
+          id: suite.id("brand-2"),
+          slug: suite.slugFor("brand-2"),
           nameRu: "Test Brand 2",
           nameTk: "Test Brand 2",
           nameEn: "Test Brand 2",
@@ -985,9 +962,9 @@ describe("ListingsController e2e", () => {
       });
       await prisma.model.create({
         data: {
-          id: "00000000-0000-0000-0000-000000000011",
+          id: suite.id("model-2"),
           brandId: brand2.id,
-          slug: "test-model-2",
+          slug: suite.slugFor("model-2"),
           nameRu: "Test Model 2",
           nameTk: "Test Model 2",
           nameEn: "Test Model 2",
@@ -1000,10 +977,10 @@ describe("ListingsController e2e", () => {
       const draft2 = await seedDraft("user-1", {
         ...validPayload,
         brandId: brand2.id,
-        modelId: "00000000-0000-0000-0000-000000000011",
+        modelId: suite.id("model-2"),
         photos: [
           {
-            photoId: "00000000-0000-0000-0000-000000000006",
+            photoId: suite.id("photo-2"),
             key: "photo2.jpg",
             sortOrder: 0,
           },
@@ -1049,6 +1026,7 @@ describe("ListingsController e2e", () => {
 
       const res = await request
         .get("/api/v1/listings/count")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(res.body.totalMatching).toBe(0);
@@ -1074,6 +1052,7 @@ describe("ListingsController e2e", () => {
 
       const res = await request
         .get("/api/v1/listings/count")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(res.body.totalMatching).toBe(1);
@@ -1085,6 +1064,7 @@ describe("ListingsController e2e", () => {
 
       const resAfter = await request
         .get("/api/v1/listings/count")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(resAfter.body.totalMatching).toBe(0);
@@ -1102,7 +1082,7 @@ describe("ListingsController e2e", () => {
         priceCurrency: "USD",
         photos: [
           {
-            photoId: "00000000-0000-0000-0000-000000000006",
+            photoId: suite.id("photo-2"),
             key: "photo2.jpg",
             sortOrder: 0,
           },
@@ -1122,7 +1102,7 @@ describe("ListingsController e2e", () => {
 
       const res = await request
         .get("/api/v1/listings/count")
-        .query({ priceMin: 50000, priceMax: 80000 })
+        .query({ brandId: suite.catalog.brandId, priceMin: 50000, priceMax: 80000 })
         .expect(200);
 
       expect(res.body.totalMatching).toBe(1);

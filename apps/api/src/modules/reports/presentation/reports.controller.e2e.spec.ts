@@ -26,7 +26,15 @@ import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { EnvSchema } from "../../../env.schema";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
 import { mintAdminJwt } from "../../../../test/helpers/mintAdminJwt";
-import { testUserId } from "../../../../test/helpers/testUserId";
+import {
+  cleanSuiteFixtures,
+  defineE2eSuite,
+  seedSuiteCatalog,
+} from "../../../../test/helpers/e2eSuite";
+
+const suite = defineE2eSuite("reports-controller");
+type SuiteUser = "seller-1" | "buyer-1" | "admin-1";
+const SUITE_USERS: readonly SuiteUser[] = ["seller-1", "buyer-1", "admin-1"];
 
 describe("ReportsController e2e", () => {
   let app: NestFastifyApplication;
@@ -89,32 +97,26 @@ describe("ReportsController e2e", () => {
   }, 60_000);
 
   beforeEach(async () => {
-    await prisma.inspectionInterest.deleteMany();
-    await prisma.favorite.deleteMany();
-    await prisma.listingMedia.deleteMany();
-    await prisma.listing.deleteMany();
-    await prisma.listingDraft.deleteMany();
-    await prisma.exchangeRate.deleteMany();
-    await prisma.session.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.city.deleteMany();
-    await prisma.region.deleteMany();
-    await prisma.model.deleteMany();
-    await prisma.brand.deleteMany();
+    // TMT→TMT is a shared global singleton — seeded via upsert in
+    // seedCatalog, never deleted (see e2eSuite helper). This suite owns no
+    // exclusive exchange-rate pairs.
+    await cleanSuiteFixtures(prisma, suite, {
+      userAliases: SUITE_USERS,
+      inspectionInterests: true,
+    });
   });
 
-  async function createUser(alias: Parameters<typeof testUserId>[0], role: "buyer" | "admin" = "buyer"): Promise<string> {
-    const userId = testUserId(alias);
+  async function createUser(alias: SuiteUser, role: "buyer" | "admin" = "buyer"): Promise<string> {
     await prisma.user.create({
-      data: { id: userId, phone: `+9936${userId.slice(-8)}`, role },
+      data: { id: suite.id(alias), phone: suite.phone(alias), role },
     });
-    return mintUserJwt(userId);
+    return mintUserJwt(suite.id(alias));
   }
 
   async function createElevatedAdmin(): Promise<{ adminId: string; token: string }> {
-    const adminId = randomUUID();
+    const adminId = suite.id("admin-1");
     await prisma.user.create({
-      data: { id: adminId, phone: `+9936${adminId.slice(-8)}`, role: "admin" },
+      data: { id: adminId, phone: suite.phone("admin-1"), role: "admin" },
     });
     const session = await prisma.session.create({
       data: {
@@ -129,62 +131,27 @@ describe("ReportsController e2e", () => {
   }
 
   async function seedCatalog() {
-    const brand = await prisma.brand.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000001",
-        slug: "test-brand",
-        nameRu: "Test Brand",
-        nameTk: "Test Brand",
-        nameEn: "Test Brand",
-      },
+    const catalog = await seedSuiteCatalog(prisma, suite);
+    // TMT→TMT is a shared global singleton — upsert, never delete.
+    await prisma.exchangeRate.upsert({
+      where: { fromCurrency_toCurrency: { fromCurrency: "TMT", toCurrency: "TMT" } },
+      create: { fromCurrency: "TMT", toCurrency: "TMT", rate: 1 },
+      update: { rate: 1 },
     });
-    const model = await prisma.model.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000002",
-        brandId: brand.id,
-        slug: "test-model",
-        nameRu: "Test Model",
-        nameTk: "Test Model",
-        nameEn: "Test Model",
-      },
-    });
-    const region = await prisma.region.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000003",
-        slug: "test-region",
-        nameRu: "Test Region",
-        nameTk: "Test Region",
-        nameEn: "Test Region",
-      },
-    });
-    const city = await prisma.city.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000004",
-        regionId: region.id,
-        slug: "test-city",
-        nameRu: "Test City",
-        nameTk: "Test City",
-        nameEn: "Test City",
-      },
-    });
-    await prisma.exchangeRate.create({
-      data: { fromCurrency: "TMT", toCurrency: "TMT", rate: 1 },
-    });
-
-    return { brand, model, region, city };
+    return catalog;
   }
 
-  async function seedDraft(alias: Parameters<typeof testUserId>[0], payload: Record<string, unknown>) {
+  async function seedDraft(alias: SuiteUser, payload: Record<string, unknown>) {
     return prisma.listingDraft.create({
-      data: { userId: testUserId(alias), payload: payload as Prisma.InputJsonValue },
+      data: { userId: suite.id(alias), payload: payload as Prisma.InputJsonValue },
     });
   }
 
   const validPayload = {
-    brandId: "00000000-0000-0000-0000-000000000001",
-    modelId: "00000000-0000-0000-0000-000000000002",
-    cityId: "00000000-0000-0000-0000-000000000004",
-    regionId: "00000000-0000-0000-0000-000000000003",
+    brandId: suite.catalog.brandId,
+    modelId: suite.catalog.modelId,
+    cityId: suite.catalog.cityId,
+    regionId: suite.catalog.regionId,
     priceAmount: 100000,
     priceCurrency: "TMT",
     year: 2020,
@@ -195,7 +162,7 @@ describe("ReportsController e2e", () => {
     allowChat: true,
     photos: [
       {
-        photoId: "00000000-0000-0000-0000-000000000005",
+        photoId: suite.id("photo-1"),
         key: "photo1.jpg",
         sortOrder: 0,
       },
@@ -230,7 +197,7 @@ describe("ReportsController e2e", () => {
         .expect(201);
 
       expect(res.body.listingId).toBe(listingId);
-      expect(res.body.requesterUserId).toBe(testUserId("buyer-1"));
+      expect(res.body.requesterUserId).toBe(suite.id("buyer-1"));
       expect(res.body.side).toBe("buyer");
       expect(res.body.willingnessToPayTmt).toBe(5000);
       expect(res.body.reusedExisting).toBe(false);

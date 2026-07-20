@@ -26,6 +26,13 @@ import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { EnvSchema } from "../../../env.schema";
 import { mintAdminJwt } from "../../../../test/helpers/mintAdminJwt";
+import {
+  cleanSuiteFixtures,
+  defineE2eSuite,
+  seedSuiteCatalog,
+} from "../../../../test/helpers/e2eSuite";
+
+const suite = defineE2eSuite("mlp-afk-smoke");
 
 describe("MLP AFK e2e smoke", () => {
   let app: NestFastifyApplication;
@@ -84,25 +91,14 @@ describe("MLP AFK e2e smoke", () => {
   }, 60_000);
 
   beforeEach(async () => {
-    await prisma.message.deleteMany();
-    await prisma.conversationParticipant.deleteMany();
-    await prisma.conversation.deleteMany();
-    await prisma.auditLog.deleteMany();
-    await prisma.contentReport.deleteMany();
-    await prisma.favorite.deleteMany();
-    await prisma.listingMedia.deleteMany();
-    await prisma.listing.deleteMany();
-    await prisma.listingDraft.deleteMany();
-    await prisma.exchangeRate.deleteMany();
-    await prisma.totpBackupCode.deleteMany();
-    await prisma.totpEnrollment.deleteMany();
-    await prisma.session.deleteMany();
-    await prisma.otpRequest.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.city.deleteMany();
-    await prisma.region.deleteMany();
-    await prisma.model.deleteMany();
-    await prisma.brand.deleteMany();
+    // Users arrive via real OTP login (server-generated IDs), so cleanup
+    // scopes by phone as well as id. TMT→TMT is a shared global singleton —
+    // seeded via upsert in seedCatalog, never deleted (see e2eSuite helper).
+    await cleanSuiteFixtures(prisma, suite, {
+      userAliases: [],
+      extraUserIds: ["admin-afk-001"],
+      extraPhones: ["+99361234001", "+99361234002", "+99369990001"],
+    });
   });
 
   async function login(phone: string): Promise<{
@@ -128,53 +124,14 @@ describe("MLP AFK e2e smoke", () => {
   }
 
   async function seedCatalog() {
-    const brand = await prisma.brand.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000001",
-        slug: "afk-brand",
-        nameRu: "AFK Brand",
-        nameTk: "AFK Brand",
-        nameEn: "AFK Brand",
-      },
+    const catalog = await seedSuiteCatalog(prisma, suite);
+    // TMT→TMT is a shared global singleton — upsert, never delete.
+    await prisma.exchangeRate.upsert({
+      where: { fromCurrency_toCurrency: { fromCurrency: "TMT", toCurrency: "TMT" } },
+      create: { fromCurrency: "TMT", toCurrency: "TMT", rate: 1 },
+      update: { rate: 1 },
     });
-    const model = await prisma.model.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000002",
-        brandId: brand.id,
-        slug: "afk-model",
-        nameRu: "AFK Model",
-        nameTk: "AFK Model",
-        nameEn: "AFK Model",
-      },
-    });
-    const region = await prisma.region.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000003",
-        slug: "afk-region",
-        nameRu: "AFK Region",
-        nameTk: "AFK Region",
-        nameEn: "AFK Region",
-      },
-    });
-    const city = await prisma.city.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000004",
-        regionId: region.id,
-        slug: "afk-city",
-        nameRu: "AFK City",
-        nameTk: "AFK City",
-        nameEn: "AFK City",
-      },
-    });
-    await prisma.exchangeRate.create({
-      data: {
-        fromCurrency: "TMT",
-        toCurrency: "TMT",
-        rate: 1,
-      },
-    });
-
-    return { brand, model, region, city };
+    return catalog;
   }
 
   async function publishListing(input: {
@@ -184,10 +141,10 @@ describe("MLP AFK e2e smoke", () => {
     description?: string;
   }): Promise<string> {
     const draftPayload = {
-      brandId: input.catalog.brand.id,
-      modelId: input.catalog.model.id,
-      cityId: input.catalog.city.id,
-      regionId: input.catalog.region.id,
+      brandId: input.catalog.brandId,
+      modelId: input.catalog.modelId,
+      cityId: input.catalog.cityId,
+      regionId: input.catalog.regionId,
       priceAmount: 125000,
       priceCurrency: "TMT",
       year: 2021,
@@ -198,7 +155,7 @@ describe("MLP AFK e2e smoke", () => {
       allowChat: true,
       photos: [
         {
-          photoId: "00000000-0000-0000-0000-000000000005",
+          photoId: suite.id("photo-1"),
           key: "afk-smoke-photo.jpg",
           sortOrder: 0,
         },
@@ -253,7 +210,7 @@ describe("MLP AFK e2e smoke", () => {
 
     const feedRes = await request
       .get("/api/v1/listings")
-      .query({ brandId: catalog.brand.id })
+      .query({ brandId: catalog.brandId })
       .expect(200);
 
     expect(feedRes.body.items.some((item: { id: string }) => item.id === listingId)).toBe(true);

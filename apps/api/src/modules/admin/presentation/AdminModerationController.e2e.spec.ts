@@ -22,18 +22,40 @@ import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { EnvSchema } from "../../../env.schema";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
 import { mintAdminJwt } from "../../../../test/helpers/mintAdminJwt";
+import {
+  cleanSuiteFixtures,
+  defineE2eSuite,
+  seedSuiteCatalog,
+} from "../../../../test/helpers/e2eSuite";
+
+const suite = defineE2eSuite("admin-moderation-controller");
+type SuiteUser =
+  | "reporter-one"
+  | "seller-one"
+  | "admin-one"
+  | "reporter-two"
+  | "seller-two"
+  | "admin-two";
+const SUITE_USERS: readonly SuiteUser[] = [
+  "reporter-one",
+  "seller-one",
+  "admin-one",
+  "reporter-two",
+  "seller-two",
+  "admin-two",
+];
 
 describe("AdminModerationController e2e smoke", () => {
   let app: NestFastifyApplication;
   let request: ReturnType<typeof supertest>;
   let prisma: PrismaService;
 
-  const reporterOneId = "00000000-0000-0000-0000-000000000101";
-  const sellerOneId = "00000000-0000-0000-0000-000000000102";
-  const adminOneId = "00000000-0000-0000-0000-000000000103";
-  const reporterTwoId = "00000000-0000-0000-0000-000000000201";
-  const sellerTwoId = "00000000-0000-0000-0000-000000000202";
-  const adminTwoId = "00000000-0000-0000-0000-000000000203";
+  const reporterOneId = suite.id("reporter-one");
+  const sellerOneId = suite.id("seller-one");
+  const adminOneId = suite.id("admin-one");
+  const reporterTwoId = suite.id("reporter-two");
+  const sellerTwoId = suite.id("seller-two");
+  const adminTwoId = suite.id("admin-two");
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -65,85 +87,32 @@ describe("AdminModerationController e2e smoke", () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase();
+    await cleanSuiteFixtures(prisma, suite, { userAliases: SUITE_USERS });
     await app.close();
   });
 
-  async function cleanDatabase() {
-    await prisma.auditLog.deleteMany();
-    await prisma.contentReport.deleteMany();
-    await prisma.listingMedia.deleteMany();
-    await prisma.listing.deleteMany();
-    await prisma.listingDraft.deleteMany();
-    await prisma.exchangeRate.deleteMany();
-    await prisma.totpBackupCode.deleteMany();
-    await prisma.totpEnrollment.deleteMany();
-    await prisma.session.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.city.deleteMany();
-    await prisma.region.deleteMany();
-    await prisma.model.deleteMany();
-    await prisma.brand.deleteMany();
-  }
-
   beforeEach(async () => {
-    await cleanDatabase();
+    // TMT→TMT is a shared global singleton — seeded via upsert in
+    // seedCatalog, never deleted (see e2eSuite helper).
+    await cleanSuiteFixtures(prisma, suite, { userAliases: SUITE_USERS });
   });
 
   async function seedCatalog() {
-    const brand = await prisma.brand.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000001",
-        slug: "test-brand",
-        nameRu: "Test Brand",
-        nameTk: "Test Brand",
-        nameEn: "Test Brand",
-      },
+    const catalog = await seedSuiteCatalog(prisma, suite);
+    // TMT→TMT is a shared global singleton — upsert, never delete.
+    await prisma.exchangeRate.upsert({
+      where: { fromCurrency_toCurrency: { fromCurrency: "TMT", toCurrency: "TMT" } },
+      create: { fromCurrency: "TMT", toCurrency: "TMT", rate: 1 },
+      update: { rate: 1 },
     });
-    await prisma.model.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000002",
-        brandId: brand.id,
-        slug: "test-model",
-        nameRu: "Test Model",
-        nameTk: "Test Model",
-        nameEn: "Test Model",
-      },
-    });
-    const region = await prisma.region.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000004",
-        slug: "test-region",
-        nameRu: "Test Region",
-        nameTk: "Test Region",
-        nameEn: "Test Region",
-      },
-    });
-    await prisma.city.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000003",
-        regionId: region.id,
-        slug: "test-city",
-        nameRu: "Test City",
-        nameTk: "Test City",
-        nameEn: "Test City",
-      },
-    });
-    await prisma.exchangeRate.create({
-      data: {
-        fromCurrency: "TMT",
-        toCurrency: "TMT",
-        rate: 1,
-      },
-    });
-    return { brandId: brand.id, modelId: "00000000-0000-0000-0000-000000000002", cityId: "00000000-0000-0000-0000-000000000003", regionId: region.id };
+    return catalog;
   }
 
-  async function createUser(userId: string, role: "buyer" | "admin" = "buyer") {
+  async function createUser(alias: SuiteUser, role: "buyer" | "admin" = "buyer") {
     await prisma.user.create({
-      data: { id: userId, phone: `+9936${userId.slice(-8)}`, role },
+      data: { id: suite.id(alias), phone: suite.phone(alias), role },
     });
-    return role === "admin" ? null : mintUserJwt(userId);
+    return role === "admin" ? null : mintUserJwt(suite.id(alias));
   }
 
   async function createAdminSession(adminUserId: string) {
@@ -189,9 +158,9 @@ describe("AdminModerationController e2e smoke", () => {
       const sellerId = sellerOneId;
       const adminId = adminOneId;
 
-      await createUser(reporterId, "buyer");
-      await createUser(sellerId, "buyer");
-      await createUser(adminId, "admin");
+      await createUser("reporter-one", "buyer");
+      await createUser("seller-one", "buyer");
+      await createUser("admin-one", "admin");
 
       const reporterToken = mintUserJwt(reporterId);
       const adminToken = await createAdminSession(adminId);
@@ -262,9 +231,9 @@ describe("AdminModerationController e2e smoke", () => {
       const sellerId = sellerTwoId;
       const adminId = adminTwoId;
 
-      await createUser(reporterId, "buyer");
-      await createUser(sellerId, "buyer");
-      await createUser(adminId, "admin");
+      await createUser("reporter-two", "buyer");
+      await createUser("seller-two", "buyer");
+      await createUser("admin-two", "admin");
 
       const reporterToken = mintUserJwt(reporterId);
       const adminToken = await createAdminSession(adminId);
