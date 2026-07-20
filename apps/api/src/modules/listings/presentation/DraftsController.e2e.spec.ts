@@ -17,7 +17,14 @@ import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
-import { testUserId } from "../../../../test/helpers/testUserId";
+import {
+  cleanSuiteFixtures,
+  defineE2eSuite,
+} from "../../../../test/helpers/e2eSuite";
+
+const suite = defineE2eSuite("drafts-controller");
+type SuiteUser = "user-1" | "user-2";
+const SUITE_USERS: readonly SuiteUser[] = ["user-1", "user-2"];
 
 describe("DraftsController e2e", () => {
   let app: NestFastifyApplication;
@@ -56,16 +63,14 @@ describe("DraftsController e2e", () => {
   });
 
   beforeEach(async () => {
-    await prisma.listingDraft.deleteMany();
-    await prisma.user.deleteMany();
+    await cleanSuiteFixtures(prisma, suite, { userAliases: SUITE_USERS });
   });
 
-  async function createUser(alias: Parameters<typeof testUserId>[0]): Promise<string> {
-    const userId = testUserId(alias);
+  async function createUser(alias: SuiteUser): Promise<string> {
     await prisma.user.create({
-      data: { id: userId, phone: `+9936${userId.slice(-8)}`, role: "buyer" },
+      data: { id: suite.id(alias), phone: suite.phone(alias), role: "buyer" },
     });
-    return mintUserJwt(userId);
+    return mintUserJwt(suite.id(alias));
   }
 
   describe("POST /api/v1/listings/drafts", () => {
@@ -81,7 +86,7 @@ describe("DraftsController e2e", () => {
         .send({})
         .expect(201);
 
-      expect(res.body.userId).toBe(testUserId("user-1"));
+      expect(res.body.userId).toBe(suite.id("user-1"));
       expect(res.body.payload).toEqual({});
       expect(res.body.id).toBeDefined();
     });
@@ -110,10 +115,10 @@ describe("DraftsController e2e", () => {
       const res = await request
         .patch(`/api/v1/listings/drafts/${created.body.id}`)
         .set("Authorization", `Bearer ${token}`)
-        .send({ vin: "WBA456", brandId: "00000000-0000-0000-0000-000000000001" })
+        .send({ vin: "WBA456", brandId: suite.catalog.brandId })
         .expect(200);
 
-      expect(res.body.payload).toMatchObject({ vin: "WBA456", brandId: "00000000-0000-0000-0000-000000000001" });
+      expect(res.body.payload).toMatchObject({ vin: "WBA456", brandId: suite.catalog.brandId });
       expect(res.body.payload.validatedSteps).toBeDefined();
     });
 
@@ -201,8 +206,8 @@ describe("DraftsController e2e", () => {
         .send({
           step: "vehicle",
           payload: {
-            brandId: "00000000-0000-0000-0000-000000000001",
-            modelId: "00000000-0000-0000-0000-000000000002",
+            brandId: suite.catalog.brandId,
+            modelId: suite.catalog.modelId,
             year: 2020,
           },
         })
@@ -225,7 +230,7 @@ describe("DraftsController e2e", () => {
         .set("Authorization", `Bearer ${token}`)
         .send({
           step: "vehicle",
-          payload: { brandId: "00000000-0000-0000-0000-000000000001" },
+          payload: { brandId: suite.catalog.brandId },
         })
         .expect(200);
 
@@ -240,8 +245,8 @@ describe("DraftsController e2e", () => {
         .set("Authorization", `Bearer ${token}`)
         .send({
           initialPayload: {
-            brandId: "00000000-0000-0000-0000-000000000001",
-            modelId: "00000000-0000-0000-0000-000000000002",
+            brandId: suite.catalog.brandId,
+            modelId: suite.catalog.modelId,
             year: 2020,
           },
         })
@@ -253,8 +258,8 @@ describe("DraftsController e2e", () => {
         .send({
           step: "vehicle",
           payload: {
-            brandId: "00000000-0000-0000-0000-000000000003",
-            modelId: "00000000-0000-0000-0000-000000000002",
+            brandId: suite.catalog.cityId,
+            modelId: suite.catalog.modelId,
             year: 2020,
           },
         })

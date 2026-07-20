@@ -18,9 +18,17 @@ import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
-import { testUserId } from "../../../../test/helpers/testUserId";
+import {
+  cleanSuiteFixtures,
+  defineE2eSuite,
+  seedSuiteCatalog,
+} from "../../../../test/helpers/e2eSuite";
 import { IMAGE_VARIANT_GENERATOR } from "../domain/ports/ImageVariantGenerator";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
+
+const suite = defineE2eSuite("favorites-controller");
+type SuiteUser = "seller-1" | "buyer-1";
+const SUITE_USERS: readonly SuiteUser[] = ["seller-1", "buyer-1"];
 
 describe("FavoritesController e2e", () => {
   let app: NestFastifyApplication;
@@ -73,78 +81,32 @@ describe("FavoritesController e2e", () => {
   });
 
   beforeEach(async () => {
-    await prisma.favorite.deleteMany();
-    await prisma.listingMedia.deleteMany();
-    await prisma.listing.deleteMany();
-    await prisma.listingDraft.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.city.deleteMany();
-    await prisma.region.deleteMany();
-    await prisma.model.deleteMany();
-    await prisma.brand.deleteMany();
+    await cleanSuiteFixtures(prisma, suite, { userAliases: SUITE_USERS });
   });
 
-  async function createUser(alias: Parameters<typeof testUserId>[0]): Promise<string> {
-    const userId = testUserId(alias);
+  async function createUser(alias: SuiteUser): Promise<string> {
     await prisma.user.create({
-      data: { id: userId, phone: `+9936${userId.slice(-8)}`, role: "buyer" },
+      data: { id: suite.id(alias), phone: suite.phone(alias), role: "buyer" },
     });
-    return mintUserJwt(userId);
+    return mintUserJwt(suite.id(alias));
   }
 
   async function seedCatalog() {
-    const brand = await prisma.brand.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000001",
-        slug: "test-brand",
-        nameRu: "Test Brand",
-        nameTk: "Test Brand",
-        nameEn: "Test Brand",
-      },
-    });
-    await prisma.model.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000002",
-        brandId: brand.id,
-        slug: "test-model",
-        nameRu: "Test Model",
-        nameTk: "Test Model",
-        nameEn: "Test Model",
-      },
-    });
-    const region = await prisma.region.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000004",
-        slug: "test-region",
-        nameRu: "Test Region",
-        nameTk: "Test Region",
-        nameEn: "Test Region",
-      },
-    });
-    await prisma.city.create({
-      data: {
-        id: "00000000-0000-0000-0000-000000000003",
-        regionId: region.id,
-        slug: "test-city",
-        nameRu: "Test City",
-        nameTk: "Test City",
-        nameEn: "Test City",
-      },
-    });
+    return seedSuiteCatalog(prisma, suite);
   }
 
-  async function seedDraft(alias: Parameters<typeof testUserId>[0], payload: Record<string, unknown>) {
+  async function seedDraft(alias: SuiteUser, payload: Record<string, unknown>) {
     const draft = await prisma.listingDraft.create({
-      data: { userId: testUserId(alias), payload: payload as Prisma.InputJsonValue },
+      data: { userId: suite.id(alias), payload: payload as Prisma.InputJsonValue },
     });
     return draft;
   }
 
   const validPayload = {
-    brandId: "00000000-0000-0000-0000-000000000001",
-    modelId: "00000000-0000-0000-0000-000000000002",
-    cityId: "00000000-0000-0000-0000-000000000003",
-    regionId: "00000000-0000-0000-0000-000000000004",
+    brandId: suite.catalog.brandId,
+    modelId: suite.catalog.modelId,
+    cityId: suite.catalog.cityId,
+    regionId: suite.catalog.regionId,
     priceAmount: 100000,
     priceCurrency: "TMT",
     year: 2020,
@@ -153,7 +115,7 @@ describe("FavoritesController e2e", () => {
     description: "Great car",
     allowCalls: true,
     allowChat: true,
-    photos: [{ photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 }],
+    photos: [{ photoId: suite.id("photo-1"), key: "photo1.jpg", sortOrder: 0 }],
   };
 
   describe("POST /api/v1/listings/:id/favorite", () => {
@@ -184,10 +146,10 @@ describe("FavoritesController e2e", () => {
         .expect(201);
 
       expect(res.body.listingId).toBe(listingId);
-      expect(res.body.userId).toBe(testUserId("buyer-1"));
+      expect(res.body.userId).toBe(suite.id("buyer-1"));
 
       const favRow = await prisma.favorite.findFirst({
-        where: { userId: testUserId("buyer-1"), listingId },
+        where: { userId: suite.id("buyer-1"), listingId },
       });
       expect(favRow).not.toBeNull();
 
@@ -322,7 +284,7 @@ describe("FavoritesController e2e", () => {
       expect(res.body.success).toBe(true);
 
       const favRow = await prisma.favorite.findFirst({
-        where: { userId: testUserId("buyer-1"), listingId },
+        where: { userId: suite.id("buyer-1"), listingId },
       });
       expect(favRow).toBeNull();
 
@@ -431,7 +393,7 @@ describe("FavoritesController e2e", () => {
       for (let i = 0; i < 3; i++) {
         const draft = await seedDraft("seller-1", {
           ...validPayload,
-          photos: [{ photoId: `00000000-0000-0000-0000-${i.toString().padStart(12, "0")}`, key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
         });
         const publishRes = await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
