@@ -88,7 +88,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Ports consumed
 
 - `PrismaService` (via `@auto-tm/db`) — `PrismaPushTokenRepository` and `PrismaNotificationHistoryRepository` map Prisma rows to/from domain objects.
-- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `EvaluateDirectMessagePush` for bidirectional block checks (`isUserBlockedBy`) and by `DecideDirectMessageNotification` to load the recipient locale before building lock-screen copy.
+- `IdentityReadPort` (`IDENTITY_READ_PORT`) from `identity/` — used by `EvaluateDirectMessagePush` for bidirectional block checks (`isUserBlockedBy`) and to load the recipient locale as part of the same eligibility result (so `DecideDirectMessageNotification` adds no separate `findUserById` round trip).
 - `PresencePort` (`PRESENCE_PORT`) from `realtime/` — used by `DecideDirectMessageNotification` to suppress push when the recipient is socket-online.
 - `ConversationStatePort` (`CONVERSATION_STATE_PORT`) from `conversations/` — used by `DecideDirectMessageNotification` to read per-conversation mute state.
 
@@ -97,8 +97,8 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 - `RegisterPushToken` — validates token + platform, handles same-user re-registration, cross-user reassignment, and inserts/upserts the row.
 - `RevokePushToken` — soft-invalidates the token for the authenticated user; idempotent.
 - `ListPushTokens` — returns active tokens ordered by `lastUsedAt DESC`.
-- `EvaluateDirectMessagePush` — returns `shouldSend: true` only when the recipient has not blocked the sender, the sender has not blocked the recipient, and the recipient has at least one active push token. Otherwise returns `shouldSend: false` with reason `BLOCKED` or `NO_TOKENS`.
-- `DecideDirectMessageNotification` — consumes a `MessageSent` event and decides whether to enqueue a direct-message push. Applies self-message, online, mute, block, and no-token suppression rules. For eligible messages it builds a `DirectMessageNotification`, writes a `NotificationHistory` row, and enqueues a job via `PushQueuePort`.
+- `EvaluateDirectMessagePush` — returns `shouldSend: true` only when the recipient has not blocked the sender, the sender has not blocked the recipient, and the recipient has at least one active push token. On success it also returns `recipientLocale` from `IdentityReadPort.findUserById` (loaded only after eligibility passes). Otherwise returns `shouldSend: false` with reason `BLOCKED` or `NO_TOKENS`.
+- `DecideDirectMessageNotification` — consumes a `MessageSent` event and decides whether to enqueue a direct-message push. Applies self-message, online, mute, block, and no-token suppression rules. For eligible messages it builds a `DirectMessageNotification` from the eligibility result's locale (no direct identity lookup), writes a `NotificationHistory` row, and enqueues a job via `PushQueuePort`.
 - `MessageSentEventHandler` — listens for `MessageSent` from `conversations/` and delegates to `DecideDirectMessageNotification`.
 
 ## HTTP routes
