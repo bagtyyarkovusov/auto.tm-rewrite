@@ -42,6 +42,9 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0034](0034-kolesa-ux-findability-reference.md) | Kolesa.kz as the UX / information-architecture reference (revises charter §1 auto.ru, findability scope only) | Accepted | 2026-06-10 |
 | [0035](0035-multi-vertical-platform-direction.md) | Multi-vertical platform direction — cars as the MLP wedge (extends ADR-0034; MLP stays cars-only) | Accepted | 2026-06-11 |
 | [0036](0036-multi-vertical-seam-resolutions-mlp.md) | Multi-vertical seam resolutions (MLP) — defer all four ADR-0035 seams, record the contracts (implements ADR-0035) | Accepted | 2026-06-11 |
+| [0037](0037-trust-inspection-competitive-wedge.md) | Trust / inspection as the competitive wedge — pulled forward against TM incumbents (amends ADR-0027 sequencing; clarifies ADR-0035 framing) | Accepted | 2026-06-11 |
+| [0038](0038-admin-totp-pending-enrollment-idempotent.md) | Admin TOTP pending enrollment is idempotent instead of replaceable | Accepted | 2026-06-13 |
+| [0039](0039-phased-cloud-first-hosting.md) | Phased cloud-first hosting — Railway until store verification, then TM cutover (amends ADR-0005 Railway exclusion scope; supersedes ADR-0030 single-account scoping) | Accepted | 2026-07-20 |
 
 ## Per-app ADRs
 
