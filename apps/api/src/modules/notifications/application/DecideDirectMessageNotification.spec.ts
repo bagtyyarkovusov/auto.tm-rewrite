@@ -24,9 +24,19 @@ import { DecideDirectMessageNotification } from "./DecideDirectMessageNotificati
 class FakeIdentityRead implements IdentityReadPort {
   blocks: Array<{ blockerId: string; blockedId: string }> = [];
   locale = "ru";
+  findUserByIdCalls = 0;
 
   async findUserById() {
-    return { id: "user-b", displayName: null, role: "buyer", locale: this.locale, suspendedAt: null, suspendedById: null, suspensionReason: null };
+    this.findUserByIdCalls += 1;
+    return {
+      id: "user-b",
+      displayName: null,
+      role: "buyer",
+      locale: this.locale,
+      suspendedAt: null,
+      suspendedById: null,
+      suspensionReason: null,
+    };
   }
 
   async findUsersByIds() {
@@ -162,18 +172,20 @@ function makeUseCase(deps?: {
   conversationState?: FakeConversationState;
   history?: FakeNotificationHistoryRepository;
   queue?: FakePushQueue;
+  evaluatePush?: Pick<EvaluateDirectMessagePush, "execute">;
 }) {
   const identityRead = deps?.identityRead ?? new FakeIdentityRead();
   const tokens = deps?.tokens ?? new FakePushTokenRepository();
-  const evaluate = new EvaluateDirectMessagePush(identityRead, tokens);
+  const evaluate =
+    deps?.evaluatePush ??
+    new EvaluateDirectMessagePush(identityRead, tokens);
 
   return new DecideDirectMessageNotification(
     deps?.presence ?? new FakePresence(),
     deps?.conversationState ?? new FakeConversationState(),
-    evaluate,
+    evaluate as EvaluateDirectMessagePush,
     deps?.history ?? new FakeNotificationHistoryRepository(),
     deps?.queue ?? new FakePushQueue(),
-    identityRead,
   );
 }
 
@@ -232,6 +244,56 @@ describe("DecideDirectMessageNotification", () => {
 
     expect(history.rows[0]?.title).toBe("New message");
     expect(history.rows[0]?.body).toBe("Photo");
+  });
+
+  it("localizes push chrome for tk recipients", async () => {
+    identityRead.locale = "tk";
+    tokens.tokens = [makeToken("user-b")];
+    const uc = makeUseCase({ identityRead, tokens, history, queue });
+
+    await uc.execute(makeTextEvent({ messageKind: "image", messageBody: null }));
+
+    expect(history.rows[0]?.title).toBe("Täze habar");
+    expect(history.rows[0]?.body).toBe("Surat");
+  });
+
+  it("adds zero findUserById round trips on the Decide hot path", async () => {
+    const evaluatePush = {
+      execute: async () =>
+        ({ shouldSend: true, recipientLocale: "en" }) as const,
+    };
+    const uc = makeUseCase({
+      identityRead,
+      tokens,
+      presence,
+      conversationState,
+      history,
+      queue,
+      evaluatePush,
+    });
+
+    await uc.execute(makeTextEvent({ messageKind: "image", messageBody: null }));
+
+    expect(identityRead.findUserByIdCalls).toBe(0);
+    expect(history.rows[0]?.title).toBe("New message");
+    expect(history.rows[0]?.body).toBe("Photo");
+  });
+
+  it("resolves locale once via Evaluate, not a second Decide lookup", async () => {
+    tokens.tokens = [makeToken("user-b")];
+    const uc = makeUseCase({
+      identityRead,
+      tokens,
+      presence,
+      conversationState,
+      history,
+      queue,
+    });
+
+    await uc.execute(makeTextEvent());
+
+    expect(identityRead.findUserByIdCalls).toBe(1);
+    expect(queue.jobs).toHaveLength(1);
   });
 
   it("suppresses push when the sender is the recipient", async () => {

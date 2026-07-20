@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityReadPort, IdentityUserSummary } from "../../identity/domain/ports/IdentityReadPort";
 import type { PushToken } from "../domain/PushToken";
 import type { PushTokenRepository } from "../domain/ports/PushTokenRepository";
 import { DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS } from "../domain/types";
@@ -8,9 +8,23 @@ import { EvaluateDirectMessagePush } from "./EvaluateDirectMessagePush";
 
 class FakeIdentityRead implements IdentityReadPort {
   blocks: Array<{ blockerId: string; blockedId: string }> = [];
+  locale: string | undefined = "ru";
+  findUserByIdCalls = 0;
 
-  async findUserById(_id: string) {
-    return null;
+  async findUserById(id: string): Promise<IdentityUserSummary | null> {
+    this.findUserByIdCalls += 1;
+    const summary: IdentityUserSummary = {
+      id,
+      displayName: null,
+      role: "buyer",
+      suspendedAt: null,
+      suspendedById: null,
+      suspensionReason: null,
+    };
+    if (this.locale !== undefined) {
+      summary.locale = this.locale;
+    }
+    return summary;
   }
 
   async findUsersByIds(_ids: string[]) {
@@ -92,7 +106,34 @@ describe("EvaluateDirectMessagePush", () => {
       recipientId: "recipient",
     });
 
+    expect(result).toEqual({ shouldSend: true, recipientLocale: "ru" });
+    expect(identityRead.findUserByIdCalls).toBe(1);
+  });
+
+  it("omits recipientLocale when the user has no stored locale", async () => {
+    identityRead.locale = undefined;
+    tokens.tokens = [makeToken("recipient")];
+    const uc = makeUseCase(identityRead, tokens);
+
+    const result = await uc.execute({
+      senderId: "sender",
+      recipientId: "recipient",
+    });
+
     expect(result).toEqual({ shouldSend: true });
+  });
+
+  it("does not load the recipient when push is suppressed", async () => {
+    identityRead.blocks.push({ blockerId: "recipient", blockedId: "sender" });
+    tokens.tokens = [makeToken("recipient")];
+    const uc = makeUseCase(identityRead, tokens);
+
+    await uc.execute({
+      senderId: "sender",
+      recipientId: "recipient",
+    });
+
+    expect(identityRead.findUserByIdCalls).toBe(0);
   });
 
   it("suppresses push when recipient has blocked sender", async () => {

@@ -12,7 +12,7 @@ export interface EvaluateDirectMessagePushInput {
 }
 
 export type EvaluateDirectMessagePushResult =
-  | { shouldSend: true }
+  | { shouldSend: true; recipientLocale?: string }
   | { shouldSend: false; reason: string };
 
 @Injectable()
@@ -57,6 +57,11 @@ export class EvaluateDirectMessagePush {
       };
     }
 
-    return { shouldSend: true };
+    // Locale is part of recipient resolution here so Decide adds no identity lookup.
+    const recipient = await this.identityRead.findUserById(input.recipientId);
+    return {
+      shouldSend: true,
+      ...(recipient?.locale ? { recipientLocale: recipient.locale } : {}),
+    };
   }
 }
