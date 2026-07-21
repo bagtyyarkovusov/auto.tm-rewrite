@@ -17,6 +17,23 @@ import type { PrismaService } from "@auto-tm/db";
  *  - no two suites can insert the same row (no shared IDs/slugs/phones),
  *  - cleanup can delete exactly the suite's own rows and nothing else,
  *  - payloads stay module-level constants (deterministic at load time).
+ *
+ * Cross-context state changes in fixtures (convention):
+ * A suite exercises its own context through HTTP only. When a fixture needs
+ * state owned by a DIFFERENT context (e.g. a listing banned by admin
+ * moderation, in a suite testing favorites), the suite may short-circuit
+ * with a direct prisma write scoped to its own suite's rows, instead of
+ * importing the other context's module and driving its admin API. Rationale:
+ *  - the owning context's own e2e suite covers the real transition end-to-end
+ *    (AdminModerationController.e2e.spec.ts proves admin ban + public
+ *    enforcement; the row lands in the same column these suites read),
+ *  - importing the owning module would widen the suite's Nest module graph
+ *    and re-test another context's behavior.
+ * Two rules keep the short-circuit honest:
+ *  - never use prisma to set up state the suite under test is responsible
+ *    for producing (that state MUST go through HTTP), and
+ *  - short-circuits touch only suite-namespaced rows, so
+ *    `cleanSuiteFixtures` removes them like any other fixture row.
  */
 
 function uuidFromKey(key: string): string {

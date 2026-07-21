@@ -237,6 +237,9 @@ describe("FavoritesController e2e", () => {
         .expect(201);
       const listingId = publishRes.body.id;
 
+      // Cross-context fixture: banning is owned by admin moderation (covered
+      // end-to-end by AdminModerationController.e2e.spec.ts). Convention in
+      // test/helpers/e2eSuite.ts allows short-circuiting via prisma here.
       await prisma.listing.update({
         where: { id: listingId },
         data: { status: "banned" },
@@ -369,7 +372,9 @@ describe("FavoritesController e2e", () => {
         .send({})
         .expect(201);
 
-      // Ban the listing
+      // Cross-context fixture: banning is owned by admin moderation (covered
+      // end-to-end by AdminModerationController.e2e.spec.ts). Convention in
+      // test/helpers/e2eSuite.ts allows short-circuiting via prisma here.
       await prisma.listing.update({
         where: { id: listingId },
         data: { status: "banned" },
