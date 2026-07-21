@@ -89,6 +89,7 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 - **NEVER store plaintext refresh tokens.** Bcrypt-hash them in `User.refreshTokenHash` (your current pattern, kept).
 - **NEVER commit `.env` files. Only `.env.template` is committed.**
 - **NEVER bypass the 60s video / 5 MB image client-side compression** — TM mobile data is metered.
+- **NEVER duplicate agent skills across layers.** The nine workflow skills live exactly once, at `.claude/skills/<name>/SKILL.md` ([ADR-0040](docs/adr/0040-repo-canonical-workflow-skills.md)); generic skills are user-global and are never committed. No `.claude/commands/` files, no `.agents/skills/` mirrors, no global `*-kimi` variants.
 
 ## Documentation systems (don't mix)
 

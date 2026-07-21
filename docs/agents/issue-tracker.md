@@ -2,7 +2,7 @@
 
 This repo tracks all issues in **GitHub Issues**, using the `gh` CLI.
 
-Skills that read this file: `to-issues`, `triage`, `to-prd`, `qa`, `request-refactor-plan`.
+Skills that read this file: user-global generic skills (`triage`, `qa`, `request-refactor-plan`) and the project workflow skills at `.claude/skills/` (`create-sprint-issues`, `run-issue`) — see [ADR-0040](../adr/0040-repo-canonical-workflow-skills.md).
 
 ## Operations
 
@@ -128,7 +128,7 @@ Emit `<promise>COMPLETE</promise>` once:
 
 ## Labels applied at creation
 
-`to-issues` applies these labels when generating sprint child issues:
+`create-sprint-issues` applies these labels when generating sprint child issues:
 
 - **Triage**: `ready-for-agent` (always, for child issues). Add `blocked` in addition when `## Depends on` lists open issues. The orchestrator filters `-label:blocked`.
 - **Phase**: `phase-1` | `phase-2` | `phase-3` (from the sprint's row in `docs/prd/03-roadmap.md`).
