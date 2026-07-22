@@ -29,7 +29,7 @@
     "compose:logs": "docker compose -f infra/compose/docker-compose.dev.yml logs -f"
   },
   "devDependencies": {
-    "@ai-hero/sandcastle": "file:./vendor/ai-hero-sandcastle-0.5.10-d4b7db7-kimi-prompt-json-no-session-capture.tgz",
+    "@ai-hero/sandcastle": "file:vendor/ai-hero-sandcastle-0.5.10-d4b7db7-1df6ad8f.tgz",
     "tsx": "^4.19.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.3"

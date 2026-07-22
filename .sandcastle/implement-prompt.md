@@ -36,6 +36,10 @@ Read `CLAUDE.md` and the local `CONTEXT.md` for the area you touch. Hard rules
 - **CONTEXT.md is current state (ADR-0019):** if you add or change a Prisma field,
   port, use-case, event, or HTTP route, update that context's `CONTEXT.md` in the
   SAME change.
+- **Railway (only if the issue declares `requires_railway: true`):** the Railway
+  CLI and the `use-railway` Claude Code skill are available. Work only against the
+  pinned `RAILWAY_PROJECT_ID` / `RAILWAY_ENVIRONMENT_ID`; never provision resources
+  or create credentials unless the issue explicitly instructs you to.
 
 # DOCUMENTATION (Context7 — required, ADR-0017)
 

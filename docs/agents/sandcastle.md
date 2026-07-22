@@ -76,25 +76,62 @@ calls later fail under a shared 5,000/hour quota.
 
 ## Agent runtime
 
-Sandcastle runs the native **Kimi Code CLI** (`kimi`) inside each Docker sandbox,
-not Claude Code pointed at Kimi's Anthropic-compatible endpoint. The sandbox image
-installs the official npm package:
+Sandcastle supports two agent providers, selectable via `SANDCASTLE_AGENT_PROVIDER`
+in `.sandcastle/.env`:
+
+- **`claude-code`** (default) — Claude Code CLI (`claude`) pointed at Kimi's
+  Anthropic-compatible endpoint. This is the primary provider and matches the
+  `tm-whatsapp` Sandcastle setup.
+- **`kimi-code`** — native Kimi Code CLI (`kimi`) via its documented `KIMI_MODEL_*`
+  environment channel.
+
+Both providers share the same per-role model matrix and 401/403 fallback ladder
+configured in `.sandcastle/main.mts`:
+
+| Role        | Model            | Effort | Context (default) |
+|-------------|------------------|--------|-------------------|
+| planner     | kimi-for-coding  | —      | 256K              |
+| implementer | kimi-for-coding  | —      | 256K              |
+| reviewer    | k3               | high   | 1M                |
+| merger      | kimi-for-coding  | —      | 256K              |
+
+K2.7 (`kimi-for-coding`) has no effort levels and caps output at 32K; K3 supports
+high effort and a 1M context window. The ladder falls back automatically on quota
+or entitlement errors.
+
+The sandbox image installs:
 
 ```bash
-npm install -g @moonshot-ai/kimi-code
+npm install -g @moonshot-ai/kimi-code   # native Kimi CLI
+curl -fsSL https://claude.ai/install.sh | bash  # Claude Code CLI
 ```
 
-Do not use the curl installer in this repo's Dockerfile. The image pins Node
+Do not use the Kimi curl installer in this repo's Dockerfile. The image pins Node
 22.19+ because the npm package requires it.
 
-At run time, `.sandcastle/main.mts` maps `.sandcastle/.env` `KIMI_API_KEY` into
-Kimi Code CLI's documented `KIMI_MODEL_*` environment channel, so the image never
-bakes the API key into `config.toml`. The active model id is `kimi-for-coding`
-with a 262k context window and thinking/tool-use capabilities enabled.
+At run time, `.sandcastle/main.mts` maps `.sandcastle/.env` `KIMI_API_KEY` into the
+chosen provider's env channel, so the image never bakes API keys into `config.toml`.
 
-Planner, reviewer, and merger use the same native Kimi Code provider as the
-implementer. The vendored fork parses Kimi stream-json output for text,
-thinking, tool calls, and session capture.
+## Railway tooling
+
+The sandbox image also installs the Railway CLI and the `use-railway` Claude Code
+skill. Railway credentials are injected **only** into sandboxes for issues that
+declare `requires_railway: true` in their body:
+
+```text
+requires_railway: true
+```
+
+The planner and merger never receive Railway credentials. Inside a Railway-enabled
+sandbox, agents can run `railway` CLI commands and invoke the `use-railway` skill,
+but they must target only the pinned `RAILWAY_PROJECT_ID` and
+`RAILWAY_ENVIRONMENT_ID` from `.sandcastle/.env`. `railway list` does not work with
+token auth, so always operate against the pinned project.
+
+> **Operational note:** Railway tooling gives agents the *ability* to call Railway.
+> It does not remove the S11 HITL gate for actual resource provisioning
+> (S11-07 through S11-13). Only issues explicitly authorized to provision should
+> declare `requires_railway: true`.
 
 ## The gate (D1)
 

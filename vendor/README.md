@@ -1,6 +1,6 @@
 # Vendored dependencies
 
-## `ai-hero-sandcastle-0.5.10-d4b7db7-kimi-prompt-json-no-session-capture.tgz`
+## `ai-hero-sandcastle-0.5.10-d4b7db7-1df6ad8f.tgz`
 
 Prebuilt tarball of the Kimi-enabled `@ai-hero/sandcastle` fork, consumed as a
 **host-only** devDependency (`file:`) by the root `package.json`. Sandcastle runs
