@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| **Status** | ⚪ Approved 2026-07-22, not started — pending batch grill + issue creation; mutable until roadmap → 🟡 |
+| **Status** | ⚪ Approved 2026-07-22, not started — batch grill complete; pending issue creation; mutable until roadmap → 🟡 |
 | **Phase** | Pre-launch deployment track (ADR-0039) |
 | **Milestone** | M10 — Store-reviewable cloud production |
 | **Demo audience** | Founder, internal operators, and App Store / Google Play reviewers using seeded demo accounts |
 | **Appetite** | One deployment sprint; slice vertically and stop at a repeatable reviewer-ready production proof |
-| **Issues** | Not created — batch slicing/grill follows approval |
+| **Issues** | Approved 13-slice dependency map below; GitHub issues not yet created |
 
 > **Why this sprint exists.** S10 closed the remote product loop, but the product is not reachable by store reviewers and production native push is still a shell. [ADR-0039](../../adr/0039-phased-cloud-first-hosting.md) moves the first deployment to Railway so store verification can proceed without waiting for TM presence or hardware. S11 makes that temporary cloud phase operable and reviewable. It does not open the marketplace to real users.
 
@@ -17,7 +17,7 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 
 ## User capability (the demo line)
 
-> “From a store-candidate mobile build, a reviewer can sign in with one of the reserved demo accounts, browse and create seeded listings, exchange rich chat between distinct buyer/seller accounts, receive a native direct-message push, report/block content, and see the report handled in the live admin — while an operator can identify the deployed commit, migrate safely, restore data, roll back, and repeat the deployment.”
+> “From an installable production-smoke mobile build that is not submitted to either store, a reviewer can sign in with one of the reserved demo accounts, browse and create seeded listings, exchange rich chat between distinct buyer/seller accounts, receive a native direct-message push, report/block content, and see the report handled in the live admin — while an operator can identify the deployed commit, migrate safely, restore data, roll back, and repeat the deployment.”
 
 ## Locked inputs
 
@@ -27,7 +27,7 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 - Each environment has `api`, `worker`, `admin`, `web`, Postgres, Redis, and MinIO. `sms-gateway` and `phone-agent` are excluded.
 - `SMS_DRIVER=mock`; `OTP_TEST_MODE` and response-embedded test codes are forbidden outside CI.
 - Production is reviewer-only: 3–5 reserved, unissueable `+993` demo accounts; no real users or real SMS before TM cutover.
-- Railway-generated domains are acceptable for staging/internal builds. A stable AutoTM-owned API domain is a human-owned hard gate before the first store-candidate production binary is submitted.
+- Railway-generated domains are acceptable for staging and internal `production-smoke` builds. A stable AutoTM-owned API domain is a human-owned hard gate before the `production` store profile is built or submitted in Sprint 12.
 - The store-era app has no `updates.url`; self-hosted OTA remains TM-era work.
 
 ## Scope
@@ -36,9 +36,9 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 
 - Make the monorepo build and start each Railway service reproducibly from the repository.
 - Add versioned Railway configuration where it removes dashboard-only drift; document any settings that must remain provider-side.
-- Use Railway private networking for service-to-service Postgres, Redis, and MinIO traffic; expose only API, admin, web, and the media read surface required by clients.
-- Give API a real readiness gate for its required dependencies. Web/admin get deploy health endpoints; the worker gets a deterministic boot/queue-connect check rather than a public route.
-- Run `prisma migrate deploy` through one explicit release authority. Never run `migrate dev` or `db push`; document deploy ordering and the backward-compatible migration rule needed when services roll independently.
+- Use Railway private networking for service-to-service Postgres, Redis, and MinIO traffic. Expose MinIO's S3 origin only for anonymous media reads and signed direct client PUTs; administrative and unsigned writes remain private, and the console is never public.
+- Give API a liveness-only `/healthz` and a bounded `/readyz` that checks Postgres, Redis, and MinIO. Web/admin get dependency-free deploy health endpoints; the worker validates Postgres, Redis/queue, and complete production push credentials at boot rather than exposing a public route.
+- API is the sole `prisma migrate deploy` authority through its Railway pre-deploy command. Worker/admin/web reference API readiness and deploy only after migration + readiness succeed. Never run `migrate dev`, `db push`, or reverse migrations; roll back application code only against expand/contract-compatible forward migrations.
 - Record commit SHA and environment in deploy evidence so production can be tied to the exact `main` revision proven in staging, even if Railway rebuilds it.
 
 ### 2. Safe environment and promotion model
@@ -48,6 +48,7 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 - Production has no branch autodeploy. An operator manually deploys the exact SHA that passed staging smoke and records approval/evidence.
 - Define fail-closed reviewer-era flags: no public signup, no real SMS, no CI OTP response mode, no production test push transport, and no accidental cross-environment database/storage URLs.
 - Prove a rollback and a Postgres + media backup/restore drill on non-production data before production is declared ready.
+- Railway Serverless sleep may be enabled for staging API, admin, and web. Trial it for staging MinIO only after volume persistence, wake, media-read, and signed-upload proof. The worker and environment-local Postgres/Redis remain awake; all production services remain awake during store review. Cold-start smoke must cover legal pages, auth, WebSocket chat, media reads, and signed uploads.
 
 ### 3. Reviewer identity and seeded scenario
 
@@ -61,15 +62,15 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 
 - Replace the worker's permanent-failure `FcmApnsPushTransport` shell with real FCM/APNS delivery behind `PushPort`.
 - Keep credentials out of git; parse multiline private keys safely; preserve invalid-token invalidation, retryable/permanent classification, and history updates.
-- Prove one offline direct-message delivery and deep link on physical Android and iOS store-candidate builds, or record a platform-specific external credential gate without claiming that platform ready.
+- Prove one offline direct-message delivery and deep link on physical Android and iOS `production-smoke` builds, or record a platform-specific external credential gate without claiming that platform ready.
 
 ### 5. Mobile build profiles and public URLs
 
-- Add `apps/mobile/eas.json` with shared, staging/internal, and production/store profiles. Environment selection is explicit; API URLs are supplied by the build environment, not committed values.
-- `EXPO_PUBLIC_API_URL` is treated as build-time public configuration. Production builds fail before bundling when the stable AutoTM-owned API URL is absent or invalid.
+- Add `apps/mobile/eas.json` with shared, `staging` internal-distribution, `production-smoke` internal-distribution, and `production` store-distribution profiles. Environment selection is explicit; API URLs are supplied by the build environment, not committed values.
+- `EXPO_PUBLIC_API_URL` is build-time public configuration. Staging and `production-smoke` may use their environment's Railway-generated host. The `production` store profile fails before bundling unless its HTTPS/WSS hosts match the approved stable AutoTM-owned domains; localhost, IP literals, and Railway-generated hosts are forbidden there.
 - Store credentials and signing material remain in EAS/store credential management, not repository files.
 - No EAS Update/self-hosted update URL is configured in this phase. Native and JS/assets ship together in each binary.
-- Produce installable Android and iOS staging builds for the integrated smoke. Production store submission remains Sprint 12.
+- Produce installable Android and iOS staging and `production-smoke` builds for integrated smoke and production confirmation. Validate the `production` profile without submitting it; production store build/submission remains Sprint 12.
 
 ### 6. Operations and proof
 
@@ -84,6 +85,8 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 - [ ] API, worker, admin, and web build/start from clean Railway builds using checked-in commands/configuration.
 - [ ] Required health/readiness gates prevent a bad release from taking traffic; worker boot failure is externally visible in deploy status/logs.
 - [ ] `prisma migrate deploy` has one documented release authority and succeeds before code requiring the migration serves traffic.
+- [ ] MinIO has one persistent volume, separate private server/public signing endpoints, anonymous GET plus signed PUT only, explicit idempotent bucket bootstrap, routine backups, and checksum-backed restore proof.
+- [ ] Staging Serverless sleep follows the approved service boundary and cold-start smoke covers legal pages, auth, WebSocket chat, media reads, and signed uploads; production store-review services remain awake.
 - [ ] Staging deploy from `main` waits for the required GitHub Actions check to pass.
 - [ ] A deliberately failing CI revision does not deploy to staging.
 - [ ] Production cannot autodeploy from a branch; manual procedure deploys the exact staging-proven SHA and records it.
@@ -93,10 +96,10 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 - [ ] Reviewer bypass tests cover disabled flag, non-reserved numbers, wrong codes, constant-time comparison seam, rate-limit exemption, audit emission, and privilege constraints.
 - [ ] Demo seed is idempotent, environment-guarded, and provides deterministic review content without committing credentials.
 - [ ] FCM and APNS adapters classify success, invalid token, retryable failure, and permanent failure; worker/history behavior remains tested.
-- [ ] Offline direct-message push and conversation deep link are proven on physical Android and iOS, or the blocked platform remains explicitly not-ready.
-- [ ] `apps/mobile/eas.json` validates and staging builds receive the intended `EXPO_PUBLIC_API_URL` without committed environment values.
+- [ ] Offline direct-message push and conversation deep link are proven on physical Android and iOS `production-smoke` builds, or the blocked platform remains explicitly not-ready.
+- [ ] `apps/mobile/eas.json` validates shared, `staging`, `production-smoke`, and `production` profiles; internal builds receive the intended `EXPO_PUBLIC_API_URL` without committed environment values, and the store profile enforces stable approved hosts.
 - [ ] No `updates.url` or EAS Update channel is introduced.
-- [ ] Android and iOS staging binaries install and complete the integrated reviewer smoke.
+- [ ] Android and iOS staging and `production-smoke` binaries install and complete their integrated reviewer smokes; no store submission occurs in S11.
 - [ ] Railway production passes reviewer auth → listing → rich chat → report/moderation/enforcement → push confirmation.
 - [ ] Rollback restores the prior application revision without an unsafe migration reversal.
 - [ ] A non-production Postgres + media restore drill passes and is recorded.
@@ -104,25 +107,33 @@ Deploy staging and reviewer-only production on Railway, prove the complete store
 - [ ] Relevant `CONTEXT.md` files change in the same implementation PRs as routes, env contracts, ports, domain invariants, or package structure.
 - [ ] Repository typecheck, lint, tests, runtime-import checks, Expo dependency check, platform exports/builds, and targeted deployment smokes pass as applicable.
 
-## Candidate build order for the later batch grill
+## Approved child issue map
 
-These are seams to challenge and slice after the sprint contract is approved; they are not issue bodies yet.
+The 2026-07-22 batch grill approved this dependency-ordered slicing. GitHub-returned issue numbers replace these local IDs during issue creation.
 
-1. Deployment contract audit: service commands, Docker/Railway config, env matrix, readiness gaps.
-2. Railway-safe migration/readiness implementation and service configuration.
-3. Reviewer bypass domain/application tests and implementation.
-4. Environment-guarded reviewer/demo seed and scenario fixtures.
-5. Real FCM/APNS transport plus credential/error-path tests.
-6. EAS profiles, URL validation, and staging build proof.
-7. Railway staging provisioning, Wait-for-CI negative proof, and integrated smoke.
-8. Backup/restore + rollback drills and production manual-promotion proof.
-9. Ops reconciliation, final reviewer confirmation pass, and sprint closeout evidence.
+| ID | Slice | Depends on | Execution mode |
+|---|---|---|---|
+| S11-01 | Deployable runtime contract: clean images, environment validation, health, and API-owned migration authority | — | AFK |
+| S11-02 | MinIO dual-endpoint contract, explicit bootstrap, signed upload, backup tooling | — | AFK |
+| S11-03 | Reviewer authentication bypass and durable audit | — | AFK |
+| S11-04 | Idempotent reviewer scenario seed, rotation, and revocation | S11-03 | AFK, blocked |
+| S11-05 | Real FCM/APNS transport and token-history hygiene | — | AFK |
+| S11-06 | EAS profiles, URL gate, Firebase file secret, and OTA-negative proof | — | AFK |
+| S11-07 | Staging Postgres, Redis, and persistent MinIO data plane | S11-01, S11-02 | HITL, blocked |
+| S11-08 | Staging applications, deploy ordering, Wait-for-CI negative proof, and cold-start smoke | S11-01, S11-07 | HITL, blocked |
+| S11-09 | Staging reviewer flow, installable builds, and physical Android/iOS push proof | S11-04, S11-05, S11-06, S11-08 | HITL, blocked |
+| S11-10 | Isolated Postgres + media backup/restore drill | S11-02, S11-08 | HITL, blocked |
+| S11-11 | Isolated reviewer-production foundation and confirmation gates | S11-08, S11-09, S11-10 | HITL, blocked |
+| S11-12 | Exact-SHA production promotion, previous-SHA rollback, and production-smoke confirmation | S11-11 | HITL, blocked |
+| S11-13 | Runbook reconciliation, evidence manifest, and sprint closeout proof | S11-09, S11-10, S11-12 | HITL, blocked |
+
+The initial unblocked queue is S11-01, S11-02, S11-03, S11-05, and S11-06. Provisioning, credentials, physical devices, production promotion, domain/DNS work, and store actions remain human gates. Issue creation does not authorize any of them.
 
 ## Files likely created / touched
 
 ```text
 .github/workflows/*
-railway.json / railway.toml or service-specific Railway config
+railway/*.json
 infra/docker/*
 apps/api/src/common/*health*
 apps/api/src/env.schema.ts
@@ -156,7 +167,7 @@ docs/prd/03-roadmap.md (only when the approved sprint starts)
 
 - **Migration race:** independently deploying API and worker against a changing schema can start new code too early. Use one release authority and expand/contract-safe migrations; do not hide the race behind retries.
 - **Monorepo build context:** Railway service root directories can omit shared workspaces/config. Prefer an explicit root build context and service-specific commands/config paths proven from clean builds.
-- **MinIO durability/public URL:** object bytes need persistent storage, private write traffic, public reads, backup, and restore proof; container health alone is insufficient.
+- **MinIO durability/public URL:** object bytes need persistent storage, a private server endpoint, a public signing/read endpoint, anonymous GET plus signed PUT only, backup, and restore proof; container health alone is insufficient.
 - **Build-time URL drift:** `EXPO_PUBLIC_*` values are embedded in binaries. A wrong production API host requires another binary and store review.
 - **Reviewer bypass exposure:** multiple accounts enlarge a permanent auth bypass. Keep the account set narrow, unissueable, audited, flag-gated, non-admin, and secret-managed.
 - **Push credential asymmetry:** Android may pass before APNS credentials exist (or vice versa). Do not call the sprint ready while one required platform is unproven.
@@ -176,7 +187,7 @@ docs/prd/03-roadmap.md (only when the approved sprint starts)
 
 ## System-design review
 
-**Provisional score: 8/10.** The proposal has explicit boundaries, deploy/promotion ordering, failure gates, data durability, rollback/restore, and external credential/domain gates. It reaches 9/10 only after the batch grill chooses a single migration orchestration mechanism, proves MinIO durability/backup semantics, and resolves whether provider configuration is versioned per service or deliberately dashboard-managed. It reaches 10/10 only after staging evidence validates those choices.
+**Approved design score: 9/10.** The batch grill resolved migration authority, per-service repository-root Railway configuration, health/readiness, MinIO durability and dual endpoints, service-specific secrets, reviewer auth/audit, real FCM/APNS delivery, EAS profiles, exact-SHA promotion, rollback, and dependency slicing. It reaches 10/10 only after live staging/production evidence measures cold starts and restore/rollback behavior, proves physical Android + iOS push, and validates stable production domains and credentials.
 
 ## References
 
