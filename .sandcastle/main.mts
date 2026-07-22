@@ -1,6 +1,16 @@
 // Kimi-Sandcastle — parallel planner + review orchestration loop for auto.tm-rewrite.
 //
-//   Phase 1 (Plan):    A Kimi planner reads the `ready-for-agent -blocked` issue
+// Providers — pick one via SANDCASTLE_AGENT_PROVIDER in .sandcastle/.env:
+//   claude-code  Claude Code CLI on Kimi's Anthropic-compatible endpoint (default)
+//   kimi-code    Native Kimi Code CLI via its documented KIMI_MODEL_* env channel
+//
+// Per-role matrix (both providers share the same fallback ladder on 401/403):
+//   planner      kimi-for-coding  —  256K
+//   implementer  kimi-for-coding  —  256K
+//   reviewer     k3               high  1M
+//   merger       kimi-for-coding  —  256K
+//
+//   Phase 1 (Plan):    A planner reads the `ready-for-agent -blocked` issue
 //                      queue, builds a dependency graph, and emits a <plan> JSON
 //                      of unblocked issues + `sandcastle/issue-<N>-<slug>` branches.
 //   Phase 2 (Execute): For each issue a sandbox is created (own Docker container +
@@ -9,6 +19,10 @@
 //                      issue pipelines run concurrently via Promise.allSettled().
 //   Phase 3 (Merge):   One merger merges the completed branches into the current
 //                      branch and closes the child issues.
+//
+// Railway env is injected ONLY into sandboxes for issues that declare
+// `requires_railway: true` in their body. The planner and merger never receive
+// Railway credentials.
 //
 // The outer loop repeats up to MAX_ITERATIONS so newly-unblocked issues are picked
 // up after each round of merges.
@@ -19,6 +33,18 @@
 
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker, defaultImageName } from "@ai-hero/sandcastle/sandboxes/docker";
+import {
+  buildFallbackLadder,
+  claudeModelForRung,
+  claudeOnKimiEnv,
+  effortForRung,
+  isKimiEntitlementError,
+  kimiCodeEnv,
+  maxOutputTokensForRung,
+  resolveRoleSpec,
+  type AgentRole,
+  type LadderRung,
+} from "@ai-hero/sandcastle";
 import { exec, execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -260,65 +286,181 @@ const HOST_ENV = { ...process.env, ...(await readSandcastleEnv()) };
 //   MAX_ITERATIONS=1 pnpm sandcastle
 const MAX_ITERATIONS = Number(HOST_ENV.MAX_ITERATIONS ?? 10);
 
-// Agent: native Kimi Code CLI (the `kimi` npm package), not Claude Code pointed at
-// Kimi's Anthropic-compatible endpoint. The CLI's documented KIMI_MODEL_* channel
-// lets us inject the key at runtime without writing secrets into config.toml.
-const MODEL = "kimi-for-coding";
+type ProviderName = "claude-code" | "kimi-code";
+const PROVIDER: ProviderName =
+  (HOST_ENV.SANDCASTLE_AGENT_PROVIDER as ProviderName | undefined) ??
+  "claude-code";
+if (PROVIDER !== "claude-code" && PROVIDER !== "kimi-code") {
+  throw new Error(
+    `Unknown SANDCASTLE_AGENT_PROVIDER "${HOST_ENV.SANDCASTLE_AGENT_PROVIDER}" — want "claude-code" | "kimi-code".`,
+  );
+}
 
-const KIMI_CODE_ENV = {
-  CI: "1",
-  COREPACK_ENABLE_PROJECT_SPEC: "0",
-  KIMI_DISABLE_TELEMETRY: "1",
-  KIMI_CODE_HOME: "/home/agent/.kimi",
-  KIMI_MODEL_NAME: MODEL,
-  KIMI_MODEL_PROVIDER_TYPE: "kimi",
-  KIMI_MODEL_BASE_URL: "https://api.kimi.com/coding/v1",
-  KIMI_MODEL_MAX_CONTEXT_SIZE: "262144",
-  KIMI_MODEL_CAPABILITIES: "thinking,tool_use,image_in",
-  ...(HOST_ENV.KIMI_MODEL_API_KEY
-    ? { KIMI_MODEL_API_KEY: HOST_ENV.KIMI_MODEL_API_KEY }
-    : HOST_ENV.KIMI_API_KEY
-      ? { KIMI_MODEL_API_KEY: HOST_ENV.KIMI_API_KEY }
-      : {}),
-};
-
-process.env.KIMI_MODEL_NAME = process.env.KIMI_MODEL_NAME || MODEL;
-process.env.KIMI_MODEL_PROVIDER_TYPE =
-  process.env.KIMI_MODEL_PROVIDER_TYPE || "kimi";
-process.env.KIMI_MODEL_BASE_URL =
-  process.env.KIMI_MODEL_BASE_URL || "https://api.kimi.com/coding/v1";
-process.env.KIMI_MODEL_MAX_CONTEXT_SIZE =
-  process.env.KIMI_MODEL_MAX_CONTEXT_SIZE || "262144";
-process.env.KIMI_MODEL_CAPABILITIES =
-  process.env.KIMI_MODEL_CAPABILITIES || "thinking,tool_use,image_in";
-process.env.KIMI_MODEL_API_KEY =
-  process.env.KIMI_MODEL_API_KEY ||
-  HOST_ENV.KIMI_MODEL_API_KEY ||
-  HOST_ENV.KIMI_API_KEY;
+const KIMI_API_KEY = HOST_ENV.KIMI_API_KEY;
+if (!KIMI_API_KEY) {
+  throw new Error(
+    "KIMI_API_KEY is not set — add it to .sandcastle/.env (see .env.example).",
+  );
+}
 
 const shellEscape = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
 
-const kimiAgent = (_effort: "low" | "medium" = "low") =>
-  ({
-    ...sandcastle.kimiCode(MODEL, {
-      thinking: true,
-      env: KIMI_CODE_ENV,
-    }),
-    buildPrintCommand({ prompt, resumeSession }) {
-      const resumeFlag = resumeSession
-        ? ` --session ${shellEscape(resumeSession)}`
-        : "";
-      return {
-        command: `kimi -p ${shellEscape(prompt)} --output-format stream-json${resumeFlag}`,
-      };
+/**
+ * Wrap a provider so its env is prefixed onto the print command (`env K=V …`).
+ *
+ * Why: top-level `sandcastle.run()` merges agent env into the container at
+ * create time, but `createSandbox()` starts its long-lived container with
+ * `agentProviderEnv: {}` — per-run agent env never reaches `sandbox.run()`
+ * execs (docker exec inherits the container's env). Prefixing the command
+ * delivers the correct per-role env on every run, including per-rung window
+ * changes while descending the fallback ladder inside a shared sandbox.
+ */
+const withProviderEnv = (
+  provider: sandcastle.AgentProvider,
+  env: Record<string, string>,
+): sandcastle.AgentProvider => {
+  const prefix = Object.entries(env)
+    .map(([k, v]) => `${k}=${shellEscape(v)}`)
+    .join(" ");
+  return {
+    ...provider,
+    buildPrintCommand(opts) {
+      const cmd = provider.buildPrintCommand(opts);
+      return { ...cmd, command: `env ${prefix} ${cmd.command}` };
     },
-    buildInteractiveArgs({ prompt, dangerouslySkipPermissions }) {
-      const args = ["kimi"];
-      if (dangerouslySkipPermissions) args.push("--yolo");
-      if (prompt) args.push(prompt);
-      return args;
-    },
-  }) satisfies sandcastle.AgentProvider;
+  };
+};
+
+const agentAtRung = (
+  role: AgentRole,
+  rung: LadderRung,
+): sandcastle.AgentProvider => {
+  const spec = resolveRoleSpec(role, HOST_ENV);
+  // Effort is K3-only: undefined on kimi-for-coding rungs (K2.7 has no
+  // effort levels) and on the k3 fallback rung of an effort-less K2.7 role
+  // (K3 then defaults server-side to high).
+  const effort = effortForRung(spec, rung);
+
+  if (PROVIDER === "kimi-code") {
+    // Native CLI: window travels via KIMI_MODEL_MAX_CONTEXT_SIZE, effort via
+    // KIMI_MODEL_THINKING_EFFORT. Model id stays `k3` (never the k3[1m] alias).
+    const env = kimiCodeEnv({
+      apiKey: KIMI_API_KEY,
+      model: rung.model,
+      window: rung.window,
+      effort,
+    });
+    return withProviderEnv(
+      sandcastle.kimiCode(rung.model, { thinking: true, env }),
+      env,
+    );
+  }
+
+  // Claude Code on Kimi: every Claude model slot pins to the same Kimi model;
+  // k3 above 256K is spelled `k3[1m]` (the alias opts into the 1M window).
+  const model = claudeModelForRung(rung);
+  const env = claudeOnKimiEnv({
+    apiKey: KIMI_API_KEY,
+    model,
+    window: rung.window,
+    effort,
+    // K2.7 caps output at 32K — pin it so Claude Code can't request more
+    // than the model emits (k3 rungs stay unpinned; cap undocumented).
+    maxOutputTokens: maxOutputTokensForRung(rung),
+  });
+  return withProviderEnv(sandcastle.claudeCode(model, { effort, env }), env);
+};
+
+/**
+ * Run `fn` with the role's agent, descending the fallback ladder on HTTP
+ * 401/403-quota: k3 roles go k3@role-window → k3@256K →
+ * kimi-for-coding@256K; K2.7 roles fall back up to k3@256K.
+ * Non-entitlement errors abort.
+ */
+const withLadder = async <T,>(
+  role: AgentRole,
+  fn: (agent: sandcastle.AgentProvider) => Promise<T>,
+): Promise<T> => {
+  const ladder = buildFallbackLadder(resolveRoleSpec(role, HOST_ENV));
+  for (const [i, rung] of ladder.entries()) {
+    if (i > 0) {
+      console.warn(
+        `[${role}] 401/403 from previous rung — falling back to ${rung.model}@${rung.window}.`,
+      );
+    }
+    try {
+      return await fn(agentAtRung(role, rung));
+    } catch (error) {
+      if (!isKimiEntitlementError(error) || i === ladder.length - 1) throw error;
+    }
+  }
+  throw new Error("unreachable: ladder exhausted without throw");
+};
+
+// ---------------------------------------------------------------------------
+// Railway env gating: injected only into issue sandboxes that declare
+// `requires_railway: true`. Planner and merger never receive Railway credentials.
+// ---------------------------------------------------------------------------
+
+const RAILWAY_ENV_KEYS = [
+  "RAILWAY_TOKEN",
+  "RAILWAY_API_TOKEN",
+  "RAILWAY_PROJECT_ID",
+  "RAILWAY_ENVIRONMENT_ID",
+  "RAILWAY_ENVIRONMENT",
+  "RAILWAY_SERVICE_ID",
+] as const;
+
+const WITHOUT_RAILWAY_ENV = Object.fromEntries(
+  RAILWAY_ENV_KEYS.map((key) => [key, ""]),
+);
+
+const RAILWAY_ISSUE_ENV = {
+  ...WITHOUT_RAILWAY_ENV,
+  RAILWAY_TOKEN: HOST_ENV.RAILWAY_TOKEN ?? "",
+  RAILWAY_PROJECT_ID: HOST_ENV.RAILWAY_PROJECT_ID ?? "",
+  RAILWAY_ENVIRONMENT_ID: HOST_ENV.RAILWAY_ENVIRONMENT_ID ?? "",
+};
+
+type IssueWorkItem = { id: string; title: string; branch: string };
+
+type IssueExecutionMetadata = {
+  body: string;
+  requiresRailway: boolean;
+};
+
+const getIssueExecutionMetadata = async (
+  issue: IssueWorkItem,
+): Promise<IssueExecutionMetadata> => {
+  const { stdout: issueJson } = await execFileAsync("gh", [
+    "issue",
+    "view",
+    issue.id,
+    "--json",
+    "body,state,labels,assignees,title",
+  ]);
+  const metadata = JSON.parse(issueJson) as {
+    body: string;
+    state: string;
+    title: string;
+    labels: { name: string }[];
+    assignees: { login: string }[];
+  };
+
+  if (metadata.state !== "OPEN") throw new Error("issue is not open");
+  if (!metadata.labels.some((label) => label.name === "ready-for-agent")) {
+    throw new Error("issue is missing `ready-for-agent`");
+  }
+  if (metadata.assignees.length > 0) throw new Error("issue is already assigned");
+  if (metadata.title !== issue.title) {
+    throw new Error("planner returned a stale issue title");
+  }
+
+  return {
+    body: metadata.body,
+    requiresRailway: /^requires_railway:\s*true\s*$/im.test(metadata.body),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Dependency strategy: copy-to-worktree (two-stage). See ADR-0033 +
@@ -551,15 +693,17 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   //
   // One planner iteration: read the issue queue once, emit a plan, then let the
   // host script canonicalize branch names so planner slug drift cannot create
-  // duplicate stale branches.
+  // duplicate stale branches. The planner gets no Railway credentials.
   // -------------------------------------------------------------------------
-  const plan = await sandcastle.run({
-    sandbox: docker(),
-    name: "planner",
-    maxIterations: 1,
-    agent: kimiAgent("low"),
-    promptFile: "./.sandcastle/plan-prompt.md",
-  });
+  const plan = await withLadder("planner", (agent) =>
+    sandcastle.run({
+      sandbox: docker({ env: WITHOUT_RAILWAY_ENV }),
+      name: "planner",
+      maxIterations: 1,
+      agent,
+      promptFile: "./.sandcastle/plan-prompt.md",
+    }),
+  );
 
   // Extract the <plan>…</plan> block from the agent's stdout. Use the LAST match:
   // the planner's output may mention <plan> inline before the real block.
@@ -601,6 +745,30 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     console.log(`  ${issue.id}: ${issue.title} → ${issue.branch}`);
   }
 
+  // Fetch issue metadata (including Railway gating) before any sandbox is created.
+  const eligibleIssues: Array<{ issue: IssueWorkItem; metadata: IssueExecutionMetadata }> = [];
+  for (const issue of issues) {
+    try {
+      eligibleIssues.push({
+        issue,
+        metadata: await getIssueExecutionMetadata(issue),
+      });
+    } catch (error) {
+      console.warn(
+        `[${issue.id}] rejected by deterministic readiness gate: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  if (eligibleIssues.length === 0) {
+    console.log("No eligible issues to work on. Exiting.");
+    break;
+  }
+
+  console.log(
+    `Executing ${eligibleIssues.length} eligible issue(s) in parallel.`,
+  );
+
   // -------------------------------------------------------------------------
   // Stage A: build the Linux node_modules tree once (no-op when the lockfile is
   // unchanged), then enumerate the dirs to clone into each worktree (Stage B).
@@ -622,19 +790,26 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   //
   // One sandbox per issue (implementer + reviewer share it on the same branch).
   // Promise.allSettled so one failing pipeline doesn't cancel the others.
+  // Railway credentials are injected only when the issue declares
+  // `requires_railway: true`.
   // -------------------------------------------------------------------------
   const settled = await Promise.allSettled(
-    issues.map(async (issue) => {
+    eligibleIssues.map(async ({ issue, metadata }) => {
       await prepareIssueBranch(issue);
       const setupStartedAt = Date.now();
       console.log(
         `[${issue.id}] creating sandbox + cloning modules for ${issue.branch}...`,
       );
+      if (metadata.requiresRailway) {
+        console.log(`[${issue.id}] Railway env injected (requires_railway: true).`);
+      }
       // Stage B: CoW-clone the prebuilt Linux modules into the worktree (no
       // install touches the bind mount). Stage C top-up runs via implementerHooks.
       const sandbox = await sandcastle.createSandbox({
         branch: issue.branch,
-        sandbox: docker(),
+        sandbox: docker({
+          env: metadata.requiresRailway ? RAILWAY_ISSUE_ENV : WITHOUT_RAILWAY_ENV,
+        }),
         copyToWorktree: MODULE_PATHS,
         copyFromDir: LINUX_MODULES_DIR,
         timeouts: { copyToWorktreeMs: COPY_TO_WORKTREE_MS },
@@ -646,34 +821,38 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         console.log(
           `[${issue.id}] implementer starting (idle timeout ${IMPLEMENTER_IDLE_TIMEOUT_SECONDS}s).`,
         );
-        const implement = await sandbox.run({
-          name: "implementer",
-          maxIterations: 100,
-          idleTimeoutSeconds: IMPLEMENTER_IDLE_TIMEOUT_SECONDS,
-          agent: kimiAgent("medium"),
-          promptFile: "./.sandcastle/implement-prompt.md",
-          promptArgs: {
-            TASK_ID: issue.id,
-            ISSUE_TITLE: issue.title,
-            BRANCH: issue.branch,
-          },
-        });
+        const implement = await withLadder("implementer", (agent) =>
+          sandbox.run({
+            name: "implementer",
+            maxIterations: 100,
+            idleTimeoutSeconds: IMPLEMENTER_IDLE_TIMEOUT_SECONDS,
+            agent,
+            promptFile: "./.sandcastle/implement-prompt.md",
+            promptArgs: {
+              TASK_ID: issue.id,
+              ISSUE_TITLE: issue.title,
+              BRANCH: issue.branch,
+            },
+          }),
+        );
 
         // Only review if the implementer produced commits.
         if (implement.commits.length > 0) {
           console.log(
             `[${issue.id}] reviewer starting (idle timeout ${REVIEWER_IDLE_TIMEOUT_SECONDS}s).`,
           );
-          const review = await sandbox.run({
-            name: "reviewer",
-            maxIterations: 1,
-            idleTimeoutSeconds: REVIEWER_IDLE_TIMEOUT_SECONDS,
-            agent: kimiAgent("low"),
-            promptFile: "./.sandcastle/review-prompt.md",
-            promptArgs: {
-              BRANCH: issue.branch,
-            },
-          });
+          const review = await withLadder("reviewer", (agent) =>
+            sandbox.run({
+              name: "reviewer",
+              maxIterations: 1,
+              idleTimeoutSeconds: REVIEWER_IDLE_TIMEOUT_SECONDS,
+              agent,
+              promptFile: "./.sandcastle/review-prompt.md",
+              promptArgs: {
+                BRANCH: issue.branch,
+              },
+            }),
+          );
 
           // Merge both runs' commits so the merge phase sees all of them.
           return { ...review, commits: [...implement.commits, ...review.commits] };
@@ -689,14 +868,14 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   for (const [i, outcome] of settled.entries()) {
     if (outcome.status === "rejected") {
       console.error(
-        `  ✗ ${issues[i]!.id} (${issues[i]!.branch}) failed: ${outcome.reason}`,
+        `  ✗ ${eligibleIssues[i]!.issue.id} (${eligibleIssues[i]!.issue.branch}) failed: ${outcome.reason}`,
       );
     }
   }
 
   // Only branches that actually produced commits go to the merge phase.
   const completedIssues = settled
-    .map((outcome, i) => ({ outcome, issue: issues[i]! }))
+    .map((outcome, i) => ({ outcome, issue: eligibleIssues[i]!.issue }))
     .filter(
       (entry) =>
         entry.outcome.status === "fulfilled" &&
@@ -726,24 +905,27 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // tm-proxy runner) for the Testcontainers e2e gate — no Docker-in-Docker here.
   // merge-to-head runs in a throwaway worktree; Stage B clones the modules into
   // it (copyToWorktree + copyFromDir) so the merger can run the gate.
+  // The merger receives no Railway credentials.
   // -------------------------------------------------------------------------
-  await sandcastle.run({
-    hooks: mergerHook,
-    sandbox: docker(),
-    branchStrategy: { type: "merge-to-head" },
-    copyToWorktree: MODULE_PATHS,
-    copyFromDir: LINUX_MODULES_DIR,
-    timeouts: { copyToWorktreeMs: COPY_TO_WORKTREE_MS },
-    name: "merger",
-    maxIterations: 1,
-    idleTimeoutSeconds: MERGER_IDLE_TIMEOUT_SECONDS,
-    agent: kimiAgent("low"),
-    promptFile: "./.sandcastle/merge-prompt.md",
-    promptArgs: {
-      BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),
-      ISSUES: completedIssues.map((i) => `- ${i.id}: ${i.title}`).join("\n"),
-    },
-  });
+  await withLadder("merger", (agent) =>
+    sandcastle.run({
+      hooks: mergerHook,
+      sandbox: docker({ env: WITHOUT_RAILWAY_ENV }),
+      branchStrategy: { type: "merge-to-head" },
+      copyToWorktree: MODULE_PATHS,
+      copyFromDir: LINUX_MODULES_DIR,
+      timeouts: { copyToWorktreeMs: COPY_TO_WORKTREE_MS },
+      name: "merger",
+      maxIterations: 1,
+      idleTimeoutSeconds: MERGER_IDLE_TIMEOUT_SECONDS,
+      agent,
+      promptFile: "./.sandcastle/merge-prompt.md",
+      promptArgs: {
+        BRANCHES: completedBranches.map((b) => `- ${b}`).join("\n"),
+        ISSUES: completedIssues.map((i) => `- ${i.id}: ${i.title}`).join("\n"),
+      },
+    }),
+  );
 
   await pushCurrentBranch();
 

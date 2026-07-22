@@ -1,5 +1,13 @@
 # Sandcastle sandbox image for auto.tm-rewrite.
 #
+# Dual agent providers on the Kimi Code API:
+#   - Claude Code CLI (`claude`) — primary, pointed at Kimi's Anthropic-compatible
+#     endpoint at runtime via ANTHROPIC_* env (main.mts)
+#   - Kimi Code CLI (`kimi`) — native fallback provider, configured at runtime
+#     via the KIMI_MODEL_* env channel (main.mts)
+#
+# Also ships: GitHub CLI (`gh`), pnpm, Context7 MCP, Railway CLI + Claude Code skill.
+#
 # Build with:
 #   pnpm exec sandcastle docker build-image --dockerfile .sandcastle/Dockerfile
 # The --dockerfile flag sets the build context to the repo root so the warm-store
@@ -12,6 +20,9 @@
 # This is a HOST-SIDE dev image (it runs on the developer Mac). It is never
 # shipped to the air-gapped runtime. It bakes a warm pnpm store so per-worktree
 # installs run offline + fast (see .sandcastle/main.mts install hook).
+#
+# Secrets (KIMI_API_KEY, GH_TOKEN, CONTEXT7_API_KEY, RAILWAY_TOKEN) are injected
+# at runtime from .sandcastle/.env; they are never baked into this image.
 
 FROM node:22.19-bookworm
 
@@ -79,12 +90,47 @@ RUN mkdir -p /home/agent/.local && \
 ENV KIMI_CODE_HOME="/home/agent/.kimi"
 
 RUN mkdir -p /home/agent/.kimi && \
-    printf 'default_model = "kimi-for-coding"\ndefault_permission_mode = "auto"\ndefault_plan_mode = false\ntelemetry = false\n\n[thinking]\nenabled = true\neffort = "high"\nkeep = "all"\n\n[loop_control]\nreserved_context_size = 50000\n\n[background]\nkeep_alive_on_exit = true\nprint_wait_ceiling_s = 3600\n' > /home/agent/.kimi/config.toml && \
+    printf 'default_model = "k3"\ndefault_permission_mode = "auto"\ndefault_plan_mode = false\ntelemetry = false\n\n[thinking]\nenabled = true\neffort = "high"\nkeep = "all"\n\n[loop_control]\nreserved_context_size = 50000\n\n[background]\nkeep_alive_on_exit = true\nprint_wait_ceiling_s = 3600\n' > /home/agent/.kimi/config.toml && \
     printf '{"mcpServers":{"context7":{"command":"npx","args":["-y","@upstash/context7-mcp"]}}}\n' > /home/agent/.kimi/mcp.json
 
 ENV PATH="/home/agent/.local/bin:${PATH}"
 
-# 7. Warm the pnpm store from the lockfile only (pnpm fetch needs just the
+# 7. Claude Code CLI — primary Sandcastle provider. The Kimi endpoint, API key,
+#    model (k3 / k3[1m] / kimi-for-coding), window and effort all arrive at run
+#    time via ANTHROPIC_* / CLAUDE_CODE_* env injected by main.mts.
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# Pre-complete Claude Code onboarding so `claude --print` runs headless from a
+# cold HOME (the CLI refuses print mode until these flags exist).
+RUN printf '{"penguinModeOrgEnabled":true,"hasCompletedOnboarding":true}' \
+      > /home/agent/.claude.json
+
+# Trust only the repository's named Context7 project server in headless runs.
+# User scope here avoids a first-run project-MCP approval prompt in sandboxes.
+RUN mkdir -p /home/agent/.claude && \
+    printf '{"enableAllProjectMcpServers":false,"enabledMcpjsonServers":["context7"]}' \
+      > /home/agent/.claude/settings.json
+
+# 8. Railway CLI. Direct binary download: the npm package's postinstall 404s
+#    on linux/arm64 (no aarch64-unknown-linux-gnu release asset); the musl
+#    build is statically linked and runs fine on bookworm. Auth via RAILWAY_TOKEN
+#    injected at runtime. The orchestrator also pins RAILWAY_PROJECT_ID and
+#    RAILWAY_ENVIRONMENT_ID so CLI commands deterministically target the right
+#    project — `railway list` does NOT work with token auth (account-level
+#    listing needs OAuth), so always operate against the pinned project.
+ARG RAILWAY_CLI_VERSION=5.27.0
+RUN set -e; \
+    case "$(uname -m)" in \
+      aarch64) TRIPLE="aarch64-unknown-linux-musl" ;; \
+      x86_64)  TRIPLE="x86_64-unknown-linux-gnu" ;; \
+      *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL "https://github.com/railwayapp/cli/releases/download/v${RAILWAY_CLI_VERSION}/railway-v${RAILWAY_CLI_VERSION}-${TRIPLE}.tar.gz" \
+      | tar -xz -C /home/agent/.local/bin railway && \
+    /home/agent/.local/bin/railway skills install --agent claude-code && \
+    test -f /home/agent/.claude/skills/use-railway/SKILL.md
+
+# 9. Warm the pnpm store from the lockfile only (pnpm fetch needs just the
 #    lockfile + workspace manifest — no per-package package.json copies). Use the
 #    same global-virtual-store flag as the runtime hook so the shared link graph is
 #    baked into the image too. Rebuild the image when pnpm-lock.yaml changes.
@@ -104,5 +150,5 @@ RUN pnpm config set fetch-retries 5 \
 
 WORKDIR /home/agent
 
-# 8. Sandcastle drives commands into the running container; keep it alive.
+# 10. Sandcastle drives commands into the running container; keep it alive.
 ENTRYPOINT ["sleep", "infinity"]
