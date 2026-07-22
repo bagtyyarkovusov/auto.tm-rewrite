@@ -20,13 +20,13 @@
 
 | | |
 |---|---|
-| **Sprint** | Next post-MLP bet — not yet shaped or numbered |
-| **Status** | ⚪ Pending human betting-table decision |
+| **Sprint** | S11 — Railway deployment + store-review readiness |
+| **Status** | ⚪ Approved, not started — pending batch grill + issue creation |
 | **Started** | — |
-| **Phase** | Phase 2 — Post-MLP marketplace bets |
-| **Plan file** | Not created |
-| **Sprint doc** | Not created |
-| **Milestone** | Not assigned |
+| **Phase** | Pre-launch deployment track (ADR-0039) |
+| **Plan file** | Batch slicing/grill not run |
+| **Sprint doc** | [`sprint-11-railway-deployment.md`](sprints/sprint-11-railway-deployment.md) |
+| **Milestone** | M10 — Store-reviewable cloud production |
 
 > **Agents:** update this block at the start of every sprint. Sprint N's first PR sets `Status` to 🟡 in progress; the sprint-closing PR sets the previous sprint to 🟢 shipped and bumps Current to N+1.
 >
@@ -37,6 +37,8 @@
 > **2026-07-17 S10 close decision:** S10 shipped through [PR #256](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/256); see the [retrospective](sprints/sprint-10-rich-chat-notifications-mobile-polish-retro.md). There is no pre-shaped S11. The next sprint is chosen through the Phase 2 betting table after beta/pilot learning rather than inferred from the old candidate list.
 >
 > **2026-07-20 hosting re-sequencing decision ([ADR-0039](../adr/0039-phased-cloud-first-hosting.md)):** AutoTM deploys **cloud-first on Railway** (staging + production) until App Store + Google Play verification passes, then cuts over to the [ADR-0005](../adr/0005-hosting.md) TM air-gapped topology. The TM-presence gate moved — it now gates the cutover, not the first deploy. CI gates stay on the `tm-build-mac` GitHub Actions runner; Railway owns build + deploy after CI green. Store-era auth runs `SMS_DRIVER=mock` with 3–5 flag-gated reviewer demo accounts (supersedes [ADR-0030](../adr/0030-reviewer-demo-account-otp-bypass.md)'s "exactly one" scoping). Registering `auto.tm` (or best fallback) is a hard gate before the first store-binary submission, making cutover a pure DNS flip. S11 shapes as the Railway deployment sprint.
+>
+> **2026-07-22 S11 approval:** The founder approved [`sprint-11-railway-deployment.md`](sprints/sprint-11-railway-deployment.md) as the pending sprint contract. It remains ⚪ and mutable until the batch grill produces issue slices and sprint issue creation moves the roadmap to 🟡. No Railway resources, paid accounts, domains, credentials, or store submissions are authorized by this planning transition.
 
 ---
 
@@ -66,6 +68,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | 🟢 Shipped (S8a; S8b deferred to deployment sprint) | 2026-06-09 | 2026-06-27 | M7 | Product-complete beta substrate; actual invites require deployment cutover |
 | S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | 🟢 Shipped (S9a remote code; S9b deferred on-ground) | 2026-07-07 | 2026-07-13 | M8 | Remote trust foundation shipped; concierge pilot deferred |
 | S10 | [Rich chat + direct-message notifications + mobile polish](sprints/sprint-10-rich-chat-notifications-mobile-polish.md) | 🟢 Shipped | 2026-07-13 | 2026-07-17 | M9 | Two signed-in mobile users can verify rich realtime chat, direct-message push path, and launch-visible mobile polish |
+| S11 | [Railway deployment + store-review readiness](sprints/sprint-11-railway-deployment.md) | ⚪ Approved, not started | — | — | M10 | Founder/operator can prove reviewer-only cloud production before store submission |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
 
@@ -113,14 +116,15 @@ These are not a backlog. They are candidates for shaping after beta learning. If
 | **M7** Private beta substrate | S8 | Product-complete, localized, beta-safe marketplace loop |
 | **M8** Trust wedge / first inspection pilot | S9 | 5-10 buyers who get a free AutoTM inspection |
 | **M9** Rich chat and launch polish | S10 | Rich realtime chat, direct-message push path, and launch-visible mobile polish |
+| **M10** Store-reviewable cloud production | S11 | Founder/operator can deploy, promote, restore, roll back, and prove the seeded reviewer path on Railway |
 
 ---
 
 ## Sprint dependencies
 
 ```
-S1 ────► S2 ────► S3 ────► S4 ────► S5 ────► S6 ────► S7 ────► S8 ────► S9 ────► S10
-          auth      catalog   listings  discovery contact   safety   beta    trust   rich chat
+S1 ────► S2 ────► S3 ────► S4 ────► S5 ────► S6 ────► S7 ────► S8 ────► S9 ────► S10 ────► S11
+          auth      catalog   listings  discovery contact   safety   beta    trust   rich chat  deploy
 ```
 
 - **S2 unlocks authenticated actions** — contact seller, create listing, and admin elevation all depend on identity.
@@ -131,7 +135,8 @@ S1 ────► S2 ────► S3 ────► S4 ────► S5 �
 - **S7 comes before broader beta** — moderation must exist before 10-50 real users enter.
 - **S8 is last in the MLP software loop** — the product-complete beta substrate is shipped; real-user invites now depend on the deferred deployment/on-site cutover sprint.
 - **S9 is the trust wedge** ([ADR-0037](../adr/0037-trust-inspection-competitive-wedge.md)) — pulled forward as the differentiator vs. TMCARS/Teklip; its on-ground concierge pilot shares the deferred deployment sprint's TM-presence dependency.
-- **S10 shipped rich chat + direct-message notifications + mobile polish** — S9b remains manual/on-ground and the next code bet is not yet shaped.
+- **S10 shipped rich chat + direct-message notifications + mobile polish** — S9b remains manual/on-ground; ADR-0039 subsequently selected S11 as the deployment track rather than another marketplace-feature bet.
+- **S11 is the approved Railway deployment sprint** ([ADR-0039](../adr/0039-phased-cloud-first-hosting.md)) — it makes staging and reviewer-only cloud production operable before the human-led store-submission track. It does not admit real users or execute the later TM cutover.
 
 If a sprint slips, slide downstream rows by the same delta. Do not parallelize unless a shaped pitch proves the dependency is false.
 

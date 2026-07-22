@@ -1,6 +1,11 @@
 # 80 — Deployment runbook
 
-The end-to-end procedure for shipping a new version of AutoTM to production. **Air-gapped — no managed CD.**
+The end-to-end procedure for shipping a new version of AutoTM. There are two operating eras:
+
+1. **Railway era (ADR-0039):** staging + reviewer-only production until both stores approve and the TM cutover gates are met. GitHub Actions owns CI; Railway builds/deploys after CI.
+2. **TM era (ADR-0005):** permanent TM-serving production uses the air-gapped bundle procedure later in this document. Railway remains non-TM staging.
+
+Until Sprint 11 closes, the Railway section is the target operating contract rather than evidence that a live environment exists.
 
 ## Pre-flight checklist
 
@@ -11,11 +16,68 @@ Before kicking off a release:
 - [ ] No `console.log` in API code (or it's intentional and on `LOG_LEVEL=debug`)
 - [ ] `CHANGELOG.md` (or release notes) updated
 - [ ] Verify the date-time + version tag in `package.json` matches what's intended
-- [ ] Backup TM database BEFORE deploying (safety net for migration failures)
+- [ ] Back up the target environment database BEFORE deploying (safety net for migration failures)
 - [ ] Confirm current beta feature-flag values are recorded before deploy (`SIGNUPS_ENABLED`, `LISTING_PUBLISH_ENABLED`, `LISTING_MUTATIONS_ENABLED`, `CONTACT_ENABLED`, `REPORT_ENTRY_ENABLED`, `ADMIN_MODERATION_ACTIONS_ENABLED`)
-- [ ] For schema-changing deploys, confirm the last successful restore drill used a staging/prod-like backup less than 30 days old
+- [ ] For schema-changing deploys, confirm the last successful restore drill used a staging/prod-like database + media backup less than 30 days old
 
-## Step 1 — Build the bundle (on self-hosted runner)
+## Railway era — staging and reviewer-only production
+
+### Step 1 — CI gate and revision selection
+
+1. Merge to `main` only after the required GitHub Actions check passes on `tm-build-mac`.
+2. Railway staging follows `main` with **Wait for CI** enabled. A failed required check must not create a staging deployment.
+3. Record the git SHA selected by the staging deployment.
+4. Production has no branch autodeploy. Select only the exact SHA that passed the staging smoke and require a human production approval.
+
+Railway owns build + deploy, not the test gate. Preview environments are optional and are not a substitute for permanent staging.
+
+### Step 2 — Build, migrate, and become ready
+
+Each environment has `api`, `worker`, `admin`, `web`, Postgres, Redis, and MinIO. `sms-gateway` and `phone-agent` do not run on Railway.
+
+- Build each application from the monorepo root so shared workspaces and lockfiles remain in the build context.
+- Use service-specific start commands and versioned Railway configuration where supported.
+- Run `prisma migrate deploy` through the single release authority defined by Sprint 11. Never use `migrate dev` or `db push`.
+- Do not route traffic until API dependency-readiness and web/admin health checks pass. A worker queue/bootstrap failure must fail the deployment or page the operator through deploy status/logs.
+- Use private Railway networking for Postgres, Redis, and MinIO writes. Public exposure is limited to API, admin, web, and required media reads.
+
+Schema changes must support independently rolling services. A rollback restores the previous application revision; it does not reverse migrations.
+
+### Step 3 — Staging smoke
+
+Against the staging mobile/internal build:
+
+1. Confirm `/healthz` and dependency readiness.
+2. Verify migration status and the deployed git SHA.
+3. Sign in with two distinct demo identities.
+4. Browse/create a seeded listing, upload/read media, exchange rich chat, and verify report → admin action → audit → public enforcement.
+5. Put the recipient offline and verify native direct-message push + conversation deep link on both required platforms.
+6. Confirm public signup is disabled, `SMS_DRIVER=mock`, response-embedded OTP test mode is disabled, and no service references production data resources.
+
+### Step 4 — Manual production deploy
+
+1. Select the staging-proven SHA; do not deploy an unverified moving branch head.
+2. Confirm the stable AutoTM-owned API/media domains when producing a store-candidate binary. Railway generated domains are acceptable only for staging/internal builds.
+3. Confirm production-only secret references and feature flags without printing their values.
+4. Approve the production deployment manually.
+5. Repeat the integrated reviewer smoke against production and record SHA, deployment/build identifiers, migration state, timestamps, and result.
+
+Production remains reviewer-only: 3–5 reserved buyer/seller demo accounts, no real users, no real SMS, and no admin-capable reviewer identity.
+
+### Step 5 — Railway rollback and restore
+
+- **Application rollback:** redeploy the last known-good Railway application revision and repeat health + focused smoke checks.
+- **Migration response:** forward-fix is preferred. Never assume application rollback undoes a schema migration.
+- **Data restore:** restore Postgres and media into an isolated/non-production target first, run current migrations, and verify auth/listing/chat/report/media reads before declaring the path usable.
+- Record restore point, data scope, start/end time, operator, result, and any recovery gap.
+
+### Step 6 — Cutover boundary
+
+Railway production is torn down only after all ADR-0039 cutover conditions pass: both stores approved, Railway-production confirmation pass, trusted TM presence, and racked TM hardware. DNS then moves the stable AutoTM-owned hosts to the ADR-0005 topology. Railway staging remains.
+
+## TM era — air-gapped production
+
+### Step 1 — Build the bundle (on self-hosted runner)
 
 ```
 # Trigger build via GitHub Actions
@@ -40,7 +102,7 @@ make bundle-base   # includes postgres, redis, minio, caddy, observability stack
 ```
 Larger bundle (~1.5-2 GB) — ship once, then app-only bundles after.
 
-## Step 2 — Transfer to TM
+### Step 2 — Transfer to TM
 
 Three options depending on what's available:
 
@@ -65,7 +127,7 @@ Slower (international link), but works because TM VMs accept inbound SSH.
 
 If all else fails: write to encrypted USB, take to AutoTM office, plug into Server A.
 
-## Step 3 — Verify checksum on TM side
+### Step 3 — Verify checksum on TM side
 
 ```bash
 ssh tm-server-a
@@ -76,7 +138,7 @@ sha256sum -c auto-tm-release-v<version>.tar.gz.sha256
 
 If checksum fails, the transfer corrupted; redo.
 
-## Step 4 — Deploy
+### Step 4 — Deploy
 
 ```bash
 cd /opt/auto-tm
@@ -98,7 +160,7 @@ The `deploy.sh` script:
 
 Expected duration: 2-5 minutes from `deploy.sh` to all green.
 
-## Step 5 — Verify
+### Step 5 — Verify
 
 The local-host `curl` lines below run **on TM Server A** and hit the docker port-mappings published by `compose/docker-compose.prod.yml` (api → 3006, admin → 3001, web → 3002). These are container-port conventions, not dev-machine ports — they match the dev `.env.template` defaults so the same runbook works in both environments. ADR-0018 covers the API port choice.
 
@@ -125,7 +187,7 @@ Check Grafana dashboard:
 
 For MLP beta, WebSocket/push checks apply only if rich chat or native push has shipped. If S6 is still text-only HTTP contact and notifications are still post-MLP, verify contact-message send/list instead.
 
-## Step 6 — Smoke test (manual)
+### Step 6 — Smoke test (manual)
 
 On your phone:
 1. Open mobile app
@@ -188,11 +250,13 @@ If restore fails or takes too long for beta operations, private beta launch is b
 - Friday afternoons (no on-call coverage over weekend)
 - During known TM Telecom outages (your SSH would fail; deploy could partially apply)
 - Without backups verified < 6 hours old
-- Without testing on staging first (Phase 2 — currently no staging environment)
+- Without testing the exact revision on Railway staging first
 
 ## References
 
 - [ADR-0004 — Migrations](../../adr/0004-migrations.md)
 - [ADR-0005 — Hosting](../../adr/0005-hosting.md)
+- [ADR-0039 — Phased cloud-first hosting](../../adr/0039-phased-cloud-first-hosting.md)
+- [Sprint 11 — Railway deployment](../sprints/sprint-11-railway-deployment.md)
 - `infra/compose/docker-compose.prod.yml`
 - `infra/deploy.sh` (lives on TM server, not in repo)
