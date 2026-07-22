@@ -537,8 +537,9 @@ Typography:
 
 | Class | Token |
 |---|---|
-| `font-sans` | Inter |
-| `font-mono` | Menlo |
+| `font-sans` | UberMoveText Regular |
+| `font-heading` | UberMove Medium |
+| `font-mono` | UberMove Mono on iOS; Menlo/system monospace fallback on Android |
 | `text-xs` … `text-5xl` | from `packages/ui/tokens/type.ts` |
 | `font-regular`, `font-medium`, `font-semibold`, `font-bold` | 400 / 500 / 600 / 700 |
 
@@ -1221,7 +1222,7 @@ pnpm --filter @auto-tm/mobile exec expo export -p ios --clear
 
 # For runtime-visible changes only:
 pnpm --filter @auto-tm/mobile exec expo start --clear --go --ios
-node apps/mobile/scripts/expo-logs.js --once
+node scripts/expo-logs.js --once
 
 # Screenshot for evidence
 xcrun simctl io booted screenshot /tmp/auto-tm-expo-go.png

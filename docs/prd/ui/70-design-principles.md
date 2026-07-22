@@ -67,7 +67,7 @@ This means we accept some "could be prettier" UX in exchange for speed.
 
 ## Things we don't do
 
-- Onboarding tutorials with multiple slides (we ship without; if users struggle, we add tooltips)
+- Heavy or post-registration onboarding. First launch is limited to the language picker plus 1–2 skippable value-proposition slides, then the anonymous feed (ADR-0034/ADR-0035)
 - Achievement / gamification (no badges for "first listing!")
 - Push notifications during quiet hours (24/7 push in MVP; Phase 2 might add quiet hours)
 - Carousel autoplay
