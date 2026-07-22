@@ -1,6 +1,6 @@
 # 84 — Launch plan (cutover from build to live)
 
-> This is the **public soft-launch** runbook, not the S8 private-beta gate. ADR-0027 narrows the first release to an MLP beta; S8 proves the loop with 10-50 invited users. Use this document after the MLP beta retro decides which post-MLP bets must exist before a wider public launch.
+> This is the **store-verification → TM cutover → public soft-launch** runbook. [ADR-0039](../../adr/0039-phased-cloud-first-hosting.md) re-sequences the path: reviewer-only Railway production comes first, both stores approve, and only then does production cut over to the ADR-0005 TM topology before real TM users are invited. Railway production never serves the public marketplace.
 
 ## Pre-launch milestones
 
@@ -44,68 +44,68 @@ Before announcing publicly, all of these must be green:
 - [ ] Report entry/admin moderation visibility pause flags are tested
 - [ ] AutoTM company phone / email for user support set up
 
-## Private beta phase (deployment/on-site cutover, before public launch)
+## App + update delivery by era
 
-Goal: shake out bugs with a small known cohort before everyone arrives.
+ADR-0039 changes the sequence without changing ADR-0029's eventual TM delivery design.
 
-- Cohort: 10-30 invited users (friends, family, sympathetic dealers)
-- Distribution: store tracks (TestFlight + Play closed/internal) with **direct-APK fallback**; updates via **self-hosted OTA** — see "App + update delivery" below ([ADR-0029](../../adr/0029-self-hosted-ota-air-gap-delivery.md))
-- Feedback channel: dedicated Telegram group with AutoTM team
-- Daily standup-style review of feedback during beta
-- Bug fix window: anything serious gets a hotfix before public launch or blocks launch entirely
-
-## App + update delivery (self-hosted OTA + hybrid)
-
-Locked in [ADR-0029](../../adr/0029-self-hosted-ota-air-gap-delivery.md) (delivery) and [ADR-0030](../../adr/0030-reviewer-demo-account-otp-bypass.md) (review access).
-
-- **Binary / initial install — hybrid.** Store tracks for legitimacy and the public path (Google Play closed/internal testing, Apple TestFlight), with **direct-APK download as the TM fallback** — and the primary Android path if Play is throttled on Telecom. Test Play/TestFlight reachability on a real TM SIM before relying on them.
-- **Updates — self-hosted OTA inside TM.** The app's `updates.url` points at a first-party Expo Updates server (`updates.auto.tm`); bundles live in the existing MinIO; manifests are code-signed (private key in TM, public cert in the build). No runtime dependency on EAS Update cloud. This is the iteration lever: JS/asset fixes ship over-the-air with no store re-review.
-- **OTA covers JS/assets only.** Native changes (new native module, SDK bump, new permission, the deferred video pipeline) require a fresh binary + bumped `runtimeVersion` — not an OTA.
-- **Channel discipline.** The beta cohort is pinned to a stable OTA channel; parallel/dev work uses a separate channel and is never pushed to the beta channel mid-test.
-- **Reviewer access.** Store reviewers (abroad, no `+993` SIM) authenticate via the single reserved fixed-OTP demo account (ADR-0030): normal privileges only, rate-limit-exempt, flag-gated, audited; the reserved number + code go only in App Store Connect / Play review notes. Seeded demo content lets a reviewer exercise post / contact / report / block for Apple Guideline 1.2.
+- **Railway/store-verification era:** EAS Build produces binaries for TestFlight and Play tracks. The app has no `updates.url`; every JS/native change requires a new binary. Railway-generated API domains may be used for staging/internal builds only. Before the first store-candidate production binary, register the stable AutoTM-owned domain and point its API/media hosts at Railway so the later TM cutover is a DNS flip rather than an app rebuild.
+- **Reviewer access:** 3–5 reserved, unissueable `+993` demo accounts (ADR-0030 as amended by ADR-0039), with at least a buyer + seller pair. They have normal privileges only, are rate-limit-exempt, flag-gated, audited, and documented only in store review notes/operator secret storage. Seeded content must exercise listing creation, rich chat, report/block, and moderation between distinct identities.
+- **TM era:** after store approval and TM cutover, direct APK fallback and the ADR-0029 first-party Expo Updates server can be implemented. OTA remains deferred until that era; it is not a store-verification dependency.
 
 ## Launch-prep checklist (sequenced)
 
-The path from "MLP done" to public launch. Tracked here in the launch plan (intentionally **not** broken into separate issues yet).
+### Human gates — start early
 
-> **Store accounts are NOT created yet** (Apple Developer + Google Play Console). They are the long pole — organization accounts need identity / D-U-N-S verification that can take weeks. **Register them first**; everything store-side blocks on them.
+- [ ] Register **Apple Developer (organization)**; D-U-N-S/identity verification can take weeks.
+- [ ] Register **Google Play Console (organization)**; verify current organization/testing policy in-console.
+- [ ] Register `auto.tm` or the approved fallback before the first store-candidate production binary.
+- [ ] Reserve 3–5 demo `+993` identities that can never be issued to real users; keep credentials outside git.
 
-**Now (parallel to S6–S7)**
+These steps can cost money or create external legal accounts and therefore require explicit founder action. Agents may document or verify them but must not create/purchase them implicitly.
 
-- [ ] Register **Apple Developer (organization)** — needs a D-U-N-S number. *Not created yet.*
-- [ ] Register **Google Play Console (organization)** — an org account avoids the personal-account closed-testing-before-production gate (verify the current Play policy in-console). *Not created yet.*
-- [ ] Reserve the demo `+993` number (ADR-0030); never issue it to a real user.
+### Shipped software foundation
 
-**S7 (moderation sprint — already planned)**
+- [x] S7 moderation/report/block and admin enforcement path.
+- [x] S8a legal pages RU/TK/EN, account deletion, localized marketplace loop, Favorites, and MLP/admin smokes.
+- [x] S10 rich chat, chat safety, and the native direct-message push decision/queue path. Real FCM/APNS delivery remains a Sprint 11 gate.
 
-- [ ] Ship moderation / report / block — also the Apple Guideline 1.2 UGC gate for the public step.
+### Sprint 11 — Railway deployment + store-review readiness
 
-**S8a (private-beta software readiness — shipped 2026-06-27)**
+- [ ] Railway staging auto-deploys `main` only after GitHub Actions passes; production is manual promotion/deploy only.
+- [ ] API, worker, admin, web, Postgres, Redis, and MinIO run in both Railway environments; SMS/phone services are excluded.
+- [ ] Reviewer bypass supports 3–5 buyer/seller demo accounts and seeded review content while public signup remains disabled.
+- [ ] Production FCM/APNS delivery is proven on physical Android + iOS.
+- [ ] EAS staging/production profiles exist; the production profile refuses a missing/invalid stable API URL and configures no OTA URL.
+- [ ] Staging and production reviewer-path smokes pass; rollback and Postgres + media restore drills are recorded.
+- [ ] Railway production confirmation pass covers auth, listing create, rich chat, report → moderation, and push.
 
-- [x] Legal pages RU/TK/EN + account-deletion grace period.
-- [x] Product-complete localized mobile loop, account surface, Favorites, broken-UI sweep, and MLP/admin smokes.
+### Sprint 12 — human-led store submission
 
-**Deployment/on-site cutover sprint (deferred from former S8b)**
+- [ ] Complete App Store Connect and Play Console metadata, privacy declarations, age/content ratings, screenshots, support URLs, and review notes.
+- [ ] Build the production binary against the stable AutoTM-owned API domain.
+- [ ] Submit iOS and Android; respond to review without enabling real-user signup or real SMS.
+- [ ] Both stores approve.
 
-- [ ] Self-hosted OTA server live (`updates.auto.tm`, code-signing keys, bundles in MinIO) — ADR-0029.
-- [ ] Hardened reviewer demo account (ADR-0030) + seeded demo content.
-- [ ] Binary built (EAS Build); Play closed track + TestFlight set up; APK fallback published.
-- [ ] Real TM OTP/SIM path verified.
-- [ ] Prod-like deploy, TLS/domains, monitoring drills, rollback, backup restore, and beta responder owner verified.
-- [ ] Beta cohort pinned to a stable OTA channel.
+### TM cutover gate — all required
 
-**Closed beta (~2–4 weeks, after the deployment/on-site cutover)**
+- [ ] Both stores approved.
+- [ ] Railway production confirmation pass repeated successfully.
+- [ ] Trusted TM presence/helper available.
+- [ ] TM hardware racked and the ADR-0005 deployment, TLS, monitoring, rollback, and restore path proven.
+- [ ] Stable domain DNS flips to TM; app binary remains unchanged.
+- [ ] Railway production is torn down; Railway staging remains and contains no real TM user data.
 
-- [ ] 10–50 real TM testers invited (real OTP); reviewer uses the bypass.
-- [ ] Iterate via self-hosted OTA (JS-only, no native changes mid-beta).
-- [ ] Feedback via dedicated Telegram group.
-- [ ] Parallel work limited to launch prep + trust-pilot prep; saved searches, engagement layer, and expensive bets deferred to the Phase 1 retro / betting table (ADR-0027, ADR-0037).
+### Closed beta after TM cutover
 
-**Public launch (after the Phase 1 retro picks bets)**
+- [ ] Verify real TM OTP/SIM delivery and Play/TestFlight reachability on TM networks; publish direct-APK fallback if needed.
+- [ ] Invite 10–50 real TM testers; reviewer bypass remains separate from real-user auth.
+- [ ] Run the feedback/support cadence and block public launch on serious defects.
+- [ ] Shape and deploy self-hosted OTA only as TM-era work; do not assume it exists at beta start.
 
-- [ ] Submit App Store + Google Play production (demo account for review, S7 moderation, legal, account deletion).
-- [ ] Follow the pre-launch milestones + launch-day sequence in this doc.
-- [ ] Keep self-hosted OTA + APK fallback as ongoing levers; then build the retro-selected post-MLP bets.
+### Public launch
+
+- [ ] Follow the pre-launch milestones and launch-day sequence below.
+- [ ] Keep real-user signups disabled until TM production, support ownership, monitoring, moderation, and rollback gates are green.
 
 ## Public launch day
 
@@ -181,6 +181,8 @@ MLP flags are server-side environment/deployment config; API enforcement is auth
 
 ## References
 
+- [ADR-0039 — Phased cloud-first hosting](../../adr/0039-phased-cloud-first-hosting.md)
+- [Sprint 11 — Railway deployment](../sprints/sprint-11-railway-deployment.md)
 - [Phase plan](../02-phases.md)
 - [Deployment runbook](80-deployment-runbook.md)
 - [Monitoring + alarms](81-monitoring-alarms.md)
