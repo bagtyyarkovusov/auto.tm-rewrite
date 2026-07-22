@@ -15,6 +15,7 @@ import type { Prisma } from "@auto-tm/db";
 
 import { ListingsModule } from "../listings.module";
 import { IdentityModule } from "../../identity/identity.module";
+import { EnvSchema } from "../../../env.schema";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
@@ -38,7 +39,10 @@ describe("FavoritesController e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
+        ConfigModule.forRoot({
+          isGlobal: true,
+          validate: (cfg) => EnvSchema.parse(cfg),
+        }),
         ListingsModule,
         IdentityModule,
         JwtModule.register({
