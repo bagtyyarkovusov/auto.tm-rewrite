@@ -45,6 +45,8 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0037](0037-trust-inspection-competitive-wedge.md) | Trust / inspection as the competitive wedge — pulled forward against TM incumbents (amends ADR-0027 sequencing; clarifies ADR-0035 framing) | Accepted | 2026-06-11 |
 | [0038](0038-admin-totp-pending-enrollment-idempotent.md) | Admin TOTP pending enrollment is idempotent instead of replaceable | Accepted | 2026-06-13 |
 | [0039](0039-phased-cloud-first-hosting.md) | Phased cloud-first hosting — Railway until store verification, then TM cutover (amends ADR-0005 Railway exclusion scope; supersedes ADR-0030 single-account scoping) | Accepted | 2026-07-20 |
+| [0040](0040-repo-canonical-workflow-skills.md) | Repo-canonical workflow skills — one layer at `.claude/skills/`; commands, mirrors, and global variants retired | Accepted | 2026-07-22 |
+| [0041](0041-git-history-is-the-archive-for-retired-agent-tool-artifacts.md) | Git history is the archive for retired agent-tool artifacts (supersedes ADR-0040's historical-document retention consequence) | Accepted | 2026-07-22 |
 
 ## Per-app ADRs
 

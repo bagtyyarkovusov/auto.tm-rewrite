@@ -1,6 +1,6 @@
 # 71 — Design tokens
 
-The single source of truth for visual values. Token files live in `packages/ui/tokens/`. Components reference tokens by name — never raw hex / px.
+Shared visual defaults live in `packages/ui/tokens/`. Components use semantic token names rather than scattering raw hex/px values. Platform theme files may deliberately override a shared default—for example, mobile maps the semantic font families to bundled UberMove assets.
 
 ## Where tokens live in code
 
@@ -17,7 +17,7 @@ packages/ui/tokens/
 
 These tokens are consumed by:
 - `apps/web` and `apps/admin` via Tailwind preset + CSS variables (shadcn/ui)
-- `apps/mobile` via NativeWind (Tailwind classnames in React Native) + runtime theme provider
+- `apps/mobile` via NativeWind (Tailwind classnames in React Native) + CSS variables, with platform mappings in `apps/mobile/tailwind.config.js`
 
 ## Color palette
 
@@ -97,8 +97,15 @@ overlayScrim: rgba(0,0,0,0.5)
 
 ## Typography
 
-Font family: **Inter** (already a dependency from the previous Flutter app).
-Mono family: **Menlo** (used for VINs, prices that need to align in columns).
+Shared web/admin defaults: **Inter** for sans and **Menlo** for mono.
+
+Mobile semantic mappings are current implementation truth:
+
+- `font-sans` → **UberMoveText Regular**
+- `font-heading` → **UberMove Medium**
+- `font-mono` → **UberMove Mono** on iOS, falling through to Menlo/system monospace on Android until Android mono assets are bundled
+
+See `apps/mobile/CONTEXT.md` and `apps/mobile/tailwind.config.js`; do not copy the shared Inter value into a mobile spec.
 
 ### Size scale
 
@@ -199,4 +206,6 @@ Used sparingly. Most surfaces are flat with borders.
 - Token source code: `packages/ui/tokens/*.ts`
 - Tailwind preset: `packages/ui/theme/tailwind.preset.ts`
 - CSS variables: `packages/ui/theme/css-variables.css`
+- Mobile semantic font mapping: `apps/mobile/tailwind.config.js`
+- Mobile current state: `apps/mobile/CONTEXT.md`
 - [70-design-principles.md](70-design-principles.md)

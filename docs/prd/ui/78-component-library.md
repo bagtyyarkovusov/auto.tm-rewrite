@@ -2,28 +2,31 @@
 
 ## Where it lives
 
-- **Web + admin**: `packages/ui/components/` — shadcn/ui copies (Radix primitives + Tailwind)
-- **Mobile**: `apps/mobile/src/components/` — React Native re-implementations with the same names + props
+- **Web + admin shared primitives**: `packages/ui/components/` — current shared source contains Button, Card, and Input plus `cn`/exports
+- **Mobile primitives**: `apps/mobile/components/ui/` — owned React Native Reusables (RNR) source on NativeWind v4
+- **Mobile feature compositions**: `apps/mobile/components/` and `apps/mobile/src/**/components/`
 
-Same vocabulary across platforms; different implementations because rendering primitives differ.
+Use common semantic vocabulary where useful, but do not promise identical props. DOM and React Native primitives, interaction states, and accessibility APIs differ.
 
-## Components in MVP (Phase 1)
+## Current primitive inventory
 
-| Component | Web (shadcn) | Mobile (RN) | Page |
+| Component family | Web/admin shared | Mobile RNR/current source | Guidance |
 |---|---|---|---|
-| **Button** | ✓ shadcn | ✓ Pressable + variants | [components/78-01-button.md](components/78-01-button.md) |
-| **Input** | ✓ shadcn | ✓ TextInput wrapper | [components/78-02-input.md](components/78-02-input.md) |
-| **Card** | ✓ shadcn-derived | ✓ View wrapper | [components/78-03-card.md](components/78-03-card.md) |
-| **List** | ✓ basic shadcn | ✓ FlatList/ScrollView | [components/78-04-list.md](components/78-04-list.md) |
-| **Modal / Sheet** | ✓ shadcn Dialog + Sheet | ✓ react-native-bottom-sheet | [components/78-05-modal-sheet.md](components/78-05-modal-sheet.md) |
-| **Toast / Snackbar** | ✓ shadcn-derived | ✓ Custom Toast | [components/78-06-toast-snackbar.md](components/78-06-toast-snackbar.md) |
-| **Tabs / Nav** | ✓ shadcn Tabs | ✓ react-navigation tabs | [components/78-07-tabs-nav.md](components/78-07-tabs-nav.md) |
-| **Form controls** (Toggle/Switch/Checkbox/Radio/Slider) | ✓ shadcn | ✓ RN equivalents | [components/78-08-form-controls.md](components/78-08-form-controls.md) |
-| **Avatar** | ✓ shadcn | ✓ Image wrapper | [components/78-09-avatar.md](components/78-09-avatar.md) |
-| **Badge** | ✓ shadcn | ✓ View wrapper | [components/78-10-badge.md](components/78-10-badge.md) |
-| **Skeleton** (loader) | ✓ shadcn | ✓ Custom shimmer | [components/78-11-skeleton.md](components/78-11-skeleton.md) |
+| **Button** | `Button.tsx` | `button.tsx` | [components/78-01-button.md](components/78-01-button.md) |
+| **Input** | `Input.tsx` | `input.tsx` | [components/78-02-input.md](components/78-02-input.md) |
+| **Card** | `Card.tsx` | `card.tsx` | [components/78-03-card.md](components/78-03-card.md) |
+| **List** | app composition | FlatList/ScrollView composition | [components/78-04-list.md](components/78-04-list.md) |
+| **Dialog / Sheet** | app-local until shared | `dialog.tsx`, `sheet.tsx`, `alert-dialog.tsx` | [components/78-05-modal-sheet.md](components/78-05-modal-sheet.md) |
+| **Toast** | app-local until shared | `toast.tsx` | [components/78-06-toast-snackbar.md](components/78-06-toast-snackbar.md) |
+| **Tabs / Nav** | app router/layout | Expo Router tab layout | [components/78-07-tabs-nav.md](components/78-07-tabs-nav.md) |
+| **Form controls** | app-local until shared | `checkbox.tsx`, `switch.tsx`, `progress.tsx` | [components/78-08-form-controls.md](components/78-08-form-controls.md) |
+| **Avatar** | app-local until shared | `avatar.tsx` | [components/78-09-avatar.md](components/78-09-avatar.md) |
+| **Badge** | app-local until shared | `badge.tsx` | [components/78-10-badge.md](components/78-10-badge.md) |
+| **Skeleton** | app-local until shared | `skeleton.tsx` | [components/78-11-skeleton.md](components/78-11-skeleton.md) |
 
-## Components NOT in MVP (deferred)
+Mobile also owns `dropdown-menu`, `icon`, `separator`, `text`, `tooltip`, and the supporting native-only animated view in the same directory. Inspect the directory and `apps/mobile/CONTEXT.md` during design/implementation; this table is a map, not an install manifest.
+
+## Not generic primitives today
 
 - DataTable (admin-only; using a simple HTML table in MVP)
 - DatePicker (forms use platform-native pickers)
@@ -37,14 +40,14 @@ Same vocabulary across platforms; different implementations because rendering pr
 Each component supports a small set of variants via props:
 
 ```tsx
-<Button intent="primary" size="md" loading={false}>Sell my car</Button>
+<Button variant="brand" size="pill"><Text>Sell my car</Text></Button>
 
-<Card padding="md" elevation="sm">...</Card>
+<Card>...</Card>
 
-<Input size="md" error={false} disabled={false} />
+<Input aria-invalid={hasError} editable={!isPending} />
 ```
 
-Variants are limited and intentional. No "what if we had 20 button colors" sprawl.
+These examples reflect the current mobile vocabulary; inspect the exported types before implementation. Variants stay limited and intentional.
 
 ## Composition over prop explosion
 
@@ -58,13 +61,13 @@ shadcn's pattern matches this — we follow it.
 
 ## Theme integration
 
-All components read from `packages/ui/tokens/` either via Tailwind classes (web) or via NativeWind / theme context (mobile).
+Components use the shared palette/scales and platform semantic mappings through Tailwind classes (web/admin) or NativeWind + CSS variables (mobile).
 
 When tokens change, components update automatically.
 
 ## Per-component pages
 
-Each component has a dedicated PRD page in [`components/`](components/) covering:
+The pages in [`components/`](components/) describe intended behavior and review criteria. Verify names, variants, and installed status against code before using an example; code/current `CONTEXT.md` wins when a mutable page is stale.
 
 1. Purpose
 2. When to use it (and when not)
@@ -77,15 +80,16 @@ Each component has a dedicated PRD page in [`components/`](components/) covering
 
 1. Is it generic (reusable across features) or one-off?
    - If one-off, it belongs in the consuming app, not `packages/ui/`
-2. Does shadcn have it?
-   - If yes, copy from shadcn CLI; theme to our tokens; document.
-3. Does it need a mobile equivalent?
-   - If yes, implement parallel in `apps/mobile/src/components/`
-4. Add a per-component PRD page in `components/`
-5. Add to the table at the top of this file
+2. On web/admin, does the current shadcn/Base UI stack provide an appropriate source primitive?
+3. On mobile, does RNR provide it?
+   - If yes, install/copy it into `apps/mobile/components/ui/`, then own and theme that file.
+   - If no, compose existing primitives under the feature directory; reserve `components/ui/` for reusable primitives.
+4. Add or revise a per-component guidance page only when the behavior is genuinely shared.
+5. Update this inventory and the owning `CONTEXT.md` when the current primitive set changes.
 
 ## References
 
 - shadcn docs: <https://ui.shadcn.com/>
+- Mobile implementation rules: [`../../agents/nativewind-v4.md`](../../agents/nativewind-v4.md)
 - [71-design-tokens.md](71-design-tokens.md)
 - [79-web-vs-mobile.md](79-web-vs-mobile.md)

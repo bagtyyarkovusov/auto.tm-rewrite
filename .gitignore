@@ -74,22 +74,12 @@ packages/db/.env
 .cache/
 tmp/
 .scratch/
-.commandcode/
 
-
-#Claude Code
+# Claude Code
 .claude/worktrees/
-.claude/skills/
 
-
-# Agents — track only project-specific *-agent-skill/ directories under
-# .agents/skills/. User-local plugin caches (Matt Pocock skills, etc.) are
-# ignored individually. Pattern: ignore everything under .agents/ EXCEPT
-# the .agents/skills/*-agent-skill/ subdirs the project commits.
-.agents/*
-!.agents/skills/
-.agents/skills/*
-!.agents/skills/*-agent-skill/
+# Agent tooling is user-global; project workflow skills live in .claude/skills/.
+.agents/
 
 # Sandcastle — the .sandcastle/ orchestrator config IS tracked (Dockerfile,
 # main.mts, prompts). Its own .sandcastle/.gitignore ignores the ephemeral
@@ -100,4 +90,3 @@ apps/mobile/android/
 apps/mobile/ios/
 .playwright-mcp/rnr-docs-snapshot.md
 .playwright-mcp/page-2026-05-16T06-51-22-523Z.yml
-.impeccable/

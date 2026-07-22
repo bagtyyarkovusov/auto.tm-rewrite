@@ -1,15 +1,16 @@
 # 73 — Typography
 
-## Font family
+## Semantic font families
 
-**Inter** for everything except mono.
+Typography is platform-specific behind shared semantic names:
 
-- Open-source (SIL Open Font License)
-- Excellent Cyrillic + Latin Extended coverage (Turkmen Latin chars supported)
-- Weights: 400 / 500 / 600 / 700 — all loaded
-- Already used in the previous Flutter app — visual continuity
+| Semantic use | Web + admin | Mobile |
+|---|---|---|
+| Body / `font-sans` | Inter | UberMoveText Regular |
+| Heading / `font-heading` | Inter with heading weight | UberMove Medium |
+| Mono / `font-mono` | Menlo, monospace | UberMove Mono on iOS; Menlo/system monospace fallback on Android |
 
-Mono: **Menlo** (system fallback to monospace). Used for VINs, prices in tabular contexts.
+The shared defaults live in `packages/ui/tokens/type.ts`. Mobile deliberately overrides the family mappings in `apps/mobile/tailwind.config.js` and bundles fonts through `apps/mobile/app/_layout.tsx`. Current mobile usage is documented in `apps/mobile/CONTEXT.md`; a mobile design must not specify Inter from the shared default.
 
 ## Type scale (from tokens)
 
@@ -25,26 +26,26 @@ xl   20   Section headings
 5xl  44   Marketing landing huge text
 ```
 
-15px base (not 14 or 16) is chosen for slightly-better readability on TM users' typically smaller-than-flagship phone screens.
+The shared scale uses a 15px base. Platform implementations must preserve readable rendered size and dynamic-text behavior rather than assuming a CSS pixel maps identically on native.
 
 ## Usage map
 
-| UI element | Size | Weight | Line height |
-|---|---|---|---|
-| Page H1 | 2xl | bold | snug |
-| Section H2 | xl | semibold | snug |
-| Sub-section H3 | lg | semibold | snug |
-| Body | base | regular | normal |
-| Body emphasized | base | medium | normal |
-| Helper / caption | sm | regular | normal |
-| Tiny / badge | xs | medium | tight |
-| Mono price | base | semibold | normal |
-| Mono VIN | sm | regular | normal |
-| Button label | base | medium | tight |
-| Tab label | sm | medium | tight |
-| Form label | sm | medium | snug |
-| Form input | base | regular | normal |
-| Form error | sm | regular | snug |
+| UI element | Family | Size | Weight | Line height |
+|---|---|---|---|---|
+| Page H1 | heading | 2xl | bold | snug |
+| Section H2 | heading | xl | semibold | snug |
+| Sub-section H3 | heading | lg | semibold | snug |
+| Body | sans | base | regular | normal |
+| Body emphasized | sans | base | medium | normal |
+| Helper / caption | sans | sm | regular | normal |
+| Tiny / badge | sans | xs | medium | tight |
+| Tabular price | sans + tabular numerals | base | semibold | normal |
+| VIN / OTP code | mono | sm / 2xl | regular / semibold | normal / tight |
+| Button label | sans | base | medium | tight |
+| Tab label | sans | sm | medium | tight |
+| Form label | sans | sm | medium | snug |
+| Form input | sans | base | regular | normal |
+| Form error | sans | sm | regular | snug |
 
 ## Hierarchy rules
 
@@ -57,18 +58,18 @@ xl   20   Section headings
 
 ### Russian (Cyrillic)
 
-- Inter handles Russian well
-- Cyrillic characters have slightly higher x-height than Latin → spacing may need fine-tuning
+- Verify the actual platform font and loaded weight with real Russian copy
+- Cyrillic can change perceived density → test wrapping and vertical rhythm rather than tightening globally
 - Line height `normal` (1.5) is safe; avoid `tight` for paragraph text in Russian
 
 ### Turkmen (Latin extended)
 
-- Inter handles Turkmen Latin extension (Ä, Ç, Ň, Ö, Ş, Ü, Ý, Ž) cleanly
-- No special handling required
+- Verify Ä, Ç, Ň, Ö, Ş, Ü, Ý, and Ž in the actual platform font and every used weight
+- Test long labels and fallbacks; missing-glyph substitution is a release blocker
 
 ### English
 
-- Default; everything works
+- Use as one test locale, never as proof that Russian/Turkmen fit
 
 ## Letter spacing
 
@@ -80,8 +81,8 @@ xl   20   Section headings
 
 ## Numbers
 
-- Tabular numbers ENABLED for prices, mileage, year — `font-variant-numeric: tabular-nums`
-- Mono font for VINs (alignment matters)
+- Use tabular numerals for prices, mileage, year, and aligned numeric tables where the platform supports them
+- Use the semantic mono family for VINs and OTP cells; do not force all prices into mono
 - Localized formatting via `Intl.NumberFormat`:
   - Russian/Turkmen: `1 899 000 TMT` (space thousands separator)
   - English: `1,899,000 TMT`
@@ -95,13 +96,16 @@ xl   20   Section headings
 
 ## Don'ts
 
-- ❌ Custom fonts loaded at runtime (Inter is bundled, no FOUT)
-- ❌ Italic text — Inter italic is fine, but our UI doesn't need it; avoid
+- ❌ Network-downloaded UI fonts or a font-dependent blank first render; mobile fonts are bundled assets
+- ❌ Inventing platform-specific family names in screen specs; use `font-sans`, `font-heading`, and `font-mono`
+- ❌ Italic text for ordinary UI emphasis
 - ❌ Underlined text for emphasis (reserved for hyperlinks only)
 - ❌ Letter-spacing tweaks beyond the three tokens above
 
 ## References
 
 - Token source: `packages/ui/tokens/type.ts`
+- Mobile mapping: `apps/mobile/tailwind.config.js`
+- Mobile font loading/current state: `apps/mobile/app/_layout.tsx`, `apps/mobile/CONTEXT.md`
 - [71-design-tokens.md](71-design-tokens.md)
 - [77-accessibility.md](77-accessibility.md) — contrast rules
