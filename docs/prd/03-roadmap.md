@@ -21,10 +21,10 @@
 | | |
 |---|---|
 | **Sprint** | S11 — Railway deployment + store-review readiness |
-| **Status** | ⚪ Approved, not started — pending batch grill + issue creation |
-| **Started** | — |
+| **Status** | 🟡 In progress — issue creation complete |
+| **Started** | 2026-07-22 |
 | **Phase** | Pre-launch deployment track (ADR-0039) |
-| **Plan file** | Batch slicing/grill not run |
+| **Plan file** | Parent [#270](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/270); children [#271](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/271)-[#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283) |
 | **Sprint doc** | [`sprint-11-railway-deployment.md`](sprints/sprint-11-railway-deployment.md) |
 | **Milestone** | M10 — Store-reviewable cloud production |
 
@@ -38,7 +38,7 @@
 >
 > **2026-07-20 hosting re-sequencing decision ([ADR-0039](../adr/0039-phased-cloud-first-hosting.md)):** AutoTM deploys **cloud-first on Railway** (staging + production) until App Store + Google Play verification passes, then cuts over to the [ADR-0005](../adr/0005-hosting.md) TM air-gapped topology. The TM-presence gate moved — it now gates the cutover, not the first deploy. CI gates stay on the `tm-build-mac` GitHub Actions runner; Railway owns build + deploy after CI green. Store-era auth runs `SMS_DRIVER=mock` with 3–5 flag-gated reviewer demo accounts (supersedes [ADR-0030](../adr/0030-reviewer-demo-account-otp-bypass.md)'s "exactly one" scoping). Registering `auto.tm` (or best fallback) is a hard gate before the first store-binary submission, making cutover a pure DNS flip. S11 shapes as the Railway deployment sprint.
 >
-> **2026-07-22 S11 approval:** The founder approved [`sprint-11-railway-deployment.md`](sprints/sprint-11-railway-deployment.md) as the pending sprint contract. It remains ⚪ and mutable until the batch grill produces issue slices and sprint issue creation moves the roadmap to 🟡. No Railway resources, paid accounts, domains, credentials, or store submissions are authorized by this planning transition.
+> **2026-07-22 S11 start:** [`sprint-11-railway-deployment.md`](sprints/sprint-11-railway-deployment.md) moved to 🟡. Parent issue [#270](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/270) and children [#271](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/271)-[#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283) created with the approved 13-slice dependency map. No Railway resources, paid accounts, domains, credentials, or store submissions are authorized by this roadmap transition.
 
 ---
 
@@ -68,7 +68,7 @@ Full scope per phase: [`02-phases.md`](02-phases.md). Anti-goals remain in [`00-
 | S8 | [Private beta polish](sprints/sprint-08-private-beta-polish.md) | 🟢 Shipped (S8a; S8b deferred to deployment sprint) | 2026-06-09 | 2026-06-27 | M7 | Product-complete beta substrate; actual invites require deployment cutover |
 | S9 | [Trust wedge](sprints/sprint-09-trust-wedge.md) | 🟢 Shipped (S9a remote code; S9b deferred on-ground) | 2026-07-07 | 2026-07-13 | M8 | Remote trust foundation shipped; concierge pilot deferred |
 | S10 | [Rich chat + direct-message notifications + mobile polish](sprints/sprint-10-rich-chat-notifications-mobile-polish.md) | 🟢 Shipped | 2026-07-13 | 2026-07-17 | M9 | Two signed-in mobile users can verify rich realtime chat, direct-message push path, and launch-visible mobile polish |
-| S11 | [Railway deployment + store-review readiness](sprints/sprint-11-railway-deployment.md) | ⚪ Approved, not started | — | — | M10 | Founder/operator can prove reviewer-only cloud production before store submission |
+| S11 | [Railway deployment + store-review readiness](sprints/sprint-11-railway-deployment.md) | 🟡 In progress | 2026-07-22 | — | M10 | Founder/operator can prove reviewer-only cloud production before store submission |
 
 **Legend:** ⚪ Pending · 🟡 In progress · 🟢 Shipped · 🔴 Blocked
 
