@@ -1,31 +1,39 @@
 # `infra/docker/`
 
-Per-app Dockerfiles (one per deployable app). Created during code scaffolding session.
+Per-app Dockerfiles (one per deployable app). Build context is always the
+**repository root** — on Railway, each service's root directory stays the
+repo root and `build.dockerfilePath` points here (see `railway/*.json`).
 
-## Planned files
+## Files
 
 | File | Builds image for |
 |---|---|
-| `Dockerfile.api` | `apps/api` (NestJS) |
-| `Dockerfile.admin` | `apps/admin` (Next.js standalone) |
-| `Dockerfile.web` | `apps/web` (Next.js standalone) |
-| `Dockerfile.sms-gateway` | `apps/sms-gateway` (Node service) |
-| `Dockerfile.worker` | `apps/worker` (NestJS standalone) |
+| `api.Dockerfile` | `apps/api` (NestJS, port 3006) |
+| `admin.Dockerfile` | `apps/admin` (Next.js standalone server, port 3001) |
+| `web.Dockerfile` | `apps/web` (Next.js standalone server, port 3002) |
+| `sms-gateway.Dockerfile` | `apps/sms-gateway` (Node service — TM era only, not deployed to Railway) |
+| `worker.Dockerfile` | `apps/worker` (NestJS BullMQ consumer, no public route) |
 
 Note: `apps/mobile` (Expo) and `apps/phone-agent` (Kotlin Android) do NOT have Dockerfiles — they're packaged via EAS Build and Gradle respectively.
 
 ## Conventions
 
-- **Multi-stage**: build + runtime stages
-- **Slim base**: `node:20-bookworm-slim`
-- **Native deps**: install `python3 make g++` only in build stage (for `sharp`, `bcrypt`)
-- **All node_modules bundled** in the final image — never `npm install` at runtime (air-gap)
-- **Postgres client tools** + `curl` in runtime stage (healthchecks)
-- **Healthcheck**: `HEALTHCHECK CMD curl -f http://localhost:3006/healthz || exit 1`
+- **Multi-stage**: deps + build + runtime stages
+- **Slim base**: `node:22-bookworm-slim`
+- **Reproducible**: `pnpm install --frozen-lockfile` from the committed lockfile; root `.dockerignore` keeps the build context clean (no `node_modules`, `.next`, `dist`, `.env`, or `.git`). The deps stage also copies the checked-in Sandcastle tarball from `vendor/` because the root workspace declares it as a local `file:` dev dependency.
+- **Native build tooling stays in the deps/build stages**: `python3`, `make`, `g++`, and `openssl` are installed before `pnpm install` so optional native packages and Prisma can build cleanly; runtime stages do not inherit that compiler toolchain.
+- **Runtime-shared packages are built before app builds**: `@auto-tm/db` and `@auto-tm/contracts` export `dist/`, so every image builds those packages before building the consuming app.
+- **Prisma client generation is build-time only**: `.env` files are excluded from the Docker context, so each build stage supplies a harmless local placeholder `DATABASE_URL` only for `@auto-tm/db` build/generate. Runtime migrations and database access use the service's real `DATABASE_URL`.
+- **Next.js images run the standalone server** (`output: "standalone"` + `outputFileTracingRoot` at the repo root): the runtime stage copies only `.next/standalone`, `.next/static`, and `public`, then runs `node apps/<app>/server.js` with `PORT`/`HOSTNAME` env
+- **Deploy evidence baked in**: every runtime stage declares `ARG RAILWAY_GIT_COMMIT_SHA` (injected by Railway for Dockerfile builds) and exports it as `ENV AUTOTM_COMMIT_SHA`, so `/healthz`/`/readyz` and worker boot logs identify the exact commit even when Railway rebuilds the revision
+- **Healthchecks**: API curls `/healthz` (liveness; dependency-free by design), admin/web curl their dependency-free `/healthz` route. The worker has no HTTP healthcheck — boot failure exits non-zero instead
 - **Non-root user**: every container runs as a non-root user
-- **Prisma migrate deploy** runs at container start for the API + worker (handles fresh DB and migrations)
+- **Migrations run ONLY via the API image pre-deploy command** (`pnpm --filter @auto-tm/db migrate:deploy`, see `railway/api.json`) — never at container start, never from the worker, never `migrate dev` / `db push` outside localhost (ADR-0004, ADR-0039). The API runtime image carries the root `package.json` + `pnpm-workspace.yaml` and `packages/db` (schema, `prisma.config.ts`, migrations, prisma CLI) for this.
 
 ## See also
 
+- [ADR-0004 — Migrations](../../docs/adr/0004-migrations.md)
+- [ADR-0039 — Phased cloud-first hosting](../../docs/adr/0039-phased-cloud-first-hosting.md)
 - [ADR-0005 — Hosting](../../docs/adr/0005-hosting.md)
+- [`railway/` — per-service config as code](../../railway/README.md)
 - [Deployment runbook](../../docs/prd/ops/80-deployment-runbook.md)

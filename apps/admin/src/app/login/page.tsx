@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback, useEffect } from "react";
+import { useState, useTransition, useCallback, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Input, Card, CardHeader, CardBody } from "@auto-tm/ui/components";
 import { Copy, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
@@ -50,7 +50,7 @@ function getDescription(step: Step): string {
   }
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = validateReturnTo(searchParams.get("returnTo")) ?? "/reports";
@@ -426,5 +426,13 @@ export default function LoginPage() {
         </CardBody>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -15,6 +15,8 @@ Internal admin dashboard. Next.js + shadcn/ui at `admin.auto.tm`. MLP beta uses 
 ## What it contains (today)
 
 - Next.js 16.x App Router scaffold under `src/app/` — `layout.tsx` + `globals.css` + `favicon.ico`
+- `src/app/healthz/route.ts` — dependency-free deploy health endpoint (`status`/`service` + `commitSha`/`environment` from build-baked `AUTOTM_COMMIT_SHA` / Railway's `RAILWAY_ENVIRONMENT_NAME`); used by the Docker `HEALTHCHECK` and Railway health gate. Never calls the API or any data store
+- `next.config.ts` sets `output: "standalone"` with `outputFileTracingRoot` at the repo root — the production image (`infra/docker/admin.Dockerfile`) runs the traced `apps/admin/server.js`, and the login page wraps its `useSearchParams` content in `<Suspense>` so the static build succeeds
 - **Auth bridge (S7)** — server-side API fetch wrapper, HTTP-only cookie storage, refresh-on-401, TOTP status/enrollment/verify flow, auth gate
 - `middleware.ts` — fast-path redirect when access cookie is missing on protected routes; preserves sanitized `pathname + search` as `returnTo` and forwards it to server layouts in `x-admin-return-to`
 - `src/lib/cookies.ts` — canonical cookie names/flags, set/clear helpers
@@ -89,6 +91,7 @@ None — admin app calls `apps/api` only through server actions / route handlers
 
 ## App Router routes
 
+- `/healthz` — dependency-free deploy health (Railway/Docker healthchecks)
 - `/login` — OTP entry + TOTP enrollment/verify
 - `/reports` — MLP moderation queue (pending default, filters, pagination, empty state)
 - `/reports/inspection-interests` — S9a inspection-interest counts and willingness-to-pay summary
@@ -121,3 +124,4 @@ None — admin app calls `apps/api` only through server actions / route handlers
 - [ADR-0006](../../docs/adr/0006-auth.md) — Admin OTP + TOTP 2FA
 - [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
 - [ADR-0027](../../docs/adr/0027-mlp-beta-scope.md) — Minimal admin first; full dashboard post-MLP
+- [ADR-0039](../../docs/adr/0039-phased-cloud-first-hosting.md) — Railway-era hosting; `/healthz` deploy evidence

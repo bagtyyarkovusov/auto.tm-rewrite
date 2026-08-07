@@ -12,7 +12,8 @@ import { LoggerModule } from "nestjs-pino";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { GlobalErrorFilter } from "./common/error.filter";
 import { HealthController } from "./common/health.controller";
-import { EnvSchema } from "./env.schema";
+import { ReadinessService } from "./common/readiness.service";
+import { parseEnv } from "./env.schema";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
 import { ListingsModule } from "./modules/listings/listings.module";
@@ -29,7 +30,7 @@ import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: (cfg) => EnvSchema.parse(cfg),
+      validate: parseEnv,
     }),
     LoggerModule.forRoot({
       pinoHttp: {
@@ -66,6 +67,7 @@ import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
   ],
   controllers: [HealthController],
   providers: [
+    ReadinessService,
     { provide: APP_FILTER, useClass: GlobalErrorFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },

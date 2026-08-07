@@ -1,0 +1,23 @@
+# Ignore everything not needed by the infra/docker/*.Dockerfile builds so the
+# build context stays small and clean rebuilds are reproducible.
+.git
+**/node_modules
+**/.next
+**/dist
+**/.expo
+**/coverage
+**/*.log
+**/.env
+**/.env.*
+!**/.env.template
+.expo
+android
+ios
+docs
+.claude
+.agents
+railway
+infra
+.github
+GRILL-OUTCOME.md
+CONTEXT-MAP.md

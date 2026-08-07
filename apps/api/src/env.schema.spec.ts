@@ -60,3 +60,136 @@ describe("API environment template", () => {
     expect(Buffer.from(match?.[1] ?? "", "base64")).toHaveLength(32);
   });
 });
+
+const deployedEnv = {
+  ...baseEnv,
+  NODE_ENV: "production",
+  APP_ENV: "production",
+  DATABASE_URL: "postgres://user:pass@postgres.railway.internal:5432/railway",
+  REDIS_URL: "redis://default:pass@redis.railway.internal:6379",
+  MINIO_ENDPOINT: "http://minio.railway.internal:9000",
+  MINIO_PUBLIC_URL: "https://minio-production.up.railway.app",
+  MINIO_ACCESS_KEY: "deployed-key",
+  MINIO_SECRET_KEY: "deployed-secret",
+  JWT_ACCESS_SECRET: `a${"1".repeat(40)}`,
+  JWT_REFRESH_SECRET: `b${"2".repeat(40)}`,
+  SOCKET_IO_CORS_ORIGIN: "https://admin.auto.tm",
+};
+
+describe("EnvSchema reviewer-era safety (fail-closed outside CI)", () => {
+  it("allows OTP test mode and the test SMS driver only when NODE_ENV=test", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...baseEnv,
+        OTP_TEST_MODE: "true",
+        OTP_TEST_CODE_RESPONSE: "true",
+        SMS_DRIVER: "test",
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects OTP_TEST_MODE outside CI", () => {
+    expect(() =>
+      EnvSchema.parse({ ...baseEnv, NODE_ENV: "development", OTP_TEST_MODE: "true" }),
+    ).toThrow(/OTP_TEST_MODE/);
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, OTP_TEST_MODE: "true" }),
+    ).toThrow(/OTP_TEST_MODE/);
+  });
+
+  it("rejects OTP_TEST_CODE_RESPONSE outside CI", () => {
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, OTP_TEST_CODE_RESPONSE: "true" }),
+    ).toThrow(/OTP_TEST_CODE_RESPONSE/);
+  });
+
+  it("rejects SMS_DRIVER=test outside CI", () => {
+    expect(() =>
+      EnvSchema.parse({ ...baseEnv, NODE_ENV: "development", SMS_DRIVER: "test" }),
+    ).toThrow(/SMS_DRIVER/);
+    expect(() => EnvSchema.parse({ ...deployedEnv, SMS_DRIVER: "test" })).toThrow(
+      /SMS_DRIVER/,
+    );
+  });
+
+  it("accepts SMS_DRIVER=mock in deployed environments", () => {
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, SMS_DRIVER: "mock" }),
+    ).not.toThrow();
+  });
+});
+
+describe("EnvSchema deployed-environment endpoint rules", () => {
+  it("accepts a coherent production configuration", () => {
+    const env = EnvSchema.parse(deployedEnv);
+    expect(env.APP_ENV).toBe("production");
+  });
+
+  it("rejects loopback data endpoints in staging and production", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        DATABASE_URL: "postgres://user:pass@localhost:5432/db",
+      }),
+    ).toThrow(/DATABASE_URL/);
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        APP_ENV: "staging",
+        REDIS_URL: "redis://127.0.0.1:6379",
+      }),
+    ).toThrow(/REDIS_URL/);
+  });
+
+  it("rejects staging hosts from production and production hosts from staging", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        DATABASE_URL: "postgres://u:p@postgres-staging.internal:5432/db",
+      }),
+    ).toThrow(/DATABASE_URL/);
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        APP_ENV: "staging",
+        MINIO_PUBLIC_URL: "https://minio-production.up.railway.app",
+      }),
+    ).toThrow(/MINIO_PUBLIC_URL/);
+  });
+
+  it("rejects default MinIO credentials and placeholder JWT secrets in deployed envs", () => {
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, MINIO_SECRET_KEY: "minioadmin" }),
+    ).toThrow(/MINIO_ACCESS_KEY/);
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        JWT_ACCESS_SECRET: "replace_me_with_64_char_random_string_padded",
+      }),
+    ).toThrow(/JWT_ACCESS_SECRET/);
+  });
+
+  it("rejects identical JWT secrets and wildcard Socket.IO CORS in production", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        JWT_REFRESH_SECRET: deployedEnv.JWT_ACCESS_SECRET,
+      }),
+    ).toThrow(/JWT_REFRESH_SECRET/);
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, SOCKET_IO_CORS_ORIGIN: "*" }),
+    ).toThrow(/SOCKET_IO_CORS_ORIGIN/);
+  });
+
+  it("allows loopback endpoints in development", () => {
+    expect(() => EnvSchema.parse(baseEnv)).not.toThrow();
+  });
+});
+
+describe("EnvSchema deploy metadata", () => {
+  it("defaults APP_ENV to development and AUTOTM_COMMIT_SHA to unknown", () => {
+    const env = EnvSchema.parse(baseEnv);
+    expect(env.APP_ENV).toBe("development");
+    expect(env.AUTOTM_COMMIT_SHA).toBe("unknown");
+  });
+});

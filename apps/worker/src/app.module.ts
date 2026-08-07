@@ -4,7 +4,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { LoggerModule } from "nestjs-pino";
 
 import { PrismaModule } from "./common/prisma.module";
-import { EnvSchema } from "./env.schema";
+import { parseEnv } from "./env.schema";
 import { PushModule } from "./push/push.module";
 import { VideoTranscodeProcessor } from "./queues/video-transcode.processor";
 import { NotificationFanoutProcessor } from "./queues/notification-fanout.processor";
@@ -17,7 +17,7 @@ import { PurgeExpiredAccounts } from "./jobs/PurgeExpiredAccounts";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: (cfg) => EnvSchema.parse(cfg),
+      validate: parseEnv,
     }),
     LoggerModule.forRoot({
       pinoHttp: {

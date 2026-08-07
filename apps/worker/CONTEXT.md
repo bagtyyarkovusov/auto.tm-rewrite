@@ -38,7 +38,7 @@ NestJS standalone worker. Consumes BullMQ queues from Redis and runs CPU-bound o
 
 ### Other
 
-- `src/main.ts` boots NestJS worker app
+- `src/main.ts` boots the NestJS worker app. Boot is fail-visible: an env-validation (or any bootstrap) failure logs the contract error and exits with code 1, so a misconfigured deploy surfaces as crashed instead of running a silently broken consumer. The worker has no public route and never runs migrations — the API pre-deploy command is the sole migration authority (ADR-0004/ADR-0039).
 - `src/app.module.ts` wires modules, including `PushModule`
 - `src/common/prisma.module.ts` — Prisma access module
 
@@ -48,11 +48,16 @@ None — worker is internal. Only Redis (queues) + Postgres + MinIO connections 
 
 ## Environment variables
 
+Validated fail-closed by `src/env.schema.ts` at boot.
+
+- `APP_ENV` — deployed-environment identity (`development` default; `staging`/`production` enable the deployed-env rules below)
+- `AUTOTM_COMMIT_SHA` — build-baked commit SHA (from `RAILWAY_GIT_COMMIT_SHA` in `infra/docker/worker.Dockerfile`), default `unknown`
 - `DATABASE_URL` — Postgres connection string
 - `REDIS_URL` — Redis connection string for BullMQ
 - `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` — object storage (used by future media pipelines)
-- `PUSH_TRANSPORT` — `test` (S10 default), `fcm-apns`, or `ntfy`
-- Optional production transport env names (not consumed until credentials are wired): `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`
+- `PUSH_TRANSPORT` — `test` (S10 default), `fcm-apns`, or `ntfy`. **`test` is rejected when `APP_ENV=production`** (it delivers nothing); `fcm-apns` requires the complete credential set below or boot fails
+- Push credentials (required together when `PUSH_TRANSPORT=fcm-apns`): `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`
+- Deployed-env rules (`APP_ENV=staging|production`): data endpoints must be valid non-loopback URLs, hosts must not reference the other environment, and default `minioadmin` credentials are forbidden
 
 ## Dependencies
 
@@ -95,3 +100,4 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
 - [ADR-0010](../../docs/adr/0010-testing-obs.md) — Uptime probes via worker
 - [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
 - [ADR-0027](../../docs/adr/0027-mlp-beta-scope.md) — Full notification/media platform deferred out of MLP beta
+- [ADR-0039](../../docs/adr/0039-phased-cloud-first-hosting.md) — Railway-era hosting; fail-closed push/env contract at boot
