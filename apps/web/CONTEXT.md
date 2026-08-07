@@ -21,7 +21,9 @@ Scope is intentionally **minimal** for MVP — full marketplace functionality st
 ## What it contains (today)
 
 - Next.js scaffold under `src/app/[locale]/` — `layout.tsx` + `page.tsx` + `globals.css`
-- `src/middleware.ts` for locale routing
+- `src/middleware.ts` for locale routing — `/healthz` is excluded from the matcher so deploy healthchecks bypass locale routing
+- `src/app/healthz/route.ts` — dependency-free deploy health endpoint (`status`/`service` + `commitSha`/`environment` from build-baked `AUTOTM_COMMIT_SHA` / Railway's `RAILWAY_ENVIRONMENT_NAME`); used by the Docker `HEALTHCHECK` and Railway health gate. Never calls the API or any data store
+- `next.config.ts` sets `output: "standalone"` with `outputFileTracingRoot` at the repo root — the production image (`infra/docker/web.Dockerfile`) runs the traced `apps/web/server.js`
 - `src/i18n/locales.ts` defining supported locales
 - `src/lib/utils.ts` — `cn()` helper
 - `src/components/ui/button.tsx` — first installed shadcn component
@@ -63,3 +65,4 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the i
 
 - [ADR-0002](../../docs/adr/0002-stack.md) — Next.js for SSR + OG
 - [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
+- [ADR-0039](../../docs/adr/0039-phased-cloud-first-hosting.md) — Railway-era hosting; web is deploy-critical for the public legal pages and ships a dependency-free `/healthz`
