@@ -26,7 +26,10 @@
     "db:seed": "pnpm --filter @auto-tm/db seed",
     "compose:up": "docker compose -f infra/compose/docker-compose.dev.yml up -d",
     "compose:down": "docker compose -f infra/compose/docker-compose.dev.yml down",
-    "compose:logs": "docker compose -f infra/compose/docker-compose.dev.yml logs -f"
+    "compose:logs": "docker compose -f infra/compose/docker-compose.dev.yml logs -f",
+    "minio:bootstrap": "node infra/minio/bootstrap.mjs",
+    "minio:backup": "node infra/minio/backup.mjs",
+    "minio:restore": "node infra/minio/restore.mjs"
   },
   "devDependencies": {
     "@ai-hero/sandcastle": "file:vendor/ai-hero-sandcastle-0.5.10-d4b7db7-1df6ad8f.tgz",

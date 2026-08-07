@@ -157,6 +157,41 @@ describe("EnvSchema deployed-environment endpoint rules", () => {
     ).toThrow(/MINIO_PUBLIC_URL/);
   });
 
+  it("requires distinct private and public MinIO endpoints in deployed environments", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        MINIO_ENDPOINT: "https://minio-production.up.railway.app",
+        MINIO_PUBLIC_URL: "https://minio-production.up.railway.app",
+      }),
+    ).toThrow(/MINIO_PUBLIC_URL/);
+  });
+
+  it("rejects internal MinIO public URLs and non-HTTPS production media URLs", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        MINIO_PUBLIC_URL: "http://minio.railway.internal:9000",
+      }),
+    ).toThrow(/MINIO_PUBLIC_URL/);
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        MINIO_PUBLIC_URL: "http://minio-production.up.railway.app",
+      }),
+    ).toThrow(/MINIO_PUBLIC_URL/);
+  });
+
+  it("allows local development to use one MinIO endpoint for private and public access", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...baseEnv,
+        MINIO_ENDPOINT: "http://localhost:9000",
+        MINIO_PUBLIC_URL: "http://localhost:9000",
+      }),
+    ).not.toThrow();
+  });
+
   it("rejects default MinIO credentials and placeholder JWT secrets in deployed envs", () => {
     expect(() =>
       EnvSchema.parse({ ...deployedEnv, MINIO_SECRET_KEY: "minioadmin" }),
