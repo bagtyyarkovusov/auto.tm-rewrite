@@ -49,7 +49,8 @@ here so dashboard-only drift is auditable:
    exact staging-proven SHA (S11-12).
 4. **Private networking**: `api`/`worker` reach Postgres, Redis, and MinIO
    over `*.railway.internal` hostnames; MinIO's public endpoint is only for
-   anonymous media reads + signed PUTs (S11-02).
+   anonymous media reads + signed PUTs. The MinIO console is not public. See
+   [`minio.md`](minio.md) for the bucket/bootstrap/backup contract.
 5. **Serverless sleep** (staging only, per sprint contract): may be enabled
    for `api`, `admin`, `web`; the worker and data services stay awake. All
    production services stay awake during store review.
@@ -67,8 +68,9 @@ generated per environment.
 | `AUTOTM_COMMIT_SHA` | baked | baked | baked | baked | image build arg (not a variable) |
 | `DATABASE_URL` | yes | yes | — | — | R: `${{Postgres.DATABASE_URL}}` |
 | `REDIS_URL` | yes | yes | — | — | R: `${{Redis.REDIS_URL}}` |
-| `MINIO_ENDPOINT` / `MINIO_PUBLIC_URL` | yes | yes | — | — | R/G: private origin / public S3 endpoint (S11-02) |
+| `MINIO_ENDPOINT` / `MINIO_PUBLIC_URL` | yes | yes | — | — | R/G: private origin / public S3 endpoint; distinct hosts in staging/production |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | yes | yes | — | — | G (S11-02) |
+| `MINIO_REGION` | yes | yes | — | — | fixed `us-east-1` unless provider requires another S3 signing region |
 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | yes | — | — | — | H, distinct per environment |
 | `TOTP_SECRET_ENCRYPTION_KEY` | yes | — | — | — | H (32-byte base64) |
 | `SMS_DRIVER` | yes | — | — | — | fixed `mock` in both environments (ADR-0039) |

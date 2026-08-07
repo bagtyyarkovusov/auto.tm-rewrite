@@ -2,11 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   S3Client,
-  CreateBucketCommand,
-  HeadBucketCommand,
   PutObjectCommand,
   DeleteObjectCommand,
-  PutBucketPolicyCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -16,19 +13,19 @@ import type { Env } from "../../../env.schema";
 @Injectable()
 export class MinioMediaStorageAdapter implements MediaStoragePort {
   private readonly s3: S3Client;
+  private readonly signingS3: S3Client;
   private readonly publicUrl: string;
 
   constructor(
     @Inject(ConfigService) private readonly config: ConfigService<Env, true>,
   ) {
     const minioEndpoint = this.config.get("MINIO_ENDPOINT", { infer: true });
+    const minioPublicUrl = this.config.get("MINIO_PUBLIC_URL", { infer: true });
     const accessKey = this.config.get("MINIO_ACCESS_KEY", { infer: true });
     const secretKey = this.config.get("MINIO_SECRET_KEY", { infer: true });
     const region = this.config.get("MINIO_REGION", { infer: true });
 
-    this.publicUrl = this.config
-      .get("MINIO_PUBLIC_URL", { infer: true })
-      .replace(/\/$/, "");
+    this.publicUrl = minioPublicUrl.replace(/\/$/, "");
     this.s3 = new S3Client({
       endpoint: minioEndpoint,
       region,
@@ -38,14 +35,15 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
       },
       forcePathStyle: true,
     });
-  }
-
-  async onModuleInit(): Promise<void> {
-    await Promise.all([
-      this.ensurePublicReadBucket("listing-photos"),
-      this.ensurePublicReadBucket("listing-videos"),
-      this.ensurePublicReadBucket("chat-attachments"),
-    ]);
+    this.signingS3 = new S3Client({
+      endpoint: this.publicUrl,
+      region,
+      credentials: {
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey,
+      },
+      forcePathStyle: true,
+    });
   }
 
   async presignUpload(data: {
@@ -62,7 +60,7 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
       ContentType: data.contentType,
     });
 
-    const url = await getSignedUrl(this.s3, command, {
+    const url = await getSignedUrl(this.signingS3, command, {
       expiresIn: data.expirySeconds ?? 600,
     });
 
@@ -101,28 +99,4 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
       : "listing-photos";
   }
 
-  private async ensurePublicReadBucket(bucket: string): Promise<void> {
-    try {
-      await this.s3.send(new HeadBucketCommand({ Bucket: bucket }));
-    } catch {
-      await this.s3.send(new CreateBucketCommand({ Bucket: bucket }));
-    }
-
-    await this.s3.send(
-      new PutBucketPolicyCommand({
-        Bucket: bucket,
-        Policy: JSON.stringify({
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Effect: "Allow",
-              Principal: { AWS: ["*"] },
-              Action: ["s3:GetObject"],
-              Resource: [`arn:aws:s3:::${bucket}/*`],
-            },
-          ],
-        }),
-      }),
-    );
-  }
 }

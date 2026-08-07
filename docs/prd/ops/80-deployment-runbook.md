@@ -40,6 +40,12 @@ Each environment has `api`, `worker`, `admin`, `web`, Postgres, Redis, and MinIO
 - Run `prisma migrate deploy` through the single release authority defined by Sprint 11. Never use `migrate dev` or `db push`.
 - Do not route traffic until API dependency-readiness and web/admin health checks pass. A worker queue/bootstrap failure must fail the deployment or page the operator through deploy status/logs.
 - Use private Railway networking for Postgres, Redis, and MinIO writes. Public exposure is limited to API, admin, web, and required media reads.
+- MinIO uses one persistent `/data` volume per environment. The S3 API public
+  endpoint is exposed only for anonymous media reads and presigned client PUTs;
+  the console and administrative/unsigned writes stay private. Bootstrap
+  buckets explicitly with `pnpm minio:bootstrap` after wiring
+  `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, and
+  `MINIO_REGION`. Do not rely on API startup to create or mutate buckets.
 
 Schema changes must support independently rolling services. A rollback restores the previous application revision; it does not reverse migrations.
 
@@ -234,6 +240,27 @@ Minimum successful drill:
 4. Start API against the restored database.
 5. Verify health, login with a test user, listing read, contact read/write if enabled, admin TOTP login, report list, audit list, and a sample media object reference.
 6. Record backup timestamp, restore start/end time, operator, result, and any data gaps.
+
+### Media backup/restore drill
+
+Run this only against isolated/non-production MinIO data:
+
+```bash
+export MINIO_ENDPOINT=http://localhost:9000
+export MINIO_ACCESS_KEY=minioadmin
+export MINIO_SECRET_KEY=minioadmin
+export MINIO_REGION=us-east-1
+
+pnpm minio:bootstrap
+pnpm minio:backup /tmp/autotm-minio-backup
+pnpm minio:restore /tmp/autotm-minio-backup
+```
+
+The backup writes `manifest.json`, `policies/<bucket>.json`, and
+`objects/<bucket>/<key>` files. The manifest stores SHA-256 checksums; restore
+verifies the local backup object before upload and reads the restored object
+back to verify the checksum after upload. A checksum failure blocks the restore
+instead of silently writing corrupt data.
 
 If restore fails or takes too long for beta operations, private beta launch is blocked until the backup path is fixed or the risk is explicitly accepted in the S8 closeout.
 

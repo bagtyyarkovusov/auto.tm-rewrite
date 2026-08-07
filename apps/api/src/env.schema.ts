@@ -145,6 +145,26 @@ function validateEndpoints(env: BaseEnv, add: (path: string, message: string) =>
       );
     }
   }
+
+  const minioPrivateHost = hostnameOf(env.MINIO_ENDPOINT);
+  const minioPublicHost = hostnameOf(env.MINIO_PUBLIC_URL);
+  if (minioPrivateHost !== null && minioPublicHost !== null) {
+    if (minioPrivateHost === minioPublicHost) {
+      add(
+        "MINIO_PUBLIC_URL",
+        "MINIO_PUBLIC_URL must be a distinct public S3 endpoint; MINIO_ENDPOINT stays private",
+      );
+    }
+    if (
+      minioPublicHost.endsWith(".railway.internal") ||
+      minioPublicHost.includes("internal")
+    ) {
+      add("MINIO_PUBLIC_URL", "MINIO_PUBLIC_URL must not use a private/internal host");
+    }
+    if (env.APP_ENV === "production" && new URL(env.MINIO_PUBLIC_URL).protocol !== "https:") {
+      add("MINIO_PUBLIC_URL", "MINIO_PUBLIC_URL must use HTTPS in production");
+    }
+  }
 }
 
 function validateSecrets(env: BaseEnv, add: (path: string, message: string) => void): void {
