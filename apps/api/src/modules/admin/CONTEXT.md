@@ -21,6 +21,7 @@ Cross-cutting admin operations: audit log and moderation actions today. Staff me
 - Duplicate pending reports are deduped at application level: same `(reporterUserId, targetType, targetId)` while `status = pending` returns the existing report (HTTP 200, `reusedExisting = true`) instead of creating a new row. New reports return HTTP 201 with `reusedExisting = false`.
 - `ContentReport.reason` enum values: `spam`, `scam`, `misleading`, `wrong_category` (listing-only), `harassment` (user or message only), `other` (requires non-empty trimmed details ≤ 1000 chars).
 - `ContentReportCreated` event is emitted from `admin/` after a new report row commits. Duplicate reuse emits no event. S7 has no in-process consumers.
+- `ReviewerOtpBypassAuthenticated` events from `identity/` append a `REVIEWER_OTP_BYPASS_LOGIN` audit row with `actorId = null`, `targetType = "user"`, target user id, and details containing only auth method, role, and occurred-at timestamp. The fixed reviewer OTP code is never persisted in audit details.
 - Public report routes (`POST /api/v1/listings/:id/report`, `POST /api/v1/users/:id/report`, and `POST /api/v1/conversations/:conversationId/messages/:messageId/report`) are authenticated with `JwtAuthGuard` (not `AdminGuard`). The public response shape is exactly `{ reportId, status, createdAt, reusedExisting }`.
 - **Launch-safety flags** (S7/S9a closeout): `REPORT_ENTRY_ENABLED=false` blocks public report writes at the controller level (403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"`) while admin report/audit reads remain available. `ADMIN_MODERATION_ACTIONS_ENABLED=false` blocks dismiss/ban/unban/suspend/unsuspend writes at the controller level (same 403 shape) while admin login, report list/detail, and audit list remain readable. `INSPECTION_INTEREST_ENABLED=false` is enforced in `reports/` for `POST /api/v1/listings/:id/inspection-interest`; `admin/` only exposes its public config flag. Flag checks are server-side environment config injected via `ConfigService`; disabled responses do not leak internal flag names.
 
@@ -49,6 +50,8 @@ Cross-cutting admin operations: audit log and moderation actions today. Staff me
   - `application/SuspendUser.spec.ts` — unit tests with fake ports and fake Prisma transaction
   - `application/UnsuspendUser.ts` — admin user unsuspend use-case; restores suspended → unsuspended; checks admin-target and self-moderation policies; no `reportId` accepted; single-transaction mutation + audit
   - `application/UnsuspendUser.spec.ts` — unit tests with fake ports and fake Prisma transaction
+  - `application/RecordReviewerAuthBypassAudit.ts` — `@OnEvent("ReviewerOtpBypassAuthenticated")` handler that records durable reviewer bypass audit rows through `AuditLogRepository`
+  - `application/RecordReviewerAuthBypassAudit.spec.ts` — unit test proving audit details omit OTP codes
   - `infrastructure/PrismaContentReportRepository.ts` — Prisma adapter for `ContentReportRepository`
   - `infrastructure/PrismaAuditLogRepository.ts` — Prisma adapter for `AuditLogRepository`
   - `presentation/ReportsController.ts` — public `POST /api/v1/listings/:id/report`, `POST /api/v1/users/:id/report`, and `POST /api/v1/conversations/:conversationId/messages/:messageId/report` (JwtAuthGuard, not AdminGuard); admin `GET /api/v1/admin/reports` and `GET /api/v1/admin/reports/:id` (AdminGuard)
@@ -85,6 +88,7 @@ Cross-cutting admin operations: audit log and moderation actions today. Staff me
 - `SuspendUser` — admin user suspend; accepts optional `reportId`; validates admin-target (`role = admin` → 403 `ADMIN_TARGET_NOT_MODERATABLE`) and self-moderation (target id === acting admin → 403 `SELF_MODERATION_NOT_ALLOWED`) before any mutation/report/audit; report-backed validation order identical to `BanListing`; direct-suspend state conflict (already suspended) → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction report resolution (when provided) + user suspension via `IdentityAdminPort.suspendUser` + audit write; returns target suspension state + `auditLogId` (+ `reportId`/`reportStatus=actioned` when report-backed)
 - `UnsuspendUser` — admin user unsuspend; restores suspended → unsuspended via `IdentityAdminPort.unsuspendUser`; checks admin-target and self-moderation policies; rejects `reportId`; state conflict (not suspended) → 409 `MODERATION_TARGET_STATE_CONFLICT`; single-transaction mutation + audit; returns target suspension state + `auditLogId`
 - `DismissReport` — admin report dismiss; accepts only pending reports; sets `ContentReport.status = dismissed`, `reviewedById`, `reviewedAt`; writes `CONTENT_REPORT_RESOLVE` audit row with `targetType = "content_report"`, `details.reportedTargetType`, and `details.reportedTargetId`; returns `reportId`, `status = dismissed`, `reviewedAt`, and `auditLogId`; already-resolved reports return 409 `REPORT_ALREADY_RESOLVED`
+- `RecordReviewerAuthBypassAudit` — consumes `ReviewerOtpBypassAuthenticated` and writes `REVIEWER_OTP_BYPASS_LOGIN` audit rows. The audit target is the authenticated user, `actorId = null`, and details omit reviewer phone/code credential values.
 
 ## Events emitted
 
@@ -195,13 +199,14 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
   | `DEALERSHIP_UNVERIFY` | Clears `verifiedAt` |
   | `NOTIFICATION_BROADCAST` | Broadcasts via `notifications/` |
   | `CATALOG_EDIT` | Add / edit / remove catalog rows |
-  | `CONTENT_REPORT_RESOLVE` | Dismiss a pending content report without mutating its reported listing/user; audit target is the `content_report` row |
+| `CONTENT_REPORT_RESOLVE` | Dismiss a pending content report without mutating its reported listing/user; audit target is the `content_report` row |
+| `REVIEWER_OTP_BYPASS_LOGIN` | Reviewer demo OTP bypass login; audit target is the authenticated buyer/seller user, with `actorId = null` |
 
 - **Ports**:
   - Exposed: `AuditWritePort.record(action, target, by, details?)`, `AdminReadPort.listAuditEntries`, `AdminReadPort.pendingContentReports`
   - Consumed: `IdentityReadPort` + `IdentityCheckPort` + `IdentityAdminPort` + `ListingsReadPort` + `ListingsAdminPort` + `DealershipReadPort` + `NotificationsDispatchPort`
 - **Events emitted**: `ContentReportCreated` after a new report row is committed if implementation needs a report-created event; duplicate pending reuse emits no report-created event. `AuditEntryRecorded` is emitted after the audit row is committed. Listing and user moderation state events are emitted by their owning contexts (`listings/` and `identity/`), not by `admin/`.
-- **Events consumed**: any event with audit interest may be subscribed here for traceability
+- **Events consumed**: `ReviewerOtpBypassAuthenticated` from `identity/` for durable reviewer-auth audit; other event-audit subscriptions can be added when their owning slices ship.
 
 ## Notable decisions
 

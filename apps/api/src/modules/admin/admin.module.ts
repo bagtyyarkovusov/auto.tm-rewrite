@@ -20,6 +20,7 @@ import { UnbanListing } from "./application/UnbanListing";
 import { SuspendUser } from "./application/SuspendUser";
 import { UnsuspendUser } from "./application/UnsuspendUser";
 import { DismissReport } from "./application/DismissReport";
+import { RecordReviewerAuthBypassAudit } from "./application/RecordReviewerAuthBypassAudit";
 import { PrismaContentReportRepository } from "./infrastructure/PrismaContentReportRepository";
 import { PrismaAuditLogRepository } from "./infrastructure/PrismaAuditLogRepository";
 import { CONTENT_REPORT_REPOSITORY } from "./domain/ports/ContentReportRepository";
@@ -49,6 +50,7 @@ import { AUDIT_LOG_REPOSITORY } from "./domain/ports/AuditLogRepository";
     SuspendUser,
     UnsuspendUser,
     DismissReport,
+    RecordReviewerAuthBypassAudit,
   ],
 })
 export class AdminModule {}

@@ -36,6 +36,9 @@ const BaseSchema = z.object({
   OTP_TEST_MODE: booleanFlag,
   OTP_TEST_CODE_RESPONSE: booleanFlag,
 
+  REVIEW_DEMO_ACCOUNT_ENABLED: booleanFlag,
+  REVIEW_DEMO_ACCOUNTS_JSON: z.string().default("[]"),
+
   RATE_LIMIT_GENERAL: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_OTP_PHONE_DAILY: z.coerce.number().int().positive().default(5),
   RATE_LIMIT_OTP_IP_HOURLY: z.coerce.number().int().positive().default(10),
@@ -212,6 +215,69 @@ function validateReviewerSafety(env: BaseEnv, add: (path: string, message: strin
       "OTP_TEST_CODE_RESPONSE",
       "OTP_TEST_CODE_RESPONSE is only allowed in CI (NODE_ENV=test)",
     );
+  }
+
+  validateReviewerDemoAccounts(env, add);
+}
+
+function validateReviewerDemoAccounts(
+  env: BaseEnv,
+  add: (path: string, message: string) => void,
+): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(env.REVIEW_DEMO_ACCOUNTS_JSON);
+  } catch {
+    add("REVIEW_DEMO_ACCOUNTS_JSON", "REVIEW_DEMO_ACCOUNTS_JSON must be valid JSON");
+    return;
+  }
+
+  if (!Array.isArray(parsed)) {
+    add("REVIEW_DEMO_ACCOUNTS_JSON", "REVIEW_DEMO_ACCOUNTS_JSON must be a JSON array");
+    return;
+  }
+
+  if (!env.REVIEW_DEMO_ACCOUNT_ENABLED) {
+    return;
+  }
+
+  if (parsed.length < 3 || parsed.length > 5) {
+    add(
+      "REVIEW_DEMO_ACCOUNTS_JSON",
+      "REVIEW_DEMO_ACCOUNT_ENABLED requires 3 to 5 reviewer demo accounts",
+    );
+    return;
+  }
+
+  const phones = new Set<string>();
+  for (const entry of parsed) {
+    if (
+      typeof entry !== "object" ||
+      entry === null ||
+      typeof (entry as { phone?: unknown }).phone !== "string" ||
+      typeof (entry as { code?: unknown }).code !== "string"
+    ) {
+      add(
+        "REVIEW_DEMO_ACCOUNTS_JSON",
+        "Each reviewer demo account must include string phone and code fields",
+      );
+      return;
+    }
+
+    const { phone, code } = entry as { phone: string; code: string };
+    if (!/^\+993\d{8}$/.test(phone)) {
+      add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account phones must be +993 E.164 numbers");
+      return;
+    }
+    if (!/^\d{5,8}$/.test(code)) {
+      add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account codes must be 5 to 8 digits");
+      return;
+    }
+    if (phones.has(phone)) {
+      add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account phones must be unique");
+      return;
+    }
+    phones.add(phone);
   }
 }
 

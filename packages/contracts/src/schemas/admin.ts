@@ -37,6 +37,7 @@ export const AdminAuditAction = {
   UserSuspend: "USER_SUSPEND",
   UserUnsuspend: "USER_UNSUSPEND",
   ContentReportResolve: "CONTENT_REPORT_RESOLVE",
+  ReviewerOtpBypassLogin: "REVIEWER_OTP_BYPASS_LOGIN",
 } as const;
 export type AdminAuditAction =
   (typeof AdminAuditAction)[keyof typeof AdminAuditAction];
