@@ -2900,10 +2900,59 @@
                       "listingId": {
                         "type": "string",
                         "format": "uuid"
+                      },
+                      "brandId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "modelId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "year": {
+                        "type": "integer",
+                        "minimum": 1900,
+                        "maximum": 2100
+                      },
+                      "displayPriceTmt": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "priceCurrency": {
+                        "type": "string",
+                        "enum": [
+                          "TMT",
+                          "USD",
+                          "AED"
+                        ]
+                      },
+                      "coverMediaKey": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "draft",
+                          "pending_review",
+                          "active",
+                          "sold",
+                          "archived",
+                          "rejected",
+                          "banned"
+                        ]
+                      },
+                      "available": {
+                        "type": "boolean",
+                        "default": true
                       }
                     },
                     "required": [
-                      "listingId"
+                      "listingId",
+                      "brandId",
+                      "modelId",
+                      "displayPriceTmt",
+                      "priceCurrency",
+                      "status"
                     ]
                   }
                 ]
@@ -2944,6 +2993,19 @@
             "type": "integer",
             "minimum": 0,
             "default": 0
+          },
+          "peerLastReadAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "peerLastDeliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mutedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
           }
         },
         "required": [
@@ -3097,10 +3159,59 @@
                             "listingId": {
                               "type": "string",
                               "format": "uuid"
+                            },
+                            "brandId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "modelId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "year": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            },
+                            "displayPriceTmt": {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            "priceCurrency": {
+                              "type": "string",
+                              "enum": [
+                                "TMT",
+                                "USD",
+                                "AED"
+                              ]
+                            },
+                            "coverMediaKey": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "pending_review",
+                                "active",
+                                "sold",
+                                "archived",
+                                "rejected",
+                                "banned"
+                              ]
+                            },
+                            "available": {
+                              "type": "boolean",
+                              "default": true
                             }
                           },
                           "required": [
-                            "listingId"
+                            "listingId",
+                            "brandId",
+                            "modelId",
+                            "displayPriceTmt",
+                            "priceCurrency",
+                            "status"
                           ]
                         }
                       ]
@@ -3141,6 +3252,19 @@
                   "type": "integer",
                   "minimum": 0,
                   "default": 0
+                },
+                "peerLastReadAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "peerLastDeliveredAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "mutedAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -3239,10 +3363,59 @@
                         "listingId": {
                           "type": "string",
                           "format": "uuid"
+                        },
+                        "brandId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "modelId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "year": {
+                          "type": "integer",
+                          "minimum": 1900,
+                          "maximum": 2100
+                        },
+                        "displayPriceTmt": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "priceCurrency": {
+                          "type": "string",
+                          "enum": [
+                            "TMT",
+                            "USD",
+                            "AED"
+                          ]
+                        },
+                        "coverMediaKey": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "pending_review",
+                            "active",
+                            "sold",
+                            "archived",
+                            "rejected",
+                            "banned"
+                          ]
+                        },
+                        "available": {
+                          "type": "boolean",
+                          "default": true
                         }
                       },
                       "required": [
-                        "listingId"
+                        "listingId",
+                        "brandId",
+                        "modelId",
+                        "displayPriceTmt",
+                        "priceCurrency",
+                        "status"
                       ]
                     }
                   ]
@@ -3356,10 +3529,59 @@
                   "listingId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "modelId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 2100
+                  },
+                  "displayPriceTmt": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "priceCurrency": {
+                    "type": "string",
+                    "enum": [
+                      "TMT",
+                      "USD",
+                      "AED"
+                    ]
+                  },
+                  "coverMediaKey": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "pending_review",
+                      "active",
+                      "sold",
+                      "archived",
+                      "rejected",
+                      "banned"
+                    ]
+                  },
+                  "available": {
+                    "type": "boolean",
+                    "default": true
                   }
                 },
                 "required": [
-                  "listingId"
+                  "listingId",
+                  "brandId",
+                  "modelId",
+                  "displayPriceTmt",
+                  "priceCurrency",
+                  "status"
                 ]
               }
             ]
@@ -3454,36 +3676,6 @@
               "kind",
               "metadata"
             ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "post_ref"
-                ]
-              },
-              "metadata": {
-                "type": "object",
-                "properties": {
-                  "listingId": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                },
-                "required": [
-                  "listingId"
-                ]
-              },
-              "clientMessageId": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "kind",
-              "metadata"
-            ]
           }
         ]
       },
@@ -3544,10 +3736,59 @@
                   "listingId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "modelId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 2100
+                  },
+                  "displayPriceTmt": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "priceCurrency": {
+                    "type": "string",
+                    "enum": [
+                      "TMT",
+                      "USD",
+                      "AED"
+                    ]
+                  },
+                  "coverMediaKey": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "pending_review",
+                      "active",
+                      "sold",
+                      "archived",
+                      "rejected",
+                      "banned"
+                    ]
+                  },
+                  "available": {
+                    "type": "boolean",
+                    "default": true
                   }
                 },
                 "required": [
-                  "listingId"
+                  "listingId",
+                  "brandId",
+                  "modelId",
+                  "displayPriceTmt",
+                  "priceCurrency",
+                  "status"
                 ]
               }
             ]
@@ -3578,6 +3819,81 @@
           "senderId",
           "text",
           "createdAt"
+        ]
+      },
+      "SendPostRefMessageRequest": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "listingId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "listingId"
+            ],
+            "additionalProperties": false
+          },
+          "clientMessageId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "metadata"
+        ],
+        "additionalProperties": false
+      },
+      "PresignChatAttachmentRequest": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/webp"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 5242880
+          }
+        },
+        "required": [
+          "contentType",
+          "sizeBytes"
+        ]
+      },
+      "PresignChatAttachmentResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "key": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "maxSizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          }
+        },
+        "required": [
+          "uploadUrl",
+          "key",
+          "expiresIn",
+          "maxSizeBytes"
         ]
       },
       "ConversationSummary": {
@@ -3717,10 +4033,59 @@
                       "listingId": {
                         "type": "string",
                         "format": "uuid"
+                      },
+                      "brandId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "modelId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "year": {
+                        "type": "integer",
+                        "minimum": 1900,
+                        "maximum": 2100
+                      },
+                      "displayPriceTmt": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "priceCurrency": {
+                        "type": "string",
+                        "enum": [
+                          "TMT",
+                          "USD",
+                          "AED"
+                        ]
+                      },
+                      "coverMediaKey": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "draft",
+                          "pending_review",
+                          "active",
+                          "sold",
+                          "archived",
+                          "rejected",
+                          "banned"
+                        ]
+                      },
+                      "available": {
+                        "type": "boolean",
+                        "default": true
                       }
                     },
                     "required": [
-                      "listingId"
+                      "listingId",
+                      "brandId",
+                      "modelId",
+                      "displayPriceTmt",
+                      "priceCurrency",
+                      "status"
                     ]
                   }
                 ]
@@ -3761,6 +4126,19 @@
             "type": "integer",
             "minimum": 0,
             "default": 0
+          },
+          "peerLastReadAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "peerLastDeliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mutedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
           }
         },
         "required": [
@@ -3829,10 +4207,59 @@
                   "listingId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "modelId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 2100
+                  },
+                  "displayPriceTmt": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "priceCurrency": {
+                    "type": "string",
+                    "enum": [
+                      "TMT",
+                      "USD",
+                      "AED"
+                    ]
+                  },
+                  "coverMediaKey": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "pending_review",
+                      "active",
+                      "sold",
+                      "archived",
+                      "rejected",
+                      "banned"
+                    ]
+                  },
+                  "available": {
+                    "type": "boolean",
+                    "default": true
                   }
                 },
                 "required": [
-                  "listingId"
+                  "listingId",
+                  "brandId",
+                  "modelId",
+                  "displayPriceTmt",
+                  "priceCurrency",
+                  "status"
                 ]
               }
             ]
@@ -3948,10 +4375,59 @@
           "listingId": {
             "type": "string",
             "format": "uuid"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "displayPriceTmt": {
+            "type": "number",
+            "minimum": 0
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "coverMediaKey": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "active",
+              "sold",
+              "archived",
+              "rejected",
+              "banned"
+            ]
+          },
+          "available": {
+            "type": "boolean",
+            "default": true
           }
         },
         "required": [
-          "listingId"
+          "listingId",
+          "brandId",
+          "modelId",
+          "displayPriceTmt",
+          "priceCurrency",
+          "status"
         ]
       },
       "MessageMetadata": {
@@ -3982,10 +4458,59 @@
               "listingId": {
                 "type": "string",
                 "format": "uuid"
+              },
+              "brandId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "modelId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "year": {
+                "type": "integer",
+                "minimum": 1900,
+                "maximum": 2100
+              },
+              "displayPriceTmt": {
+                "type": "number",
+                "minimum": 0
+              },
+              "priceCurrency": {
+                "type": "string",
+                "enum": [
+                  "TMT",
+                  "USD",
+                  "AED"
+                ]
+              },
+              "coverMediaKey": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending_review",
+                  "active",
+                  "sold",
+                  "archived",
+                  "rejected",
+                  "banned"
+                ]
+              },
+              "available": {
+                "type": "boolean",
+                "default": true
               }
             },
             "required": [
-              "listingId"
+              "listingId",
+              "brandId",
+              "modelId",
+              "displayPriceTmt",
+              "priceCurrency",
+              "status"
             ]
           }
         ]
@@ -4129,10 +4654,59 @@
                       "listingId": {
                         "type": "string",
                         "format": "uuid"
+                      },
+                      "brandId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "modelId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "year": {
+                        "type": "integer",
+                        "minimum": 1900,
+                        "maximum": 2100
+                      },
+                      "displayPriceTmt": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "priceCurrency": {
+                        "type": "string",
+                        "enum": [
+                          "TMT",
+                          "USD",
+                          "AED"
+                        ]
+                      },
+                      "coverMediaKey": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "draft",
+                          "pending_review",
+                          "active",
+                          "sold",
+                          "archived",
+                          "rejected",
+                          "banned"
+                        ]
+                      },
+                      "available": {
+                        "type": "boolean",
+                        "default": true
                       }
                     },
                     "required": [
-                      "listingId"
+                      "listingId",
+                      "brandId",
+                      "modelId",
+                      "displayPriceTmt",
+                      "priceCurrency",
+                      "status"
                     ]
                   }
                 ]
@@ -4177,6 +4751,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "deletedAt": {
             "type": "string",
             "format": "date-time"
@@ -4184,7 +4762,32 @@
         },
         "required": [
           "messageId",
+          "conversationId",
           "deletedAt"
+        ]
+      },
+      "TypingStartRequest": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "conversationId"
+        ]
+      },
+      "TypingStopRequest": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "conversationId"
         ]
       },
       "TypingEvent": {
@@ -4206,6 +4809,31 @@
           "conversationId",
           "userId",
           "isTyping"
+        ]
+      },
+      "PresenceEvent": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "conversationId",
+          "userId",
+          "online"
         ]
       },
       "WatermarkEvent": {
@@ -4362,7 +4990,6 @@
               "spam",
               "scam",
               "misleading",
-              "wrong_category",
               "harassment",
               "other"
             ]
@@ -4370,20 +4997,10 @@
           "details": {
             "type": "string",
             "maxLength": 1000
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "conversationId": {
-            "type": "string",
-            "format": "uuid"
           }
         },
         "required": [
-          "reason",
-          "messageId",
-          "conversationId"
+          "reason"
         ]
       },
       "ReportListItem": {
@@ -4699,6 +5316,10 @@
                 "type": "string",
                 "format": "uuid"
               },
+              "listingId": {
+                "type": "string",
+                "format": "uuid"
+              },
               "senderId": {
                 "type": "string",
                 "format": "uuid"
@@ -4712,6 +5333,7 @@
               },
               "messageDeletedAt": {
                 "type": "string",
+                "nullable": true,
                 "format": "date-time"
               }
             },
@@ -4744,6 +5366,79 @@
               }
             }
           },
+          "messageContext": {
+            "type": "object",
+            "properties": {
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "messageId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "listingId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "messageCreatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "messageBody": {
+                "type": "string"
+              },
+              "messageDeletedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "surroundingMessages": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "senderId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "body": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "deletedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "senderId",
+                    "createdAt"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "conversationId",
+              "messageId",
+              "listingId",
+              "senderId",
+              "messageCreatedAt",
+              "surroundingMessages"
+            ]
+          },
           "reportsSubmittedByReporterCount": {
             "type": "integer",
             "minimum": 0
@@ -4774,6 +5469,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "listingId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "senderId": {
             "type": "string",
             "format": "uuid"
@@ -4789,20 +5488,47 @@
             "type": "string",
             "format": "date-time"
           },
-          "surroundingMessageIds": {
+          "surroundingMessages": {
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid"
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "senderId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "body": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "deletedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "senderId",
+                "createdAt"
+              ]
             }
           }
         },
         "required": [
           "conversationId",
           "messageId",
+          "listingId",
           "senderId",
           "messageCreatedAt",
-          "surroundingMessageIds"
+          "surroundingMessages"
         ]
       },
       "DismissReportRequest": {
@@ -5108,7 +5834,8 @@
               "LISTING_UNBAN",
               "USER_SUSPEND",
               "USER_UNSUSPEND",
-              "CONTENT_REPORT_RESOLVE"
+              "CONTENT_REPORT_RESOLVE",
+              "REVIEWER_OTP_BYPASS_LOGIN"
             ]
           },
           "actorSummary": {
@@ -5172,7 +5899,8 @@
                     "LISTING_UNBAN",
                     "USER_SUSPEND",
                     "USER_UNSUSPEND",
-                    "CONTENT_REPORT_RESOLVE"
+                    "CONTENT_REPORT_RESOLVE",
+                    "REVIEWER_OTP_BYPASS_LOGIN"
                   ]
                 },
                 "actorSummary": {
@@ -5446,10 +6174,49 @@
           },
           "invalidatedPrevious": {
             "type": "boolean"
+          },
+          "token": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "token": {
+                "type": "string"
+              },
+              "platform": {
+                "type": "string",
+                "enum": [
+                  "android",
+                  "ios",
+                  "web"
+                ]
+              },
+              "deviceId": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastSeenAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "token",
+              "platform",
+              "createdAt",
+              "lastSeenAt"
+            ]
           }
         },
         "required": [
-          "registered"
+          "registered",
+          "token"
         ]
       },
       "NotificationPreferences": {
@@ -5805,10 +6572,59 @@
                                 "listingId": {
                                   "type": "string",
                                   "format": "uuid"
+                                },
+                                "brandId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "modelId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "year": {
+                                  "type": "integer",
+                                  "minimum": 1900,
+                                  "maximum": 2100
+                                },
+                                "displayPriceTmt": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "priceCurrency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "TMT",
+                                    "USD",
+                                    "AED"
+                                  ]
+                                },
+                                "coverMediaKey": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "draft",
+                                    "pending_review",
+                                    "active",
+                                    "sold",
+                                    "archived",
+                                    "rejected",
+                                    "banned"
+                                  ]
+                                },
+                                "available": {
+                                  "type": "boolean",
+                                  "default": true
                                 }
                               },
                               "required": [
-                                "listingId"
+                                "listingId",
+                                "brandId",
+                                "modelId",
+                                "displayPriceTmt",
+                                "priceCurrency",
+                                "status"
                               ]
                             }
                           ]
@@ -5849,6 +6665,19 @@
                       "type": "integer",
                       "minimum": 0,
                       "default": 0
+                    },
+                    "peerLastReadAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "peerLastDeliveredAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "mutedAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
                     }
                   },
                   "required": [
@@ -6134,10 +6963,59 @@
                                       "listingId": {
                                         "type": "string",
                                         "format": "uuid"
+                                      },
+                                      "brandId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "modelId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "year": {
+                                        "type": "integer",
+                                        "minimum": 1900,
+                                        "maximum": 2100
+                                      },
+                                      "displayPriceTmt": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "priceCurrency": {
+                                        "type": "string",
+                                        "enum": [
+                                          "TMT",
+                                          "USD",
+                                          "AED"
+                                        ]
+                                      },
+                                      "coverMediaKey": {
+                                        "type": "string"
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "draft",
+                                          "pending_review",
+                                          "active",
+                                          "sold",
+                                          "archived",
+                                          "rejected",
+                                          "banned"
+                                        ]
+                                      },
+                                      "available": {
+                                        "type": "boolean",
+                                        "default": true
                                       }
                                     },
                                     "required": [
-                                      "listingId"
+                                      "listingId",
+                                      "brandId",
+                                      "modelId",
+                                      "displayPriceTmt",
+                                      "priceCurrency",
+                                      "status"
                                     ]
                                   }
                                 ]
@@ -6178,6 +7056,19 @@
                             "type": "integer",
                             "minimum": 0,
                             "default": 0
+                          },
+                          "peerLastReadAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "peerLastDeliveredAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "mutedAt": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "date-time"
                           }
                         },
                         "required": [
@@ -6309,10 +7200,59 @@
                                   "listingId": {
                                     "type": "string",
                                     "format": "uuid"
+                                  },
+                                  "brandId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "modelId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "year": {
+                                    "type": "integer",
+                                    "minimum": 1900,
+                                    "maximum": 2100
+                                  },
+                                  "displayPriceTmt": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "priceCurrency": {
+                                    "type": "string",
+                                    "enum": [
+                                      "TMT",
+                                      "USD",
+                                      "AED"
+                                    ]
+                                  },
+                                  "coverMediaKey": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "draft",
+                                      "pending_review",
+                                      "active",
+                                      "sold",
+                                      "archived",
+                                      "rejected",
+                                      "banned"
+                                    ]
+                                  },
+                                  "available": {
+                                    "type": "boolean",
+                                    "default": true
                                   }
                                 },
                                 "required": [
-                                  "listingId"
+                                  "listingId",
+                                  "brandId",
+                                  "modelId",
+                                  "displayPriceTmt",
+                                  "priceCurrency",
+                                  "status"
                                 ]
                               }
                             ]
@@ -6506,10 +7446,59 @@
                             "listingId": {
                               "type": "string",
                               "format": "uuid"
+                            },
+                            "brandId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "modelId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "year": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            },
+                            "displayPriceTmt": {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            "priceCurrency": {
+                              "type": "string",
+                              "enum": [
+                                "TMT",
+                                "USD",
+                                "AED"
+                              ]
+                            },
+                            "coverMediaKey": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "pending_review",
+                                "active",
+                                "sold",
+                                "archived",
+                                "rejected",
+                                "banned"
+                              ]
+                            },
+                            "available": {
+                              "type": "boolean",
+                              "default": true
                             }
                           },
                           "required": [
-                            "listingId"
+                            "listingId",
+                            "brandId",
+                            "modelId",
+                            "displayPriceTmt",
+                            "priceCurrency",
+                            "status"
                           ]
                         }
                       ]

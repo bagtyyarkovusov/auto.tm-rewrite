@@ -7,3 +7,5 @@ export type { PasswordHasherPort } from "./PasswordHasherPort";
 export type { IdentityCheckPort } from "./IdentityCheckPort";
 export type { IdentityReadPort } from "./IdentityReadPort";
 export type { AccountDeletionListingsPort } from "./AccountDeletionListingsPort";
+export type { ConstantTimeComparatorPort } from "./ConstantTimeComparatorPort";
+export type { ReviewerOtpBypassConfig } from "./ReviewerOtpBypassConfig";

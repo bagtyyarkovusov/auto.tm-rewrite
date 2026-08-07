@@ -7,6 +7,10 @@ import type { UserRepository } from "../domain/ports/UserRepository";
 import type { SessionRepository } from "../domain/ports/SessionRepository";
 import type { PasswordHasherPort } from "../domain/ports/PasswordHasherPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
+import type { ConstantTimeComparatorPort } from "../domain/ports/ConstantTimeComparatorPort";
+import { CONSTANT_TIME_COMPARATOR_PORT } from "../domain/ports/ConstantTimeComparatorPort";
+import type { ReviewerOtpBypassConfig } from "../domain/ports/ReviewerOtpBypassConfig";
+import { REVIEWER_OTP_BYPASS_CONFIG } from "../domain/ports/ReviewerOtpBypassConfig";
 import { PrismaOtpRequestRepository } from "../infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "../infrastructure/PrismaSessionRepository";
@@ -60,6 +64,10 @@ export class VerifyOtp {
     private readonly eventBus: { emit: (event: string, payload: unknown) => void },
     @Inject(RecoverAccount)
     private readonly recoverAccount: RecoverAccount,
+    @Inject(REVIEWER_OTP_BYPASS_CONFIG)
+    private readonly reviewerBypassConfig: ReviewerOtpBypassConfig,
+    @Inject(CONSTANT_TIME_COMPARATOR_PORT)
+    private readonly constantTimeComparator: ConstantTimeComparatorPort,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
@@ -67,6 +75,17 @@ export class VerifyOtp {
 
     const now = this.clock.now();
     const codeHash = hashSha256(input.code);
+
+    const reviewerBypassResult = await this.tryReviewerBypass({
+      phone: phone.value,
+      code: input.code,
+      deviceLabel: input.deviceLabel,
+      userAgent: input.userAgent,
+      now,
+    });
+    if (reviewerBypassResult !== null) {
+      return reviewerBypassResult;
+    }
 
     const otpRequest = await this.otpRequestRepo.findLatestByPhone(phone.value);
     if (!otpRequest) {
@@ -94,7 +113,6 @@ export class VerifyOtp {
       throw new Error("Invalid OTP code");
     }
 
-    // Find or create user
     const existingUser = await this.userRepo.findByPhone(phone.value);
     const isNewUser = !existingUser;
 
@@ -123,7 +141,78 @@ export class VerifyOtp {
       });
     }
 
-    // Session cap: delete expired first, then evict oldest if still at cap
+    return this.createSessionResult({
+      user,
+      now,
+      deviceLabel: input.deviceLabel,
+      userAgent: input.userAgent,
+      deletionScheduledAt,
+    });
+  }
+
+  private async tryReviewerBypass(input: {
+    phone: string;
+    code: string;
+    deviceLabel: string | undefined;
+    userAgent: string | undefined;
+    now: Date;
+  }): Promise<VerifyOtpResult | null> {
+    if (!this.reviewerBypassConfig.enabled) {
+      return null;
+    }
+
+    let matched = false;
+    for (const account of this.reviewerBypassConfig.accounts) {
+      const phoneMatches = this.constantTimeComparator.compare(input.phone, account.phone);
+      const codeMatches = this.constantTimeComparator.compare(input.code, account.code);
+      matched = matched || (phoneMatches && codeMatches);
+    }
+
+    if (!matched) {
+      return null;
+    }
+
+    const user = await this.userRepo.findByPhone(input.phone);
+    if (!user || (user.role !== "buyer" && user.role !== "seller")) {
+      return null;
+    }
+
+    const deletionScheduledAt = user.deletionScheduledAt;
+    if (deletionScheduledAt !== null) {
+      await this.recoverAccount.execute({ userId: user.id });
+    }
+
+    const result = await this.createSessionResult({
+      user,
+      now: input.now,
+      deviceLabel: input.deviceLabel,
+      userAgent: input.userAgent,
+      deletionScheduledAt,
+    });
+
+    this.eventBus.emit("ReviewerOtpBypassAuthenticated", {
+      userId: user.id,
+      role: user.role,
+      occurredAt: input.now.toISOString(),
+    });
+
+    return result;
+  }
+
+  private async createSessionResult(input: {
+    user: {
+      id: string;
+      phone: string;
+      displayName: string | null;
+      role: string;
+    };
+    now: Date;
+    deviceLabel: string | undefined;
+    userAgent: string | undefined;
+    deletionScheduledAt: Date | null;
+  }): Promise<VerifyOtpResult> {
+    const { user, now } = input;
+
     const sessionCount = await this.sessionRepo.countByUserId(user.id);
     if (sessionCount > 0) {
       await this.sessionRepo.deleteExpiredByUserId(user.id);
@@ -166,7 +255,7 @@ export class VerifyOtp {
         phone: user.phone,
         displayName: user.displayName,
         role: user.role,
-        deletionScheduledAt: deletionScheduledAt?.toISOString() ?? null,
+        deletionScheduledAt: input.deletionScheduledAt?.toISOString() ?? null,
       },
     };
   }

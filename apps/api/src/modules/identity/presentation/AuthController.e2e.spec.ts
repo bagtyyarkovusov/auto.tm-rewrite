@@ -9,11 +9,22 @@ import {
 import supertest from "supertest";
 import { PrismaService } from "@auto-tm/db";
 import { APP_GUARD, Reflector } from "@nestjs/core";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 import { JwtModule, JwtService } from "@nestjs/jwt";
 
 import { IdentityModule } from "../identity.module";
+import { AUDIT_LOG_REPOSITORY } from "../../admin/domain/ports/AuditLogRepository";
+import { RecordReviewerAuthBypassAudit } from "../../admin/application/RecordReviewerAuthBypassAudit";
+import { PrismaAuditLogRepository } from "../../admin/infrastructure/PrismaAuditLogRepository";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { GlobalErrorFilter } from "../../../common/error.filter";
+
+function reviewerDemoAccount(index: number): { phone: string; code: string } {
+  return {
+    phone: `+99365${String(index).padStart(6, "0")}`,
+    code: String(index).repeat(6),
+  };
+}
 
 describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
   let app: NestFastifyApplication;
@@ -285,6 +296,111 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
 
     const userAfter = await prisma.user.findUnique({ where: { id: existingUser.id } });
     expect(userAfter?.deletionScheduledAt).toBeNull();
+  });
+});
+
+describe("AuthController e2e — reviewer OTP bypass audit", () => {
+  let app: NestFastifyApplication;
+  let request: ReturnType<typeof supertest>;
+  let prisma: PrismaService;
+  let previousReviewEnabled: string | undefined;
+  let previousReviewAccounts: string | undefined;
+  const account1 = reviewerDemoAccount(1);
+  const account2 = reviewerDemoAccount(2);
+  const account3 = reviewerDemoAccount(3);
+
+  beforeAll(async () => {
+    previousReviewEnabled = process.env["REVIEW_DEMO_ACCOUNT_ENABLED"];
+    previousReviewAccounts = process.env["REVIEW_DEMO_ACCOUNTS_JSON"];
+    process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] = "true";
+    process.env["REVIEW_DEMO_ACCOUNTS_JSON"] = JSON.stringify([
+      account1,
+      account2,
+      account3,
+    ]);
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [
+        EventEmitterModule.forRoot(),
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
+      providers: [
+        PrismaAuditLogRepository,
+        {
+          provide: AUDIT_LOG_REPOSITORY,
+          useClass: PrismaAuditLogRepository,
+        },
+        RecordReviewerAuthBypassAudit,
+      ],
+    }).compile();
+
+    app = moduleFixture.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    app.useGlobalFilters(new GlobalErrorFilter());
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    request = supertest(app.getHttpServer());
+    prisma = app.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    if (previousReviewEnabled === undefined) {
+      delete process.env["REVIEW_DEMO_ACCOUNT_ENABLED"];
+    } else {
+      process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] = previousReviewEnabled;
+    }
+    if (previousReviewAccounts === undefined) {
+      delete process.env["REVIEW_DEMO_ACCOUNTS_JSON"];
+    } else {
+      process.env["REVIEW_DEMO_ACCOUNTS_JSON"] = previousReviewAccounts;
+    }
+    await app?.close();
+  });
+
+  beforeEach(async () => {
+    await prisma.auditLog.deleteMany();
+    await prisma.session.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.otpRequest.deleteMany();
+  });
+
+  it("authenticates a pre-existing reviewer buyer without OTP issuance and writes a durable audit row without the code", async () => {
+    const user = await prisma.user.create({
+      data: {
+        phone: account1.phone,
+        role: "buyer",
+      },
+    });
+
+    const res = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: account1.phone, code: account1.code })
+      .expect(201);
+
+    expect(res.body.user.id).toBe(user.id);
+    expect(await prisma.otpRequest.count()).toBe(0);
+
+    const auditLog = await prisma.auditLog.findFirst({
+      where: {
+        action: "REVIEWER_OTP_BYPASS_LOGIN",
+        targetType: "user",
+        targetId: user.id,
+      },
+    });
+
+    expect(auditLog).not.toBeNull();
+    expect(auditLog?.actorId).toBeNull();
+    expect(auditLog?.details).toMatchObject({
+      authMethod: "reviewer_otp_bypass",
+      role: "buyer",
+    });
+    expect(JSON.stringify(auditLog)).not.toContain(account1.code);
   });
 });
 

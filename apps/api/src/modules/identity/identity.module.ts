@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 
 import { PrismaModule } from "../../common/prisma.module";
 import { IdentityController } from "./presentation/identity.controller";
@@ -35,14 +36,20 @@ import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
 import { PrismaAccountDeletionListingsAdapter } from "./infrastructure/PrismaAccountDeletionListingsAdapter";
+import { NodeConstantTimeComparator } from "./infrastructure/NodeConstantTimeComparator";
+import { parseReviewerOtpBypassConfig } from "./infrastructure/ReviewerOtpBypassConfigFactory";
+import { EventEmitterIdentityEventBus } from "./infrastructure/EventEmitterIdentityEventBus";
 import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
 import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
+import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
+import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConfig";
 
 @Module({
   imports: [
+    EventEmitterModule,
     PrismaModule,
   ],
   controllers: [IdentityController, AuthController, MeController, AdminAuthController],
@@ -63,6 +70,8 @@ import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
     InMemoryTotpThrottleAdapter,
     PinoSecurityLoggerAdapter,
     PrismaAccountDeletionListingsAdapter,
+    NodeConstantTimeComparator,
+    EventEmitterIdentityEventBus,
     {
       provide: ACCOUNT_DELETION_LISTINGS_PORT,
       useClass: PrismaAccountDeletionListingsAdapter,
@@ -86,6 +95,18 @@ import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
     {
       provide: BLOCKED_USER_REPOSITORY,
       useClass: PrismaBlockedUserRepository,
+    },
+    {
+      provide: CONSTANT_TIME_COMPARATOR_PORT,
+      useClass: NodeConstantTimeComparator,
+    },
+    {
+      provide: REVIEWER_OTP_BYPASS_CONFIG,
+      useFactory: () =>
+        parseReviewerOtpBypassConfig({
+          REVIEW_DEMO_ACCOUNT_ENABLED: process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] === "true",
+          REVIEW_DEMO_ACCOUNTS_JSON: process.env["REVIEW_DEMO_ACCOUNTS_JSON"] ?? "[]",
+        }),
     },
     {
       provide: IDENTITY_TOKENS.ClockPort,
@@ -125,11 +146,7 @@ import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
     },
     {
       provide: "EventBus",
-      useFactory: () => ({
-        emit: (_event: string, _payload: unknown) => {
-          // Stub — will be replaced by NestJS EventEmitter2 when event infrastructure lands.
-        },
-      }),
+      useClass: EventEmitterIdentityEventBus,
     },
     RequestOtp,
     VerifyOtp,

@@ -34,6 +34,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - `OtpRequest` expires after 5 minutes; max 5 attempts before invalidation (application-level).
 - Rate limits: 5 OTP requests per phone per 24h; 10 per IP per hour. Exponential backoff: `60 × 2^N` seconds where N is the count of prior requests.
 - `SMS_DRIVER=mock` (default) logs the OTP code; `SMS_DRIVER=gateway` sends via SMS gateway. `OTP_TEST_MODE=true` returns the plaintext code in the API response.
+- Reviewer demo OTP bypass is disabled by default. When `REVIEW_DEMO_ACCOUNT_ENABLED=true`, `REVIEW_DEMO_ACCOUNTS_JSON` must provide 3-5 secret-managed reserved `+993` phone/code entries. Reserved phone and fixed-code comparisons go through `ConstantTimeComparatorPort`. A bypass success never requires an `OtpRequest`, never creates a user, and only authenticates a pre-existing `buyer` or `seller`; `moderator` and `admin` users fall through to the normal safe OTP failure path. Successful bypass emits `ReviewerOtpBypassAuthenticated` without the fixed code.
 - `BlockedUser` is one-way (block by A on B). If both want, both must block. Self-blocking is rejected at the application layer (`BlockUser`) and the domain entity (`BlockedUser`).
 - **S7 user suspension enforcement** — `User.suspendedAt` blocks authenticated marketplace mutations across `listings/` (create/edit/publish/media/state), `conversations/` (new contact/send when either participant is suspended), and `admin/` (report creation). Suspended users may still authenticate, log out, browse public surfaces, view their generic suspension state, and delete their account. Enforcement is synchronous via `IdentityCheckPort.isSuspended` (no event side effects). `IdentityAdminPort` owns the suspension field writes and participates in the caller's transaction for S7 admin moderation.
 
@@ -67,16 +68,18 @@ TotpEnrollmentRepository   // TotpEnrollment persistence (findByUserId, createPe
 TotpThrottlePort           // failed-attempt counting per user/session with window expiry
 SecurityLoggerPort         // structured security logging for TOTP failures
 BlockedUserRepository      // one-way block/unblock persistence and check
+ConstantTimeComparatorPort // constant-time string comparison seam for reviewer demo phone/code matching
+ReviewerOtpBypassConfig    // parsed reviewer demo account flag + 3-5 secret-managed entries
 ```
 
 ## Ports consumed (from other contexts)
 
-- (none today — `SmsPort` is consumed indirectly via the in-context `OtpSenderPort` abstraction)
+- `admin/` consumes `ReviewerOtpBypassAuthenticated` via the Nest event bus and records a durable audit row. `identity/` does not import admin internals.
 
 ## Shipped use-cases
 
 - `RequestOtp` — validates TM phone, enforces rate limits, generates + sends OTP code, stores hashed record. Exposed as `POST /api/v1/auth/otp/request` (public).
-- `VerifyOtp` — validates OTP code against stored hash, creates or loads User, creates a multi-device Session with bcrypt-hashed refresh token, enforces 10-session cap with expired cleanup + FIFO eviction, issues JWT access token (15 min, includes `sid` = Session.id) and random refresh token (30-day sliding expiry). Emits `UserRegistered` on first login. If the existing user is in a deletion grace period (`deletionScheduledAt` set), auto-recovers the account via `RecoverAccount` before continuing. Respects `SIGNUPS_ENABLED=false` by blocking new-user creation with `FEATURE_DISABLED` while preserving existing-user login and recovery. Exposed as `POST /api/v1/auth/otp/verify` (public).
+- `VerifyOtp` — validates OTP code against stored hash, creates or loads User, creates a multi-device Session with bcrypt-hashed refresh token, enforces 10-session cap with expired cleanup + FIFO eviction, issues JWT access token (15 min, includes `sid` = Session.id) and random refresh token (30-day sliding expiry). Emits `UserRegistered` on first login. If the existing user is in a deletion grace period (`deletionScheduledAt` set), auto-recovers the account via `RecoverAccount` before continuing. Respects `SIGNUPS_ENABLED=false` by blocking new-user creation with `FEATURE_DISABLED` while preserving existing-user login and recovery. Before normal OTP lookup, checks the reviewer demo bypass config: a matching reserved phone/code can create a normal session only for a pre-existing buyer/seller and emits `ReviewerOtpBypassAuthenticated`; disabled, non-reserved, wrong-code, missing-user, moderator, and admin cases fall through to the normal safe OTP path. Exposed as `POST /api/v1/auth/otp/verify` (public).
 - `RefreshSession` — locates a session by bcrypt-scanning all session rows against the provided refresh token, validates expiry, rotates the refresh token hash in-place with optimistic locking (old-hash match via `updateMany`), bumps `lastSeenAt`, extends `expiresAt` to `now + 30 days`, preserves existing `adminTotpExpiresAt` without extending it, and issues a fresh JWT access token (includes `sid`). Rejects unknown, expired, and already-used tokens with 401. Exposed as `POST /api/v1/auth/refresh` (public).
 - `Logout` — locates the session matching the supplied refresh token via bcrypt comparison and deletes that single session row. Returns 204 on success; throws 401 when no match. Idempotent. Exposed as `POST /api/v1/auth/logout` (public).
 - `LogoutAll` — deletes every session for the authenticated user (identified by bearer JWT). Returns 204. Exposed as `POST /api/v1/auth/logout-all` (requires bearer auth).
@@ -129,6 +132,7 @@ Refresh-token lookup scans all `Session` rows and bcrypt-compares the plaintext 
 ## Events emitted
 
 - `UserRegistered` — first successful OTP verification creates a User. Emitted via `eventBus.emit("UserRegistered", ...)` in `VerifyOtp`.
+- `ReviewerOtpBypassAuthenticated` — successful reviewer demo bypass for a pre-existing buyer/seller. Payload contains `userId`, `role`, and `occurredAt`; it deliberately omits the fixed code and reviewer credential values.
 
 ## Events consumed
 

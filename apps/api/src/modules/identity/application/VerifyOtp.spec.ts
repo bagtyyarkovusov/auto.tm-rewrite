@@ -10,10 +10,23 @@ import type { SessionRepository } from "../domain/ports/SessionRepository";
 import type { PasswordHasherPort } from "../domain/ports/PasswordHasherPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { AccountDeletionListingsPort } from "../domain/ports/AccountDeletionListingsPort";
+import type {
+  ConstantTimeComparatorPort,
+} from "../domain/ports/ConstantTimeComparatorPort";
+import type {
+  ReviewerOtpBypassConfig,
+} from "../domain/ports/ReviewerOtpBypassConfig";
 import { VerifyOtp } from "./VerifyOtp";
 import { RecoverAccount } from "./RecoverAccount";
 
 const NOW = new Date("2026-05-14T12:00:00Z");
+
+function reviewerDemoAccount(index: number): { phone: string; code: string } {
+  return {
+    phone: `+99365${String(index).padStart(6, "0")}`,
+    code: String(index).repeat(6),
+  };
+}
 
 function hashCode(code: string): string {
   return createHash("sha256").update(code).digest("hex");
@@ -259,6 +272,15 @@ class FakeClock implements ClockPort {
   }
 }
 
+class FakeConstantTimeComparator implements ConstantTimeComparatorPort {
+  calls: Array<{ candidate: string; expected: string }> = [];
+
+  compare(candidate: string, expected: string): boolean {
+    this.calls.push({ candidate, expected });
+    return candidate === expected;
+  }
+}
+
 class FakeListingsPort implements AccountDeletionListingsPort {
   republishedSellerId: string | null = null;
 
@@ -281,6 +303,8 @@ interface MakeUseCaseOpts {
   clock?: ClockPort;
   eventBus?: { emit: ReturnType<typeof vi.fn> };
   listingsPort?: AccountDeletionListingsPort;
+  reviewerBypassConfig?: ReviewerOtpBypassConfig;
+  constantTimeComparator?: ConstantTimeComparatorPort;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
@@ -298,6 +322,8 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     jwtService,
     opts.eventBus ?? { emit: vi.fn() },
     recoverAccount,
+    opts.reviewerBypassConfig ?? { enabled: false, accounts: [] },
+    opts.constantTimeComparator ?? new FakeConstantTimeComparator(),
   );
 }
 
@@ -309,6 +335,7 @@ describe("VerifyOtp", () => {
   let clock: FakeClock;
   let eventBus: { emit: ReturnType<typeof vi.fn> };
   let listingsPort: FakeListingsPort;
+  let constantTimeComparator: FakeConstantTimeComparator;
 
   beforeEach(() => {
     otpRepo = new FakeOtpRequestRepository();
@@ -318,6 +345,7 @@ describe("VerifyOtp", () => {
     clock = new FakeClock();
     eventBus = { emit: vi.fn() };
     listingsPort = new FakeListingsPort();
+    constantTimeComparator = new FakeConstantTimeComparator();
     delete process.env["SIGNUPS_ENABLED"];
   });
 
@@ -675,5 +703,203 @@ describe("VerifyOtp", () => {
 
     expect(result.user.id).toBe(existingUser.id);
     expect(listingsPort.republishedSellerId).toBe(existingUser.id);
+  });
+
+  describe("reviewer OTP bypass", () => {
+    const account1 = reviewerDemoAccount(1);
+    const account2 = reviewerDemoAccount(2);
+    const account3 = reviewerDemoAccount(3);
+    const reviewerConfig: ReviewerOtpBypassConfig = {
+      enabled: true,
+      accounts: [
+        account1,
+        account2,
+        account3,
+      ],
+    };
+
+    it("uses the normal safe failure path when the reviewer flag is disabled", async () => {
+      const existingUser = makeUser({ phone: account1.phone, role: "buyer" });
+      userRepo.users.push(existingUser);
+
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        eventBus,
+        reviewerBypassConfig: { ...reviewerConfig, enabled: false },
+        constantTimeComparator,
+      });
+
+      await expect(
+        uc.execute({ phone: account1.phone, code: account1.code }),
+      ).rejects.toThrow("No OTP request found for this phone");
+      expect(sessionRepo.sessions).toHaveLength(0);
+      expect(eventBus.emit).not.toHaveBeenCalledWith(
+        "ReviewerOtpBypassAuthenticated",
+        expect.anything(),
+      );
+    });
+
+    it("uses the normal safe failure path for non-reserved numbers", async () => {
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      await expect(
+        uc.execute({ phone: "+99361234567", code: account1.code }),
+      ).rejects.toThrow("No OTP request found for this phone");
+    });
+
+    it("uses the normal safe failure path for a reserved number with the wrong fixed code", async () => {
+      const existingUser = makeUser({ phone: account1.phone, role: "buyer" });
+      userRepo.users.push(existingUser);
+
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      await expect(
+        uc.execute({ phone: account1.phone, code: "999999" }),
+      ).rejects.toThrow("No OTP request found for this phone");
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
+
+    it("compares reserved phone and fixed code through the constant-time seam", async () => {
+      const existingUser = makeUser({ phone: account2.phone, role: "seller" });
+      userRepo.users.push(existingUser);
+
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        eventBus,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      await uc.execute({ phone: account2.phone, code: account2.code });
+
+      expect(constantTimeComparator.calls).toEqual(
+        expect.arrayContaining([
+          { candidate: account2.phone, expected: account1.phone },
+          { candidate: account2.phone, expected: account2.phone },
+          { candidate: account2.code, expected: account2.code },
+        ]),
+      );
+    });
+
+    it("authenticates an existing buyer without an OTP request or rate-limit issuance dependency and emits audit evidence without the code", async () => {
+      const existingUser = makeUser({ phone: account1.phone, role: "buyer" });
+      userRepo.users.push(existingUser);
+
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        eventBus,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      const result = await uc.execute({
+        phone: account1.phone,
+        code: account1.code,
+        deviceLabel: "Reviewer iPhone",
+      });
+
+      expect(result.user.id).toBe(existingUser.id);
+      expect(result.user.role).toBe("buyer");
+      expect(otpRepo.records).toHaveLength(0);
+      expect(sessionRepo.sessions).toHaveLength(1);
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        "ReviewerOtpBypassAuthenticated",
+        expect.objectContaining({
+          userId: existingUser.id,
+          role: "buyer",
+          occurredAt: NOW.toISOString(),
+        }),
+      );
+      expect(JSON.stringify(eventBus.emit.mock.calls)).not.toContain(account1.code);
+    });
+
+    it("authenticates an existing seller through the reviewer bypass", async () => {
+      const existingUser = makeUser({ phone: account3.phone, role: "seller" });
+      userRepo.users.push(existingUser);
+
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      const result = await uc.execute({ phone: account3.phone, code: account3.code });
+
+      expect(result.user.id).toBe(existingUser.id);
+      expect(result.user.role).toBe("seller");
+      expect(userRepo.users).toHaveLength(1);
+    });
+
+    it("does not create a missing reserved user", async () => {
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      await expect(
+        uc.execute({ phone: account1.phone, code: account1.code }),
+      ).rejects.toThrow("No OTP request found for this phone");
+      expect(userRepo.users).toHaveLength(0);
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
+
+    it("does not authenticate or elevate an admin through the reviewer bypass", async () => {
+      const adminUser = makeUser({ phone: account1.phone, role: "admin" });
+      userRepo.users.push(adminUser);
+
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      await expect(
+        uc.execute({ phone: account1.phone, code: account1.code }),
+      ).rejects.toThrow("No OTP request found for this phone");
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
+
+    it("does not authenticate moderators through the reviewer bypass", async () => {
+      const moderatorUser = makeUser({ phone: account1.phone, role: "moderator" });
+      userRepo.users.push(moderatorUser);
+
+      const uc = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      await expect(
+        uc.execute({ phone: account1.phone, code: account1.code }),
+      ).rejects.toThrow("No OTP request found for this phone");
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
   });
 });

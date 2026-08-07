@@ -193,6 +193,9 @@ describe("Admin constants", () => {
     expect(AdminAuditAction.ContentReportResolve).toBe(
       "CONTENT_REPORT_RESOLVE",
     );
+    expect(AdminAuditAction.ReviewerOtpBypassLogin).toBe(
+      "REVIEWER_OTP_BYPASS_LOGIN",
+    );
   });
 
   it("has expected canonical error reasons", () => {
@@ -647,6 +650,20 @@ describe("AuditLogListItemSchema", () => {
       id: validUuid,
       createdAt: "2026-06-08T12:00:00Z",
       action: "ADMIN_BOOTSTRAP_PROMOTE",
+      actorSummary: {
+        label: "Operator script",
+      },
+      targetType: "user",
+      targetId: validUuid,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts reviewer OTP bypass audit entries", () => {
+    const result = AuditLogListItemSchema.safeParse({
+      id: validUuid,
+      createdAt: "2026-07-22T12:00:00Z",
+      action: "REVIEWER_OTP_BYPASS_LOGIN",
       actorSummary: {
         label: "Operator script",
       },

@@ -76,6 +76,13 @@ const deployedEnv = {
   SOCKET_IO_CORS_ORIGIN: "https://admin.auto.tm",
 };
 
+function reviewerDemoAccount(index: number): { phone: string; code: string } {
+  return {
+    phone: `+99365${String(index).padStart(6, "0")}`,
+    code: String(index).repeat(6),
+  };
+}
+
 describe("EnvSchema reviewer-era safety (fail-closed outside CI)", () => {
   it("allows OTP test mode and the test SMS driver only when NODE_ENV=test", () => {
     expect(() =>
@@ -116,6 +123,77 @@ describe("EnvSchema reviewer-era safety (fail-closed outside CI)", () => {
     expect(() =>
       EnvSchema.parse({ ...deployedEnv, SMS_DRIVER: "mock" }),
     ).not.toThrow();
+  });
+
+  it("defaults reviewer demo-account bypass off with no configured accounts", () => {
+    const env = EnvSchema.parse(baseEnv);
+
+    expect(env.REVIEW_DEMO_ACCOUNT_ENABLED).toBe(false);
+    expect(env.REVIEW_DEMO_ACCOUNTS_JSON).toBe("[]");
+  });
+
+  it("requires 3 to 5 secret-managed reviewer demo accounts when enabled", () => {
+    const accounts = JSON.stringify([
+      reviewerDemoAccount(1),
+      reviewerDemoAccount(2),
+      reviewerDemoAccount(3),
+    ]);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: accounts,
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects enabled reviewer bypass with too few, too many, malformed, or duplicate accounts", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([
+          reviewerDemoAccount(1),
+          reviewerDemoAccount(2),
+        ]),
+      }),
+    ).toThrow(/REVIEW_DEMO_ACCOUNTS_JSON/);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([
+          reviewerDemoAccount(1),
+          reviewerDemoAccount(2),
+          reviewerDemoAccount(3),
+          reviewerDemoAccount(4),
+          reviewerDemoAccount(5),
+          reviewerDemoAccount(6),
+        ]),
+      }),
+    ).toThrow(/REVIEW_DEMO_ACCOUNTS_JSON/);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: "not-json",
+      }),
+    ).toThrow(/REVIEW_DEMO_ACCOUNTS_JSON/);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([
+          reviewerDemoAccount(1),
+          { ...reviewerDemoAccount(2), phone: reviewerDemoAccount(1).phone },
+          reviewerDemoAccount(3),
+        ]),
+      }),
+    ).toThrow(/REVIEW_DEMO_ACCOUNTS_JSON/);
   });
 });
 
