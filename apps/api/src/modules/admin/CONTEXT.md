@@ -22,6 +22,7 @@ Cross-cutting admin operations: audit log and moderation actions today. Staff me
 - `ContentReport.reason` enum values: `spam`, `scam`, `misleading`, `wrong_category` (listing-only), `harassment` (user or message only), `other` (requires non-empty trimmed details ≤ 1000 chars).
 - `ContentReportCreated` event is emitted from `admin/` after a new report row commits. Duplicate reuse emits no event. S7 has no in-process consumers.
 - `ReviewerOtpBypassAuthenticated` events from `identity/` append a `REVIEWER_OTP_BYPASS_LOGIN` audit row with `actorId = null`, `targetType = "user"`, target user id, and details containing only auth method, role, and occurred-at timestamp. The fixed reviewer OTP code is never persisted in audit details.
+- S11 reviewer scenario seed/rotation/revocation runs from `packages/db` and appends `REVIEWER_SCENARIO_SEED`, `REVIEWER_SCENARIO_ROTATE`, or `REVIEWER_SCENARIO_REVOKE` audit rows with `actorId = null`, `targetType = "reviewer_scenario"`, and details containing stable seed ids/counts only. Reviewer phone/code credential values are never persisted in audit details.
 - Public report routes (`POST /api/v1/listings/:id/report`, `POST /api/v1/users/:id/report`, and `POST /api/v1/conversations/:conversationId/messages/:messageId/report`) are authenticated with `JwtAuthGuard` (not `AdminGuard`). The public response shape is exactly `{ reportId, status, createdAt, reusedExisting }`.
 - **Launch-safety flags** (S7/S9a closeout): `REPORT_ENTRY_ENABLED=false` blocks public report writes at the controller level (403 `FORBIDDEN` with `details.reason = "FEATURE_DISABLED"`) while admin report/audit reads remain available. `ADMIN_MODERATION_ACTIONS_ENABLED=false` blocks dismiss/ban/unban/suspend/unsuspend writes at the controller level (same 403 shape) while admin login, report list/detail, and audit list remain readable. `INSPECTION_INTEREST_ENABLED=false` is enforced in `reports/` for `POST /api/v1/listings/:id/inspection-interest`; `admin/` only exposes its public config flag. Flag checks are server-side environment config injected via `ConfigService`; disabled responses do not leak internal flag names.
 
@@ -199,8 +200,11 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
   | `DEALERSHIP_UNVERIFY` | Clears `verifiedAt` |
   | `NOTIFICATION_BROADCAST` | Broadcasts via `notifications/` |
   | `CATALOG_EDIT` | Add / edit / remove catalog rows |
-| `CONTENT_REPORT_RESOLVE` | Dismiss a pending content report without mutating its reported listing/user; audit target is the `content_report` row |
-| `REVIEWER_OTP_BYPASS_LOGIN` | Reviewer demo OTP bypass login; audit target is the authenticated buyer/seller user, with `actorId = null` |
+  | `CONTENT_REPORT_RESOLVE` | Dismiss a pending content report without mutating its reported listing/user; audit target is the `content_report` row |
+  | `REVIEWER_OTP_BYPASS_LOGIN` | Reviewer demo OTP bypass login; audit target is the authenticated buyer/seller user, with `actorId = null` |
+  | `REVIEWER_SCENARIO_SEED` | Operator-converged store-review seed data; audit target is `reviewer_scenario`, with stable ids/counts only |
+  | `REVIEWER_SCENARIO_ROTATE` | Operator-rotated reviewer account phones through secret-store input; audit target is `reviewer_scenario`, with stable ids/counts only |
+  | `REVIEWER_SCENARIO_REVOKE` | Operator-revoked reviewer account login reachability; audit target is `reviewer_scenario`, with stable ids/counts only |
 
 - **Ports**:
   - Exposed: `AuditWritePort.record(action, target, by, details?)`, `AdminReadPort.listAuditEntries`, `AdminReadPort.pendingContentReports`
