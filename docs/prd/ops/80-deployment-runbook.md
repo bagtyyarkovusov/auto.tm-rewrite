@@ -70,6 +70,34 @@ Against the staging mobile/internal build:
 
 Production remains reviewer-only: 3–5 reserved buyer/seller demo accounts, no real users, no real SMS, and no admin-capable reviewer identity.
 
+### Reviewer scenario seed, rotation, and revocation
+
+The reviewer scenario seed is explicit operator work, not an application boot side effect. It creates or converges the reserved buyer/seller identities, deterministic listings, a rich-chat starting point, and a pending report for the store-review smoke. It never prints reviewer phone/code values; keep those values only in Railway/store-review secret storage.
+
+Required environment before running the seed:
+
+- `APP_ENV=staging` or `APP_ENV=production`
+- `SIGNUPS_ENABLED=false`
+- `REVIEW_DEMO_ACCOUNT_ENABLED=true`
+- `REVIEW_DEMO_ACCOUNTS_JSON` populated from the secret store with 3–5 reviewer account entries
+- `REVIEWER_SCENARIO_SEED_AUTHORIZATION=seed-reviewer-scenario`
+
+Run the seed after catalog/database migrations and before the reviewer smoke:
+
+```bash
+pnpm --filter @auto-tm/db reviewer:scenario -- --mode seed
+```
+
+Rotation uses the same command after replacing the secret-store account set. Stable user ids are reused, existing reviewer sessions are revoked, push tokens are invalidated, and a `REVIEWER_SCENARIO_ROTATE` audit row is written without phone/code values.
+
+Revocation keeps historical listings, conversations, reports, and audit target ids intact while removing reviewer login reachability:
+
+```bash
+pnpm --filter @auto-tm/db reviewer:scenario -- --mode revoke
+```
+
+Revocation rewrites reserved reviewer user phones to non-login `revoked:<id>` tombstones, deletes their sessions, invalidates push tokens, and writes a `REVIEWER_SCENARIO_REVOKE` audit row. Remove or disable `REVIEW_DEMO_ACCOUNTS_JSON` / `REVIEW_DEMO_ACCOUNT_ENABLED` in the same operator change when store review is no longer in flight.
+
 ### Step 5 — Railway rollback and restore
 
 - **Application rollback:** redeploy the last known-good Railway application revision and repeat health + focused smoke checks.

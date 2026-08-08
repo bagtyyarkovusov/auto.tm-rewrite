@@ -36,15 +36,25 @@ packages/db/
 │   ├── index.ts              Public re-export
 │   ├── prisma.service.ts     NestJS-injectable wrapper around PrismaClient
 │   ├── seed.ts               Seed script (`pnpm db:seed`)
-│   └── promote-admin.ts      Testable core for the admin bootstrap script
+│   ├── promote-admin.ts      Testable core for the admin bootstrap script
+│   └── reviewer-scenario-seed.ts Testable core for the reviewer scenario seed
 ├── scripts/
 │   ├── build.cjs             Build helper that serializes prisma generate + tsc with .build.lock
-│   └── promote-admin.ts      CLI entry point for first-admin bootstrap (`pnpm admin:promote`)
+│   ├── promote-admin.ts      CLI entry point for first-admin bootstrap (`pnpm admin:promote`)
+│   └── reviewer-scenario.ts  CLI entry point for guarded store-review scenario seed/rotation/revocation (`pnpm reviewer:scenario`)
 ├── tsconfig.build.json       CJS runtime build for Node consumers
 ├── eslint.config.mjs         Lints source/config files; ignores generated and built output
 ├── package.json
 └── CONTEXT.md
 ```
+
+S11 reviewer scenario seed (now implemented):
+- `src/reviewer-scenario-seed.ts` owns the testable core for the guarded store-review scenario seed.
+- `scripts/reviewer-scenario.ts` is the Prisma-backed CLI (`pnpm --filter @auto-tm/db reviewer:scenario -- --mode seed|revoke`).
+- The seed requires explicit operator authorization (`REVIEWER_SCENARIO_SEED_AUTHORIZATION=seed-reviewer-scenario`), `APP_ENV=staging|production`, `SIGNUPS_ENABLED=false`, `REVIEW_DEMO_ACCOUNT_ENABLED=true`, and 3–5 secret-managed entries in `REVIEW_DEMO_ACCOUNTS_JSON`.
+- The seed derives stable buyer/seller user slots from the secret-managed reviewer account list, creates only `buyer` / `seller` users, refuses privileged or hijacked accounts, converges deterministic catalog/listing/conversation/message/report rows, and writes audit rows that omit reviewer phone/code values.
+- Rotation is a rerun with a changed secret-store account list. Stable user ids are retained, phones are updated, existing reviewer sessions are deleted, push tokens are invalidated, and `REVIEWER_SCENARIO_ROTATE` audit evidence is written without credential values.
+- Revocation rewrites seeded reviewer user phones to `revoked:<id>` tombstones, deletes reviewer sessions, invalidates push tokens, preserves historical listings/conversations/reports/audit target ids, and writes `REVIEWER_SCENARIO_REVOKE`.
 
 ## Schema organization
 
