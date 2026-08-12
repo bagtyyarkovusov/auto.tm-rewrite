@@ -15,7 +15,7 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 
 ### Stack
 
-- **`expo`** SDK 55 (`expo@55.0.26`), **`expo-router@55.0.16`** for navigation, **`react-native@0.83.6`**, **`react@19.2.0`**
+- **`expo`** SDK 55 (`expo@55.0.28`), **`expo-router@55.0.17`** for navigation, **`react-native@0.83.10`**, **`react@19.2.0`**
 - **NativeWind v4** (`nativewind@^4.2.0`, `tailwindcss@^3.4.17`) + **React Native Reusables (RNR)** for styling and composite components — see [`docs/agents/nativewind-v4.md`](../../docs/agents/nativewind-v4.md). 19 RNR components installed at `apps/mobile/components/ui/` (alert-dialog, avatar, badge, button, card, checkbox, dialog, dropdown-menu, icon, input, native-only-animated-view, progress, separator, sheet, skeleton, switch, text, toast, tooltip). `lib/theme.ts` has HSL tokens (light + dark, RED brand primary `0 100% 45%`). `@rn-primitives/{alert-dialog, avatar, checkbox, dialog, dropdown-menu, label, popover, portal, progress, separator, slot, switch, tooltip}` v1.4.0 wired.
 - **`@tanstack/react-query@^5.100.10`** for server cache + mutations, layered on a small custom `apiClient` wrapper at `src/api/client.ts`. See [ADR-0015](../../docs/adr/0015-mobile-data-fetching.md) and [`docs/agents/mobile-data-fetching.md`](../../docs/agents/mobile-data-fetching.md). Query keys factory at `src/api/queryKeys.ts` (covers `me`, `catalog.*`, `listings.*`, `uploads.*`, `exchangeRates.*`, `conversations.*`, `reports.*`, `favorites.*`, `notifications.*`). The wrapper uses `AbortController` with a 30-second default request timeout (15 seconds for refresh); timeouts throw `ApiError("NETWORK_ERROR", 0, "Request timed out")`. The wrapper sends `Accept-Language` from `localeStore` on every request.
 - **`react-i18next@^15.5.1`** + **`i18next@^24.2.3`** for UI localization. Namespaced per feature (`common`, `auth`, `account`, `listings`, `conversations`, `onboarding`) with `tk`/`ru`/`en` resources. Init in `app/_layout.tsx` hydrates the locale store before rendering.
@@ -37,6 +37,18 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 - **`expo-linking`** installed (Universal Links / App Links handling will be wired in S4).
 - **`lucide-react-native`** for icons, rendered through the `@/components/ui/icon` wrapper.
 - **Custom fonts**: `app/_layout.tsx` loads UberMove / UberMoveText `.otf` families via `useFonts`. **UberMove Mono** `.ttf` files (`UberMoveMono-Regular`, `UberMoveMono-Medium`) load **only on iOS** today; Android has no bundled mono fonts (tailwind `font-mono` falls through to `"Menlo", monospace` fallback on Android).
+
+### EAS build profiles and URL gate (today)
+
+`apps/mobile/eas.json` defines the S11 store-review build profiles:
+
+- `staging` — internal distribution, EAS environment `staging`, Android `apk`.
+- `production-smoke` — internal distribution, EAS environment `production-smoke`, Android `apk`.
+- `production` — store distribution, EAS environment `production`, Android `app-bundle`.
+
+All three profiles extend `base`, which runs `pnpm validate:eas-env` as `prebuildCommand`. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WS_URL`, and `EXPO_PUBLIC_MEDIA_URL` are supplied by EAS environment variables and are intentionally absent from committed profile env blocks. Staging and production-smoke accept only Railway-generated `*.up.railway.app` HTTPS/WSS hosts. Production accepts only HTTPS/WSS `auto.tm` or `*.auto.tm` hosts and rejects localhost, IP literals, and Railway-generated hosts before bundling.
+
+`apps/mobile/app.config.js` is the Expo config source. It preserves the prior app identity, `userInterfaceStyle: "automatic"`, typed routes, and media permission text while wiring `android.googleServicesFile` from the EAS file variable `GOOGLE_SERVICES_JSON` and `ios.googleServicesFile` from `GOOGLE_SERVICES_INFO_PLIST` when those variables are present. The app config does not define `updates.url`, and `eas.json` does not define EAS Update `channel` or `releaseChannel`; S11 binaries carry native code and JS/assets together.
 
 ### Typography utilities (today)
 
@@ -209,7 +221,7 @@ Shipped markers below record provenance. Items described as future are not in co
 
 ### Expo SDK 55 package alignment
 
-Expo Go includes native modules at SDK-specific versions. `expo install --check` expects this app's SDK 55 package set to include `@expo/metro-runtime@55.0.12`, `expo@55.0.28`, `expo-router@55.0.17`, `expo-camera@55.0.21`, `expo-constants@55.0.17`, `expo-file-system@55.0.24`, `expo-font@55.0.8`, `expo-image-manipulator@55.0.19`, `expo-image-picker@55.0.22`, `expo-linking@55.0.16`, `expo-localization@55.0.17`, `expo-network@55.0.16`, `expo-notifications@~55.0.25`, `expo-secure-store@55.0.16`, `react-native@0.83.6`, `react-native-svg@15.15.3`, `react-native-reanimated@4.2.1`, and `react-native-worklets@0.7.4`. After package alignment, run `pnpm install --force` at the repo root; pnpm can otherwise leave stale symlinks in `apps/mobile/node_modules`.
+Expo Go includes native modules at SDK-specific versions. `expo install --check` expects this app's SDK 55 package set to include `@expo/metro-runtime@55.0.12`, `expo@55.0.28`, `expo-router@55.0.17`, `expo-camera@55.0.21`, `expo-constants@55.0.17`, `expo-file-system@55.0.24`, `expo-font@55.0.8`, `expo-image-manipulator@55.0.19`, `expo-image-picker@55.0.22`, `expo-linking@55.0.16`, `expo-localization@55.0.17`, `expo-network@55.0.16`, `expo-notifications@~55.0.25`, `expo-secure-store@55.0.16`, `react-native@0.83.10`, `react-native-svg@15.15.3`, `react-native-reanimated@4.2.1`, and `react-native-worklets@0.7.4`. After package alignment, run `pnpm install --force` at the repo root; pnpm can otherwise leave stale symlinks in `apps/mobile/node_modules`.
 
 Reanimated 4 initializes through Worklets. Expo SDK 55 installs `react-native-reanimated` and `react-native-worklets` together; both must be explicit app dependencies, especially when adding React Native Reusables components that import animation builders such as `FadeIn`, `FadeOut`, `SlideInDown`, or `FadeInUp`. A transitive or SDK-mismatched Worklets peer can pass typecheck and fail only inside Expo Go with `Exception in HostFunction` at module import time.
 

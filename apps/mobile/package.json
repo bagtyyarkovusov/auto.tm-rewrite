@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:unit": "vitest run --passWithNoTests"
+    "test:unit": "vitest run --passWithNoTests",
+    "validate:eas-env": "tsx scripts/validate-eas-build-env.ts"
   },
   "dependencies": {
     "@auto-tm/contracts": "workspace:*",
@@ -61,7 +62,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^15.5.1",
-    "react-native": "0.83.6",
+    "react-native": "0.83.10",
     "react-native-compressor": "^1.10.0",
     "react-native-css-interop": "^0.2.4",
     "react-native-gesture-handler": "~2.30.0",
