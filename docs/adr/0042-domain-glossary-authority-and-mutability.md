@@ -1,7 +1,7 @@
 # ADR-0042: Domain glossary authority and mutability
 
-- **Status**: Proposed
-- **Date**: 2026-08-13
+- **Status**: Accepted
+- **Date**: 2026-08-25
 - **Deciders**: AutoTM founder + AI architect
 
 ## Context

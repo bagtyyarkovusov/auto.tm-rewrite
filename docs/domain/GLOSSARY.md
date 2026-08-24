@@ -30,7 +30,7 @@ _Avoid_: Dealer user, dealer account
 
 **Listing**
 
-A seller-owned vehicle offer presented for marketplace discovery. It carries the vehicle details, media, location, price, availability, and contact options.
+A seller's offer of a vehicle to people browsing the marketplace.
 
 _Avoid_: Advert, post
 
@@ -38,13 +38,13 @@ _Avoid_: Advert, post
 
 **Conversation**
 
-A one-to-one buyer and seller thread scoped to a single Listing. A buyer can have at most one Conversation for the same Listing.
+A discussion between a buyer and seller about a Listing.
 
 _Avoid_: Chat room, inbox thread
 
 **Message**
 
-A participant-authored or system-authored item within a Conversation. Its kind determines whether it contains text, an image, a listing reference, or system information.
+A single communication within a Conversation, authored by a participant or by AutoTM.
 
 _Avoid_: Chat
 
@@ -52,6 +52,6 @@ _Avoid_: Chat
 
 **Content Report**
 
-A moderation request submitted against a reportable marketplace target. It records the reason, resolution state, and moderation context without becoming the target itself.
+A request for AutoTM moderators to review a reportable marketplace target for a stated concern.
 
 _Avoid_: Complaint, support ticket
