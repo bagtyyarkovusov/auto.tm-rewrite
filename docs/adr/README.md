@@ -47,6 +47,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0039](0039-phased-cloud-first-hosting.md) | Phased cloud-first hosting — Railway until store verification, then TM cutover (amends ADR-0005 Railway exclusion scope; supersedes ADR-0030 single-account scoping) | Accepted | 2026-07-20 |
 | [0040](0040-repo-canonical-workflow-skills.md) | Repo-canonical workflow skills — one layer at `.claude/skills/`; commands, mirrors, and global variants retired | Accepted | 2026-07-22 |
 | [0041](0041-git-history-is-the-archive-for-retired-agent-tool-artifacts.md) | Git history is the archive for retired agent-tool artifacts (supersedes ADR-0040's historical-document retention consequence) | Accepted | 2026-07-22 |
+| [0042](0042-domain-glossary-authority-and-mutability.md) | Domain glossary authority and mutability | Proposed | 2026-08-13 |
 
 ## Per-app ADRs
 

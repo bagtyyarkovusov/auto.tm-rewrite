@@ -24,6 +24,8 @@ jobs:
 
       - run: pnpm --filter @auto-tm/db generate
 
+      - run: pnpm check:glossary
+
       - run: pnpm lint
 
       - run: pnpm typecheck
