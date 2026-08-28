@@ -15,6 +15,10 @@ function createFixture(glossary) {
   const root = mkdtempSync(join(tmpdir(), "auto-tm-glossary-"));
   mkdirSync(join(root, "docs", "domain"), { recursive: true });
   mkdirSync(join(root, "docs", "adr"), { recursive: true });
+  mkdirSync(join(root, "docs", "agents"), { recursive: true });
+  mkdirSync(join(root, ".claude", "skills", "shape-with-docs"), { recursive: true });
+  mkdirSync(join(root, ".claude", "skills", "create-sprint-issues"), { recursive: true });
+  mkdirSync(join(root, ".claude", "skills", "run-issue"), { recursive: true });
   mkdirSync(join(root, ".github", "workflows"), { recursive: true });
   writeFileSync(join(root, "docs", "domain", "GLOSSARY.md"), glossary);
   writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { "check:glossary": "node scripts/check-domain-glossary.mjs" } }));
@@ -28,6 +32,26 @@ function createFixture(glossary) {
     writeFileSync(join(root, "docs", "adr", name), "fixture\n");
   }
   writeFileSync(join(root, "docs", "adr", "README.md"), "[0042](0042-domain-glossary-authority-and-mutability.md)\n");
+  writeFileSync(join(root, ".claude", "skills", "shape-with-docs", "SKILL.md"), [
+    "[Glossary](../../../docs/domain/GLOSSARY.md)",
+    "[ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md)",
+    "[ADR-0020](../../../docs/adr/0020-document-hierarchy-and-mutability.md)",
+    "[ADR-0042](../../../docs/adr/0042-domain-glossary-authority-and-mutability.md)",
+    "[Workflow](../../../docs/agents/coding-workflow.md)",
+  ].join("\n"));
+  for (const name of ["create-sprint-issues", "run-issue"]) {
+    writeFileSync(join(root, ".claude", "skills", name, "SKILL.md"), "fixture\n");
+  }
+  writeFileSync(join(root, "docs", "agents", "coding-workflow.md"), [
+    "[Glossary](../domain/GLOSSARY.md)",
+    "[Shape](../../.claude/skills/shape-with-docs/SKILL.md)",
+    "[Specify and create tickets](../../.claude/skills/create-sprint-issues/SKILL.md)",
+    "[Implement and review](../../.claude/skills/run-issue/SKILL.md)",
+  ].join("\n"));
+  writeFileSync(join(root, "docs", "agents", "domain.md"), "[Glossary](../domain/GLOSSARY.md)\n");
+  for (const name of ["AGENTS.md", "CLAUDE.md"]) {
+    writeFileSync(join(root, name), "[Glossary](docs/domain/GLOSSARY.md)\n[Workflow](docs/agents/coding-workflow.md)\n");
+  }
   for (const name of ["ci.yml", "pr-checks.yml"]) writeFileSync(join(root, ".github", "workflows", name), "- run: pnpm check:glossary\n");
   return root;
 }
@@ -92,4 +116,17 @@ test("rejects a broken governing ADR link", () => withFixture(valid, (root) => {
     "[ADR-0040](0040-repo-canonical-workflow-skills.md)",
   ].join("\n"));
   assert.match(failure(root), /ADR-0042 has a broken ADR-0019 link/);
+}));
+test("rejects a missing shaping workflow", () => withFixture(valid, (root) => {
+  rmSync(join(root, ".claude", "skills", "shape-with-docs", "SKILL.md"));
+  assert.match(failure(root), /shape-with-docs is missing its glossary link/);
+}));
+test("rejects a broken workflow-router glossary link", () => withFixture(valid, (root) => {
+  writeFileSync(join(root, "docs", "agents", "coding-workflow.md"), [
+    "[Glossary](../domain/GLOSSARY-wrong.md)",
+    "[Shape](../../.claude/skills/shape-with-docs/SKILL.md)",
+    "[Specify and create tickets](../../.claude/skills/create-sprint-issues/SKILL.md)",
+    "[Implement and review](../../.claude/skills/run-issue/SKILL.md)",
+  ].join("\n"));
+  assert.match(failure(root), /coding workflow is missing its glossary link/);
 }));

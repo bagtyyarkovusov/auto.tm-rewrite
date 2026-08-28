@@ -6,10 +6,11 @@ This file is read at the start of every AI-assisted coding session in this repo.
 
 1. **`GRILL-OUTCOME.md`** — the design charter. Locked decisions. The spec.
 2. **`docs/prd/03-roadmap.md`** — the trajectory. Tells you which sprint is current and what shipped before it. Points to the per-sprint file under `docs/prd/sprints/`.
-3. **`CONTEXT-MAP.md`** — index of every `CONTEXT.md` in the tree.
-4. **The `CONTEXT.md` for the workspace you're working in** (e.g., `apps/api/src/modules/conversations/CONTEXT.md`).
-5. Relevant **ADRs** in `docs/adr/` for the decisions that affect this work. **Always include [ADR-0019](docs/adr/0019-context-md-describes-current-state.md) (CONTEXT.md = current state) and [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) (doc hierarchy + mutability rules) — these govern every artifact in the repo.**
-6. **The current sprint file** (`docs/prd/sprints/sprint-NN-<name>.md`) for the DoD, file list, tests required, and open risks of the work you're doing.
+3. **[`docs/domain/GLOSSARY.md`](docs/domain/GLOSSARY.md)** — canonical domain and engineering vocabulary; presence defines a term, not implementation status.
+4. **`CONTEXT-MAP.md`** — index of every `CONTEXT.md` in the tree.
+5. **The `CONTEXT.md` for the workspace you're working in** (e.g., `apps/api/src/modules/conversations/CONTEXT.md`).
+6. Relevant **ADRs** in `docs/adr/` for the decisions that affect this work. **Always include [ADR-0019](docs/adr/0019-context-md-describes-current-state.md) (CONTEXT.md = current state) and [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) (doc hierarchy + mutability rules) — these govern every artifact in the repo.**
+7. **The current sprint file** (`docs/prd/sprints/sprint-NN-<name>.md`) for the DoD, file list, tests required, and open risks of the work you're doing.
 
 ## Architecture in one paragraph
 
@@ -89,7 +90,7 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 - **NEVER store plaintext refresh tokens.** Bcrypt-hash them in `User.refreshTokenHash` (your current pattern, kept).
 - **NEVER commit `.env` files. Only `.env.template` is committed.**
 - **NEVER bypass the 60s video / 5 MB image client-side compression** — TM mobile data is metered.
-- **NEVER duplicate agent skills across layers.** The nine workflow skills live exactly once, at `.claude/skills/<name>/SKILL.md` ([ADR-0040](docs/adr/0040-repo-canonical-workflow-skills.md)); generic skills are user-global and are never committed. No `.claude/commands/` files, no `.agents/skills/` mirrors, no global `*-kimi` variants.
+- **NEVER duplicate agent skills across layers.** The ten workflow skills live exactly once, at `.claude/skills/<name>/SKILL.md` ([ADR-0040](docs/adr/0040-repo-canonical-workflow-skills.md)); generic skills are user-global and are never committed. No `.claude/commands/` files, no `.agents/skills/` mirrors, no global `*-kimi` variants.
 
 ## Documentation systems (don't mix)
 
@@ -97,6 +98,7 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 
 | System | Where | Mutable? | When to write |
 |---|---|---|---|
+| Domain glossary | `docs/domain/GLOSSARY.md` | Yes — governed by ADR-0042 | Canonical terms, concise definitions, and rejected synonyms; never implementation status or product translations |
 | ADRs | `docs/adr/`, `apps/*/docs/adr/` | **No** (immutable after merge — supersede with new ADRs) | Every architectural decision; every material PRD-feature revision (per ADR-0020) |
 | `CONTEXT.md` | Per app + per bounded context | Yes — per PR | **Current state only** (not aspirational) — updated in the same PR that changes domain invariants. Locked in [ADR-0019](docs/adr/0019-context-md-describes-current-state.md). |
 | PRD vision/scope | `docs/prd/00-...02-...md` | Rarely | Charter-level changes |
@@ -107,6 +109,10 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 | Agent skill config | `docs/agents/` | Rarely | Only when changing issue tracker or label vocabulary |
 
 ## Agent skills
+
+### Coding workflow
+
+Shape, specify, ticket, implement, and review through the repository router in [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md).
 
 ### Issue tracker
 
@@ -122,7 +128,7 @@ Canonical five-role vocabulary, default names. See `docs/agents/triage-labels.md
 
 ### Domain docs
 
-**Multi-context** — `CONTEXT-MAP.md` at root, per-app `CONTEXT.md`, per-bounded-context `CONTEXT.md` under `apps/api/src/modules/`. See `docs/agents/domain.md`.
+Vocabulary lives in the [canonical glossary](docs/domain/GLOSSARY.md). Current implementation remains **multi-context** — `CONTEXT-MAP.md` at root, per-app `CONTEXT.md`, per-bounded-context `CONTEXT.md` under `apps/api/src/modules/`. See `docs/agents/domain.md`.
 
 ## Verification before completion
 

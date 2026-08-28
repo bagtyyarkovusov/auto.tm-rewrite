@@ -6,10 +6,11 @@ Same policy as `CLAUDE.md` in this repository. AI agents working in this repo sh
 
 1. `GRILL-OUTCOME.md` — locked design decisions
 2. `docs/prd/03-roadmap.md` — current sprint + cross-sprint trajectory
-3. `CONTEXT-MAP.md` — index of every `CONTEXT.md` (mirrors current code, per ADR-0019)
-4. The local `CONTEXT.md` for the area you're working in
-5. Relevant ADRs in `docs/adr/`. **Always include [ADR-0019](docs/adr/0019-context-md-describes-current-state.md) (CONTEXT.md = current state) and [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) (doc hierarchy + mutability rules).** These two ADRs govern every artifact in the repo.
-6. `docs/prd/sprints/sprint-NN-<name>.md` — current sprint's DoD + file list + risks
+3. [`docs/domain/GLOSSARY.md`](docs/domain/GLOSSARY.md) — canonical vocabulary; a term's presence does not claim implementation
+4. `CONTEXT-MAP.md` — index of every `CONTEXT.md` (mirrors current code, per ADR-0019)
+5. The local `CONTEXT.md` for the area you're working in
+6. Relevant ADRs in `docs/adr/`. **Always include [ADR-0019](docs/adr/0019-context-md-describes-current-state.md) (CONTEXT.md = current state) and [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) (doc hierarchy + mutability rules).** These two ADRs govern every artifact in the repo.
+7. `docs/prd/sprints/sprint-NN-<name>.md` — current sprint's DoD + file list + risks
 
 For the full agent policy (architecture rules, never-do list, verification checklist, documentation system), read `CLAUDE.md`.
 
@@ -25,6 +26,7 @@ Where each kind of state lives:
 
 | Question | Answer artifact |
 |---|---|
+| "What does this term mean?" | `docs/domain/GLOSSARY.md` |
 | "What does this feature DO when complete?" | `docs/prd/features/*.md` |
 | "What does this sprint ADD?" | `docs/prd/sprints/sprint-NN-*.md` |
 | "Why did we decide this approach?" | `docs/adr/*.md` |
@@ -36,6 +38,10 @@ If two artifacts try to answer the same question → that's drift. Pick the cano
 
 ## Agent skills
 
+### Coding workflow
+
+Shape, specify, ticket, implement, and review through [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md).
+
 ### Issue tracker
 
 GitHub Issues via `gh` CLI. See `docs/agents/issue-tracker.md`.
@@ -46,7 +52,7 @@ Canonical five-role vocabulary. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Multi-context — see `CONTEXT-MAP.md` and `docs/agents/domain.md`.
+Canonical vocabulary — see [`docs/domain/GLOSSARY.md`](docs/domain/GLOSSARY.md). Current implementation remains multi-context — see `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 
 ### Mobile / Expo checks
 
@@ -66,10 +72,11 @@ The verification gate requires that you consulted Context7 for every external li
 
 ### Sprint + design skill set (project skills, `.claude/skills/`)
 
-Nine project-specific skills live under [`.claude/skills/`](./.claude/skills/) in Claude Code skill format (YAML frontmatter + progressive-disclosure reference files), tracked in git and reviewed via PR. This is the **only** agent-skill layer in the repo — there are no slash-command mirrors and no cross-agent copies. Locked in [ADR-0040](docs/adr/0040-repo-canonical-workflow-skills.md). Generic skills (grilling, tdd, write-a-skill, …) are user-global personal tooling and are never committed.
+Ten project-specific skills live under [`.claude/skills/`](./.claude/skills/) in Claude Code skill format (YAML frontmatter + progressive-disclosure reference files), tracked in git and reviewed via PR. This is the **only** agent-skill layer in the repo — there are no slash-command mirrors and no cross-agent copies. Locked in [ADR-0040](docs/adr/0040-repo-canonical-workflow-skills.md). Generic skills (grilling, tdd, write-a-skill, …) are user-global personal tooling and are never committed.
 
 | Skill | Phase of sprint lifecycle |
 |---|---|
+| [`shape-with-docs`](./.claude/skills/shape-with-docs/SKILL.md) | Before tickets — grills an unsettled capability, routes vocabulary and specifications to canonical docs, and delivers a reviewed shaping PR |
 | [`create-sprint-issues`](./.claude/skills/create-sprint-issues/SKILL.md) | Start of sprint — reads `docs/prd/sprints/sprint-NN-*.md`, proposes a slicing, creates parent + child issues on GitHub, bumps roadmap to 🟡 |
 | [`run-issue`](./.claude/skills/run-issue/SKILL.md) | During sprint — picks one issue, branches, optional design check, implements, PRs, self-merges, syncs main, unblocks dependents |
 | [`resume-issue`](./.claude/skills/resume-issue/SKILL.md) | During sprint — picks up an issue a previous run bailed on; offers continue / rebase-and-continue / abandon-and-restart |
