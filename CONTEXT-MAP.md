@@ -12,6 +12,8 @@ Agents working in this repo read these files **before** the per-context `CONTEXT
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | Root agent policy (canonical for Claude Code) — architecture rules, never-do list, verification gate |
 | [`AGENTS.md`](AGENTS.md) | Cross-agent mirror of CLAUDE.md (Cursor, Codex, Windsurf, etc.) |
+| [`docs/domain/GLOSSARY.md`](docs/domain/GLOSSARY.md) | Canonical domain and engineering vocabulary ([ADR-0042](docs/adr/0042-domain-glossary-authority-and-mutability.md)); term presence is not implementation status |
+| [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md) | Router from shaping through specification, sprint issue creation, issue execution, and independent review |
 | [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md) | Canonical Context7 MCP workflow + pinned library-ID table for the whole stack ([ADR-0017](docs/adr/0017-context7-as-canonical-doc-source.md)) |
 | [`docs/agents/mobile-expo.md`](docs/agents/mobile-expo.md) | Mobile SDK alignment + dependency-check gate |
 | [`docs/agents/nativewind-v4.md`](docs/agents/nativewind-v4.md) | Mobile styling with NativeWind v4 + React Native Reusables ([ADR-0014](docs/adr/0014-mobile-component-library.md)) |

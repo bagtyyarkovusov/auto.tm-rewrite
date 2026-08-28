@@ -10,6 +10,14 @@ Invocation of `/run-issue N` authorizes these ordinary steps after verification 
 4. Use a valid type: `feat`, `fix`, `test`, `docs`, `refactor`, `perf`, `build`, `ci`, or `chore`.
 5. Preserve a valid conventional issue title when possible; otherwise derive the scope from the primary area.
 6. Do not add a generated-agent or model-specific co-author trailer.
+7. Record the resulting commit SHA. That fixed SHA is the review target.
+
+## Independent review
+
+1. Review the pinned commit through the independent Standards and Spec axes defined in `docs/agents/coding-workflow.md`.
+2. Resolve valid findings, rerun proportionate verification, commit the fixes, and pin the new SHA.
+3. Repeat every affected review axis against the new fixed commit. Any content change after a pass invalidates that pass for the affected axis.
+4. Continue to delivery only when both axes pass against the latest commit. Do not push an unreviewed implementation.
 
 ## Push and PR
 
@@ -39,6 +47,7 @@ Closes #<N>
 
 ## Checks and merge
 
+- Confirm both review axes still target the latest implementation commit. A post-review code change returns to verification, commit, and the affected review axes.
 - Wait for required checks. Pending is not failure.
 - Repair an in-scope CI defect and push within the same three-attempt cap.
 - On a failed check, conflict, or protection failure, leave the PR open and bail with its URL and exact state.
