@@ -46,8 +46,8 @@ Do not add confirmation gates for ordinary implementation mechanics. You may gro
 2. Select single-session or mandatory [SUBAGENT-MODE.md](SUBAGENT-MODE.md) using its auto-detect gate.
 3. Implement the smallest complete vertical slice. Tests and required current-state docs are in scope even when omitted from a file list.
 4. Follow [VERIFICATION.md](VERIFICATION.md). Repair an in-scope root failure at most three focused times.
-5. Review the fixed implementation commit through the independent Standards and Spec axes defined in `docs/agents/coding-workflow.md`. Resolve valid findings, rerun proportionate verification, and repeat each affected axis.
-6. Only after both axes pass, follow [FINALIZATION.md](FINALIZATION.md) for exact-path staging, commits, push, PR, checks, squash merge, sync, and unblocking.
+5. Follow [FINALIZATION.md](FINALIZATION.md) to stage exact paths, create and pin the implementation commit, pass independent Standards and Spec review, then push, open the PR, check, squash-merge, sync, and unblock dependents.
+6. Resolve valid review findings in new commits, rerun proportionate verification, pin the new SHA, and repeat each affected review axis before delivery continues.
 7. On any stop or failed finalization, follow [BAIL-AND-RECOVERY.md](BAIL-AND-RECOVERY.md).
 
 ## Completion
