@@ -123,6 +123,9 @@ if (existsSync(packagePath)) {
 if (packageJson?.scripts?.["check:glossary"] !== "node scripts/check-domain-glossary.mjs") {
   errors.push("package.json is missing the check:glossary script");
 }
+if (packageJson?.scripts?.test !== "pnpm test:glossary && turbo run test") {
+  errors.push("package.json does not run glossary tests in the root test gate");
+}
 requireMarkdownLink("docs/domain/GLOSSARY.md", "../adr/0042-domain-glossary-authority-and-mutability.md", "docs/domain/GLOSSARY.md is missing its ADR-0042 link");
 requireMarkdownLink("docs/adr/0042-domain-glossary-authority-and-mutability.md", "../domain/GLOSSARY.md", "ADR-0042 is missing or has a broken docs/domain/GLOSSARY.md link");
 requireMarkdownLink("docs/adr/README.md", "0042-domain-glossary-authority-and-mutability.md", "docs/adr/README.md is missing the ADR-0042 link");
@@ -143,6 +146,9 @@ for (const [source, target, diagnostic] of [
   [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/adr/0020-document-hierarchy-and-mutability.md", "shape-with-docs is missing its ADR-0020 link"],
   [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/adr/0042-domain-glossary-authority-and-mutability.md", "shape-with-docs is missing its ADR-0042 link"],
   [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/agents/coding-workflow.md", "shape-with-docs is missing its workflow-router link"],
+  [".claude/skills/shape-with-docs/SKILL.md", "../new-adr/SKILL.md", "shape-with-docs is missing its new-adr link"],
+  [".claude/skills/shape-with-docs/SKILL.md", "../create-sprint-issues/SKILL.md", "shape-with-docs is missing its create-sprint-issues link"],
+  [".claude/skills/shape-with-docs/SKILL.md", "../run-issue/SKILL.md", "shape-with-docs is missing its run-issue link"],
   ["docs/agents/coding-workflow.md", "../domain/GLOSSARY.md", "coding workflow is missing its glossary link"],
   ["docs/agents/coding-workflow.md", "../../.claude/skills/shape-with-docs/SKILL.md", "coding workflow is missing its shaping-skill link"],
   ["docs/agents/coding-workflow.md", "../../.claude/skills/create-sprint-issues/SKILL.md", "coding workflow is missing its sprint-issue-creation link"],

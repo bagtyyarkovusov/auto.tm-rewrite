@@ -106,7 +106,7 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 | **Sprint plans** | **`docs/prd/sprints/sprint-NN-*.md`** | **Mutable until sprint starts; locked when roadmap → 🟡** (per ADR-0020) | Edit freely before 🟡; after, scope changes go in the retro doc |
 | PRD features / flows | `docs/prd/features/`, `docs/prd/flows/` | Yes — but material capability changes require a new ADR (per ADR-0020) | Target capability spec; never aspirational content for code |
 | Sprint retros | `docs/prd/sprints/sprint-NN-*-retro.md` | **Append-only** | End of each sprint or when post-🟡 scope shifts |
-| Agent skill config | `docs/agents/` | Rarely | Only when changing issue tracker or label vocabulary |
+| Repository agent guidance | `docs/agents/` | Rarely | Cross-agent workflows, issue/label policy, and technology-specific operating guidance |
 
 ## Agent skills
 

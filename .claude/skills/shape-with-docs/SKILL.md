@@ -46,14 +46,21 @@ Do not silently resolve a product choice, material scope change, or architecture
 
 Never edit an accepted ADR, a locked in-progress sprint plan, or an append-only retro. If the requested change has no legal mutable destination, stop and explain which governing decision must be superseded.
 
+## Preflight the shaping branch
+
+- Require a clean working tree before branching. Report unrelated changes and stop; never stash, discard, or absorb them.
+- Fetch the remote and start from updated `main`.
+- Resolve the intended `shape/<slug>` name and inspect local/remote branches and open PRs before creating it.
+- If prior shaping work exists, report its branch, commits, diff, and PR state. Require an explicit continue, safety-branch-and-rebase, preserve-and-restart, or cancel choice; never overwrite or delete it.
+- Create the dedicated shaping branch only after these checks pass. Keep implementation code and executable ticket mutations off it.
+
 ## Prepare the shaping delivery
 
 1. Produce a decision record in the conversation: problem, outcomes, scope, non-goals, actors, scenarios, invariants, terminology, risks, unresolved questions, and evidence.
 2. Map each accepted decision to its canonical document before editing. Reject duplicate specifications that would give two artifacts the same job.
-3. Create a dedicated `shape/<slug>` branch from current `main`; keep implementation code and executable ticket mutations off it.
-4. Edit only the approved mutable documents, glossary, agent guidance, and a new ADR when its separate workflow has been authorized.
-5. Run applicable structural checks, link checks, and `git diff --check`. Show the complete documentation diff and any new-ADR implications for review.
-6. After user approval, commit, push, and open a documentation PR. Do not create executable tickets until that PR is reviewed and merged.
+3. Edit only the approved mutable documents, glossary, agent guidance, and a new ADR when its separate workflow has been authorized.
+4. Run applicable structural checks, link checks, and `git diff --check`. Show the complete documentation diff and any new-ADR implications for review.
+5. After user approval, stage exact paths only, commit, push, and open a documentation PR. Do not create executable tickets until that PR is reviewed and merged.
 
 ## Hand off
 

@@ -1,6 +1,6 @@
 # Finalization
 
-Invocation of `/run-issue N` authorizes these ordinary steps after verification passes.
+Invocation of `/run-issue N` authorizes these ordinary steps after verification and independent Standards/Spec review pass against the fixed implementation commit.
 
 ## Commit
 
@@ -39,6 +39,7 @@ Closes #<N>
 
 ## Checks and merge
 
+- Confirm both review axes still target the latest implementation commit. A post-review code change returns to verification and the affected review axes.
 - Wait for required checks. Pending is not failure.
 - Repair an in-scope CI defect and push within the same three-attempt cap.
 - On a failed check, conflict, or protection failure, leave the PR open and bail with its URL and exact state.
