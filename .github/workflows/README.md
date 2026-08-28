@@ -6,8 +6,8 @@ GitHub Actions workflows.
 
 | Workflow | Trigger | Runner | Purpose |
 |---|---|---|---|
-| `ci.yml` | Push to `main` | self-hosted (`tm-proxy`) | install → db generate → lint → typecheck → `pnpm test` → `pnpm build` |
-| `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | install → db generate → lint → typecheck → `pnpm test` |
+| `ci.yml` | Push to `main` | self-hosted (`tm-proxy`) | install → db generate → glossary check → lint → typecheck → `pnpm test` → `pnpm build` |
+| `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | install → db generate → glossary check → lint → typecheck → `pnpm test` |
 | `bundle.yml` | Tag push `v*` | self-hosted (`tm-proxy`) | `make bundle TAG=<tag>`, uploads `images/auto-tm-<tag>.tar.gz` as a workflow artifact (90-day retention) |
 
 ## Self-hosted runner
