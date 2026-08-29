@@ -13,7 +13,7 @@ Create issues for exactly one already-shaped sprint. Do not shape a sprint, inve
 
 ## Read and resolve
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, ADR-0019, ADR-0020, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and the candidate sprint file.
+1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, [the domain glossary](../../../docs/domain/GLOSSARY.md), ADR-0019, ADR-0020, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, and the candidate sprint file.
 2. If `$sprint` is empty, list eligible pending sprint files and ask the user to choose. If none exist, report that sprint shaping is required and stop.
 3. Verify the prior sprint is shipped, the sprint plan exists and is still eligible to start, required labels exist, and no completed issue set already owns the sprint.
 4. If a parent or children already exist, inspect the partial run. Report a complete set and stop; otherwise offer repair rather than duplication.
@@ -26,11 +26,14 @@ Show before mutation:
 
 - parent title/body and labels;
 - every child title, purpose, acceptance criteria, expected files, area/type/phase labels;
+- relevant canonical terms and the glossary entry in each domain-vocabulary-sensitive child reading contract;
 - AFK (`ready-for-agent`) versus HITL (`ready-for-human`) classification;
 - dependency graph and topological creation order; and
 - roadmap change and proposed branch/PR.
 
 Allow edits and re-preview until the user confirms or cancels. One explicit confirmation authorizes issue creation and the roadmap-start branch/PR; it does not authorize running Sandcastle or `/run-issue`.
+
+The glossary supplies vocabulary, not sprint scope or behavior. Use canonical terms in new issue text, but do not silently rename existing code or turn unrelated terminology drift into child scope; report harmful ambiguity as a separately proposed issue.
 
 ## Create
 

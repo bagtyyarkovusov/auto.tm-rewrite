@@ -12,7 +12,7 @@ Use mandatory separate subagent contexts for evidence, design, and critique, wit
 
 ## 1. Foundation auditor
 
-Dispatch one `Explore` subagent for read-only exploration. It identifies screens/platforms, authority documents, current implementation, existing specs, scope contradictions, missing product decisions, and stale guidance. It may inspect code to distinguish present from target, but never proposes visual detail as a product decision.
+Dispatch one `Explore` subagent for read-only exploration. It identifies screens/platforms, authority documents, relevant glossary terms, current implementation, existing specs, actual i18n copy, scope contradictions, missing product decisions, and stale guidance. It may inspect code to distinguish present from target, but never proposes visual detail as a product decision.
 
 Return evidence paths plus one verdict from `FOUNDATION.md`.
 
@@ -20,7 +20,7 @@ Return evidence paths plus one verdict from `FOUNDATION.md`.
 
 After foundation settles, dispatch one fresh general-purpose wireframe designer. Preload/use the repo `wireframe` skill and, when available, user-global `ux-heuristics` and `design-everyday-things`. Otherwise use the same rubric embedded in the wireframe reference.
 
-The designer produces draft artifacts only. It must return every factual gap to the orchestrator; the orchestrator routes each gap through the read-only oracle before the designer finalizes the affected section.
+The designer produces draft artifacts only. Give it the relevant canonical terms and actual copy sources separately: glossary definitions are not UI strings or translations. It must return every factual gap to the orchestrator; the orchestrator routes each gap through the read-only oracle before the designer finalizes the affected section.
 
 ## 3. Wireframe UX review
 
@@ -37,7 +37,7 @@ Return usability and discoverability scores 0–10 plus improvements toward 10. 
 
 ## 4. Hi-fi designer
 
-Only after wireframe approval, dispatch one fresh general-purpose hi-fi designer. Preload/use repo `hifi-design` plus the three user-global UX skills when available, including `microinteractions`. Resolve actual tokens/components/i18n from code rather than copying mutable constants, and route factual gaps through the same oracle loop.
+Only after wireframe approval, dispatch one fresh general-purpose hi-fi designer. Preload/use repo `hifi-design` plus the three user-global UX skills when available, including `microinteractions`. Resolve actual tokens/components/i18n from code rather than copying mutable constants or translating glossary definitions, and route factual gaps through the same oracle loop.
 
 ## 5. Final review
 

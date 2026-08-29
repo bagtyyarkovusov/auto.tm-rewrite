@@ -5,6 +5,7 @@ The sprint file owns the sprint-wide promise. Issues own independently reviewabl
 ## Extract facts
 
 - sprint number/name, phase, milestone, demo line, DoD, risks, explicit files, tests, references, and no-gos;
+- relevant canonical glossary terms and avoided synonyms;
 - current implementation from relevant `CONTEXT.md` and code;
 - dependencies already established by ADRs or earlier sprints; and
 - host-only gates such as Testcontainers, CI credentials, Expo export, or simulator/runtime checks.
@@ -47,6 +48,8 @@ AFK sprint children use the rich canonical body in `docs/agents/issue-tracker.md
 - Out of scope
 - Depends on
 - Completion signal
+
+When domain vocabulary matters, `Read first` includes `docs/domain/GLOSSARY.md`, and the child uses its canonical terms without treating the glossary as behavioral requirements. Existing inconsistent names remain out of scope unless the sprint explicitly owns a migration; harmful ambiguity becomes separately scoped follow-up work.
 
 HITL children may adapt the execution details but still require a testable completion signal. Parent issues are dashboards, not executable prompts.
 

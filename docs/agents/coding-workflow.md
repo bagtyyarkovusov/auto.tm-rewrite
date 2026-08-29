@@ -30,6 +30,19 @@ Use the [canonical domain glossary](../domain/GLOSSARY.md) for engineering and d
 
 Vocabulary additions and routine clarifications go directly to the glossary. Semantic redefinitions, bounded-context ownership changes, and vocabulary changes caused by material product or architecture decisions require a new ADR. Planned behavior never enters `CONTEXT.md`; the implementation PR updates `CONTEXT.md` when the corresponding invariant actually ships.
 
+## Downstream vocabulary contract
+
+- Specifications and child issues use canonical terms to name accepted concepts. A glossary definition cannot add behavior, scope, acceptance criteria, or implementation claims.
+- Implementers and resume flows reload the relevant terms beside the issue, target specification, ADRs, and current-state documents. New or changed names follow the glossary; unrelated existing inconsistencies are not migrated silently.
+- Design workflows use canonical meaning for engineering handoff, while actual i18n resources and approved design artifacts own RU/TK/EN user-facing copy. Glossary definitions are never translated into interface strings.
+- If an existing name creates harmful ambiguity, record the evidence and propose separately scoped work. Do not expand the active issue merely to normalize names.
+
+## Diagnosis vocabulary
+
+Repository diagnosis applies canonical terms to hypotheses, evidence notes, and regression-test names so the investigation and eventual fix describe the same concepts. The glossary does not prove expected behavior or current state: derive those from the issue/specification, code, tests, `CONTEXT.md`, and ADRs.
+
+Use this repository guidance alongside any user-global diagnosis technique without modifying or copying the global skill. Report pre-existing naming drift separately unless it caused the observed failure and the active issue explicitly owns its correction.
+
 ## Context and approval boundaries
 
 - Keep one conversation through decision grilling, documentation editing, and approval of the shaping PR so unresolved choices remain visible.
@@ -40,6 +53,10 @@ Vocabulary additions and routine clarifications go directly to the glossary. Sem
 
 ## Review contract
 
-The Standards reviewer checks repository policy, architecture, tests, documentation hierarchy, vocabulary use, and maintainability. The Spec reviewer checks every acceptance criterion and expected behavior against the fixed commit. They review independently; implementation ownership and review ownership must remain distinct when subagents are used.
+The Standards reviewer checks repository policy, architecture, tests, documentation hierarchy, maintainability, and terminology drift in new or changed engineering names. Vocabulary findings are labeled separately from runtime-correctness findings.
+
+The Spec reviewer uses canonical definitions to interpret terms in the issue and specification, then checks every acceptance criterion and expected behavior against the fixed commit. The glossary cannot create a missing requirement; vocabulary drift is reported separately from requirement-correctness findings.
+
+Pre-existing inconsistent names outside the diff are follow-up observations, not automatic migrations or blockers, unless the change worsens them or the ambiguity prevents reliable runtime/spec evaluation. The reviewers work independently; implementation ownership and review ownership must remain distinct when subagents are used.
 
 Resolve valid findings with focused changes, rerun proportionate verification, and repeat the affected review axis. Only a fixed, green commit proceeds to pull-request merge.

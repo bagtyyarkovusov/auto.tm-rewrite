@@ -14,7 +14,7 @@ Invocation of `/run-issue N` authorizes these ordinary steps after verification 
 
 ## Independent review
 
-1. Review the pinned commit through the independent Standards and Spec axes defined in `docs/agents/coding-workflow.md`.
+1. Read the relevant entries in [the domain glossary](../../../docs/domain/GLOSSARY.md), then review the pinned commit through the independent Standards and Spec axes defined in `docs/agents/coding-workflow.md`.
 2. Resolve valid findings, rerun proportionate verification, commit the fixes, and pin the new SHA.
 3. Repeat every affected review axis against the new fixed commit. Any content change after a pass invalidates that pass for the affected axis.
 4. Continue to delivery only when both axes pass against the latest commit. Do not push an unreviewed implementation.

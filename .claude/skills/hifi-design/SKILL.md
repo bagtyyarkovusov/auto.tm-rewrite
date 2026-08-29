@@ -10,6 +10,8 @@ Turn settled structure into an implementation-ready spec. Do not use visual prec
 
 ## Establish authority
 
+Read [the domain glossary](../../../docs/domain/GLOSSARY.md) for canonical engineering and domain vocabulary. It does not own user-facing wording or translations.
+
 1. Parse `$ARGUMENTS` and locate the owning wireframe, issue, PRD/flow, and platform.
 2. Read authority in this order: charter/ADRs → target PRD/flow and issue/sprint delta → `CONTEXT.md`/code → actual tokens/components/i18n → mutable UI guidance.
 3. Treat code and current-state docs as present reality, the PRD/issue as target behavior, and shipped UI specs as current mirrors. Label a redesign proposal until it ships.
@@ -31,7 +33,7 @@ Follow [REFERENCE.md](REFERENCE.md) and [EXAMPLES.md](EXAMPLES.md):
 - applicable hover, pressed, focus-visible, disabled, validation, success, permission, auth-deferred, optimistic, pending, and retry states;
 - exact motion and reduced-motion behavior;
 - platform-specific accessibility and verification;
-- exact RU/TK/EN keys/copy, with new translations marked `PROPOSED — native review required`; and
+- exact RU/TK/EN keys/copy from i18n and approved design sources, with new translations marked `PROPOSED — native review required`; never translate glossary definitions into interface copy; and
 - implementation shape without inventing unsupported APIs.
 
 Rate heuristic usability, discoverability/error tolerance, and microinteraction quality 0–10. Resolve severity 3–4 findings before delivery and list concrete improvements toward 10/10.

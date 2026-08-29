@@ -13,7 +13,7 @@ Inspect before mutation. Preserve the previous attempt until the user chooses a 
 
 ## Resolve and inspect
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, the roadmap, CONTEXT map, ADR-0019, ADR-0020, the issue, its references, and the latest bail comment.
+1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, the roadmap, [the domain glossary](../../../docs/domain/GLOSSARY.md), CONTEXT map, ADR-0019, ADR-0020, the issue, its references, and the latest bail comment. Reload relevant canonical terms even when the preserved attempt predates the glossary.
 2. If `$issue` is empty, list candidates from local/remote `agent/issue-*` branches, recent bail comments, and open PRs; require selection.
 3. Inspect issue state, dependencies, last bail comment, local and remote branch heads, working-tree diff, commits versus `main`, PR/check state, and merge/issue closure state.
 4. Classify the attempt as local-only, pushed without PR, open PR, or merged PR with bookkeeping drift.
@@ -35,6 +35,7 @@ If the branch is missing, only restart is available. Never delete the preserved 
 Approval of A or B authorizes the normal completion flow without another push/merge confirmation:
 
 1. Rebuild the acceptance-criterion evidence map.
+   - Reconcile new or changed names with the glossary without treating definitions as behavior, current-state evidence, or authorization for an unrelated naming migration.
 2. Re-run scoped typecheck, lint, tests, runtime-import checks, Expo gates, host-only checks, and `CONTEXT.md` reconciliation required by the touched workspaces. Unknown or unavailable gates are not passes. Use the same three-focused-attempt cap as `/run-issue`.
 3. Review the complete diff and stage exact paths only. Reuse the existing PR when present; otherwise push the preserved issue branch and open one PR beginning with `Closes #<N>`.
 4. Wait for required checks, never self-approve, and squash-merge with branch deletion only when green. Verify issue closure, sync `main` safely, and unblock dependents only after every declared dependency is closed.

@@ -13,7 +13,7 @@ Execute exactly one issue. Invocation authorizes the normal branch-to-merge flow
 
 ## Resolve the issue
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, `CONTEXT-MAP.md`, ADR-0019, ADR-0020, and the issue-relevant sprint, ADR, agent, and `CONTEXT.md` files.
+1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, [the domain glossary](../../../docs/domain/GLOSSARY.md), `CONTEXT-MAP.md`, ADR-0019, ADR-0020, and the issue-relevant sprint, ADR, agent, and `CONTEXT.md` files. Identify the glossary entries relevant to the issue; definitions settle vocabulary, not requirements or implementation status.
 2. If `$issue` is empty, list open `ready-for-agent` issues without `blocked` and ask the user to pick. Never auto-pick.
 3. Fetch the chosen issue, labels, dependencies, comments, branches, and PRs.
 4. Require an open issue, `ready-for-agent`, no `blocked`, closed dependencies, and an intelligible problem plus testable acceptance criteria.
@@ -26,6 +26,7 @@ Execute exactly one issue. Invocation authorizes the normal branch-to-merge flow
 - Reuse a clean zero-ahead branch preserved by a design pause.
 - If a branch is modified/ahead, exists only remotely, or has an open PR, route to `/resume-issue <N>` instead of overwriting or duplicating it.
 - Build a scoped execution plan mapping every acceptance criterion to implementation and evidence.
+- Record relevant canonical terms and avoided synonyms. Use them in new or changed code, documentation, hypotheses, and test names without silently migrating unrelated existing names.
 - Consult Context7 for every external library touched, following `docs/agents/documentation-lookups.md`.
 
 ## Decision boundaries
@@ -45,6 +46,7 @@ Do not add confirmation gates for ordinary implementation mechanics. You may gro
 1. For UI work, follow [UI-MODE.md](UI-MODE.md).
 2. Select single-session or mandatory [SUBAGENT-MODE.md](SUBAGENT-MODE.md) using its auto-detect gate.
 3. Implement the smallest complete vertical slice. Tests and required current-state docs are in scope even when omitted from a file list.
+   - If existing naming creates harmful ambiguity, report separately scoped follow-up work unless the issue explicitly owns that migration.
 4. Follow [VERIFICATION.md](VERIFICATION.md). Repair an in-scope root failure at most three focused times.
 5. Follow [FINALIZATION.md](FINALIZATION.md) to stage exact paths, create and pin the implementation commit, pass independent Standards and Spec review, then push, open the PR, check, squash-merge, sync, and unblock dependents.
 6. Resolve valid review findings in new commits, rerun proportionate verification, pin the new SHA, and repeat each affected review axis before delivery continues.
