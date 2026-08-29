@@ -52,9 +52,10 @@ function createFixture(glossary) {
     "[Run issue](../run-issue/SKILL.md)",
   ].join("\n"));
   writeFileSync(join(root, ".claude", "skills", "new-adr", "SKILL.md"), "fixture\n");
-  for (const name of ["create-sprint-issues", "run-issue", "resume-issue", "design-grill", "wireframe", "hifi-design"]) {
+  for (const name of ["create-sprint-issues", "run-issue", "design-grill", "wireframe", "hifi-design"]) {
     writeFileSync(join(root, ".claude", "skills", name, "SKILL.md"), "[Glossary](../../../docs/domain/GLOSSARY.md)\n");
   }
+  writeFileSync(join(root, ".claude", "skills", "resume-issue", "SKILL.md"), "[Glossary](../../../docs/domain/GLOSSARY.md)\n[Finalize](../run-issue/FINALIZATION.md)\n");
   writeFileSync(join(root, ".claude", "skills", "run-issue", "FINALIZATION.md"), "[Glossary](../../../docs/domain/GLOSSARY.md)\n");
   writeFileSync(join(root, "docs", "agents", "coding-workflow.md"), [
     "[Glossary](../domain/GLOSSARY.md)",
@@ -167,6 +168,7 @@ for (const [label, source, target, diagnostic] of [
   ["wireframe", ".claude/skills/wireframe/SKILL.md", "../../../docs/domain/GLOSSARY.md", /wireframe is missing its glossary link/],
   ["hi-fi design", ".claude/skills/hifi-design/SKILL.md", "../../../docs/domain/GLOSSARY.md", /hifi-design is missing its glossary link/],
   ["fixed-commit review", ".claude/skills/run-issue/FINALIZATION.md", "../../../docs/domain/GLOSSARY.md", /run-issue finalization is missing its glossary link/],
+  ["resumed fixed-commit review", ".claude/skills/resume-issue/SKILL.md", "../run-issue/FINALIZATION.md", /resume-issue is missing its fixed-commit finalization link/],
 ]) {
   test(`rejects a broken downstream ${label} link`, () => withFixture(valid, (root) => {
     const path = join(root, source);

@@ -166,6 +166,7 @@ for (const [source, target, diagnostic] of [
   [".claude/skills/wireframe/SKILL.md", "../../../docs/domain/GLOSSARY.md", "wireframe is missing its glossary link"],
   [".claude/skills/hifi-design/SKILL.md", "../../../docs/domain/GLOSSARY.md", "hifi-design is missing its glossary link"],
   [".claude/skills/run-issue/FINALIZATION.md", "../../../docs/domain/GLOSSARY.md", "run-issue finalization is missing its glossary link"],
+  [".claude/skills/resume-issue/SKILL.md", "../run-issue/FINALIZATION.md", "resume-issue is missing its fixed-commit finalization link"],
 ]) {
   requireMarkdownLink(source, target, diagnostic);
 }

@@ -37,9 +37,8 @@ Approval of A or B authorizes the normal completion flow without another push/me
 1. Rebuild the acceptance-criterion evidence map.
    - Reconcile new or changed names with the glossary without treating definitions as behavior, current-state evidence, or authorization for an unrelated naming migration.
 2. Re-run scoped typecheck, lint, tests, runtime-import checks, Expo gates, host-only checks, and `CONTEXT.md` reconciliation required by the touched workspaces. Unknown or unavailable gates are not passes. Use the same three-focused-attempt cap as `/run-issue`.
-3. Review the complete diff and stage exact paths only. Reuse the existing PR when present; otherwise push the preserved issue branch and open one PR beginning with `Closes #<N>`.
-4. Wait for required checks, never self-approve, and squash-merge with branch deletion only when green. Verify issue closure, sync `main` safely, and unblock dependents only after every declared dependency is closed.
-5. If completion bails again, preserve the branch, working tree, remote branch, and PR. Comment with the failing command/root cause, attempts, passed evidence, exact state, and next recovery action; never reset, stash, delete, or overwrite user work.
+3. Follow [the fixed-commit finalization contract](../run-issue/FINALIZATION.md): stage exact paths, create and pin the implementation commit, pass independent Standards and Spec review against that SHA, resolve findings and repeat affected axes, then push, check, merge, and verify integrity. These gates apply even when the preserved attempt already has commits or an open PR; reuse the PR rather than creating a duplicate.
+4. If completion bails again, preserve the branch, working tree, remote branch, and PR. Comment with the failing command/root cause, attempts, passed evidence, exact state, and next recovery action; never reset, stash, delete, or overwrite user work.
 
 For C, preserve the prior attempt first, then hand the fresh branch to the same `/run-issue` state machine. If the same root failure survives three focused attempts in the resumed run, bail rather than loop.
 
