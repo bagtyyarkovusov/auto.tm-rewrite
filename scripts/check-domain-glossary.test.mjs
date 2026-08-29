@@ -20,6 +20,10 @@ function createFixture(glossary) {
   mkdirSync(join(root, ".claude", "skills", "new-adr"), { recursive: true });
   mkdirSync(join(root, ".claude", "skills", "create-sprint-issues"), { recursive: true });
   mkdirSync(join(root, ".claude", "skills", "run-issue"), { recursive: true });
+  mkdirSync(join(root, ".claude", "skills", "resume-issue"), { recursive: true });
+  mkdirSync(join(root, ".claude", "skills", "design-grill"), { recursive: true });
+  mkdirSync(join(root, ".claude", "skills", "wireframe"), { recursive: true });
+  mkdirSync(join(root, ".claude", "skills", "hifi-design"), { recursive: true });
   mkdirSync(join(root, ".github", "workflows"), { recursive: true });
   writeFileSync(join(root, "docs", "domain", "GLOSSARY.md"), glossary);
   writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: {
@@ -47,9 +51,12 @@ function createFixture(glossary) {
     "[Create sprint issues](../create-sprint-issues/SKILL.md)",
     "[Run issue](../run-issue/SKILL.md)",
   ].join("\n"));
-  for (const name of ["new-adr", "create-sprint-issues", "run-issue"]) {
-    writeFileSync(join(root, ".claude", "skills", name, "SKILL.md"), "fixture\n");
+  writeFileSync(join(root, ".claude", "skills", "new-adr", "SKILL.md"), "fixture\n");
+  for (const name of ["create-sprint-issues", "run-issue", "design-grill", "wireframe", "hifi-design"]) {
+    writeFileSync(join(root, ".claude", "skills", name, "SKILL.md"), "[Glossary](../../../docs/domain/GLOSSARY.md)\n");
   }
+  writeFileSync(join(root, ".claude", "skills", "resume-issue", "SKILL.md"), "[Glossary](../../../docs/domain/GLOSSARY.md)\n[Finalize](../run-issue/FINALIZATION.md)\n");
+  writeFileSync(join(root, ".claude", "skills", "run-issue", "FINALIZATION.md"), "[Glossary](../../../docs/domain/GLOSSARY.md)\n");
   writeFileSync(join(root, "docs", "agents", "coding-workflow.md"), [
     "[Glossary](../domain/GLOSSARY.md)",
     "[Shape](../../.claude/skills/shape-with-docs/SKILL.md)",
@@ -57,6 +64,7 @@ function createFixture(glossary) {
     "[Implement and review](../../.claude/skills/run-issue/SKILL.md)",
   ].join("\n"));
   writeFileSync(join(root, "docs", "agents", "domain.md"), "[Glossary](../domain/GLOSSARY.md)\n");
+  writeFileSync(join(root, "docs", "agents", "issue-tracker.md"), "[Glossary](../domain/GLOSSARY.md)\n");
   for (const name of ["AGENTS.md", "CLAUDE.md"]) {
     writeFileSync(join(root, name), "[Glossary](docs/domain/GLOSSARY.md)\n[Workflow](docs/agents/coding-workflow.md)\n");
   }
@@ -148,6 +156,24 @@ for (const [label, target, diagnostic] of [
     const skillPath = join(root, ".claude", "skills", "shape-with-docs", "SKILL.md");
     const skill = readFileSync(skillPath, "utf8").replace(`(${target})`, `(${target}.wrong)`);
     writeFileSync(skillPath, skill);
+    assert.match(failure(root), diagnostic);
+  }));
+}
+for (const [label, source, target, diagnostic] of [
+  ["sprint issue creation", ".claude/skills/create-sprint-issues/SKILL.md", "../../../docs/domain/GLOSSARY.md", /create-sprint-issues is missing its glossary link/],
+  ["child issue contract", "docs/agents/issue-tracker.md", "../domain/GLOSSARY.md", /issue tracker guidance is missing its glossary link/],
+  ["issue execution", ".claude/skills/run-issue/SKILL.md", "../../../docs/domain/GLOSSARY.md", /run-issue is missing its glossary link/],
+  ["issue resume", ".claude/skills/resume-issue/SKILL.md", "../../../docs/domain/GLOSSARY.md", /resume-issue is missing its glossary link/],
+  ["design orchestration", ".claude/skills/design-grill/SKILL.md", "../../../docs/domain/GLOSSARY.md", /design-grill is missing its glossary link/],
+  ["wireframe", ".claude/skills/wireframe/SKILL.md", "../../../docs/domain/GLOSSARY.md", /wireframe is missing its glossary link/],
+  ["hi-fi design", ".claude/skills/hifi-design/SKILL.md", "../../../docs/domain/GLOSSARY.md", /hifi-design is missing its glossary link/],
+  ["fixed-commit review", ".claude/skills/run-issue/FINALIZATION.md", "../../../docs/domain/GLOSSARY.md", /run-issue finalization is missing its glossary link/],
+  ["resumed fixed-commit review", ".claude/skills/resume-issue/SKILL.md", "../run-issue/FINALIZATION.md", /resume-issue is missing its fixed-commit finalization link/],
+]) {
+  test(`rejects a broken downstream ${label} link`, () => withFixture(valid, (root) => {
+    const path = join(root, source);
+    const content = readFileSync(path, "utf8").replace(`(${target})`, `(${target}.wrong)`);
+    writeFileSync(path, content);
     assert.match(failure(root), diagnostic);
   }));
 }

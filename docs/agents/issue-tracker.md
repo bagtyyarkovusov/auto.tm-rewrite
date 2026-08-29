@@ -88,6 +88,8 @@ Both paths treat the issue body as the slice contract. The parent remains a dash
 
 The body must be self-contained enough for either execution path. Reference repository files by path; the executor resolves current facts inside its working tree rather than treating the body as a frozen code snapshot.
 
+When domain vocabulary matters, the reading contract includes the [canonical glossary](../domain/GLOSSARY.md). The issue keeps the repository path as text so it remains usable when copied into GitHub.
+
 ```markdown
 ## Summary
 
@@ -96,10 +98,11 @@ The body must be self-contained enough for either execution path. Reference repo
 ## Read first (inside the sandbox)
 
 1. `docs/prd/sprints/sprint-NN-<name>.md` — sprint goal + sprint-wide DoD
-2. `apps/api/src/modules/<context>/CONTEXT.md` — domain invariants + ports (if API-side)
-3. `docs/adr/<NNNN>-<name>.md` — relevant ADRs
-4. `CLAUDE.md` — architecture rules (no Prisma in domain, ports for cross-context, etc.)
-5. `docs/agents/mobile-expo.md` — required for `mobile` area issues, Expo package work, Metro failures, or Expo Go runtime crashes
+2. `docs/domain/GLOSSARY.md` — relevant canonical terms and avoided synonyms (when domain vocabulary matters; not product behavior or implementation status)
+3. `apps/api/src/modules/<context>/CONTEXT.md` — domain invariants + ports (if API-side)
+4. `docs/adr/<NNNN>-<name>.md` — relevant ADRs
+5. `CLAUDE.md` — architecture rules (no Prisma in domain, ports for cross-context, etc.)
+6. `docs/agents/mobile-expo.md` — required for `mobile` area issues, Expo package work, Metro failures, or Expo Go runtime crashes
 
 ## Files to create / modify
 
@@ -147,6 +150,7 @@ Parent PRD issues get `phase-N` + `feature` only — no triage label, since they
 - **Slice-specific AC** lives in the child issue body. Once a `/run-issue` agent picks it up, the body is effectively immutable for that run.
 - The two never overlap semantically: sprint DoD describes the sprint demo; slice AC describes one vertical PR.
 - For decision-heavy sprints, prefer a `Recommended child issue map` in the sprint file over copying every sprint decision into every issue body. Child issues should reference the sprint file and local `CONTEXT.md`, then restate only the acceptance criteria needed for that slice.
+- When a child uses domain vocabulary, include the glossary in `Read first` and use canonical terms in new issue text. Do not infer behavior from a definition or silently add migration of inconsistent existing names.
 - If a child issue would need more than one unrelated bounded context behavior to pass, split it. If splitting would make one behavior land without its enforcement/tests, keep it together as one vertical slice.
 
 ## Dependency tracking (`Depends on`)

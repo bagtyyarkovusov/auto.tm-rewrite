@@ -16,6 +16,8 @@ Produce structure and behavior, not visual polish. Treat user-facing decisions a
 
 ## Read authority in order
 
+Read [the domain glossary](../../../docs/domain/GLOSSARY.md) for canonical engineering and domain labels. It does not specify screen behavior or user-facing copy.
+
 1. `GRILL-OUTCOME.md` and accepted ADRs.
 2. Target PRD/flow, current roadmap, and active issue/sprint delta.
 3. Relevant `CONTEXT.md` and current implementation.
@@ -34,7 +36,7 @@ Follow the output contract in [REFERENCE.md](REFERENCE.md) and the compact examp
 
 - Cover Default, Loading, Empty, Error, and Offline; use `N/A` only with a concrete reason.
 - Map every primary action, exit/back path, blocked state, retry, and preserved user input.
-- Use realistic one-language placeholder copy and flag every new string for hi-fi RU/TK/EN work.
+- Use canonical domain meaning when labeling concepts, but take realistic one-language placeholder copy from product/i18n evidence. Flag every new string for hi-fi RU/TK/EN work; never translate glossary definitions into UI copy.
 - Include a heuristic score, discoverability score, severity-rated findings, and concrete improvements toward 10/10.
 - Leave token values, detailed motion, and visual styling to `/hifi-design`.
 

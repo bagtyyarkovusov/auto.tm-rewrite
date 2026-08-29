@@ -158,6 +158,15 @@ for (const [source, target, diagnostic] of [
   ["AGENTS.md", "docs/agents/coding-workflow.md", "AGENTS.md is missing its workflow-router link"],
   ["CLAUDE.md", "docs/domain/GLOSSARY.md", "CLAUDE.md is missing its glossary link"],
   ["CLAUDE.md", "docs/agents/coding-workflow.md", "CLAUDE.md is missing its workflow-router link"],
+  [".claude/skills/create-sprint-issues/SKILL.md", "../../../docs/domain/GLOSSARY.md", "create-sprint-issues is missing its glossary link"],
+  ["docs/agents/issue-tracker.md", "../domain/GLOSSARY.md", "issue tracker guidance is missing its glossary link"],
+  [".claude/skills/run-issue/SKILL.md", "../../../docs/domain/GLOSSARY.md", "run-issue is missing its glossary link"],
+  [".claude/skills/resume-issue/SKILL.md", "../../../docs/domain/GLOSSARY.md", "resume-issue is missing its glossary link"],
+  [".claude/skills/design-grill/SKILL.md", "../../../docs/domain/GLOSSARY.md", "design-grill is missing its glossary link"],
+  [".claude/skills/wireframe/SKILL.md", "../../../docs/domain/GLOSSARY.md", "wireframe is missing its glossary link"],
+  [".claude/skills/hifi-design/SKILL.md", "../../../docs/domain/GLOSSARY.md", "hifi-design is missing its glossary link"],
+  [".claude/skills/run-issue/FINALIZATION.md", "../../../docs/domain/GLOSSARY.md", "run-issue finalization is missing its glossary link"],
+  [".claude/skills/resume-issue/SKILL.md", "../run-issue/FINALIZATION.md", "resume-issue is missing its fixed-commit finalization link"],
 ]) {
   requireMarkdownLink(source, target, diagnostic);
 }

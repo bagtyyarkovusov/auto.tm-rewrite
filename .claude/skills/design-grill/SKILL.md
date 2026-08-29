@@ -13,10 +13,12 @@ Settle design for one UI-heavy issue. Facts come from agents and repository evid
 
 ## Resolve the issue
 
-1. Read `CLAUDE.md`, charter, roadmap, ADR-0019, ADR-0020, issue-tracker guidance, the issue, and every referenced PRD/flow/sprint/`CONTEXT.md` file.
+1. Read `CLAUDE.md`, charter, roadmap, [the domain glossary](../../../docs/domain/GLOSSARY.md), ADR-0019, ADR-0020, issue-tracker guidance, the issue, and every referenced PRD/flow/sprint/`CONTEXT.md` file.
 2. If `$issue` is empty, list eligible UI issues and require selection.
 3. Accept rich or lean bodies when problem and acceptance criteria are discoverable. Derive screens/files from read-only inspection; stop only when user-facing intent remains ambiguous.
 4. Require a clean worktree and inspect existing design artifacts/branches/PRs before mutation.
+
+The glossary controls canonical engineering and domain vocabulary. User-visible RU/TK/EN copy remains owned by actual i18n resources and approved design artifacts; never translate glossary definitions or treat them as interface copy.
 
 ## Foundation gate
 
