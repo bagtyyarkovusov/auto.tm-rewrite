@@ -28,9 +28,14 @@ export class PrismaPushDeviceStore implements PushDeviceStore {
     }));
   }
 
+  /**
+   * `updateMany` rather than `update`: a concurrently deleted or re-registered
+   * row would make `update` throw P2025, aborting the job before its history
+   * row is written and causing a full re-send on the BullMQ retry.
+   */
   async invalidateToken(token: string): Promise<void> {
-    await this.prisma.fcmDevice.update({
-      where: { token },
+    await this.prisma.fcmDevice.updateMany({
+      where: { token, invalidatedAt: null },
       data: { invalidatedAt: new Date() },
     });
   }

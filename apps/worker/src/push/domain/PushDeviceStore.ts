@@ -1,6 +1,8 @@
+import type { PushPlatform } from "./types";
+
 export interface ActivePushDevice {
   token: string;
-  platform: string;
+  platform: PushPlatform;
 }
 
 export interface PushDeviceStore {

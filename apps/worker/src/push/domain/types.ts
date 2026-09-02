@@ -21,4 +21,12 @@ export const PUSH_TRANSPORT = {
 } as const;
 export type PushTransport = (typeof PUSH_TRANSPORT)[keyof typeof PUSH_TRANSPORT];
 
+/** Mirrors the Prisma `PushPlatform` enum on `FcmDevice.platform`. */
+export const PUSH_PLATFORM = {
+  Android: "android",
+  Ios: "ios",
+  Web: "web",
+} as const;
+export type PushPlatform = (typeof PUSH_PLATFORM)[keyof typeof PUSH_PLATFORM];
+
 export const NO_ACTIVE_PUSH_TOKENS_REASON = "NO_TOKENS" as const;

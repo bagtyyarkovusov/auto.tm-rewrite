@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { normalizePrivateKey } from "./shared/pem";
+
 const BaseSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   /**
@@ -30,6 +32,13 @@ const BaseSchema = z.object({
   APNS_TEAM_ID: z.string().optional(),
   APNS_BUNDLE_ID: z.string().optional(),
   APNS_PRIVATE_KEY: z.string().optional(),
+  /**
+   * Selects the APNS host explicitly. Not derived from APP_ENV: EAS `internal`
+   * distribution signs iOS with production entitlements, so staging can hold
+   * production APNS tokens. The wrong host answers `BadDeviceToken`, which
+   * would deactivate healthy devices.
+   */
+  APNS_PRODUCTION: z.enum(["true", "false"]).optional(),
 });
 
 type BaseEnv = z.infer<typeof BaseSchema>;
@@ -74,7 +83,10 @@ const FCM_APNS_REQUIRED_VARS = [
   "APNS_TEAM_ID",
   "APNS_BUNDLE_ID",
   "APNS_PRIVATE_KEY",
+  "APNS_PRODUCTION",
 ] as const;
+
+const PRIVATE_KEY_VARS = ["FCM_PRIVATE_KEY", "APNS_PRIVATE_KEY"] as const;
 
 function validateEndpoints(env: BaseEnv, add: (path: string, message: string) => void): void {
   if (!DEPLOYED_ENVS.has(env.APP_ENV)) return;
@@ -112,10 +124,10 @@ function validateEndpoints(env: BaseEnv, add: (path: string, message: string) =>
 
 /**
  * Push contract (Sprint 11): the `test` transport records sends in memory and
- * delivers nothing, so it must be impossible to boot production with it. The
- * `fcm-apns` transport is a permanent-failure shell until credentials are
- * complete, so booting with a partial credential set is also forbidden —
- * the worker must fail visibly at boot rather than silently drop pushes.
+ * delivers nothing, so it must be impossible to boot production with it.
+ * `fcm-apns` delivers through real FCM and APNS, so booting with a partial or
+ * unparseable credential set is also forbidden — the worker must fail visibly
+ * at boot rather than silently drop pushes.
  */
 function validatePushContract(env: BaseEnv, add: (path: string, message: string) => void): void {
   if (env.APP_ENV === "production" && env.PUSH_TRANSPORT === "test") {
@@ -125,15 +137,28 @@ function validatePushContract(env: BaseEnv, add: (path: string, message: string)
     );
   }
 
-  if (env.PUSH_TRANSPORT === "fcm-apns") {
-    for (const name of FCM_APNS_REQUIRED_VARS) {
-      const value = env[name];
-      if (value === undefined || value.trim() === "") {
-        add(
-          name,
-          `${name} is required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)`,
-        );
-      }
+  if (env.PUSH_TRANSPORT !== "fcm-apns") return;
+
+  for (const name of FCM_APNS_REQUIRED_VARS) {
+    const value = env[name];
+    if (value === undefined || value.trim() === "") {
+      add(
+        name,
+        `${name} is required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)`,
+      );
+    }
+  }
+
+  // Provider private keys arrive escaped and shell-quoted. Parsing them at boot
+  // turns a malformed secret into a startup failure instead of a silent
+  // per-message delivery failure. The key value is never echoed.
+  for (const name of PRIVATE_KEY_VARS) {
+    const value = env[name];
+    if (value === undefined || value.trim() === "") continue;
+    try {
+      normalizePrivateKey(name, value);
+    } catch {
+      add(name, `${name} is not a parseable PEM private key`);
     }
   }
 }

@@ -119,13 +119,12 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Worker integration
 
 - Direct-message pushes are enqueued on the BullMQ queue `notification-fanout` with job name `direct-message` and payload `{ category, recipientUserId, historyId, title, body, deepLink, data }`. The `historyId` lets the worker update the corresponding `NotificationHistory` row. Jobs are enqueued with `attempts: 3` and exponential backoff so the worker can retry transient (`RETRYABLE`) transport failures.
-- The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; it validates the payload with `DirectMessagePushJobSchema` and calls `ProcessDirectMessagePush`.
+- The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; it validates the payload with `DirectMessagePushJobSchema` and calls `ProcessDirectMessagePush`. Since S11 the worker's `fcm-apns` transport delivers natively through FCM (Android/Web) and APNS (iOS) per [ADR-0043](../../../../../docs/adr/0043-native-apns-delivery-via-node-apn.md); this context is unchanged by that, because transport selection and provider credentials live entirely in `apps/worker`. The worker de-duplicates across the `attempts: 3` retries, so a retried job does not re-notify a device that already received the push.
 
 ## Planned additions (future shaped bets)
 
 Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), only capability absent from code is listed here. The target remains in `docs/prd/features/36-notifications.md` and requires a shaped sprint.
 
-- Production FCM/APNS credentials and a real `FcmApnsPushTransport`; S10's non-test adapter is an explicit permanent-failure shell.
 - In-app notification feed/read APIs, a notification center UI, admin broadcasts, and broadcast-recipient metrics.
 - Saved-search, listing-activity, admin, blog, marketing, digest, and quiet-hours delivery policies.
 - A user-facing category preference center; only per-conversation direct-message mute is enforced in S10.
