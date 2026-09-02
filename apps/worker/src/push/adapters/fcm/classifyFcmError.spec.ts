@@ -27,7 +27,6 @@ describe("classifyFcmError", () => {
     "messaging/unknown-error",
     "messaging/message-rate-exceeded",
     "messaging/device-message-rate-exceeded",
-    "messaging/quota-exceeded",
     "app/network-error",
   ])("treats %s as retryable", (code) => {
     expect(classifyFcmError(fcmError(code))).toEqual({

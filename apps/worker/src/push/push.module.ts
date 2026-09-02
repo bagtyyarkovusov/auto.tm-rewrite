@@ -19,6 +19,7 @@ import { PrismaNotificationHistoryStore } from "./infrastructure/PrismaNotificat
 /**
  * Resolves the configured transport. Provider SDKs and credentials are only
  * touched for `fcm-apns`, so `test` boots without any push secret present.
+ * The APNS host comes from `APNS_PRODUCTION`, never from `APP_ENV`.
  */
 export async function createPushPort(config: ConfigService): Promise<PushPort> {
   const transport = config.get<string>("PUSH_TRANSPORT");
@@ -32,11 +33,10 @@ export async function createPushPort(config: ConfigService): Promise<PushPort> {
   }
 
   const read = (name: string) => config.get<string>(name);
-  const production = config.get<string>("APP_ENV") === "production";
 
   const [fcmSendFn, apnsSendFn] = await Promise.all([
     createFirebaseSendFn(readFcmCredentials(read)),
-    createApnsSendFn(readApnsCredentials(read, production)),
+    createApnsSendFn(readApnsCredentials(read)),
   ]);
 
   return new FcmApnsPushTransport(

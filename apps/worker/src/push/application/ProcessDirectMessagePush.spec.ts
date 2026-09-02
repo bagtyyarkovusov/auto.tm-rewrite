@@ -41,6 +41,11 @@ class FakeNotificationHistoryStore implements NotificationHistoryStore {
     status: NotificationHistoryStatus;
     details?: Record<string, unknown>;
   }> = [];
+  succeededTokens: string[] = [];
+
+  async listSucceededTokens(_historyId: string): Promise<string[]> {
+    return this.succeededTokens;
+  }
 
   async updateStatus(
     historyId: string,
@@ -144,7 +149,7 @@ describe("ProcessDirectMessagePush", () => {
     pushPort.setResult("token-a", {
       ok: false,
       reason: PUSH_RESULT_REASON.Permanent,
-      cause: new Error("bad configuration"),
+      cause: "bad configuration",
     });
 
     await useCase.execute(makeInput());
@@ -161,7 +166,7 @@ describe("ProcessDirectMessagePush", () => {
     pushPort.setResult("token-a", {
       ok: false,
       reason: PUSH_RESULT_REASON.Retryable,
-      cause: new Error("network timeout"),
+      cause: "network timeout",
     });
 
     await expect(useCase.execute(makeInput())).rejects.toBeInstanceOf(
@@ -215,7 +220,7 @@ describe("ProcessDirectMessagePush", () => {
     pushPort.setResult("flaky-token", {
       ok: false,
       reason: PUSH_RESULT_REASON.Retryable,
-      cause: new Error("network timeout"),
+      cause: "network timeout",
     });
 
     await expect(useCase.execute(makeInput())).rejects.toBeInstanceOf(
@@ -310,3 +315,59 @@ describe("ProcessDirectMessagePush over the production transport", () => {
     }
   });
 });
+
+describe("ProcessDirectMessagePush retry hygiene", () => {
+  it("does not re-send to a device an earlier attempt already delivered to", async () => {
+    const pushPort = new TestPushTransport();
+    const deviceStore = new FakePushDeviceStore();
+    const historyStore = new FakeNotificationHistoryStore();
+    deviceStore.devices = [
+      { token: "delivered-token", platform: "ios" },
+      { token: "flaky-token", platform: "android" },
+    ];
+    historyStore.succeededTokens = ["delivered-token"];
+
+    await useCaseFor(pushPort, deviceStore, historyStore).execute(makeInput());
+
+    expect(pushPort.deliveries.map((d) => d.payload.deviceToken)).toEqual([
+      "flaky-token",
+    ]);
+    expect(historyStore.updates[0]?.status).toBe(
+      NOTIFICATION_HISTORY_STATUS.Delivered,
+    );
+  });
+
+  it("still records a previously delivered token as successful", async () => {
+    const pushPort = new TestPushTransport();
+    const deviceStore = new FakePushDeviceStore();
+    const historyStore = new FakeNotificationHistoryStore();
+    deviceStore.devices = [{ token: "delivered-token", platform: "ios" }];
+    historyStore.succeededTokens = ["delivered-token"];
+
+    await useCaseFor(pushPort, deviceStore, historyStore).execute(makeInput());
+
+    expect(pushPort.deliveries).toHaveLength(0);
+    expect(historyStore.updates[0]?.details?.["results"]).toEqual([
+      { token: "delivered-token", success: true, skipped: true },
+    ]);
+  });
+
+  it("sends normally on the first attempt when nothing was delivered yet", async () => {
+    const pushPort = new TestPushTransport();
+    const deviceStore = new FakePushDeviceStore();
+    const historyStore = new FakeNotificationHistoryStore();
+    deviceStore.devices = [{ token: "token-a", platform: "android" }];
+
+    await useCaseFor(pushPort, deviceStore, historyStore).execute(makeInput());
+
+    expect(pushPort.deliveries).toHaveLength(1);
+  });
+});
+
+function useCaseFor(
+  pushPort: TestPushTransport,
+  deviceStore: FakePushDeviceStore,
+  historyStore: FakeNotificationHistoryStore,
+): ProcessDirectMessagePush {
+  return new ProcessDirectMessagePush(pushPort, deviceStore, historyStore);
+}

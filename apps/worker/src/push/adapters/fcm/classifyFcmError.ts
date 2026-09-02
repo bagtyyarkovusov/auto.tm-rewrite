@@ -24,7 +24,6 @@ const RETRYABLE_CODES = new Set([
   "messaging/message-rate-exceeded",
   "messaging/device-message-rate-exceeded",
   "messaging/topics-message-rate-exceeded",
-  "messaging/quota-exceeded",
   "app/network-error",
   "app/network-timeout",
 ]);

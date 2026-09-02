@@ -30,6 +30,7 @@ const fullPushCredentials = {
   APNS_TEAM_ID: "TEAM1234",
   APNS_BUNDLE_ID: "tm.auto.app",
   APNS_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\\nxyz\\n-----END PRIVATE KEY-----\\n",
+  APNS_PRODUCTION: "true",
 };
 
 describe("worker EnvSchema push contract", () => {
@@ -72,6 +73,7 @@ describe("worker EnvSchema push contract", () => {
     "APNS_TEAM_ID",
     "APNS_BUNDLE_ID",
     "APNS_PRIVATE_KEY",
+    "APNS_PRODUCTION",
   ])("fails boot when %s is missing for fcm-apns", (missing) => {
     const credentials = { ...fullPushCredentials } as Record<string, string>;
     Reflect.deleteProperty(credentials, missing);
@@ -83,6 +85,17 @@ describe("worker EnvSchema push contract", () => {
         ...credentials,
       }),
     ).toThrow(new RegExp(missing));
+  });
+
+  it("requires APNS_PRODUCTION to be an explicit boolean string", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        PUSH_TRANSPORT: "fcm-apns",
+        ...fullPushCredentials,
+        APNS_PRODUCTION: "yes",
+      }),
+    ).toThrow(/APNS_PRODUCTION/);
   });
 
   it("rejects an unparseable FCM private key", () => {
@@ -127,6 +140,7 @@ describe("worker EnvSchema push contract", () => {
         ...fullPushCredentials,
         APNS_PRIVATE_KEY: "leaked-secret-material",
       });
+      expect.unreachable("expected the malformed key to fail validation");
     } catch (error) {
       expect(String(error)).not.toContain("leaked-secret-material");
       expect(String(error)).toContain("APNS_PRIVATE_KEY");

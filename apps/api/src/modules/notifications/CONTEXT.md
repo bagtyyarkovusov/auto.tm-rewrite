@@ -119,7 +119,7 @@ Pure TypeScript, no Nest decorators, no Prisma imports.
 ## Worker integration
 
 - Direct-message pushes are enqueued on the BullMQ queue `notification-fanout` with job name `direct-message` and payload `{ category, recipientUserId, historyId, title, body, deepLink, data }`. The `historyId` lets the worker update the corresponding `NotificationHistory` row. Jobs are enqueued with `attempts: 3` and exponential backoff so the worker can retry transient (`RETRYABLE`) transport failures.
-- The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; it validates the payload with `DirectMessagePushJobSchema` and calls `ProcessDirectMessagePush`. Since S11 the worker's `fcm-apns` transport delivers natively through FCM and APNS; this context is unchanged by that, because transport selection and provider credentials live entirely in `apps/worker`.
+- The worker processor (`apps/worker/src/queues/notification-fanout.processor.ts`) owns external transport selection and per-token delivery; it validates the payload with `DirectMessagePushJobSchema` and calls `ProcessDirectMessagePush`. Since S11 the worker's `fcm-apns` transport delivers natively through FCM (Android/Web) and APNS (iOS) per [ADR-0043](../../../../../docs/adr/0043-native-apns-delivery-via-node-apn.md); this context is unchanged by that, because transport selection and provider credentials live entirely in `apps/worker`. The worker de-duplicates across the `attempts: 3` retries, so a retried job does not re-notify a device that already received the push.
 
 ## Planned additions (future shaped bets)
 

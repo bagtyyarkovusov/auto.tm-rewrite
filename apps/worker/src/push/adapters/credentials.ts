@@ -1,11 +1,12 @@
 /**
- * Push provider credential parsing.
+ * Push provider credential assembly.
  *
  * Provider private keys arrive as single-line environment variables where the
- * PEM newlines are escaped (`\n`) and the value is often shell-quoted. Parsing
- * must therefore be explicit, and it must never echo key material: every error
- * raised here describes the variable, never its value.
+ * PEM newlines are escaped and the value is often shell-quoted; parsing lives
+ * in `src/shared/pem.ts` because boot-time env validation needs it too. Errors
+ * raised here describe the variable, never its value.
  */
+import { normalizePrivateKey } from "../../shared/pem";
 
 export class InvalidPushCredentialError extends Error {
   constructor(
@@ -15,44 +16,6 @@ export class InvalidPushCredentialError extends Error {
     super(`${variable} ${reason}`);
     this.name = "InvalidPushCredentialError";
   }
-}
-
-const PEM_BEGIN = "-----BEGIN";
-const PEM_END = "-----END";
-
-/**
- * Turns an escaped, possibly quoted environment value into a usable PEM block.
- * Never include the returned value in logs or error messages.
- */
-export function normalizePrivateKey(variable: string, raw: string): string {
-  const unquoted = stripWrappingQuotes(raw.trim());
-  const normalized = unquoted
-    .replace(/\\r\\n/g, "\n")
-    .replace(/\\n/g, "\n")
-    .replace(/\r\n/g, "\n")
-    .trim();
-
-  if (normalized === "") {
-    throw new InvalidPushCredentialError(variable, "is empty");
-  }
-
-  if (!normalized.includes(PEM_BEGIN) || !normalized.includes(PEM_END)) {
-    throw new InvalidPushCredentialError(
-      variable,
-      "is not a PEM private key block",
-    );
-  }
-
-  return `${normalized}\n`;
-}
-
-function stripWrappingQuotes(value: string): string {
-  const isWrapped =
-    value.length >= 2 &&
-    ((value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'")));
-
-  return isWrapped ? value.slice(1, -1) : value;
 }
 
 export interface FcmCredentials {
@@ -74,7 +37,10 @@ export type CredentialReader = (name: string) => string | undefined;
 function requireValue(read: CredentialReader, name: string): string {
   const value = read(name)?.trim();
   if (value === undefined || value === "") {
-    throw new InvalidPushCredentialError(name, "is required for PUSH_TRANSPORT=fcm-apns");
+    throw new InvalidPushCredentialError(
+      name,
+      "is required for PUSH_TRANSPORT=fcm-apns",
+    );
   }
   return value;
 }
@@ -90,10 +56,14 @@ export function readFcmCredentials(read: CredentialReader): FcmCredentials {
   };
 }
 
-export function readApnsCredentials(
-  read: CredentialReader,
-  production: boolean,
-): ApnsCredentials {
+/**
+ * `production` selects the APNS host. It is read from `APNS_PRODUCTION` rather
+ * than derived from `APP_ENV`: EAS `internal` distribution signs iOS builds
+ * with production entitlements, so a staging deployment can legitimately hold
+ * production APNS tokens. Guessing the wrong host returns `BadDeviceToken`,
+ * which would deactivate every healthy iOS device.
+ */
+export function readApnsCredentials(read: CredentialReader): ApnsCredentials {
   return {
     keyId: requireValue(read, "APNS_KEY_ID"),
     teamId: requireValue(read, "APNS_TEAM_ID"),
@@ -102,6 +72,6 @@ export function readApnsCredentials(
       "APNS_PRIVATE_KEY",
       requireValue(read, "APNS_PRIVATE_KEY"),
     ),
-    production,
+    production: requireValue(read, "APNS_PRODUCTION") === "true",
   };
 }

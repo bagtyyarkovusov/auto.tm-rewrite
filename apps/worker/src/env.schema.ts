@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { normalizePrivateKey } from "./push/adapters/credentials";
+import { normalizePrivateKey } from "./shared/pem";
 
 const BaseSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -32,6 +32,13 @@ const BaseSchema = z.object({
   APNS_TEAM_ID: z.string().optional(),
   APNS_BUNDLE_ID: z.string().optional(),
   APNS_PRIVATE_KEY: z.string().optional(),
+  /**
+   * Selects the APNS host explicitly. Not derived from APP_ENV: EAS `internal`
+   * distribution signs iOS with production entitlements, so staging can hold
+   * production APNS tokens. The wrong host answers `BadDeviceToken`, which
+   * would deactivate healthy devices.
+   */
+  APNS_PRODUCTION: z.enum(["true", "false"]).optional(),
 });
 
 type BaseEnv = z.infer<typeof BaseSchema>;
@@ -76,6 +83,7 @@ const FCM_APNS_REQUIRED_VARS = [
   "APNS_TEAM_ID",
   "APNS_BUNDLE_ID",
   "APNS_PRIVATE_KEY",
+  "APNS_PRODUCTION",
 ] as const;
 
 const PRIVATE_KEY_VARS = ["FCM_PRIVATE_KEY", "APNS_PRIVATE_KEY"] as const;

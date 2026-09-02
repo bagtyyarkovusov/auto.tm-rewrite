@@ -1,3 +1,5 @@
+import type { Notification } from "@parse/node-apn";
+
 import type { PushResult } from "../../domain/PushPort";
 import type { ApnsCredentials } from "../credentials";
 
@@ -41,6 +43,26 @@ export class ParseApnsSender implements ApnsSender {
 }
 
 /**
+ * Builds the APNS notification actually put on the wire. Exported so the
+ * payload shape — in particular the S10 `deepLink` key, which the mobile app
+ * reads from `notification.request.content.data.deepLink` — is verifiable
+ * without credentials or a network connection.
+ */
+export async function buildApnsNotification(
+  topic: string,
+  message: ApnsMessage,
+): Promise<Notification> {
+  const apn = await import("@parse/node-apn");
+  const notification = new apn.Notification();
+  notification.topic = topic;
+  notification.pushType = "alert";
+  notification.sound = "default";
+  notification.alert = { title: message.title, body: message.body };
+  notification.payload = message.data;
+  return notification;
+}
+
+/**
  * Builds the node-apn send function from token-based credentials. Imported
  * lazily so the SDK is only loaded when `PUSH_TRANSPORT=fcm-apns`.
  */
@@ -58,12 +80,10 @@ export async function createApnsSendFn(
   });
 
   return async (message) => {
-    const notification = new apn.Notification();
-    notification.topic = credentials.bundleId;
-    notification.pushType = "alert";
-    notification.sound = "default";
-    notification.alert = { title: message.title, body: message.body };
-    notification.payload = message.data;
+    const notification = await buildApnsNotification(
+      credentials.bundleId,
+      message,
+    );
 
     return (await provider.send(
       notification,
