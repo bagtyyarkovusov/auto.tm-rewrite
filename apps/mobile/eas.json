@@ -1,0 +1,54 @@
+{
+  "cli": {
+    "version": ">= 15.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "node": "22.11.0",
+      "corepack": true,
+      "prebuildCommand": "pnpm validate:eas-env",
+      "env": {
+        "EXPO_PUBLIC_PUSH_TRANSPORT": "fcm",
+        "EXPO_PUBLIC_APP_VERSION": "0.1.0",
+        "EXPO_PUBLIC_CUSTOM_SCHEME": "autotm"
+      }
+    },
+    "staging": {
+      "extends": "base",
+      "distribution": "internal",
+      "environment": "staging",
+      "env": {
+        "EXPO_PUBLIC_ENV": "staging",
+        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production-smoke": {
+      "extends": "base",
+      "distribution": "internal",
+      "environment": "production-smoke",
+      "env": {
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "distribution": "store",
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  }
+}
