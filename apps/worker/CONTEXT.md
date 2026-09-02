@@ -111,4 +111,4 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md):
 - [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
 - [ADR-0027](../../docs/adr/0027-mlp-beta-scope.md) — Full notification/media platform deferred out of MLP beta
 - [ADR-0039](../../docs/adr/0039-phased-cloud-first-hosting.md) — Railway-era hosting; fail-closed push/env contract at boot
-- [ADR-0043](../../docs/adr/0043-native-apns-delivery-via-node-apn.md) — Native APNS via `@parse/node-apn`, FCM via `firebase-admin` (**Proposed**)
+- [ADR-0043](../../docs/adr/0043-native-apns-delivery-via-node-apn.md) — Native APNS via `@parse/node-apn`, FCM via `firebase-admin`

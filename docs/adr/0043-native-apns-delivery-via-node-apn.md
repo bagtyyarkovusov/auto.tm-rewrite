@@ -1,6 +1,6 @@
 # ADR-0043: Native APNS delivery via node-apn, not firebase-admin
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-03
 - **Deciders**: AutoTM founder + AI architect
 
