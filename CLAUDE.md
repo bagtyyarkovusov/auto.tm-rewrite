@@ -14,7 +14,7 @@ This file is read at the start of every AI-assisted coding session in this repo.
 
 ## Architecture in one paragraph
 
-Monorepo (Turborepo + pnpm) with 7 apps and 5 packages. API is NestJS + Prisma + Postgres + Socket.IO. Two Next.js apps (public + admin) plus an Expo mobile app. Custom Kotlin Android SMS gateway for OTP. **Level 2 bounded-contexts architecture** in `apps/api/src/modules/<context>/`: each context has `domain/` (pure TS, no Prisma), `application/` (one use-case per file), `infrastructure/` (Prisma repositories, FCM clients, mappers), and `presentation/` (HTTP controllers + WS gateways). **Cross-context calls go through injected ports OR the in-process event bus — never direct imports.** Self-hosted inside Turkmenistan (air-gapped), deployments via Docker image tarballs.
+Monorepo (Turborepo + pnpm) with 7 apps and 5 packages. API is NestJS + Prisma + Postgres + Socket.IO. Two Next.js apps (public + admin) plus an Expo mobile app. Custom Kotlin Android SMS gateway for OTP. **Level 2 bounded-contexts architecture** in `apps/api/src/modules/<context>/`: each context has `domain/` (pure TS, no Prisma), `application/` (one use-case per file), `infrastructure/` (Prisma repositories, FCM clients, mappers), and `presentation/` (HTTP controllers + WS gateways). **Cross-context calls go through injected ports OR the in-process event bus — never direct imports.** Hosting is phased per [ADR-0039](docs/adr/0039-phased-cloud-first-hosting.md): cloud-first on Railway (staging + production) today, cutting over to the [ADR-0005](docs/adr/0005-hosting.md) fully-in-TM air-gapped topology with Docker image tarballs once both stores approve and TM presence exists.
 
 ## Always do
 
@@ -86,7 +86,7 @@ Earlier debugging tried patching Codegen and patching `react-native-screens`; th
 - **NEVER mock Prisma in tests.** Use Testcontainers for real Postgres + Redis.
 - **NEVER use `db push` outside localhost dev.** Migrations only.
 - **NEVER inline magic strings for tokens, roles, or status enums.** They live in `domain/types.ts` per context.
-- **NEVER ship code that calls an outside-of-TM service from the API or worker.** Air-gap. Use the TM Proxy PC for VPN-bridged external calls if absolutely needed.
+- **NEVER add a new outbound dependency on a foreign service without an ADR.** The sanctioned set is closed: the push providers locked in [ADR-0009](docs/adr/0009-notifications.md) and [ADR-0043](docs/adr/0043-native-apns-delivery-via-node-apn.md) (FCM for Android/Web, APNS for iOS, both from `apps/worker` only). Everything else stays inside the deployment. This is not a blanket air-gap ban — ADR-0039 put the stack on Railway for the store-verification phase — but the TM-era target is still the air-gapped topology, so every new egress point is a decision, not a judgement call. In the TM era, use the TM Proxy PC for VPN-bridged external calls if absolutely needed.
 - **NEVER store plaintext refresh tokens.** Bcrypt-hash them in `User.refreshTokenHash` (your current pattern, kept).
 - **NEVER commit `.env` files. Only `.env.template` is committed.**
 - **NEVER bypass the 60s video / 5 MB image client-side compression** — TM mobile data is metered.
