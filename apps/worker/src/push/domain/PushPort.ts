@@ -1,7 +1,9 @@
-import type { PUSH_RESULT_REASON } from "./types";
+import type { PushPlatform, PUSH_RESULT_REASON } from "./types";
 
 export interface PushPayload {
   deviceToken: string;
+  /** Selects the delivery provider: `ios` goes to APNS, everything else to FCM. */
+  platform: PushPlatform;
   title: string;
   body: string;
   deepLink: string;

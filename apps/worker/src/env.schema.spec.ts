@@ -85,6 +85,60 @@ describe("worker EnvSchema push contract", () => {
     ).toThrow(new RegExp(missing));
   });
 
+  it("rejects an unparseable FCM private key", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        PUSH_TRANSPORT: "fcm-apns",
+        ...fullPushCredentials,
+        FCM_PRIVATE_KEY: "not-a-pem-block",
+      }),
+    ).toThrow(/FCM_PRIVATE_KEY is not a parseable PEM private key/);
+  });
+
+  it("rejects an unparseable APNS private key", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        PUSH_TRANSPORT: "fcm-apns",
+        ...fullPushCredentials,
+        APNS_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----",
+      }),
+    ).toThrow(/APNS_PRIVATE_KEY is not a parseable PEM private key/);
+  });
+
+  it("accepts a shell-quoted escaped private key", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        PUSH_TRANSPORT: "fcm-apns",
+        ...fullPushCredentials,
+        FCM_PRIVATE_KEY:
+          '"-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----"',
+      }),
+    ).not.toThrow();
+  });
+
+  it("never echoes private key material in the validation error", () => {
+    try {
+      EnvSchema.parse({
+        ...deployedEnv,
+        PUSH_TRANSPORT: "fcm-apns",
+        ...fullPushCredentials,
+        APNS_PRIVATE_KEY: "leaked-secret-material",
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain("leaked-secret-material");
+      expect(String(error)).toContain("APNS_PRIVATE_KEY");
+    }
+  });
+
+  it("ignores push credentials entirely when the transport is test", () => {
+    expect(() =>
+      EnvSchema.parse({ ...baseEnv, FCM_PRIVATE_KEY: "garbage" }),
+    ).not.toThrow();
+  });
+
   it("rejects blank credential values for fcm-apns", () => {
     expect(() =>
       EnvSchema.parse({

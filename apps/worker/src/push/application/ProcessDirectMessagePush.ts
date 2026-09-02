@@ -64,6 +64,7 @@ export class ProcessDirectMessagePush {
     for (const device of devices) {
       const result = await this.pushPort.send({
         deviceToken: device.token,
+        platform: device.platform,
         title: input.title,
         body: input.body,
         deepLink: input.deepLink,
