@@ -1,22 +1,16 @@
 # Creation reference
 
-Use GitHub-returned identifiers. Predicted issue numbers are display hints at most, never dependencies.
+Use GitHub-returned identifiers. Predicted issue numbers are display hints at most, never dependencies. The transaction-like sequence is canonical in `docs/agents/sprint-transitions.md`; this reference gives `create-sprint-issues`-specific execution notes.
 
 ## Before mutation
 
 - Confirm the proposal in the current conversation.
-- Recheck that labels exist and no competing sprint parent appeared.
-- Record a local creation ledger with planned item, result number, and verification state under `/tmp`.
+- Recheck that labels exist, the Sprint plan is still mutable, and no competing sprint parent appeared.
+- Record a local transition ledger under `/tmp` with planned items, result numbers, external boundaries, and verification state.
 
 ## Transaction-like sequence
 
-1. Create the parent with phase + feature labels and capture its URL/number.
-2. Create dependency-free children first.
-3. Continue in topological order. Use actual blocker numbers in each `## Depends on` section.
-4. Apply `ready-for-agent` or `ready-for-human`; add `blocked` only for open issue dependencies.
-5. Update the parent tasklist with actual child numbers.
-6. Re-fetch every created issue and verify the rendered body and labels.
-7. If a dependent body could not know a later sibling number, patch it only after that sibling exists and verify again.
+Run the Sprint-start sequence from `docs/agents/sprint-transitions.md`. Keep `CREATION.md` out of the business of redefining status transitions, tasklist semantics, or dependency-label rules.
 
 On failure, stop creating new items. Do not close or rewrite successfully created issues automatically. Show the ledger and propose the smallest repair.
 
@@ -25,10 +19,10 @@ On failure, stop creating new items. Do not close or rewrite successfully create
 Only after the GitHub issue set verifies:
 
 - create a focused docs branch from current `main`;
-- update the roadmap current-sprint block and the sprint row to `🟡` with the actual date, parent, children, milestone, and sprint-doc link;
-- do not change the now-locked sprint plan;
-- stage only the roadmap;
+- update the allowed Sprint-plan status metadata and the roadmap current-sprint block/sprint row to `🟡` with the actual date, parent, children, milestone, and sprint-doc link in one commit;
+- do not change Sprint DoD, scope, risks, or acceptance criteria;
+- stage only the Sprint plan and roadmap files;
 - commit and push the docs branch; and
 - open the already-authorized roadmap PR.
 
-Do not merge without a separate user decision. If the roadmap PR cannot be opened, the issues remain valid; report the incomplete start transition explicitly.
+Do not merge without a separate user decision. If the roadmap PR cannot be opened, the issues remain valid; report the incomplete start transition explicitly with the ledger path and the exact repair.

@@ -13,7 +13,7 @@ Execute exactly one issue. Invocation authorizes the normal branch-to-merge flow
 
 ## Resolve the issue
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, [the domain glossary](../../../docs/domain/GLOSSARY.md), `CONTEXT-MAP.md`, ADR-0019, ADR-0020, and the issue-relevant sprint, ADR, agent, and `CONTEXT.md` files. Identify the glossary entries relevant to the issue; definitions settle vocabulary, not requirements or implementation status.
+1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, [the domain glossary](../../../docs/domain/GLOSSARY.md), `CONTEXT-MAP.md`, ADR-0019, ADR-0020, `docs/agents/sprint-transitions.md`, and the issue-relevant sprint, ADR, agent, and `CONTEXT.md` files. Identify the glossary entries relevant to the issue; definitions settle vocabulary, not requirements or implementation status.
 2. If `$issue` is empty, list open `ready-for-agent` issues without `blocked` and ask the user to pick. Never auto-pick.
 3. Fetch the chosen issue, labels, dependencies, comments, branches, and PRs.
 4. Require an open issue, `ready-for-agent`, no `blocked`, closed dependencies, and an intelligible problem plus testable acceptance criteria.
