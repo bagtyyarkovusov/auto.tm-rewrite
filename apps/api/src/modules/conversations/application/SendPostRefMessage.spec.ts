@@ -14,6 +14,8 @@ import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadP
 import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/MessageEventPublisher";
 
 import { SendPostRefMessage } from "./SendPostRefMessage";
+import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
+import { SendConversationMessage } from "./SendConversationMessage";
 
 class FakeConversationRepository implements ConversationRepository {
   conversations: Conversation[] = [];
@@ -203,12 +205,23 @@ function makeUseCase(
   identityRead?: FakeIdentityReadPort,
   messageEvents?: FakeMessageEventPublisher,
 ) {
-  return new SendPostRefMessage(
-    repo ?? new FakeConversationRepository(),
-    listings ?? new FakeListingsReadPort(),
-    identityCheck ?? new FakeIdentityCheckPort(),
-    identityRead ?? new FakeIdentityReadPort(),
+  const effectiveRepo = repo ?? new FakeConversationRepository();
+  const effectiveListings = listings ?? new FakeListingsReadPort();
+  const effectiveIdentityCheck = identityCheck ?? new FakeIdentityCheckPort();
+  const effectiveIdentityRead = identityRead ?? new FakeIdentityReadPort();
+  const accessPolicy = new ConversationAccessPolicy(
+    effectiveIdentityCheck,
+    effectiveIdentityRead,
+  );
+  const workflow = new SendConversationMessage(
+    effectiveRepo,
+    effectiveListings,
     messageEvents ?? new FakeMessageEventPublisher(),
+    accessPolicy,
+  );
+  return new SendPostRefMessage(
+    workflow,
+    effectiveListings,
   );
 }
 
@@ -399,7 +412,8 @@ describe("SendPostRefMessage", () => {
     seedConversation(repo);
     seedParentListing(listings);
     seedReferencedListing(listings);
-    const uc = makeUseCase(repo, listings);
+    const events = new FakeMessageEventPublisher();
+    const uc = makeUseCase(repo, listings, undefined, undefined, events);
 
     const first = await uc.execute({
       senderId: "buyer-1",
@@ -416,6 +430,31 @@ describe("SendPostRefMessage", () => {
     });
 
     expect(second.message.id).toBe(first.message.id);
+    expect(repo.messages).toHaveLength(1);
+    expect(events.events).toHaveLength(1);
+  });
+
+  it("validates referenced listing before returning an idempotent retry", async () => {
+    seedConversation(repo);
+    seedParentListing(listings);
+    seedReferencedListing(listings);
+    const uc = makeUseCase(repo, listings);
+
+    await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      metadata: { listingId: "referenced-listing" },
+      clientMessageId: "client-ref-1",
+    });
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        metadata: { listingId: "missing-listing" },
+        clientMessageId: "client-ref-1",
+      }),
+    ).rejects.toThrow(ForbiddenException);
     expect(repo.messages).toHaveLength(1);
   });
 

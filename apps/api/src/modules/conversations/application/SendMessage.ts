@@ -1,37 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { Inject, Injectable } from "@nestjs/common";
 
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from "@nestjs/common";
-import { AdminSchemas } from "@auto-tm/contracts";
-
-import type {
-  ListingsReadPort,
-  ListingSummary,
-} from "../../listings/domain/ports/ListingsReadPort";
-import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
-import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
+import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
 import { Message } from "../domain/Message";
 import type { ImageMessageMetadata } from "../domain/types";
 import {
   CONVERSATION_ERROR_CODES,
   ConversationDomainError,
 } from "../domain/types";
-import {
-  CONVERSATION_REPOSITORY,
-  type ConversationRepository,
-} from "../domain/ports/ConversationRepository";
-import type {
-  MessageEventPublisher,
-} from "../domain/ports/MessageEventPublisher";
-import { MESSAGE_EVENT_PUBLISHER } from "../domain/ports/MessageEventPublisher";
+
+import { SendConversationMessage } from "./SendConversationMessage";
 
 export type SendMessageInput =
   | {
@@ -57,207 +34,60 @@ export interface SendMessageResult {
 @Injectable()
 export class SendMessage {
   constructor(
-    @Inject(CONVERSATION_REPOSITORY)
-    private readonly conversations: ConversationRepository,
-    @Inject(LISTINGS_READ_PORT)
-    private readonly listings: ListingsReadPort,
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
-    private readonly identityCheck: IdentityCheckPort,
-    @Inject(IDENTITY_READ_PORT)
-    private readonly identityRead: IdentityReadPort,
-    @Inject(MESSAGE_EVENT_PUBLISHER)
-    private readonly messageEvents: MessageEventPublisher,
+    @Inject(SendConversationMessage)
+    private readonly sendConversationMessage: SendConversationMessage,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
-    const conversation = await this.conversations.findById(
-      input.conversationId,
-    );
-
-    if (!conversation) {
-      throw new NotFoundException({
-        code: "NOT_FOUND",
-        message: "Conversation not found",
-      });
-    }
-
-    if (!conversation.isParticipant(input.senderId)) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "You are not a participant in this conversation",
-        details: { reason: CONVERSATION_ERROR_CODES.NOT_A_PARTICIPANT },
-      });
-    }
-
-    const listing = await this.listings.getListingSummary(
-      conversation.listingId,
-    );
-
-    if (!listing) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "Listing is no longer available for contact",
-        details: { reason: CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE },
-      });
-    }
-
-    if (listing.status !== "active") {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "Listing is not available for contact",
-        details: { reason: CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE },
-      });
-    }
-
-    if (!listing.allowChat) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "Chat is disabled for this listing",
-        details: { reason: CONVERSATION_ERROR_CODES.CHAT_DISABLED },
-      });
-    }
-
-    const otherParticipantId =
-      conversation.buyerId === input.senderId
-        ? conversation.sellerId
-        : conversation.buyerId;
-
-    await this.guardSuspended(input.senderId, otherParticipantId);
-    await this.guardBlocked(input.senderId, otherParticipantId);
-
-    if (input.clientMessageId) {
-      const existing = await this.conversations.findMessageByClientMessageId(
-        input.conversationId,
-        input.senderId,
-        input.clientMessageId,
-      );
-      if (existing) {
-        return { message: existing, listing };
-      }
-    }
-
-    let message: Message;
-    try {
-      message = this.createMessage(input);
-    } catch (err) {
-      if (err instanceof ConversationDomainError) {
-        throw new BadRequestException({
-          code: "VALIDATION_FAILED",
-          message: err.message,
-          details: { reason: err.code },
-        });
-      }
-      throw err;
-    }
-
-    await this.conversations.saveMessage(message);
-    await this.emitMessageSent(input.senderId, conversation, message);
-
-    return { message, listing };
+    const result = await this.executeWithDeliveryState(input);
+    return { message: result.message, listing: result.listing };
   }
 
-  private async emitMessageSent(
-    senderId: string,
-    conversation: { id: string; buyerId: string; sellerId: string },
-    message: Message,
-  ): Promise<void> {
-    const recipientId =
-      conversation.buyerId === senderId
-        ? conversation.sellerId
-        : conversation.buyerId;
-
-    await this.messageEvents.emitMessageSent({
-      event: "MessageSent",
-      conversationId: conversation.id,
-      messageId: message.id,
-      senderId,
-      recipientId,
-      sentAt: message.createdAt.toISOString(),
-      messageKind: message.kind,
-      messageBody: message.body,
-      messageMetadata: message.metadata,
-      messageDeletedAt: message.deletedAt?.toISOString() ?? null,
+  async executeWithDeliveryState(input: SendMessageInput) {
+    return this.sendConversationMessage.execute({
+      senderId: input.senderId,
+      conversationId: input.conversationId,
+      clientMessageId: input.clientMessageId,
+      createMessage: ({ id, conversationId, senderId, clientMessageId }) =>
+        this.createMessage({
+          id,
+          conversationId,
+          senderId,
+          clientMessageId,
+          input,
+        }),
     });
   }
 
-  private createMessage(input: SendMessageInput): Message {
-    const base = {
-      id: randomUUID(),
-      conversationId: input.conversationId,
-      senderId: input.senderId,
-      clientMessageId: input.clientMessageId,
-    };
-
-    switch (input.kind) {
+  private createMessage(data: {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    clientMessageId?: string | undefined;
+    input: SendMessageInput;
+  }): Message {
+    switch (data.input.kind) {
       case "text":
         return Message.createText({
-          ...base,
-          text: input.text,
+          id: data.id,
+          conversationId: data.conversationId,
+          senderId: data.senderId,
+          clientMessageId: data.clientMessageId,
+          text: data.input.text,
         });
       case "image":
         return Message.createImage({
-          ...base,
-          metadata: input.metadata,
+          id: data.id,
+          conversationId: data.conversationId,
+          senderId: data.senderId,
+          clientMessageId: data.clientMessageId,
+          metadata: data.input.metadata,
         });
       default:
         throw new ConversationDomainError(
           CONVERSATION_ERROR_CODES.MESSAGE_KIND_NOT_SUPPORTED,
           "Message kind not supported",
         );
-    }
-  }
-
-  private async guardSuspended(
-    senderId: string,
-    otherParticipantId: string,
-  ): Promise<void> {
-    const senderSuspended = await this.identityCheck.isSuspended(senderId);
-    if (senderSuspended) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "User is suspended",
-        details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
-      });
-    }
-
-    const otherSuspended = await this.identityCheck.isSuspended(
-      otherParticipantId,
-    );
-    if (otherSuspended) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "User is suspended",
-        details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
-      });
-    }
-  }
-
-  private async guardBlocked(
-    senderId: string,
-    otherParticipantId: string,
-  ): Promise<void> {
-    const blockedByOther = await this.identityRead.isUserBlockedBy(
-      otherParticipantId,
-      senderId,
-    );
-    if (blockedByOther) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "You are blocked by this user",
-        details: { reason: CONVERSATION_ERROR_CODES.BLOCKED_BY_USER },
-      });
-    }
-
-    const blockedThem = await this.identityRead.isUserBlockedBy(
-      senderId,
-      otherParticipantId,
-    );
-    if (blockedThem) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "You have blocked this user",
-        details: { reason: CONVERSATION_ERROR_CODES.USER_BLOCKED },
-      });
     }
   }
 }

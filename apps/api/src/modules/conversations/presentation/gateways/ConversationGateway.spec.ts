@@ -8,7 +8,7 @@ import { Conversation } from "../../domain/Conversation";
 import { Message } from "../../domain/Message";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
-import type { SendMessage, SendMessageResult } from "../../application/SendMessage";
+import type { SendMessage } from "../../application/SendMessage";
 import type { UpdateWatermark, UpdateWatermarkResult } from "../../application/UpdateWatermark";
 import type { DeleteMessage } from "../../application/DeleteMessage";
 
@@ -50,6 +50,7 @@ function buildSendMessage(
 ): SendMessage {
   return {
     execute: vi.fn(),
+    executeWithDeliveryState: vi.fn(),
     ...overrides,
   } as unknown as SendMessage;
 }
@@ -329,10 +330,11 @@ describe("ConversationGateway", () => {
         clientMessageId: "client-1",
       });
       const sendMessage = buildSendMessage({
-        execute: vi.fn().mockResolvedValue({
+        executeWithDeliveryState: vi.fn().mockResolvedValue({
           message,
           listing: null,
-        } as SendMessageResult),
+          created: true,
+        }),
       });
       const { gateway } = buildGateway(undefined, sendMessage);
       const socket = buildSocket({
@@ -363,7 +365,7 @@ describe("ConversationGateway", () => {
           clientMessageId: "client-1",
         }),
       });
-      expect(sendMessage.execute).toHaveBeenCalledWith({
+      expect(sendMessage.executeWithDeliveryState).toHaveBeenCalledWith({
         senderId: "buyer-1",
         conversationId: CONV_1,
         kind: "text",
@@ -388,16 +390,26 @@ describe("ConversationGateway", () => {
         clientMessageId: "client-dup",
       });
       const sendMessage = buildSendMessage({
-        execute: vi.fn().mockResolvedValue({
-          message,
-          listing: null,
-        } as SendMessageResult),
+        executeWithDeliveryState: vi
+          .fn()
+          .mockResolvedValueOnce({
+            message,
+            listing: null,
+            created: true,
+          })
+          .mockResolvedValueOnce({
+            message,
+            listing: null,
+            created: false,
+          }),
       });
       const { gateway } = buildGateway(undefined, sendMessage);
       const socket = buildSocket({
         user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
       });
-      gateway.server = buildServer();
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
 
       const first = await gateway.handleSendMessage(
         {
@@ -421,7 +433,8 @@ describe("ConversationGateway", () => {
       expect((first as { ok: true; message: { id: string } }).message.id).toBe(
         (second as { ok: true; message: { id: string } }).message.id,
       );
-      expect(sendMessage.execute).toHaveBeenCalledTimes(2);
+      expect(sendMessage.executeWithDeliveryState).toHaveBeenCalledTimes(2);
+      expect(emitMock).toHaveBeenCalledTimes(1);
     });
 
     it("rejects send for unauthenticated sockets", async () => {
@@ -465,7 +478,7 @@ describe("ConversationGateway", () => {
 
     it("rejects send when SendMessage throws a participant/business error", async () => {
       const sendMessage = buildSendMessage({
-        execute: vi.fn().mockRejectedValue({
+        executeWithDeliveryState: vi.fn().mockRejectedValue({
           response: {
             code: "FORBIDDEN",
             message: "You are not a participant in this conversation",

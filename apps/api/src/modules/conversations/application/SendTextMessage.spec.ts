@@ -10,6 +10,8 @@ import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadP
 import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/MessageEventPublisher";
 
 import { SendTextMessage } from "./SendTextMessage";
+import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
+import { SendConversationMessage } from "./SendConversationMessage";
 
 class FakeConversationRepository implements ConversationRepository {
   conversations: Conversation[] = [];
@@ -201,13 +203,19 @@ function makeUseCase(
   identityRead?: FakeIdentityReadPort,
   messageEvents?: FakeMessageEventPublisher,
 ) {
-  return new SendTextMessage(
+  const effectiveIdentityCheck = identityCheck ?? new FakeIdentityCheckPort();
+  const effectiveIdentityRead = identityRead ?? new FakeIdentityReadPort();
+  const accessPolicy = new ConversationAccessPolicy(
+    effectiveIdentityCheck,
+    effectiveIdentityRead,
+  );
+  const workflow = new SendConversationMessage(
     repo ?? new FakeConversationRepository(),
     listings ?? new FakeListingsReadPort(),
-    identityCheck ?? new FakeIdentityCheckPort(),
-    identityRead ?? new FakeIdentityReadPort(),
     messageEvents ?? new FakeMessageEventPublisher(),
+    accessPolicy,
   );
+  return new SendTextMessage(workflow);
 }
 
 function seedConversation(

@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import { RealtimeModule } from "../realtime/realtime.module";
 
 import { ConversationsModule } from "./conversations.module";
+import { ConversationAccessPolicy } from "./application/ConversationAccessPolicy";
+import { SendConversationMessage } from "./application/SendConversationMessage";
 
 describe("ConversationsModule", () => {
   it("imports the realtime presence provider used by ConversationGateway", () => {
@@ -15,5 +17,15 @@ describe("ConversationsModule", () => {
     ) as unknown[];
 
     expect(imports).toContain(RealtimeModule);
+  });
+
+  it("registers shared conversation access and send-message providers", () => {
+    const providers = Reflect.getMetadata(
+      MODULE_METADATA.PROVIDERS,
+      ConversationsModule,
+    ) as unknown[];
+
+    expect(providers).toContain(ConversationAccessPolicy);
+    expect(providers).toContain(SendConversationMessage);
   });
 });
