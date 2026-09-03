@@ -60,7 +60,7 @@ Closes #<N>
 1. Verify the PR merged and the issue closed through `Closes #N`.
 2. If the issue stayed open, report the integrity failure and ask before manual closure.
 3. Verify/sync local `main` without discarding user state.
-4. Inspect open dependents. Remove `blocked` only when every issue in their `## Depends on` section is closed.
-5. Report every label changed.
+4. Follow child-progress reconciliation in `docs/agents/sprint-transitions.md`: resolve the correct Sprint parent, verify it lists the child, mark the child complete in the parent tasklist, then re-evaluate `blocked` labels for affected children from their `## Depends on` sections.
+5. Re-fetch the parent and affected children, then report the final rollup and every parent-body or label change.
 
 Do not create a second direct-to-main roadmap commit. If final-issue roadmap closeout was explicitly part of the issue, it belongs in the original PR; otherwise `/close-sprint` owns the reconciliation.

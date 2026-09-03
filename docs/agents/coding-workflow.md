@@ -8,7 +8,7 @@ This is the repository router for moving an idea from shaping to shipped code. I
 |---|---|---|---|
 | Shaping | [`shape-with-docs`](../../.claude/skills/shape-with-docs/SKILL.md) | Reviewed vocabulary and mutable product, flow, or pending-sprint documents; a new ADR when required | Work stays on `shape/<slug>` and contains no executable tickets or implementation |
 | Specification | The same shaping PRD, flow, and pending-sprint artifacts governed by ADR-0020 | Testable outcomes, scope, non-goals, scenarios, invariants, risks, DoD, and evidence plan | There is no duplicate standalone specification artifact |
-| Sprint issue creation | [`create-sprint-issues`](../../.claude/skills/create-sprint-issues/SKILL.md) | Confirmed parent and dependency-ordered child issues plus the roadmap-start PR | Starts only after the shaping documentation PR is reviewed and merged |
+| Sprint issue creation | [`create-sprint-issues`](../../.claude/skills/create-sprint-issues/SKILL.md) using [`sprint-transitions.md`](sprint-transitions.md) | Confirmed parent and dependency-ordered child issues plus the roadmap-start PR | Starts only after the shaping documentation PR is reviewed and merged |
 | Issue execution | [`run-issue`](../../.claude/skills/run-issue/SKILL.md), or `resume-issue` for an interrupted run | One verified implementation PR and its required current-state documentation | Fresh execution context per issue; one issue and one integration owner |
 | Review | Independent Standards review and Spec review of the fixed implementation commit | Findings resolved or explicitly rejected with evidence | Both axes pass before merge |
 | Sprint control | `sprint-status`, then `close-sprint` when the sprint is complete | Queue visibility, shipped-vs-planned verification, retro, and roadmap update | Retros remain append-only; sprint locks remain in force |
@@ -47,6 +47,7 @@ Use this repository guidance alongside any user-global diagnosis technique witho
 
 - Keep one conversation through decision grilling, documentation editing, and approval of the shaping PR so unresolved choices remain visible.
 - Start issue creation only from merged shaping documents. Its confirmation authorizes issue and roadmap mutations, not execution.
+- Sprint starts and child-progress reconciliation use the canonical verified sequence in [`docs/agents/sprint-transitions.md`](sprint-transitions.md). Report success only after fresh repository and GitHub reads agree.
 - Start each implementation issue in a fresh execution context with the issue, canonical vocabulary, governing specification, ADRs, and current-state context reloaded.
 - A normal `run-issue` invocation authorizes its branch-to-merge flow, subject to its decision boundaries and both review axes.
 - Never edit user-global skills or copy their generic instructions into the repository. AutoTM's canonical workflows live once under `.claude/skills/`.

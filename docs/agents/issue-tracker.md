@@ -2,7 +2,7 @@
 
 This repo tracks all issues in **GitHub Issues**, using the `gh` CLI.
 
-Skills that read this file: user-global generic skills (`triage`, `qa`, `request-refactor-plan`) and the project workflow skills at `.claude/skills/` (`create-sprint-issues`, `run-issue`) — see [ADR-0040](../adr/0040-repo-canonical-workflow-skills.md).
+Skills that read this file: user-global generic skills (`triage`, `qa`, `request-refactor-plan`) and the project workflow skills at `.claude/skills/` (`create-sprint-issues`, `run-issue`) — see [ADR-0040](../adr/0040-repo-canonical-workflow-skills.md). Sprint start, tasklist reconciliation, and dependency-label updates use the canonical verified sequence in [`sprint-transitions.md`](sprint-transitions.md).
 
 ## Operations
 
@@ -58,7 +58,7 @@ Two kinds of issues coexist in this repo, **one parent per sprint** plus **one c
 ```markdown
 # Sprint <N> — <Name>
 
-> **Status:** ⚪ Pending | 🟡 In progress | 🟢 Shipped
+> **Status:** ⚪ Pending | Pending roadmap-start PR | 🟡 In progress | 🟢 Shipped
 > **Phase:** 1 | 2 | 3
 > **Milestone:** M<n> — <demo line>
 > **Sprint doc:** [docs/prd/sprints/sprint-NN-<name>.md](...)
@@ -158,7 +158,7 @@ Parent PRD issues get `phase-N` + `feature` only — no triage label, since they
 Each child issue body has a `## Depends on` section listing zero or more issue numbers (or "None").
 
 - At creation: if any blocker is open, the issue is labelled `blocked`.
-- After a blocker merges, `/run-issue` or the Sandcastle merger removes `blocked` only after re-reading every dependency and confirming none remain open.
+- After a blocker merges, `/run-issue` reconciles parent tasklist progress and `blocked` labels through [`sprint-transitions.md`](sprint-transitions.md), after re-reading every dependency and confirming which remain open.
 - A human may repair bookkeeping manually with `gh issue edit <n> --remove-label "blocked"` after the same check.
 - The executable queue is `gh issue list --label "ready-for-agent" --search "-label:blocked"`.
 
@@ -173,7 +173,7 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 5. Opens a PR with title mirroring the issue + body starting `Closes #<N>` so the issue auto-closes on merge
 6. Waits for required checks and squash-merges the PR; it never self-approves
 7. Syncs `main` locally
-8. Strips the `blocked` label from any open issue whose `## Depends on` section now has zero open blockers
+8. Reconciles the Sprint parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`
 
 Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.
 

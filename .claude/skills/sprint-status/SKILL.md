@@ -12,7 +12,7 @@ This skill is strictly read-only. Do not edit files, labels, issues, PRs, branch
 
 ## Resolve scope
 
-1. Read `docs/prd/03-roadmap.md`, ADR-0019, ADR-0020, `docs/agents/issue-tracker.md`, and the applicable sprint file/retro.
+1. Read `docs/prd/03-roadmap.md`, ADR-0019, ADR-0020, `docs/agents/issue-tracker.md`, `docs/agents/sprint-transitions.md`, and the applicable sprint file/retro.
 2. If `$sprint` is supplied, report that sprint without changing the roadmap's current pointer.
 3. Otherwise use the roadmap current-sprint block.
 4. “No shaped sprint” is valid: show the pending betting-table state, omit issue/DoD rollups, and suggest shaping the documented next bet. Never infer or create S11.
@@ -39,7 +39,7 @@ Avoid a repository-wide forensic audit. Fetch full bodies only when needed to de
 - **Bookkeeping drift:** labels/body/roadmap disagree with observed state.
 - **Unknown:** evidence is ambiguous or not structurally available. Never convert unknown to pass.
 
-Doc checks are signals, not repairs. ADR-0019 means current-state docs should match code; ADR-0020 defines which documents may still change. Report suspected drift with paths and evidence.
+Doc checks are signals, not repairs. ADR-0019 means current-state docs should match code; ADR-0020 defines which documents may still change. Use the read-only drift detection rules in `docs/agents/sprint-transitions.md`; report suspected drift with paths, evidence, and one bounded repair.
 
 ## Output
 
