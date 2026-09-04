@@ -6,7 +6,16 @@
 # (`pnpm --filter @auto-tm/db migrate:deploy`) in this image before the new
 # revision takes traffic. Forward-only, per ADR-0004.
 FROM node:22-bookworm-slim AS base
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+# Corepack caches the activated pnpm under $COREPACK_HOME, which defaults to
+# the *invoking user's* home. The runtime stages drop to the system user
+# `auto-tm`, which has no home directory, so a runtime `pnpm` (the API's
+# migrate pre-deploy) would fail with EACCES trying to re-download pnpm.
+# Pinning a shared, world-writable location makes the prepared pnpm reachable
+# from every user in every stage.
+ENV COREPACK_HOME=/opt/corepack
+RUN mkdir -p /opt/corepack && chmod 777 /opt/corepack \
+    && corepack enable && corepack prepare pnpm@9.12.0 --activate \
+    && chmod -R a+rX /opt/corepack
 WORKDIR /app
 
 FROM base AS deps
