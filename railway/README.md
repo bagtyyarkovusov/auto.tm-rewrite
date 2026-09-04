@@ -1,9 +1,21 @@
-# `railway/` — per-service config as code
+# `railway/` — per-service declared deploy state
 
-Versioned Railway configuration for the ADR-0039 cloud phase (Sprint 11).
-One JSON file per deployable service; each is valid against
-<https://railway.com/railway.schema.json> and overrides the equivalent
-dashboard settings for that service.
+The checked-in declaration of Railway deploy settings for the ADR-0039 cloud
+phase (Sprint 11). One JSON file per deployable service, each valid against
+<https://railway.com/railway.schema.json>.
+
+**Railway does not read these files.** Railway deprecated config as code
+(`railway.json` / `railway.toml`); pointing a service at one is rejected by
+the live API. Its replacement, Infrastructure as Code in `.railway/railway.ts`,
+covers neither Dockerfile builds nor the API pre-deploy migration, so AutoTM
+does not adopt it. Deploy settings are applied provider-side per environment
+through `serviceInstanceUpdate`, and these files remain the human- and
+agent-readable statement of what those settings should be. Locked in
+[ADR-0044](../docs/adr/0044-railway-deploy-settings-live-provider-side.md).
+
+Changing a service's contract is therefore two steps: edit the file here, then
+apply it provider-side and record it in the environment's evidence file. Drift
+between the two is an operator finding — nothing reconciles it automatically.
 
 | File | Service | Build | Start command | Pre-deploy | Health gate |
 |---|---|---|---|---|---|
@@ -32,17 +44,18 @@ a build arg for Dockerfile builds) and bakes it as `ENV AUTOTM_COMMIT_SHA`.
 when Railway rebuilds it. `environment` prefers the Railway-injected
 `RAILWAY_ENVIRONMENT_NAME`, falling back to `APP_ENV`.
 
-## Provider-side settings (cannot live in this repo)
+## Provider-side settings
 
-Config as code does not cover everything. These stay in the Railway
-dashboard/API and are verified during provisioning (S11-07/S11-08) — listed
-here so dashboard-only drift is auditable:
+Everything Railway actually runs on is set provider-side and verified during
+provisioning (S11-07/S11-08) — listed here so drift stays auditable:
 
 1. **Service source**: each of `api`, `worker`, `admin`, `web` builds from
    this repo with the **root directory set to the repository root** (the
    Dockerfiles need the full monorepo context).
-2. **Config file path**: each service's config-as-code path set to
-   `/railway/<service>.json`.
+2. **Deploy contract**: the `build` and `deploy` blocks of each JSON file
+   above — Dockerfile path, start command, pre-deploy command, healthcheck
+   path and timeout, restart policy — applied per environment through
+   `serviceInstanceUpdate`. These are not read from the repo (ADR-0044).
 3. **Environments**: one project, `staging` + `production`. Staging
    auto-deploys `main` with **Wait for CI** (GitHub Actions must be green);
    production has **no branch autodeploy** — an operator manually deploys the
@@ -93,4 +106,5 @@ no dashboard setting can accidentally enable them.
 - [ADR-0004 — migrations](../docs/adr/0004-migrations.md)
 - [Sprint 11 — Railway deployment](../docs/prd/sprints/sprint-11-railway-deployment.md)
 - [`infra/docker/`](../infra/docker/README.md)
-- Railway docs: config as code (`https://docs.railway.com/guides/config-as-code`)
+- [ADR-0044 — Railway deploy settings live provider-side](../docs/adr/0044-railway-deploy-settings-live-provider-side.md)
+- Railway docs: infrastructure as code (`https://docs.railway.com/infrastructure-as-code`)
