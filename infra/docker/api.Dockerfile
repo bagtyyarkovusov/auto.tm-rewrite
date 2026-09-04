@@ -23,7 +23,12 @@ COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/tsconfig/package.json packages/tsconfig/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
+# No BuildKit cache mount here. Railway's builder requires cache mount ids of
+# the form `s/<service id>-<target path>` and rejects env vars inside them, so
+# a cache mount would bake a Railway service UUID into an image these
+# Dockerfiles also build for the ADR-0005 air-gapped bundles. Layer caching on
+# an unchanged lockfile covers the common case.
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
