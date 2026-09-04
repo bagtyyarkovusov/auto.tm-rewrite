@@ -15,6 +15,8 @@ import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/Me
 
 import { SendPostRefMessage } from "./SendPostRefMessage";
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
+import { ConversationMessageCommitter } from "./ConversationMessageCommitter";
+import { ConversationSendPolicy } from "./ConversationSendPolicy";
 import { SendConversationMessage } from "./SendConversationMessage";
 
 class FakeConversationRepository implements ConversationRepository {
@@ -215,9 +217,11 @@ function makeUseCase(
   );
   const workflow = new SendConversationMessage(
     effectiveRepo,
-    effectiveListings,
-    messageEvents ?? new FakeMessageEventPublisher(),
-    accessPolicy,
+    new ConversationSendPolicy(effectiveRepo, effectiveListings, accessPolicy),
+    new ConversationMessageCommitter(
+      effectiveRepo,
+      messageEvents ?? new FakeMessageEventPublisher(),
+    ),
   );
   return new SendPostRefMessage(
     workflow,
@@ -434,7 +438,7 @@ describe("SendPostRefMessage", () => {
     expect(events.events).toHaveLength(1);
   });
 
-  it("validates referenced listing before returning an idempotent retry", async () => {
+  it("returns an idempotent retry before validating replacement metadata", async () => {
     seedConversation(repo);
     seedParentListing(listings);
     seedReferencedListing(listings);
@@ -447,14 +451,14 @@ describe("SendPostRefMessage", () => {
       clientMessageId: "client-ref-1",
     });
 
-    await expect(
-      uc.execute({
-        senderId: "buyer-1",
-        conversationId: "conv-1",
-        metadata: { listingId: "missing-listing" },
-        clientMessageId: "client-ref-1",
-      }),
-    ).rejects.toThrow(ForbiddenException);
+    const retry = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      metadata: { listingId: "missing-listing" },
+      clientMessageId: "client-ref-1",
+    });
+
+    expect(retry.message.clientMessageId).toBe("client-ref-1");
     expect(repo.messages).toHaveLength(1);
   });
 

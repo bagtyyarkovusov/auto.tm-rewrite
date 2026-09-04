@@ -8,7 +8,7 @@ import { Conversation } from "../../domain/Conversation";
 import { Message } from "../../domain/Message";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
-import type { SendMessage } from "../../application/SendMessage";
+import type { SendRealtimeMessage } from "../../application/SendRealtimeMessage";
 import type { UpdateWatermark, UpdateWatermarkResult } from "../../application/UpdateWatermark";
 import type { DeleteMessage } from "../../application/DeleteMessage";
 
@@ -46,13 +46,12 @@ function buildValidateAccess(
 }
 
 function buildSendMessage(
-  overrides: Partial<SendMessage> = {},
-): SendMessage {
+  overrides: Partial<SendRealtimeMessage> = {},
+): SendRealtimeMessage {
   return {
     execute: vi.fn(),
-    executeWithDeliveryState: vi.fn(),
     ...overrides,
-  } as unknown as SendMessage;
+  } as unknown as SendRealtimeMessage;
 }
 
 function buildUpdateWatermark(
@@ -95,14 +94,14 @@ function buildServer(): Server {
 
 function buildGateway(
   validateAccess?: ValidateConversationAccess,
-  sendMessage?: SendMessage,
+  sendMessage?: SendRealtimeMessage,
   updateWatermark?: UpdateWatermark,
   deleteMessage?: DeleteMessage,
   presence?: PresencePort,
 ): {
   gateway: ConversationGateway;
   validateAccess: ValidateConversationAccess;
-  sendMessage: SendMessage;
+  sendMessage: SendRealtimeMessage;
   updateWatermark: UpdateWatermark;
   deleteMessage: DeleteMessage;
   presence: PresencePort;
@@ -330,7 +329,7 @@ describe("ConversationGateway", () => {
         clientMessageId: "client-1",
       });
       const sendMessage = buildSendMessage({
-        executeWithDeliveryState: vi.fn().mockResolvedValue({
+        execute: vi.fn().mockResolvedValue({
           message,
           listing: null,
           created: true,
@@ -365,7 +364,7 @@ describe("ConversationGateway", () => {
           clientMessageId: "client-1",
         }),
       });
-      expect(sendMessage.executeWithDeliveryState).toHaveBeenCalledWith({
+      expect(sendMessage.execute).toHaveBeenCalledWith({
         senderId: "buyer-1",
         conversationId: CONV_1,
         kind: "text",
@@ -390,7 +389,7 @@ describe("ConversationGateway", () => {
         clientMessageId: "client-dup",
       });
       const sendMessage = buildSendMessage({
-        executeWithDeliveryState: vi
+        execute: vi
           .fn()
           .mockResolvedValueOnce({
             message,
@@ -433,7 +432,7 @@ describe("ConversationGateway", () => {
       expect((first as { ok: true; message: { id: string } }).message.id).toBe(
         (second as { ok: true; message: { id: string } }).message.id,
       );
-      expect(sendMessage.executeWithDeliveryState).toHaveBeenCalledTimes(2);
+      expect(sendMessage.execute).toHaveBeenCalledTimes(2);
       expect(emitMock).toHaveBeenCalledTimes(1);
     });
 
@@ -478,7 +477,7 @@ describe("ConversationGateway", () => {
 
     it("rejects send when SendMessage throws a participant/business error", async () => {
       const sendMessage = buildSendMessage({
-        executeWithDeliveryState: vi.fn().mockRejectedValue({
+        execute: vi.fn().mockRejectedValue({
           response: {
             code: "FORBIDDEN",
             message: "You are not a participant in this conversation",

@@ -1,6 +1,13 @@
 import type { Conversation } from "../Conversation";
 import type { Message } from "../Message";
 
+export class MessageAlreadySavedError extends Error {
+  constructor(readonly existingMessage: Message) {
+    super("A message with this client message ID already exists");
+    this.name = "MessageAlreadySavedError";
+  }
+}
+
 export interface ParticipantState {
   mutedAt: Date | null;
   lastReadAt: Date | null;

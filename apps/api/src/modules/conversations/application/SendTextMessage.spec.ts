@@ -11,6 +11,8 @@ import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/Me
 
 import { SendTextMessage } from "./SendTextMessage";
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
+import { ConversationMessageCommitter } from "./ConversationMessageCommitter";
+import { ConversationSendPolicy } from "./ConversationSendPolicy";
 import { SendConversationMessage } from "./SendConversationMessage";
 
 class FakeConversationRepository implements ConversationRepository {
@@ -209,11 +211,13 @@ function makeUseCase(
     effectiveIdentityCheck,
     effectiveIdentityRead,
   );
+  const effectiveRepo = repo ?? new FakeConversationRepository();
+  const effectiveListings = listings ?? new FakeListingsReadPort();
+  const effectiveEvents = messageEvents ?? new FakeMessageEventPublisher();
   const workflow = new SendConversationMessage(
-    repo ?? new FakeConversationRepository(),
-    listings ?? new FakeListingsReadPort(),
-    messageEvents ?? new FakeMessageEventPublisher(),
-    accessPolicy,
+    effectiveRepo,
+    new ConversationSendPolicy(effectiveRepo, effectiveListings, accessPolicy),
+    new ConversationMessageCommitter(effectiveRepo, effectiveEvents),
   );
   return new SendTextMessage(workflow);
 }

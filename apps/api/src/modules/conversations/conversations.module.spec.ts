@@ -7,7 +7,10 @@ import { RealtimeModule } from "../realtime/realtime.module";
 
 import { ConversationsModule } from "./conversations.module";
 import { ConversationAccessPolicy } from "./application/ConversationAccessPolicy";
+import { ConversationMessageCommitter } from "./application/ConversationMessageCommitter";
+import { ConversationSendPolicy } from "./application/ConversationSendPolicy";
 import { SendConversationMessage } from "./application/SendConversationMessage";
+import { SendRealtimeMessage } from "./application/SendRealtimeMessage";
 
 describe("ConversationsModule", () => {
   it("imports the realtime presence provider used by ConversationGateway", () => {
@@ -26,6 +29,9 @@ describe("ConversationsModule", () => {
     ) as unknown[];
 
     expect(providers).toContain(ConversationAccessPolicy);
+    expect(providers).toContain(ConversationMessageCommitter);
+    expect(providers).toContain(ConversationSendPolicy);
     expect(providers).toContain(SendConversationMessage);
+    expect(providers).toContain(SendRealtimeMessage);
   });
 });

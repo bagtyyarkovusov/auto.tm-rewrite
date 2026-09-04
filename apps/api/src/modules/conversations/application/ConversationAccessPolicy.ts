@@ -26,9 +26,7 @@ export class ConversationAccessPolicy {
   async assertParticipantAccess(
     input: AssertConversationParticipantAccessInput,
   ): Promise<void> {
-    this.assertParticipant(input.conversation, input.userId);
-
-    const otherParticipantId = this.otherParticipantId(
+    const otherParticipantId = this.assertParticipant(
       input.conversation,
       input.userId,
     );
@@ -45,7 +43,7 @@ export class ConversationAccessPolicy {
   assertParticipant(
     conversation: Conversation,
     userId: string,
-  ): void {
+  ): string {
     if (!conversation.isParticipant(userId)) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
@@ -53,6 +51,10 @@ export class ConversationAccessPolicy {
         details: { reason: CONVERSATION_ERROR_CODES.NOT_A_PARTICIPANT },
       });
     }
+
+    return conversation.buyerId === userId
+      ? conversation.sellerId
+      : conversation.buyerId;
   }
 
   async assertParticipantSafety(input: {
@@ -66,22 +68,6 @@ export class ConversationAccessPolicy {
       input.otherParticipantSuspendedMessage,
     );
     await this.guardBlocked(input.userId, input.otherParticipantId);
-  }
-
-  getOtherParticipantId(
-    conversation: { buyerId: string; sellerId: string },
-    userId: string,
-  ): string {
-    return this.otherParticipantId(conversation, userId);
-  }
-
-  private otherParticipantId(
-    conversation: { buyerId: string; sellerId: string },
-    userId: string,
-  ): string {
-    return conversation.buyerId === userId
-      ? conversation.sellerId
-      : conversation.buyerId;
   }
 
   private async guardSuspended(

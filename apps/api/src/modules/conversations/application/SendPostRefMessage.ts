@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Inject,
   Injectable,
   ForbiddenException,
@@ -40,27 +39,19 @@ export class SendPostRefMessage {
   async execute(
     input: SendPostRefMessageInput,
   ): Promise<SendPostRefMessageResult> {
-    let referencedListing: ListingSummary | null = null;
-
     const result = await this.sendConversationMessage.execute({
       senderId: input.senderId,
       conversationId: input.conversationId,
       clientMessageId: input.clientMessageId,
-      beforeIdempotencyCheck: async () => {
-        referencedListing = await this.loadReferencedListing(
+      createMessage: async ({
+        id,
+        conversationId,
+        senderId,
+        clientMessageId,
+      }) => {
+        const referencedListing = await this.loadReferencedListing(
           input.metadata.listingId,
         );
-      },
-      createMessage: ({ id, conversationId, senderId, clientMessageId }) => {
-        if (!referencedListing) {
-          throw new BadRequestException({
-            code: "VALIDATION_FAILED",
-            message: "Referenced listing is not available",
-            details: {
-              reason: CONVERSATION_ERROR_CODES.LISTING_REFERENCE_NOT_VISIBLE,
-            },
-          });
-        }
 
         return Message.createPostRef({
           id,

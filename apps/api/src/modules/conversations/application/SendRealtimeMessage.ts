@@ -1,42 +1,38 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
 import type { Message } from "../domain/Message";
 
 import { createRichMessage, type RichMessageInput } from "./RichMessageFactory";
 import { SendConversationMessage } from "./SendConversationMessage";
 
-export type SendMessageInput = RichMessageInput & {
+export type SendRealtimeMessageInput = RichMessageInput & {
   senderId: string;
   conversationId: string;
 };
 
-export interface SendMessageResult {
+export interface SendRealtimeMessageResult {
   message: Message;
-  listing: ListingSummary | null;
+  created: boolean;
 }
 
 @Injectable()
-export class SendMessage {
+export class SendRealtimeMessage {
   constructor(
     @Inject(SendConversationMessage)
     private readonly sendConversationMessage: SendConversationMessage,
   ) {}
 
-  async execute(input: SendMessageInput): Promise<SendMessageResult> {
+  async execute(
+    input: SendRealtimeMessageInput,
+  ): Promise<SendRealtimeMessageResult> {
     const result = await this.sendConversationMessage.execute({
       senderId: input.senderId,
       conversationId: input.conversationId,
       clientMessageId: input.clientMessageId,
       createMessage: ({ id, conversationId, senderId }) =>
-        createRichMessage({
-          id,
-          conversationId,
-          senderId,
-          input,
-        }),
+        createRichMessage({ id, conversationId, senderId, input }),
     });
 
-    return { message: result.message, listing: result.listing };
+    return { message: result.message, created: result.created };
   }
 }

@@ -19,7 +19,10 @@ import {
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
 import { PRESENCE_PORT, type PresencePort } from "../../../realtime/domain/ports/PresencePort";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
-import { SendMessage } from "../../application/SendMessage";
+import {
+  SendRealtimeMessage,
+  type SendRealtimeMessageResult,
+} from "../../application/SendRealtimeMessage";
 import { UpdateWatermark } from "../../application/UpdateWatermark";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 import { DeleteMessage } from "../../application/DeleteMessage";
@@ -126,8 +129,8 @@ export class ConversationGateway implements OnGatewayDisconnect {
   constructor(
     @Inject(ValidateConversationAccess)
     private readonly validateAccess: ValidateConversationAccess,
-    @Inject(SendMessage)
-    private readonly sendMessage: SendMessage,
+    @Inject(SendRealtimeMessage)
+    private readonly sendMessage: SendRealtimeMessage,
     @Inject(UpdateWatermark)
     private readonly updateWatermark: UpdateWatermark,
     @Inject(DeleteMessage)
@@ -459,9 +462,9 @@ export class ConversationGateway implements OnGatewayDisconnect {
       };
     }
 
-    let result: Awaited<ReturnType<SendMessage["executeWithDeliveryState"]>>;
+    let result: SendRealtimeMessageResult;
     try {
-      result = await this.sendMessage.executeWithDeliveryState({
+      result = await this.sendMessage.execute({
         senderId: user.sub,
         ...payload,
       });

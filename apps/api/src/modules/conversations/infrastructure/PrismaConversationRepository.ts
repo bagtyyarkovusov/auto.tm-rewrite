@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaService } from "@auto-tm/db";
-import type { Prisma } from "@auto-tm/db";
+import { Prisma, PrismaService } from "@auto-tm/db";
 
 import { Conversation } from "../domain/Conversation";
 import type { Message } from "../domain/Message";
+import { MessageAlreadySavedError } from "../domain/ports/ConversationRepository";
 import type {
   ConversationRepository,
   ParticipantState,
@@ -184,28 +184,44 @@ export class PrismaConversationRepository
 
   async saveMessage(message: Message): Promise<void> {
     const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.message.create({
-        data: {
-          id: message.id,
-          conversationId: message.conversationId,
-          senderId: message.senderId,
-          kind: message.kind,
-          body: message.body,
-          metadata: toRawMetadata(message.metadata) as Prisma.InputJsonValue,
-          createdAt: message.createdAt,
-          clientMessageId: message.clientMessageId ?? null,
-        },
-      }),
-      this.prisma.conversation.update({
-        where: { id: message.conversationId },
-        data: {
-          updatedAt: now,
-          lastMessageAt: message.createdAt,
-          lastMessageId: message.id,
-        },
-      }),
-    ]);
+    try {
+      await this.prisma.$transaction([
+        this.prisma.message.create({
+          data: {
+            id: message.id,
+            conversationId: message.conversationId,
+            senderId: message.senderId,
+            kind: message.kind,
+            body: message.body,
+            metadata: toRawMetadata(message.metadata) as Prisma.InputJsonValue,
+            createdAt: message.createdAt,
+            clientMessageId: message.clientMessageId ?? null,
+          },
+        }),
+        this.prisma.conversation.update({
+          where: { id: message.conversationId },
+          data: {
+            updatedAt: now,
+            lastMessageAt: message.createdAt,
+            lastMessageId: message.id,
+          },
+        }),
+      ]);
+    } catch (error) {
+      if (
+        message.clientMessageId &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const existing = await this.findMessageByClientMessageId(
+          message.conversationId,
+          message.senderId,
+          message.clientMessageId,
+        );
+        if (existing) throw new MessageAlreadySavedError(existing);
+      }
+      throw error;
+    }
   }
 
   async updateWatermark(
