@@ -49,6 +49,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0041](0041-git-history-is-the-archive-for-retired-agent-tool-artifacts.md) | Git history is the archive for retired agent-tool artifacts (supersedes ADR-0040's historical-document retention consequence) | Accepted | 2026-07-22 |
 | [0042](0042-domain-glossary-authority-and-mutability.md) | Domain glossary authority and mutability | Accepted | 2026-08-25 |
 | [0043](0043-native-apns-delivery-via-node-apn.md) | Native APNS delivery via node-apn, not firebase-admin (supersedes ADR-0009's firebase-admin-for-both clause and its `PUSH_TRANSPORT` value list) | Accepted | 2026-09-03 |
+| [0044](0044-railway-deploy-settings-live-provider-side.md) | Railway deploy settings live provider-side; `railway/*.json` is a declared-state record only (corrects ADR-0039's config-as-code assumption) | Accepted | 2026-09-05 |
 
 ## Per-app ADRs
 

@@ -36,7 +36,7 @@ Railway owns build + deploy, not the test gate. Preview environments are optiona
 Each environment has `api`, `worker`, `admin`, `web`, Postgres, Redis, and MinIO. `sms-gateway` and `phone-agent` do not run on Railway.
 
 - Build each application from the monorepo root so shared workspaces and lockfiles remain in the build context.
-- Use service-specific start commands and versioned Railway configuration where supported.
+- Use service-specific start commands. The per-service deploy contract is declared in `railway/*.json`, but Railway no longer reads config files from the repo: apply Dockerfile path, start command, pre-deploy command, healthcheck, and restart policy provider-side per environment and record what you applied in that environment's evidence file (ADR-0044).
 - Run `prisma migrate deploy` through the single release authority defined by Sprint 11. Never use `migrate dev` or `db push`.
 - Do not route traffic until API dependency-readiness and web/admin health checks pass. A worker queue/bootstrap failure must fail the deployment or page the operator through deploy status/logs.
 - Use private Railway networking for Postgres, Redis, and MinIO writes. Public exposure is limited to API, admin, web, and required media reads.
