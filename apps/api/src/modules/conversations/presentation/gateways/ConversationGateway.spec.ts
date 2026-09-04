@@ -8,7 +8,7 @@ import { Conversation } from "../../domain/Conversation";
 import { Message } from "../../domain/Message";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
 import type { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
-import type { SendMessage, SendMessageResult } from "../../application/SendMessage";
+import type { SendRealtimeMessage } from "../../application/SendRealtimeMessage";
 import type { UpdateWatermark, UpdateWatermarkResult } from "../../application/UpdateWatermark";
 import type { DeleteMessage } from "../../application/DeleteMessage";
 
@@ -46,12 +46,12 @@ function buildValidateAccess(
 }
 
 function buildSendMessage(
-  overrides: Partial<SendMessage> = {},
-): SendMessage {
+  overrides: Partial<SendRealtimeMessage> = {},
+): SendRealtimeMessage {
   return {
     execute: vi.fn(),
     ...overrides,
-  } as unknown as SendMessage;
+  } as unknown as SendRealtimeMessage;
 }
 
 function buildUpdateWatermark(
@@ -94,14 +94,14 @@ function buildServer(): Server {
 
 function buildGateway(
   validateAccess?: ValidateConversationAccess,
-  sendMessage?: SendMessage,
+  sendMessage?: SendRealtimeMessage,
   updateWatermark?: UpdateWatermark,
   deleteMessage?: DeleteMessage,
   presence?: PresencePort,
 ): {
   gateway: ConversationGateway;
   validateAccess: ValidateConversationAccess;
-  sendMessage: SendMessage;
+  sendMessage: SendRealtimeMessage;
   updateWatermark: UpdateWatermark;
   deleteMessage: DeleteMessage;
   presence: PresencePort;
@@ -332,7 +332,8 @@ describe("ConversationGateway", () => {
         execute: vi.fn().mockResolvedValue({
           message,
           listing: null,
-        } as SendMessageResult),
+          created: true,
+        }),
       });
       const { gateway } = buildGateway(undefined, sendMessage);
       const socket = buildSocket({
@@ -388,16 +389,26 @@ describe("ConversationGateway", () => {
         clientMessageId: "client-dup",
       });
       const sendMessage = buildSendMessage({
-        execute: vi.fn().mockResolvedValue({
-          message,
-          listing: null,
-        } as SendMessageResult),
+        execute: vi
+          .fn()
+          .mockResolvedValueOnce({
+            message,
+            listing: null,
+            created: true,
+          })
+          .mockResolvedValueOnce({
+            message,
+            listing: null,
+            created: false,
+          }),
       });
       const { gateway } = buildGateway(undefined, sendMessage);
       const socket = buildSocket({
         user: { sub: "buyer-1", sid: "sid-1", phone: "+993", role: "user" },
       });
-      gateway.server = buildServer();
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
 
       const first = await gateway.handleSendMessage(
         {
@@ -422,6 +433,7 @@ describe("ConversationGateway", () => {
         (second as { ok: true; message: { id: string } }).message.id,
       );
       expect(sendMessage.execute).toHaveBeenCalledTimes(2);
+      expect(emitMock).toHaveBeenCalledTimes(1);
     });
 
     it("rejects send for unauthenticated sockets", async () => {

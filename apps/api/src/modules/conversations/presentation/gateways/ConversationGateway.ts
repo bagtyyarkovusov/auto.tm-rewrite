@@ -19,8 +19,10 @@ import {
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
 import { PRESENCE_PORT, type PresencePort } from "../../../realtime/domain/ports/PresencePort";
 import { CONVERSATION_SOCKET_ERROR_CODES } from "../../domain/types";
-import type { SendMessageResult } from "../../application/SendMessage";
-import { SendMessage } from "../../application/SendMessage";
+import {
+  SendRealtimeMessage,
+  type SendRealtimeMessageResult,
+} from "../../application/SendRealtimeMessage";
 import { UpdateWatermark } from "../../application/UpdateWatermark";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 import { DeleteMessage } from "../../application/DeleteMessage";
@@ -127,8 +129,8 @@ export class ConversationGateway implements OnGatewayDisconnect {
   constructor(
     @Inject(ValidateConversationAccess)
     private readonly validateAccess: ValidateConversationAccess,
-    @Inject(SendMessage)
-    private readonly sendMessage: SendMessage,
+    @Inject(SendRealtimeMessage)
+    private readonly sendMessage: SendRealtimeMessage,
     @Inject(UpdateWatermark)
     private readonly updateWatermark: UpdateWatermark,
     @Inject(DeleteMessage)
@@ -460,7 +462,7 @@ export class ConversationGateway implements OnGatewayDisconnect {
       };
     }
 
-    let result: SendMessageResult;
+    let result: SendRealtimeMessageResult;
     try {
       result = await this.sendMessage.execute({
         senderId: user.sub,
@@ -472,8 +474,10 @@ export class ConversationGateway implements OnGatewayDisconnect {
 
     const message = this.toMessageSummary(result.message);
 
-    const room = conversationRoom(payload.conversationId);
-    this.server.to(room).emit("message:new", { message });
+    if (result.created) {
+      const room = conversationRoom(payload.conversationId);
+      this.server.to(room).emit("message:new", { message });
+    }
 
     return {
       ok: true,

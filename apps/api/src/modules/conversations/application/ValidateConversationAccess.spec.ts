@@ -9,6 +9,7 @@ import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadP
 import type { Message } from "../domain/Message";
 
 import { ValidateConversationAccess } from "./ValidateConversationAccess";
+import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
 
 class FakeConversationRepository implements ConversationRepository {
   conversations: Conversation[] = [];
@@ -138,10 +139,15 @@ function makeUseCase(
   identityCheck?: FakeIdentityCheckPort,
   identityRead?: FakeIdentityReadPort,
 ) {
+  const effectiveIdentityCheck = identityCheck ?? new FakeIdentityCheckPort();
+  const effectiveIdentityRead = identityRead ?? new FakeIdentityReadPort();
+  const accessPolicy = new ConversationAccessPolicy(
+    effectiveIdentityCheck,
+    effectiveIdentityRead,
+  );
   return new ValidateConversationAccess(
     repo ?? new FakeConversationRepository(),
-    identityCheck ?? new FakeIdentityCheckPort(),
-    identityRead ?? new FakeIdentityReadPort(),
+    accessPolicy,
   );
 }
 

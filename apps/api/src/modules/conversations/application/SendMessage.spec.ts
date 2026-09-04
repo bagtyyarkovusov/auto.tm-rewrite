@@ -3,6 +3,7 @@ import { NotFoundException, ForbiddenException, BadRequestException } from "@nes
 
 import { Conversation } from "../domain/Conversation";
 import { Message } from "../domain/Message";
+import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
@@ -10,6 +11,10 @@ import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadP
 import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/MessageEventPublisher";
 
 import { SendMessage } from "./SendMessage";
+import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
+import { ConversationMessageCommitter } from "./ConversationMessageCommitter";
+import { ConversationSendPolicy } from "./ConversationSendPolicy";
+import { SendConversationMessage } from "./SendConversationMessage";
 
 class FakeConversationRepository implements ConversationRepository {
   conversations: Conversation[] = [];
@@ -201,13 +206,25 @@ function makeUseCase(
   identityRead?: FakeIdentityReadPort,
   messageEvents?: FakeMessageEventPublisher,
 ) {
-  return new SendMessage(
-    repo ?? new FakeConversationRepository(),
-    listings ?? new FakeListingsReadPort(),
-    identityCheck ?? new FakeIdentityCheckPort(),
-    identityRead ?? new FakeIdentityReadPort(),
-    messageEvents ?? new FakeMessageEventPublisher(),
+  const effectiveIdentityCheck = identityCheck ?? new FakeIdentityCheckPort();
+  const effectiveIdentityRead = identityRead ?? new FakeIdentityReadPort();
+  const effectiveRepo = repo ?? new FakeConversationRepository();
+  const effectiveListings = listings ?? new FakeListingsReadPort();
+  const effectiveEvents = messageEvents ?? new FakeMessageEventPublisher();
+  const accessPolicy = new ConversationAccessPolicy(
+    effectiveIdentityCheck,
+    effectiveIdentityRead,
   );
+  const workflow = new SendConversationMessage(
+    effectiveRepo,
+    new ConversationSendPolicy(
+      effectiveRepo,
+      effectiveListings,
+      accessPolicy,
+    ),
+    new ConversationMessageCommitter(effectiveRepo, effectiveEvents),
+  );
+  return new SendMessage(workflow);
 }
 
 function seedConversation(
@@ -323,7 +340,8 @@ describe("SendMessage", () => {
   it("returns existing message for duplicate clientMessageId", async () => {
     seedConversation(repo);
     seedListing(listings);
-    const uc = makeUseCase(repo, listings);
+    const events = new FakeMessageEventPublisher();
+    const uc = makeUseCase(repo, listings, undefined, undefined, events);
 
     const first = await uc.execute({
       senderId: "buyer-1",
@@ -338,6 +356,32 @@ describe("SendMessage", () => {
       conversationId: "conv-1",
       kind: "text",
       text: "Second",
+      clientMessageId: "client-1",
+    });
+
+    expect(second.message.id).toBe(first.message.id);
+    expect(repo.messages).toHaveLength(1);
+    expect(events.events).toHaveLength(1);
+  });
+
+  it("returns existing duplicate text message before validating replacement text", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const uc = makeUseCase(repo, listings);
+
+    const first = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "text",
+      text: "First",
+      clientMessageId: "client-1",
+    });
+
+    const second = await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "text",
+      text: "",
       clientMessageId: "client-1",
     });
 
@@ -388,6 +432,30 @@ describe("SendMessage", () => {
         text: "Hello",
       }),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("checks parent listing contactability before suspension state", async () => {
+    seedConversation(repo);
+    seedListing(listings, { status: "sold" });
+    const identity = new FakeIdentityCheckPort();
+    identity.suspend("buyer-1");
+    const uc = makeUseCase(repo, listings, identity);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        kind: "text",
+        text: "Hello",
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        message: "Listing is not available for contact",
+        details: {
+          reason: CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE,
+        },
+      },
+    });
   });
 
   it("blocks sends when sender is suspended", async () => {
