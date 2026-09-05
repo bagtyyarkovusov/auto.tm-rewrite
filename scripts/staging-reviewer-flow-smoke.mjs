@@ -56,6 +56,9 @@ const SEEDED_PRIMARY_LISTING_ID = "e042b037-1e59-495d-8380-e497ad7d035e";
 
 const results = [];
 let failed = false;
+// Errors check() has already turned into a FAIL row. Anything thrown outside a
+// check() is absent from this set and must still reach the summary.
+const recordedFailures = new WeakSet();
 
 function expandHome(p) {
   return p.startsWith("~/") ? p.replace("~", homedir()) : p;
@@ -92,6 +95,7 @@ async function check(name, fn) {
     record(name, true, formatDetail(detail, Date.now() - started));
   } catch (err) {
     record(name, false, `${err instanceof Error ? err.message : String(err)} (${Date.now() - started}ms)`);
+    if (err instanceof Object) recordedFailures.add(err);
     throw err;
   }
 }
@@ -626,8 +630,17 @@ async function main() {
         return `anonymous detail status=${detail.status}, absent from feed`;
       });
     }
-  } catch {
-    // check() already recorded the failure; fall through to the summary.
+  } catch (err) {
+    // check() already recorded whatever it caught. A throw from between checks
+    // (credential load, socket setup) was never recorded, and without this row
+    // it would disappear into an "N/M checks passed" line with no FAIL.
+    if (!(err instanceof Object) || !recordedFailures.has(err)) {
+      record(
+        "smoke run aborted between checks",
+        false,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   } finally {
     for (const socket of sockets) socket.close();
     // Leave the reviewer scenario as it was found. A completed run ends with

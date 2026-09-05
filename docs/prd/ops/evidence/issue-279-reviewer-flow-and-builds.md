@@ -212,6 +212,23 @@ and its environment contract validated — both are done below — but it cannot
 smoked against a live production API until #281 lands. This is a dependency-order
 observation for the S11 retro, not a defect.
 
+### Finding 5 — `staging` and `production-smoke` share one EAS environment
+
+Both profiles in `apps/mobile/eas.json` name the EAS environment `preview`,
+because custom EAS environment names require a higher Expo plan than the account
+holds. The two profiles therefore read the same `EXPO_PUBLIC_API_URL`,
+`EXPO_PUBLIC_WS_URL`, and `EXPO_PUBLIC_MEDIA_URL`, while `production-smoke` still
+declares `EXPO_PUBLIC_ENV: "production"`. The URL gate accepts Railway-generated
+hosts for both profiles, so it cannot detect a `production-smoke` binary built
+against staging hosts, and no test pins the two profiles to distinct
+environments.
+
+Nothing is mis-built today: `production-smoke` has no target environment at all
+until #281 lands (Finding 4), so there is no correct value the profile is failing
+to use. The hole becomes real the moment #281 creates one. Recorded here so the
+#281 work picks it up rather than rediscovering it, and noted as current state in
+[`apps/mobile/CONTEXT.md`](../../../../apps/mobile/CONTEXT.md).
+
 ## Part 2 — Installable Builds: **Android staging binary exists; iOS not ready**
 
 Recorded per criterion 4: a platform that cannot pass is named, and no
@@ -239,7 +256,27 @@ readiness is claimed beyond what was observed.
       dependency of `apps/mobile`. The only repository match for the concept is
       the regression test that asserts its absence.
 - [x] `apps/mobile` config tests pass: 2 files, 14 tests, including
-      *"does not introduce EAS Update channels or OTA update URLs"*.
+      *"does not introduce EAS Update channels or OTA update URLs"*, which
+      asserts the absent `expo-updates` dependency as well as the absent config
+      keys.
+
+The mobile gate in [`docs/agents/mobile-expo.md`](../../../agents/mobile-expo.md)
+was run in full on the final tree:
+
+| Gate command | Result |
+|---|---|
+| `pnpm --filter @auto-tm/mobile typecheck` | exit `0` |
+| `CI=1 pnpm --filter @auto-tm/mobile exec expo install --check` | "Dependencies are up to date" |
+| `pnpm --filter @auto-tm/mobile exec expo export -p ios --clear` | exit `0`, `Exported: dist` |
+| `pnpm --filter @auto-tm/mobile test -- src/config/` | 2 files, 14 tests |
+| `node --test scripts/staging-reviewer-flow-smoke.test.mjs` | 5 tests |
+
+The iOS export needs `pnpm --filter @auto-tm/contracts build` first in a fresh
+worktree, which is the same `dist/` requirement the `eas-build-post-install` hook
+satisfies on the EAS builder. The Expo Go simulator leg was **not** run: this
+slice changes build configuration, documentation, and a Node script, and touches
+no runtime UI code. Per `docs/agents/mobile-expo.md` that leg is for runtime-only
+bugs and simulator crashes.
 
 ### Android `staging` build — succeeded
 
@@ -379,11 +416,11 @@ Against the criteria in [#279](https://github.com/bagtyyarkovusov/auto.tm-rewrit
 
 | # | Criterion | Status |
 |---|---|---|
-| 1 | Signup disabled while ≥2 reserved accounts complete browse/create, rich chat, report/block, and live-admin moderation/enforcement | **Met.** 8/8 checks green in one pass, plus a positive-code signup-gate probe returning `FEATURE_DISABLED` and creating no user. |
-| 2 | Installable Android and iOS staging and production-smoke builds with intended URLs and no OTA update URL | **Not met.** The URL gate and the OTA-negative are proven, and a signed Android `staging` APK now exists (`657eb3cc`). It has not been installed or exercised. iOS has no binary; `production-smoke` has no target environment. Blocked on Apple Developer Program membership, a physical Android device, and #281. |
+| 1 | Signup disabled while ≥2 reserved accounts complete browse/create, rich chat, report/block, and live-admin moderation/enforcement | **Met, with a known defect.** 8/8 checks green in one pass, plus a positive-code signup-gate probe returning `FEATURE_DISABLED` and creating no user. The rich-chat leg passed only because the harness also sent the image over the socket: `POST /messages/rich`, the path the shipped app uses, never broadcasts to the connected peer. Filed as [#312](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/312) and detailed in Finding 3. |
+| 2 | Installable Android and iOS staging and production-smoke builds with intended URLs and no OTA update URL | **Not met.** The URL gate and the OTA-negative are proven, and a signed Android `staging` APK now exists (`657eb3cc`). It has not been installed or exercised. iOS has no binary; `production-smoke` has no target environment. Blocked on Apple Developer Program membership, a physical Android device, and #281. The "intended environment URLs" half also carries a known hole: `staging` and `production-smoke` share Expo's default `preview` environment, so they resolve identical URLs and the gate cannot catch a `production-smoke` build carrying staging hosts. See Finding 5. |
 | 3 | Offline direct-message push opens the intended conversation on physical Android and iOS | **Not met** on both platforms. Blocked on FCM/APNS credentials, Firebase config files, physical devices, and a binary to install. |
 | 4 | A platform that cannot pass is explicitly recorded not-ready; no partial readiness claim | **Met.** Android and iOS are each recorded not-ready for criteria 2 and 3, with the specific external gate named. The issue remains open. |
-| 5 | Build identifiers, commit SHA, environment, timestamps, and smoke results recorded without credentials or private keys | **Met for what exists.** SHA, environment, hosts, timestamps, per-check results, and listing/conversation/report/audit identifiers recorded, plus the Android build id, its commit, profile, version, timings, and artifact URL. No credentials or key material recorded. |
+| 5 | Build identifiers, commit SHA, environment, timestamps, and smoke results recorded without credentials or private keys | **Met for what exists.** SHA, environment, hosts, timestamps, per-check results, and listing/conversation/report/audit identifiers recorded, plus the Android build id, its commit, profile, version, and timings. No credentials or key material recorded. The EAS artifact link is deliberately omitted: it is an unauthenticated, non-expiring capability URL for a signed binary, and this repository is public. |
 | 6 | No production store build or submission | **Met.** No store build, no submission, no EAS session. The `production` profile was validated only by running its URL gate locally. |
 
 **Two of six criteria are unmet, both on external human gates.** Per criterion 4
@@ -423,3 +460,17 @@ production promotion, and TM cutover.
 - [86 — Admin bootstrap runbook](../86-admin-bootstrap-runbook.md)
 - [Issue 278 — staging applications evidence](issue-278-staging-applications.md)
 - [`scripts/staging-reviewer-flow-smoke.mjs`](../../../../scripts/staging-reviewer-flow-smoke.mjs)
+
+### Documentation lookups
+
+Per [ADR-0017](../../../adr/0017-context7-as-canonical-doc-source.md) and
+[`docs/agents/documentation-lookups.md`](../../../agents/documentation-lookups.md),
+the EAS claims in this slice were checked against current docs through Context7
+(`/expo/eas-cli`), not from memory. `CommonBuildProfile` in
+`packages/eas-json/src/build/types.ts` confirms every field this slice depends
+on: `node`, `pnpm`, and `corepack` are sibling build-environment fields;
+`environment` is a single string per profile, which is why `staging` and
+`production-smoke` cannot be separated without a second EAS environment
+(Finding 5); `prebuildCommand` is a build-configuration field, not a lifecycle
+hook, which is why the URL gate moved to `eas-build-post-install`; and `channel`
+and `releaseChannel` are the OTA fields `easBuildConfig.spec.ts` asserts absent.

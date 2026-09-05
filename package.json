@@ -2,7 +2,7 @@
   "name": "auto-tm-rewrite",
   "version": "0.1.0",
   "private": true,
-  "description": "AutoTM \u2014 Turkmenistan car marketplace (rewrite). Monorepo for API, web, admin, mobile, SMS gateway, phone agent, worker.",
+  "description": "AutoTM — Turkmenistan car marketplace (rewrite). Monorepo for API, web, admin, mobile, SMS gateway, phone agent, worker.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.11.0",

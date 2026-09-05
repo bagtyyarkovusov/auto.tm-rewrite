@@ -73,11 +73,17 @@ describe("EAS build configuration", () => {
 
   it("does not introduce EAS Update channels or OTA update URLs", () => {
     const easJsonSource = readFileSync(resolve(mobileRoot, "eas.json"), "utf-8");
+    const packageJson = JSON.parse(readFileSync(resolve(mobileRoot, "package.json"), "utf-8"));
     const appConfig = requireFreshAppConfig();
 
     expect(easJsonSource).not.toContain("\"channel\"");
     expect(easJsonSource).not.toContain("\"releaseChannel\"");
     expect(appConfig.expo.updates).toBeUndefined();
+    // The config keys above can only carry an OTA URL while the runtime that
+    // reads them is installed, so the absent dependency is the binding half.
+    expect(Object.keys({ ...packageJson.dependencies, ...packageJson.devDependencies })).not.toContain(
+      "expo-updates",
+    );
   });
 
   it("wires Firebase service files from EAS file-secret environment variables", () => {
