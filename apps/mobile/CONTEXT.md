@@ -42,11 +42,11 @@ The primary user surface. Expo (React Native) app for Android + iOS. Anonymous b
 
 `apps/mobile/eas.json` defines the S11 store-review build profiles:
 
-- `staging` — internal distribution, EAS environment `staging`, Android `apk`.
-- `production-smoke` — internal distribution, EAS environment `production-smoke`, Android `apk`.
+- `staging` — internal distribution, EAS environment `preview`, Android `apk`.
+- `production-smoke` — internal distribution, EAS environment `preview`, Android `apk`.
 - `production` — store distribution, EAS environment `production`, Android `app-bundle`.
 
-All three profiles extend `base`, which runs `pnpm validate:eas-env` as `prebuildCommand`. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WS_URL`, and `EXPO_PUBLIC_MEDIA_URL` are supplied by EAS environment variables and are intentionally absent from committed profile env blocks. Staging and production-smoke accept only Railway-generated `*.up.railway.app` HTTPS/WSS hosts. Production accepts only HTTPS/WSS `auto.tm` or `*.auto.tm` hosts and rejects localhost, IP literals, and Railway-generated hosts before bundling.
+All three profiles extend `base`, which pins Node `22.11.0` and pnpm `9.12.0`, then runs `pnpm validate:eas-env` as `prebuildCommand`. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WS_URL`, and `EXPO_PUBLIC_MEDIA_URL` are supplied by EAS environment variables and are intentionally absent from committed profile env blocks. Staging and production-smoke currently share Expo's default `preview` environment because custom EAS environment names require a higher Expo plan; the profile name still drives `EAS_BUILD_PROFILE`, so the URL gate keeps their behavior distinct from `production`. Staging and production-smoke accept only Railway-generated `*.up.railway.app` HTTPS/WSS hosts. Production accepts only HTTPS/WSS `auto.tm` or `*.auto.tm` hosts and rejects localhost, IP literals, and Railway-generated hosts before bundling.
 
 `apps/mobile/app.config.js` is the Expo config source. It preserves the prior app identity, `userInterfaceStyle: "automatic"`, typed routes, and media permission text while wiring `android.googleServicesFile` from the EAS file variable `GOOGLE_SERVICES_JSON` and `ios.googleServicesFile` from `GOOGLE_SERVICES_INFO_PLIST` when those variables are present. The app config does not define `updates.url`, and `eas.json` does not define EAS Update `channel` or `releaseChannel`; S11 binaries carry native code and JS/assets together.
 

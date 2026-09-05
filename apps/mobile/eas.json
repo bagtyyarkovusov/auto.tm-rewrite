@@ -6,6 +6,7 @@
   "build": {
     "base": {
       "node": "22.11.0",
+      "pnpm": "9.12.0",
       "corepack": true,
       "prebuildCommand": "pnpm validate:eas-env",
       "env": {
@@ -17,7 +18,7 @@
     "staging": {
       "extends": "base",
       "distribution": "internal",
-      "environment": "staging",
+      "environment": "preview",
       "env": {
         "EXPO_PUBLIC_ENV": "staging",
         "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"
@@ -29,7 +30,7 @@
     "production-smoke": {
       "extends": "base",
       "distribution": "internal",
-      "environment": "production-smoke",
+      "environment": "preview",
       "env": {
         "EXPO_PUBLIC_ENV": "production",
         "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"

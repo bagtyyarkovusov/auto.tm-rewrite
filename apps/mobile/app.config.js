@@ -4,6 +4,7 @@ const config = {
   expo: {
     name: "AutoTM",
     slug: "auto-tm",
+    owner: "tkmdevelopers",
     scheme: "autotm",
     version: "0.1.0",
     orientation: "portrait",
@@ -43,6 +44,11 @@ const config = {
     ],
     experiments: {
       typedRoutes: true,
+    },
+    extra: {
+      eas: {
+        projectId: "156dd00b-6192-4467-90ba-1469f7de50fb",
+      },
     },
   },
 };
