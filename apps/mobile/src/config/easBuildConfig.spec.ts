@@ -25,6 +25,16 @@ describe("EAS build configuration", () => {
     expect(easJson.build.production.extends).toBe("base");
   });
 
+  it("pins a Node version the whole workspace can install on", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+    const [major, minor] = easJson.build.base.node.split(".").map(Number);
+
+    // EAS installs the entire pnpm workspace, so @auto-tm/db's Prisma 7 preinstall
+    // gate (20.19+ / 22.12+ / 24.0+) applies to the mobile build too.
+    expect(major).toBe(22);
+    expect(minor).toBeGreaterThanOrEqual(12);
+  });
+
   it("pins pnpm without corepack so the builder installs exactly one pnpm shim", () => {
     const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
     const rootPackageJson = JSON.parse(readFileSync(resolve(mobileRoot, "../../package.json"), "utf-8"));
