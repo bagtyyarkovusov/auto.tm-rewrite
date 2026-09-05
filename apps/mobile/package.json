@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --passWithNoTests",
     "validate:eas-env": "tsx scripts/validate-eas-build-env.ts",
-    "eas-build-post-install": "pnpm validate:eas-env"
+    "eas-build-post-install": "pnpm validate:eas-env && pnpm --filter @auto-tm/contracts build"
   },
   "dependencies": {
     "@auto-tm/contracts": "workspace:*",

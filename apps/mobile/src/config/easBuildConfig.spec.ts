@@ -34,7 +34,11 @@ describe("EAS build configuration", () => {
     for (const profile of Object.values(easJson.build)) {
       expect((profile as { prebuildCommand?: string }).prebuildCommand).toBeUndefined();
     }
-    expect(mobilePackageJson.scripts["eas-build-post-install"]).toBe("pnpm validate:eas-env");
+    // @auto-tm/contracts is a built package: nothing on the EAS builder runs the
+    // local `predev` build, so the hook has to produce dist/ before Metro bundles.
+    expect(mobilePackageJson.scripts["eas-build-post-install"]).toBe(
+      "pnpm validate:eas-env && pnpm --filter @auto-tm/contracts build"
+    );
   });
 
   it("pins a Node version the whole workspace can install on", () => {
