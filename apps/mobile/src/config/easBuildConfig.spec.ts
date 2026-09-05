@@ -25,6 +25,43 @@ describe("EAS build configuration", () => {
     expect(easJson.build.production.extends).toBe("base");
   });
 
+  it("runs the URL gate as an eas-build-post-install hook, not as prebuildCommand", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+    const mobilePackageJson = JSON.parse(readFileSync(resolve(mobileRoot, "package.json"), "utf-8"));
+
+    // EAS appends `--platform <platform>` to prebuildCommand, which `pnpm validate:eas-env`
+    // rejects. eas-build-post-install runs after install and before prebuild instead.
+    for (const profile of Object.values(easJson.build)) {
+      expect((profile as { prebuildCommand?: string }).prebuildCommand).toBeUndefined();
+    }
+    // @auto-tm/contracts is a built package: nothing on the EAS builder runs the
+    // local `predev` build, so the hook has to produce dist/ before Metro bundles.
+    expect(mobilePackageJson.scripts["eas-build-post-install"]).toBe(
+      "pnpm validate:eas-env && pnpm --filter @auto-tm/contracts build"
+    );
+  });
+
+  it("pins a Node version the whole workspace can install on", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+    const [major, minor] = easJson.build.base.node.split(".").map(Number);
+
+    // EAS installs the entire pnpm workspace, so @auto-tm/db's Prisma 7 preinstall
+    // gate (20.19+ / 22.12+ / 24.0+) applies to the mobile build too.
+    expect(major).toBe(22);
+    expect(minor).toBeGreaterThanOrEqual(12);
+  });
+
+  it("pins pnpm without corepack so the builder installs exactly one pnpm shim", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+    const rootPackageJson = JSON.parse(readFileSync(resolve(mobileRoot, "../../package.json"), "utf-8"));
+
+    // EAS runs `corepack enable` before honouring the `pnpm` pin. Corepack creates the
+    // pnpm shim first, so the pin's `npm i -g pnpm@<version>` then fails with EEXIST.
+    expect(easJson.build.base.corepack).toBeUndefined();
+    expect(easJson.build.base.pnpm).toBe("9.12.0");
+    expect(rootPackageJson.packageManager).toBe(`pnpm@${easJson.build.base.pnpm}`);
+  });
+
   it("keeps environment URLs out of committed EAS profile env blocks", () => {
     const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
     const profileEnv = Object.values(easJson.build).flatMap((profile) => Object.keys((profile as { env?: object }).env ?? {}));
@@ -36,11 +73,17 @@ describe("EAS build configuration", () => {
 
   it("does not introduce EAS Update channels or OTA update URLs", () => {
     const easJsonSource = readFileSync(resolve(mobileRoot, "eas.json"), "utf-8");
+    const packageJson = JSON.parse(readFileSync(resolve(mobileRoot, "package.json"), "utf-8"));
     const appConfig = requireFreshAppConfig();
 
     expect(easJsonSource).not.toContain("\"channel\"");
     expect(easJsonSource).not.toContain("\"releaseChannel\"");
     expect(appConfig.expo.updates).toBeUndefined();
+    // The config keys above can only carry an OTA URL while the runtime that
+    // reads them is installed, so the absent dependency is the binding half.
+    expect(Object.keys({ ...packageJson.dependencies, ...packageJson.devDependencies })).not.toContain(
+      "expo-updates",
+    );
   });
 
   it("wires Firebase service files from EAS file-secret environment variables", () => {

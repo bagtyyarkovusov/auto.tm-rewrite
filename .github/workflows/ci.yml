@@ -32,4 +32,10 @@ jobs:
 
       - run: pnpm test
 
+      # The reviewer-flow smoke's pure helpers (base32, TOTP, formatting). The
+      # smoke itself needs a deployed environment and credentials, so it is an
+      # operator command, not a CI step. Kept out of `pnpm test` because
+      # ADR-0042's glossary check pins that script's exact contents.
+      - run: pnpm test:reviewer-flow-smoke
+
       - run: pnpm build

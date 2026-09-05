@@ -64,6 +64,79 @@ Against the staging mobile/internal build:
 5. Put the recipient offline and verify native direct-message push + conversation deep link on both required platforms.
 6. Confirm public signup is disabled, `SMS_DRIVER=mock`, response-embedded OTP test mode is disabled, and no service references production data resources.
 
+Steps 1–4 and 6 are automated by the checked-in harness, which drives the real
+HTTP, WebSocket, and signed-upload surfaces and prints one PASS/FAIL line per
+check with no credential, token, or phone number in its output:
+
+```bash
+SMOKE_CREDENTIALS_FILE=~/.autotm-ops/<env>/smoke-credentials.json node scripts/staging-reviewer-flow-smoke.mjs
+```
+
+The credentials file is a local `0600` JSON document holding the environment's
+API URL, the reviewer phone/code pairs, and the operator admin's TOTP secret and
+rotating refresh token. It is never committed and never printed.
+
+The harness leaves the environment as it found it: the block it asserts is
+released, and the listing it publishes ends the run banned (or archived, if the
+run fails before moderation), so the reviewer feed keeps only the seeded content.
+
+Step 6's signup assertion is a two-step operator probe because the mock SMS
+driver delivers the code to the API log rather than to the caller:
+
+```bash
+node scripts/staging-reviewer-flow-smoke.mjs signup-probe-request
+
+railway logs --service api --environment <env> -d --lines 200 \
+  | grep -a 'mock] OTP for <probe phone>' | tail -1 | sed -E 's/.*: ([0-9]{6}).*/\1/' \
+  | node scripts/staging-reviewer-flow-smoke.mjs signup-probe-verify
+```
+
+The code goes down a pipe rather than into an argument: it is single-use, but
+argv lands in shell history and in `ps` output.
+
+A **correct** code for an unreserved number must return `403` with
+`details.reason = FEATURE_DISABLED` and must not create a `users` row. A wrong
+code proves nothing here — it fails on the code, not on the signup gate.
+
+Step 5 (offline native push and deep link on physical devices) is not
+automatable and stays a human gate; see the mobile build prerequisites below.
+
+### Prerequisite — the first admin identity in a signups-disabled environment
+
+Step 3's moderation half needs an elevated admin, and reviewer accounts can
+never become one: `VerifyOtp` refuses the ADR-0030 bypass for any user whose
+role is not `buyer` or `seller`. In a reviewer-era environment `SIGNUPS_ENABLED`
+is `false`, so `POST /auth/otp/verify` will not create the operator's user
+either, and `admin:promote` deliberately refuses to create users. There is
+therefore no non-break-glass path to the first admin. Do **not** resolve this by
+turning `SIGNUPS_ENABLED` on temporarily — that is the one flag the reviewer-era
+posture must be able to claim was never off.
+
+The sanctioned sequence inserts only the identity that OTP would have created,
+then uses the audited promotion path for the privilege change. Locked in
+[ADR-0045](../../adr/0045-first-admin-bootstrap-in-signups-disabled-environments.md):
+
+```bash
+# 1. break-glass: create the operator identity only (role stays buyer)
+railway ssh --service api --environment <env> -- psql "$DATABASE_URL" -c \
+  "insert into users (id, phone, \"displayName\", locale, role, \"createdAt\", \"updatedAt\") \
+   values (gen_random_uuid(), '<operator phone>', '<label>', 'ru', 'buyer', now(), now()) \
+   on conflict (phone) do nothing;"
+
+# 2. audited promotion — dry-run first, then the real run
+railway ssh --service api --environment <env> -- sh -c \
+  "cd /app && pnpm --filter @auto-tm/db admin:promote -- --phone <operator phone> --reason '<reason>' --dry-run"
+
+railway ssh --service api --environment <env> -- sh -c \
+  "cd /app && pnpm --filter @auto-tm/db admin:promote -- --phone <operator phone> --reason '<reason>'"
+```
+
+Then sign in once as the operator (request the OTP, read it from the API's mock
+SMS log line), `POST /auth/admin/totp/enroll`, and `POST /auth/admin/totp/verify`
+— the **first** successful verify is what returns the ten backup codes; enroll
+returns only `secret` and `qrCodeUrl`. Store the secret, the backup codes, and
+the refresh token in the operator secret store.
+
 ### Step 4 — Manual production deploy
 
 1. Select the staging-proven SHA; do not deploy an unverified moving branch head.
