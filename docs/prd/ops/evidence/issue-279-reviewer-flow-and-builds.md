@@ -231,13 +231,13 @@ Recorded per criterion 4: neither platform may be claimed partially ready.
 | `production` | Railway-generated hosts | **rejected** — "must not use localhost, IP literals, or Railway-generated hosts in production", exit `1`, on all three URLs |
 | `production` | `https://api.auto.tm`, `wss://api.auto.tm`, `https://media.auto.tm` | valid |
 
-- [x] The gate runs as `prebuildCommand` on every profile, so a store build
+- [x] The gate runs as the `eas-build-post-install` hook, so a store build
       fails **before** bundling rather than shipping a wrong host.
 - [x] **No OTA update surface exists.** `app.config.js` has no `updates` key,
       `eas.json` has no `channel` or `updates` key, and `expo-updates` is not a
       dependency of `apps/mobile`. The only repository match for the concept is
       the regression test that asserts its absence.
-- [x] `apps/mobile` config tests pass: 2 files, 11 tests, including
+- [x] `apps/mobile` config tests pass: 2 files, 14 tests, including
       *"does not introduce EAS Update channels or OTA update URLs"*.
 
 ### What is blocked, and on what

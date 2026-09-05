@@ -25,6 +25,18 @@ describe("EAS build configuration", () => {
     expect(easJson.build.production.extends).toBe("base");
   });
 
+  it("runs the URL gate as an eas-build-post-install hook, not as prebuildCommand", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+    const mobilePackageJson = JSON.parse(readFileSync(resolve(mobileRoot, "package.json"), "utf-8"));
+
+    // EAS appends `--platform <platform>` to prebuildCommand, which `pnpm validate:eas-env`
+    // rejects. eas-build-post-install runs after install and before prebuild instead.
+    for (const profile of Object.values(easJson.build)) {
+      expect((profile as { prebuildCommand?: string }).prebuildCommand).toBeUndefined();
+    }
+    expect(mobilePackageJson.scripts["eas-build-post-install"]).toBe("pnpm validate:eas-env");
+  });
+
   it("pins a Node version the whole workspace can install on", () => {
     const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
     const [major, minor] = easJson.build.base.node.split(".").map(Number);
