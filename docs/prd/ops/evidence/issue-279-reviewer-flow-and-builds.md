@@ -54,7 +54,19 @@ pasted into evidence.
 
 `#278`'s equivalent script was ad hoc and local; this one is versioned so the
 same proof can be re-run on every promotion, which is what the sprint's
-"repeatable" requirement asks for.
+"repeatable" requirement asks for. It is wired into the repo rather than left
+loose: `pnpm smoke:reviewer-flow` runs it, `socket.io-client` is resolved
+explicitly through `apps/mobile`'s package so the harness drives the same client
+the shipped app uses and does not depend on `shamefully-hoist`, and its pure
+helpers (base32 decode, RFC-6238 TOTP, detail formatting) have a `node --test`
+suite that CI runs as `pnpm test:reviewer-flow-smoke`. That step is a separate
+CI line rather than part of `pnpm test`, because ADR-0042's glossary check pins
+the exact contents of the root `test` script.
+
+The run below was reproduced three times end to end, including after the
+harness was refactored to derive the catalogue from the seeded listing and to
+pin each endpoint's response shape. Identifiers differ per run because each run
+publishes a fresh listing; the check set and the result do not.
 
 ### Result — 8/8 checks passed
 
@@ -68,7 +80,7 @@ Against commit `d1471212079ffccb6f9ea4cce66bfb1f7f98acff`, environment
 | 3 | Create a listing | The seller ran the real wizard path: `POST /uploads/presign` → signed `PUT` of real JPEG bytes to MinIO → `POST /listings/drafts` → `PATCH` the draft → `POST /listings/drafts/:id/publish`. Published `07d06ccd-a0ab-4b9c-b7a7-e508438673be`, immediately readable anonymously. 3535ms | [x] |
 | 4 | Rich chat | Conversation `c631b53b-16bf-4340-b3a0-161d486375ec` opened by the buyer on the new listing. Both accounts connected to `/ws/chat` over the `websocket` transport and joined the room. Buyer's `message:send` (text) delivered to the seller as `message:new`; seller's `message:send` (image, after a signed chat-attachment upload) delivered to the buyer as `message:new`; a third image sent over `POST /messages/rich` persisted. All three appear in `GET /messages` history. 9722ms | [x] |
 | 5 | Report and block | Buyer filed `POST /listings/:id/report` (`misleading`) → report `d9c459d2-56a7-48aa-b910-1e599536f50c`, `status=pending`. Buyer blocked the seller, `GET /me/blocked-users/:id` returned `blocked=true`, then released the block so the scenario is left as found. 1218ms | [x] |
-| 6 | Admin session and TOTP elevation | Operator admin session refreshed, `/api/v1/me` returned `role=admin`, `POST /auth/admin/totp/verify` accepted a computed RFC-6238 code, `GET /auth/admin/totp/status` returned `enrolled=true, elevated=true`. 2500ms | [x] |
+| 6 | Admin session and TOTP elevation | Operator admin session refreshed, `/api/v1/me` returned `role=admin`, `POST /auth/admin/totp/verify` accepted a computed RFC-6238 code, and `GET /auth/admin/totp/status` was asserted to return both `enrolled=true` and `elevated=true`. 2800ms | [x] |
 | 7 | Live admin moderation | The report filed in check 5 was present in `GET /admin/reports?status=pending`. `POST /admin/listings/:id/ban` with that `reportId` returned `reportStatus=actioned` and audit row `c7fcf36c-b1d4-4094-a110-73c385c65769`. 757ms | [x] |
 | 8 | Public enforcement | The banned listing returned `404` to an anonymous reader and was absent from the authenticated feed. 443ms | [x] |
 
@@ -137,7 +149,8 @@ used the audited script for the privilege change:
       and consumed immediately), then `POST /auth/admin/totp/enroll`, then
       `POST /auth/admin/totp/verify`.
 
-Recorded in [80 — deployment runbook](../80-deployment-runbook.md) and
+Locked in [ADR-0045](../../../adr/0045-first-admin-bootstrap-in-signups-disabled-environments.md)
+and recorded in [80 — deployment runbook](../80-deployment-runbook.md) and
 [86 — admin bootstrap runbook](../86-admin-bootstrap-runbook.md). This also
 satisfies runbook 86's standing requirement that bootstrap be drilled in staging
 before the first production admin promotion.
@@ -175,7 +188,9 @@ handler and drop the direct emit, so both transports converge — changes the
 event payload contract (`MessageSentEvent` carries no `clientMessageId`, which
 the mobile client uses to reconcile optimistic messages). That is a real design
 change in the conversations context, not a smoke-test fix, so it is recorded
-here and left to its own issue. The harness proves realtime delivery over the
+here and filed as
+[#312](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/312). The
+harness proves realtime delivery over the
 socket and proves HTTP-sent messages persist and appear in history, which is the
 reviewer-visible outcome available today.
 
@@ -258,6 +273,24 @@ both.
 **Android: not ready. iOS: not ready.** Criterion 3 is unmet on both. Per
 criterion 4, no partial readiness is claimed and the issue stays open.
 
+## Repository changes this slice made
+
+Issue #279's own file list is credential stores, evidence, and runbook
+corrections. These four additions are the corrections that the observed
+behavior required, plus the harness the sprint's "repeatable" requirement asks
+for:
+
+| Change | Why |
+|---|---|
+| `scripts/staging-reviewer-flow-smoke.mjs` + its `node --test` suite | The repeatable proof itself. Sprint 11 §6 asks for a repeatable procedure; #278 left it as an unversioned local script. |
+| [ADR-0045](../../../adr/0045-first-admin-bootstrap-in-signups-disabled-environments.md) | Finding 1 is an operational decision with a rejected alternative, which CLAUDE.md requires be captured as an ADR rather than only as runbook prose. |
+| `docs/prd/ops/80-deployment-runbook.md`, `86-admin-bootstrap-runbook.md` | Findings 1 and 2. Runbook 86's step 4 and its "No user found" failure line were unexecutable in a reviewer-era environment and are now cross-referenced to the exception. |
+| `.github/workflows/ci.yml` | One line, so the harness's helper tests are not shipped unowned. |
+
+No application code changed. No bounded-context invariant, port, route, event,
+or environment contract changed, so no `CONTEXT.md` was owed under
+[ADR-0019](../../../adr/0019-context-md-describes-current-state.md).
+
 ## Secret Hygiene
 
 - [x] No secret value appears in this file.
@@ -283,6 +316,12 @@ criterion 4, no partial readiness is claimed and the issue stays open.
 - [x] No secret was written to `scripts/staging-reviewer-flow-smoke.mjs`; the
       credentials file path is supplied by environment variable and defaults
       outside the repository.
+- [x] The signup probe takes its code on **stdin**, not argv, so a live (if
+      single-use) OTP never lands in shell history or `ps` output. The runbook
+      documents the piped form.
+- [x] The harness `chmod`s the credentials file back to `0600` after rewriting
+      the rotated admin refresh token; `writeFileSync`'s `mode` only applies
+      when it creates the file.
 
 ### Inherited open finding
 
@@ -333,6 +372,7 @@ production promotion, and TM cutover.
 - [ADR-0030 — reviewer demo account OTP bypass](../../../adr/0030-reviewer-demo-account-otp-bypass.md)
 - [ADR-0039 — phased cloud-first hosting](../../../adr/0039-phased-cloud-first-hosting.md)
 - [ADR-0043 — native APNS delivery via node-apn](../../../adr/0043-native-apns-delivery-via-node-apn.md)
+- [ADR-0045 — first admin bootstrap in signups-disabled environments](../../../adr/0045-first-admin-bootstrap-in-signups-disabled-environments.md)
 - [Sprint 11 — Railway deployment](../../sprints/sprint-11-railway-deployment.md)
 - [80 — Deployment runbook](../80-deployment-runbook.md)
 - [86 — Admin bootstrap runbook](../86-admin-bootstrap-runbook.md)

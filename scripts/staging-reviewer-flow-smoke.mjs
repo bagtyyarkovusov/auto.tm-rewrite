@@ -22,7 +22,7 @@
  *   # Two-step signup-gate probe: step 1 asks for a code, the operator reads
  *   # it from the API's mock-SMS log line, step 2 proves the gate rejects it.
  *   node scripts/staging-reviewer-flow-smoke.mjs signup-probe-request
- *   node scripts/staging-reviewer-flow-smoke.mjs signup-probe-verify <code>
+ *   printf '%s' <code> | node scripts/staging-reviewer-flow-smoke.mjs signup-probe-verify
  *
  * Credentials file shape:
  *   {
@@ -33,21 +33,26 @@
  *   }
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { createHmac, randomUUID } from "node:crypto";
 import { homedir } from "node:os";
-import { io } from "socket.io-client";
+import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 
-// ── Fixed scenario identifiers, mirrored from packages/db/src/reviewer-scenario-seed.ts ──
-// The API validates every one of these with z.string().uuid(), which is why
-// the seed writes UUIDs rather than slugs (see #308).
-const SCENARIO = {
-  brandId: "4c5cf769-30a6-4a26-a789-3138bb78bd17",
-  modelId: "928b8485-794b-401b-9ca0-34cac8e74a86",
-  regionId: "8d3bfb24-c5fc-4841-8eaf-089771c642d2",
-  cityId: "b760afbb-d466-4367-8c86-eea7dd392fa5",
-  primaryListingId: "e042b037-1e59-495d-8380-e497ad7d035e",
-};
+// Resolved through apps/mobile's package rather than a root dependency, on
+// purpose: the harness should drive the flow with the exact Socket.IO client
+// the shipped app uses, and this survives `.npmrc`'s shamefully-hoist being
+// turned off or Expo re-aligning the mobile dependency set.
+const { io } = createRequire(new URL("../apps/mobile/package.json", import.meta.url))(
+  "socket.io-client",
+);
+
+// The one identifier this harness has to know: the reviewer scenario's primary
+// seeded listing, from packages/db/src/reviewer-scenario-seed.ts. Everything
+// else the flow needs — brand, model, region, city — is read back off that
+// listing rather than copied here, so the catalogue ids can never drift out of
+// sync with the seed and the read itself proves the catalogue is reachable.
+const SEEDED_PRIMARY_LISTING_ID = "e042b037-1e59-495d-8380-e497ad7d035e";
 
 const results = [];
 let failed = false;
@@ -65,6 +70,9 @@ function loadCredentials() {
 
 function saveCredentials(path, credentials) {
   writeFileSync(path, JSON.stringify(credentials, null, 2), { mode: 0o600 });
+  // `mode` only applies when writeFileSync creates the file. This file already
+  // exists on every run after the first, so tighten it explicitly.
+  chmodSync(path, 0o600);
 }
 
 function record(name, ok, detail) {
@@ -73,11 +81,15 @@ function record(name, ok, detail) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
 }
 
+export function formatDetail(detail, elapsedMs) {
+  return detail ? `${detail}, ${elapsedMs}ms` : `${elapsedMs}ms`;
+}
+
 async function check(name, fn) {
   const started = Date.now();
   try {
     const detail = await fn();
-    record(name, true, `${detail ?? ""}${detail ? ", " : ""}${Date.now() - started}ms`);
+    record(name, true, formatDetail(detail, Date.now() - started));
   } catch (err) {
     record(name, false, `${err instanceof Error ? err.message : String(err)} (${Date.now() - started}ms)`);
     throw err;
@@ -108,15 +120,16 @@ async function request(baseUrl, method, path, { token, body, headers } = {}) {
 function expectStatus(res, expected, what) {
   const allowed = Array.isArray(expected) ? expected : [expected];
   if (!allowed.includes(res.status)) {
-    // The API's error envelope carries a code but no secret values.
-    const code = res.json && typeof res.json === "object" ? res.json.code ?? res.json.error?.code : undefined;
+    // GlobalErrorFilter's envelope is flat: { statusCode, code, message, details }.
+    // It carries a code but never a secret value.
+    const code = res.json?.code;
     throw new Error(`${what}: expected ${allowed.join("|")}, got ${res.status}${code ? ` (${code})` : ""}`);
   }
   return res.json;
 }
 
 /** RFC 6238 TOTP, so the admin elevation step needs no authenticator app. */
-function base32Decode(input) {
+export function base32Decode(input) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const clean = input.replace(/=+$/, "").toUpperCase().replace(/\s+/g, "");
   let bits = 0;
@@ -135,7 +148,7 @@ function base32Decode(input) {
   return Buffer.from(out);
 }
 
-function totp(secret, atMs = Date.now()) {
+export function totp(secret, atMs = Date.now()) {
   const counter = Math.floor(atMs / 1000 / 30);
   const buf = Buffer.alloc(8);
   buf.writeUInt32BE(Math.floor(counter / 2 ** 32), 0);
@@ -255,16 +268,27 @@ async function signupProbeRequest() {
   expectStatus(res, [200, 201], "signup probe OTP request");
   console.log(
     "PASS  signup-probe-request — OTP issued for an unreserved number; " +
-      "read the code from the API mock-SMS log line, then run signup-probe-verify <code>",
+      "pipe the code from the API mock-SMS log line into signup-probe-verify",
   );
 }
 
-async function signupProbeVerify(code) {
+async function readCodeFromStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  const code = Buffer.concat(chunks).toString("utf8").trim();
+  if (!/^\d{6}$/.test(code)) throw new Error("expected a 6-digit code on stdin");
+  return code;
+}
+
+async function signupProbeVerify() {
+  // The code arrives on stdin rather than argv: argv lands in shell history
+  // and in `ps` output, and this is a live (if single-use) credential.
+  const code = await readCodeFromStdin();
   const { credentials } = loadCredentials();
   const res = await request(credentials.apiUrl, "POST", "/api/v1/auth/otp/verify", {
     body: { phone: credentials.signupProbePhone, code },
   });
-  const reason = res.json?.details?.reason ?? res.json?.message?.details?.reason;
+  const reason = res.json?.details?.reason;
   const ok = res.status === 403 && reason === "FEATURE_DISABLED";
   record(
     "signup gate rejects a correct code for an unreserved number",
@@ -311,7 +335,9 @@ async function main() {
       return `${signedIn.length} accounts, roles=${signedIn.map((s) => s.role).join("/")}`;
     });
 
-    // 2 — browse
+    // 2 — browse. The seeded listing's detail doubles as the catalogue source
+    // for check 3, so a drifted seed fails here rather than deep in publishing.
+    let catalogue = null;
     await check("browse: authenticated feed and anonymous listing detail", async () => {
       const feed = expectStatus(
         await request(apiUrl, "GET", "/api/v1/listings?limit=20", { token: buyer.accessToken }),
@@ -319,10 +345,19 @@ async function main() {
         "listing feed",
       );
       const detail = expectStatus(
-        await request(apiUrl, "GET", `/api/v1/listings/${SCENARIO.primaryListingId}`),
+        await request(apiUrl, "GET", `/api/v1/listings/${SEEDED_PRIMARY_LISTING_ID}`),
         200,
         "seeded listing detail",
       );
+      catalogue = {
+        brandId: detail.brandId,
+        modelId: detail.modelId,
+        regionId: detail.regionId,
+        cityId: detail.cityId,
+      };
+      for (const [field, value] of Object.entries(catalogue)) {
+        if (!value) throw new Error(`seeded listing has no ${field}`);
+      }
       return `feed items=${feed.items?.length ?? 0}, seeded listing status=${detail.status}`;
     });
 
@@ -343,10 +378,7 @@ async function main() {
         await request(apiUrl, "PATCH", `/api/v1/listings/drafts/${draft.id}`, {
           token: seller.accessToken,
           body: {
-            brandId: SCENARIO.brandId,
-            modelId: SCENARIO.modelId,
-            regionId: SCENARIO.regionId,
-            cityId: SCENARIO.cityId,
+            ...catalogue,
             year: 2019,
             condition: "used",
             mileageKm: 84000,
@@ -371,7 +403,7 @@ async function main() {
         [200, 201],
         "publish draft",
       );
-      publishedListingId = published.id ?? published.listing?.id;
+      publishedListingId = published.id;
       if (!publishedListingId) throw new Error("publish returned no listing id");
       expectStatus(
         await request(apiUrl, "GET", `/api/v1/listings/${publishedListingId}`),
@@ -391,7 +423,7 @@ async function main() {
         [200, 201],
         "open conversation",
       );
-      conversationId = opened.id ?? opened.conversation?.id;
+      conversationId = opened.id;
       if (!conversationId) throw new Error("open conversation returned no id");
 
       const buyerSocket = await connectChat(apiUrl, buyer.accessToken);
@@ -550,10 +582,12 @@ async function main() {
           200,
           "admin TOTP status",
         );
-        if (status.elevated !== true && status.currentlyElevated !== true) {
-          throw new Error("admin session is not elevated after TOTP verify");
+        if (status.enrolled !== true || status.elevated !== true) {
+          throw new Error(
+            `admin TOTP status: enrolled=${status.enrolled}, elevated=${status.elevated}`,
+          );
         }
-        return "role=admin, elevated";
+        return "role=admin, enrolled, elevated";
       });
 
       await check("admin sees the report and bans the listing", async () => {
@@ -564,7 +598,7 @@ async function main() {
           200,
           "admin report queue",
         );
-        const found = (queue.items ?? []).some((r) => r.id === reportId || r.reportId === reportId);
+        const found = (queue.items ?? []).some((report) => report.id === reportId);
         if (!found) throw new Error("the report just filed is not in the pending queue");
 
         const ban = expectStatus(
@@ -616,15 +650,19 @@ async function main() {
   process.exit(failed ? 1 : 0);
 }
 
-const [, , subcommand, argument] = process.argv;
+const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+const [, , subcommand] = process.argv;
 const run =
   subcommand === "signup-probe-request"
     ? signupProbeRequest
     : subcommand === "signup-probe-verify"
-      ? () => signupProbeVerify(argument)
+      ? signupProbeVerify
       : main;
 
-run().catch((err) => {
-  console.error(`smoke aborted: ${err instanceof Error ? err.message : String(err)}`);
-  process.exit(1);
-});
+if (invokedDirectly) {
+  run().catch((err) => {
+    console.error(`smoke aborted: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  });
+}

@@ -59,14 +59,15 @@ promotion stays audited. The exact commands are in
 [80 — deployment runbook](80-deployment-runbook.md), under *Prerequisite — the
 first admin identity in a signups-disabled environment*. Never turn
 `SIGNUPS_ENABLED` on to work around this; the reviewer-era posture depends on
-being able to state that public signup was never enabled.
+being able to state that public signup was never enabled. Locked in
+[ADR-0045](../../adr/0045-first-admin-bootstrap-in-signups-disabled-environments.md).
 
 ## Procedure
 
 1. Generate and store `TOTP_SECRET_ENCRYPTION_KEY` in the production secret store and offline operator password manager before deploy.
 2. Confirm `apps/api` starts in staging or a prod-like environment with the configured key, and fails fast when the key is missing/invalid during the drill.
 3. Run the bootstrap command with `--dry-run` in staging or a prod-like snapshot before the production promotion.
-4. Ask the intended admin to complete normal OTP login once.
+4. Ask the intended admin to complete normal OTP login once, so the `User` exists. **Not possible where signups are disabled** — follow the reviewer-era exception above instead, then continue from step 5.
 5. Verify the target phone number out of band.
 6. Confirm a recent DB backup exists.
 7. Run the planned command with the target phone and reason.
@@ -77,7 +78,7 @@ being able to state that public signup was never enabled.
 
 ## Failure handling
 
-- No user found: stop; the target person must log in through OTP first.
+- No user found: stop; the target person must log in through OTP first. Where `SIGNUPS_ENABLED=false` makes that impossible, do not lift the flag — use the reviewer-era exception above, which is the only sanctioned break-glass here and is limited to creating the identity.
 - Wrong phone promoted: revoke sessions/refresh tokens for the promoted account, use a reviewed operator fix path, and record an incident/operator note; there is no S7 admin demotion UI.
 - TOTP enrollment fails: do not grant temporary admin access; fix the TOTP flow or recover manually.
 - Compromised admin: revoke sessions/refresh tokens, rotate admin cookies or affected secrets if needed, record an incident/operator note, review recent audit rows, and do not try to suspend the admin through the report queue.

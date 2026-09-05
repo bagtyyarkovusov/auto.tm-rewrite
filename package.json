@@ -2,7 +2,7 @@
   "name": "auto-tm-rewrite",
   "version": "0.1.0",
   "private": true,
-  "description": "AutoTM — Turkmenistan car marketplace (rewrite). Monorepo for API, web, admin, mobile, SMS gateway, phone agent, worker.",
+  "description": "AutoTM \u2014 Turkmenistan car marketplace (rewrite). Monorepo for API, web, admin, mobile, SMS gateway, phone agent, worker.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.11.0",
@@ -21,6 +21,8 @@
     "check:glossary": "node scripts/check-domain-glossary.mjs",
     "test:glossary": "node --test scripts/check-domain-glossary.test.mjs",
     "check:runtime-imports": "node scripts/check-runtime-imports.cjs",
+    "smoke:reviewer-flow": "node scripts/staging-reviewer-flow-smoke.mjs",
+    "test:reviewer-flow-smoke": "node --test scripts/staging-reviewer-flow-smoke.test.mjs",
     "clean": "turbo run clean && rm -rf node_modules",
     "db:generate": "pnpm --filter @auto-tm/db generate",
     "db:migrate:dev": "pnpm --filter @auto-tm/db migrate:dev",

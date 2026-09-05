@@ -85,9 +85,14 @@ driver delivers the code to the API log rather than to the caller:
 
 ```bash
 node scripts/staging-reviewer-flow-smoke.mjs signup-probe-request
-railway logs --service api --environment <env> -d --lines 200 | grep 'mock] OTP for <probe phone>'
-node scripts/staging-reviewer-flow-smoke.mjs signup-probe-verify <code>
+
+railway logs --service api --environment <env> -d --lines 200 \
+  | grep -a 'mock] OTP for <probe phone>' | tail -1 | sed -E 's/.*: ([0-9]{6}).*/\1/' \
+  | node scripts/staging-reviewer-flow-smoke.mjs signup-probe-verify
 ```
+
+The code goes down a pipe rather than into an argument: it is single-use, but
+argv lands in shell history and in `ps` output.
 
 A **correct** code for an unreserved number must return `403` with
 `details.reason = FEATURE_DISABLED` and must not create a `users` row. A wrong
@@ -108,7 +113,8 @@ turning `SIGNUPS_ENABLED` on temporarily — that is the one flag the reviewer-e
 posture must be able to claim was never off.
 
 The sanctioned sequence inserts only the identity that OTP would have created,
-then uses the audited promotion path for the privilege change:
+then uses the audited promotion path for the privilege change. Locked in
+[ADR-0045](../../adr/0045-first-admin-bootstrap-in-signups-disabled-environments.md):
 
 ```bash
 # 1. break-glass: create the operator identity only (role stays buyer)
@@ -117,9 +123,12 @@ railway ssh --service api --environment <env> -- psql "$DATABASE_URL" -c \
    values (gen_random_uuid(), '<operator phone>', '<label>', 'ru', 'buyer', now(), now()) \
    on conflict (phone) do nothing;"
 
-# 2. audited promotion (dry-run first)
+# 2. audited promotion — dry-run first, then the real run
 railway ssh --service api --environment <env> -- sh -c \
   "cd /app && pnpm --filter @auto-tm/db admin:promote -- --phone <operator phone> --reason '<reason>' --dry-run"
+
+railway ssh --service api --environment <env> -- sh -c \
+  "cd /app && pnpm --filter @auto-tm/db admin:promote -- --phone <operator phone> --reason '<reason>'"
 ```
 
 Then sign in once as the operator (request the OTP, read it from the API's mock
