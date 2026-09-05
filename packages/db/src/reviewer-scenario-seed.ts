@@ -4,29 +4,58 @@ const REVIEWER_PHONE_RE = /^\+993\d{8}$/;
 type ReviewerRole = "buyer" | "seller";
 type ReviewerMode = "seed" | "revoke";
 
+/**
+ * Every identifier the scenario writes is a fixed UUID, not a readable slug.
+ * The API's request contracts validate `brandId`, `modelId`, `regionId`,
+ * `cityId`, `listingId`, and `conversationId` with `z.string().uuid()`, so
+ * slug ids seeded straight into Postgres are rejected the moment a reviewer
+ * tries to filter the catalogue, open a conversation on a seeded listing, or
+ * join one over the realtime namespace. The values are hardcoded rather than
+ * generated so the seed stays idempotent across runs and environments.
+ */
+const SCENARIO_UUIDS = {
+  buyer1: "be255e7f-3414-49ae-8dcb-d4d6b26b94f9",
+  seller1: "c410b0ef-dc1b-45f5-afe6-72f4ba5d9cb7",
+  buyer2: "9ee7ec27-8ebc-40e5-b0b5-e76494c9a024",
+  seller2: "dbda60a2-a7f6-4230-a993-9ec73f30dc6d",
+  buyer3: "30157e67-4129-4984-afe1-c4cd014f68ed",
+  brand: "4c5cf769-30a6-4a26-a789-3138bb78bd17",
+  model: "928b8485-794b-401b-9ca0-34cac8e74a86",
+  region: "8d3bfb24-c5fc-4841-8eaf-089771c642d2",
+  city: "b760afbb-d466-4367-8c86-eea7dd392fa5",
+  primaryListing: "e042b037-1e59-495d-8380-e497ad7d035e",
+  reportableListing: "e2354d2f-3d4f-4860-a71f-c9f1e10c37e8",
+  conversation: "a8ff59c2-6da5-45fb-b38a-563fffa989b6",
+  buyerParticipant: "293dc57f-3c17-40d4-8ce2-ceb3972518b0",
+  sellerParticipant: "55187868-ac2e-40fa-9074-71205d95b630",
+  firstMessage: "be00bd8c-661b-45e0-9853-b4431c7e6bf0",
+  secondMessage: "3ee96724-f42d-463a-943c-2a0eb5507502",
+  report: "67e970fd-d408-4d87-ae3a-c9dc880223d6",
+} as const;
+
 const ACCOUNT_SLOTS: Array<{ id: string; role: ReviewerRole; displayName: string }> = [
   {
-    id: "autotm-reviewer-buyer-1",
+    id: SCENARIO_UUIDS.buyer1,
     role: "buyer",
     displayName: "Reviewer Buyer 1",
   },
   {
-    id: "autotm-reviewer-seller-1",
+    id: SCENARIO_UUIDS.seller1,
     role: "seller",
     displayName: "Reviewer Seller 1",
   },
   {
-    id: "autotm-reviewer-buyer-2",
+    id: SCENARIO_UUIDS.buyer2,
     role: "buyer",
     displayName: "Reviewer Buyer 2",
   },
   {
-    id: "autotm-reviewer-seller-2",
+    id: SCENARIO_UUIDS.seller2,
     role: "seller",
     displayName: "Reviewer Seller 2",
   },
   {
-    id: "autotm-reviewer-buyer-3",
+    id: SCENARIO_UUIDS.buyer3,
     role: "buyer",
     displayName: "Reviewer Buyer 3",
   },
@@ -35,22 +64,22 @@ const ACCOUNT_SLOTS: Array<{ id: string; role: ReviewerRole; displayName: string
 const REVIEWER_USER_IDS = ACCOUNT_SLOTS.map((slot) => slot.id);
 
 const CATALOG = {
-  brandId: "autotm-reviewer-brand",
+  brandId: SCENARIO_UUIDS.brand,
   brandSlug: "autotm-reviewer",
-  modelId: "autotm-reviewer-model",
+  modelId: SCENARIO_UUIDS.model,
   modelSlug: "review-scenario",
-  regionId: "autotm-reviewer-region",
+  regionId: SCENARIO_UUIDS.region,
   regionSlug: "reviewer-region",
-  cityId: "autotm-reviewer-city",
+  cityId: SCENARIO_UUIDS.city,
   citySlug: "reviewer-city",
 };
 
-const PRIMARY_LISTING_ID = "autotm-reviewer-listing-primary";
-const REPORTABLE_LISTING_ID = "autotm-reviewer-listing-reportable";
-const CONVERSATION_ID = "autotm-reviewer-conversation-primary";
-const FIRST_MESSAGE_ID = "autotm-reviewer-message-001";
-const SECOND_MESSAGE_ID = "autotm-reviewer-message-002";
-const REPORT_ID = "autotm-reviewer-report-listing-001";
+const PRIMARY_LISTING_ID = SCENARIO_UUIDS.primaryListing;
+const REPORTABLE_LISTING_ID = SCENARIO_UUIDS.reportableListing;
+const CONVERSATION_ID = SCENARIO_UUIDS.conversation;
+const FIRST_MESSAGE_ID = SCENARIO_UUIDS.firstMessage;
+const SECOND_MESSAGE_ID = SCENARIO_UUIDS.secondMessage;
+const REPORT_ID = SCENARIO_UUIDS.report;
 
 export interface ReviewerScenarioSeedEnv {
   appEnv: string | undefined;
@@ -393,14 +422,14 @@ export async function runReviewerScenarioSeed(
     lastMessageId: SECOND_MESSAGE_ID,
   });
   await store.upsertConversationParticipant({
-    id: `${CONVERSATION_ID}-buyer`,
+    id: SCENARIO_UUIDS.buyerParticipant,
     conversationId: CONVERSATION_ID,
     userId: buyer.id,
     lastReadAt: options.now,
     lastDeliveredAt: options.now,
   });
   await store.upsertConversationParticipant({
-    id: `${CONVERSATION_ID}-seller`,
+    id: SCENARIO_UUIDS.sellerParticipant,
     conversationId: CONVERSATION_ID,
     userId: seller.id,
     lastReadAt: firstMessageAt,
@@ -475,8 +504,18 @@ export async function runReviewerScenarioSeed(
 
 export const reviewerScenarioSeedIds = {
   userIds: REVIEWER_USER_IDS,
+  buyerIds: [SCENARIO_UUIDS.buyer1, SCENARIO_UUIDS.buyer2, SCENARIO_UUIDS.buyer3] as const,
+  sellerIds: [SCENARIO_UUIDS.seller1, SCENARIO_UUIDS.seller2] as const,
+  brandId: CATALOG.brandId,
+  modelId: CATALOG.modelId,
+  regionId: CATALOG.regionId,
+  cityId: CATALOG.cityId,
   primaryListingId: PRIMARY_LISTING_ID,
   reportableListingId: REPORTABLE_LISTING_ID,
   conversationId: CONVERSATION_ID,
+  buyerParticipantId: SCENARIO_UUIDS.buyerParticipant,
+  sellerParticipantId: SCENARIO_UUIDS.sellerParticipant,
+  firstMessageId: FIRST_MESSAGE_ID,
+  secondMessageId: SECOND_MESSAGE_ID,
   reportId: REPORT_ID,
 };

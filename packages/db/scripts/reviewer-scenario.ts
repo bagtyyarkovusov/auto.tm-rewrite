@@ -6,6 +6,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../generated/prisma/client/client";
 import {
+  reviewerScenarioSeedIds,
   runReviewerScenarioSeed,
   type ReviewerScenarioSeedStore,
   type ReviewerScenarioUser,
@@ -197,10 +198,10 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
       update: {
         sellerId: input.sellerId,
         status: "active",
-        brandId: "autotm-reviewer-brand",
-        modelId: "autotm-reviewer-model",
-        cityId: "autotm-reviewer-city",
-        regionId: "autotm-reviewer-region",
+        brandId: reviewerScenarioSeedIds.brandId,
+        modelId: reviewerScenarioSeedIds.modelId,
+        cityId: reviewerScenarioSeedIds.cityId,
+        regionId: reviewerScenarioSeedIds.regionId,
         year: 2020,
         mileageKm: 72000,
         priceAmount: input.priceAmount,
@@ -223,10 +224,10 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         id: input.id,
         sellerId: input.sellerId,
         status: "active",
-        brandId: "autotm-reviewer-brand",
-        modelId: "autotm-reviewer-model",
-        cityId: "autotm-reviewer-city",
-        regionId: "autotm-reviewer-region",
+        brandId: reviewerScenarioSeedIds.brandId,
+        modelId: reviewerScenarioSeedIds.modelId,
+        cityId: reviewerScenarioSeedIds.cityId,
+        regionId: reviewerScenarioSeedIds.regionId,
         year: 2020,
         mileageKm: 72000,
         priceAmount: input.priceAmount,
