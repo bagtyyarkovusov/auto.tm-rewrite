@@ -113,6 +113,12 @@ API log line:
 - [x] Three stray listings from pre-fix runs were archived through the product's
       own `POST /listings/:id/archive`, not by SQL. The reviewer feed is back to
       the two seeded listings.
+- [x] One stray `pending` report left by a partial run was dismissed through the
+      admin API, again not by SQL. Final staging state: 3 reviewer accounts plus
+      1 operator admin, the 2 seeded listings `active` and everything the smoke
+      created `archived` or `banned`, and **exactly one** `pending` report — the
+      seeded one (`67e970fd-…`), which is what the reviewer scenario is supposed
+      to present.
 
 ## Findings from Part 1
 
