@@ -41,6 +41,26 @@ Implementation (checked in):
 - `--dry-run` validates input and reports the planned action without mutating `User` or writing `AuditLog`
 - Audit log action `ADMIN_BOOTSTRAP_PROMOTE` with `actorId = null`, `targetType = "user"`, `targetId = promotedUserId`, `details.reason`, `details.before.role`, and `details.after.role`; no phone snapshot stored in `details`
 
+## Reviewer-era exception — environments where signups are disabled
+
+Step 4 below ("ask the intended admin to complete normal OTP login once") is the
+normal path and assumes the target user can create itself through OTP. That
+assumption does not hold in an ADR-0039 reviewer-era environment: staging and
+reviewer-only production run `SIGNUPS_ENABLED=false`, so `VerifyOtp` refuses to
+create a new user, and this script refuses to create one too. Reviewer accounts
+cannot fill the gap either — the ADR-0030 bypass returns no session for any user
+whose role is not `buyer` or `seller`, precisely so it can never elevate an
+admin. The first admin in such an environment therefore has no non-break-glass
+route, which was observed during the issue #279 staging drill.
+
+Resolve it by break-glass inserting **only the identity** (role `buyer`, no
+session, no privilege), then using this script for the privilege change so the
+promotion stays audited. The exact commands are in
+[80 — deployment runbook](80-deployment-runbook.md), under *Prerequisite — the
+first admin identity in a signups-disabled environment*. Never turn
+`SIGNUPS_ENABLED` on to work around this; the reviewer-era posture depends on
+being able to state that public signup was never enabled.
+
 ## Procedure
 
 1. Generate and store `TOTP_SECRET_ENCRYPTION_KEY` in the production secret store and offline operator password manager before deploy.
@@ -51,7 +71,7 @@ Implementation (checked in):
 6. Confirm a recent DB backup exists.
 7. Run the planned command with the target phone and reason.
 8. Ask the admin to open `admin.auto.tm`.
-9. Admin completes OTP, TOTP enrollment or verification, and copies the 10 backup codes.
+9. Admin completes OTP, TOTP enrollment or verification, and copies the 10 backup codes. The codes are returned by the **first successful** `POST /auth/admin/totp/verify`, not by `enroll` — `enroll` returns only `secret` and `qrCodeUrl`. An operator who records the enrollment response and stops there has no backup codes.
 10. Confirm `GET /api/v1/auth/admin/totp/status` reports enrolled and currently elevated.
 11. Confirm an AdminGuard-protected route succeeds only after TOTP elevation.
 
