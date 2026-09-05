@@ -183,6 +183,24 @@ describe("EnvSchema reviewer-era safety (fail-closed outside CI)", () => {
       }),
     ).toThrow(/REVIEW_DEMO_ACCOUNTS_JSON/);
 
+    // A reviewer code is an OTP code. OtpVerifyRequestSchema.code is /^\d{6}$/,
+    // so anything else is accepted at boot and then rejected by the HTTP
+    // contract before the bypass runs. Staging hit exactly this with 8-digit
+    // codes: POST /auth/otp/verify answered 400 VALIDATION_FAILED.
+    for (const code of ["12345", "1234567", "12345678"]) {
+      expect(() =>
+        EnvSchema.parse({
+          ...deployedEnv,
+          REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+          REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([
+            { ...reviewerDemoAccount(1), code },
+            reviewerDemoAccount(2),
+            reviewerDemoAccount(3),
+          ]),
+        }),
+      ).toThrow(/exactly 6 digits/);
+    }
+
     expect(() =>
       EnvSchema.parse({
         ...deployedEnv,

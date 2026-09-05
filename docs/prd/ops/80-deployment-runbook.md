@@ -83,7 +83,7 @@ Required environment before running the seed:
 - `APP_ENV=staging` or `APP_ENV=production`
 - `SIGNUPS_ENABLED=false`
 - `REVIEW_DEMO_ACCOUNT_ENABLED=true`
-- `REVIEW_DEMO_ACCOUNTS_JSON` populated from the secret store with 3–5 reviewer account entries
+- `REVIEW_DEMO_ACCOUNTS_JSON` populated from the secret store with 3–5 reviewer account entries. Each `code` must be **exactly 6 digits** — it is submitted to `POST /auth/otp/verify`, whose contract is `/^\d{6}$/`, so any other length is accepted at boot and then rejected with `400 VALIDATION_FAILED` before the bypass runs
 - `REVIEWER_SCENARIO_SEED_AUTHORIZATION=seed-reviewer-scenario`
 
 Run the seed after catalog/database migrations and before the reviewer smoke:

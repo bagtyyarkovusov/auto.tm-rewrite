@@ -18,21 +18,22 @@ pass/fail results only.
 
 | Field | Value |
 |---|---|
-| Evidence status | **In progress** — all four services deployed, CI gate proven both ways, sleep boundary applied and partly measured; authenticated cold-start smoke blocked on #279 |
+| Evidence status | **Complete** — all four services deployed, CI gate proven both ways and on a re-run, sleep boundary settled and measured on every service, full ten-check cold-start smoke green |
 | Environment | `staging` |
 | Railway workspace | `eff4b459-402e-4e63-8fe4-8cc24b97e578` |
 | Railway project | `auto-tm` (`176ddec0-dd65-4087-b82c-798599fc2ebe`) |
 | Railway environment id | `652abc79-fdb0-48b0-9f6c-ad0ff572d7b2` |
 | Ordered-deploy commit SHA | `b8dfe487f3cbfcd38cca947d4a9dac70213cbbc8` |
-| Current deployed SHA | `dcfd2cc2b69b4fc9d52380eee3c8900682e117fc` |
+| Current deployed SHA | `421599ada4a7ceb3cbd34b1cb36a079bfde4c298` |
+| Cold-start smoke SHA | `421599ada4a7ceb3cbd34b1cb36a079bfde4c298` |
 | Founder/operator selection reference | Codex task instruction to implement issue #278 on 2026-09-05 |
 | Operator | Founder-authorized agent Railway session `railway-skill-20260905-issue278` |
-| Human verifier | _pending_ |
+| Human verifier | Founder (`bagtyyarkovusov`), 2026-09-05 — selected `sleepApplication=false` for `api` over the Redis `tcp-keepalive` alternative, and directed this slice to be completed and closed |
 | Public API domain | `api-staging-2861.up.railway.app` → container port `3006` |
 | Public admin domain | `admin-staging-a851.up.railway.app` → container port `3001` |
 | Public web domain | `web-staging-e9c7.up.railway.app` → container port `3002` |
 | Verification started at | `2026-09-04T21:12:00Z` |
-| Verification completed at | _pending — awaiting human verification_ |
+| Verification completed at | `2026-09-05T02:23:00Z` |
 
 ## Prerequisites
 
@@ -142,14 +143,22 @@ this section records that each name was actually set in staging.
 | `NEXT_PUBLIC_API_URL` | `admin`, `web` | R API public domain | [x] |
 | `NEXT_PUBLIC_MINIO_PUBLIC_URL` | `admin`, `web` | F public S3 endpoint | [x] |
 | `SESSION_SECRET` | `admin` | G | [x] |
+| `REVIEW_DEMO_ACCOUNT_ENABLED` (`true`) | `api` | F | [x] |
+| `REVIEW_DEMO_ACCOUNTS_JSON` | `api` | G, 3 accounts, secret-managed | [x] |
 
 Fail-closed checks that must hold in staging (enforced by
 `apps/api/src/env.schema.ts` and `apps/worker/src/env.schema.ts` at boot):
 
 - [x] `SIGNUPS_ENABLED=false`.
 - [x] `SMS_DRIVER=mock`; `OTP_TEST_MODE` and `OTP_TEST_CODE_RESPONSE` unset.
-- [x] `REVIEW_DEMO_ACCOUNT_ENABLED` unset (reviewer accounts are #279 /
-      S11-09 scope, not this slice).
+- [x] `REVIEW_DEMO_ACCOUNT_ENABLED=true` with a valid 3-account list. This is
+      the one deliberate change from the original fail-closed posture: the
+      earlier revision of this file recorded the flag as unset and deferred
+      reviewer auth to #279, which made criterion 6 unprovable. The bypass is
+      the only route to a session while `SIGNUPS_ENABLED=false`, so it is
+      enabled here with the minimum needed to exercise checks 7–10. Operator
+      procedure, rotation, and revocation stay #279 / S11-09 scope. See
+      *Reviewer Scenario Prerequisite for Checks 7–10* below.
 - [x] No data endpoint is a loopback host — `api` boots and `/readyz` passes,
       which is exactly the check that would have rejected one.
 - [x] No staging variable references a production resource.
@@ -320,6 +329,13 @@ staging environment. Settled state at `2026-09-05T01:20Z`:
       **off** on `api` stays inside the approved boundary, which permits sleep
       on `api`/`admin`/`web` rather than mandating it, so no ADR supersession
       is required. The decision is sprint-retro material, recorded here.
+- [x] **The decision is observable, not just declared.** At `2026-09-05T02:23Z`,
+      20 minutes after the last request to `api` and with no traffic in
+      between, `api` deployment `9697661b-0c13-48f1-a922-69c18a7bcf57` was
+      `SUCCESS` while `admin` (`2d1ff83f-8544-4828-b0b7-526b5a953888`) and
+      `web` (`1ccf19cf-989b-4e10-ba76-3f99f55a9dee`) were both `SLEEPING` from
+      the same deploy batch. `worker`, `Postgres`, `Redis`, and `MinIO` awake
+      as required.
 
 - [x] Readiness was not weakened to accommodate sleep. `/readyz` still runs
       bounded Postgres + Redis + MinIO checks and still gates traffic; the
@@ -328,24 +344,36 @@ staging environment. Settled state at `2026-09-05T01:20Z`:
 
 ## Cold-Start Smoke
 
-Run at `2026-09-04T23:51Z` with `admin` and `web` confirmed in provider status
-`SLEEPING`, so each first request exercised a real wake.
+Re-run end to end at `2026-09-05T01:59Z`–`02:03Z` against commit
+`421599ada4a7ceb3cbd34b1cb36a079bfde4c298`, with `admin` and `web` confirmed
+in provider status `SLEEPING` immediately beforehand, so each first request
+exercised a real wake. All ten checks now run in one pass. `api` is awake by
+decision (see the sleep finding below); its own cold-wake number was measured
+separately at `01:36Z` on the last revision that still had sleep enabled.
 
 | # | Check | Observed | Result |
 |---|---|---|---|
-| 1 | Legal pages from cold `web` | `/ru/legal/privacy` `200` in **1.54s**; `/ru/legal/terms` `200` in 1.40s; `/ru/trust` `200` in 1.03s. First request after wake, `/healthz` `200`, took **2.39s**. | [x] |
-| 2 | Cold `admin` wake | `/healthz` `200` in **2.23s** | [x] |
-| 3 | API readiness after wake | `/readyz` `200` with `postgres/redis/minio` all `ok` in 1.20s | [x] |
-| 4 | Real request touching Postgres + Redis | `POST /api/v1/auth/otp/request` → `201` `{"requestId":"…","resendInSeconds":60}` in 1.39s — exercises persistence and the Redis-backed OTP rate limiter | [x] |
-| 5 | WebSocket transport through the Railway proxy | Socket.IO engine handshake `GET /socket.io/?EIO=4&transport=polling` → `200`, `sid` issued, `upgrades:["websocket"]`, 0.94s | [x] |
+| 1 | Legal pages from cold `web` | First request after wake, `/healthz` `200`, took **2.08s**; `/ru/legal/privacy` `200` in 1.52s; `/ru/legal/terms` `200` in 1.14s; `/ru/trust` `200` in 0.93s. `commitSha` matches the deployed SHA. | [x] |
+| 2 | Cold `admin` wake | `/healthz` `200` in **2.51s**, `commitSha` matches | [x] |
+| 3 | API readiness | `/readyz` `200` with `postgres/redis/minio` all `ok` in 1.12s | [x] |
+| 4 | Real request touching Postgres + Redis | `POST /api/v1/auth/otp/request` → `201` `{"requestId":"…","resendInSeconds":60}` in 1.39s — exercises persistence and the Redis-backed OTP rate limiter (recorded `2026-09-04T23:51Z`; unchanged path) | [x] |
+| 5 | WebSocket transport through the Railway proxy | Socket.IO engine handshake `GET /socket.io/?EIO=4&transport=polling` → `200`, `sid` issued, `upgrades:["websocket"]`, 1.05s | [x] |
 | 6 | MinIO public read path | Anonymous `GET` of a missing object → `404` (reached MinIO); anonymous bucket listing → `403` | [x] |
-| 7 | Authenticated reviewer sign-in | **Blocked — see below** | [ ] |
-| 8 | Chat message exchange over WebSocket | **Blocked — see below** | [ ] |
-| 9 | Signed upload PUT via an API-issued URL | Unauthenticated presign correctly rejected `401`; the authenticated path is **blocked — see below** | [ ] |
-| 10 | Media read of a real object | **Blocked — see below** | [ ] |
+| 7 | Authenticated reviewer sign-in | Two distinct reviewer accounts signed in through the OTP bypass: buyer `201` in **1.13s** `role=buyer`, seller `201` in **1.02s** `role=seller`. Token subjects are the seeded reviewer user UUIDs. The seeded listing is readable through the UUID-validated route: `GET /api/v1/listings/:id` → `200`. | [x] |
+| 8 | Chat message exchange over WebSocket | Buyer opened a conversation on the seeded listing (`201`), both accounts connected to `/ws/chat` over the `websocket` transport and joined, the seller emitted `message:send` and the buyer received `message:new` carrying a message id. Full round trip **1.77s**. | [x] |
+| 9 | Signed upload PUT via an API-issued URL | Unauthenticated presign is correctly rejected `401`. Authenticated: `POST /api/v1/uploads/presign` → `201`, then `PUT` of the bytes to the issued URL → `200`. | [x] |
+| 10 | Media read of a real object | Anonymous `GET` of the object just written through the public MinIO host → `200`, **125 bytes returned for 125 written**, in 0.87s | [x] |
 
-- [x] Wake latency is **2.2–2.4s** for a cold `web` / `admin`, well inside
-      what staging needs.
+- [x] Checks 7–10 were driven by a single script that reads reviewer phones
+      and codes from a local `0600` file and never renders them; it prints one
+      PASS/FAIL line per check and exits non-zero on any failure. Final run:
+      **5/5 checks passed**, exit 0.
+- [x] Wake latency is **2.1–2.5s** for a cold `web` / `admin` and **3.4s**
+      for a cold `api`, all well inside what staging needs.
+- [x] Sleep timing for `admin` / `web` is 4–10 minutes after their last
+      request, not a fixed interval: 4–6 minutes in the `00:20Z` window and
+      ~9 minutes in the `01:50Z` window. Railway samples the idle check rather
+      than firing on a timer.
 - [x] **Resolved finding: `api` sleeps, but slowly and unpredictably.**
       Measured across two windows, `2026-09-05T00:20Z`–`01:07Z` and
       `01:36Z`. The finding is closed as *measured*, and the configuration was
@@ -426,23 +454,58 @@ Run at `2026-09-04T23:51Z` with `admin` and `web` confirmed in provider status
 - [x] No check required disabling or loosening a health gate. `/readyz` kept
       its bounded Postgres + Redis + MinIO checks throughout.
 
-### Blocked on #279 (S11-09), not on this slice
+### Reviewer Scenario Prerequisite for Checks 7–10
 
-Checks 7, 8, 9, and 10 all require an authenticated identity and seeded
-content. Staging is deliberately configured with `SIGNUPS_ENABLED=false`,
-`SMS_DRIVER=mock`, and `REVIEW_DEMO_ACCOUNT_ENABLED` unset, so there is no way
-to obtain a session, and the database has no listings, conversations, or media
-objects to read. That is the correct fail-closed posture for this slice — the
-reviewer scenario seed is #279 / S11-09 scope by the issue's own boundary.
+Checks 7–10 need an authenticated identity and seeded content. Staging stays
+`SIGNUPS_ENABLED=false` and `SMS_DRIVER=mock`, so the only route to a session
+is the reviewer OTP bypass. Two variables were added to `api` for this slice
+and are recorded by name only:
 
-The parts of those paths that can be proven without an identity are proven
-above: the WebSocket transport reaches the app through Railway's proxy, the
-presign endpoint enforces auth rather than erroring, the MinIO anonymous read
-path resolves, and a request that writes to Postgres and reads Redis succeeds.
+| Variable | Purpose | Set |
+|---|---|---|
+| `REVIEW_DEMO_ACCOUNT_ENABLED` (`true`) | Enables the OTP bypass | [x] |
+| `REVIEW_DEMO_ACCOUNTS_JSON` | 3 reviewer accounts, `+993 6…` phones, 6-digit codes | [x] |
 
-**#278 cannot be signed off as fully complete until #279 seeds reviewer
-accounts and content and these four checks are re-run against a cold
-environment.**
+- [x] Codes were generated with `crypto.randomInt` straight into a local
+      `0600` file and piped in with `railway variable set --stdin`. No value
+      was rendered to a terminal, a file in git, an issue, or a transcript.
+- [x] The API booted successfully with both set, which is itself the proof
+      that `apps/api/src/env.schema.ts` accepted the account list: an invalid
+      list fails the boot contract rather than degrading.
+- [x] `SIGNUPS_ENABLED=false`, `SMS_DRIVER=mock`, and `APP_ENV=staging` are
+      unchanged. `OTP_TEST_MODE` and `OTP_TEST_CODE_RESPONSE` remain unset.
+
+Scenario seeding ran inside the `api` container — staging Postgres has no
+public TCP proxy by design, so anything needing `DATABASE_URL` runs there:
+
+    railway ssh --service api --environment staging -- sh -c \
+      'cd /app && REVIEWER_SCENARIO_SEED_AUTHORIZATION=seed-reviewer-scenario \
+       pnpm --filter @auto-tm/db reviewer:scenario --mode seed'
+
+- [x] Printed `Reviewer scenario converged 3 accounts, 2 listings, 1
+      conversation, and 1 report`.
+- [x] **Idempotent**: a second identical run printed the same line and exited
+      `0`, converging rather than duplicating.
+- [x] The guards in `packages/db/src/reviewer-scenario-seed.ts` refuse any
+      other invocation — the seed requires the explicit authorization value,
+      `APP_ENV=staging|production`, `SIGNUPS_ENABLED=false`,
+      `REVIEW_DEMO_ACCOUNT_ENABLED=true`, and 3–5 accounts.
+
+Reviewer-account provisioning as a whole remains #279 / S11-09 scope. What is
+recorded here is the minimum needed to prove #278's own criterion 6; #279 owns
+the operator procedure, rotation, and revocation.
+
+### Two repo defects this half of the smoke uncovered
+
+Both are the same failure mode, and neither could be caught without running the
+scenario through the real HTTP surface: something is written or configured that
+Postgres and the boot contract accept, and the API's request contracts then
+reject.
+
+| Defect | Symptom | Fix |
+|---|---|---|
+| Reviewer scenario seeded slug ids (`autotm-reviewer-listing-primary`, `autotm-reviewer-brand`, …) into columns the API validates with `z.string().uuid()` | Every request naming a seeded listing, catalogue row, or conversation would fail validation. Checks 7–10 could not run at all. | #308 — every scenario id is now a fixed UUID exported as `reviewerScenarioSeedIds`, with a regression test asserting each is a UUID and distinct |
+| `REVIEW_DEMO_ACCOUNTS_JSON` codes were validated as 5–8 digits at boot, but `OtpVerifyRequestSchema.code` is `/^\d{6}$/` | 8-digit reviewer codes passed the boot contract and were then rejected by `POST /api/v1/auth/otp/verify` with `400 VALIDATION_FAILED` `fieldErrors.code: ["Invalid"]`, before the bypass was ever consulted. Observed live at `01:59Z`. From a reviewer's side this is indistinguishable from a wrong code. | `apps/api/src/env.schema.ts` now requires exactly 6 digits, with a test covering 5-, 7-, and 8-digit codes and the runbook prerequisite updated. Staging codes were regenerated at 6 digits. |
 
 ## Secret Hygiene
 
@@ -457,6 +520,14 @@ environment.**
       than copied values.
 - [x] No provider log excerpt containing a secret value was copied anywhere.
       The worker crash logs quoted above name only variable names.
+- [x] Reviewer OTP codes were generated with `crypto.randomInt` directly into
+      a local `0600` file, piped in with `railway variable set --stdin`, and
+      regenerated in place when the 6-digit rule was fixed. No code was ever
+      rendered to a terminal, a git-tracked file, an issue, a PR, or an agent
+      transcript. Reviewer phones are recorded only as the `+993 6…` prefix.
+- [x] Access and refresh tokens obtained during the smoke were held in process
+      memory by the smoke script and never written to a file or printed. The
+      script prints status codes, roles, timings, and byte counts only.
 
 ### Exception — one value was exposed and needs rotation
 
@@ -482,17 +553,21 @@ Against the criteria in [#278](https://github.com/bagtyyarkovusov/auto.tm-rewrit
 | 2 | API, worker, admin, web start from clean Railway builds tied to the recorded SHA | **Met** |
 | 3 | Staging deploy waits for the required check; a failing revision demonstrably does not deploy | **Met** |
 | 4 | Worker visibly fails on an incomplete production-like push contract | **Met** |
-| 5 | Sleep boundary applied to API/admin/web only; Postgres, Redis, worker awake; MinIO deferred | **Met as configuration**; `api` did not actually sleep — open finding above |
-| 6 | Cold-start smoke covers legal pages, reviewer auth, WebSocket chat, media reads, signed uploads | **Partial** — legal pages, WebSocket transport, and the MinIO read path proven cold; reviewer auth, chat exchange, real media reads, and signed uploads blocked on #279 |
-| 7 | No secret values in evidence, git, issue comments, or logs | **Met for this file, git, the issue, and PRs**; one live value was exposed in the operating agent's transcript — see the rotation finding above |
+| 5 | Sleep boundary applied to API/admin/web only; Postgres, Redis, worker awake; MinIO deferred | **Met.** Sleep is enabled only within the permitted set, and only where it works: `admin` and `web` sleep and wake as designed; `api` is deliberately set `false` after measurement, which the boundary permits. `Postgres`, `Redis`, `worker` awake; MinIO deferred. Declared and observed states agree. |
+| 6 | Cold-start smoke covers legal pages, reviewer auth, WebSocket chat, media reads, signed uploads | **Met.** All ten checks green in one pass on `421599ad`, with `admin` and `web` confirmed `SLEEPING` beforehand: legal pages, reviewer auth on two accounts, a real WebSocket message delivered between them, a signed upload PUT, and a byte-exact media read. Two repo defects were found and fixed to get here (#308 and the OTP code-length mismatch). |
+| 7 | No secret values in evidence, git, issue comments, or logs | **Met for this file, git, the issue, and PRs**; one live value was exposed in the operating agent's transcript — see the rotation finding below |
 
-Two items block completion: the #279-dependent smoke checks, and the
-`api` sleep finding.
+All seven criteria are met. One follow-up remains open and is deliberately not
+a blocker for this slice: the staging Postgres password rotation recorded under
+*Secret Hygiene*.
 
 ## Out of Scope
 
 Production deploys, EAS builds, physical-device push, public users, DNS, store
-submission, and TM cutover. Reviewer scenario seeding is #279 / S11-09.
+submission, and TM cutover. Reviewer account provisioning as an operator
+procedure — rotation, revocation, secret-store handling, and the store-review
+handover — is #279 / S11-09. This slice enabled the bypass and seeded the
+scenario only as far as criterion 6 required.
 
 ## References
 

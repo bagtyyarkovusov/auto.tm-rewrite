@@ -269,8 +269,14 @@ function validateReviewerDemoAccounts(
       add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account phones must be +993 E.164 numbers");
       return;
     }
-    if (!/^\d{5,8}$/.test(code)) {
-      add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account codes must be 5 to 8 digits");
+    // Exactly six digits, because a reviewer code is an OTP code: it is
+    // submitted to POST /auth/otp/verify, whose contract
+    // (`OtpVerifyRequestSchema.code` in @auto-tm/contracts) is /^\d{6}$/. A
+    // wider rule here accepts a code at boot that the HTTP layer then rejects
+    // with VALIDATION_FAILED before the bypass is ever consulted, which reads
+    // as "wrong code" and is undebuggable from the reviewer's side.
+    if (!/^\d{6}$/.test(code)) {
+      add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account codes must be exactly 6 digits");
       return;
     }
     if (phones.has(phone)) {
