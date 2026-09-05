@@ -27,6 +27,7 @@ Before kicking off a release:
 1. Merge to `main` only after the required GitHub Actions check passes on `tm-build-mac`.
 2. Railway staging follows `main` with **Wait for CI** enabled (`checkSuites` on each service's deployment trigger). A failed required check must not create a staging deployment; Railway records the trigger as `SKIPPED` and creates no build. A deployment held for a still-running check sits in `WAITING`.
    Railway has **no cross-service deploy ordering**: a green `main` push fans out to every service with a trigger, in parallel. Any release carrying a migration must be ordered by the operator — deploy `api` explicitly, wait for `/readyz`, then deploy the rest.
+   A `SKIPPED` trigger is **final for that SHA**. Railway acts on the check suite's first conclusion, so re-running a flaky failed CI job to green does *not* un-skip the deployment — no new deployment appears. Recover by deploying that SHA explicitly, or by carrying it forward in a later commit. Verify with `list-deployments` rather than assuming the re-run was enough.
 3. Record the git SHA selected by the staging deployment.
 4. Production has no branch autodeploy. Select only the exact SHA that passed the staging smoke and require a human production approval.
 
@@ -37,7 +38,8 @@ Railway owns build + deploy, not the test gate. Preview environments are optiona
 Each environment has `api`, `worker`, `admin`, `web`, Postgres, Redis, and MinIO. `sms-gateway` and `phone-agent` do not run on Railway.
 
 - Build each application from the monorepo root so shared workspaces and lockfiles remain in the build context.
-- Use service-specific start commands. The per-service deploy contract is declared in `railway/*.json`, but Railway no longer reads config files from the repo: apply Dockerfile path, start command, pre-deploy command, healthcheck, and restart policy provider-side per environment and record what you applied in that environment's evidence file (ADR-0044).
+- Use service-specific start commands. The per-service deploy contract is declared in `railway/*.json`, but Railway no longer reads config files from the repo: apply Dockerfile path, start command, pre-deploy command, healthcheck, restart policy, and sleep mode provider-side per environment and record what you applied in that environment's evidence file (ADR-0044).
+- `sleepApplication` takes effect on the service's **next deployment**, not immediately. A service already asleep on the previous revision stays asleep until it is redeployed.
 - Run `prisma migrate deploy` through the single release authority defined by Sprint 11. Never use `migrate dev` or `db push`.
 - Set `PORT` explicitly per service. Railway injects `PORT=8080` into every service and it overrides the `ENV PORT` baked into the image, so a service whose Railway domain targets the port the Dockerfile declares will return `502` with no application error until the two agree.
 - Do not route traffic until API dependency-readiness and web/admin health checks pass. A worker queue/bootstrap failure must fail the deployment or page the operator through deploy status/logs.

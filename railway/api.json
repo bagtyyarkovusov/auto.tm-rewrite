@@ -10,6 +10,7 @@
     "healthcheckPath": "/readyz",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 5
+    "restartPolicyMaxRetries": 5,
+    "sleepApplication": false
   }
 }

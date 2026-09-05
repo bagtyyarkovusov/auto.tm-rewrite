@@ -54,8 +54,9 @@ provisioning (S11-07/S11-08) — listed here so drift stays auditable:
    Dockerfiles need the full monorepo context).
 2. **Deploy contract**: the `build` and `deploy` blocks of each JSON file
    above — Dockerfile path, start command, pre-deploy command, healthcheck
-   path and timeout, restart policy — applied per environment through
-   `serviceInstanceUpdate`. These are not read from the repo (ADR-0044).
+   path and timeout, restart policy, sleep mode — applied per environment
+   through `serviceInstanceUpdate`. These are not read from the repo
+   (ADR-0044).
 3. **Environments**: one project, `staging` + `production`. Staging
    auto-deploys `main` with **Wait for CI** (GitHub Actions must be green);
    production has **no branch autodeploy** — an operator manually deploys the
@@ -64,9 +65,17 @@ provisioning (S11-07/S11-08) — listed here so drift stays auditable:
    over `*.railway.internal` hostnames; MinIO's public endpoint is only for
    anonymous media reads + signed PUTs. The MinIO console is not public. See
    [`minio.md`](minio.md) for the bucket/bootstrap/backup contract.
-5. **Serverless sleep** (staging only, per sprint contract): may be enabled
-   for `api`, `admin`, `web`; the worker and data services stay awake. All
-   production services stay awake during store review.
+5. **Serverless sleep** (staging only, per sprint contract): permitted for
+   `api`, `admin`, `web`; the worker and data services stay awake. All
+   production services stay awake during store review. Enabled on `admin` and
+   `web`, which sleep in 4–6 minutes and wake in ~2.2–2.4s. **Disabled on
+   `api`** — it holds three long-lived Redis sockets (the Socket.IO adapter's
+   pub/sub clients and the BullMQ queue connection), so Railway's packet-based
+   idle detector never fires and the setting could not take effect. The
+   declaration is `false` so it matches observed behaviour rather than
+   asserting a sleep that cannot happen (ADR-0044 drift rule). Measured and
+   root-caused in
+   [`docs/prd/ops/evidence/issue-278-staging-applications.md`](../docs/prd/ops/evidence/issue-278-staging-applications.md).
 
 ## Environment matrix (names/references only — never values)
 
