@@ -25,6 +25,17 @@ describe("EAS build configuration", () => {
     expect(easJson.build.production.extends).toBe("base");
   });
 
+  it("pins pnpm without corepack so the builder installs exactly one pnpm shim", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+    const rootPackageJson = JSON.parse(readFileSync(resolve(mobileRoot, "../../package.json"), "utf-8"));
+
+    // EAS runs `corepack enable` before honouring the `pnpm` pin. Corepack creates the
+    // pnpm shim first, so the pin's `npm i -g pnpm@<version>` then fails with EEXIST.
+    expect(easJson.build.base.corepack).toBeUndefined();
+    expect(easJson.build.base.pnpm).toBe("9.12.0");
+    expect(rootPackageJson.packageManager).toBe(`pnpm@${easJson.build.base.pnpm}`);
+  });
+
   it("keeps environment URLs out of committed EAS profile env blocks", () => {
     const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
     const profileEnv = Object.values(easJson.build).flatMap((profile) => Object.keys((profile as { env?: object }).env ?? {}));
