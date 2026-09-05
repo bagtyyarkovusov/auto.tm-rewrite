@@ -92,7 +92,11 @@ generated per environment.
 | `FCM_*` / `APNS_*` | — | yes | — | — | H, complete set required for `fcm-apns` (S11-05) |
 | `NEXT_PUBLIC_API_URL` | — | — | yes | yes | R: API service public domain |
 | `NEXT_PUBLIC_MINIO_PUBLIC_URL` | — | — | yes | yes | R/G (S11-02) |
-| `SESSION_SECRET` | — | — | yes | — | H |
+| `SESSION_SECRET` | — | — | yes | — | G |
+| `PORT` | yes | — | yes | yes | F: must match the port the image listens on; Railway injects `PORT=8080` and it overrides the Dockerfile `ENV PORT` |
+| `API_BASE_URL` | — | — | yes | — | R: API private origin for server-side admin calls |
+| `ADMIN_ORIGIN` | — | — | yes | — | R: admin public origin |
+| `SIGNUPS_ENABLED` | yes | — | — | — | F: `false` in staging and production until public launch |
 
 Reviewer-era fail-closed flags (`SMS_DRIVER=test`, `OTP_TEST_MODE`,
 `OTP_TEST_CODE_RESPONSE`, `PUSH_TRANSPORT=test` in production, loopback or
