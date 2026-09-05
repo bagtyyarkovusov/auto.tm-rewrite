@@ -78,10 +78,14 @@ Applied through `serviceInstanceUpdate` and read back with
 | `healthcheckPath` | `/readyz` | — (no public route) | `/healthz` | `/healthz` |
 | `healthcheckTimeout` | `120` | — | `120` | `120` |
 | `restartPolicyMaxRetries` | `5` | `5` | `5` | `5` |
-| `sleepApplication` | `true` | `false` | `true` | `true` |
+| `sleepApplication` | `false` | `false` | `true` | `true` |
 
 - [x] Settings match the declared contract in `railway/api.json`,
       `railway/worker.json`, `railway/admin.json`, `railway/web.json`.
+- [x] `api` started this slice at `sleepApplication=true` and was changed to
+      `false` at `2026-09-05T01:20Z` after the sleep finding below. The four
+      `railway/*.json` files now declare `sleepApplication` explicitly so the
+      contract covers the setting instead of leaving it implicit.
 - [x] `api` is the only service with a pre-deploy migration command.
 - [x] `worker` has no healthcheck path; a boot failure must surface as a
       non-zero exit and a failed deploy, not a silently degraded replica.
@@ -267,25 +271,55 @@ Settled state:
       test. CI run `33929513100` concluded `success` and all four services
       deployed that SHA.
 
+### Gate behavior on a re-run — the operator trap
+
+A third case turned up unplanned and is worth recording, because it will
+recur. Commit `56104ffa91a9ae775d815e7679c04a0ffc82497d` (#308) failed CI run
+`33936145854` at `01:27Z` for an infrastructure reason — the self-hosted
+`tm-build-mac` runner could not download `actions/setup-node` from
+`codeload.github.com` after three attempts. The code was fine. Railway did the
+correct thing and recorded **SKIPPED** on all four services at `01:27:10Z`.
+
+Re-running the job took CI to `success` at `01:34Z`. **Railway did not create
+any deployment for that SHA.** The Wait-for-CI trigger acts on the check
+suite's first conclusion; a later re-run to green does not un-skip the
+deployment it already declined.
+
+| Service | SHA | Trigger outcome | After CI re-run to green |
+|---|---|---|---|
+| `api` | `56104ffa91a9` | SKIPPED `01:27:10Z` | no new deployment |
+| `worker` | `56104ffa91a9` | SKIPPED `01:27:10Z` | no new deployment |
+| `admin` | `56104ffa91a9` | SKIPPED `01:27:10Z` | no new deployment |
+| `web` | `56104ffa91a9` | SKIPPED `01:27:10Z` | no new deployment |
+
+Operator consequence: after a flaky CI failure, re-running the workflow
+restores the check but not the deploy. The SHA must be deployed explicitly, or
+carried forward by a later commit. Recorded in the deployment runbook.
+
 ## Serverless Sleep Boundary
 
-Approved staging boundary (sprint-11 §51): sleep is allowed for `api`,
-`admin`, and `web`. `Postgres`, `Redis`, and `worker` stay awake. MinIO sleep
-is enabled only after separate persistence and wake proof, which is not part
-of this slice.
+Approved staging boundary (sprint-11 §51): sleep **may** be enabled for `api`,
+`admin`, and `web` — the sprint permits it there, it does not require it.
+`Postgres`, `Redis`, and `worker` stay awake. MinIO sleep is enabled only
+after separate persistence and wake proof, which is not part of this slice.
 
 Read back from `serviceInstance.sleepApplication` on every service in the
-staging environment:
+staging environment. Settled state at `2026-09-05T01:20Z`:
 
 | Service | Sleep expected | Provider value | Matches |
 |---|---|---|---|
-| `api` | enabled | `true` | [x] |
+| `api` | disabled — see decision below | `false` | [x] |
 | `admin` | enabled | `true` | [x] |
 | `web` | enabled | `true` | [x] |
 | `worker` | disabled | `false` | [x] |
 | `Postgres` | disabled | `false` | [x] |
 | `Redis` | disabled | `false` | [x] |
 | `MinIO` | disabled (deferred) | `false` | [x] |
+
+- [x] No service outside the permitted set has sleep enabled. Turning sleep
+      **off** on `api` stays inside the approved boundary, which permits sleep
+      on `api`/`admin`/`web` rather than mandating it, so no ADR supersession
+      is required. The decision is sprint-retro material, recorded here.
 
 - [x] Readiness was not weakened to accommodate sleep. `/readyz` still runs
       bounded Postgres + Redis + MinIO checks and still gates traffic; the
@@ -312,17 +346,83 @@ Run at `2026-09-04T23:51Z` with `admin` and `web` confirmed in provider status
 
 - [x] Wake latency is **2.2–2.4s** for a cold `web` / `admin`, well inside
       what staging needs.
-- [ ] **Open finding: `api` did not sleep.** `sleepApplication=true` is set on
-      `api`, but across two observation windows totalling ~20 minutes with no
-      inbound requests from the operator, its deployment stayed `SUCCESS` and
-      never reached `SLEEPING`, while `admin` and `web` slept normally in the
-      same windows. No cold-start number for `api` could be measured. The
-      likely cause is that the API holds background activity — BullMQ/Redis
-      subscriptions and Socket.IO ping timers — that Railway counts as
-      activity. This matters for the ADR-0039 cost assumption, which expects
-      staging `api` to sleep between sessions. Needs a decision: either accept
-      that `api` stays awake in staging and update the sprint's approved sleep
-      boundary, or identify what keeps it warm.
+- [x] **Resolved finding: `api` sleeps, but slowly and unpredictably.**
+      Measured across two windows, `2026-09-05T00:20Z`–`01:07Z` and
+      `01:36Z`. The finding is closed as *measured*, and the configuration was
+      changed as a result.
+
+  **What was first observed, and why it was misread.** `api` deployed at
+  `00:20:30Z` and was polled every two minutes for 42 uninterrupted minutes
+  with no operator request of any kind. It stayed `SUCCESS` throughout, while
+  `admin` and `web`, deployed in the same batch, reached `SLEEPING` at
+  `00:24:12Z` and `00:26:02Z` — four to six minutes. On that window alone the
+  conclusion drawn was that `api` could never sleep. **That conclusion was
+  wrong.** The polling stopped at `01:03:09Z` and `api` reached `SLEEPING` at
+  `01:07:27Z`, roughly 57 minutes after deploy. Deployment
+  `5f62b61f-6d9d-4c25-812f-3e5b2ca151fb`, provider status `SLEEPING`.
+
+  **Cause of the delay.** Railway's Serverless detector is packet-based: a
+  service sleeps after roughly five minutes with no *outbound* traffic, sampled
+  on an interval, so the real boundary is 5–10 minutes. `api` holds three Redis
+  sockets for the life of the container — the Socket.IO adapter's pub and sub
+  clients from `RealtimeIoAdapter`, plus the BullMQ queue connection registered
+  in `notifications.module.ts`. `CLIENT LIST` on the staging Redis, read from
+  the `worker` container so `api` was not disturbed, shows exactly those three
+  at `age=712s idle=712s` (`info`, `hmset`, `subscribe sub=6`) — the
+  application itself sends nothing. Staging Redis is `redis:8.2` with
+  `tcp-keepalive 300` and `timeout 0`, so the *server* probes every idle client
+  every 300 seconds and the API's kernel answers. One outbound packet every 300
+  seconds against a ~300-second idle threshold is a race, which is exactly what
+  the data shows: `api` won that race for 47 minutes and then lost it. `admin`
+  and `web` open no long-lived connections at all and sleep in 4–6 minutes
+  every time.
+
+  Postgres is not involved: `PrismaService` uses a `pg` `Pool`, whose default
+  `idleTimeoutMillis` is 10 seconds, so those sockets close shortly after boot.
+  The Docker `HEALTHCHECK` is not involved either — `admin` and `web` carry the
+  same directive and sleep normally.
+
+  **`api` cold-start number, measured.** With `api` confirmed `SLEEPING`, the
+  first request at `2026-09-05T01:36:03Z` woke it: `/healthz` `200` in
+  **3.43s** (all of it time-to-first-byte; TCP connect was reused). The
+  immediately following `/readyz` returned `200` with `postgres/redis/minio`
+  all `ok` in 1.16s, so the dependency pool reconnects inside the first
+  request. `api` wakes about 1s slower than `admin`/`web`, which is the NestJS
+  boot plus the Redis/BullMQ/Socket.IO adapter reconnect.
+
+  **Decision (founder, 2026-09-05): `sleepApplication=false` on staging
+  `api`.** Sleep on `api` is permitted by the sprint boundary, not required,
+  and what the measurements show is a service whose sleep is real but
+  unpredictable — anywhere from a few minutes to the better part of an hour,
+  decided by a race between a Redis keepalive probe and the provider's idle
+  sampler. An environment whose job is being reliably available for store-review
+  smokes should not depend on that race, and `api` is not where staging cost
+  goes: `Postgres`, `Redis`, `MinIO`, and `worker` are awake by contract and are
+  the floor. Turning the setting off makes the declared state and the observed
+  state agree, which is the drift rule ADR-0044 exists for. No superseding ADR
+  is needed because the boundary permits either value; the decision is recorded
+  here and belongs in the S11 retro. `railway/api.json`, `railway/worker.json`,
+  `railway/admin.json`, and `railway/web.json` now all declare
+  `sleepApplication` explicitly so the contract covers the setting instead of
+  leaving it implicit.
+
+  **Rejected alternative: raising Redis `tcp-keepalive` from 300s to 600s.**
+  Ten minutes of silence would clear the idle bar cleanly and `api` would sleep
+  predictably — and then Railway's own wake rule fires, because a service wakes
+  on private-network traffic from another service in the project, which is
+  precisely what the next keepalive probe is. The expected steady state is a
+  sleep/wake cycle roughly every ten minutes driven by the probe that allowed
+  the sleep, each wake paying the 3.4s boot measured above plus Redis, BullMQ,
+  and Socket.IO adapter reconnect churn. The change is also shared: `worker`'s
+  BullMQ connections use the same Redis server, so its dead-peer detection
+  would double too. Not done.
+
+  **Provider setting semantics worth recording:** `sleepApplication` is applied
+  through `serviceInstanceUpdate` and takes effect on the service's **next
+  deployment**. `api` was still `SLEEPING` on its previous revision for
+  16 minutes after the setting was changed, which is why the cold-start number
+  above could still be measured.
+
 - [x] No check required disabling or loosening a health gate. `/readyz` kept
       its bounded Postgres + Redis + MinIO checks throughout.
 
