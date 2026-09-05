@@ -5,7 +5,7 @@ The end-to-end procedure for shipping a new version of AutoTM. There are two ope
 1. **Railway era (ADR-0039):** staging + reviewer-only production until both stores approve and the TM cutover gates are met. GitHub Actions owns CI; Railway builds/deploys after CI.
 2. **TM era (ADR-0005):** permanent TM-serving production uses the air-gapped bundle procedure later in this document. Railway remains non-TM staging.
 
-Until Sprint 11 closes, the Railway section is the target operating contract rather than evidence that a live environment exists.
+Sprint 11 is in flight. Railway **staging** is live and its data plane, application deploys, and backup/restore path have been exercised — see the evidence files under [`evidence/`](evidence/). Railway **production** does not exist yet, so every production procedure below remains the target operating contract rather than evidence of a live environment.
 
 ## Pre-flight checklist
 
@@ -355,7 +355,7 @@ railway run --service api -- \
 
 # restore: isolated target only
 railway run --service <minio-target> -- \
-  sh -c 'MINIO_ENDPOINT=<target origin> MINIO_ACCESS_KEY="$MINIO_ROOT_USER" MINIO_SECRET_KEY="$MINIO_ROOT_PASSWORD" MINIO_REGION=us-east-1 node infra/minio/restore.mjs /tmp/autotm-minio-backup'
+  sh -c 'MINIO_ENDPOINT=<target-origin> MINIO_ACCESS_KEY="$MINIO_ROOT_USER" MINIO_SECRET_KEY="$MINIO_ROOT_PASSWORD" MINIO_REGION=us-east-1 node infra/minio/restore.mjs /tmp/autotm-minio-backup'
 ```
 
 Give the target a generated domain on port `9000` only, so the drill can also
@@ -363,10 +363,6 @@ prove access behaviour: anonymous GET returns `200` with matching bytes and an
 unsigned PUT returns `403`. Re-read every manifested object from the target and
 compare against the manifest as an independent pass rather than relying solely
 on the restore script's own read-back.
-
-If the source environment holds media in only one bucket, write a small
-non-sensitive throwaway object into the others before the backup so the drill
-covers every bucket, and delete those objects from the source afterwards.
 
 The backup writes `manifest.json`, `policies/<bucket>.json`, and
 `objects/<bucket>/<key>` files. The manifest stores SHA-256 checksums; restore

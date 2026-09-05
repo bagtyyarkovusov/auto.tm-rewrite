@@ -17,8 +17,8 @@ digests, and pass/fail results only.
 
 | Field | Value |
 |---|---|
-| Evidence status | **Complete** — Postgres and media both restored into isolated targets, all integrity and checksum checks green, temporary resources destroyed |
-| Environment exercised | `staging` (source, read-only) + isolated temporary targets in the same environment |
+| Evidence status | **Drill executed; awaiting founder verification.** Postgres and media both restored into isolated targets, all integrity and checksum checks green, temporary resources destroyed. Issue #280's completion signal requires a human to verify the recovery evidence, so the issue stays open until that happens |
+| Environment exercised | `staging` (source read-only apart from the two throwaway objects recorded below) + isolated temporary targets in the same environment |
 | Production touched | **No.** The `production` environment contained zero services before, during, and after the drill |
 | Drill commit SHA | `d1471212079ffccb6f9ea4cce66bfb1f7f98acff` |
 | Railway workspace | `eff4b459-402e-4e63-8fe4-8cc24b97e578` |
@@ -27,10 +27,11 @@ digests, and pass/fail results only.
 | Production environment id | `93cb9126-de04-493e-95ec-6296470c4d7d` (verified empty, untouched) |
 | Founder/operator selection reference | Founder instruction to implement issue #280 on 2026-09-05 |
 | Operator | Founder-authorized agent Railway session `railway-skill-20260905-issue280` |
-| Human verifier | Founder (`bagtyyarkovusov`), 2026-09-05 — approved creating the isolated Railway targets, selected **delete after evidence** as the cleanup decision, and approved widening the media half with throwaway objects |
+| Founder authorization | Founder (`bagtyyarkovusov`), 2026-09-05 — approved creating the isolated Railway targets, selected **delete after evidence** as the cleanup decision, and approved widening the media half with throwaway objects. This is authorization to run the drill, **not** verification of its results |
+| Human verifier | **Pending.** No human has yet verified the recovery evidence below |
 | Procedure version | `docs/prd/ops/80-deployment-runbook.md` "Restore drill" as of this commit; corrections from this drill are folded into the same PR |
 | Drill started at | `2026-09-05T19:32:27Z` |
-| Drill completed at | `2026-09-05T19:47:00Z` |
+| Drill execution finished at | `2026-09-05T19:49:00Z` (last recorded action: drill-volume deletion at `19:48Z`) |
 
 ## Prerequisites
 
@@ -81,8 +82,11 @@ handled by the operator, and no variable on any live service was changed.
 - [x] No migration was reversed. `prisma migrate deploy` on the restored target
       reported **"No pending migrations to apply."**
 - [x] Source MinIO (`MinIO` / `af9ecdec-433b-48f0-8457-1a13c5ab1ab7`) was read
-      via `ListObjectsV2` / `GetObject` / `GetBucketPolicy` only. `minio:restore`
-      was pointed exclusively at the isolated target.
+      via `ListObjectsV2` / `GetObject` / `GetBucketPolicy`, with the single
+      exception of the two throwaway objects recorded below, which were written
+      under a dedicated `issue-280-drill/` prefix and deleted afterwards. No
+      pre-existing object was overwritten or deleted. `minio:restore` was
+      pointed exclusively at the isolated target.
 - [x] The two throwaway drill objects written to staging before the backup (see
       below) were deleted afterwards; `issue-280-drill/` is empty in all three
       buckets.
@@ -93,10 +97,18 @@ handled by the operator, and no variable on any live service was changed.
 
 ### Throwaway objects added to widen the media drill
 
-Staging held media in `listing-photos` only. To exercise all three buckets,
-two deterministic, non-sensitive throwaway objects were written to staging
-through signed `PutObject` before the backup (same pattern as issue #277), then
-deleted after the drill. They contain HMAC-derived filler bytes, no user data.
+At the pre-drill survey (`19:32Z`) staging held media in `listing-photos` only —
+2 objects, with `listing-videos` and `chat-attachments` empty. Two
+deterministic, non-sensitive throwaway objects were therefore written to
+`listing-videos` and `chat-attachments` through signed `PutObject` before the
+backup (same pattern as issue #277), then deleted after the drill. They contain
+HMAC-derived filler bytes, no user data.
+
+By the time the backup ran at `19:38Z`, issue #279's concurrent staging work had
+independently populated `chat-attachments` with 7 objects and grown
+`listing-photos` to 47, so the throwaway objects were strictly necessary only
+for `listing-videos`. They are retained in the record because they were part of
+the executed drill and are covered by the checksum verification below.
 
 | Key | Bucket | Size | SHA-256 |
 |---|---|---|---|
@@ -139,7 +151,7 @@ database (`tables=0`) rather than converging onto leftovers.
 | Dump SHA-256 | `ca289cb125f4c365bb9fc9ef4e8946dd0de84cc7d973c49e8c39a45c269cbf9d` |
 | Restore started | `2026-09-05T19:35:54Z` |
 | Restore finished | `2026-09-05T19:35:55Z` (`1 s`) |
-| Postgres recovery time (backup → restored) | **1 s** for a ~10 MB staging database |
+| Postgres recovery time (backup → restored) | **~1 s** for a ~10 MB database (`pg_database_size` 9910 kB; 95 KB compressed dump). Both phases completed inside the 1-second resolution of the recorded timestamps, so this is an upper bound, not a measured duration |
 | Server version (source and target) | PostgreSQL 18.6 (`postgres-ssl:18` image on both) |
 
 ### Concurrency note
@@ -280,7 +292,7 @@ written straight into Railway variables without being printed.
 | Manifest created at | `2026-09-05T19:38:24Z` |
 | Backup started / finished | `2026-09-05T19:38:21Z` / `2026-09-05T19:38:40Z` (`19 s`) |
 | Restore started / finished | `2026-09-05T19:38:47Z` / `2026-09-05T19:39:26Z` (`39 s`) |
-| Media recovery time (backup → restored) | **58 s** for 56 objects across 3 buckets |
+| Media recovery time (backup → restored) | **65 s** end to end for 56 objects across 3 buckets (`19:38:21Z` → `19:39:26Z`): 19 s backup, a 7 s operator gap, 39 s restore |
 | Buckets captured | `listing-photos`, `listing-videos`, `chat-attachments` |
 | Objects captured | 56 |
 
@@ -306,27 +318,47 @@ trusting the read-back check inside `infra/minio/restore.mjs`.
 | Bucket policy assertion (`assertPublicReadOnlyPolicy`) on every bucket | Pass |
 | Anonymous GET of a restored object through the target's public origin | `200`, bytes matched the manifest checksum |
 | Anonymous (unsigned) PUT to the target | `403` — refused |
+| Signed PUT to the target | Pass — the restore itself performed 56 signed `PutObject` writes with the target's own credentials, every one of which was read back and checksum-verified. Signed write and unsigned write are therefore both proven, in the correct directions |
 | Target public origin serves the S3 API, not the console | `/minio/health/live` → `200`; the generated domain targets port `9000` only, `9001` has no domain |
 
 ## Acceptance Criteria Mapping
+
+Boxes below record what the drill demonstrated. The issue itself closes only
+after the founder verifies this evidence, per its completion signal.
 
 - [x] A non-production Postgres backup restores into an isolated target and
       passes migration/status plus reviewer-scenario integrity checks —
       `migrate status` up to date, `migrate deploy` a no-op, all 36 table counts
       equal, schema digest equal, all four reviewer digests equal, both
       referential-integrity joins equal, and the API reads reviewer content back
-      from the restored database.
+      from the restored database. **Scope:** reviewer-scenario integrity is
+      proven at the data layer plus unauthenticated reads. Authenticated
+      reviewer flows (bypass login, chat, report → moderation) need reviewer
+      codes from the operator secret store and belong to issue #279.
 - [x] MinIO backup restores into an isolated target with checksum equality for
       all manifested objects and correct bucket access behaviour — 56/56 objects
-      checksum-equal, 0 extras, anonymous GET `200`, unsigned PUT `403`,
+      checksum-equal, 0 extras, anonymous GET `200`, signed PUT accepted
+      (56 restore writes, all checksum-verified), unsigned PUT `403`,
       anonymous-read-only policy asserted per bucket.
 - [x] The drill proves recovery without reversing a migration or overwriting
-      staging/production source data — no migration reversed, source read-only,
-      restore pointed only at isolated targets, production untouched.
+      staging/production source data — no migration reversed, no pre-existing
+      source row or object read non-destructively altered, the two additive
+      throwaway objects removed afterwards, restore pointed only at isolated
+      targets, production untouched.
 - [x] Recovery time, commands/procedure version, commit SHA, timestamps, counts,
       and checksums are recorded without secret values.
 - [x] Temporary resources are handled according to the approved cleanup
       decision; no production resource is mutated.
+
+### Not covered by this drill
+
+- Authenticated reviewer flows against the restored database (issue #279).
+- The reserved reviewer account set is incomplete in staging (3 of 5 slots
+  seeded at drill time). That is a property of the source, not a restore
+  failure; completing it is issue #279's work.
+- Restoring a Railway **volume** snapshot, as opposed to logical Postgres and
+  object-level media backups. Railway PITR is disabled, so no volume-level
+  restore path was available to exercise.
 
 ## Cleanup
 
@@ -352,19 +384,33 @@ from the issue #277 credential-rotation remediation. They were not touched.
 
 ## Findings Folded Into The Runbook
 
-1. Railway PITR is **disabled** on staging Postgres (`Bucket wired: no`), so
-   `railway postgres pitr restore` — which would create a restored sibling
-   service — is not currently an available recovery path. The logical
-   `pg_dump`/`pg_restore` procedure is the one that works today.
-2. Source Postgres has no public TCP proxy, so the runbook now documents
-   running the dump from inside the restore target's container over private
-   networking with a `${{Postgres.DATABASE_URL}}` variable reference, instead of
-   assuming an operator-reachable connection string.
-3. The MinIO drill commands in the runbook were localhost-only. The Railway-era
-   invocation (credentials injected by `railway run`, admin operations over the
-   public S3 origin, restore aimed at a separate instance) is now recorded.
-4. `/readyz` can report false negatives when the API is run off-platform during
-   a restore drill; the runbook now says to re-probe after connections warm.
-5. `railway add --service <name>` silently ignores the requested name and
-   Railway exposes no rename operation, so drill resources should be identified
-   by id in evidence rather than by an expected name.
+Where the observed drill diverged from the documented procedure, the correction
+went into [`../80-deployment-runbook.md`](../80-deployment-runbook.md) in the
+same commit. The divergences, one line each:
+
+1. Railway PITR is disabled, so `railway postgres pitr restore` is not an
+   available recovery path.
+2. The source database has no public TCP proxy, so the dump cannot be run from
+   an operator machine.
+3. The documented MinIO drill commands were localhost-only.
+4. `/readyz` reports false negatives when the API is run off-platform.
+5. Deleting a Railway service detaches but does not delete its volume.
+6. `railway add --service <name>` ignores the requested name and Railway offers
+   no rename, so drill resources must be identified by id.
+
+## References
+
+- Issue [#280](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/280) —
+  this slice; [#279](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/279)
+  ran concurrently against the same staging environment.
+- [`../80-deployment-runbook.md`](../80-deployment-runbook.md) — restore drill
+  procedure, corrected by this drill.
+- [`issue-277-staging-data-plane.md`](issue-277-staging-data-plane.md) and
+  [`issue-278-staging-applications.md`](issue-278-staging-applications.md) —
+  the staging data plane and applications this drill read from.
+- [ADR-0039](../../../adr/0039-phased-cloud-first-hosting.md) — phased
+  cloud-first hosting; [ADR-0004](../../../adr/0004-migrations.md) — migrations.
+- `infra/minio/contract.mjs`, `infra/minio/backup.mjs`, `infra/minio/restore.mjs`
+  — the media backup/restore tooling exercised here.
+- `packages/db/src/reviewer-scenario-seed.ts` — the fixed reviewer-scenario
+  UUIDs the integrity digests are computed over.
