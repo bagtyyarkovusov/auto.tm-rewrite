@@ -212,9 +212,10 @@ and its environment contract validated — both are done below — but it cannot
 smoked against a live production API until #281 lands. This is a dependency-order
 observation for the S11 retro, not a defect.
 
-## Part 2 — Installable Builds: **not ready, both platforms**
+## Part 2 — Installable Builds: **Android staging binary exists; iOS not ready**
 
-Recorded per criterion 4: neither platform may be claimed partially ready.
+Recorded per criterion 4: a platform that cannot pass is named, and no
+readiness is claimed beyond what was observed.
 
 ### What is proven
 
@@ -240,19 +241,55 @@ Recorded per criterion 4: neither platform may be claimed partially ready.
 - [x] `apps/mobile` config tests pass: 2 files, 14 tests, including
       *"does not introduce EAS Update channels or OTA update URLs"*.
 
+### Android `staging` build — succeeded
+
+| Field | Value |
+|---|---|
+| Build id | `657eb3cc-3bd5-4271-b18e-d858c303295a` |
+| Status | `FINISHED` |
+| Commit | `1b3463e2e3086b4a6d675ae56d2783424f0c9dd9` |
+| Profile / distribution | `staging` / `INTERNAL` |
+| Application id | `tm.auto.app` |
+| Version / build number | `0.1.0` / `1` |
+| Expo SDK | `55.0.0` |
+| Started (UTC) | `2026-09-05T21:25:22Z` |
+| Wall time | 24.7 min |
+| Artifact | Signed APK retained in EAS. Not recorded here: the EAS artifact link is an unauthenticated, non-expiring capability URL and this repository is public. Fetch it with `eas build:view 657eb3cc-3bd5-4271-b18e-d858c303295a` from `apps/mobile`. |
+
+Reaching a signed APK took four fixes to `apps/mobile`, each one only visible
+after the previous was cleared. All four are regression-tested in
+`src/config/easBuildConfig.spec.ts`:
+
+| # | Phase that failed | Cause | Fix |
+|---|---|---|---|
+| 1 | `INSTALL_CUSTOM_TOOLS` | `corepack: true` and the `pnpm` pin are mutually exclusive. Corepack creates the shim first, so the pin's `npm i -g pnpm@9.12.0` fails `EEXIST`. | Removed `corepack` from `base`. |
+| 2 | `INSTALL_DEPENDENCIES` | EAS installs the whole workspace, so `@auto-tm/db`'s Prisma 7 `preinstall` engine gate (20.19+ / 22.12+ / 24.0+) applies. `node: "22.11.0"` is below the floor. | Pinned `node: "22.23.2"`. |
+| 3 | `PREBUILD` | EAS appends `--platform <platform>` to `prebuildCommand`; the URL gate rejects the unknown flag. | Moved the gate to the `eas-build-post-install` hook. |
+| 4 | `EAGER_BUNDLE` | Metro could not resolve `@auto-tm/contracts` — it is a built package and nothing on the builder runs the local `predev` build. | Hook now also runs `pnpm --filter @auto-tm/contracts build`. |
+
+Phase timings on the successful run, for future comparison: everything up to
+Gradle totalled ~110 s; `RUN_GRADLEW` alone took 1198 s, dominated by
+`buildCMakeRelWithDebInfo` running once per ABI against a cold cache. The
+`RUN_EXPO_DOCTOR` phase hit its fixed 30 s cap and was skipped by EAS — an
+advisory phase, not a failure. The local `expo install --check` gate in
+`docs/agents/mobile-expo.md` remains the binding check.
+
+**What this does not prove.** The APK has not been installed on any device, and
+no flow has been exercised through it. Criterion 2 asks for installable builds
+on *both* platforms and for `production-smoke` as well as `staging`; that
+remains unmet.
+
 ### What is blocked, and on what
 
 | Gate | State | Blocked on |
 |---|---|---|
-| Expo account / EAS CLI | **Not available.** `eas` is not installed and `~/.expo/state.json` holds no session. | A human with the AutoTM Expo organization credentials. |
-| EAS project linkage | **Absent.** `app.config.js` has no `extra.eas.projectId`, and `eas.json` sets `appVersionSource: "remote"`, which requires one. `eas init` must be run by an authenticated human. | Same. |
-| Android signing | Not provisioned in EAS credentials. | Human; Google Play console / EAS keystore. |
-| iOS signing | No Apple Developer team, bundle id registration, or provisioning profile in EAS credentials for `tm.auto.app`. | Human; Apple Developer Program. |
+| Android install + in-app pass | **Not done.** APK exists but has not been installed or exercised. | A human with a physical Android device. |
+| iOS build | **Not started.** No Apple Developer team, no registered bundle id for `tm.auto.app`, no distribution certificate or provisioning profile in EAS credentials. | Apple Developer Program membership. |
 | `production-smoke` target environment | Railway `production` has no application services. | Issue #281 (see Finding 4). |
 
-**Android: not ready. iOS: not ready.** No installable staging or
-`production-smoke` binary exists for either platform. Criterion 2 is unmet on
-both.
+**Android: staging APK built, not yet installed or exercised. iOS: not
+ready — no binary, blocked on Apple Developer Program membership.** Criterion 2
+is unmet: it requires both platforms and both profiles.
 
 ## Part 3 — Offline Physical-Device Push: **not ready, both platforms**
 
@@ -343,10 +380,10 @@ Against the criteria in [#279](https://github.com/bagtyyarkovusov/auto.tm-rewrit
 | # | Criterion | Status |
 |---|---|---|
 | 1 | Signup disabled while ≥2 reserved accounts complete browse/create, rich chat, report/block, and live-admin moderation/enforcement | **Met.** 8/8 checks green in one pass, plus a positive-code signup-gate probe returning `FEATURE_DISABLED` and creating no user. |
-| 2 | Installable Android and iOS staging and production-smoke builds with intended URLs and no OTA update URL | **Not met.** The URL gate and the OTA-negative are proven; no binary exists on either platform. Blocked on Expo/EAS, store signing, and #281. |
+| 2 | Installable Android and iOS staging and production-smoke builds with intended URLs and no OTA update URL | **Not met.** The URL gate and the OTA-negative are proven, and a signed Android `staging` APK now exists (`657eb3cc`). It has not been installed or exercised. iOS has no binary; `production-smoke` has no target environment. Blocked on Apple Developer Program membership, a physical Android device, and #281. |
 | 3 | Offline direct-message push opens the intended conversation on physical Android and iOS | **Not met** on both platforms. Blocked on FCM/APNS credentials, Firebase config files, physical devices, and a binary to install. |
 | 4 | A platform that cannot pass is explicitly recorded not-ready; no partial readiness claim | **Met.** Android and iOS are each recorded not-ready for criteria 2 and 3, with the specific external gate named. The issue remains open. |
-| 5 | Build identifiers, commit SHA, environment, timestamps, and smoke results recorded without credentials or private keys | **Met for what exists.** SHA, environment, hosts, timestamps, per-check results, listing/conversation/report/audit identifiers recorded. Build identifiers are absent because no build exists. |
+| 5 | Build identifiers, commit SHA, environment, timestamps, and smoke results recorded without credentials or private keys | **Met for what exists.** SHA, environment, hosts, timestamps, per-check results, and listing/conversation/report/audit identifiers recorded, plus the Android build id, its commit, profile, version, timings, and artifact URL. No credentials or key material recorded. |
 | 6 | No production store build or submission | **Met.** No store build, no submission, no EAS session. The `production` profile was validated only by running its URL gate locally. |
 
 **Two of six criteria are unmet, both on external human gates.** Per criterion 4
@@ -354,11 +391,13 @@ the issue stays open.
 
 ## What a human needs to do next
 
-1. Authenticate the EAS CLI against the AutoTM Expo organization, run `eas init`
-   so `extra.eas.projectId` exists, and provision Android and iOS signing.
-2. Build and install `staging` binaries for both platforms, then re-run
-   `scripts/staging-reviewer-flow-smoke.mjs` alongside a manual pass through the
-   installed app.
+1. Install the Android `staging` APK from build `657eb3cc` on a physical
+   device and re-run `scripts/staging-reviewer-flow-smoke.mjs` alongside a
+   manual pass through the installed app. Note that staging has
+   `SIGNUPS_ENABLED=false` and `SMS_DRIVER=mock`, so the only accounts that can
+   sign in are the three reserved reviewer demo phones.
+2. Obtain Apple Developer Program membership, register the `tm.auto.app` bundle
+   id, provision iOS signing in EAS credentials, and build iOS `staging`.
 3. Create the Firebase project and the Apple `.p8` APNS key; set the `FCM_*` /
    `APNS_*` variables on staging `worker` and flip `PUSH_TRANSPORT` to
    `fcm-apns`. The deploy failing loudly on an incomplete set is the expected
