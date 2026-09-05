@@ -5,7 +5,7 @@ The end-to-end procedure for shipping a new version of AutoTM. There are two ope
 1. **Railway era (ADR-0039):** staging + reviewer-only production until both stores approve and the TM cutover gates are met. GitHub Actions owns CI; Railway builds/deploys after CI.
 2. **TM era (ADR-0005):** permanent TM-serving production uses the air-gapped bundle procedure later in this document. Railway remains non-TM staging.
 
-Until Sprint 11 closes, the Railway section is the target operating contract rather than evidence that a live environment exists.
+Sprint 11 is in flight. Railway **staging** is live and its data plane, application deploys, and backup/restore path have been exercised — see the evidence files under [`evidence/`](evidence/). Railway **production** does not exist yet, so every production procedure below remains the target operating contract rather than evidence of a live environment.
 
 ## Pre-flight checklist
 
@@ -106,7 +106,7 @@ Revocation rewrites reserved reviewer user phones to non-login `revoked:<id>` to
 
 - **Application rollback:** redeploy the last known-good Railway application revision and repeat health + focused smoke checks.
 - **Migration response:** forward-fix is preferred. Never assume application rollback undoes a schema migration.
-- **Data restore:** restore Postgres and media into an isolated/non-production target first, run current migrations, and verify auth/listing/chat/report/media reads before declaring the path usable.
+- **Data restore:** restore Postgres and media into an isolated/non-production target first, run current migrations, and verify auth/listing/chat/report/media reads before declaring the path usable. The executed Railway procedure is in [Restore drill](#restore-drill); the drill evidence is in [`evidence/issue-280-backup-restore-drill.md`](evidence/issue-280-backup-restore-drill.md).
 - Record restore point, data scope, start/end time, operator, result, and any recovery gap.
 
 ### Step 6 — Cutover boundary
@@ -273,9 +273,64 @@ Minimum successful drill:
 5. Verify health, login with a test user, listing read, contact read/write if enabled, admin TOTP login, report list, audit list, and a sample media object reference.
 6. Record backup timestamp, restore start/end time, operator, result, and any data gaps.
 
+Executed evidence for the Railway era lives in
+[`evidence/issue-280-backup-restore-drill.md`](evidence/issue-280-backup-restore-drill.md).
+
+### Railway-era Postgres drill
+
+Railway **PITR is disabled** on the AutoTM databases (`railway postgres pitr
+status` reports `Bucket wired: no`), so `railway postgres pitr restore` — which
+would create a restored sibling service — is not an available recovery path
+today. Use the logical dump procedure below, and re-check `pitr status` before
+assuming otherwise.
+
+Environment-local Railway databases have **no public TCP proxy**, so do not plan
+on an operator-reachable connection string. Create the isolated restore target
+in the same environment (private networking is environment-scoped), give it a
+read-only reference to the source, and run both halves from inside its own
+container so no database bytes and no credentials reach the operator:
+
+```bash
+# 1. create the isolated target (Railway ignores --service <name>; note the id)
+railway add --database postgres
+
+# 2. point the target at the source, read-only, by reference — never by value
+railway variables --service <target> --set 'SOURCE_DATABASE_URL=${{Postgres.DATABASE_URL}}'
+
+# 3. dump and restore entirely inside the private network
+railway ssh --service <target> -- sh -lc 'pg_dump --format=custom --no-owner --no-acl --file=/tmp/drill.dump "$SOURCE_DATABASE_URL" && pg_restore --no-owner --no-acl --exit-on-error --dbname "$DATABASE_URL" /tmp/drill.dump'
+```
+
+Drop and recreate `public` on the target before the measured run so the restore
+starts from an empty database rather than converging onto leftovers.
+
+Deleting a Railway service detaches its volume but does **not** delete it. After
+tearing down a drill target, list volumes and delete the orphan explicitly, or
+it keeps billing.
+
+To run `prisma migrate status` / `deploy` and an API boot against the restored
+database from an operator machine, add a TCP proxy **to the temporary target
+only** (`railway tcp-proxy create --port 5432 --service <target>`) and delete it
+with the target. `migrate status` must report the schema up to date and
+`migrate deploy` must report no pending migrations — a restore drill never
+reverses a migration.
+
+Verify the restore by comparing the source and target on row counts for every
+table, schema shape, and digests over the fixed reviewer-scenario UUIDs in
+`packages/db/src/reviewer-scenario-seed.ts`. If the source is being written
+concurrently, snapshot it immediately before *and* after the dump; identical
+snapshots pin the dump-time state unambiguously.
+
+When the API is started off-platform against the restored database, expect the
+first one or two `/readyz` probes to be false negatives: the per-check budget is
+`1500 ms`, sized for private-network latency, and a laptop reaching Postgres
+through a TCP proxy and MinIO over the public internet exceeds it until
+connections warm. Re-probe before treating `postgres=failed` or `minio=failed`
+as a restore problem.
+
 ### Media backup/restore drill
 
-Run this only against isolated/non-production MinIO data:
+Run this only against isolated/non-production MinIO data. Local development:
 
 ```bash
 export MINIO_ENDPOINT=http://localhost:9000
@@ -287,6 +342,27 @@ pnpm minio:bootstrap
 pnpm minio:backup /tmp/autotm-minio-backup
 pnpm minio:restore /tmp/autotm-minio-backup
 ```
+
+Railway era — let `railway run` inject the credentials so no access key is
+handled by the operator, reach the source through its public S3 origin (private
+hosts do not resolve off-platform), and point the restore at a **separate MinIO
+instance with its own volume**:
+
+```bash
+# backup: source, read-only
+railway run --service api -- \
+  sh -c 'MINIO_ENDPOINT="$MINIO_PUBLIC_URL" node infra/minio/backup.mjs /tmp/autotm-minio-backup'
+
+# restore: isolated target only
+railway run --service <minio-target> -- \
+  sh -c 'MINIO_ENDPOINT=<target-origin> MINIO_ACCESS_KEY="$MINIO_ROOT_USER" MINIO_SECRET_KEY="$MINIO_ROOT_PASSWORD" MINIO_REGION=us-east-1 node infra/minio/restore.mjs /tmp/autotm-minio-backup'
+```
+
+Give the target a generated domain on port `9000` only, so the drill can also
+prove access behaviour: anonymous GET returns `200` with matching bytes and an
+unsigned PUT returns `403`. Re-read every manifested object from the target and
+compare against the manifest as an independent pass rather than relying solely
+on the restore script's own read-back.
 
 The backup writes `manifest.json`, `policies/<bucket>.json`, and
 `objects/<bucket>/<key>` files. The manifest stores SHA-256 checksums; restore
