@@ -17,7 +17,7 @@ digests, and pass/fail results only.
 
 | Field | Value |
 |---|---|
-| Evidence status | **Drill executed; awaiting founder verification.** Postgres and media both restored into isolated targets, all integrity and checksum checks green, temporary resources destroyed. Issue #280's completion signal requires a human to verify the recovery evidence, so the issue stays open until that happens |
+| Evidence status | **Drill executed; founder verified.** Postgres and media both restored into isolated targets, all integrity and checksum checks green, temporary resources destroyed. The founder verified the recovery evidence and non-destructive scope in the Codex review thread on `2026-09-05T20:12:16Z` |
 | Environment exercised | `staging` (source read-only apart from the two throwaway objects recorded below) + isolated temporary targets in the same environment |
 | Production touched | **No.** The `production` environment contained zero services before, during, and after the drill |
 | Drill commit SHA | `d1471212079ffccb6f9ea4cce66bfb1f7f98acff` |
@@ -27,8 +27,8 @@ digests, and pass/fail results only.
 | Production environment id | `93cb9126-de04-493e-95ec-6296470c4d7d` (verified empty, untouched) |
 | Founder/operator selection reference | Founder instruction to implement issue #280 on 2026-09-05 |
 | Operator | Founder-authorized agent Railway session `railway-skill-20260905-issue280` |
-| Founder authorization | Founder (`bagtyyarkovusov`), 2026-09-05 — approved creating the isolated Railway targets, selected **delete after evidence** as the cleanup decision, and approved widening the media half with throwaway objects. This is authorization to run the drill, **not** verification of its results |
-| Human verifier | **Pending.** No human has yet verified the recovery evidence below |
+| Founder authorization | Founder (`bagtyyarkovusov`), 2026-09-05 — approved creating the isolated Railway targets, selected **delete after evidence** as the cleanup decision, and approved widening the media half with throwaway objects |
+| Human verifier | Founder (`bagtyyarkovusov`), verified in the Codex review thread on `2026-09-05T20:12:16Z` |
 | Procedure version | `docs/prd/ops/80-deployment-runbook.md` "Restore drill" as of this commit; corrections from this drill are folded into the same PR |
 | Drill started at | `2026-09-05T19:32:27Z` |
 | Drill execution finished at | `2026-09-05T19:49:00Z` (last recorded action: drill-volume deletion at `19:48Z`) |
@@ -318,13 +318,14 @@ trusting the read-back check inside `infra/minio/restore.mjs`.
 | Bucket policy assertion (`assertPublicReadOnlyPolicy`) on every bucket | Pass |
 | Anonymous GET of a restored object through the target's public origin | `200`, bytes matched the manifest checksum |
 | Anonymous (unsigned) PUT to the target | `403` — refused |
-| Signed PUT to the target | Pass — the restore itself performed 56 signed `PutObject` writes with the target's own credentials, every one of which was read back and checksum-verified. Signed write and unsigned write are therefore both proven, in the correct directions |
+| Signed restore write to the target | Pass — the restore itself performed 56 authenticated `PutObject` writes with the target's own credentials, every one of which was read back and checksum-verified. This proves the isolated target accepted authorized restore writes. Direct client presigned PUT was proven on staging in issue #277/#278 and was not re-proven against this deleted restore target |
 | Target public origin serves the S3 API, not the console | `/minio/health/live` → `200`; the generated domain targets port `9000` only, `9001` has no domain |
 
 ## Acceptance Criteria Mapping
 
-Boxes below record what the drill demonstrated. The issue itself closes only
-after the founder verifies this evidence, per its completion signal.
+Boxes below record what the drill demonstrated. The founder verified this
+evidence in the Codex review thread on `2026-09-05T20:12:16Z`, satisfying the
+issue's human-verification completion signal.
 
 - [x] A non-production Postgres backup restores into an isolated target and
       passes migration/status plus reviewer-scenario integrity checks —
@@ -337,9 +338,11 @@ after the founder verifies this evidence, per its completion signal.
       codes from the operator secret store and belong to issue #279.
 - [x] MinIO backup restores into an isolated target with checksum equality for
       all manifested objects and correct bucket access behaviour — 56/56 objects
-      checksum-equal, 0 extras, anonymous GET `200`, signed PUT accepted
-      (56 restore writes, all checksum-verified), unsigned PUT `403`,
-      anonymous-read-only policy asserted per bucket.
+      checksum-equal, 0 extras, anonymous GET `200`, authorized restore writes
+      accepted (56 restore writes, all checksum-verified), unsigned PUT `403`,
+      anonymous-read-only policy asserted per bucket. Direct client presigned
+      PUT was covered by the staging data-plane/application smokes in #277/#278,
+      not repeated against this deleted restore target.
 - [x] The drill proves recovery without reversing a migration or overwriting
       staging/production source data — no migration reversed, no pre-existing
       source row or object read non-destructively altered, the two additive
