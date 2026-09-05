@@ -221,10 +221,10 @@ describe("parseReviewerScenarioAccounts", () => {
     );
 
     expect(parsed.map((entry) => ({ id: entry.id, role: entry.role }))).toEqual([
-      { id: "autotm-reviewer-buyer-1", role: "buyer" },
-      { id: "autotm-reviewer-seller-1", role: "seller" },
-      { id: "autotm-reviewer-buyer-2", role: "buyer" },
-      { id: "autotm-reviewer-seller-2", role: "seller" },
+      { id: reviewerScenarioSeedIds.buyerIds[0], role: "buyer" },
+      { id: reviewerScenarioSeedIds.sellerIds[0], role: "seller" },
+      { id: reviewerScenarioSeedIds.buyerIds[1], role: "buyer" },
+      { id: reviewerScenarioSeedIds.sellerIds[1], role: "seller" },
     ]);
     expect(JSON.stringify(parsed)).not.toContain("123456");
   });
@@ -241,6 +241,38 @@ describe("parseReviewerScenarioAccounts", () => {
         ]),
       ),
     ).toThrow(/unique/);
+  });
+});
+
+describe("reviewerScenarioSeedIds", () => {
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // The API validates brandId, modelId, regionId, cityId, listingId, and
+  // conversationId with z.string().uuid(). A slug id seeded straight into
+  // Postgres is accepted by the database and then rejected by every request
+  // that names it, so the scenario is only usable if every id is a UUID.
+  it("uses UUIDs for every identifier the API validates", () => {
+    const ids = [
+      ...reviewerScenarioSeedIds.userIds,
+      reviewerScenarioSeedIds.brandId,
+      reviewerScenarioSeedIds.modelId,
+      reviewerScenarioSeedIds.regionId,
+      reviewerScenarioSeedIds.cityId,
+      reviewerScenarioSeedIds.primaryListingId,
+      reviewerScenarioSeedIds.reportableListingId,
+      reviewerScenarioSeedIds.conversationId,
+      reviewerScenarioSeedIds.buyerParticipantId,
+      reviewerScenarioSeedIds.sellerParticipantId,
+      reviewerScenarioSeedIds.firstMessageId,
+      reviewerScenarioSeedIds.secondMessageId,
+      reviewerScenarioSeedIds.reportId,
+    ];
+
+    for (const id of ids) {
+      expect(id).toMatch(UUID_RE);
+    }
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 
@@ -271,18 +303,18 @@ describe("runReviewerScenarioSeed", () => {
 
     expect(result.exitCode).toBe(0);
     expect(store.users.size).toBe(3);
-    expect(store.users.get("autotm-reviewer-buyer-1")?.role).toBe("buyer");
-    expect(store.users.get("autotm-reviewer-seller-1")?.role).toBe("seller");
+    expect(store.users.get(reviewerScenarioSeedIds.buyerIds[0])?.role).toBe("buyer");
+    expect(store.users.get(reviewerScenarioSeedIds.sellerIds[0])?.role).toBe("seller");
     expect(store.listings.size).toBe(2);
     expect(store.conversations.get(reviewerScenarioSeedIds.conversationId)).toMatchObject({
-      buyerId: "autotm-reviewer-buyer-1",
-      sellerId: "autotm-reviewer-seller-1",
-      lastMessageId: "autotm-reviewer-message-002",
+      buyerId: reviewerScenarioSeedIds.buyerIds[0],
+      sellerId: reviewerScenarioSeedIds.sellerIds[0],
+      lastMessageId: reviewerScenarioSeedIds.secondMessageId,
     });
     expect(store.participants.size).toBe(2);
     expect(store.messages.size).toBe(2);
     expect(store.reports.get(reviewerScenarioSeedIds.reportId)).toMatchObject({
-      reporterUserId: "autotm-reviewer-buyer-2",
+      reporterUserId: reviewerScenarioSeedIds.buyerIds[1],
       targetId: reviewerScenarioSeedIds.reportableListingId,
     });
   });
@@ -303,12 +335,12 @@ describe("runReviewerScenarioSeed", () => {
 
   it("refuses to create or reuse privileged reviewer accounts", async () => {
     const store = new FakeReviewerScenarioSeedStore();
-    store.users.set("autotm-reviewer-buyer-1", {
-      id: "autotm-reviewer-buyer-1",
+    store.users.set(reviewerScenarioSeedIds.buyerIds[0], {
+      id: reviewerScenarioSeedIds.buyerIds[0],
       phone: "+99365000001",
       role: "admin",
     });
-    store.usersByPhone.set("+99365000001", "autotm-reviewer-buyer-1");
+    store.usersByPhone.set("+99365000001", reviewerScenarioSeedIds.buyerIds[0]);
 
     const result = await runReviewerScenarioSeed(store, seedOptions());
 
@@ -334,9 +366,9 @@ describe("runReviewerScenarioSeed", () => {
     );
 
     expect(result.rotatedUserIds).toEqual([
-      "autotm-reviewer-buyer-1",
-      "autotm-reviewer-seller-1",
-      "autotm-reviewer-buyer-2",
+      reviewerScenarioSeedIds.buyerIds[0],
+      reviewerScenarioSeedIds.sellerIds[0],
+      reviewerScenarioSeedIds.buyerIds[1],
     ]);
     expect(store.deletedSessionUserIds).toEqual(result.rotatedUserIds);
     expect(store.invalidatedDeviceUserIds).toEqual(result.rotatedUserIds);
@@ -354,8 +386,8 @@ describe("runReviewerScenarioSeed", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.revokedUserIds).toEqual(reviewerScenarioSeedIds.userIds.slice(0, 3));
-    expect(store.users.get("autotm-reviewer-buyer-1")?.phone).toBe(
-      "revoked:autotm-reviewer-buyer-1",
+    expect(store.users.get(reviewerScenarioSeedIds.buyerIds[0])?.phone).toBe(
+      `revoked:${reviewerScenarioSeedIds.buyerIds[0]}`,
     );
     expect(store.deletedSessionUserIds).toEqual(result.revokedUserIds);
     expect(store.auditLogs.at(-1)?.action).toBe("REVIEWER_SCENARIO_REVOKE");
