@@ -1,0 +1,167 @@
+# Issue 281 production foundation evidence
+
+Secret-free continuation record for [#281](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/281).
+
+**Not ready for promotion.** Production exists, but its Postgres cleanup is
+unfinished, Redis still needs its copied snapshot removed, reviewer identities
+are not configured, and push credentials are incomplete. Keep #281 open and
+#282 blocked. No completion or production approval is recorded here.
+
+## Evidence provenance
+
+The 2026-09-13 continuation handoff reports the provider work performed from
+2026-09-05 onward. Its original scratch probes and logs were lost when `/tmp`
+was cleared. Findings below explicitly attributed to the handoff are historical
+operator reports, not fresh passing checks.
+
+The continuation read the current issue body and comments on 2026-09-13 and
+confirmed the project and both environment IDs through Railway GraphQL.
+Requests through the configured proxy failed; a direct request succeeded, but
+a subsequent direct schema query failed at TLS. Connectivity is intermittent.
+No provider mutation was performed during this continuation's initial inspection.
+
+| Resource | Identifier |
+|---|---|
+| Project | `auto-tm`, `176ddec0-dd65-4087-b82c-798599fc2ebe` |
+| Staging | `652abc79-fdb0-48b0-9f6c-ad0ff572d7b2` |
+| Current production | `c628b9bf-08ef-45f6-976f-3d646e0ebfbd` |
+| Previous empty production | `93cb9126-de04-493e-95ec-6296470c4d7d` |
+| Repository baseline | `5062815` |
+
+The previous production ID in #280's evidence identifies that drill's historical
+target. It must not be reused for current production operations. A repository
+search found that literal ID in one evidence file, not the three claimed by the
+handoff. Preserve the historical record and append a dated clarification there.
+
+## Reported provider state, awaiting fresh verification
+
+| Service | ID | Handoff state |
+|---|---|---|
+| api | `6db6f1b1-5c7a-4033-88d0-53f5f315bfc0` | Application deployment removed |
+| worker | `24aa02e0-25a9-4e80-9cc2-c1795ef82091` | Application deployment removed; push credentials incomplete |
+| admin | `69ba9f86-0000-4460-8165-de69b289b36e` | Application deployment removed |
+| web | `f3c5888b-d303-44b1-bc6e-3d775dad4639` | Application deployment removed |
+| Postgres | `30dda76c-1a50-457f-a08a-dce846eb9843` | Recovery configuration remains applied; original data directory partly deleted |
+| Redis | `bde03eb2-23df-4e3c-9fda-997621632b26` | Copied snapshot remains |
+| MinIO | `af9ecdec-433b-48f0-8457-1a13c5ab1ab7` | Three buckets bootstrapped; persistent volume |
+
+The handoff reports exactly seven production services, four production deployment
+triggers removed, four staging triggers retained, and sleep disabled for all
+production instances. These settings need fresh provider reads. Disabled sleep
+is a configuration claim; it does not mean removed applications are serving.
+
+## Duplication incident and recovery gate
+
+The handoff reports that environment duplication copied Postgres and Redis data
+from staging. Postgres skipped initialization, leaving the regenerated password
+unapplied. Both attempted passwords failed authentication. Redis loaded 14 keys
+from a recent RDB snapshot. MinIO bootstrap created three buckets; that observation
+suggests different initialization behavior, but does not establish a general
+provider guarantee that custom-image volumes are never copied.
+
+Production Postgres's original `/pgdata` contains remaining directories including
+`base/` and `global/`. Removing top-level files did not complete the wipe.
+The recovery configuration redirects `PGDATA` to
+`/var/lib/postgresql/data/pgdata-tmp` and sets `startCommand` to `sleep infinity`.
+Do not undo it until the human has finished the original data-directory cleanup.
+The handoff reports that a `startCommand: null` mutation returned success without
+clearing the field. Read the field back after any eventual correction.
+
+| Volume | Shared project-level ID | Production cleanup still required |
+|---|---|---|
+| Postgres | `2bd46ac8-731c-48c2-86a8-d512f1817c9c` | `/pgdata` and, after recovery, any throwaway directory |
+| Redis | `4d809b5a-e9fe-4f3a-8445-60f74d75a6ec` | `/dump.rdb` |
+| MinIO | `c795022f-f34d-4b87-b1ae-9b30bffa5f8f` | No wipe requested |
+
+Volume IDs are shared across environments. Never call project-wide
+`volumeDelete` or an unscoped detach to repair this production instance.
+The earlier `volumeInstanceUpdate` deletion flag did not remove files and caused
+mount conflicts; the handoff reports it reverted.
+
+Recovery requires restored SFTP access and human execution of the environment-
+scoped file deletion. The CLI refuses agent file deletion; do not remove agent
+identification variables or substitute another route to evade that restriction.
+After human confirmation, verify the files are absent before restoring `PGDATA`
+to `/var/lib/postgresql/data/pgdata` and clearing the start override. Then verify
+fresh initialization and password authentication, restart Redis and prove zero
+loaded keys, and remove any temporary public database proxy immediately after
+the authentication test. These steps remain pending, not authorized by this record.
+
+## Application deployment boundary breach
+
+The handoff records automatic application deployments after duplication at
+`2026-09-05T22:49:23Z`: worker succeeded, API failed, and admin/web slept.
+All four deployments were removed at `2026-09-05T23:00:27Z`, roughly eleven
+minutes later. A preceding `latestDeployment: null` read raced deployment creation.
+
+No deliberate exact-SHA promotion is reported, but application revisions did run
+in production. Criterion 7 is therefore **not met**. Removing deployments does
+not erase that breach. Recheck deployment history before any future readiness
+claim. No store build or submission is reported for #281.
+
+## Confirmation gates before promotion
+
+| Gate | Current evidence and required completion |
+|---|---|
+| Data isolation | Finish and verify fresh Postgres/Redis initialization. Check resolved provider references and environment ownership. Existing API/worker hostname guards reject recognizable opposite-environment names; neutral `*.railway.internal` names alone cannot prove isolation. |
+| Readiness | Repository API `/readyz` checks Postgres, Redis, and MinIO. Verify provider health path and timeout before promotion. Runtime production readiness is unproven while applications are removed. |
+| Migration authority | `railway/api.json` declares `pnpm --filter @auto-tm/db migrate:deploy` as API pre-deploy. Other application declarations have no migration command. Read back production settings; #282 must deploy API first and wait for readiness. |
+| Reviewer flags | Handoff reports mock SMS, signup off, CI OTP off, but reviewer bypass disabled with an empty account list. Criterion 4 is not met. Verify names and boolean assertions without printing values. |
+| Reviewer identity | Founder must reserve 3–5 unissueable `+993` identities with six-digit codes in the operator secret store. Verify unique entries, buyer/seller-only privileges and seed authorization; at least a buyer/seller pair must exercise the later confirmation flow. Do not put credentials in this record. |
+| Push | Handoff reports `fcm-apns` selected with incomplete credentials, so the worker cannot boot. `test` is rejected in production. On 2026-09-13 the founder deferred Apple/APNS to #282. This defers Apple proof, not the code requirement for both credential sets; production worker startup remains blocked. Android proof is not implicitly deferred or marked complete. |
+| Internal mobile hosts | `staging` and `production-smoke` share EAS `preview`. Founder selected the no-upgrade guard on 2026-09-13. ADR-0046 and the local implementation require independent production host approvals for API/WS/media. Local validation passed; provider-supplied host configuration remains pending; no remote variable change or build occurred. |
+| Store domains | ADR-0039 requires stable owned API/media domains before the later store build. Railway hosts are allowed only for internal builds. Verify the existing store-profile gate locally; domain ownership and DNS remain human gates. |
+| Persistence and exposure | Read back all production sleep settings, volume mounts, MinIO bucket policy and console exposure. Handoff reports persistence and private console, but the continuation has not reverified these. |
+| Secret inventory | Complete the names-only table below with fresh presence/shape/difference assertions. Never print raw variables or environment config. |
+
+## Secret inventory awaiting readback
+
+| Names | Owner | Handoff report / gate |
+|---|---|---|
+| `POSTGRES_PASSWORD`, derived database references | Postgres, API, worker | Rotated; authentication failed against copied cluster. Fresh initialization required. |
+| Redis credentials and derived references | Redis, API, worker | Regenerated; copied data still requires removal. |
+| MinIO root and application access/secret keys | MinIO, API, worker | Copied from staging, then rotated twice after transcript exposure. Verify distinct production credentials and working references. |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | API | Copied then rotated; verify production/staging differ and pair differs. |
+| `TOTP_SECRET_ENCRYPTION_KEY` | API | Copied then rotated; verify shape and environment separation. |
+| `SESSION_SECRET` | admin | Copied then rotated; verify presence and environment separation. |
+| `REVIEW_DEMO_ACCOUNTS_JSON` | API | Empty; founder-managed credentials required. |
+| `FCM_*`, `APNS_*` | worker | Incomplete; copied staging FCM values deleted from production. |
+
+The handoff reports FCM credentials now present on staging worker, superseding
+#279's earlier absence observation. It also reports a previously exposed staging
+Firebase service-account key requiring provider-side rotation. That human follow-up
+remains outstanding and is not a #281 deliverable. Do not read or copy the key.
+
+Other findings to carry forward: production MinIO reportedly inherits the unpinned
+`latest` image; pinning needs an operator decision. `railway environment config
+--json` prints secrets and must not be displayed. Inspect only selected metadata
+or use an in-memory filter that emits names and assertions.
+
+## Verification record
+
+- Current issue body and both comments read through authenticated GitHub CLI.
+- Current project/environment IDs verified by GraphQL; later TLS failure prevents a complete live readback.
+- Context7 `/railwayapp/docs` consulted for duplication and volume operations. Returned documentation establishes a volume-file deletion command, but did not resolve duplication or agent restrictions. Those claims remain attributed to the handoff.
+- Repository deploy declarations and API/worker environment validation inspected.
+- No new application revision, store build, or provider mutation performed during initial continuation inspection.
+- Railway CLI 5.49.2 authenticated with and without proxy variables. Direct production Postgres SFTP directory listing failed with `Disconnected`; cleanup remains blocked.
+- Expo build environment/profile behavior consulted through Context7 `/expo/expo`.
+- `pnpm test` passed, 10/10 tasks with nine cache hits; mobile ran 106 files and 889 tests. Targeted build-gate tests passed 29/29.
+- `pnpm typecheck` passed, 11/11 tasks with ten cache hits; mobile typechecking executed.
+- Expo dependency check passed after removing proxy variables for that command. Cleared iOS export and targeted ESLint passed.
+- These are local checks, not production deployment or physical-device evidence. Fixed-point code review remains pending.
+
+## Acceptance criteria status
+
+Criteria copied verbatim from the current #281 issue body. Historical reports are
+not substituted for fresh completion evidence.
+
+| # | Criterion | Status and gate |
+|---|---|---|
+| 1 | Production contains exactly API, worker, admin, web, Postgres, Redis, and persistent MinIO; no sms-gateway or phone-agent. | Reported met in handoff; fresh service/mount readback pending. |
+| 2 | All production data services are environment-local; cross-environment database/storage URLs are rejected. | Not met. Copied data cleanup and authentication pending; repeat rejection checks and verify actual resource ownership. |
+| 3 | Production has no branch autodeploy and remains manual-only. | Reported met in handoff; fresh trigger readback pending. |
+| 4 | `SMS_DRIVER=mock`, public signup off, reviewer bypass on, CI OTP response mode off, and `PUSH_TRANSPORT=fcm-apns` are verified without exposing values. | Not met. Reviewer bypass is reported disabled; founder identities, push decision and secret-free flag readback pending. |
+| 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Reported configuration met; runtime unproven. Fresh sleep, exposure, persistence and later runtime confirmation pending. |
+| 6 | Readiness, migration authority, reviewer identity constraints, stable-domain gate for the later store profile, and secret inventory are verified before promotion. | Not met. Confirmation table above remains incomplete. |
+| 7 | No application revision is promoted and no store build/submission occurs in this issue. | Not met. Duplication ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05. No store action reported; preserve breach and obtain founder disposition. |

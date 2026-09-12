@@ -5,7 +5,7 @@ The end-to-end procedure for shipping a new version of AutoTM. There are two ope
 1. **Railway era (ADR-0039):** staging + reviewer-only production until both stores approve and the TM cutover gates are met. GitHub Actions owns CI; Railway builds/deploys after CI.
 2. **TM era (ADR-0005):** permanent TM-serving production uses the air-gapped bundle procedure later in this document. Railway remains non-TM staging.
 
-Sprint 11 is in flight. Railway **staging** is live and its data plane, application deploys, and backup/restore path have been exercised — see the evidence files under [`evidence/`](evidence/). Railway **production** does not exist yet, so every production procedure below remains the target operating contract rather than evidence of a live environment.
+Sprint 11 is in flight. Railway **staging** is live and its data plane, application deploys, and backup/restore path have been exercised — see the evidence files under [`evidence/`](evidence/). Railway **production** now exists, but is not ready for promotion. The #281 continuation records unfinished copied-data cleanup, missing reviewer configuration and push credentials, and accidental application deployments during environment duplication. See [production foundation evidence](evidence/issue-281-production-foundation.md) for the current gates; the release procedure below is not proof that they passed.
 
 ## Pre-flight checklist
 
@@ -21,6 +21,46 @@ Before kicking off a release:
 - [ ] For schema-changing deploys, confirm the last successful restore drill used a staging/prod-like database + media backup less than 30 days old
 
 ## Railway era — staging and reviewer-only production
+
+### Production foundation recovery gate
+
+The #281 handoff reports that duplicating staging copied Postgres/Redis data,
+application secrets and deployment triggers, and automatically deployed the four
+application services. Do not treat environment duplication as an empty or
+inert foundation. Verify destination deployment history, triggers, secret
+separation and actual data contents before claiming isolation.
+
+The current production environment is
+`c628b9bf-08ef-45f6-976f-3d646e0ebfbd`; earlier evidence may identify the previous
+empty environment. Resolve the target before each operation. Volume IDs are
+project-level and shared between environments. Never use project-wide volume
+deletion or an unscoped detach to repair one environment.
+
+Production Postgres recovery currently depends on keeping its original data
+directory idle while a temporary `PGDATA` redirect permits a live container.
+The handoff reports SFTP volume-file access requires that live container. Do not
+restore the original data path or clear the temporary start command until the
+human has completed the scoped file cleanup and read-only verification confirms
+it. A successful configuration mutation response is insufficient; read the
+settings back before redeploying.
+
+The installed Railway CLI refuses agents permission to delete volume files.
+A human must run the reviewed, production-scoped command from an external
+terminal. Do not strip agent-identification variables to bypass this guard.
+`--volume` belongs to `volume files`, before the `delete` subcommand, and the
+production environment flag must remain present. See #281 evidence for the exact
+resource IDs and recovery order. Recheck the target state before issuing a
+destructive command, especially Redis persistence and whether the directory is
+still idle.
+
+After cleanup, verify fresh Postgres initialization and actual credential
+authentication, then Redis startup with zero copied keys. Remove any temporary
+public database proxy immediately after its probe. Recovery is incomplete until
+temporary settings and directories are removed and the results are recorded.
+
+Never display raw `railway environment config --json` or variable listings.
+Inspect metadata and names-only or pass/fail assertions through a filtered
+wrapper; these commands can otherwise expose every application secret.
 
 ### Step 1 — CI gate and revision selection
 

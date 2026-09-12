@@ -5,6 +5,7 @@ type ValidationInput = {
   apiUrl: string | undefined;
   wsUrl: string | undefined;
   mediaUrl: string | undefined;
+  productionSmokeHosts?: { api: string | undefined; ws: string | undefined; media: string | undefined };
 };
 
 type ParsedUrl = {
@@ -89,6 +90,31 @@ function requireRailwayHost(name: string, url: ParsedUrl | null, errors: string[
   }
 }
 
+function requireProductionSmokeHost(
+  name: string,
+  url: ParsedUrl | null,
+  expectedHost: string | undefined,
+  errors: string[],
+): void {
+  // These independently supplied hostnames must come from production provider
+  // readback, never from the resolved EXPO_PUBLIC_* URLs being checked.
+  if (
+    !expectedHost ||
+    !/^[a-z0-9-]+\.up\.railway\.app$/i.test(expectedHost) ||
+    expectedHost.toLowerCase().includes("staging")
+  ) {
+    errors.push(`${name} requires an approved production-smoke hostname in PRODUCTION_SMOKE_${name.replace("EXPO_PUBLIC_", "").replace("_URL", "")}_HOST`);
+    return;
+  }
+  if (
+    url &&
+    (url.parsed.hostname.toLowerCase() !== expectedHost.toLowerCase() ||
+      url.parsed.username || url.parsed.password || url.parsed.port)
+  ) {
+    errors.push(`${name} must match its approved production-smoke host without credentials or a custom port`);
+  }
+}
+
 export function validateEasBuildProfile(input: ValidationInput): string[] {
   const errors: string[] = [];
   const profile = input.profile;
@@ -121,6 +147,12 @@ export function validateEasBuildProfile(input: ValidationInput): string[] {
     requireRailwayHost("EXPO_PUBLIC_MEDIA_URL", mediaUrl, errors);
   }
 
+  if (profile === "production-smoke") {
+    requireProductionSmokeHost("EXPO_PUBLIC_API_URL", apiUrl, input.productionSmokeHosts?.api, errors);
+    requireProductionSmokeHost("EXPO_PUBLIC_WS_URL", wsUrl, input.productionSmokeHosts?.ws, errors);
+    requireProductionSmokeHost("EXPO_PUBLIC_MEDIA_URL", mediaUrl, input.productionSmokeHosts?.media, errors);
+  }
+
   return errors;
 }
 
@@ -130,5 +162,10 @@ export function validateCurrentEasBuildProfile(env: Record<string, string | unde
     apiUrl: env["EXPO_PUBLIC_API_URL"],
     wsUrl: env["EXPO_PUBLIC_WS_URL"],
     mediaUrl: env["EXPO_PUBLIC_MEDIA_URL"],
+    productionSmokeHosts: {
+      api: env["PRODUCTION_SMOKE_API_HOST"],
+      ws: env["PRODUCTION_SMOKE_WS_HOST"],
+      media: env["PRODUCTION_SMOKE_MEDIA_HOST"],
+    },
   });
 }
