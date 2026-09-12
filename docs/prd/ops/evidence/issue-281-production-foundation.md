@@ -149,7 +149,70 @@ or use an in-memory filter that emits names and assertions.
 - `pnpm test` passed, 10/10 tasks with nine cache hits; mobile ran 106 files and 889 tests. Targeted build-gate tests passed 29/29.
 - `pnpm typecheck` passed, 11/11 tasks with ten cache hits; mobile typechecking executed.
 - Expo dependency check passed after removing proxy variables for that command. Cleared iOS export and targeted ESLint passed.
+- Second continuation 2026-09-13: Railway GraphQL and CLI reachable with proxy variables removed; SFTP still fails at `ssh.railway.com`.
+- SFTP failure reproduced against a healthy staging volume and traced to local VPN TUN/fake-IP interception of port 22, not to Railway or to the recovery configuration.
+- Production service list, sleep settings, deployment state, deployment triggers and volume instances re-read through GraphQL. No mutation performed.
 - These are local checks, not production deployment or physical-device evidence. Fixed-point code review remains pending.
+
+## Second continuation readback (2026-09-13)
+
+A later session on the same day re-reached the provider and replaced several
+"pending readback" rows above with fresh reads. Connectivity changed: with the
+proxy variables removed, Railway GraphQL and the authenticated CLI both work.
+SFTP does not.
+
+### SFTP root cause identified
+
+The blocker is local, not provider-side. A VPN/proxy client is running in TUN
+plus fake-IP mode: `ssh.railway.com`, `backboard.railway.com` and `github.com`
+all resolve into the benchmarking range `198.18.0.0/15`, and five `utun`
+interfaces are up. Port 443 is forwarded, so HTTPS and GraphQL succeed. Port 22
+is accepted at TCP level but never returns an SSH banner, and `ssh` reports
+`Connection closed by 198.18.0.59 port 22`.
+
+The failure reproduces identically against a healthy **staging** volume, so it is
+neither production-specific nor caused by the recovery configuration. The earlier
+handoff attributed CLI failure to the proxy variables alone; the sharper finding
+is that unsetting them fixes GraphQL while the TUN interception continues to
+break SFTP. Clearing the volume files requires the founder to quit the VPN client
+entirely, not merely unset `HTTP_PROXY`/`HTTPS_PROXY`.
+
+### Fresh provider reads
+
+All reads below are GraphQL, read-only. No mutation was performed.
+
+Production contains exactly seven services and no `sms-gateway` or `phone-agent`.
+Sleep is disabled on every one. The four application services report no
+deployment; the three data services are running.
+
+| Service | Sleep | Latest deployment |
+|---|---|---|
+| api, worker, admin, web | disabled | none |
+| Postgres | disabled | SUCCESS, 2026-09-05T23:35:08Z |
+| Redis | disabled | SUCCESS, 2026-09-05T23:28:28Z |
+| MinIO | disabled | SUCCESS, 2026-09-05T22:59:37Z |
+
+Because the Postgres deployment is running, the SFTP failure is not an absent
+container. The recovery configuration is still applied and still required:
+`startCommand` reads `sleep infinity`, confirming the handoff's warning that the
+earlier clearing mutation did not take effect.
+
+Deployment triggers project-wide total four, all bound to staging on `main`.
+Production has zero. Criterion 3 is confirmed by fresh read.
+
+Every volume reports exactly one instance per environment, all `READY`, with the
+expected mount paths and no duplicate mounts, confirming the earlier
+`volumeInstanceUpdate` experiment was fully reverted.
+
+| Volume | Mount | Production | Staging |
+|---|---|---|---|
+| `postgres-volume-tbO8` | `/var/lib/postgresql/data` | 112 MB | 160 MB |
+| `redis-volume-YfzJ` | `/data` | 83 MB | 217 MB |
+| `minio-volume-mr74` | `/data` | 519 MB | 630 MB |
+
+Production Postgres still consumes 112 MB, consistent with the unremoved
+`base/` and `global/` directories. The cleanup in the recovery gate above remains
+outstanding and still requires a human on an unproxied network.
 
 ## Acceptance criteria status
 
@@ -158,10 +221,10 @@ not substituted for fresh completion evidence.
 
 | # | Criterion | Status and gate |
 |---|---|---|
-| 1 | Production contains exactly API, worker, admin, web, Postgres, Redis, and persistent MinIO; no sms-gateway or phone-agent. | Reported met in handoff; fresh service/mount readback pending. |
+| 1 | Production contains exactly API, worker, admin, web, Postgres, Redis, and persistent MinIO; no sms-gateway or phone-agent. | Met. Fresh 2026-09-13 read confirms exactly seven services, no `sms-gateway` or `phone-agent`, and a `READY` MinIO volume mounted at `/data`. |
 | 2 | All production data services are environment-local; cross-environment database/storage URLs are rejected. | Not met. Copied data cleanup and authentication pending; repeat rejection checks and verify actual resource ownership. |
-| 3 | Production has no branch autodeploy and remains manual-only. | Reported met in handoff; fresh trigger readback pending. |
+| 3 | Production has no branch autodeploy and remains manual-only. | Met. Fresh 2026-09-13 read confirms four project triggers, all staging on `main`, and zero production triggers. |
 | 4 | `SMS_DRIVER=mock`, public signup off, reviewer bypass on, CI OTP response mode off, and `PUSH_TRANSPORT=fcm-apns` are verified without exposing values. | Not met. Reviewer bypass is reported disabled; founder identities, push decision and secret-free flag readback pending. |
-| 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Reported configuration met; runtime unproven. Fresh sleep, exposure, persistence and later runtime confirmation pending. |
+| 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Partially met. Fresh 2026-09-13 read confirms sleep disabled on all seven services and all three volumes `READY` with expected mounts. MinIO console exposure is not reverified, and runtime remains unproven while applications are removed. |
 | 6 | Readiness, migration authority, reviewer identity constraints, stable-domain gate for the later store profile, and secret inventory are verified before promotion. | Not met. Confirmation table above remains incomplete. |
 | 7 | No application revision is promoted and no store build/submission occurs in this issue. | Not met. Duplication ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05. No store action reported; preserve breach and obtain founder disposition. |
