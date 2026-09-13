@@ -110,13 +110,13 @@ claim. No store build or submission is reported for #281.
 | Data isolation | Finish and verify fresh Postgres/Redis initialization. Check resolved provider references and environment ownership. Existing API/worker hostname guards reject recognizable opposite-environment names; neutral `*.railway.internal` names alone cannot prove isolation. |
 | Readiness | Repository API `/readyz` checks Postgres, Redis, and MinIO. Verify provider health path and timeout before promotion. Runtime production readiness is unproven while applications are removed. |
 | Migration authority | `railway/api.json` declares `pnpm --filter @auto-tm/db migrate:deploy` as API pre-deploy. Other application declarations have no migration command. Read back production settings; #282 must deploy API first and wait for readiness. |
-| Reviewer flags | Handoff reports mock SMS, signup off, CI OTP off, but reviewer bypass disabled with an empty account list. Criterion 4 is not met. Verify names and boolean assertions without printing values. |
-| Reviewer identity | Founder must reserve 3–5 unissueable `+993` identities with six-digit codes in the operator secret store. Verify unique entries, buyer/seller-only privileges and seed authorization; at least a buyer/seller pair must exercise the later confirmation flow. Do not put credentials in this record. |
-| Push | Handoff reports `fcm-apns` selected with incomplete credentials, so the worker cannot boot. `test` is rejected in production. On 2026-09-13 the founder deferred Apple/APNS to #282. This defers Apple proof, not the code requirement for both credential sets; production worker startup remains blocked. Android proof is not implicitly deferred or marked complete. |
+| Reviewer flags | **Verified 2026-09-13** by in-memory assertion over the GraphQL variable map. Mock SMS, signup off, both OTP test flags unset, reviewer bypass on, and a five-entry reviewer account list that satisfies every schema rule. Criterion 4 is met. |
+| Reviewer identity | **Shape verified, substance outstanding.** Five unique `+993` E.164 identities with unique six-digit codes are configured and stored under `~/.autotm-ops/production/`, sharing an 11-character prefix. Two gates remain: the founder has not confirmed the reserved block is unissueable by the carrier, and the reviewer scenario seed has not run — production Postgres is an empty cluster with no schema, so migrations must precede any seed, which collides with criterion 7. Do not put credentials in this record. |
+| Push | **Confirmed by fresh read 2026-09-13.** `PUSH_TRANSPORT=fcm-apns` is set on the production worker and all eight required credential variables are absent, so the worker cannot boot. Staging carries the three `FCM_*` values and no `APNS_*`. `test` is rejected outright in production. The founder deferred Apple/APNS to #282 on 2026-09-13; that defers Apple proof, not the code requirement for both credential sets. Android proof is not implicitly deferred or marked complete. |
 | Internal mobile hosts | `staging` and `production-smoke` share EAS `preview`. Founder selected the no-upgrade guard on 2026-09-13. ADR-0046 and the local implementation require independent production host approvals for API/WS/media. Local validation passed; provider-supplied host configuration remains pending; no remote variable change or build occurred. |
 | Store domains | ADR-0039 requires stable owned API/media domains before the later store build. Railway hosts are allowed only for internal builds. Verify the existing store-profile gate locally; domain ownership and DNS remain human gates. |
 | Persistence and exposure | **Verified 2026-09-13.** Fresh reads confirm sleep disabled on all seven production services, three volumes `READY` at their expected mounts, the MinIO console port unrouted, and a public-read-only bucket policy that refuses anonymous listing, writes, deletes and admin calls. Remaining item is the unpinned `latest` MinIO image, an operator decision. |
-| Secret inventory | Complete the names-only table below with fresh presence/shape/difference assertions. Never print raw variables or environment config. |
+| Secret inventory | **Completed 2026-09-13** for `api`, `worker` and `admin` by in-memory presence, length and digest-difference assertions. Every application secret differs from staging; the only identical values are `*.railway.internal` names and shared non-secret flags. Never print raw variables or environment config. |
 
 ## Secret inventory awaiting readback
 
@@ -125,11 +125,11 @@ claim. No store build or submission is reported for #281.
 | `POSTGRES_PASSWORD`, derived database references | Postgres, API, worker | Rotated; authentication failed against copied cluster. Fresh initialization required. |
 | Redis credentials and derived references | Redis, API, worker | Regenerated; copied data still requires removal. |
 | MinIO root and application access/secret keys | MinIO, API, worker | Copied from staging, then rotated twice after transcript exposure. **Distinctness verified 2026-09-13** — staging root credentials are rejected by the production origin with `InvalidAccessKeyId`, and production root credentials authenticate against it. Application-level references still ride on the API/worker revisions that #281 forbids running. |
-| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | API | Copied then rotated; verify production/staging differ and pair differs. |
-| `TOTP_SECRET_ENCRYPTION_KEY` | API | Copied then rotated; verify shape and environment separation. |
-| `SESSION_SECRET` | admin | Copied then rotated; verify presence and environment separation. |
-| `REVIEW_DEMO_ACCOUNTS_JSON` | API | Empty; founder-managed credentials required. |
-| `FCM_*`, `APNS_*` | worker | Incomplete; copied staging FCM values deleted from production. |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | API | **Verified 2026-09-13**: both differ from staging, differ from each other, and are 64 characters. |
+| `TOTP_SECRET_ENCRYPTION_KEY` | API | **Verified 2026-09-13**: 44 characters (32 bytes base64) and differs from staging. |
+| `SESSION_SECRET` | admin | **Verified 2026-09-13**: present and differs from staging. |
+| `REVIEW_DEMO_ACCOUNTS_JSON` | API | **Populated and verified 2026-09-13**: five unique `+993` E.164 phones with unique six-digit codes, differing from staging. Codes live in the operator secret store and were never printed. |
+| `FCM_*`, `APNS_*` | worker | **All eight absent on production** as of 2026-09-13, against `PUSH_TRANSPORT=fcm-apns`. Copied staging FCM values were deleted from production earlier; staging retains three `FCM_*` and no `APNS_*`. |
 
 The handoff reports FCM credentials now present on staging worker, superseding
 #279's earlier absence observation. It also reports a previously exposed staging
@@ -159,6 +159,7 @@ or use an in-memory filter that emits names and assertions.
 - SFTP failure reproduced against a healthy staging volume and traced to local VPN TUN/fake-IP interception of port 22, not to Railway or to the recovery configuration.
 - Production service list, sleep settings, deployment state, deployment triggers and volume instances re-read through GraphQL. No mutation performed.
 - Third continuation 2026-09-13: MinIO console routing, anonymous access behaviour, media inventory and credential distinctness verified read-only. No mutation, no deployment, no object write.
+- Criterion-4 flags, reviewer-account shape, cross-environment secret distinctness and push-credential absence read back on 2026-09-13 as assertions only; no raw variable value entered the transcript.
 - These are local checks, not production deployment or physical-device evidence. Fixed-point code review remains pending.
 
 ## Second continuation readback (2026-09-13)
@@ -368,6 +369,89 @@ pinning remains an operator decision that has not been made. It is not a
 criterion-5 blocker, but it is a reproducibility risk: any restart can pull a
 different build, and the environments can silently diverge.
 
+## Criterion 4 flag readback and secret inventory (2026-09-13)
+
+Variable maps were fetched through GraphQL and reduced **in memory** to
+assertions before anything reached the transcript. Non-secret operational flags
+are quoted by value; every secret is reported only as presence, length, or a
+comparison of SHA-256 digests. No raw secret was printed, and
+`railway environment config --json` / `railway variable list --kv` were not used.
+
+### The five criterion-4 flags
+
+Production `api` carries 34 variables, production `worker` 21.
+
+| Flag | Service | Read | Verdict |
+|---|---|---|---|
+| `SMS_DRIVER` | api | `mock` | Met |
+| `SIGNUPS_ENABLED` | api | `false` | Met — public signup off |
+| `REVIEW_DEMO_ACCOUNT_ENABLED` | api | `true` | Met — reviewer bypass on |
+| `OTP_TEST_MODE`, `OTP_TEST_CODE_RESPONSE` | api | both **unset** | Met — CI OTP response mode off, and `apps/api/src/env.schema.ts` additionally rejects either flag whenever `NODE_ENV` is not `test`, so the off state is fail-closed rather than merely defaulted |
+| `PUSH_TRANSPORT` | worker | `fcm-apns` | Met as a flag; see the push gate for the credential blocker |
+
+Criterion 4 is therefore **met**. Two caveats belong to other criteria, not to
+this one: the reviewer bypass flag is inert until the reviewer scenario seed
+exists, and the worker still cannot boot with `fcm-apns` selected and no
+credentials present.
+
+### Reviewer demo account shape
+
+`REVIEW_DEMO_ACCOUNTS_JSON` was parsed inside a `railway run` process against the
+production `api` service and reduced to assertions. No phone number and no code
+was printed.
+
+| Assertion | Result |
+|---|---|
+| Valid JSON array | yes |
+| Account count | 5 — inside the schema's 3–5 range |
+| Object keys | exactly `code` and `phone` |
+| Every phone matches `+993` E.164 | yes, all length 12 |
+| Phones unique | yes |
+| Longest shared phone prefix | 11 of 12 characters — a contiguous reserved block differing only in the final digit |
+| Every code exactly six digits | yes |
+| Codes unique | yes |
+
+This satisfies every rule `validateReviewerDemoAccounts` enforces. It does not
+establish that the reserved block is unissueable by the carrier, which is a
+founder confirmation, nor that the identities exist as buyer/seller users, which
+the seed must create.
+
+### Cross-environment secret distinctness
+
+Digests were computed locally and compared; only the boolean result is recorded.
+
+| Variable | Service | production vs staging |
+|---|---|---|
+| `JWT_ACCESS_SECRET` | api | differs |
+| `JWT_REFRESH_SECRET` | api | differs |
+| `JWT_ACCESS_SECRET` vs `JWT_REFRESH_SECRET` within production | api | differs |
+| `TOTP_SECRET_ENCRYPTION_KEY` | api | differs |
+| `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` | api, worker | differ |
+| `MINIO_PUBLIC_URL` | api | differs |
+| `DATABASE_URL`, `REDIS_URL` | api, worker | differ |
+| `REVIEW_DEMO_ACCOUNTS_JSON` | api | differs |
+| `SESSION_SECRET` | admin | differs |
+| `ADMIN_ORIGIN`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_MINIO_PUBLIC_URL` | admin | differ |
+
+Shapes are as expected: both JWT secrets 64 characters,
+`TOTP_SECRET_ENCRYPTION_KEY` 44 characters (32 bytes base64).
+
+Three values are **identical** across environments by design, and each is a
+private-network name rather than a credential: `MINIO_ENDPOINT` and
+`API_BASE_URL` are `*.railway.internal` origins, and `SMS_DRIVER`/`SIGNUPS_ENABLED`
+are the same flag values in both environments. A neutral internal name still
+cannot by itself prove environment-local resolution; that proof needs a running
+revision and belongs to #282.
+
+### Push credentials remain absent
+
+Production `worker` selects `fcm-apns` and is missing **all eight** variables the
+schema requires for it: `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`,
+`APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`,
+`APNS_PRODUCTION`. Staging carries the three `FCM_*` values and no `APNS_*`.
+The production worker cannot boot until at least the Android half is supplied,
+and `PUSH_TRANSPORT=test` is rejected outright when `APP_ENV=production`.
+
 ## Acceptance criteria status
 
 Criteria copied verbatim from the current #281 issue body. Historical reports are
@@ -378,7 +462,7 @@ not substituted for fresh completion evidence.
 | 1 | Production contains exactly API, worker, admin, web, Postgres, Redis, and persistent MinIO; no sms-gateway or phone-agent. | Met. Fresh 2026-09-13 read confirms exactly seven services, no `sms-gateway` or `phone-agent`, and a `READY` MinIO volume mounted at `/data`. |
 | 2 | All production data services are environment-local; cross-environment database/storage URLs are rejected. | Data-locality half **met** on 2026-09-13: Postgres re-initialised from empty with 0 user tables and working password authentication, Redis `DBSIZE` 0, and production MinIO holding 0 objects across all three buckets against staging's 76 (verified 2026-09-13). The rejection half rests on the `apps/api` and `apps/worker` hostname guards and their unit tests, not on a live production request; re-confirm once an application revision is permitted to run under #282. |
 | 3 | Production has no branch autodeploy and remains manual-only. | Met. Fresh 2026-09-13 read confirms four project triggers, all staging on `main`, and zero production triggers. |
-| 4 | `SMS_DRIVER=mock`, public signup off, reviewer bypass on, CI OTP response mode off, and `PUSH_TRANSPORT=fcm-apns` are verified without exposing values. | Not met. Reviewer bypass is reported disabled; founder identities, push decision and secret-free flag readback pending. |
+| 4 | `SMS_DRIVER=mock`, public signup off, reviewer bypass on, CI OTP response mode off, and `PUSH_TRANSPORT=fcm-apns` are verified without exposing values. | **Met** 2026-09-13. All five flags read back secret-free: `SMS_DRIVER=mock`, `SIGNUPS_ENABLED=false`, `REVIEW_DEMO_ACCOUNT_ENABLED=true`, both OTP test flags unset and fail-closed outside `NODE_ENV=test`, `PUSH_TRANSPORT=fcm-apns`. The reviewer bypass flag is inert until the seed runs and the worker still lacks push credentials; both belong to criterion 6. |
 | 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Infrastructure half **met** on 2026-09-13: sleep disabled on all seven services, all three volumes `READY` at their expected mounts, the MinIO console port unrouted with no TCP proxy, and anonymous listing/write/delete/admin all refused on the public S3 origin. Runtime behaviour during an actual review remains unproven while the application services are removed; re-confirm under #282. |
 | 6 | Readiness, migration authority, reviewer identity constraints, stable-domain gate for the later store profile, and secret inventory are verified before promotion. | Not met. Confirmation table above remains incomplete. |
 | 7 | No application revision is promoted and no store build/submission occurs in this issue. | Not met. Duplication ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05. No store action reported; preserve breach and obtain founder disposition. |
