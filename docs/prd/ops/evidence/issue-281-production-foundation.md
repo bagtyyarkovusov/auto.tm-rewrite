@@ -2,10 +2,14 @@
 
 Secret-free continuation record for [#281](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/281).
 
-**Not ready for promotion.** Production exists, but its Postgres cleanup is
-unfinished, Redis still needs its copied snapshot removed, reviewer identities
-are not configured, and push credentials are incomplete. Keep #281 open and
+**Not ready for promotion.** The duplication incident is closed — Postgres was
+wiped and re-initialised, Redis holds no keys, and production MinIO holds no
+objects. What remains open is reviewer identity and the reviewer scenario seed,
+push credentials for the worker, and the criterion-7 breach. Keep #281 open and
 #282 blocked. No completion or production approval is recorded here.
+
+Sections are appended in the order they were verified; where a later section
+contradicts an earlier one, the later section is current.
 
 ## Evidence provenance
 
@@ -111,7 +115,7 @@ claim. No store build or submission is reported for #281.
 | Push | Handoff reports `fcm-apns` selected with incomplete credentials, so the worker cannot boot. `test` is rejected in production. On 2026-09-13 the founder deferred Apple/APNS to #282. This defers Apple proof, not the code requirement for both credential sets; production worker startup remains blocked. Android proof is not implicitly deferred or marked complete. |
 | Internal mobile hosts | `staging` and `production-smoke` share EAS `preview`. Founder selected the no-upgrade guard on 2026-09-13. ADR-0046 and the local implementation require independent production host approvals for API/WS/media. Local validation passed; provider-supplied host configuration remains pending; no remote variable change or build occurred. |
 | Store domains | ADR-0039 requires stable owned API/media domains before the later store build. Railway hosts are allowed only for internal builds. Verify the existing store-profile gate locally; domain ownership and DNS remain human gates. |
-| Persistence and exposure | Read back all production sleep settings, volume mounts, MinIO bucket policy and console exposure. Handoff reports persistence and private console, but the continuation has not reverified these. |
+| Persistence and exposure | **Verified 2026-09-13.** Fresh reads confirm sleep disabled on all seven production services, three volumes `READY` at their expected mounts, the MinIO console port unrouted, and a public-read-only bucket policy that refuses anonymous listing, writes, deletes and admin calls. Remaining item is the unpinned `latest` MinIO image, an operator decision. |
 | Secret inventory | Complete the names-only table below with fresh presence/shape/difference assertions. Never print raw variables or environment config. |
 
 ## Secret inventory awaiting readback
@@ -120,7 +124,7 @@ claim. No store build or submission is reported for #281.
 |---|---|---|
 | `POSTGRES_PASSWORD`, derived database references | Postgres, API, worker | Rotated; authentication failed against copied cluster. Fresh initialization required. |
 | Redis credentials and derived references | Redis, API, worker | Regenerated; copied data still requires removal. |
-| MinIO root and application access/secret keys | MinIO, API, worker | Copied from staging, then rotated twice after transcript exposure. Verify distinct production credentials and working references. |
+| MinIO root and application access/secret keys | MinIO, API, worker | Copied from staging, then rotated twice after transcript exposure. **Distinctness verified 2026-09-13** — staging root credentials are rejected by the production origin with `InvalidAccessKeyId`, and production root credentials authenticate against it. Application-level references still ride on the API/worker revisions that #281 forbids running. |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | API | Copied then rotated; verify production/staging differ and pair differs. |
 | `TOTP_SECRET_ENCRYPTION_KEY` | API | Copied then rotated; verify shape and environment separation. |
 | `SESSION_SECRET` | admin | Copied then rotated; verify presence and environment separation. |
@@ -154,6 +158,7 @@ or use an in-memory filter that emits names and assertions.
 - Second continuation 2026-09-13: Railway GraphQL and CLI reachable with proxy variables removed; SFTP still fails at `ssh.railway.com`.
 - SFTP failure reproduced against a healthy staging volume and traced to local VPN TUN/fake-IP interception of port 22, not to Railway or to the recovery configuration.
 - Production service list, sleep settings, deployment state, deployment triggers and volume instances re-read through GraphQL. No mutation performed.
+- Third continuation 2026-09-13: MinIO console routing, anonymous access behaviour, media inventory and credential distinctness verified read-only. No mutation, no deployment, no object write.
 - These are local checks, not production deployment or physical-device evidence. Fixed-point code review remains pending.
 
 ## Second continuation readback (2026-09-13)
@@ -276,6 +281,93 @@ Both yield the image default entrypoint and Postgres starts correctly from the
 empty value, but the two environments are not byte-identical on this field. This
 is a known, deliberate difference, not drift to be silently reconciled.
 
+## MinIO exposure and media locality verified (2026-09-13)
+
+A third continuation re-reached the provider and closed the MinIO half of
+criterion 5, which the record above carried as reported-but-unverified. All
+checks below are read-only. No provider mutation, no application deployment, and
+no object write occurred. Local network conditions were unchanged: the VPN is
+still in TUN/fake-IP mode (`ssh.railway.com` resolves into `198.18.0.0/15`), so
+GraphQL and HTTPS work and SFTP/`railway ssh` remain unavailable.
+
+### Console and admin surface are not publicly routed
+
+| Read | Result |
+|---|---|
+| Production service domains | `MinIO` has exactly one generated domain, target port **9000** |
+| Production `startCommand` | `minio server /data --console-address :9001` |
+| Domain on port 9001 | none — no generated domain, no custom domain |
+| TCP proxies on the production MinIO service | none |
+| Other production domains | `api` → 3006, `admin` → 3001, `web` → 3002; `Postgres`, `Redis`, `worker` have none |
+
+Only the S3 API port is routed. The console listener exists inside the container
+on 9001 and has no ingress. This matches the `railway/minio.md` contract.
+
+### Anonymous behaviour on the public S3 origin
+
+Unauthenticated requests against the production origin:
+
+| Request | Result |
+|---|---|
+| `GET /` (ListAllMyBuckets) | `403 AccessDenied` |
+| `GET /listing-photos/?list-type=2` | `403 AccessDenied` |
+| `GET /listing-videos/?list-type=2` | `403 AccessDenied` |
+| `GET /chat-attachments/?list-type=2` | `403 AccessDenied` |
+| `GET /minio/ui/` | `403 AccessDenied`, parsed as an object key — the console is not served on 9000 |
+| `GET /minio/admin/v3/info` | `403 AccessDenied` |
+| `GET /minio/health/live` | `200` — the intended liveness path |
+| `GET /listing-photos/<absent key>` | `404 NoSuchKey` — anonymous `s3:GetObject` is granted, as the contract requires |
+| `PUT /listing-photos/<probe key>` | `403 AccessDenied` |
+| `DELETE /listing-photos/<probe key>` | `403 AccessDenied` |
+| Read back the probe key afterwards | `404 NoSuchKey` — nothing was written |
+
+Anonymous read of objects is deliberate and documented; anonymous listing,
+writing, deleting and administration are all refused. The bucket policy is
+therefore public-read-only, not public.
+
+### Media locality: production MinIO is empty
+
+Volume size alone is misleading. Production `minio-volume-mr74` reports 544 MB
+and staging 630 MB, but an empty Redis volume in the same project reports 83 MB,
+so several hundred megabytes are filesystem and MinIO internal overhead rather
+than media. An authenticated inventory settles it.
+
+Counts were taken with a throwaway read-only `ListObjectsV2` script executed
+under `railway run --service MinIO --environment <env>`, so each environment's
+own root credentials were injected into the process environment and never
+printed. The script emitted only counts, byte totals, and a SHA-256 digest over
+sorted `bucket/key:size:etag` lines.
+
+| Environment | `listing-photos` | `listing-videos` | `chat-attachments` | Total | Bytes |
+|---|---|---|---|---|---|
+| production | 0 | 0 | 0 | **0** | 0 |
+| staging | 65 | 0 | 11 | 76 | 275388 |
+
+The production digest is the SHA-256 of the empty string
+(`e3b0c442…7852b855`); staging's is `0c81d47f…6d06cd8f`. Production holds no
+staging media. Combined with the wiped Postgres and the zero Redis `DBSIZE`
+recorded above, all three production data services are now proven free of
+duplicated staging data on fresh reads.
+
+This also corrects the weak inference recorded earlier. The claim that MinIO
+"was not copied because bootstrap created three buckets" was never sound —
+idempotent bootstrap cannot distinguish creation from pre-existence in the
+record we kept. The object inventory is the direct evidence.
+
+### MinIO credentials are environment-local
+
+Running the same inventory with **staging** root credentials against the
+**production** origin fails with `InvalidAccessKeyId`. The production root
+access key is therefore distinct from staging's, not a duplication leftover. No
+credential value was read or printed.
+
+### Still open on MinIO
+
+Production MinIO runs `quay.io/minio/minio:latest`. The image is unpinned and
+pinning remains an operator decision that has not been made. It is not a
+criterion-5 blocker, but it is a reproducibility risk: any restart can pull a
+different build, and the environments can silently diverge.
+
 ## Acceptance criteria status
 
 Criteria copied verbatim from the current #281 issue body. Historical reports are
@@ -284,9 +376,9 @@ not substituted for fresh completion evidence.
 | # | Criterion | Status and gate |
 |---|---|---|
 | 1 | Production contains exactly API, worker, admin, web, Postgres, Redis, and persistent MinIO; no sms-gateway or phone-agent. | Met. Fresh 2026-09-13 read confirms exactly seven services, no `sms-gateway` or `phone-agent`, and a `READY` MinIO volume mounted at `/data`. |
-| 2 | All production data services are environment-local; cross-environment database/storage URLs are rejected. | Data-locality half **met** on 2026-09-13: Postgres re-initialised from empty with 0 user tables and working password authentication, Redis `DBSIZE` 0. The rejection half rests on the `apps/api` and `apps/worker` hostname guards and their unit tests, not on a live production request; re-confirm once an application revision is permitted to run under #282. |
+| 2 | All production data services are environment-local; cross-environment database/storage URLs are rejected. | Data-locality half **met** on 2026-09-13: Postgres re-initialised from empty with 0 user tables and working password authentication, Redis `DBSIZE` 0, and production MinIO holding 0 objects across all three buckets against staging's 76 (verified 2026-09-13). The rejection half rests on the `apps/api` and `apps/worker` hostname guards and their unit tests, not on a live production request; re-confirm once an application revision is permitted to run under #282. |
 | 3 | Production has no branch autodeploy and remains manual-only. | Met. Fresh 2026-09-13 read confirms four project triggers, all staging on `main`, and zero production triggers. |
 | 4 | `SMS_DRIVER=mock`, public signup off, reviewer bypass on, CI OTP response mode off, and `PUSH_TRANSPORT=fcm-apns` are verified without exposing values. | Not met. Reviewer bypass is reported disabled; founder identities, push decision and secret-free flag readback pending. |
-| 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Partially met. Fresh 2026-09-13 read confirms sleep disabled on all seven services and all three volumes `READY` with expected mounts. MinIO console exposure is not reverified, and runtime remains unproven while applications are removed. |
+| 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Infrastructure half **met** on 2026-09-13: sleep disabled on all seven services, all three volumes `READY` at their expected mounts, the MinIO console port unrouted with no TCP proxy, and anonymous listing/write/delete/admin all refused on the public S3 origin. Runtime behaviour during an actual review remains unproven while the application services are removed; re-confirm under #282. |
 | 6 | Readiness, migration authority, reviewer identity constraints, stable-domain gate for the later store profile, and secret inventory are verified before promotion. | Not met. Confirmation table above remains incomplete. |
 | 7 | No application revision is promoted and no store build/submission occurs in this issue. | Not met. Duplication ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05. No store action reported; preserve breach and obtain founder disposition. |
