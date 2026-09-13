@@ -452,6 +452,81 @@ schema requires for it: `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`,
 The production worker cannot boot until at least the Android half is supplied,
 and `PUSH_TRANSPORT=test` is rejected outright when `APP_ENV=production`.
 
+## Founder dispositions (2026-09-13)
+
+Two open questions from the criterion-4 readback were put to the founder and
+answered on the same day. Both are recorded here as founder decisions, with the
+kind of evidence each rests on stated plainly.
+
+### Reviewer phone block — accepted
+
+The agent flagged that the reserved `+993` block sits inside an active mobile
+range and that "unissueable" had not been positively established. The founder
+confirmed the block is acceptable: those numbers are not in the form real AutoTM
+users hold, so a collision between a reviewer identity and a real subscriber is
+not a practical risk.
+
+This is a **founder judgement about the user population**, not a carrier or
+numbering-plan confirmation. It closes the reviewer-identity question for #281
+on that basis. If the reserved set is ever rotated, `--mode seed` reuses stable
+user ids, so replacing the block later is cheap.
+
+The residual exposure, for the record: the bypass authenticates only a
+pre-existing buyer or seller, never a moderator or admin, and never creates a
+user. Should one of the reserved numbers ever reach a real subscriber, the
+consequence is bounded to a login into a seeded reviewer account.
+
+### Production FCM project — deferred to #282
+
+The founder will create a separate production Firebase project rather than reuse
+`autotm-staging`, and chose to do it under #282 rather than #281.
+
+The reasoning, recorded because it is the load-bearing part of the decision:
+
+- `PUSH_TRANSPORT=fcm-apns` requires **both** credential sets to boot. Apple is
+  already deferred to #282, so supplying `FCM_*` alone leaves the production
+  worker exactly as unbootable as it is now while adding a live production
+  credential nobody is exercising.
+- #281 cannot prove push in principle. Criterion 7 forbids promoting an
+  application revision, and a delivery proof needs a running worker, a
+  `production-smoke` build, and a physical Android device — all of which belong
+  to #282.
+- The present state is the intended fail-closed one. `apps/worker/src/env.schema.ts`
+  rejects an incomplete `fcm-apns` set at boot; a half-filled set fails the same
+  way while making the gap less legible.
+- No repository change is required to support a second project.
+  `apps/mobile/app.config.js` uses the same Android package `tm.auto.app` on every
+  EAS profile and already reads `googleServicesFile` from `GOOGLE_SERVICES_JSON`,
+  so the production project is selected by profile environment, not by code.
+
+Two follow-ups fall out of this and are **not** #281 deliverables:
+
+1. Rotate the exposed `autotm-staging` service-account key in Firebase. This is
+   independent of both issues and outstanding now.
+2. Capture "one Firebase project per environment" as an ADR extending
+   [ADR-0009](../../../adr/0009-notifications.md) and
+   [ADR-0043](../../../adr/0043-native-apns-delivery-via-node-apn.md) when the
+   production project is created. It is a decision about outbound credentials
+   and environment isolation, not an implementation detail.
+
+### Migrations and the reviewer scenario seed — deferred to #282
+
+Production Postgres is an empty cluster with no schema, so the seed cannot run
+until migrations do. Every route to migrate inside #281 is worse than waiting:
+
+| Route | Why it is rejected for #281 |
+|---|---|
+| Deploy `api` so its `railway/api.json` pre-deploy hook runs `migrate:deploy` | Promotes an application revision — a second criterion-7 breach |
+| `railway run … migrate:deploy` from an operator machine | `railway run` executes locally and production `DATABASE_URL` resolves to `postgres.railway.internal`, unreachable off the private network |
+| Public TCP proxy to production Postgres | Forbidden by the runbook and by this record; production Postgres has never been publicly exposed and must not be |
+
+#282 deploys the API first, and that deploy's pre-deploy hook is the sanctioned
+migration authority. Running migrations and then
+`pnpm --filter @auto-tm/db reviewer:scenario -- --mode seed` there uses the
+designed path instead of improvising around it. Until the seed runs,
+`REVIEW_DEMO_ACCOUNT_ENABLED=true` is inert: the bypass authenticates a
+pre-existing buyer or seller, and production has no users.
+
 ## Acceptance criteria status
 
 Criteria copied verbatim from the current #281 issue body. Historical reports are
