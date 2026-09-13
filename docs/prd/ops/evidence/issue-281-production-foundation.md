@@ -149,6 +149,8 @@ or use an in-memory filter that emits names and assertions.
 - `pnpm test` passed, 10/10 tasks with nine cache hits; mobile ran 106 files and 889 tests. Targeted build-gate tests passed 29/29.
 - `pnpm typecheck` passed, 11/11 tasks with ten cache hits; mobile typechecking executed.
 - Expo dependency check passed after removing proxy variables for that command. Cleared iOS export and targeted ESLint passed.
+- Remediation completed 2026-09-13 by an unattended operator script run from a non-agent terminal; volume-file deletion was never performed by an agent.
+- Postgres wipe, re-initialisation, password authentication, table count, and Redis `DBSIZE` verified from inside the containers over `railway ssh`, against `127.0.0.1`. No public TCP proxy was created and production Postgres was never exposed.
 - Second continuation 2026-09-13: Railway GraphQL and CLI reachable with proxy variables removed; SFTP still fails at `ssh.railway.com`.
 - SFTP failure reproduced against a healthy staging volume and traced to local VPN TUN/fake-IP interception of port 22, not to Railway or to the recovery configuration.
 - Production service list, sleep settings, deployment state, deployment triggers and volume instances re-read through GraphQL. No mutation performed.
@@ -214,6 +216,66 @@ Production Postgres still consumes 112 MB, consistent with the unremoved
 `base/` and `global/` directories. The cleanup in the recovery gate above remains
 outstanding and still requires a human on an unproxied network.
 
+## Duplication remediation completed (2026-09-13)
+
+The copied-data incident is resolved. Production Postgres and Redis now hold no
+staging data, and the recovery scaffolding is removed.
+
+### What finally worked
+
+Three provider behaviours defeated every earlier attempt. Each is a finding in
+its own right.
+
+**`startCommand` could not be cleared with JSON `null`.** `serviceInstanceUpdate`
+accepts `startCommand: null`, returns `true`, and leaves the field unchanged —
+`null` means "do not modify this field" under partial-update semantics. Passing
+an **empty string** clears it. Every prior session read the `true` and assumed
+success; the field never moved.
+
+**`railway volume files delete` cannot remove directories.** Its own help reads
+"Delete a file". This is why earlier passes removed `/pgdata`'s top-level files
+while `base/`, `global/` and every `pg_*` directory survived. The workable route
+is `railway ssh` into the container and `rm -rf` the directory, which requires
+the container to be alive — which is exactly what the `sleep infinity`
+scaffolding provided.
+
+**`railway redeploy` replays the existing deployment's configuration snapshot.**
+It does not pick up changed service settings. After `startCommand` was cleared, a
+redeploy still launched `sleep infinity` as PID 1. A deployment that reads current
+configuration must be triggered by a real configuration change; setting a variable
+to its existing value is a no-op and triggers nothing. A throwaway variable was
+set to force one deployment and deleted immediately afterwards.
+
+### Verified end state
+
+Postgres was wiped while parked on `sleep infinity` with no `postgres` process
+running, so the data directory was idle rather than racing a live server.
+
+| Check | Result |
+|---|---|
+| `/var/lib/postgresql/data/pgdata` | removed, then recreated by a first-ever `initdb` |
+| Volume root | `certs/` and `lost+found/` preserved; 18 MB → 64 KB before re-init |
+| Postgres process | running, PostgreSQL 18.6, `PG_VERSION=18` |
+| Password authentication | **succeeds** — the original #281 failure is cleared |
+| Databases | `postgres`, `railway`, `template0`, `template1` only |
+| User tables in `railway` | **0** |
+| Redis `DBSIZE` | **0** |
+| Redis restart | `keys loaded: 0` |
+| Application services | `api`, `worker`, `admin`, `web` all still report no deployment |
+
+Deleting Redis's `dump.rdb` was futile in every earlier attempt: the server runs
+with `--save 60 1` and rewrites the file from memory, so the copied keys returned
+on the next save. `FLUSHALL` followed by `SAVE` is what actually clears them. The
+same lesson as the Postgres data directory — operate on the live server's state,
+not on the file it happens to persist to.
+
+### Residual divergence to record
+
+Production Postgres `startCommand` now reads empty string; staging reads null.
+Both yield the image default entrypoint and Postgres starts correctly from the
+empty value, but the two environments are not byte-identical on this field. This
+is a known, deliberate difference, not drift to be silently reconciled.
+
 ## Acceptance criteria status
 
 Criteria copied verbatim from the current #281 issue body. Historical reports are
@@ -222,7 +284,7 @@ not substituted for fresh completion evidence.
 | # | Criterion | Status and gate |
 |---|---|---|
 | 1 | Production contains exactly API, worker, admin, web, Postgres, Redis, and persistent MinIO; no sms-gateway or phone-agent. | Met. Fresh 2026-09-13 read confirms exactly seven services, no `sms-gateway` or `phone-agent`, and a `READY` MinIO volume mounted at `/data`. |
-| 2 | All production data services are environment-local; cross-environment database/storage URLs are rejected. | Not met. Copied data cleanup and authentication pending; repeat rejection checks and verify actual resource ownership. |
+| 2 | All production data services are environment-local; cross-environment database/storage URLs are rejected. | Data-locality half **met** on 2026-09-13: Postgres re-initialised from empty with 0 user tables and working password authentication, Redis `DBSIZE` 0. The rejection half rests on the `apps/api` and `apps/worker` hostname guards and their unit tests, not on a live production request; re-confirm once an application revision is permitted to run under #282. |
 | 3 | Production has no branch autodeploy and remains manual-only. | Met. Fresh 2026-09-13 read confirms four project triggers, all staging on `main`, and zero production triggers. |
 | 4 | `SMS_DRIVER=mock`, public signup off, reviewer bypass on, CI OTP response mode off, and `PUSH_TRANSPORT=fcm-apns` are verified without exposing values. | Not met. Reviewer bypass is reported disabled; founder identities, push decision and secret-free flag readback pending. |
 | 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Partially met. Fresh 2026-09-13 read confirms sleep disabled on all seven services and all three volumes `READY` with expected mounts. MinIO console exposure is not reverified, and runtime remains unproven while applications are removed. |
