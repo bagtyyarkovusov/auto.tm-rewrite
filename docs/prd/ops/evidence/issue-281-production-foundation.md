@@ -115,7 +115,7 @@ claim. No store build or submission is reported for #281.
 | Push | **Confirmed by fresh read 2026-09-13.** `PUSH_TRANSPORT=fcm-apns` is set on the production worker and all eight required credential variables are absent, so the worker cannot boot. Staging carries the three `FCM_*` values and no `APNS_*`. `test` is rejected outright in production. The founder deferred Apple/APNS to #282 on 2026-09-13; that defers Apple proof, not the code requirement for both credential sets. Android proof is not implicitly deferred or marked complete. |
 | Internal mobile hosts | `staging` and `production-smoke` share EAS `preview`. Founder selected the no-upgrade guard on 2026-09-13. ADR-0046 and the local implementation require independent production host approvals for API/WS/media. Local validation passed; provider-supplied host configuration remains pending; no remote variable change or build occurred. |
 | Store domains | ADR-0039 requires stable owned API/media domains before the later store build. Railway hosts are allowed only for internal builds. Verify the existing store-profile gate locally; domain ownership and DNS remain human gates. |
-| Persistence and exposure | **Verified 2026-09-13.** Fresh reads confirm sleep disabled on all seven production services, three volumes `READY` at their expected mounts, the MinIO console port unrouted, and a public-read-only bucket policy that refuses anonymous listing, writes, deletes and admin calls. Remaining item is the unpinned `latest` MinIO image, an operator decision. |
+| Persistence and exposure | **Verified 2026-09-13, closed 2026-09-14.** Fresh reads confirm sleep disabled on all seven production services, three volumes `READY` at their expected mounts, the MinIO console port unrouted, and a public-read-only bucket policy that refuses anonymous listing, writes, deletes and admin calls. The MinIO image is now pinned to the release already running. |
 | Secret inventory | **Completed 2026-09-13** for `api`, `worker` and `admin` by in-memory presence, length and digest-difference assertions. Every application secret differs from staging; the only identical values are `*.railway.internal` names and shared non-secret flags. Never print raw variables or environment config. |
 
 ## Secret inventory awaiting readback
@@ -362,12 +362,40 @@ Running the same inventory with **staging** root credentials against the
 access key is therefore distinct from staging's, not a duplication leftover. No
 credential value was read or printed.
 
-### Still open on MinIO
+### Image pinned (2026-09-14)
 
-Production MinIO runs `quay.io/minio/minio:latest`. The image is unpinned and
-pinning remains an operator decision that has not been made. It is not a
-criterion-5 blocker, but it is a reproducibility risk: any restart can pull a
-different build, and the environments can silently diverge.
+Production MinIO previously ran `quay.io/minio/minio:latest`, so any restart
+could pull a different build. The founder authorised pinning it.
+
+The running build was identified before choosing a tag, so the pin records the
+version already in production rather than performing a blind upgrade. A signed
+`GET /minio/admin/v3/info` issued under `railway run` with the production root
+credentials reported `mode: online`, one server, `state: online`, version
+`2025-09-07T16:13:09Z`, commit `07c3a429bfed`. Credentials were supplied by the
+provider to the process and never printed.
+
+| Step | Result |
+|---|---|
+| Running version before the change | `2025-09-07T16:13:09Z` |
+| Tag existence checked on quay.io | `RELEASE.2025-09-07T16-13-09Z`, digest `sha256:14cea493d9a34af3…`, not expired |
+| `serviceInstanceUpdate` | returned `true` — meaningless on its own, per the `startCommand` finding above |
+| Configuration read back | `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` |
+| `startCommand` after the change | unchanged, `minio server /data --console-address :9001` |
+| `latestDeployment` after the change | unchanged — `880ac266…`, `SUCCESS`, 2026-09-05T22:59:37Z |
+| `unmergedChangesCount` | `null` — nothing left staged |
+
+No deployment was triggered. The pin takes effect on the next MinIO deployment,
+and because the pinned tag is the build already running, that deployment will
+not be an upgrade. Forcing a restart now would have proven nothing and risked a
+production data service for no gain. This is the only provider mutation
+performed under #281 after the duplication remediation, and it touches no
+application service, so criterion 7 is unaffected.
+
+**Divergence to note:** staging MinIO still runs `quay.io/minio/minio:latest`.
+Pinning it is a separate operator decision outside #281's scope. Leaving it
+unpinned means staging can drift onto a newer MinIO than production, which
+inverts the usual safety order — staging should lead, but it should lead
+deliberately.
 
 ## Criterion 4 flag readback and secret inventory (2026-09-13)
 
