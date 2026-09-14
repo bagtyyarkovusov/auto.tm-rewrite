@@ -114,7 +114,7 @@ claim. No store build or submission is reported for #281.
 | Reviewer identity | **Shape verified; block accepted by the founder; seed deferred.** Five unique `+993` E.164 identities with unique six-digit codes are configured and stored under `~/.autotm-ops/production/`, sharing an 11-character prefix. The founder accepted the reserved block on 2026-09-13 on the grounds that real users do not hold numbers of that form — a judgement about the user population, not a carrier confirmation. The reviewer scenario seed has not run — production Postgres is an empty cluster with no schema, so migrations must precede any seed, which collides with criterion 7. Do not put credentials in this record. |
 | Push | **Confirmed by fresh read 2026-09-13.** `PUSH_TRANSPORT=fcm-apns` is set on the production worker and all eight required credential variables are absent, so the worker cannot boot. Staging carries the three `FCM_*` values and no `APNS_*`. `test` is rejected outright in production. The founder deferred Apple/APNS to #282 on 2026-09-13; that defers Apple proof, not the code requirement for both credential sets. Android proof is not implicitly deferred or marked complete. |
 | Internal mobile hosts | `staging` and `production-smoke` share EAS `preview`. Founder selected the no-upgrade guard on 2026-09-13. ADR-0046 and the local implementation require independent production host approvals for API/WS/media. Local validation passed; provider-supplied host configuration remains pending; no remote variable change or build occurred. |
-| Store domains | ADR-0039 requires stable owned API/media domains before the later store build. Railway hosts are allowed only for internal builds. Verify the existing store-profile gate locally; domain ownership and DNS remain human gates. |
+| Store domains | ADR-0039 requires stable owned API/media domains before the later store build. Railway hosts are allowed only for internal builds. **Local gate verified 2026-09-14** — `easBuildProfileValidation.spec.ts` proves the `production` profile accepts only HTTPS/WSS `auto.tm` and `*.auto.tm` and rejects Railway-generated hosts, localhost, IP literals and insecure protocols. Domain ownership and DNS remain human gates and are **not** satisfied: the production readback above shows Railway-generated domains only and no custom domain on any service. Registration status of `auto.tm` itself was not checked under #281. The gate is therefore proven in code and unsatisfied in configuration. |
 | Persistence and exposure | **Verified 2026-09-13, closed 2026-09-14.** Fresh reads confirm sleep disabled on all seven production services, three volumes `READY` at their expected mounts, the MinIO console port unrouted, and a public-read-only bucket policy that refuses anonymous listing, writes, deletes and admin calls. The MinIO image is now pinned to the release already running. |
 | Secret inventory | **Completed 2026-09-13** for `api`, `worker` and `admin` by in-memory presence, length and digest-difference assertions. Every application secret differs from staging; the only identical values are `*.railway.internal` names and shared non-secret flags. Never print raw variables or environment config. |
 
@@ -329,7 +329,8 @@ therefore public-read-only, not public.
 ### Media locality: production MinIO is empty
 
 Volume size alone is misleading. Production `minio-volume-mr74` reports 544 MB
-and staging 630 MB, but an empty Redis volume in the same project reports 83 MB,
+at this read and staging 630 MB — the 519 MB in the earlier fresh-read table is
+the same volume at an earlier point the same day, not a conflicting measurement. But an empty Redis volume in the same project reports 83 MB,
 so several hundred megabytes are filesystem and MinIO internal overhead rather
 than media. An authenticated inventory settles it.
 
@@ -435,7 +436,7 @@ was printed.
 | Object keys | exactly `code` and `phone` |
 | Every phone matches `+993` E.164 | yes, all length 12 |
 | Phones unique | yes |
-| Longest shared phone prefix | 11 of 12 characters — a contiguous reserved block differing only in the final digit |
+| Shared phone prefix | all five sit inside one contiguous reserved block; the block's width is deliberately not recorded here, since this file is public |
 | Every code exactly six digits | yes |
 | Codes unique | yes |
 
