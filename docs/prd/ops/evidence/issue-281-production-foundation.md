@@ -536,11 +536,12 @@ than inferring it.
 None of this happens under #281. Criterion 7 forbids it, and the sequence above
 is recorded here so #282 inherits it rather than re-deriving it.
 
-## Founder dispositions (2026-09-13)
+## Founder dispositions
 
-Two open questions from the criterion-4 readback were put to the founder and
-answered on the same day. Both are recorded here as founder decisions, with the
-kind of evidence each rests on stated plainly.
+Open questions were put to the founder and answered on the dates below. Each is
+recorded as a founder decision, with the kind of evidence it rests on stated
+plainly. Two arose from the criterion-4 readback, one from criterion 6, and the
+criterion-7 disposition was added on 2026-09-14.
 
 ### Reviewer phone block — accepted
 
@@ -611,6 +612,40 @@ designed path instead of improvising around it. Until the seed runs,
 `REVIEW_DEMO_ACCOUNT_ENABLED=true` is inert: the bypass authenticates a
 pre-existing buyer or seller, and production has no users.
 
+### Criterion 7 — breach accepted as recorded, with a forward gate (2026-09-14)
+
+Criterion 7 reads "No application revision is promoted and no store build/submission
+occurs in this issue." Its store half is met. Its promotion half is not: duplicating
+staging copied staging's deployment triggers, those triggers fired on their own at
+`2026-09-05T22:49:23Z`, and four application deployments existed until
+`23:00:27Z`. No promotion command was ever issued.
+
+The founder accepted the breach on 2026-09-14 rather than treating it as a bar to
+the next slice. The reasoning recorded: the deployments were triggered by copied
+configuration rather than by an act of promotion, they lasted roughly eleven
+minutes, all four were removed, production now carries zero branch triggers, and
+no store build or submission occurred. Criterion 7 stays marked **not met** — this
+disposition governs what the unmet state means for the sprint, and does not alter
+the criterion or claim it was satisfied.
+
+**This is a founder judgement on a self-reported incident, not a verified finding.**
+Per the evidence-provenance section above, the breach facts come from the
+2026-09-13 continuation handoff, whose original probes and logs were lost when
+`/tmp` was cleared. `deploymentLogs` over GraphQL returns `Not Authorized` with the
+CLI token, the CLI's own historical logs for deployments of that age have expired,
+and the deployments themselves were deleted. The incident is therefore very likely
+no longer independently verifiable. It is preserved because a session reporting its
+own boundary violation is credible precisely for being self-incriminating, not
+because it was confirmed by a fresh read.
+
+The accompanying gate is consequently **forward-looking only**. The instruction
+elsewhere in this file to "recheck deployment history before any future readiness
+claim" cannot retroactively confirm 2026-09-05; it binds #282 onward. #282 must
+read production deployment history and trigger configuration immediately before its
+first promotion and record the result, so that any revision found running in
+production is either an accounted-for promotion or a new incident. That gate is
+recorded in the deployment runbook.
+
 ## Acceptance criteria status
 
 Criteria copied verbatim from the current #281 issue body. Historical reports are
@@ -624,4 +659,4 @@ not substituted for fresh completion evidence.
 | 4 | `SMS_DRIVER=mock`, public signup off, reviewer bypass on, CI OTP response mode off, and `PUSH_TRANSPORT=fcm-apns` are verified without exposing values. | **Met** 2026-09-13. All five flags read back secret-free: `SMS_DRIVER=mock`, `SIGNUPS_ENABLED=false`, `REVIEW_DEMO_ACCOUNT_ENABLED=true`, both OTP test flags unset and fail-closed outside `NODE_ENV=test`, `PUSH_TRANSPORT=fcm-apns`. The reviewer bypass flag is inert until the seed runs and the worker still lacks push credentials; both belong to criterion 6. |
 | 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Infrastructure half **met** on 2026-09-13: sleep disabled on all seven services, all three volumes `READY` at their expected mounts, the MinIO console port unrouted with no TCP proxy, and anonymous listing/write/delete/admin all refused on the public S3 origin. Runtime behaviour during an actual review remains unproven while the application services are removed; re-confirm under #282. |
 | 6 | Readiness, migration authority, reviewer identity constraints, stable-domain gate for the later store profile, and secret inventory are verified before promotion. | Partially met. Secret inventory is complete, reviewer identity shape is verified and the reserved block is accepted by the founder. Still open and deferred to #282 by founder decision: migrations plus the reviewer scenario seed, production push credentials, and the runtime readiness and stable-domain gates, all of which need a promoted revision that criterion 7 forbids here. |
-| 7 | No application revision is promoted and no store build/submission occurs in this issue. | Not met. Duplication ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05. No store action reported; preserve breach and obtain founder disposition. |
+| 7 | No application revision is promoted and no store build/submission occurs in this issue. | **Not met, breach accepted by the founder 2026-09-14.** Copied deployment triggers ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05; no promotion command was issued. No store action. The status stands as not met and is not reinterpreted; see the criterion-7 disposition above for the reasoning, the self-reported basis, and the forward-only gate on #282. |

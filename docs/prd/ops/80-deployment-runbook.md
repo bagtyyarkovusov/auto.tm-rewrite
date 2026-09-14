@@ -179,11 +179,12 @@ the refresh token in the operator secret store.
 
 ### Step 4 — Manual production deploy
 
-1. Select the staging-proven SHA; do not deploy an unverified moving branch head.
-2. Confirm the stable AutoTM-owned API/media domains when producing a store-candidate binary. Railway generated domains are acceptable only for staging/internal builds.
-3. Confirm production-only secret references and feature flags without printing their values.
-4. Approve the production deployment manually.
-5. Repeat the integrated reviewer smoke against production and record SHA, deployment/build identifiers, migration state, timestamps, and result.
+1. **Read production deployment history and trigger configuration before promoting, and record the result.** Every revision found running in production must be either an accounted-for promotion from this runbook or a new incident. #281 established why: copied deployment triggers ran four application revisions in production on 2026-09-05 without any promotion command, and a `latestDeployment: null` read taken moments earlier raced their creation — so a single "nothing is deployed" read is not evidence. Confirm zero branch triggers in the same check. This gate is forward-looking; it cannot confirm anything about 2026-09-05.
+2. Select the staging-proven SHA; do not deploy an unverified moving branch head.
+3. Confirm the stable AutoTM-owned API/media domains when producing a store-candidate binary. Railway generated domains are acceptable only for staging/internal builds.
+4. Confirm production-only secret references and feature flags without printing their values.
+5. Approve the production deployment manually.
+6. Repeat the integrated reviewer smoke against production and record SHA, deployment/build identifiers, migration state, timestamps, and result.
 
 Production remains reviewer-only: 3–5 reserved buyer/seller demo accounts, no real users, no real SMS, and no admin-capable reviewer identity.
 
