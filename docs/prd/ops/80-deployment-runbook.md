@@ -5,7 +5,7 @@ The end-to-end procedure for shipping a new version of AutoTM. There are two ope
 1. **Railway era (ADR-0039):** staging + reviewer-only production until both stores approve and the TM cutover gates are met. GitHub Actions owns CI; Railway builds/deploys after CI.
 2. **TM era (ADR-0005):** permanent TM-serving production uses the air-gapped bundle procedure later in this document. Railway remains non-TM staging.
 
-Sprint 11 is in flight. Railway **staging** is live and its data plane, application deploys, and backup/restore path have been exercised — see the evidence files under [`evidence/`](evidence/). Railway **production** does not exist yet, so every production procedure below remains the target operating contract rather than evidence of a live environment.
+Sprint 11 is in flight. Railway **staging** is live and its data plane, application deploys, and backup/restore path have been exercised — see the evidence files under [`evidence/`](evidence/). Railway **production** now exists, but is not ready for promotion. The duplication cleanup completed on 2026-09-13 — production Postgres and Redis are verified empty and reviewer flags read back correct — while production push credentials, migrations, the reviewer seed, and runtime readiness remain open and are deferred to #282. Application revisions did run in production during the duplication incident; that breach is recorded, not erased. See [production foundation evidence](evidence/issue-281-production-foundation.md) for the current gates; the release procedure below is not proof that they passed.
 
 ## Pre-flight checklist
 
@@ -21,6 +21,46 @@ Before kicking off a release:
 - [ ] For schema-changing deploys, confirm the last successful restore drill used a staging/prod-like database + media backup less than 30 days old
 
 ## Railway era — staging and reviewer-only production
+
+### Production foundation: what duplication taught us
+
+**The recovery itself is complete** — see [#281 evidence](evidence/issue-281-production-foundation.md)
+for the verified end state. The rules below are the durable lessons; they apply to
+any future environment duplication, not to an outstanding cleanup.
+
+Duplicating staging copied Postgres/Redis data, application secrets and deployment
+triggers, and automatically deployed the four application services. Do not treat
+environment duplication as an empty or inert foundation. Verify destination
+deployment history, triggers, secret separation and actual data contents before
+claiming isolation.
+
+The current production environment is
+`c628b9bf-08ef-45f6-976f-3d646e0ebfbd`; earlier evidence may identify the previous
+empty environment. Resolve the target before each operation. Volume IDs are
+project-level and shared between environments. Never use project-wide volume
+deletion or an unscoped detach to repair one environment.
+
+Operate on the live server's state, not on the file it persists to. Park Postgres
+on `sleep infinity` so the data directory is idle rather than racing a live server
+before touching it. Deleting Redis's `dump.rdb` is futile while the server runs
+with `--save 60 1` — it rewrites the file from memory, so `FLUSHALL` then `SAVE` is
+what actually clears copied keys. A successful configuration mutation response is
+insufficient; read the settings back before redeploying.
+
+The installed Railway CLI refuses agents permission to delete volume files.
+A human must run the reviewed, production-scoped command from an external
+terminal. Do not strip agent-identification variables to bypass this guard.
+`--volume` belongs to `volume files`, before the `delete` subcommand, and the
+production environment flag must remain present.
+
+After any such cleanup, verify fresh Postgres initialization and actual credential
+authentication, then Redis startup with zero copied keys. Remove any temporary
+public database proxy immediately after its probe. Recovery is incomplete until
+temporary settings and directories are removed and the results are recorded.
+
+Never display raw `railway environment config --json` or variable listings.
+Inspect metadata and names-only or pass/fail assertions through a filtered
+wrapper; these commands can otherwise expose every application secret.
 
 ### Step 1 — CI gate and revision selection
 

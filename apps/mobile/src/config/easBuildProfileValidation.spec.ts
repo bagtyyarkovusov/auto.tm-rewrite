@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateEasBuildProfile } from "./easBuildProfileValidation";
+import { validateCurrentEasBuildProfile, validateEasBuildProfile } from "./easBuildProfileValidation";
 
 describe("validateEasBuildProfile", () => {
   it("allows development without remote build URLs", () => {
@@ -77,5 +77,60 @@ describe("validateEasBuildProfile", () => {
       "EXPO_PUBLIC_WS_URL is required",
       "EXPO_PUBLIC_MEDIA_URL is required",
     ]);
+  });
+});
+
+
+describe("production-smoke environment isolation", () => {
+  const productionEnv = {
+    EAS_BUILD_PROFILE: "production-smoke",
+    EXPO_PUBLIC_API_URL: "https://api-production-example.up.railway.app/api/v1",
+    EXPO_PUBLIC_WS_URL: "wss://api-production-example.up.railway.app/ws/chat",
+    EXPO_PUBLIC_MEDIA_URL: "https://media-production-example.up.railway.app",
+    PRODUCTION_SMOKE_API_HOST: "api-production-example.up.railway.app",
+    PRODUCTION_SMOKE_WS_HOST: "api-production-example.up.railway.app",
+    PRODUCTION_SMOKE_MEDIA_HOST: "media-production-example.up.railway.app",
+  };
+
+  it("accepts independently approved production API, websocket and media hosts", () => {
+    expect(validateCurrentEasBuildProfile(productionEnv)).toEqual([]);
+  });
+
+  it.each(["API", "WS", "MEDIA"])("rejects a staging %s host even when the other URLs are production", (service) => {
+    const name = `EXPO_PUBLIC_${service}_URL`;
+    const protocol = service === "WS" ? "wss" : "https";
+    const errors = validateCurrentEasBuildProfile({
+      ...productionEnv,
+      [name]: `${protocol}://api-staging-example.up.railway.app`,
+    });
+    expect(errors).toEqual([`${name} must match its approved production-smoke host without credentials or a custom port`]);
+  });
+
+  it.each(["API", "WS", "MEDIA"])("requires independent approval for the %s host", (service) => {
+    expect(validateCurrentEasBuildProfile({
+      ...productionEnv,
+      [`PRODUCTION_SMOKE_${service}_HOST`]: undefined,
+    })).toHaveLength(1);
+  });
+
+  it.each([
+    "api-staging-example.up.railway.app",
+    "https://api-production-example.up.railway.app",
+    "api-production-example.up.railway.app.evil.example",
+    "api-production-example.up.railway.app:443",
+  ])("rejects an invalid or staging approval host %s", (host) => {
+    expect(validateCurrentEasBuildProfile({ ...productionEnv, PRODUCTION_SMOKE_API_HOST: host })).not.toEqual([]);
+  });
+
+  it.each([
+    "https://different-environment.up.railway.app/api/v1",
+    "https://user:password@api-production-example.up.railway.app/api/v1",
+    "https://api-production-example.up.railway.app:8443/api/v1",
+    "https://api-production-example.up.railway.app.evil.example/api/v1",
+  ])("rejects an unapproved origin %s without echoing its value", (url) => {
+    const errors = validateCurrentEasBuildProfile({ ...productionEnv, EXPO_PUBLIC_API_URL: url });
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.join(" ")).not.toContain(url);
+    expect(errors.join(" ")).not.toContain("user:password");
   });
 });

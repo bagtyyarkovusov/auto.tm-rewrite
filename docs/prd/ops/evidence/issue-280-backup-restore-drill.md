@@ -417,3 +417,13 @@ same commit. The divergences, one line each:
   — the media backup/restore tooling exercised here.
 - `packages/db/src/reviewer-scenario-seed.ts` — the fixed reviewer-scenario
   UUIDs the integrity digests are computed over.
+
+
+## 2026-09-13 production identifier clarification
+
+The production ID above identifies the empty environment checked during this
+restore drill. #281 subsequently established production as
+`c628b9bf-08ef-45f6-976f-3d646e0ebfbd`, confirmed through GraphQL in the
+2026-09-13 continuation. Do not reuse the historical ID for current operations.
+This does not revise the drill's observation that its production target was
+untouched. Current foundation gates live in [#281 evidence](issue-281-production-foundation.md).

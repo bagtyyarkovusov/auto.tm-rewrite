@@ -24,6 +24,20 @@ between the two is an operator finding — nothing reconciles it automatically.
 | `admin.json` | `admin` | `infra/docker/admin.Dockerfile` | `node apps/admin/server.js` | — | `/healthz` (dependency-free) |
 | `web.json` | `web` | `infra/docker/web.Dockerfile` | `node apps/web/server.js` | — | `/healthz` (dependency-free) |
 
+## Production overrides and verification
+
+The JSON files retain the staging sleep settings. For production, apply
+`sleepApplication=false` to all seven service instances, including admin and
+web whose JSON declarations use `true` for staging. Every other declared
+application build/start/pre-deploy/health/restart setting carries over unless a
+reviewed change explicitly replaces it. Record provider readback per environment;
+these files do not apply any settings automatically.
+
+Production foundation status and outstanding verification live in
+[#281 evidence](../docs/prd/ops/evidence/issue-281-production-foundation.md).
+The existence of service instances does not establish readiness or authorize
+an application deployment. Production must have no branch deployment triggers.
+
 ## Migration authority
 
 `api` is the **sole** migration authority. Its pre-deploy command runs

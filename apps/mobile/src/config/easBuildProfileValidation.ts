@@ -5,6 +5,7 @@ type ValidationInput = {
   apiUrl: string | undefined;
   wsUrl: string | undefined;
   mediaUrl: string | undefined;
+  productionSmokeHosts?: { api: string | undefined; ws: string | undefined; media: string | undefined };
 };
 
 type ParsedUrl = {
@@ -89,6 +90,37 @@ function requireRailwayHost(name: string, url: ParsedUrl | null, errors: string[
   }
 }
 
+function isApprovableRailwayHost(hostname: string): boolean {
+  // Stricter than isRailwayHost: an approval names exactly one Railway service
+  // label, so bare `up.railway.app` and multi-label hosts are both refused.
+  return isRailwayHost(hostname) && /^[a-z0-9-]+\.up\.railway\.app$/.test(hostname);
+}
+
+function requireProductionSmokeHost(
+  name: string,
+  approvalName: string,
+  url: ParsedUrl | null,
+  expectedHost: string | undefined,
+  errors: string[],
+): void {
+  // Approvals must come from production provider readback, never from the
+  // resolved EXPO_PUBLIC_* URLs being checked. An approval is a bare hostname:
+  // no scheme, no port, no path.
+  const approvedHost = expectedHost?.toLowerCase();
+  if (!approvedHost || !isApprovableRailwayHost(approvedHost) || approvedHost.includes("staging")) {
+    errors.push(`${name} requires an approved production-smoke hostname in ${approvalName}`);
+    return;
+  }
+
+  if (
+    url &&
+    (url.parsed.hostname.toLowerCase() !== approvedHost ||
+      url.parsed.username || url.parsed.password || url.parsed.port)
+  ) {
+    errors.push(`${name} must match its approved production-smoke host without credentials or a custom port`);
+  }
+}
+
 export function validateEasBuildProfile(input: ValidationInput): string[] {
   const errors: string[] = [];
   const profile = input.profile;
@@ -121,6 +153,13 @@ export function validateEasBuildProfile(input: ValidationInput): string[] {
     requireRailwayHost("EXPO_PUBLIC_MEDIA_URL", mediaUrl, errors);
   }
 
+  if (profile === "production-smoke") {
+    const hosts = input.productionSmokeHosts;
+    requireProductionSmokeHost("EXPO_PUBLIC_API_URL", "PRODUCTION_SMOKE_API_HOST", apiUrl, hosts?.api, errors);
+    requireProductionSmokeHost("EXPO_PUBLIC_WS_URL", "PRODUCTION_SMOKE_WS_HOST", wsUrl, hosts?.ws, errors);
+    requireProductionSmokeHost("EXPO_PUBLIC_MEDIA_URL", "PRODUCTION_SMOKE_MEDIA_HOST", mediaUrl, hosts?.media, errors);
+  }
+
   return errors;
 }
 
@@ -130,5 +169,10 @@ export function validateCurrentEasBuildProfile(env: Record<string, string | unde
     apiUrl: env["EXPO_PUBLIC_API_URL"],
     wsUrl: env["EXPO_PUBLIC_WS_URL"],
     mediaUrl: env["EXPO_PUBLIC_MEDIA_URL"],
+    productionSmokeHosts: {
+      api: env["PRODUCTION_SMOKE_API_HOST"],
+      ws: env["PRODUCTION_SMOKE_WS_HOST"],
+      media: env["PRODUCTION_SMOKE_MEDIA_HOST"],
+    },
   });
 }

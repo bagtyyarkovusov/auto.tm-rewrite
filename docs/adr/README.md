@@ -51,6 +51,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0043](0043-native-apns-delivery-via-node-apn.md) | Native APNS delivery via node-apn, not firebase-admin (supersedes ADR-0009's firebase-admin-for-both clause and its `PUSH_TRANSPORT` value list) | Accepted | 2026-09-03 |
 | [0044](0044-railway-deploy-settings-live-provider-side.md) | Railway deploy settings live provider-side; `railway/*.json` is a declared-state record only (corrects ADR-0039's config-as-code assumption) | Accepted | 2026-09-05 |
 | [0045](0045-first-admin-bootstrap-in-signups-disabled-environments.md) | The first admin in a signups-disabled environment is bootstrapped by break-glass identity insert, never by lifting the signup flag | Accepted | 2026-09-06 |
+| [0046](0046-production-smoke-host-approval.md) | Approve production-smoke hosts independently of the shared EAS `preview` URLs | Accepted | 2026-09-13 |
 
 ## Per-app ADRs
 
