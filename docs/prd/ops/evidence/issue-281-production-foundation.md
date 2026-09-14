@@ -109,7 +109,7 @@ claim. No store build or submission is reported for #281.
 |---|---|
 | Data isolation | Finish and verify fresh Postgres/Redis initialization. Check resolved provider references and environment ownership. Existing API/worker hostname guards reject recognizable opposite-environment names; neutral `*.railway.internal` names alone cannot prove isolation. |
 | Readiness | Repository API `/readyz` checks Postgres, Redis, and MinIO. Verify provider health path and timeout before promotion. Runtime production readiness is unproven while applications are removed. |
-| Migration authority | `railway/api.json` declares `pnpm --filter @auto-tm/db migrate:deploy` as API pre-deploy. Other application declarations have no migration command. Read back production settings; #282 must deploy API first and wait for readiness. |
+| Migration authority | **Read back 2026-09-14.** Production `api` carries `pnpm --filter @auto-tm/db migrate:deploy` as its pre-deploy command with `/readyz` on a 120 s timeout; `worker`, `admin` and `web` carry none. Staging reads identically. #282 must still deploy API first and wait for readiness. |
 | Reviewer flags | **Verified 2026-09-13** by in-memory assertion over the GraphQL variable map. Mock SMS, signup off, both OTP test flags unset, reviewer bypass on, and a five-entry reviewer account list that satisfies every schema rule. Criterion 4 is met. |
 | Reviewer identity | **Shape verified; block accepted by the founder; seed deferred.** Five unique `+993` E.164 identities with unique six-digit codes are configured and stored under `~/.autotm-ops/production/`, sharing an 11-character prefix. The founder accepted the reserved block on 2026-09-13 on the grounds that real users do not hold numbers of that form — a judgement about the user population, not a carrier confirmation. The reviewer scenario seed has not run — production Postgres is an empty cluster with no schema, so migrations must precede any seed, which collides with criterion 7. Do not put credentials in this record. |
 | Push | **Confirmed by fresh read 2026-09-13.** `PUSH_TRANSPORT=fcm-apns` is set on the production worker and all eight required credential variables are absent, so the worker cannot boot. Staging carries the three `FCM_*` values and no `APNS_*`. `test` is rejected outright in production. The founder deferred Apple/APNS to #282 on 2026-09-13; that defers Apple proof, not the code requirement for both credential sets. Android proof is not implicitly deferred or marked complete. |
@@ -480,6 +480,60 @@ schema requires for it: `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`,
 `APNS_PRODUCTION`. Staging carries the three `FCM_*` values and no `APNS_*`.
 The production worker cannot boot until at least the Android half is supplied,
 and `PUSH_TRANSPORT=test` is rejected outright when `APP_ENV=production`.
+
+## Production deploy contract readback (2026-09-14)
+
+Read-only. This closes the readback half of the migration-authority gate and
+establishes what #282 will actually execute.
+
+| Service | Builder | Dockerfile path | Start command | Pre-deploy | Health gate |
+|---|---|---|---|---|---|
+| api | RAILPACK | `infra/docker/api.Dockerfile` | `node dist/src/main.js` | `pnpm --filter @auto-tm/db migrate:deploy` | `/readyz`, 120 s |
+| worker | RAILPACK | `infra/docker/worker.Dockerfile` | `node dist/main.js` | none | none |
+| admin | RAILPACK | `infra/docker/admin.Dockerfile` | `node apps/admin/server.js` | none | `/healthz`, 120 s |
+| web | RAILPACK | `infra/docker/web.Dockerfile` | `node apps/web/server.js` | none | `/healthz`, 120 s |
+
+All four build from `bagtyyarkovusov/auto.tm-rewrite` with root directory `/`,
+as the monorepo Dockerfile context requires. Staging reads **identically** on
+every one of these fields, so production is not drifting from the environment
+that proved the contract.
+
+The `builder` enum reads `RAILPACK` on both environments while `railway/api.json`
+and its siblings declare `"builder": "DOCKERFILE"`. This is the provider's
+default enum value surfacing alongside an explicit `dockerfilePath`, not a real
+divergence: staging builds and runs from these same settings today. Worth
+knowing when reading the field, not worth reconciling.
+
+`preDeployCommand` confirms `api` is the sole migration authority provider-side,
+matching `railway/README.md`. No other service carries a pre-deploy command.
+
+### How an application revision reaches production
+
+Production carries **zero** deployment triggers, so nothing deploys on push —
+that is criterion 3, and it is verified. Promotion is an explicit operator act
+against an exact commit:
+
+`serviceInstanceDeployV2(serviceId, environmentId, commitSha)` — the mutation
+behind the dashboard's deploy-a-specific-commit action. `serviceInstanceRedeploy`
+and `deploymentRedeploy` are **not** substitutes: both replay a previous
+deployment's configuration snapshot, as the duplication remediation proved.
+
+Order is not a preference, it is the contract:
+
+1. **api** — its pre-deploy runs `migrate:deploy` inside the new image before the
+   revision takes traffic, and `/readyz` (Postgres + Redis + MinIO, 120 s) holds
+   back a release whose dependencies are unwired.
+2. **worker** — will fail to boot until the `fcm-apns` credential set is complete.
+   That is the designed fail-closed behaviour, not a regression.
+3. **admin**, then **web**.
+
+The SHA must be one staging has already proved. Every image bakes
+`AUTOTM_COMMIT_SHA`, and `/healthz` and `/readyz` report `commitSha` and
+`environment`, so the operator can confirm the exact revision that landed rather
+than inferring it.
+
+None of this happens under #281. Criterion 7 forbids it, and the sequence above
+is recorded here so #282 inherits it rather than re-deriving it.
 
 ## Founder dispositions (2026-09-13)
 
