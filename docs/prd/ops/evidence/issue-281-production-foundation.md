@@ -863,3 +863,65 @@ at `2026-09-14T10:58:54Z` on commit `58f860f`.
 Staging must be re-credentialed before the Android push proof on #279, which needs
 `PUSH_TRANSPORT=fcm-apns`. Production is unaffected — it carries its own key,
 minted 2026-09-16 under `autotm-production`.
+
+## gcloud audit: FCM API, key inventory, and a live credential test (2026-09-16)
+
+Google Cloud CLI 585.0.0 installed from Google's bundled tarball and authenticated
+as `tkmdevelopers@gmail.com`. Homebrew's `gcloud-cli` cask fails on this machine —
+its sandboxed pip cannot complete a TLS handshake to PyPI (`SSL:
+RECORD_LAYER_FAILURE`), with or without proxy variables set. The tarball ships its
+own Python and avoids the step entirely. Recorded so the next session does not
+repeat the two failed cask attempts.
+
+### Cloud Messaging API is enabled — previously assumed, now verified
+
+The 2026-09-16 Firebase provisioning section above recorded this as **not
+verified**. That is superseded: `gcloud services list --enabled` on
+`autotm-production` returns `fcm.googleapis.com`, alongside
+`fcmregistrations.googleapis.com`, `firebase.googleapis.com`,
+`firebaseinstallations.googleapis.com` and five other Firebase services. No
+enablement action was needed.
+
+### The staging service account was deleted outright
+
+The revocation section above noted the `account not found` error *suggested* the
+service account itself had been removed, and flagged it as unconfirmed. Confirmed:
+`gcloud iam service-accounts list --project autotm-staging` returns **zero service
+accounts**.
+
+The consequence is now certain rather than conditional. Re-credentialing staging
+for the #279 Android push proof means creating a **new** service account, which
+will carry a **different** `FCM_CLIENT_EMAIL`. The old address will not resolve.
+
+### Production key inventory
+
+`firebase-adminsdk-fbsvc@autotm-production.iam.gserviceaccount.com` — the only
+service account on the project:
+
+| Key ID | Type | Created |
+|---|---|---|
+| `2d741d115669db135a1c2c6d5aa0deacaee32e3a` | `SYSTEM_MANAGED` | `2026-09-15T16:33:47Z` |
+| `7236675d09c6e11f2bc0cb0b37b5b2ebd43f8381` | `USER_MANAGED` | `2026-09-15T16:38:18Z` |
+
+Exactly one user-managed key, and its ID matches the key installed on the
+production worker. The system-managed key is Google-rotated and is not an operator
+liability. No stray or forgotten keys exist on either project.
+
+### The production credential works
+
+The positive counterpart to the staging revocation test. The stored
+`FCM_CLIENT_EMAIL` / `FCM_PRIVATE_KEY` were used to request an OAuth token with a
+JWT bearer assertion scoped to `firebase.messaging`:
+
+```
+HTTP 200 | error: (none)
+access token issued: true | expires_in: 3599
+```
+
+Google issues a valid messaging-scoped token for the production credential. The
+token was not printed and was discarded. Combined with `fcm.googleapis.com` being
+enabled, the FCM half of the worker's `fcm-apns` contract is proven live, not
+merely present.
+
+This does not lift the hold on #282. Five `APNS_*` variables remain absent,
+`validatePushContract` requires all eight, and criterion 3 is both-platform.
