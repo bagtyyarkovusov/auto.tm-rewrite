@@ -660,3 +660,305 @@ not substituted for fresh completion evidence.
 | 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Infrastructure half **met** on 2026-09-13: sleep disabled on all seven services, all three volumes `READY` at their expected mounts, the MinIO console port unrouted with no TCP proxy, and anonymous listing/write/delete/admin all refused on the public S3 origin. Runtime behaviour during an actual review remains unproven while the application services are removed; re-confirm under #282. |
 | 6 | Readiness, migration authority, reviewer identity constraints, stable-domain gate for the later store profile, and secret inventory are verified before promotion. | Partially met. Secret inventory is complete, reviewer identity shape is verified and the reserved block is accepted by the founder. Still open and deferred to #282 by founder decision: migrations plus the reviewer scenario seed, production push credentials, and the runtime readiness and stable-domain gates, all of which need a promoted revision that criterion 7 forbids here. |
 | 7 | No application revision is promoted and no store build/submission occurs in this issue. | **Not met, breach accepted by the founder 2026-09-14.** Copied deployment triggers ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05; no promotion command was issued. No store action. The status stands as not met and is not reinterpreted; see the criterion-7 disposition above for the reasoning, the self-reported basis, and the forward-only gate on #282. |
+
+## Provider-side readback and a correction to the criterion-7 provenance (2026-09-15)
+
+Taken while deciding whether to start #282, not as a completion claim for anything
+in #281. Per this file's header, where this section contradicts an earlier one,
+this section is current. **This is not a step-4.1 record** — step 4.1 binds a read
+taken immediately before promoting, and no promotion was attempted.
+
+### The 2026-09-05 incident is corroborated by provider records
+
+The criterion-7 disposition above states that the incident "is very likely no
+longer independently verifiable" and that "the deployments themselves were
+deleted". **That is too strong and is superseded here.** The deployment *records*
+persist and are readable; it is the *logs* that are gone. A `deployments` query
+against environment `c628b9bf-08ef-45f6-976f-3d646e0ebfbd` returns all four
+application deployments:
+
+| Service | Deployment | Created (UTC) | Removed (UTC) | Lifetime |
+|---|---|---|---|---|
+| api `6db6f1b1…` | `033bcdb2-5c99-4630-adf3-e131102c3df5` | `2026-09-05T22:49:23.452Z` | `23:00:07.053Z` | 10 m 44 s |
+| worker `24aa02e0…` | `b7a0c06f-1445-4c46-b034-fb32854aab88` | `2026-09-05T22:49:23.445Z` | `23:00:20.487Z` | 10 m 57 s |
+| admin `69ba9f86…` | `9ec6406d-f586-497c-aa1c-9eafc72702e9` | `2026-09-05T22:49:23.453Z` | `23:00:23.661Z` | 11 m 00 s |
+| web `f3c5888b…` | `ad959b52-39bc-4abc-a708-554004718fc6` | `2026-09-05T22:49:23.437Z` | `23:00:27.274Z` | 11 m 04 s |
+
+All four carry `branch: main`, `status: REMOVED`, and commit
+`506281523a399981db1717b300af2f92f9a38c03` — PR #314, the S11 #279 merge. Every
+checkable particular of the self-report matches: four application services, that
+window, roughly eleven minutes, all removed.
+
+**What the records do not settle.** Each carries `meta.reason: "deploy"`, which
+does not distinguish a trigger-fired deployment from an operator-issued one. The
+claim that *no promotion command was ever issued* therefore remains self-reported,
+and the founder's 2026-09-14 disposition still rests on that report. What changes
+is the scope of the doubt: the incident's shape and extent are now matters of
+record, and only its cause is testimony. The forward-only character of the
+step-4.1 gate is unaffected.
+
+### `auto.tm` is registered — the stable-domain gate is not blocked on acquisition
+
+#281 recorded domain ownership as unsatisfied in configuration and never
+established whether the domain existed. Checked 2026-09-15 against the `.tm`
+registry (`whois.nic.tm`):
+
+| Field | Value |
+|---|---|
+| Domain | `auto.tm` |
+| Status | `Live` |
+| Expiry | `2033-07-22` |
+| Nameservers | `ns-252.awsdns-31.com`, `ns-671.awsdns-19.net` |
+
+The domain is held and delegated to Route 53 for a further seven years. The
+stable-domain gate for the store-candidate profile is therefore a domain-attachment
+and DNS task, not an acquisition. Production still carries Railway-generated
+service domains only, so the gate itself remains unsatisfied.
+
+### Deployment triggers and current production state
+
+- Four project deployment triggers exist, all on `main`, all scoped to environment
+  `652abc79-fdb0-48b0-9f6c-ad0ff572d7b2` (staging). **Zero target production.**
+  This re-confirms #281's criterion 3 on a fresh read.
+- `api`, `admin`, `worker` and `web` all report `latestDeployment: null` in
+  production. No application deployment has existed there since 2026-09-05.
+- Production `MinIO` runs the pinned `RELEASE.2025-09-07T16-13-09Z`; the
+  2026-09-05 deployments ran `:latest`.
+
+### An unapplied staged patch sits on production
+
+Patch `c4cb29a1-4115-4376-8f1e-3b9cfa1a6133`, staged `2026-09-12T17:30:49Z`, still
+`STAGED`. One change, non-destructive: remove an already-empty Start Command from
+`Postgres` (`30dda76c…`). Functionally a no-op, but `accept-deploy` would commit it
+alongside whatever else is staged at that moment. #282 should clear it or record a
+decision to leave it before its first promotion.
+
+### Worker push credentials, read secret-free
+
+Variable **names** were listed and filtered in memory; no value was rendered.
+`PUSH_TRANSPORT` is present, and was confirmed equal to `fcm-apns` by comparison
+rather than by printing. All eight variables required by `FCM_APNS_REQUIRED_VARS`
+in `apps/worker/src/env.schema.ts` — `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`,
+`FCM_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`,
+`APNS_PRIVATE_KEY`, `APNS_PRODUCTION` — are **absent**.
+
+`validatePushContract` rejects this combination at boot, so the consequence is
+larger than an unprovable push criterion: the worker cannot start, and it is third
+in the promotion order. This is the fact on which #282 was held on 2026-09-15; the
+disposition is in
+[`sprint-11-railway-deployment-retro.md`](../../sprints/sprint-11-railway-deployment-retro.md).
+
+## Production Firebase provisioned; FCM half of the push contract closed (2026-09-16)
+
+Closes one of the two gates named in the 2026-09-15 hold on #282. The hold itself
+stands — see the consequences below.
+
+### Project and apps
+
+| Item | Value |
+|---|---|
+| Firebase / GCP project | `autotm-production` |
+| Project number | `692100780765` |
+| Android app | `1:692100780765:android:94dd5c1fdc2c8b52fcc134`, package `tm.auto.app` |
+| iOS app | `1:692100780765:ios:8b6f795fcf90d4c3fcc134`, bundle `tm.auto.app` |
+
+Both identifiers match `apps/mobile/app.config.js`, which declares `tm.auto.app`
+for Android `package` and iOS `bundleIdentifier`. Created under
+`tkmdevelopers@gmail.com`, the account that already owns `autotm-staging` and the
+`tkmdevelopers` Expo owner slug, so staging and production share one console.
+
+### Worker push variables, verified secret-free
+
+No value was rendered at any point. Presence and length only, with a digest
+comparison for the key.
+
+| Variable | State |
+|---|---|
+| `PUSH_TRANSPORT` | set, length 8 (`fcm-apns`, confirmed by comparison) |
+| `FCM_PROJECT_ID` | set, length 17 |
+| `FCM_CLIENT_EMAIL` | set, length 65, domain `autotm-production.iam.gserviceaccount.com` |
+| `FCM_PRIVATE_KEY` | set, length 1703 |
+| `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`, `APNS_PRODUCTION` | **absent** |
+
+`FCM_PRIVATE_KEY` reads back 1703 characters against 1704 in the source file.
+The difference is the trailing newline, which `railway variable set --stdin`
+strips; the two are byte-identical after `rstrip("\n")`. The stored value carries
+no literal `\n` escapes and spans 28 lines with both PEM markers intact.
+`normalizePrivateKey` from `apps/worker/src/shared/pem.ts` — the same function
+the worker runs at boot — parses it successfully. The credential was piped from
+the downloaded key file directly into the Railway CLI, so it never entered a
+transcript, a shell history, or a process argument list.
+
+All three writes used `--skip-deploys`, preserving the manual-deploy-only posture.
+No deployment was created.
+
+### What this does and does not change
+
+- The **Firebase gate on #282 is closed.** The worker's `fcm-apns` contract is
+  half-satisfied.
+- The **hold stands.** `validatePushContract` requires all eight variables, so the
+  worker still fails at boot; five remain, all downstream of the Apple Developer
+  Program membership tracked on #279. Criterion 3 is both-platform regardless.
+- Of the five, only `APNS_PRIVATE_KEY` is a true secret. `APNS_BUNDLE_ID` is
+  `tm.auto.app` and `APNS_PRODUCTION` is a `"true"`/`"false"` flag, both settable
+  without Apple; `APNS_KEY_ID` and `APNS_TEAM_ID` are identifiers issued with the
+  membership.
+- **Not verified:** that the Cloud Messaging API is enabled on the project. It is
+  enabled by default for Firebase-created projects, but this was not checked and
+  is not claimed. Confirm before the first production push proof.
+- **Still outstanding, unchanged:** the exposed `autotm-staging` service-account
+  key has not been rotated.
+- `google-services.json` and `GoogleService-Info.plist` are **not** matched by
+  `.gitignore`. `firebase-adminsdk-*.json` is. The repository is public and
+  `app.config.js` consumes both client files by path at EAS build time, so the
+  gap should be closed before either file is pulled into a worktree.
+
+## Exposed staging service-account key revoked (2026-09-16)
+
+Closes the outstanding item carried across five sessions and listed as still open
+in the section immediately above. That line is superseded by this one.
+
+### Scope of the exposure, established before acting
+
+The key was held in exactly one place — `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL` and
+`FCM_PRIVATE_KEY` on the **staging worker**. Checked and found clean: the staging
+`api`, `admin` and `web` services carry no push variables, and no GitHub Actions
+secret references FCM, Firebase, Google or APNS.
+
+The staging worker's `PUSH_TRANSPORT` is `test`, which records sends in memory and
+delivers nothing. **The exposed key was therefore never in a live send path**, and
+revoking it could not break anything. That was true for the whole time the item sat
+open.
+
+### Revocation, verified by use rather than by inspection
+
+The founder deleted the key provider-side. Console state was not taken as proof —
+instead the stored credential was used to request an OAuth token from
+`https://oauth2.googleapis.com/token` with a JWT bearer assertion scoped to
+`firebase.messaging`:
+
+```
+HTTP 400
+error: invalid_grant | Invalid grant: account not found
+access token returned: false
+```
+
+The credential is rejected by Google. No key material was printed at any point and
+no token was returned to print.
+
+**Note for whoever provisions staging push next:** the error is `account not
+found`, not a key-specific rejection, which suggests the service account itself may
+have been deleted rather than only its keys. If so, a future staging credential
+will carry a **different** `FCM_CLIENT_EMAIL`. Confirm before assuming the old
+address still resolves.
+
+### Cleanup
+
+All three `FCM_*` variables were deleted from the staging worker so nothing
+references a revoked credential; `PUSH_TRANSPORT=test` remains. `railway variable
+delete` accepts neither `--skip-deploys` nor `-y`. No deployment resulted: the
+staging worker's latest deployment is still `dbca42ac-423c-4881-860c-a1a90ef4669b`
+at `2026-09-14T10:58:54Z` on commit `58f860f`.
+
+Staging must be re-credentialed before the Android push proof on #279, which needs
+`PUSH_TRANSPORT=fcm-apns`. Production is unaffected — it carries its own key,
+minted 2026-09-16 under `autotm-production`.
+
+## gcloud audit: FCM API, key inventory, and a live credential test (2026-09-16)
+
+Google Cloud CLI 585.0.0 installed from Google's bundled tarball and authenticated
+as `tkmdevelopers@gmail.com`. Homebrew's `gcloud-cli` cask fails on this machine —
+its sandboxed pip cannot complete a TLS handshake to PyPI (`SSL:
+RECORD_LAYER_FAILURE`), with or without proxy variables set. The tarball ships its
+own Python and avoids the step entirely. Recorded so the next session does not
+repeat the two failed cask attempts.
+
+### Cloud Messaging API is enabled — previously assumed, now verified
+
+The 2026-09-16 Firebase provisioning section above recorded this as **not
+verified**. That is superseded: `gcloud services list --enabled` on
+`autotm-production` returns `fcm.googleapis.com`, alongside
+`fcmregistrations.googleapis.com`, `firebase.googleapis.com`,
+`firebaseinstallations.googleapis.com` and five other Firebase services. No
+enablement action was needed.
+
+### The staging service account was deleted outright
+
+The revocation section above noted the `account not found` error *suggested* the
+service account itself had been removed, and flagged it as unconfirmed. Confirmed:
+`gcloud iam service-accounts list --project autotm-staging` returns **zero service
+accounts**.
+
+The consequence is now certain rather than conditional. Re-credentialing staging
+for the #279 Android push proof means creating a **new** service account, which
+will carry a **different** `FCM_CLIENT_EMAIL`. The old address will not resolve.
+
+### Production key inventory
+
+`firebase-adminsdk-fbsvc@autotm-production.iam.gserviceaccount.com` — the only
+service account on the project:
+
+| Key ID | Type | Created |
+|---|---|---|
+| `2d741d115669db135a1c2c6d5aa0deacaee32e3a` | `SYSTEM_MANAGED` | `2026-09-15T16:33:47Z` |
+| `7236675d09c6e11f2bc0cb0b37b5b2ebd43f8381` | `USER_MANAGED` | `2026-09-15T16:38:18Z` |
+
+Exactly one user-managed key, and its ID matches the key installed on the
+production worker. The system-managed key is Google-rotated and is not an operator
+liability. No stray or forgotten keys exist on either project.
+
+### The production credential works
+
+The positive counterpart to the staging revocation test. The stored
+`FCM_CLIENT_EMAIL` / `FCM_PRIVATE_KEY` were used to request an OAuth token with a
+JWT bearer assertion scoped to `firebase.messaging`:
+
+```
+HTTP 200 | error: (none)
+access token issued: true | expires_in: 3599
+```
+
+Google issues a valid messaging-scoped token for the production credential. The
+token was not printed and was discarded. Combined with `fcm.googleapis.com` being
+enabled, the FCM half of the worker's `fcm-apns` contract is proven live, not
+merely present.
+
+This does not lift the hold on #282. Five `APNS_*` variables remain absent,
+`validatePushContract` requires all eight, and criterion 3 is both-platform.
+
+## Non-secret APNS variables set; Android-only boot proven impossible (2026-09-16)
+
+`APNS_BUNDLE_ID` = `tm.auto.app` and `APNS_PRODUCTION` = `true` set on the
+production worker with `--skip-deploys`. Neither requires Apple: the bundle
+identifier is fixed by `apps/mobile/app.config.js` and `APNS_PRODUCTION` is a
+`"true"`/`"false"` flag, `true` being correct for TestFlight and App Store builds.
+
+Production worker push contract, six of eight present:
+
+| Variable | State |
+|---|---|
+| `PUSH_TRANSPORT` | set, length 8 |
+| `FCM_PROJECT_ID` | set, length 17 |
+| `FCM_CLIENT_EMAIL` | set, length 65 |
+| `FCM_PRIVATE_KEY` | set, length 1703 |
+| `APNS_BUNDLE_ID` | set, length 11 |
+| `APNS_PRODUCTION` | set, length 4 |
+| `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` | **absent** |
+
+### The remaining three block boot outright
+
+Parsing the exact production variable set through the real `EnvSchema` from
+`apps/worker/src/env.schema.ts`:
+
+```
+boots with Android-only credentials: false
+  APNS_KEY_ID      : required when PUSH_TRANSPORT=fcm-apns
+  APNS_TEAM_ID     : required when PUSH_TRANSPORT=fcm-apns
+  APNS_PRIVATE_KEY : required when PUSH_TRANSPORT=fcm-apns
+```
+
+`fcm-apns` is all-or-nothing. A working FCM half does not produce a booting
+worker. With Apple enrolment deferred to 2026-10-12 and Google Play named the sole
+near-term target, this is a blocker on the Android path itself, not only on
+criterion 3. The scope decision and the proposed FCM-only transport are recorded
+in [`sprint-11-railway-deployment-retro.md`](../../sprints/sprint-11-railway-deployment-retro.md).

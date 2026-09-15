@@ -46,3 +46,101 @@ file rather than to an edit of the locked sprint file.
   therefore partial by design rather than by slippage.
 - Criterion 2 is met on data locality only, and criterion 5 on infrastructure only.
   Both need re-confirmation under S11-12 once a revision is permitted to run.
+
+### 2026-09-15 — S11-12 held until production push credentials exist
+
+[#282](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/282) (S11-12) is
+**held before any work begins**. Its six acceptance criteria are unchanged and
+none is reinterpreted; this entry records that the slice does not start, and what
+lifts the hold.
+
+The blocking fact is narrower and harder than "push cannot be proved". The
+production worker has `PUSH_TRANSPORT=fcm-apns` set with all eight credential
+variables absent, and `validatePushContract` in `apps/worker/src/env.schema.ts`
+rejects that combination **at boot**. The worker is third in the promotion order,
+so the missing credentials do not merely fail criterion 3's both-platform push
+clause — they stop the worker from starting at all, which also puts criteria 1
+and 2 partly out of reach for the full service set.
+
+The founder was offered a promotion-now option against a hold, and chose the
+hold. The two routes by which a partial proof could have been reached were
+recorded at the time and are not taken:
+
+| Route | Why it is not taken |
+|---|---|
+| Promote with `PUSH_TRANSPORT=ntfy` | Boots without credentials and fails every send permanently and visibly through `UnconfiguredPushTransport`, so it is honest rather than silent. But it is a deliberate production posture change made solely to get a green run, and it would produce a promotion proof of a configuration that will never be the shipped one. |
+| Promote API/admin/web and skip the worker | Breaks the runbook's promotion order and leaves criterion 1's "deployed services expose the same recorded SHA" unsatisfiable for the full set. |
+
+The founder chose to hold rather than to record a fifth partial criterion. The
+precedent weighed was S11-11's criterion 7 immediately above: a slice closed with
+a criterion permanently unmet cost a founder disposition and its own PR, and #282
+would have entered that state by choice rather than by accident.
+
+**What lifts the hold** — both, not either:
+
+1. Apple Developer Program membership, then `tm.auto.app` registered and iOS
+   signing provisioned in EAS credentials (tracked on
+   [#279](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/279)), which
+   yields `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` and `APNS_PRIVATE_KEY`.
+2. The production Firebase project, which yields `FCM_PROJECT_ID`,
+   `FCM_CLIENT_EMAIL` and `FCM_PRIVATE_KEY`.
+
+`APNS_PRODUCTION` is an operator-set flag and needs no provider.
+
+**Consequences:**
+
+- #282 regains the `blocked` label; `ready-for-human` stays. It leaves the ready
+  queue until both credential sets exist.
+- [#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283) (S11-13)
+  stays blocked behind S11-12, so **S11 cannot close on this hold**. That is the
+  reason this sequencing decision is recorded here rather than left implicit: it
+  changes S11's completion path without changing any slice's criteria.
+- The S11 roadmap row stays 🟡 and Current stays 11. A hold is not a status change.
+- The pre-promotion readback taken on 2026-09-15 is **not** a step-4.1 record.
+  Step 4.1 binds a read taken immediately before promoting; this one was taken to
+  test the handoff's assumptions. #282 must still run its own when it resumes.
+
+### 2026-09-16 — Apple deferred to October 12; Google Play becomes the sole near-term target
+
+The founder will begin Apple Developer Program enrolment and account creation on
+**2026-10-12**. Until then the product focus is the **Google Play launch only**.
+
+This puts a roughly four-week floor under the #282 hold recorded on 2026-09-15,
+and S11 cannot close before it: #283 (S11-13) depends on S11-12.
+
+**Progress since the hold.** The production Firebase project exists, and the FCM
+half of the worker's push contract is not merely populated but proven live — the
+stored credential mints a `firebase.messaging`-scoped token and
+`fcm.googleapis.com` is enabled. `APNS_BUNDLE_ID` (`tm.auto.app`) and
+`APNS_PRODUCTION` (`true`) were set on 2026-09-16 because neither needs Apple.
+Six of eight push variables are present; `APNS_KEY_ID`, `APNS_TEAM_ID` and
+`APNS_PRIVATE_KEY` remain, all downstream of the October enrolment.
+
+**The blocker this exposes.** An Android-only launch is not reachable by waiting.
+`validatePushContract` in `apps/worker/src/env.schema.ts` treats `fcm-apns` as
+all-or-nothing: every one of the eight variables is required, so the worker fails
+at boot with three APNS values missing even though FCM works. Verified by parsing
+the production variable set through the real `EnvSchema`:
+
+```
+boots with Android-only credentials: false
+  APNS_KEY_ID      : required when PUSH_TRANSPORT=fcm-apns
+  APNS_TEAM_ID     : required when PUSH_TRANSPORT=fcm-apns
+  APNS_PRIVATE_KEY : required when PUSH_TRANSPORT=fcm-apns
+```
+
+So the Google-Play-only period cannot produce a booting production worker under
+the current contract. The two existing escape hatches are both wrong here:
+`PUSH_TRANSPORT=test` is rejected outright in production, and `ntfy` boots but
+fails every send through `UnconfiguredPushTransport`.
+
+**Consequence: this needs a decision, not a wait.** Shipping Google Play before
+Apple requires an FCM-only path — most plausibly a fourth transport value
+requiring only the three `FCM_*` variables, leaving `fcm-apns` untouched for the
+both-platform era. That changes the transport contract fixed by ADR-0009 and
+ADR-0043, so it needs its own ADR rather than an edit to either. Not yet opened as
+an issue; flagged here so the October date is not mistaken for the only obstacle.
+
+**#282's criterion 3 is unaffected** and still reads both-platform. An FCM-only
+transport would let the worker boot and let Android push be proven; it would not
+satisfy criterion 3, which remains gated on Apple regardless.

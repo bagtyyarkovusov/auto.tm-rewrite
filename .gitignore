@@ -34,6 +34,10 @@ captures/
 *-private-key.json
 gcp-*.json
 firebase-adminsdk-*.json
+# Firebase client config: not server secrets (they ship inside app binaries),
+# but this repo is public and app.config.js consumes them by path at EAS build time.
+google-services.json
+GoogleService-Info.plist
 
 # Editor
 .vscode/
