@@ -660,3 +660,90 @@ not substituted for fresh completion evidence.
 | 5 | All production services remain awake during review; MinIO console/admin remains private and data is persistent. | Infrastructure half **met** on 2026-09-13: sleep disabled on all seven services, all three volumes `READY` at their expected mounts, the MinIO console port unrouted with no TCP proxy, and anonymous listing/write/delete/admin all refused on the public S3 origin. Runtime behaviour during an actual review remains unproven while the application services are removed; re-confirm under #282. |
 | 6 | Readiness, migration authority, reviewer identity constraints, stable-domain gate for the later store profile, and secret inventory are verified before promotion. | Partially met. Secret inventory is complete, reviewer identity shape is verified and the reserved block is accepted by the founder. Still open and deferred to #282 by founder decision: migrations plus the reviewer scenario seed, production push credentials, and the runtime readiness and stable-domain gates, all of which need a promoted revision that criterion 7 forbids here. |
 | 7 | No application revision is promoted and no store build/submission occurs in this issue. | **Not met, breach accepted by the founder 2026-09-14.** Copied deployment triggers ran application revisions from 22:49:23Z to 23:00:27Z on 2026-09-05; no promotion command was issued. No store action. The status stands as not met and is not reinterpreted; see the criterion-7 disposition above for the reasoning, the self-reported basis, and the forward-only gate on #282. |
+
+## Provider-side readback and a correction to the criterion-7 provenance (2026-09-15)
+
+Taken while deciding whether to start #282, not as a completion claim for anything
+in #281. Per this file's header, where this section contradicts an earlier one,
+this section is current. **This is not a step-4.1 record** — step 4.1 binds a read
+taken immediately before promoting, and no promotion was attempted.
+
+### The 2026-09-05 incident is corroborated by provider records
+
+The criterion-7 disposition above states that the incident "is very likely no
+longer independently verifiable" and that "the deployments themselves were
+deleted". **That is too strong and is superseded here.** The deployment *records*
+persist and are readable; it is the *logs* that are gone. A `deployments` query
+against environment `c628b9bf-08ef-45f6-976f-3d646e0ebfbd` returns all four
+application deployments:
+
+| Service | Deployment | Created (UTC) | Removed (UTC) | Lifetime |
+|---|---|---|---|---|
+| api `6db6f1b1…` | `033bcdb2-5c99-4630-adf3-e131102c3df5` | `2026-09-05T22:49:23.452Z` | `23:00:07.053Z` | 10 m 44 s |
+| worker `24aa02e0…` | `b7a0c06f-1445-4c46-b034-fb32854aab88` | `2026-09-05T22:49:23.445Z` | `23:00:20.487Z` | 10 m 57 s |
+| admin `69ba9f86…` | `9ec6406d-f586-497c-aa1c-9eafc72702e9` | `2026-09-05T22:49:23.453Z` | `23:00:23.661Z` | 11 m 00 s |
+| web `f3c5888b…` | `ad959b52-39bc-4abc-a708-554004718fc6` | `2026-09-05T22:49:23.437Z` | `23:00:27.274Z` | 11 m 04 s |
+
+All four carry `branch: main`, `status: REMOVED`, and commit
+`506281523a399981db1717b300af2f92f9a38c03` — PR #314, the S11 #279 merge. Every
+checkable particular of the self-report matches: four application services, that
+window, roughly eleven minutes, all removed.
+
+**What the records do not settle.** Each carries `meta.reason: "deploy"`, which
+does not distinguish a trigger-fired deployment from an operator-issued one. The
+claim that *no promotion command was ever issued* therefore remains self-reported,
+and the founder's 2026-09-14 disposition still rests on that report. What changes
+is the scope of the doubt: the incident's shape and extent are now matters of
+record, and only its cause is testimony. The forward-only character of the
+step-4.1 gate is unaffected.
+
+### `auto.tm` is registered — the stable-domain gate is not blocked on acquisition
+
+#281 recorded domain ownership as unsatisfied in configuration and never
+established whether the domain existed. Checked 2026-09-15 against the `.tm`
+registry (`whois.nic.tm`):
+
+| Field | Value |
+|---|---|
+| Domain | `auto.tm` |
+| Status | `Live` |
+| Expiry | `2033-07-22` |
+| Nameservers | `ns-252.awsdns-31.com`, `ns-671.awsdns-19.net` |
+
+The domain is held and delegated to Route 53 for a further seven years. The
+stable-domain gate for the store-candidate profile is therefore a domain-attachment
+and DNS task, not an acquisition. Production still carries Railway-generated
+service domains only, so the gate itself remains unsatisfied.
+
+### Deployment triggers and current production state
+
+- Four project deployment triggers exist, all on `main`, all scoped to environment
+  `652abc79-fdb0-48b0-9f6c-ad0ff572d7b2` (staging). **Zero target production.**
+  This re-confirms #281's criterion 3 on a fresh read.
+- `api`, `admin`, `worker` and `web` all report `latestDeployment: null` in
+  production. No application deployment has existed there since 2026-09-05.
+- Production `MinIO` runs the pinned `RELEASE.2025-09-07T16-13-09Z`; the
+  2026-09-05 deployments ran `:latest`.
+
+### An unapplied staged patch sits on production
+
+Patch `c4cb29a1-4115-4376-8f1e-3b9cfa1a6133`, staged `2026-09-12T17:30:49Z`, still
+`STAGED`. One change, non-destructive: remove an already-empty Start Command from
+`Postgres` (`30dda76c…`). Functionally a no-op, but `accept-deploy` would commit it
+alongside whatever else is staged at that moment. #282 should clear it or record a
+decision to leave it before its first promotion.
+
+### Worker push credentials, read secret-free
+
+Variable **names** were listed and filtered in memory; no value was rendered.
+`PUSH_TRANSPORT` is present, and was confirmed equal to `fcm-apns` by comparison
+rather than by printing. All eight variables required by `FCM_APNS_REQUIRED_VARS`
+in `apps/worker/src/env.schema.ts` — `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`,
+`FCM_PRIVATE_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`,
+`APNS_PRIVATE_KEY`, `APNS_PRODUCTION` — are **absent**.
+
+`validatePushContract` rejects this combination at boot, so the consequence is
+larger than an unprovable push criterion: the worker cannot start, and it is third
+in the promotion order. This is the fact on which #282 was held on 2026-09-15; the
+disposition is in
+[`sprint-11-railway-deployment-retro.md`](../../sprints/sprint-11-railway-deployment-retro.md).

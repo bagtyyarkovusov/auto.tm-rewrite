@@ -46,3 +46,56 @@ file rather than to an edit of the locked sprint file.
   therefore partial by design rather than by slippage.
 - Criterion 2 is met on data locality only, and criterion 5 on infrastructure only.
   Both need re-confirmation under S11-12 once a revision is permitted to run.
+
+### 2026-09-15 — S11-12 held until production push credentials exist
+
+[#282](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/282) (S11-12) is
+**held before any work begins**. Its six acceptance criteria are unchanged and
+none is reinterpreted; this entry records that the slice does not start, and what
+lifts the hold.
+
+The blocking fact is narrower and harder than "push cannot be proved". The
+production worker has `PUSH_TRANSPORT=fcm-apns` set with all eight credential
+variables absent, and `validatePushContract` in `apps/worker/src/env.schema.ts`
+rejects that combination **at boot**. The worker is third in the promotion order,
+so the missing credentials do not merely fail criterion 3's both-platform push
+clause — they stop the worker from starting at all, which also puts criteria 1
+and 2 partly out of reach for the full service set.
+
+The founder was offered a promotion-now option against a hold, and chose the
+hold. The two routes by which a partial proof could have been reached were
+recorded at the time and are not taken:
+
+| Route | Why it is not taken |
+|---|---|
+| Promote with `PUSH_TRANSPORT=ntfy` | Boots without credentials and fails every send permanently and visibly through `UnconfiguredPushTransport`, so it is honest rather than silent. But it is a deliberate production posture change made solely to get a green run, and it would produce a promotion proof of a configuration that will never be the shipped one. |
+| Promote API/admin/web and skip the worker | Breaks the runbook's promotion order and leaves criterion 1's "deployed services expose the same recorded SHA" unsatisfiable for the full set. |
+
+The founder chose to hold rather than to record a fifth partial criterion. The
+precedent weighed was S11-11's criterion 7 immediately above: a slice closed with
+a criterion permanently unmet cost a founder disposition and its own PR, and #282
+would have entered that state by choice rather than by accident.
+
+**What lifts the hold** — both, not either:
+
+1. Apple Developer Program membership, then `tm.auto.app` registered and iOS
+   signing provisioned in EAS credentials (tracked on
+   [#279](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/279)), which
+   yields `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` and `APNS_PRIVATE_KEY`.
+2. The production Firebase project, which yields `FCM_PROJECT_ID`,
+   `FCM_CLIENT_EMAIL` and `FCM_PRIVATE_KEY`.
+
+`APNS_PRODUCTION` is an operator-set flag and needs no provider.
+
+**Consequences:**
+
+- #282 regains the `blocked` label; `ready-for-human` stays. It leaves the ready
+  queue until both credential sets exist.
+- [#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283) (S11-13)
+  stays blocked behind S11-12, so **S11 cannot close on this hold**. That is the
+  reason this sequencing decision is recorded here rather than left implicit: it
+  changes S11's completion path without changing any slice's criteria.
+- The S11 roadmap row stays 🟡 and Current stays 11. A hold is not a status change.
+- The pre-promotion readback taken on 2026-09-15 is **not** a step-4.1 record.
+  Step 4.1 binds a read taken immediately before promoting; this one was taken to
+  test the handoff's assumptions. #282 must still run its own when it resumes.
