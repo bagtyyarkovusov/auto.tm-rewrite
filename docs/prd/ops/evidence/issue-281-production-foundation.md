@@ -812,3 +812,54 @@ No deployment was created.
   `.gitignore`. `firebase-adminsdk-*.json` is. The repository is public and
   `app.config.js` consumes both client files by path at EAS build time, so the
   gap should be closed before either file is pulled into a worktree.
+
+## Exposed staging service-account key revoked (2026-09-16)
+
+Closes the outstanding item carried across five sessions and listed as still open
+in the section immediately above. That line is superseded by this one.
+
+### Scope of the exposure, established before acting
+
+The key was held in exactly one place — `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL` and
+`FCM_PRIVATE_KEY` on the **staging worker**. Checked and found clean: the staging
+`api`, `admin` and `web` services carry no push variables, and no GitHub Actions
+secret references FCM, Firebase, Google or APNS.
+
+The staging worker's `PUSH_TRANSPORT` is `test`, which records sends in memory and
+delivers nothing. **The exposed key was therefore never in a live send path**, and
+revoking it could not break anything. That was true for the whole time the item sat
+open.
+
+### Revocation, verified by use rather than by inspection
+
+The founder deleted the key provider-side. Console state was not taken as proof —
+instead the stored credential was used to request an OAuth token from
+`https://oauth2.googleapis.com/token` with a JWT bearer assertion scoped to
+`firebase.messaging`:
+
+```
+HTTP 400
+error: invalid_grant | Invalid grant: account not found
+access token returned: false
+```
+
+The credential is rejected by Google. No key material was printed at any point and
+no token was returned to print.
+
+**Note for whoever provisions staging push next:** the error is `account not
+found`, not a key-specific rejection, which suggests the service account itself may
+have been deleted rather than only its keys. If so, a future staging credential
+will carry a **different** `FCM_CLIENT_EMAIL`. Confirm before assuming the old
+address still resolves.
+
+### Cleanup
+
+All three `FCM_*` variables were deleted from the staging worker so nothing
+references a revoked credential; `PUSH_TRANSPORT=test` remains. `railway variable
+delete` accepts neither `--skip-deploys` nor `-y`. No deployment resulted: the
+staging worker's latest deployment is still `dbca42ac-423c-4881-860c-a1a90ef4669b`
+at `2026-09-14T10:58:54Z` on commit `58f860f`.
+
+Staging must be re-credentialed before the Android push proof on #279, which needs
+`PUSH_TRANSPORT=fcm-apns`. Production is unaffected — it carries its own key,
+minted 2026-09-16 under `autotm-production`.
