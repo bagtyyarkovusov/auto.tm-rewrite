@@ -99,3 +99,48 @@ would have entered that state by choice rather than by accident.
 - The pre-promotion readback taken on 2026-09-15 is **not** a step-4.1 record.
   Step 4.1 binds a read taken immediately before promoting; this one was taken to
   test the handoff's assumptions. #282 must still run its own when it resumes.
+
+### 2026-09-16 — Apple deferred to October 12; Google Play becomes the sole near-term target
+
+The founder will begin Apple Developer Program enrolment and account creation on
+**2026-10-12**. Until then the product focus is the **Google Play launch only**.
+
+This puts a roughly four-week floor under the #282 hold recorded on 2026-09-15,
+and S11 cannot close before it: #283 (S11-13) depends on S11-12.
+
+**Progress since the hold.** The production Firebase project exists, and the FCM
+half of the worker's push contract is not merely populated but proven live — the
+stored credential mints a `firebase.messaging`-scoped token and
+`fcm.googleapis.com` is enabled. `APNS_BUNDLE_ID` (`tm.auto.app`) and
+`APNS_PRODUCTION` (`true`) were set on 2026-09-16 because neither needs Apple.
+Six of eight push variables are present; `APNS_KEY_ID`, `APNS_TEAM_ID` and
+`APNS_PRIVATE_KEY` remain, all downstream of the October enrolment.
+
+**The blocker this exposes.** An Android-only launch is not reachable by waiting.
+`validatePushContract` in `apps/worker/src/env.schema.ts` treats `fcm-apns` as
+all-or-nothing: every one of the eight variables is required, so the worker fails
+at boot with three APNS values missing even though FCM works. Verified by parsing
+the production variable set through the real `EnvSchema`:
+
+```
+boots with Android-only credentials: false
+  APNS_KEY_ID      : required when PUSH_TRANSPORT=fcm-apns
+  APNS_TEAM_ID     : required when PUSH_TRANSPORT=fcm-apns
+  APNS_PRIVATE_KEY : required when PUSH_TRANSPORT=fcm-apns
+```
+
+So the Google-Play-only period cannot produce a booting production worker under
+the current contract. The two existing escape hatches are both wrong here:
+`PUSH_TRANSPORT=test` is rejected outright in production, and `ntfy` boots but
+fails every send through `UnconfiguredPushTransport`.
+
+**Consequence: this needs a decision, not a wait.** Shipping Google Play before
+Apple requires an FCM-only path — most plausibly a fourth transport value
+requiring only the three `FCM_*` variables, leaving `fcm-apns` untouched for the
+both-platform era. That changes the transport contract fixed by ADR-0009 and
+ADR-0043, so it needs its own ADR rather than an edit to either. Not yet opened as
+an issue; flagged here so the October date is not mistaken for the only obstacle.
+
+**#282's criterion 3 is unaffected** and still reads both-platform. An FCM-only
+transport would let the worker boot and let Android push be proven; it would not
+satisfy criterion 3, which remains gated on Apple regardless.

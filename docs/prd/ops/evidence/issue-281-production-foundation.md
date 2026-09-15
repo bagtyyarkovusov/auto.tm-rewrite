@@ -925,3 +925,40 @@ merely present.
 
 This does not lift the hold on #282. Five `APNS_*` variables remain absent,
 `validatePushContract` requires all eight, and criterion 3 is both-platform.
+
+## Non-secret APNS variables set; Android-only boot proven impossible (2026-09-16)
+
+`APNS_BUNDLE_ID` = `tm.auto.app` and `APNS_PRODUCTION` = `true` set on the
+production worker with `--skip-deploys`. Neither requires Apple: the bundle
+identifier is fixed by `apps/mobile/app.config.js` and `APNS_PRODUCTION` is a
+`"true"`/`"false"` flag, `true` being correct for TestFlight and App Store builds.
+
+Production worker push contract, six of eight present:
+
+| Variable | State |
+|---|---|
+| `PUSH_TRANSPORT` | set, length 8 |
+| `FCM_PROJECT_ID` | set, length 17 |
+| `FCM_CLIENT_EMAIL` | set, length 65 |
+| `FCM_PRIVATE_KEY` | set, length 1703 |
+| `APNS_BUNDLE_ID` | set, length 11 |
+| `APNS_PRODUCTION` | set, length 4 |
+| `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` | **absent** |
+
+### The remaining three block boot outright
+
+Parsing the exact production variable set through the real `EnvSchema` from
+`apps/worker/src/env.schema.ts`:
+
+```
+boots with Android-only credentials: false
+  APNS_KEY_ID      : required when PUSH_TRANSPORT=fcm-apns
+  APNS_TEAM_ID     : required when PUSH_TRANSPORT=fcm-apns
+  APNS_PRIVATE_KEY : required when PUSH_TRANSPORT=fcm-apns
+```
+
+`fcm-apns` is all-or-nothing. A working FCM half does not produce a booting
+worker. With Apple enrolment deferred to 2026-10-12 and Google Play named the sole
+near-term target, this is a blocker on the Android path itself, not only on
+criterion 3. The scope decision and the proposed FCM-only transport are recorded
+in [`sprint-11-railway-deployment-retro.md`](../../sprints/sprint-11-railway-deployment-retro.md).
