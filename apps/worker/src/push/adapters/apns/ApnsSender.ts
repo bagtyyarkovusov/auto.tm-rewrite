@@ -64,7 +64,8 @@ export async function buildApnsNotification(
 
 /**
  * Builds the node-apn send function from token-based credentials. Imported
- * lazily so the SDK is only loaded when `PUSH_TRANSPORT=fcm-apns`.
+ * lazily so the SDK is only loaded when `PUSH_TRANSPORT=fcm-apns`; `fcm` uses
+ * `UnprovisionedApnsSender` instead and never reaches this function.
  */
 export async function createApnsSendFn(
   credentials: ApnsCredentials,

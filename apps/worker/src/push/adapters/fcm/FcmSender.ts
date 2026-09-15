@@ -46,7 +46,8 @@ export class FirebaseFcmSender implements FcmSender {
 
 /**
  * Builds the firebase-admin send function from service-account credentials.
- * Imported lazily so the SDK is only loaded when `PUSH_TRANSPORT=fcm-apns`.
+ * Imported lazily so the SDK is only loaded for a transport that delivers
+ * through FCM (`fcm` or `fcm-apns`).
  */
 export async function createFirebaseSendFn(
   credentials: FcmCredentials,

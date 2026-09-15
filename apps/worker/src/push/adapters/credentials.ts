@@ -34,12 +34,18 @@ export interface ApnsCredentials {
 
 export type CredentialReader = (name: string) => string | undefined;
 
+/**
+ * The transport is not named in the message: `FCM_*` is required by both `fcm`
+ * and `fcm-apns` (ADR-0047), and this reader cannot see which one is selected.
+ * `env.schema.ts` already names the transport at boot; reaching here means the
+ * value went missing after validation.
+ */
 function requireValue(read: CredentialReader, name: string): string {
   const value = read(name)?.trim();
   if (value === undefined || value === "") {
     throw new InvalidPushCredentialError(
       name,
-      "is required for PUSH_TRANSPORT=fcm-apns",
+      "is required by the configured push transport",
     );
   }
   return value;
