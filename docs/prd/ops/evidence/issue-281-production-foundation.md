@@ -747,3 +747,68 @@ larger than an unprovable push criterion: the worker cannot start, and it is thi
 in the promotion order. This is the fact on which #282 was held on 2026-09-15; the
 disposition is in
 [`sprint-11-railway-deployment-retro.md`](../../sprints/sprint-11-railway-deployment-retro.md).
+
+## Production Firebase provisioned; FCM half of the push contract closed (2026-09-16)
+
+Closes one of the two gates named in the 2026-09-15 hold on #282. The hold itself
+stands — see the consequences below.
+
+### Project and apps
+
+| Item | Value |
+|---|---|
+| Firebase / GCP project | `autotm-production` |
+| Project number | `692100780765` |
+| Android app | `1:692100780765:android:94dd5c1fdc2c8b52fcc134`, package `tm.auto.app` |
+| iOS app | `1:692100780765:ios:8b6f795fcf90d4c3fcc134`, bundle `tm.auto.app` |
+
+Both identifiers match `apps/mobile/app.config.js`, which declares `tm.auto.app`
+for Android `package` and iOS `bundleIdentifier`. Created under
+`tkmdevelopers@gmail.com`, the account that already owns `autotm-staging` and the
+`tkmdevelopers` Expo owner slug, so staging and production share one console.
+
+### Worker push variables, verified secret-free
+
+No value was rendered at any point. Presence and length only, with a digest
+comparison for the key.
+
+| Variable | State |
+|---|---|
+| `PUSH_TRANSPORT` | set, length 8 (`fcm-apns`, confirmed by comparison) |
+| `FCM_PROJECT_ID` | set, length 17 |
+| `FCM_CLIENT_EMAIL` | set, length 65, domain `autotm-production.iam.gserviceaccount.com` |
+| `FCM_PRIVATE_KEY` | set, length 1703 |
+| `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`, `APNS_PRODUCTION` | **absent** |
+
+`FCM_PRIVATE_KEY` reads back 1703 characters against 1704 in the source file.
+The difference is the trailing newline, which `railway variable set --stdin`
+strips; the two are byte-identical after `rstrip("\n")`. The stored value carries
+no literal `\n` escapes and spans 28 lines with both PEM markers intact.
+`normalizePrivateKey` from `apps/worker/src/shared/pem.ts` — the same function
+the worker runs at boot — parses it successfully. The credential was piped from
+the downloaded key file directly into the Railway CLI, so it never entered a
+transcript, a shell history, or a process argument list.
+
+All three writes used `--skip-deploys`, preserving the manual-deploy-only posture.
+No deployment was created.
+
+### What this does and does not change
+
+- The **Firebase gate on #282 is closed.** The worker's `fcm-apns` contract is
+  half-satisfied.
+- The **hold stands.** `validatePushContract` requires all eight variables, so the
+  worker still fails at boot; five remain, all downstream of the Apple Developer
+  Program membership tracked on #279. Criterion 3 is both-platform regardless.
+- Of the five, only `APNS_PRIVATE_KEY` is a true secret. `APNS_BUNDLE_ID` is
+  `tm.auto.app` and `APNS_PRODUCTION` is a `"true"`/`"false"` flag, both settable
+  without Apple; `APNS_KEY_ID` and `APNS_TEAM_ID` are identifiers issued with the
+  membership.
+- **Not verified:** that the Cloud Messaging API is enabled on the project. It is
+  enabled by default for Firebase-created projects, but this was not checked and
+  is not claimed. Confirm before the first production push proof.
+- **Still outstanding, unchanged:** the exposed `autotm-staging` service-account
+  key has not been rotated.
+- `google-services.json` and `GoogleService-Info.plist` are **not** matched by
+  `.gitignore`. `firebase-adminsdk-*.json` is. The repository is public and
+  `app.config.js` consumes both client files by path at EAS build time, so the
+  gap should be closed before either file is pulled into a worktree.
