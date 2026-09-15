@@ -962,3 +962,61 @@ worker. With Apple enrolment deferred to 2026-10-12 and Google Play named the so
 near-term target, this is a blocker on the Android path itself, not only on
 criterion 3. The scope decision and the proposed FCM-only transport are recorded
 in [`sprint-11-railway-deployment-retro.md`](../../sprints/sprint-11-railway-deployment-retro.md).
+
+## Android-only boot unblocked by ADR-0047; production switched to `PUSH_TRANSPORT=fcm` (2026-09-16)
+
+Supersedes the section immediately above, which recorded the block as
+unresolved. [ADR-0047](../../../adr/0047-fcm-only-push-transport-for-android-first-launch.md)
+adds `PUSH_TRANSPORT=fcm`, requiring only the three `FCM_*` variables and
+leaving `fcm-apns` unchanged.
+
+### Re-verified against the same production variable set
+
+The production worker's variables were read into memory and parsed through the
+real `EnvSchema` carrying the ADR-0047 change. No value reached a transcript, a
+file or a log.
+
+```
+production worker variable names present:
+  APNS_BUNDLE_ID, APNS_PRODUCTION, APP_ENV, DATABASE_URL, FCM_CLIENT_EMAIL,
+  FCM_PRIVATE_KEY, FCM_PROJECT_ID, LOG_LEVEL, MINIO_ACCESS_KEY, MINIO_ENDPOINT,
+  MINIO_SECRET_KEY, NODE_ENV, PUSH_TRANSPORT, REDIS_URL  (+ RAILWAY_* injected)
+
+PUSH_TRANSPORT=fcm-apns (today)   : boots = false
+  APNS_KEY_ID      : APNS_KEY_ID is required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)
+  APNS_TEAM_ID     : APNS_TEAM_ID is required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)
+  APNS_PRIVATE_KEY : APNS_PRIVATE_KEY is required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)
+
+PUSH_TRANSPORT=fcm      (ADR-0047): boots = true
+```
+
+The endpoint, MinIO-credential and cross-environment rules all pass in the same
+parse, so `boots = true` is the whole contract, not the push clause alone.
+
+### What is true now
+
+| Fact | State |
+|---|---|
+| Production push credential set | Three `FCM_*` present and proven live; `APNS_BUNDLE_ID` and `APNS_PRODUCTION` present; `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` absent |
+| Worker boots in production | **Yes**, under `PUSH_TRANSPORT=fcm` |
+| Android / Web push | Deliverable; not yet proven end-to-end against a real device |
+| iOS push | Fails `PERMANENT` with cause `APNS is not provisioned under PUSH_TRANSPORT=fcm`. Device rows are **not** deactivated |
+| #282 hold | **Still held.** The hold is a founder decision; only its boot-level cause is removed |
+| #282 criterion 3 | Still both-platform, still gated on Apple |
+
+### Ordering constraint this creates
+
+`PUSH_TRANSPORT=fcm` is only a valid enum value from this change forward.
+Promoting a SHA older than it, with the variable set to `fcm`, fails Zod enum
+validation at boot — fail-closed and visible in deployment logs, never a silent
+drop. #282's step-4.1 pre-promotion readback must therefore confirm both the
+variable and that the target SHA is at or after the ADR-0047 merge.
+
+### The October reversal
+
+Once `APNS_KEY_ID`, `APNS_TEAM_ID` and `APNS_PRIVATE_KEY` exist, production must
+be switched back to `fcm-apns`. Nothing in the schema can detect a stale `fcm`
+setting at that point — `fcm`'s own credential rule is satisfied, so the worker
+boots happily and simply stops delivering to iOS. This is recorded as an
+explicit checklist item in ADR-0047, the S11 retro and #282 rather than left to
+inference.

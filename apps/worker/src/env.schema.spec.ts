@@ -87,6 +87,71 @@ describe("worker EnvSchema push contract", () => {
     ).toThrow(new RegExp(missing));
   });
 
+  it("accepts fcm in production with only the FCM credentials (ADR-0047)", () => {
+    const env = EnvSchema.parse({
+      ...deployedEnv,
+      PUSH_TRANSPORT: "fcm",
+      FCM_PROJECT_ID: fullPushCredentials.FCM_PROJECT_ID,
+      FCM_CLIENT_EMAIL: fullPushCredentials.FCM_CLIENT_EMAIL,
+      FCM_PRIVATE_KEY: fullPushCredentials.FCM_PRIVATE_KEY,
+    });
+    expect(env.PUSH_TRANSPORT).toBe("fcm");
+  });
+
+  it.each(["APNS_KEY_ID", "APNS_TEAM_ID", "APNS_PRIVATE_KEY"])(
+    "does not require %s for fcm",
+    (apnsVar) => {
+      // The whole point of ADR-0047: these three are Apple-issued and cannot
+      // exist before the 2026-10-12 enrolment, so `fcm` must boot without them.
+      expect(() =>
+        EnvSchema.parse({
+          ...deployedEnv,
+          PUSH_TRANSPORT: "fcm",
+          ...fullPushCredentials,
+          [apnsVar]: undefined,
+        }),
+      ).not.toThrow();
+    },
+  );
+
+  it.each(["FCM_PROJECT_ID", "FCM_CLIENT_EMAIL", "FCM_PRIVATE_KEY"])(
+    "fails boot when %s is missing for fcm",
+    (missing) => {
+      const credentials = { ...fullPushCredentials } as Record<string, string>;
+      Reflect.deleteProperty(credentials, missing);
+
+      expect(() =>
+        EnvSchema.parse({
+          ...deployedEnv,
+          PUSH_TRANSPORT: "fcm",
+          ...credentials,
+        }),
+      ).toThrow(new RegExp(`${missing} is required when PUSH_TRANSPORT=fcm `));
+    },
+  );
+
+  it("rejects an unparseable FCM private key under fcm", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        PUSH_TRANSPORT: "fcm",
+        ...fullPushCredentials,
+        FCM_PRIVATE_KEY: "not-a-pem-block",
+      }),
+    ).toThrow(/FCM_PRIVATE_KEY is not a parseable PEM private key/);
+  });
+
+  it("ignores a malformed APNS key under fcm, which never reads it", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        PUSH_TRANSPORT: "fcm",
+        ...fullPushCredentials,
+        APNS_PRIVATE_KEY: "not-a-pem-block",
+      }),
+    ).not.toThrow();
+  });
+
   it("requires APNS_PRODUCTION to be an explicit boolean string", () => {
     expect(() =>
       EnvSchema.parse({

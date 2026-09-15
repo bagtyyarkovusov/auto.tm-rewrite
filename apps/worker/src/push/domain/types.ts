@@ -16,6 +16,8 @@ export type PushResultReason =
 
 export const PUSH_TRANSPORT = {
   Test: "test",
+  /** FCM only (Android + Web); iOS fails permanently. ADR-0047. */
+  Fcm: "fcm",
   FcmApns: "fcm-apns",
   Ntfy: "ntfy",
 } as const;

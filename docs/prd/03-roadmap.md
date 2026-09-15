@@ -21,7 +21,7 @@
 | | |
 |---|---|
 | **Sprint** | S11 — Railway deployment + store-review readiness |
-| **Status** | 🟡 In progress — issue creation complete |
+| **Status** | 🟡 In progress — **Google Play only until 2026-10-12** (see the store-sequencing decision below) |
 | **Started** | 2026-07-22 |
 | **Phase** | Pre-launch deployment track (ADR-0039) |
 | **Plan file** | Parent [#270](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/270); children [#271](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/271)-[#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283) |
@@ -39,6 +39,8 @@
 > **2026-07-20 hosting re-sequencing decision ([ADR-0039](../adr/0039-phased-cloud-first-hosting.md)):** AutoTM deploys **cloud-first on Railway** (staging + production) until App Store + Google Play verification passes, then cuts over to the [ADR-0005](../adr/0005-hosting.md) TM air-gapped topology. The TM-presence gate moved — it now gates the cutover, not the first deploy. CI gates stay on the `tm-build-mac` GitHub Actions runner; Railway owns build + deploy after CI green. Store-era auth runs `SMS_DRIVER=mock` with 3–5 flag-gated reviewer demo accounts (supersedes [ADR-0030](../adr/0030-reviewer-demo-account-otp-bypass.md)'s "exactly one" scoping). Registering `auto.tm` (or best fallback) is a hard gate before the first store-binary submission, making cutover a pure DNS flip. S11 shapes as the Railway deployment sprint.
 >
 > **2026-07-22 S11 start:** [`sprint-11-railway-deployment.md`](sprints/sprint-11-railway-deployment.md) moved to 🟡. Parent issue [#270](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/270) and children [#271](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/271)-[#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283) created with the approved 13-slice dependency map. No Railway resources, paid accounts, domains, credentials, or store submissions are authorized by this roadmap transition.
+>
+> **2026-09-16 store-sequencing decision — Google Play first, Apple from 2026-10-12.** ADR-0039 assumed both stores would be approached together. They are not. Apple Developer Program enrolment and account creation begin on **2026-10-12**; until that date the **sole** launch target is Google Play, and work that exists only to satisfy Apple is deferred, not abandoned. This is a sequencing change, not a scope cut: iOS remains in `apps/mobile`, `apps/mobile/app.config.js` still declares both platforms, and `eas.json` still carries iOS-capable profiles. What changes is which of them is on the critical path. The immediate code consequence is [ADR-0047](../adr/0047-fcm-only-push-transport-for-android-first-launch.md) — `PUSH_TRANSPORT=fcm`, without which the production worker cannot boot with Apple credentials absent and no promotion can run at all. S11 still cannot close on this: [#282](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/282) is held by founder decision and [#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283) depends on it. Reversing to `fcm-apns` is an explicit October checklist item, because nothing in the schema detects an FCM-only production worker once iOS ships. Recorded in full in the [S11 retro](sprints/sprint-11-railway-deployment-retro.md).
 
 ---
 

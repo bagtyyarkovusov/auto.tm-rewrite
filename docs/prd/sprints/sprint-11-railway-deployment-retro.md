@@ -144,3 +144,59 @@ an issue; flagged here so the October date is not mistaken for the only obstacle
 **#282's criterion 3 is unaffected** and still reads both-platform. An FCM-only
 transport would let the worker boot and let Android push be proven; it would not
 satisfy criterion 3, which remains gated on Apple regardless.
+
+### 2026-09-16 — the FCM-only transport is decided and built ([ADR-0047](../../adr/0047-fcm-only-push-transport-for-android-first-launch.md))
+
+The decision flagged in the entry above is taken. The founder directed that the
+project focus exclusively on the 2026-10-12 Apple date — Google Play until then —
+and that the code and environment be aligned to it rather than left waiting.
+
+[ADR-0047](../../adr/0047-fcm-only-push-transport-for-android-first-launch.md)
+adds a fourth transport value, `fcm`, requiring only `FCM_PROJECT_ID`,
+`FCM_CLIENT_EMAIL` and `FCM_PRIVATE_KEY`. `fcm-apns` is untouched. `fcm` reuses
+`FcmApnsPushTransport` — same routing rule, same wire payload, same `deepLink`
+contract — with `UnprovisionedApnsSender` on the APNS side, which loads no SDK
+and returns `PERMANENT` for an iOS token. It deliberately does not return
+`INVALID_TOKEN`: a missing server credential is no evidence a device is dead,
+and those `FcmDevice` rows must survive into the `fcm-apns` era.
+
+Verified by parsing the **real** production variable set through the real
+`EnvSchema`, values never leaving memory:
+
+```
+PUSH_TRANSPORT=fcm-apns (today)   : boots = false
+  APNS_KEY_ID      : required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)
+  APNS_TEAM_ID     : required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)
+  APNS_PRIVATE_KEY : required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)
+
+PUSH_TRANSPORT=fcm      (ADR-0047): boots = true
+```
+
+**What this does and does not change for #282:**
+
+- The worker can now boot in production, so the promotion order is runnable and
+  the boot-level blocker recorded on 2026-09-15 is lifted. The hold itself is a
+  founder decision and is **not** lifted by this entry.
+- Criterion 3 still reads both-platform push and is still gated on Apple. `fcm`
+  makes Android push provable; it cannot make criterion 3 pass.
+- Criteria 1 and 2 return to reach for the full service set, since the worker is
+  no longer excluded from a promotion by a boot failure.
+- #282's step-4.1 pre-promotion readback must confirm `PUSH_TRANSPORT=fcm` on a
+  SHA at or after this change. An older SHA does not know the `fcm` enum value
+  and fails closed at boot — visibly, not silently.
+
+**The locked sprint file is not edited.** Its DoD reads "Production has
+`SMS_DRIVER=mock`, public signup disabled, reviewer bypass enabled, CI OTP
+response mode disabled, and real `PUSH_TRANSPORT=fcm-apns`." That line now
+diverges from the shipped configuration, and per ADR-0020 the divergence is
+recorded here rather than rewritten there. Read it as **"a real delivering
+transport, correct for the launch window"**: `fcm` until Apple credentials
+exist, `fcm-apns` after. The clause's intent — that production must never sit on
+a transport that delivers nothing — is satisfied by `fcm`, and is still enforced
+at boot for `test`. The DoD line is **not** marked met by this entry.
+
+**The reversal is a checklist item, not an inference.** `fcm` in production
+after iOS ships would stop delivering to iOS devices with no schema error,
+because its own credential rule is satisfied. Switching back to `fcm-apns` is
+therefore an explicit step on the October iOS launch path, recorded in ADR-0047
+and in [#282](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/282).

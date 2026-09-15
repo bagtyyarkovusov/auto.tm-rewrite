@@ -23,7 +23,7 @@ const BaseSchema = z.object({
   MINIO_SECRET_KEY: z.string().min(1),
 
   PUSH_TRANSPORT: z
-    .enum(["test", "fcm-apns", "ntfy"])
+    .enum(["test", "fcm", "fcm-apns", "ntfy"])
     .default("test"),
   FCM_PROJECT_ID: z.string().optional(),
   FCM_CLIENT_EMAIL: z.string().optional(),
@@ -75,10 +75,13 @@ function referencesOtherEnvironment(host: string, appEnv: string): boolean {
 
 const DEPLOYED_ENVS = new Set(["staging", "production"]);
 
-const FCM_APNS_REQUIRED_VARS = [
+const FCM_REQUIRED_VARS = [
   "FCM_PROJECT_ID",
   "FCM_CLIENT_EMAIL",
   "FCM_PRIVATE_KEY",
+] as const;
+
+const APNS_REQUIRED_VARS = [
   "APNS_KEY_ID",
   "APNS_TEAM_ID",
   "APNS_BUNDLE_ID",
@@ -86,7 +89,20 @@ const FCM_APNS_REQUIRED_VARS = [
   "APNS_PRODUCTION",
 ] as const;
 
-const PRIVATE_KEY_VARS = ["FCM_PRIVATE_KEY", "APNS_PRIVATE_KEY"] as const;
+/**
+ * Credentials each delivering transport needs to boot. `fcm` (ADR-0047) carries
+ * the Android-first launch window and deliberately requires no Apple value;
+ * `fcm-apns` requires both sets.
+ */
+const REQUIRED_VARS_BY_TRANSPORT = {
+  fcm: FCM_REQUIRED_VARS,
+  "fcm-apns": [...FCM_REQUIRED_VARS, ...APNS_REQUIRED_VARS],
+} as const satisfies Record<string, readonly (keyof BaseEnv)[]>;
+
+const PRIVATE_KEY_VARS: readonly string[] = [
+  "FCM_PRIVATE_KEY",
+  "APNS_PRIVATE_KEY",
+];
 
 function validateEndpoints(env: BaseEnv, add: (path: string, message: string) => void): void {
   if (!DEPLOYED_ENVS.has(env.APP_ENV)) return;
@@ -124,10 +140,11 @@ function validateEndpoints(env: BaseEnv, add: (path: string, message: string) =>
 
 /**
  * Push contract (Sprint 11): the `test` transport records sends in memory and
- * delivers nothing, so it must be impossible to boot production with it.
- * `fcm-apns` delivers through real FCM and APNS, so booting with a partial or
+ * delivers nothing, so it must be impossible to boot production with it. The
+ * delivering transports reach real providers, so booting one with a partial or
  * unparseable credential set is also forbidden — the worker must fail visibly
- * at boot rather than silently drop pushes.
+ * at boot rather than silently drop pushes. Each transport is checked against
+ * its own required set, so `fcm` does not inherit `fcm-apns`'s Apple values.
  */
 function validatePushContract(env: BaseEnv, add: (path: string, message: string) => void): void {
   if (env.APP_ENV === "production" && env.PUSH_TRANSPORT === "test") {
@@ -137,24 +154,30 @@ function validatePushContract(env: BaseEnv, add: (path: string, message: string)
     );
   }
 
-  if (env.PUSH_TRANSPORT !== "fcm-apns") return;
+  const required = REQUIRED_VARS_BY_TRANSPORT[
+    env.PUSH_TRANSPORT as keyof typeof REQUIRED_VARS_BY_TRANSPORT
+  ] as readonly (keyof BaseEnv)[] | undefined;
+  if (required === undefined) return;
 
-  for (const name of FCM_APNS_REQUIRED_VARS) {
+  for (const name of required) {
     const value = env[name];
-    if (value === undefined || value.trim() === "") {
+    if (typeof value !== "string" || value.trim() === "") {
       add(
         name,
-        `${name} is required when PUSH_TRANSPORT=fcm-apns (incomplete push credentials)`,
+        `${name} is required when PUSH_TRANSPORT=${env.PUSH_TRANSPORT} (incomplete push credentials)`,
       );
     }
   }
 
   // Provider private keys arrive escaped and shell-quoted. Parsing them at boot
   // turns a malformed secret into a startup failure instead of a silent
-  // per-message delivery failure. The key value is never echoed.
-  for (const name of PRIVATE_KEY_VARS) {
+  // per-message delivery failure. Only keys this transport actually uses are
+  // parsed, so a stray APNS value cannot crash an `fcm` worker. The key value
+  // is never echoed.
+  for (const name of required) {
+    if (!PRIVATE_KEY_VARS.includes(name)) continue;
     const value = env[name];
-    if (value === undefined || value.trim() === "") continue;
+    if (typeof value !== "string" || value.trim() === "") continue;
     try {
       normalizePrivateKey(name, value);
     } catch {

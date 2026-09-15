@@ -111,8 +111,9 @@ generated per environment.
 | `TOTP_SECRET_ENCRYPTION_KEY` | yes | — | — | — | H (32-byte base64) |
 | `SMS_DRIVER` | yes | — | — | — | fixed `mock` in both environments (ADR-0039) |
 | `SOCKET_IO_CORS_ORIGIN` | yes | — | — | — | explicit origin list; never `*` in production |
-| `PUSH_TRANSPORT` | — | yes | — | — | `fcm-apns` in production (S11-05) |
-| `FCM_*` / `APNS_*` | — | yes | — | — | H, complete set required for `fcm-apns` (S11-05) |
+| `PUSH_TRANSPORT` | — | yes | — | — | `fcm` in production during the Android-first window, `fcm-apns` once Apple credentials exist (ADR-0047) |
+| `FCM_*` | — | yes | — | — | H, all three required for `fcm` and `fcm-apns` (S11-05) |
+| `APNS_*` | — | yes | — | — | H, all five required for `fcm-apns` only; unread under `fcm` (ADR-0047) |
 | `NEXT_PUBLIC_API_URL` | — | — | yes | yes | R: API service public domain |
 | `NEXT_PUBLIC_MINIO_PUBLIC_URL` | — | — | yes | yes | R/G (S11-02) |
 | `SESSION_SECRET` | — | — | yes | — | G |
