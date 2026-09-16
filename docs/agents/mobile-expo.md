@@ -34,17 +34,25 @@ CI=1 pnpm --filter @auto-tm/mobile exec expo install --check
 pnpm --filter @auto-tm/mobile exec expo export -p ios --clear
 ```
 
-For runtime-only bugs or simulator crashes, also run Expo Go and inspect logs:
+For runtime-only bugs or crashes, build and run a development build. Expo Go is
+not an option for this app (see the SDK 55 pitfalls below):
 
 ```bash
-pnpm --filter @auto-tm/mobile exec expo start --clear --go --ios
+pnpm --filter @auto-tm/mobile exec expo run:android
 node scripts/expo-logs.js --once
 ```
 
-Capture a simulator screenshot for UI/runtime claims:
+Capture a screenshot for UI/runtime claims. On the Android emulator:
 
 ```bash
-xcrun simctl io booted screenshot /tmp/auto-tm-expo-go.png
+adb exec-out screencap -p > /tmp/auto-tm-android.png
+```
+
+The emulator also needs the host stack reachable, since `EXPO_PUBLIC_*` point at
+`localhost`:
+
+```bash
+for p in 8081 3006 9000; do adb reverse tcp:$p tcp:$p; done
 ```
 
 Stop Metro before handing back the task.
@@ -56,7 +64,34 @@ Stop Metro before handing back the task.
 - Keep `react-native-screens` on its React Native/Fabric source path. Do not redirect it to `lib/commonjs`; that caused `RNSSafeAreaView` view-config crashes.
 - Do not patch `@react-native/codegen` for `react-native-screens` unless the package check is already clean and a fresh Codegen/parser repro proves the current aligned toolchain still fails.
 - `expo-router@55.0.14` ships the internal router modules needed by SDK 55. Do not restore old `expo-router@6.0.23` shims or postinstall patches.
-- Expo Go is valid for current routing/auth smoke tests. Use a custom dev client only for project-native code or modules Expo Go does not bundle, such as the `react-native-compressor` video path.
+- **Expo Go can no longer run this app.** `app/(tabs)/chat.tsx` imports `useChatPushTokenRegistration`, which pulls in `expo-notifications` at module load; Expo Go dropped remote-push native code in SDK 53, so the app throws on launch. A development build is required for every runtime check, not just for `react-native-compressor`. This regressed when S10 added push registration to the chat tab.
+
+## Local Android build pitfalls
+
+- **`ANDROID_HOME` must be exported in the shell that runs `expo run:android`.** `apps/mobile/android/local.properties` is not committed and `expo prebuild` does not generate it, so a shell without the SDK env fails at configuration time with `SDK location not found`, even though `adb` may work from an interactive terminal that sources a profile. Export it before building:
+
+```bash
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+```
+
+- **Gradle can fail to download `com.facebook.react:react-android` with `bad_record_mac`.** The symptom is many simultaneous task failures that all name the same artifact:
+
+```
+Could not download react-android-0.83.10-debug.aar
+  > (bad_record_mac) Insufficient buffer remaining for AEAD cipher fragment
+```
+
+  This is not a network outage and not a dependency-alignment problem — `curl` fetches the same 236 MB artifact fine. It is the Gradle daemon's JDK TLS 1.3 stack failing on a large AEAD transfer. Confirm the network first, then force TLS 1.2 for the daemon:
+
+```bash
+cd apps/mobile/android
+./gradlew app:assembleDebug -x lint -x test -PreactNativeArchitectures=arm64-v8a \
+  -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Djdk.tls.client.protocols=TLSv1.2"
+```
+
+  Once the artifact is cached, `expo run:android` succeeds normally. Do not "fix" this by pinning React Native versions or clearing `node_modules`; the artifact coordinates are correct.
 
 ## Documentation duty
 

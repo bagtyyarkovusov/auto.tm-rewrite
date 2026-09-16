@@ -23,7 +23,6 @@ const config = {
     },
     android: {
       package: "tm.auto.app",
-      edgeToEdgeEnabled: true,
       ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
       permissions: ["CAMERA", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES"],
     },

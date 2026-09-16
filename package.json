@@ -44,5 +44,10 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "pnpm": {
+    "overrides": {
+      "react-native-css-interop": "0.2.4"
+    }
+  }
 }
