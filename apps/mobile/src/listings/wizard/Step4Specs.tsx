@@ -5,7 +5,6 @@ import { Enums } from "@auto-tm/contracts";
 import type { WizardSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
-
 import { useColors } from "../../api/catalog/useColors";
 import { useBodyTypes } from "../../api/catalog/useBodyTypes";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";

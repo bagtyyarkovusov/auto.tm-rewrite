@@ -3,7 +3,7 @@ import { resolve } from "path";
 
 import { describe, it, expect } from "vitest";
 
-const source = readFileSync(resolve(__dirname, "./index.tsx"), "utf-8");
+const source = readFileSync(resolve(__dirname, "../../app/(tabs)/index.tsx"), "utf-8");
 
 describe("Feed trust framing", () => {
   it("renders a compact trust banner below the search header", () => {

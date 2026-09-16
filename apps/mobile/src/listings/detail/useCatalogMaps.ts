@@ -10,6 +10,7 @@ import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
+import type { Locale } from "../../i18n/resources";
 
 export interface CatalogMaps {
   brandName: (id: string) => string | undefined;
@@ -28,7 +29,7 @@ export function useCatalogMaps(
   brandId?: string,
   modelId?: string,
   regionId?: string,
-  locale: "tk" | "ru" | "en" = "ru",
+  locale?: Locale,
 ): { maps: CatalogMaps; isLoading: boolean } {
   const brands = useBrands(locale);
   const models = useModels(brandId ?? "", locale);

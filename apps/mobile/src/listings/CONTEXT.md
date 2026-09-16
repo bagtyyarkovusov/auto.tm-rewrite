@@ -18,7 +18,7 @@ Client-side listing creation + upload pipeline + feed browsing + search filters 
 - `apps/mobile/src/listings/`
   - `feed/` — public feed card components
     - `ListingCard.tsx` — cover image (`expo-image` `list` variant) sized with NativeWind `h-[100px] w-[140px]` + derived title + price + status badge + city + neutral `verifiedPhone` badge when `listing.sellerTrust.phoneVerified` is true. Card layout uses `shrink-0`/`min-w-0`/`flex-wrap` so long titles, prices, locations, and multiple badges do not push the image off-screen or overflow the card width.
-    - `useFeedCatalogMaps.ts` — hook that resolves brand/model/city IDs to display names for a batch of listings; uses `useBrands`/`useRegions` + batched `useQueries` for models/cities; derives locale from `i18n.language`; relies on `Accept-Language` header (no `?locale=` query params)
+    - `useFeedCatalogMaps.ts` — hook that resolves brand/model/city IDs to display names for a batch of listings; uses `useBrands`/`useRegions` + batched `useQueries` for models/cities; resolves locale with `useCatalogLocale()` and sends it as `?locale=` on every catalog request
     - `FeedSkeleton.tsx` — skeleton rows for initial load
     - `FeedEmpty.tsx` — empty feed CTA to Sell tab (shown when no listings exist and no filters are active) with a large muted-circle icon and vertically spaced copy.
     - `FilteredEmpty.tsx` — zero-result state when active filters match nothing; shows "No listings match. Try adjusting filters." + Reset filters button that calls `useListingFilters().reset()`, with a large muted-circle icon and vertically spaced copy.

@@ -8,6 +8,8 @@ import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
+import { buildVariantUrl } from "@/src/listings/detail/buildVariantUrl";
+import { formatPrice } from "@/src/listings/formatPrice";
 
 export interface PostRefCardProps {
   listingId: string;
@@ -32,7 +34,6 @@ export function PostRefCard({
   modelId,
   year,
   displayPriceTmt,
-  priceCurrency,
   coverMediaKey,
   status,
   available,
@@ -52,10 +53,10 @@ export function PostRefCard({
     .filter(Boolean)
     .join(" ");
 
-  const priceText = `${displayPriceTmt.toLocaleString(i18n.language)} ${priceCurrency}`;
+  const priceText = formatPrice(displayPriceTmt, i18n.language);
 
   const imageUrl = coverMediaKey
-    ? `${process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""}/${coverMediaKey}`
+    ? buildVariantUrl(coverMediaKey, "thumbnail")
     : null;
 
   const isUnavailable = !available || status !== Enums.ListingStatus.Active;

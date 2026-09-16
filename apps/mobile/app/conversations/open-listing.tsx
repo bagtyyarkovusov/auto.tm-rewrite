@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -16,22 +16,21 @@ export default function OpenListingConversationScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const router = useRouter();
   const goBack = useSafeBack("/(tabs)/chat");
-  const {
-    mutate,
-    isPending,
-    isSuccess,
-    isError,
-    data,
-    error,
-  } = useOpenConversation();
+  const { mutate, isSuccess, isError, data, error } = useOpenConversation();
+
+  // Fire exactly once per listingId. Keying off isPending/isSuccess alone would
+  // re-fire forever after a failure, because a failed mutation leaves both
+  // flags false and the error screen below would never stay on screen.
+  const attemptedListingId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!listingId || isPending || isSuccess) {
+    if (!listingId || attemptedListingId.current === listingId) {
       return;
     }
 
+    attemptedListingId.current = listingId;
     mutate({ listingId });
-  }, [listingId, mutate, isPending, isSuccess]);
+  }, [listingId, mutate]);
 
   useEffect(() => {
     if (isSuccess && data) {

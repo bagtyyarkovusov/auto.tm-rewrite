@@ -45,7 +45,11 @@ export function AutoTmTabBar({
 
   return (
     <View
-      className="flex-row items-center border-t border-border bg-background/90"
+      accessibilityRole="tablist"
+      // items-stretch, not items-center: with align-items:center each tab
+      // Pressable sizes to its own content (~41dp measured) instead of filling
+      // the 64dp bar, leaving every tab target below Android's 48dp minimum.
+      className="flex-row items-stretch border-t border-border bg-background/90"
       style={{
         paddingBottom: insets.bottom,
         height: 64 + insets.bottom,
@@ -85,8 +89,8 @@ export function AutoTmTabBar({
         return (
           <Pressable
             key={tab.name}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isFocused }}
             accessibilityLabel={
               descriptor?.options.tabBarAccessibilityLabel ?? tab.label
             }

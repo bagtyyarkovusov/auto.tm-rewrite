@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { localeTag } from "@/src/i18n/resources";
+import { formatPrice } from "@/src/listings/formatPrice";
+import { listingStatusLabel } from "@/src/listings/listingStatusLabel";
 
 type ListingSummary = ListingsSchemas.ListingSummary;
 type ListingStatus = ListingsSchemas.ListingSummary["status"];
@@ -24,23 +25,6 @@ interface OwnerListingCardProps {
   cityName?: string;
   onOpen: (id: string) => void;
   onEdit: (id: string) => void;
-}
-
-function formatPrice(amount: number, locale: string): string {
-  return `${amount.toLocaleString(localeTag(locale))} TMT`;
-}
-
-function statusLabel(status: ListingStatus, t: (key: string) => string): string {
-  switch (status) {
-    case Enums.ListingStatus.Active:
-      return t("active");
-    case Enums.ListingStatus.Sold:
-      return t("sold");
-    case Enums.ListingStatus.Archived:
-      return t("archived");
-    default:
-      return status;
-  }
 }
 
 function statusBadgeVariant(
@@ -78,7 +62,7 @@ export function OwnerListingCard({
     modelName ?? listing.modelId,
   ].filter(Boolean);
 
-  const label = statusLabel(listing.status, t);
+  const label = listingStatusLabel(listing.status, t);
 
   return (
     <Pressable

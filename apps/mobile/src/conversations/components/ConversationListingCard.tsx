@@ -5,6 +5,9 @@ import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 
 import { Text } from "@/components/ui/text";
+import { buildVariantUrl } from "@/src/listings/detail/buildVariantUrl";
+import { formatPrice } from "@/src/listings/formatPrice";
+import { listingStatusLabel } from "@/src/listings/listingStatusLabel";
 
 interface ConversationListingCardProps {
   listing: {
@@ -36,10 +39,10 @@ export function ConversationListingCard({
     .filter(Boolean)
     .join(" ");
 
-  const priceText = `${listing.displayPriceTmt.toLocaleString(i18n.language)} ${listing.priceCurrency}`;
+  const priceText = formatPrice(listing.displayPriceTmt, i18n.language);
 
   const imageUrl = listing.coverMediaKey
-    ? `${process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""}/${listing.coverMediaKey}`
+    ? buildVariantUrl(listing.coverMediaKey, "thumbnail")
     : null;
 
   return (
@@ -69,8 +72,8 @@ export function ConversationListingCard({
         </Text>
         <Text className="text-sm text-muted-foreground">{priceText}</Text>
         {listing.status !== Enums.ListingStatus.Active && (
-          <Text className="text-xs text-muted-foreground capitalize">
-            {listing.status}
+          <Text className="text-xs text-muted-foreground">
+            {listingStatusLabel(listing.status, t)}
           </Text>
         )}
       </View>

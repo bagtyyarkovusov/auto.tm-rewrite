@@ -1,4 +1,7 @@
 import "../global.css";
+// Registers NativeWind's className->style bridge for expo-image. Must run
+// before any screen renders an <Image className="...">.
+import "../lib/expo-image-interop";
 
 import { Stack, router } from "expo-router";
 import { ThemeProvider } from "@react-navigation/native";

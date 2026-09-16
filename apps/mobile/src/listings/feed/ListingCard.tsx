@@ -7,11 +7,11 @@ import { useTranslation } from "react-i18next";
 import { BadgeCheck } from "lucide-react-native";
 
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
+import { formatPrice } from "../formatPrice";
 
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { localeTag } from "@/src/i18n/resources";
 
 type ListingSummary = ListingsSchemas.ListingSummary;
 
@@ -21,10 +21,6 @@ interface ListingCardProps {
   brandName?: string;
   modelName?: string;
   cityName?: string;
-}
-
-function formatPrice(amount: number, locale: string): string {
-  return `${amount.toLocaleString(localeTag(locale))} TMT`;
 }
 
 export function ListingCard({

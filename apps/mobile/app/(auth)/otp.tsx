@@ -48,10 +48,6 @@ function parseInitialSeconds(value: string | undefined): number {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 }
 
-function isDevBuild(): boolean {
-  return process.env.EXPO_PUBLIC_ENV !== "production";
-}
-
 export default function OtpScreen() {
   const params = useLocalSearchParams<{
     phone?: string;
@@ -65,7 +61,9 @@ export default function OtpScreen() {
 
   const phone = firstParam(params.phone);
   const [code, setCode] = useState("");
-  const [testCode, setTestCode] = useState(firstParam(params.testCode));
+  const [testCode, setTestCode] = useState(
+    __DEV__ ? firstParam(params.testCode) : undefined,
+  );
   const [secondsRemaining, setSecondsRemaining] = useState(
     parseInitialSeconds(firstParam(params.resendInSeconds)),
   );
@@ -204,7 +202,7 @@ export default function OtpScreen() {
     try {
       const result = await requestOtpMutate({ phone: canonicalPhone });
       setSecondsRemaining(result.resendInSeconds);
-      setTestCode(result.testCode);
+      setTestCode(__DEV__ ? result.testCode : undefined);
       requestAnimationFrame(() => otpRef.current?.focus());
     } catch (error) {
       if (error instanceof ApiError) {
@@ -331,7 +329,7 @@ export default function OtpScreen() {
                 </View>
               ) : null}
 
-              {isDevBuild() && testCode ? (
+              {__DEV__ && testCode ? (
                 <Button
                   className="self-start h-auto rounded-full px-3 py-1"
                   size="sm"

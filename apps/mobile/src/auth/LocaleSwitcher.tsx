@@ -12,6 +12,7 @@ export function LocaleSwitcher() {
   return (
     <View
       accessibilityLabel="Language"
+      accessibilityRole="radiogroup"
       className="flex-row rounded-md bg-muted p-1"
     >
       {locales.map((l) => {
@@ -19,12 +20,12 @@ export function LocaleSwitcher() {
 
         return (
           <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: active }}
             className={
               active
-                ? "items-center justify-center rounded-md bg-background px-2 py-1"
-                : "items-center justify-center rounded-md px-2 py-1"
+                ? "min-h-[48px] min-w-[48px] items-center justify-center rounded-md bg-background px-4"
+                : "min-h-[48px] min-w-[48px] items-center justify-center rounded-md px-4"
             }
             key={l}
             onPress={() => setLocale(l)}
