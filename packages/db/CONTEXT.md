@@ -41,12 +41,19 @@ packages/db/
 ├── scripts/
 │   ├── build.cjs             Build helper that serializes prisma generate + tsc with .build.lock
 │   ├── promote-admin.ts      CLI entry point for first-admin bootstrap (`pnpm admin:promote`)
-│   └── reviewer-scenario.ts  CLI entry point for guarded store-review scenario seed/rotation/revocation (`pnpm reviewer:scenario`)
+│   ├── reviewer-scenario.ts  CLI entry point for guarded store-review scenario seed/rotation/revocation (`pnpm reviewer:scenario`)
+│   ├── ui-fixture.ts         Local-only UI review fixture: feed listings with photos in MinIO, favourites, chat threads (`pnpm ui:fixture`)
+│   └── fixture-photos.ts     Wikimedia Commons photo list used by `ui-fixture.ts`
 ├── tsconfig.build.json       CJS runtime build for Node consumers
 ├── eslint.config.mjs         Lints source/config files; ignores generated and built output
 ├── package.json
 └── CONTEXT.md
 ```
+
+Local UI fixture:
+- `scripts/ui-fixture.ts` (`pnpm --filter @auto-tm/db ui:fixture`) populates a local database and MinIO with active listings, real car photographs at every media variant path, favourites, and conversations so mobile screens can be reviewed on an emulator. It is idempotent.
+- It refuses to run unless both `DATABASE_URL` and `MINIO_ENDPOINT` resolve to localhost.
+- Photos listed in `scripts/fixture-photos.ts` are downloaded from Wikimedia Commons at run time into `node_modules/.cache/fixture-photos` and never committed. This is a developer-machine download, not a deployment dependency.
 
 S11 reviewer scenario seed (now implemented):
 - `src/reviewer-scenario-seed.ts` owns the testable core for the guarded store-review scenario seed.
