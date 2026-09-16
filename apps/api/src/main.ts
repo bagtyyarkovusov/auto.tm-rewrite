@@ -11,6 +11,7 @@ import { ConfigService } from "@nestjs/config";
 import { Logger } from "nestjs-pino";
 
 import { AppModule } from "./app.module";
+import { registerAcceptLanguageHook } from "./common/accept-language";
 import { RealtimeIoAdapter } from "./modules/realtime/infrastructure/RealtimeIoAdapter";
 
 async function bootstrap() {
@@ -41,6 +42,8 @@ async function bootstrap() {
     }
     done();
   });
+  // A Fastify hook, not Nest middleware: see common/accept-language.ts.
+  registerAcceptLanguageHook(httpAdapter.getInstance());
 
   app.enableShutdownHooks();
 
