@@ -3,7 +3,7 @@ import { resolve } from "path";
 
 import { describe, it, expect } from "vitest";
 
-const source = readFileSync(resolve(__dirname, "./[id].tsx"), "utf-8");
+const source = readFileSync(resolve(__dirname, "../../app/conversations/[id].tsx"), "utf-8");
 
 describe("ConversationDetailScreen quick replies", () => {
   it("passes showQuickReplies to MessageComposer", () => {

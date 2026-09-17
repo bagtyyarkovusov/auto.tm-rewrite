@@ -8,6 +8,9 @@ import { Image as ImageIcon, Trash2, Car } from "lucide-react-native";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
+import { buildVariantUrl } from "@/src/listings/detail/buildVariantUrl";
+import { formatPrice } from "@/src/listings/formatPrice";
+import { listingStatusLabel } from "@/src/listings/listingStatusLabel";
 
 interface ConversationListItemProps {
   conversation: {
@@ -128,11 +131,11 @@ export function ConversationListItem({
     : t("chat");
 
   const priceText = listing
-    ? `${listing.displayPriceTmt.toLocaleString("en-US")} ${listing.priceCurrency}`
+    ? formatPrice(listing.displayPriceTmt, i18n.language)
     : undefined;
 
   const imageUrl = listing?.coverMediaKey
-    ? `${process.env["EXPO_PUBLIC_MEDIA_URL"] ?? ""}/${listing.coverMediaKey}`
+    ? buildVariantUrl(listing.coverMediaKey, "thumbnail")
     : null;
 
   const handlePress = () => {
@@ -226,8 +229,8 @@ export function ConversationListItem({
             {conversation.myRole === "buyer" ? t("youAreBuyer") : t("youAreSeller")}
           </Text>
           {listing && listing.status !== Enums.ListingStatus.Active && (
-            <Text className="text-xs text-muted-foreground capitalize">
-              · {listing.status}
+            <Text className="text-xs text-muted-foreground">
+              · {listingStatusLabel(listing.status, t)}
             </Text>
           )}
         </View>

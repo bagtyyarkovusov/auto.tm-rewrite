@@ -1,7 +1,7 @@
-import { ActivityIndicator, Share, View } from "react-native";
+import { ActivityIndicator, Platform, Share, View } from "react-native";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import { Phone, MessageCircle, Share2, Heart, Forward } from "lucide-react-native";
+import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -102,27 +102,18 @@ export function ContactCtaBar({
     }
   };
 
-  const handleShareToChat = () => {
-    if (isAuthenticated === false) {
-      useAuthIntentStore.getState().setIntent({
-        returnPath: `/conversations/share-listing?listingId=${listingId}`,
-      });
-      router.push("/(auth)/phone");
-      return;
-    }
-
-    router.push({
-      pathname: "/conversations/share-listing",
-      params: { listingId },
-    });
-  };
-
   const handleShare = async () => {
+    const url = `https://auto.tm/listings/${listingId}`;
     try {
-      await Share.share({
-        message: t("shareMessage"),
-        url: `https://auto.tm/listings/${listingId}`,
-      });
+      // React Native's Android Share bridge forwards only `title` and
+      // `message` and drops `url` entirely (Libraries/Share/Share.js), so the
+      // link has to be inlined into the message there. iOS keeps them separate
+      // so the share sheet can render a rich link preview.
+      await Share.share(
+        Platform.OS === "android"
+          ? { message: `${t("shareMessage")} ${url}` }
+          : { message: t("shareMessage"), url },
+      );
     } catch {
       // Silently ignore share cancellation or errors
     }
@@ -176,24 +167,6 @@ export function ContactCtaBar({
             className={
               canMessage
                 ? "size-5 text-primary-foreground"
-                : "size-5 text-muted-foreground"
-            }
-          />
-        </Button>
-
-        <Button
-          variant="secondary"
-          size="icon"
-          disabled={!canMessage}
-          onPress={handleShareToChat}
-          accessibilityLabel={t("shareToChat")}
-          accessibilityState={{ disabled: !canMessage }}
-        >
-          <Icon
-            as={Forward}
-            className={
-              canMessage
-                ? "size-5 text-foreground"
                 : "size-5 text-muted-foreground"
             }
           />

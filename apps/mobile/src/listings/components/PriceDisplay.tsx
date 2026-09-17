@@ -4,10 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 import { localeTag } from "@/src/i18n/resources";
-
-function formatPrice(amount: number, locale: string): string {
-  return `${amount.toLocaleString(localeTag(locale))} TMT`;
-}
+import { formatPrice } from "@/src/listings/formatPrice";
 
 interface PriceDisplayProps {
   displayPriceTmt: number;

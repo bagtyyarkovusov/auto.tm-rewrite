@@ -54,6 +54,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0046](0046-production-smoke-host-approval.md) | Approve production-smoke hosts independently of the shared EAS `preview` URLs | Accepted | 2026-09-13 |
 | [0047](0047-fcm-only-push-transport-for-android-first-launch.md) | `PUSH_TRANSPORT=fcm` for the Android-first launch window (supersedes ADR-0043's transport value list) | Accepted | 2026-09-16 |
 | [0048](0048-pin-react-native-css-interop-with-a-pnpm-override.md) | Pin react-native-css-interop with a pnpm override | Accepted | 2026-09-16 |
+| [0049](0049-defer-listing-detail-share-to-chat-until-recipient-selection.md) | Defer listing-detail share to chat until the recipient is chosen | Accepted | 2026-09-17 |
 
 ## Per-app ADRs
 

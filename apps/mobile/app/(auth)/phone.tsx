@@ -112,7 +112,7 @@ export default function PhoneScreen() {
           phone: canonicalPhone,
           requestId: result.requestId,
           resendInSeconds: String(result.resendInSeconds),
-          ...(result.testCode ? { testCode: result.testCode } : {}),
+          ...(__DEV__ && result.testCode ? { testCode: result.testCode } : {}),
         },
       });
     } catch (error) {

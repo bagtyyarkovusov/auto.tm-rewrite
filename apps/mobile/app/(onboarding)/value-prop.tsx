@@ -85,7 +85,7 @@ export default function ValuePropScreen() {
           onPress={finishOnboarding}
           accessibilityRole="button"
           accessibilityLabel={t("common:skip", { defaultValue: "Skip" })}
-          className="items-center justify-center min-h-[44px] active:opacity-70"
+          className="min-h-12 items-center justify-center active:opacity-70"
         >
           <Text className="text-sm text-muted-foreground">
             {t("common:skip", { defaultValue: "Skip" })}

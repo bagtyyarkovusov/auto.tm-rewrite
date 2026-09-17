@@ -3,7 +3,7 @@ import { resolve } from "path";
 
 import { describe, it, expect } from "vitest";
 
-const source = readFileSync(resolve(__dirname, "./value-prop.tsx"), "utf-8");
+const source = readFileSync(resolve(__dirname, "../../app/(onboarding)/value-prop.tsx"), "utf-8");
 
 describe("Onboarding value prop trust slide", () => {
   it("includes a third trust-focused slide", () => {

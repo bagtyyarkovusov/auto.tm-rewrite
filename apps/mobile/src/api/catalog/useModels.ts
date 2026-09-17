@@ -3,7 +3,10 @@ import { CatalogSchemas } from "@auto-tm/contracts";
 import { z } from "zod";
 
 import { apiClient } from "../client";
+import type { Locale } from "../../i18n/resources";
 import { queryKeys } from "../queryKeys";
+
+import { useCatalogLocale } from "./useCatalogLocale";
 
 const ModelsListResponseSchema = z.object({
   items: z.array(CatalogSchemas.ModelSummarySchema),
@@ -15,12 +18,13 @@ const ModelsListResponseSchema = z.object({
 // well under 200 models; 500 is the safe headroom.
 const MODEL_PAGE_SIZE = 500;
 
-export function useModels(brandId: string, locale: "tk" | "ru" | "en" = "ru") {
+export function useModels(brandId: string, localeOverride?: Locale) {
+  const locale = useCatalogLocale(localeOverride);
   return useQuery({
     queryKey: queryKeys.catalog.models(brandId, locale),
     queryFn: () =>
       apiClient.get(
-        `/catalog/brands/${brandId}/models?limit=${MODEL_PAGE_SIZE}`,
+        `/catalog/brands/${brandId}/models?limit=${MODEL_PAGE_SIZE}&locale=${locale}`,
         ModelsListResponseSchema,
         { auth: false },
       ),
