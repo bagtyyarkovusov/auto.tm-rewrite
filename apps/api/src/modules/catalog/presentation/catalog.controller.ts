@@ -6,7 +6,7 @@ import {
 } from "@auto-tm/contracts";
 
 import { Public } from "../../../common/public.decorator";
-import type { LocalizedRequest } from "../../../common/accept-language.middleware";
+import type { LocalizedRequest } from "../../../common/accept-language";
 import { ListBrands } from "../application/ListBrands";
 import { ListModelsForBrand } from "../application/ListModelsForBrand";
 import { ListGenerationsForModel } from "../application/ListGenerationsForModel";

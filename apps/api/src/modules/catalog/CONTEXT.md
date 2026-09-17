@@ -130,7 +130,7 @@ All admin use-cases require an admin actor verified via `IdentityCheckPort.isAdm
 
 ### Public read endpoints (`CatalogController` at `GET /api/v1/catalog`)
 
-All read endpoints are `@Public()` (no authentication required). Locale resolution order: `?locale=` query param → `Accept-Language` header → default `ru`.
+All read endpoints are `@Public()` (no authentication required). Locale resolution order: `?locale=` query param → `Accept-Language` header → default `ru`. A Fastify `onRequest` hook (`registerAcceptLanguageHook`, registered in `apps/api/src/main.ts`) parses the first supported header language and writes it to the Fastify request read by the controller. Nest middleware receives the raw Node request under this adapter, so it cannot populate the controller's `req.locale`.
 
 | Method | Path | Description |
 |---|---|---|
@@ -161,9 +161,9 @@ There is no catalog UI in `apps/admin` today. Operators use the existing protect
 | `PATCH` | `/api/v1/admin/catalog/models/:id` | Update model |
 | `DELETE` | `/api/v1/admin/catalog/models/:id` | Delete model |
 
-## Accept-Language middleware
+## Accept-Language hook
 
-`apps/api/src/common/accept-language.middleware.ts` parses the `Accept-Language` header and sets `request.locale` to one of `tk | ru | en` (defaulting to `ru`). Catalog read endpoints use this as a fallback when `?locale=` is absent.
+`apps/api/src/common/accept-language.ts` exports `parseAcceptLanguage` and `registerAcceptLanguageHook`. The hook runs on every API request (not only catalog routes) and sets `request.locale` to one of `tk | ru | en` from the first `Accept-Language` tag, defaulting to `ru`. Catalog read endpoints use it as a fallback when `?locale=` is absent. It is a Fastify hook rather than Nest middleware because Nest middleware under the Fastify adapter receives the raw Node request, which controllers never see.
 
 ## Seed data
 

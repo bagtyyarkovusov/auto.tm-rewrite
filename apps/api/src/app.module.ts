@@ -1,4 +1,3 @@
-import type { NestModule, MiddlewareConsumer } from "@nestjs/common";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
@@ -24,7 +23,6 @@ import { ContentModule } from "./modules/content/content.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
-import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
 
 @Module({
   imports: [
@@ -73,10 +71,4 @@ import { AcceptLanguageMiddleware } from "./common/accept-language.middleware";
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer
-      .apply(AcceptLanguageMiddleware)
-      .forRoutes("api/v1/catalog/*");
-  }
-}
+export class AppModule {}
