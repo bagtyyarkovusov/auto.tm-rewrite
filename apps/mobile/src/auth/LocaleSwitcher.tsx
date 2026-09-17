@@ -24,8 +24,8 @@ export function LocaleSwitcher() {
             accessibilityState={{ checked: active }}
             className={
               active
-                ? "min-h-[48px] min-w-[48px] items-center justify-center rounded-md bg-background px-4"
-                : "min-h-[48px] min-w-[48px] items-center justify-center rounded-md px-4"
+                ? "min-h-12 min-w-12 items-center justify-center rounded-md bg-background px-4"
+                : "min-h-12 min-w-12 items-center justify-center rounded-md px-4"
             }
             key={l}
             onPress={() => setLocale(l)}
