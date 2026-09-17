@@ -1,6 +1,6 @@
 # ADR-0049: Defer listing-detail share to chat until the recipient is chosen
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-17
 - **Deciders**: AutoTM founder + AI architect
 
