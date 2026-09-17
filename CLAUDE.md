@@ -42,7 +42,7 @@ Monorepo (Turborepo + pnpm) with 7 apps and 5 packages. API is NestJS + Prisma +
 
 ### Expo SDK 55 package alignment
 
-Expo Go contains native code for specific SDK-compatible versions. Treat Expo CLI compatibility warnings as runtime risks, not just package-manager noise. The iOS simulator previously hit:
+The native runtime (Expo Go historically, a development build today) is compiled for specific SDK-compatible package versions. Treat Expo CLI compatibility warnings as runtime risks, not just package-manager noise. The iOS simulator previously hit, while still running in Expo Go:
 
 - `Invariant Violation: View config not found for component 'RNSSafeAreaView'` after redirecting `react-native-screens` away from Fabric sources.
 - `Unsupported top level event type "topSvgLayout"` with an old `react-native-svg`.
@@ -50,7 +50,7 @@ Expo Go contains native code for specific SDK-compatible versions. Treat Expo CL
 
 The fix is SDK alignment, not local package patching: `expo install --fix` aligned the mobile app to the SDK 55 expected package set (`expo-router@55.0.14`, `react-native@0.83.6`, `react-native-svg@15.15.3`, etc.). After changing Expo/RN package versions, run `pnpm install --force` from the repo root so pnpm relinks stale workspace symlinks.
 
-Reanimated 4 is a Worklets-backed native runtime dependency. Keep `react-native-reanimated` and `react-native-worklets` installed explicitly through Expo in `apps/mobile`; RNR components that import animation builders like `FadeIn` can otherwise compile but crash in Expo Go at module import time with vague `Exception in HostFunction` errors.
+Reanimated 4 is a Worklets-backed native runtime dependency. Keep `react-native-reanimated` and `react-native-worklets` installed explicitly through Expo in `apps/mobile`; RNR components that import animation builders like `FadeIn` can otherwise compile but crash at module import time with vague `Exception in HostFunction` errors.
 
 Required first check for SDK/package issues:
 
@@ -76,7 +76,7 @@ Node runtime packages and bundler-only packages use different rules. API/worker 
 
 ### react-native-screens Fabric imports
 
-Do not redirect `react-native-screens` to `lib/commonjs/`. Metro resolves the package's React Native/Fabric sources, and redirecting to commonjs bypasses Fabric view-config registration, which caused `RNSSafeAreaView` runtime crashes in Expo Go.
+Do not redirect `react-native-screens` to `lib/commonjs/`. Metro resolves the package's React Native/Fabric sources, and redirecting to commonjs bypasses Fabric view-config registration, which caused `RNSSafeAreaView` runtime crashes (observed in Expo Go).
 
 Earlier debugging tried patching Codegen and patching `react-native-screens`; those are not needed with the SDK-aligned `react-native@0.83.6` / `@react-native/codegen@0.83.6` set. If this class of error returns, first rerun Expo's dependency check before introducing local `node_modules` patches.
 
@@ -142,6 +142,6 @@ Before claiming a feature done:
 6. Manual verification: actually run the dev stack and try the feature in the UI
 7. You consulted Context7 for every external library your change touched (or recorded in the PR description why you didn't — e.g., trivial dep bump with no API surface change). See [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md).
 
-For any mobile / Expo package, Metro, navigation, or runtime-crash change, also run the mobile gate in `docs/agents/mobile-expo.md`. At minimum this means Expo dependency check, mobile typecheck, iOS export, and an Expo Go simulator launch/log check when the bug was runtime-only.
+For any mobile / Expo package, Metro, navigation, or runtime-crash change, also run the mobile gate in `docs/agents/mobile-expo.md`. At minimum this means Expo dependency check, mobile typecheck, iOS export, and a **development-build** launch/log check when the bug was runtime-only. Expo Go cannot run this app — `expo-notifications` loads at startup via the chat tab and Expo Go dropped remote push in SDK 53.
 
 Evidence before assertions. Never claim "fixed" without a passing test or a screenshot of the working flow.
