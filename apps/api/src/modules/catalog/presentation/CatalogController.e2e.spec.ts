@@ -11,6 +11,7 @@ import { PrismaService } from "@auto-tm/db";
 import { JwtModule } from "@nestjs/jwt";
 
 import { CatalogModule } from "../catalog.module";
+import { registerAcceptLanguageHook } from "../../../common/accept-language";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 
 describe("CatalogController e2e", () => {
@@ -34,6 +35,7 @@ describe("CatalogController e2e", () => {
       new FastifyAdapter(),
     );
     app.useGlobalFilters(new GlobalErrorFilter());
+    registerAcceptLanguageHook(app.getHttpAdapter().getInstance());
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
     request = supertest(app.getHttpServer());
@@ -109,6 +111,19 @@ describe("CatalogController e2e", () => {
 
       expect(res.body.items[0].name).toBe("Lada");
       expect(res.body.items[0].localeFallback).toBe("en");
+    });
+
+    it("uses the Accept-Language header when ?locale= is absent", async () => {
+      await prisma.brand.create({
+        data: { id: "b1", slug: "lada", nameRu: "Лада", nameTk: "Lada TK", nameEn: "Lada" },
+      });
+
+      const res = await request
+        .get("/api/v1/catalog/brands")
+        .set("Accept-Language", "tk-TM,ru;q=0.8")
+        .expect(200);
+
+      expect(res.body.items[0].name).toBe("Lada TK");
     });
 
     it("returns paginated results with cursor", async () => {

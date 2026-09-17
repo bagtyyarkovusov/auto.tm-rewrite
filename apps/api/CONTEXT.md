@@ -21,6 +21,7 @@ Every bounded context under `src/modules/<context>/` has four layers:
 
 - 10 modules under `src/modules/` (admin, catalog, content, conversations, identity, listings, notifications, realtime, reports, subscriptions); `realtime` is an infrastructure module that provides authenticated Socket.IO and presence state to the business contexts
 - Global `JwtAuthGuard` + `@Public()` decorator at `src/common/` for auth-gating + anonymous-browsing escape hatch. The API auth boundary is bearer-token only; browser cookie storage belongs to `apps/admin`, which forwards `Authorization: Bearer <accessToken>` server-side.
+- `registerAcceptLanguageHook` at `src/common/accept-language.ts`: a Fastify `onRequest` hook registered in `main.ts` that sets `request.locale` (`tk | ru | en`, default `ru`) from `Accept-Language` on every request. Catalog endpoints use it when `?locale=` is absent.
 - `AdminGuard` at `src/common/admin.guard.ts` composing on top of `JwtAuthGuard` (gates admin-only routes via `IdentityCheckPort.isAdmin`)
 - Global throttler (`@nestjs/throttler`) — 60 req/min/IP default; per-route override via `@Throttle()`. S7 public report routes use this global throttler only; no report-specific quota store or custom report throttling rule ships in the MLP.
 - Prisma client via `PrismaService` (PrismaModule is currently commented out in `app.module.ts` pending API ESM migration — issue #16)
