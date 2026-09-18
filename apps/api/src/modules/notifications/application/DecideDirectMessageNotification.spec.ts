@@ -161,6 +161,7 @@ function makeTextEvent(overrides?: Partial<MessageSentEvent>): MessageSentEvent 
     messageBody: "Hello",
     messageMetadata: null,
     messageDeletedAt: null,
+    clientMessageId: null,
     ...overrides,
   };
 }

@@ -42,6 +42,7 @@ export class ConversationMessageCommitter {
       messageBody: message.body,
       messageMetadata: message.metadata,
       messageDeletedAt: message.deletedAt?.toISOString() ?? null,
+      clientMessageId: message.clientMessageId,
     });
     return { message, created: true };
   }

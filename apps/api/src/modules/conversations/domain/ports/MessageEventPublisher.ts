@@ -11,6 +11,7 @@ export interface MessageSentEvent {
   messageBody: string | null;
   messageMetadata: MessageMetadata | null;
   messageDeletedAt: string | null;
+  clientMessageId: string | null;
 }
 
 export interface MessageEventPublisher {

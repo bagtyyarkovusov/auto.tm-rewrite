@@ -38,6 +38,7 @@ describe("EventEmitterMessageEventPublisher", () => {
       messageBody: "Hello",
       messageMetadata: null,
       messageDeletedAt: null,
+      clientMessageId: null,
     });
 
     expect(listener).toHaveBeenCalledOnce();

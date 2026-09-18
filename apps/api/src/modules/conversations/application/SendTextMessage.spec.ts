@@ -307,6 +307,7 @@ describe("SendTextMessage", () => {
       messageId: result.message.id,
       senderId: "buyer-1",
       recipientId: "seller-1",
+      clientMessageId: null,
     });
   });
 

@@ -305,6 +305,7 @@ describe("SendMessage", () => {
       conversationId: "conv-1",
       kind: "text",
       text: "Hello",
+      clientMessageId: "client-1",
     });
 
     expect(events.events).toHaveLength(1);
@@ -314,6 +315,7 @@ describe("SendMessage", () => {
       messageId: result.message.id,
       senderId: "buyer-1",
       recipientId: "seller-1",
+      clientMessageId: "client-1",
     });
   });
 
