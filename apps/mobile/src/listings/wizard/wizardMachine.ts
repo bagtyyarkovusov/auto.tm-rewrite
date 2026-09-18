@@ -1,4 +1,4 @@
-import { WizardSchemas } from "@auto-tm/contracts";
+import { Enums, WizardSchemas } from "@auto-tm/contracts";
 
 const {
   WIZARD_STEPS,
@@ -135,6 +135,13 @@ export function wizardMachineReducer(
   switch (action.type) {
     case "INIT": {
       const mode = action.mode ?? "create";
+      const payload =
+        mode === "create"
+          ? {
+              ...action.payload,
+              condition: action.payload.condition ?? Enums.ListingCondition.Used,
+            }
+          : action.payload;
       const legacyStep = mapLegacyStep(action.payload.currentStep);
       const validatedSteps =
         action.payload.validatedSteps && Array.isArray(action.payload.validatedSteps)
@@ -151,7 +158,7 @@ export function wizardMachineReducer(
           listingId: action.listingId ?? null,
           mode,
           editEntryAtReview: true,
-          payload: action.payload,
+          payload,
           validatedSteps: DATA_STEPS,
           currentStep: "review",
           saveError: null,
@@ -178,7 +185,7 @@ export function wizardMachineReducer(
         listingId: action.listingId ?? null,
         mode,
         editEntryAtReview: false,
-        payload: action.payload,
+        payload,
         validatedSteps,
         currentStep: resumeStep,
         saveError: null,

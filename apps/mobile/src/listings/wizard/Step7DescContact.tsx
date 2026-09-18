@@ -135,7 +135,11 @@ function ContactPhoneInput({
           onChangeText={(text) =>
             onChange({ contactPhone: text || undefined })
           }
-          placeholder={defaultPhone ? `${t("defaultPhone")}: ${defaultPhone}` : t("enterPhoneNumber")}
+          placeholder={
+            defaultPhone
+              ? t("defaultPhone", { phone: defaultPhone })
+              : t("enterPhoneNumber")
+          }
           editable={!disabled}
           keyboardType="phone-pad"
           accessibilityLabel={t("contactPhone")}
