@@ -33,50 +33,91 @@ export const WIZARD_STEPS: WizardStep[] = [
   "review",
 ];
 
+// ── Validation message keys ──
+// Step schemas emit stable dotted keys, not English prose, so every client can
+// render them in the user's own language. See ADR-0050. The keys are namespaced
+// under `wizardErrors.` and the numeric limits below are exported so clients can
+// interpolate them without duplicating the constants.
+
+export const WIZARD_ERROR_KEY_PREFIX = "wizardErrors.";
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+export const WIZARD_LIMITS = {
+  vinMaxLength: 17,
+  yearMin: 1900,
+  yearMax: CURRENT_YEAR + 1,
+  priceMax: 999_999_999,
+  locationTextMaxLength: 200,
+  descriptionMaxLength: 2000,
+} as const;
+
+const KEY = {
+  required: "wizardErrors.required",
+  invalidValue: "wizardErrors.invalidValue",
+  unknownStep: "wizardErrors.unknownStep",
+  vinTooLong: "wizardErrors.vinTooLong",
+  photosRequired: "wizardErrors.photosRequired",
+  photosUploading: "wizardErrors.photosUploading",
+  brandRequired: "wizardErrors.brandRequired",
+  modelRequired: "wizardErrors.modelRequired",
+  yearRequired: "wizardErrors.yearRequired",
+  yearWholeNumber: "wizardErrors.yearWholeNumber",
+  yearTooEarly: "wizardErrors.yearTooEarly",
+  yearTooLate: "wizardErrors.yearTooLate",
+  mileageNegative: "wizardErrors.mileageNegative",
+  enginePowerNotPositive: "wizardErrors.enginePowerNotPositive",
+  mileageRequiredForUsed: "wizardErrors.mileageRequiredForUsed",
+  priceRequired: "wizardErrors.priceRequired",
+  priceNotPositive: "wizardErrors.priceNotPositive",
+  priceTooLarge: "wizardErrors.priceTooLarge",
+  regionRequired: "wizardErrors.regionRequired",
+  cityRequired: "wizardErrors.cityRequired",
+  locationTextTooLong: "wizardErrors.locationTextTooLong",
+  descriptionRequired: "wizardErrors.descriptionRequired",
+  descriptionTooLong: "wizardErrors.descriptionTooLong",
+  contactChannelRequired: "wizardErrors.contactChannelRequired",
+} as const;
+
 // ── Per-step validation schemas ──
 // Each schema validates exactly the fields required for its step.
 // They are refinements of ListingDraftPayloadSchema — partial, step-scoped.
 
 export const StepVinSchema = z.object({
-  vin: z.string().max(17, "VIN cannot exceed 17 characters").optional(),
+  vin: z.string().max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong).optional(),
 });
 export type StepVinInput = z.infer<typeof StepVinSchema>;
 
 export const StepPhotosSchema = z.object({
   photos: z
     .array(DraftPhotoSchema)
-    .min(1, "At least one photo is required")
-    .refine(
-      (photos) => photos.some((p) => p.key),
-      "Wait for photos to finish uploading",
-    ),
+    .min(1, KEY.photosRequired)
+    .refine((photos) => photos.some((p) => p.key), KEY.photosUploading),
 });
 export type StepPhotosInput = z.infer<typeof StepPhotosSchema>;
 
-const CURRENT_YEAR = new Date().getFullYear();
-
 export const StepVehicleSchema = z.object({
-  brandId: z.string({ required_error: "Brand is required" }).uuid({ message: "Brand is required" }),
-  modelId: z.string({ required_error: "Model is required" }).uuid({ message: "Model is required" }),
+  brandId: z.string({ required_error: KEY.brandRequired }).uuid({ message: KEY.brandRequired }),
+  modelId: z.string({ required_error: KEY.modelRequired }).uuid({ message: KEY.modelRequired }),
   generationId: z.string().uuid().optional(),
   year: z
-    .number({ required_error: "Year is required", invalid_type_error: "Year is required" })
-    .int("Year must be a whole number")
-    .min(1900, "Year must be 1900 or later")
-    .max(CURRENT_YEAR + 1, `Year cannot be later than ${CURRENT_YEAR + 1}`),
+    .number({ required_error: KEY.yearRequired, invalid_type_error: KEY.yearRequired })
+    .int(KEY.yearWholeNumber)
+    .min(WIZARD_LIMITS.yearMin, KEY.yearTooEarly)
+    .max(WIZARD_LIMITS.yearMax, KEY.yearTooLate),
 });
 export type StepVehicleInput = z.infer<typeof StepVehicleSchema>;
 
 export const StepSpecsSchema = z
   .object({
     condition: ListingConditionSchema,
-    mileageKm: z.number().int().nonnegative("Mileage must be zero or greater").optional(),
+    mileageKm: z.number().int().nonnegative(KEY.mileageNegative).optional(),
     colorId: z.string().uuid().optional(),
     bodyTypeId: z.string().uuid().optional(),
     transmissionId: z.string().uuid().optional(),
     driveTypeId: z.string().uuid().optional(),
     engineTypeId: z.string().uuid().optional(),
-    enginePower: z.number().int().positive("Engine power must be greater than zero").optional(),
+    enginePower: z.number().int().positive(KEY.enginePowerNotPositive).optional(),
     conditionDisclosure: ConditionDisclosureSchema.optional(),
   })
   .refine(
@@ -86,15 +127,15 @@ export const StepSpecsSchema = z
       }
       return true;
     },
-    { message: "Mileage is required for used cars", path: ["mileageKm"] },
+    { message: KEY.mileageRequiredForUsed, path: ["mileageKm"] },
   );
 export type StepSpecsInput = z.infer<typeof StepSpecsSchema>;
 
 export const StepPriceSchema = z.object({
   priceAmount: z
-    .number({ required_error: "Price is required", invalid_type_error: "Price is required" })
-    .positive("Price must be greater than zero")
-    .max(999_999_999, "Price is too large"),
+    .number({ required_error: KEY.priceRequired, invalid_type_error: KEY.priceRequired })
+    .positive(KEY.priceNotPositive)
+    .max(WIZARD_LIMITS.priceMax, KEY.priceTooLarge),
   priceCurrency: CurrencySchema,
   acceptsExchange: z.boolean().optional(),
   installmentAvailable: z.boolean().optional(),
@@ -102,18 +143,21 @@ export const StepPriceSchema = z.object({
 export type StepPriceInput = z.infer<typeof StepPriceSchema>;
 
 export const StepLocationSchema = z.object({
-  regionId: z.string({ required_error: "Region is required" }).uuid({ message: "Region is required" }),
-  cityId: z.string({ required_error: "City is required" }).uuid({ message: "City is required" }),
-  locationText: z.string().max(200, "Area must be 200 characters or fewer").optional(),
+  regionId: z.string({ required_error: KEY.regionRequired }).uuid({ message: KEY.regionRequired }),
+  cityId: z.string({ required_error: KEY.cityRequired }).uuid({ message: KEY.cityRequired }),
+  locationText: z
+    .string()
+    .max(WIZARD_LIMITS.locationTextMaxLength, KEY.locationTextTooLong)
+    .optional(),
 });
 export type StepLocationInput = z.infer<typeof StepLocationSchema>;
 
 export const StepContactSchema = z
   .object({
     description: z
-      .string({ required_error: "Description is required" })
-      .min(1, "Description is required")
-      .max(2000, "Description must be 2000 characters or fewer"),
+      .string({ required_error: KEY.descriptionRequired })
+      .min(1, KEY.descriptionRequired)
+      .max(WIZARD_LIMITS.descriptionMaxLength, KEY.descriptionTooLong),
     contactPhone: z.string().optional(),
     allowCalls: z.boolean(),
     allowChat: z.boolean(),
@@ -121,7 +165,7 @@ export const StepContactSchema = z
   .refine(
     (data) => data.allowCalls || data.allowChat,
     {
-      message: "Choose calls or chat",
+      message: KEY.contactChannelRequired,
       path: ["allowCalls"],
     },
   );
@@ -223,8 +267,36 @@ export interface StepValidationResult {
 }
 
 /**
+ * Turns Zod's own built-in messages into wizard error keys. Schema-level
+ * messages take precedence over this map, so it only covers the issues we
+ * never spelled out — a missing enum such as `condition`, for instance, would
+ * otherwise reach the UI as the untranslated literal "Required".
+ */
+const wizardErrorMap: z.ZodErrorMap = (issue, ctx) => {
+  // A contextual error map runs last and outranks the schema, so hand back any
+  // message a step schema already spelled out rather than flattening it.
+  if (ctx.defaultError.startsWith(WIZARD_ERROR_KEY_PREFIX)) {
+    return { message: ctx.defaultError };
+  }
+  if (
+    (issue.code === z.ZodIssueCode.invalid_type &&
+      issue.received === z.ZodParsedType.undefined) ||
+    issue.code === z.ZodIssueCode.invalid_enum_value
+  ) {
+    return { message: KEY.required };
+  }
+  return { message: ctx.defaultError };
+};
+
+const parseOptions = { errorMap: wizardErrorMap };
+
+/**
  * Validate a single wizard step against a draft payload.
  * Returns client-side validation result (no server calls).
+ *
+ * Messages are `wizardErrors.*` keys, not display text — clients translate
+ * them (ADR-0050). `WIZARD_LIMITS` carries the numbers the length and range
+ * messages interpolate.
  */
 export function validateStep(
   step: WizardStep,
@@ -234,32 +306,32 @@ export function validateStep(
 
   switch (step) {
     case "vin":
-      result = StepVinSchema.safeParse(payload);
+      result = StepVinSchema.safeParse(payload, parseOptions);
       break;
     case "photos":
-      result = StepPhotosSchema.safeParse(payload);
+      result = StepPhotosSchema.safeParse(payload, parseOptions);
       break;
     case "vehicle":
-      result = StepVehicleSchema.safeParse(payload);
+      result = StepVehicleSchema.safeParse(payload, parseOptions);
       break;
     case "specs":
-      result = StepSpecsSchema.safeParse(payload);
+      result = StepSpecsSchema.safeParse(payload, parseOptions);
       break;
     case "price":
-      result = StepPriceSchema.safeParse(payload);
+      result = StepPriceSchema.safeParse(payload, parseOptions);
       break;
     case "location":
-      result = StepLocationSchema.safeParse(payload);
+      result = StepLocationSchema.safeParse(payload, parseOptions);
       break;
     case "contact":
-      result = StepContactSchema.safeParse(payload);
+      result = StepContactSchema.safeParse(payload, parseOptions);
       break;
     case "review":
       // Review has no fields; it's gated by prior steps being validated.
-      result = StepReviewSchema.safeParse(payload);
+      result = StepReviewSchema.safeParse(payload, parseOptions);
       break;
     default:
-      return { valid: false, errors: ["Unknown step"], fieldErrors: {} };
+      return { valid: false, errors: [KEY.unknownStep], fieldErrors: {} };
   }
 
   if (result.success) {
@@ -269,7 +341,7 @@ export function validateStep(
   const errors: string[] = [];
   const fieldErrors: Record<string, string> = {};
   for (const issue of result.error.issues) {
-    const message = issue.message ?? "Invalid value";
+    const message = issue.message ?? KEY.invalidValue;
     errors.push(message);
     const key = (issue.path[0] ?? "").toString();
     // First issue per field wins — later ones are typically less specific.

@@ -282,9 +282,13 @@ interface WizardMachineContext {
 
 Each step renders its own field errors inline directly under the relevant Input/Picker, reading from `WizardMachineContext.fieldErrors[fieldPath]`. The Vehicle step gates required-field errors until the user has either attempted Continue on the step or interacted with that specific field, so selecting Brand does not immediately reveal downstream Model/Year errors. The shared `WizardLayout` does **not** render `stepErrors` as a global list; layout-level error UI is reserved for the save banner (network / autosave failures) and a one-line `disabledReason` helper below a disabled Continue/Publish button after an attempted advance. This is the divergence point from the original spec's "global errors block at top of step body" pattern — see [sprint-04 retro](../../../../../docs/prd/sprints/sprint-04-listings-crud-retro.md).
 
+### Error message localization
+
+`validateStep` returns `wizardErrors.*` translation keys, not display text ([ADR-0050](../../../../docs/adr/0050-wizard-validation-messages-as-translation-keys.md)). `sell.tsx` and `listings/[id]/edit.tsx` run `ctx.fieldErrors`, `ctx.stepErrors[0]`, and `publishGate.blockers[0]` through `src/listings/wizard/wizardErrors.ts` before rendering; anything without the `wizardErrors.` prefix passes through untouched. Translations live in `src/i18n/resources.ts` under `common.wizardErrors` for tk/ru/en, and interpolate the limits exported as `WizardSchemas.WIZARD_LIMITS` rather than restating them. `computePublishGate` in `uploadStaging/queueState.ts` emits keys from the same namespace.
+
 ### Shared schema authority
 
-`packages/contracts/src/schemas/wizard.ts` is the single source of truth for step names, step validation schemas (Zod), dependency graph, and invalidation logic. Both mobile and API (`UpdateDraft`, `ValidateDraftStep`) consume it.
+`packages/contracts/src/schemas/wizard.ts` is the single source of truth for step names, step validation schemas (Zod), dependency graph, invalidation logic, and the `wizardErrors.*` message keys. Both mobile and API (`UpdateDraft`, `ValidateDraftStep`) consume it.
 
 ## 3. Autosave
 

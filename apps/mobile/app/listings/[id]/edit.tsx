@@ -25,6 +25,10 @@ import {
   createInitialState,
   wizardMachineReducer,
 } from "../../../src/listings/wizard/wizardMachine";
+import {
+  translateWizardError,
+  translateWizardFieldErrors,
+} from "../../../src/listings/wizard/wizardErrors";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
@@ -230,6 +234,7 @@ export default function EditListingScreen() {
   }
 
   const currentStep = machineState.currentStep;
+  const fieldErrors = translateWizardFieldErrors(t, ctx.fieldErrors);
 
   // Compute upload status counts for chip + publishGate reason
   const uploadStatus = {
@@ -246,12 +251,13 @@ export default function EditListingScreen() {
         ? t("photosFailedRetryOrRemove", { count: uploadStatus.failed })
         : uploadStatus.inflight > 0
           ? t("waitForPhotos", { count: uploadStatus.inflight })
-          : (uploadQueue.publishGate.blockers[0] ?? t("cannotSaveYet"))
+          : (translateWizardError(t, uploadQueue.publishGate.blockers[0]) ??
+            t("cannotSaveYet"))
       : !ctx.isLastStep &&
           !ctx.canContinue &&
           attemptedSteps[currentStep] &&
           ctx.stepErrors.length > 0
-        ? ctx.stepErrors[0]
+        ? translateWizardError(t, ctx.stepErrors[0])
         : undefined;
 
   const saveStatus: "idle" | "saving" | "saved" | "error" =
@@ -290,7 +296,7 @@ export default function EditListingScreen() {
         <Step1Vin
           payload={machineState.payload}
           onChange={handlePayloadChange}
-          fieldErrors={ctx.fieldErrors}
+          fieldErrors={fieldErrors}
           disabled={true}
         />
       )}
@@ -303,14 +309,14 @@ export default function EditListingScreen() {
           onRetryPhoto={uploadQueue.retryPhoto}
           isCompressing={uploadQueue.isCompressing}
           isUploading={uploadQueue.isUploading}
-          fieldErrors={ctx.fieldErrors}
+          fieldErrors={fieldErrors}
         />
       )}
       {currentStep === "vehicle" && (
         <Step3VehicleId
           payload={machineState.payload}
           onChange={handlePayloadChange}
-          fieldErrors={ctx.fieldErrors}
+          fieldErrors={fieldErrors}
           disabled={true}
           showErrors={attemptedSteps.vehicle === true}
         />
@@ -319,28 +325,28 @@ export default function EditListingScreen() {
         <Step4Specs
           payload={machineState.payload}
           onChange={handlePayloadChange}
-          fieldErrors={ctx.fieldErrors}
+          fieldErrors={fieldErrors}
         />
       )}
       {currentStep === "price" && (
         <Step5Price
           payload={machineState.payload}
           onChange={handlePayloadChange}
-          fieldErrors={ctx.fieldErrors}
+          fieldErrors={fieldErrors}
         />
       )}
       {currentStep === "location" && (
         <Step6Location
           payload={machineState.payload}
           onChange={handlePayloadChange}
-          fieldErrors={ctx.fieldErrors}
+          fieldErrors={fieldErrors}
         />
       )}
       {currentStep === "contact" && (
         <Step7DescContact
           payload={machineState.payload}
           onChange={handlePayloadChange}
-          fieldErrors={ctx.fieldErrors}
+          fieldErrors={fieldErrors}
           defaultPhone={listing.contactPhone ?? ""}
         />
       )}

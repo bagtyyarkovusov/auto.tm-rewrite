@@ -30,3 +30,14 @@ describe("English broad-surface translations", () => {
     expect(russianKeys.filter((key) => !englishKeys.has(key))).toEqual([]);
   });
 });
+
+describe("Turkmen translations", () => {
+  // Turkmen falls back to Russian at runtime, so a gap here is invisible on
+  // device until a Turkmen-speaking user hits the screen.
+  it("defines every key available in the Russian fallback locale", () => {
+    const russianKeys = flattenKeys(resources["ru"]);
+    const turkmenKeys = new Set(flattenKeys(resources["tk"]));
+
+    expect(russianKeys.filter((key) => !turkmenKeys.has(key))).toEqual([]);
+  });
+});

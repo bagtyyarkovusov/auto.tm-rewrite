@@ -3,12 +3,16 @@ import type { ListingsSchemas } from "@auto-tm/contracts";
 import { getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from "./types";
 
+/**
+ * Blockers are translation keys, not display text — the wizard screens run them
+ * through `translateWizardError` before rendering (ADR-0050).
+ */
 export function computePublishGate(queue: UploadQueue): PublishGateResult {
   const blockers: string[] = [];
 
   const hasPhotos = queue.photos.length > 0;
   if (!hasPhotos) {
-    blockers.push("At least one photo is required");
+    blockers.push("wizardErrors.photosRequired");
   }
 
   const hasPending = queue.photos.some(
@@ -19,19 +23,19 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
       p.state === "uploading",
   );
   if (hasPending) {
-    blockers.push("Some uploads are still in progress");
+    blockers.push("wizardErrors.uploadsInProgress");
   }
 
   const hasFailed = queue.photos.some((p) => p.state === "failed");
   if (hasFailed) {
-    blockers.push("Some uploads failed — retry or remove them");
+    blockers.push("wizardErrors.uploadsFailed");
   }
 
   const hasAttached = queue.photos.some(
     (p) => p.state === "attached" || p.state === "uploaded",
   );
   if (!hasAttached && hasPhotos) {
-    blockers.push("At least one photo must be successfully attached");
+    blockers.push("wizardErrors.noPhotoAttached");
   }
 
   return {

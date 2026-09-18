@@ -506,9 +506,9 @@ describe("buildMachineContext", () => {
     expect(state.currentStep).toBe("vehicle");
 
     const ctx = buildMachineContext(state);
-    expect(ctx.fieldErrors.brandId).toBe("Brand is required");
-    expect(ctx.fieldErrors.modelId).toBe("Model is required");
-    expect(ctx.fieldErrors.year).toBe("Year is required");
+    expect(ctx.fieldErrors.brandId).toBe("wizardErrors.brandRequired");
+    expect(ctx.fieldErrors.modelId).toBe("wizardErrors.modelRequired");
+    expect(ctx.fieldErrors.year).toBe("wizardErrors.yearRequired");
   });
 
   it("computes canPublish only on review with all steps valid", () => {

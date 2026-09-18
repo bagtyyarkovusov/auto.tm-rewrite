@@ -4,6 +4,8 @@ import { loadAuthSession, subscribeAuthSession } from "./session";
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // Empty string, not null, so consumers can pass it straight to a TextInput.
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -12,6 +14,7 @@ export function useAuth() {
       const session = await loadAuthSession();
       if (!cancelled) {
         setIsAuthenticated(session !== null);
+        setPhone(session?.user.phone ?? "");
       }
     }
 
@@ -26,5 +29,5 @@ export function useAuth() {
     };
   }, []);
 
-  return { isAuthenticated };
+  return { isAuthenticated, phone };
 }
