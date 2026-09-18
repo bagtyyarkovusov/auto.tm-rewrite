@@ -45,7 +45,7 @@ describe("computePublishGate", () => {
   it("returns canPublish=false with blocker when queue is empty", () => {
     const result = computePublishGate(makeQueue([]));
     expect(result.canPublish).toBe(false);
-    expect(result.blockers).toContain("At least one photo is required");
+    expect(result.blockers).toContain("wizardErrors.photosRequired");
   });
 
   it("returns canPublish=false when photo is in selected state", () => {
@@ -53,7 +53,7 @@ describe("computePublishGate", () => {
       makeQueue([makePhoto({ state: "selected" })]),
     );
     expect(result.canPublish).toBe(false);
-    expect(result.blockers).toContain("Some uploads are still in progress");
+    expect(result.blockers).toContain("wizardErrors.uploadsInProgress");
   });
 
   it("returns canPublish=false when photo is in failed state", () => {
@@ -61,7 +61,7 @@ describe("computePublishGate", () => {
       makeQueue([makePhoto({ state: "failed" })]),
     );
     expect(result.canPublish).toBe(false);
-    expect(result.blockers).toContain("Some uploads failed — retry or remove them");
+    expect(result.blockers).toContain("wizardErrors.uploadsFailed");
   });
 
   it("returns canPublish=true when photo is in attached state", () => {
@@ -80,7 +80,7 @@ describe("computePublishGate", () => {
       ]),
     );
     expect(result.canPublish).toBe(false);
-    expect(result.blockers).toContain("Some uploads are still in progress");
+    expect(result.blockers).toContain("wizardErrors.uploadsInProgress");
   });
 });
 

@@ -41,6 +41,7 @@ import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
   validateStep,
+  isWizardErrorKey,
   getStepDependencies,
   getInvalidatedSteps,
   StepVinSchema,
@@ -837,9 +838,9 @@ describe("validateStep", () => {
   it("returns errors for used vehicle without mileage", () => {
     const result = validateStep("specs", { condition: "used" });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Mileage is required for used cars");
+    expect(result.errors).toContain("wizardErrors.mileageRequiredForUsed");
     expect(result.fieldErrors["mileageKm"]).toBe(
-      "Mileage is required for used cars",
+      "wizardErrors.mileageRequiredForUsed",
     );
   });
 
@@ -854,21 +855,73 @@ describe("validateStep", () => {
       photos: [{ photoId: validUuid, sortOrder: 0 }],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Wait for photos to finish uploading");
+    expect(result.errors).toContain("wizardErrors.photosUploading");
   });
 
   it("returns per-field error map for vehicle step", () => {
     const result = validateStep("vehicle", {});
     expect(result.valid).toBe(false);
-    expect(result.fieldErrors["brandId"]).toBe("Brand is required");
-    expect(result.fieldErrors["modelId"]).toBe("Model is required");
-    expect(result.fieldErrors["year"]).toBe("Year is required");
+    expect(result.fieldErrors["brandId"]).toBe("wizardErrors.brandRequired");
+    expect(result.fieldErrors["modelId"]).toBe("wizardErrors.modelRequired");
+    expect(result.fieldErrors["year"]).toBe("wizardErrors.yearRequired");
   });
 
   it("returns valid for review when invoked directly", () => {
     const result = validateStep("review", {});
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
+  });
+
+  // Messages cross the API boundary and land in a Turkmen or Russian UI, so
+  // none of them may be English prose — clients translate the keys (ADR-0050).
+  it.each([
+    ["vin", { vin: "x".repeat(18) }],
+    ["photos", {}],
+    ["vehicle", {}],
+    ["specs", { condition: "used" }],
+    ["specs", {}],
+    ["price", {}],
+    ["price", { priceAmount: -1, priceCurrency: "TMT" }],
+    ["location", {}],
+    ["contact", {}],
+    ["contact", { description: "ok", allowCalls: false, allowChat: false }],
+    // Zod built-ins the schemas never spell out a message for.
+    ["vehicle", { brandId: null, modelId: "no", year: 2020 }],
+    ["specs", { condition: "used", mileageKm: 12.5, enginePower: 1.5 }],
+    ["specs", { condition: "new", colorId: "not-a-uuid" }],
+    ["specs", { condition: "salvaged" }],
+    ["price", { priceAmount: 100, priceCurrency: "XYZ" }],
+    ["location", { regionId: null, cityId: null }],
+  ] as const)("emits only translation keys for %s", (step, payload) => {
+    const result = validateStep(step, payload as never);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    for (const message of [...result.errors, ...Object.values(result.fieldErrors)]) {
+      expect(isWizardErrorKey(message), message).toBe(true);
+    }
+  });
+
+  it("asks for a photo whether the list is missing or empty", () => {
+    expect(validateStep("photos", {}).fieldErrors["photos"]).toBe(
+      "wizardErrors.photosRequired",
+    );
+    expect(validateStep("photos", { photos: [] }).fieldErrors["photos"]).toBe(
+      "wizardErrors.photosRequired",
+    );
+  });
+
+  it("reports a missing field as required and a wrong value as invalid", () => {
+    expect(validateStep("specs", {}).fieldErrors["condition"]).toBe(
+      "wizardErrors.required",
+    );
+    expect(
+      validateStep("specs", { condition: "salvaged" } as never).fieldErrors["condition"],
+    ).toBe("wizardErrors.invalidValue");
+    expect(
+      validateStep("price", { priceAmount: 100, priceCurrency: "XYZ" } as never)
+        .fieldErrors["priceCurrency"],
+    ).toBe("wizardErrors.invalidValue");
   });
 });
 

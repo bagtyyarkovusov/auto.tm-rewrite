@@ -23,7 +23,10 @@ import {
 import { WizardLayout } from "../../src/listings/wizard/WizardLayout";
 import { useWizardAutosave } from "../../src/listings/wizard/useWizardAutosave";
 import { useAuth } from "../../src/auth/useAuth";
-import { loadAuthSession } from "../../src/auth/session";
+import {
+  translateWizardError,
+  translateWizardFieldErrors,
+} from "../../src/listings/wizard/wizardErrors";
 import { SignInDialog } from "../../components/auth/SignInDialog";
 import Step1Vin from "../../src/listings/wizard/Step1Vin";
 import Step2Photos from "../../src/listings/wizard/Step2Photos";
@@ -66,7 +69,9 @@ function buildPayloadPhotos(
 
 export default function SellScreen() {
   const { t, i18n } = useTranslation();
-  const { isAuthenticated } = useAuth();
+  // `phone` follows the live auth session, so signing in from this tab's own
+  // sign-in sheet fills the Step 7 contact placeholder without a remount.
+  const { isAuthenticated, phone: defaultPhone } = useAuth();
   const { show } = useToast();
   const navigation = useContext(NavigationContext);
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
@@ -78,12 +83,7 @@ export default function SellScreen() {
   const [attemptedSteps, setAttemptedSteps] = useState<
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
-  const [defaultPhone, setDefaultPhone] = useState("");
   const resumedRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    loadAuthSession().then((s) => setDefaultPhone(s?.user.phone ?? ""));
-  }, []);
 
   // Hide the bottom tab bar while the wizard is open — the wizard is a focused
   // flow that should not advertise navigation to other tabs.
@@ -342,6 +342,7 @@ export default function SellScreen() {
   // ── Wizard mode ──
   if (machineState.status !== "idle" && machineState.draftId) {
     const currentStep = ctx.state.currentStep;
+    const fieldErrors = translateWizardFieldErrors(t, ctx.fieldErrors);
 
     // Compute upload status counts for chip + publishGate reason
     const uploadStatus = {
@@ -360,7 +361,9 @@ export default function SellScreen() {
       } else if (uploadStatus.inflight > 0) {
         disabledReason = t("waitForPhotos", { count: uploadStatus.inflight });
       } else {
-        disabledReason = uploadQueue.publishGate.blockers[0] ?? t("cannotPublishYet");
+        disabledReason =
+          translateWizardError(t, uploadQueue.publishGate.blockers[0]) ??
+          t("cannotPublishYet");
       }
     } else if (ctx.isLastStep && !ctx.canPublish) {
       const missing = WizardSchemas.WIZARD_STEPS.filter(
@@ -376,7 +379,7 @@ export default function SellScreen() {
       attemptedSteps[currentStep] &&
       ctx.stepErrors.length > 0
     ) {
-      disabledReason = ctx.stepErrors[0];
+      disabledReason = translateWizardError(t, ctx.stepErrors[0]);
     }
 
     const secondaryAction =
@@ -414,7 +417,7 @@ export default function SellScreen() {
           <Step1Vin
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            fieldErrors={ctx.fieldErrors}
+            fieldErrors={fieldErrors}
           />
         )}
         {currentStep === "photos" && (
@@ -426,14 +429,14 @@ export default function SellScreen() {
             onRetryPhoto={uploadQueue.retryPhoto}
             isCompressing={uploadQueue.isCompressing}
             isUploading={uploadQueue.isUploading}
-            fieldErrors={ctx.fieldErrors}
+            fieldErrors={fieldErrors}
           />
         )}
         {currentStep === "vehicle" && (
           <Step3VehicleId
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            fieldErrors={ctx.fieldErrors}
+            fieldErrors={fieldErrors}
             showErrors={attemptedSteps.vehicle === true}
           />
         )}
@@ -441,28 +444,28 @@ export default function SellScreen() {
           <Step4Specs
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            fieldErrors={ctx.fieldErrors}
+            fieldErrors={fieldErrors}
           />
         )}
         {currentStep === "price" && (
           <Step5Price
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            fieldErrors={ctx.fieldErrors}
+            fieldErrors={fieldErrors}
           />
         )}
         {currentStep === "location" && (
           <Step6Location
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            fieldErrors={ctx.fieldErrors}
+            fieldErrors={fieldErrors}
           />
         )}
         {currentStep === "contact" && (
           <Step7DescContact
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            fieldErrors={ctx.fieldErrors}
+            fieldErrors={fieldErrors}
             defaultPhone={defaultPhone}
           />
         )}

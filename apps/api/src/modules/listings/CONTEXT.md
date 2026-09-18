@@ -106,7 +106,7 @@ Repository ports (consumed only within `listings/`):
 - `AttachMedia` — registers uploaded asset on a listing; calls `ImageVariantGenerator` (sync Sharp) for images; enforces ≤20 photos + ≤1 video
 - `RemoveMedia` — hard-deletes `ListingMedia` row + all variant MinIO objects (best-effort)
 - `ReorderMedia` — bulk-updates `sortOrder` for owner-selected ordering in one Prisma transaction
-- `ValidateDraftStep` — validates a single wizard step payload against the shared step schema without persisting it; used for step-level guard logic before autosave or publish
+- `ValidateDraftStep` — validates a single wizard step payload against the shared step schema without persisting it; used for step-level guard logic before autosave or publish. `errors` / `fieldErrors` carry `wizardErrors.*` translation keys, not display text — the client renders them in the user's locale ([ADR-0050](../../../../../docs/adr/0050-wizard-validation-messages-as-translation-keys.md))
 - `GetExchangeRates` — returns all stored exchange rates
 - `AddFavorite` — favorites an active listing; idempotent; returns 404 for non-existent, deleted, or non-active listings; increments `listing.favoriteCount`
 - `RemoveFavorite` — removes a favorite; idempotent; decrements `listing.favoriteCount`
