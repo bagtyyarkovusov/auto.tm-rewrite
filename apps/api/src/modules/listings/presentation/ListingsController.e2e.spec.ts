@@ -663,6 +663,7 @@ describe("ListingsController e2e", () => {
 
       const feed = await request
         .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       const item = feed.body.items.find((i: { id: string }) => i.id === listingId);
@@ -728,6 +729,7 @@ describe("ListingsController e2e", () => {
       // Should still be in feed
       const feed = await request
         .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(feed.body.items.some((item: { id: string }) => item.id === listingId)).toBe(true);
@@ -741,6 +743,7 @@ describe("ListingsController e2e", () => {
       // Should no longer be in feed
       const feedAfter = await request
         .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(feedAfter.body.items.some((item: { id: string }) => item.id === listingId)).toBe(false);
@@ -766,6 +769,7 @@ describe("ListingsController e2e", () => {
 
       const feed = await request
         .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
       expect(feed.body.items.some((item: { id: string }) => item.id === listingId)).toBe(false);
