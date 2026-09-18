@@ -902,6 +902,15 @@ describe("validateStep", () => {
     }
   });
 
+  it("asks for a photo whether the list is missing or empty", () => {
+    expect(validateStep("photos", {}).fieldErrors["photos"]).toBe(
+      "wizardErrors.photosRequired",
+    );
+    expect(validateStep("photos", { photos: [] }).fieldErrors["photos"]).toBe(
+      "wizardErrors.photosRequired",
+    );
+  });
+
   it("reports a missing field as required and a wrong value as invalid", () => {
     expect(validateStep("specs", {}).fieldErrors["condition"]).toBe(
       "wizardErrors.required",

@@ -111,7 +111,7 @@ export type StepVinInput = z.infer<typeof StepVinSchema>;
 
 export const StepPhotosSchema = z.object({
   photos: z
-    .array(DraftPhotoSchema)
+    .array(DraftPhotoSchema, { required_error: KEY.photosRequired })
     .min(1, KEY.photosRequired)
     .refine((photos) => photos.some((p) => p.key), KEY.photosUploading),
 });
