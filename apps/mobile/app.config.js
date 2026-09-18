@@ -24,7 +24,16 @@ const config = {
     android: {
       package: "tm.auto.app",
       ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
-      permissions: ["CAMERA", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES"],
+      permissions: ["CAMERA"],
+      // Photo selection goes through the system photo picker, which needs no media
+      // permission on API 33+. Nothing records audio, and the overlay permission is
+      // only for the dev-client red box (the debug manifest still adds it).
+      blockedPermissions: [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+      ],
     },
     plugins: [
       "expo-router",
@@ -32,12 +41,14 @@ const config = {
         "expo-image-picker",
         {
           photosPermission: "AutoTM accesses your photos so you can select vehicle images for listings.",
+          microphonePermission: false,
         },
       ],
       [
         "expo-camera",
         {
           cameraPermission: "Allow AutoTM to access your camera to take photos of your vehicle for listings.",
+          recordAudioAndroid: false,
         },
       ],
     ],
