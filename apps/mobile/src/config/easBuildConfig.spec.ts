@@ -86,6 +86,27 @@ describe("EAS build configuration", () => {
     );
   });
 
+  it("keeps Play-restricted media, audio, and overlay permissions out of the Android build", () => {
+    const appConfig = requireFreshAppConfig();
+    const { permissions, blockedPermissions } = appConfig.expo.android;
+    const pluginOptions = (name: string) =>
+      appConfig.expo.plugins.find((plugin: unknown) => Array.isArray(plugin) && plugin[0] === name)?.[1];
+
+    // The system photo picker needs no media permission, so broad photo access
+    // would need a Play declaration the app can't truthfully make.
+    expect(permissions).toEqual(["CAMERA"]);
+    expect(blockedPermissions).toEqual(
+      expect.arrayContaining([
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+      ]),
+    );
+    expect(pluginOptions("expo-image-picker").microphonePermission).toBe(false);
+    expect(pluginOptions("expo-camera").recordAudioAndroid).toBe(false);
+  });
+
   it("wires Firebase service files from EAS file-secret environment variables", () => {
     const previousAndroid = process.env.GOOGLE_SERVICES_JSON;
     const previousIos = process.env.GOOGLE_SERVICES_INFO_PLIST;
