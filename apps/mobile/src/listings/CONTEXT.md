@@ -256,7 +256,7 @@ Implemented in `UPDATE_FIELDS` action via `getInvalidatedSteps(changedFields)` f
 
 ### Resume logic
 
-`INIT` action: loads draft/listing payload → extracts `validatedSteps[]` → resumes at the first unvalidated step up to the previously-reached step. Handles legacy numeric `currentStep` (1–7) via `mapLegacyStep()`. In edit mode with `entryStep: "review"`, it skips draft resume semantics, lands directly on Review, and marks all seven data steps validated because the payload came from a published listing.
+`INIT` action: loads draft/listing payload → extracts `validatedSteps[]` → resumes at the first unvalidated step up to the previously-reached step. In create mode, a missing condition is initialized to `used`, matching the Specifications toggle and making its required value explicit before validation and autosave. Handles legacy numeric `currentStep` (1–7) via `mapLegacyStep()`. In edit mode with `entryStep: "review"`, it skips draft resume semantics, lands directly on Review, and marks all seven data steps validated because the payload came from a published listing.
 
 **Resume-any-draft from management**: `app/(tabs)/sell.tsx` reads the `resumeDraftId` route param and, after the latest drafts list resolves, initializes the wizard with the requested draft instead of the most recently updated one. This lets the owner management screen resume any draft, not just the latest.
 

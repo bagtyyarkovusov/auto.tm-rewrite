@@ -74,8 +74,34 @@ describe("INIT", () => {
     expect(next.status).toBe("step");
     expect(next.draftId).toBe("draft-1");
     expect(next.mode).toBe("create");
-    expect(next.payload).toEqual({ vin: "WBA123" });
+    expect(next.payload).toEqual({ vin: "WBA123", condition: "used" });
     expect(next.currentStep).toBe("vin");
+  });
+
+  it("preserves an explicit condition when resuming a create draft", () => {
+    const next = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: "draft-1",
+      payload: { condition: "new" },
+    });
+
+    expect(next.payload.condition).toBe("new");
+  });
+
+  it("lets a resumed Used draft continue after mileage is entered", () => {
+    const resumed = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: "draft-1",
+      entryStep: "specs",
+      payload: { validatedSteps: ["vin", "photos", "vehicle"] },
+    });
+    const withMileage = wizardMachineReducer(resumed, {
+      type: "UPDATE_FIELDS",
+      updates: { mileageKm: 50000 },
+    });
+
+    expect(withMileage.currentStep).toBe("specs");
+    expect(buildMachineContext(withMileage).canContinue).toBe(true);
   });
 
   it("initializes edit mode at review with all data steps validated", () => {
