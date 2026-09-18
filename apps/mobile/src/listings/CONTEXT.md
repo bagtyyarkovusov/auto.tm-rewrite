@@ -284,7 +284,7 @@ Each step renders its own field errors inline directly under the relevant Input/
 
 ### Error message localization
 
-`validateStep` returns `wizardErrors.*` translation keys, not display text ([ADR-0050](../../../../docs/adr/0050-wizard-validation-messages-as-translation-keys.md)). `sell.tsx` and `listings/[id]/edit.tsx` run `ctx.fieldErrors`, `ctx.stepErrors[0]`, and `publishGate.blockers[0]` through `src/listings/wizard/wizardErrors.ts` before rendering; anything without the `wizardErrors.` prefix passes through untouched. Translations live in `src/i18n/resources.ts` under `common.wizardErrors` for tk/ru/en, and interpolate the limits exported as `WizardSchemas.WIZARD_LIMITS` rather than restating them. `computePublishGate` in `uploadStaging/queueState.ts` emits keys from the same namespace.
+`validateStep` returns `wizardErrors.*` translation keys, not display text ([ADR-0050](../../../../docs/adr/0050-wizard-validation-messages-as-translation-keys.md)). `sell.tsx` and `listings/[id]/edit.tsx` run `ctx.fieldErrors`, `ctx.stepErrors[0]`, and `publishGate.blockers[0]` through `src/listings/wizard/wizardErrors.ts` before rendering; anything without the `wizardErrors.` prefix passes through untouched. Translations live in `src/i18n/resources.ts` under `common.wizardErrors` for tk/ru/en, and interpolate the limits exported as `WizardSchemas.WIZARD_LIMITS` rather than restating them. `computePublishGate` in `uploadStaging/queueState.ts` emits keys from `WizardSchemas.WIZARD_ERROR_KEYS`, the contract's full key set, which `wizardErrors.spec.ts` checks every locale against.
 
 ### Shared schema authority
 

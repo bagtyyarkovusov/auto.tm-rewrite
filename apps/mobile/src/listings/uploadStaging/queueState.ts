@@ -1,4 +1,4 @@
-import type { ListingsSchemas } from "@auto-tm/contracts";
+import { WizardSchemas, type ListingsSchemas } from "@auto-tm/contracts";
 
 import { getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from "./types";
@@ -7,12 +7,14 @@ import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from ".
  * Blockers are translation keys, not display text — the wizard screens run them
  * through `translateWizardError` before rendering (ADR-0050).
  */
+const { WIZARD_ERROR_KEYS } = WizardSchemas;
+
 export function computePublishGate(queue: UploadQueue): PublishGateResult {
   const blockers: string[] = [];
 
   const hasPhotos = queue.photos.length > 0;
   if (!hasPhotos) {
-    blockers.push("wizardErrors.photosRequired");
+    blockers.push(WIZARD_ERROR_KEYS.photosRequired);
   }
 
   const hasPending = queue.photos.some(
@@ -23,19 +25,19 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
       p.state === "uploading",
   );
   if (hasPending) {
-    blockers.push("wizardErrors.uploadsInProgress");
+    blockers.push(WIZARD_ERROR_KEYS.uploadsInProgress);
   }
 
   const hasFailed = queue.photos.some((p) => p.state === "failed");
   if (hasFailed) {
-    blockers.push("wizardErrors.uploadsFailed");
+    blockers.push(WIZARD_ERROR_KEYS.uploadsFailed);
   }
 
   const hasAttached = queue.photos.some(
     (p) => p.state === "attached" || p.state === "uploaded",
   );
   if (!hasAttached && hasPhotos) {
-    blockers.push("wizardErrors.noPhotoAttached");
+    blockers.push(WIZARD_ERROR_KEYS.noPhotoAttached);
   }
 
   return {

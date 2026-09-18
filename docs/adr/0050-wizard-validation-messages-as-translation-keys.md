@@ -18,10 +18,10 @@ The same messages cross the API boundary: `POST /api/v1/listings/drafts/:id/vali
 
 **Contracts emit stable message keys; clients own the display text.**
 
-- Every user-facing message in the wizard step schemas is a dotted key under the `wizardErrors.` prefix, exported as `WizardSchemas.WIZARD_ERROR_KEY_PREFIX`.
-- A contextual `z.ZodErrorMap` maps Zod's own defaults (a missing value, a bad enum) to `wizardErrors.required`, so no built-in English reaches a client either. Schema-level messages outrank it.
+- Every user-facing message in the wizard step schemas is a dotted key under the `wizardErrors.` prefix, exported as `WizardSchemas.WIZARD_ERROR_KEY_PREFIX`. The full key set is exported as `WizardSchemas.WIZARD_ERROR_KEYS` (typed `WizardErrorKey`), and clients import keys from it rather than restating the strings.
+- A contextual `z.ZodErrorMap` maps Zod's own defaults to keys: a missing value becomes `wizardErrors.required`, and every other built-in (a wrong type, a malformed uuid, a fractional number, an unknown enum value) becomes `wizardErrors.invalidValue`. Schema-level messages outrank it. `validateStep` also replaces any message that is not a declared key with `wizardErrors.invalidValue`, so no English prose reaches a client.
 - Numeric limits the messages interpolate (VIN length, year range, description and area caps) are exported as `WizardSchemas.WIZARD_LIMITS` rather than baked into the sentence, so a translation can place the number where its own grammar wants it and the two can never drift.
-- The mobile publish-gate blockers use the same `wizardErrors.*` namespace.
+- The mobile publish-gate blockers use the same `wizardErrors.*` namespace and are declared in the same `WIZARD_ERROR_KEYS` set.
 - `apps/mobile/src/listings/wizard/wizardErrors.ts` translates at the render boundary. Anything not carrying the prefix passes through untouched — server and network messages are already localized elsewhere.
 
 Translations live in `apps/mobile/src/i18n/resources.ts` under `common.wizardErrors` for all three locales.
@@ -36,7 +36,7 @@ Translations live in `apps/mobile/src/i18n/resources.ts` under `common.wizardErr
 
 ### Negative / accepted costs
 
-- `validate-step` responses changed shape-compatibly but content-incompatibly: a consumer that displayed `errors[0]` raw now shows a key. Today the only consumers are this mobile app and the API's own tests, both updated here.
+- `validate-step` responses changed shape-compatibly but content-incompatibly: a consumer that displayed `errors[0]` raw now shows a key. Today the only consumer that reads the messages is this mobile app, updated here; the API's `DraftsController` e2e suite asserts only error counts and validity, so it needed no change.
 - A new step field needs a key in three locales, not just an inline English string. `resources.spec.ts` now fails the build when Turkmen or English lags Russian, which makes the cost visible rather than silent.
 
 ### Neutral

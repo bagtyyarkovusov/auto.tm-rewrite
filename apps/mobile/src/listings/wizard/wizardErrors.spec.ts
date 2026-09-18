@@ -31,14 +31,6 @@ function collectEmittedKeys(): string[] {
   return [...keys];
 }
 
-/** The publish gate's blockers are keys too, and never reach validateStep. */
-const UPLOAD_BLOCKER_KEYS = [
-  "wizardErrors.photosRequired",
-  "wizardErrors.uploadsInProgress",
-  "wizardErrors.uploadsFailed",
-  "wizardErrors.noPhotoAttached",
-];
-
 const tByLocale = new Map<string, TFunction>();
 
 function translator(locale: string): TFunction {
@@ -64,11 +56,8 @@ beforeAll(async () => {
   }
 });
 
-/** Every key the resource bundle declares, so unused ones are covered too. */
-const DECLARED_KEYS = Object.keys(
-  (resources["en"]?.["common"] as { wizardErrors: Record<string, string> })
-    .wizardErrors,
-).map((key) => `${WizardSchemas.WIZARD_ERROR_KEY_PREFIX}${key}`);
+/** Every key the contract declares, including the publish-gate blockers. */
+const DECLARED_KEYS: string[] = Object.values(WizardSchemas.WIZARD_ERROR_KEYS);
 
 describe("wizard validation messages", () => {
   it.each(INVALID_PAYLOADS)("emits a key for an invalid %s step", (step, payload) => {
@@ -87,7 +76,7 @@ describe("wizard validation messages", () => {
   it.each(locales)("translates every declared key in %s", (locale) => {
     const t = translator(locale);
 
-    for (const key of [...DECLARED_KEYS, ...UPLOAD_BLOCKER_KEYS]) {
+    for (const key of DECLARED_KEYS) {
       const translated = translateWizardError(t, key);
 
       expect(translated, `${key} is missing from ${locale}`).not.toBe(key);

@@ -32,13 +32,6 @@ export function translateWizardError(
   return t(message, INTERPOLATION);
 }
 
-export function translateWizardErrors(
-  t: TFunction,
-  messages: string[],
-): string[] {
-  return messages.map((message) => translateWizardError(t, message));
-}
-
 export function translateWizardFieldErrors(
   t: TFunction,
   fieldErrors: Record<string, string>,

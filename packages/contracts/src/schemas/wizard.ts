@@ -52,32 +52,53 @@ export const WIZARD_LIMITS = {
   descriptionMaxLength: 2000,
 } as const;
 
-const KEY = {
-  required: "wizardErrors.required",
-  invalidValue: "wizardErrors.invalidValue",
-  unknownStep: "wizardErrors.unknownStep",
-  vinTooLong: "wizardErrors.vinTooLong",
-  photosRequired: "wizardErrors.photosRequired",
-  photosUploading: "wizardErrors.photosUploading",
-  brandRequired: "wizardErrors.brandRequired",
-  modelRequired: "wizardErrors.modelRequired",
-  yearRequired: "wizardErrors.yearRequired",
-  yearWholeNumber: "wizardErrors.yearWholeNumber",
-  yearTooEarly: "wizardErrors.yearTooEarly",
-  yearTooLate: "wizardErrors.yearTooLate",
-  mileageNegative: "wizardErrors.mileageNegative",
-  enginePowerNotPositive: "wizardErrors.enginePowerNotPositive",
-  mileageRequiredForUsed: "wizardErrors.mileageRequiredForUsed",
-  priceRequired: "wizardErrors.priceRequired",
-  priceNotPositive: "wizardErrors.priceNotPositive",
-  priceTooLarge: "wizardErrors.priceTooLarge",
-  regionRequired: "wizardErrors.regionRequired",
-  cityRequired: "wizardErrors.cityRequired",
-  locationTextTooLong: "wizardErrors.locationTextTooLong",
-  descriptionRequired: "wizardErrors.descriptionRequired",
-  descriptionTooLong: "wizardErrors.descriptionTooLong",
-  contactChannelRequired: "wizardErrors.contactChannelRequired",
-} as const;
+const WIZARD_ERROR_NAMES = [
+  "required",
+  "invalidValue",
+  "unknownStep",
+  "vinTooLong",
+  "photosRequired",
+  "photosUploading",
+  "brandRequired",
+  "modelRequired",
+  "yearRequired",
+  "yearWholeNumber",
+  "yearTooEarly",
+  "yearTooLate",
+  "mileageNegative",
+  "enginePowerNotPositive",
+  "mileageRequiredForUsed",
+  "priceRequired",
+  "priceNotPositive",
+  "priceTooLarge",
+  "regionRequired",
+  "cityRequired",
+  "locationTextTooLong",
+  "descriptionRequired",
+  "descriptionTooLong",
+  "contactChannelRequired",
+  // Upload publish-gate blockers. The mobile upload queue emits these, not
+  // validateStep, but they share the namespace and the translation table.
+  "uploadsInProgress",
+  "uploadsFailed",
+  "noPhotoAttached",
+] as const;
+
+type WizardErrorName = (typeof WIZARD_ERROR_NAMES)[number];
+export type WizardErrorKey = `${typeof WIZARD_ERROR_KEY_PREFIX}${WizardErrorName}`;
+
+/** Every wizard error key, by name — the single source clients import from. */
+export const WIZARD_ERROR_KEYS = Object.fromEntries(
+  WIZARD_ERROR_NAMES.map((name) => [name, `${WIZARD_ERROR_KEY_PREFIX}${name}`]),
+) as { readonly [N in WizardErrorName]: `${typeof WIZARD_ERROR_KEY_PREFIX}${N}` };
+
+const ALL_WIZARD_ERROR_KEYS: ReadonlySet<string> = new Set(Object.values(WIZARD_ERROR_KEYS));
+
+export function isWizardErrorKey(message: string): message is WizardErrorKey {
+  return ALL_WIZARD_ERROR_KEYS.has(message);
+}
+
+const KEY = WIZARD_ERROR_KEYS;
 
 // ── Per-step validation schemas ──
 // Each schema validates exactly the fields required for its step.
@@ -269,23 +290,23 @@ export interface StepValidationResult {
 /**
  * Turns Zod's own built-in messages into wizard error keys. Schema-level
  * messages take precedence over this map, so it only covers the issues we
- * never spelled out — a missing enum such as `condition`, for instance, would
- * otherwise reach the UI as the untranslated literal "Required".
+ * never spelled out: a missing field becomes `required`, and anything else
+ * (a wrong type, a malformed uuid, a fractional number, an unknown enum
+ * value) becomes `invalidValue`. Zod's English defaults never escape.
  */
 const wizardErrorMap: z.ZodErrorMap = (issue, ctx) => {
   // A contextual error map runs last and outranks the schema, so hand back any
   // message a step schema already spelled out rather than flattening it.
-  if (ctx.defaultError.startsWith(WIZARD_ERROR_KEY_PREFIX)) {
+  if (isWizardErrorKey(ctx.defaultError)) {
     return { message: ctx.defaultError };
   }
   if (
-    (issue.code === z.ZodIssueCode.invalid_type &&
-      issue.received === z.ZodParsedType.undefined) ||
-    issue.code === z.ZodIssueCode.invalid_enum_value
+    issue.code === z.ZodIssueCode.invalid_type &&
+    issue.received === z.ZodParsedType.undefined
   ) {
     return { message: KEY.required };
   }
-  return { message: ctx.defaultError };
+  return { message: KEY.invalidValue };
 };
 
 const parseOptions = { errorMap: wizardErrorMap };
@@ -341,7 +362,9 @@ export function validateStep(
   const errors: string[] = [];
   const fieldErrors: Record<string, string> = {};
   for (const issue of result.error.issues) {
-    const message = issue.message ?? KEY.invalidValue;
+    // A message set directly on a check bypasses the error map, so enforce
+    // the keys-only contract here as well.
+    const message = isWizardErrorKey(issue.message) ? issue.message : KEY.invalidValue;
     errors.push(message);
     const key = (issue.path[0] ?? "").toString();
     // First issue per field wins — later ones are typically less specific.

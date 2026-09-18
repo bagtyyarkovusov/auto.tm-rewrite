@@ -55,6 +55,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0047](0047-fcm-only-push-transport-for-android-first-launch.md) | `PUSH_TRANSPORT=fcm` for the Android-first launch window (supersedes ADR-0043's transport value list) | Accepted | 2026-09-16 |
 | [0048](0048-pin-react-native-css-interop-with-a-pnpm-override.md) | Pin react-native-css-interop with a pnpm override | Accepted | 2026-09-16 |
 | [0049](0049-defer-listing-detail-share-to-chat-until-recipient-selection.md) | Defer listing-detail share to chat until the recipient is chosen | Accepted | 2026-09-17 |
+| [0050](0050-wizard-validation-messages-as-translation-keys.md) | Wizard validation messages are translation keys, not prose | Accepted | 2026-09-18 |
 
 ## Per-app ADRs
 

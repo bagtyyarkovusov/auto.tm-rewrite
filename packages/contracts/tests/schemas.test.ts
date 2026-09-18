@@ -41,6 +41,7 @@ import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
   validateStep,
+  isWizardErrorKey,
   getStepDependencies,
   getInvalidatedSteps,
   StepVinSchema,
@@ -884,17 +885,34 @@ describe("validateStep", () => {
     ["location", {}],
     ["contact", {}],
     ["contact", { description: "ok", allowCalls: false, allowChat: false }],
+    // Zod built-ins the schemas never spell out a message for.
+    ["vehicle", { brandId: null, modelId: "no", year: 2020 }],
+    ["specs", { condition: "used", mileageKm: 12.5, enginePower: 1.5 }],
+    ["specs", { condition: "new", colorId: "not-a-uuid" }],
+    ["specs", { condition: "salvaged" }],
+    ["price", { priceAmount: 100, priceCurrency: "XYZ" }],
+    ["location", { regionId: null, cityId: null }],
   ] as const)("emits only translation keys for %s", (step, payload) => {
     const result = validateStep(step, payload as never);
 
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
-    for (const message of result.errors) {
-      expect(message).toMatch(/^wizardErrors\./);
+    for (const message of [...result.errors, ...Object.values(result.fieldErrors)]) {
+      expect(isWizardErrorKey(message), message).toBe(true);
     }
-    for (const message of Object.values(result.fieldErrors)) {
-      expect(message).toMatch(/^wizardErrors\./);
-    }
+  });
+
+  it("reports a missing field as required and a wrong value as invalid", () => {
+    expect(validateStep("specs", {}).fieldErrors["condition"]).toBe(
+      "wizardErrors.required",
+    );
+    expect(
+      validateStep("specs", { condition: "salvaged" } as never).fieldErrors["condition"],
+    ).toBe("wizardErrors.invalidValue");
+    expect(
+      validateStep("price", { priceAmount: 100, priceCurrency: "XYZ" } as never)
+        .fieldErrors["priceCurrency"],
+    ).toBe("wizardErrors.invalidValue");
   });
 });
 

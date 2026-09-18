@@ -69,9 +69,8 @@ function buildPayloadPhotos(
 
 export default function SellScreen() {
   const { t, i18n } = useTranslation();
-  // `phone` tracks the live auth session. Reading it once on mount left the
-  // Step 7 contact placeholder empty for anyone who signed in from the sheet
-  // this very tab raises — the first-run path (#321 sweep).
+  // `phone` follows the live auth session, so signing in from this tab's own
+  // sign-in sheet fills the Step 7 contact placeholder without a remount.
   const { isAuthenticated, phone: defaultPhone } = useAuth();
   const { show } = useToast();
   const navigation = useContext(NavigationContext);
