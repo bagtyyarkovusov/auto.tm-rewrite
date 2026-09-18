@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { OnEvent } from "@nestjs/event-emitter";
 import {
   ConnectedSocket,
   MessageBody,
@@ -27,6 +28,7 @@ import { UpdateWatermark } from "../../application/UpdateWatermark";
 import { ValidateConversationAccess } from "../../application/ValidateConversationAccess";
 import { DeleteMessage } from "../../application/DeleteMessage";
 import type { Message } from "../../domain/Message";
+import type { MessageSentEvent } from "../../domain/ports/MessageEventPublisher";
 import type { Conversation } from "../../domain/Conversation";
 
 type JoinPayload = {
@@ -472,17 +474,19 @@ export class ConversationGateway implements OnGatewayDisconnect {
       return this.toSocketError(err);
     }
 
-    const message = this.toMessageSummary(result.message);
-
-    if (result.created) {
-      const room = conversationRoom(payload.conversationId);
-      this.server.to(room).emit("message:new", { message });
-    }
-
+    // message:new fanout happens in handleMessageSent, which every transport
+    // reaches through ConversationMessageCommitter.
     return {
       ok: true,
-      message,
+      message: this.toMessageSummary(result.message),
     };
+  }
+
+  @OnEvent("MessageSent")
+  handleMessageSent(event: MessageSentEvent): void {
+    this.server
+      .to(conversationRoom(event.conversationId))
+      .emit("message:new", { message: this.toBroadcastSummary(event) });
   }
 
   @SubscribeMessage("message:delete")
@@ -587,6 +591,30 @@ export class ConversationGateway implements OnGatewayDisconnect {
         : {}),
       ...(message.clientMessageId
         ? { clientMessageId: message.clientMessageId }
+        : {}),
+    } as ConversationsSchemas.MessageSummary;
+  }
+
+  private toBroadcastSummary(
+    event: MessageSentEvent,
+  ): ConversationsSchemas.MessageSummary {
+    // A post-reference send is rejected unless the referenced listing is
+    // active, so a freshly sent card is always available.
+    const metadata =
+      event.messageKind === "post_ref" && event.messageMetadata
+        ? { ...event.messageMetadata, available: true }
+        : event.messageMetadata;
+    return {
+      id: event.messageId,
+      conversationId: event.conversationId,
+      senderId: event.senderId,
+      kind: event.messageKind,
+      text: event.messageBody,
+      ...(metadata ? { metadata } : {}),
+      createdAt: event.sentAt,
+      ...(event.messageDeletedAt ? { deletedAt: event.messageDeletedAt } : {}),
+      ...(event.clientMessageId
+        ? { clientMessageId: event.clientMessageId }
         : {}),
     } as ConversationsSchemas.MessageSummary;
   }

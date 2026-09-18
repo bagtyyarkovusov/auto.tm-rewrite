@@ -11,6 +11,7 @@ import type { ValidateConversationAccess } from "../../application/ValidateConve
 import type { SendRealtimeMessage } from "../../application/SendRealtimeMessage";
 import type { UpdateWatermark, UpdateWatermarkResult } from "../../application/UpdateWatermark";
 import type { DeleteMessage } from "../../application/DeleteMessage";
+import type { MessageSentEvent } from "../../domain/ports/MessageEventPublisher";
 
 import { ConversationGateway } from "./ConversationGateway";
 
@@ -320,7 +321,7 @@ describe("ConversationGateway", () => {
   });
 
   describe("message:send", () => {
-    it("acks sender with durable message and fans out message:new", async () => {
+    it("acks sender with the durable message and leaves message:new to the MessageSent broadcast", async () => {
       const message = Message.createText({
         id: "msg-1",
         conversationId: CONV_1,
@@ -371,13 +372,8 @@ describe("ConversationGateway", () => {
         text: "Hello socket",
         clientMessageId: "client-1",
       });
-      expect(toMock).toHaveBeenCalledWith(conversationRoom(CONV_1));
-      expect(emitMock).toHaveBeenCalledWith("message:new", {
-        message: expect.objectContaining({
-          id: "msg-1",
-          clientMessageId: "client-1",
-        }),
-      });
+      expect(toMock).not.toHaveBeenCalled();
+      expect(emitMock).not.toHaveBeenCalled();
     });
 
     it("returns existing message for duplicate clientMessageId without creating a new row", async () => {
@@ -433,7 +429,7 @@ describe("ConversationGateway", () => {
         (second as { ok: true; message: { id: string } }).message.id,
       );
       expect(sendMessage.execute).toHaveBeenCalledTimes(2);
-      expect(emitMock).toHaveBeenCalledTimes(1);
+      expect(emitMock).not.toHaveBeenCalled();
     });
 
     it("rejects send for unauthenticated sockets", async () => {
@@ -504,6 +500,108 @@ describe("ConversationGateway", () => {
         ok: false,
         code: "FORBIDDEN",
         message: "You are not a participant in this conversation",
+      });
+    });
+  });
+
+  describe("MessageSent broadcast", () => {
+    function messageSentEvent(
+      overrides: Partial<MessageSentEvent> = {},
+    ): MessageSentEvent {
+      return {
+        event: "MessageSent",
+        conversationId: CONV_1,
+        messageId: MSG_ID,
+        senderId: "buyer-1",
+        recipientId: "seller-1",
+        sentAt: "2026-09-18T10:00:00.000Z",
+        messageKind: "image",
+        messageBody: null,
+        messageMetadata: { key: "chat-attachments/c/1/original.jpg", width: 800, height: 600 },
+        messageDeletedAt: null,
+        clientMessageId: "client-img-1",
+        ...overrides,
+      };
+    }
+
+    it("fans out message:new to the conversation room for a message sent over any transport", () => {
+      const { gateway } = buildGateway();
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
+
+      gateway.handleMessageSent(messageSentEvent());
+
+      expect(toMock).toHaveBeenCalledWith(conversationRoom(CONV_1));
+      expect(emitMock).toHaveBeenCalledTimes(1);
+      expect(emitMock).toHaveBeenCalledWith("message:new", {
+        message: {
+          id: MSG_ID,
+          conversationId: CONV_1,
+          senderId: "buyer-1",
+          kind: "image",
+          text: null,
+          metadata: { key: "chat-attachments/c/1/original.jpg", width: 800, height: 600 },
+          createdAt: "2026-09-18T10:00:00.000Z",
+          clientMessageId: "client-img-1",
+        },
+      });
+    });
+
+    it("omits clientMessageId when the send carried none", () => {
+      const { gateway } = buildGateway();
+      const emitMock = vi.fn();
+      gateway.server = {
+        to: vi.fn().mockReturnValue({ emit: emitMock }),
+      } as unknown as Server;
+
+      gateway.handleMessageSent(
+        messageSentEvent({
+          messageKind: "text",
+          messageBody: "Hello",
+          messageMetadata: null,
+          clientMessageId: null,
+        }),
+      );
+
+      const payload = emitMock.mock.calls[0]?.[1] as {
+        message: Record<string, unknown>;
+      };
+      expect(payload.message).not.toHaveProperty("clientMessageId");
+      expect(payload.message).not.toHaveProperty("metadata");
+      expect(payload.message["text"]).toBe("Hello");
+    });
+
+    it("marks a freshly sent post-reference card as available", () => {
+      const { gateway } = buildGateway();
+      const emitMock = vi.fn();
+      gateway.server = {
+        to: vi.fn().mockReturnValue({ emit: emitMock }),
+      } as unknown as Server;
+      const snapshot = {
+        listingId: LISTING_1,
+        brandId: "brand-1",
+        modelId: "model-1",
+        year: 2020,
+        displayPriceTmt: 100000,
+        priceCurrency: "TMT" as const,
+        status: "active" as const,
+      };
+
+      gateway.handleMessageSent(
+        messageSentEvent({
+          messageKind: "post_ref",
+          messageMetadata: snapshot,
+          clientMessageId: "client-ref-1",
+        }),
+      );
+
+      expect(emitMock).toHaveBeenCalledWith("message:new", {
+        message: expect.objectContaining({
+          kind: "post_ref",
+          metadata: { ...snapshot, available: true },
+          clientMessageId: "client-ref-1",
+        }),
       });
     });
   });
