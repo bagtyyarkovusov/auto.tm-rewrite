@@ -1,5 +1,5 @@
 import { createRequire } from "module";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 
 import { describe, expect, it } from "vitest";
@@ -105,6 +105,51 @@ describe("EAS build configuration", () => {
     );
     expect(pluginOptions("expo-image-picker").microphonePermission).toBe(false);
     expect(pluginOptions("expo-camera").recordAudioAndroid).toBe(false);
+  });
+
+  it("points launcher and splash configuration at committed branding assets", () => {
+    const appConfig = requireFreshAppConfig();
+    const { icon, android, plugins } = appConfig.expo;
+    const splashPlugin = plugins.find(
+      (plugin: unknown) => Array.isArray(plugin) && plugin[0] === "expo-splash-screen",
+    ) as
+      | [
+          string,
+          {
+            image: string;
+            imageWidth: number;
+            resizeMode: string;
+            backgroundColor: string;
+          },
+        ]
+      | undefined;
+
+    expect(icon).toBe("./assets/images/icon.png");
+    expect(android.adaptiveIcon).toEqual({
+      foregroundImage: "./assets/images/android-icon-foreground.png",
+      backgroundImage: "./assets/images/android-icon-background.png",
+      monochromeImage: "./assets/images/android-icon-monochrome.png",
+    });
+    expect(splashPlugin?.[1]).toEqual({
+      image: "./assets/images/splash-icon.png",
+      imageWidth: 160,
+      resizeMode: "contain",
+      backgroundColor: "#FFFFFF",
+    });
+
+    const configuredPaths = [
+      icon,
+      android.adaptiveIcon.foregroundImage,
+      android.adaptiveIcon.backgroundImage,
+      android.adaptiveIcon.monochromeImage,
+      splashPlugin?.[1].image,
+    ];
+
+    for (const assetPath of configuredPaths) {
+      expect(assetPath).toBeTypeOf("string");
+      if (typeof assetPath !== "string") throw new TypeError("Missing branding asset path");
+      expect(existsSync(resolve(mobileRoot, assetPath))).toBe(true);
+    }
   });
 
   it("wires Firebase service files from EAS file-secret environment variables", () => {

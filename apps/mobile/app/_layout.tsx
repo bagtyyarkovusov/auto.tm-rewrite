@@ -8,6 +8,7 @@ import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import { useColorScheme as useNativeWindColorScheme } from "nativewind";
 import {
   focusManager,
@@ -40,6 +41,11 @@ import { themeStore } from "../src/theme/themeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+// Keep the native launch screen visible until fonts and locale resources are
+// ready. Expo recommends calling this in module scope so the native screen
+// cannot auto-hide before React mounts.
+void SplashScreen.preventAutoHideAsync();
 
 // Start first-time users in the onboarding flow. Returning users are
 // redirected to the feed from the splash screen once the flag is read.
@@ -178,6 +184,7 @@ export default function RootLayout() {
         }
       : {}),
   });
+  const appReady = fontsLoaded && i18nReady;
 
   useEffect(() => {
     void localeStore.getState().hydrate().then(() => {
@@ -195,6 +202,12 @@ export default function RootLayout() {
     const sub = AppState.addEventListener("change", onAppStateChange);
     return () => sub.remove();
   }, []);
+
+  useEffect(() => {
+    if (appReady) {
+      SplashScreen.hide();
+    }
+  }, [appReady]);
 
   useEffect(() => {
     void NetInfo.fetch().then((state) => {
@@ -228,7 +241,7 @@ export default function RootLayout() {
     return () => unsubscribe();
   }, []);
 
-  if (!fontsLoaded || !i18nReady) {
+  if (!appReady) {
     return null;
   }
 
