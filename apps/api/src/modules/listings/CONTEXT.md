@@ -68,7 +68,7 @@ All entities live in `apps/api/src/modules/listings/domain/` as pure TypeScript 
 |---|---|---|---|
 | `ListingsReadPort` | `LISTINGS_READ_PORT` | `domain/ports/ListingsReadPort.ts` | Cross-context: contact seller (S6), minimal admin (S7), post-MLP subscriptions/notifications |
 | `ListingsAdminPort` | `LISTINGS_ADMIN_PORT` | `domain/ports/ListingsAdminPort.ts` | Cross-context: `admin/` S7 moderation (`BanListing`, `UnbanListing`) — transaction-scoped `banActiveListing` / `unbanBannedListing` |
-| `VinDecoderPort` | `VIN_DECODER_PORT` | `domain/ports/VinDecoderPort.ts` | Internal: `PublishListing`, `GetListingDetail` |
+| `VinDecoderPort` | `VIN_DECODER_PORT` | `domain/ports/VinDecoderPort.ts` | Internal: `GetListingDetail` |
 | `MediaContentClassifierPort` | `MEDIA_CONTENT_CLASSIFIER_PORT` | `domain/ports/MediaContentClassifierPort.ts` | Internal: `AttachMedia` use-case |
 | `ImageVariantGenerator` | `IMAGE_VARIANT_GENERATOR` | `domain/ports/ImageVariantGenerator.ts` | Internal: `AttachMedia` use-case |
 | `FeedRankingPort` | `FEED_RANKING_PORT` | `domain/ports/FeedRankingPort.ts` | Internal: `ListFeed`, `CountListings`, and `CountListingModels` use-cases; exposes `rank()`, `count()`, and `modelCounts()` |
