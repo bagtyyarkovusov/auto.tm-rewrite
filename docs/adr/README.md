@@ -56,6 +56,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0048](0048-pin-react-native-css-interop-with-a-pnpm-override.md) | Pin react-native-css-interop with a pnpm override | Accepted | 2026-09-16 |
 | [0049](0049-defer-listing-detail-share-to-chat-until-recipient-selection.md) | Defer listing-detail share to chat until the recipient is chosen | Accepted | 2026-09-17 |
 | [0050](0050-wizard-validation-messages-as-translation-keys.md) | Wizard validation messages are translation keys, not prose | Accepted | 2026-09-18 |
+| [0051](0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) | Auto.ru-inspired mobile discovery before Google Play review (supersedes ADR-0034 for mobile discovery and conflicting ADR-0035 browse clauses) | Accepted | 2026-09-21 |
 
 ## Per-app ADRs
 
