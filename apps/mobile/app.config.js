@@ -7,6 +7,7 @@ const config = {
     owner: "tkmdevelopers",
     scheme: "autotm",
     version: "0.1.0",
+    icon: "./assets/images/icon.png",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     platforms: ["ios", "android"],
@@ -23,6 +24,11 @@ const config = {
     },
     android: {
       package: "tm.auto.app",
+      adaptiveIcon: {
+        foregroundImage: "./assets/images/android-icon-foreground.png",
+        backgroundImage: "./assets/images/android-icon-background.png",
+        monochromeImage: "./assets/images/android-icon-monochrome.png",
+      },
       ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
       permissions: ["CAMERA"],
       // Photo selection goes through the system photo picker, which needs no media
@@ -49,6 +55,15 @@ const config = {
         {
           cameraPermission: "Allow AutoTM to access your camera to take photos of your vehicle for listings.",
           recordAudioAndroid: false,
+        },
+      ],
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/splash-icon.png",
+          imageWidth: 160,
+          resizeMode: "contain",
+          backgroundColor: "#FFFFFF",
         },
       ],
     ],

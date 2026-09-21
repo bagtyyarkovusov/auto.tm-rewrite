@@ -1,51 +1,41 @@
-import { router } from "expo-router";
+import { Redirect } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 
-import { BrandLogo } from "../../src/auth/BrandLogo";
+import LaunchMark from "../../assets/launch-mark.svg";
 import { getOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
-import { Text } from "@/components/ui/text";
-
-const SPLASH_DELAY_MS = 1_200;
 
 export default function OnboardingSplashScreen() {
-  const [checking, setChecking] = useState(true);
+  const [destination, setDestination] = useState<
+    "/(tabs)" | "/(onboarding)/language" | null
+  >(null);
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let mounted = true;
 
     void getOnboardingCompleted().then((completed) => {
       if (!mounted) return;
 
-      if (completed) {
-        router.replace("/(tabs)");
-        return;
-      }
-
-      setChecking(false);
-      timeoutId = setTimeout(() => {
-        router.replace("/(onboarding)/language");
-      }, SPLASH_DELAY_MS);
+      setDestination(completed ? "/(tabs)" : "/(onboarding)/language");
     });
 
     return () => {
       mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
 
+  if (destination) {
+    return <Redirect href={destination} />;
+  }
+
   return (
-    <SafeScreen className="items-center justify-center px-6">
-      <View className="items-center gap-6">
-        <BrandLogo width={180} height={32} />
-        {checking ? (
-          <ActivityIndicator />
-        ) : (
-          <Text className="text-base text-muted-foreground">AutoTM</Text>
-        )}
+    <SafeScreen className="items-center justify-center bg-white px-6">
+      <StatusBar style="dark" />
+      <View accessibilityLabel="AutoTM" accessibilityRole="image">
+        <LaunchMark width={160} height={115} />
       </View>
     </SafeScreen>
   );
