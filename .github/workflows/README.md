@@ -12,6 +12,8 @@ GitHub Actions workflows.
 
 Each workflow reports the Node and pnpm versions, pnpm store path, and free space before `pnpm install`. Compare these lines with pnpm's `reused` and `downloaded` counts when an install is unexpectedly slow. The investigation and baseline timings are in [the runner performance research](../../docs/research/github-actions-self-hosted-performance.md).
 
+The current Mac runner uses `${HOME}/Library/pnpm/store` for all three workflows. This path survives worktree cleaning and avoids pnpm's previous store under `/tmp`. The bundle workflow uses the same local store without a GitHub cache restore/save. Revisit the path if the `tm-proxy` label moves to a non-macOS runner.
+
 ## Self-hosted runner
 
 One runner is registered: **`tm-build-mac`** (labels `self-hosted, macOS, ARM64, tm-proxy`), the developer's Mac, registered repo-scoped. ADR-0005 designates the dev Mac as the backup build box; it is currently the only one.

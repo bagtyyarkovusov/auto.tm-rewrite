@@ -21,6 +21,8 @@ The 64-second setup on the sampled PR includes two failed `codeload.github.com` 
 
 The diagnostic PR confirms the runner currently uses `/tmp/pnpm-gvs-fetch-lNi5eI/store/v3`, with Node 22.23.1 and pnpm 9.12.0. It reused 2,044 packages and downloaded none. The temporary store path is a durability concern because the operating system or a cleanup process may clear it; the logs do not prove that happened before the cold run. The same diagnostic run retried downloads of both `actions/checkout` and `pnpm/action-setup` from `codeload.github.com`, adding roughly 40 seconds of explicit backoff. [Diagnostic run](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35628364395).
 
+The next PR revision sets `npm_config_store_dir` to `${HOME}/Library/pnpm/store`, a populated location outside the checkout worktree. This removes reliance on the `/tmp` path. Bundle also stops restoring and saving the pnpm store through GitHub's remote cache. A fresh runner run must verify whether this location is warm for the current lockfile and measure the result; this is a change under test, not a measured speedup.
+
 ### Recommended experiments, in order
 
 1. **Diagnose cold installs.** Record `pnpm store path`, pnpm/Node versions, free disk, and install's reused/downloaded counts for several CI runs. Keep the pnpm store at a stable path outside `actions-runner/_work`. Investigate any cleanup task or store-path drift; reclaim disk space deliberately rather than deleting the active store. A warm install is already about 11 seconds, so a repeatable local store has the largest demonstrated upside.

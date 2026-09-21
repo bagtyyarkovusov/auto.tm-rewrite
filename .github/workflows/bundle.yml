@@ -7,6 +7,8 @@ on:
 jobs:
   bundle:
     runs-on: [self-hosted, tm-proxy]
+    env:
+      npm_config_store_dir: ${HOME}/Library/pnpm/store
 
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
 
       - name: Report dependency cache state
         shell: bash
