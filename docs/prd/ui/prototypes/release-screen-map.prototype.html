@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE — AutoTM release screen map</title>
+<style>
+  :root { --ink:#111; --mute:#6b6b6b; --line:#e2e2e2; --soft:#f4f4f4; --accent:#1a56db; --warn:#b45309; --ok:#047857; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:#fafafa; }
+  header.top { padding:20px 28px 8px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:15px; margin:24px 0 8px; }
+  .lede { color:var(--mute); max-width:980px; margin:0; }
+  .tag { display:inline-block; font-size:11px; padding:1px 6px; border-radius:4px; background:#fff3cd; color:#7a5b00; margin-left:6px; vertical-align:middle; }
+  main { display:grid; grid-template-columns: 380px 1fr; gap:24px; padding:12px 28px 40px; align-items:start; }
+  /* phone */
+  .phone { width:360px; height:740px; border:2px solid #222; border-radius:28px; background:#fff; overflow:hidden; display:flex; flex-direction:column; position:sticky; top:12px; }
+  .status { height:22px; font-size:11px; color:var(--mute); padding:3px 14px; display:flex; justify-content:space-between; }
+  .appbar { display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--line); min-height:44px; }
+  .appbar .title { font-weight:600; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .appbar .sub { font-size:11px; color:var(--mute); font-weight:400; }
+  .body { flex:1; overflow-y:auto; padding:10px; position:relative; }
+  .tabs { display:flex; border-top:1px solid var(--line); }
+  .tabs button { flex:1; border:0; background:none; padding:8px 0 10px; font-size:10.5px; color:var(--mute); cursor:pointer; }
+  .tabs button.on { color:var(--accent); font-weight:600; }
+  .sysnav { height:26px; background:#f0f0f0; display:flex; justify-content:center; align-items:center; gap:48px; font-size:12px; }
+  .sysnav button { border:0; background:none; cursor:pointer; font-size:13px; }
+  .overlay { position:absolute; inset:0; background:#fff; display:flex; flex-direction:column; }
+  .sheetwrap { position:absolute; inset:0; background:rgba(0,0,0,.35); display:flex; align-items:flex-end; }
+  .sheet { background:#fff; width:100%; border-radius:14px 14px 0 0; padding:12px; }
+  .box { border:1px dashed #bbb; border-radius:10px; padding:10px; margin-bottom:8px; background:#fff; }
+  .box.solid { border-style:solid; border-color:var(--line); }
+  .ph { background:var(--soft); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#999; font-size:11px; }
+  .row { display:flex; align-items:center; gap:8px; }
+  .between { justify-content:space-between; }
+  .btn { border:1px solid #bbb; background:#fff; border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer; }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.block { display:block; width:100%; text-align:center; padding:10px; }
+  .btn.link { border:0; padding:4px 0; color:var(--accent); background:none; }
+  .btn:disabled { opacity:.4; cursor:default; }
+  .chip { display:inline-flex; align-items:center; gap:4px; border:1px solid #bbb; border-radius:999px; padding:3px 9px; font-size:11.5px; background:#fff; cursor:pointer; white-space:nowrap; }
+  .chip.dark { background:#222; color:#fff; border-color:#222; }
+  .chip.sel { border-color:var(--accent); color:var(--accent); }
+  .chips { display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; }
+  .card { display:flex; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .card .ph { width:96px; height:66px; flex:none; }
+  .price { font-weight:700; }
+  .small { font-size:11.5px; color:var(--mute); }
+  .list-row { display:flex; justify-content:space-between; padding:10px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .sticky { border-top:1px solid var(--line); padding:8px 10px; background:#fff; }
+  .note { font-size:11px; color:var(--warn); background:#fff8eb; border-radius:6px; padding:6px 8px; margin:6px 0; }
+  .bubble { max-width:75%; padding:6px 10px; border-radius:12px; margin:4px 0; font-size:12.5px; }
+  .bubble.me { background:#e8efff; margin-left:auto; }
+  .empty { text-align:center; padding:40px 16px; color:var(--mute); }
+  .logo { display:inline-flex; width:30px; height:30px; border-radius:50%; border:1px solid #bbb; background:#fff; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex:none; }
+  .logo.missing { border-style:dashed; color:#999; font-size:12px; }
+  .skel { height:66px; background:linear-gradient(90deg,#f2f2f2,#e9e9e9,#f2f2f2); border-radius:8px; margin-bottom:8px; }
+  .toast { position:absolute; left:12px; right:12px; bottom:12px; background:#222; color:#fff; padding:8px 12px; border-radius:8px; font-size:12px; }
+  /* right column */
+  .panel { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+  .state { display:grid; grid-template-columns: 150px 1fr; gap:4px 12px; font-size:13px; }
+  .state dt { color:var(--mute); }
+  .state dd { margin:0; }
+  .changed { background:#fff3a3; border-radius:3px; padding:0 3px; }
+  .crumbs span { display:inline-block; background:var(--soft); border-radius:4px; padding:1px 6px; margin:1px 2px 1px 0; }
+  .crumbs span:last-child { background:#dbe6ff; }
+  .event { font-size:13px; color:var(--ok); margin-top:8px; }
+  .wt-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .wt-tabs button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12.5px; }
+  .wt-tabs button.on { border-color:var(--accent); color:var(--accent); }
+  .steps button { display:block; text-align:left; width:100%; border:1px solid var(--line); background:#fff; border-radius:6px; padding:6px 10px; margin:4px 0; cursor:pointer; font-size:13px; }
+  .steps button.done { color:var(--mute); text-decoration:line-through; }
+  .steps button.next { border-color:var(--accent); background:#f3f7ff; }
+  .steps button:disabled { cursor:default; }
+  .free { display:flex; flex-wrap:wrap; gap:6px; }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; }
+  th, td { text-align:left; vertical-align:top; border-bottom:1px solid var(--line); padding:6px 8px; }
+  th { background:var(--soft); position:sticky; top:0; }
+  .st-new { color:var(--accent); font-weight:600; }
+  .st-change { color:var(--warn); font-weight:600; }
+  .st-keep { color:var(--ok); font-weight:600; }
+  .decisions li { margin-bottom:8px; }
+  code { font-size:12px; background:var(--soft); padding:0 4px; border-radius:3px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>AutoTM reviewer-only Android release: screen map <span class="tag">PROTOTYPE, throwaway</span></h1>
+  <p class="lede">
+    <b>Question:</b> which named screens make up the Android app a Google Play reviewer will see, and does the journey
+    <b>Home → brand/model → filters → Results → Listing → Favorite / Message</b> hold up, including going back to Results and signing in when an action needs it?
+    Click inside the phone, use the Android <b>◁ Back</b> button under it, or run a journey on the right. The state panel shows what the app remembers after every tap.
+    Low-fidelity on purpose: grey boxes, not AutoTM's visual design. Sample data is invented. The founder's approval is recorded on
+    <i>Approve the release screen map and Auto.ru-inspired buyer journey</i> (issue 344).
+  </p>
+</header>
+
+<main>
+  <div>
+    <div class="phone" id="phone"></div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2 style="margin-top:0">What the app remembers now</h2>
+      <dl class="state" id="state"></dl>
+      <div class="event" id="event"></div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0">Journeys to try</h2>
+      <div class="wt-tabs" id="wt-tabs"></div>
+      <div id="wt-body"></div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0">Free play</h2>
+      <div class="free" id="free"></div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0">Decisions for the founder</h2>
+      <ol class="decisions" id="decisions"></ol>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin-top:0">Screen catalogue</h2>
+      <p class="small">Every screen a reviewer can reach in the release build. <span class="st-keep">Keep</span> = exists today and stays.
+        <span class="st-change">Change</span> = exists but behaves differently in this map. <span class="st-new">New</span> = not built yet.
+        Click a name to open it in the phone. Reference IDs point at the annotated Auto.ru (AR) and Kolesa (KZ) captures in
+        <code>docs/prd/ui/research/reference-screens-2026-09-21-annotations.md</code>.</p>
+      <div style="max-height:620px; overflow:auto"><table id="catalogue"></table></div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ======================================================================
+   PORTABLE MODULE: navigation + search state model (no DOM in here).
+   The page below is a thin shell over `reduce`.
+   ====================================================================== */
+const Model = (() => {
+  const BRANDS = {
+    toyota: { name: "Toyota", models: { camry: "Camry", corolla: "Corolla", lc: "Land Cruiser", rav4: "RAV4" } },
+    lexus: { name: "Lexus", models: { rx: "RX", gx: "GX", lx: "LX" } },
+    hyundai: { name: "Hyundai", models: { elantra: "Elantra", sonata: "Sonata" } },
+    kia: { name: "Kia", models: { rio: "Rio", k5: "K5" } },
+    chevrolet: { name: "Chevrolet", noLogo: true, models: { cobalt: "Cobalt", malibu: "Malibu" } },
+  };
+  // Other spellings a buyer may type (Cyrillic, Turkmen Latin). ASSUMPTION pending founder confirmation.
+  const ALIASES = {
+    toyota: ["тойота", "toýota"], lexus: ["лексус"], hyundai: ["хендай", "хюндай", "hundai"], kia: ["киа"], chevrolet: ["шевроле", "chevy"],
+    camry: ["камри"], corolla: ["королла"], lc: ["ленд крузер", "крузак", "lc", "landcruiser"], rav4: ["рав4", "rav 4"],
+    rx: ["рх"], gx: ["гх"], lx: ["лх"], elantra: ["элантра"], sonata: ["соната"], rio: ["рио"], k5: ["к5"], cobalt: ["кобальт"], malibu: ["малибу"],
+  };
+  // "Smart" matching: lower-case, Turkmen letters folded (ý→y, ä→a, ş→sh…), Cyrillic transliterated to Latin,
+  // and one typo forgiven on words of 4+ letters. Real version: catalog alias table + pg_trgm on the API.
+  const FOLD = { "ý":"y","ä":"a","ö":"o","ü":"u","ç":"ch","ş":"sh","ž":"zh","ň":"n" };
+  const CYR = { а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"ts",ч:"ch",ш:"sh",щ:"sch",ы:"y",э:"e",ю:"yu",я:"ya",ь:"",ъ:"" };
+  const norm = (t) => t.toLowerCase().replace(/\s+/g, " ").trim();
+  const latin = (t) => [...norm(t)].map((c) => FOLD[c] ?? CYR[c] ?? c).join("");
+  const names = (key, name) => { const all = [norm(name), ...(ALIASES[key] || [])]; return [...new Set([...all, ...all.map(latin)])]; };
+  function lev(a, b) { const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return d[a.length][b.length]; }
+  const wordHit = (w, q) => w.startsWith(q) || (q.length >= 4 && lev(w.slice(0, q.length), q) <= 1);
+  const starts = (list, q) => { const qs = [...new Set([q, latin(q)])];
+    return list.some((n) => qs.some((x) => wordHit(n, x) || n.split(" ").some((w) => wordHit(w, x)))); };
+
+  /* Brand & model search: brands and models in one list. "toy" finds Toyota and its models;
+     "cam" finds Camry; "toyota cam" narrows to Camry; Cyrillic spellings match too. */
+  // Years typed with the name: "camry 2018" → Camry, 2018; "лексус 2015-2019" → Lexus, 2015–2019; "2018" alone → all cars from 2018.
+  function parseYears(query) {
+    let yearMin = null, yearMax = null;
+    const rest = norm(query).replace(/\b(19[5-9]\d|20[0-2]\d)\s*[-–]\s*(19[5-9]\d|20[0-2]\d)\b|\b(19[5-9]\d|20[0-2]\d)\b/g, (m, a, b, c) => {
+      if (c) { yearMin = yearMax = +c; } else { yearMin = +a; yearMax = +b; }
+      return " ";
+    });
+    return { text: norm(rest), yearMin, yearMax };
+  }
+  function searchCatalog(query, listings) {
+    const { text, yearMin, yearMax } = parseYears(query);
+    const withYears = (rows) => rows.map((r) => ({ ...r, yearMin, yearMax, count: listings.filter((l) => l.brand === r.brand && (!r.model || l.model === r.model)
+      && (!yearMin || l.year >= yearMin) && (!yearMax || l.year <= yearMax)).length }));
+    if (yearMin && !text) return [{ kind: "year", yearMin, yearMax, count: listings.filter((l) => l.year >= yearMin && l.year <= yearMax).length }];
+    const rows = searchNames(text, listings);
+    return yearMin ? withYears(rows) : rows;
+  }
+  function searchNames(query, listings) {
+    const q = norm(query);
+    const count = (b, m) => listings.filter((l) => l.brand === b && (!m || l.model === m)).length;
+    if (!q) return Object.keys(BRANDS).map((b) => ({ kind: "brand", brand: b, count: count(b) })).sort((a, b) => b.count - a.count);
+    const out = [];
+    for (const [b, def] of Object.entries(BRANDS)) {
+      const bNames = names(b, def.name);
+      const brandHit = starts(bNames, q);
+      if (brandHit) out.push({ kind: "brand", brand: b, count: count(b) });
+      for (const [m, mName] of Object.entries(def.models)) {
+        const mNames = names(m, mName);
+        const tokens = q.split(" ");
+        const combo = tokens.length > 1 && starts(bNames, tokens[0]) && starts(mNames, tokens.slice(1).join(" "));
+        if (brandHit || starts(mNames, q) || combo) out.push({ kind: "model", brand: b, model: m, count: count(b, m) });
+      }
+    }
+    return out.filter((r) => !(q.includes(" ") && r.kind === "brand" && out.some((x) => x.kind === "model")))
+      .sort((a, b) => (a.kind === b.kind ? b.count - a.count : a.kind === "brand" ? -1 : 1));
+  }
+  const CITIES = ["Ashgabat", "Mary", "Türkmenabat", "Daşoguz", "Balkanabat"];
+  const L = (id, brand, model, year, price, city, cond, days) => ({ id, brand, model, year, price, city, cond, days,
+    km: cond === "new" ? 0 : (2026 - year) * 17000 + 4000, gearbox: year % 2 ? "Automatic" : "Manual", fuel: model === "lc" || model === "gx" ? "Diesel" : "Petrol" });
+  const LISTINGS = [
+    L("l1","toyota","camry",2018,245000,"Ashgabat","used",0), L("l2","toyota","camry",2020,318000,"Ashgabat","used",0),
+    L("l3","lexus","rx",2016,410000,"Ashgabat","used",1), L("l4","hyundai","elantra",2021,215000,"Mary","used",1),
+    L("l5","toyota","lc",2019,890000,"Ashgabat","used",1), L("l6","toyota","camry",2015,168000,"Mary","used",2),
+    L("l7","kia","rio",2022,172000,"Türkmenabat","new",2), L("l8","toyota","corolla",2017,139000,"Daşoguz","used",3),
+    L("l9","chevrolet","cobalt",2023,155000,"Ashgabat","new",3), L("l10","toyota","camry",2012,121000,"Balkanabat","used",4),
+    L("l11","lexus","gx",2014,520000,"Ashgabat","used",4), L("l12","toyota","rav4",2019,335000,"Ashgabat","used",5),
+    L("l13","hyundai","sonata",2018,199000,"Ashgabat","used",6), L("l14","toyota","camry",2022,455000,"Ashgabat","new",6),
+  ];
+  const MINE = "l1"; // the sample signed-in User owns nothing; publishing creates "l99"
+
+  const emptyFilters = () => ({ brand: null, models: [], city: null, cond: "any", priceMax: null, yearMin: null, yearMax: null });
+
+  function matches(l, f) {
+    if (f.brand && l.brand !== f.brand) return false;
+    if (f.models.length && !f.models.includes(l.model)) return false;
+    if (f.city && l.city !== f.city) return false;
+    if (f.cond !== "any" && l.cond !== f.cond) return false;
+    if (f.priceMax && l.price > f.priceMax) return false;
+    if (f.yearMin && l.year < f.yearMin) return false;
+    if (f.yearMax && l.year > f.yearMax) return false;
+    return true;
+  }
+  // Sort orders offered on Results (Kolesa's short list, KZ-04-002, minus combined orders). Newest first is the default.
+  const SORTS = { newest: "Newest first", priceAsc: "Cheapest first", priceDesc: "Most expensive first", yearDesc: "Newest year first", yearAsc: "Oldest year first", kmAsc: "Lowest mileage first" };
+  const SORT_FN = { newest: () => 0, priceAsc: (a, b) => a.price - b.price, priceDesc: (a, b) => b.price - a.price,
+    yearDesc: (a, b) => b.year - a.year, yearAsc: (a, b) => a.year - b.year, kmAsc: (a, b) => a.km - b.km };
+  const search = (f, listings, sort = "newest") => listings.filter((l) => matches(l, f)).sort(SORT_FN[sort]); // array order = newest
+  const countOf = (f, listings) => search(f, listings).length;
+  const activeCount = (f) =>
+    (f.brand ? 1 : 0) + (f.models.length ? 1 : 0) + (f.city ? 1 : 0) + (f.cond !== "any" ? 1 : 0) + (f.priceMax ? 1 : 0) + (f.yearMin || f.yearMax ? 1 : 0);
+
+  const initial = (opts = {}) => ({
+    firstRun: !!opts.firstRun,
+    tab: "search",
+    stacks: {
+      search: [opts.firstRun ? "launch" : "home"],
+      favorites: ["favorites"], sell: ["sell"], chat: ["conversations"], cabinet: ["cabinet"],
+    },
+    overlays: [],        // full-screen pickers, auth, sheets drawn over the current tab
+    pickerOrigin: null,  // "home" = fast path from Home search card; "parameters" = editing inside Search parameters
+    signedIn: false,
+    user: { phone: null, email: null }, // verified sign-in methods on the one User
+    authMethod: "phone", // which tab the Sign in screen shows
+    codeTo: null,        // where the last code went
+    addError: null,
+    query: "",           // text in Search or in the Brand/Model picker field
+    sort: "newest",      // Results order; kept while you edit filters
+    history: [],         // recent brand/model choices, on this device only: [{brand, models:[]}]
+    applied: emptyFilters(), // what Results is showing
+    draft: emptyFilters(),   // what Search parameters / pickers are editing
+    resultsScroll: 0,
+    favorites: [],
+    pending: null,       // action waiting for sign-in, e.g. {kind:"favorite", listingId:"l2"}
+    conversations: [],   // [{listingId, messages:[...]}]
+    blocked: [],
+    reported: [],
+    published: [],
+    data: "normal",      // normal | loading | offline
+    toast: null,
+    event: "App opened.",
+  });
+
+  const clone = (s) => JSON.parse(JSON.stringify(s));
+  const top = (s) => s.stacks[s.tab][s.stacks[s.tab].length - 1];
+  const allListings = (s) => [...s.published.map((id) => L(id,"toyota","corolla",2016,128000,"Ashgabat","used",0)), ...LISTINGS];
+  const listingById = (s, id) => allListings(s).find((l) => l.id === id);
+  const title = (l) => `${BRANDS[l.brand].name} ${BRANDS[l.brand].models[l.model]}, ${l.year}`;
+
+  function completePending(s) {
+    const p = s.pending;
+    s.pending = null;
+    if (!p) return "Signed in.";
+    if (p.kind === "favorite") {
+      if (!s.favorites.includes(p.listingId)) s.favorites.push(p.listingId);
+      return `Signed in, returned to the Listing, and saved it to Favorites. Results is still behind it.`;
+    }
+    if (p.kind === "message") {
+      openConversation(s, p.listingId);
+      return "Signed in, then opened the Conversation for that Listing. Back returns to the Listing, then Results.";
+    }
+    if (p.kind === "report") { s.overlays.push("report"); return "Signed in, then opened Report listing."; }
+    if (p.kind === "sell") return s.user.phone ? "Signed in. The Sell wizard is ready." : "Signed in with email. Selling still needs a verified phone.";
+    return "Signed in and returned to where you were.";
+  }
+
+  function openConversation(s, listingId) {
+    if (!s.conversations.find((c) => c.listingId === listingId)) s.conversations.unshift({ listingId, messages: [] });
+    s.stacks[s.tab].push("conversation:" + listingId);
+  }
+
+  function needAuth(s, pending, why) {
+    s.pending = pending;
+    s.overlays.push("phone");
+    return why;
+  }
+
+  function reduce(prev, a) {
+    const s = clone(prev);
+    s.toast = null;
+    const stack = s.stacks[s.tab];
+    let ev = "";
+    switch (a.type) {
+      case "RESET": return initial(a.opts);
+
+      /* ---- onboarding ---- */
+      case "LAUNCH_DONE": stack.splice(0, stack.length, "language"); ev = "First run: choose a language."; break;
+      case "PICK_LANGUAGE": stack.splice(0, stack.length, "welcome"); ev = `Language set to ${a.lang}.`; break;
+      case "FINISH_WELCOME": stack.splice(0, stack.length, "home"); s.firstRun = false; ev = "Onboarding finished. Home is the root of the Search tab; there is no sign-in wall."; break;
+
+      /* ---- tabs and back ---- */
+      case "OPEN_TAB":
+        s.overlays = []; s.pickerOrigin = null;
+        if (s.tab === a.tab && s.stacks[a.tab].length > 1) {
+          s.stacks[a.tab] = [s.stacks[a.tab][0]];
+          if (a.tab === "search") s.resultsScroll = 0;
+          ev = "Tapped the active tab again: it went back to the tab's first screen.";
+        } else {
+          s.tab = a.tab;
+          ev = `Switched to ${a.tab}. Each tab keeps its own history.`;
+        }
+        break;
+      case "BACK":
+        if (s.overlays.length) {
+          const gone = s.overlays.pop();
+          if (gone === "addphone" || gone === "addemail") { s.addError = null; if (s.pending && s.pending.kind === "sell") s.pending = null; }
+          if ((gone === "phone" || gone === "code") && s.pending) { ev = "Cancelled sign-in. The waiting action was dropped; nothing changed."; s.pending = null; s.overlays = s.overlays.filter((o) => o !== "phone" && o !== "code"); }
+          else if (gone === "code") { s.overlays.push("phone"); s.overlays.pop(); ev = "Back from code entry."; }
+          else ev = `Closed ${gone}. Unapplied changes are kept only while the search form is open.`;
+          if (!s.overlays.some((o) => ["parameters","brand","model","city"].includes(o))) s.pickerOrigin = null;
+        } else if (stack.length > 1) {
+          const gone = stack.pop();
+          ev = gone === "results" ? "Left Results for Home. The applied search stays in memory for this session." : `Back from ${gone.split(":")[0]}.`;
+          if (top(s) === "results") ev += ` Results is at the same scroll position (row ${s.resultsScroll + 1}).`;
+        } else if (s.tab !== "search") {
+          s.tab = "search"; ev = "Android Back on another tab's first screen goes to the Search tab.";
+        } else {
+          ev = "Android Back on Home leaves the app.";
+        }
+        break;
+
+      /* ---- discovery ---- */
+      case "OPEN_SEARCH": s.query = ""; s.overlays = ["search"]; ev = "Opened Search from the magnifier on Home. Recent searches and popular brands show until you type."; break;
+      case "PICK_HISTORY": {
+        const h = s.history[a.i];
+        s.draft = clone(s.applied); s.draft.brand = h.brand; s.draft.models = [...h.models];
+        const r = reduce(s, { type: "SHOW_RESULTS" });
+        r.event = "Picked a recent search: straight to Results. It moved to the top of the history.";
+        return r;
+      }
+      case "CLEAR_HISTORY": s.history = []; ev = "Cleared recent searches on this device."; break;
+      case "TYPE_QUERY": s.query = a.q; ev = a.q ? `Typed “${a.q}”: brands and models listed together.` : "Cleared the search text."; break;
+      case "PICK_SEARCH_RESULT": {
+        s.draft = clone(s.applied); s.draft.brand = a.brand || null; s.draft.models = a.model ? [a.model] : [];
+        if (a.yearMin) { s.draft.yearMin = a.yearMin; s.draft.yearMax = a.yearMax; }
+        s.overlays = []; s.query = "";
+        const r = reduce(s, { type: "SHOW_RESULTS" });
+        if (a.yearMin) r.event = `Search understood the year: Results for ${a.brand ? "that " + (a.model ? "model" : "brand") : "all cars"} from ${a.yearMin}${a.yearMax !== a.yearMin ? " to " + a.yearMax : ""}.`; else
+        r.event = a.model ? "Picked a model: Results for that brand and model. Other applied filters were kept." : "Picked a brand: Results for every model of that brand. Other applied filters were kept.";
+        return r;
+      }
+      case "OPEN_BRAND_SEARCH":
+        s.draft = clone(s.applied); s.draft.brand = null; s.draft.models = []; s.query = "";
+        s.pickerOrigin = "home"; s.overlays = ["brand"];
+        ev = "Opened Brand picker from the Home “Brand, model” card. One brand can be picked. Other applied filters carry over.";
+        break;
+      case "OPEN_PARAMETERS":
+        s.draft = clone(s.applied); s.pickerOrigin = "parameters"; s.overlays = ["parameters"];
+        ev = a.from === "results" ? "Opened Search parameters, pre-filled with what Results is showing." : "Opened Search parameters.";
+        break;
+      case "OPEN_BRAND_FROM_PARAMS": s.overlays.push("brand"); ev = "Opened Brand picker from Search parameters."; break;
+      case "OPEN_MODEL_FROM_PARAMS": s.overlays.push("model"); ev = "Opened Model picker from Search parameters."; break;
+      case "OPEN_CITY": s.overlays.push("city"); ev = "Opened City picker."; break;
+      case "PICK_BRAND":
+        s.draft.brand = a.brand; s.draft.models = []; s.query = "";
+        s.overlays.push("model");
+        ev = `Picked ${BRANDS[a.brand].name}. Model picker opened: tick any number of models, or none for all ${BRANDS[a.brand].name} models.`;
+        break;
+      case "TOGGLE_MODEL": {
+        const m = s.draft.models; const i = m.indexOf(a.model);
+        if (i >= 0) m.splice(i, 1); else m.push(a.model);
+        ev = "Changed selected models."; break;
+      }
+      case "ALL_MODELS": s.draft.models = []; ev = "All models of the brand."; break;
+      case "MODEL_DONE": // inside parameters: back to the form
+        s.overlays = s.overlays.filter((o) => o !== "brand" && o !== "model");
+        ev = "Returned to Search parameters with the brand and model filled in."; break;
+      case "PICK_CITY": s.draft.city = a.city; s.overlays.pop(); ev = a.city ? `City set to ${a.city}.` : "Any city."; break;
+      case "SET_COND": s.draft.cond = a.cond; ev = `Condition: ${a.cond}.`; break;
+      case "SET_PRICE_MAX": s.draft.priceMax = a.v; ev = a.v ? `Price up to ${a.v.toLocaleString()} TMT.` : "Any price."; break;
+      case "SET_YEAR_MIN": s.draft.yearMin = a.v; ev = a.v ? `Year from ${a.v}.` : "Any year."; break;
+      case "RESET_DRAFT": s.draft = emptyFilters(); ev = "Cleared the search form (not applied yet)."; break;
+      case "SHOW_RESULTS": {
+        s.applied = clone(s.draft); s.overlays = []; s.pickerOrigin = null; s.resultsScroll = 0; s.query = "";
+        if (s.applied.brand) {
+          const e = { brand: s.applied.brand, models: [...s.applied.models] };
+          s.history = [e, ...s.history.filter((h) => !(h.brand === e.brand && [...h.models].sort().join() === [...e.models].sort().join()))].slice(0, 10);
+        }
+        s.tab = "search";
+        const st = s.stacks.search;
+        const at = st.indexOf("results");
+        if (at >= 0) { st.splice(at + 1); ev = "Applied. Results updated in place; no second Results screen was stacked."; }
+        else { st.splice(1); st.push("results"); ev = "Applied. Opened Results, a separate screen from Home."; }
+        break;
+      }
+      case "OPEN_SORT": s.overlays.push("sort"); ev = "Opened Sort from the Results header."; break;
+      case "SET_SORT": s.sort = a.sort; s.overlays = s.overlays.filter((o) => o !== "sort"); s.resultsScroll = 0; ev = `Sorted: ${SORTS[a.sort]}. Filters unchanged.`; break;
+      case "SHOW_ALL": {
+        s.draft = emptyFilters();
+        const r = reduce(s, { type: "SHOW_RESULTS" });
+        r.event = "“See all” on Home: Results with no brand, model or filter is the full feed of every listing.";
+        return r;
+      }
+      case "SET_RESULTS_COND": s.applied.cond = a.cond; s.resultsScroll = 0; ev = `Condition switched to ${a.cond} right on Results; the count updated in place.`; break;
+      case "EDIT_MODELS_FROM_RESULTS":
+        s.draft = clone(s.applied); s.query = ""; s.pickerOrigin = "results";
+        s.overlays = s.draft.brand ? ["model"] : ["brand"];
+        ev = s.draft.brand ? "Tapped the brand/model card: Model picker opened with the current models ticked. Add or untick, then Show." : "No brand yet: Brand picker opened from Results.";
+        break;
+      case "CHANGE_BRAND_FROM_MODEL":
+        s.query = ""; s.overlays = s.overlays.filter((o) => o !== "model" && o !== "brand").concat("brand");
+        ev = "“Change brand” from the Model picker: pick another brand, then its models. Back returns to Results unchanged.";
+        break;
+      case "REMOVE_MODEL":
+        s.applied.models = s.applied.models.filter((m) => m !== a.model); s.resultsScroll = 0;
+        ev = "Removed one model.";
+        break;
+      case "REMOVE_CHIP":
+        if (a.key === "brand") { s.applied.brand = null; s.applied.models = []; }
+        else if (a.key === "models") s.applied.models = [];
+        else if (a.key === "cond") s.applied.cond = "any";
+        else if (a.key === "yearMin") { s.applied.yearMin = null; s.applied.yearMax = null; }
+        else s.applied[a.key] = null;
+        s.resultsScroll = 0; ev = "Removed one filter. Results re-ran from the top."; break;
+      case "CLEAR_ALL": s.applied = emptyFilters(); s.resultsScroll = 0; ev = "Cleared every filter. Results shows all listings."; break;
+      case "SCROLL_TOP": s.resultsScroll = 0; ev = "Scrolled back to the top."; break;
+      case "SCROLL_RESULTS": s.resultsScroll = Math.min(s.resultsScroll + 3, Math.max(0, countOf(s.applied, allListings(s)) - 1)); ev = `Scrolled Results to row ${s.resultsScroll + 1}.`; break;
+      case "OPEN_LISTING": stack.push("listing:" + a.id); ev = "Opened the Listing."; break;
+      case "OPEN_PHOTOS": s.overlays.push("photos"); ev = "Full-screen photos."; break;
+
+      /* ---- actions that need a User ---- */
+      case "TOGGLE_FAVORITE":
+        if (!s.signedIn) { ev = needAuth(s, { kind: "favorite", listingId: a.id }, "Favorite needs a User. Sign-in opened over the Listing; the tap is remembered."); break; }
+        if (s.favorites.includes(a.id)) { s.favorites = s.favorites.filter((x) => x !== a.id); ev = "Removed from Favorites."; }
+        else { s.favorites.push(a.id); ev = "Saved to Favorites."; }
+        break;
+      case "MESSAGE":
+        if (!s.signedIn) { ev = needAuth(s, { kind: "message", listingId: a.id }, "Message needs a User. Sign-in opened; the Conversation opens after."); break; }
+        openConversation(s, a.id); ev = "Opened the Conversation for this Listing."; break;
+      case "CALL": s.toast = "Opens the phone dialer with the seller's number."; ev = "Call hands off to the phone dialer. No sign-in needed."; break;
+      case "REPORT":
+        if (!s.signedIn) { ev = needAuth(s, { kind: "report", listingId: a.id }, "Reporting needs a User. Sign-in opened."); break; }
+        s.overlays.push("report"); ev = "Opened Report listing."; break;
+      case "SUBMIT_REPORT": s.overlays.pop(); s.reported.push(a.id); s.toast = "Thanks. A moderator will review it."; ev = "Report sent."; break;
+      case "SIGN_IN_FROM": s.pending = a.kind === "sell" ? { kind: "sell" } : null; s.overlays.push("phone"); ev = "Opened Sign in."; break;
+      case "SET_AUTH_METHOD": s.authMethod = a.method; ev = a.method === "email" ? "Sign in with email: no password, a code is emailed." : "Sign in with phone: a code is texted."; break;
+      case "SUBMIT_PHONE": s.authMethod = "phone"; s.codeTo = "+993 6• ••• •••"; s.overlays.push("code"); ev = "SMS code sent (reviewer account uses a fixed code)."; break;
+      case "SUBMIT_EMAIL": s.authMethod = "email"; s.codeTo = "reviewer@auto.tm"; s.overlays.push("code"); ev = "Code emailed. No password."; break;
+      case "SUBMIT_CODE":
+        if (s.overlays.includes("addphone") || s.overlays.includes("addemail")) {
+          const kind = s.overlays.includes("addphone") ? "phone" : "email";
+          s.user[kind] = s.codeTo; s.overlays = s.overlays.filter((o) => !["addphone","addemail","code"].includes(o));
+          if (kind === "phone" && s.pending && s.pending.kind === "sell") { s.pending = null; ev = "Phone verified and added to the same User. The Sell wizard is unlocked."; }
+          else ev = `${kind === "phone" ? "Phone" : "Email"} verified and added. Both now sign in to the same User.`;
+          break;
+        }
+        s.signedIn = true; s.user[s.authMethod] = s.codeTo; s.overlays = s.overlays.filter((o) => o !== "phone" && o !== "code");
+        ev = completePending(s); break;
+      case "OPEN_ADD": s.addError = null; s.overlays.push(a.kind === "phone" ? "addphone" : "addemail"); if (a.forSell) s.pending = { kind: "sell" };
+        ev = a.kind === "phone" ? "Add phone: a code will be texted to it." : "Add email: a code will be emailed to it."; break;
+      case "SUBMIT_ADD":
+        if (a.taken) { s.addError = "This " + a.kind + " is used by another account. Sign in with it instead, or use a different one."; ev = "Refused: that " + a.kind + " belongs to another User. Accounts are never merged."; break; }
+        s.addError = null; s.codeTo = a.kind === "phone" ? "+993 6• ••• •••" : "reviewer@auto.tm"; s.overlays.push("code"); ev = "Code sent to the new " + a.kind + "."; break;
+      case "SEND_MESSAGE": {
+        const c = s.conversations.find((x) => x.listingId === a.id); c.messages.push(a.text);
+        ev = "Message sent."; break;
+      }
+      case "OPEN_CONVERSATION": stack.push("conversation:" + a.id); ev = "Opened the Conversation."; break;
+      case "OPEN_THREAD_MENU": s.overlays.push("threadmenu"); ev = "Conversation menu: Report message, Block user."; break;
+      case "BLOCK": s.overlays.pop(); s.blocked.push(a.id); ev = "Blocked the other User. The composer is disabled."; break;
+
+      /* ---- selling + cabinet ---- */
+      case "PUBLISH": {
+        const id = "l99"; if (!s.published.includes(id)) s.published.push(id);
+        stack.splice(1); stack.push("listing:" + id); ev = "Published. The wizard is replaced by your Listing in owner view."; break;
+      }
+      case "PUSH": stack.push(a.screen); ev = `Opened ${a.screen}.`; break;
+      case "OPEN_WEB": s.toast = `Opens ${a.page} on auto.tm in the browser.`; ev = `Legal page opens on the web: ${a.page}.`; break;
+      case "SIGN_OUT": s.signedIn = false; s.user = { phone: null, email: null }; s.stacks.cabinet = ["cabinet"]; s.stacks.chat = ["conversations"]; s.stacks.favorites = ["favorites"]; ev = "Signed out. Browsing still works."; break;
+      case "DELETE_ACCOUNT":
+        s.signedIn = false; s.user = { phone: null, email: null }; s.favorites = []; s.conversations = []; s.published = [];
+        s.stacks = initial().stacks; s.tab = "search";
+        s.toast = "Account deleted."; ev = "Account deleted. Back on Home, signed out."; break;
+
+      /* ---- data conditions ---- */
+      case "SET_DATA": s.data = a.v; ev = `Network condition: ${a.v}.`; break;
+      case "GOTO": Object.assign(s, a.patch(s)); ev = `Jumped to ${a.name}.`; break;
+      default: ev = "Unknown action " + a.type;
+    }
+    s.event = ev;
+    return s;
+  }
+
+  const sameEntry = (a, b) => a.brand === b.brand && [...a.models].sort().join() === [...b.models].sort().join();
+  return { parseYears, SORTS, searchCatalog, BRANDS, CITIES, initial, reduce, search, countOf, activeCount, top, allListings, listingById, title, emptyFilters, MINE };
+})();
+
+/* ======================================================================
+   PAGE SHELL (throwaway)
+   ====================================================================== */
+let S = Model.initial();
+let prevS = S;
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const fmt = (n) => n.toLocaleString("en").replace(/,/g, " ");
+const B = Model.BRANDS;
+
+function go(a) { prevS = S; S = Model.reduce(S, a); render(); }
+window.go = go;
+const A = (obj) => `go(${esc(JSON.stringify(obj))})`;
+
+/* ---------- phone screens ---------- */
+function bar(title, { back = true, right = "", sub = "" } = {}) {
+  return `<div class="appbar">${back ? `<button class="btn link" onclick='${A({type:"BACK"})}'>←</button>` : ""}
+    <div class="title">${title}${sub ? `<div class="sub">${sub}</div>` : ""}</div>${right}</div>`;
+}
+function card(l) {
+  const fav = S.favorites.includes(l.id) ? "♥" : "♡";
+  return `<div class="card" onclick='${A({type:"OPEN_LISTING", id:l.id})}'>
+    <div class="ph">photo</div>
+    <div style="flex:1;min-width:0"><div class="price">${fmt(l.price)} TMT</div>
+    <div>${esc(Model.title(l))}</div><div class="small">${l.city} · ${l.days === 0 ? "today" : l.days + " d ago"}${l.cond === "new" ? " · new" : ""}</div></div>
+    <div class="small">${fav}</div></div>`;
+}
+function dataState(render) {
+  if (S.data === "loading") return `<div class="skel"></div><div class="skel"></div><div class="skel"></div>`;
+  if (S.data === "offline") return `<div class="empty">No connection.<br><br><button class="btn" onclick='${A({type:"SET_DATA", v:"normal"})}'>Retry</button></div>`;
+  return render();
+}
+function filterSummary(f) {
+  const parts = [];
+  if (f.brand) parts.push(B[f.brand].name + (f.models.length ? " " + f.models.map((m) => B[f.brand].models[m]).join(", ") : ""));
+  if (f.city) parts.push(f.city);
+  if (f.cond !== "any") parts.push(f.cond);
+  if (f.priceMax) parts.push("≤ " + fmt(f.priceMax));
+  if (f.yearMin || f.yearMax) parts.push((f.yearMax && f.yearMax !== f.yearMin ? (f.yearMin ? f.yearMin + "–" + f.yearMax : "to " + f.yearMax) : (f.yearMax ? String(f.yearMin) : "from " + f.yearMin)));
+  return parts.join(" · ");
+}
+
+const screens = {
+  launch: () => `<div class="body"><div class="empty" style="padding-top:200px"><b>AutoTM</b><br><br>
+      <button class="btn" onclick='${A({type:"LAUNCH_DONE"})}'>(splash finishes)</button></div></div>`,
+  language: () => `${bar("Choose language", { back:false })}<div class="body">
+      ${["Türkmen","Русский"].map((l) => `<div class="list-row" onclick='${A({type:"PICK_LANGUAGE", lang:l})}'>${l}<span>›</span></div>`).join("")}</div>`,
+  welcome: () => `${bar("Welcome", { back:false })}<div class="body"><div class="ph" style="height:220px">illustration</div>
+      <p>Buy and sell cars in Turkmenistan. Browse without an account.</p></div>
+      <div class="sticky"><button class="btn primary block" onclick='${A({type:"FINISH_WELCOME"})}'>Start browsing</button></div>`,
+
+  home: () => {
+    const all = Model.allListings(S);
+    const hasApplied = Model.activeCount(S.applied) > 0;
+    return `${bar("AutoTM", { back:false, right: `<button class="btn link" style="font-size:18px" title="Search" onclick='${A({type:"OPEN_SEARCH"})}'>🔍</button>` })}<div class="body">
+      <div class="box solid" style="cursor:pointer" >
+        <div class="row between">
+          <div style="flex:1" onclick='${A({type:"OPEN_BRAND_SEARCH"})}'><b>🚗 Brand, model</b><div class="small">${fmt(all.length)} listings</div></div>
+        </div>
+      </div>
+      <div class="row between" style="margin:6px 0 2px"><b>New listings</b><button class="btn link" onclick='${A({type:"SHOW_ALL"})}'>See all ›</button></div>
+      ${dataState(() => all.length ? all.slice(0, 8).map(card).join("") : `<div class="empty">No listings yet.<br><br><button class="btn" onclick='${A({type:"OPEN_TAB", tab:"sell"})}'>Sell your car</button></div>`)}
+      </div>`;
+  },
+
+  results: () => {
+    const f = S.applied, all = Model.allListings(S), list = Model.search(f, all, S.sort);
+    const n = Model.activeCount(f) - (f.brand ? 1 : 0) - (f.models.length ? 1 : 0) - (f.cond !== "any" ? 1 : 0);
+    const prices = list.map((l) => l.price);
+    const range = prices.length ? `${fmt(Math.min(...prices))} – ${fmt(Math.max(...prices))} TMT` : "no prices";
+    const seg = (v, lab) => `<span class="chip ${f.cond === v ? "dark" : ""}" style="flex:1;justify-content:center" onclick='${A({type:"SET_RESULTS_COND", cond:v})}'>${lab}</span>`;
+    const models = f.models.map((m) => B[f.brand].models[m]);
+    // Auto.ru-style brand/model card (AR-05-001): one row, no chips. "Toyota Camry, +2"; tap to edit; ✕ clears.
+    const cardTitle = !f.brand ? "Brand, model" : B[f.brand].name + (models.length ? " " + models[0] + (models.length > 1 ? `, +${models.length - 1}` : "") : "");
+    const cardSub = !f.brand ? "All brands and models" : models.length ? "Change models" : "All models · choose models";
+    const bm = `<div class="box solid" style="margin:0 0 6px;background:var(--soft)"><div class="row between">
+        <div style="flex:1;cursor:pointer" onclick='${A({type:"EDIT_MODELS_FROM_RESULTS"})}'><div class="row">${f.brand ? logo(f.brand) : `<span style="font-size:18px">🚗</span>`}<div><b>${cardTitle}</b><div class="small">${cardSub}</div></div></div></div>
+        ${f.brand ? `<button class="btn link" title="Clear brand and models" onclick='${A({type:"REMOVE_CHIP", key:"brand"})}'>✕</button>` : ""}</div></div>`;
+    const valueChips = [
+      `<span class="chip dark" onclick='${A({type:"OPEN_PARAMETERS", from:"results"})}'>⚙ Filters${n ? ` <b style="background:#e11d48;border-radius:9px;padding:0 5px">${n}</b>` : ""}</span>`,
+      f.city ? `<span class="chip dark" onclick='${A({type:"REMOVE_CHIP", key:"city"})}'>${f.city} ✕</span>` : "",
+      f.priceMax ? `<span class="chip dark" onclick='${A({type:"REMOVE_CHIP", key:"priceMax"})}'>up to ${fmt(f.priceMax)} TMT ✕</span>` : "",
+      f.yearMin || f.yearMax ? `<span class="chip dark" onclick='${A({type:"REMOVE_CHIP", key:"yearMin"})}'>${(f.yearMax && f.yearMax !== f.yearMin ? (f.yearMin ? f.yearMin + "–" + f.yearMax : "to " + f.yearMax) : (f.yearMax ? String(f.yearMin) : "from " + f.yearMin))} ✕</span>` : "",
+    ].join("");
+    const bigCard = (l) => `<div class="box solid" style="padding:0;cursor:pointer;overflow:hidden" onclick='${A({type:"OPEN_LISTING", id:l.id})}'>
+        <div class="row" style="gap:2px"><div class="ph" style="flex:3;height:110px;border-radius:0">photo 1</div><div class="ph" style="flex:2;height:110px;border-radius:0">photo 2</div></div>
+        <div style="padding:8px 10px"><div class="price" style="font-size:16px">${fmt(l.price)} TMT</div>
+        <div class="small" style="color:#333">${l.km ? fmt(l.km) + " km" : "new"} · ${l.gearbox} · ${l.fuel}</div>
+        <div class="small">${esc(Model.title(l))}</div>
+        <div class="row between"><span class="small">${l.city} · ${l.days === 0 ? "today" : l.days + " d ago"}</span><span>${S.favorites.includes(l.id) ? "♥" : "♡"}</span></div></div></div>`;
+    const shown = list.slice(S.resultsScroll);
+    const scrolled = S.resultsScroll > 0;
+    return `${bar(`${list.length} listings`, { sub: `${range} · ${Model.SORTS[S.sort]}`, right: `<button class="btn link" style="font-size:17px" title="Sort" onclick='${A({type:"OPEN_SORT"})}'>⇅</button>` })}
+      ${scrolled ? "" : `<div style="padding:8px 10px 0"><div class="row" style="gap:4px;margin-bottom:6px">${seg("any","All")}${seg("new","New")}${seg("used","Used")}</div>${bm}<div class="chips">${valueChips}</div></div>`}
+      <div class="body">${dataState(() => list.length === 0
+        ? `<div class="empty"><b>No listings match.</b><br>Remove a filter above, or<br><br><button class="btn" onclick='${A({type:"CLEAR_ALL"})}'>Clear all filters</button></div>`
+        : `${scrolled ? `<div class="small" style="cursor:pointer" onclick='${A({type:"SCROLL_TOP"})}'>↑ ${S.resultsScroll} above · tap to scroll up</div>` : ""}${shown.map(bigCard).join("")}
+           <div class="small" style="text-align:center;padding:8px">End of results</div>`)}
+      ${scrolled ? `<div style="position:sticky;bottom:0;padding:6px 0;background:linear-gradient(transparent,#fff 30%)"><div class="chips">${valueChips}</div></div>` : ""}</div>`;
+  },
+
+  listing: (id) => {
+    const l = Model.listingById(S, id);
+    if (!l) return `${bar("Listing")}<div class="body"><div class="empty">This listing is no longer available.</div></div>`;
+    const own = S.published.includes(id);
+    const fav = S.favorites.includes(id);
+    return `${bar("", { right: `<button class="btn link" onclick='${A({type:"TOGGLE_FAVORITE", id})}'>${fav ? "♥" : "♡"}</button><button class="btn link">Share</button>` })}
+      <div class="body">
+        <div class="ph" style="height:170px;cursor:pointer" onclick='${A({type:"OPEN_PHOTOS"})}'>photos 1/8 (tap for full screen)</div>
+        <div class="price" style="font-size:18px;margin-top:8px">${fmt(l.price)} TMT</div>
+        <div><b>${esc(Model.title(l))}</b></div>
+        <div class="small">${l.city} · ${l.days === 0 ? "today" : l.days + " days ago"}</div>
+        <div class="box solid" style="margin-top:8px"><div class="small">Year ${l.year} · ${l.cond} · mileage · gearbox · fuel · body · colour</div></div>
+        <div class="box">Description…</div>
+        <div class="box solid"><b>Private seller</b> · <span class="chip">✓ Phone verified</span><div class="small">${l.city} · every seller has a verified phone, because publishing needs one</div></div>
+        ${own ? `<div class="box"><b>Owner view</b><div class="row" style="gap:6px;margin-top:6px"><button class="btn">Edit</button><button class="btn">Mark sold</button><button class="btn">Archive</button></div></div>`
+              : `<button class="btn link" onclick='${A({type:"REPORT", id})}'>⚑ Report listing</button>`}
+        <div class="small">ID ${id}</div>
+      </div>
+      ${own ? "" : `<div class="sticky row"><button class="btn" style="flex:1" onclick='${A({type:"CALL"})}'>Call</button>
+        <button class="btn primary" style="flex:1" onclick='${A({type:"MESSAGE", id})}'>Message</button></div>`}`;
+  },
+
+  favorites: () => `${bar("Favorites", { back:false })}<div class="body">${
+    !S.signedIn ? `<div class="empty">♡<br><b>Sign in to see your Favorites</b><br><br><button class="btn primary" onclick='${A({type:"SIGN_IN_FROM"})}'>Sign in</button></div>`
+    : dataState(() => S.favorites.length ? S.favorites.map((id) => card(Model.listingById(S, id))).join("")
+      : `<div class="empty">♡<br><b>No favorites yet</b><br>Tap ♡ on a listing to save it.<br><br><button class="btn" onclick='${A({type:"OPEN_TAB", tab:"search"})}'>Browse listings</button></div>`)}</div>`,
+
+  conversations: () => `${bar("Messages", { back:false })}<div class="body">${
+    !S.signedIn ? `<div class="empty">💬<br><b>Sign in to see your Conversations</b><br><br><button class="btn primary" onclick='${A({type:"SIGN_IN_FROM"})}'>Sign in</button></div>`
+    : dataState(() => S.conversations.length ? S.conversations.map((c) => { const l = Model.listingById(S, c.listingId);
+        return `<div class="card" onclick='${A({type:"OPEN_CONVERSATION", id:c.listingId})}'><div class="ph" style="width:48px;height:48px">car</div>
+          <div style="flex:1"><b>${esc(Model.title(l))}</b> · ${fmt(l.price)}<div class="small">${esc(c.messages.at(-1) || "No messages yet")}</div></div></div>`; }).join("")
+      : `<div class="empty">💬<br><b>No Conversations yet</b><br>Open a listing and tap Message to write to the seller.</div>`)}</div>`,
+
+  conversation: (id) => {
+    const l = Model.listingById(S, id), c = S.conversations.find((x) => x.listingId === id);
+    const blocked = S.blocked.includes(id);
+    return `${bar("Seller", { right: `<button class="btn link" onclick='${A({type:"OPEN_THREAD_MENU"})}'>⋮</button>` })}
+      <div class="box solid" style="margin:8px 10px;cursor:pointer" onclick='${A({type:"OPEN_LISTING", id})}'><div class="row"><div class="ph" style="width:40px;height:30px">car</div>
+        <div><b>${esc(Model.title(l))}</b><div class="small">${fmt(l.price)} TMT ›</div></div></div></div>
+      <div class="body">
+        ${c.messages.map((m) => `<div class="bubble me">${esc(m)}</div>`).join("")}
+        ${blocked ? `<div class="note">You blocked this User. They can't message you.</div>` : ""}</div>
+      ${blocked ? "" : `<div class="sticky">${c.messages.length === 0 ? `<div class="chips">${["Is it still for sale?","Is the price negotiable?","Where can I see it?"].map((q) =>
+        `<span class="chip" onclick='${A({type:"SEND_MESSAGE", id, text:q})}'>${q}</span>`).join("")}</div>` : ""}
+        <div class="row"><div class="box" style="flex:1;margin:0">Message…</div><button class="btn primary" onclick='${A({type:"SEND_MESSAGE", id, text:"Hello"})}'>Send</button></div></div>`}`;
+  },
+
+  sell: () => `${bar("Sell", { back:false })}<div class="body">${
+    !S.signedIn ? `<div class="empty">🚗<br><b>Sign in to sell your car</b><br>Your phone number is your account.<br><br><button class="btn primary" onclick='${A({type:"SIGN_IN_FROM", kind:"sell"})}'>Sign in</button></div>`
+    : !S.user.phone ? `<div class="empty">📱<br><b>Add a phone number to sell</b><br>Buyers call sellers, and a verified phone keeps listings trustworthy. You signed in with email; the phone is added to the same account.<br><br>
+        <button class="btn primary" onclick='${A({type:"OPEN_ADD", kind:"phone", forSell:true})}'>Add phone</button></div>`
+    : `<div class="small">Step 1 of 8 · VIN</div><div class="box">Wizard steps: VIN → Brand/model → Year → Specs & condition → Photos → Price → Location & contact → Review</div>
+       <div class="small">Draft saves automatically.</div><br><button class="btn primary block" onclick='${A({type:"PUBLISH"})}'>(skip to) Publish</button>
+       <br><button class="btn link" onclick='${A({type:"PUSH", screen:"mylistings"})}'>My listings ›</button>`}</div>`,
+
+  cabinet: () => `${bar("Cabinet", { back:false })}<div class="body">
+    ${S.signedIn ? `<div class="list-row" onclick='${A({type:"PUSH", screen:"profile"})}'><span><b>Reviewer</b> ${S.user.phone ? `<span class="chip">✓ Phone verified</span>` : ""}<br><span class="small">${S.user.phone || S.user.email}</span></span>›</div>
+       <div class="list-row" onclick='${A({type:"PUSH", screen:"mylistings"})}'>My listings<span>›</span></div>`
+      : `<div class="box solid" style="text-align:center"><b>Sign in to manage your listings</b><br><br><button class="btn primary" onclick='${A({type:"SIGN_IN_FROM"})}'>Sign in</button></div>`}
+    <div class="list-row" onclick='${A({type:"PUSH", screen:"settings"})}'>Settings<span>›</span></div>
+    <div class="list-row" onclick='${A({type:"OPEN_TAB", tab:"sell"})}'>Sell a car<span>›</span></div></div>`,
+  profile: () => `${bar("Profile")}<div class="body"><div class="ph" style="width:64px;height:64px;border-radius:50%">avatar</div><div class="box">Display name</div>
+      <div style="margin-top:10px"><b>Sign-in methods</b><div class="small">Both sign in to this same account.</div></div>
+      ${[["phone","Phone"],["email","Email"]].map(([k, lab]) => `<div class="list-row" ${S.user[k] ? "" : `onclick='${A({type:"OPEN_ADD", kind:k})}'`}>
+        <span>${lab}<br><span class="small">${S.user[k] || "Not added"}</span></span>
+        <span class="small">${S.user[k] ? (k === "phone" ? `<span class="chip">✓ Verified</span>` : "✓ Verified") : "Add ›"}</span></div>`).join("")}
+      <div class="small">A phone is needed to sell. The last sign-in method can't be removed.</div></div>`,
+  mylistings: () => `${bar("My listings")}<div class="body">${!S.signedIn ? "" : S.published.length
+      ? S.published.map((id) => card(Model.listingById(S, id))).join("") : `<div class="empty">No listings or drafts yet.<br><br><button class="btn" onclick='${A({type:"OPEN_TAB", tab:"sell"})}'>Sell a car</button></div>`}</div>`,
+  settings: () => `${bar("Settings")}<div class="body">
+      <div class="list-row">Language<span class="small">Türkmen ›</span></div><div class="list-row">Theme<span class="small">System ›</span></div>
+      ${["Privacy policy","Terms of service","Posting rules"].map((p) => `<div class="list-row" onclick='${A({type:"OPEN_WEB", page:p})}'>${p}<span>↗</span></div>`).join("")}
+      <div class="list-row">About<span>›</span></div>
+      ${S.signedIn ? `<div class="list-row" onclick='${A({type:"SIGN_OUT"})}'>Log out<span></span></div>
+        <div class="list-row" style="color:#b91c1c" onclick='${A({type:"PUSH", screen:"deleteaccount"})}'>Delete account<span>›</span></div>` : ""}</div>`,
+  deleteaccount: () => `${bar("Delete account")}<div class="body"><p>Deleting removes your profile, listings, Favorites and Conversations. This can't be undone.</p>
+      <div class="small">Also available on the web: auto.tm/account/delete</div><br>
+      <button class="btn block" style="border-color:#b91c1c;color:#b91c1c" onclick='${A({type:"DELETE_ACCOUNT"})}'>Delete my account</button></div>`,
+};
+
+// Brand logo from the catalog; a monogram in a dashed circle when an admin hasn't uploaded one yet.
+const logo = (b) => B[b].noLogo ? `<span class="logo missing" title="No logo uploaded: letter fallback">${B[b].name[0]}</span>`
+  : `<span class="logo" title="${B[b].name} logo">${B[b].name.slice(0, 3).toUpperCase()}</span>`;
+function historyBlock() {
+  if (!S.history.length) return "";
+  return `<div class="row between" style="margin-top:4px"><span class="small">Recent</span><button class="btn link small" onclick='${A({type:"CLEAR_HISTORY"})}'>Clear</button></div>
+    ${S.history.map((h, i) => `<div class="list-row" onclick='${A({type:"PICK_HISTORY", i})}'><span class="row">${logo(h.brand)} 🕘 ${B[h.brand].name}${h.models.length ? " " + h.models.map((m) => B[h.brand].models[m]).join(", ") : ` <span class="small">&nbsp;all models</span>`}</span><span class="small">›</span></div>`).join("")}`;
+}
+const fieldInput = (ph) => `<input id="q" value="${esc(S.query)}" placeholder="${ph}" style="width:100%;border:1px solid #bbb;border-radius:8px;padding:6px 8px;font-size:14px;margin-bottom:6px" oninput="go({type:'TYPE_QUERY', q:this.value})">`;
+const overlays = {
+  search: () => {
+    const res = Model.searchCatalog(S.query, Model.allListings(S));
+    return `<div class="overlay">${bar(`<input id="q" value="${esc(S.query)}" placeholder="Search brand or model" style="width:100%;border:1px solid #bbb;border-radius:8px;padding:6px 8px;font-size:14px" oninput="go({type:'TYPE_QUERY', q:this.value})">`)}
+      <div class="body"><div class="chips">${["toy","camri","camry 2018","лексус 2014-2019","2018","тойота","toýota","ленд крузер","toyota cor","zzz"].map((q) => `<span class="chip" onclick='${A({type:"TYPE_QUERY", q})}'>try “${q}”</span>`).join("")}</div>
+      ${!S.query ? historyBlock() + `<div class="small" style="margin-top:6px">Popular brands</div>` : ""}
+      ${res.length ? res.map((r) => r.kind === "year" ? `<div class="list-row" onclick='${A({type:"PICK_SEARCH_RESULT", brand:null, model:null, yearMin:r.yearMin, yearMax:r.yearMax})}'><span>📅 <b>All cars, ${r.yearMin}${r.yearMax !== r.yearMin ? "–" + r.yearMax : ""}</b></span><span class="small">${r.count} ›</span></div>` : `<div class="list-row" onclick='${A({type:"PICK_SEARCH_RESULT", brand:r.brand, model:r.model || null, yearMin:r.yearMin || null, yearMax:r.yearMax || null})}'>
+          <span class="row">${r.kind === "brand" ? `${logo(r.brand)} <b>${B[r.brand].name}</b> <span class="small">brand</span>` : `<span style="width:30px;display:inline-block"></span> ${B[r.brand].name} <b>${B[r.brand].models[r.model]}</b>`}${r.yearMin ? ` <span class="small">· ${r.yearMin}${r.yearMax !== r.yearMin ? "–" + r.yearMax : ""}</span>` : ""}</span><span class="small">${r.count} ›</span></div>`).join("")
+        : `<div class="empty">No brand or model matches “${esc(S.query)}”.<br><br><button class="btn" onclick='${A({type:"OPEN_PARAMETERS"})}'>Open all filters</button></div>`}
+      </div><div class="sticky"><button class="btn block" onclick='${A({type:"OPEN_PARAMETERS"})}'>⚙ All filters</button></div></div>`;
+  },
+  addphone: () => `<div class="overlay">${bar("Add phone")}<div class="body"><p>We'll text a code to confirm it.</p><div class="box">+993 __ ___ ___</div>
+      ${S.addError ? `<div class="note">${esc(S.addError)}</div>` : ""}
+      <button class="btn link" onclick='${A({type:"SUBMIT_ADD", kind:"phone", taken:true})}'>(simulate: number already on another account)</button></div>
+      <div class="sticky"><button class="btn primary block" onclick='${A({type:"SUBMIT_ADD", kind:"phone"})}'>Get code</button></div></div>`,
+  addemail: () => `<div class="overlay">${bar("Add email")}<div class="body"><p>We'll email a code to confirm it. No password.</p><div class="box">name@mail.com</div>
+      ${S.addError ? `<div class="note">${esc(S.addError)}</div>` : ""}
+      <button class="btn link" onclick='${A({type:"SUBMIT_ADD", kind:"email", taken:true})}'>(simulate: email already on another account)</button></div>
+      <div class="sticky"><button class="btn primary block" onclick='${A({type:"SUBMIT_ADD", kind:"email"})}'>Get code</button></div></div>`,
+  parameters: () => {
+    const d = S.draft, n = Model.countOf(d, Model.allListings(S));
+    const seg = (v, lab) => `<span class="chip ${d.cond === v ? "sel" : ""}" onclick='${A({type:"SET_COND", cond:v})}'>${lab}</span>`;
+    return `<div class="overlay">${bar("Search parameters", { right: `<button class="btn link" onclick='${A({type:"RESET_DRAFT"})}'>Reset</button>` })}
+      <div class="body">
+        <div class="chips">${seg("any","Any")}${seg("new","New")}${seg("used","Used")}</div>
+        <div class="list-row" onclick='${A({type:"OPEN_CITY"})}'>City<span class="small">${d.city || "Any city"} ›</span></div>
+        <div class="list-row" onclick='${A({type:"OPEN_BRAND_FROM_PARAMS"})}'>Brand<span class="small">${d.brand ? B[d.brand].name : "Add"} ›</span></div>
+        <div class="list-row" onclick='${d.brand ? A({type:"OPEN_MODEL_FROM_PARAMS"}) : ""}' style="${d.brand ? "" : "opacity:.4"}">Model<span class="small">${d.models.length ? d.models.map((m) => B[d.brand].models[m]).join(", ") : "All models"} ›</span></div>
+        <div style="margin-top:10px"><b>Year from</b></div><div class="chips">${[null,2015,2018,2020].map((y) => `<span class="chip ${d.yearMin === y ? "sel" : ""}" onclick='${A({type:"SET_YEAR_MIN", v:y})}'>${y || "Any"}</span>`).join("")}</div>
+        <div><b>Price up to, TMT</b></div><div class="chips">${[null,150000,250000,400000].map((p) => `<span class="chip ${d.priceMax === p ? "sel" : ""}" onclick='${A({type:"SET_PRICE_MAX", v:p})}'>${p ? fmt(p) : "Any"}</span>`).join("")}</div>
+        <div class="small">(real form: from/to inputs for year and price)</div>
+      </div>
+      <div class="sticky"><button class="btn primary block" onclick='${A({type:"SHOW_RESULTS"})}'>Show ${n} listings</button></div></div>`;
+  },
+  brand: () => {
+    const all = Model.allListings(S);
+    const cnt = (b) => all.filter((l) => l.brand === b).length;
+    const hits = S.query ? Model.searchCatalog(S.query, all).filter((r) => r.kind === "brand").map((r) => r.brand) : Object.keys(B).sort((a, b) => cnt(b) - cnt(a));
+    return `<div class="overlay">${bar("Brand")}<div class="body">${fieldInput("Search brand (any spelling)")}
+      ${!S.query && S.pickerOrigin !== "parameters" ? historyBlock() : ""}
+      <div class="small" style="margin-top:6px">${S.query ? "Matching brands" : "Popular"}</div>${hits.map((b) => `<div class="list-row" onclick='${A({type:"PICK_BRAND", brand:b})}'>
+        <span class="row">${logo(b)} ${B[b].name}</span><span class="small">${cnt(b)} ›</span></div>`).join("") || `<div class="empty">No brand matches.</div>`}
+      ${S.query ? "" : `<div class="small" style="margin-top:8px">All brands A–Z …</div>`}</div></div>`;
+  },
+  model: () => {
+    const d = S.draft, all = Model.allListings(S);
+    const n = Model.countOf(d, all);
+    const fast = S.pickerOrigin === "home" || S.pickerOrigin === "results";
+    const mc = (m) => all.filter((l) => l.brand === d.brand && l.model === m).length;
+    return `<div class="overlay">${bar(B[d.brand].name + ": models", { right: `<button class="btn link" onclick='${A({type:"CHANGE_BRAND_FROM_MODEL"})}'>Change brand</button>` })}<div class="body">${fieldInput("Search model")}
+      <div class="list-row" onclick='${A({type:"ALL_MODELS"})}'><span>${d.models.length ? "○" : "●"} All models</span><span class="small">${all.filter((l) => l.brand === d.brand).length}</span></div>
+      <div class="small">Popular models</div>
+      ${Object.keys(B[d.brand].models).filter((m) => !S.query || Model.searchCatalog(S.query, all).some((r) => r.model === m) || B[d.brand].models[m].toLowerCase().startsWith(S.query.toLowerCase())).sort((a, b) => mc(b) - mc(a)).map((m) => `<div class="list-row" onclick='${A({type:"TOGGLE_MODEL", model:m})}'>
+        <span>${d.models.includes(m) ? "☑" : "☐"} ${B[d.brand].models[m]}</span><span class="small">${mc(m)}</span></div>`).join("")}</div>
+      <div class="sticky">${fast ? `${d.models.length ? "" : `<div class="small" style="text-align:center">No model picked: all ${B[d.brand].name} models</div>`}<button class="btn primary block" onclick='${A({type:"SHOW_RESULTS"})}'>Show ${n} listings</button>
+          <button class="btn link" style="display:block;margin:6px auto 0" onclick='go({type:"OPEN_PARAMETERS_KEEP"})'>More filters</button>`
+        : `<button class="btn primary block" onclick='${A({type:"MODEL_DONE"})}'>Done · ${n} listings</button>`}</div></div>`;
+  },
+  city: () => `<div class="overlay">${bar("City")}<div class="body"><div class="list-row" onclick='${A({type:"PICK_CITY", city:null})}'>Any city<span></span></div>
+      ${Model.CITIES.map((c) => `<div class="list-row" onclick='${A({type:"PICK_CITY", city:c})}'>${c}<span></span></div>`).join("")}</div></div>`,
+  phone: () => {
+    const em = S.authMethod === "email";
+    return `<div class="overlay">${bar("Sign in")}<div class="body">
+      <div class="chips"><span class="chip ${em ? "" : "sel"}" onclick='${A({type:"SET_AUTH_METHOD", method:"phone"})}'>Phone</span><span class="chip ${em ? "sel" : ""}" onclick='${A({type:"SET_AUTH_METHOD", method:"email"})}'>Email</span></div>
+      <p>${em ? "Enter your email. We'll send you a code. No password." : "Enter your phone number. We'll text you a code."}</p>
+      <div class="box">${em ? "name@mail.com" : "+993 __ ___ ___"}</div><div class="small">By continuing you accept the Terms and Posting rules.</div></div>
+      <div class="sticky"><button class="btn primary block" onclick='${A({type: em ? "SUBMIT_EMAIL" : "SUBMIT_PHONE"})}'>Get code</button></div></div>`;
+  },
+  code: () => `<div class="overlay">${bar("Enter code")}<div class="body"><p>Code sent to ${esc(S.codeTo || "")}</p><div class="box">_ _ _ _ _ _</div>
+      <button class="btn link">Resend code</button></div>
+      <div class="sticky"><button class="btn primary block" onclick='${A({type:"SUBMIT_CODE"})}'>Verify</button></div></div>`,
+  photos: () => `<div class="overlay" style="background:#111;color:#fff">${bar("1 / 8")}<div class="body"><div class="ph" style="height:300px;margin-top:120px">photo</div></div></div>`,
+  sort: () => `<div class="sheetwrap"><div class="sheet"><div class="row between"><b>Sort</b><button class="btn link" onclick='${A({type:"BACK"})}'>✕</button></div>
+      ${Object.entries(Model.SORTS).map(([k, lab]) => `<div class="list-row" onclick='${A({type:"SET_SORT", sort:k})}'>${lab}<span>${S.sort === k ? "●" : "○"}</span></div>`).join("")}</div></div>`,
+  report: () => `<div class="sheetwrap"><div class="sheet"><b>Report listing</b>
+      ${["Fraud or prepayment request","Wrong information","Offensive content","Already sold","Other"].map((r) => `<div class="list-row">${r}<span>○</span></div>`).join("")}
+      <button class="btn primary block" style="margin-top:8px" onclick='${A({type:"SUBMIT_REPORT", id:(Model.top(S).split(":")[1] || "")})}'>Send report</button></div></div>`,
+  threadmenu: () => `<div class="sheetwrap"><div class="sheet"><div class="list-row">Mute notifications<span></span></div>
+      <div class="list-row">Report message<span>›</span></div>
+      <div class="list-row" style="color:#b91c1c" onclick='${A({type:"BLOCK", id:Model.top(S).split(":")[1]})}'>Block user<span></span></div>
+      <button class="btn link" onclick='${A({type:"BACK"})}'>Cancel</button></div></div>`,
+};
+
+// small glue actions handled in the shell (kept out of the model on purpose)
+const _reduce = Model.reduce;
+Model.reduce = (s, a) => {
+  if (a.type === "OPEN_PARAMETERS_KEEP") { const n = _reduce(s, { type: "OPEN_PARAMETERS" }); n.draft = JSON.parse(JSON.stringify(s.draft)); n.event = "Moved from the fast path into Search parameters, keeping the brand and model."; return n; }
+  return _reduce(s, a);
+};
+
+function renderPhone() {
+  const t = Model.top(S);
+  const [name, arg] = t.split(":");
+  const tabDefs = [["search","Search"],["favorites","Favorites"],["sell","Sell"],["chat","Messages"],["cabinet","Cabinet"]];
+  const showTabs = !["launch","language","welcome"].includes(name);
+  const ov = S.overlays.length ? overlays[S.overlays[S.overlays.length - 1]]() : "";
+  $("phone").innerHTML = `<div class="status"><span>9:41</span><span>${S.data === "offline" ? "no network" : "▂▄▆"} 🔋</span></div>
+    <div style="flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden">${screens[name](arg)}${ov}
+    ${S.toast ? `<div class="toast">${esc(S.toast)}</div>` : ""}</div>
+    ${showTabs ? `<div class="tabs">${tabDefs.map(([k, l]) => `<button class="${S.tab === k ? "on" : ""}" onclick='${A({type:"OPEN_TAB", tab:k})}'>${l}${
+      k === "chat" && S.conversations.length ? " •" : ""}</button>`).join("")}</div>` : ""}
+    <div class="sysnav"><button onclick='${A({type:"BACK"})}' title="Android Back">◁ Back</button><span>○</span><span>▢</span></div>`;
+}
+
+const NAMES = { launch:"Launch", language:"Language choice", welcome:"Welcome", home:"Home", results:"Results", listing:"Listing",
+  favorites:"Favorites", conversations:"Conversations", conversation:"Conversation", sell:"Sell wizard", cabinet:"Cabinet",
+  profile:"Profile", mylistings:"My listings", settings:"Settings", deleteaccount:"Delete account",
+  parameters:"Search parameters", brand:"Brand picker", model:"Model picker", city:"City picker", phone:"Phone sign-in", code:"Code verification",
+  photos:"Photo viewer", report:"Report listing", threadmenu:"Conversation menu", sort:"Sort sheet",
+  search:"Search", addphone:"Add phone", addemail:"Add email" };
+const nm = (k) => { const [a, b] = k.split(":"); return NAMES[a] + (b ? ` (${b})` : ""); };
+
+function keepFocus() {
+  const q = document.getElementById("q");
+  if (q && document.activeElement !== q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+}
+function renderState() {
+  const f = (x) => filterSummary(x) || "none";
+  const rows = [
+    ["Tab", S.tab, prevS.tab],
+    ["This tab's history", S.stacks[S.tab].map((k) => `<span>${nm(k)}</span>`).join(" › "), prevS.stacks[S.tab]?.join()],
+    ["Open over it", S.overlays.length ? S.overlays.map(nm).join(" › ") : "nothing", prevS.overlays.join()],
+    ["Signed in", S.signedIn ? "yes" : "no", prevS.signedIn],
+    ["Verified sign-in methods", [S.user.phone && "phone " + S.user.phone, S.user.email && "email " + S.user.email].filter(Boolean).join(", ") || "none", JSON.stringify(prevS.user)],
+    ["Applied search (Results)", f(S.applied), f(prevS.applied)],
+    ["Search being edited", S.overlays.some((o) => ["parameters","brand","model","city"].includes(o)) ? f(S.draft) + ` → ${Model.countOf(S.draft, Model.allListings(S))} listings` : "—", ""],
+    ["Results order", Model.SORTS[S.sort], ""],
+    ["Results scroll", "row " + (S.resultsScroll + 1), prevS.resultsScroll],
+    ["Waiting for sign-in", S.pending ? `${S.pending.kind}${S.pending.listingId ? " " + S.pending.listingId : ""}` : "nothing", JSON.stringify(prevS.pending)],
+    ["Favorites", S.favorites.join(", ") || "none", prevS.favorites.join()],
+    ["Conversations", S.conversations.map((c) => c.listingId).join(", ") || "none", prevS.conversations.map((c) => c.listingId).join()],
+    ["Recent searches (device)", S.history.map((h) => B[h.brand].name + (h.models.length ? " " + h.models.map((m) => B[h.brand].models[m]).join("+") : "")).join(" · ") || "none", ""],
+    ["Search text", S.overlays.some((o) => ["search","brand","model"].includes(o)) ? (S.query ? `“${esc(S.query)}”` : "empty") : "—", ""],
+    ["Other tabs' history", Object.entries(S.stacks).filter(([k]) => k !== S.tab).map(([k, v]) => `${k}: ${v.map(nm).join(" › ")}`).join("<br>"), ""],
+  ];
+  const plain = (v) => String(v).replace(/<[^>]+>/g, "");
+  $("state").innerHTML = rows.map(([k, v, before]) => {
+    const now = { "Verified sign-in methods":JSON.stringify(S.user), "Tab":S.tab, "This tab's history":S.stacks[S.tab].join(), "Open over it":S.overlays.join(), "Signed in":S.signedIn,
+      "Applied search (Results)":f(S.applied), "Results scroll":S.resultsScroll, "Waiting for sign-in":JSON.stringify(S.pending),
+      "Favorites":S.favorites.join(), "Conversations":S.conversations.map((c) => c.listingId).join() }[k];
+    const changed = now !== undefined && String(now) !== String(before);
+    return `<dt>${k}</dt><dd>${changed ? `<span class="changed">${v}</span>` : v}</dd>`;
+  }).join("");
+  $("event").textContent = "→ " + S.event;
+}
+
+/* ---------- walkthroughs ---------- */
+const WALK = [
+  { name: "1. Brand → models → Results", text: "The main buyer journey from ADR-0051: the Home “Brand, model” card, one brand, several models, then Results. Watch Results keep its scroll position through a Listing and back.",
+    steps: [["Tap the Home “Brand, model” card", {type:"OPEN_BRAND_SEARCH"}], ["Pick Toyota (one brand)", {type:"PICK_BRAND", brand:"toyota"}],
+      ["Tick Camry", {type:"TOGGLE_MODEL", model:"camry"}], ["Also tick Corolla", {type:"TOGGLE_MODEL", model:"corolla"}], ["Show listings", {type:"SHOW_RESULTS"}], ["Scroll Results", {type:"SCROLL_RESULTS"}],
+      ["Open the first visible Listing", {type:"OPEN_LISTING", id:"l8"}], ["Android Back", {type:"BACK"}]] },
+  { name: "2. Change models on Results", text: "Results follows Auto.ru: a sort button in the header, an All / New / Used switch, one brand/model card (“Toyota Camry, +2”), then the filter chips. Tap the card to add or remove models in the Model picker; “Change brand” there switches brand; ✕ clears brand and models and Results becomes the full feed. After scrolling, the filter chips float at the bottom.",
+    steps: [["Brand card → Toyota → Camry → Show", [{type:"OPEN_BRAND_SEARCH"},{type:"PICK_BRAND", brand:"toyota"},{type:"TOGGLE_MODEL", model:"camry"},{type:"SHOW_RESULTS"}]],
+      ["Tap the brand/model card", {type:"EDIT_MODELS_FROM_RESULTS"}], ["Tick Corolla", {type:"TOGGLE_MODEL", model:"corolla"}], ["Tick RAV4", {type:"TOGGLE_MODEL", model:"rav4"}],
+      ["Show listings (Results updates in place)", {type:"SHOW_RESULTS"}], ["Tap the card, untick Camry, Show", [{type:"EDIT_MODELS_FROM_RESULTS"},{type:"TOGGLE_MODEL", model:"camry"},{type:"SHOW_RESULTS"}]],
+      ["Tap ⇅ Sort", {type:"OPEN_SORT"}], ["Cheapest first", {type:"SET_SORT", sort:"priceAsc"}],
+      ["Switch to Used on Results", {type:"SET_RESULTS_COND", cond:"used"}], ["Scroll: chips float at the bottom", {type:"SCROLL_RESULTS"}], ["Tap to scroll up", {type:"SCROLL_TOP"}],
+      ["Tap the card → Change brand", [{type:"EDIT_MODELS_FROM_RESULTS"},{type:"CHANGE_BRAND_FROM_MODEL"}]], ["Pick Lexus → Show all Lexus", [{type:"PICK_BRAND", brand:"lexus"},{type:"SHOW_RESULTS"}]],
+      ["✕ on the card: Results becomes the full feed", {type:"REMOVE_CHIP", key:"brand"}], ["Android Back to Home", {type:"BACK"}]] },
+  { name: "3. All listings as a feed", text: "Results with no brand and no model shows every listing: a full feed with the same sort and filters. You get there from “See all” on Home, from Search parameters with nothing set, or by clearing the brand on Results.",
+    steps: [["Tap “See all” on Home", {type:"SHOW_ALL"}], ["Tap ⇅ Sort → Most expensive first", [{type:"OPEN_SORT"},{type:"SET_SORT", sort:"priceDesc"}]],
+      ["Filters chip → city Ashgabat → Show", [{type:"OPEN_PARAMETERS", from:"results"},{type:"OPEN_CITY"},{type:"PICK_CITY", city:"Ashgabat"},{type:"SHOW_RESULTS"}]],
+      ["Tap the empty brand/model card", {type:"EDIT_MODELS_FROM_RESULTS"}], ["Pick Toyota → Show (sort and city kept)", [{type:"PICK_BRAND", brand:"toyota"},{type:"SHOW_RESULTS"}]]] },
+  { name: "4. Refine from Results", text: "Editing filters from Results reopens the same form pre-filled. Applying updates Results in place: Back goes to Home, not to an older Results.",
+    steps: [["Brand/model fast path: Toyota → all models → Show", [{type:"OPEN_SEARCH"},{type:"TYPE_QUERY", q:"toyota"},{type:"PICK_SEARCH_RESULT", brand:"toyota", model:null}]],
+      ["Tap the Filters chip", {type:"OPEN_PARAMETERS", from:"results"}], ["Open City", {type:"OPEN_CITY"}], ["Pick Ashgabat", {type:"PICK_CITY", city:"Ashgabat"}],
+      ["Price up to 400 000", {type:"SET_PRICE_MAX", v:400000}], ["Show listings", {type:"SHOW_RESULTS"}], ["Remove the city chip", {type:"REMOVE_CHIP", key:"city"}],
+      ["Android Back", {type:"BACK"}]] },
+  { name: "5. Favorite while signed out", text: "A signed-out tap on ♡ asks for sign-in over the Listing. After the code, the app goes back to the same Listing, saves the Favorite, and keeps Results behind it. Today's app returns to the Listing but loses Results and doesn't save the Favorite.",
+    steps: [["Search Toyota Camry", [{type:"OPEN_SEARCH"},{type:"PICK_SEARCH_RESULT", brand:"toyota", model:"camry"}]],
+      ["Open a Listing", {type:"OPEN_LISTING", id:"l2"}], ["Tap ♡", {type:"TOGGLE_FAVORITE", id:"l2"}], ["Enter phone", {type:"SUBMIT_PHONE"}],
+      ["Enter code", {type:"SUBMIT_CODE"}], ["Android Back", {type:"BACK"}], ["Open the Favorites tab", {type:"OPEN_TAB", tab:"favorites"}]] },
+  { name: "6. Message while signed out", text: "Message needs a User. After sign-in the Conversation opens on top of the Listing, so Back goes Conversation → Listing → Results.",
+    steps: [["Search Lexus", [{type:"OPEN_SEARCH"},{type:"PICK_SEARCH_RESULT", brand:"lexus", model:null}]], ["Open a Listing", {type:"OPEN_LISTING", id:"l3"}],
+      ["Tap Message", {type:"MESSAGE", id:"l3"}], ["Enter phone", {type:"SUBMIT_PHONE"}], ["Enter code", {type:"SUBMIT_CODE"}],
+      ["Send a quick reply", {type:"SEND_MESSAGE", id:"l3", text:"Is it still for sale?"}], ["Android Back", {type:"BACK"}], ["Android Back", {type:"BACK"}]] },
+  { name: "7. Cancel sign-in", text: "Backing out of sign-in drops the waiting action. Nothing is saved, and the buyer is back on the Listing.",
+    steps: [["Open a Listing from Home", {type:"OPEN_LISTING", id:"l5"}], ["Tap ♡", {type:"TOGGLE_FAVORITE", id:"l5"}], ["Android Back (cancel)", {type:"BACK"}]] },
+  { name: "8. No results", text: "A search that matches nothing keeps its filter chips visible so the buyer can loosen one, rather than starting over.",
+    steps: [["See all → Filters chip → Kia, new, from 2020, up to 150 000", [{type:"SHOW_ALL"},{type:"OPEN_PARAMETERS", from:"results"},{type:"OPEN_BRAND_FROM_PARAMS"},{type:"PICK_BRAND", brand:"kia"},{type:"MODEL_DONE"},{type:"SET_COND", cond:"new"},{type:"SET_YEAR_MIN", v:2020},{type:"SET_PRICE_MAX", v:150000}]],
+      ["Show listings", {type:"SHOW_RESULTS"}], ["Remove the price chip", {type:"REMOVE_CHIP", key:"priceMax"}]] },
+  { name: "9. Tabs keep their place", text: "Each tab keeps its own history. Tapping the active tab again returns it to its first screen.",
+    steps: [["Search Toyota", [{type:"OPEN_SEARCH"},{type:"TYPE_QUERY", q:"toyota"},{type:"PICK_SEARCH_RESULT", brand:"toyota", model:null}]], ["Open Favorites tab", {type:"OPEN_TAB", tab:"favorites"}],
+      ["Back to Search tab", {type:"OPEN_TAB", tab:"search"}], ["Tap Search tab again", {type:"OPEN_TAB", tab:"search"}]] },
+  { name: "10. Separate search (🔍)", text: "The magnifier on Home opens Search. It finds brands and models in Russian, English and Turkmen spellings, forgiving one typo. It leads to the same Results. Recent searches show before you type.",
+    steps: [["Tap 🔍 on Home", {type:"OPEN_SEARCH"}], ["Type “тойота” (Russian)", {type:"TYPE_QUERY", q:"тойота"}], ["Tap Toyota (brand only)", {type:"PICK_SEARCH_RESULT", brand:"toyota", model:null}],
+      ["Android Back to Home", {type:"BACK"}], ["Tap 🔍 again: Toyota is in Recent", {type:"OPEN_SEARCH"}], ["Type “camri” (typo)", {type:"TYPE_QUERY", q:"camri"}],
+      ["Tap Toyota Camry (model)", {type:"PICK_SEARCH_RESULT", brand:"toyota", model:"camry"}],
+      ["Search “camry 2018”", [{type:"OPEN_SEARCH"},{type:"TYPE_QUERY", q:"camry 2018"}]], ["Tap Toyota Camry · 2018", {type:"PICK_SEARCH_RESULT", brand:"toyota", model:"camry", yearMin:2018, yearMax:2018}], ["Search “zzz” (no match)", [{type:"OPEN_SEARCH"},{type:"TYPE_QUERY", q:"zzz"}]]] },
+  { name: "11. Brand only, then history", text: "Pick a brand and skip models to see every model of that brand. The choice is saved to Recent on this device; Recent shows in the Brand picker and in Search, and tapping it goes straight to Results.",
+    steps: [["Tap the Home “Brand, model” card", {type:"OPEN_BRAND_SEARCH"}], ["Pick Lexus", {type:"PICK_BRAND", brand:"lexus"}], ["Show listings (no model picked)", {type:"SHOW_RESULTS"}],
+      ["Android Back to Home", {type:"BACK"}], ["Open the card again: Lexus is in Recent", {type:"OPEN_BRAND_SEARCH"}], ["Tap “Lexus, all models” in Recent", {type:"PICK_HISTORY", i:0}],
+      ["Android Back, open 🔍: same Recent there", [{type:"BACK"},{type:"OPEN_SEARCH"}]]] },
+  { name: "12. Email sign-in, then sell", text: "Sign in with email and a code, no password. Buying works straight away. Selling asks for a phone, which is added to the same User; after that both sign in to it.",
+    steps: [["Open the Sell tab", {type:"OPEN_TAB", tab:"sell"}], ["Tap Sign in", {type:"SIGN_IN_FROM", kind:"sell"}], ["Choose Email", {type:"SET_AUTH_METHOD", method:"email"}],
+      ["Get code", {type:"SUBMIT_EMAIL"}], ["Enter code", {type:"SUBMIT_CODE"}], ["Tap Add phone", {type:"OPEN_ADD", kind:"phone", forSell:true}],
+      ["Try a number another User owns", {type:"SUBMIT_ADD", kind:"phone", taken:true}], ["Use your own number: get code", {type:"SUBMIT_ADD", kind:"phone"}], ["Enter code", {type:"SUBMIT_CODE"}],
+      ["Open Cabinet → Profile", [{type:"OPEN_TAB", tab:"cabinet"},{type:"PUSH", screen:"profile"}]]] },
+  { name: "13. Phone User adds an email", text: "A User who signed in by phone adds an email in Profile. It's confirmed by an emailed code and joins the same account.",
+    steps: [["Sign in by phone from Cabinet", [{type:"OPEN_TAB", tab:"cabinet"},{type:"SIGN_IN_FROM"},{type:"SUBMIT_PHONE"},{type:"SUBMIT_CODE"}]], ["Open Profile", {type:"PUSH", screen:"profile"}],
+      ["Tap Email: Add", {type:"OPEN_ADD", kind:"email"}], ["Get code", {type:"SUBMIT_ADD", kind:"email"}], ["Enter code", {type:"SUBMIT_CODE"}]] },
+  { name: "14. Reviewer path: first run to account deletion", text: "What a Google Play reviewer walks: onboarding, sign-in from Cabinet, legal pages, and in-app account deletion.",
+    steps: [["Restart as a first-time user", {type:"RESET", opts:{firstRun:true}}], ["Splash finishes", {type:"LAUNCH_DONE"}], ["Pick Türkmen", {type:"PICK_LANGUAGE", lang:"Türkmen"}],
+      ["Start browsing", {type:"FINISH_WELCOME"}], ["Open Cabinet", {type:"OPEN_TAB", tab:"cabinet"}], ["Sign in", [{type:"SIGN_IN_FROM"},{type:"SUBMIT_PHONE"},{type:"SUBMIT_CODE"}]],
+      ["Settings", {type:"PUSH", screen:"settings"}], ["Privacy policy", {type:"OPEN_WEB", page:"Privacy policy"}], ["Delete account", {type:"PUSH", screen:"deleteaccount"}],
+      ["Confirm deletion", {type:"DELETE_ACCOUNT"}]] },
+];
+let wt = 0, wtStep = 0;
+function startWalk(i) { wt = i; wtStep = 0; S = Model.initial(); prevS = S; render(); }
+function stepWalk(i) {
+  if (i !== wtStep) return;
+  const act = WALK[wt].steps[i][1];
+  (Array.isArray(act) ? act : [act]).forEach((a) => { prevS = S; S = Model.reduce(S, a); });
+  wtStep++; render();
+}
+window.startWalk = startWalk; window.stepWalk = stepWalk;
+function renderWalk() {
+  $("wt-tabs").innerHTML = WALK.map((w, i) => `<button class="${i === wt ? "on" : ""}" onclick="startWalk(${i})">${w.name}</button>`).join("");
+  const w = WALK[wt];
+  $("wt-body").innerHTML = `<p style="margin-top:0">${w.text}</p><div class="steps">${w.steps.map(([label], i) =>
+    `<button class="${i < wtStep ? "done" : i === wtStep ? "next" : ""}" ${i !== wtStep ? "disabled" : ""} onclick="stepWalk(${i})">${i + 1}. ${label}</button>`).join("")}</div>
+    ${wtStep >= w.steps.length ? `<p class="small">Done. Pick another journey, or keep clicking in the phone.</p>` : ""}`;
+}
+
+/* ---------- free play ---------- */
+const FREE = [
+  ["Restart (returning user)", {type:"RESET"}], ["Restart (first run)", {type:"RESET", opts:{firstRun:true}}],
+  ["Android Back", {type:"BACK"}], ["Sign in instantly", [{type:"SIGN_IN_FROM"},{type:"SUBMIT_PHONE"},{type:"SUBMIT_CODE"}]], ["Sign out", {type:"SIGN_OUT"}],
+  ["Network: normal", {type:"SET_DATA", v:"normal"}], ["Network: loading", {type:"SET_DATA", v:"loading"}], ["Network: offline", {type:"SET_DATA", v:"offline"}],
+];
+function renderFree() {
+  $("free").innerHTML = FREE.map(([l, a], i) => `<button class="btn" onclick="freeGo(${i})">${l}</button>`).join("");
+}
+window.freeGo = (i) => { const a = FREE[i][1]; (Array.isArray(a) ? a : [a]).forEach((x) => { prevS = S; S = Model.reduce(S, x); }); render(); };
+
+/* ---------- decisions ---------- */
+const DECISIONS = [
+  "<b>Two ways into Results, both from Home</b> <i>(founder, revised)</i>. The “Brand, model” card opens the <b>Brand picker</b>; the <b>🔍 magnifier</b> in the header opens a separate <b>Search</b>. Both end on the same Results screen. <b>Home has no filters</b> <i>(founder)</i>: Search parameters opens only from Results (⚙ Filters), the Model picker (“More filters”) and Search (“All filters”). (Auto.ru's card opens its full parameters form first, AR-01-001 → AR-02-002; AutoTM goes straight to the Brand picker by founder choice.)",
+  "<b>Brand picker: exactly one brand, with brand logos</b> <i>(founder: logos are a must)</i>. A search field on top (any spelling), then Recent, Popular with counts, and A–Z; every brand row shows its logo (AR-08-002, KZ-03-007). The same logos appear on brand rows in Search and Recent and on the Results brand/model card. A brand with no uploaded logo shows its first letter in a circle, so the list never breaks. <i>Needs: a logo field on Brand, logo files stored in AutoTM's own object storage (no outside logo service), an admin upload path, and a decision on where the logo files come from.</i>",
+  "<b>Model picker: any number of models, or none.</b> “All models” is the default. The sticky “Show N listings” button goes to Results; with no model ticked it shows every model of the brand. “More filters” opens Search parameters with the brand and models kept. Inside Search parameters, the same pickers end with “Done” back to the form.",
+  "<b>Search (🔍) finds brands and models together.</b> Typing “toy” lists Toyota and its models; a brand result gives Results for the whole brand, a model result gives Results for that model. Matching is “smart”: Russian, English and Turkmen spellings (Тойота, Toyota, Toýota), transliteration, and one forgiven typo (camri → Camry). <b>It also understands years</b> <i>(founder)</i>: “camry 2018” gives Camry from 2018, “лексус 2014-2019” gives Lexus 2014–2019, and “2018” alone gives all cars from 2018; the year shows as a removable chip on Results. Free-text search inside listing descriptions is not part of this.",
+  "<b>Recent searches replace the “Your search” row on Home</b> <i>(founder)</i>. The last 10 brand/model choices, brand-only ones included, are kept <b>on this device only</b>. They show in the Brand picker and in Search, can be cleared, and go straight to Results. They are not saved searches: no account sync and no alerts.",
+  "<b>Search parameters becomes a full-screen form</b> replacing today's bottom sheet, with a sticky “Show N listings” count. Filters stay at what the API supports: condition, city, brand, one or more models of one brand, year range, price range.",
+  "<b>Results follows Auto.ru's layout</b> <i>(founder)</i> (AR-05-001, AR-05-003). Header: back, “N listings” with the results' price range and the current order, and a <b>⇅ Sort</b> button. Under it: All / New / Used; <b>one brand/model card</b> like Auto.ru's (“Toyota Camry, +2”, subtitle “Change models”, ✕ clears) with no model chips; then the chip row: ⚙ Filters with a count badge and one removable chip per other filter (city, price, year). Tapping the card opens the Model picker with current models ticked (add or untick there); “Change brand” opens the Brand picker. After scrolling the chip row floats at the bottom. Applying anything updates Results in place. <b>Cards are large</b>: two photos, price, “km · gearbox · fuel”, title and year, city and date, ♡. Not adopted: generation line, saved-search bell, history/valuation badges.",
+  "<b>No brand and no model means all listings</b> <i>(founder)</i>: Results becomes the full feed, with the same sort and filters. Reached from “See all” on Home, from Search parameters with nothing set, or by clearing the brand on Results. The card then reads “Brand, model · All brands and models”.",
+  "<b>Sort on Results</b> <i>(founder)</i>: Newest first (default), Cheapest first, Most expensive first, Newest year first, Oldest year first, Lowest mileage first (Kolesa's short list, KZ-04-002). The order is kept while filters change and shown under the count. <i>Needs API work: the feed only supports newest first with a date-based cursor; each order needs its own cursor and database index.</i>",
+  "<i>API work for Results</i>: feed items need a second photo, mileage, gearbox, fuel and condition; the count endpoint needs min/max price; the feed needs a sort parameter.",
+  "<b>Home keeps the “New listings” feed</b>, newest first, no personalization. The safety banner and all prepayment warnings are removed <i>(founder)</i>. Call opens the dialer directly.",
+  "<b>Sign-in on action returns to the same place and finishes the action</b> (Favorite, Message, Report). Fixes today's lost Results and unsaved Favorite.",
+  "<b>Sign in with phone or email, both by code, no password</b> <i>(founder: in the Google Play release)</i>. One User, either method; add the other in Profile. Details: identity decision ticket.",
+  "<b>Selling needs a verified phone; “Phone verified” shows only with one</b> <i>(founder)</i>.",
+  "<b>Five tabs keep today's names</b>: Search, Favorites, Sell, Messages, Cabinet.",
+  "<b>Rejected for the release:</b> several brands at once, brand exclusion, generations, saved searches with alerts, relevance or “best deal” sorting, radius, personalized feed, comparisons, credit/valuation/history badges, stories, category tiles, ads, promoted cards, passwords, social sign-in, account merging.",
+];
+
+/* ---------- catalogue ---------- */
+const CAT = [
+  // [name, route today → proposed, status, purpose, entry, exit, states, refs, goto patch]
+  ["Launch","(onboarding)/index","Keep","Splash; routes first run to Language, else Home","App start","Language choice / Home","—","—", (s)=>({stacks:{...s.stacks,search:["launch"]},tab:"search",overlays:[]})],
+  ["Language choice","(onboarding)/language","Keep","Pick Türkmen or Russian","Launch (first run)","Welcome","—","AR-43, KZ-28 (not yet annotated)", (s)=>({stacks:{...s.stacks,search:["language"]},tab:"search",overlays:[]})],
+  ["Welcome","(onboarding)/value-prop","Keep","One-screen value statement; no sign-in wall","Language choice","Home","—","batch 3", (s)=>({stacks:{...s.stacks,search:["welcome"]},tab:"search",overlays:[]})],
+  ["Sign in","(auth)/phone → sign-in with Phone | Email","Change","Choose phone or email; enter it; terms notice. No password","Favorite/Message/Report/Sell, or Sign in on a tab","Code verification; Back cancels and drops the waiting action","phone, email, invalid value, sending, rate-limited, email delivery failed","KZ-29, AR-44 (batch 3)", (s)=>({overlays:["phone"]})],
+  ["Code verification","(auth)/otp","Change","Enter the code sent by SMS or email; reviewer uses a fixed code","Sign in, Add phone, Add email","Back to where it started, then finish the waiting action (change: stop replacing history)","default, wrong code, expired, resend, sent to phone, sent to email","batch 3", (s)=>({overlays:["phone","code"],codeTo:"reviewer@auto.tm"})],
+  ["Add phone","— → account/add-phone","New","Add and verify a phone on the signed-in User","Profile, Sell (email-only User)","Code verification → Profile or Sell wizard","default, already on another User, sending","—", (s)=>({signedIn:true,user:{phone:null,email:"reviewer@auto.tm"},overlays:["addphone"]})],
+  ["Add email","— → account/add-email","New","Add and verify an email on the signed-in User","Profile","Code verification → Profile","default, already on another User, sending","—", (s)=>({signedIn:true,user:{phone:"+993 6• ••• •••",email:null},overlays:["addemail"]})],
+  ["Home","(tabs)/index","Change","🔍 Search in header; “Brand, model” card with live count; New listings feed with “See all”. No filters, no safety banner","Search tab; app start","Search, Brand picker, Results (See all), Listing","loading, offline, empty catalogue, populated","AR-01-001, AR-01-002, KZ-01-001", (s)=>({tab:"search",stacks:{...s.stacks,search:["home"]},overlays:[]})],
+  ["Search","— → search/text","New","Text search over brands and models in RU/EN/TK spellings with typo tolerance; Recent and Popular when empty","Home 🔍","Results (brand only or brand+model), Search parameters","empty with Recent, empty without Recent, typing, no match, loading, offline","AR-01-001 (header 🔍; its target screen is not captured)", (s)=>({overlays:["search"],query:""})],
+  ["Search parameters","FilterSheet (bottom sheet) → search/parameters","Change","Full-screen form: condition, city, brand, model, year, price; sticky Show N","Results Filters chip, Model picker “More filters”, Search “All filters”","Results (Show), Home/Results (Back, discards unapplied edits)","default, filled, count loading, count error, invalid range","AR-02-002, AR-02-003, AR-06-015–018, KZ-03-002, KZ-03-005", (s)=>({draft:s.applied,pickerOrigin:"parameters",overlays:["parameters"]})],
+  ["Brand picker","CatalogPickerSheet → search/brand","Change","Pick exactly one brand, each row with its logo: search field, Recent, Popular with counts, A–Z","Home “Brand, model” card, Results card, Search parameters","Model picker","loading, error, no match, logo missing (letter fallback)","AR-08-002, AR-08-003, KZ-03-007", (s)=>({draft:Model.emptyFilters(),pickerOrigin:"home",query:"",overlays:["brand"]})],
+  ["Model picker","ModelMultiSelectSheet → search/model","Change","Multi-select models or none (= whole brand); search field; Show N → Results (from Home) or Done → form","Brand picker","Results, Search parameters","loading, error, no match","AR-08-004, AR-08-005, KZ-03-008, KZ-03-009", (s)=>({draft:{...Model.emptyFilters(),brand:"toyota"},pickerOrigin:"home",query:"",overlays:["brand","model"]})],
+  ["City picker","CityFilterControl sheets","Keep","Region → city drilldown (prototype shows a flat list)","Search parameters","Search parameters","loading, error","AR-10-002, KZ-03-003", (s)=>({draft:s.applied,pickerOrigin:"parameters",overlays:["parameters","city"]})],
+  ["Results","— → search/results","New","Count + price range + order, ⇅ Sort, All/New/Used switch, one Auto.ru-style brand/model card, Filters chip with badge, value chips (float on scroll), large cards; no brand = full feed; keeps scroll across Listing round trips","Model picker Show, Search result, Recent, Search parameters Show, Home “See all”","Listing, Model/Brand picker (card), Search parameters (Filters chip), Home (Back)","loading, offline, empty with chips, all listings (no brand), brand only, several models, each sort order, scrolled with floating chips, end of list","AR-05-001, AR-05-003, AR-05-005, AR-11-002, KZ-03-012", (s)=>({tab:"search",applied:{...Model.emptyFilters(),brand:"toyota"},stacks:{...s.stacks,search:["home","results"]},overlays:[]})],
+  ["Listing","(public)/listings/[id]","Keep","Photos, price, title, city/date, specs, description, seller, Report listing; sticky Call + Message; ♡ and Share in header; owner view for own Listing","Home, Results, Favorites, Conversation strip, My listings, push","Photo viewer, Call sheet, Conversation, sign-in, Report listing","loading, not found/removed, sold, owner, signed-out","AR-11-003, AR-11-005, AR-11-010, KZ-07-002, KZ-07-007", (s)=>({tab:"search",stacks:{...s.stacks,search:["home","listing:l2"]},overlays:[]})],
+  ["Sort sheet","— → sheet on Results","New","Six orders; current one marked","Results ⇅","Results, re-sorted in place","each order selected","KZ-04-002, AR-05-007", (s)=>({tab:"search",stacks:{...s.stacks,search:["home","results"]},overlays:["sort"]})],
+  ["Photo viewer","PhotoGallery modal","Keep","Full-screen photos with counter","Listing","Listing","no photos","AR-11-004", (s)=>({tab:"search",stacks:{...s.stacks,search:["home","listing:l2"]},overlays:["photos"]})],
+  ["Call (no screen)","tel: directly","Keep","Call opens the phone dialer; the prepayment sheet was rejected","Listing Call","Dialer / Listing","calls disabled, sold","KZ-12-002, KZ-12-003", null],
+  ["Report listing","ReportSheet","Keep","Pick a reason, send to moderation (Play UGC)","Listing","Listing with confirmation","sending, sent, error, signed-out → sign-in","KZ-07-007", (s)=>({signedIn:true,tab:"search",stacks:{...s.stacks,search:["home","listing:l2"]},overlays:["report"]})],
+  ["Favorites","(tabs)/favorites","Keep","Saved Listings","Favorites tab","Listing, Home (empty CTA)","signed-out, loading, empty, populated, sold listing","AR-36-001, AR-36-002, KZ-26-002, KZ-26-003", (s)=>({tab:"favorites",overlays:[]})],
+  ["Conversations","(tabs)/chat","Keep","Conversation list: listing thumb, title, price, last Message","Messages tab","Conversation","signed-out, loading, empty, populated","AR-37-005, AR-38-001", (s)=>({tab:"chat",overlays:[]})],
+  ["Conversation","conversations/[id]","Keep","Pinned Listing strip, Messages, quick replies, menu with Report message and Block user","Listing Message, Conversations, push notification","Listing (strip), Back","new/empty, populated, sending, failed, blocked, listing sold","AR-37-002–004, KZ-11-002, KZ-49-003", (s)=>({signedIn:true,conversations:[{listingId:"l3",messages:[]}],tab:"chat",stacks:{...s.stacks,chat:["conversations","conversation:l3"]},overlays:[]})],
+  ["Sell wizard","(tabs)/sell","Change","8-step listing wizard with autosaved drafts; needs a verified phone","Sell tab, Cabinet, Home empty CTA","Listing (owner view) after publish; My listings; Add phone","signed-out, signed in without phone, draft resume, step errors, photo upload states, publishing","AR-50, KZ-50 (batches 1–2)", (s)=>({tab:"sell",signedIn:true,user:{phone:null,email:"reviewer@auto.tm"},overlays:[]})],
+  ["My listings","listings/manage","Keep","Drafts and published Listings with status actions","Cabinet, Sell","Listing, Edit listing, Sell wizard","loading, empty, drafts, active/sold/archived","KZ-51 (batch 2)", (s)=>({signedIn:true,tab:"cabinet",stacks:{...s.stacks,cabinet:["cabinet","mylistings"]},overlays:[]})],
+  ["Edit listing","listings/[id]/edit","Keep","Edit a published Listing from Review step","Listing owner view, My listings","Listing","unsaved changes, saving, error","—", null],
+  ["Cabinet","(tabs)/services","Keep","Identity card (phone or email; “Phone verified” only with a phone), My listings, Settings, Sell","Cabinet tab","Profile, My listings, Settings, sign-in","signed-out, loading, signed-in","KZ-27 (batch 4)", (s)=>({tab:"cabinet",stacks:{...s.stacks,cabinet:["cabinet"]},overlays:[]})],
+  ["Profile","profile","Change","Display name, avatar, sign-in methods (phone, email) with Verified or Add","Cabinet","Add phone, Add email, Cabinet","loading, saving, error, phone only, email only, both","batch 4", (s)=>({signedIn:true,user:{phone:"+993 6• ••• •••",email:null},tab:"cabinet",stacks:{...s.stacks,cabinet:["cabinet","profile"]},overlays:[]})],
+  ["Settings","settings","Keep","Language, theme, legal pages (web), About, Log out, Delete account","Cabinet","Delete account, web legal pages","signed-out, signed-in","KZ-41–44 (batch 4)", (s)=>({signedIn:true,tab:"cabinet",stacks:{...s.stacks,cabinet:["cabinet","settings"]},overlays:[]})],
+  ["Delete account","account/delete","Keep","In-app deletion with consequences stated (Play requirement)","Settings","Home, signed out","confirming, deleting, error","KZ-48 (batch 4)", (s)=>({signedIn:true,tab:"cabinet",stacks:{...s.stacks,cabinet:["cabinet","settings","deleteaccount"]},overlays:[]})],
+];
+function renderCatalogue() {
+  $("catalogue").innerHTML = `<tr><th>Screen</th><th>Route: today → proposed</th><th>Status</th><th>Purpose</th><th>Entry</th><th>Exit</th><th>States to prove</th><th>References</th></tr>` +
+    CAT.map((r, i) => `<tr><td>${r[8] ? `<a href="#" onclick="gotoCat(${i});return false">${r[0]}</a>` : r[0]}</td><td><code>${esc(r[1])}</code></td>
+      <td class="${r[2].startsWith("New") ? "st-new" : r[2] === "Change" ? "st-change" : "st-keep"}">${r[2]}</td>
+      <td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td><td>${r[7]}</td></tr>`).join("") +
+    `<tr><td colspan="8" class="small">Not screens: <code>conversations/index</code> and <code>conversations/open-listing</code> are redirect routes. Selling screens are listed so the reviewer path is complete; their redesign is outside this ticket.</td></tr>`;
+}
+window.gotoCat = (i) => { const r = CAT[i]; prevS = S; S = { ...Model.reduce(S, { type: "GOTO", name: r[0], patch: r[8] }) }; window.scrollTo({ top: 0, behavior: "smooth" }); render(); };
+
+function render() { renderPhone(); renderState(); renderWalk(); keepFocus(); }
+$("decisions").innerHTML = DECISIONS.map((d) => `<li>${d}</li>`).join("");
+renderFree(); renderCatalogue(); render();
+</script>
+</body>
+</html>
