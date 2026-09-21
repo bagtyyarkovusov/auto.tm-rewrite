@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE — Listing card and Listing detail content (throwaway)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  PROTOTYPE — throwaway. Answers "Prototype listing card and Listing detail content"
+  (wayfinder ticket, map "Google Play reviewer-only Android release readiness").
+  Question: what each listing surface shows and in what order — Home card, Results card,
+  Favorites card, Listing detail (buyer, signed out, owner, sold, archived, removed, loading),
+  collapsing header, photo viewer, "Phone verified" placement, and the API fields this needs.
+  Plan: 4 Home-card layouts + 3 detail variants, switchable via ?cards= / ?detail= and the floating bar.
+  APPROVED by the founder 2026-09-21: Home C (Auto.ru two-column grid), large Results card, Auto.ru-style
+  Favorites (large card + Call/Message, Hide sold on), Detail A. Condition block cut to Damaged/needs repair + Known issues.
+  Colours are AutoTM tokens from apps/mobile/global.css (light). Not Auto.ru's look.
+-->
+<style>
+  :root{
+    --bg:hsl(0 0% 100%); --fg:hsl(0 0% 9%); --primary:hsl(0 90% 48%); --secondary:hsl(45 5% 96%);
+    --muted:hsl(45 5% 92%); --mfg:hsl(0 0% 45%); --border:hsl(45 8% 88%); --destructive:hsl(15 85% 55%);
+    --ok:#1a7f37; --warn:#9a6700; --r:8px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--fg);background:#f4f4f2}
+  .wrap{display:flex;gap:24px;padding:20px 20px 90px;align-items:flex-start}
+  .phone{width:372px;height:780px;flex:none;border:10px solid #111;border-radius:36px;background:var(--bg);color:var(--fg);position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .status{height:24px;font-size:11px;color:var(--mfg);padding:4px 16px;display:flex;justify-content:space-between}
+  .scroller{position:absolute;top:24px;bottom:0;left:0;right:0;overflow-y:auto}
+  .scroller::-webkit-scrollbar{display:none}
+  .panel{flex:1;min-width:420px;max-width:760px}
+  .panel h1{font-size:19px;margin:0 0 4px}
+  .panel h2{font-size:14px;margin:20px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:var(--mfg)}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;flex-wrap:wrap}
+  .seg button{border:0;background:none;padding:6px 10px;font-size:12.5px;cursor:pointer;border-right:1px solid var(--border)}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--fg);color:#fff}
+  .q{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px}
+  .q label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+  .q .why{color:var(--mfg);font-size:12px;margin-left:24px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;background:#fff}
+  td,th{border:1px solid var(--border);padding:4px 6px;text-align:left;vertical-align:top}
+  th{background:var(--secondary)}
+  .have{color:var(--ok)} .miss{color:var(--destructive);font-weight:600} .fix{color:var(--warn);font-weight:600}
+  .vdesc{background:#fff;border-left:3px solid var(--primary);padding:8px 10px;font-size:13px;margin:6px 0}
+  /* app pieces */
+  .appbar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:5}
+  .appbar .t{font-weight:700;font-size:17px;flex:1}
+  .ph{background:linear-gradient(135deg,#c9ccd1,#9aa0a8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;position:relative}
+  .ph.b{background:linear-gradient(135deg,#b7c3b9,#7f8f85)} .ph.c{background:linear-gradient(135deg,#c8bfb2,#958877)}
+  .price{font-weight:800}
+  .mute{color:var(--mfg)} .xs{font-size:11.5px} .sm{font-size:12.5px}
+  .heart{border:0;background:none;font-size:20px;cursor:pointer;line-height:1;color:var(--fg)}
+  .heart.on{color:var(--primary)}
+  .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--secondary);border:1px solid var(--border);white-space:nowrap}
+  .badge.ver{background:#eef7f0;border-color:#cfe6d5;color:var(--ok)}
+  .badge.sold{background:var(--fg);color:#fff;border-color:var(--fg)}
+  .chip{display:inline-flex;border:1px solid var(--border);border-radius:999px;padding:5px 11px;font-size:12.5px;background:#fff;white-space:nowrap;cursor:pointer}
+  .btn{border:0;border-radius:999px;padding:11px 14px;font-weight:700;font-size:14px;cursor:pointer}
+  .btn.brand{background:var(--primary);color:#fff} .btn.out{background:var(--secondary);color:var(--fg)} .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .card{background:#fff}
+  .sep{height:8px;background:var(--secondary)}
+  .sec{padding:14px 16px}
+  .sec h3{margin:0 0 8px;font-size:16px}
+  .skel{background:var(--muted);border-radius:6px;animation:p 1.2s infinite}
+  @keyframes p{50%{opacity:.5}}
+  .sticky{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:8px 12px 14px;display:flex;gap:8px;z-index:6}
+  .hdr{position:absolute;top:24px;left:0;right:0;height:52px;display:flex;align-items:center;gap:6px;padding:0 8px;z-index:7;transition:background .15s,border-color .15s;border-bottom:1px solid transparent}
+  .hdr .ib{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.85);font-size:17px;cursor:pointer;flex:none}
+  .hdr .mid{flex:1;text-align:center;opacity:0;transition:opacity .15s;min-width:0}
+  .hdr.solid{background:var(--bg);border-color:var(--border)}
+  .hdr.solid .mid{opacity:1}
+  .hdr.solid .ib{background:transparent}
+  .viewer{position:absolute;inset:0;background:#000;z-index:20;display:flex;flex-direction:column;color:#fff}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;padding:16px;z-index:25;box-shadow:0 -6px 20px rgba(0,0,0,.2)}
+  .dim{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:24}
+  .toast{position:absolute;left:12px;right:12px;bottom:84px;background:#222;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;z-index:30}
+  .ptabs{display:flex;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:5}
+  .ptabs button{flex:1;border:0;background:none;padding:10px 0;font-size:13px;cursor:pointer;color:var(--mfg)}
+  .ptabs button.on{color:var(--fg);font-weight:700;box-shadow:inset 0 -2px 0 var(--primary)}
+  .switcher{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;border-radius:999px;padding:6px 8px;display:flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:100;font-size:13px}
+  .switcher button{background:#333;color:#fff;border:0;border-radius:999px;width:30px;height:30px;cursor:pointer}
+  .switcher .lbl{padding:0 8px;min-width:250px;text-align:center}
+  .switcher .which{background:#333;border-radius:999px;padding:4px 10px;cursor:pointer;border:0;color:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+  .kv{display:grid;grid-template-columns:42% 58%;gap:6px 8px;font-size:13.5px}
+  .kv .k{color:var(--mfg)}
+  .phone.dark{--bg:hsl(0 0% 4%);--fg:hsl(60 10% 98%);--secondary:hsl(0 0% 14%);--muted:hsl(240 4% 20%);--mfg:hsl(45 4% 64%);--border:hsl(0 0% 23%);color:var(--fg)}
+  .phone.dark .card,.phone.dark .chip{background:var(--bg)}
+  .phone.dark .appbar{background:var(--bg)}
+  .phone.dark .badge.sold{background:var(--fg);color:var(--bg)}
+  .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phone" id="phone"><div class="status"><span>09:41</span><span>AutoTM · Android</span></div><div class="scroller" id="scroller"></div><div id="overlay"></div></div>
+  <div class="panel" id="panel"></div>
+</div>
+<div class="switcher" id="switcher"></div>
+
+<script>
+/* ───────────── sample data (one realistic Listing) ───────────── */
+const L = {
+  id:"4f1c9a2e-7b1d-4e0a-9c55-2a8e6d1b3f70", shortId:"4F1C9A2E",
+  brand:"Toyota", model:"Camry", gen:"XV70", year:2018, price:"285 000 TMT", priceUsd:"≈ original 81 500 USD (owner only)",
+  km:"96 000 km", gearbox:"Automatic", fuel:"Petrol", drive:"Front", power:"181 hp", color:"White", body:"Sedan",
+  condition:"Used", vin:"JTNB11HK*******42", city:"Aşgabat", region:"Ahal", place:"Parahat 7",
+  published:"12 Sep", updated:"18 Sep", photos:12, views:214, favs:12,
+  seller:"Merdan", phoneVerified:true, exchange:true, installment:false,
+  desc:"One owner in Turkmenistan, bought from the dealer in Dubai. Serviced every 10 000 km, full service book. Two sets of tyres. Small scratch on the rear bumper (photo 9). No accidents. Viewing in Parahat 7 after 18:00.",
+  disclosure:{accident:false,mileageOk:true,owners:1,service:true,issues:"Small scratch on rear bumper"}
+};
+/* ───────────── state ───────────── */
+const url = new URL(location.href);
+const S = {
+  surface: url.searchParams.get("surface") || "detail",
+  cards: url.searchParams.get("cards") || "C",
+  co: { photos:"two", heart:"bottom", spec:"base", count:true, verified:false, anon:false, loading:false, dark:false },
+  favLayout:"auto", hideSold:true, favState:"list", lastRemoved:null,
+  detail: url.searchParams.get("detail") || "A",
+  cardTab: "home",
+  state: "buyer",        // buyer | anon | owner | sold | archived | removed | loading
+  loadMode: "seeded",    // seeded | skeleton
+  viewer: null,          // photo index when open
+  photo: 0,
+  sheet: null, toast: null,
+  fav: false,
+  opt: { vinSection:false, disclosure:true, inspection:false, trustLink:false, share:true, ask:true, footer:true, ownerStats:true, viewerCta:true, similar:true, descMore:true },
+};
+const DETAIL_VARIANTS = {
+  A:{name:"Auto.ru order", desc:"Photos → title + year → price (+ exchange/installment) → date · city → six key specs as a grid, then the rest as rows → seller’s description → Ask the seller → condition → seller card (“Phone verified” here) → Report listing → ID · dates footer. Header collapses to price + title (AR-11-003/005/008/010, KZ-07-007)."},
+  B:{name:"Kolesa table", desc:"Photos → title → price, “Phone verified” in the price block → a single label/value table (city first, then every spec) → description → condition → seller → Report → footer. No icon grid. Two equal buttons: Message + Call (KZ-07-002/003/007)."},
+  C:{name:"Seller up front", desc:"Photos → price + title → seller strip immediately under price (name, “Phone verified”, city) → key facts as a chip row → description → full specs collapsed behind “All specifications” → condition → Report → footer. Trust and contact before specs."},
+};
+
+function set(p){Object.assign(S,p);sync();render();}
+function opt(k,v){S.opt[k]=v;render();}
+function sync(){url.searchParams.set("surface",S.surface);url.searchParams.set("cards",S.cards);url.searchParams.set("detail",S.detail);history.replaceState(null,"",url);}
+function toast(m){S.toast=m;render();clearTimeout(window._t);window._t=setTimeout(()=>{S.toast=null;render();},2200);}
+
+/* ───────────── cards ───────────── */
+const FEED = [
+  {id:1,brand:"Toyota",model:"Camry",year:2018,p:"285 000 TMT",km:96000,cond:"used",gear:"Automatic",fuel:"Petrol",power:181,c:"Aşgabat",d:"Today",fav:false,st:"active",n:12,ph:["","b"]},
+  {id:2,brand:"Lexus",model:"RX 350",year:2016,p:"410 000 TMT",km:132000,cond:"used",gear:"Automatic",fuel:"Petrol",power:295,c:"Mary",d:"Today",fav:true,st:"active",n:8,ph:["c","b"]},
+  {id:3,brand:"Hyundai",model:"Elantra",year:2024,p:"318 000 TMT",km:0,cond:"new",gear:"Automatic",fuel:"Petrol",power:147,c:"Türkmenabat",d:"Yesterday",fav:false,st:"active",n:5,ph:["b",""]},
+  {id:4,brand:"Toyota",model:"Land Cruiser Prado",year:2012,p:"520 000 TMT",km:210000,cond:"used",gear:"Automatic",fuel:"Diesel",power:173,c:"Balkanabat",d:"10 Sep",fav:false,st:"active",n:1,ph:["",""]},
+  {id:5,brand:"Mercedes-Benz",model:"E-Class All-Terrain 4MATIC",year:2017,p:"460 000 TMT",km:150000,cond:"used",gear:null,fuel:"Diesel",power:null,c:"Daşoguz",d:"8 Sep",fav:false,st:"active",n:6,ph:["c",""]},
+  {id:6,brand:"Lada",model:"Niva",year:2008,p:"45 000 TMT",km:null,cond:"used",gear:"Manual",fuel:"Petrol",power:null,c:"Lebap",d:"3 Mar 2025",fav:false,st:"active",n:0,ph:["",""]},
+];
+let FAVS = [
+  {...FEED[1]},
+  {...FEED[0],fav:true,st:"sold"},
+  {...FEED[3],fav:true,st:"archived"},
+];
+const HOME_VARIANTS = {
+  A:{name:"Large card (same as Results)", desc:"Home “New listings” uses the exact Results card. One component. Home reads as the first page of Results; “See all” continues the same list."},
+  B:{name:"Compact rows (today)", desc:"One photo left, text right. About twice as many Listings above the fold, but a second card component, and Home looks different from Results."},
+  C:{name:"Two-column grid — Auto.ru Home (AR-01-002)", desc:"As on Auto.ru Home: rounded photo with ♡ on it, price, “Brand Model” on one line, then “year, km” (“year, New” for new cars). No city, gearbox or fuel; those show on the large Results card. No badges (Auto.ru’s “Fair price” and “New” pills are left out)."},
+  D:{name:"Horizontal strip + See all", desc:"Home stays short: search, Brand/model card, then a sideways strip of the 10 newest with a last “See all 1 284” tile. Browsing happens in Results only."},
+};
+function photo(cls,h,label){return `<div class="ph ${cls}" style="height:${h}px">${label||""}</div>`;}
+const fmtKm = n => n.toLocaleString("ru-RU").replace(/,/g," ");
+function specLine(x){
+  return [x.cond==="new"?"New":(x.km!=null?fmtKm(x.km)+" km":null), x.gear, x.fuel, S.co.spec==="power"&&x.power?x.power+" hp":null].filter(Boolean).join(" · ");
+}
+const titleOf = x => `${x.brand} ${x.model}, ${x.year}`;
+function heartBtn(x,onPhoto){
+  const act = S.co.anon ? "toast('Sign in → ♡ is saved → you land back here, list and scroll intact')"
+            : S.cardTab==="favorites" ? `unfav(${x.id})` : `toggleFav(${x.id})`;
+  const style = onPhoto?"position:absolute;right:6px;top:6px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)":"";
+  return `<button class="heart ${x.fav&&!onPhoto?'on':''}" style="${style}" onclick="event.stopPropagation();${act}">${x.fav?'♥':'♡'}</button>`;
+}
+window.toggleFav=id=>{const x=FEED.find(f=>f.id===id);x.fav=!x.fav;render();};
+window.unfav=id=>{const i=FAVS.findIndex(f=>f.id===id);S.lastRemoved=[i,FAVS[i]];FAVS.splice(i,1);toast("Removed from Favorites · Undo");};
+window.undoFav=()=>{if(S.lastRemoved){FAVS.splice(S.lastRemoved[0],0,S.lastRemoved[1]);S.lastRemoved=null;S.toast=null;render();}};
+function stLabel(x,abs){
+  if(x.st==="sold") return `<span class="badge sold" ${abs?'style="position:absolute;left:8px;top:8px"':''}>Sold</span>`;
+  if(x.st==="archived") return `<span class="badge" style="background:#fff;${abs?'position:absolute;left:8px;top:8px':''}">Removed from sale</span>`;
+  return "";
+}
+function photoArea(x,h){
+  const dim = x.st!=="active"?"opacity:.5;":"";
+  const cnt = S.co.count&&x.n>1?`<span style="position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 7px;border-radius:999px">📷 ${x.n}</span>`:"";
+  const heart = S.co.heart==="photo"?heartBtn(x,true):"";
+  let inner;
+  if(x.n===0) inner=`<div class="ph" style="height:${h}px;background:var(--muted);color:var(--mfg)">No photos</div>`;
+  else if(x.n===1||S.co.photos==="one") inner=photo(x.ph[0],h,"1");
+  else if(S.co.photos==="two") inner=`<div style="display:grid;grid-template-columns:62% 38%;gap:2px">${photo(x.ph[0],h,"1")}${photo(x.ph[1],h,"2")}</div>`;
+  else { const k=Math.min(x.n,5); inner=`<div style="display:flex;gap:2px;overflow-x:auto;scrollbar-width:none" onclick="event.stopPropagation()">${Array.from({length:k},(_,i)=>`<div style="flex:0 0 62%">${i===4&&x.n>5?`<div class="ph" style="height:${h}px;background:var(--fg)">+${x.n-4} photos</div>`:photo(["","b","c"][i%3],h,String(i+1))}</div>`).join("")}</div>`; }
+  return `<div style="position:relative;${dim}">${inner}${cnt}</div>${stLabel(x,true)}${heart}`;
+}
+function largeCard(x){
+  return `<div class="card lc" style="padding:0 0 12px" onclick="openFromCard(${x.id},'${x.st}')">
+    <div style="position:relative">${photoArea(x,170)}</div>
+    <div style="padding:10px 14px 0">
+      <div class="price" style="font-size:20px;${x.st!=='active'?'color:var(--mfg)':''}">${x.p}</div>
+      <div class="sm" style="margin-top:2px">${specLine(x)}</div>
+      <div class="sm mute" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${titleOf(x)}</div>
+      ${S.co.verified?`<div style="margin-top:4px"><span class="badge ver">✓ Phone verified</span></div>`:""}
+      ${S.cardTab==="favorites"&&S.favLayout==="auto"&&x.st==="active"?`<div style="display:flex;gap:8px;margin-top:10px"><button class="btn brand" style="flex:1" onclick="event.stopPropagation();toast('Opens the phone dialer')">Call</button><button class="btn out" style="flex:1" onclick="event.stopPropagation();toast('Opens the Conversation with this seller')">💬 Message</button></div>`:""}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;min-height:24px"><span class="xs mute">${x.c}${S.cardTab==="favorites"&&S.favLayout==="auto"?"":" · "+x.d}</span>${S.co.heart==="bottom"?heartBtn(x):""}</div>
+    </div></div><div class="sep lcsep" style="height:6px"></div>`;
+}
+function compactCard(x){
+  return `<div class="lc" style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)" onclick="openFromCard(${x.id},'${x.st}')">
+    <div style="width:128px;height:96px;flex:none;border-radius:8px;overflow:hidden;position:relative;${x.st!=='active'?'opacity:.5':''}">${x.n?photo(x.ph[0],96):`<div class="ph" style="height:96px;background:var(--muted);color:var(--mfg)">No photos</div>`}</div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between">
+      <div><div class="price" style="font-size:16px;${x.st!=='active'?'color:var(--mfg)':''}">${x.p}</div><div class="sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${titleOf(x)}</div><div class="xs mute" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${specLine(x)}</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px"><span class="xs mute" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${stLabel(x)} ${x.c} · ${x.d}</span>${heartBtn(x)}</div>
+    </div></div>`;
+}
+function gridCard(x){
+  const meta=[x.year, x.cond==='new'?'New':x.km!=null?fmtKm(x.km)+' km':null].filter(Boolean).join(', ');
+  return `<div class="lc" style="min-width:0" onclick="openFromCard(${x.id},'${x.st}')"><div style="position:relative;border-radius:12px;overflow:hidden">${x.n?photo(x.ph[0],120):`<div class="ph" style="height:120px;background:var(--muted);color:var(--mfg)">No photos</div>`}${heartBtn(x,true)}</div>
+    <div class="price" style="font-size:16px;margin-top:6px">${x.p}</div><div class="sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.brand} ${x.model}</div><div class="sm mute">${meta}</div></div>`;
+}
+function stripCard(x){
+  return `<div class="lc" style="flex:0 0 232px" onclick="openFromCard(${x.id},'${x.st}')"><div style="position:relative;border-radius:10px;overflow:hidden">${x.n?photo(x.ph[0],140):`<div class="ph" style="height:140px;background:var(--muted);color:var(--mfg)">No photos</div>`}${heartBtn(x,true)}</div>
+    <div class="price" style="font-size:16px;margin-top:6px">${x.p}</div><div class="xs" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${specLine(x)}</div><div class="xs mute" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${titleOf(x)}</div><div class="xs mute">${x.c} · ${x.d}</div></div>`;
+}
+function skeletonLarge(){return `<div style="padding-bottom:12px"><div class="skel" style="height:170px;border-radius:0"></div><div style="padding:10px 14px"><div class="skel" style="height:20px;width:45%"></div><div class="skel" style="height:12px;width:80%;margin-top:8px"></div><div class="skel" style="height:12px;width:55%;margin-top:6px"></div></div></div><div class="sep" style="height:6px"></div>`;}
+function skeletonCompact(){return `<div style="display:flex;gap:10px;padding:10px 14px"><div class="skel" style="width:128px;height:96px"></div><div style="flex:1"><div class="skel" style="height:16px;width:50%"></div><div class="skel" style="height:12px;margin-top:8px"></div><div class="skel" style="height:12px;width:60%;margin-top:6px"></div></div></div>`;}
+window.openFromCard=(id,st)=>set({surface:'detail',state:st==='sold'?'sold':st==='archived'?'archived':(S.co.anon?'anon':'buyer')});
+function homeScreen(){
+  const v=S.cards, L0=S.co.loading;
+  let list;
+  if(v==="A") list=L0?skeletonLarge().repeat(3):FEED.map(largeCard).join("");
+  else if(v==="B") list=L0?skeletonCompact().repeat(5):FEED.map(compactCard).join("");
+  else if(v==="C") list=`<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 10px;padding:0 14px">${L0?'<div class="skel" style="height:170px"></div>'.repeat(4):FEED.map(gridCard).join("")}</div>`;
+  else list=`<div style="display:flex;gap:10px;overflow-x:auto;padding:0 14px 6px;scrollbar-width:none">${L0?'<div class="skel" style="flex:0 0 232px;height:220px"></div>'.repeat(2):FEED.map(stripCard).join("")+`<div style="flex:0 0 140px;border-radius:10px;background:var(--secondary);display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;padding:10px" onclick="set({cardTab:'results'})">See all<br>1 284 listings →</div>`}</div>
+    <div class="xs mute" style="padding:14px">Nothing else below: Home ends here. Browsing continues in Results.</div>`;
+  return `<div class="appbar"><span class="t">AutoTM</span><span style="font-size:18px">🔍</span></div>
+    <div style="padding:12px 14px"><div style="background:var(--secondary);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between" onclick="set({cardTab:'results'})"><div><b>Brand, model</b><div class="xs mute">1 284 listings</div></div><span>›</span></div></div>
+    <div style="display:flex;justify-content:space-between;padding:4px 14px 8px"><b style="font-size:17px">New listings</b><span class="sm" style="color:var(--primary)" onclick="set({cardTab:'results'})">See all</span></div>${list}`;
+}
+function resultsScreen(){
+  return `<div class="appbar"><span onclick="set({cardTab:'home'})">←</span><div class="t" style="font-size:15px">1 284 listings<div class="xs mute" style="font-weight:400">45 000 – 1 200 000 TMT · Newest first</div></div><span>⇅</span></div>
+    <div style="padding:8px 14px;display:flex;gap:6px"><span class="chip" style="background:var(--fg);color:var(--bg)">All</span><span class="chip">New</span><span class="chip">Used</span></div>
+    ${S.co.loading?skeletonLarge().repeat(3):FEED.map(largeCard).join("")}`;
+}
+function favScreen(){
+  if(S.co.anon) return `<div class="appbar"><span class="t">Favorites</span></div><div style="padding:120px 28px;text-align:center"><div style="font-size:36px">♡</div><b>Sign in to see your Favorites</b><div class="sm mute" style="margin:6px 0 16px">Tap ♡ on any Listing to save it here.</div><button class="btn brand">Sign in</button></div>`;
+  if(S.favState==="empty"||FAVS.length===0) return `<div class="appbar"><span class="t">Favorites</span></div><div style="padding:120px 28px;text-align:center"><div style="font-size:36px">♡</div><b>No Favorites yet</b><div class="sm mute" style="margin:6px 0 16px">Tap ♡ on a Listing to keep it here.</div><button class="btn out" onclick="set({cardTab:'home'})">Browse new listings</button></div>`;
+  const shown = S.favLayout==="auto"&&S.hideSold ? FAVS.filter(x=>x.st==="active") : FAVS;
+  const hidden = FAVS.length-shown.length;
+  const items = S.co.loading?(S.favLayout==="compact"?skeletonCompact().repeat(4):skeletonLarge().repeat(3)):(S.favLayout==="compact"?shown.map(compactCard).join(""):shown.map(largeCard).join(""));
+  const toggle = S.favLayout==="auto"?`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)"><span>Hide sold</span><span onclick="set({hideSold:!S.hideSold})" style="width:44px;height:26px;border-radius:999px;background:${S.hideSold?'var(--fg)':'var(--muted)'};position:relative;cursor:pointer"><span style="position:absolute;top:3px;${S.hideSold?'right:3px':'left:3px'};width:20px;height:20px;border-radius:50%;background:#fff"></span></span></div>${S.hideSold&&hidden?`<div class="xs mute" style="padding:8px 14px">${hidden} sold or removed from sale hidden</div>`:""}`:`<div class="xs mute" style="padding:8px 14px">Newest saved first. Sold and removed-from-sale stay in place, marked. Tapping ♥ removes with Undo.</div>`;
+  return `<div class="appbar"><span class="t">Favorites <span class="mute" style="font-weight:400">${FAVS.length}</span></span></div>${toggle}${items}${shown.length===0?`<div style="padding:60px 28px;text-align:center"><b>No active listings</b><div class="sm mute" style="margin:6px 0 16px">Saved Listings that sold are hidden. Turn off “Hide sold” to see them.</div><button class="btn out" onclick="set({cardTab:'home'})">Browse new listings</button></div>`:""}`;
+}
+function tabbar(){
+  const t=[["home","🔍","Search"],["favorites","♡","Favorites"],["sell","＋","Sell"],["msg","💬","Messages"],["cab","👤","Cabinet"]];
+  return `<div style="position:absolute;left:0;right:0;bottom:0;height:56px;border-top:1px solid var(--border);background:var(--bg);display:flex;z-index:6">${t.map(([k,i,n])=>`<div style="flex:1;text-align:center;font-size:10px;padding-top:6px;color:${(S.cardTab===k||(k==='home'&&S.cardTab==='results'))?'var(--primary)':'var(--mfg)'}" onclick="${k==='home'||k==='favorites'?`set({cardTab:'${k}'})`:''}"><div style="font-size:17px">${i}</div>${n}</div>`).join("")}</div>`;
+}
+function cardsSurface(){
+  const body=S.cardTab==="home"?homeScreen():S.cardTab==="results"?resultsScreen():favScreen();
+  return `${body}<div style="height:70px"></div>`;
+}
+function foldCount(){
+  const sc=document.getElementById("scroller"); if(!sc||S.surface!=="cards") return null;
+  const vh=sc.clientHeight-56, r0=sc.getBoundingClientRect();
+  let n=0; sc.querySelectorAll(".lc").forEach(el=>{const r=el.getBoundingClientRect();const top=r.top-r0.top, left=r.left-r0.left;if(top<vh-40&&left<sc.clientWidth-60&&r.bottom>r0.top)n++;});
+  return n;
+}
+
+/* ───────────── detail ───────────── */
+const isOwner=()=>S.state==="owner";
+const closed=()=>S.state==="sold"||S.state==="archived";
+function gallery(){
+  const cls=["","b","c"][S.photo%3];
+  const banner = S.state==="sold"?`<div style="position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.72);color:#fff;padding:8px 14px;font-weight:700">Sold${S.state==='sold'?' · 19 Sep':''}</div>`:
+                 S.state==="archived"?`<div style="position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.72);color:#fff;padding:8px 14px;font-weight:700">Removed from sale by the seller</div>`:"";
+  return `<div style="position:relative" id="hero">
+    <div class="ph ${cls}" style="height:270px;cursor:zoom-in" onclick="set({viewer:S.photo})">Photo ${S.photo+1}</div>
+    <button onclick="set({photo:(S.photo+${L.photos}-1)%${L.photos}})" style="position:absolute;left:6px;top:120px;border:0;background:rgba(255,255,255,.7);border-radius:50%;width:28px;height:28px">‹</button>
+    <button onclick="set({photo:(S.photo+1)%${L.photos}})" style="position:absolute;right:6px;top:120px;border:0;background:rgba(255,255,255,.7);border-radius:50%;width:28px;height:28px">›</button>
+    <span style="position:absolute;right:10px;${banner?'top:60px':'bottom:10px'};background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:999px">${S.photo+1} / ${L.photos}</span>
+    ${banner}</div>`;
+}
+function priceBlock(withVerified){
+  return `<div class="price" style="font-size:26px;${closed()?'color:var(--mfg)':''}">${L.price}</div>
+   ${isOwner()?`<div class="xs mute">${L.priceUsd}</div>`:""}
+   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${L.exchange?'<span class="badge">Exchange possible</span>':''}${L.installment?'<span class="badge">Installment</span>':''}${withVerified&&L.phoneVerified?'<span class="badge ver">✓ Phone verified</span>':''}</div>`;
+}
+function title(){return `${L.brand} ${L.model} ${L.gen}, ${L.year}`;}
+function keyGrid(){
+  const k=[["📅",L.year,"year"],["🛣",L.km,"mileage"],["⚙",L.gearbox,"gearbox"],["⛽",L.fuel,"fuel"],["🔧",L.power,"power"],["↔",L.drive,"drive"]];
+  return `<div class="grid2">${k.map(([i,v,l])=>`<div style="display:flex;gap:8px;padding:6px 0"><span>${i}</span><div><b>${v}</b><div class="xs mute">${l}</div></div></div>`).join("")}</div>`;
+}
+function restRows(){return `<div class="kv" style="margin-top:8px"><span class="k">Condition</span><span>${L.condition}</span><span class="k">Body</span><span>${L.body}</span><span class="k">Colour</span><span>${L.color}</span>${L.vin?`<span class="k">VIN</span><span>${L.vin}</span>`:""}</div>`;}
+function fullTable(){
+  const rows=[["City",`${L.city}, ${L.region}`],["Year",L.year],["Mileage",L.km],["Condition",L.condition],["Body",L.body],["Engine",`${L.fuel}, ${L.power}`],["Gearbox",L.gearbox],["Drive",L.drive],["Colour",L.color],["Generation",L.gen],["VIN",L.vin]];
+  return `<div class="kv">${rows.map(([k,v])=>`<span class="k">${k}</span><span>${v}</span>`).join("")}</div>`;
+}
+function description(){
+  return `<div class="sec"><h3>Seller’s description</h3><div class="${S.opt.descMore?'clamp':''}" id="desc">${L.desc}</div>${S.opt.descMore?`<span class="sm" style="color:var(--primary);cursor:pointer" onclick="document.getElementById('desc').classList.remove('clamp');this.remove()">More</span>`:""}</div>`;
+}
+function ask(){
+  if(!S.opt.ask||isOwner()||closed()) return "";
+  const qs=["Still for sale?","Is exchange possible?","Is the price negotiable?","Where and when can I see it?"];
+  return `<div class="sep"></div><div class="sec"><h3>Ask the seller</h3><div style="display:flex;flex-wrap:wrap;gap:6px">${qs.map(q=>`<span class="chip" onclick="toast('${S.state==='anon'?'Sign in → Conversation opens with “'+q+'” ready to send':'Conversation opens with “'+q+'” ready to send'}')">${q}</span>`).join("")}</div></div>`;
+}
+function disclosure(){
+  if(!S.opt.disclosure) return "";
+  const d=L.disclosure;
+  return `<div class="sep"></div><div class="sec"><h3>Condition, as stated by the seller</h3><div class="kv"><span class="k">Damaged / needs repair</span><span>${d.accident?'Yes':'No'}</span><span class="k">Known issues</span><span>${d.issues}</span></div></div>`;
+}
+function vinSection(){ if(!S.opt.vinSection) return ""; return `<div class="sep"></div><div class="sec"><h3>VIN decode</h3><div class="sm mute">Brand Toyota · Model Camry · 2018 · Sedan · Petrol · confidence 82%</div></div>`;}
+function seller(withVerified){
+  if(isOwner()) return "";
+  return `<div class="sep"></div><div class="sec"><h3>Seller</h3><div style="display:flex;gap:10px;align-items:center"><div style="width:44px;height:44px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700">${L.seller[0]}</div>
+   <div style="flex:1"><b>${L.seller}</b> <span class="xs mute">· Private seller</span>${withVerified&&L.phoneVerified?`<div><span class="badge ver">✓ Phone verified</span></div>`:""}<div class="xs mute">On AutoTM since March 2026</div></div></div>
+   <div class="sm" style="margin-top:8px">📍 ${L.city}, ${L.region} · ${L.place}</div></div>`;
+}
+function sellerStrip(){
+  if(isOwner()) return "";
+  return `<div style="display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px;border-radius:10px;background:var(--secondary)"><div style="width:36px;height:36px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">${L.seller[0]}</div>
+   <div style="flex:1"><b>${L.seller}</b> <span class="xs mute">· Private seller</span><div class="xs mute">📍 ${L.city} · ${L.place}</div></div>${L.phoneVerified?'<span class="badge ver">✓ Phone verified</span>':''}</div>`;
+}
+function reportAndFooter(){
+  let s="";
+  if(!isOwner()) s+=`<div class="sec" style="padding-top:4px"><button class="btn out" style="width:100%;font-weight:600" onclick="${S.state==='anon'?"toast('Sign in → Report listing opens, then back here')":"set({sheet:'report'})"}">⚑ Report listing</button></div>`;
+  if(S.opt.inspection&&!closed()) s+=`<div class="sec" style="padding-top:0"><div class="q" style="margin:0">Want an inspection before buying? <span style="color:var(--primary)">Tell us</span> <span class="xs mute">(S9a fake door)</span></div></div>`;
+  if(S.opt.trustLink) s+=`<div class="sec" style="padding-top:0"><div class="q" style="margin:0">🛡 How to buy safely on AutoTM ›</div></div>`;
+  if(S.opt.footer) s+=`<div class="sec xs mute" style="padding-top:0">ID ${L.shortId} · Published ${L.published} · Updated ${L.updated}${isOwner()&&S.opt.ownerStats?` · 👁 ${L.views} · ♡ ${L.favs}`:""}</div>`;
+  return s;
+}
+function ownerBanner(){
+  if(!isOwner()) return "";
+  return `<div style="margin:10px 16px 0;padding:10px 12px;border-radius:10px;background:var(--secondary)"><b>Your listing · Active</b>${S.opt.ownerStats?`<div class="xs mute">👁 ${L.views} views · ♡ ${L.favs} saved · published ${L.published}</div>`:""}</div>`;
+}
+function closedBanner(){
+  if(!closed()) return "";
+  const m=S.state==="sold"?"This car is sold. Calls and messages are off.":"The seller removed this listing from sale. Calls and messages are off.";
+  return `<div style="margin:10px 16px 0;padding:10px 12px;border-radius:10px;background:var(--secondary)" class="sm">${m}${S.opt.similar?`<div style="margin-top:6px"><span class="chip" onclick="set({surface:'cards',cardTab:'results'})">See other ${L.brand} ${L.model} →</span></div>`:""}</div>`;
+}
+function detailBody(){
+  const v=S.detail;
+  let h=gallery()+ownerBanner()+closedBanner();
+  if(v==="A"){
+    h+=`<div class="sec"><div style="font-size:18px">${title()}</div><div style="margin-top:4px">${priceBlock(false)}</div><div class="sm mute" style="margin-top:6px">${L.published} · ${L.city}</div></div>`;
+    h+=`<div class="sep"></div><div class="sec"><h3>Specifications</h3>${keyGrid()}${restRows()}</div>`;
+    h+=`<div class="sep"></div>`+description()+ask()+disclosure()+vinSection()+seller(true)+`<div class="sep"></div>`+reportAndFooter();
+  } else if(v==="B"){
+    h+=`<div class="sec"><div style="font-size:18px;font-weight:700">${L.brand} ${L.model}, ${L.year}</div><div style="margin-top:4px">${priceBlock(true)}</div></div>`;
+    h+=`<div class="sep"></div><div class="sec"><h3>Specifications</h3>${fullTable()}</div>`;
+    h+=`<div class="sep"></div>`+description()+disclosure()+vinSection()+ask()+seller(false)+`<div class="sep"></div>`+reportAndFooter();
+  } else {
+    h+=`<div class="sec"><div>${priceBlock(false)}</div><div style="font-size:16px;margin-top:2px">${title()}</div>${sellerStrip()}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${[L.km,L.gearbox,L.fuel,L.power,L.drive,L.color].map(x=>`<span class="badge" style="font-size:12px;padding:3px 9px">${x}</span>`).join("")}</div></div>`;
+    h+=`<div class="sep"></div>`+description()+ask();
+    h+=`<div class="sep"></div><div class="sec"><details><summary style="font-weight:700;cursor:pointer">All specifications</summary><div style="margin-top:8px">${fullTable()}</div></details></div>`;
+    h+=disclosure()+vinSection()+`<div class="sep"></div>`+reportAndFooter();
+  }
+  return h+`<div style="height:90px"></div>`;
+}
+function bottomBar(){
+  if(S.state==="owner") return `<div class="sticky"><button class="btn out" style="flex:1">✎ Edit</button><button class="btn out" style="flex:1">Mark sold</button><button class="btn out" style="width:48px" onclick="set({sheet:'ownerMore'})">⋯</button></div>`;
+  if(closed()) return "";
+  const msg=S.state==="anon"?"toast('Sign in → the Conversation opens, Listing stays behind it')":"toast('Opens the Conversation with this seller')";
+  const call=`<button class="btn brand" style="flex:1" onclick="toast('Opens the phone dialer: +993 6x xx xx xx')">Call</button>`;
+  const m=`<button class="btn ${S.detail==='B'?'brand':'out'}" style="flex:1${S.detail==='A'?';flex:0 0 64px':''}" onclick="${msg}">${S.detail==='A'?'💬':'Message'}</button>`;
+  return `<div class="sticky">${S.detail==='B'?m+call:call+m}</div>`;
+}
+function header(){
+  const favOn=S.fav;
+  const favClick = S.state==="anon"?"toast('Sign in → ♡ saved → back on this Listing')":"S.fav=!S.fav;render()";
+  const right = isOwner()?`<button class="ib" onclick="set({sheet:'ownerMore'})">⋯</button>`:
+    `${S.opt.share?`<button class="ib" onclick="toast('Share sheet: https://auto.tm/listings/…')">⇪</button>`:""}${closed()?"":`<button class="ib" style="color:${favOn?'var(--primary)':'inherit'}" onclick="${favClick}">${favOn?'♥':'♡'}</button>`}<button class="ib" onclick="set({sheet:'more'})">⋯</button>`;
+  return `<div class="hdr" id="hdr"><button class="ib" onclick="set({surface:'cards'})">←</button><div class="mid"><div class="price" style="font-size:15px">${L.price}</div><div class="xs mute">${L.brand} ${L.model}, ${L.year}</div></div>${right}</div>`;
+}
+function loadingView(){
+  if(S.loadMode==="seeded"){
+    return `<div class="hdr"><button class="ib">←</button><div class="mid"></div></div><div style="position:relative">${photo("",270,"Cover from the card (already cached)")}</div>
+      <div class="sec"><div style="font-size:18px">${L.brand} ${L.model}, ${L.year}</div><div class="price" style="font-size:26px">${L.price}</div><div class="sm mute">${L.km} · ${L.gearbox} · ${L.fuel}</div><div class="xs mute">${L.city} · ${L.published}</div></div>
+      <div class="sec"><div class="skel" style="height:14px;width:40%;margin-bottom:10px"></div><div class="grid2">${Array(6).fill('<div class="skel" style="height:34px"></div>').join("")}</div><div class="skel" style="height:12px;margin-top:14px"></div><div class="skel" style="height:12px;margin-top:6px;width:70%"></div></div>
+      <div class="sticky"><button class="btn brand" style="flex:1" disabled>Call</button><button class="btn out" style="flex:0 0 64px" disabled>💬</button></div>`;
+  }
+  return `<div class="hdr"><button class="ib">←</button><div class="mid"></div></div><div class="skel" style="height:270px;border-radius:0"></div>
+    <div class="sec"><div class="skel" style="height:20px;width:70%"></div><div class="skel" style="height:28px;width:45%;margin-top:8px"></div><div class="grid2" style="margin-top:16px">${Array(6).fill('<div class="skel" style="height:34px"></div>').join("")}</div><div class="skel" style="height:12px;margin-top:14px"></div></div>`;
+}
+function removedView(){
+  return `<div class="hdr solid"><button class="ib" onclick="set({surface:'cards'})">←</button><div class="mid"></div></div>
+   <div style="padding:120px 28px 0;text-align:center"><div style="font-size:40px">🚗</div><div style="font-size:18px;font-weight:700;margin-top:8px">This listing is no longer available</div>
+   <div class="sm mute" style="margin-top:6px">The seller deleted it, or it broke the rules.</div>
+   <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px"><button class="btn brand" onclick="set({surface:'cards',cardTab:'home'})">Go to Home</button><button class="btn out" onclick="set({surface:'cards'})">Back</button></div>
+   <div class="xs mute" style="margin-top:14px">Opened from Favorites? The heart is removed for you; deleted Listings never show in Favorites.</div></div>`;
+}
+function detailSurface(){
+  if(S.state==="loading") return loadingView();
+  if(S.state==="removed") return removedView();
+  return detailBody();
+}
+function overlays(){
+  let o="";
+  if(S.surface==="detail"&&!["loading","removed"].includes(S.state)){ o+=header(); o+=bottomBar(); }
+  if(S.viewer!==null){
+    const i=S.viewer, cls=["","b","c"][i%3];
+    o+=`<div class="viewer"><div style="display:flex;align-items:center;padding:34px 12px 8px;gap:8px"><button class="heart" style="color:#fff" onclick="set({viewer:null,photo:${i}})">✕</button><div style="flex:1;text-align:center">${i+1} / ${L.photos}</div>${isOwner()||closed()?'<span style="width:20px"></span>':`<button class="heart" style="color:#fff">${S.fav?'♥':'♡'}</button>`}</div>
+      <div style="flex:1;display:flex;align-items:center;position:relative"><div class="ph ${cls}" style="height:250px;width:100%">Photo ${i+1} · pinch to zoom · swipe</div>
+      <button onclick="set({viewer:(${i}+${L.photos}-1)%${L.photos}})" style="position:absolute;left:4px;border:0;background:#333;color:#fff;border-radius:50%;width:30px;height:30px">‹</button><button onclick="set({viewer:(${i}+1)%${L.photos}})" style="position:absolute;right:4px;border:0;background:#333;color:#fff;border-radius:50%;width:30px;height:30px">›</button></div>
+      <div style="display:flex;gap:4px;padding:6px 10px;overflow:hidden">${Array.from({length:L.photos},(_,k)=>`<div onclick="set({viewer:${k}})" class="ph ${["","b","c"][k%3]}" style="width:36px;height:28px;flex:none;border-radius:4px;${k===i?'outline:2px solid #fff':'opacity:.6'}"></div>`).join("")}</div>
+      ${S.opt.viewerCta&&!isOwner()&&!closed()?`<div style="display:flex;gap:8px;padding:8px 12px 18px"><button class="btn brand" style="flex:1">Call</button><button class="btn" style="flex:1;background:#333;color:#fff">Message</button></div>`:'<div style="height:24px"></div>'}
+      <div class="xs" style="text-align:center;color:#aaa;padding-bottom:10px">Swipe down or ✕ to close → detail opens at photo ${i+1}</div></div>`;
+  }
+  if(S.sheet){
+    let c="";
+    if(S.sheet==="more") c=`<div style="display:flex;flex-direction:column;gap:6px"><button class="btn out" onclick="set({sheet:'report'})">⚑ Report listing</button><button class="btn out" onclick="toast('Link copied');S.sheet=null">Copy link</button><button class="btn out" onclick="set({sheet:null})">Cancel</button></div>`;
+    if(S.sheet==="ownerMore") c=`<div style="display:flex;flex-direction:column;gap:6px"><button class="btn out">Remove from sale (archive)</button><button class="btn out">Share</button><button class="btn out" style="color:var(--destructive)">Delete listing</button><button class="btn out" onclick="set({sheet:null})">Cancel</button></div>`;
+    if(S.sheet==="report") c=`<b>Report listing</b><div class="sm mute" style="margin:6px 0">Existing ReportSheet: reason + optional note.</div><button class="btn out" style="width:100%" onclick="set({sheet:null})">Close</button>`;
+    o+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet">${c}</div>`;
+  }
+  if(S.toast) o+=`<div class="toast" style="${S.surface==='cards'?'bottom:66px':''}">${S.toast.replace("Undo",'<b style="color:#ff8a80;float:right;cursor:pointer" onclick="undoFav()">Undo</b>')}</div>`;
+  return o;
+}
+
+/* ───────────── panel ───────────── */
+function seg(items,cur,fn){return `<div class="seg">${items.map(([k,n])=>`<button class="${cur===k?'on':''}" onclick="${fn}('${k}')">${n}</button>`).join("")}</div>`;}
+function chk(k,label,why){return `<div class="q"><label><input type="checkbox" ${S.opt[k]?'checked':''} onchange="opt('${k}',this.checked)"> <span>${label}</span></label>${why?`<div class="why">${why}</div>`:""}</div>`;}
+function panel(){
+  const dv=DETAIL_VARIANTS[S.detail];
+  let h=`<h1>PROTOTYPE — Listing card and Listing detail content</h1>
+  <div class="sm mute">Throwaway. Use the floating bar or ← → keys to flip variants; everything in the phone is clickable. Colours are AutoTM tokens.</div>
+  <h2>Surface</h2>${seg([["cards","Cards (Home · Results · Favorites)"],["detail","Listing detail"]],S.surface,"setSurface")}`;
+  if(S.surface==="cards"){
+    const n=foldCount();
+    const co=(k,items)=>seg(items,S.co[k],`(v=>{S.co.${k}=v;render()})`);
+    const cb=(k,label,why)=>`<div class="q"><label><input type="checkbox" ${S.co[k]?'checked':''} onchange="S.co.${k}=this.checked;render()"> <span>${label}</span></label>${why?`<div class="why">${why}</div>`:""}</div>`;
+    h+=`<h2>Screen</h2>${seg([["home","Home"],["results","Results"],["favorites","Favorites"]],S.cardTab,"(v=>set({cardTab:v}))")}
+      <div class="q" style="font-size:14px">On the first screen: <b>${n??"–"} Listing${n===1?"":"s"}</b> <span class="xs mute">(at least partly visible, above the tab bar)</span></div>
+      <h2>Home “New listings” — ${S.cards}: ${HOME_VARIANTS[S.cards].name}</h2><div class="vdesc">${HOME_VARIANTS[S.cards].desc}</div>
+      ${seg([["A","A Large"],["B","B Compact"],["C","C Grid"],["D","D Strip"]],S.cards,"setCards")}
+      <h2>Large card (Results; Home A; Favorites large)</h2>
+      <div class="q">Photos ${co("photos",[["two","Two fixed (approved)"],["swipe","Swipe strip, up to 5"],["one","One wide"]])}
+        <div class="why" style="margin:4px 0 0">One photo → full width; none → “No photos” tile. Tapping any photo opens the Listing, not the viewer.</div></div>
+      <div class="q">♡ position ${co("heart",[["bottom","Bottom right (Auto.ru)"],["photo","On the photo"]])}</div>
+      <div class="q">Spec line ${co("spec",[["base","km · gearbox · fuel (approved)"],["power","+ power"]])}
+        <div class="why" style="margin:4px 0 0">New cars show “New” instead of km. Missing fields drop out, with no dashes (see the Mercedes and the Lada).</div></div>
+      ${cb("count","📷 photo count on the first photo","Tells the buyer there is more than the two photos shown.")}
+      ${cb("verified","“Phone verified” on cards","Recommended off: the approved card leaves it out, and it sits on the detail seller card.")}
+      <h2>Favorites</h2>
+      <div class="q">Layout ${seg([["auto","Auto.ru: large + Call/Message, Hide sold (AR-36-002)"],["large","Plain large card"],["compact","Compact rows"]],S.favLayout,"(v=>set({favLayout:v}))")}<div class="why" style="margin:4px 0 0">Auto.ru shows Call and Message on every saved card, and hides sold ones by default behind a switch. No recommendations block below (ruled out).</div></div>
+      <div class="q">State ${seg([["list","3 saved (1 sold, 1 removed from sale)"],["empty","Empty"]],S.favState,"(v=>set({favState:v}))")}
+        <div class="why" style="margin:4px 0 0">Tap ♥ in Favorites: the card leaves at once with “Undo”. Deleted and banned Listings are never listed (the API already drops them).</div></div>
+      <h2>Whole-app states</h2>
+      ${cb("anon","Signed out","♡ → sign in → saved → back on the same screen and scroll. Favorites tab shows the sign-in prompt.")}
+      ${cb("loading","Loading","Skeletons match the chosen card shape, so nothing jumps when data lands.")}
+      ${cb("dark","Dark theme (AutoTM dark tokens)","")}
+      <h2>Card rules (proposed, fixed across variants)</h2>
+      <div class="q sm">
+      • <b>Price</b> first, in TMT only; original currency is detail and owner only.<br>
+      • <b>Title</b> “Brand Model, year”, one line, ellipsis. No generation on cards.<br>
+      • <b>Date</b> “Today”, “Yesterday”, “12 Sep”, or “3 Mar 2025” for earlier years. Uses publishedAt.<br>
+      • <b>No badges</b> for exchange, installment, “new listing” or price quality. Sold / Removed from sale only, and only in Favorites (Results and Home never contain them).<br>
+      • <b>City</b> only; no region, no street.</div>`;
+  } else {
+    h+=`<h2>Detail variant ${S.detail} — ${dv.name}</h2><div class="vdesc">${dv.desc}</div>
+      ${seg([["A","A"],["B","B"],["C","C"]],S.detail,"setDetail")}
+      <h2>State</h2>${seg([["buyer","Signed in"],["anon","Signed out"],["owner","Owner"],["sold","Sold"],["archived","Removed from sale"],["removed","Deleted / banned"],["loading","Loading"]],S.state,"setState")}
+      ${S.state==="loading"?`<div style="margin-top:6px">${seg([["seeded","Seeded from the card"],["skeleton","Plain skeleton (today)"]],S.loadMode,"setLoad")}</div>`:""}
+      <h2>Blocks to keep or drop</h2>
+      ${chk("disclosure","Condition disclosure (S9a)","Founder decision 2026-09-21: one question, Damaged / needs repair (yes/no), plus Known issues text. Owners, service history and the mileage checkbox are dropped. ADR to follow.")}
+      ${chk("vinSection","VIN decode section (S9a)","Today it shows decoded brand/model/year with a confidence %. Close to a “history report” block, which is ruled out. When off, the VIN remains a spec row.")}
+      ${chk("ask","“Ask the seller” quick questions (AR-11-008)","Tapping one opens the Conversation with that text ready to send. Reuses the four static QuickReplies intents. Needs sign-in, then replay.")}
+      ${chk("descMore","Clamp the description at 3 lines with “More” (KZ-07-003)","")}
+      ${chk("share","Share in the header","Today Share sits in the bottom bar. Moving it up frees the bar for Call + Message.")}
+      ${chk("footer","ID · Published · Updated footer (KZ-07-007)","A short ID the user can quote to support. Needs a public short ID, or the first 8 characters of the UUID.")}
+      ${chk("ownerStats","Views and saves, owner only","Buyers never see view counters.")}
+      ${chk("similar","On sold / removed-from-sale: “See other Toyota Camry” → Results","This is a plain brand + model filter, not a recommendation, so it stays within the no-personalization rule.")}
+      ${chk("viewerCta","Call + Message inside the photo viewer (AR-11-004)","")}
+      ${chk("inspection","Inspection-interest fake door (S9a)","Experiment CTA. Decide whether it survives into the review build.")}
+      ${chk("trustLink","“How to buy safely” link to auto.tm/trust","The screen map ruled out safety and prepayment notes. Today this link renders at the bottom of every detail screen.")}
+      <h2>Behaviour shown</h2>
+      <div class="q sm">
+      • <b>Collapsing header:</b> scroll past the photos and the header turns solid, showing price + “Brand Model, year” (AR-11-005). Back, Share, ♡ and ⋯ stay put. Report listing also sits in ⋯.<br>
+      • <b>Photo viewer:</b> tap a photo → black full screen, “n / 12” counter, ✕, ♡, swipe, pinch zoom, and a thumbnail strip. Closing lands the gallery on the same photo.<br>
+      • <b>Call</b> opens the dialer, no sheet. <b>Message, ♡, Report and Ask</b> need sign-in, return to this Listing, and finish the action.<br>
+      • <b>Sold / removed from sale:</b> contact bar and ♡ hidden, price greyed, banner on the photo. Today an archived Listing still shows an active Call button.<br>
+      • <b>Owner:</b> no Call/Message. Edit and Mark sold in the bar, Archive/Delete in ⋯, the original currency under the price.
+      </div>`;
+  }
+  h+=`<h2>API fields this needs (for “Slice the approved discovery journey”)</h2>
+  <table><tr><th>Field</th><th>Surface</th><th>Today</th></tr>
+  <tr><td>Two photo keys (first two by sortOrder)</td><td>Large card</td><td class="miss">Summary has one coverMediaKey</td></tr>
+  <tr><td>mileageKm</td><td>Card · detail</td><td class="miss">Detail only</td></tr>
+  <tr><td>transmissionId (gearbox)</td><td>Card · detail</td><td class="miss">Detail only</td></tr>
+  <tr><td>engineTypeId (fuel)</td><td>Card · detail</td><td class="miss">Detail only</td></tr>
+  <tr><td>isFavorited per item (signed in)</td><td>Card ♡</td><td class="miss">Detail only</td></tr>
+  <tr><td>sellerTrust.phoneVerified — real value</td><td>Detail (± card)</td><td class="fix">Hard-coded true (VERIFIED_PHONE_TRUST)</td></tr>
+  <tr><td>seller display name (User.displayName, fallback “Private seller”)</td><td>Detail seller card</td><td class="miss">Not exposed</td></tr>
+  <tr><td>seller “on AutoTM since” (User.createdAt, month)</td><td>Detail seller card</td><td class="miss">Not exposed · optional</td></tr>
+  <tr><td>media count</td><td>Detail counter</td><td class="have">media[] length</td></tr>
+  <tr><td>publishedAt / updatedAt / soldAt</td><td>Card date · footer · Sold banner</td><td class="have">Detail has all · Summary has publishedAt</td></tr>
+  <tr><td>status on Favorites items (sold / archived)</td><td>Favorites card</td><td class="have">Present</td></tr>
+  <tr><td>Short public listing ID</td><td>Footer</td><td class="fix">Decide: new field or UUID prefix</td></tr>
+  <tr><td>year, price, city, brand/model</td><td>All</td><td class="have">Present</td></tr>
+  </table>
+  <div class="xs mute" style="margin-top:6px">Brand, model, city and gearbox/fuel names resolve client-side from catalog maps, as today.</div>`;
+  document.getElementById("panel").innerHTML=h;
+}
+window.setSurface=k=>set({surface:k});
+window.setCards=k=>set({cards:k});
+window.setDetail=k=>set({detail:k});
+window.setState=k=>set({state:k,viewer:null,sheet:null,fav:k==="buyer"?S.fav:false});
+window.setLoad=k=>set({loadMode:k});
+
+/* ───────────── render ───────────── */
+function render(){
+  const sc=document.getElementById("scroller"); const top=sc.scrollTop;
+  sc.innerHTML = S.surface==="cards"?cardsSurface():detailSurface();
+  sc.style.top = S.surface==="detail"?"24px":"24px";
+  document.getElementById("overlay").innerHTML=overlays()+(S.surface==="cards"?tabbar():"");
+  document.getElementById("phone").classList.toggle("dark",S.surface==="cards"&&S.co.dark);
+  sc.scrollTop=top; onScroll();
+  panel(); switcher();
+}
+function onScroll(){
+  const hdr=document.getElementById("hdr"); if(!hdr) return;
+  hdr.classList.toggle("solid", document.getElementById("scroller").scrollTop>230);
+}
+document.getElementById("scroller").addEventListener("scroll",onScroll);
+
+/* ───────────── floating switcher ───────────── */
+function switcher(){
+  const key=S.surface==="cards"?"cards":"detail", V=key==="cards"?HOME_VARIANTS:DETAIL_VARIANTS;
+  document.getElementById("switcher").innerHTML=`<button onclick="cycle(-1)">←</button><span class="lbl">${key==="cards"?"Home cards":"Detail"} ${S[key]} — ${V[S[key]].name}</span><button onclick="cycle(1)">→</button><button class="which" onclick="setSurface('${key==="cards"?"detail":"cards"}')">switch to ${key==="cards"?"detail":"cards"}</button>`;
+}
+window.cycle=d=>{const key=S.surface==="cards"?"cards":"detail",ks=key==="cards"?["A","B","C","D"]:["A","B","C"];const i=(ks.indexOf(S[key])+d+ks.length)%ks.length;set({[key]:ks[i]});};
+document.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea,[contenteditable]"))return;if(e.key==="ArrowLeft")cycle(-1);if(e.key==="ArrowRight")cycle(1);});
+render();
+</script>
+</body>
+</html>
