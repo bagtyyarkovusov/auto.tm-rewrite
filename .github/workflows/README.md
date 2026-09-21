@@ -10,6 +10,8 @@ GitHub Actions workflows.
 | `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | install → db generate → glossary check → lint → typecheck → `pnpm test` |
 | `bundle.yml` | Tag push `v*` | self-hosted (`tm-proxy`) | `make bundle TAG=<tag>`, uploads `images/auto-tm-<tag>.tar.gz` as a workflow artifact (90-day retention) |
 
+Each workflow reports the Node and pnpm versions, pnpm store path, and free space before `pnpm install`. Compare these lines with pnpm's `reused` and `downloaded` counts when an install is unexpectedly slow. The investigation and baseline timings are in [the runner performance research](../../docs/research/github-actions-self-hosted-performance.md).
+
 ## Self-hosted runner
 
 One runner is registered: **`tm-build-mac`** (labels `self-hosted, macOS, ARM64, tm-proxy`), the developer's Mac, registered repo-scoped. ADR-0005 designates the dev Mac as the backup build box; it is currently the only one.
