@@ -58,7 +58,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0050](0050-wizard-validation-messages-as-translation-keys.md) | Wizard validation messages are translation keys, not prose | Accepted | 2026-09-18 |
 | [0051](0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) | Auto.ru-inspired mobile discovery before Google Play review (supersedes ADR-0034 for mobile discovery and conflicting ADR-0035 browse clauses) | Accepted | 2026-09-21 |
 | [0052](0052-seller-condition-disclosure-is-damaged-plus-known-issues.md) | Seller condition disclosure is "Damaged / needs repair" plus known issues (amends ADR-0037 condition disclosure) | Accepted | 2026-09-21 |
-| [0053](0053-defer-vin-decoding-until-a-real-decoder-exists.md) | Defer VIN decoding until a real decoder exists (amends ADR-0037 VIN history signal) | Accepted | 2026-09-21 |
+| [0053](0053-defer-vin-decoding-until-a-real-decoder-exists.md) | Defer VIN decoding until a real decoder exists (amends ADR-0037 VIN history signal) | Accepted | 2026-09-22 |
 
 ## Per-app ADRs
 
