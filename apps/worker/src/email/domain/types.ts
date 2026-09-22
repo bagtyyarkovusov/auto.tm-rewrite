@@ -14,6 +14,16 @@ export const EMAIL_SEND_FAILURE = {
 export type EmailSendFailure =
   (typeof EMAIL_SEND_FAILURE)[keyof typeof EMAIL_SEND_FAILURE];
 
+export const SEND_SIGN_IN_CODE_OUTCOME = {
+  Sent: "sent",
+  CapReached: "cap-reached",
+  Rejected: "rejected",
+  Retryable: "retryable",
+} as const;
+
+/** The `alert` field on the log line written when the daily cap stops a send. */
+export const EMAIL_DAILY_CAP_REACHED_ALERT = "EMAIL_DAILY_CAP_REACHED";
+
 /** Mirrors `Locale` in `@auto-tm/contracts`. */
 export const EMAIL_LOCALE = {
   Ru: "ru",

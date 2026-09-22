@@ -8,7 +8,7 @@ import {
   renderSignInCodeEmail,
   type SignInCodeEmailInput,
 } from "../domain/renderSignInCodeEmail";
-import { EMAIL_SEND_FAILURE } from "../domain/types";
+import { EMAIL_SEND_FAILURE, SEND_SIGN_IN_CODE_OUTCOME as OUTCOME } from "../domain/types";
 
 export interface SendSignInCodeEmailInput extends SignInCodeEmailInput {
   /** The BullMQ job ID: the idempotency key and the daily-cap slot. */
@@ -16,10 +16,10 @@ export interface SendSignInCodeEmailInput extends SignInCodeEmailInput {
 }
 
 export type SendSignInCodeEmailOutcome =
-  | { status: "sent" }
-  | { status: "cap-reached"; cap: number }
-  | { status: "rejected"; cause: string }
-  | { status: "retryable"; cause: string };
+  | { status: typeof OUTCOME.Sent }
+  | { status: typeof OUTCOME.CapReached; cap: number }
+  | { status: typeof OUTCOME.Rejected; cause: string }
+  | { status: typeof OUTCOME.Retryable; cause: string };
 
 @Injectable()
 export class SendSignInCodeEmail {
@@ -36,17 +36,17 @@ export class SendSignInCodeEmail {
   ): Promise<SendSignInCodeEmailOutcome> {
     const decision = await this.dailyCap.reserve(input.jobId, now);
     if (!decision.allowed) {
-      return { status: "cap-reached", cap: decision.cap };
+      return { status: OUTCOME.CapReached, cap: decision.cap };
     }
 
     const result = await this.sender.send(renderSignInCodeEmail(input), {
       idempotencyKey: input.jobId,
     });
 
-    if (result.ok) return { status: "sent" };
+    if (result.ok) return { status: OUTCOME.Sent };
     if (result.reason === EMAIL_SEND_FAILURE.Rejected) {
-      return { status: "rejected", cause: result.cause };
+      return { status: OUTCOME.Rejected, cause: result.cause };
     }
-    return { status: "retryable", cause: result.cause };
+    return { status: OUTCOME.Retryable, cause: result.cause };
   }
 }

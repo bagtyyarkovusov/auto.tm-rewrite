@@ -17,8 +17,10 @@ const RETRYABLE_NAMES = new Set([
 
 /**
  * Everything not known to be transient is a rejection, so a bad address, a
- * suppressed recipient, a spent quota or a misconfigured key fails the job
- * once instead of retrying. A null status code is a network fault.
+ * spent quota or a misconfigured key fails the job once instead of retrying.
+ * A null status code is a network fault. Resend accepts a send to a suppressed
+ * address and reports the suppression only as a later `email.suppressed`
+ * webhook, which ADR-0055 rules out, so suppression never reaches this map.
  */
 export function classifyResendError(error: ResendErrorLike): EmailSendResult & { ok: false } {
   if (error.statusCode === null) {

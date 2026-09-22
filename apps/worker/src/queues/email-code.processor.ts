@@ -4,6 +4,10 @@ import { UnrecoverableError, type Job } from "bullmq";
 import { AuthSchemas } from "@auto-tm/contracts";
 
 import { SendSignInCodeEmail } from "../email/application/SendSignInCodeEmail";
+import {
+  EMAIL_DAILY_CAP_REACHED_ALERT,
+  SEND_SIGN_IN_CODE_OUTCOME as OUTCOME,
+} from "../email/domain/types";
 
 /** `a***@example.com`: enough to tell recipients apart in logs, not to read them. */
 export function maskEmail(address: string): string {
@@ -57,19 +61,19 @@ export class EmailCodeProcessor extends WorkerHost {
     });
 
     switch (outcome.status) {
-      case "sent":
+      case OUTCOME.Sent:
         this.logger.log(context, "[email-code] sent");
         return;
-      case "cap-reached":
+      case OUTCOME.CapReached:
         this.logger.error(
-          { ...context, alert: "EMAIL_DAILY_CAP_REACHED", cap: outcome.cap },
+          { ...context, alert: EMAIL_DAILY_CAP_REACHED_ALERT, cap: outcome.cap },
           `[email-code] ALERT daily email cap of ${outcome.cap} reached; not sending`,
         );
         throw new UnrecoverableError(`daily email cap of ${outcome.cap} reached`);
-      case "rejected":
+      case OUTCOME.Rejected:
         this.logger.error({ ...context, cause: outcome.cause }, "[email-code] rejected by provider");
         throw new UnrecoverableError(`email rejected by provider: ${outcome.cause}`);
-      case "retryable":
+      case OUTCOME.Retryable:
         this.logger.warn({ ...context, cause: outcome.cause }, "[email-code] retryable send failure");
         throw new Error(`retryable email send failure: ${outcome.cause}`);
     }
