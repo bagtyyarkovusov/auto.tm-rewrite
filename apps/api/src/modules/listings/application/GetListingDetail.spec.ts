@@ -271,6 +271,42 @@ describe("GetListingDetail", () => {
     expect(result.status).toBe("banned");
   });
 
+  describe("buyer visibility regression (#366)", () => {
+    it("returns 404 for a soft-deleted listing requested by a buyer", async () => {
+      const listing = seedListing({ sellerId: "user-1" });
+      repo.listings = [listing.softDelete(new Date())];
+
+      const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+      await expect(
+        uc.execute({ listingId: "listing-1", requestingUserId: "user-2" }),
+      ).rejects.toThrow("Listing not found");
+    });
+
+    it("returns 404 for a banned listing requested anonymously", async () => {
+      seedListing({ status: "banned", sellerId: "user-1" });
+
+      const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+      await expect(uc.execute({ listingId: "listing-1" })).rejects.toThrow(
+        "Listing not found",
+      );
+    });
+
+    it.each(["sold", "archived"] as const)(
+      "serves a %s listing to buyers so the client can show it closed for contact",
+      async (status) => {
+        seedListing({ status, sellerId: "user-1" });
+
+        const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+        const result = await uc.execute({
+          listingId: "listing-1",
+          requestingUserId: "user-2",
+        });
+
+        expect(result.status).toBe(status);
+      },
+    );
+  });
+
   it("returns isFavorited=false when no requestingUserId", async () => {
     seedListing();
     favorites.favorites.add("user-1:listing-1");
