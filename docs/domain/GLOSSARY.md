@@ -22,7 +22,7 @@ _Avoid_: Account, customer
 
 **Sign-in Method**
 
-A phone number or email address that belongs to exactly one User and that the User proved they control by confirming a Sign-in Code sent to it. A User has at most one of each kind and at least one in total.
+A phone number or email address that belongs to exactly one User and that the User proved they control by confirming a Sign-in Code sent to it. A User has at most one of each kind, and a live User has at least one.
 
 _Avoid_: Login, credential, contact method
 
