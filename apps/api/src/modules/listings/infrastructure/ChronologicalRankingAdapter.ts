@@ -1,13 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService, type Prisma } from "@auto-tm/db";
 
+import { toCardPhotos, type CardPhotos } from "../domain/CardPhotos";
 import { Listing } from "../domain/Listing";
-import type { FeedRankingPort } from "../domain/ports/FeedRankingPort";
+import type { FeedRankingPort, RankedListing } from "../domain/ports/FeedRankingPort";
 import {
   EXCHANGE_RATE_PORT,
   type ExchangeRatePort,
 } from "../domain/ports/ExchangeRatePort";
-import type { Currency, FeedCursor, ListingFilterCriteria } from "../domain/types";
+import type { Currency, FeedCursor, ListingFilterCriteria, MediaKind } from "../domain/types";
 
 @Injectable()
 export class ChronologicalRankingAdapter implements FeedRankingPort {
@@ -22,7 +23,7 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     filters?: ListingFilterCriteria;
     cursor?: FeedCursor;
     limit: number;
-  }): Promise<{ items: Listing[]; nextCursor?: FeedCursor }> {
+  }): Promise<{ items: RankedListing[]; nextCursor?: FeedCursor }> {
     const take = query.limit + 1;
     const where = await this.buildWhere(query.filters, query.cursor);
 
@@ -30,10 +31,12 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
       where,
       orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
       take,
+      // One batched media read for the whole page (not per row). A Listing
+      // holds at most 20 photos + 1 video, so the full key list stays small.
       include: {
         media: {
           orderBy: { sortOrder: "asc" },
-          take: 1,
+          select: { key: true, kind: true },
         },
       },
     });
@@ -42,8 +45,11 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     const items = hasMore ? rows.slice(0, -1) : rows;
     const last = items[items.length - 1];
 
-    const result: { items: Listing[]; nextCursor?: FeedCursor } = {
-      items: items.map((r) => this.toDomain(r)),
+    const result: { items: RankedListing[]; nextCursor?: FeedCursor } = {
+      items: items.map((r) => {
+        const photos = toCardPhotos(r.media);
+        return { listing: this.toDomain(r, photos), photos };
+      }),
     };
 
     if (hasMore && last && last.publishedAt) {
@@ -225,8 +231,8 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     installmentAvailable: boolean;
     createdAt: Date;
     updatedAt: Date;
-    media: Array<{ key: string }>;
-  }): Listing {
+    media: Array<{ key: string; kind: MediaKind }>;
+  }, photos: CardPhotos): Listing {
     return Listing.create({
       id: row.id,
       sellerId: row.sellerId,
@@ -257,12 +263,12 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
       ...(row.transmissionId ? { transmissionId: row.transmissionId } : {}),
       ...(row.driveTypeId ? { driveTypeId: row.driveTypeId } : {}),
       ...(row.enginePower ? { enginePower: row.enginePower } : {}),
-      ...(row.mileageKm ? { mileageKm: row.mileageKm } : {}),
+      ...(row.mileageKm !== null ? { mileageKm: row.mileageKm } : {}),
       ...(row.locationText ? { locationText: row.locationText } : {}),
       ...(row.description ? { description: row.description } : {}),
       acceptsExchange: row.acceptsExchange,
       installmentAvailable: row.installmentAvailable,
-      ...(row.media[0]?.key ? { coverMediaKey: row.media[0].key } : {}),
+      ...(photos.coverMediaKey ? { coverMediaKey: photos.coverMediaKey } : {}),
     });
   }
 }

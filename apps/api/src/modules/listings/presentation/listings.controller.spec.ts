@@ -1,4 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
+import type { FastifyRequest } from "fastify";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { ListingsController } from "./listings.controller";
@@ -103,10 +104,13 @@ describe("ListingsController filter validation", () => {
     } as unknown as ListFeed;
     const controller = buildController({ listFeed });
 
-    await controller.listFeed({
-      brandId: "550e8400-e29b-41d4-a716-446655440000",
-      modelIds: ["550e8400-e29b-41d4-a716-446655440001"],
-    });
+    await controller.listFeed(
+      {
+        brandId: "550e8400-e29b-41d4-a716-446655440000",
+        modelIds: ["550e8400-e29b-41d4-a716-446655440001"],
+      },
+      {} as FastifyRequest,
+    );
 
     expect(listFeed.execute).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -115,6 +119,22 @@ describe("ListingsController filter validation", () => {
           modelIds: ["550e8400-e29b-41d4-a716-446655440001"],
         },
       }),
+    );
+    expect(listFeed.execute).toHaveBeenCalledWith(
+      expect.not.objectContaining({ viewerId: expect.anything() }),
+    );
+  });
+
+  it("forwards the signed-in viewer to the feed use-case", async () => {
+    const listFeed = {
+      execute: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    } as unknown as ListFeed;
+    const controller = buildController({ listFeed });
+
+    await controller.listFeed({}, { user: { sub: "viewer-1" } } as unknown as FastifyRequest);
+
+    expect(listFeed.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ viewerId: "viewer-1" }),
     );
   });
 });

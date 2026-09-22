@@ -58,6 +58,7 @@ import { IMAGE_VARIANT_GENERATOR } from "./domain/ports/ImageVariantGenerator";
 import { EXCHANGE_RATE_PORT } from "./domain/ports/ExchangeRatePort";
 import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
 import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
+import { LISTING_CARD_READ_PORT } from "./domain/ports/ListingCardReadPort";
 import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
 import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
 
@@ -124,6 +125,10 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     {
       provide: LISTINGS_READ_PORT,
       useClass: PrismaListingsReadRepository,
+    },
+    {
+      provide: LISTING_CARD_READ_PORT,
+      useExisting: PrismaListingsReadRepository,
     },
     {
       provide: LISTINGS_ADMIN_PORT,

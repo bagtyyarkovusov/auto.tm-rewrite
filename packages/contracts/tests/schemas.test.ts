@@ -13,6 +13,8 @@ import {
   EditListingRequestSchema,
   FeedQuerySchema,
   FeedResponseSchema,
+  FavoriteListingSummarySchema,
+  MyFavoritesResponseSchema,
   ListingFilterSchema,
   encodeCursor,
   decodeCursor,
@@ -107,10 +109,18 @@ const validListingSummary = {
   priceAmount: 1890000,
   priceCurrency: "TMT" as const,
   displayPriceTmt: 1890000,
+  photoKeys: [] as string[],
+  photoCount: 0,
   cityId: "550e8400-e29b-41d4-a716-446655440004",
   publishedAt: "2026-05-17T14:32:01Z",
   sellerTrust: { phoneVerified: true },
 };
+
+function without<T extends object>(obj: T, key: keyof T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([k]) => k !== key),
+  ) as Partial<T>;
+}
 
 describe("ListingSummarySchema", () => {
   it("accepts a valid summary", () => {
@@ -139,6 +149,72 @@ describe("ListingSummarySchema", () => {
     delete (withoutSellerTrust as Partial<typeof withoutSellerTrust>).sellerTrust;
     const result = ListingSummarySchema.safeParse(withoutSellerTrust);
     expect(result.success).toBe(false);
+  });
+
+  it("accepts card fields and a signed-in isFavorited flag", () => {
+    const result = ListingSummarySchema.safeParse({
+      ...validListingSummary,
+      photoKeys: ["listings/a/0.jpg", "listings/a/1.jpg"],
+      photoCount: 7,
+      mileageKm: 120000,
+      condition: "used",
+      transmissionId: "550e8400-e29b-41d4-a716-446655440010",
+      engineTypeId: "550e8400-e29b-41d4-a716-446655440011",
+      isFavorited: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires photoKeys and photoCount", () => {
+    const withoutKeys = without(validListingSummary, "photoKeys");
+    const withoutCount = without(validListingSummary, "photoCount");
+    expect(ListingSummarySchema.safeParse(withoutKeys).success).toBe(false);
+    expect(ListingSummarySchema.safeParse(withoutCount).success).toBe(false);
+  });
+
+  it("rejects more than two photoKeys", () => {
+    const result = ListingSummarySchema.safeParse({
+      ...validListingSummary,
+      photoKeys: ["a", "b", "c"],
+      photoCount: 3,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("FavoriteListingSummarySchema", () => {
+  const validFavorite = {
+    ...validListingSummary,
+    contactPhone: "+99365000000",
+    allowCalls: true,
+    allowChat: false,
+  };
+
+  it("accepts a summary with contact preferences", () => {
+    expect(FavoriteListingSummarySchema.safeParse(validFavorite).success).toBe(true);
+  });
+
+  it("allows contactPhone to be absent", () => {
+    const withoutPhone = without(validFavorite, "contactPhone");
+    expect(FavoriteListingSummarySchema.safeParse(withoutPhone).success).toBe(true);
+  });
+
+  it("requires allowCalls and allowChat", () => {
+    const withoutCalls = without(validFavorite, "allowCalls");
+    const withoutChat = without(validFavorite, "allowChat");
+    expect(FavoriteListingSummarySchema.safeParse(withoutCalls).success).toBe(false);
+    expect(FavoriteListingSummarySchema.safeParse(withoutChat).success).toBe(false);
+  });
+
+  it("is the MyFavoritesResponse item shape", () => {
+    const result = MyFavoritesResponseSchema.safeParse({
+      items: [validListingSummary],
+      nextCursor: null,
+    });
+    expect(result.success).toBe(false);
+    expect(
+      MyFavoritesResponseSchema.safeParse({ items: [validFavorite], nextCursor: null }).success,
+    ).toBe(true);
   });
 });
 
@@ -1051,6 +1127,8 @@ describe("OpenAPI document", () => {
     expect(doc.components.schemas).toHaveProperty("ListingMedia");
     expect(doc.components.schemas).toHaveProperty("ListingDraft");
     expect(doc.components.schemas).toHaveProperty("FeedResponse");
+    expect(doc.components.schemas).toHaveProperty("FavoriteListingSummary");
+    expect(doc.components.schemas).toHaveProperty("MyFavoritesResponse");
   });
 
   it("contains uploads and exchange-rates schemas", () => {

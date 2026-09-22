@@ -36,6 +36,14 @@ class FakeFavoriteRepository implements FavoriteRepository {
     );
   }
 
+  async favoritedListingIds(userId: string, listingIds: string[]): Promise<Set<string>> {
+    return new Set(
+      listingIds.filter((id) =>
+        this.favorites.some((f) => f.userId === userId && f.listingId === id),
+      ),
+    );
+  }
+
   async listByUserId(
     _userId: string,
     _opts?: { cursor?: { timestamp: string; id: string }; limit?: number },

@@ -9,9 +9,9 @@ import {
   type FavoriteRepository,
 } from "../domain/ports/FavoriteRepository";
 import {
-  LISTINGS_READ_PORT,
-  type ListingsReadPort,
-} from "../domain/ports/ListingsReadPort";
+  LISTING_CARD_READ_PORT,
+  type ListingCardReadPort,
+} from "../domain/ports/ListingCardReadPort";
 
 export interface ListMyFavoritesInput {
   userId: string;
@@ -28,8 +28,8 @@ export class ListMyFavorites {
   constructor(
     @Inject(FAVORITE_REPOSITORY)
     private readonly favorites: FavoriteRepository,
-    @Inject(LISTINGS_READ_PORT)
-    private readonly listingsRead: ListingsReadPort,
+    @Inject(LISTING_CARD_READ_PORT)
+    private readonly cards: ListingCardReadPort,
   ) {}
 
   async execute(input: ListMyFavoritesInput): Promise<MyFavoritesResponseDto> {
@@ -45,14 +45,14 @@ export class ListMyFavorites {
     });
 
     const listingIds = favoriteResult.items.map((f) => f.listingId);
-    const summaries = await this.listingsRead.getListingSummaries(listingIds);
+    const cards = await this.cards.getVisibleCards(listingIds);
 
     // Build a map for stable ordering and deduplication
-    const summaryMap = new Map(summaries.map((s) => [s.id, s]));
+    const cardMap = new Map(cards.map((s) => [s.id, s]));
 
     // Preserve favorite order (newest first), but only include visible listings
     const items = favoriteResult.items
-      .map((f) => summaryMap.get(f.listingId))
+      .map((f) => cardMap.get(f.listingId))
       .filter((s): s is NonNullable<typeof s> => s !== undefined);
 
     return {
@@ -67,9 +67,18 @@ export class ListMyFavorites {
         priceCurrency: item.priceCurrency,
         displayPriceTmt: item.displayPriceTmt,
         coverMediaKey: item.coverMediaKey,
+        photoKeys: item.photoKeys,
+        photoCount: item.photoCount,
+        mileageKm: item.mileageKm,
+        condition: item.condition,
+        transmissionId: item.transmissionId,
+        engineTypeId: item.engineTypeId,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
         sellerTrust: VERIFIED_PHONE_TRUST,
+        contactPhone: item.contactPhone,
+        allowCalls: item.allowCalls,
+        allowChat: item.allowChat,
       })),
       nextCursor: favoriteResult.nextCursor
         ? ListingsSchemas.encodeCursor(favoriteResult.nextCursor)

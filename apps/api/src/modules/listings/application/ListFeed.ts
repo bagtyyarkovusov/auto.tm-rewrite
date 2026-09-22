@@ -16,8 +16,14 @@ import {
   MEDIA_STORAGE_PORT,
   type MediaStoragePort,
 } from "../domain/ports/MediaStoragePort";
+import {
+  FAVORITE_REPOSITORY,
+  type FavoriteRepository,
+} from "../domain/ports/FavoriteRepository";
 
 export interface ListFeedInput {
+  /** Signed-in viewer, when the request carries one; drives `isFavorited`. */
+  viewerId?: string;
   cursor?: string;
   limit?: number;
   filters?: ListingFilterCriteria;
@@ -34,6 +40,8 @@ export class ListFeed {
     private readonly exchangeRates: ExchangeRatePort,
     @Inject(MEDIA_STORAGE_PORT)
     private readonly storage: MediaStoragePort,
+    @Inject(FAVORITE_REPOSITORY)
+    private readonly favorites: FavoriteRepository,
   ) {}
 
   async execute(input: ListFeedInput): Promise<FeedResponseDto> {
@@ -44,14 +52,22 @@ export class ListFeed {
       : undefined;
 
     const rankResult = await this.ranking.rank({
+      ...(input.viewerId !== undefined ? { viewerId: input.viewerId } : {}),
       ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
       limit,
       ...(input.filters !== undefined ? { filters: input.filters } : {}),
     });
 
     const rateMap = await this.buildRateMap();
+    const favorited =
+      input.viewerId !== undefined
+        ? await this.favorites.favoritedListingIds(
+            input.viewerId,
+            rankResult.items.map(({ listing }) => listing.id),
+          )
+        : undefined;
 
-    const items = rankResult.items.map((listing) => {
+    const items = rankResult.items.map(({ listing, photos }) => {
       const displayPriceTmt = this.computeDisplayPriceTmt(
         listing.priceAmount,
         listing.priceCurrency,
@@ -69,9 +85,18 @@ export class ListFeed {
         priceCurrency: listing.priceCurrency,
         displayPriceTmt,
         coverMediaKey: listing.coverMediaKey,
+        photoKeys: photos.photoKeys,
+        photoCount: photos.photoCount,
+        ...(listing.mileageKm !== undefined ? { mileageKm: listing.mileageKm } : {}),
+        ...(listing.condition !== undefined ? { condition: listing.condition } : {}),
+        ...(listing.transmissionId !== undefined
+          ? { transmissionId: listing.transmissionId }
+          : {}),
+        ...(listing.engineTypeId !== undefined ? { engineTypeId: listing.engineTypeId } : {}),
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
         sellerTrust: VERIFIED_PHONE_TRUST,
+        ...(favorited !== undefined ? { isFavorited: favorited.has(listing.id) } : {}),
       };
     });
 

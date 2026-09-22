@@ -5,9 +5,9 @@ import type { z } from "zod";
 
 import { VERIFIED_PHONE_TRUST } from "../domain/types";
 import {
-  LISTINGS_READ_PORT,
-  type ListingsReadPort,
-} from "../domain/ports/ListingsReadPort";
+  LISTING_CARD_READ_PORT,
+  type ListingCardReadPort,
+} from "../domain/ports/ListingCardReadPort";
 
 export interface ListMyListingsInput {
   userId: string;
@@ -20,8 +20,8 @@ export type MyListingsResponseDto = z.infer<typeof ListingsSchemas.MyListingsRes
 @Injectable()
 export class ListMyListings {
   constructor(
-    @Inject(LISTINGS_READ_PORT)
-    private readonly listingsRead: ListingsReadPort,
+    @Inject(LISTING_CARD_READ_PORT)
+    private readonly cards: ListingCardReadPort,
   ) {}
 
   async execute(input: ListMyListingsInput): Promise<MyListingsResponseDto> {
@@ -31,7 +31,7 @@ export class ListMyListings {
       ? ListingsSchemas.decodeCursor(input.cursor)
       : undefined;
 
-    const result = await this.listingsRead.getListingsForOwner(input.userId, {
+    const result = await this.cards.getOwnerCards(input.userId, {
       ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
       limit,
     });
@@ -48,6 +48,12 @@ export class ListMyListings {
         priceCurrency: item.priceCurrency,
         displayPriceTmt: item.displayPriceTmt,
         coverMediaKey: item.coverMediaKey,
+        photoKeys: item.photoKeys,
+        photoCount: item.photoCount,
+        mileageKm: item.mileageKm,
+        condition: item.condition,
+        transmissionId: item.transmissionId,
+        engineTypeId: item.engineTypeId,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
         sellerTrust: VERIFIED_PHONE_TRUST,

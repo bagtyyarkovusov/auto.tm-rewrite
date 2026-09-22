@@ -101,6 +101,10 @@ class FakeFavoriteRepository implements FavoriteRepository {
     return this.favorites.has(`${userId}:${listingId}`);
   }
 
+  async favoritedListingIds(userId: string, listingIds: string[]): Promise<Set<string>> {
+    return new Set(listingIds.filter((id) => this.favorites.has(`${userId}:${id}`)));
+  }
+
   async listByUserId(_userId: string) {
     return { items: [] };
   }

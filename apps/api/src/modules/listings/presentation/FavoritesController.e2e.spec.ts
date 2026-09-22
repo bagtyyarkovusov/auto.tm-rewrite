@@ -10,6 +10,7 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
+import { ListingsSchemas } from "@auto-tm/contracts";
 import { PrismaService } from "@auto-tm/db";
 import type { Prisma } from "@auto-tm/db";
 
@@ -355,6 +356,88 @@ describe("FavoritesController e2e", () => {
       expect(res.body.items).toHaveLength(1);
       expect(res.body.items[0].id).toBe(listingId);
       expect(res.body.nextCursor).toBeNull();
+    });
+
+    it("returns card fields and contact preferences on favorite items", async () => {
+      await seedCatalog();
+      const sellerToken = await createUser("seller-1");
+      const buyerToken = await createUser("buyer-1");
+      const draft = await seedDraft("seller-1", {
+        ...validPayload,
+        photos: [
+          { photoId: suite.id("photo-a"), key: "a.jpg", sortOrder: 0 },
+          { photoId: suite.id("photo-b"), key: "b.jpg", sortOrder: 1 },
+          { photoId: suite.id("photo-c"), key: "c.jpg", sortOrder: 2 },
+        ],
+      });
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${sellerToken}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+      // contactPhone stays free text until the contact-phone slice (ADR-0056).
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { contactPhone: "+99365000000", allowCalls: false, allowChat: true },
+      });
+
+      await request
+        .post(`/api/v1/listings/${listingId}/favorite`)
+        .set("Authorization", `Bearer ${buyerToken}`)
+        .send({})
+        .expect(201);
+
+      const res = await request
+        .get("/api/v1/favorites")
+        .set("Authorization", `Bearer ${buyerToken}`)
+        .expect(200);
+      const parsed = ListingsSchemas.MyFavoritesResponseSchema.parse(res.body);
+
+      expect(parsed.items).toHaveLength(1);
+      expect(parsed.items[0]).toMatchObject({
+        id: listingId,
+        photoKeys: ["a.jpg", "b.jpg"],
+        photoCount: 3,
+        mileageKm: 50000,
+        condition: "used",
+        contactPhone: "+99365000000",
+        allowCalls: false,
+        allowChat: true,
+      });
+    });
+
+    it("excludes soft-deleted listings from favorites list", async () => {
+      await seedCatalog();
+      const sellerToken = await createUser("seller-1");
+      const buyerToken = await createUser("buyer-1");
+      const draft = await seedDraft("seller-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${sellerToken}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      await request
+        .post(`/api/v1/listings/${listingId}/favorite`)
+        .set("Authorization", `Bearer ${buyerToken}`)
+        .send({})
+        .expect(201);
+
+      await request
+        .delete(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${sellerToken}`)
+        .expect(200);
+
+      const res = await request
+        .get("/api/v1/favorites")
+        .set("Authorization", `Bearer ${buyerToken}`)
+        .expect(200);
+
+      expect(res.body.items).toHaveLength(0);
     });
 
     it("excludes banned listings from favorites list", async () => {

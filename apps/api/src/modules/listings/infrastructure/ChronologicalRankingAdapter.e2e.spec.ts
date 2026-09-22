@@ -179,8 +179,54 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
 
     const result = await adapter.rank({ limit: 10 });
     expect(result.items).toHaveLength(2);
-    expect(result.items.map((i) => i.id)).toEqual(["l1", "l2"]);
+    expect(result.items.map((i) => i.listing.id)).toEqual(["l1", "l2"]);
     expect(result.nextCursor).toBeUndefined();
+  });
+
+  it("returns the first two photo keys by sortOrder and the total photo count", async () => {
+    const { cityA, brandX, modelX, seller } = await seedBaseCatalog();
+
+    const now = new Date();
+    await seedListing({
+      id: "with-photos",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 100_000,
+      priceCurrency: "TMT",
+      publishedAt: now,
+    });
+    await seedListing({
+      id: "no-photos",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 100_000,
+      priceCurrency: "TMT",
+      publishedAt: new Date(now.getTime() - 1000),
+    });
+    // Inserted out of order; the video sits between photos and is not a photo.
+    await prisma.listingMedia.createMany({
+      data: [
+        { listingId: "with-photos", kind: "image", key: "p3", sortOrder: 3 },
+        { listingId: "with-photos", kind: "image", key: "p0", sortOrder: 0 },
+        { listingId: "with-photos", kind: "video", key: "v1", sortOrder: 1 },
+        { listingId: "with-photos", kind: "image", key: "p2", sortOrder: 2 },
+      ],
+    });
+
+    const result = await adapter.rank({ limit: 10 });
+
+    const [withPhotos, noPhotos] = result.items;
+    expect(withPhotos!.listing.id).toBe("with-photos");
+    expect(withPhotos!.photos.photoKeys).toEqual(["p0", "p2"]);
+    expect(withPhotos!.photos.photoCount).toBe(3);
+    expect(withPhotos!.listing.coverMediaKey).toBe("p0");
+    expect(noPhotos!.listing.id).toBe("no-photos");
+    expect(noPhotos!.photos.photoKeys).toEqual([]);
+    expect(noPhotos!.photos.photoCount).toBe(0);
   });
 
   it("filters by brandId", async () => {
@@ -210,7 +256,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
 
     const result = await adapter.rank({ limit: 10, filters: { brandId: brandX } });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by modelId", async () => {
@@ -240,7 +286,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
 
     const result = await adapter.rank({ limit: 10, filters: { modelId: modelX } });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by cityId", async () => {
@@ -270,7 +316,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
 
     const result = await adapter.rank({ limit: 10, filters: { cityId: cityA } });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by condition", async () => {
@@ -302,7 +348,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
 
     const result = await adapter.rank({ limit: 10, filters: { condition: "new" } });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by year range", async () => {
@@ -348,7 +394,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       filters: { yearMin: 2019, yearMax: 2022 },
     });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by price range across multiple currencies using FX conversion", async () => {
@@ -397,7 +443,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       filters: { priceMin: 50_000, priceMax: 100_000 },
     });
     expect(result.items).toHaveLength(2);
-    expect(result.items.map((i) => i.id)).toEqual(["l1", "l3"]);
+    expect(result.items.map((i) => i.listing.id)).toEqual(["l1", "l3"]);
   });
 
   it("includes 14-day sold listings and respects filters on them", async () => {
@@ -434,7 +480,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
 
     const result = await adapter.rank({ limit: 10 });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("paginates with cursor and remains stable across same-second creates with filters", async () => {
@@ -469,7 +515,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
     } while (cursor);
 
     expect(all).toHaveLength(3); // newest tie-breaker first: l5, l3, l1
-    expect(all.map((i) => i.id)).toEqual(["l5", "l3", "l1"]);
+    expect(all.map((i) => i.listing.id)).toEqual(["l5", "l3", "l1"]);
   });
 
   it("returns no results when filter matches nothing", async () => {
@@ -548,7 +594,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       },
     });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by yearMin only", async () => {
@@ -583,7 +629,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       filters: { yearMin: 2019 },
     });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by yearMax only", async () => {
@@ -618,7 +664,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       filters: { yearMax: 2018 },
     });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l2");
+    expect(result.items[0]!.listing.id).toBe("l2");
   });
 
   it("filters by priceMin only", async () => {
@@ -651,7 +697,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       filters: { priceMin: 50_000 },
     });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 
   it("filters by priceMax only", async () => {
@@ -684,7 +730,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       filters: { priceMax: 50_000 },
     });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l2");
+    expect(result.items[0]!.listing.id).toBe("l2");
   });
 
   it("excludes listings in currencies with missing FX rates when price filter is applied", async () => {
@@ -720,6 +766,6 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
       filters: { priceMin: 50_000, priceMax: 100_000 },
     });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]!.id).toBe("l1");
+    expect(result.items[0]!.listing.id).toBe("l1");
   });
 });
