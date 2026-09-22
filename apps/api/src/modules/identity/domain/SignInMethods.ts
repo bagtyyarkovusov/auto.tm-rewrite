@@ -1,4 +1,4 @@
-import type { Email } from "./Email";
+import { Email } from "./Email";
 import type { Phone } from "./Phone";
 
 /**
@@ -38,9 +38,15 @@ export function isPhoneVerified(methods: SignInMethods): boolean {
   return methods.phone !== null && methods.phoneVerifiedAt !== null;
 }
 
-/** Throws unless every stored value is verified and at least one is stored. */
+/**
+ * Throws unless every stored value is verified, a stored email is normalised
+ * (see `Email`), and at least one method is stored.
+ */
 export function assertLiveUserSignInMethods(methods: SignInMethods): void {
   assertSignInMethodsVerified(methods);
+  if (methods.email !== null && Email.create(methods.email).value !== methods.email) {
+    throw new Error("A stored email must be trimmed and lowercased");
+  }
   if (!hasSignInMethod(methods)) {
     throw new Error("A live User must have at least one Sign-in Method");
   }

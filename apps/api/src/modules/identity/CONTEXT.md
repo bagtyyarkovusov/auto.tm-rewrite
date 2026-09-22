@@ -20,7 +20,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 
 ## Invariants
 
-- **Sign-in Methods** ([ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md)) — `User.phone` and `User.email` are each optional and unique, and each is stored only together with its verified-at time (`phoneVerifiedAt` / `emailVerifiedAt`). Enforced by the database check constraints `users_phone_verified_check` / `users_email_verified_check` and by `domain/SignInMethods.ts` (`assertSignInMethodsVerified` when mapping every row; `assertLiveUserSignInMethods` — at least one method — when `UserRepository.create` runs). A User purged after deletion has neither.
+- **Sign-in Methods** ([ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md)) — `User.phone` and `User.email` are each optional and unique, and each is stored only together with its verified-at time (`phoneVerifiedAt` / `emailVerifiedAt`). Enforced by the database check constraints `users_phone_verified_check` / `users_email_verified_check` and by `domain/SignInMethods.ts` (`assertSignInMethodsVerified` when mapping every row; `assertLiveUserSignInMethods` — at least one method, and a stored email already normalised — when `UserRepository.create` runs). A User purged after deletion has neither; "at least one" is checked only at creation because nothing else marks a User as live.
 - Email is stored trimmed and lowercased through the `Email` value object (`domain/Email.ts`); no provider-specific rewriting. No code path writes an email yet: sign-in is still phone-only, and a new User is created with only a phone verified at the moment its code was confirmed.
 - `User.role` values: `buyer` (default), `seller`, `moderator`, `admin`. Marketplace identity only — dealership membership role is separate (`DealershipMember.role`). Per ADR-0013.
 - A `User` can belong to **at most one** `Dealership` (enforced via `@@unique([userId])` on `DealershipMember`).
@@ -62,7 +62,7 @@ OtpRequestRepository       // persisted OTP request storage
 OtpSenderPort              // abstracts SMS driver (mock / gateway)
 PasswordHasherPort         // bcrypt hash + compare for refresh tokens
 SessionRepository          // Session persistence (create, count, deleteExpired, deleteOldest, findById, updateAdminTotpExpiresAt)
-UserRepository             // User persistence (findByPhone, findById, create(SignInMethods), scheduleDeletion, clearDeletionSchedule, findUsersWithExpiredDeletionGrace, purgePersonalData)
+UserRepository             // User persistence (findByPhone, findById, create(SignInMethods), delete, scheduleDeletion, clearDeletionSchedule, findUsersWithExpiredDeletionGrace, purgePersonalData)
 TotpSecretCipherPort       // AES-256-GCM encrypt/decrypt for TOTP secrets
 TotpVerifierPort           // TOTP secret generation, otpauth URI generation, code verification with skew
 TotpEnrollmentRepository   // TotpEnrollment persistence (findByUserId, createPending, markVerified, addBackupCodes, findBackupCodes, consumeBackupCode, completeFirstVerification transaction, consumeBackupCodeAndElevate transaction, deleteByUserId)
@@ -109,7 +109,7 @@ ReviewerOtpBypassConfig    // parsed reviewer demo account flag + 3-5 secret-man
 - Unaffected by `SIGNUPS_ENABLED=false`.
 
 **Day-30 purge** (`apps/worker` BullMQ repeatable job) — finds `deletionScheduledAt <= now` and:
-- **Frees both Sign-in Methods and clears PII**: `phone`, `phoneVerifiedAt`, `email`, `emailVerifiedAt`, `displayName` and `avatarUrl` → null, clears `deletionScheduledAt`. A later User can take the same phone or email. This replaced the old `phone → deleted:<id>` tombstone; migration `20260922000000_add_user_sign_in_methods` nulled phones still holding that tombstone. `UserRepository.purgePersonalData` performs the same User-row update inside identity.
+- **Frees both Sign-in Methods and clears PII**: `phone`, `phoneVerifiedAt`, `email`, `emailVerifiedAt`, `displayName` and `avatarUrl` → null, clears `deletionScheduledAt`. A later User can take the same phone or email. This replaced the old `phone → deleted:<id>` tombstone; migration `20260922000000_add_user_sign_in_methods` nulled phones still holding that tombstone. `UserRepository.purgePersonalData` is an identity-side equivalent of that User-row update (without clearing `deletionScheduledAt`); no production code calls it today.
 - **Prunes private rows**: `Session`, `TotpEnrollment` (+ backup codes), `FcmDevice`, `NotificationHistory`, `NotificationPreference`, `SavedSearch`, `Favorite`, `OwnedVehicle`, `BlockedUser` (both directions), `DealershipMember`, `ListingDraft`.
 - **Retains content**: `Listing` (left archived), `Conversation` + `Message`, `ContentReport` actor references (`reporterUserId` / `reviewedById` nullable via `SetNull`), `AuditLog` (`actorId` nullable via `SetNull`).
 

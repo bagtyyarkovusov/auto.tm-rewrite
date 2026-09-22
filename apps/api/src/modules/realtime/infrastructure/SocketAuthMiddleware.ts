@@ -7,7 +7,7 @@ import { REALTIME_ERROR_CODES } from "../domain/types";
 export interface AuthenticatedSocketUser {
   sub: string;
   sid: string;
-  phone: string;
+  phone: string | null;
   role: string;
 }
 

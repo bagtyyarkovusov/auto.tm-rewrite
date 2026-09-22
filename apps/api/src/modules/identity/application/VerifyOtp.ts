@@ -145,7 +145,8 @@ export class VerifyOtp {
     }
 
     return this.createSessionResult({
-      user: { ...user, phone: phone.value },
+      user,
+      phone: phone.value,
       now,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
@@ -186,7 +187,8 @@ export class VerifyOtp {
     }
 
     const result = await this.createSessionResult({
-      user: { ...user, phone: input.phone },
+      user,
+      phone: input.phone,
       now: input.now,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
@@ -205,10 +207,11 @@ export class VerifyOtp {
   private async createSessionResult(input: {
     user: {
       id: string;
-      phone: string;
       displayName: string | null;
       role: string;
     };
+    /** The phone whose code was just confirmed; the User was found or created by it. */
+    phone: string;
     now: Date;
     deviceLabel: string | undefined;
     userAgent: string | undefined;
@@ -246,7 +249,7 @@ export class VerifyOtp {
     const accessToken = this.jwtService.sign({
       sub: user.id,
       sid: session.id,
-      phone: user.phone,
+      phone: input.phone,
       role: user.role,
     });
 
@@ -255,7 +258,7 @@ export class VerifyOtp {
       refreshToken,
       user: {
         id: user.id,
-        phone: user.phone,
+        phone: input.phone,
         displayName: user.displayName,
         role: user.role,
         deletionScheduledAt: input.deletionScheduledAt?.toISOString() ?? null,

@@ -73,6 +73,16 @@ describe("SignInMethods", () => {
       );
     });
 
+    it("rejects an email that is not trimmed and lowercased", () => {
+      expect(() =>
+        assertLiveUserSignInMethods({
+          ...NO_SIGN_IN_METHODS,
+          email: "Me@Example.com",
+          emailVerifiedAt: VERIFIED_AT,
+        }),
+      ).toThrow("A stored email must be trimmed and lowercased");
+    });
+
     it("accepts a User holding both methods", () => {
       expect(() =>
         assertLiveUserSignInMethods({
