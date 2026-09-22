@@ -14,10 +14,10 @@ Maral (first-time buyer) installs the app. From cold open to first meaningful ac
 
 ### Step 1 — Install & open (anonymous)
 
-- App opens directly to the feed (no splash gate, no signup wall)
-- Top: search bar
-- Feed: latest listings
+- First launch: language choice and one Welcome screen, then Home (no signup wall)
+- Home: 🔍 Search in the header, a "Brand, model" entry, and New listings
 - Bottom: 5-tab nav
+- Screens and states: [33 — Search & discovery](../features/33-search-discovery.md)
 
 **No login prompt** — she's browsing.
 

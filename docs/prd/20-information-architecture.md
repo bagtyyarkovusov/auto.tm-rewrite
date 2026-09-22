@@ -56,7 +56,7 @@ Tab 1 follows the Auto.ru-inspired discovery journey of [ADR-0051](../adr/0051-a
 ## Mobile navigation patterns
 
 - **Stack navigation** inside each tab via expo-router
-- **Modal sheets** for login, Sort and action sheets (cancel-able from anywhere). Search parameters is a full-screen form, not a sheet.
+- **Modal sheets** for sign-in, Sort and action sheets (cancel-able from anywhere). Search parameters is a full-screen form, not a sheet.
 - **Deep linking** opens at the correct nested route (e.g., `/chat/abc-123` lands inside the chat tab stack)
 - **Action-gated auth** — tapping any auth-required action triggers the `(auth)/phone` modal stack with intent state; returns to original screen after success
 

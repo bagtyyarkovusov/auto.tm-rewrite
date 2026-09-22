@@ -86,7 +86,7 @@ Top to bottom, in Auto.ru's order:
 That is the whole screen. Video is added below the photos only when the video media UX ships.
 
 - **Contact bar:** Call (opens the phone dialer directly, with no warning sheet) and Message stick to the bottom of the screen.
-- **Collapsing header:** once the photos scroll away, it turns solid and shows the price plus "Brand Model, year". Back, Share, ♡ and ⋯ (which holds Report listing and Copy link) stay put.
+- **Collapsing header:** once the photos scroll away, it turns solid and shows the price plus "Brand Model, year". Back, Share, ♡ and ⋯ (which holds Report listing and Copy link) stay put on active Listings.
 - **Photo viewer:** black, full screen, with "n / N", ✕, ♡, swipe, pinch zoom, a thumbnail strip, and Call + Message. Closing it returns the gallery to the same photo.
 - **Sign-in on action:** ♡, Message, Ask the seller and Report listing need sign-in, then return to this Listing and finish the action. Call needs nothing. See [33 — Search & discovery](33-search-discovery.md#sign-in-on-action).
 - **VIN decoding:** a decoded-VIN section appears only when the VIN is actually decoded. With no real decoder bound, it never appears; there is no "not provided" or "not decoded" state ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)).
@@ -125,7 +125,7 @@ That is the whole screen. Video is added below the photos only when the video me
 
 - Button in My Listings: "Mark as sold"
 - Confirm modal: "This car is sold. Is the buyer from AutoTM?" (yes / no — analytics signal)
-- Listing transitions to `sold` state, shows "Sold" badge for 14 days, then auto-archived
+- Listing transitions to `sold` state and is auto-archived after 14 days. Buyers see it labelled Sold on detail and in Favorites, then Removed from sale once archived; it never appears in Home or Results.
 - Garage entry (if linked) auto-updates to `status=sold`
 
 ### Listing states
@@ -134,7 +134,7 @@ That is the whole screen. Video is added below the photos only when the video me
 |---|---|---|
 | `draft` | Owner only | Continue / discard |
 | `active` | Public | Favorite, chat, share, owner-edit |
-| `sold` | Detail and Favorites only, labelled Sold; never in Home or Results | Closed for contact: no Call, Message, Ask the seller, ♡ or Report; existing threads readable |
+| `sold` | Detail and Favorites only, labelled Sold; never in Home or Results | Closed for contact: no Call, Message, Ask the seller, ♡ or Report; existing Conversations stay readable |
 | `archived` | Owner + admin; a buyer reaching it from Favorites or a link sees it closed, labelled Removed from sale; never in Home or Results | Closed for contact, as `sold`; owner can republish |
 | `reported` | Admin only | Reserved review-hold status; S7 report submission does not auto-transition active listings here |
 | `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact/messages disabled; existing threads readable; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
