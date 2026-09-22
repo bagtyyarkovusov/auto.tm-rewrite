@@ -175,7 +175,7 @@ describe("ListingDetailView", () => {
 
   it("passes sellerTrust.phoneVerified to SellerBlock", () => {
     expect(listingDetailSource).toContain("sellerTrust?.phoneVerified");
-    expect(listingDetailSource).toContain("phoneVerified={listing.sellerTrust?.phoneVerified}");
+    expect(listingDetailSource).toContain("listing.sellerTrust?.phoneVerified}");
   });
 });
 
@@ -309,5 +309,71 @@ describe("ListingDetailView owner branching", () => {
 
   it("accepts isOwner prop", () => {
     expect(listingDetailSource).toContain("isOwner?: boolean");
+  });
+});
+
+describe("Closed Listing (sold / archived) for buyers", () => {
+  it("hides the whole contact bar (Call, Message, ♡) on closed Listings", () => {
+    expect(screenSource).toContain("isClosedForContact,");
+    expect(screenSource).toContain('} from "../../../src/listings/detail/closedListing"');
+    expect(screenSource).toContain(
+      "{!isOwner && !isClosedForContact(data.status) && (",
+    );
+  });
+
+  it("wires See other Brand Model navigation from the screen", () => {
+    expect(screenSource).toContain(
+      "onSeeSimilar={() => router.navigate(similarListingsHref(data))}",
+    );
+  });
+
+  it("derives the closed state for buyers only, keeping the owner view unchanged", () => {
+    expect(listingDetailSource).toContain(
+      "const isClosedForBuyer = !isOwner && isClosedForContact(listing.status)",
+    );
+    expect(listingDetailSource).toContain("{isSold && !isClosedForBuyer && (");
+  });
+
+  it("shows the Sold / Removed from sale banner on the photo", () => {
+    expect(listingDetailSource).toContain(
+      "banner={closedBannerKey ? t(closedBannerKey) : undefined}",
+    );
+    expect(photoGallerySource).toContain("banner?: string");
+    expect(photoGallerySource).toContain("{banner && <GalleryBanner label={banner} />}");
+  });
+
+  it("greys the price", () => {
+    expect(listingDetailSource).toContain("muted={isClosedForBuyer}");
+    expect(priceDisplaySource).toContain(
+      'muted ? "text-muted-foreground" : "text-primary"',
+    );
+  });
+
+  it("hides the seller phone and verified badge", () => {
+    expect(listingDetailSource).toContain(
+      "contactPhone={isClosedForBuyer ? undefined : listing.contactPhone}",
+    );
+    expect(listingDetailSource).toContain(
+      "allowCalls={listing.allowCalls && !isClosedForBuyer}",
+    );
+    expect(listingDetailSource).toContain(
+      "phoneVerified={!isClosedForBuyer && listing.sellerTrust?.phoneVerified}",
+    );
+  });
+
+  it("keeps Report limited to active Listings", () => {
+    expect(listingDetailSource).toContain(
+      "{!isOwner && listing.status === Enums.ListingStatus.Active && onReport && (",
+    );
+  });
+
+  it("links See other Brand Model to the brand + model filtered feed", () => {
+    expect(listingDetailSource).toContain(
+      "{isClosedForBuyer && onSeeSimilar && brandName && modelName && (",
+    );
+    expect(listingDetailSource).toContain("onPress={onSeeSimilar}");
+    expect(listingDetailSource).toContain(
+      't("seeOtherBrandModel", { brand: brandName, model: modelName })',
+    );
   });
 });
