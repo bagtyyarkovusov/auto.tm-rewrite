@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { DEFAULT_EMAIL_DAILY_CAP } from "./email/domain/types";
 import { normalizePrivateKey } from "./shared/pem";
 
 const BaseSchema = z.object({
@@ -39,6 +40,14 @@ const BaseSchema = z.object({
    * would deactivate healthy devices.
    */
   APNS_PRODUCTION: z.enum(["true", "false"]).optional(),
+
+  /** ADR-0055. `mock` delivers nothing and needs no key; `resend` sends for real. */
+  EMAIL_DRIVER: z.enum(["mock", "resend"]).default("mock"),
+  /** e.g. `AutoTM <no-reply@autotm.bagtyyar.dev>`. Required for `resend`. */
+  EMAIL_FROM: z.string().optional(),
+  /** Sends allowed per UTC day, counted in Redis. 80 stays under Resend Free's 100. */
+  EMAIL_DAILY_CAP: z.coerce.number().int().positive().default(DEFAULT_EMAIL_DAILY_CAP),
+  RESEND_API_KEY: z.string().optional(),
 });
 
 type BaseEnv = z.infer<typeof BaseSchema>;
@@ -186,12 +195,29 @@ function validatePushContract(env: BaseEnv, add: (path: string, message: string)
   }
 }
 
+/**
+ * Email contract (ADR-0055): `resend` reaches a real provider, so it must boot
+ * with a sending key and a From address, or not at all. The key is never
+ * echoed.
+ */
+function validateEmailContract(env: BaseEnv, add: (path: string, message: string) => void): void {
+  if (env.EMAIL_DRIVER !== "resend") return;
+
+  for (const name of ["RESEND_API_KEY", "EMAIL_FROM"] as const) {
+    const value = env[name];
+    if (typeof value !== "string" || value.trim() === "") {
+      add(name, `${name} is required when EMAIL_DRIVER=resend`);
+    }
+  }
+}
+
 export const EnvSchema = BaseSchema.superRefine((env, ctx) => {
   const add = (path: string, message: string) =>
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
 
   validateEndpoints(env, add);
   validatePushContract(env, add);
+  validateEmailContract(env, add);
 });
 
 export type Env = z.infer<typeof EnvSchema>;

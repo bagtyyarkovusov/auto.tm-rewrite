@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { UserRole } from "../enums";
+import { Locale, SignInCodePurpose, UserRole } from "../enums";
 
 export const PhoneTm = z.string().regex(
   /^\+993[67]\d{7}$/,
@@ -116,3 +116,21 @@ export const AdminTotpVerifyResponseSchema = z
 export type AdminTotpVerifyResponse = z.infer<
   typeof AdminTotpVerifyResponseSchema
 >;
+
+// ── Worker sign-in code email job payload (API → worker, ADR-0055) ──
+
+export const EMAIL_CODE_QUEUE = "email-code" as const;
+export const EMAIL_CODE_JOB_NAME = "sign-in-code" as const;
+
+/**
+ * The job ID is the Resend idempotency key, so the producer must give every
+ * job a globally unique `jobId` (for example the code request's UUID), not
+ * BullMQ's per-queue counter.
+ */
+export const EmailCodeJobSchema = z.object({
+  to: z.string().email(),
+  code: z.string().regex(/^\d{6}$/),
+  locale: z.nativeEnum(Locale),
+  purpose: z.nativeEnum(SignInCodePurpose),
+});
+export type EmailCodeJob = z.infer<typeof EmailCodeJobSchema>;
