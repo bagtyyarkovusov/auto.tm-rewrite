@@ -2,11 +2,11 @@
 
 ## Summary
 
-Phone-OTP based authentication and basic user profiles. The MLP beta uses identity for "who is this person and what can they do?" Dealership memberships and Garage remain target capabilities, but are post-MLP bets per [ADR-0027](../../adr/0027-mlp-beta-scope.md).
+Code-based sign-in by phone or email, with no passwords, and basic user profiles. The MLP beta uses identity for "who is this person and what can they do?" Dealership memberships and Garage remain target capabilities, but are post-MLP bets per [ADR-0027](../../adr/0027-mlp-beta-scope.md).
 
 ## Why it exists
 
-Every gated action (contact seller, sell, later favorite/save search) needs identity. Anonymous browsing is the default; auth is triggered on action with deferred-action replay. TM users are phone-rooted (most don't use email reliably), so phone OTP is the only viable login path. Admin UI exposure requires TOTP on top of OTP per ADR-0006 / ADR-0012.
+Every gated action (contact seller, sell, later favorite/save search) needs identity. Anonymous browsing is the default; auth is triggered on action with deferred-action replay. TM users are phone-rooted (most don't use email reliably), so phone is the main sign-in path. Email sign-in reaches store reviewers abroad and people without a working SIM. Both are Sign-in Methods on the same User ([ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md)). Admin UI exposure requires TOTP on top of OTP per ADR-0006 / ADR-0012.
 
 ## What it does (user-visible behavior)
 
@@ -21,6 +21,20 @@ Every gated action (contact seller, sell, later favorite/save search) needs iden
 7. Resend after 60s timer
 8. On success: JWT issued, user returned to the original action they tapped; if no deferred action exists, route to the tab app
 
+The same flow works with an email address instead of a phone. A confirmed code for a phone or email that no User holds creates a new User with only that Sign-in Method, unless `SIGNUPS_ENABLED=false`. Requesting a code never reveals whether the value is registered.
+
+### Sign-in Methods
+
+Per [ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md):
+
+- A User has an optional, unique, verified phone (`+993` only) and an optional, unique, verified email (trimmed and lowercased). A live User has at least one.
+- A signed-in User adds the missing method, or replaces one, by confirming a code sent to the new value. A value held by another User, including one in the deletion grace period, is refused after the code is confirmed, with `SIGN_IN_METHOD_TAKEN`. Users are never merged.
+- Sign-in Methods can be replaced but not removed. Replacing frees the old value immediately and leaves sessions and Listings alone.
+- Publishing or republishing a Listing needs a verified phone (`PHONE_REQUIRED`). The mobile Sell entry shows an "Add a phone" step to Users without one. "Phone verified" seller trust shows only for Users with a verified phone.
+- Codes: 6 digits; 5 wrong attempts; 5 requests per destination per 24 hours; `60 × 2^N` backoff; expiry 5 minutes for phone and 10 minutes for email; 10 requests per IP per hour shared across channels. Sign-in, add/change and deletion codes share these budgets.
+- API: `POST /api/v1/auth/otp/request` and `/verify` accept `{ phone }` or `{ email }`. `GET /api/v1/me` returns nullable `phone` and `email` plus `phoneVerified`. `POST /api/v1/me/sign-in-methods/request` and `/verify` add or replace a method. Shapes are Zod schemas in `@auto-tm/contracts`.
+- Email delivery waits on [Decide the email provider ADR for sign-in codes](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/376).
+
 ### Admin TOTP enrollment
 
 1. After OTP success, if user has `role='admin'`, the API creates a normal non-elevated Session and returns tokens with `sid`.
@@ -33,7 +47,7 @@ Every gated action (contact seller, sell, later favorite/save search) needs iden
 
 ### Profile screens
 
-- View own profile: avatar, name, phone (masked), tenure, listings count
+- View own profile: avatar, name, phone and/or email (masked), tenure, listings count
 - Edit profile: name, avatar upload, language preference, theme preference (system / light / dark)
 - View other user: avatar, name, tenure, public listings
 - Block user from a chat → recorded in `BlockedUser` table
@@ -52,11 +66,12 @@ Post-MLP profile additions: notification preferences, public Garage entries, blo
 Apple App Store policy requires every app with account creation to offer in-app account deletion. This is non-negotiable.
 
 - Profile → Settings → "Delete my account" (with a warning screen)
-- Confirmation step: re-enter phone number to confirm
+- Confirmation step: re-enter the phone number or email on the account to confirm
 - Soft-delete: `User.deletedAt` set; all listings → `archived`; conversations → closed system message; refresh tokens revoked
-- 30-day grace period: user can recover by logging back in (clears `deletedAt`)
-- After 30 days: hard-delete personally identifiable data; preserve listings, messages, moderation reports, and audit rows as "Deleted user" / historical attribution for audit trail
+- 30-day grace period: user can recover by signing back in with either Sign-in Method (clears `deletedAt`)
+- After 30 days: hard-delete personally identifiable data, including nulling `phone`, `email` and both verified-at times; preserve listings, messages, moderation reports, and audit rows as "Deleted user" / historical attribution for audit trail
 - API endpoint: `DELETE /api/v1/me`
+- Web deletion page (Google Play requirement): the person enters a phone or email, confirms a code sent to it, and the same 30-day grace period starts. Backed by public `POST /api/v1/account-deletion/request` and `/confirm`.
 - Admin can see deletion requests in the audit log; cannot reverse them after the 30-day window
 - S8 deletion must preserve S7 moderation history: `ContentReport` rows survive reporter/reviewer deletion with nullable user references, no reporter/reviewer PII snapshots are stored on reports in the MLP, and reporter deletion or suspension does not invalidate existing reports.
 
@@ -74,6 +89,7 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 | OTP entry | Expired | "Code expired. Request a new one." |
 | OTP entry | Dev test mode | Non-production only: show "Dev code: 123456" if API returns `testCode` |
 | OTP entry | Locked | Inline countdown / request-new-code state; no separate error route |
+| Sell entry | No phone | "Add a phone" step before publishing |
 | Profile (own) | New user | Prompt to add avatar + name |
 | Profile (own) | Suspended | Banner: "Your account is suspended. Contact support." Auth/session/account-deletion still work; marketplace mutations are blocked. |
 | Profile (other) | Default | Show public info only |
@@ -87,6 +103,7 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 ## Decisions
 
 - [ADR-0006](../../adr/0006-auth.md) — Phone OTP + custom SMS gateway + TOTP for admins
+- [ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md) — Phone or email sign-in share one User (supersedes ADR-0006's phone-only rule)
 - Mobile S2 auth routes are `(auth)/phone` and `(auth)/otp`. Historical `login` / `login/otp` route names are superseded for the mobile implementation.
 - Legal agreement in S2 is implicit copy under the phone CTA: "By continuing, you agree to the Terms and Privacy Policy." Add a checkbox only if legal review requires explicit recorded acceptance. Legal pages remain canonical on web.
 - OTP login does not ask for native notification permission. Notification prompts are tied to later user actions that need notifications.
@@ -119,7 +136,7 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 
 ## Phase
 
-**Phase 1 MLP beta for phone OTP and basic profile.** Dealership membership, Garage, notification preferences, and rich public profile surfaces are post-MLP bets.
+**Phase 1 MLP beta for phone or email code sign-in and basic profile.** Dealership membership, Garage, notification preferences, and rich public profile surfaces are post-MLP bets.
 
 ## Out of scope
 
@@ -127,7 +144,7 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 - Social login (Google / Apple)
 - Biometric (Face ID / Touch ID) — could add in Phase 1.5 as a session-unlock convenience
 - Device management UI for revoking a specific other device — multi-device sessions are allowed per ADR-0012
-- Email verification
+- Magic links, merging Users, and removing a Sign-in Method
 - OTP "Having trouble?" support/help link — revisit after real delivery data; S2 keeps the flow minimal
 - Printable backup-code PDF / download, backup-code regeneration UI, and self-service admin recovery
 - Admin deprovision, role hierarchy, read-only support accounts, and emergency admin lockout UI
