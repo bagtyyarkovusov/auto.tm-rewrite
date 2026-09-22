@@ -81,7 +81,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
 
   async function seedUser(id: string): Promise<void> {
     await prisma.user.create({
-      data: { id, phone: `+9936${id.slice(-8)}`, role: "buyer" },
+      data: { id, phone: `+9936${id.slice(-8)}`, phoneVerifiedAt: new Date(), role: "buyer" },
     });
   }
 

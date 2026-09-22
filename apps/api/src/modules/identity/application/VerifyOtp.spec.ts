@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { JwtService } from "@nestjs/jwt";
 import type { OtpRequest } from "../domain/OtpRequest";
+import type { SignInMethods } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { Session } from "../domain/Session";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
@@ -51,6 +52,9 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: randomUUID(),
     phone: "+99361234567",
+    phoneVerifiedAt: NOW,
+    email: null,
+    emailVerifiedAt: null,
     displayName: null,
     avatarUrl: null,
     locale: "ru",
@@ -149,10 +153,10 @@ class FakeUserRepository implements UserRepository {
     return this.users.find((u) => u.id === id) ?? null;
   }
 
-  async create(input: { phone: string }): Promise<User> {
+  async create(signInMethods: SignInMethods): Promise<User> {
     const user: User = {
       id: randomUUID(),
-      phone: input.phone,
+      ...signInMethods,
       displayName: null,
       avatarUrl: null,
       locale: "ru",
@@ -169,7 +173,7 @@ class FakeUserRepository implements UserRepository {
   async scheduleDeletion(_userId: string, _deletionScheduledAt: Date): Promise<void> {}
   async clearDeletionSchedule(_userId: string): Promise<void> {}
   async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
-  async tombstoneUser(_userId: string): Promise<void> {}
+  async purgePersonalData(_userId: string): Promise<void> {}
 }
 
 class FakeSessionRepository implements SessionRepository {
@@ -531,6 +535,23 @@ describe("VerifyOtp", () => {
       (s) => s.createdAt.getTime() === oldestCreatedAt.getTime(),
     );
     expect(removedSession).toBeUndefined();
+  });
+
+  // --- Sign-in Methods (ADR-0054) ---
+
+  it("creates a new User holding only the phone, verified when the code was confirmed", async () => {
+    otpRepo.addRecord(makeOtpRequest());
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
+    await uc.execute({ phone: "+99361234567", code: "123456" });
+
+    expect(userRepo.users).toHaveLength(1);
+    expect(userRepo.users[0]).toMatchObject({
+      phone: "+99361234567",
+      phoneVerifiedAt: NOW,
+      email: null,
+      emailVerifiedAt: null,
+    });
   });
 
   // --- UserRegistered event ---

@@ -3,7 +3,7 @@ import type { Session } from "../Session";
 export interface SessionLookupResult {
   session: Session;
   userId: string;
-  phone: string;
+  phone: string | null;
   role: string;
 }
 

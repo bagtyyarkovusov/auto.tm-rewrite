@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { UserRepository } from "../domain/ports/UserRepository";
+import { isPhoneVerified } from "../domain/SignInMethods";
 import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
 
 export interface GetMeInput {
@@ -8,7 +9,9 @@ export interface GetMeInput {
 
 export interface GetMeResult {
   id: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
+  phoneVerified: boolean;
   displayName: string | null;
   role: string;
   avatarUrl: string | null;
@@ -33,6 +36,8 @@ export class GetMe {
     return {
       id: user.id,
       phone: user.phone,
+      email: user.email,
+      phoneVerified: isPhoneVerified(user),
       displayName: user.displayName,
       role: user.role,
       avatarUrl: user.avatarUrl,

@@ -99,7 +99,7 @@ function AuthenticatedIdentityCard() {
     <Pressable onPress={handlePress} className="active:opacity-90">
       <Card>
         <CardContent className="flex-row items-center gap-4 py-5">
-          <Avatar className="size-16" alt={data.displayName ?? data.phone}>
+          <Avatar className="size-16" alt={data.displayName ?? data.phone ?? ""}>
             {data.avatarUrl ? (
               <AvatarImage source={{ uri: data.avatarUrl }} />
             ) : null}

@@ -73,7 +73,7 @@ describe("AdminAuthController e2e — admin TOTP", () => {
     await prisma.user.upsert({
       where: { phone: ADMIN_PHONE },
       update: { role: "admin" },
-      create: { phone: ADMIN_PHONE, role: "admin" },
+      create: { phone: ADMIN_PHONE, phoneVerifiedAt: new Date(), role: "admin" },
     });
 
     const otpRes = await request

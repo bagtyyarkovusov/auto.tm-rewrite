@@ -70,6 +70,7 @@ describe("AdminCatalogController e2e", () => {
       data: {
         id: `admin-${Date.now()}`,
         phone: "+99361111111",
+        phoneVerifiedAt: new Date(),
         role: "admin",
       },
     });
@@ -89,6 +90,7 @@ describe("AdminCatalogController e2e", () => {
       data: {
         id: `user-${Date.now()}`,
         phone: "+99362222222",
+        phoneVerifiedAt: new Date(),
         role: "buyer",
       },
     });

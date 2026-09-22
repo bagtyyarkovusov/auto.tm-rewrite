@@ -593,6 +593,7 @@ async function main(): Promise<void> {
       {
         id: SELLER_IDS.aygul,
         phone: "+99361000001",
+        phoneVerifiedAt: new Date(),
         displayName: "Aýgül Amanowa",
         locale: "tk",
         role: UserRole.seller,
@@ -600,6 +601,7 @@ async function main(): Promise<void> {
       {
         id: SELLER_IDS.merdan,
         phone: "+99361000002",
+        phoneVerifiedAt: new Date(),
         displayName: "Merdan Hojaýew",
         locale: "ru",
         role: UserRole.seller,
@@ -607,6 +609,7 @@ async function main(): Promise<void> {
       {
         id: SELLER_IDS.salamat,
         phone: "+99361000003",
+        phoneVerifiedAt: new Date(),
         displayName: "Salamat Motors",
         locale: "ru",
         role: UserRole.seller,
@@ -614,6 +617,7 @@ async function main(): Promise<void> {
       {
         id: BUYER_ID,
         phone: "+99361000009",
+        phoneVerifiedAt: new Date(),
         displayName: "Öwez Berdiýew",
         locale: "tk",
         role: UserRole.buyer,

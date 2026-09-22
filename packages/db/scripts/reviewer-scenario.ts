@@ -60,6 +60,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
       where: { id: input.id },
       update: {
         phone: input.phone,
+        phoneVerifiedAt: new Date(),
         displayName: input.displayName,
         role: input.role,
         deletionScheduledAt: null,
@@ -67,6 +68,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
       create: {
         id: input.id,
         phone: input.phone,
+        phoneVerifiedAt: new Date(),
         displayName: input.displayName,
         role: input.role,
       },

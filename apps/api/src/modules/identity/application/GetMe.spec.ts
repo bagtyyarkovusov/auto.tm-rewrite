@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { randomUUID } from "node:crypto";
+import type { SignInMethods } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { UserRepository } from "../domain/ports/UserRepository";
 import { GetMe } from "./GetMe";
@@ -8,6 +9,9 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: "user-1",
     phone: "+99361234567",
+    phoneVerifiedAt: new Date("2026-05-01T00:00:00Z"),
+    email: null,
+    emailVerifiedAt: null,
     displayName: "Bagtyyar",
     avatarUrl: "https://example.com/avatar.jpg",
     locale: "ru",
@@ -23,7 +27,7 @@ class FakeUserRepository implements UserRepository {
   users: Map<string, User> = new Map();
 
   async findByPhone(_phone: string): Promise<User | null> { return null; }
-  async create(_input: { phone: string }): Promise<User> {
+  async create(_signInMethods: SignInMethods): Promise<User> {
     return makeUser();
   }
 
@@ -35,7 +39,7 @@ class FakeUserRepository implements UserRepository {
   async scheduleDeletion(_userId: string, _deletionScheduledAt: Date): Promise<void> {}
   async clearDeletionSchedule(_userId: string): Promise<void> {}
   async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
-  async tombstoneUser(_userId: string): Promise<void> {}
+  async purgePersonalData(_userId: string): Promise<void> {}
 }
 
 function makeUseCase(userRepo?: FakeUserRepository) {
@@ -58,6 +62,8 @@ describe("GetMe", () => {
 
     expect(result.id).toBe("user-1");
     expect(result.phone).toBe("+99361234567");
+    expect(result.email).toBeNull();
+    expect(result.phoneVerified).toBe(true);
     expect(result.displayName).toBe("Bagtyyar");
     expect(result.role).toBe("buyer");
     expect(result.avatarUrl).toBe("https://example.com/avatar.jpg");
@@ -74,6 +80,22 @@ describe("GetMe", () => {
 
     expect(result.displayName).toBeNull();
     expect(result.avatarUrl).toBeNull();
+  });
+
+  it("returns an email-only User with a null phone and phoneVerified false", async () => {
+    const user = makeUser({
+      phone: null,
+      phoneVerifiedAt: null,
+      email: "me@example.com",
+      emailVerifiedAt: new Date("2026-09-22T10:00:00Z"),
+    });
+    userRepo.users.set(user.id, user);
+
+    const result = await makeUseCase(userRepo).execute({ userId: "user-1" });
+
+    expect(result.phone).toBeNull();
+    expect(result.email).toBe("me@example.com");
+    expect(result.phoneVerified).toBe(false);
   });
 
   it("throws 'User not found' when the user does not exist", async () => {
