@@ -314,17 +314,22 @@ describe("ListingDetailView owner branching", () => {
 
 describe("Closed Listing (sold / archived) for buyers", () => {
   it("hides the whole contact bar (Call, Message, ♡) on closed Listings", () => {
-    expect(screenSource).toContain(
-      'import { isClosedForContact } from "../../../src/listings/detail/closedListing"',
-    );
+    expect(screenSource).toContain("isClosedForContact,");
+    expect(screenSource).toContain('} from "../../../src/listings/detail/closedListing"');
     expect(screenSource).toContain(
       "{!isOwner && !isClosedForContact(data.status) && (",
     );
   });
 
+  it("wires See other Brand Model navigation from the screen", () => {
+    expect(screenSource).toContain(
+      "onSeeSimilar={() => router.navigate(similarListingsHref(data))}",
+    );
+  });
+
   it("derives the closed state for buyers only, keeping the owner view unchanged", () => {
     expect(listingDetailSource).toContain(
-      "const closedBannerKey = isOwner ? null : closedListingBannerKey(listing.status)",
+      "const isClosedForBuyer = !isOwner && isClosedForContact(listing.status)",
     );
     expect(listingDetailSource).toContain("{isSold && !isClosedForBuyer && (");
   });
@@ -363,10 +368,10 @@ describe("Closed Listing (sold / archived) for buyers", () => {
   });
 
   it("links See other Brand Model to the brand + model filtered feed", () => {
-    expect(listingDetailSource).toContain("{isClosedForBuyer && brandName && modelName && (");
     expect(listingDetailSource).toContain(
-      "router.navigate(similarListingsHref(listing))",
+      "{isClosedForBuyer && onSeeSimilar && brandName && modelName && (",
     );
+    expect(listingDetailSource).toContain("onPress={onSeeSimilar}");
     expect(listingDetailSource).toContain(
       't("seeOtherBrandModel", { brand: brandName, model: modelName })',
     );

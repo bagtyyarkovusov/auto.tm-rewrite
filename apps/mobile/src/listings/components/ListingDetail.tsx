@@ -1,6 +1,5 @@
 import { ScrollView, View, Pressable } from "react-native";
 import * as Linking from "expo-linking";
-import { router } from "expo-router";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { ChevronRight, Flag, ShieldCheck } from "lucide-react-native";
@@ -9,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import type { CatalogMaps } from "../detail/useCatalogMaps";
 import {
   closedListingBannerKey,
-  similarListingsHref,
+  isClosedForContact,
 } from "../detail/closedListing";
 
 import { PhotoGallery } from "./PhotoGallery";
@@ -36,6 +35,8 @@ interface ListingDetailProps {
   inspectionInterestEnabled?: boolean;
   inspectionInterestOpen?: boolean;
   onInspectionInterestOpenChange?: (open: boolean) => void;
+  /** "See other Brand Model" on a closed Listing. */
+  onSeeSimilar?: () => void;
 }
 
 function buildTitle(listing: ListingDetail, maps: CatalogMaps): string {
@@ -73,12 +74,15 @@ export function ListingDetailView({
   inspectionInterestEnabled = true,
   inspectionInterestOpen = false,
   onInspectionInterestOpenChange,
+  onSeeSimilar,
 }: ListingDetailProps) {
   const { t, i18n } = useTranslation();
   const isSold = listing.status === Enums.ListingStatus.Sold;
   // Buyers see sold/archived Listings as closed for contact; the owner view is unchanged.
-  const closedBannerKey = isOwner ? null : closedListingBannerKey(listing.status);
-  const isClosedForBuyer = closedBannerKey !== null;
+  const isClosedForBuyer = !isOwner && isClosedForContact(listing.status);
+  const closedBannerKey = isClosedForBuyer
+    ? closedListingBannerKey(listing.status)
+    : null;
   const brandName = maps.brandName(listing.brandId);
   const modelName = maps.modelName(listing.modelId);
 
@@ -170,12 +174,12 @@ export function ListingDetailView({
           muted={isClosedForBuyer}
         />
 
-        {isClosedForBuyer && brandName && modelName && (
+        {isClosedForBuyer && onSeeSimilar && brandName && modelName && (
           <Button
             variant="secondary"
             size="sm"
             className="self-start"
-            onPress={() => router.navigate(similarListingsHref(listing))}
+            onPress={onSeeSimilar}
           >
             <Text className="text-sm text-secondary-foreground" numberOfLines={1}>
               {t("seeOtherBrandModel", { brand: brandName, model: modelName })}

@@ -5,7 +5,8 @@ export type ClosedListingBannerKey = "sold" | "removedFromSale";
 
 /**
  * Sold and archived (removed-from-sale) Listings stay readable for buyers but
- * are closed for contact: no Call, Message, ♡ or Report.
+ * are closed for contact: the detail screen drops the contact bar and the
+ * seller phone. Report is separately limited to active Listings.
  */
 export function isClosedForContact(status: Enums.ListingStatus): boolean {
   return (
