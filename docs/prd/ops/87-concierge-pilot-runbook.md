@@ -20,7 +20,7 @@ The pilot tests the single biggest risk in the trust wedge: **does a real buyer,
 |---|---|---|
 | **Who does it** | Founder / remote team | Founder or trusted helper + pilot mechanic |
 | **Location** | China / anywhere with dev stack | Turkmenistan, Aşgabat first |
-| **Output** | Trust signals, fake-door demand instrument, rubric v1, this runbook | 5-10 free inspections + case studies + demand summary |
+| **Output** | Trust signals, fake-door demand instrument (removed from the app by ADR-0057), rubric v1, this runbook | 5-10 free inspections + case studies + demand summary |
 | **Software needed** | S8a app + S9a changes | No new software; hand-filled rubric + PDF template |
 | **Go/no-go decision** | Prepares inputs | Feeds the later betting-table decision |
 
@@ -333,5 +333,6 @@ When S9b triggers, the coordinator follows this runbook and records outputs. The
 - [`business/README.md`](../business/README.md) — competitive context
 - [`../00-vision.md`](../00-vision.md) — anti-goals, especially no test-drive scheduling and no escrow
 - [ADR-0037](../../adr/0037-trust-inspection-competitive-wedge.md) — trust wedge rationale
+- [ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md) — no in-app inspection demand signal; the pilot measures demand
 - [ADR-0020](../../adr/0020-document-hierarchy-and-mutability.md) — doc mutability rules
 - [ADR-0019](../../adr/0019-context-md-describes-current-state.md) — CONTEXT.md current-state rule

@@ -133,11 +133,11 @@ That is the whole screen. Video is added below the photos only when the video me
 | State | Visible to | Action available |
 |---|---|---|
 | `draft` | Owner only | Continue / discard |
-| `active` | Public | Favorite, chat, share, owner-edit |
+| `active` | Public | Favorite, Message, share, owner-edit |
 | `sold` | Detail and Favorites only, labelled Sold; never in Home or Results | Closed for contact: no Call, Message, Ask the seller, ♡ or Report; existing Conversations stay readable |
 | `archived` | Owner + admin; a buyer reaching it from Favorites or a link sees it closed, labelled Removed from sale; never in Home or Results | Closed for contact, as `sold`; owner can republish |
 | `reported` | Admin only | Reserved review-hold status; S7 report submission does not auto-transition active listings here |
-| `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact/messages disabled; existing threads readable; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
+| `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact and Messages disabled; existing Conversations stay readable; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
 
 ## Screens / states
 
