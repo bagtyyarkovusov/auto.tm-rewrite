@@ -60,6 +60,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0052](0052-seller-condition-disclosure-is-damaged-plus-known-issues.md) | Seller condition disclosure is "Damaged / needs repair" plus known issues (amends ADR-0037 condition disclosure) | Accepted | 2026-09-21 |
 | [0053](0053-defer-vin-decoding-until-a-real-decoder-exists.md) | Defer VIN decoding until a real decoder exists (amends ADR-0037 VIN history signal) | Accepted | 2026-09-22 |
 | [0054](0054-phone-or-email-sign-in-share-one-user.md) | Phone or email sign-in share one User (supersedes ADR-0006 phone-only sign-in; amends ADR-0030 reviewer entries) | Accepted | 2026-09-22 |
+| [0055](0055-resend-sends-sign-in-codes-from-the-worker.md) | Resend sends sign-in codes by email from the worker (complements ADR-0054) | Accepted | 2026-09-22 |
 
 ## Per-app ADRs
 

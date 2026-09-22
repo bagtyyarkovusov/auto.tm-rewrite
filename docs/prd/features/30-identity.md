@@ -33,7 +33,7 @@ Per [ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md):
 - Publishing or republishing a Listing needs a verified phone (`PHONE_REQUIRED`). The mobile Sell entry shows an "Add a phone" step to Users without one. "Phone verified" seller trust shows only for Users with a verified phone.
 - Codes: 6 digits; 5 wrong attempts; 5 requests per destination per 24 hours; `60 × 2^N` backoff; expiry 5 minutes for phone and 10 minutes for email; 10 requests per IP per hour shared across channels. Sign-in, add/change and deletion codes share these budgets.
 - API: `POST /api/v1/auth/otp/request` and `/verify` accept `{ phone }` or `{ email }`. `GET /api/v1/me` returns nullable `phone` and `email` plus `phoneVerified`. `POST /api/v1/me/sign-in-methods/request` and `/verify` add or replace a method. Shapes are Zod schemas in `@auto-tm/contracts`.
-- Email delivery waits on [Decide the email provider ADR for sign-in codes](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/376).
+- Email codes are sent by `apps/worker` through Resend's HTTPS API, with Amazon SES as the fallback. The API only enqueues. In the TM era email sign-in is best-effort through the TM Proxy PC, and phone stays primary ([ADR-0055](../../adr/0055-resend-sends-sign-in-codes-from-the-worker.md)). No email-sending code has shipped yet.
 
 ### Admin TOTP enrollment
 
