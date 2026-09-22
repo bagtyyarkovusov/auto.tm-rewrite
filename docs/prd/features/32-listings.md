@@ -107,7 +107,7 @@ That is the whole screen. Video is added below the photos only when the video me
 **Removed from detail** by the approved design:
 
 - The "VIN history" section in its empty states (the VIN stays as a specification row).
-- The Sprint 9a "Request AutoTM inspection" fake door.
+- The Sprint 9a "Request AutoTM inspection" fake door, together with the sheet that opened after publishing ([ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md)).
 - The "How to buy safely" link to auto.tm/trust.
 - View counts for buyers.
 - A similar-listings block. "See other Brand Model" on a closed Listing is the only link to other Listings.
@@ -173,11 +173,12 @@ That is the whole screen. Video is added below the photos only when the video me
 - [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first listing location; no exact listing GPS in Phase 1
 - [ADR-0024](../../adr/0024-owner-post-publish-photo-editing.md) — Owners may edit photos after publishing
 - [ADR-0027](../../adr/0027-mlp-beta-scope.md) — MLP beta scope; video and adjacent platform features deferred
-- [ADR-0037](../../adr/0037-trust-inspection-competitive-wedge.md) — Trust and inspection as the competitive wedge, amended by ADR-0052 and ADR-0053
+- [ADR-0037](../../adr/0037-trust-inspection-competitive-wedge.md) — Trust and inspection as the competitive wedge, amended by ADR-0052, ADR-0053 and ADR-0057
 - [ADR-0051](../../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) — Auto.ru is the structural reference for cards and discovery; AutoTM keeps its own tokens
 - [ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md) — Condition disclosure is "Damaged / needs repair" plus Known issues
 - [ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md) — VIN decoding deferred; the section shows only when decoded
 - [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md) — Listing contact phones are verified; no per-Listing "Phone verified" badge
+- [ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md) — No in-app inspection demand signal for the release; the concierge pilot measures demand
 
 ## Phase
 
