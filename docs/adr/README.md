@@ -61,6 +61,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0053](0053-defer-vin-decoding-until-a-real-decoder-exists.md) | Defer VIN decoding until a real decoder exists (amends ADR-0037 VIN history signal) | Accepted | 2026-09-22 |
 | [0054](0054-phone-or-email-sign-in-share-one-user.md) | Phone or email sign-in share one User (supersedes ADR-0006 phone-only sign-in; amends ADR-0030 reviewer entries) | Accepted | 2026-09-22 |
 | [0055](0055-resend-sends-sign-in-codes-from-the-worker.md) | Resend sends sign-in codes by email from the worker (complements ADR-0054) | Accepted | 2026-09-22 |
+| [0056](0056-listing-contact-phones-are-verified.md) | Listing contact phones are verified (supersedes ADR-0054 publishing and seller-trust parts) | Accepted | 2026-09-22 |
 
 ## Per-app ADRs
 
