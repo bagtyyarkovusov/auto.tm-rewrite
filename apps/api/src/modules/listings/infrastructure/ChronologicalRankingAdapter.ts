@@ -257,7 +257,7 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
       ...(row.transmissionId ? { transmissionId: row.transmissionId } : {}),
       ...(row.driveTypeId ? { driveTypeId: row.driveTypeId } : {}),
       ...(row.enginePower ? { enginePower: row.enginePower } : {}),
-      ...(row.mileageKm ? { mileageKm: row.mileageKm } : {}),
+      ...(row.mileageKm !== null ? { mileageKm: row.mileageKm } : {}),
       ...(row.locationText ? { locationText: row.locationText } : {}),
       ...(row.description ? { description: row.description } : {}),
       acceptsExchange: row.acceptsExchange,

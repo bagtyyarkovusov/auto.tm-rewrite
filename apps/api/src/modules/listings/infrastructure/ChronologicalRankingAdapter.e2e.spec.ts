@@ -105,6 +105,7 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
     priceCurrency: Currency;
     year?: number;
     condition?: "new" | "used";
+    mileageKm?: number;
     publishedAt: Date;
     status?: "active" | "sold";
     soldAt?: Date;
@@ -181,6 +182,25 @@ describe("ChronologicalRankingAdapter — Testcontainers", () => {
     expect(result.items).toHaveLength(2);
     expect(result.items.map((i) => i.id)).toEqual(["l1", "l2"]);
     expect(result.nextCursor).toBeUndefined();
+  });
+
+  it("keeps a mileageKm of 0 on ranked Listings", async () => {
+    const { cityA, brandX, modelX, seller } = await seedBaseCatalog();
+    await seedListing({
+      id: "l1",
+      sellerId: seller,
+      brandId: brandX,
+      modelId: modelX,
+      cityId: cityA,
+      priceAmount: 100_000,
+      priceCurrency: "TMT",
+      condition: "new",
+      mileageKm: 0,
+      publishedAt: new Date(),
+    });
+
+    const result = await adapter.rank({ limit: 10 });
+    expect(result.items[0]!.mileageKm).toBe(0);
   });
 
   it("filters by brandId", async () => {

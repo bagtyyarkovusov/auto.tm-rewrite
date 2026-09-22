@@ -54,6 +54,16 @@ export class PrismaFavoriteRepository implements FavoriteRepository {
     return row !== null;
   }
 
+  async favoritedListingIds(userId: string, listingIds: string[]): Promise<Set<string>> {
+    if (listingIds.length === 0) return new Set();
+
+    const rows = await this.prisma.favorite.findMany({
+      where: { userId, listingId: { in: listingIds } },
+      select: { listingId: true },
+    });
+    return new Set(rows.map((r) => r.listingId));
+  }
+
   async listByUserId(
     userId: string,
     opts?: { cursor?: { timestamp: string; id: string }; limit?: number },

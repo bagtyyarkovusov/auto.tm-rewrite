@@ -63,6 +63,8 @@ import {
   ListingModelCountResponseSchema,
   MyListingsResponseSchema,
   MyDraftsResponseSchema,
+  FavoriteListingSummarySchema,
+  MyFavoritesResponseSchema,
 } from "./schemas/listings";
 import {
   PresignRequestSchema,
@@ -192,6 +194,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("ListingModelCountResponse", ListingModelCountResponseSchema);
   registry.register("MyListingsResponse", MyListingsResponseSchema);
   registry.register("MyDraftsResponse", MyDraftsResponseSchema);
+  registry.register("FavoriteListingSummary", FavoriteListingSummarySchema);
+  registry.register("MyFavoritesResponse", MyFavoritesResponseSchema);
 
   // Uploads schemas
   registry.register("PresignRequest", PresignRequestSchema);

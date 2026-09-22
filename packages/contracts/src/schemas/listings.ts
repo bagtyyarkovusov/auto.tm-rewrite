@@ -60,11 +60,29 @@ export const ListingSummarySchema = z.object({
   priceCurrency: CurrencySchema,
   displayPriceTmt: z.number().positive(),
   coverMediaKey: z.string().optional(),
+  /** Keys of the first two photos by `sortOrder`; empty when the Listing has no photos. */
+  photoKeys: z.array(z.string()).max(2),
+  photoCount: z.number().int().nonnegative(),
+  mileageKm: z.number().int().nonnegative().optional(),
+  condition: ListingConditionSchema.optional(),
+  transmissionId: z.string().uuid().optional(),
+  engineTypeId: z.string().uuid().optional(),
   cityId: z.string().uuid(),
   publishedAt: z.string().datetime(),
   sellerTrust: SellerTrustSchema,
+  /** Present only when the request carries a signed-in viewer. */
+  isFavorited: z.boolean().optional(),
 });
 export type ListingSummary = z.infer<typeof ListingSummarySchema>;
+
+// ── Favorites item (ListingSummary + contact preferences) ──
+
+export const FavoriteListingSummarySchema = ListingSummarySchema.extend({
+  contactPhone: z.string().optional(),
+  allowCalls: z.boolean(),
+  allowChat: z.boolean(),
+});
+export type FavoriteListingSummary = z.infer<typeof FavoriteListingSummarySchema>;
 
 // ── ListingMedia ──
 
@@ -443,7 +461,7 @@ export const RemoveFavoriteResponseSchema = z.object({
 export type RemoveFavoriteResponse = z.infer<typeof RemoveFavoriteResponseSchema>;
 
 export const MyFavoritesResponseSchema = z.object({
-  items: z.array(ListingSummarySchema),
+  items: z.array(FavoriteListingSummarySchema),
   nextCursor: z.string().nullable(),
 });
 export type MyFavoritesResponse = z.infer<typeof MyFavoritesResponseSchema>;

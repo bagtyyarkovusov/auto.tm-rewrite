@@ -1,6 +1,6 @@
 import "reflect-metadata";
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { ConfigModule } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
@@ -82,6 +82,14 @@ describe("ListingsController e2e", () => {
   });
 
   afterAll(async () => {
+    // Card-field fixtures reference suite-owned transmission / engine type
+    // rows, so drop the suite's listings first, then those lookup rows.
+    await cleanSuiteFixtures(prisma, suite, {
+      userAliases: SUITE_USERS,
+      exchangeRatePairs: [{ from: "USD", to: "TMT" }],
+    });
+    await prisma.transmission.deleteMany({ where: { id: suite.id("transmission") } });
+    await prisma.engineType.deleteMany({ where: { id: suite.id("engine-type") } });
     await app.close();
   });
 
@@ -647,6 +655,168 @@ describe("ListingsController e2e", () => {
       const parsed = ListingsSchemas.FeedResponseSchema.parse(feed.body);
 
       expect(parsed.items).toHaveLength(1);
+    });
+
+    async function seedFeedListing(overrides: Partial<Prisma.ListingUncheckedCreateInput> = {}) {
+      return prisma.listing.create({
+        data: {
+          sellerId: suite.id("user-1"),
+          status: "active",
+          brandId: validPayload.brandId,
+          modelId: validPayload.modelId,
+          cityId: validPayload.cityId,
+          priceAmount: validPayload.priceAmount,
+          priceCurrency: "TMT",
+          publishedAt: new Date(),
+          ...overrides,
+        },
+      });
+    }
+
+    it("returns card photo and spec fields, omitting unset specs", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      const transmission = await prisma.transmission.upsert({
+        where: { id: suite.id("transmission") },
+        create: { id: suite.id("transmission"), nameRu: "e2e", nameTk: "e2e", nameEn: "e2e" },
+        update: {},
+      });
+      const engineType = await prisma.engineType.upsert({
+        where: { id: suite.id("engine-type") },
+        create: { id: suite.id("engine-type"), nameRu: "e2e", nameTk: "e2e", nameEn: "e2e" },
+        update: {},
+      });
+
+      const full = await seedFeedListing({
+        mileageKm: 0,
+        condition: "new",
+        transmissionId: transmission.id,
+        engineTypeId: engineType.id,
+        publishedAt: new Date("2026-07-18T12:00:00.000Z"),
+      });
+      const bare = await seedFeedListing({
+        publishedAt: new Date("2026-07-17T12:00:00.000Z"),
+      });
+      await prisma.listingMedia.createMany({
+        data: [
+          { listingId: full.id, kind: "image", key: "p2", sortOrder: 2 },
+          { listingId: full.id, kind: "image", key: "p0", sortOrder: 0 },
+          { listingId: full.id, kind: "video", key: "v1", sortOrder: 1 },
+          { listingId: full.id, kind: "image", key: "p3", sortOrder: 3 },
+        ],
+      });
+
+      const feed = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+      const parsed = ListingsSchemas.FeedResponseSchema.parse(feed.body);
+
+      const fullItem = parsed.items.find((i) => i.id === full.id);
+      expect(fullItem).toMatchObject({
+        photoKeys: ["p0", "p2"],
+        photoCount: 3,
+        mileageKm: 0,
+        condition: "new",
+        transmissionId: transmission.id,
+        engineTypeId: engineType.id,
+      });
+
+      const bareItem = feed.body.items.find((i: { id: string }) => i.id === bare.id);
+      expect(bareItem.photoKeys).toEqual([]);
+      expect(bareItem.photoCount).toBe(0);
+      expect(bareItem).not.toHaveProperty("mileageKm");
+      expect(bareItem).not.toHaveProperty("condition");
+      expect(bareItem).not.toHaveProperty("transmissionId");
+      expect(bareItem).not.toHaveProperty("engineTypeId");
+    });
+
+    it("marks isFavorited for a signed-in viewer and omits it for an anonymous one", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      const viewerToken = await createUser("user-2");
+      const favorited = await seedFeedListing();
+      const other = await seedFeedListing();
+      await prisma.favorite.create({
+        data: { userId: suite.id("user-2"), listingId: favorited.id },
+      });
+
+      const signedIn = await request
+        .get("/api/v1/listings")
+        .set("Authorization", `Bearer ${viewerToken}`)
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+      const byId = new Map(
+        signedIn.body.items.map((i: { id: string; isFavorited?: boolean }) => [i.id, i.isFavorited]),
+      );
+      expect(byId.get(favorited.id)).toBe(true);
+      expect(byId.get(other.id)).toBe(false);
+
+      const anonymous = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+      expect(anonymous.body.items).toHaveLength(2);
+      for (const item of anonymous.body.items) {
+        expect(item).not.toHaveProperty("isFavorited");
+      }
+    });
+
+    it("makes the same number of SQL queries regardless of page size", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      const viewerToken = await createUser("user-2");
+      await seedExchangeRate("USD", "TMT", 20);
+      for (let i = 0; i < 12; i++) {
+        const listing = await seedFeedListing({
+          priceCurrency: i % 2 === 0 ? "TMT" : "USD",
+          publishedAt: new Date(Date.now() - i * 1000),
+        });
+        await prisma.listingMedia.createMany({
+          data: [0, 1, 2].map((sortOrder) => ({
+            listingId: listing.id,
+            kind: "image" as const,
+            key: `${listing.id}/${sortOrder}`,
+            sortOrder,
+          })),
+        });
+        if (i % 3 === 0) {
+          await prisma.favorite.create({
+            data: { userId: suite.id("user-2"), listingId: listing.id },
+          });
+        }
+      }
+
+      // PrismaService (@auto-tm/db) hands its private pg Pool to PrismaPg
+      // (@prisma/adapter-pg 7.x), which sends every non-transaction SQL
+      // statement through pool.query(). If that wiring changes, the
+      // `small > 0` guard below fails loudly instead of passing vacuously.
+      const pool = (prisma as unknown as { pool: { query: (...args: unknown[]) => unknown } }).pool;
+      const querySpy = vi.spyOn(pool, "query");
+
+      async function queriesForPage(limit: number): Promise<number> {
+        querySpy.mockClear();
+        const res = await request
+          .get("/api/v1/listings")
+          .set("Authorization", `Bearer ${viewerToken}`)
+          .query({ brandId: suite.catalog.brandId, limit })
+          .expect(200);
+        expect(res.body.items).toHaveLength(limit);
+        return querySpy.mock.calls.length;
+      }
+
+      try {
+        const small = await queriesForPage(2);
+        const large = await queriesForPage(12);
+
+        // Guards against a spy that never fires (0 === 0).
+        expect(small).toBeGreaterThan(0);
+        expect(large).toBe(small);
+        // listings + cover media include + card photos + exchange rates + favorites.
+        expect(large).toBeLessThanOrEqual(5);
+      } finally {
+        querySpy.mockRestore();
+      }
     });
 
     it("returns coverMediaKey for published listings with media", async () => {

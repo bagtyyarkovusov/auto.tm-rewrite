@@ -723,6 +723,36 @@
           "coverMediaKey": {
             "type": "string"
           },
+          "photoKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2
+          },
+          "photoCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "cityId": {
             "type": "string",
             "format": "uuid"
@@ -741,6 +771,9 @@
             "required": [
               "phoneVerified"
             ]
+          },
+          "isFavorited": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -752,6 +785,8 @@
           "priceAmount",
           "priceCurrency",
           "displayPriceTmt",
+          "photoKeys",
+          "photoCount",
           "cityId",
           "publishedAt",
           "sellerTrust"
@@ -2119,6 +2154,36 @@
                 "coverMediaKey": {
                   "type": "string"
                 },
+                "photoKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 2
+                },
+                "photoCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mileageKm": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "condition": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "used"
+                  ]
+                },
+                "transmissionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "engineTypeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "cityId": {
                   "type": "string",
                   "format": "uuid"
@@ -2137,6 +2202,9 @@
                   "required": [
                     "phoneVerified"
                   ]
+                },
+                "isFavorited": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -2148,6 +2216,8 @@
                 "priceAmount",
                 "priceCurrency",
                 "displayPriceTmt",
+                "photoKeys",
+                "photoCount",
                 "cityId",
                 "publishedAt",
                 "sellerTrust"
@@ -2360,6 +2430,36 @@
                 "coverMediaKey": {
                   "type": "string"
                 },
+                "photoKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 2
+                },
+                "photoCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mileageKm": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "condition": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "used"
+                  ]
+                },
+                "transmissionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "engineTypeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "cityId": {
                   "type": "string",
                   "format": "uuid"
@@ -2378,6 +2478,9 @@
                   "required": [
                     "phoneVerified"
                   ]
+                },
+                "isFavorited": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -2389,6 +2492,8 @@
                 "priceAmount",
                 "priceCurrency",
                 "displayPriceTmt",
+                "photoKeys",
+                "photoCount",
                 "cityId",
                 "publishedAt",
                 "sellerTrust"
@@ -2602,6 +2707,292 @@
                 "payload",
                 "createdAt",
                 "updatedAt"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "FavoriteListingSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "active",
+              "sold",
+              "archived",
+              "rejected",
+              "banned"
+            ]
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "displayPriceTmt": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "coverMediaKey": {
+            "type": "string"
+          },
+          "photoKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2
+          },
+          "photoCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sellerTrust": {
+            "type": "object",
+            "properties": {
+              "phoneVerified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "phoneVerified"
+            ]
+          },
+          "isFavorited": {
+            "type": "boolean"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "allowCalls": {
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sellerId",
+          "status",
+          "brandId",
+          "modelId",
+          "priceAmount",
+          "priceCurrency",
+          "displayPriceTmt",
+          "photoKeys",
+          "photoCount",
+          "cityId",
+          "publishedAt",
+          "sellerTrust",
+          "allowCalls",
+          "allowChat"
+        ]
+      },
+      "MyFavoritesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sellerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "pending_review",
+                    "active",
+                    "sold",
+                    "archived",
+                    "rejected",
+                    "banned"
+                  ]
+                },
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "modelId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "year": {
+                  "type": "integer"
+                },
+                "priceAmount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "priceCurrency": {
+                  "type": "string",
+                  "enum": [
+                    "TMT",
+                    "USD",
+                    "AED"
+                  ]
+                },
+                "displayPriceTmt": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "coverMediaKey": {
+                  "type": "string"
+                },
+                "photoKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 2
+                },
+                "photoCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mileageKm": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "condition": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "used"
+                  ]
+                },
+                "transmissionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "engineTypeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "cityId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "sellerTrust": {
+                  "type": "object",
+                  "properties": {
+                    "phoneVerified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "phoneVerified"
+                  ]
+                },
+                "isFavorited": {
+                  "type": "boolean"
+                },
+                "contactPhone": {
+                  "type": "string"
+                },
+                "allowCalls": {
+                  "type": "boolean"
+                },
+                "allowChat": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "sellerId",
+                "status",
+                "brandId",
+                "modelId",
+                "priceAmount",
+                "priceCurrency",
+                "displayPriceTmt",
+                "photoKeys",
+                "photoCount",
+                "cityId",
+                "publishedAt",
+                "sellerTrust",
+                "allowCalls",
+                "allowChat"
               ]
             }
           },

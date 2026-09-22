@@ -128,12 +128,14 @@ export class ListingsController {
 
   @Public()
   @Get()
-  async listFeed(@Query() query: unknown) {
+  async listFeed(@Query() query: unknown, @Req() req: FastifyRequest) {
     const parsed = this.parseZodQuery(ListingsSchemas.FeedQuerySchema, query);
     const { cursor, limit, ...filterFields } = parsed;
     const filters = this.parseAndValidateFilters(filterFields);
+    const viewerId = (req as { user?: { sub: string } }).user?.sub;
 
     return this.listFeedUC.execute({
+      ...(viewerId !== undefined ? { viewerId } : {}),
       ...(cursor !== undefined ? { cursor } : {}),
       limit,
       ...(filters !== undefined ? { filters } : {}),
