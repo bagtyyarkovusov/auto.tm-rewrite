@@ -13,7 +13,7 @@
   - **Phase 1** (~8-10 weeks) — Marketplace MVP: identity, listings, chat, notifications, garage, blog, public web, admin
   - **Phase 2** (~6-8 weeks) — Inspection reports + 3-tier system + PDF export + AutoTM-staffed pro media
   - **Phase 3** (~4-6 weeks) — 360° orbit photos + comparisons + polish
-- Reference design: **Auto.ru** is the structural reference for the mobile discovery journey (Home, search, filters, Results) and for Listing cards and detail — *revised 2026-09-21, see [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) and §21*. **Kolesa.kz** ([ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md), 2026-06-10) remains the UX / findability reference only for other mobile screens without an approved spec. Visual design system stays AutoTM's own — see §12.
+- Reference design: **Auto.ru** is the structural reference for the mobile discovery journey (Home, search, filters, Results) and for Listing cards and detail — *revised 2026-09-21, see [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md), the founder-approved [listing content](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/351#issuecomment-5761811759), and §21*. **Kolesa.kz** ([ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md), 2026-06-10) remains the UX / findability reference only for other mobile screens without an approved spec. Visual design system stays AutoTM's own — see §12.
 - Brand identity: red `#E60000` carried from previous Flutter app; rest of design fresh
 
 ## 2. Stack

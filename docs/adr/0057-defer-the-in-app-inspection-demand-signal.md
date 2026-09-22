@@ -11,7 +11,7 @@ ADR-0037 decision 4 required a "Request AutoTM inspection (coming soon)" interes
 
 - **Listing detail:** `InspectionInterestCta` shows the call-to-action on active Listings. It opens a sheet with "coming soon" copy and an optional willingness-to-pay amount. Signed-out visitors must sign in first.
 - **After publishing:** the Sell wizard opens the new Listing with `?inspectionInterest=1`, which opens the same sheet automatically for the seller.
-- **API:** each submission is saved as an `InspectionInterest` record, but only when `INSPECTION_INTEREST_ENABLED` is on. The flag defaults to `false`, and `GET /api/v1/config` reports it to the app. When it is off, the app still shows the button, disabled, with "inspection temporarily unavailable".
+- **API:** each submission is saved as an `InspectionInterest` record, but only when `INSPECTION_INTEREST_ENABLED` is on. The flag defaults to `false`, and `GET /api/v1/config` reports it to the app. When it is off, the app still shows the button, disabled, with "Inspections are temporarily unavailable."
 - **Admin:** a page shows the counts.
 
 In [Prototype listing card and Listing detail content](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/351), the founder approved a Listing detail screen without this call-to-action. [Reconcile the discovery PRD and Kolesa guidance with ADR-0051](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/358) made that removal an acceptance criterion. The same review amended ADR-0037's other signals in [ADR-0052](0052-seller-condition-disclosure-is-damaged-plus-known-issues.md) and [ADR-0053](0053-defer-vin-decoding-until-a-real-decoder-exists.md). Decision 4 still stands, so the approved design contradicts an accepted ADR.
