@@ -25,6 +25,25 @@ The PR sets `npm_config_store_dir` to `${HOME}/Library/pnpm/store`, a location o
 
 Verification on the same PR commit: [attempt 1](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35629115802/attempts/1) used the Library store, reused 1,785 packages, downloaded 259 missing packages, and installed in 43.5 seconds. [Attempt 2](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35629115802/attempts/2) reused 2,044 packages, downloaded none, and installed in 8.9 seconds. Both PR checks passed. This demonstrates a warm install after the initial population. It does not prove how often the old `/tmp` store was cleared or that total job time will stay low when `codeload.github.com` retries occur.
 
+### Action-download follow-up
+
+The workflow-jobs API separates queue time from work on the runner. The first five jobs below waited 6–7 seconds in the queue. Their setup times varied far more than their warm installs:
+
+| Run | Queue | Setup | Failed action downloads | Install |
+|---|---:|---:|---:|---:|
+| [35574413248](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35574413248) | 6 s | 11 s | 0 | 11 s |
+| [35582538081](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35582538081) | 6 s | 64 s | 2 | 11 s |
+| [35596238264](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35596238264) | 6 s | 12 s | 0 | 230 s, cold store |
+| [35628364395](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35628364395) | 7 s | 56 s | 2 | 9 s |
+| [35630154321](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35630154321) | 6 s | 82 s | 3 | 9 s |
+| [35632775960](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35632775960) | 5 s | 35 s | 1 | 11 s |
+
+The failures hit different actions: `pnpm/action-setup` and `actions/setup-node` in run 35582538081; `actions/checkout` and `pnpm/action-setup` in run 35628364395; `actions/checkout` once and `pnpm/action-setup` twice in run 35630154321; and `pnpm/action-setup` in run 35632775960. Each failed URL was on `codeload.github.com`. The runner's local diagnostic log for run 35630154321 gives a more precise error than the workflow warning: `HttpRequestException` while copying the archive stream, caused by `IOException: The decryption operation failed`, then `AppleCrypto+SslException: decryption failure`. The successful retry downloaded the same action. This points to an intermittent TLS transfer failure in the runner's network path; it does not identify which hop caused it.
+
+The running `Runner.Listener` had no lowercase or uppercase proxy variables. macOS had an HTTPS proxy configured, but that system setting does not establish that the runner uses it. A bounded test downloaded the same public `actions/checkout` archive 12 times with an explicit direct route and 12 times through the Mac's local HTTPS proxy. All 24 transfers returned HTTP 200 with the full 434,773 bytes in roughly 2–3 seconds. This `curl` test did not reproduce the runner's .NET/AppleCrypto error and does not show that the proxy would fix it. Keep any proxy change as a separate reversible experiment, with repeated PR runs and runner diagnostic logs before claiming an improvement. [GitHub's runner proxy instructions](https://docs.github.com/en/actions/how-tos/manage-runners/use-proxy-servers) require lowercase variables on macOS before runner startup and a restart after changing them.
+
+One route experiment set only `https_proxy` in the runner-root `.env` and restarted the idle service. [Run 35630154321, attempt 2](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35630154321/attempts/2) still failed one `pnpm/action-setup` archive transfer and spent 39 seconds in setup; install stayed warm at 9 seconds and the check passed. The runner then went offline with session-creation conflicts, so no second proxy run started. The proxy line was removed and the service restarted. It reconnected and picked up [attempt 3](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35630154321/attempts/3) on the original route: setup took 31 seconds with one `pnpm/action-setup` retry, and install took 10 seconds. That attempt later failed an unrelated `ListingsController.e2e.spec.ts` test with `socket hang up`. This single proxy sample neither fixed action downloads nor proves the proxy caused the session conflict. The runner was online again after restoration.
+
 ### Recommended experiments, in order
 
 1. **Diagnose cold installs.** Record `pnpm store path`, pnpm/Node versions, free disk, and install's reused/downloaded counts for several CI runs. Keep the pnpm store at a stable path outside `actions-runner/_work`. Investigate any cleanup task or store-path drift; reclaim disk space deliberately rather than deleting the active store. A warm install is already about 11 seconds, so a repeatable local store has the largest demonstrated upside.
