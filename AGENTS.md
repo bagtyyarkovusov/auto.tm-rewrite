@@ -58,6 +58,10 @@ Canonical vocabulary — see [`docs/domain/GLOSSARY.md`](docs/domain/GLOSSARY.md
 
 For any `mobile` issue, SDK/package debugging, Metro failure, or Expo Go runtime crash, read `docs/agents/mobile-expo.md` before changing package versions, Metro config, Codegen, or `node_modules` resolution.
 
+### Mobile discovery reference
+
+For any mobile screen, navigation, IA, or findability work, read [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) first. Auto.ru is AutoTM's **structural reference for the mobile discovery journey**: Home, the brand and model pickers, Search, Results, Sort, and Search parameters. The approved target lives in [33 — Search & discovery](docs/prd/features/33-search-discovery.md) and, for Listing cards and Listing detail, [32 — Listings](docs/prd/features/32-listings.md). Auto.ru is a journey reference, **not** a visual template or a feature list: keep AutoTM's own Uber-style tokens and the locked five tabs, and the [00-vision anti-goals](docs/prd/00-vision.md#anti-goals-things-we-explicitly-will-not-build) and MLP scope still apply. Capture IDs (`AR-…`, `KZ-…`) are indexed in [the reference screens index](docs/prd/ui/research/reference-screens-2026-09-21.md). The [Kolesa findability guide](docs/prd/ui/kolesa-findability-reference.md) no longer governs Home, search, filters, or Results; use it only for other mobile screens that have no approved spec. Locked in [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md), which supersedes [ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md) for these surfaces.
+
 ### TypeScript runtime boundaries
 
 For any TypeScript module-resolution, package `exports`, `.js`/extensionless import, or runtime-shared workspace package issue, read `docs/agents/typescript-runtime.md` first. `@auto-tm/db` and `@auto-tm/contracts` are built packages for runtime consumers; do not point their exports back at raw `src/*.ts`.

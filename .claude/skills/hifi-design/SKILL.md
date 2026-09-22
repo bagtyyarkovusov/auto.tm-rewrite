@@ -21,7 +21,7 @@ Read [the domain glossary](../../../docs/domain/GLOSSARY.md) for canonical engin
 
 When available, apply user-global `ux-heuristics`, `design-everyday-things`, and `microinteractions`. The mandatory fallback rubric in [REFERENCE.md](REFERENCE.md) covers usability, affordances, constraints, feedback/recovery, and Trigger → Rules → Feedback → Loops/Modes for each key interaction.
 
-Use Kolesa only for mobile IA/findability. AutoTM's actual tokens, components, typography, copy, and brand remain authoritative for visuals.
+Use Auto.ru only as the mobile discovery journey reference (ADR-0051), and Kolesa only for other mobile IA without an approved spec. AutoTM's actual tokens, components, typography, copy, and brand remain authoritative for visuals.
 
 ## Specify
 
