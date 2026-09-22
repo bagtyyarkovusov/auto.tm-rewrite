@@ -787,7 +787,10 @@ describe("ListingsController e2e", () => {
         }
       }
 
-      // PrismaPg sends every SQL statement through the external pool's query().
+      // PrismaService (@auto-tm/db) hands its private pg Pool to PrismaPg
+      // (@prisma/adapter-pg 7.x), which sends every non-transaction SQL
+      // statement through pool.query(). If that wiring changes, the
+      // `small > 0` guard below fails loudly instead of passing vacuously.
       const pool = (prisma as unknown as { pool: { query: (...args: unknown[]) => unknown } }).pool;
       const querySpy = vi.spyOn(pool, "query");
 
@@ -809,8 +812,8 @@ describe("ListingsController e2e", () => {
         // Guards against a spy that never fires (0 === 0).
         expect(small).toBeGreaterThan(0);
         expect(large).toBe(small);
-        // listings + media + exchange rates + favorites.
-        expect(large).toBeLessThanOrEqual(4);
+        // listings + cover media include + card photos + exchange rates + favorites.
+        expect(large).toBeLessThanOrEqual(5);
       } finally {
         querySpy.mockRestore();
       }

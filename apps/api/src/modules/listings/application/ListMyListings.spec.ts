@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import type { CardPhotos } from "../domain/CardPhotos";
 import { ListMyListings } from "./ListMyListings";
 import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
 
 class FakeListingCardReadPort implements ListingCardReadPort {
   summaries: ListingCard[] = [];
+
+  async getCardPhotos(): Promise<Map<string, CardPhotos>> {
+    return new Map();
+  }
   nextCursor?: { timestamp: string; id: string };
 
   async getVisibleCards(_ids: string[]): Promise<ListingCard[]> {

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
-import { toCardPhotos } from "../domain/CardPhotos";
+import { toCardPhotos, type CardPhotos } from "../domain/CardPhotos";
 import type {
   Currency,
   FeedCursor,
@@ -79,11 +79,32 @@ export class PrismaListingsReadRepository
     }
 
     const [card] = await this.toCards([row]);
-    return card ?? null;
+    return card ? toListingSummary(card) : null;
   }
 
   async getListingSummaries(ids: string[]): Promise<ListingSummary[]> {
-    return this.getVisibleCards(ids);
+    return (await this.getVisibleCards(ids)).map(toListingSummary);
+  }
+
+  async getCardPhotos(listingIds: string[]): Promise<Map<string, CardPhotos>> {
+    if (listingIds.length === 0) return new Map();
+
+    const rows = await this.prisma.listingMedia.findMany({
+      where: { listingId: { in: listingIds } },
+      orderBy: [{ listingId: "asc" }, { sortOrder: "asc" }],
+      select: { listingId: true, key: true, kind: true },
+    });
+
+    const mediaByListing = new Map<string, Array<{ key: string; kind: MediaKind }>>();
+    for (const row of rows) {
+      const media = mediaByListing.get(row.listingId) ?? [];
+      media.push({ key: row.key, kind: row.kind });
+      mediaByListing.set(row.listingId, media);
+    }
+
+    return new Map(
+      [...mediaByListing].map(([listingId, media]) => [listingId, toCardPhotos(media)]),
+    );
   }
 
   async getVisibleCards(ids: string[]): Promise<ListingCard[]> {
@@ -126,7 +147,8 @@ export class PrismaListingsReadRepository
     ownerId: string,
     query?: { cursor?: FeedCursor; limit?: number },
   ): Promise<{ items: ListingSummary[]; nextCursor?: FeedCursor }> {
-    return this.getOwnerCards(ownerId, query);
+    const result = await this.getOwnerCards(ownerId, query);
+    return { ...result, items: result.items.map(toListingSummary) };
   }
 
   async getOwnerCards(
@@ -255,4 +277,27 @@ export class PrismaListingsReadRepository
     }
     return priceAmount * rate;
   }
+}
+
+/**
+ * Narrows a card to the cross-context `ListingSummary` fields so card-only
+ * data (notably `contactPhone`) never reaches other contexts at runtime.
+ */
+function toListingSummary(card: ListingCard): ListingSummary {
+  const summary: ListingSummary = {
+    id: card.id,
+    sellerId: card.sellerId,
+    status: card.status,
+    brandId: card.brandId,
+    modelId: card.modelId,
+    priceAmount: card.priceAmount,
+    priceCurrency: card.priceCurrency,
+    displayPriceTmt: card.displayPriceTmt,
+    cityId: card.cityId,
+    publishedAt: card.publishedAt,
+    allowChat: card.allowChat,
+  };
+  if (card.year !== undefined) summary.year = card.year;
+  if (card.coverMediaKey !== undefined) summary.coverMediaKey = card.coverMediaKey;
+  return summary;
 }

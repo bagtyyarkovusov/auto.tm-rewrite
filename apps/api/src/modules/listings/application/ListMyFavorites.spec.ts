@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import type { CardPhotos } from "../domain/CardPhotos";
 
 import { ListMyFavorites } from "./ListMyFavorites";
 import { Favorite } from "../domain/Favorite";
@@ -70,6 +71,10 @@ class FakeFavoriteRepository implements FavoriteRepository {
 
 class FakeListingCardReadPort implements ListingCardReadPort {
   summaries: ListingCard[] = [];
+
+  async getCardPhotos(): Promise<Map<string, CardPhotos>> {
+    return new Map();
+  }
 
   async getVisibleCards(ids: string[]): Promise<ListingCard[]> {
     return this.summaries.filter((s) => ids.includes(s.id));

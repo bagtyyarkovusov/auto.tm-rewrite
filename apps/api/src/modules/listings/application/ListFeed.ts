@@ -20,6 +20,11 @@ import {
   FAVORITE_REPOSITORY,
   type FavoriteRepository,
 } from "../domain/ports/FavoriteRepository";
+import {
+  LISTING_CARD_READ_PORT,
+  type ListingCardReadPort,
+} from "../domain/ports/ListingCardReadPort";
+import { toCardPhotos } from "../domain/CardPhotos";
 
 export interface ListFeedInput {
   /** Signed-in viewer, when the request carries one; drives `isFavorited`. */
@@ -42,6 +47,8 @@ export class ListFeed {
     private readonly storage: MediaStoragePort,
     @Inject(FAVORITE_REPOSITORY)
     private readonly favorites: FavoriteRepository,
+    @Inject(LISTING_CARD_READ_PORT)
+    private readonly cards: ListingCardReadPort,
   ) {}
 
   async execute(input: ListFeedInput): Promise<FeedResponseDto> {
@@ -58,16 +65,18 @@ export class ListFeed {
       ...(input.filters !== undefined ? { filters: input.filters } : {}),
     });
 
+    const listingIds = rankResult.items.map((listing) => listing.id);
     const rateMap = await this.buildRateMap();
+    // Batched per page, never per Listing: one media read, one favorites read.
+    const photosById = await this.cards.getCardPhotos(listingIds);
     const favorited =
       input.viewerId !== undefined
-        ? await this.favorites.favoritedListingIds(
-            input.viewerId,
-            rankResult.items.map(({ listing }) => listing.id),
-          )
+        ? await this.favorites.favoritedListingIds(input.viewerId, listingIds)
         : undefined;
+    const noPhotos = toCardPhotos([]);
 
-    const items = rankResult.items.map(({ listing, photos }) => {
+    const items = rankResult.items.map((listing) => {
+      const photos = photosById.get(listing.id) ?? noPhotos;
       const displayPriceTmt = this.computeDisplayPriceTmt(
         listing.priceAmount,
         listing.priceCurrency,

@@ -3,16 +3,14 @@ import { ListFeed } from "./ListFeed";
 import { Listing } from "../domain/Listing";
 import type { CardPhotos } from "../domain/CardPhotos";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
-import type { FeedRankingPort, RankedListing } from "../domain/ports/FeedRankingPort";
+import type { FeedRankingPort } from "../domain/ports/FeedRankingPort";
+import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { ListingFilterCriteria } from "../domain/types";
 
-const NO_PHOTOS: CardPhotos = { photoKeys: [], photoCount: 0 };
-
 class FakeFeedRankingPort implements FeedRankingPort {
   items: Listing[] = [];
-  photos = new Map<string, CardPhotos>();
   nextCursor?: { timestamp: string; id: string };
   lastViewerId: string | undefined;
 
@@ -21,13 +19,10 @@ class FakeFeedRankingPort implements FeedRankingPort {
     filters?: ListingFilterCriteria;
     cursor?: { timestamp: string; id: string };
     limit: number;
-  }): Promise<{ items: RankedListing[]; nextCursor?: { timestamp: string; id: string } }> {
+  }): Promise<{ items: Listing[]; nextCursor?: { timestamp: string; id: string } }> {
     this.lastViewerId = query.viewerId;
-    const result: { items: RankedListing[]; nextCursor?: { timestamp: string; id: string } } = {
-      items: this.items.map((listing) => ({
-        listing,
-        photos: this.photos.get(listing.id) ?? NO_PHOTOS,
-      })),
+    const result: { items: Listing[]; nextCursor?: { timestamp: string; id: string } } = {
+      items: this.items,
     };
     if (this.nextCursor !== undefined) {
       result.nextCursor = this.nextCursor;
@@ -98,17 +93,37 @@ class FakeFavoriteRepository implements FavoriteRepository {
   }
 }
 
+class FakeListingCardReadPort implements ListingCardReadPort {
+  photos = new Map<string, CardPhotos>();
+  photoLookups = 0;
+
+  async getCardPhotos(listingIds: string[]): Promise<Map<string, CardPhotos>> {
+    this.photoLookups += 1;
+    return new Map([...this.photos].filter(([id]) => listingIds.includes(id)));
+  }
+
+  async getVisibleCards(): Promise<ListingCard[]> {
+    return [];
+  }
+
+  async getOwnerCards(): Promise<{ items: ListingCard[] }> {
+    return { items: [] };
+  }
+}
+
 function makeUseCase(
   ranking?: FakeFeedRankingPort,
   exchangeRates?: FakeExchangeRatePort,
   storage?: FakeMediaStoragePort,
   favorites?: FakeFavoriteRepository,
+  cards?: FakeListingCardReadPort,
 ) {
   return new ListFeed(
     ranking ?? new FakeFeedRankingPort(),
     exchangeRates ?? new FakeExchangeRatePort(),
     storage ?? new FakeMediaStoragePort(),
     favorites ?? new FakeFavoriteRepository(),
+    cards ?? new FakeListingCardReadPort(),
   );
 }
 
@@ -217,6 +232,7 @@ describe("ListFeed", () => {
       exchangeRates,
       new FakeMediaStoragePort(),
       new FakeFavoriteRepository(),
+      new FakeListingCardReadPort(),
     );
     const cursor = Buffer.from(
       JSON.stringify({ timestamp: "2026-05-01T00:00:00Z", id: "00000000-0000-0000-0000-000000000001" }),
@@ -264,19 +280,22 @@ describe("ListFeed", () => {
       exchangeRates,
       new FakeMediaStoragePort(),
       new FakeFavoriteRepository(),
+      new FakeListingCardReadPort(),
     );
     await uc.execute({ filters: { brandId: "brand-x", priceMin: 50000 } });
 
     expect(receivedFilters).toEqual({ brandId: "brand-x", priceMin: 50000 });
   });
 
-  it("returns photoKeys and photoCount from the ranking result", async () => {
+  it("returns photoKeys and photoCount from one batched photo read", async () => {
     ranking.items = [seedListing({ id: "l1" }), seedListing({ id: "l2" })];
-    ranking.photos.set("l1", { coverMediaKey: "a", photoKeys: ["a", "b"], photoCount: 5 });
+    const cards = new FakeListingCardReadPort();
+    cards.photos.set("l1", { coverMediaKey: "a", photoKeys: ["a", "b"], photoCount: 5 });
 
-    const uc = makeUseCase(ranking, exchangeRates);
+    const uc = makeUseCase(ranking, exchangeRates, undefined, undefined, cards);
     const result = await uc.execute({});
 
+    expect(cards.photoLookups).toBe(1);
     expect(result.items[0]!.photoKeys).toEqual(["a", "b"]);
     expect(result.items[0]!.photoCount).toBe(5);
     expect(result.items[1]!.photoKeys).toEqual([]);

@@ -4,7 +4,7 @@ import type { ListingSummary } from "./ListingsReadPort";
 
 /**
  * In-context card read model: a `ListingSummary` plus the fields the
- * Favorites and My Listings cards render without a detail fetch.
+ * Home, Favorites, and My Listings cards render without a detail fetch.
  * Consumed only inside `listings/`; the cross-context `ListingsReadPort`
  * surface is unchanged.
  */
@@ -18,6 +18,12 @@ export interface ListingCard extends ListingSummary, CardPhotos {
 }
 
 export interface ListingCardReadPort {
+  /**
+   * Card photo fields for the given Listing ids in one batched read. Ids with
+   * no media are absent from the map. Used by `ListFeed` next to
+   * `FeedRankingPort.rank()`, which stays ranking-only per ADR-0021.
+   */
+  getCardPhotos(listingIds: string[]): Promise<Map<string, CardPhotos>>;
   /** Cards for the given ids, excluding deleted, banned, and non-public-status Listings. Order is not preserved. */
   getVisibleCards(ids: string[]): Promise<ListingCard[]>;
   /** The owner's non-deleted Listings (any status), newest `updatedAt` first. */

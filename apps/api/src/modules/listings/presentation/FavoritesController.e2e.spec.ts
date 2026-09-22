@@ -27,6 +27,10 @@ import {
 } from "../../../../test/helpers/e2eSuite";
 import { IMAGE_VARIANT_GENERATOR } from "../domain/ports/ImageVariantGenerator";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
+import {
+  LISTINGS_READ_PORT,
+  type ListingsReadPort,
+} from "../domain/ports/ListingsReadPort";
 
 const suite = defineE2eSuite("favorites-controller");
 type SuiteUser = "seller-1" | "buyer-1";
@@ -406,6 +410,13 @@ describe("FavoritesController e2e", () => {
         allowCalls: false,
         allowChat: true,
       });
+
+      // The cross-context read surface stays narrow: no contact phone.
+      const listingsRead = app.get<ListingsReadPort>(LISTINGS_READ_PORT);
+      const [summary] = await listingsRead.getListingSummaries([listingId]);
+      expect(summary).toBeDefined();
+      expect(summary).not.toHaveProperty("contactPhone");
+      expect(summary).not.toHaveProperty("photoKeys");
     });
 
     it("excludes soft-deleted listings from favorites list", async () => {
