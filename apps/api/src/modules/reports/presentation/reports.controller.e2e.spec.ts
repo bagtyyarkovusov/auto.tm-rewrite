@@ -108,7 +108,7 @@ describe("ReportsController e2e", () => {
 
   async function createUser(alias: SuiteUser, role: "buyer" | "admin" = "buyer"): Promise<string> {
     await prisma.user.create({
-      data: { id: suite.id(alias), phone: suite.phone(alias), role },
+      data: { id: suite.id(alias), phone: suite.phone(alias), phoneVerifiedAt: new Date(), role },
     });
     return mintUserJwt(suite.id(alias));
   }
@@ -116,7 +116,7 @@ describe("ReportsController e2e", () => {
   async function createElevatedAdmin(): Promise<{ adminId: string; token: string }> {
     const adminId = suite.id("admin-1");
     await prisma.user.create({
-      data: { id: adminId, phone: suite.phone("admin-1"), role: "admin" },
+      data: { id: adminId, phone: suite.phone("admin-1"), phoneVerifiedAt: new Date(), role: "admin" },
     });
     const session = await prisma.session.create({
       data: {

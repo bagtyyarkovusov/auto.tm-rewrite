@@ -1,6 +1,7 @@
-export interface User {
+import type { SignInMethods } from "./SignInMethods";
+
+export interface User extends SignInMethods {
   readonly id: string;
-  readonly phone: string;
   readonly displayName: string | null;
   readonly avatarUrl: string | null;
   readonly locale: string;

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import type { SignInMethods } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { UserRepository } from "../domain/ports/UserRepository";
 import type { SessionRepository } from "../domain/ports/SessionRepository";
@@ -13,6 +14,9 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: "user-1",
     phone: "+99361234567",
+    phoneVerifiedAt: new Date("2026-05-01T00:00:00Z"),
+    email: null,
+    emailVerifiedAt: null,
     displayName: "Bagtyyar",
     avatarUrl: "https://example.com/avatar.jpg",
     locale: "ru",
@@ -29,7 +33,7 @@ class FakeUserRepository implements UserRepository {
   scheduledDeletions: Map<string, Date> = new Map();
 
   async findByPhone(_phone: string): Promise<User | null> { return null; }
-  async create(_input: { phone: string }): Promise<User> { return makeUser(); }
+  async create(_signInMethods: SignInMethods): Promise<User> { return makeUser(); }
 
   async findById(id: string): Promise<User | null> {
     return this.users.get(id) ?? null;
@@ -48,7 +52,7 @@ class FakeUserRepository implements UserRepository {
 
   async clearDeletionSchedule(_userId: string): Promise<void> {}
   async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
-  async tombstoneUser(_userId: string): Promise<void> {}
+  async purgePersonalData(_userId: string): Promise<void> {}
 }
 
 class FakeSessionRepository implements SessionRepository {
@@ -163,8 +167,8 @@ describe("DeleteMe", () => {
     ).rejects.toThrow("User not found");
   });
 
-  it("is idempotent for a tombstoned user (re-schedules deletion)", async () => {
-    const user = makeUser({ phone: "deleted:user-1" });
+  it("is idempotent for a purged user (re-schedules deletion)", async () => {
+    const user = makeUser({ phone: null, phoneVerifiedAt: null });
     userRepo.users.set(user.id, user);
 
     const uc = makeUseCase(userRepo, sessionRepo, listingsPort, clock);

@@ -60,7 +60,10 @@ export const LogoutAllResponseSchema = z.object({});
 
 export const MeResponseSchema = z.object({
   id: z.string().uuid(),
-  phone: PhoneTm,
+  // Sign-in Methods (ADR-0054): each is optional; phoneVerified reflects a stored verified phone.
+  phone: PhoneTm.nullable(),
+  email: z.string().email().nullable(),
+  phoneVerified: z.boolean(),
   displayName: z.string().nullable(),
   role: z.nativeEnum(UserRole),
   avatarUrl: z.string().nullable(),

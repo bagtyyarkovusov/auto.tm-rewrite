@@ -92,7 +92,7 @@ export default function ProfileScreen() {
         <View className="flex-1 px-4 pt-4 gap-4">
           {/* Identity card */}
           <View className="items-center gap-3 py-6">
-            <Avatar className="size-24" alt={data.displayName ?? data.phone}>
+            <Avatar className="size-24" alt={data.displayName ?? data.phone ?? ""}>
               {data.avatarUrl ? (
                 <AvatarImage source={{ uri: data.avatarUrl }} />
               ) : null}

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Phone } from "../domain/Phone";
+import { verifiedSignInMethods } from "../domain/SignInMethods";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { UserRepository } from "../domain/ports/UserRepository";
 import type { SessionRepository } from "../domain/ports/SessionRepository";
@@ -122,7 +123,9 @@ export class VerifyOtp {
       throw err;
     }
 
-    const user = existingUser ?? (await this.userRepo.create({ phone: phone.value }));
+    const user =
+      existingUser ??
+      (await this.userRepo.create(verifiedSignInMethods({ phone, verifiedAt: now })));
 
     // Auto-recover account if in deletion grace period
     const deletionScheduledAt = user.deletionScheduledAt;
@@ -137,12 +140,13 @@ export class VerifyOtp {
     if (isNewUser) {
       this.eventBus.emit("UserRegistered", {
         userId: user.id,
-        phone: user.phone,
+        phone: phone.value,
       });
     }
 
     return this.createSessionResult({
       user,
+      phone: phone.value,
       now,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
@@ -184,6 +188,7 @@ export class VerifyOtp {
 
     const result = await this.createSessionResult({
       user,
+      phone: input.phone,
       now: input.now,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
@@ -202,10 +207,11 @@ export class VerifyOtp {
   private async createSessionResult(input: {
     user: {
       id: string;
-      phone: string;
       displayName: string | null;
       role: string;
     };
+    /** The phone whose code was just confirmed; the User was found or created by it. */
+    phone: string;
     now: Date;
     deviceLabel: string | undefined;
     userAgent: string | undefined;
@@ -243,7 +249,7 @@ export class VerifyOtp {
     const accessToken = this.jwtService.sign({
       sub: user.id,
       sid: session.id,
-      phone: user.phone,
+      phone: input.phone,
       role: user.role,
     });
 
@@ -252,7 +258,7 @@ export class VerifyOtp {
       refreshToken,
       user: {
         id: user.id,
-        phone: user.phone,
+        phone: input.phone,
         displayName: user.displayName,
         role: user.role,
         deletionScheduledAt: input.deletionScheduledAt?.toISOString() ?? null,

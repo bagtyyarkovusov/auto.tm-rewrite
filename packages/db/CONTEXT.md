@@ -12,11 +12,12 @@ Single source of truth for the database schema. Owns `schema.prisma`, all migrat
 packages/db/
 ├── prisma/
 │   ├── schema.prisma         The schema — all bounded contexts' tables, grouped by /// section comments
-│   ├── migrations/           Forward-only timestamped SQL history through S10
+│   ├── migrations/           Forward-only timestamped SQL history
 │   │   ├── ...               Earlier migrations remain immutable
 │   │   ├── 20260713000000_s10_rich_chat_foundation/
 │   │   ├── 20260713170000_add_notification_history_status/
 │   │   ├── 20260719010000_align_prisma_schema_with_existing_database/
+│   │   ├── 20260922000000_add_user_sign_in_methods/
 │   │   └── migration_lock.toml
 │   └── seed/
 │       ├── _legacy/cars.brands.json   Monolingual snapshot from old backend; historical port source
@@ -120,6 +121,12 @@ S10 additions (rich-chat schema + contract foundation, now in schema):
 - `ContentReport.messageContext` — JSONB surrounding context for message-target reports.
 - Migration `20260713000000_s10_rich_chat_foundation` adds the columns and indexes above. No behavior, WebSocket, push delivery, upload, report, or mobile UI code ships in this slice.
 - `NotificationHistoryStatus` enum (`pending` | `delivered` | `failed`) and `NotificationHistory.status` (default `pending`) plus `NotificationHistory.deliveryDetails` (JSONB) — added by migration `20260713170000_add_notification_history_status` so the worker can record direct-message push delivery outcomes.
+
+User Sign-in Methods ([ADR-0054](../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md), now in schema):
+- `User.phone` is nullable and still unique; `User.phoneVerifiedAt`, `User.email` (unique) and `User.emailVerifiedAt` are nullable.
+- Check constraints `users_phone_verified_check` and `users_email_verified_check` require each value to be null exactly when its verified-at time is null. Prisma 7 has no schema syntax for check constraints, so they live only in the migration SQL (like `listings_ownerCount_check`); `prisma migrate diff` does not see them.
+- Migration `20260922000000_add_user_sign_in_methods` backfills `phoneVerifiedAt = createdAt` for every User with a phone, nulls phones still holding the old `deleted:<id>` purge tombstone, adds the `users_email_key` unique index and both constraints. `tests/user-sign-in-methods.migration.test.ts` replays the earlier migrations in a Testcontainers Postgres and checks the backfill, constraints, uniqueness and value reuse after the purge.
+- Every writer that stores a phone sets `phoneVerifiedAt`: the S7 moderation fixture, `scripts/ui-fixture.ts`, and `scripts/reviewer-scenario.ts` (seed and rotation set it to the write time). Reviewer revocation keeps its `revoked:<id>` phone and existing `phoneVerifiedAt`.
 
 ## Foreign-key policy across contexts
 

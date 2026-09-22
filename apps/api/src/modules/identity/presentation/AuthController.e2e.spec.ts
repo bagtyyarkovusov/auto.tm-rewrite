@@ -264,7 +264,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
     process.env["SIGNUPS_ENABLED"] = "false";
 
     const existingUser = await prisma.user.create({
-      data: { phone: "+99361234567" },
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
     });
 
     const testCode = await requestOtp("+99361234567");
@@ -282,6 +282,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
     const existingUser = await prisma.user.create({
       data: {
         phone: "+99361234567",
+        phoneVerifiedAt: new Date(),
         deletionScheduledAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
       },
     });
@@ -374,6 +375,7 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
     const user = await prisma.user.create({
       data: {
         phone: account1.phone,
+        phoneVerifiedAt: new Date(),
         role: "buyer",
       },
     });
@@ -685,6 +687,8 @@ describe("MeController e2e — GET /api/v1/me", () => {
 
     expect(res.body.id).toBe(userId);
     expect(res.body.phone).toBe("+99361234567");
+    expect(res.body.email).toBeNull();
+    expect(res.body.phoneVerified).toBe(true);
     expect(res.body.role).toBe("buyer");
     expect(res.body).toHaveProperty("displayName");
     expect(res.body).toHaveProperty("avatarUrl");

@@ -182,7 +182,7 @@ describe("MLP AFK e2e smoke", () => {
   async function createElevatedAdmin(): Promise<{ adminId: string; token: string }> {
     const adminId = "admin-afk-001";
     await prisma.user.create({
-      data: { id: adminId, phone: "+99369990001", role: "admin" },
+      data: { id: adminId, phone: "+99369990001", phoneVerifiedAt: new Date(), role: "admin" },
     });
     const session = await prisma.session.create({
       data: {

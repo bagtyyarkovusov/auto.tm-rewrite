@@ -21,7 +21,12 @@ enum UserRole {
 
 model User {
   id          String   @id @default(uuid())
-  phone       String   @unique
+  /// Sign-in Methods (ADR-0054). Each value is stored only with its verified-at
+  /// time; the migration adds `users_phone_verified_check` / `users_email_verified_check`.
+  phone           String?   @unique
+  phoneVerifiedAt DateTime?
+  email           String?   @unique
+  emailVerifiedAt DateTime?
   displayName String?
   avatarUrl   String?
   locale      String   @default("ru")

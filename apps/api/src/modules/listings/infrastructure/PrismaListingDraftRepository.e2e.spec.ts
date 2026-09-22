@@ -49,7 +49,7 @@ describe("PrismaListingDraftRepository — Testcontainers", () => {
 
   async function seedUser(userId: string): Promise<void> {
     await prisma.user.create({
-      data: { id: userId, phone: `+9936${userId.slice(-8)}`, role: "buyer" },
+      data: { id: userId, phone: `+9936${userId.slice(-8)}`, phoneVerifiedAt: new Date(), role: "buyer" },
     });
   }
 

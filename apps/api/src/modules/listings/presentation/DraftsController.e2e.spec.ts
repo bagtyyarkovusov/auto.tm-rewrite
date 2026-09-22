@@ -72,7 +72,7 @@ describe("DraftsController e2e", () => {
 
   async function createUser(alias: SuiteUser): Promise<string> {
     await prisma.user.create({
-      data: { id: suite.id(alias), phone: suite.phone(alias), role: "buyer" },
+      data: { id: suite.id(alias), phone: suite.phone(alias), phoneVerifiedAt: new Date(), role: "buyer" },
     });
     return mintUserJwt(suite.id(alias));
   }
