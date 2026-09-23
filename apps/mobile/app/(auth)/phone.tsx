@@ -1,7 +1,7 @@
 import * as Linking from "expo-linking";
 import { router, useLocalSearchParams } from "expo-router";
 import { X } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,6 +22,7 @@ import {
   normalizeTmPhone,
   validateTmPhone,
 } from "../../src/auth/phone";
+import { useAuthIntentStore } from "../../src/auth/intentStore";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { THEME } from "@/lib/theme";
@@ -58,6 +59,16 @@ export default function PhoneScreen() {
   const [requestError, setRequestError] = useState<string | null>(null);
 
   const { mutateAsync: requestOtp, isPending: isSubmitting } = useRequestOtp();
+
+  // This screen is the root of the authentication flow, so it unmounts exactly
+  // when the flow ends: close button, hardware back, or the iOS swipe gesture.
+  // A successful sign-in consumes the intent before dismissing these screens,
+  // which makes this cleanup a no-op there and leaves the replay intact.
+  useEffect(() => {
+    return () => {
+      useAuthIntentStore.getState().cancelSignIn();
+    };
+  }, []);
 
   const canonicalPhone = useMemo(
     () => normalizeTmPhone(phoneDisplay),

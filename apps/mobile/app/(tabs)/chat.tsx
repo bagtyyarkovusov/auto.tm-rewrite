@@ -18,10 +18,9 @@ function AnonymousChatEntry() {
   const { t } = useTranslation();
 
   const handleSignIn = () => {
-    useAuthIntentStore.getState().setIntent({
-      returnPath: "/(tabs)/chat",
+    useAuthIntentStore.getState().requireSignIn(router, {
+      returnTo: "/(tabs)/chat",
     });
-    router.push("/(auth)/phone");
   };
 
   return (

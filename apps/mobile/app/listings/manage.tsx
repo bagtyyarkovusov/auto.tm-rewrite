@@ -267,7 +267,7 @@ export default function ManageListingsScreen() {
           actionLabel={t("continueWithPhone")}
           description={t("signInToManageDescription")}
           open={showSignIn}
-          returnPath="/listings/manage"
+          returnTo="/listings/manage"
           title={t("signInToManageTitle")}
           onOpenChange={setShowSignIn}
         />

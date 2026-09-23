@@ -19,7 +19,7 @@ import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
-import { useAuthIntentStore } from "../../src/auth/intentStore";
+import { useOtpAuthNavigation } from "../../src/auth/useOtpAuthNavigation";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { THEME } from "@/lib/theme";
@@ -58,6 +58,7 @@ export default function OtpScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { t, i18n } = useTranslation("auth");
+  const authNavigation = useOtpAuthNavigation(router);
 
   const phone = firstParam(params.phone);
   const [code, setCode] = useState("");
@@ -87,7 +88,7 @@ export default function OtpScreen() {
 
   useEffect(() => {
     if (!canonicalPhone) {
-      router.replace("/(auth)/phone");
+      authNavigation.invalidPhone();
     }
   }, [canonicalPhone]);
 
@@ -123,13 +124,12 @@ export default function OtpScreen() {
     setCode(value);
   }
 
-  function backToPhone() {
-    router.replace({
-      pathname: "/(auth)/phone",
-      params: {
-        ...(canonicalPhone ? { phone: canonicalPhone } : {}),
-      },
-    });
+  function cancelAuth() {
+    authNavigation.cancel();
+  }
+
+  function changePhoneNumber() {
+    authNavigation.changePhone();
   }
 
   async function submitCode(nextCode: string) {
@@ -160,10 +160,7 @@ export default function OtpScreen() {
       }
 
       await storeAuthSession(result);
-      router.dismissAll();
-      await useAuthIntentStore
-        .getState()
-        .consumeAndReplay(router as { replace: (path: string) => void });
+      authNavigation.complete();
     } catch (error) {
       otpRef.current?.shake();
       setCode("");
@@ -228,10 +225,7 @@ export default function OtpScreen() {
       await storeAuthSession(pendingSession);
       setPendingSession(null);
       setShowRestorePrompt(false);
-      router.dismissAll();
-      await useAuthIntentStore
-        .getState()
-        .consumeAndReplay(router as { replace: (path: string) => void });
+      authNavigation.complete();
     } catch {
       // Keep prompt open so the user can retry if storage fails.
     }
@@ -242,7 +236,7 @@ export default function OtpScreen() {
     setPendingSession(null);
     setCode("");
     lastSubmittedCode.current = null;
-    backToPhone();
+    changePhoneNumber();
   }
 
   return (
@@ -259,7 +253,7 @@ export default function OtpScreen() {
                 size="icon"
                 variant="ghost"
                 className="h-11 w-11"
-                onPress={backToPhone}
+                onPress={cancelAuth}
               >
                 <Icon as={ChevronLeft} className="size-5 text-foreground" />
               </Button>
@@ -279,7 +273,7 @@ export default function OtpScreen() {
                 <Button
                   variant="link"
                   className="self-start px-0"
-                  onPress={backToPhone}
+                  onPress={changePhoneNumber}
                 >
                   <Text>{t("changeNumber")}</Text>
                 </Button>

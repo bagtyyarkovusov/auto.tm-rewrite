@@ -11,9 +11,8 @@ const source = readFileSync(
 describe("InspectionInterestCta", () => {
   it("imports auth, intent store, and mutation hook", () => {
     expect(source).toContain('import { useAuth } from "../../auth/useAuth"');
-    expect(source).toContain(
-      'import { useAuthIntentStore } from "../../auth/intentStore"',
-    );
+    expect(source).toContain("useAuthIntentStore");
+    expect(source).toContain("useReplayAuthAction");
     expect(source).toContain(
       'import { useCreateInspectionInterest } from "../../api/reports/useCreateInspectionInterest"',
     );
@@ -28,9 +27,16 @@ describe("InspectionInterestCta", () => {
 
   it("routes anonymous users through auth-on-action before submitting", () => {
     expect(source).toContain("isAuthenticated === false");
-    expect(source).toContain("useAuthIntentStore.getState().setIntent");
-    expect(source).toContain('returnPath: `/(public)/listings/${listingId}`');
-    expect(source).toContain('router.push("/(auth)/phone")');
+    expect(source).toContain("useAuthIntentStore.getState().requireSignIn(router, {");
+    expect(source).toContain('returnTo: `/(public)/listings/${listingId}`');
+    expect(source).toContain('action: { kind: "inspection", listingId }');
+  });
+
+  it("reopens the sheet from a serializable pending action, not a closure", () => {
+    expect(source).toContain(
+      'useReplayAuthAction("inspection", listingId, () => onOpenChange(true))',
+    );
+    expect(source).not.toContain("replay:");
   });
 
   it("submits interest when authenticated", () => {

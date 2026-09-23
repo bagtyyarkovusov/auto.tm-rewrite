@@ -30,10 +30,9 @@ function AnonymousIdentityCard() {
   const { t } = useTranslation(["account", "common"]);
 
   const handleSignIn = () => {
-    useAuthIntentStore.getState().setIntent({
-      returnPath: "/(tabs)/services",
+    useAuthIntentStore.getState().requireSignIn(router, {
+      returnTo: "/(tabs)/services",
     });
-    router.push("/(auth)/phone");
   };
 
   return (
