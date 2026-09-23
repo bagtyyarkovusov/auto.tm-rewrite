@@ -177,7 +177,7 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 
 Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.
 
-`run-issue` is the interactive path and is provider-neutral. Sandcastle is the separate Docker AFK path described in [`sandcastle.md`](sandcastle.md) and ADR-0028; it does not execute the repository skill files, but ADR-0058 requires it to produce the same branch, draft-PR, execution-state, review, CI, merge, and recovery evidence. No `.github/workflows/unblock.yml` exists, so each successful integration owner reconciles dependents after merge.
+`run-issue` is the interactive path and is provider-neutral. Sandcastle is the separate Docker AFK path described in [`sandcastle.md`](sandcastle.md) and ADR-0028; it does not execute the repository skill files. Its current wrapper still uses the retired batch-merger path, so do not dispatch implementation work through it until `.sandcastle/main.mts` and its operating guide implement ADR-0058's branch, draft-PR, execution-state, review, CI, merge, and recovery evidence. No `.github/workflows/unblock.yml` exists, so each successful integration owner reconciles dependents after merge.
 
 ## Body template (general / non-sprint issues)
 

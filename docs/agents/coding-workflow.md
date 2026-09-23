@@ -19,7 +19,7 @@ All phases use the shared [worktree lifecycle](worktree-lifecycle.md): reuse a h
 
 ## Portable issue execution
 
-Every implementation path follows the same state machine:
+The interactive path follows this state machine. Sandcastle must not dispatch implementation work while its current wrapper still uses batch integration; AFK execution resumes only after the wrapper and its operating guide implement the same state machine.
 
 1. Confirm the issue is open, labelled `ready-for-agent`, not `blocked`, has closed dependencies, and has intelligible acceptance criteria.
 2. Reserve it by pushing `agent/issue-<N>` from updated `main` before editing. An existing branch, worktree, or PR means resume; never create a duplicate.

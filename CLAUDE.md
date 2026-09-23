@@ -121,7 +121,7 @@ GitHub Issues via `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Autonomous execution
 
-Two paths consume the `ready-for-agent` queue: `run-issue` (interactive, single-issue, usable by Codex or Claude) and **Sandcastle** (AFK, parallel, in Docker sandboxes). Both follow the portable branch, draft-PR, execution-state, fixed-commit review, CI, and merge contract in [ADR-0058](docs/adr/0058-portable-coding-agent-issue-execution-and-pull-request-gates.md). See [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md) and [`docs/agents/sandcastle.md`](docs/agents/sandcastle.md). The in-sandbox gate is typecheck + lint + Docker-free unit tests; the Testcontainers e2e suite stays on CI; the mobile Expo simulator gate stays with the human.
+The interactive `run-issue` path consumes one selected `ready-for-agent` issue and is usable by Codex or Claude. It follows the portable branch, draft-PR, execution-state, fixed-commit review, CI, and merge contract in [ADR-0058](docs/adr/0058-portable-coding-agent-issue-execution-and-pull-request-gates.md). **Do not start Sandcastle issue execution while its wrapper and guide still use the legacy batch-merger path.** AFK dispatch resumes only after `.sandcastle/main.mts` and [`docs/agents/sandcastle.md`](docs/agents/sandcastle.md) implement the same ADR-0058 contract. The in-sandbox gate remains typecheck + lint + Docker-free unit tests; the Testcontainers e2e suite stays on CI; the mobile Expo simulator gate stays with the human.
 
 ### Triage labels
 
