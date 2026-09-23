@@ -263,6 +263,15 @@ describe("parseReviewerScenarioAccounts", () => {
     expect(() =>
       parseReviewerScenarioAccounts(
         JSON.stringify([
+          account("+99365000001", "12345"),
+          account("+99365000002", "222222"),
+          account("+99365000003", "333333"),
+        ]),
+      ),
+    ).toThrow(/exactly 6 digits/);
+    expect(() =>
+      parseReviewerScenarioAccounts(
+        JSON.stringify([
           account("+99365000001", "111111", "shared@autotm.bagtyyar.dev"),
           account("+99365000002", "222222", "shared@autotm.bagtyyar.dev"),
           account("+99365000003", "333333"),

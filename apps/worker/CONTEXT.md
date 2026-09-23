@@ -1,6 +1,6 @@
 # apps/worker — CONTEXT
 
-> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Video transcode and broad orphan-cleanup processors remain stubs. S11 ships native FCM and APNS direct-message delivery behind `PushPort`; acquiring provider credentials and configuring them on Railway remain operational work outside the repository. Sign-in Code emails go out through Resend behind `EmailSenderPort` ([ADR-0055](../../docs/adr/0055-resend-sends-sign-in-codes-from-the-worker.md)); the API does not enqueue them yet, and the Resend account, domain DNS and key are operational work outside the repository.
+> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md). Video transcode and broad orphan-cleanup processors remain stubs. S11 ships native FCM and APNS direct-message delivery behind `PushPort`; acquiring provider credentials and configuring them on Railway remain operational work outside the repository. Sign-in Code emails go out through Resend behind `EmailSenderPort` ([ADR-0055](../../docs/adr/0055-resend-sends-sign-in-codes-from-the-worker.md)); the API enqueues them through BullMQ, while the Resend account, domain DNS and key remain operational work outside the repository.
 
 ## Purpose
 

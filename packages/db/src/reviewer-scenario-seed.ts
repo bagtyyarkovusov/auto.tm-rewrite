@@ -1,6 +1,7 @@
 const REVIEWER_SEED_AUTHORIZATION = "seed-reviewer-scenario";
 const REVIEWER_PHONE_RE = /^\+993\d{8}$/;
 const REVIEWER_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const REVIEWER_CODE_RE = /^\d{6}$/;
 
 type ReviewerRole = "buyer" | "seller";
 type ReviewerMode = "seed" | "revoke";
@@ -181,6 +182,7 @@ export interface ReviewerScenarioSeedStore {
 interface ParsedReviewerAccount {
   phone: string;
   email: string;
+  code: string;
 }
 
 interface ReviewerScenarioAccount {
@@ -234,9 +236,10 @@ export function parseReviewerScenarioAccounts(
       typeof entry !== "object" ||
       entry === null ||
       typeof (entry as ParsedReviewerAccount).phone !== "string" ||
-      typeof (entry as ParsedReviewerAccount).email !== "string"
+      typeof (entry as ParsedReviewerAccount).email !== "string" ||
+      typeof (entry as ParsedReviewerAccount).code !== "string"
     ) {
-      throw new Error("Each reviewer account must include a phone and email");
+      throw new Error("Each reviewer account must include a phone, email, and code");
     }
 
     const phone = (entry as ParsedReviewerAccount).phone;
@@ -260,6 +263,10 @@ export function parseReviewerScenarioAccounts(
       throw new Error("Reviewer account emails must be unique");
     }
     seenEmails.add(email);
+
+    if (!REVIEWER_CODE_RE.test((entry as ParsedReviewerAccount).code)) {
+      throw new Error("Reviewer account codes must be exactly 6 digits");
+    }
 
     const slot = ACCOUNT_SLOTS[index];
     if (!slot) {

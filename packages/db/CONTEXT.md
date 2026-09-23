@@ -18,6 +18,7 @@ packages/db/
 │   │   ├── 20260713170000_add_notification_history_status/
 │   │   ├── 20260719010000_align_prisma_schema_with_existing_database/
 │   │   ├── 20260922000000_add_user_sign_in_methods/
+│   │   ├── 20260923000000_add_sign_in_code_channel/
 │   │   └── migration_lock.toml
 │   └── seed/
 │       ├── _legacy/cars.brands.json   Monolingual snapshot from old backend; historical port source

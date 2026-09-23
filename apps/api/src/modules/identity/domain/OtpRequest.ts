@@ -11,4 +11,6 @@ export interface OtpRequest {
   readonly createdAt: Date;
 }
 
-export type SignInCodeChannel = "phone" | "email";
+export type { SignInCodeChannel } from "./types";
+
+import type { SignInCodeChannel } from "./types";

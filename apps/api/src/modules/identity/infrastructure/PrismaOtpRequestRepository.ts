@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
+import { SIGN_IN_CODE_CHANNELS } from "../domain/types";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 
 @Injectable()
@@ -19,7 +20,7 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
       data: {
         channel: input.channel,
         destination: input.destination,
-        phone: input.channel === "phone" ? input.destination : null,
+        phone: input.channel === SIGN_IN_CODE_CHANNELS.PHONE ? input.destination : null,
         codeHash: input.codeHash,
         expiresAt: input.expiresAt,
         userId: input.userId,

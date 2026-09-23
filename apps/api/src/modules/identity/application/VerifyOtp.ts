@@ -4,6 +4,8 @@ import { JwtService } from "@nestjs/jwt";
 import { Phone } from "../domain/Phone";
 import { Email } from "../domain/Email";
 import type { User } from "../domain/User";
+import { matchesReviewerCredential } from "../domain/ReviewerSignIn";
+import { SIGN_IN_CODE_CHANNELS, type SignInCodeChannel } from "../domain/types";
 import { verifiedSignInMethods } from "../domain/SignInMethods";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { UserRepository } from "../domain/ports/UserRepository";
@@ -76,12 +78,12 @@ export class VerifyOtp {
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
     const signInMethod = "phone" in input
       ? {
-          channel: "phone" as const,
+          channel: SIGN_IN_CODE_CHANNELS.PHONE,
           destination: Phone.create(input.phone).value,
           phone: Phone.create(input.phone),
         }
       : {
-          channel: "email" as const,
+          channel: SIGN_IN_CODE_CHANNELS.EMAIL,
           destination: Email.create(input.email).value,
           email: Email.create(input.email),
         };
@@ -130,12 +132,14 @@ export class VerifyOtp {
       throw new Error("Invalid OTP code");
     }
 
-    const existingUser = signInMethod.channel === "phone"
+    const existingUser = signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE
       ? await this.userRepo.findByPhone(signInMethod.destination)
       : await this.userRepo.findByEmail(signInMethod.destination);
-    const isReviewerEmail = signInMethod.channel === "email" &&
-      this.matchesReviewerCredential(
-        "email",
+    const isReviewerEmail = signInMethod.channel === SIGN_IN_CODE_CHANNELS.EMAIL &&
+      matchesReviewerCredential(
+        this.reviewerBypassConfig,
+        this.constantTimeComparator,
+        SIGN_IN_CODE_CHANNELS.EMAIL,
         signInMethod.destination,
         input.code,
       );
@@ -159,7 +163,7 @@ export class VerifyOtp {
       existingUser ??
       (await this.userRepo.create(
         verifiedSignInMethods({
-          ...(signInMethod.channel === "phone"
+          ...(signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE
             ? { phone: signInMethod.phone }
             : { email: signInMethod.email }),
           verifiedAt: now,
@@ -198,18 +202,29 @@ export class VerifyOtp {
   }
 
   private async tryReviewerBypass(input: {
-    channel: "phone" | "email";
+    channel: SignInCodeChannel;
     destination: string;
     code: string;
     deviceLabel: string | undefined;
     userAgent: string | undefined;
     now: Date;
   }): Promise<VerifyOtpResult | null> {
-    if (!this.reviewerBypassConfig.enabled || input.channel !== "phone") {
+    if (
+      !this.reviewerBypassConfig.enabled ||
+      input.channel !== SIGN_IN_CODE_CHANNELS.PHONE
+    ) {
       return null;
     }
 
-    if (!this.matchesReviewerCredential("phone", input.destination, input.code)) {
+    if (
+      !matchesReviewerCredential(
+        this.reviewerBypassConfig,
+        this.constantTimeComparator,
+        SIGN_IN_CODE_CHANNELS.PHONE,
+        input.destination,
+        input.code,
+      )
+    ) {
       return null;
     }
 
@@ -234,25 +249,6 @@ export class VerifyOtp {
     this.emitReviewerBypassAuthenticated(user, input.now);
 
     return result;
-  }
-
-  private matchesReviewerCredential(
-    channel: "phone" | "email",
-    destination: string,
-    code: string,
-  ): boolean {
-    if (!this.reviewerBypassConfig.enabled) return false;
-
-    let matched = false;
-    for (const account of this.reviewerBypassConfig.accounts) {
-      const destinationMatches = this.constantTimeComparator.compare(
-        destination,
-        account[channel],
-      );
-      const codeMatches = this.constantTimeComparator.compare(code, account.code);
-      matched = matched || (destinationMatches && codeMatches);
-    }
-    return matched;
   }
 
   private emitReviewerBypassAuthenticated(user: User, now: Date): void {

@@ -154,7 +154,7 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 - [ADR-0006](../../../../../docs/adr/0006-auth.md) — Phone OTP + TOTP for admins (refresh subsection superseded by ADR-0012).
 - [ADR-0012](../../../../../docs/adr/0012-multi-device-sessions.md) — Multi-device sessions, per-session refresh tokens (bcrypt), 10-session cap, sliding 30-day expiry.
 - [ADR-0013](../../../../../docs/adr/0013-user-role-split.md) — `User.role` split from `DealershipMember.role`.
-- [ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md) — Phone and email are optional, verified Sign-in Methods on one User (data model shipped; email sign-in not yet).
+- [ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md) — Phone and email are optional, verified Sign-in Methods on one User; either method can sign in through a channel-bound code.
 - [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Bounded context architecture.
 - [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state.
 - [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) — Garage and dealership work deferred out of MLP beta.

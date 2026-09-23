@@ -5,6 +5,8 @@ import { Phone } from "../domain/Phone";
 import { Email } from "../domain/Email";
 import { OtpCode } from "../domain/OtpCode";
 import { OtpAttemptLedger } from "../domain/OtpAttemptLedger";
+import { findReviewerAccount } from "../domain/ReviewerSignIn";
+import { SIGN_IN_CODE_CHANNELS } from "../domain/types";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
@@ -59,14 +61,25 @@ export class RequestOtp {
 
   async execute(input: RequestOtpInput): Promise<RequestOtpResult> {
     const signInMethod = "phone" in input
-      ? { channel: "phone" as const, destination: Phone.create(input.phone).value }
-      : { channel: "email" as const, destination: Email.create(input.email).value };
+      ? {
+          channel: SIGN_IN_CODE_CHANNELS.PHONE,
+          destination: Phone.create(input.phone).value,
+        }
+      : {
+          channel: SIGN_IN_CODE_CHANNELS.EMAIL,
+          destination: Email.create(input.email).value,
+        };
 
-    const reservedAccount = this.findReservedAccount(
+    const reservedAccount = findReviewerAccount(
+      this.reviewerBypassConfig,
+      this.constantTimeComparator,
       signInMethod.channel,
       signInMethod.destination,
     );
-    if (signInMethod.channel === "phone" && reservedAccount !== null) {
+    if (
+      signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE &&
+      reservedAccount !== null
+    ) {
       return { requestId: randomUUID(), resendInSeconds: 0 };
     }
 
@@ -98,14 +111,16 @@ export class RequestOtp {
       throw new Error("Too many OTP requests");
     }
 
-    const code = signInMethod.channel === "email" && reservedAccount !== null
+    const code = signInMethod.channel === SIGN_IN_CODE_CHANNELS.EMAIL && reservedAccount !== null
       ? OtpCode.create(reservedAccount.code)
       : OtpCode.generate();
     const codeHash = createHash("sha256").update(code.value).digest("hex");
 
     const expiresAt = new Date(
       now.getTime() +
-        (signInMethod.channel === "phone" ? PHONE_OTP_TTL_MS : EMAIL_OTP_TTL_MS),
+        (signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE
+          ? PHONE_OTP_TTL_MS
+          : EMAIL_OTP_TTL_MS),
     );
 
     const record = await this.otpRequestRepo.create({
@@ -117,7 +132,7 @@ export class RequestOtp {
       ip: input.ip,
     });
 
-    if (signInMethod.channel === "phone") {
+    if (signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE) {
       await this.otpSender.send(signInMethod.destination, code.value);
     } else if (reservedAccount === null) {
       await this.emailCodeSender.enqueue({
@@ -138,15 +153,5 @@ export class RequestOtp {
     }
 
     return result;
-  }
-
-  private findReservedAccount(
-    channel: "phone" | "email",
-    destination: string,
-  ): ReviewerOtpBypassConfig["accounts"][number] | null {
-    if (!this.reviewerBypassConfig.enabled) return null;
-    return this.reviewerBypassConfig.accounts.find((account) =>
-      this.constantTimeComparator.compare(destination, account[channel]),
-    ) ?? null;
   }
 }
