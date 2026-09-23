@@ -5,17 +5,16 @@ import type { OtpRequest } from "../domain/OtpRequest";
 import type { SignInCodeDestination } from "../domain/SignInCodeDestination";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { ClockPort } from "../domain/ports/ClockPort";
-import { PrismaOtpRequestRepository } from "../infrastructure/PrismaOtpRequestRepository";
-import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
+import { IDENTITY_TOKENS } from "../identity.tokens";
 
 const MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class VerifySignInCode {
   constructor(
-    @Inject(PrismaOtpRequestRepository)
+    @Inject(IDENTITY_TOKENS.OtpRequestRepository)
     private readonly otpRequestRepo: OtpRequestRepository,
-    @Inject(SystemClockAdapter)
+    @Inject(IDENTITY_TOKENS.ClockPort)
     private readonly clock: ClockPort,
   ) {}
 

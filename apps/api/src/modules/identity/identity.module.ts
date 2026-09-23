@@ -120,6 +120,10 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
         }),
     },
     {
+      provide: IDENTITY_TOKENS.OtpRequestRepository,
+      useExisting: PrismaOtpRequestRepository,
+    },
+    {
       provide: IDENTITY_TOKENS.ClockPort,
       useExisting: SystemClockAdapter,
     },
