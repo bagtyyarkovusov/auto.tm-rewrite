@@ -18,6 +18,11 @@ export class PrismaUserRepository implements UserRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const row = await this.prisma.user.findUnique({ where: { email } });
+    return row ? this.toDomain(row) : null;
+  }
+
   async findById(id: string): Promise<User | null> {
     const row = await this.prisma.user.findUnique({ where: { id } });
     return row ? this.toDomain(row) : null;

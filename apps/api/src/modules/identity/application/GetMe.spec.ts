@@ -27,6 +27,7 @@ class FakeUserRepository implements UserRepository {
   users: Map<string, User> = new Map();
 
   async findByPhone(_phone: string): Promise<User | null> { return null; }
+  async findByEmail(_email: string): Promise<User | null> { return null; }
   async create(_signInMethods: SignInMethods): Promise<User> {
     return makeUser();
   }

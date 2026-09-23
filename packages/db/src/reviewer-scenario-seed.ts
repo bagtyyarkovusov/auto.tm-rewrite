@@ -1,5 +1,6 @@
 const REVIEWER_SEED_AUTHORIZATION = "seed-reviewer-scenario";
 const REVIEWER_PHONE_RE = /^\+993\d{8}$/;
+const REVIEWER_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ReviewerRole = "buyer" | "seller";
 type ReviewerMode = "seed" | "revoke";
@@ -97,16 +98,19 @@ export interface ReviewerScenarioSeedOptions {
 
 export interface ReviewerScenarioUser {
   id: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
   role: string;
 }
 
 export interface ReviewerScenarioSeedStore {
   findUserById(id: string): Promise<ReviewerScenarioUser | null>;
   findUserByPhone(phone: string): Promise<ReviewerScenarioUser | null>;
+  findUserByEmail(email: string): Promise<ReviewerScenarioUser | null>;
   upsertUser(input: {
     id: string;
     phone: string;
+    email: string;
     displayName: string;
     role: ReviewerRole;
   }): Promise<ReviewerScenarioUser>;
@@ -176,11 +180,13 @@ export interface ReviewerScenarioSeedStore {
 
 interface ParsedReviewerAccount {
   phone: string;
+  email: string;
 }
 
 interface ReviewerScenarioAccount {
   id: string;
   phone: string;
+  email: string;
   role: ReviewerRole;
   displayName: string;
 }
@@ -222,13 +228,15 @@ export function parseReviewerScenarioAccounts(
   }
 
   const seenPhones = new Set<string>();
+  const seenEmails = new Set<string>();
   return parsed.map((entry: unknown, index: number) => {
     if (
       typeof entry !== "object" ||
       entry === null ||
-      typeof (entry as ParsedReviewerAccount).phone !== "string"
+      typeof (entry as ParsedReviewerAccount).phone !== "string" ||
+      typeof (entry as ParsedReviewerAccount).email !== "string"
     ) {
-      throw new Error("Each reviewer account must include a phone");
+      throw new Error("Each reviewer account must include a phone and email");
     }
 
     const phone = (entry as ParsedReviewerAccount).phone;
@@ -240,6 +248,19 @@ export function parseReviewerScenarioAccounts(
     }
     seenPhones.add(phone);
 
+    const email = (entry as ParsedReviewerAccount).email;
+    if (
+      email !== email.trim().toLowerCase() ||
+      email.length > 254 ||
+      !REVIEWER_EMAIL_RE.test(email)
+    ) {
+      throw new Error("Reviewer account emails must be normalized valid addresses");
+    }
+    if (seenEmails.has(email)) {
+      throw new Error("Reviewer account emails must be unique");
+    }
+    seenEmails.add(email);
+
     const slot = ACCOUNT_SLOTS[index];
     if (!slot) {
       throw new Error("Reviewer account slot is not available");
@@ -248,6 +269,7 @@ export function parseReviewerScenarioAccounts(
     return {
       id: slot.id,
       phone,
+      email,
       role: slot.role,
       displayName: slot.displayName,
     };
@@ -304,6 +326,18 @@ async function assertNoPrivilegedOrHijackedAccounts(
     if (byPhone && byPhone.role !== "buyer" && byPhone.role !== "seller") {
       return safeFailure(
         "Reviewer scenario seed refused: a reviewer phone resolves to a privileged user",
+      );
+    }
+
+    const byEmail = await store.findUserByEmail(account.email);
+    if (byEmail && byEmail.id !== account.id) {
+      return safeFailure(
+        "Reviewer scenario seed refused: a reviewer email is already owned by another user",
+      );
+    }
+    if (byEmail && byEmail.role !== "buyer" && byEmail.role !== "seller") {
+      return safeFailure(
+        "Reviewer scenario seed refused: a reviewer email resolves to a privileged user",
       );
     }
   }
@@ -373,7 +407,10 @@ export async function runReviewerScenarioSeed(
   const seededUserIds: string[] = [];
   for (const account of accounts) {
     const existing = await store.findUserById(account.id);
-    if (existing && existing.phone !== account.phone) {
+    if (
+      existing &&
+      (existing.phone !== account.phone || existing.email !== account.email)
+    ) {
       rotatedUserIds.push(account.id);
     }
     const user = await store.upsertUser(account);

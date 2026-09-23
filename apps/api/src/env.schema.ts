@@ -250,21 +250,27 @@ function validateReviewerDemoAccounts(
   }
 
   const phones = new Set<string>();
+  const emails = new Set<string>();
   for (const entry of parsed) {
     if (
       typeof entry !== "object" ||
       entry === null ||
       typeof (entry as { phone?: unknown }).phone !== "string" ||
+      typeof (entry as { email?: unknown }).email !== "string" ||
       typeof (entry as { code?: unknown }).code !== "string"
     ) {
       add(
         "REVIEW_DEMO_ACCOUNTS_JSON",
-        "Each reviewer demo account must include string phone and code fields",
+        "Each reviewer demo account must include string phone, email, and code fields",
       );
       return;
     }
 
-    const { phone, code } = entry as { phone: string; code: string };
+    const { phone, email, code } = entry as {
+      phone: string;
+      email: string;
+      code: string;
+    };
     if (!/^\+993\d{8}$/.test(phone)) {
       add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account phones must be +993 E.164 numbers");
       return;
@@ -279,11 +285,27 @@ function validateReviewerDemoAccounts(
       add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account codes must be exactly 6 digits");
       return;
     }
+    if (
+      email !== email.trim().toLowerCase() ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      email.length > 254
+    ) {
+      add(
+        "REVIEW_DEMO_ACCOUNTS_JSON",
+        "Reviewer demo account emails must be normalized valid addresses",
+      );
+      return;
+    }
     if (phones.has(phone)) {
       add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account phones must be unique");
       return;
     }
     phones.add(phone);
+    if (emails.has(email)) {
+      add("REVIEW_DEMO_ACCOUNTS_JSON", "Reviewer demo account emails must be unique");
+      return;
+    }
+    emails.add(email);
   }
 }
 

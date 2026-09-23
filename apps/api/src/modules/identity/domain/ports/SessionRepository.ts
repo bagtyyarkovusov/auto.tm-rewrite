@@ -4,6 +4,7 @@ export interface SessionLookupResult {
   session: Session;
   userId: string;
   phone: string | null;
+  email: string | null;
   role: string;
 }
 

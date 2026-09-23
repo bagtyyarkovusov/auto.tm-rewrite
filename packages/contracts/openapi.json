@@ -8082,15 +8082,34 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+993[67]\\d{7}$"
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      }
+                    },
+                    "required": [
+                      "phone"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      }
+                    },
+                    "required": [
+                      "email"
+                    ],
+                    "additionalProperties": false
                   }
-                },
-                "required": [
-                  "phone"
                 ]
               }
             }
@@ -8184,24 +8203,52 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+993[67]\\d{7}$"
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      },
+                      "deviceLabel": {
+                        "type": "string",
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "phone",
+                      "code"
+                    ],
+                    "additionalProperties": false
                   },
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{6}$"
-                  },
-                  "deviceLabel": {
-                    "type": "string",
-                    "maxLength": 200
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      },
+                      "deviceLabel": {
+                        "type": "string",
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "code"
+                    ],
+                    "additionalProperties": false
                   }
-                },
-                "required": [
-                  "phone",
-                  "code"
                 ]
               }
             }
@@ -8230,7 +8277,13 @@
                         },
                         "phone": {
                           "type": "string",
+                          "nullable": true,
                           "pattern": "^\\+993[67]\\d{7}$"
+                        },
+                        "email": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -8254,6 +8307,7 @@
                       "required": [
                         "id",
                         "phone",
+                        "email",
                         "displayName",
                         "role"
                       ]

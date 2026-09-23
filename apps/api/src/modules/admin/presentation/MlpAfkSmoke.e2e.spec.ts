@@ -301,6 +301,13 @@ describe("MLP AFK e2e smoke", () => {
     });
     expect(sellerSessionsAfterDelete).toBe(0);
 
+    // The smoke flow covers recovery rather than retry throttling. Move the
+    // earlier successful request beyond its first 60-second backoff window.
+    await prisma.otpRequest.updateMany({
+      where: { channel: "phone", destination: "+99361234001" },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
+
     const recoveryOtpRes = await request
       .post("/api/v1/auth/otp/request")
       .send({ phone: "+99361234001" })

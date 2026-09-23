@@ -58,7 +58,9 @@ export class PrismaSessionRepository implements SessionRepository {
 
   async findByRefreshToken(plaintext: string): Promise<SessionLookupResult | null> {
     const rows = await this.prisma.session.findMany({
-      include: { user: { select: { id: true, phone: true, role: true } } },
+      include: {
+        user: { select: { id: true, phone: true, email: true, role: true } },
+      },
     });
 
     for (const row of rows) {
@@ -68,6 +70,7 @@ export class PrismaSessionRepository implements SessionRepository {
           session: this.toDomain(row),
           userId: row.user.id,
           phone: row.user.phone,
+          email: row.user.email,
           role: row.user.role as string,
         };
       }

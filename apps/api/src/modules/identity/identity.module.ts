@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
+import { BullModule } from "@nestjs/bullmq";
 import { EventEmitterModule } from "@nestjs/event-emitter";
+import { AuthSchemas } from "@auto-tm/contracts";
 
 import { PrismaModule } from "../../common/prisma.module";
 import { IdentityController } from "./presentation/identity.controller";
@@ -39,6 +41,7 @@ import { PrismaAccountDeletionListingsAdapter } from "./infrastructure/PrismaAcc
 import { NodeConstantTimeComparator } from "./infrastructure/NodeConstantTimeComparator";
 import { parseReviewerOtpBypassConfig } from "./infrastructure/ReviewerOtpBypassConfigFactory";
 import { EventEmitterIdentityEventBus } from "./infrastructure/EventEmitterIdentityEventBus";
+import { BullMqEmailCodeSenderAdapter } from "./infrastructure/BullMqEmailCodeSenderAdapter";
 import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
@@ -46,11 +49,13 @@ import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionLi
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
 import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConfig";
+import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
 
 @Module({
   imports: [
     EventEmitterModule,
     PrismaModule,
+    BullModule.registerQueue({ name: AuthSchemas.EMAIL_CODE_QUEUE }),
   ],
   controllers: [IdentityController, AuthController, MeController, AdminAuthController],
   providers: [
@@ -72,6 +77,11 @@ import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConf
     PrismaAccountDeletionListingsAdapter,
     NodeConstantTimeComparator,
     EventEmitterIdentityEventBus,
+    BullMqEmailCodeSenderAdapter,
+    {
+      provide: EMAIL_CODE_SENDER_PORT,
+      useExisting: BullMqEmailCodeSenderAdapter,
+    },
     {
       provide: ACCOUNT_DELETION_LISTINGS_PORT,
       useClass: PrismaAccountDeletionListingsAdapter,

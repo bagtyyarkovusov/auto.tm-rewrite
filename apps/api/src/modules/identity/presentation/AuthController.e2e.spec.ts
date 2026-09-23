@@ -18,10 +18,15 @@ import { RecordReviewerAuthBypassAudit } from "../../admin/application/RecordRev
 import { PrismaAuditLogRepository } from "../../admin/infrastructure/PrismaAuditLogRepository";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { GlobalErrorFilter } from "../../../common/error.filter";
+import {
+  EMAIL_CODE_SENDER_PORT,
+  type EmailCodeSenderPort,
+} from "../domain/ports/EmailCodeSenderPort";
 
-function reviewerDemoAccount(index: number): { phone: string; code: string } {
+function reviewerDemoAccount(index: number): { phone: string; email: string; code: string } {
   return {
     phone: `+99365${String(index).padStart(6, "0")}`,
+    email: `reviewer${index}@autotm.bagtyyar.dev`,
     code: String(index).repeat(6),
   };
 }
@@ -108,10 +113,16 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
   it("enforces phone daily rate limit (5 requests)", async () => {
     const phone = "+99363334444";
     for (let i = 0; i < 5; i++) {
-      await request
-        .post("/api/v1/auth/otp/request")
-        .send({ phone })
-        .expect(201);
+      await prisma.otpRequest.create({
+        data: {
+          channel: "phone",
+          destination: phone,
+          phone,
+          codeHash: "test-hash",
+          expiresAt: new Date(Date.now() + 300_000),
+          ip: `10.0.0.${i}`,
+        },
+      });
     }
 
     const res = await request
@@ -120,6 +131,125 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
       .expect(400);
 
     expect(res.body.code).toBe("RATE_LIMITED");
+  });
+});
+
+describe("AuthController e2e — email Sign-in Method", () => {
+  let app: NestFastifyApplication;
+  let request: ReturnType<typeof supertest>;
+  let prisma: PrismaService;
+  const queued: Parameters<EmailCodeSenderPort["enqueue"]>[0][] = [];
+  const emailSender: EmailCodeSenderPort = {
+    enqueue: async (input) => { queued.push(input); },
+  };
+
+  beforeAll(async () => {
+    process.env["OTP_TEST_MODE"] = "true";
+    const moduleFixture = await Test.createTestingModule({
+      imports: [
+        IdentityModule,
+        JwtModule.register({
+          global: true,
+          secret: process.env["JWT_ACCESS_SECRET"] ?? "dev-secret-change-me",
+          signOptions: { expiresIn: "1h" },
+        }),
+      ],
+    })
+      .overrideProvider(EMAIL_CODE_SENDER_PORT)
+      .useValue(emailSender)
+      .compile();
+
+    app = moduleFixture.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    app.useGlobalFilters(new GlobalErrorFilter());
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    request = supertest(app.getHttpServer());
+    prisma = app.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    delete process.env["OTP_TEST_MODE"];
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    queued.length = 0;
+    await prisma.session.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.otpRequest.deleteMany();
+  });
+
+  it("requests and verifies an emailed code into an email-only User", async () => {
+    const requestResponse = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ email: " Buyer@Example.COM " })
+      .expect(201);
+
+    expect(queued).toEqual([
+      expect.objectContaining({
+        requestId: requestResponse.body.requestId,
+        email: "buyer@example.com",
+        code: requestResponse.body.testCode,
+      }),
+    ]);
+    const stored = await prisma.otpRequest.findUnique({
+      where: { id: requestResponse.body.requestId },
+    });
+    expect(stored).toMatchObject({
+      channel: "email",
+      destination: "buyer@example.com",
+      phone: null,
+    });
+
+    const verifyResponse = await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ email: "buyer@example.com", code: requestResponse.body.testCode })
+      .expect(201);
+
+    expect(verifyResponse.body.user).toMatchObject({
+      phone: null,
+      email: "buyer@example.com",
+      role: "buyer",
+    });
+    await expect(prisma.user.findUnique({
+      where: { email: "buyer@example.com" },
+    })).resolves.toMatchObject({
+      phone: null,
+      emailVerifiedAt: expect.any(Date),
+    });
+
+    await request
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: verifyResponse.body.refreshToken })
+      .expect(201);
+  });
+
+  it("returns the same request response for registered and unregistered emails", async () => {
+    await prisma.user.create({
+      data: {
+        email: "registered@example.com",
+        emailVerifiedAt: new Date(),
+      },
+    });
+
+    const registered = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ email: "registered@example.com" })
+      .expect(201);
+    const unregistered = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ email: "unregistered@example.com" })
+      .expect(201);
+
+    expect(Object.keys(registered.body).sort()).toEqual(
+      Object.keys(unregistered.body).sort(),
+    );
+    expect(queued.map((job) => job.email)).toEqual([
+      "registered@example.com",
+      "unregistered@example.com",
+    ]);
   });
 });
 
@@ -237,6 +367,10 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
     const userId = res1.body.user.id;
 
     // Request a new OTP and verify again with same phone
+    await prisma.otpRequest.updateMany({
+      where: { channel: "phone", destination: "+99361234567" },
+      data: { createdAt: new Date(Date.now() - 2 * 60_000) },
+    });
     const testCode2 = await requestOtp("+99361234567");
     const res2 = await request
       .post("/api/v1/auth/otp/verify")
@@ -376,6 +510,8 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
       data: {
         phone: account1.phone,
         phoneVerifiedAt: new Date(),
+        email: account1.email,
+        emailVerifiedAt: new Date(),
         role: "buyer",
       },
     });

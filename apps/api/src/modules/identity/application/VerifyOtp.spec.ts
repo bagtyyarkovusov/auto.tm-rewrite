@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { JwtService } from "@nestjs/jwt";
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
 import type { SignInMethods } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { Session } from "../domain/Session";
@@ -22,9 +22,10 @@ import { RecoverAccount } from "./RecoverAccount";
 
 const NOW = new Date("2026-05-14T12:00:00Z");
 
-function reviewerDemoAccount(index: number): { phone: string; code: string } {
+function reviewerDemoAccount(index: number): { phone: string; email: string; code: string } {
   return {
     phone: `+99365${String(index).padStart(6, "0")}`,
+    email: `reviewer${index}@autotm.bagtyyar.dev`,
     code: String(index).repeat(6),
   };
 }
@@ -36,7 +37,8 @@ function hashCode(code: string): string {
 function makeOtpRequest(overrides: Partial<OtpRequest> = {}): OtpRequest {
   return {
     id: randomUUID(),
-    phone: "+99361234567",
+    channel: "phone",
+    destination: "+99361234567",
     codeHash: hashCode("123456"),
     expiresAt: new Date(NOW.getTime() + 5 * 60 * 1000),
     verifiedAt: null,
@@ -85,7 +87,8 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
   records: OtpRequest[] = [];
 
   async create(input: {
-    phone: string;
+    channel: SignInCodeChannel;
+    destination: string;
     codeHash: string;
     expiresAt: Date;
     userId: string | null;
@@ -106,14 +109,17 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
     return this.records.find((r) => r.id === id) ?? null;
   }
 
-  async findLatestByPhone(phone: string): Promise<OtpRequest | null> {
+  async findLatestByDestination(
+    channel: SignInCodeChannel,
+    destination: string,
+  ): Promise<OtpRequest | null> {
     const sorted = this.records
-      .filter((r) => r.phone === phone)
+      .filter((r) => r.channel === channel && r.destination === destination)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return sorted[0] ?? null;
   }
 
-  async countByPhoneSince(): Promise<number> {
+  async countByDestinationSince(): Promise<number> {
     return 0;
   }
 
@@ -147,6 +153,10 @@ class FakeUserRepository implements UserRepository {
 
   async findByPhone(phone: string): Promise<User | null> {
     return this.users.find((u) => u.phone === phone) ?? null;
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.users.find((user) => user.email === email) ?? null;
   }
 
   async findById(id: string): Promise<User | null> {
@@ -449,8 +459,8 @@ describe("VerifyOtp", () => {
 
   // --- Too many attempts ---
 
-  it("locks the OTP request after 6 wrong attempts", async () => {
-    const otpRequest = makeOtpRequest({ attempts: 5 });
+  it("locks the OTP request on the fifth wrong attempt", async () => {
+    const otpRequest = makeOtpRequest({ attempts: 4 });
     otpRepo.addRecord(otpRequest);
 
     const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
@@ -595,7 +605,7 @@ describe("VerifyOtp", () => {
     const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
     await expect(
       uc.execute({ phone: "+99361234567", code: "123456" }),
-    ).rejects.toThrow("No OTP request found for this phone");
+    ).rejects.toThrow("No Sign-in Code request found");
   });
 
   // --- Access token expiry ---
@@ -726,6 +736,88 @@ describe("VerifyOtp", () => {
     expect(listingsPort.republishedSellerId).toBe(existingUser.id);
   });
 
+  describe("email Sign-in Method", () => {
+    const email = "buyer@example.com";
+
+    it("creates an email-only User and returns both nullable methods", async () => {
+      otpRepo.addRecord(makeOtpRequest({
+        channel: "email",
+        destination: email,
+        expiresAt: new Date(NOW.getTime() + 10 * 60_000),
+      }));
+
+      const result = await makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        eventBus,
+      }).execute({ email: " Buyer@Example.COM ", code: "123456" });
+
+      expect(result.user).toMatchObject({ phone: null, email });
+      expect(userRepo.users[0]).toMatchObject({
+        phone: null,
+        phoneVerifiedAt: null,
+        email,
+        emailVerifiedAt: NOW,
+      });
+      expect(eventBus.emit).toHaveBeenCalledWith("UserRegistered", {
+        userId: userRepo.users[0]!.id,
+        phone: null,
+        email,
+      });
+    });
+
+    it("signs in and recovers an existing email User while signups are disabled", async () => {
+      process.env["SIGNUPS_ENABLED"] = "false";
+      const existingUser = makeUser({
+        phone: null,
+        phoneVerifiedAt: null,
+        email,
+        emailVerifiedAt: NOW,
+        deletionScheduledAt: new Date(NOW.getTime() + 86_400_000),
+      });
+      userRepo.users.push(existingUser);
+      otpRepo.addRecord(makeOtpRequest({ channel: "email", destination: email }));
+
+      const result = await makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        listingsPort,
+      }).execute({ email, code: "123456" });
+
+      expect(result.user.id).toBe(existingUser.id);
+      expect(listingsPort.republishedSellerId).toBe(existingUser.id);
+      expect(userRepo.users).toHaveLength(1);
+    });
+
+    it("blocks creation of a new email User when signups are disabled", async () => {
+      process.env["SIGNUPS_ENABLED"] = "false";
+      otpRepo.addRecord(makeOtpRequest({ channel: "email", destination: email }));
+
+      await expect(makeUseCase({ otpRepo, userRepo, sessionRepo }).execute({
+        email,
+        code: "123456",
+      })).rejects.toThrow("Signups are currently disabled");
+      expect(userRepo.users).toHaveLength(0);
+    });
+
+    it("locks an email code on the fifth wrong attempt", async () => {
+      const request = makeOtpRequest({
+        channel: "email",
+        destination: email,
+        attempts: 4,
+      });
+      otpRepo.addRecord(request);
+
+      await expect(makeUseCase({ otpRepo, userRepo, sessionRepo }).execute({
+        email,
+        code: "000000",
+      })).rejects.toThrow("Too many attempts");
+      expect((await otpRepo.findById(request.id))!.attempts).toBe(5);
+    });
+  });
+
   describe("reviewer OTP bypass", () => {
     const account1 = reviewerDemoAccount(1);
     const account2 = reviewerDemoAccount(2);
@@ -738,6 +830,42 @@ describe("VerifyOtp", () => {
         account3,
       ],
     };
+
+    it("requires a rate-limited request before reserved email authentication", async () => {
+      const existingUser = makeUser({
+        phone: account1.phone,
+        email: account1.email,
+        emailVerifiedAt: NOW,
+        role: "buyer",
+      });
+      userRepo.users.push(existingUser);
+      const useCase = makeUseCase({
+        otpRepo,
+        userRepo,
+        sessionRepo,
+        eventBus,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      });
+
+      await expect(
+        useCase.execute({ email: account1.email, code: account1.code }),
+      ).rejects.toThrow("No Sign-in Code request found");
+
+      otpRepo.addRecord(makeOtpRequest({
+        channel: "email",
+        destination: account1.email,
+        codeHash: hashCode(account1.code),
+        expiresAt: new Date(NOW.getTime() + 10 * 60_000),
+      }));
+      await expect(
+        useCase.execute({ email: account1.email, code: account1.code }),
+      ).resolves.toMatchObject({ user: { id: existingUser.id } });
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        "ReviewerOtpBypassAuthenticated",
+        expect.objectContaining({ userId: existingUser.id, role: "buyer" }),
+      );
+    });
 
     it("uses the normal safe failure path when the reviewer flag is disabled", async () => {
       const existingUser = makeUser({ phone: account1.phone, role: "buyer" });
@@ -754,7 +882,7 @@ describe("VerifyOtp", () => {
 
       await expect(
         uc.execute({ phone: account1.phone, code: account1.code }),
-      ).rejects.toThrow("No OTP request found for this phone");
+      ).rejects.toThrow("No Sign-in Code request found");
       expect(sessionRepo.sessions).toHaveLength(0);
       expect(eventBus.emit).not.toHaveBeenCalledWith(
         "ReviewerOtpBypassAuthenticated",
@@ -773,7 +901,7 @@ describe("VerifyOtp", () => {
 
       await expect(
         uc.execute({ phone: "+99361234567", code: account1.code }),
-      ).rejects.toThrow("No OTP request found for this phone");
+      ).rejects.toThrow("No Sign-in Code request found");
     });
 
     it("uses the normal safe failure path for a reserved number with the wrong fixed code", async () => {
@@ -790,7 +918,7 @@ describe("VerifyOtp", () => {
 
       await expect(
         uc.execute({ phone: account1.phone, code: "999999" }),
-      ).rejects.toThrow("No OTP request found for this phone");
+      ).rejects.toThrow("No Sign-in Code request found");
       expect(sessionRepo.sessions).toHaveLength(0);
     });
 
@@ -882,7 +1010,7 @@ describe("VerifyOtp", () => {
 
       await expect(
         uc.execute({ phone: account1.phone, code: account1.code }),
-      ).rejects.toThrow("No OTP request found for this phone");
+      ).rejects.toThrow("No Sign-in Code request found");
       expect(userRepo.users).toHaveLength(0);
       expect(sessionRepo.sessions).toHaveLength(0);
     });
@@ -901,7 +1029,7 @@ describe("VerifyOtp", () => {
 
       await expect(
         uc.execute({ phone: account1.phone, code: account1.code }),
-      ).rejects.toThrow("No OTP request found for this phone");
+      ).rejects.toThrow("No Sign-in Code request found");
       expect(sessionRepo.sessions).toHaveLength(0);
     });
 
@@ -919,7 +1047,7 @@ describe("VerifyOtp", () => {
 
       await expect(
         uc.execute({ phone: account1.phone, code: account1.code }),
-      ).rejects.toThrow("No OTP request found for this phone");
+      ).rejects.toThrow("No Sign-in Code request found");
       expect(sessionRepo.sessions).toHaveLength(0);
     });
   });

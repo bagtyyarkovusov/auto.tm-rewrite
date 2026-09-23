@@ -1,5 +1,5 @@
 export interface RateLimitInput {
-  phoneCount24h: number;
+  destinationCount24h: number;
   ipCount1h: number;
   lastAttemptAt: Date | null;
   now: Date;
@@ -8,47 +8,68 @@ export interface RateLimitInput {
 export interface RateLimitResult {
   allowed: boolean;
   resendInSeconds: number;
-  reason?: "PHONE_LIMIT" | "IP_LIMIT";
+  reason?: "DESTINATION_LIMIT" | "IP_LIMIT" | "BACKOFF";
 }
 
 export class OtpAttemptLedger {
   constructor(
-    private readonly phoneLimit: number,
+    private readonly destinationLimit: number,
     private readonly ipLimit: number,
     private readonly baseBackoffSeconds: number,
   ) {}
 
   check(input: RateLimitInput): RateLimitResult {
-    const { phoneCount24h, ipCount1h, lastAttemptAt, now } = input;
+    const { destinationCount24h, ipCount1h, lastAttemptAt, now } = input;
 
     // Check hard limits
-    const phoneExceeded = phoneCount24h >= this.phoneLimit;
+    const destinationExceeded = destinationCount24h >= this.destinationLimit;
     const ipExceeded = ipCount1h >= this.ipLimit;
 
-    // Compute exponential backoff regardless of limit status
-    const resendInSeconds = this.computeBackoff(phoneCount24h, lastAttemptAt, now);
+    const currentBackoffRemaining = this.computeCurrentBackoffRemaining(
+      destinationCount24h,
+      lastAttemptAt,
+      now,
+    );
+    const nextBackoffSeconds =
+      this.baseBackoffSeconds * Math.pow(2, destinationCount24h);
 
-    if (phoneExceeded) {
-      return { allowed: false, resendInSeconds, reason: "PHONE_LIMIT" };
+    if (destinationExceeded) {
+      return {
+        allowed: false,
+        resendInSeconds: currentBackoffRemaining,
+        reason: "DESTINATION_LIMIT",
+      };
     }
 
     if (ipExceeded) {
-      return { allowed: false, resendInSeconds, reason: "IP_LIMIT" };
+      return {
+        allowed: false,
+        resendInSeconds: currentBackoffRemaining,
+        reason: "IP_LIMIT",
+      };
     }
 
-    return { allowed: true, resendInSeconds };
+    if (currentBackoffRemaining > 0) {
+      return {
+        allowed: false,
+        resendInSeconds: currentBackoffRemaining,
+        reason: "BACKOFF",
+      };
+    }
+
+    return { allowed: true, resendInSeconds: nextBackoffSeconds };
   }
 
-  private computeBackoff(
-    phoneCount24h: number,
+  private computeCurrentBackoffRemaining(
+    destinationCount24h: number,
     lastAttemptAt: Date | null,
     now: Date,
   ): number {
-    // Exponential backoff: base * 2^N for N prior requests
-    // After 0 requests → 60s, after 1 → 120s, after 2 → 240s, etc.
-    const backoffTotal = this.baseBackoffSeconds * Math.pow(2, phoneCount24h);
+    if (lastAttemptAt === null) return 0;
 
-    if (lastAttemptAt === null) return backoffTotal;
+    // The latest accepted request was created after N-1 prior requests.
+    const priorRequests = Math.max(0, destinationCount24h - 1);
+    const backoffTotal = this.baseBackoffSeconds * Math.pow(2, priorRequests);
 
     const elapsed = (now.getTime() - lastAttemptAt.getTime()) / 1000;
     return Math.max(0, Math.ceil(backoffTotal - elapsed));

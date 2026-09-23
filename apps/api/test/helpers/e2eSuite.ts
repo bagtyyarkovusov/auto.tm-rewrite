@@ -211,7 +211,9 @@ export async function cleanSuiteFixtures(
       });
     }
   }
-  await prisma.otpRequest.deleteMany({ where: { phone: { in: phones } } });
+  await prisma.otpRequest.deleteMany({
+    where: { channel: "phone", destination: { in: phones } },
+  });
   // Cascades sessions + TOTP enrollments/backup codes.
   await prisma.user.deleteMany({ where: userScope });
   await prisma.city.deleteMany({ where: { slug: { startsWith: suite.slug } } });

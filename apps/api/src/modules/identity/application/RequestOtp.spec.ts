@@ -1,226 +1,243 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import type { OtpRequest } from "../domain/OtpRequest";
+import { describe, expect, it } from "vitest";
+import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
+import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
+import type { ReviewerOtpBypassConfig } from "../domain/ports/ReviewerOtpBypassConfig";
+import type { ConstantTimeComparatorPort } from "../domain/ports/ConstantTimeComparatorPort";
 import { RequestOtp } from "./RequestOtp";
 
-const NOW = new Date("2026-05-14T12:00:00Z");
+const START = new Date("2026-09-23T12:00:00Z");
+
+class FakeClock implements ClockPort {
+  current = START;
+  now(): Date { return this.current; }
+  advance(seconds: number): void {
+    this.current = new Date(this.current.getTime() + seconds * 1000);
+  }
+}
 
 class FakeOtpRequestRepository implements OtpRequestRepository {
   records: OtpRequest[] = [];
   private idCounter = 0;
+  constructor(private readonly clock: ClockPort) {}
 
   async create(input: {
-    phone: string;
+    channel: SignInCodeChannel;
+    destination: string;
     codeHash: string;
     expiresAt: Date;
     userId: string | null;
     ip: string;
   }): Promise<OtpRequest> {
-    this.idCounter++;
     const record: OtpRequest = {
-      id: `req-${this.idCounter}`,
+      id: `00000000-0000-4000-8000-${String(++this.idCounter).padStart(12, "0")}`,
       ...input,
       verifiedAt: null,
       attempts: 0,
-      createdAt: NOW,
+      createdAt: this.clock.now(),
     };
     this.records.push(record);
     return record;
   }
 
   async findById(id: string): Promise<OtpRequest | null> {
-    return this.records.find((r) => r.id === id) ?? null;
+    return this.records.find((record) => record.id === id) ?? null;
   }
 
-  async countByPhoneSince(phone: string, since: Date): Promise<number> {
+  async findLatestByDestination(
+    channel: SignInCodeChannel,
+    destination: string,
+  ): Promise<OtpRequest | null> {
+    return this.records
+      .filter((record) => record.channel === channel && record.destination === destination)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
+  }
+
+  async countByDestinationSince(
+    channel: SignInCodeChannel,
+    destination: string,
+    since: Date,
+  ): Promise<number> {
     return this.records.filter(
-      (r) => r.phone === phone && r.createdAt >= since,
+      (record) =>
+        record.channel === channel &&
+        record.destination === destination &&
+        record.createdAt >= since,
     ).length;
   }
 
   async countByIpSince(ip: string, since: Date): Promise<number> {
     return this.records.filter(
-      (r) => r.ip === ip && r.createdAt >= since,
+      (record) => record.ip === ip && record.createdAt >= since,
     ).length;
   }
 
-  async findLatestByPhone(phone: string): Promise<OtpRequest | null> {
-    const sorted = this.records
-      .filter((r) => r.phone === phone)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    return sorted[0] ?? null;
-  }
-
-  async markVerified(id: string, userId: string): Promise<OtpRequest> {
-    const record = this.records.find((r) => r.id === id);
-    if (!record) throw new Error("Not found");
-    const updated: OtpRequest = { ...record, verifiedAt: new Date(), userId };
-    this.records = this.records.map((r) => (r.id === id ? updated : r));
-    return updated;
-  }
-
-  async incrementAttempts(id: string): Promise<OtpRequest> {
-    const record = this.records.find((r) => r.id === id);
-    if (!record) throw new Error("Not found");
-    const updated: OtpRequest = { ...record, attempts: record.attempts + 1 };
-    this.records = this.records.map((r) => (r.id === id ? updated : r));
-    return updated;
-  }
+  async markVerified(): Promise<OtpRequest> { throw new Error("unused"); }
+  async incrementAttempts(): Promise<OtpRequest> { throw new Error("unused"); }
 }
 
 class FakeOtpSender implements OtpSenderPort {
   sent: Array<{ phone: string; code: string }> = [];
-
   async send(phone: string, code: string): Promise<void> {
     this.sent.push({ phone, code });
   }
 }
 
-class FakeClock implements ClockPort {
-  now(): Date {
-    return NOW;
+class FakeEmailCodeSender implements EmailCodeSenderPort {
+  jobs: Array<{ requestId: string; email: string; code: string; locale: "ru" | "tk" | "en" }> = [];
+  async enqueue(input: {
+    requestId: string;
+    email: string;
+    code: string;
+    locale: "ru" | "tk" | "en";
+  }): Promise<void> {
+    this.jobs.push(input);
   }
 }
 
-function makeUseCase(overrides: {
-  repo?: OtpRequestRepository;
-  sender?: OtpSenderPort;
-  clock?: ClockPort;
+const comparator: ConstantTimeComparatorPort = {
+  compare: (candidate, expected) => candidate === expected,
+};
+const noReviewers: ReviewerOtpBypassConfig = { enabled: false, accounts: [] };
+
+function harness(options: {
   testMode?: boolean;
+  reviewerConfig?: ReviewerOtpBypassConfig;
 } = {}) {
-  return new RequestOtp(
-    overrides.repo ?? new FakeOtpRequestRepository(),
-    overrides.sender ?? new FakeOtpSender(),
-    overrides.clock ?? new FakeClock(),
-    overrides.testMode ?? false,
+  const clock = new FakeClock();
+  const repo = new FakeOtpRequestRepository(clock);
+  const sms = new FakeOtpSender();
+  const email = new FakeEmailCodeSender();
+  const useCase = new RequestOtp(
+    repo,
+    sms,
+    clock,
+    options.testMode ?? false,
+    email,
+    options.reviewerConfig ?? noReviewers,
+    comparator,
   );
+  return { clock, repo, sms, email, useCase };
+}
+
+function reviewerConfig(): ReviewerOtpBypassConfig {
+  return {
+    enabled: true,
+    accounts: [{
+      phone: "+99365000001",
+      email: "reviewer1@autotm.bagtyyar.dev",
+      code: "111111",
+    }],
+  };
 }
 
 describe("RequestOtp", () => {
-  let repo: FakeOtpRequestRepository;
-  let sender: FakeOtpSender;
+  it("preserves the phone request path and five-minute expiry", async () => {
+    const { useCase, repo, sms, email } = harness();
+    const result = await useCase.execute({ phone: "+99361234567", ip: "127.0.0.1" });
 
-  beforeEach(() => {
-    repo = new FakeOtpRequestRepository();
-    sender = new FakeOtpSender();
-  });
-
-  it("creates an OTP request for a valid TM phone", async () => {
-    const uc = makeUseCase({ repo, sender });
-    const result = await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
-
-    expect(result.requestId).toBeDefined();
     expect(result.resendInSeconds).toBe(60);
-    expect(repo.records).toHaveLength(1);
-    expect(repo.records[0]!.phone).toBe("+99361234567");
-    expect(repo.records[0]!.codeHash).toBeTruthy();
-    expect(repo.records[0]!.codeHash).not.toBe("123456");
-    expect(sender.sent).toHaveLength(1);
-    expect(sender.sent[0]!.phone).toBe("+99361234567");
+    expect(repo.records[0]).toMatchObject({
+      channel: "phone",
+      destination: "+99361234567",
+    });
+    expect(repo.records[0]!.expiresAt).toEqual(new Date(START.getTime() + 5 * 60_000));
+    expect(repo.records[0]!.codeHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(sms.sent).toHaveLength(1);
+    expect(email.jobs).toHaveLength(0);
   });
 
-  it("hashes the OTP code, never stores plaintext", async () => {
-    const uc = makeUseCase({ repo, sender });
-    const result = await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
+  it("normalizes email, stores a ten-minute request, and enqueues the plaintext code", async () => {
+    const { useCase, repo, sms, email } = harness();
+    await useCase.execute({ email: "  Buyer@Example.COM ", ip: "127.0.0.1" });
 
-    const record = repo.records[0]!;
-    // codeHash is a SHA-256 hex string (64 chars)
-    expect(record.codeHash).toMatch(/^[a-f0-9]{64}$/);
-    // Plaintext code is not in the record
-    expect(record.codeHash).not.toBe("123456");
+    expect(repo.records[0]).toMatchObject({ channel: "email", destination: "buyer@example.com" });
+    expect(repo.records[0]!.expiresAt).toEqual(new Date(START.getTime() + 10 * 60_000));
+    expect(repo.records[0]!.codeHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(repo.records[0]!.codeHash).not.toBe(email.jobs[0]!.code);
+    expect(email.jobs[0]).toMatchObject({
+      requestId: repo.records[0]!.id,
+      email: "buyer@example.com",
+      locale: "ru",
+    });
+    expect(email.jobs[0]!.code).toMatch(/^\d{6}$/);
+    expect(sms.sent).toHaveLength(0);
   });
 
-  it("sends the plaintext code via the sender port", async () => {
-    const uc = makeUseCase({ repo, sender });
-    await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
+  it("enforces backoff and returns the next cooldown after an accepted retry", async () => {
+    const { useCase, clock } = harness();
+    const input = { email: "buyer@example.com", ip: "127.0.0.1" };
 
-    expect(sender.sent[0]!.code).toMatch(/^\d{6}$/);
+    await expect(useCase.execute(input)).resolves.toMatchObject({ resendInSeconds: 60 });
+    await expect(useCase.execute(input)).rejects.toThrow("Too many OTP requests");
+    clock.advance(60);
+    await expect(useCase.execute(input)).resolves.toMatchObject({ resendInSeconds: 120 });
   });
 
-  it("throws on invalid phone", async () => {
-    const uc = makeUseCase({ repo, sender });
-    await expect(
-      uc.execute({ phone: "not-a-phone", ip: "127.0.0.1" }),
-    ).rejects.toThrow("Phone must be +993[6-7]");
+  it("limits each normalized destination to five requests per 24 hours", async () => {
+    const { useCase, clock } = harness();
+    const input = { email: "buyer@example.com", ip: "127.0.0.1" };
+
+    for (const wait of [0, 60, 120, 240, 480]) {
+      if (wait > 0) clock.advance(wait);
+      await useCase.execute(input);
+    }
+    clock.advance(960);
+    await expect(useCase.execute(input)).rejects.toThrow("Too many OTP requests");
   });
 
-  it("throws on non-TM phone", async () => {
-    const uc = makeUseCase({ repo, sender });
-    await expect(
-      uc.execute({ phone: "+15551234567", ip: "127.0.0.1" }),
-    ).rejects.toThrow("Phone must be +993[6-7]");
-  });
-
-  it("blocks when phone daily limit reached", async () => {
-    // Pre-seed 5 requests for same phone
-    for (let i = 0; i < 5; i++) {
-      await repo.create({
-        phone: "+99361234567",
-        codeHash: "abc123",
-        expiresAt: new Date(NOW.getTime() + 300_000),
-        userId: null,
-        ip: "127.0.0.1",
-      });
+  it("shares the ten-request IP budget across phone and email", async () => {
+    const { useCase } = harness();
+    for (let index = 0; index < 10; index++) {
+      if (index % 2 === 0) {
+        await useCase.execute({
+          phone: `+9936${String(1000000 + index).slice(-7)}`,
+          ip: "10.0.0.1",
+        });
+      } else {
+        await useCase.execute({ email: `buyer${index}@example.com`, ip: "10.0.0.1" });
+      }
     }
 
-    const uc = makeUseCase({ repo });
     await expect(
-      uc.execute({ phone: "+99361234567", ip: "127.0.0.1" }),
+      useCase.execute({ email: "eleventh@example.com", ip: "10.0.0.1" }),
     ).rejects.toThrow("Too many OTP requests");
   });
 
-  it("blocks when IP hourly limit reached", async () => {
-    // Pre-seed 10 requests from same IP
-    for (let i = 0; i < 10; i++) {
-      await repo.create({
-        phone: `+9936${String(i).padStart(7, "0")}`,
-        codeHash: "abc123",
-        expiresAt: new Date(NOW.getTime() + 300_000),
-        userId: null,
-        ip: "10.0.0.1",
-      });
+  it("keeps reserved phones issuance-free and rate-limit exempt", async () => {
+    const { useCase, repo, sms, email } = harness({ reviewerConfig: reviewerConfig() });
+    for (let index = 0; index < 12; index++) {
+      await useCase.execute({ phone: "+99365000001", ip: "10.0.0.1" });
     }
+    expect(repo.records).toHaveLength(0);
+    expect(sms.sent).toHaveLength(0);
+    expect(email.jobs).toHaveLength(0);
+  });
 
-    const uc = makeUseCase({ repo });
+  it("stores and rate-limits reserved emails without enqueueing a hard bounce", async () => {
+    const { useCase, repo, email, clock } = harness({ reviewerConfig: reviewerConfig() });
+    const input = { email: "reviewer1@autotm.bagtyyar.dev", ip: "10.0.0.1" };
+
+    for (const wait of [0, 60, 120, 240, 480]) {
+      if (wait > 0) clock.advance(wait);
+      await useCase.execute(input);
+    }
+    clock.advance(960);
+    await expect(useCase.execute(input)).rejects.toThrow("Too many OTP requests");
+    expect(repo.records).toHaveLength(5);
+    expect(email.jobs).toHaveLength(0);
+  });
+
+  it("returns the code only in test mode", async () => {
+    const enabled = harness({ testMode: true });
+    const disabled = harness();
     await expect(
-      uc.execute({ phone: "+99379999999", ip: "10.0.0.1" }),
-    ).rejects.toThrow("Too many OTP requests");
-  });
-
-  it("enforces exponential backoff between requests", async () => {
-    const uc = makeUseCase({ repo });
-    // First request
-    const r1 = await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
-    expect(r1.resendInSeconds).toBe(60);
-
-    // Second request
-    const r2 = await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
-    expect(r2.resendInSeconds).toBe(120);
-  });
-
-  it("returns testCode when test mode is enabled", async () => {
-    const uc = makeUseCase({ repo, sender, testMode: true });
-    const result = await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
-
-    expect(result.testCode).toBeDefined();
-    expect(result.testCode).toMatch(/^\d{6}$/);
-  });
-
-  it("does NOT return testCode when test mode is disabled", async () => {
-    const uc = makeUseCase({ repo, sender, testMode: false });
-    const result = await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
-
-    expect(result.testCode).toBeUndefined();
-  });
-
-  it("sets OTP expiry to 5 minutes from now", async () => {
-    const uc = makeUseCase({ repo, sender });
-    await uc.execute({ phone: "+99361234567", ip: "127.0.0.1" });
-
-    const record = repo.records[0]!;
-    const expectedExpiry = new Date(NOW.getTime() + 5 * 60 * 1000);
-    expect(record.expiresAt.getTime()).toBe(expectedExpiry.getTime());
+      enabled.useCase.execute({ email: "one@example.com", ip: "127.0.0.1" }),
+    ).resolves.toMatchObject({ testCode: expect.stringMatching(/^\d{6}$/) });
+    await expect(
+      disabled.useCase.execute({ email: "two@example.com", ip: "127.0.0.1" }),
+    ).resolves.not.toHaveProperty("testCode");
   });
 });

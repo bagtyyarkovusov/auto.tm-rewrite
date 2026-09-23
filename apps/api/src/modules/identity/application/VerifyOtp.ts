@@ -2,6 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Phone } from "../domain/Phone";
+import { Email } from "../domain/Email";
+import type { User } from "../domain/User";
 import { verifiedSignInMethods } from "../domain/SignInMethods";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { UserRepository } from "../domain/ports/UserRepository";
@@ -19,7 +21,7 @@ import { BcryptHasherAdapter } from "../infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
 import { RecoverAccount } from "./RecoverAccount";
 
-const MAX_ATTEMPTS = 6;
+const MAX_ATTEMPTS = 5;
 const MAX_SESSIONS = 10;
 const REFRESH_TTL_DAYS = 30;
 
@@ -27,19 +29,19 @@ function hashSha256(input: string): string {
   return createHash("sha256").update(input).digest("hex");
 }
 
-export interface VerifyOtpInput {
-  phone: string;
+export type VerifyOtpInput = ({ phone: string } | { email: string }) & {
   code: string;
   deviceLabel?: string;
   userAgent?: string;
-}
+};
 
 export interface VerifyOtpResult {
   accessToken: string;
   refreshToken: string;
   user: {
     id: string;
-    phone: string;
+    phone: string | null;
+    email: string | null;
     displayName: string | null;
     role: string;
     deletionScheduledAt: string | null;
@@ -72,13 +74,24 @@ export class VerifyOtp {
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
-    const phone = Phone.create(input.phone);
+    const signInMethod = "phone" in input
+      ? {
+          channel: "phone" as const,
+          destination: Phone.create(input.phone).value,
+          phone: Phone.create(input.phone),
+        }
+      : {
+          channel: "email" as const,
+          destination: Email.create(input.email).value,
+          email: Email.create(input.email),
+        };
 
     const now = this.clock.now();
     const codeHash = hashSha256(input.code);
 
     const reviewerBypassResult = await this.tryReviewerBypass({
-      phone: phone.value,
+      channel: signInMethod.channel,
+      destination: signInMethod.destination,
       code: input.code,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
@@ -88,9 +101,12 @@ export class VerifyOtp {
       return reviewerBypassResult;
     }
 
-    const otpRequest = await this.otpRequestRepo.findLatestByPhone(phone.value);
+    const otpRequest = await this.otpRequestRepo.findLatestByDestination(
+      signInMethod.channel,
+      signInMethod.destination,
+    );
     if (!otpRequest) {
-      throw new Error("No OTP request found for this phone");
+      throw new Error("No Sign-in Code request found");
     }
 
     if (otpRequest.verifiedAt !== null) {
@@ -114,7 +130,23 @@ export class VerifyOtp {
       throw new Error("Invalid OTP code");
     }
 
-    const existingUser = await this.userRepo.findByPhone(phone.value);
+    const existingUser = signInMethod.channel === "phone"
+      ? await this.userRepo.findByPhone(signInMethod.destination)
+      : await this.userRepo.findByEmail(signInMethod.destination);
+    const isReviewerEmail = signInMethod.channel === "email" &&
+      this.matchesReviewerCredential(
+        "email",
+        signInMethod.destination,
+        input.code,
+      );
+
+    if (
+      isReviewerEmail &&
+      (!existingUser ||
+        (existingUser.role !== "buyer" && existingUser.role !== "seller"))
+    ) {
+      throw new Error("Invalid OTP code");
+    }
     const isNewUser = !existingUser;
 
     if (isNewUser && process.env["SIGNUPS_ENABLED"] === "false") {
@@ -125,7 +157,14 @@ export class VerifyOtp {
 
     const user =
       existingUser ??
-      (await this.userRepo.create(verifiedSignInMethods({ phone, verifiedAt: now })));
+      (await this.userRepo.create(
+        verifiedSignInMethods({
+          ...(signInMethod.channel === "phone"
+            ? { phone: signInMethod.phone }
+            : { email: signInMethod.email }),
+          verifiedAt: now,
+        }),
+      ));
 
     // Auto-recover account if in deletion grace period
     const deletionScheduledAt = user.deletionScheduledAt;
@@ -136,17 +175,21 @@ export class VerifyOtp {
     // Mark OTP as verified
     await this.otpRequestRepo.markVerified(otpRequest.id, user.id);
 
+    if (isReviewerEmail) {
+      this.emitReviewerBypassAuthenticated(user, now);
+    }
+
     // Emit UserRegistered for new users
     if (isNewUser) {
       this.eventBus.emit("UserRegistered", {
         userId: user.id,
-        phone: phone.value,
+        phone: user.phone,
+        email: user.email,
       });
     }
 
     return this.createSessionResult({
       user,
-      phone: phone.value,
       now,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
@@ -155,28 +198,22 @@ export class VerifyOtp {
   }
 
   private async tryReviewerBypass(input: {
-    phone: string;
+    channel: "phone" | "email";
+    destination: string;
     code: string;
     deviceLabel: string | undefined;
     userAgent: string | undefined;
     now: Date;
   }): Promise<VerifyOtpResult | null> {
-    if (!this.reviewerBypassConfig.enabled) {
+    if (!this.reviewerBypassConfig.enabled || input.channel !== "phone") {
       return null;
     }
 
-    let matched = false;
-    for (const account of this.reviewerBypassConfig.accounts) {
-      const phoneMatches = this.constantTimeComparator.compare(input.phone, account.phone);
-      const codeMatches = this.constantTimeComparator.compare(input.code, account.code);
-      matched = matched || (phoneMatches && codeMatches);
-    }
-
-    if (!matched) {
+    if (!this.matchesReviewerCredential("phone", input.destination, input.code)) {
       return null;
     }
 
-    const user = await this.userRepo.findByPhone(input.phone);
+    const user = await this.userRepo.findByPhone(input.destination);
     if (!user || (user.role !== "buyer" && user.role !== "seller")) {
       return null;
     }
@@ -188,30 +225,46 @@ export class VerifyOtp {
 
     const result = await this.createSessionResult({
       user,
-      phone: input.phone,
       now: input.now,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
       deletionScheduledAt,
     });
 
-    this.eventBus.emit("ReviewerOtpBypassAuthenticated", {
-      userId: user.id,
-      role: user.role,
-      occurredAt: input.now.toISOString(),
-    });
+    this.emitReviewerBypassAuthenticated(user, input.now);
 
     return result;
   }
 
+  private matchesReviewerCredential(
+    channel: "phone" | "email",
+    destination: string,
+    code: string,
+  ): boolean {
+    if (!this.reviewerBypassConfig.enabled) return false;
+
+    let matched = false;
+    for (const account of this.reviewerBypassConfig.accounts) {
+      const destinationMatches = this.constantTimeComparator.compare(
+        destination,
+        account[channel],
+      );
+      const codeMatches = this.constantTimeComparator.compare(code, account.code);
+      matched = matched || (destinationMatches && codeMatches);
+    }
+    return matched;
+  }
+
+  private emitReviewerBypassAuthenticated(user: User, now: Date): void {
+    this.eventBus.emit("ReviewerOtpBypassAuthenticated", {
+      userId: user.id,
+      role: user.role,
+      occurredAt: now.toISOString(),
+    });
+  }
+
   private async createSessionResult(input: {
-    user: {
-      id: string;
-      displayName: string | null;
-      role: string;
-    };
-    /** The phone whose code was just confirmed; the User was found or created by it. */
-    phone: string;
+    user: User;
     now: Date;
     deviceLabel: string | undefined;
     userAgent: string | undefined;
@@ -249,7 +302,8 @@ export class VerifyOtp {
     const accessToken = this.jwtService.sign({
       sub: user.id,
       sid: session.id,
-      phone: input.phone,
+      phone: user.phone,
+      email: user.email,
       role: user.role,
     });
 
@@ -258,7 +312,8 @@ export class VerifyOtp {
       refreshToken,
       user: {
         id: user.id,
-        phone: input.phone,
+        phone: user.phone,
+        email: user.email,
         displayName: user.displayName,
         role: user.role,
         deletionScheduledAt: input.deletionScheduledAt?.toISOString() ?? null,
