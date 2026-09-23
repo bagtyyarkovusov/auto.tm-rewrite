@@ -1,4 +1,4 @@
-# Claude / Cursor — agent policy for auto.tm-rewrite
+# Coding agent policy for auto.tm-rewrite
 
 This file is read at the start of every AI-assisted coding session in this repo.
 
@@ -28,6 +28,7 @@ Monorepo (Turborepo + pnpm) with 7 apps and 5 packages. API is NestJS + Prisma +
 - **Update the CONTEXT.md when domain invariants change.** That file should always reflect today, not last quarter.
 - **All times UTC in DB.** Convert at the display layer.
 - **Run `pnpm test` and `pnpm typecheck` before committing.**
+- **Use durable issue state.** Every implementation issue uses one pushed `agent/issue-<N>` reservation branch and one early draft PR. Keep its `Execution state` current at meaningful checkpoints so Codex or Claude can resume without the previous chat. Never check provider quota before starting. See [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md) and [ADR-0058](docs/adr/0058-portable-coding-agent-issue-execution-and-pull-request-gates.md).
 - **`.npmrc` has `shamefully-hoist=true`** — pnpm must flatten `node_modules` for React Native / Expo / Metro compatibility. Never remove this setting without testing Expo bundling end-to-end.
 - **Use Context7 MCP for every library doc lookup.** Before writing or debugging code that touches an external library, framework, SDK, API, CLI, or cloud service, resolve and query it via Context7 (`resolve-library-id` → `query-docs`). This applies even when you "know" the answer — your training data lags. The canonical workflow, the pinned library-ID table for this stack, and recipes for the most-touched libraries live in [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md). Locked in [ADR-0017](docs/adr/0017-context7-as-canonical-doc-source.md). The Expo SDK 55 rule below is a subset of this rule.
 - **Use Context7 for Expo SDK 55 docs.** Always resolve and query `expo-router`, `expo`, `@expo/cli`, and other Expo SDK packages via Context7 MCP before writing code or debugging.
@@ -120,7 +121,7 @@ GitHub Issues via `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Autonomous execution
 
-Two paths consume the `ready-for-agent` queue: `/run-issue` (synchronous, single-issue, in your session) and **Kimi-Sandcastle** (AFK, parallel, in Docker sandboxes). See `docs/agents/sandcastle.md` + [ADR-0028](docs/adr/0028-kimi-sandcastle-afk-orchestrator.md). In-sandbox gate = typecheck + lint + Docker-free unit tests; the Testcontainers e2e suite stays on CI; the mobile Expo simulator gate stays with the human.
+Two paths consume the `ready-for-agent` queue: `run-issue` (interactive, single-issue, usable by Codex or Claude) and **Sandcastle** (AFK, parallel, in Docker sandboxes). Both follow the portable branch, draft-PR, execution-state, fixed-commit review, CI, and merge contract in [ADR-0058](docs/adr/0058-portable-coding-agent-issue-execution-and-pull-request-gates.md). See [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md) and [`docs/agents/sandcastle.md`](docs/agents/sandcastle.md). The in-sandbox gate is typecheck + lint + Docker-free unit tests; the Testcontainers e2e suite stays on CI; the mobile Expo simulator gate stays with the human.
 
 ### Triage labels
 

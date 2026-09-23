@@ -78,7 +78,7 @@ Canonical in the sprint doc. The list above is the slice-level rollup; when ever
 The unblocked queue is:
 \`gh issue list --label "ready-for-agent" --search "-label:blocked" --json number,title,labels\`
 
-- Synchronous: the user selects an issue and invokes `/run-issue <N>` in Claude Code.
+- Interactive: the user selects an issue and invokes `run-issue <N>` in Codex or Claude.
 - AFK: Sandcastle selects eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
 
 Both paths treat the issue body as the slice contract. The parent remains a dashboard, never an executable prompt.
@@ -164,20 +164,20 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 
 ## `/run-issue` integration
 
-`/run-issue <N>` is the Claude Code skill that drives one issue end-to-end. Per invocation it:
+`run-issue <N>` is the tracked repository skill that Codex or Claude can use to drive one issue end-to-end. Per invocation it:
 
 1. Reads the issue body via `gh issue view <N> --json body,title,labels`
 2. Reads CLAUDE.md house rules + the issue's referenced docs (`## Read first` section)
-3. Creates an `agent/issue-<N>` branch off main
-4. Implements, tests, and runs the verification gate (typecheck, tests, Expo gate for mobile)
-5. Opens a PR with title mirroring the issue + body starting `Closes #<N>` so the issue auto-closes on merge
-6. Waits for required checks and squash-merges the PR; it never self-approves
-7. Syncs `main` locally
-8. Reconciles the Sprint parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`
+3. Creates and pushes an `agent/issue-<N>` reservation branch off `main`; existing branch/worktree/PR state routes to `resume-issue`
+4. Commits and pushes meaningful checkpoints, then opens a draft PR after the first checkpoint with `Closes #<N>` and one mutable `Execution state`
+5. Implements, tests, and runs the verification gate (typecheck, tests, Expo gate for mobile) while keeping the PR state current
+6. Runs independent read-only Standards and Spec reviews against the exact commit and records verdicts as PR comments
+7. Waits for required checks and squash-merges the PR; it never self-approves or closes the issue directly
+8. Syncs `main` locally and reconciles the Sprint parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`
 
 Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.
 
-`/run-issue` is the synchronous Claude Code path. Sandcastle is the separate Docker AFK path described in [`sandcastle.md`](sandcastle.md) and ADR-0028; it does not consume the repository skill files. No `.github/workflows/unblock.yml` exists, so each successful merger owns dependent unblocking.
+`run-issue` is the interactive path and is provider-neutral. Sandcastle is the separate Docker AFK path described in [`sandcastle.md`](sandcastle.md) and ADR-0028; it does not execute the repository skill files, but ADR-0058 requires it to produce the same branch, draft-PR, execution-state, review, CI, merge, and recovery evidence. No `.github/workflows/unblock.yml` exists, so each successful integration owner reconciles dependents after merge.
 
 ## Body template (general / non-sprint issues)
 

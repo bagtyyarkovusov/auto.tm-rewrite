@@ -21,7 +21,7 @@ Verification is evidence collection, not a ceremonial command list. Map each iss
 - For mobile UI, also read `docs/agents/nativewind-v4.md` and the current UI sources named by the design spec.
 - For external libraries, record the Context7 library ID and what was verified.
 
-The Claude host flow is not the Sandcastle sandbox gate. Run all relevant host-capable tests. If Testcontainers, CI, credentials, hardware, or a simulator is genuinely unavailable, name the skipped gate, why it is unavailable, and where it must run; never report it as passed.
+The interactive host flow is not the Sandcastle sandbox gate. Run all relevant host-capable tests. If Testcontainers, CI, credentials, hardware, or a simulator is genuinely unavailable, name the skipped gate, why it is unavailable, and where it must run; never report it as passed.
 
 ## Documentation gate
 

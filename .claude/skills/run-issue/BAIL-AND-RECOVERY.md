@@ -2,40 +2,37 @@
 
 Preserve evidence and make recovery obvious. Never reset, stash, delete, or overwrite user work to make a run look clean.
 
-## State classes
+## Before the first checkpoint
 
-### Preflight rejection
+The pushed `agent/issue-<N>` reservation remains. Keep the working tree exactly as-is and comment on the issue with branch/HEAD, files changed, known command state, failure/root cause, attempts, and the next safe action.
 
-No branch was created and no implementation began. Report the failed readiness condition. Do not add an “Agent bailed” comment unless the issue itself needs a durable blocker note.
+## After the draft PR exists
 
-### In-flight bail before push
+Update its single `Execution state` to `blocked` with:
 
-Keep the local `agent/issue-<N>` branch and working tree exactly as-is. Comment on the issue with:
-
-- branch and HEAD;
-- files changed;
+- branch and last pushed checkpoint SHA;
+- completed acceptance criteria;
 - verification already passed;
-- failing command/root cause;
+- current failure and root cause;
+- interrupted commands and whether their result is unknown;
 - repair attempts;
-- the decision or environment change needed; and
-- `Resume with /resume-issue <N>`.
+- documentation and Context7 state; and
+- one concrete next action.
 
-### Post-push or PR bail
-
-Keep the remote branch and PR open. Record their URLs, check/conflict/protection state, local divergence, and the next safe action. Never open a replacement PR automatically.
+Keep the remote branch and PR open. Never open a replacement PR or directly close the issue.
 
 ## Bail immediately when
 
 - required product intent or architecture authority is missing;
 - the working tree contains overlapping user changes;
-- a destructive operation would be required without approval;
+- destructive recovery would be required without authorization;
 - the same root failure survives three focused repairs;
 - required credentials, service, hardware, or host gate is unavailable;
 - a design decision remains open; or
 - a conflict has multiple valid semantic resolutions.
 
-Temporary logs and generated evidence belong under `/tmp`, not `.mastra/` or another committed/ignored tool directory.
+Temporary logs and generated evidence belong under `/tmp`, not a committed or ignored tool directory.
 
 ## Recovery contract
 
-Route every preserved attempt through `/resume-issue <N>`. Resume must inspect local branch, remote branch, bail comment, and PR before offering continue, safety-branch-and-rebase, preserve-and-restart, or cancel.
+Route every preserved attempt through `resume-issue <N>`. The incoming agent inspects issue, branch, worktree, PR, checks, comments, processes, and diff before selecting the safest deterministic continuation. It pauses only for destructive or semantically ambiguous recovery.
