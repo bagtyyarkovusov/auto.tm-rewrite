@@ -2,6 +2,8 @@
 
 Invocation of `run-issue N` authorizes these ordinary steps after implementation and verification pass.
 
+Keep terms in the PR, reviews, and reconciliation aligned with the canonical [domain glossary](../../../docs/domain/GLOSSARY.md).
+
 ## Checkpoint and pin
 
 1. Review `git status --short` and the complete diff.

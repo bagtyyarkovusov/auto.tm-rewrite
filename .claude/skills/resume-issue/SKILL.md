@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 # Resume one issue
 
-Git and GitHub state, not the prior chat, own recovery. Preserve the previous attempt until its state is understood.
+Git and GitHub state, not the prior chat, own recovery. Preserve the previous attempt until its state is understood. Use the canonical [domain glossary](../../../docs/domain/GLOSSARY.md) when reconstructing acceptance criteria and documentation.
 
 ## Resolve and inspect
 
