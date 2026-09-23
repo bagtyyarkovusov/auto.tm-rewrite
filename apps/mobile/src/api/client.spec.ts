@@ -54,6 +54,7 @@ describe("apiClient", () => {
         user: {
           id: "u1",
           phone: "+99361000000",
+          email: null,
           displayName: null,
           role: "buyer" as const,
         },
@@ -101,6 +102,7 @@ describe("apiClient", () => {
         user: {
           id: "u1",
           phone: "+99361000000",
+          email: null,
           displayName: null,
           role: "buyer" as const,
         },
@@ -128,6 +130,7 @@ describe("apiClient", () => {
         user: {
           id: "u1",
           phone: "+99361000000",
+          email: null,
           displayName: null,
           role: "buyer" as const,
         },
@@ -164,6 +167,7 @@ describe("apiClient", () => {
         user: {
           id: "u1",
           phone: "+99361000000",
+          email: null,
           displayName: null,
           role: "buyer" as const,
         },
@@ -223,6 +227,7 @@ describe("apiClient", () => {
         user: {
           id: "u1",
           phone: "+99361000000",
+          email: null,
           displayName: null,
           role: "buyer" as const,
         },
@@ -333,6 +338,7 @@ describe("apiClient", () => {
         user: {
           id: "u1",
           phone: "+99361000000",
+          email: null,
           displayName: null,
           role: "buyer" as const,
         },
