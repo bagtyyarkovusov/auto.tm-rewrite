@@ -76,6 +76,7 @@ class FakeSessionRepository implements SessionRepository {
       session,
       userId: session.userId,
       phone: "+99361234567",
+      email: null,
       role: "buyer",
     };
   }

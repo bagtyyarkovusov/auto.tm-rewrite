@@ -78,6 +78,22 @@ describe("OTP request schema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts and normalizes an email address", () => {
+    const result = OtpRequestRequestSchema.safeParse({
+      email: " Buyer@Example.COM ",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toEqual({ email: "buyer@example.com" });
+  });
+
+  it("rejects both destinations and rejects neither", () => {
+    expect(OtpRequestRequestSchema.safeParse({}).success).toBe(false);
+    expect(OtpRequestRequestSchema.safeParse({
+      phone: "+99362001122",
+      email: "buyer@example.com",
+    }).success).toBe(false);
+  });
 });
 
 describe("OTP verify schema", () => {
@@ -95,6 +111,18 @@ describe("OTP verify schema", () => {
       code: "12345",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts email plus a 6-digit code and rejects both destinations", () => {
+    expect(OtpVerifyRequestSchema.safeParse({
+      email: "buyer@example.com",
+      code: "123456",
+    }).success).toBe(true);
+    expect(OtpVerifyRequestSchema.safeParse({
+      phone: "+99365001122",
+      email: "buyer@example.com",
+      code: "123456",
+    }).success).toBe(false);
   });
 });
 

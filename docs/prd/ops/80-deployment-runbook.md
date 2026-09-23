@@ -190,14 +190,14 @@ Production remains reviewer-only: 3–5 reserved buyer/seller demo accounts, no 
 
 ### Reviewer scenario seed, rotation, and revocation
 
-The reviewer scenario seed is explicit operator work, not an application boot side effect. It creates or converges the reserved buyer/seller identities, deterministic listings, a rich-chat starting point, and a pending report for the store-review smoke. It never prints reviewer phone/code values; keep those values only in Railway/store-review secret storage.
+The reviewer scenario seed is explicit operator work, not an application boot side effect. It creates or converges the reserved buyer/seller identities, deterministic listings, a rich-chat starting point, and a pending report for the store-review smoke. It never prints reviewer phone, email, or code values; keep those values only in Railway/store-review secret storage.
 
 Required environment before running the seed:
 
 - `APP_ENV=staging` or `APP_ENV=production`
 - `SIGNUPS_ENABLED=false`
 - `REVIEW_DEMO_ACCOUNT_ENABLED=true`
-- `REVIEW_DEMO_ACCOUNTS_JSON` populated from the secret store with 3–5 reviewer account entries. Each `code` must be **exactly 6 digits** — it is submitted to `POST /auth/otp/verify`, whose contract is `/^\d{6}$/`, so any other length is accepted at boot and then rejected with `400 VALIDATION_FAILED` before the bypass runs
+- `REVIEW_DEMO_ACCOUNTS_JSON` populated from the secret store with 3–5 `{ phone, email, code }` entries. Phones are unique `+993` values, emails are unique normalized addresses on the reserved reviewer domain, and each code is exactly 6 digits. The reserved domain has no MX: the API stores and rate-limits its email requests but must never enqueue a send.
 - `REVIEWER_SCENARIO_SEED_AUTHORIZATION=seed-reviewer-scenario`
 
 Run the seed after catalog/database migrations and before the reviewer smoke:
@@ -206,7 +206,7 @@ Run the seed after catalog/database migrations and before the reviewer smoke:
 pnpm --filter @auto-tm/db reviewer:scenario -- --mode seed
 ```
 
-Rotation uses the same command after replacing the secret-store account set. Stable user ids are reused, existing reviewer sessions are revoked, push tokens are invalidated, and a `REVIEWER_SCENARIO_ROTATE` audit row is written without phone/code values.
+Rotation uses the same command after replacing the secret-store account set. Stable user ids are reused, both Sign-in Methods are updated, existing reviewer sessions are revoked, push tokens are invalidated, and a `REVIEWER_SCENARIO_ROTATE` audit row is written without credential values.
 
 Revocation keeps historical listings, conversations, reports, and audit target ids intact while removing reviewer login reachability:
 
@@ -214,7 +214,7 @@ Revocation keeps historical listings, conversations, reports, and audit target i
 pnpm --filter @auto-tm/db reviewer:scenario -- --mode revoke
 ```
 
-Revocation rewrites reserved reviewer user phones to non-login `revoked:<id>` tombstones, deletes their sessions, invalidates push tokens, and writes a `REVIEWER_SCENARIO_REVOKE` audit row. Remove or disable `REVIEW_DEMO_ACCOUNTS_JSON` / `REVIEW_DEMO_ACCOUNT_ENABLED` in the same operator change when store review is no longer in flight.
+Revocation rewrites reserved reviewer user phones to non-login `revoked:<id>` tombstones, clears their reserved emails, deletes their sessions, invalidates push tokens, and writes a `REVIEWER_SCENARIO_REVOKE` audit row. Remove or disable `REVIEW_DEMO_ACCOUNTS_JSON` / `REVIEW_DEMO_ACCOUNT_ENABLED` in the same operator change when store review is no longer in flight.
 
 ### Step 5 — Railway rollback and restore
 

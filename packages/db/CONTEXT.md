@@ -18,6 +18,7 @@ packages/db/
 │   │   ├── 20260713170000_add_notification_history_status/
 │   │   ├── 20260719010000_align_prisma_schema_with_existing_database/
 │   │   ├── 20260922000000_add_user_sign_in_methods/
+│   │   ├── 20260923000000_add_sign_in_code_channel/
 │   │   └── migration_lock.toml
 │   └── seed/
 │       ├── _legacy/cars.brands.json   Monolingual snapshot from old backend; historical port source
@@ -59,11 +60,13 @@ Local UI fixture:
 S11 reviewer scenario seed (now implemented):
 - `src/reviewer-scenario-seed.ts` owns the testable core for the guarded store-review scenario seed.
 - `scripts/reviewer-scenario.ts` is the Prisma-backed CLI (`pnpm --filter @auto-tm/db reviewer:scenario -- --mode seed|revoke`).
-- The seed requires explicit operator authorization (`REVIEWER_SCENARIO_SEED_AUTHORIZATION=seed-reviewer-scenario`), `APP_ENV=staging|production`, `SIGNUPS_ENABLED=false`, `REVIEW_DEMO_ACCOUNT_ENABLED=true`, and 3–5 secret-managed entries in `REVIEW_DEMO_ACCOUNTS_JSON`.
-- The seed derives stable buyer/seller user slots from the secret-managed reviewer account list, creates only `buyer` / `seller` users, refuses privileged or hijacked accounts, converges deterministic catalog/listing/conversation/message/report rows, and writes audit rows that omit reviewer phone/code values.
+- The seed requires explicit operator authorization (`REVIEWER_SCENARIO_SEED_AUTHORIZATION=seed-reviewer-scenario`), `APP_ENV=staging|production`, `SIGNUPS_ENABLED=false`, `REVIEW_DEMO_ACCOUNT_ENABLED=true`, and 3–5 secret-managed `{ phone, email, code }` entries in `REVIEW_DEMO_ACCOUNTS_JSON`.
+- The seed derives stable buyer/seller user slots from the secret-managed reviewer account list, stores each reserved phone and email as verified Sign-in Methods, refuses privileged or hijacked values, converges deterministic catalog/listing/conversation/message/report rows, and writes audit rows that omit reviewer credential values.
 - Every identifier the scenario writes — user slots, catalog rows, listings, the conversation and its participants, messages, and the report — is a fixed UUID exported as `reviewerScenarioSeedIds`. The API validates `brandId`, `modelId`, `regionId`, `cityId`, `listingId`, and `conversationId` with `z.string().uuid()`, so slug ids would be accepted by Postgres and then rejected by every request naming them.
-- Rotation is a rerun with a changed secret-store account list. Stable user ids are retained, phones are updated, existing reviewer sessions are deleted, push tokens are invalidated, and `REVIEWER_SCENARIO_ROTATE` audit evidence is written without credential values.
-- Revocation rewrites seeded reviewer user phones to `revoked:<id>` tombstones, deletes reviewer sessions, invalidates push tokens, preserves historical listings/conversations/reports/audit target ids, and writes `REVIEWER_SCENARIO_REVOKE`.
+- Rotation is a rerun with a changed secret-store account list. Stable user ids are retained, phones and emails are updated, existing reviewer sessions are deleted, push tokens are invalidated, and `REVIEWER_SCENARIO_ROTATE` audit evidence is written without credential values.
+- Revocation rewrites seeded reviewer user phones to `revoked:<id>` tombstones, clears their emails, deletes reviewer sessions, invalidates push tokens, preserves historical listings/conversations/reports/audit target ids, and writes `REVIEWER_SCENARIO_REVOKE`.
+
+Sign-in Code storage uses `SignInCodeChannel` plus normalized `OtpRequest.destination`, indexed with `createdAt` for destination budgets and latest-code lookup. Migration `20260923000000_add_sign_in_code_channel` backfills existing phone rows. It temporarily retains nullable `OtpRequest.phone`, its index, and a compatibility trigger so the previous phone-only API revision can overlap or be redeployed during this rollout; email rows keep that alias null.
 
 ## Schema organization
 

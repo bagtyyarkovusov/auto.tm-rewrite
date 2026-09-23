@@ -2,6 +2,7 @@ import type { ReviewerOtpBypassConfig } from "../domain/ports/ReviewerOtpBypassC
 
 interface RawReviewerOtpBypassAccount {
   phone?: unknown;
+  email?: unknown;
   code?: unknown;
 }
 
@@ -18,6 +19,7 @@ export function parseReviewerOtpBypassConfig(env: {
     enabled: true,
     accounts: raw.map((entry) => ({
       phone: String(entry.phone),
+      email: String(entry.email),
       code: String(entry.code),
     })),
   };

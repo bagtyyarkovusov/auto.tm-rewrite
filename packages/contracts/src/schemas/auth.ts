@@ -7,9 +7,17 @@ export const PhoneTm = z.string().regex(
   "Phone must be +993[6-7]XXXXXXX (TM mobile)",
 );
 
-export const OtpRequestRequestSchema = z.object({
-  phone: PhoneTm,
-});
+export const EmailAddress = z
+  .string()
+  .trim()
+  .email()
+  .max(254)
+  .transform((value) => value.toLowerCase());
+
+export const OtpRequestRequestSchema = z.union([
+  z.object({ phone: PhoneTm }).strict(),
+  z.object({ email: EmailAddress }).strict(),
+]);
 export type OtpRequestRequest = z.infer<typeof OtpRequestRequestSchema>;
 
 export const OtpRequestResponseSchema = z.object({
@@ -19,11 +27,15 @@ export const OtpRequestResponseSchema = z.object({
 });
 export type OtpRequestResponse = z.infer<typeof OtpRequestResponseSchema>;
 
-export const OtpVerifyRequestSchema = z.object({
-  phone: PhoneTm,
+const OtpVerifyFields = {
   code: z.string().regex(/^\d{6}$/),
   deviceLabel: z.string().max(200).optional(),
-});
+};
+
+export const OtpVerifyRequestSchema = z.union([
+  z.object({ phone: PhoneTm, ...OtpVerifyFields }).strict(),
+  z.object({ email: EmailAddress, ...OtpVerifyFields }).strict(),
+]);
 export type OtpVerifyRequest = z.infer<typeof OtpVerifyRequestSchema>;
 
 export const OtpVerifyResponseSchema = z.object({
@@ -31,7 +43,8 @@ export const OtpVerifyResponseSchema = z.object({
   refreshToken: z.string(),
   user: z.object({
     id: z.string().uuid(),
-    phone: PhoneTm,
+    phone: PhoneTm.nullable(),
+    email: z.string().email().nullable(),
     displayName: z.string().nullable(),
     role: z.nativeEnum(UserRole),
     deletionScheduledAt: z.string().datetime().nullable().optional(),

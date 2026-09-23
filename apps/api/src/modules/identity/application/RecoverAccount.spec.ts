@@ -28,6 +28,7 @@ class FakeUserRepository implements UserRepository {
   clearedForUserId: string | null = null;
 
   async findByPhone(_phone: string): Promise<User | null> { return null; }
+  async findByEmail(_email: string): Promise<User | null> { return null; }
   async create(_signInMethods: SignInMethods): Promise<User> { return makeUser(); }
   async findById(id: string): Promise<User | null> {
     return this.users.get(id) ?? null;

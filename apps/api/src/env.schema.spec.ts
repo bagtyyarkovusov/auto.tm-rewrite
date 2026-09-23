@@ -76,9 +76,10 @@ const deployedEnv = {
   SOCKET_IO_CORS_ORIGIN: "https://admin.auto.tm",
 };
 
-function reviewerDemoAccount(index: number): { phone: string; code: string } {
+function reviewerDemoAccount(index: number): { phone: string; email: string; code: string } {
   return {
     phone: `+99365${String(index).padStart(6, "0")}`,
+    email: `reviewer${index}@autotm.bagtyyar.dev`,
     code: String(index).repeat(6),
   };
 }
@@ -208,6 +209,18 @@ describe("EnvSchema reviewer-era safety (fail-closed outside CI)", () => {
         REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([
           reviewerDemoAccount(1),
           { ...reviewerDemoAccount(2), phone: reviewerDemoAccount(1).phone },
+          reviewerDemoAccount(3),
+        ]),
+      }),
+    ).toThrow(/REVIEW_DEMO_ACCOUNTS_JSON/);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([
+          reviewerDemoAccount(1),
+          { ...reviewerDemoAccount(2), email: reviewerDemoAccount(1).email },
           reviewerDemoAccount(3),
         ]),
       }),

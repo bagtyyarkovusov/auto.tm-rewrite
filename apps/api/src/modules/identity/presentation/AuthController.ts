@@ -19,6 +19,7 @@ import { Logout } from "../application/Logout";
 import { LogoutAll } from "../application/LogoutAll";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
+type LocalizedAuthRequest = FastifyRequest & { locale?: "ru" | "tk" | "en" };
 
 @Controller("api/v1/auth")
 export class AuthController {
@@ -34,13 +35,13 @@ export class AuthController {
   @Post("otp/request")
   async otpRequest(
     @Body() body: unknown,
-    @Req() req: FastifyRequest,
+    @Req() req: LocalizedAuthRequest,
   ) {
     const parsed = AuthSchemas.OtpRequestRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
         code: "VALIDATION_FAILED",
-        message: "Invalid phone number format",
+        message: "Invalid sign-in destination",
         details: parsed.error.flatten(),
       });
     }
@@ -50,10 +51,11 @@ export class AuthController {
         ?? req.ip
         ?? "127.0.0.1";
 
-      const result = await this.requestOtp.execute({
-        phone: parsed.data.phone,
-        ip,
-      });
+      const result = await this.requestOtp.execute(
+        "phone" in parsed.data
+          ? { phone: parsed.data.phone, ip, locale: req.locale ?? "ru" }
+          : { email: parsed.data.email, ip, locale: req.locale ?? "ru" },
+      );
 
       return {
         requestId: result.requestId,
@@ -67,7 +69,11 @@ export class AuthController {
           message: "Too many OTP requests. Please wait before trying again.",
         });
       }
-      if (err instanceof Error && err.message.startsWith("Phone must be")) {
+      if (
+        err instanceof Error &&
+        (err.message.startsWith("Phone must be") ||
+          err.message.startsWith("Email must be"))
+      ) {
         throw new BadRequestException({
           code: "VALIDATION_FAILED",
           message: err.message,
@@ -96,7 +102,9 @@ export class AuthController {
       const userAgent = req.headers["user-agent"] as string | undefined;
 
       const result = await this.verifyOtp.execute({
-        phone: parsed.data.phone,
+        ...("phone" in parsed.data
+          ? { phone: parsed.data.phone }
+          : { email: parsed.data.email }),
         code: parsed.data.code,
         ...(parsed.data.deviceLabel !== undefined ? { deviceLabel: parsed.data.deviceLabel } : {}),
         ...(userAgent !== undefined ? { userAgent } : {}),
@@ -128,7 +136,7 @@ export class AuthController {
           message: "Too many failed attempts. Please request a new code.",
         });
       }
-      if (err instanceof Error && err.message === "No OTP request found for this phone") {
+      if (err instanceof Error && err.message === "No Sign-in Code request found") {
         throw new BadRequestException({
           code: "OTP_NOT_FOUND",
           message: "No OTP request found. Please request a code first.",

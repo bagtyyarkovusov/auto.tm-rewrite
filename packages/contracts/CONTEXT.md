@@ -17,7 +17,7 @@ Shared API contracts. Owns:
 packages/contracts/
 ├── src/
 │   ├── schemas/
-│   │   ├── auth.ts             OTP request/verify/refresh/logout schemas + admin TOTP status/enroll/verify schemas (S7) + the `email-code` queue `sign-in-code` job payload (`EmailCodeJobSchema`: `to`, 6-digit `code`, `Locale`, `SignInCodePurpose`; ADR-0055)
+│   │   ├── auth.ts             Sign-in Code request/verify strict unions (`{ phone } | { email }`), nullable-method auth response, refresh/logout schemas, admin TOTP schemas, and the `email-code` queue job payload
 │   │   ├── identity.ts         User, Dealership, Garage schemas
 │   │   ├── catalog.ts          Brand, Model, Generation, Color, BodyType, Region, City schemas
 │   │   ├── listings.ts         ListingSummary (card fields: photoKeys, photoCount, specs, isFavorited?), FavoriteListingSummary, ListingDetail, ListingMedia, ListingDraft, ListingFilter, request/response DTOs, cursor helpers, error codes

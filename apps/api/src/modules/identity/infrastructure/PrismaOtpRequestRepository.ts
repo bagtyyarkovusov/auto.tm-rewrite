@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
+import { SIGN_IN_CODE_CHANNELS } from "../domain/types";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 
 @Injectable()
@@ -8,7 +9,8 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async create(input: {
-    phone: string;
+    channel: SignInCodeChannel;
+    destination: string;
     codeHash: string;
     expiresAt: Date;
     userId: string | null;
@@ -16,7 +18,9 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
   }): Promise<OtpRequest> {
     const row = await this.prisma.otpRequest.create({
       data: {
-        phone: input.phone,
+        channel: input.channel,
+        destination: input.destination,
+        phone: input.channel === SIGN_IN_CODE_CHANNELS.PHONE ? input.destination : null,
         codeHash: input.codeHash,
         expiresAt: input.expiresAt,
         userId: input.userId,
@@ -31,9 +35,13 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async countByPhoneSince(phone: string, since: Date): Promise<number> {
+  async countByDestinationSince(
+    channel: SignInCodeChannel,
+    destination: string,
+    since: Date,
+  ): Promise<number> {
     return this.prisma.otpRequest.count({
-      where: { phone, createdAt: { gte: since } },
+      where: { channel, destination, createdAt: { gte: since } },
     });
   }
 
@@ -43,9 +51,12 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
     });
   }
 
-  async findLatestByPhone(phone: string): Promise<OtpRequest | null> {
+  async findLatestByDestination(
+    channel: SignInCodeChannel,
+    destination: string,
+  ): Promise<OtpRequest | null> {
     const row = await this.prisma.otpRequest.findFirst({
-      where: { phone },
+      where: { channel, destination },
       orderBy: { createdAt: "desc" },
     });
     return row ? this.toDomain(row) : null;
@@ -72,7 +83,8 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
   ): OtpRequest {
     return {
       id: row.id,
-      phone: row.phone,
+      channel: row.channel,
+      destination: row.destination,
       codeHash: row.codeHash,
       expiresAt: row.expiresAt,
       verifiedAt: row.verifiedAt,

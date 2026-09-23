@@ -3,6 +3,7 @@ import type { User } from "../User";
 
 export interface UserRepository {
   findByPhone(phone: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   /** Creates a User holding the given verified Sign-in Methods (at least one). */
   create(signInMethods: SignInMethods): Promise<User>;

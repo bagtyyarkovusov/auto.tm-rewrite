@@ -9,7 +9,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 ## Owns (entities + tables)
 
 - `User` — id, phone? (unique), phoneVerifiedAt?, email? (unique), emailVerifiedAt?, displayName?, avatarUrl?, locale (default "ru"), role (`UserRole` enum: buyer | seller | moderator | admin; default buyer), createdAt, updatedAt, suspendedAt?, suspendedById?, suspensionReason?, deletionScheduledAt?
-- `OtpRequest` — id, phone, codeHash, expiresAt, verifiedAt?, attempts, userId?, ip, createdAt, updatedAt
+- `OtpRequest` — id, channel (`phone | email`), normalized destination, codeHash, expiresAt, verifiedAt?, attempts, userId?, ip, createdAt, updatedAt. The nullable `phone` compatibility alias and its index remain for one rollout; a database trigger keeps old phone-only writers and new channel-aware writers compatible.
 - `Session` — id, userId, refreshTokenHash (unique, bcrypt), deviceLabel?, userAgent?, expiresAt, createdAt, lastSeenAt, adminTotpExpiresAt?. `onDelete: Cascade` on userId → User.id.
 - `TotpEnrollment` — id, userId (unique), encryptedSecret (AES-256-GCM), verifiedAt?, createdAt, updatedAt. `onDelete: Cascade` on userId → User.id.
 - `TotpBackupCode` — id, totpEnrollmentId, codeHash (SHA-256), usedAt?. `onDelete: Cascade` on totpEnrollmentId → TotpEnrollment.id.
@@ -21,7 +21,7 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 ## Invariants
 
 - **Sign-in Methods** ([ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md)) — `User.phone` and `User.email` are each optional and unique, and each is stored only together with its verified-at time (`phoneVerifiedAt` / `emailVerifiedAt`). Enforced by the database check constraints `users_phone_verified_check` / `users_email_verified_check` and by `domain/SignInMethods.ts` (`assertSignInMethodsVerified` when mapping every row; `assertLiveUserSignInMethods` — at least one method, and a stored email already normalised — when `UserRepository.create` runs). A User purged after deletion has neither; "at least one" is checked only at creation because nothing else marks a User as live.
-- Email is stored trimmed and lowercased through the `Email` value object (`domain/Email.ts`); no provider-specific rewriting. No code path writes an email yet: sign-in is still phone-only, and a new User is created with only a phone verified at the moment its code was confirmed.
+- Email is stored trimmed and lowercased through the `Email` value object (`domain/Email.ts`); no provider-specific rewriting. A confirmed email code creates an email-only User when the destination is unheld and signups are enabled.
 - `User.role` values: `buyer` (default), `seller`, `moderator`, `admin`. Marketplace identity only — dealership membership role is separate (`DealershipMember.role`). Per ADR-0013.
 - A `User` can belong to **at most one** `Dealership` (enforced via `@@unique([userId])` on `DealershipMember`).
 - `Session.refreshTokenHash` is bcrypt-hashed; plaintext is never stored. Per ADR-0012.
@@ -32,10 +32,10 @@ User identity, authentication, sessions, dealerships, and personal garage. The s
 - **TOTP verification** — accepts the current 30-second step plus one adjacent step for small clock skew (`epochTolerance = period`). Backup codes are 16-character hex strings; 10 generated exactly once on first successful enrollment verify. First enrollment completion (mark verified + backup-code insert + session elevation) is one Prisma transaction. Backup-code consumption and session elevation are also one transaction, with atomic `usedAt: null` consumption. Post-enrollment verify accepts either a TOTP code or one unused backup code.
 - **TOTP throttling** — max 5 failed TOTP/backup-code attempts per admin user/session per 10 minutes. Wrong TOTP and wrong backup code return the same generic failure. Throttled attempts return rate-limit error. Successful verification resets the counter.
 - `OtpRequest.codeHash` is SHA-256; plaintext never stored.
-- `OtpRequest` expires after 5 minutes; max 5 attempts before invalidation (application-level).
-- Rate limits: 5 OTP requests per phone per 24h; 10 per IP per hour. Exponential backoff: `60 × 2^N` seconds where N is the count of prior requests.
+- Phone Sign-in Codes expire after 5 minutes and email codes after 10 minutes; the fifth wrong attempt invalidates either channel (application-level).
+- Rate limits: 5 requests per channel/destination per 24h; 10 per IP per hour shared across both channels. The enforced cooldown is `60 × 2^N` seconds, where N is the number of requests accepted before the current one.
 - `SMS_DRIVER=mock` (default) logs the OTP code; `SMS_DRIVER=gateway` sends via SMS gateway. `OTP_TEST_MODE=true` returns the plaintext code in the API response.
-- Reviewer demo OTP bypass is disabled by default. When `REVIEW_DEMO_ACCOUNT_ENABLED=true`, `REVIEW_DEMO_ACCOUNTS_JSON` must provide 3-5 secret-managed reserved `+993` phone entries with exactly-6-digit codes, matching `OtpVerifyRequestSchema.code`. Reserved phone and fixed-code comparisons go through `ConstantTimeComparatorPort`. A bypass success never requires an `OtpRequest`, never creates a user, and only authenticates a pre-existing `buyer` or `seller`; `moderator` and `admin` users fall through to the normal safe OTP failure path. Successful bypass emits `ReviewerOtpBypassAuthenticated` without the fixed code.
+- Reviewer demo bypass is disabled by default. When enabled, `REVIEW_DEMO_ACCOUNTS_JSON` provides 3-5 secret-managed entries with a reserved `+993` phone, normalized reserved email, and exactly-6-digit code. Reserved phone requests remain issuance-free and rate-limit exempt. Reserved email requests use the normal destination/IP budgets, persist the fixed code hash, and never enqueue an email because the reviewer domain has no MX; email verification therefore requires a request. Either channel authenticates only a pre-existing `buyer` or `seller`, never creates or elevates a User, compares credentials through `ConstantTimeComparatorPort`, and emits `ReviewerOtpBypassAuthenticated` without credential values.
 - `BlockedUser` is one-way (block by A on B). If both want, both must block. Self-blocking is rejected at the application layer (`BlockUser`) and the domain entity (`BlockedUser`).
 - **S7 user suspension enforcement** — `User.suspendedAt` blocks authenticated marketplace mutations across `listings/` (create/edit/publish/media/state), `conversations/` (new contact/send when either participant is suspended), and `admin/` (report creation). Suspended users may still authenticate, log out, browse public surfaces, view their generic suspension state, and delete their account. Enforcement is synchronous via `IdentityCheckPort.isSuspended` (no event side effects). `IdentityAdminPort` owns the suspension field writes and participates in the caller's transaction for S7 admin moderation.
 
@@ -60,16 +60,17 @@ interface IdentityCheckPort {
 ClockPort                  // injectable clock for time-based tests
 OtpRequestRepository       // persisted OTP request storage
 OtpSenderPort              // abstracts SMS driver (mock / gateway)
+EmailCodeSenderPort        // enqueues the worker email-code/sign-in-code job through BullMQ
 PasswordHasherPort         // bcrypt hash + compare for refresh tokens
 SessionRepository          // Session persistence (create, count, deleteExpired, deleteOldest, findById, updateAdminTotpExpiresAt)
-UserRepository             // User persistence (findByPhone, findById, create(SignInMethods), delete, scheduleDeletion, clearDeletionSchedule, findUsersWithExpiredDeletionGrace, purgePersonalData)
+UserRepository             // User persistence (findByPhone, findByEmail, findById, create(SignInMethods), delete, scheduleDeletion, clearDeletionSchedule, findUsersWithExpiredDeletionGrace, purgePersonalData)
 TotpSecretCipherPort       // AES-256-GCM encrypt/decrypt for TOTP secrets
 TotpVerifierPort           // TOTP secret generation, otpauth URI generation, code verification with skew
 TotpEnrollmentRepository   // TotpEnrollment persistence (findByUserId, createPending, markVerified, addBackupCodes, findBackupCodes, consumeBackupCode, completeFirstVerification transaction, consumeBackupCodeAndElevate transaction, deleteByUserId)
 TotpThrottlePort           // failed-attempt counting per user/session with window expiry
 SecurityLoggerPort         // structured security logging for TOTP failures
 BlockedUserRepository      // one-way block/unblock persistence and check
-ConstantTimeComparatorPort // constant-time string comparison seam for reviewer demo phone/code matching
+ConstantTimeComparatorPort // constant-time string comparison seam for reviewer demo phone/email/code matching
 ReviewerOtpBypassConfig    // parsed reviewer demo account flag + 3-5 secret-managed entries
 ```
 
@@ -79,8 +80,9 @@ ReviewerOtpBypassConfig    // parsed reviewer demo account flag + 3-5 secret-man
 
 ## Shipped use-cases
 
-- `RequestOtp` — validates TM phone, enforces rate limits, generates + sends OTP code, stores hashed record. Exposed as `POST /api/v1/auth/otp/request` (public).
-- `VerifyOtp` — validates OTP code against stored hash, creates (with only a phone, `phoneVerifiedAt = now`) or loads User, creates a multi-device Session with bcrypt-hashed refresh token, enforces 10-session cap with expired cleanup + FIFO eviction, issues JWT access token (15 min, includes `sid` = Session.id) and random refresh token (30-day sliding expiry). Emits `UserRegistered` on first login. If the existing user is in a deletion grace period (`deletionScheduledAt` set), auto-recovers the account via `RecoverAccount` before continuing. Respects `SIGNUPS_ENABLED=false` by blocking new-user creation with `FEATURE_DISABLED` while preserving existing-user login and recovery. Before normal OTP lookup, checks the reviewer demo bypass config: a matching reserved phone/code can create a normal session only for a pre-existing buyer/seller and emits `ReviewerOtpBypassAuthenticated`; disabled, non-reserved, wrong-code, missing-user, moderator, and admin cases fall through to the normal safe OTP path. Exposed as `POST /api/v1/auth/otp/verify` (public).
+- `RequestOtp` — accepts exactly one phone or email, normalizes it, enforces shared limits and cooldown, stores only the code hash, sends phone codes through `OtpSenderPort`, and enqueues ordinary email codes through `EmailCodeSenderPort` using the request UUID as BullMQ job id. It never reads User state, so registered and unregistered destinations follow the same path. Exposed as `POST /api/v1/auth/otp/request` (public).
+- `VerifySignInCode` — loads the latest request bound to the normalized channel/destination, rejects used or expired records, increments wrong attempts, and locks the request on the fifth wrong code. It returns the valid request to `VerifyOtp`; it does not create Users or Sessions.
+- `VerifyOtp` — verifies the latest code bound to the supplied channel/destination, creates a User holding only that verified Sign-in Method or loads the existing User, and returns both nullable methods. It creates a multi-device Session, enforces the 10-session cap, issues a JWT with `sid`, `phone`, `email`, and role, emits `UserRegistered` on first sign-in, recovers deletion-grace Users, and honors `SIGNUPS_ENABLED=false` for new Users on both channels. Reviewer phone bypass does not require a request; reviewer email bypass does. Exposed as `POST /api/v1/auth/otp/verify` (public).
 - `RefreshSession` — locates a session by bcrypt-scanning all session rows against the provided refresh token, validates expiry, rotates the refresh token hash in-place with optimistic locking (old-hash match via `updateMany`), bumps `lastSeenAt`, extends `expiresAt` to `now + 30 days`, preserves existing `adminTotpExpiresAt` without extending it, and issues a fresh JWT access token (includes `sid`). Rejects unknown, expired, and already-used tokens with 401. Exposed as `POST /api/v1/auth/refresh` (public).
 - `Logout` — locates the session matching the supplied refresh token via bcrypt comparison and deletes that single session row. Returns 204 on success; throws 401 when no match. Idempotent. Exposed as `POST /api/v1/auth/logout` (public).
 - `LogoutAll` — deletes every session for the authenticated user (identified by bearer JWT). Returns 204. Exposed as `POST /api/v1/auth/logout-all` (requires bearer auth).
@@ -127,8 +129,8 @@ Refresh-token lookup scans all `Session` rows and bcrypt-compares the plaintext 
 
 - **Domain** (no Prisma, pure TS): `OtpCode.spec.ts`, `Phone.spec.ts`, `Email.spec.ts`, `SignInMethods.spec.ts`, `OtpAttemptLedger.spec.ts`.
 - **Application** (no HTTP, fakes for repos / clock / hasher): `RequestOtp.spec.ts`, `VerifyOtp.spec.ts`, `RefreshSession.spec.ts`, `Logout.spec.ts`, `LogoutAll.spec.ts`, `GetMe.spec.ts`, `DeleteMe.spec.ts`, `RecoverAccount.spec.ts`, `GetAdminTotpStatus.spec.ts`, `EnrollAdminTotp.spec.ts`, `VerifyAdminTotp.spec.ts`. All chaos scenarios live here.
-- **Presentation** (e2e Supertest against running compose Postgres): `AuthController.e2e.spec.ts` covers happy-path OTP request + verify, phone rate-limit response shape, logout / logout-all / GET me / DELETE me (grace period), signup kill switch, and account recovery during grace. `AdminAuthController.e2e.spec.ts` covers admin TOTP pending-enrollment idempotency and later-session verification with the same enrolled authenticator secret.
-- **Infrastructure layer** — `AesGcmTotpSecretCipher.spec.ts`, `OtplibTotpVerifier.spec.ts`, `InMemoryTotpThrottleAdapter.spec.ts`. Testcontainers tests for `PrismaOtpRequestRepository` and `PrismaSessionRepository` were planned for S2 but deferred. Rationale: thin pass-throughs over `prisma.<model>.{create, findUnique, update, deleteMany}` indirectly exercised by `AuthController.e2e.spec.ts`. Add if a future bug surfaces inside an adapter.
+- **Presentation** (e2e Supertest against running compose Postgres): `AuthController.e2e.spec.ts` covers phone and email request/verify, queue-port capture for email, phone rate-limit response shape, logout / logout-all / GET me / DELETE me, signup kill switch, and grace-period recovery. `AdminAuthController.e2e.spec.ts` covers admin TOTP pending-enrollment idempotency and later-session verification with the same enrolled authenticator secret.
+- **Infrastructure layer** — `BullMqEmailCodeSenderAdapter.spec.ts`, `AesGcmTotpSecretCipher.spec.ts`, `OtplibTotpVerifier.spec.ts`, `InMemoryTotpThrottleAdapter.spec.ts`. Prisma adapters are indirectly exercised by `AuthController.e2e.spec.ts` against Postgres.
 
 ## Events emitted
 
@@ -153,7 +155,7 @@ Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.m
 - [ADR-0006](../../../../../docs/adr/0006-auth.md) — Phone OTP + TOTP for admins (refresh subsection superseded by ADR-0012).
 - [ADR-0012](../../../../../docs/adr/0012-multi-device-sessions.md) — Multi-device sessions, per-session refresh tokens (bcrypt), 10-session cap, sliding 30-day expiry.
 - [ADR-0013](../../../../../docs/adr/0013-user-role-split.md) — `User.role` split from `DealershipMember.role`.
-- [ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md) — Phone and email are optional, verified Sign-in Methods on one User (data model shipped; email sign-in not yet).
+- [ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md) — Phone and email are optional, verified Sign-in Methods on one User; either method can sign in through a channel-bound code.
 - [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Bounded context architecture.
 - [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state.
 - [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) — Garage and dealership work deferred out of MLP beta.

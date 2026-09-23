@@ -19,6 +19,11 @@ enum UserRole {
   admin
 }
 
+enum SignInCodeChannel {
+  phone
+  email
+}
+
 model User {
   id          String   @id @default(uuid())
   /// Sign-in Methods (ADR-0054). Each value is stored only with its verified-at
@@ -70,7 +75,10 @@ model User {
 
 model OtpRequest {
   id         String    @id @default(uuid())
-  phone      String
+  channel    SignInCodeChannel
+  destination String
+  /// Temporary deployment compatibility alias. New code reads channel + destination.
+  phone      String?
   codeHash   String
   expiresAt  DateTime
   verifiedAt DateTime?
@@ -81,6 +89,7 @@ model OtpRequest {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  @@index([channel, destination, createdAt])
   @@index([phone, createdAt])
   @@index([ip, createdAt])
   @@map("otp_requests")
