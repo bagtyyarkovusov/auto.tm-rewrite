@@ -1,11 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 
-import { Phone } from "../domain/Phone";
-import { Email } from "../domain/Email";
 import { OtpCode } from "../domain/OtpCode";
 import { OtpAttemptLedger } from "../domain/OtpAttemptLedger";
 import { findReviewerAccount } from "../domain/ReviewerSignIn";
+import { signInCodeDestination } from "../domain/SignInCodeDestination";
 import { SIGN_IN_CODE_CHANNELS } from "../domain/types";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
@@ -21,8 +20,6 @@ import { PrismaOtpRequestRepository } from "../infrastructure/PrismaOtpRequestRe
 import { HttpOtpSenderAdapter } from "../infrastructure/HttpOtpSenderAdapter";
 import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
 
-const PHONE_OTP_TTL_MS = 5 * 60 * 1000;
-const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;
 const DESTINATION_LIMIT = 5;
 const IP_LIMIT = 10;
 const BASE_BACKOFF_S = 60;
@@ -60,24 +57,16 @@ export class RequestOtp {
   ) {}
 
   async execute(input: RequestOtpInput): Promise<RequestOtpResult> {
-    const signInMethod = "phone" in input
-      ? {
-          channel: SIGN_IN_CODE_CHANNELS.PHONE,
-          destination: Phone.create(input.phone).value,
-        }
-      : {
-          channel: SIGN_IN_CODE_CHANNELS.EMAIL,
-          destination: Email.create(input.email).value,
-        };
+    const destination = signInCodeDestination(input);
 
     const reservedAccount = findReviewerAccount(
       this.reviewerBypassConfig,
       this.constantTimeComparator,
-      signInMethod.channel,
-      signInMethod.destination,
+      destination.channel,
+      destination.value,
     );
     if (
-      signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE &&
+      destination.channel === SIGN_IN_CODE_CHANNELS.PHONE &&
       reservedAccount !== null
     ) {
       return { requestId: randomUUID(), resendInSeconds: 0 };
@@ -89,14 +78,14 @@ export class RequestOtp {
 
     const [destinationCount24h, ipCount1h, latest] = await Promise.all([
       this.otpRequestRepo.countByDestinationSince(
-        signInMethod.channel,
-        signInMethod.destination,
+        destination.channel,
+        destination.value,
         dayAgo,
       ),
       this.otpRequestRepo.countByIpSince(input.ip, hourAgo),
       this.otpRequestRepo.findLatestByDestination(
-        signInMethod.channel,
-        signInMethod.destination,
+        destination.channel,
+        destination.value,
       ),
     ]);
 
@@ -111,33 +100,26 @@ export class RequestOtp {
       throw new Error("Too many OTP requests");
     }
 
-    const code = signInMethod.channel === SIGN_IN_CODE_CHANNELS.EMAIL && reservedAccount !== null
+    const code = destination.channel === SIGN_IN_CODE_CHANNELS.EMAIL && reservedAccount !== null
       ? OtpCode.create(reservedAccount.code)
       : OtpCode.generate();
     const codeHash = createHash("sha256").update(code.value).digest("hex");
 
-    const expiresAt = new Date(
-      now.getTime() +
-        (signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE
-          ? PHONE_OTP_TTL_MS
-          : EMAIL_OTP_TTL_MS),
-    );
-
     const record = await this.otpRequestRepo.create({
-      channel: signInMethod.channel,
-      destination: signInMethod.destination,
+      channel: destination.channel,
+      destination: destination.value,
       codeHash,
-      expiresAt,
+      expiresAt: destination.expiresAt(now),
       userId: null,
       ip: input.ip,
     });
 
-    if (signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE) {
-      await this.otpSender.send(signInMethod.destination, code.value);
+    if (destination.channel === SIGN_IN_CODE_CHANNELS.PHONE) {
+      await this.otpSender.send(destination.value, code.value);
     } else if (reservedAccount === null) {
       await this.emailCodeSender.enqueue({
         requestId: record.id,
-        email: signInMethod.destination,
+        email: destination.value,
         code: code.value,
         locale: input.locale ?? "ru",
       });

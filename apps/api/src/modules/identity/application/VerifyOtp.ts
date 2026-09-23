@@ -1,12 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { Phone } from "../domain/Phone";
-import { Email } from "../domain/Email";
 import type { User } from "../domain/User";
 import { matchesReviewerCredential } from "../domain/ReviewerSignIn";
 import { SIGN_IN_CODE_CHANNELS, type SignInCodeChannel } from "../domain/types";
-import { verifiedSignInMethods } from "../domain/SignInMethods";
+import { signInCodeDestination } from "../domain/SignInCodeDestination";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { UserRepository } from "../domain/ports/UserRepository";
 import type { SessionRepository } from "../domain/ports/SessionRepository";
@@ -22,14 +20,10 @@ import { PrismaSessionRepository } from "../infrastructure/PrismaSessionReposito
 import { BcryptHasherAdapter } from "../infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
 import { RecoverAccount } from "./RecoverAccount";
+import { VerifySignInCode } from "./VerifySignInCode";
 
-const MAX_ATTEMPTS = 5;
 const MAX_SESSIONS = 10;
 const REFRESH_TTL_DAYS = 30;
-
-function hashSha256(input: string): string {
-  return createHash("sha256").update(input).digest("hex");
-}
 
 export type VerifyOtpInput = ({ phone: string } | { email: string }) & {
   code: string;
@@ -73,27 +67,18 @@ export class VerifyOtp {
     private readonly reviewerBypassConfig: ReviewerOtpBypassConfig,
     @Inject(CONSTANT_TIME_COMPARATOR_PORT)
     private readonly constantTimeComparator: ConstantTimeComparatorPort,
+    @Inject(VerifySignInCode)
+    private readonly verifySignInCode: VerifySignInCode,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
-    const signInMethod = "phone" in input
-      ? {
-          channel: SIGN_IN_CODE_CHANNELS.PHONE,
-          destination: Phone.create(input.phone).value,
-          phone: Phone.create(input.phone),
-        }
-      : {
-          channel: SIGN_IN_CODE_CHANNELS.EMAIL,
-          destination: Email.create(input.email).value,
-          email: Email.create(input.email),
-        };
+    const destination = signInCodeDestination(input);
 
     const now = this.clock.now();
-    const codeHash = hashSha256(input.code);
 
     const reviewerBypassResult = await this.tryReviewerBypass({
-      channel: signInMethod.channel,
-      destination: signInMethod.destination,
+      channel: destination.channel,
+      destination: destination.value,
       code: input.code,
       deviceLabel: input.deviceLabel,
       userAgent: input.userAgent,
@@ -103,44 +88,17 @@ export class VerifyOtp {
       return reviewerBypassResult;
     }
 
-    const otpRequest = await this.otpRequestRepo.findLatestByDestination(
-      signInMethod.channel,
-      signInMethod.destination,
-    );
-    if (!otpRequest) {
-      throw new Error("No Sign-in Code request found");
-    }
+    const otpRequest = await this.verifySignInCode.execute(destination, input.code);
 
-    if (otpRequest.verifiedAt !== null) {
-      throw new Error("OTP code has already been used");
-    }
-
-    if (otpRequest.expiresAt < now) {
-      throw new Error("OTP code has expired");
-    }
-
-    if (otpRequest.attempts >= MAX_ATTEMPTS) {
-      throw new Error("Too many attempts");
-    }
-
-    if (otpRequest.codeHash !== codeHash) {
-      await this.otpRequestRepo.incrementAttempts(otpRequest.id);
-      const newAttempts = otpRequest.attempts + 1;
-      if (newAttempts >= MAX_ATTEMPTS) {
-        throw new Error("Too many attempts");
-      }
-      throw new Error("Invalid OTP code");
-    }
-
-    const existingUser = signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE
-      ? await this.userRepo.findByPhone(signInMethod.destination)
-      : await this.userRepo.findByEmail(signInMethod.destination);
-    const isReviewerEmail = signInMethod.channel === SIGN_IN_CODE_CHANNELS.EMAIL &&
+    const existingUser = destination.channel === SIGN_IN_CODE_CHANNELS.PHONE
+      ? await this.userRepo.findByPhone(destination.value)
+      : await this.userRepo.findByEmail(destination.value);
+    const isReviewerEmail = destination.channel === SIGN_IN_CODE_CHANNELS.EMAIL &&
       matchesReviewerCredential(
         this.reviewerBypassConfig,
         this.constantTimeComparator,
         SIGN_IN_CODE_CHANNELS.EMAIL,
-        signInMethod.destination,
+        destination.value,
         input.code,
       );
 
@@ -162,12 +120,7 @@ export class VerifyOtp {
     const user =
       existingUser ??
       (await this.userRepo.create(
-        verifiedSignInMethods({
-          ...(signInMethod.channel === SIGN_IN_CODE_CHANNELS.PHONE
-            ? { phone: signInMethod.phone }
-            : { email: signInMethod.email }),
-          verifiedAt: now,
-        }),
+        destination.verifiedMethods(now),
       ));
 
     // Auto-recover account if in deletion grace period

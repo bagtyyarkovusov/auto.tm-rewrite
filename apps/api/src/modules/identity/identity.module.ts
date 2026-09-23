@@ -10,6 +10,7 @@ import { MeController } from "./presentation/MeController";
 import { AdminAuthController } from "./presentation/AdminAuthController";
 import { RequestOtp } from "./application/RequestOtp";
 import { VerifyOtp } from "./application/VerifyOtp";
+import { VerifySignInCode } from "./application/VerifySignInCode";
 import { RefreshSession } from "./application/RefreshSession";
 import { Logout } from "./application/Logout";
 import { LogoutAll } from "./application/LogoutAll";
@@ -160,6 +161,7 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     },
     RequestOtp,
     VerifyOtp,
+    VerifySignInCode,
     RefreshSession,
     Logout,
     LogoutAll,

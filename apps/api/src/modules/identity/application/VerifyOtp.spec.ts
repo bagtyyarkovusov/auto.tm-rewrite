@@ -18,6 +18,7 @@ import type {
   ReviewerOtpBypassConfig,
 } from "../domain/ports/ReviewerOtpBypassConfig";
 import { VerifyOtp } from "./VerifyOtp";
+import { VerifySignInCode } from "./VerifySignInCode";
 import { RecoverAccount } from "./RecoverAccount";
 
 const NOW = new Date("2026-05-14T12:00:00Z");
@@ -322,22 +323,26 @@ interface MakeUseCaseOpts {
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
+  const otpRepo = opts.otpRepo ?? new FakeOtpRequestRepository();
+  const userRepo = opts.userRepo ?? new FakeUserRepository();
+  const clock = opts.clock ?? new FakeClock();
   const listingsPort = opts.listingsPort ?? new FakeListingsPort();
   const recoverAccount = new RecoverAccount(
-    opts.userRepo ?? new FakeUserRepository(),
+    userRepo,
     listingsPort,
   );
   return new VerifyOtp(
-    opts.otpRepo ?? new FakeOtpRequestRepository(),
-    opts.userRepo ?? new FakeUserRepository(),
+    otpRepo,
+    userRepo,
     opts.sessionRepo ?? new FakeSessionRepository(),
     opts.hasher ?? new FakePasswordHasher(),
-    opts.clock ?? new FakeClock(),
+    clock,
     jwtService,
     opts.eventBus ?? { emit: vi.fn() },
     recoverAccount,
     opts.reviewerBypassConfig ?? { enabled: false, accounts: [] },
     opts.constantTimeComparator ?? new FakeConstantTimeComparator(),
+    new VerifySignInCode(otpRepo, clock),
   );
 }
 
