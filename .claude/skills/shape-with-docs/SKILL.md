@@ -49,6 +49,7 @@ Never edit an accepted ADR, a locked in-progress sprint plan, or an append-only 
 ## Preflight the shaping branch
 
 - Require a clean working tree before branching. Report unrelated changes and stop; never stash, discard, or absorb them.
+- Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). Reuse a host-created isolated worktree instead of creating another one for the same shaping task.
 - Fetch the remote and start from updated `main`.
 - Resolve the intended `shape/<slug>` name and inspect local/remote branches and open PRs before creating it.
 - If prior shaping work exists, report its branch, commits, diff, and PR state. Require an explicit continue, safety-branch-and-rebase, preserve-and-restart, or cancel choice; never overwrite or delete it.
@@ -64,6 +65,6 @@ Never edit an accepted ADR, a locked in-progress sprint plan, or an append-only 
 
 ## Hand off
 
-After the shaping PR merges, follow the [coding workflow router](../../../docs/agents/coding-workflow.md): use [`create-sprint-issues`](../create-sprint-issues/SKILL.md) for an approved pending sprint, then execute one accepted issue at a time with [`run-issue`](../run-issue/SKILL.md). Each implementation must pass independent Standards and Spec review before merge.
+After the shaping PR merges, follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md), then follow the [coding workflow router](../../../docs/agents/coding-workflow.md): use [`create-sprint-issues`](../create-sprint-issues/SKILL.md) for an approved pending sprint, then execute one accepted issue at a time with [`run-issue`](../run-issue/SKILL.md). Each implementation must pass independent Standards and Spec review before merge.
 
 Report the merged shaping PR, changed canonical artifacts, accepted vocabulary, superseding ADRs, unresolved risks, and the exact next workflow. Stop before creating or running tickets.
