@@ -42,6 +42,10 @@ If two artifacts try to answer the same question → that's drift. Pick the cano
 
 Shape, specify, ticket, implement, and review through [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md).
 
+Every implementation issue uses one pushed `agent/issue-<N>` reservation branch, one early draft pull request, and one mutable `Execution state`. Codex and Claude can resume each other's work from Git and GitHub evidence. Reviews are fresh, read-only, and fixed to the current commit; high-risk work needs one Codex and one Claude review. Implementation issues close through the merged pull request. Never query provider quota before starting.
+
+Sandcastle implementation dispatch is suspended until issue #406 replaces its legacy batch merger, host push, reviewer mutation, and direct issue-closure path with the ADR-0058 contract.
+
 ### Issue tracker
 
 GitHub Issues via `gh` CLI. See `docs/agents/issue-tracker.md`.

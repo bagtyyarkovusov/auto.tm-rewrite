@@ -23,6 +23,7 @@ Each reviewer posts a PR comment with:
 ```markdown
 ## <Standards|Spec> review
 
+- **Review axis:** <Standards|Spec>
 - **Reviewer:** <agent/context identifier>
 - **Provider:** <Codex|Claude>
 - **Commit:** `<full SHA>`
@@ -31,7 +32,7 @@ Each reviewer posts a PR comment with:
 <concrete findings and evidence, or “No findings.”>
 ```
 
-Resolve valid findings, rerun proportionate verification, commit and push the fixes, and pin the new SHA. Any content change invalidates the affected earlier verdict. Continue only when both axes pass against the latest commit.
+Record the evidence for accepting or rejecting every finding in the PR. Resolve accepted findings, rerun proportionate verification, commit and push the fixes, and pin the new SHA. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates the affected earlier verdict. Continue only when both axes pass against the latest commit.
 
 ## Ready PR
 
@@ -65,7 +66,7 @@ Mark the draft ready only after verification and both reviews pass on its curren
 
 ## Integrity and sync
 
-1. The issue must close through the PR's `Closes #N`; do not close it directly.
+1. The issue must close through the PR's `Closes #N`; do not close it directly. If it remains open after merge, treat that as an integration failure, preserve the evidence, and repair closure through a dedicated pull request with the correct closing link.
 2. Verify and sync local `main` without discarding user state.
 3. Follow child-progress reconciliation in `docs/agents/sprint-transitions.md` and re-evaluate affected `blocked` labels from their `## Depends on` sections.
 4. Re-fetch the parent and affected children before reporting.
