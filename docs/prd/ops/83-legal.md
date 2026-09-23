@@ -25,7 +25,7 @@ Sign-in uses implicit agreement copy on the phone or email entry screen:
 
 The Terms and Privacy Policy labels link to the canonical public web URLs above, opened from mobile via an in-app browser or custom tab when available. Do not add a checkbox in S2 unless legal review requires explicit recorded acceptance.
 
-If explicit recorded acceptance is required later, record the accepted terms version, privacy version, locale, and timestamp during first account creation or Sign-in Code verification. This is a legal-review follow-up, not part of the S2 OTP implementation.
+If explicit recorded acceptance is required later, record the accepted terms version, privacy version, locale, and timestamp during first account creation or Sign-in Code verification. This is a legal-review follow-up, not part of the S2 sign-in implementation.
 
 ## Privacy Policy — required sections
 

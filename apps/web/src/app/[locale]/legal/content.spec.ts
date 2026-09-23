@@ -46,7 +46,7 @@ const privacyPromises: CopyPromise[] = [
     name: "the provider keeps the address and the message for 30 days",
     phrases: {
       en: "and keeps them for 30 days",
-      ru: "и хранит их 30 дней",
+      ru: "а также хранит их 30 дней",
       tk: "olary 30 gün saklaýar",
     },
   },
@@ -215,7 +215,7 @@ describe.each(documents)("%s", (_name, document) => {
 
   it("uses no internal sign-in vocabulary", () => {
     for (const locale of locales) {
-      expect(fullText(document[locale])).not.toMatch(/\bOTP\b/i);
+      expect(fullText(document[locale])).not.toMatch(/\bOTPs?\b/i);
     }
   });
 });

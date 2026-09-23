@@ -26,7 +26,7 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
         title: "1. What we collect",
         body: `We collect the following information when you use AutoTM:
 
-- **Phone number** — used to create your account and to sign in with a code sent by SMS.
+- **Phone number** — used to create or sign in to your account with a code sent by SMS.
 - **Email address** — collected when you choose to sign in by email, or when you add or change an email address on your account.
 - **Listing contact phone** — the +993 number you choose to show on a listing. It is always a number confirmed by an SMS code.
 - **Name and profile photo** — if you choose to add them to your profile.
@@ -110,7 +110,7 @@ When you request account deletion:
     sections: [
       {
         title: "1. Какие данные мы собираем",
-        body: `- **Номер телефона** — для создания аккаунта и входа по коду из SMS.
+        body: `- **Номер телефона** — для создания аккаунта или входа по коду из SMS.
 - **Адрес электронной почты** — если вы выбираете вход по почте либо добавляете или меняете почту в аккаунте.
 - **Контактный телефон объявления** — номер +993, который вы показываете в объявлении. Это всегда номер, подтверждённый кодом из SMS.
 - **Имя и фото профиля** — если вы их добавите.
@@ -141,7 +141,7 @@ When you request account deletion:
       },
       {
         title: "5. Передача третьим лицам",
-        body: "В MLP-бете используется собственная инфраструктура. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом и хранит их 30 дней. Если добавим push-уведомления, токены устройств будут передаваться FCM (Google) и APNS (Apple). Мы не передаём данные рекламным сетям или брокерам.",
+        body: "В MLP-бете используется собственная инфраструктура. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Если добавим push-уведомления, токены устройств будут передаваться FCM (Google) и APNS (Apple). Мы не передаём данные рекламным сетям или брокерам.",
       },
       {
         title: "6. Хранение данных и удаление аккаунта",
@@ -192,7 +192,7 @@ When you request account deletion:
     sections: [
       {
         title: "1. Haýsy maglumatlary ýygnaýarys",
-        body: `- **Telefon belgisi** — akkaunt döretmek we SMS arkaly gelen kod bilen girmek üçin.
+        body: `- **Telefon belgisi** — SMS arkaly gelen kod bilen akkaunt döretmek ýa-da girmek üçin.
 - **E-poçta salgysy** — e-poçta arkaly girmegi saýlasaňyz ýa-da akkauntyňyza e-poçta goşsaňyz ýa-da çalyşsaňyz.
 - **Bildirişiň habarlaşma belgisi** — bildirişde görkezmek üçin saýlan +993 belgiňiz. Ol hemişe SMS kody bilen tassyklanan belgidir.
 - **Ady we profil suraty** — goşsaňyz.
@@ -223,7 +223,7 @@ When you request account deletion:
       },
       {
         title: "5. Üçünji taraplara geçirmek",
-        body: "MLP betada öz infrastrukturamyz. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar, olary 30 gün saklaýar. Push habarlary goşulsa, enjam tokenlary FCM (Google) we APNS (Apple) gidýär. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
+        body: "MLP betada öz infrastrukturamyz. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarlary goşulsa, enjam tokenlary FCM (Google) we APNS (Apple) gidýär. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
       },
       {
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
