@@ -15,6 +15,8 @@ This is the repository router for moving an idea from shaping to shipped code. I
 
 UI-heavy implementation issues insert `design-grill` after issue creation and before `run-issue`. The design workflow refines the accepted issue; it does not reopen product shaping silently.
 
+All phases use the shared [worktree lifecycle](worktree-lifecycle.md): reuse a host-created isolated checkout, keep one worktree per task session, and let the root or integration session retire clean merged work after the worker finishes.
+
 ## Document routing
 
 Use the [canonical domain glossary](../domain/GLOSSARY.md) for engineering and domain vocabulary only. A term's presence accepts its meaning; it does not claim that behavior is planned or implemented.

@@ -8,21 +8,27 @@ export interface LegalSection {
 export interface LegalDocument {
   title: string;
   effectiveDate: string;
+  effectiveDateISO: string;
   lastRevised: string;
+  lastRevisedISO: string;
   sections: LegalSection[];
 }
 
 export const privacyPolicy: Record<Locale, LegalDocument> = {
   en: {
     title: "Privacy Policy",
-    effectiveDate: "June 10, 2026",
-    lastRevised: "June 10, 2026",
+    effectiveDate: "September 23, 2026",
+    effectiveDateISO: "2026-09-23",
+    lastRevised: "September 23, 2026",
+    lastRevisedISO: "2026-09-23",
     sections: [
       {
         title: "1. What we collect",
         body: `We collect the following information when you use AutoTM:
 
-- **Phone number** — used for account creation and authentication via SMS OTP.
+- **Phone number** — used to create or sign in to your account with a code sent by SMS.
+- **Email address** — collected when you choose to sign in by email, or when you add or change an email address on your account.
+- **Listing contact phone** — the +993 number you choose to show on a listing. It is always a number confirmed by an SMS code.
 - **Name and profile photo** — if you choose to add them to your profile.
 - **Location** — the region and city you select for your listings or search preferences. We do **not** track your real-time GPS location.
 - **Listings** — vehicle details, photos, price, and description of cars you post.
@@ -39,6 +45,7 @@ Future collections (if features ship): push notification tokens, video uploads, 
         body: `- We do **not** track your GPS location in the MLP beta.
 - We do **not** store raw GPS coordinates.
 - We do **not** use third-party advertising SDKs.
+- We do **not** add open tracking, tracking pixels, or tracked links to the emails we send you.
 - We do **not** sell your data to anyone.`,
       },
       {
@@ -47,28 +54,30 @@ Future collections (if features ship): push notification tokens, video uploads, 
       },
       {
         title: "4. Who can see it",
-        body: `- **Public:** your display name and avatar (if shown), active listings, public listing photos, and the city/region of listings.
-- **Private:** your phone number, contact-thread message content (except for admin moderation), and exact location pin (if a future phase adds map features).`,
+        body: `- **Public:** your display name and avatar (if shown), active listings, public listing photos, the city/region of listings, and the contact phone you chose for a listing.
+- **Private:** the phone number and email address you use to sign in (unless you also choose that phone number as the contact phone of a listing), contact-thread message content (except for admin moderation), and exact location pin (if a future phase adds map features).`,
       },
       {
         title: "5. Sharing with third parties",
-        body: "In the MLP beta, AutoTM uses its own authentication and hosting infrastructure. If native push notifications ship later, Firebase Cloud Messaging (Google) and Apple Push Notification Service will receive your device token and notification payload. We do not share data with advertisers, data brokers, or other third parties.",
+        body: "In the MLP beta, AutoTM uses its own authentication and hosting infrastructure. Sign-in codes sent by email are delivered by an email delivery provider located in the United States: it receives your email address and the message containing the code, and keeps them for 30 days. If native push notifications ship later, Firebase Cloud Messaging (Google) and Apple Push Notification Service will receive your device token and notification payload. We do not share data with advertisers, data brokers, or other third parties.",
       },
       {
         title: "6. Data retention & account deletion",
         body: `Your data is retained while your account is active.
 
+If you are signed in, you can request account deletion from the app settings. On the public account deletion page on our website, enter a phone number or email address on the account and confirm the request with a code sent to it.
+
 When you request account deletion:
 - Your account enters a **30-day grace period**.
-- During this period, your listings are archived, all sessions are revoked, and your phone number remains reserved to you.
-- You may recover your account at any time during the grace period by logging in again. Recovery reactivates your account and republishes archived listings.
-- After 30 days, your personal information is removed: phone number is freed, display name and avatar are cleared.
+- During this period, your listings are archived, all sessions are revoked, and your phone number and email address remain reserved to you.
+- You may recover your account at any time during the grace period by signing in again with either your phone number or your email address. Recovery reactivates your account and republishes archived listings.
+- After 30 days, your personal information is removed: your phone number and email address are freed, display name and avatar are cleared.
 - Your listings, messages, and conversation history are retained with "Deleted user" attribution to preserve counterparties' records and audit trails.
 - Moderation reports and audit logs remain intact.`,
       },
       {
         title: "7. Your rights",
-        body: "You have the right to: access your data, delete your account (with the 30-day grace period described above), correct your profile and listing information, and opt out of marketing notifications if we ever introduce them.",
+        body: "You have the right to: access your data, delete your account (in the app or on our website, with the 30-day grace period described above), correct your profile and listing information, and opt out of marketing notifications if we ever introduce them.",
       },
       {
         title: "8. Children's privacy",
@@ -94,12 +103,16 @@ When you request account deletion:
   },
   ru: {
     title: "Политика конфиденциальности",
-    effectiveDate: "10 июня 2026 г.",
-    lastRevised: "10 июня 2026 г.",
+    effectiveDate: "23 сентября 2026 г.",
+    effectiveDateISO: "2026-09-23",
+    lastRevised: "23 сентября 2026 г.",
+    lastRevisedISO: "2026-09-23",
     sections: [
       {
         title: "1. Какие данные мы собираем",
-        body: `- **Номер телефона** — для создания аккаунта и аутентификации через SMS.
+        body: `- **Номер телефона** — для создания аккаунта или входа по коду из SMS.
+- **Адрес электронной почты** — если вы выбираете вход по почте либо добавляете или меняете почту в аккаунте.
+- **Контактный телефон объявления** — номер +993, который вы показываете в объявлении. Это всегда номер, подтверждённый кодом из SMS.
 - **Имя и фото профиля** — если вы их добавите.
 - **Местоположение** — регион и город, выбранные для объявлений или поиска. Мы **не** отслеживаем GPS в реальном времени.
 - **Объявления** — данные автомобиля, фото, цена, описание.
@@ -114,6 +127,7 @@ When you request account deletion:
         body: `- Мы **не** отслеживаем GPS-локацию.
 - Мы **не** храним сырые GPS-координаты.
 - Мы **не** используем сторонние рекламные SDK.
+- Мы **не** добавляем в наши письма отслеживание открытий, трекинговые пиксели и отслеживаемые ссылки.
 - Мы **не** продаём данные.`,
       },
       {
@@ -122,28 +136,30 @@ When you request account deletion:
       },
       {
         title: "4. Кто может видеть данные",
-        body: `- **Публично:** имя, аватар (если включены), активные объявления, фото, город/регион объявления.
-- **Приватно:** номер телефона, содержание переписки (кроме модерации), точная точка на карте (если добавим позже).`,
+        body: `- **Публично:** имя, аватар (если включены), активные объявления, фото, город/регион объявления и контактный телефон, выбранный для объявления.
+- **Приватно:** номер телефона и адрес почты, по которым вы входите (если вы не выбрали этот номер контактным телефоном объявления), содержание переписки (кроме модерации), точная точка на карте (если добавим позже).`,
       },
       {
         title: "5. Передача третьим лицам",
-        body: "В MLP-бете используется собственная инфраструктура. Если добавим push-уведомления, токены устройств будут передаваться FCM (Google) и APNS (Apple). Мы не передаём данные рекламным сетям или брокерам.",
+        body: "В MLP-бете используется собственная инфраструктура. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Если добавим push-уведомления, токены устройств будут передаваться FCM (Google) и APNS (Apple). Мы не передаём данные рекламным сетям или брокерам.",
       },
       {
         title: "6. Хранение данных и удаление аккаунта",
         body: `Данные хранятся, пока аккаунт активен.
 
+Если вы вошли в аккаунт, удалить его можно в настройках приложения. На общедоступной странице удаления аккаунта на нашем сайте укажите номер телефона или адрес почты из аккаунта и подтвердите запрос кодом, отправленным на выбранный способ входа.
+
 При удалении аккаунта:
 - Аккаунт переходит в **30-дневный льготный период**.
-- В этот период объявления архивируются, все сессии завершаются, номер остаётся зарезервированным.
-- Вы можете восстановить аккаунт в любой момент, войдя снова. Восстановление активирует аккаунт и возвращает архивные объявления.
-- Через 30 дней ПД удаляются: номер освобождается, имя и аватар очищаются.
+- В этот период объявления архивируются, все сессии завершаются, номер телефона и адрес почты остаются зарезервированными за вами.
+- Вы можете восстановить аккаунт в любой момент, войдя снова по номеру телефона или по адресу почты. Восстановление активирует аккаунт и возвращает архивные объявления.
+- Через 30 дней персональные данные удаляются: номер телефона и адрес почты освобождаются, имя и аватар очищаются.
 - Объявления, сообщения и переписка сохраняются с пометкой «Удалённый пользователь» — чтобы сохранить историю для собеседников и аудита.
 - Жалобы и журналы аудита остаются нетронутыми.`,
       },
       {
         title: "7. Ваши права",
-        body: "Право на доступ к данным, удаление аккаунта (с 30-дневным льготным периодом), исправление профиля/объявлений, отказ от маркетинговых уведомлений.",
+        body: "Право на доступ к данным, удаление аккаунта (в приложении или на сайте, с 30-дневным льготным периодом), исправление профиля/объявлений, отказ от маркетинговых уведомлений.",
       },
       {
         title: "8. Дети",
@@ -169,12 +185,16 @@ When you request account deletion:
   },
   tk: {
     title: "Gizlinlik syýasaty",
-    effectiveDate: "10-njy iýun 2026",
-    lastRevised: "10-njy iýun 2026",
+    effectiveDate: "23-nji sentýabr 2026",
+    effectiveDateISO: "2026-09-23",
+    lastRevised: "23-nji sentýabr 2026",
+    lastRevisedISO: "2026-09-23",
     sections: [
       {
         title: "1. Haýsy maglumatlary ýygnaýarys",
-        body: `- **Telefon belgisi** — akkaunt döretmek we SMS bilen tassyklamak üçin.
+        body: `- **Telefon belgisi** — SMS arkaly gelen kod bilen akkaunt döretmek ýa-da girmek üçin.
+- **E-poçta salgysy** — e-poçta arkaly girmegi saýlasaňyz ýa-da akkauntyňyza e-poçta goşsaňyz ýa-da çalyşsaňyz.
+- **Bildirişiň habarlaşma belgisi** — bildirişde görkezmek üçin saýlan +993 belgiňiz. Ol hemişe SMS kody bilen tassyklanan belgidir.
 - **Ady we profil suraty** — goşsaňyz.
 - **Ýerleşýän ýeri** — saýlanan sebit we şäher. GPS-y **gözegçilik etmeyäris**.
 - **Bildirişler** — awtoulag maglumatlary, suratlar, baha, düşündiriş.
@@ -189,6 +209,7 @@ When you request account deletion:
         body: `- GPS-y gözegçilik etmeyäris.
 - GPS koordinatalaryny saklamaýarys.
 - Üçünji tarap reklama SDK-laryny ulanmaýarys.
+- Size iberýän hatlarymyza açylma yzarlaýşyny, yzarlaýjy piksel ýa-da yzarlanýan salgy goşmaýarys.
 - Maglumatlary satmaýarys.`,
       },
       {
@@ -197,28 +218,30 @@ When you request account deletion:
       },
       {
         title: "4. Kim görüp biler",
-        body: `- **Jemgyýetçilik:** ady, awatar (açyk bolsa), işjeň bildirişler, suratlar, şäher/sebit.
-- **Şahsy:** telefon belgisi, çat habarlary (moderasiýadan başga), täk ýer (soňrak goşulsa).`,
+        body: `- **Jemgyýetçilik:** ady, awatar (açyk bolsa), işjeň bildirişler, suratlar, şäher/sebit we bildiriş üçin saýlanan habarlaşma belgisi.
+- **Şahsy:** girmek üçin ulanýan telefon belgiňiz we e-poçta salgyňyz (şol telefon belgisini bildirişiň habarlaşma belgisi edip saýlamadyk bolsaňyz), çat habarlary (moderasiýadan başga), takyk ýer (soňrak goşulsa).`,
       },
       {
         title: "5. Üçünji taraplara geçirmek",
-        body: "MLP betada öz infrastrukturamyz. Push habarlary goşulsa, enjam tokenlary FCM (Google) we APNS (Apple) gidýär. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
+        body: "MLP betada öz infrastrukturamyz. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarlary goşulsa, enjam tokenlary FCM (Google) we APNS (Apple) gidýär. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
       },
       {
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
         body: `Maglumatlar akkaunt işjeň bolança saklanýar.
 
+Akkaunta giren bolsaňyz, ony programmanyň sazlamalarynda pozup bilersiňiz. Saýtymyzdaky köpçülige açyk akkaunt pozmak sahypasynda akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
+
 Akkaunty pozan wagtyňyz:
 - **30 günlük lýgotly döwr** başlaýar.
-- Bu döwürde bildirişler arhiwlenýär, ähli sessiýalar gutarýar, telefon belgisi size golaý galýar.
-- Bu döwürde islän wagtyňyz gaýtadan giriň, akkaunty dikeldip bilersiňiz. Dikeltme işjeň edýär we arhiwlenen bildirişleri yzyna getirýär.
-- 30 günden soň şahsy maglumatlar aýrylýar: telefon boşadylýar, ady we awatar arassalanýar.
+- Bu döwürde bildirişler arhiwlenýär, ähli sessiýalar gutarýar, telefon belgiňiz we e-poçta salgyňyz size bellenen galýar.
+- Bu döwürde islän wagtyňyz telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bilersiňiz. Dikeltme işjeň edýär we arhiwlenen bildirişleri yzyna getirýär.
+- 30 günden soň şahsy maglumatlar aýrylýar: telefon belgisi we e-poçta salgysy boşadylýar, ady we awatar arassalanýar.
 - Bildirişler, habarlar we çat taryhy «Pozulan ulanyjy» diýip saklanýar — tarapyňyz üçin ýazgylary we audit ýollaryny goraşmak üçin.
 - Şikaýatlar we audit gündelikleri galyberýär.`,
       },
       {
         title: "7. Siziň hukuklaryňyz",
-        body: "Maglumatlara giriş, akkaunty pozmak (30 günlük lýgotly döwür bilen), profil/bildirişleri düzetmek, marketing habarlamalaryndan çykmaq.",
+        body: "Maglumatlara giriş, akkaunty pozmak (programmada ýa-da saýtda, 30 günlük lýgotly döwür bilen), profil/bildirişleri düzetmek, marketing habarlamalaryndan çykmak.",
       },
       {
         title: "8. Çagalar",
@@ -247,8 +270,10 @@ Akkaunty pozan wagtyňyz:
 export const termsOfService: Record<Locale, LegalDocument> = {
   en: {
     title: "Terms of Service",
-    effectiveDate: "June 10, 2026",
-    lastRevised: "June 10, 2026",
+    effectiveDate: "September 23, 2026",
+    effectiveDateISO: "2026-09-23",
+    lastRevised: "September 23, 2026",
+    lastRevisedISO: "2026-09-23",
     sections: [
       {
         title: "1. Eligibility",
@@ -256,15 +281,19 @@ export const termsOfService: Record<Locale, LegalDocument> = {
       },
       {
         title: "2. Account responsibilities",
-        body: "You are responsible for maintaining access to your phone number and for all content you post on AutoTM.",
+        body: `You sign in with a code sent to your phone number or to your email address; AutoTM does not use passwords. Your account always keeps at least one of these sign-in methods, and you are responsible for maintaining access to them and for keeping your codes to yourself. AutoTM will never ask you to share a code.
+
+You are responsible for all content you post on AutoTM.`,
       },
       {
         title: "3. Acceptable use",
         body: "Listings must be for real vehicles you own or are authorized to represent. You may not use AutoTM for scams, fraud, harassment, illegal content, or intellectual property infringement.",
       },
       {
-        title: "4. Listing accuracy",
-        body: "Sellers represent that their listings are accurate. Misrepresentation may result in account suspension or listing removal.",
+        title: "4. Listing accuracy and contact phone",
+        body: `Sellers represent that their listings are accurate. Misrepresentation may result in account suspension or listing removal.
+
+Every listing shows a contact phone that has been verified. Before you publish or republish a listing, or change its contact phone, that number must be verified: it is either the verified phone number on your account, or another +993 number you confirm with a code sent to it by SMS for this purpose. Confirming a number only allows it to be shown on your listing; it does not make that number a way to sign in to your account. If your account has no phone number, you do not need to add one — you verify a contact phone while creating the listing. Use only a number you are entitled to use: if it belongs to someone else, that person must agree to be contacted about the listing.`,
       },
       {
         title: "5. Prohibited content",
@@ -272,7 +301,7 @@ export const termsOfService: Record<Locale, LegalDocument> = {
       },
       {
         title: "6. Communication",
-        body: "You agree to receive transactional messages necessary to operate the service: OTP codes and contact-thread messages. Push notifications and marketing communications require separate opt-in if introduced.",
+        body: "You agree to receive transactional messages necessary to operate the service: sign-in codes sent by SMS or email, codes that confirm a listing contact phone, and contact-thread messages. Push notifications and marketing communications require separate opt-in if introduced.",
       },
       {
         title: "7. Disclaimer",
@@ -288,7 +317,7 @@ export const termsOfService: Record<Locale, LegalDocument> = {
       },
       {
         title: "10. Termination & account deletion",
-        body: `You may delete your account at any time through the in-app settings. Deletion initiates a 30-day grace period during which you may recover your account by logging in again. After 30 days, your personal data is removed, but your listings and messages are retained with anonymized attribution.
+        body: `You may delete your account at any time through the in-app settings, or by requesting deletion on our website with the phone number or email address on your account. Deletion initiates a 30-day grace period during which you may recover your account by signing in again with either your phone number or your email address. After 30 days, your personal data is removed, but your listings and messages are retained with anonymized attribution.
 
 AutoTM may suspend accounts that violate these terms.`,
       },
@@ -308,8 +337,10 @@ AutoTM may suspend accounts that violate these terms.`,
   },
   ru: {
     title: "Условия использования",
-    effectiveDate: "10 июня 2026 г.",
-    lastRevised: "10 июня 2026 г.",
+    effectiveDate: "23 сентября 2026 г.",
+    effectiveDateISO: "2026-09-23",
+    lastRevised: "23 сентября 2026 г.",
+    lastRevisedISO: "2026-09-23",
     sections: [
       {
         title: "1. Допустимый возраст",
@@ -317,15 +348,19 @@ AutoTM may suspend accounts that violate these terms.`,
       },
       {
         title: "2. Ответственность за аккаунт",
-        body: "Вы несёте ответственность за доступ к номеру телефона и за весь контент, который публикуете.",
+        body: `Вход выполняется по коду, который приходит на ваш номер телефона или на адрес электронной почты; паролей в AutoTM нет. В аккаунте всегда остаётся хотя бы один такой способ входа: вы отвечаете за доступ к нему и за то, чтобы не передавать коды посторонним. AutoTM никогда не просит сообщить код.
+
+Вы несёте ответственность за весь контент, который публикуете.`,
       },
       {
         title: "3. Допустимое использование",
         body: "Объявления должны быть о реальных автомобилях, которыми вы владеете или имеете право представлять. Запрещены мошенничество, спам, домогательства, незаконный контент, нарушение интеллектуальной собственности.",
       },
       {
-        title: "4. Точность объявлений",
-        body: "Продавец гарантирует достоверность информации. Недостоверные сведения могут привести к блокировке.",
+        title: "4. Точность объявлений и контактный телефон",
+        body: `Продавец гарантирует достоверность информации. Недостоверные сведения могут привести к блокировке.
+
+В каждом объявлении показывается подтверждённый контактный телефон. Прежде чем вы опубликуете или переопубликуете объявление либо измените его контактный телефон, этот номер должен быть подтверждён: это либо подтверждённый номер телефона вашего аккаунта, либо другой номер +993, который вы подтверждаете кодом, отправленным на него по SMS для этой цели. Подтверждение разрешает только показывать номер в вашем объявлении; оно не делает этот номер способом входа в аккаунт. Если в аккаунте нет номера телефона, добавлять его не нужно — контактный телефон подтверждается при создании объявления. Указывайте только тот номер, которым вы вправе пользоваться: если он принадлежит другому человеку, этот человек должен согласиться на обращения по объявлению.`,
       },
       {
         title: "5. Запрещённый контент",
@@ -333,7 +368,7 @@ AutoTM may suspend accounts that violate these terms.`,
       },
       {
         title: "6. Коммуникации",
-        body: "Вы соглашаетесь получать транзакционные сообщения: коды OTP и переписку. Push-уведомления и маркетинг — отдельное согласие.",
+        body: "Вы соглашаетесь получать транзакционные сообщения, необходимые для работы сервиса: коды входа по SMS или электронной почте, коды подтверждения контактного телефона объявления и переписку. Push-уведомления и маркетинг — отдельное согласие.",
       },
       {
         title: "7. Ограничение ответственности",
@@ -349,7 +384,7 @@ AutoTM may suspend accounts that violate these terms.`,
       },
       {
         title: "10. Расторжение и удаление аккаунта",
-        body: `Вы можете удалить аккаунт в настройках. Удаление запускает 30-дневный льготный период с возможностью восстановления. Через 30 дней ПД удаляются, объявления и переписка сохраняются с анонимной атрибуцией.
+        body: `Вы можете удалить аккаунт в настройках приложения или запросить удаление на нашем сайте, указав номер телефона или адрес почты из аккаунта. Удаление запускает 30-дневный льготный период, в течение которого аккаунт можно восстановить, войдя снова по номеру телефона или по адресу почты. Через 30 дней персональные данные удаляются, объявления и переписка сохраняются с анонимной атрибуцией.
 
 AutoTM может приостановить аккаунт за нарушения.`,
       },
@@ -369,8 +404,10 @@ AutoTM может приостановить аккаунт за нарушен�
   },
   tk: {
     title: "Ulanyş şertleri",
-    effectiveDate: "10-njy iýun 2026",
-    lastRevised: "10-njy iýun 2026",
+    effectiveDate: "23-nji sentýabr 2026",
+    effectiveDateISO: "2026-09-23",
+    lastRevised: "23-nji sentýabr 2026",
+    lastRevisedISO: "2026-09-23",
     sections: [
       {
         title: "1. Ýaş çägi",
@@ -378,15 +415,19 @@ AutoTM может приостановить аккаунт за нарушен�
       },
       {
         title: "2. Akkaunt jogapkärçiligi",
-        body: "Telefon belgisiňize we ýazan ähli kontentiňize siz jogapkär.",
+        body: `Siz parol bilen däl-de, telefon belgiňize ýa-da e-poçta salgyňyza iberilen kod bilen girýärsiňiz. Akkauntyňyzda şeýle giriş usullarynyň iň azyndan biri hemişe galýar: oňa elýeterliligi saklamak we kody başga hiç kime bermezlik siziň jogapkärçiligiňiz. AutoTM hiç haçan kody paýlaşmagy soramaýar.
+
+Ýazan ähli kontentiňize siz jogapkär.`,
       },
       {
         title: "3. Kabul edilýan ulanyş",
         body: "Bildirişler siziň özüňize degişli ýa-da wakalaşyk berlen hakyky awtoular hakda bolmaly. Aldamçylyk, spam, garsylyk, näkanuny kontent gadagan.",
       },
       {
-        title: "4. Bildirişleriň dogrulygy",
-        body: "Satyjy maglumatlaryň dogrulygyny kepillendirýär. Ýalňyş maglumat akkaunty bloklamaga getirip biler.",
+        title: "4. Bildirişleriň dogrulygy we habarlaşma belgisi",
+        body: `Satyjy maglumatlaryň dogrulygyny kepillendirýär. Ýalňyş maglumat akkaunty bloklamaga getirip biler.
+
+Her bildirişde tassyklanan habarlaşma belgisi görkezilýär. Bildirişi çap etmezden, gaýtadan çap etmezden ýa-da onuň habarlaşma belgisini çalyşmazdan öň şol belgi tassyklanmaly: ol ýa akkauntyňyzdaky tassyklanan telefon belgiňizdir, ýa-da şu maksat bilen SMS arkaly iberilen kod bilen tassyklaýan başga bir +993 belgiňizdir. Belgini tassyklamak diňe ony bildirişiňizde görkezmäge rugsat berýär; ol belgi akkaunta girmegiň usulyna öwrülmeýär. Akkauntyňyzda telefon belgisi ýok bolsa, goşmak hökman däl — habarlaşma belgisini bildirişi döredeniňizde tassyklaýarsyňyz. Diňe ulanmaga hakyňyz bolan belgini görkeziň: belgi başga bir adama degişli bolsa, ol adam bildiriş boýunça habarlaşylmagyna razy bolmaly.`,
       },
       {
         title: "5. Gadagan kontent",
@@ -394,7 +435,7 @@ AutoTM может приостановить аккаунт за нарушен�
       },
       {
         title: "6. Habarlaşma",
-        body: "Siz transaksion habarlary almakdy kabul edýärsiňiz: OTP kodlar we çat. Push we marketing — aýratyn razylyk.",
+        body: "Siz hyzmaty işletmek üçin zerur transaksion habarlary almagy kabul edýärsiňiz: SMS ýa-da e-poçta arkaly gelýän giriş kodlary, bildirişiň habarlaşma belgisini tassyklaýan kodlar we çat habarlary. Push we marketing — aýratyn razylyk.",
       },
       {
         title: "7. Jogapkärçiliginiň çäklendirilmesi",
@@ -410,7 +451,7 @@ AutoTM может приостановить аккаунт за нарушен�
       },
       {
         title: "10. Yzyna çykma we akkaunty pozmak",
-        body: `Sazlamalardan akkaunty pozup bilersiňiz. Pozmak 30 günlük lýgotly döwr başlaýar, dikeldip bolýar. 30 günden soň şahsy maglumatlar aýrylýar, bildirişler we çat anonim atanama saklanýar.
+        body: `Akkaunty programmanyň sazlamalaryndan pozup bilersiňiz ýa-da saýtymyzda akkauntyňyzdaky telefon belgisi ýa-da e-poçta salgysy bilen pozmagy sorap bilersiňiz. Pozmak 30 günlük lýgotly döwür başlaýar; şol döwürde telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bolýar. 30 günden soň şahsy maglumatlar aýrylýar, bildirişler we çat anonim atanama saklanýar.
 
 AutoTM düzgünleri bozýan akkaunty bloklap biler.`,
       },
