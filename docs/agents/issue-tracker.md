@@ -41,8 +41,11 @@ gh issue view <number>
 ```bash
 gh issue edit <n> --add-label "ready-for-human" --remove-label "needs-triage"
 gh issue comment <n> --body "<update>"
-gh issue close <n>
+# Parent dashboards and non-implementation bookkeeping only:
+gh issue close <n> --comment "<why this dashboard/bookkeeping issue is complete>"
 ```
+
+Implementation issues close only through a merged pull request whose body contains `Closes #<n>`.
 
 ## Issue types
 
