@@ -22,6 +22,7 @@ Execute exactly one issue. Invocation authorizes the normal branch-to-merge flow
 ## Preflight
 
 - Require a clean working tree. Report user changes and stop; never stash, discard, or absorb them.
+- Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). Reuse a host-created isolated worktree instead of creating a second one for the same issue, and record any unchanged scaffold branch for later cleanup.
 - Start from updated `main` on `agent/issue-<N>`.
 - Reuse a clean zero-ahead branch preserved by a design pause.
 - If a branch is modified/ahead, exists only remotely, or has an open PR, route to `/resume-issue <N>` instead of overwriting or duplicating it.

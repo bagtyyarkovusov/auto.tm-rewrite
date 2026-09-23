@@ -53,7 +53,7 @@ Closes #<N>
 - On a failed check, conflict, or protection failure, leave the PR open and bail with its URL and exact state.
 - Never self-approve.
 - Squash merge with branch deletion once required checks pass: `gh pr merge --squash --delete-branch`.
-- Do not repeat manual local/remote branch deletion already handled by `gh`.
+- Verify the PR state separately from the merge command's exit status. `gh` may merge successfully and then report that it could not delete a local branch still checked out in a linked worktree.
 
 ## Integrity and sync
 
@@ -62,5 +62,6 @@ Closes #<N>
 3. Verify/sync local `main` without discarding user state.
 4. Follow child-progress reconciliation in `docs/agents/sprint-transitions.md`: resolve the correct Sprint parent, verify it lists the child, mark the child complete in the parent tasklist, then re-evaluate `blocked` labels for affected children from their `## Depends on` sections.
 5. Re-fetch the parent and affected children, then report the final rollup and every parent-body or label change.
+6. Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). If this live session runs inside the task worktree, report its cleanup tuple so the root or integration session can remove it after the session finishes.
 
 Do not create a second direct-to-main roadmap commit. If final-issue roadmap closeout was explicitly part of the issue, it belongs in the original PR; otherwise `/close-sprint` owns the reconciliation.
