@@ -46,6 +46,12 @@ A seller's offer of a vehicle to people browsing the marketplace.
 
 _Avoid_: Advert, post
 
+**Verified Contact Phone**
+
+A `+993` phone number a seller proved can receive listing-contact SMS codes, so AutoTM may show it on that seller's Listing. It never signs the seller in, may belong to another person, and can be reused only while the Listings spec allows.
+
+_Avoid_: Account phone, login phone, phone verified badge, credential
+
 ## Conversations
 
 **Conversation**

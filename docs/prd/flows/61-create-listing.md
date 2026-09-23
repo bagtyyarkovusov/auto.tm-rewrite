@@ -92,7 +92,9 @@ The location is the car's location, not the user's current GPS location. A user 
 
 - Description textarea (required; max 2000 chars; no minimum beyond non-empty)
 - Store seller text exactly as written; no auto-translation or language selector in Sprint 4.
-- Phone defaults to the user's account phone and can be edited as a per-listing override
+- Phone defaults to the user's verified account phone when they have one.
+- A different `+993` number must be verified with a purpose-bound SMS code before Continue / Publish. Email-only sellers verify a contact phone here; they do not need to add an account phone first.
+- Verified extra numbers can be reused by the same seller on new Listings for 7 days and appear as quick picks with days left.
 - Contact preferences:
   - Allow calls (default ON)
   - Allow chat (default ON) with helper that messaging launches later
@@ -128,6 +130,8 @@ The location is the car's location, not the user's current GPS location. A user 
 - App backgrounds/kills mid-upload → draft and staged compressed files remain; upload retries when the app is reopened and online
 - Upload retry is whole-file retry from the staged compressed file; Phase 1 does not promise multipart byte-level resume
 - VIN decode is not called from the Sprint 4 mobile wizard
+- Contact-phone SMS code expires or has too many wrong attempts → keep the seller on Step 7, explain that the number must be confirmed, and let them request a new code within the shared SMS budgets.
+- Someone shares a contact-phone code for their number → the Listing may show that number, but it does not become a Sign-in Method and cannot be used to sign in.
 - Publish fails (server error) → keep wizard state, show retry
 
 ## References
@@ -136,6 +140,7 @@ The location is the car's location, not the user's current GPS location. A user 
 - [Feature 31 — Catalog](../features/31-catalog.md)
 - [ADR-0008 — Media](../../adr/0008-media.md)
 - [ADR-0022 — City-first listing location](../../adr/0022-city-first-listing-location.md)
+- [ADR-0056 — Listing contact phones are verified](../../adr/0056-listing-contact-phones-are-verified.md)
 
 ## Open questions
 

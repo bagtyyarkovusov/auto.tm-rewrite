@@ -30,7 +30,7 @@ Per [ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md):
 - A User has an optional, unique, verified phone (`+993` only) and an optional, unique, verified email (trimmed and lowercased). A live User has at least one.
 - A signed-in User adds the missing method, or replaces one, by confirming a code sent to the new value. A value held by another User, including one in the deletion grace period, is refused after the code is confirmed, with `SIGN_IN_METHOD_TAKEN`. Users are never merged.
 - Sign-in Methods can be replaced but not removed. Replacing frees the old value immediately and leaves sessions and Listings alone.
-- Publishing or republishing a Listing needs a verified phone (`PHONE_REQUIRED`). The mobile Sell entry shows an "Add a phone" step to Users without one. "Phone verified" seller trust shows only for Users with a verified phone.
+- Listing contact is owned by the Listings capability, not by Sign-in Methods. Per [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md), publishing, republishing, or editing a Listing needs a verified contact phone for that Listing; email-only Users verify one in the Sell wizard and do not need to add an account phone. `PHONE_REQUIRED`, `IdentityCheckPort.hasVerifiedPhone`, the Sell "Add a phone" step, and the per-Listing "Phone verified" seller-trust signal are superseded.
 - Codes: 6 digits; 5 wrong attempts; 5 requests per destination per 24 hours; `60 × 2^N` backoff; expiry 5 minutes for phone and 10 minutes for email; 10 requests per IP per hour shared across channels. Sign-in, add/change and deletion codes share these budgets.
 - API: `POST /api/v1/auth/otp/request` and `/verify` accept `{ phone }` or `{ email }`. `GET /api/v1/me` returns nullable `phone` and `email` plus `phoneVerified`. `POST /api/v1/me/sign-in-methods/request` and `/verify` add or replace a method. Shapes are Zod schemas in `@auto-tm/contracts`.
 - Email codes are sent by `apps/worker` through Resend's HTTPS API, with Amazon SES as the fallback. The API only enqueues. In the TM era email sign-in is best-effort through the TM Proxy PC, and phone stays primary ([ADR-0055](../../adr/0055-resend-sends-sign-in-codes-from-the-worker.md)). The worker side has shipped: the `email-code` queue consumer, the Resend and mock adapters, the RU/TK/EN message and the 80-a-day cap. The API doesn't enqueue email codes yet.
@@ -89,7 +89,7 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 | OTP entry | Expired | "Code expired. Request a new one." |
 | OTP entry | Dev test mode | Non-production only: show "Dev code: 123456" if API returns `testCode` |
 | OTP entry | Locked | Inline countdown / request-new-code state; no separate error route |
-| Sell entry | No phone | "Add a phone" step before publishing |
+| Sell contact step | Email-only or different phone | Verify the Listing contact phone in the Sell wizard; no account phone is required |
 | Profile (own) | New user | Prompt to add avatar + name |
 | Profile (own) | Suspended | Banner: "Your account is suspended. Contact support." Auth/session/account-deletion still work; marketplace mutations are blocked. |
 | Profile (other) | Default | Show public info only |
@@ -104,6 +104,7 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 
 - [ADR-0006](../../adr/0006-auth.md) — Phone OTP + custom SMS gateway + TOTP for admins
 - [ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md) — Phone or email sign-in share one User (supersedes ADR-0006's phone-only rule)
+- [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md) — Listing contact phones are verified; supersedes ADR-0054's publishing and seller-trust phone requirements
 - Mobile S2 auth routes are `(auth)/phone` and `(auth)/otp`. Historical `login` / `login/otp` route names are superseded for the mobile implementation.
 - Legal agreement in S2 is implicit copy under the phone CTA: "By continuing, you agree to the Terms and Privacy Policy." Add a checkbox only if legal review requires explicit recorded acceptance. Legal pages remain canonical on web.
 - OTP login does not ask for native notification permission. Notification prompts are tied to later user actions that need notifications.

@@ -18,7 +18,7 @@ A marketplace without listings is empty. This is the central feature; everything
 4. **Condition** (`used` default / `new`) + **Mileage** (visible and required for used cars; optional/hidden for new cars) + optional completeness fields: **Color**, **Body type**, **Transmission**, **Drive type**, **Engine type**, **Engine power**. These completeness fields do not block publish in Sprint 4. The seller condition disclosure also lives in this step ([ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md)): **Damaged / needs repair** (yes/no, required to publish and kept on edit) and optional **Known issues** free text (up to 1000 characters).
 5. **Price + Currency** (TMT default / USD / AED) + **Seller terms**. Switching currency clears the amount instead of auto-converting; non-TMT shows approximate TMT using admin FX; missing non-TMT FX blocks publish with an inline helper. Optional terms: Exchange possible and Installment possible. No separate negotiable toggle in Sprint 4. Price is always the full asking price, never a down payment.
 6. **Car location** — Region + City + optional area/landmark text ("Aşgabat, 30 mkr"). This is the physical location where the car can be inspected, not the seller's current GPS location.
-7. **Description + Phone + Contact preferences** — description is required but has no minimum word count beyond non-empty, max 2000 chars. Store seller text exactly as written; no auto-translation or language selector in Sprint 4. Profile phone is prefilled as a per-listing editable override; calls/chat switches have at-least-one validation; chat can be enabled now with honest helper text that messaging launches later. No separate Preview route in Sprint 4; show a compact Review summary above Publish.
+7. **Description + Verified Contact Phone + Contact preferences** — description is required but has no minimum word count beyond non-empty, max 2000 chars. Store seller text exactly as written; no auto-translation or language selector in Sprint 4. The contact phone defaults to the seller's verified account phone when one exists; a different `+993` number, or any number for an email-only User, must be confirmed with a purpose-bound SMS code before Continue / Publish. Calls/chat switches have at-least-one validation; chat can be enabled now with honest helper text that messaging launches later. No separate Preview route in Sprint 4; show a compact Review summary above Publish.
 
 Navigation is linear Next/Back in Sprint 4. The compact Review summary can link back to completed steps for corrections; do not build arbitrary step-jump navigation. Drafts auto-save to the server while editing and force-save on step transition. Do not promise offline draft persistence in Sprint 4. Resume on next visit. If drafts exist, Sell opens a lightweight entry with latest draft as the primary Continue action and New listing as secondary; full draft management belongs in My Listings. Discard draft lives in the wizard header overflow menu and requires destructive confirmation.
 
@@ -31,6 +31,20 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 - Phase 1 does not store exact listing GPS coordinates.
 - `locationText` is optional area/landmark text, not a home-address field. UX copy should discourage exact private addresses ("Do not enter your home address. Add only the area where the car can be inspected.").
 - Dealer showroom location may become more precise later because it is a business location. Inspection or meeting coordinates are private appointment data, not public listing data.
+
+### Listing contact phone policy
+
+Per [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md), every Listing contact phone is verified before it can be used:
+
+- The wizard pre-fills the seller's verified account phone when present. Keeping it needs no new code.
+- A seller may use a different `+993` number without changing their Sign-in Methods. The wizard sends a 6-digit contact-phone code to that number, and the seller cannot continue until it is confirmed.
+- A confirmed extra number becomes that seller's **Verified Contact Phone** for 7 days from confirmation. During that window it appears as a quick pick with days left and can be reused on new Listings without another code. After the window, the next new use needs a fresh code.
+- A Verified Contact Phone never becomes a Sign-in Method. Several sellers may verify the same number, and a seller may verify a number that is another User's sign-in phone, because the holder of that SIM shared the purpose-specific code.
+- The server rejects publishing, republishing, or editing unless the submitted contact phone is either the seller's verified account phone or one of that seller's currently reusable Verified Contact Phones.
+- A published Listing keeps its contact phone after the 7-day reuse window ends. The window limits new uses, not existing published contact paths.
+- Existing unverified `contactPhone` values are discarded before release; no migration must preserve them.
+- Contact-phone codes are purpose-bound and cannot sign anyone in. Sign-in codes cannot verify a Listing contact phone.
+- The SMS copy must explain that the code lets someone show the number on a car Listing and should be shared only if the recipient agreed.
 
 ### Media upload + refresh behavior
 
@@ -85,7 +99,7 @@ Top to bottom, in Auto.ru's order:
 
 That is the whole screen. Video is added below the photos only when the video media UX ships.
 
-- **Contact bar:** Call (opens the phone dialer directly, with no warning sheet) and Message stick to the bottom of the screen.
+- **Contact bar:** Call (opens the phone dialer directly, with no warning sheet) and Message stick to the bottom of the screen. The Call area carries one short caption that AutoTM verifies seller numbers by SMS; the fuller explanation lives on the public trust page, not as a per-Listing badge or extra detail link.
 - **Collapsing header:** once the photos scroll away, it turns solid and shows the price plus "Brand Model, year". Back, Share, ♡ and ⋯ (which holds Report listing and Copy link) stay put on active Listings.
 - **Photo viewer:** black, full screen, with "n / N", ✕, ♡, swipe, pinch zoom, a thumbnail strip, and Call + Message. Closing it returns the gallery to the same photo.
 - **Sign-in on action:** ♡, Message, Ask the seller and Report listing need sign-in, then return to this Listing and finish the action. Call needs nothing. See [33 — Search & discovery](33-search-discovery.md#sign-in-on-action).
@@ -118,6 +132,7 @@ That is the whole screen. Video is added below the photos only when the video me
 - Published edits PATCH the `Listing` directly. They do not create or autosave a `ListingDraft`; drafts are only for pre-publish listing creation.
 - Edit changes stay local inside the edit screen until the seller taps **Save changes**. Buyers keep seeing the old published listing while the seller is editing, including the old photo set.
 - Locked identity fields: VIN, brand, model, generation, and year cannot be changed; they define the identity of the car.
+- Saving a changed contact phone follows the same verification rule as publishing: it must be the seller's verified account phone or a currently reusable Verified Contact Phone.
 - Owners can update photo order, add photos, and remove photos after publishing. The first photo remains the cover. Photo edits are staged locally in edit mode and applied only on **Save changes**. New photo uploads may start during editing for responsiveness, but uploaded files are not public until attached on Save; abandoned unattached uploads are storage orphans for cleanup. This is locked by [ADR-0024](../../adr/0024-owner-post-publish-photo-editing.md).
 - Change price (price-change history kept for analytics)
 
@@ -147,6 +162,7 @@ That is the whole screen. Video is added below the photos only when the video me
 | Wizard step 2 (photos) | <1 photo | Submit disabled; helper text |
 | Wizard step 3 (vehicle identity) | Missing year | Continue disabled; year is required for marketplace-quality listings |
 | Wizard step 4 (specs) | Used car missing mileage | Continue disabled; mileage is required for used-car listings |
+| Wizard step 7 (contact) | Different phone or email-only seller | Send contact-phone code, block Continue / Publish until confirmed, then offer the number as a quick pick for 7 days |
 | Wizard | Upload failed | Retry button per failed photo |
 | Wizard | Network slow | Show progress + "Slow connection" badge |
 | Listing detail | Loading | Card fields from the tapped card's cache; the rest behind skeletons; contact bar disabled until loaded |
@@ -177,7 +193,7 @@ That is the whole screen. Video is added below the photos only when the video me
 - [ADR-0051](../../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) — Auto.ru is the structural reference for cards and discovery; AutoTM keeps its own tokens
 - [ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md) — Condition disclosure is "Damaged / needs repair" plus Known issues
 - [ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md) — VIN decoding deferred; the section shows only when decoded
-- [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md) — Listing contact phones are verified; no per-Listing "Phone verified" badge
+- [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md) — Listing contact phones are verified; no per-Listing "Phone verified" badge; no account-phone requirement for email-only sellers
 - [ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md) — No in-app inspection demand signal for the release; the concierge pilot measures demand
 
 ## Phase
@@ -205,7 +221,7 @@ These are future product capabilities — most map to Phase 2 trust-layer work a
 
 - **Flipper / re-seller detection** — Auto.ru exposes "active listings count" + "listings history" + "average time-to-sell" on the seller profile page so buyers can self-detect flippers. AutoTM equivalent should ship after seller profile/admin trust work is bet on. No explicit "flipper" label — let data speak.
 - **"First owner" claim** — Seller self-declares «первый хозяин» equivalent in the wizard; admin verifies post-hoc via registration documents or trust signals. Buyer-side filter is post-MLP if added. Implementation: `Listing.isFirstOwner: Boolean @default(false)` + admin verification flag.
-- **Phone-number-reuse detection** — "5 other listings from this phone number" surfaced on listing detail (Auto.ru pattern). Phase 2 candidate; uses `Listing.contactPhone ?? seller.phoneE164` as the key. Strong flipper signal.
+- **Phone-number-reuse detection** — "5 other listings from this phone number" surfaced on listing detail (Auto.ru pattern). Phase 2 candidate; keys on the Listing's Verified Contact Phone, not on `Listing.contactPhone ?? seller.phoneE164`. Strong flipper signal.
 - **Edit-triggered re-review** — Auto.ru flags edits that change >50% of photos, drop price >30% in 24h, or rewrite >50% of description. AutoTM equivalent should land in Phase 2 alongside trust tiers. S4's AuditLog scope captures price changes + state transitions; Phase 2 needs to add audit entries for media operations + description edits to enable detection.
 - **Inspected-listing edit policy** — When trust tier exists (Phase 2 inspection reports), structural edits (specs, condition, photos) should invalidate the tier until re-inspection; metadata edits (price, description) should not. Decide policy when S11-S15 plan.
 - **Inappropriate / non-car photo screening** — MLP beta auto-publishes everything; reactive moderation ships in S7. A later trust bet should add self-hosted ML screening: NudeNet for NSFW, YOLO or CLIP for car-detection, pHash for stolen-photo detection (all offline-compatible per air-gap constraint). Implementation: `MediaContentClassifierPort` ships in S4 with `NullContentClassifier` adapter; trust bet swaps in `MlContentClassifier`. Failed classifications transition listing to `pending_review` status (enum value already in schema).
