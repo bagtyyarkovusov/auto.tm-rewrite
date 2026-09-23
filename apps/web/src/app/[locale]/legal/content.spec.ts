@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import type { Locale } from "../../../i18n/locales";
-import { locales } from "../../../i18n/locales";
-
-import { privacyPolicy, termsOfService } from "./content";
 import type { LegalDocument } from "./content";
+import { privacyPolicy, termsOfService } from "./content";
+
+import type { Locale } from "@/i18n/locales";
+import { locales } from "@/i18n/locales";
 
 type LocalePhrases = Record<Locale, string>;
 
-/** A promise the document makes in every language, with the phrase that carries it. */
+/**
+ * A promise the document makes in every language, with the phrase that carries it.
+ *
+ * The phrases are deliberately exact: these documents are what users agree to, so
+ * rewording a material promise should fail here and force a re-read in all three
+ * languages rather than pass silently in one.
+ */
 interface CopyPromise {
   name: string;
   phrases: LocalePhrases;
@@ -23,25 +29,25 @@ const privacyPromises: CopyPromise[] = [
   {
     name: "collects an email address for sign-in and account management",
     phrases: {
-      en: "**Email address** — collected when you choose to sign in by email",
-      ru: "**Адрес электронной почты** — если вы выбираете вход по почте",
-      tk: "**E-poçta salgysy** — e-poçta arkaly girmegi saýlasaňyz",
+      en: "collected when you choose to sign in by email, or when you add or change an email address on your account",
+      ru: "если вы выбираете вход по почте либо добавляете или меняете почту в аккаунте",
+      tk: "e-poçta arkaly girmegi saýlasaňyz ýa-da akkauntyňyza e-poçta goşsaňyz ýa-da çalyşsaňyz",
     },
   },
   {
     name: "email codes go through a delivery provider in the United States",
     phrases: {
       en: "email delivery provider located in the United States",
-      ru: "провайдер email-рассылки, расположенный в США",
+      ru: "сторонний почтовый сервис, расположенный в США",
       tk: "ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi",
     },
   },
   {
-    name: "the provider keeps delivery records for 30 days",
+    name: "the provider keeps the address and the message for 30 days",
     phrases: {
-      en: "keeps delivery records for 30 days",
-      ru: "хранит записи о доставке 30 дней",
-      tk: "eltiş ýazgylaryny 30 gün saklaýar",
+      en: "and keeps them for 30 days",
+      ru: "и хранит их 30 дней",
+      tk: "olary 30 gün saklaýar",
     },
   },
   {
@@ -77,11 +83,11 @@ const privacyPromises: CopyPromise[] = [
     },
   },
   {
-    name: "the Listing contact phone is collected and confirmed by SMS",
+    name: "the Listing contact phone is collected and is always SMS-confirmed",
     phrases: {
-      en: "**Listing contact phone** — the +993 number you choose to show on a listing",
-      ru: "**Контактный телефон объявления** — номер +993",
-      tk: "**Bildirişiň habarlaşma belgisi** — bildirişde görkezmek üçin saýlan +993 belgiňiz",
+      en: "the +993 number you choose to show on a listing. It is always a number confirmed by an SMS code",
+      ru: "номер +993, который вы показываете в объявлении. Это всегда номер, подтверждённый кодом из SMS",
+      tk: "bildirişde görkezmek üçin saýlan +993 belgiňiz. Ol hemişe SMS kody bilen tassyklanan belgidir",
     },
   },
   {
@@ -107,7 +113,7 @@ const termsPromises: CopyPromise[] = [
     name: "publishing, republishing, or changing the contact phone needs a verified number",
     phrases: {
       en: "Before you publish or republish a listing, or change its contact phone",
-      ru: "Прежде чем опубликовать или переопубликовать объявление либо изменить его контактный телефон",
+      ru: "Прежде чем вы опубликуете или переопубликуете объявление либо измените его контактный телефон",
       tk: "Bildirişi çap etmezden, gaýtadan çap etmezden ýa-da onuň habarlaşma belgisini çalyşmazdan öň",
     },
   },
@@ -165,23 +171,36 @@ function fullText(document: LegalDocument) {
   return document.sections.map((section) => `${section.title}\n${section.body}`).join("\n\n");
 }
 
+/**
+ * The displayed date is hand-written per locale, so it can only be checked against
+ * the machine-readable one by the parts every locale spells with digits.
+ */
+function expectDisplayToMatchISO(display: string, iso: string) {
+  const [year, , day] = iso.split("-");
+  expect(display).toContain(year);
+  expect(display).toMatch(new RegExp(`(^|\\D)${Number(day)}(\\D|$)`));
+}
+
 describe.each(documents)("%s", (_name, document) => {
-  it("has the same sections in every locale", () => {
-    const sectionTitles = locales.map((locale) =>
-      document[locale].sections.map((section) => section.title.split(".")[0]),
-    );
-    const [reference, ...rest] = sectionTitles;
-    for (const titles of rest) {
-      expect(titles).toEqual(reference);
+  it("numbers sections identically in every locale", () => {
+    for (const locale of locales) {
+      expect(document[locale].sections).toHaveLength(document.en.sections.length);
+      expect(document[locale].sections.map((section) => section.title.split(".")[0])).toEqual(
+        document.en.sections.map((section) => section.title.split(".")[0]),
+      );
     }
   });
 
   it("dates the same revision in every locale", () => {
     for (const locale of locales) {
-      expect(document[locale].effectiveDateISO).toBe(document.en.effectiveDateISO);
-      expect(document[locale].lastRevisedISO).toBe(document.en.lastRevisedISO);
-      expect(document[locale].effectiveDateISO).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(document[locale].lastRevisedISO).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const { effectiveDate, effectiveDateISO, lastRevised, lastRevisedISO } = document[locale];
+
+      expect(effectiveDateISO).toBe(document.en.effectiveDateISO);
+      expect(lastRevisedISO).toBe(document.en.lastRevisedISO);
+      expect(effectiveDateISO).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(lastRevisedISO).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expectDisplayToMatchISO(effectiveDate, effectiveDateISO);
+      expectDisplayToMatchISO(lastRevised, lastRevisedISO);
     }
   });
 
@@ -196,7 +215,7 @@ describe.each(documents)("%s", (_name, document) => {
 
   it("uses no internal sign-in vocabulary", () => {
     for (const locale of locales) {
-      expect(fullText(document[locale])).not.toMatch(/OTP/i);
+      expect(fullText(document[locale])).not.toMatch(/\bOTP\b/i);
     }
   });
 });
