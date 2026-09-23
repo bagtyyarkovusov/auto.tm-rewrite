@@ -94,7 +94,7 @@ The location is the car's location, not the user's current GPS location. A user 
 - Store seller text exactly as written; no auto-translation or language selector in Sprint 4.
 - Phone defaults to the user's verified account phone when they have one.
 - A different `+993` number must be verified with a purpose-bound SMS code before Continue / Publish. Email-only sellers verify a contact phone here; they do not need to add an account phone first.
-- Verified extra numbers can be reused by the same seller on new Listings for 7 days and appear as quick picks with days left.
+- The account phone, when present, remains a quick pick. Verified extra numbers can be reused by the same seller on new Listings for 7 days and appear as quick picks with days left.
 - Contact preferences:
   - Allow calls (default ON)
   - Allow chat (default ON) with helper that messaging launches later

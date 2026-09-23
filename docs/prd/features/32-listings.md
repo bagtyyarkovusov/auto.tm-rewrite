@@ -36,13 +36,12 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 
 Per [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md), every Listing contact phone is verified before it can be used:
 
-- The wizard pre-fills the seller's verified account phone when present. Keeping it needs no new code.
+- The wizard pre-fills the seller's verified account phone when present. Keeping it needs no new code, and it remains available as a quick pick if the seller selects another number.
 - A seller may use a different `+993` number without changing their Sign-in Methods. The wizard sends a 6-digit contact-phone code to that number, and the seller cannot continue until it is confirmed.
 - A confirmed extra number becomes that seller's **Verified Contact Phone** for 7 days from confirmation. During that window it appears as a quick pick with days left and can be reused on new Listings without another code. After the window, the next new use needs a fresh code.
 - A Verified Contact Phone never becomes a Sign-in Method. Several sellers may verify the same number, and a seller may verify a number that is another User's sign-in phone, because the holder of that SIM shared the purpose-specific code.
-- The server rejects publishing, republishing, or editing unless the submitted contact phone is either the seller's verified account phone or one of that seller's currently reusable Verified Contact Phones.
+- The server rejects publishing or republishing unless the submitted contact phone is either the seller's verified account phone or one of that seller's currently reusable Verified Contact Phones. An edit that changes the contact phone applies the same check; an unrelated edit may keep the Listing's existing contact phone after its reuse window expires.
 - A published Listing keeps its contact phone after the 7-day reuse window ends. The window limits new uses, not existing published contact paths.
-- Existing unverified `contactPhone` values are discarded before release; no migration must preserve them.
 - Contact-phone codes are purpose-bound and cannot sign anyone in. Sign-in codes cannot verify a Listing contact phone.
 - The SMS copy must explain that the code lets someone show the number on a car Listing and should be shared only if the recipient agreed.
 
