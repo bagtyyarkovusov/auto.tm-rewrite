@@ -25,6 +25,7 @@ Execute exactly one issue. Invocation authorizes the normal reservation-branch-t
 - Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). Reuse a host-created isolated worktree and record any unchanged scaffold branch for later cleanup.
 - Start from updated `main` on `agent/issue-<N>` and push that branch before editing. The remote branch is the reservation.
 - If a local/remote canonical branch, issue worktree, or PR already exists, including a reservation-only branch with no checkpoint commits, route through `resume-issue <N>` and continue the existing attempt instead of creating a duplicate.
+- A design pause may leave only the reservation branch. After its design PR merges, `resume-issue` verifies that the branch has no unique work and fast-forwards it to current `main` before implementation.
 - Build a scoped execution plan mapping every acceptance criterion to implementation and evidence.
 - Record relevant canonical terms and avoided synonyms. Do not silently migrate unrelated names.
 - Consult Context7 for every external library touched, following `docs/agents/documentation-lookups.md`.

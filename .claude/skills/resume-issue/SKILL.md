@@ -23,6 +23,7 @@ Git and GitHub state, not the prior chat, own recovery. Preserve the previous at
 
 Choose the safest path from evidence without adding an ordinary confirmation stop:
 
+- **Refresh a reservation-only branch:** if it has no unique commits, worktree changes, or open PR, fast-forward it to current `main` before continuing. This includes a branch preserved while `design-grill` produced and merged design artifacts.
 - **Continue:** heads agree or fast-forward safely; preserve the existing base and worktree.
 - **Safety branch and rebase:** the branch diverged but the resolution is mechanical; create a preservation ref, rebase on current `main`, then continue.
 - **Preserve and restart:** the canonical branch is missing or unusable; preserve every recoverable ref/diff before rebuilding `agent/issue-<N>` from `main`.

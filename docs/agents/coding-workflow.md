@@ -22,7 +22,7 @@ All phases use the shared [worktree lifecycle](worktree-lifecycle.md): reuse a h
 The interactive path follows this state machine. Sandcastle must not dispatch implementation work while its current wrapper still uses batch integration; AFK execution resumes only after the wrapper and its operating guide implement the same state machine.
 
 1. Confirm the issue is open, labelled `ready-for-agent`, not `blocked`, has closed dependencies, and has intelligible acceptance criteria.
-2. Reserve it by pushing `agent/issue-<N>` from updated `main` before editing. An existing branch, worktree, or PR means resume; never create a duplicate.
+2. Reserve it by pushing `agent/issue-<N>` from updated `main` before editing. An existing branch, worktree, or PR means resume; never create a duplicate. A reservation-only branch left by a design pause fast-forwards to current `main` after the design PR merges and before implementation continues.
 3. Commit and push meaningful checkpoints. After the first checkpoint, open a draft PR whose body starts `Closes #<N>` and contains the single mutable `Execution state` defined in [`run-issue/EXECUTION-STATE.md`](../../.claude/skills/run-issue/EXECUTION-STATE.md).
 4. Implement and verify. Update execution state with the latest checkpoint, completed criteria, commands and results, failures, interrupted commands, documentation/Context7 status, and one next action.
 5. Run independent Standards and Spec reviews against the exact current commit. Record each verdict as a PR comment naming its axis, agent, provider, SHA, and either `pass` or concrete findings.
