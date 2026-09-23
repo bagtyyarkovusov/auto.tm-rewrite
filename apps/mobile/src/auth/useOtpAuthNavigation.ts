@@ -1,0 +1,50 @@
+import { useEffect, useState } from "react";
+import { usePreventRemove } from "@react-navigation/native";
+import type { Router } from "expo-router";
+
+import { useAuthIntentStore } from "./intentStore";
+
+type OtpExit = "cancel" | "change-phone" | "complete";
+
+/**
+ * Owns every way the OTP screen can leave. Native Back and swipe gestures are
+ * intercepted while the screen is active, then replayed as an explicit auth
+ * outcome after the removal guard has been disabled for the next render.
+ */
+export function useOtpAuthNavigation(router: Router) {
+  const [exit, setExit] = useState<OtpExit | null>(null);
+
+  usePreventRemove(exit === null, () => {
+    setExit("cancel");
+  });
+
+  useEffect(() => {
+    if (exit === null) {
+      return;
+    }
+
+    if (exit === "change-phone") {
+      router.back();
+      return;
+    }
+
+    const authIntent = useAuthIntentStore.getState();
+    if (exit === "complete") {
+      authIntent.completeSignIn(router);
+      return;
+    }
+
+    if (authIntent.intent) {
+      authIntent.cancelSignIn(router);
+      return;
+    }
+
+    router.back();
+  }, [exit, router]);
+
+  return {
+    cancel: () => setExit("cancel"),
+    changePhone: () => setExit("change-phone"),
+    complete: () => setExit("complete"),
+  };
+}

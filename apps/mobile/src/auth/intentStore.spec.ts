@@ -174,15 +174,14 @@ describe("auth intent return mechanism", () => {
   });
 
   it("the OTP screen finishes through completeSignIn", () => {
-    expect(otpSource).toContain("useAuthIntentStore.getState().completeSignIn(router)");
+    expect(otpSource).toContain("authNavigation.complete()");
     expect(otpSource).not.toContain("consumeAndReplay");
     expect(otpSource).not.toContain("router.dismissAll()");
   });
 
   it("the OTP back button cancels while Change number pops to the existing phone screen", () => {
-    expect(otpSource).toContain("authIntent.cancelSignIn(router)");
-    expect(otpSource).toContain("function changePhoneNumber()");
-    expect(otpSource).toContain("router.back()");
+    expect(otpSource).toContain("authNavigation.cancel()");
+    expect(otpSource).toContain("authNavigation.changePhone()");
     expect(otpSource).not.toContain('pathname: "/(auth)/phone"');
   });
 

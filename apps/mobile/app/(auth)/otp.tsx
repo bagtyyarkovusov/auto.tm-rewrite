@@ -19,7 +19,7 @@ import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
-import { useAuthIntentStore } from "../../src/auth/intentStore";
+import { useOtpAuthNavigation } from "../../src/auth/useOtpAuthNavigation";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { THEME } from "@/lib/theme";
@@ -58,6 +58,7 @@ export default function OtpScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { t, i18n } = useTranslation("auth");
+  const authNavigation = useOtpAuthNavigation(router);
 
   const phone = firstParam(params.phone);
   const [code, setCode] = useState("");
@@ -124,17 +125,11 @@ export default function OtpScreen() {
   }
 
   function cancelAuth() {
-    const authIntent = useAuthIntentStore.getState();
-    if (authIntent.intent) {
-      authIntent.cancelSignIn(router);
-      return;
-    }
-
-    router.back();
+    authNavigation.cancel();
   }
 
   function changePhoneNumber() {
-    router.back();
+    authNavigation.changePhone();
   }
 
   async function submitCode(nextCode: string) {
@@ -165,7 +160,7 @@ export default function OtpScreen() {
       }
 
       await storeAuthSession(result);
-      useAuthIntentStore.getState().completeSignIn(router);
+      authNavigation.complete();
     } catch (error) {
       otpRef.current?.shake();
       setCode("");
@@ -230,7 +225,7 @@ export default function OtpScreen() {
       await storeAuthSession(pendingSession);
       setPendingSession(null);
       setShowRestorePrompt(false);
-      useAuthIntentStore.getState().completeSignIn(router);
+      authNavigation.complete();
     } catch {
       // Keep prompt open so the user can retry if storage fails.
     }
