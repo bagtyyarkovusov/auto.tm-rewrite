@@ -60,7 +60,7 @@ Error red is rose `#F43F5E` (palette `rose[500]`) — distinct hue from brand, f
 
 | App | Style system | How tokens consumed |
 |---|---|---|
-| `apps/web` (Next.js) | Tailwind v4 + shadcn | `globals.css` imports `theme/theme.css` via `@import`; CSS variables from `@theme` directive |
+| `apps/web` (Next.js) | Tailwind v4 + shadcn | `globals.css` imports `theme/theme.css` via `@import`; the shared theme registers `components/` for class detection and exposes semantic CSS variables as Tailwind color utilities |
 | `apps/admin` (Next.js) | Tailwind v4 + shadcn | Same as web |
 | `apps/mobile` (Expo) | NativeWind v4 (Tailwind for RN) | `tailwind.config.js` extends `theme/tailwind.ts`; theme provider supplies mode |
 
