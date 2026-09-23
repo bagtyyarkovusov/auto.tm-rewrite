@@ -160,10 +160,7 @@ export default function OtpScreen() {
       }
 
       await storeAuthSession(result);
-      router.dismissAll();
-      await useAuthIntentStore
-        .getState()
-        .consumeAndReplay(router as { replace: (path: string) => void });
+      useAuthIntentStore.getState().completeSignIn(router);
     } catch (error) {
       otpRef.current?.shake();
       setCode("");
@@ -228,10 +225,7 @@ export default function OtpScreen() {
       await storeAuthSession(pendingSession);
       setPendingSession(null);
       setShowRestorePrompt(false);
-      router.dismissAll();
-      await useAuthIntentStore
-        .getState()
-        .consumeAndReplay(router as { replace: (path: string) => void });
+      useAuthIntentStore.getState().completeSignIn(router);
     } catch {
       // Keep prompt open so the user can retry if storage fails.
     }

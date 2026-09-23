@@ -15,6 +15,7 @@ import {
 } from "../../../src/listings/detail/closedListing";
 import { ContactCtaBar } from "../../../src/listings/components/ContactCtaBar";
 import { useViewer } from "../../../src/auth/useViewer";
+import { useReplayAuthAction } from "../../../src/auth/intentStore";
 import { useConfig } from "../../../src/api/admin/useConfig";
 import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
@@ -105,6 +106,10 @@ export default function ListingDetailScreen() {
 
   const isOwner =
     viewer != null && data != null && viewer.userId === data.sellerId;
+
+  // Reporting while signed out parks a pending action; returning from
+  // authentication reopens the report sheet on this same screen.
+  useReplayAuthAction("report", id, () => setReportOpen(true));
 
   useEffect(() => {
     if (

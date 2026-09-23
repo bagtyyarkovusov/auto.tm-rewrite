@@ -27,16 +27,16 @@ describe("ChatScreen", () => {
     expect(source).toContain("AnonymousChatEntry");
   });
 
-  it("stores auth intent to return to chat after login", () => {
+  it("returns to the chat tab after a sign-in with no pending action", () => {
     expect(source).toContain(
       'import { useAuthIntentStore } from "../../src/auth/intentStore"',
     );
-    expect(source).toContain("useAuthIntentStore.getState().setIntent");
-    expect(source).toContain('returnPath: "/(tabs)/chat"');
+    expect(source).toContain("useAuthIntentStore.getState().requireSignIn(router, {");
+    expect(source).toContain('returnTo: "/(tabs)/chat"');
   });
 
-  it("routes anonymous user to phone auth on sign-in tap", () => {
-    expect(source).toContain('router.push("/(auth)/phone")');
+  it("opens authentication through requireSignIn rather than a bare push", () => {
+    expect(source).not.toContain('router.push("/(auth)/phone")');
   });
 
   it("shows loading state while auth is resolving", () => {
