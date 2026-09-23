@@ -63,6 +63,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0055](0055-resend-sends-sign-in-codes-from-the-worker.md) | Resend sends sign-in codes by email from the worker (complements ADR-0054) | Accepted | 2026-09-22 |
 | [0056](0056-listing-contact-phones-are-verified.md) | Listing contact phones are verified (supersedes ADR-0054 publishing and seller-trust parts) | Accepted | 2026-09-22 |
 | [0057](0057-defer-the-in-app-inspection-demand-signal.md) | Defer the in-app inspection demand signal (amends ADR-0037 demand instrumentation) | Accepted | 2026-09-22 |
+| [0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) | Portable coding-agent issue execution and pull-request gates | Accepted | 2026-09-23 |
 
 ## Per-app ADRs
 
