@@ -71,10 +71,10 @@ function TrustSectionCard({ section }: { section: TrustSection }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start gap-4">
-        <div className="rounded-full bg-brand-500/10 p-3">
+        <div className="shrink-0 rounded-full bg-brand-500/10 p-3">
           <Icon className="size-6 text-brand-500" aria-hidden="true" />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h2 className="text-xl font-semibold text-foreground">
             {section.title}
           </h2>
