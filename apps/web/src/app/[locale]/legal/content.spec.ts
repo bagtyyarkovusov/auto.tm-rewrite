@@ -27,6 +27,14 @@ const documents: [string, Record<Locale, LegalDocument>][] = [
 
 const privacyPromises: CopyPromise[] = [
   {
+    name: "collects a phone number to create an account or sign in with an SMS code",
+    phrases: {
+      en: "used to create or sign in to your account with a code sent by SMS",
+      ru: "для создания аккаунта или входа по коду из SMS",
+      tk: "SMS arkaly gelen kod bilen akkaunt döretmek ýa-da girmek üçin",
+    },
+  },
+  {
     name: "collects an email address for sign-in and account management",
     phrases: {
       en: "collected when you choose to sign in by email, or when you add or change an email address on your account",
