@@ -1,6 +1,6 @@
 # ADR-0057: Defer the in-app inspection demand signal
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-22
 - **Deciders**: AutoTM founder
 - **Amends**: the "instrument demand before building ops" decision (decision 4, and its mention in decision 5) of [ADR-0037](0037-trust-inspection-competitive-wedge.md). The rest of ADR-0037 remains in force.
