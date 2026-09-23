@@ -107,6 +107,20 @@ describe("useAuthIntentStore", () => {
     expect(navigator.dismissTo).not.toHaveBeenCalled();
   });
 
+  it("cancels from OTP and dismisses the whole auth flow to the caller", () => {
+    const navigator = fakeNavigator();
+    useAuthIntentStore.getState().requireSignIn(navigator, {
+      returnTo: LISTING_ROUTE,
+      action: { kind: "report", listingId: LISTING_ID },
+    });
+
+    useAuthIntentStore.getState().cancelSignIn(navigator);
+
+    expect(navigator.dismissTo).toHaveBeenCalledWith(LISTING_ROUTE);
+    expect(useAuthIntentStore.getState().intent).toBeNull();
+    expect(useAuthIntentStore.getState().replayAction).toBeNull();
+  });
+
   // The authentication screens cancel on unmount, which also runs right after a
   // successful sign-in dismissed them. That must not eat the replay.
   it("leaves a completed replay alone when the auth screens unmount", () => {
@@ -163,6 +177,13 @@ describe("auth intent return mechanism", () => {
     expect(otpSource).toContain("useAuthIntentStore.getState().completeSignIn(router)");
     expect(otpSource).not.toContain("consumeAndReplay");
     expect(otpSource).not.toContain("router.dismissAll()");
+  });
+
+  it("the OTP back button cancels while Change number pops to the existing phone screen", () => {
+    expect(otpSource).toContain("authIntent.cancelSignIn(router)");
+    expect(otpSource).toContain("function changePhoneNumber()");
+    expect(otpSource).toContain("router.back()");
+    expect(otpSource).not.toContain('pathname: "/(auth)/phone"');
   });
 
   it("the phone screen cancels an abandoned sign-in", () => {

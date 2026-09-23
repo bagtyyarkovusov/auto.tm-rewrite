@@ -123,13 +123,18 @@ export default function OtpScreen() {
     setCode(value);
   }
 
-  function backToPhone() {
-    router.replace({
-      pathname: "/(auth)/phone",
-      params: {
-        ...(canonicalPhone ? { phone: canonicalPhone } : {}),
-      },
-    });
+  function cancelAuth() {
+    const authIntent = useAuthIntentStore.getState();
+    if (authIntent.intent) {
+      authIntent.cancelSignIn(router);
+      return;
+    }
+
+    router.back();
+  }
+
+  function changePhoneNumber() {
+    router.back();
   }
 
   async function submitCode(nextCode: string) {
@@ -236,7 +241,7 @@ export default function OtpScreen() {
     setPendingSession(null);
     setCode("");
     lastSubmittedCode.current = null;
-    backToPhone();
+    changePhoneNumber();
   }
 
   return (
@@ -253,7 +258,7 @@ export default function OtpScreen() {
                 size="icon"
                 variant="ghost"
                 className="h-11 w-11"
-                onPress={backToPhone}
+                onPress={cancelAuth}
               >
                 <Icon as={ChevronLeft} className="size-5 text-foreground" />
               </Button>
@@ -273,7 +278,7 @@ export default function OtpScreen() {
                 <Button
                   variant="link"
                   className="self-start px-0"
-                  onPress={backToPhone}
+                  onPress={changePhoneNumber}
                 >
                   <Text>{t("changeNumber")}</Text>
                 </Button>

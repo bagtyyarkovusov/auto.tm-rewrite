@@ -45,7 +45,7 @@ interface AuthIntentStore {
   replayAction: PendingAction | null;
   requireSignIn(navigator: AuthNavigator, intent: AuthIntent): void;
   completeSignIn(navigator: AuthNavigator): void;
-  cancelSignIn(): void;
+  cancelSignIn(navigator?: Pick<AuthNavigator, "dismissTo">): void;
   clearReplayAction(): void;
 }
 
@@ -68,14 +68,16 @@ export const useAuthIntentStore = create<AuthIntentStore>()((set, get) => ({
     navigator.dismissTo(intent?.returnTo ?? HOME_ROUTE);
   },
 
-  cancelSignIn() {
+  cancelSignIn(navigator) {
     // A successful sign-in consumes the intent before the authentication
     // screens unmount, so this is a no-op then and the replay survives. Only a
     // real back-out still has an intent to drop.
-    if (get().intent === null) {
+    const { intent } = get();
+    if (intent === null) {
       return;
     }
     set({ intent: null, replayAction: null });
+    navigator?.dismissTo(intent.returnTo);
   },
 
   clearReplayAction() {
