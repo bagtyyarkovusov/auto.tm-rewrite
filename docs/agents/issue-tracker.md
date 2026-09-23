@@ -54,7 +54,7 @@ Two kinds of issues coexist in this repo, **one parent per sprint** plus **one c
 | Type | Used for | Body shape |
 |---|---|---|
 | **Sprint PRD (parent)** | One per sprint (S1, S2, ...). Tracks child sub-issues. | Dashboard + tasklist — no agent prompt. |
-| **Sprint child** | One independently mergeable vertical slice. Executed synchronously by `/run-issue` or, when eligible, by Sandcastle. | Self-contained implementation contract (see below). |
+| **Sprint child** | One independently mergeable vertical slice. Executed synchronously by `/run-issue`; Sandcastle becomes eligible again only after issue #406 replaces its suspended legacy path. | Self-contained implementation contract (see below). |
 
 ## Sprint PRD body template (parent)
 
@@ -82,7 +82,7 @@ The unblocked queue is:
 \`gh issue list --label "ready-for-agent" --search "-label:blocked" --json number,title,labels\`
 
 - Interactive: the user selects an issue and invokes `run-issue <N>` in Codex or Claude.
-- AFK: Sandcastle selects eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
+- AFK: Sandcastle dispatch is suspended until issue #406 replaces its legacy integration path. After that issue merges, it may select eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
 
 Both paths treat the issue body as the slice contract. The parent remains a dashboard, never an executable prompt.
 ```

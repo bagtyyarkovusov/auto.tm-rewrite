@@ -77,7 +77,7 @@ The Spec reviewer uses canonical definitions to interpret terms in the issue and
 
 Pre-existing inconsistent names outside the diff are follow-up observations, not automatic migrations or blockers, unless the change worsens them or the ambiguity prevents reliable runtime/spec evaluation. The reviewers work independently; implementation ownership and review ownership must remain distinct when subagents are used.
 
-Each verdict is a PR comment with `Review axis`, `Reviewer`, `Provider`, `Commit`, and `Verdict`. Resolve valid findings with focused changes, rerun proportionate verification, and repeat the affected review axis. Any content change invalidates affected earlier verdicts. Only the current fixed, green commit proceeds to pull-request merge.
+Each verdict is a PR comment with `Review axis`, `Reviewer`, `Provider`, `Commit`, and `Verdict`. Record evidence for accepting or rejecting every finding. Resolve accepted findings with focused changes, rerun proportionate verification, and repeat the affected review axis. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates affected earlier verdicts. Only the current fixed, green commit proceeds to pull-request merge.
 
 ## Integration, closure, and recovery
 
