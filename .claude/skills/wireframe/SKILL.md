@@ -22,9 +22,9 @@ Read [the domain glossary](../../../docs/domain/GLOSSARY.md) for canonical engin
 2. Target PRD/flow, current roadmap, and active issue/sprint delta.
 3. Relevant `CONTEXT.md` and current implementation.
 4. Actual routes, components, i18n, and token sources.
-5. Mutable UI guidance: IA, Kolesa findability, design principles, accessibility, and platform split.
+5. Mutable UI guidance: IA, the reference screens index, the Kolesa guide (screens outside discovery only), design principles, accessibility, and platform split.
 
-Kolesa informs UX/IA/findability only—never AutoTM visuals or deferred feature breadth. If mutable guidance conflicts with higher authority or code reality, surface the drift instead of copying it.
+Auto.ru is the journey reference for mobile discovery (ADR-0051); Kolesa informs only other mobile screens without an approved spec. Neither sets AutoTM visuals or adds deferred feature breadth. If mutable guidance conflicts with higher authority or code reality, surface the drift instead of copying it.
 
 ## Apply UX foundations
 

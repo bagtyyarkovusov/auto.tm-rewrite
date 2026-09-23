@@ -12,10 +12,10 @@ A marketplace without listings is empty. This is the central feature; everything
 
 ### Create wizard (7 steps for MVP)
 
-1. **VIN entry** — optional manual text only in Sprint 4; no OCR, decoder, checking, or auto-fill promise in the mobile wizard. Skip button is prominent. Real VIN decode is Phase 2.
+1. **VIN entry** — optional manual text only in Sprint 4; no OCR, decoder, checking, or auto-fill promise in the mobile wizard. Skip button is prominent. VIN decoding is deferred until a real decoder exists ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)).
 2. **Photo capture** — pick from library OR camera; min 1, max 20; freeform photo set with lightweight guidance only; client-side compress + reorder UI; first photo = cover and gets a Cover badge; drag-reorder changes cover; failed uploads expose Retry + Remove
 3. **Brand → Model → Generation → Year** — input-like rows open searchable picker sheets; Brand first, Model disabled until Brand, Generation optional/skippable when no catalog data exists, Year required
-4. **Condition** (`used` default / `new`) + **Mileage** (visible and required for used cars; optional/hidden for new cars) + optional completeness fields: **Color**, **Body type**, **Transmission**, **Drive type**, **Engine type**, **Engine power**. These completeness fields do not block publish in Sprint 4.
+4. **Condition** (`used` default / `new`) + **Mileage** (visible and required for used cars; optional/hidden for new cars) + optional completeness fields: **Color**, **Body type**, **Transmission**, **Drive type**, **Engine type**, **Engine power**. These completeness fields do not block publish in Sprint 4. The seller condition disclosure also lives in this step ([ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md)): **Damaged / needs repair** (yes/no, required to publish and kept on edit) and optional **Known issues** free text (up to 1000 characters).
 5. **Price + Currency** (TMT default / USD / AED) + **Seller terms**. Switching currency clears the amount instead of auto-converting; non-TMT shows approximate TMT using admin FX; missing non-TMT FX blocks publish with an inline helper. Optional terms: Exchange possible and Installment possible. No separate negotiable toggle in Sprint 4. Price is always the full asking price, never a down payment.
 6. **Car location** — Region + City + optional area/landmark text ("Aşgabat, 30 mkr"). This is the physical location where the car can be inspected, not the seller's current GPS location.
 7. **Description + Phone + Contact preferences** — description is required but has no minimum word count beyond non-empty, max 2000 chars. Store seller text exactly as written; no auto-translation or language selector in Sprint 4. Profile phone is prefilled as a per-listing editable override; calls/chat switches have at-least-one validation; chat can be enabled now with honest helper text that messaging launches later. No separate Preview route in Sprint 4; show a compact Review summary above Publish.
@@ -43,17 +43,74 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 - Remote listing images are displayed through a native image cache (`expo-image` in mobile) using immutable media URLs. TanStack Query caches listing JSON, not image/video bytes.
 - Listing video playback is deferred with the video media UX. We do not promise offline video playback or persistent video caching.
 
-### View listing
+### Cards
 
-- Photo gallery (swipe through; pinch zoom; tap to fullscreen)
-- Video below photos only after the video media UX ships; Sprint 4 photo listings do not need a video player
-- Title block: derived `Year + Brand + Model + Generation/trim when available`; no manual title field in Sprint 4. Price display follows the S4 TMT-display policy.
-- Seller terms badges when true: Exchange possible, Installment possible. Feed/listing cards show small secondary badges under price; detail shows badges near price with helper text. These are informational; AutoTM does not finance, broker, match exchange vehicles, or verify payment terms in Sprint 4.
-- Spec grid: mileage, transmission, drive, engine, color, body type, condition, year, VIN (masked if seller hides)
-- Description block
-- Seller block: avatar, name (or dealership name + PRO badge), tenure, city, response time stat
-- CTA buttons: **Call** (green primary) + **Message** + ♥ Favorite + Share
-- Related listings: "Похожие предложения" with 4-6 thumbnails
+Approved in the [listing content resolution](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/351#issuecomment-5761811759). Auto.ru's structure, AutoTM's tokens ([ADR-0051](../../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md)).
+
+- **Home "New listings": a two-column grid** (AR-01-002).
+  - Rounded photo with ♡ on it, then the price, "Brand Model" on one line, and "year, km" ("year, New" for new cars).
+  - No city, gearbox, fuel or badges.
+  - About six Listings fit on the first screen. The Home card does not become the large card.
+- **Results: the large card** (AR-05-001).
+  - Two fixed photos, with a 📷 photo count on the first.
+  - Then the price, the "km · gearbox · fuel" line, "Brand Model, year", and "city · date". ♡ sits bottom-right.
+- **Favorites: the large card with contact buttons** (AR-36-001, AR-36-002).
+  - The large card plus **Call** and **Message** buttons and a filled ♥. Tapping ♥ removes the card at once, with Undo.
+  - A **Hide sold** switch, on by default, hides sold and removed-from-sale Listings and says how many are hidden. Turned off, they show dimmed and labelled, without contact buttons.
+  - Deleted and banned Listings never appear. No recommendations block.
+- **Rules for every card:**
+  - Price in TMT only.
+  - Title on one line with an ellipsis, and no generation.
+  - Missing fields drop out of the spec line, with no placeholders.
+  - Date as "Today", "Yesterday", "12 Sep", or "3 Mar 2025" for earlier years.
+  - City only, no area text.
+  - No "Phone verified" and no seller-terms badges. The only badges are Sold and Removed from sale, and only in Favorites. Home and Results never contain sold or archived Listings.
+  - Loading skeletons have the same shape as the card.
+
+### Listing detail
+
+Top to bottom, in Auto.ru's order:
+
+1. **Photos**, full width, with an "n / N" counter.
+2. **"Brand Model Generation, year".** Derived; there is no manual title field.
+3. **Price**, plus Exchange possible / Installment possible when set. These terms are informational: AutoTM does not finance, broker, match exchange vehicles, or verify payment terms.
+4. **"date · city".**
+5. **Specifications:** six key specs as a grid (year, mileage, gearbox, fuel, power, drive), then rows for condition (new/used), body, colour and VIN. The VIN row shows only when the seller entered one.
+6. **Seller's description**, clamped to 3 lines with "More".
+7. **Ask the seller** quick questions. They reuse the four QuickReplies intents and open the Conversation with the text ready to send.
+8. **Condition, as stated by the seller:** Damaged / needs repair, and Known issues when given ([ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md)). The heading keeps anyone from reading them as verified.
+9. **Seller card:** the seller's display name (fallback "Private seller"), "Private seller", "On AutoTM since" with the join month, and city · area. There is no "Phone verified" badge; how buyers learn that contact phones are verified is set by [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md).
+10. **Report listing.**
+11. **Footer:** ID · Published · Updated.
+
+That is the whole screen. Video is added below the photos only when the video media UX ships.
+
+- **Contact bar:** Call (opens the phone dialer directly, with no warning sheet) and Message stick to the bottom of the screen.
+- **Collapsing header:** once the photos scroll away, it turns solid and shows the price plus "Brand Model, year". Back, Share, ♡ and ⋯ (which holds Report listing and Copy link) stay put on active Listings.
+- **Photo viewer:** black, full screen, with "n / N", ✕, ♡, swipe, pinch zoom, a thumbnail strip, and Call + Message. Closing it returns the gallery to the same photo.
+- **Sign-in on action:** ♡, Message, Ask the seller and Report listing need sign-in, then return to this Listing and finish the action. Call needs nothing. See [33 — Search & discovery](33-search-discovery.md#sign-in-on-action).
+- **VIN decoding:** a decoded-VIN section appears only when the VIN is actually decoded. With no real decoder bound, it never appears; there is no "not provided" or "not decoded" state ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)).
+
+**Detail states**
+
+- **Owner viewing their own Listing:** no Call or Message bar.
+  - A status card with views and saves. Only owners see these counts; buyers never see view counts.
+  - The original currency under the price.
+  - Edit and Mark sold in the bottom bar; Archive, Share and Delete in ⋯.
+- **Sold / Removed from sale (`sold`, `archived`):** closed for contact.
+  - A banner on the photo and a greyed price.
+  - ♡, the contact bar, Ask the seller and Report listing are hidden.
+  - A "See other Brand Model" link opens Results filtered by that brand and model. It is a plain filter, not a recommendation.
+- **Deleted / banned for a buyer (404):** "This listing is no longer available", with Go to Home and Back.
+- **Loading:** the photo, title, price, spec line, city and date come straight from the tapped card's cache. The rest loads behind skeletons, and the contact bar is disabled until it does. Deep links use a plain skeleton.
+
+**Removed from detail** by the approved design:
+
+- The "VIN history" section in its empty states (the VIN stays as a specification row).
+- The Sprint 9a "Request AutoTM inspection" fake door, together with the sheet that opened after publishing ([ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md)).
+- The "How to buy safely" link to auto.tm/trust.
+- View counts for buyers.
+- A similar-listings block. "See other Brand Model" on a closed Listing is the only link to other Listings.
 
 ### Edit listing
 
@@ -68,7 +125,7 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 
 - Button in My Listings: "Mark as sold"
 - Confirm modal: "This car is sold. Is the buyer from AutoTM?" (yes / no — analytics signal)
-- Listing transitions to `sold` state, shows "Sold" badge for 14 days, then auto-archived
+- Listing transitions to `sold` state and is auto-archived after 14 days. Buyers see it labelled Sold on detail and in Favorites, then Removed from sale once archived; it never appears in Home or Results.
 - Garage entry (if linked) auto-updates to `status=sold`
 
 ### Listing states
@@ -76,11 +133,11 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 | State | Visible to | Action available |
 |---|---|---|
 | `draft` | Owner only | Continue / discard |
-| `active` | Public | Favorite, chat, share, owner-edit |
-| `sold` | Public (badged) | New contact disabled; existing threads readable |
-| `archived` | Owner + admin | Owner can republish |
+| `active` | Public | Favorite, Message, share, owner-edit |
+| `sold` | Detail and Favorites only, labelled Sold; never in Home or Results | Closed for contact: no Call, Message, Ask the seller, ♡ or Report; existing Conversations stay readable |
+| `archived` | Owner + admin; a buyer reaching it from Favorites or a link sees it closed, labelled Removed from sale; never in Home or Results | Closed for contact, as `sold`; owner can republish |
 | `reported` | Admin only | Reserved review-hold status; S7 report submission does not auto-transition active listings here |
-| `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact/messages disabled; existing threads readable; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
+| `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact and Messages disabled; existing Conversations stay readable; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
 
 ## Screens / states
 
@@ -92,10 +149,12 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 | Wizard step 4 (specs) | Used car missing mileage | Continue disabled; mileage is required for used-car listings |
 | Wizard | Upload failed | Retry button per failed photo |
 | Wizard | Network slow | Show progress + "Slow connection" badge |
-| Listing detail | Anonymous | All buttons present; tap → login modal |
-| Listing detail | Owner viewing own | "Edit" / "Mark sold" / "Delete" instead of action buttons |
-| Listing detail | Sold | Badge prominent; chat button replaced with "Sold" pill |
-| Listing detail | Banned | Owner sees: "This listing was removed. Reason: …" |
+| Listing detail | Loading | Card fields from the tapped card's cache; the rest behind skeletons; contact bar disabled until loaded |
+| Listing detail | Signed out | Call works; ♡, Message, Ask the seller and Report listing lead to sign-in, then finish the action here |
+| Listing detail | Owner viewing own | No contact bar; status card with views and saves; Edit / Mark sold in the bar; Archive / Share / Delete in ⋯ |
+| Listing detail | Sold / Removed from sale | Banner on the photo, greyed price; contact, ♡, Ask and Report hidden; "See other Brand Model" link |
+| Listing detail | Deleted, or banned for a buyer | "This listing is no longer available", with Go to Home and Back |
+| Listing detail | Banned, owner | Generic ban notice; admin reasons stay internal |
 | Listing detail | Reported (admin view) | All actions + moderation toolbar |
 | My listings | Empty | "List your first car" CTA |
 | My listings | Has drafts | "Continue draft" pinned at top |
@@ -114,6 +173,12 @@ Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location 
 - [ADR-0022](../../adr/0022-city-first-listing-location.md) — City-first listing location; no exact listing GPS in Phase 1
 - [ADR-0024](../../adr/0024-owner-post-publish-photo-editing.md) — Owners may edit photos after publishing
 - [ADR-0027](../../adr/0027-mlp-beta-scope.md) — MLP beta scope; video and adjacent platform features deferred
+- [ADR-0037](../../adr/0037-trust-inspection-competitive-wedge.md) — Trust and inspection as the competitive wedge, amended by ADR-0052, ADR-0053 and ADR-0057
+- [ADR-0051](../../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) — Auto.ru is the structural reference for cards and discovery; AutoTM keeps its own tokens
+- [ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md) — Condition disclosure is "Damaged / needs repair" plus Known issues
+- [ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md) — VIN decoding deferred; the section shows only when decoded
+- [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md) — Listing contact phones are verified; no per-Listing "Phone verified" badge
+- [ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md) — No in-app inspection demand signal for the release; the concierge pilot measures demand
 
 ## Phase
 

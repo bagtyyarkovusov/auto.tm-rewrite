@@ -9,7 +9,7 @@ Read the owning product/flow and current implementation first. Then resolve curr
 - `apps/mobile/components/ui/` and `apps/mobile/CONTEXT.md` for mobile RNR;
 - app i18n resources for existing copy;
 - `docs/prd/ui/70-design-principles.md` through `79-web-vs-mobile.md`; and
-- `docs/prd/ui/kolesa-findability-reference.md` for mobile IA only.
+- ADR-0051 with `docs/prd/features/33-search-discovery.md` and `32-listings.md` for the mobile discovery journey, cards and Listing detail; `docs/prd/ui/kolesa-findability-reference.md` only for other mobile IA without an approved spec.
 
 When guidance conflicts with code/current `CONTEXT.md` or a later ADR, cite the conflict and use higher authority. Never repeat stale constants from memory.
 

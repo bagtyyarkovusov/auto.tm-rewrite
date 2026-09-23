@@ -18,7 +18,7 @@ Switching between related views or sections. Two distinct concepts here:
 
 - Filter results: All / Photos only / Videos only
 - Favorites screen: Listings / Saved Searches / Comparisons (Phase 3)
-- Filter sheet vehicle category: Cars / Commercial / Moto
+- Results condition switch: All / New / Used
 - Settings profile: Account / Notifications / Privacy
 
 ## When NOT to use

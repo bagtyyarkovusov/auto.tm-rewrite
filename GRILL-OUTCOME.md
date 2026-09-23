@@ -13,7 +13,7 @@
   - **Phase 1** (~8-10 weeks) — Marketplace MVP: identity, listings, chat, notifications, garage, blog, public web, admin
   - **Phase 2** (~6-8 weeks) — Inspection reports + 3-tier system + PDF export + AutoTM-staffed pro media
   - **Phase 3** (~4-6 weeks) — 360° orbit photos + comparisons + polish
-- Reference design: **Kolesa.kz** for UX / information-architecture / findability — *revised 2026-06-10, see [ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md) and §21* (was: auto.ru, simplified for TM market). Visual design system stays AutoTM's own — see §12.
+- Reference design: **Auto.ru** is the structural reference for the mobile discovery journey (Home, search, filters, Results) and for Listing cards and detail — *revised 2026-09-21, see [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md), the founder-approved [listing content](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/351#issuecomment-5761811759), and §21*. **Kolesa.kz** ([ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md), 2026-06-10) remains the UX / findability reference only for other mobile screens without an approved spec. Visual design system stays AutoTM's own — see §12.
 - Brand identity: red `#E60000` carried from previous Flutter app; rest of design fresh
 
 ## 2. Stack
@@ -333,6 +333,14 @@ auto.ru remains only as a historical label in early/shipped artifacts (not rewri
 ### 2026-06-11 — Multi-vertical platform direction (ADR-0035)
 
 AutoTM's long-term direction is recorded as a **multi-vertical platform** — vehicles (incl. **trucks/commercial**), **auto parts** (incl. compatibility matching), and **services** — with **cars as the MLP wedge**. **MLP stays cars-only**; [ADR-0027](docs/adr/0027-mlp-beta-scope.md) is unchanged and no vertical is built until shaped at the betting table. MLP work follows **anti-lock-in seam principles**: general naming (`Listing`, not `CarListing`); tab-1 cars browse as a self-contained *category* surface with a **dedicated filter page (not feed chips)**; per-category-configurable filter shape; a `Listing.category` discriminator added at the last responsible moment. Target IA = Kolesa's `hub → category → dedicated filter`. This **reverses the 2026-06-10 "feed + quick-filter chips" home sub-decision** in favour of the dedicated-filter vertical browse. Full record + expansion sequence: [ADR-0035](docs/adr/0035-multi-vertical-platform-direction.md).
+
+### 2026-09-21 — Auto.ru discovery reference (ADR-0051)
+
+§1's reference design is revised again for discovery: **Auto.ru is the structural reference for the mobile discovery journey** before the Google Play review build. Home shows new Listings and a prominent "Brand, model" entry; buyers pick one brand and any models, or search for them, and land on a separate Results screen that shows the count, the active filters, a way to edit them, and Listing cards, and keeps its scroll position across a Listing round trip. Full record in [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md).
+
+- **Supersedes** the 2026-06-10 Kolesa guidance for Home, search, filters, and Results, and the 2026-06-11 browse-route prescription ("dedicated filter page", Kolesa's `hub → category → dedicated filter`). ADR-0035's cars-first, multi-vertical direction stays in force.
+- **Unchanged:** the five tabs, anonymous browsing, §12's design system (Auto.ru is a journey reference, not a visual template or a feature list), and the ban on paid placement. No personalized ranking, saved searches, or other vehicle categories are added.
+- **Target specs:** [33 — Search & discovery](docs/prd/features/33-search-discovery.md) and, for Listing cards and detail, [32 — Listings](docs/prd/features/32-listings.md).
 
 ---
 
