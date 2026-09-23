@@ -22,6 +22,7 @@ function fakeRouter() {
     back: vi.fn(),
     dismissTo: vi.fn(),
     push: vi.fn(),
+    replace: vi.fn(),
   } as unknown as Router;
 }
 
@@ -64,6 +65,21 @@ describe("useOtpAuthNavigation", () => {
 
     expect(removalGuardEnabled).toBe(false);
     expect(router.back).toHaveBeenCalledTimes(1);
+    expect(useAuthIntentStore.getState().intent).not.toBeNull();
+  });
+
+  it("replaces an invalid OTP route with Phone after disabling the guard", () => {
+    const router = fakeRouter();
+    useAuthIntentStore.getState().requireSignIn(router, {
+      returnTo: LISTING_ROUTE,
+      action: { kind: "message", listingId: LISTING_ID },
+    });
+    const { result } = renderHook(() => useOtpAuthNavigation(router));
+
+    act(() => result.current.invalidPhone());
+
+    expect(removalGuardEnabled).toBe(false);
+    expect(router.replace).toHaveBeenCalledWith("/(auth)/phone");
     expect(useAuthIntentStore.getState().intent).not.toBeNull();
   });
 

@@ -88,7 +88,7 @@ export default function OtpScreen() {
 
   useEffect(() => {
     if (!canonicalPhone) {
-      router.replace("/(auth)/phone");
+      authNavigation.invalidPhone();
     }
   }, [canonicalPhone]);
 
