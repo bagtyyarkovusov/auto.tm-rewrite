@@ -67,19 +67,19 @@ const privacyPromises: CopyPromise[] = [
     },
   },
   {
-    name: "deletion can be requested in the app or on the web deletion page",
+    name: "authenticated deletion is available in the app settings",
     phrases: {
-      en: "in the app, or on the account deletion page on our website",
-      ru: "в приложении или на странице удаления аккаунта на нашем сайте",
-      tk: "programmada ýa-da saýtymyzdaky akkaunt pozmak sahypasynda",
+      en: "request account deletion from the app settings",
+      ru: "удалить его можно в настройках приложения",
+      tk: "ony programmanyň sazlamalarynda pozup bilersiňiz",
     },
   },
   {
-    name: "deletion is confirmed with a code sent to the phone or the email",
+    name: "public web deletion is confirmed with a phone or email code",
     phrases: {
-      en: "code sent to the phone number or the email address on the account",
-      ru: "кодом, отправленным на номер телефона или адрес почты",
-      tk: "telefon belgä ýa-da e-poçta salga iberilen kod bilen tassyklanýar",
+      en: "enter a phone number or email address on the account and confirm the request with a code sent to it",
+      ru: "укажите номер телефона или адрес почты из аккаунта и подтвердите запрос кодом",
+      tk: "akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň",
     },
   },
   {
@@ -126,7 +126,7 @@ const termsPromises: CopyPromise[] = [
     },
   },
   {
-    name: "the contact phone is the account phone or another +993 number confirmed by SMS",
+    name: "the contact phone uses a verified phone Sign-in Method or another +993 number confirmed by SMS",
     phrases: {
       en: "another +993 number you confirm with a code sent to it by SMS for this purpose",
       ru: "другой номер +993, который вы подтверждаете кодом, отправленным на него по SMS для этой цели",
@@ -142,7 +142,7 @@ const termsPromises: CopyPromise[] = [
     },
   },
   {
-    name: "email-only sellers do not need an account phone",
+    name: "email-only sellers do not need a phone Sign-in Method",
     phrases: {
       en: "If your account has no phone number, you do not need to add one",
       ru: "Если в аккаунте нет номера телефона, добавлять его не нужно",

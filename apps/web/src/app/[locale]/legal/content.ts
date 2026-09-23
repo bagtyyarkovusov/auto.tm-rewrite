@@ -65,7 +65,7 @@ Future collections (if features ship): push notification tokens, video uploads, 
         title: "6. Data retention & account deletion",
         body: `Your data is retained while your account is active.
 
-You can request account deletion in two ways: in the app, or on the account deletion page on our website. Either way, you confirm the request with a code sent to the phone number or the email address on the account.
+If you are signed in, you can request account deletion from the app settings. On the public account deletion page on our website, enter a phone number or email address on the account and confirm the request with a code sent to it.
 
 When you request account deletion:
 - Your account enters a **30-day grace period**.
@@ -147,7 +147,7 @@ When you request account deletion:
         title: "6. Хранение данных и удаление аккаунта",
         body: `Данные хранятся, пока аккаунт активен.
 
-Удаление аккаунта можно запросить двумя способами: в приложении или на странице удаления аккаунта на нашем сайте. В обоих случаях запрос подтверждается кодом, отправленным на номер телефона или адрес почты, указанные в аккаунте.
+Если вы вошли в аккаунт, удалить его можно в настройках приложения. На общедоступной странице удаления аккаунта на нашем сайте укажите номер телефона или адрес почты из аккаунта и подтвердите запрос кодом, отправленным на выбранный способ входа.
 
 При удалении аккаунта:
 - Аккаунт переходит в **30-дневный льготный период**.
@@ -229,7 +229,7 @@ When you request account deletion:
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
         body: `Maglumatlar akkaunt işjeň bolança saklanýar.
 
-Akkaunty pozmagy iki ýol bilen sorap bilersiňiz: programmada ýa-da saýtymyzdaky akkaunt pozmak sahypasynda. Iki ýagdaýda-da haýyş akkauntdaky telefon belgä ýa-da e-poçta salga iberilen kod bilen tassyklanýar.
+Akkaunta giren bolsaňyz, ony programmanyň sazlamalarynda pozup bilersiňiz. Saýtymyzdaky köpçülige açyk akkaunt pozmak sahypasynda akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
 
 Akkaunty pozan wagtyňyz:
 - **30 günlük lýgotly döwr** başlaýar.
