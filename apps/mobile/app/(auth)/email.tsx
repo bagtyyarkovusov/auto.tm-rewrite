@@ -11,25 +11,20 @@ import {
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
 
-import { PhoneInput } from "../../components/auth/PhoneInput";
 import { SignInMethodTabs } from "../../components/auth/SignInMethodTabs";
-import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
 import { ApiError } from "../../src/api/client";
+import { useRequestOtp } from "../../src/api/identity/useRequestOtp";
 import { BrandLogo } from "../../src/auth/BrandLogo";
-import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
-import {
-  displayPhoneFromCanonical,
-  formatLocalPhone,
-  normalizeTmPhone,
-  validateTmPhone,
-} from "../../src/auth/phone";
+import { normalizeEmail } from "../../src/auth/email";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
+import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
-import { THEME } from "@/lib/theme";
-import { Text } from "@/components/ui/text";
-import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
+import { THEME } from "@/lib/theme";
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -44,29 +39,17 @@ function closeAuth() {
   router.replace("/(tabs)");
 }
 
-export default function PhoneScreen() {
-  const params = useLocalSearchParams<{
-    phone?: string;
-    authRoot?: string;
-  }>();
-  const initialPhone = firstParam(params.phone);
+export default function EmailScreen() {
+  const params = useLocalSearchParams<{ email?: string; authRoot?: string }>();
   const isAuthRoot = firstParam(params.authRoot) === "1";
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const { t, i18n } = useTranslation("auth");
-
-  const [phoneDisplay, setPhoneDisplay] = useState(
-    initialPhone ? displayPhoneFromCanonical(initialPhone) : "",
-  );
+  const [emailInput, setEmailInput] = useState(firstParam(params.email) ?? "");
   const [touched, setTouched] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
-
   const { mutateAsync: requestOtp, isPending: isSubmitting } = useRequestOtp();
 
-  // This screen is the root of the authentication flow, so it unmounts exactly
-  // when the flow ends: close button, hardware back, or the iOS swipe gesture.
-  // A successful sign-in consumes the intent before dismissing these screens,
-  // which makes this cleanup a no-op there and leaves the replay intact.
   useEffect(() => {
     if (!isAuthRoot) return;
 
@@ -75,58 +58,25 @@ export default function PhoneScreen() {
     };
   }, [isAuthRoot]);
 
-  const canonicalPhone = useMemo(
-    () => normalizeTmPhone(phoneDisplay),
-    [phoneDisplay],
-  );
-  const phoneValidation = validateTmPhone(phoneDisplay);
-  const canSubmit = canonicalPhone !== null && !isSubmitting;
-
-  const helperText = useMemo(() => {
-    if (requestError) {
-      return requestError;
-    }
-
-    if (!touched || phoneValidation === null) {
-      return t("phoneInputHelper");
-    }
-
-    return phoneValidation === "incomplete"
-      ? t("phoneIncompleteError")
-      : t("phoneFormatError");
-  }, [t, phoneValidation, requestError, touched]);
-
-  const showError = useMemo(() => {
-    if (requestError) return true;
-    if (!touched) return false;
-    // Only show aggressive red after blur OR when 8+ digits have been entered
-    const localDigits = phoneDisplay.replace(/\D/g, "");
-    if (localDigits.length >= 8) return phoneValidation !== null;
-    return phoneValidation === "format";
-  }, [requestError, touched, phoneDisplay, phoneValidation]);
-
-  function handlePhoneChange(value: string) {
-    setPhoneDisplay(formatLocalPhone(value));
-    setRequestError(null);
-  }
+  const canonicalEmail = useMemo(() => normalizeEmail(emailInput), [emailInput]);
+  const showError = touched && canonicalEmail === null;
+  const canSubmit = canonicalEmail !== null && !isSubmitting;
 
   async function handleSubmit() {
     setTouched(true);
 
-    if (!canonicalPhone || isSubmitting) {
-      return;
-    }
+    if (!canonicalEmail || isSubmitting) return;
 
     setRequestError(null);
 
     try {
-      const result = await requestOtp({ phone: canonicalPhone });
+      const result = await requestOtp({ email: canonicalEmail });
 
       router.push({
         pathname: "/(auth)/otp",
         params: {
-          method: "phone",
-          destination: canonicalPhone,
+          method: "email",
+          destination: canonicalEmail,
           requestId: result.requestId,
           resendInSeconds: String(result.resendInSeconds),
           ...(__DEV__ && result.testCode ? { testCode: result.testCode } : {}),
@@ -155,9 +105,9 @@ export default function PhoneScreen() {
           <View className="flex-row items-center justify-between py-4">
             <Button
               accessibilityLabel={t("close")}
+              className="h-11 w-11"
               size="icon"
               variant="ghost"
-              className="h-11 w-11"
               onPress={closeAuth}
             >
               <Icon as={X} className="size-5 text-foreground" />
@@ -170,41 +120,49 @@ export default function PhoneScreen() {
               <BrandLogo />
 
               <SignInMethodTabs
-                value="phone"
-                onChange={() => router.navigate("/(auth)/email")}
+                value="email"
+                onChange={() => router.navigate("/(auth)/phone")}
               />
 
               <View className="gap-2">
                 <Text className="text-2xl font-semibold leading-snug text-foreground">
-                  {t("phoneTitle")}
+                  {t("emailTitle")}
                 </Text>
                 <Text className="text-base leading-normal text-muted-foreground">
-                  {t("phoneHelper")}
+                  {t("emailHelper")}
                 </Text>
               </View>
 
               <View className="gap-2">
                 <Text className="text-sm font-medium text-foreground">
-                  {t("phoneLabel")}
+                  {t("emailLabel")}
                 </Text>
-                <PhoneInput
-                  accessibilityLabel={t("phoneLabel")}
-                  hasError={showError}
-                  keyboardType="phone-pad"
+                <Input
+                  accessibilityLabel={t("emailLabel")}
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                  autoFocus
+                  keyboardType="email-address"
+                  returnKeyType="send"
+                  aria-invalid={showError || requestError !== null}
+                  value={emailInput}
                   onBlur={() => setTouched(true)}
-                  onChangeText={handlePhoneChange}
-                  placeholder={t("phonePlaceholder")}
-                  textContentType="telephoneNumber"
-                  value={phoneDisplay}
+                  onChangeText={(value) => {
+                    setEmailInput(value);
+                    setRequestError(null);
+                  }}
+                  onSubmitEditing={() => void handleSubmit()}
+                  placeholder={t("emailPlaceholder")}
                 />
                 <Text
                   className={
-                    showError
+                    showError || requestError
                       ? "text-sm leading-snug text-destructive"
                       : "text-sm leading-snug text-muted-foreground"
                   }
                 >
-                  {helperText}
+                  {requestError ?? (showError ? t("emailFormatError") : t("emailInputHelper"))}
                 </Text>
               </View>
 
@@ -212,7 +170,7 @@ export default function PhoneScreen() {
                 disabled={!canSubmit}
                 size="lg"
                 variant="brand"
-                onPress={handleSubmit}
+                onPress={() => void handleSubmit()}
               >
                 {isSubmitting ? (
                   <ActivityIndicator
@@ -225,14 +183,14 @@ export default function PhoneScreen() {
             </View>
 
             <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
-              {t("legalPrefix")}{" "}
+              {t("legalPrefix")} {" "}
               <Text
                 className="font-medium text-info-500 underline"
                 onPress={() => openLegalPage("terms")}
               >
                 {t("terms")}
               </Text>{" "}
-              {t("legalAnd")}{" "}
+              {t("legalAnd")} {" "}
               <Text
                 className="font-medium text-info-500 underline"
                 onPress={() => openLegalPage("privacy")}
@@ -252,12 +210,8 @@ function getRequestOtpErrorCopy(
   error: ApiError,
   t: (key: string) => string,
 ): string {
-  if (error.code === "VALIDATION_FAILED") {
-    return t("phoneFormatError");
-  }
-  if (error.code === "NETWORK_ERROR" || error.status === 0) {
-    return t("offline");
-  }
+  if (error.code === "VALIDATION_FAILED") return t("emailFormatError");
+  if (error.code === "NETWORK_ERROR" || error.status === 0) return t("offline");
   if (error.code === "RATE_LIMITED" || error.status === 429) {
     return t("rateLimitedCode");
   }

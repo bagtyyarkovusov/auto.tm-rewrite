@@ -53,7 +53,7 @@ describe("useOtpAuthNavigation", () => {
     expect(useAuthIntentStore.getState().replayAction).toBeNull();
   });
 
-  it("lets Change number pop to the existing phone screen without cancelling", () => {
+  it("lets Change number or email pop to the existing entry screen without cancelling", () => {
     const router = fakeRouter();
     useAuthIntentStore.getState().requireSignIn(router, {
       returnTo: LISTING_ROUTE,
@@ -61,14 +61,14 @@ describe("useOtpAuthNavigation", () => {
     });
     const { result } = renderHook(() => useOtpAuthNavigation(router));
 
-    act(() => result.current.changePhone());
+    act(() => result.current.changeMethod());
 
     expect(removalGuardEnabled).toBe(false);
     expect(router.back).toHaveBeenCalledTimes(1);
     expect(useAuthIntentStore.getState().intent).not.toBeNull();
   });
 
-  it("replaces an invalid OTP route with Phone after disabling the guard", () => {
+  it("replaces an invalid phone OTP route with Phone after disabling the guard", () => {
     const router = fakeRouter();
     useAuthIntentStore.getState().requireSignIn(router, {
       returnTo: LISTING_ROUTE,
@@ -76,10 +76,26 @@ describe("useOtpAuthNavigation", () => {
     });
     const { result } = renderHook(() => useOtpAuthNavigation(router));
 
-    act(() => result.current.invalidPhone());
+    act(() => result.current.invalidDestination("phone"));
 
     expect(removalGuardEnabled).toBe(false);
     expect(router.replace).toHaveBeenCalledWith("/(auth)/phone");
+    expect(useAuthIntentStore.getState().intent).not.toBeNull();
+  });
+
+  it("replaces an invalid email OTP route with Email after disabling the guard", () => {
+    const router = fakeRouter();
+    useAuthIntentStore.getState().requireSignIn(
+      router,
+      { returnTo: LISTING_ROUTE, action: { kind: "message", listingId: LISTING_ID } },
+      "email",
+    );
+    const { result } = renderHook(() => useOtpAuthNavigation(router));
+
+    act(() => result.current.invalidDestination("email"));
+
+    expect(removalGuardEnabled).toBe(false);
+    expect(router.replace).toHaveBeenCalledWith("/(auth)/email");
     expect(useAuthIntentStore.getState().intent).not.toBeNull();
   });
 

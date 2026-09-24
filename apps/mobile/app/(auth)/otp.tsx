@@ -17,6 +17,7 @@ import { useVerifyOtp } from "../../src/api/identity/useVerifyOtp";
 import { ApiError } from "../../src/api/client";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
+import { normalizeEmail } from "../../src/auth/email";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
 import { useOtpAuthNavigation } from "../../src/auth/useOtpAuthNavigation";
@@ -50,7 +51,8 @@ function parseInitialSeconds(value: string | undefined): number {
 
 export default function OtpScreen() {
   const params = useLocalSearchParams<{
-    phone?: string;
+    method?: string;
+    destination?: string;
     resendInSeconds?: string;
     testCode?: string;
   }>();
@@ -60,7 +62,8 @@ export default function OtpScreen() {
   const { t, i18n } = useTranslation("auth");
   const authNavigation = useOtpAuthNavigation(router);
 
-  const phone = firstParam(params.phone);
+  const method = firstParam(params.method);
+  const destination = firstParam(params.destination);
   const [code, setCode] = useState("");
   const [testCode, setTestCode] = useState(
     __DEV__ ? firstParam(params.testCode) : undefined,
@@ -80,17 +83,22 @@ export default function OtpScreen() {
   const { mutateAsync: requestOtpMutate, isPending: isResending } =
     useRequestOtp();
 
-  const canonicalPhone = useMemo(
-    () => (phone ? normalizeTmPhone(phone) : null),
-    [phone],
-  );
-  const maskedPhone = canonicalPhone ? maskTmPhone(canonicalPhone) : "";
+  const canonicalDestination = useMemo(() => {
+    if (!destination) return null;
+    if (method === "phone") return normalizeTmPhone(destination);
+    if (method === "email") return normalizeEmail(destination);
+    return null;
+  }, [destination, method]);
+  const displayedDestination =
+    method === "phone" && canonicalDestination
+      ? maskTmPhone(canonicalDestination)
+      : (canonicalDestination ?? "");
 
   useEffect(() => {
-    if (!canonicalPhone) {
-      authNavigation.invalidPhone();
+    if (!canonicalDestination || (method !== "phone" && method !== "email")) {
+      authNavigation.invalidDestination(method === "email" ? "email" : "phone");
     }
-  }, [canonicalPhone]);
+  }, [canonicalDestination, method]);
 
   useEffect(() => {
     otpRef.current?.focus();
@@ -128,20 +136,24 @@ export default function OtpScreen() {
     authNavigation.cancel();
   }
 
-  function changePhoneNumber() {
-    authNavigation.changePhone();
+  function changeSignInMethod() {
+    authNavigation.changeMethod();
   }
 
   async function submitCode(nextCode: string) {
-    if (!canonicalPhone || nextCode.length !== OTP_LENGTH || isVerifying) {
+    if (!canonicalDestination || nextCode.length !== OTP_LENGTH || isVerifying) {
       return;
     }
 
     setOtpError(null);
 
     try {
+      const identifier =
+        method === "email"
+          ? { email: canonicalDestination }
+          : { phone: canonicalDestination };
       const result = await verifyOtpMutate({
-        phone: canonicalPhone,
+        ...identifier,
         code: nextCode,
         deviceLabel: Platform.OS === "ios" ? "iOS app" : "Android app",
       });
@@ -188,7 +200,7 @@ export default function OtpScreen() {
   }
 
   async function resendCode() {
-    if (!canonicalPhone || secondsRemaining > 0 || isResending) {
+    if (!canonicalDestination || secondsRemaining > 0 || isResending) {
       return;
     }
 
@@ -197,7 +209,11 @@ export default function OtpScreen() {
     lastSubmittedCode.current = null;
 
     try {
-      const result = await requestOtpMutate({ phone: canonicalPhone });
+      const result = await requestOtpMutate(
+        method === "email"
+          ? { email: canonicalDestination }
+          : { phone: canonicalDestination },
+      );
       setSecondsRemaining(result.resendInSeconds);
       setTestCode(__DEV__ ? result.testCode : undefined);
       requestAnimationFrame(() => otpRef.current?.focus());
@@ -236,7 +252,7 @@ export default function OtpScreen() {
     setPendingSession(null);
     setCode("");
     lastSubmittedCode.current = null;
-    changePhoneNumber();
+    changeSignInMethod();
   }
 
   return (
@@ -268,14 +284,21 @@ export default function OtpScreen() {
                   {t("otpTitle")}
                 </Text>
                 <Text className="text-base leading-normal text-muted-foreground">
-                  {t("otpSent", { phone: maskedPhone })}
+                  {t("otpSent", { destination: displayedDestination })}
                 </Text>
+                {method === "email" ? (
+                  <Text className="text-sm leading-normal text-muted-foreground">
+                    {t("emailCodeExpiry")}
+                  </Text>
+                ) : null}
                 <Button
                   variant="link"
                   className="self-start px-0"
-                  onPress={changePhoneNumber}
+                  onPress={changeSignInMethod}
                 >
-                  <Text>{t("changeNumber")}</Text>
+                  <Text>
+                    {method === "email" ? t("changeEmail") : t("changeNumber")}
+                  </Text>
                 </Button>
               </View>
 

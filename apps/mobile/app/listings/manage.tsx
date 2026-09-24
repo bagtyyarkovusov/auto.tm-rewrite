@@ -264,7 +264,6 @@ export default function ManageListingsScreen() {
           </Button>
         </View>
         <SignInDialog
-          actionLabel={t("continueWithPhone")}
           description={t("signInToManageDescription")}
           open={showSignIn}
           returnTo="/listings/manage"

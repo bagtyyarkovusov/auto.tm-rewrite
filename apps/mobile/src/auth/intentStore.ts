@@ -35,6 +35,8 @@ export interface AuthIntent {
  */
 export type AuthNavigator = Pick<Router, "push" | "dismissTo">;
 
+export type SignInMethod = "phone" | "email";
+
 const PHONE_ROUTE = "/(auth)/phone";
 const HOME_ROUTE = "/(tabs)";
 
@@ -43,7 +45,11 @@ interface AuthIntentStore {
   intent: AuthIntent | null;
   /** Set once authentication succeeded, until the owning screen performs it. */
   replayAction: PendingAction | null;
-  requireSignIn(navigator: AuthNavigator, intent: AuthIntent): void;
+  requireSignIn(
+    navigator: AuthNavigator,
+    intent: AuthIntent,
+    method?: SignInMethod,
+  ): void;
   completeSignIn(navigator: AuthNavigator): void;
   cancelSignIn(navigator?: Pick<AuthNavigator, "dismissTo">): void;
   clearReplayAction(): void;
@@ -53,9 +59,12 @@ export const useAuthIntentStore = create<AuthIntentStore>()((set, get) => ({
   intent: null,
   replayAction: null,
 
-  requireSignIn(navigator, intent) {
+  requireSignIn(navigator, intent, method = "phone") {
     set({ intent, replayAction: null });
-    navigator.push(PHONE_ROUTE);
+    navigator.push({
+      pathname: method === "email" ? "/(auth)/email" : PHONE_ROUTE,
+      params: { authRoot: "1" },
+    });
   },
 
   completeSignIn(navigator) {

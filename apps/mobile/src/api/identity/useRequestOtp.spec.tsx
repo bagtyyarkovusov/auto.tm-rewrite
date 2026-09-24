@@ -50,6 +50,26 @@ describe("useRequestOtp", () => {
     expect(result.current.data?.resendInSeconds).toBe(60);
   });
 
+  it("accepts an email Sign-in Method through the shared contract", async () => {
+    let requestBody: unknown;
+    server.use(
+      http.post("*/auth/otp/request", async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json({
+          requestId: "550e8400-e29b-41d4-a716-446655440000",
+          resendInSeconds: 60,
+        });
+      }),
+    );
+
+    const { result } = renderHook(() => useRequestOtp(), { wrapper });
+
+    result.current.mutate({ email: "buyer@example.com" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(requestBody).toEqual({ email: "buyer@example.com" });
+  });
+
   it("surfaces a contract violation when API returns garbage", async () => {
     server.use(
       http.post("*/auth/otp/request", () =>

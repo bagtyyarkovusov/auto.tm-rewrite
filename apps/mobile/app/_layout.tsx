@@ -261,6 +261,7 @@ export default function RootLayout() {
                 <Stack.Screen name="conversations/[id]" />
                 <Stack.Screen name="conversations/open-listing" />
                 <Stack.Screen name="(auth)/phone" />
+                <Stack.Screen name="(auth)/email" />
                 <Stack.Screen name="(auth)/otp" />
               </Stack>
             </ErrorBoundary>
