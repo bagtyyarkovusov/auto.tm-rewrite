@@ -2,11 +2,21 @@
 
 Preserve evidence and make recovery obvious. Never reset, stash, delete, or overwrite user work to make a run look clean.
 
-## Before the first checkpoint
+## State classes
 
-The pushed `agent/issue-<N>` reservation remains. Keep the working tree exactly as-is and comment on the issue with branch/HEAD, files changed, known command state, failure/root cause, attempts, and the next safe action.
+### Preflight failure before reservation
 
-## After the draft PR exists
+No branch exists and implementation did not begin. Report the failed readiness condition. Add an issue comment only when the issue needs a durable blocker note.
+
+### Reservation or local changes before a pushed checkpoint
+
+Keep the pushed `agent/issue-<N>` reservation branch and working tree exactly as-is. Comment on the issue with branch/HEAD, files changed, known command state, failure/root cause, attempts, and the next safe action.
+
+### Pushed checkpoint without a draft PR
+
+Keep the remote branch and checkpoint. Comment on the issue with the exact branch and SHA, completed acceptance criteria, verification state, current failure, interrupted commands, repair attempts, documentation and Context7 state, and one concrete recovery action. The next run resumes this attempt and creates the one draft PR; it never opens a replacement branch or PR.
+
+### After the draft PR exists
 
 Update its single `Execution state` to `blocked` with:
 

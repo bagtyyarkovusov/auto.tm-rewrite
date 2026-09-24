@@ -51,6 +51,9 @@ The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one
 
 ## Architecture notes
 - <ADR/CONTEXT/library-doc implications, or omit>
+
+## Design notes
+- <wireframe/hi-fi/UX evidence, or omit>
 ```
 
 Mark the draft ready only after verification and both reviews pass on its current SHA.
@@ -66,7 +69,7 @@ Mark the draft ready only after verification and both reviews pass on its curren
 
 ## Integrity and sync
 
-1. The issue must close through the PR's `Closes #N`; do not close it directly. If it remains open after merge, treat that as an integration failure, preserve the evidence, and repair closure through a dedicated pull request with the correct closing link.
+1. The issue must close through the PR's `Closes #N`; do not close it directly. If it remains open after merge, treat that as an integration failure, preserve the exact PR and issue evidence, and escalate it without creating a replacement PR or closing the issue directly. Repair requires an explicit governing decision for this exceptional state.
 2. Verify and sync local `main` without discarding user state.
 3. Follow child-progress reconciliation in `docs/agents/sprint-transitions.md` and re-evaluate affected `blocked` labels from their `## Depends on` sections.
 4. Re-fetch the parent and affected children before reporting.
