@@ -27,9 +27,9 @@ Choose the safest path from evidence without adding an ordinary confirmation sto
 - **Continue:** heads agree or fast-forward safely; preserve the existing base and worktree.
 - **Safety branch and rebase:** the branch diverged but the resolution is mechanical; create a preservation ref, rebase on current `main`, then continue.
 - **Preserve and restart:** the canonical branch is missing or unusable; preserve every recoverable ref/diff before rebuilding `agent/issue-<N>` from `main`.
-- **Bookkeeping repair:** code already merged; verify the PR/issue/dependency state and repair only the authorized metadata.
+- **Bookkeeping repair:** code already merged and closure is intact; reconcile only the parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`. Do not change an implementation issue's open/closed state directly.
 
-Pause only when recovery is destructive, overlaps user work, or a conflict has multiple valid semantic resolutions. Never delete preserved evidence automatically.
+Pause and escalate when an issue remains open after its closing PR merged, following the integrity rule in [`../run-issue/FINALIZATION.md`](../run-issue/FINALIZATION.md). Also pause when recovery is destructive, overlaps user work, or a conflict has multiple valid semantic resolutions. Never delete preserved evidence automatically.
 
 ## Continue through completion
 
