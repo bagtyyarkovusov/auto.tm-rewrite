@@ -7,6 +7,7 @@ export const ErrorCode = {
   NotFound: "NOT_FOUND",
   Conflict: "CONFLICT",
   RateLimited: "RATE_LIMITED",
+  SignInMethodTaken: "SIGN_IN_METHOD_TAKEN",
   Internal: "INTERNAL",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

@@ -42,6 +42,7 @@ import {
   ListMessagesResponseSchema,
   ListConversationsResponseSchema,
 } from "../src/schemas/conversations";
+import { ErrorResponseSchema } from "../src/errors";
 import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
@@ -157,6 +158,16 @@ describe("Sign-in Method change schemas", () => {
       locale: "ru",
       createdAt: "2026-09-24T00:00:00.000Z",
       deletionScheduledAt: null,
+    }).success).toBe(true);
+  });
+
+  it("accepts the runtime SIGN_IN_METHOD_TAKEN error envelope", () => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode: 409,
+      code: "SIGN_IN_METHOD_TAKEN",
+      message: "This Sign-in Method belongs to another User.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
     }).success).toBe(true);
   });
 });
