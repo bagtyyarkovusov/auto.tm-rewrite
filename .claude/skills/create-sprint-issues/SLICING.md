@@ -58,7 +58,7 @@ HITL children may adapt the execution details but still require a testable compl
 Distinguish three environments:
 
 - common agent gate: typecheck, lint, and Docker-free unit tests;
-- Claude host `/run-issue` gate: all relevant repository tests and guides;
+- interactive host `run-issue` gate: all relevant repository tests and guides;
 - CI/host-only gates: Testcontainers/e2e, credentials, hardware, and Expo simulator/runtime evidence.
 
 ADR-0019 always requires invariant-changing code and its current-state `CONTEXT.md` update in the same PR.

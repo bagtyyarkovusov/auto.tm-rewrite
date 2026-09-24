@@ -18,7 +18,7 @@ For the full agent policy (architecture rules, never-do list, verification check
 
 Two ADRs lock how docs work in this repo. Read both before editing any artifact:
 
-- **[ADR-0019](docs/adr/0019-context-md-describes-current-state.md) — CONTEXT.md describes current state.** Every `CONTEXT.md` file mirrors current implemented code, not aspirational spec. **Any PR that changes domain invariants (Prisma field, port, use-case, event, route, app/package structure) must update the relevant CONTEXT.md in the same PR.** Enforced by item 3 of the verification gate in `CLAUDE.md` and by `/run-issue` §5.5.
+- **[ADR-0019](docs/adr/0019-context-md-describes-current-state.md) — CONTEXT.md describes current state.** Every `CONTEXT.md` file mirrors current implemented code, not aspirational spec. **Any PR that changes domain invariants (Prisma field, port, use-case, event, route, app/package structure) must update the relevant CONTEXT.md in the same PR.** Enforced by item 3 of the verification gate in `CLAUDE.md` and by the tracked [`run-issue`](.claude/skills/run-issue/SKILL.md) verification flow.
 
 - **[ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) — Document hierarchy and mutability rules.** Each artifact has exactly one job + one mutability rule. PRD features describe target capability (mutable; material revisions get an ADR). Sprint files describe per-sprint DoD (mutable until the sprint starts; locked at 🟡). Retros are append-only. ADRs are immutable after merge. ADR-0020 contains the full table, the workflow for adding a new PRD, and the rules for when a PRD revision requires its own ADR.
 
@@ -41,6 +41,10 @@ If two artifacts try to answer the same question → that's drift. Pick the cano
 ### Coding workflow
 
 Shape, specify, ticket, implement, and review through [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md).
+
+Every implementation issue uses one pushed `agent/issue-<N>` reservation branch, one early draft pull request, and one mutable `Execution state`. Codex and Claude can resume each other's work from Git and GitHub evidence. Reviews are fresh, read-only, and fixed to the current commit; high-risk work needs one Codex and one Claude review. Implementation issues close through the merged pull request. Never query provider quota before starting.
+
+Sandcastle implementation dispatch is suspended until issue #406 replaces its legacy batch merger, host push, reviewer mutation, and direct issue-closure path with the ADR-0058 contract.
 
 ### Issue tracker
 
@@ -83,7 +87,7 @@ Ten project-specific skills live under [`.claude/skills/`](./.claude/skills/) in
 | [`shape-with-docs`](./.claude/skills/shape-with-docs/SKILL.md) | Before tickets — grills an unsettled capability, routes vocabulary and specifications to canonical docs, and delivers a reviewed shaping PR |
 | [`create-sprint-issues`](./.claude/skills/create-sprint-issues/SKILL.md) | Start of sprint — reads `docs/prd/sprints/sprint-NN-*.md`, proposes a slicing, creates parent + child issues on GitHub, bumps roadmap to 🟡 |
 | [`run-issue`](./.claude/skills/run-issue/SKILL.md) | During sprint — picks one issue, branches, optional design check, implements, PRs, self-merges, syncs main, unblocks dependents |
-| [`resume-issue`](./.claude/skills/resume-issue/SKILL.md) | During sprint — picks up an issue a previous run bailed on; offers continue / rebase-and-continue / abandon-and-restart |
+| [`resume-issue`](./.claude/skills/resume-issue/SKILL.md) | During sprint — reconstructs durable Git/GitHub state and takes the safest deterministic recovery path; pauses only at an exceptional boundary |
 | [`sprint-status`](./.claude/skills/sprint-status/SKILL.md) | Anytime — read-only dashboard of current sprint, open PRs, unblocked queue, suggested next action |
 | [`close-sprint`](./.claude/skills/close-sprint/SKILL.md) | End of sprint — verifies shipped-vs-planned, detects drift, writes retro doc, proposes doc-update commits |
 | [`new-adr`](./.claude/skills/new-adr/SKILL.md) | Anytime — scaffolds a new ADR at `docs/adr/`, auto-numbers, offers PR rhythm (ADRs are immutable after merge) |

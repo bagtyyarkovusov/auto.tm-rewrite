@@ -1,6 +1,6 @@
 ---
 name: resume-issue
-description: Inspects and safely resumes a previously bailed AutoTM issue from its preserved branch, remote branch, bail comment, or open pull request. Use when the user invokes /resume-issue or asks to continue, rebase, or restart an interrupted /run-issue attempt.
+description: Inspects and safely resumes a previously interrupted AutoTM issue from its durable branch, worktree, draft pull request, execution state, comments, and checks. Codex or Claude may resume an attempt created by the other.
 argument-hint: "[issue-number]"
 arguments:
   - issue
@@ -9,39 +9,36 @@ disable-model-invocation: true
 
 # Resume one issue
 
-Inspect before mutation. Preserve the previous attempt until the user chooses a recovery path.
+Git and GitHub state, not the prior chat, own recovery. Preserve the previous attempt until its state is understood. Use the canonical [domain glossary](../../../docs/domain/GLOSSARY.md) when reconstructing acceptance criteria and documentation.
 
 ## Resolve and inspect
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, the roadmap, [the domain glossary](../../../docs/domain/GLOSSARY.md), CONTEXT map, ADR-0019, ADR-0020, the issue, its references, and the latest bail comment. Reload relevant canonical terms even when the preserved attempt predates the glossary.
-2. If `$issue` is empty, list candidates from local/remote `agent/issue-*` branches, recent bail comments, and open PRs; require selection.
-3. Inspect issue state, dependencies, last bail comment, local and remote branch heads, working-tree diff, commits versus `main`, PR/check state, and merge/issue closure state.
-4. Classify the attempt as local-only, pushed without PR, open PR, or merged PR with bookkeeping drift.
-5. Run non-mutating/scoped verification needed to understand current state. Install dependencies only when dependency state requires it.
+1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, the roadmap, glossary, CONTEXT map, ADR-0019, ADR-0020, ADR-0058, the issue, its references, and the latest durable state.
+2. If `$issue` is empty, list candidates from local/remote `agent/issue-*` branches, worktrees, blocked execution states, and open PRs; require selection.
+3. Inspect issue/dependencies, local and remote heads, worktree status and diff, commits versus `main`, PR body/comments/checks, review SHAs, and running processes. Treat missing or interrupted results as `unknown`.
+4. Classify the attempt as reservation-only, local changes, pushed checkpoints without PR, open draft/ready PR, or merged PR with bookkeeping drift.
+5. Run non-mutating scoped checks needed to understand state. Never query provider quota.
 
-## Propose one recovery
+## Select the recovery path
 
-Show evidence and require one explicit choice:
+Choose the safest path from evidence without adding an ordinary confirmation stop:
 
-- **A — Continue:** keep the current base and finish the existing attempt.
-- **B — Safety-branch and rebase:** preserve a safety branch, rebase on current `main`, then continue.
-- **C — Preserve and restart:** rename/preserve the old branch and create a fresh `agent/issue-<N>` from `main`.
-- **Cancel:** leave everything unchanged.
+- **Refresh a reservation-only branch:** if it has no unique commits, worktree changes, or open PR, fast-forward it to current `main` before continuing. This includes a branch preserved while `design-grill` produced and merged design artifacts.
+- **Continue:** heads agree or fast-forward safely; preserve the existing base and worktree.
+- **Safety branch and rebase:** the branch diverged but the resolution is mechanical; create a preservation ref, rebase on current `main`, then continue.
+- **Preserve and restart:** the canonical branch is missing or unusable; preserve every recoverable ref/diff before rebuilding `agent/issue-<N>` from `main`.
+- **Bookkeeping repair:** code already merged and closure is intact; reconcile only the parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`. Do not change an implementation issue's open/closed state directly.
 
-If the branch is missing, only restart is available. Never delete the preserved branch automatically. Stop for conflicts with multiple valid semantic resolutions; mechanical conflicts within the approved rebase may be resolved.
+Pause and escalate when an issue remains open after its closing PR merged, following the integrity rule in [`../run-issue/FINALIZATION.md`](../run-issue/FINALIZATION.md). Also pause when recovery is destructive, overlaps user work, or a conflict has multiple valid semantic resolutions. Never delete preserved evidence automatically.
 
-## Execute the choice
+## Continue through completion
 
-Approval of A or B authorizes the normal completion flow without another push/merge confirmation:
-
-1. Rebuild the acceptance-criterion evidence map.
-   - Reconcile new or changed names with the glossary without treating definitions as behavior, current-state evidence, or authorization for an unrelated naming migration.
-2. Re-run scoped typecheck, lint, tests, runtime-import checks, Expo gates, host-only checks, and `CONTEXT.md` reconciliation required by the touched workspaces. Unknown or unavailable gates are not passes. Use the same three-focused-attempt cap as `/run-issue`.
-3. Follow [the fixed-commit finalization contract](../run-issue/FINALIZATION.md): stage exact paths, create and pin the implementation commit, pass independent Standards and Spec review against that SHA, resolve findings and repeat affected axes, then push, check, merge, and verify integrity. These gates apply even when the preserved attempt already has commits or an open PR; reuse the PR rather than creating a duplicate.
-4. If completion bails again, preserve the branch, working tree, remote branch, and PR. Comment with the failing command/root cause, attempts, passed evidence, exact state, and next recovery action; never reset, stash, delete, or overwrite user work.
-
-For C, preserve the prior attempt first, then hand the fresh branch to the same `/run-issue` state machine. If the same root failure survives three focused attempts in the resumed run, bail rather than loop.
+1. Restore or create the one draft PR after the first pushed checkpoint and update its `Execution state` using [`../run-issue/EXECUTION-STATE.md`](../run-issue/EXECUTION-STATE.md).
+2. Rebuild the acceptance-criterion evidence map and reconcile terminology without expanding scope.
+3. Run the scoped typecheck, lint, tests, runtime-import checks, Expo gates, host-only checks, and documentation reconciliation required by the touched workspaces.
+4. Follow the [fixed-commit finalization contract](../run-issue/FINALIZATION.md): pin the SHA, obtain independent Standards and Spec verdict comments, resolve findings, wait for checks, merge, and verify closure. Reuse the existing PR.
+5. If completion stops again, preserve and update the same branch and PR state.
 
 ## Completion
 
-Report the chosen path, preserved safety state, resulting PR/merge/issue status, verification evidence, and dependents changed.
+Report the recovery path, preserved safety state, PR/merge/issue status, verification evidence, and dependents changed.

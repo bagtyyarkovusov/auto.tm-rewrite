@@ -1,33 +1,44 @@
-# Finalization
+# Fixed-commit finalization
 
-Invocation of `/run-issue N` authorizes these ordinary steps after verification passes.
+Invocation of `run-issue N` authorizes these ordinary steps after implementation and verification pass.
 
-## Commit
+Keep terms in the PR, reviews, and reconciliation aligned with the canonical [domain glossary](../../../docs/domain/GLOSSARY.md).
+
+## Checkpoint and pin
 
 1. Review `git status --short` and the complete diff.
 2. Stage explicit paths only; never use `git add -A` or absorb unrelated files.
-3. Use intentional local commits when they improve review. The PR squash creates one mainline commit.
-4. Use a valid type: `feat`, `fix`, `test`, `docs`, `refactor`, `perf`, `build`, `ci`, or `chore`.
-5. Preserve a valid conventional issue title when possible; otherwise derive the scope from the primary area.
-6. Do not add a generated-agent or model-specific co-author trailer.
-7. Record the resulting commit SHA. That fixed SHA is the review target.
+3. Commit and push meaningful checkpoints. Use a valid conventional type and no model-specific co-author trailer.
+4. Keep the existing draft PR's `Execution state` current. Never create a replacement PR.
+5. Record the resulting commit SHA. That fixed SHA is the review target.
 
 ## Independent review
 
-1. Read the relevant entries in [the domain glossary](../../../docs/domain/GLOSSARY.md), then review the pinned commit through the independent Standards and Spec axes defined in `docs/agents/coding-workflow.md`.
-2. Resolve valid findings, rerun proportionate verification, commit the fixes, and pin the new SHA.
-3. Repeat every affected review axis against the new fixed commit. Any content change after a pass invalidates that pass for the affected axis.
-4. Continue to delivery only when both axes pass against the latest commit. Do not push an unreviewed implementation.
+Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
 
-## Push and PR
+The same provider may perform both axes for ordinary work. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one Codex and one Claude review across the two axes.
 
-Push `agent/issue-<N>` and create one PR against `main`. Do not duplicate an existing PR.
-
-The title mirrors the issue. The body starts with `Closes #<N>` and includes:
+Each reviewer posts a PR comment with:
 
 ```markdown
-Closes #<N>
+## <Standards|Spec> review
 
+- **Review axis:** <Standards|Spec>
+- **Reviewer:** <agent/context identifier>
+- **Provider:** <Codex|Claude>
+- **Commit:** `<full SHA>`
+- **Verdict:** pass | findings
+
+<concrete findings and evidence, or “No findings.”>
+```
+
+Record the evidence for accepting or rejecting every finding in the PR. Resolve accepted findings, rerun proportionate verification, commit and push the fixes, and pin the new SHA. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates the affected earlier verdict. Continue only when both axes pass against the latest commit.
+
+## Ready PR
+
+The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one mutable `Execution state`, followed by:
+
+```markdown
 ## Summary
 - <behavior shipped>
 
@@ -45,23 +56,23 @@ Closes #<N>
 - <wireframe/hi-fi/UX evidence, or omit>
 ```
 
+Mark the draft ready only after verification and both reviews pass on its current SHA.
+
 ## Checks and merge
 
-- Confirm both review axes still target the latest implementation commit. A post-review code change returns to verification, commit, and the affected review axes.
-- Wait for required checks. Pending is not failure.
-- Repair an in-scope CI defect and push within the same three-attempt cap.
-- On a failed check, conflict, or protection failure, leave the PR open and bail with its URL and exact state.
+- Wait for required checks. Pending, missing output, or an interrupted run is `unknown`, never `pass`.
+- Repair an in-scope CI defect and push within the same three-attempt cap; repeat affected review axes.
+- On a failed check, conflict, or protection failure, leave the PR open and preserve exact state.
 - Never self-approve.
-- Squash merge with branch deletion once required checks pass: `gh pr merge --squash --delete-branch`.
-- Verify the PR state separately from the merge command's exit status. `gh` may merge successfully and then report that it could not delete a local branch still checked out in a linked worktree.
+- Squash merge with branch deletion once required checks and reviews pass.
+- Verify PR merge and issue closure independently from the merge command's exit status.
 
 ## Integrity and sync
 
-1. Verify the PR merged and the issue closed through `Closes #N`.
-2. If the issue stayed open, report the integrity failure and ask before manual closure.
-3. Verify/sync local `main` without discarding user state.
-4. Follow child-progress reconciliation in `docs/agents/sprint-transitions.md`: resolve the correct Sprint parent, verify it lists the child, mark the child complete in the parent tasklist, then re-evaluate `blocked` labels for affected children from their `## Depends on` sections.
-5. Re-fetch the parent and affected children, then report the final rollup and every parent-body or label change.
-6. Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). If this live session runs inside the task worktree, report its cleanup tuple so the root or integration session can remove it after the session finishes.
+1. The issue must close through the PR's `Closes #N`; do not close it directly. If it remains open after merge, treat that as an integration failure, preserve the exact PR and issue evidence, and escalate it without creating a replacement PR or closing the issue directly. Repair requires an explicit governing decision for this exceptional state.
+2. Verify and sync local `main` without discarding user state.
+3. Follow child-progress reconciliation in `docs/agents/sprint-transitions.md` and re-evaluate affected `blocked` labels from their `## Depends on` sections.
+4. Re-fetch the parent and affected children before reporting.
+5. Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). A live task worktree reports its cleanup tuple for the integration session.
 
-Do not create a second direct-to-main roadmap commit. If final-issue roadmap closeout was explicitly part of the issue, it belongs in the original PR; otherwise `/close-sprint` owns the reconciliation.
+Do not create a second direct-to-main roadmap commit. If final-issue roadmap closeout was explicitly part of the issue, it belongs in the original PR; otherwise `close-sprint` owns reconciliation.
