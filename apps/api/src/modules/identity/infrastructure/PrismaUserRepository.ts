@@ -8,6 +8,7 @@ import {
 } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { UserRepository } from "../domain/ports/UserRepository";
+import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
 import {
   IDENTITY_ERROR_CODES,
   IdentityDomainError,
@@ -16,7 +17,7 @@ import {
 } from "../domain/types";
 
 @Injectable()
-export class PrismaUserRepository implements UserRepository {
+export class PrismaUserRepository implements UserRepository, SignInMethodRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async findByPhone(phone: string): Promise<User | null> {

@@ -247,6 +247,18 @@ describe("MeController e2e - Sign-in Method changes", () => {
     });
     expect((rejected as PromiseRejectedResult).reason).toBeInstanceOf(IdentityDomainError);
     await expect(prisma.user.count({ where: { email: "race@example.com" } })).resolves.toBe(1);
+    const users = await prisma.user.findMany({
+      where: { id: { in: [first.id, second.id] } },
+      orderBy: { id: "asc" },
+    });
+    expect(users.map((user) => user.email).sort()).toEqual([
+      null,
+      "race@example.com",
+    ]);
+    expect(users.map((user) => user.phone).sort()).toEqual([
+      "+99361234567",
+      "+99362234567",
+    ]);
   });
 
   it("requires bearer authentication", async () => {
