@@ -5319,6 +5319,142 @@
         ],
         "additionalProperties": false
       },
+      "SignInMethodChangeRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "pattern": "^\\+993[67]\\d{7}$"
+              }
+            },
+            "required": [
+              "phone"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email"
+              }
+            },
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SignInMethodChangeVerifyRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "pattern": "^\\+993[67]\\d{7}$"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "phone",
+              "code"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "email",
+              "code"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SignInMethodChangeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\+993[67]\\d{7}$"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "format": "email"
+          },
+          "phoneVerified": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "seller",
+              "moderator",
+              "admin"
+            ]
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletionScheduledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "email",
+          "phoneVerified",
+          "displayName",
+          "role",
+          "avatarUrl",
+          "locale",
+          "createdAt",
+          "deletionScheduledAt"
+        ]
+      },
       "CreateReportRequest": {
         "type": "object",
         "properties": {
@@ -8421,6 +8557,447 @@
           },
           "401": {
             "description": "Invalid or expired refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/sign-in-methods/request": {
+      "post": {
+        "summary": "Request a code to add or replace a Sign-in Method",
+        "tags": [
+          "Identity"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      }
+                    },
+                    "required": [
+                      "phone"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      }
+                    },
+                    "required": [
+                      "email"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sign-in Method code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resendInSeconds": {
+                      "type": "integer"
+                    },
+                    "testCode": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "requestId",
+                    "resendInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or rate-limit error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/sign-in-methods/verify": {
+      "post": {
+        "summary": "Confirm and apply a Sign-in Method change",
+        "tags": [
+          "Identity"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      }
+                    },
+                    "required": [
+                      "phone",
+                      "code"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "code"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sign-in Method changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^\\+993[67]\\d{7}$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "email"
+                    },
+                    "phoneVerified": {
+                      "type": "boolean"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "buyer",
+                        "seller",
+                        "moderator",
+                        "admin"
+                      ]
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "deletionScheduledAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "phone",
+                    "email",
+                    "phoneVerified",
+                    "displayName",
+                    "role",
+                    "avatarUrl",
+                    "locale",
+                    "createdAt",
+                    "deletionScheduledAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, expired, or used code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sign-in Method belongs to another User",
             "content": {
               "application/json": {
                 "schema": {

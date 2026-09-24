@@ -14,6 +14,9 @@ import {
   OtpRequestResponseSchema,
   OtpVerifyRequestSchema,
   OtpVerifyResponseSchema,
+  SignInMethodChangeRequestSchema,
+  SignInMethodChangeVerifyRequestSchema,
+  SignInMethodChangeResponseSchema,
   RefreshRequestSchema,
   RefreshResponseSchema,
   LogoutRequestSchema,
@@ -251,6 +254,12 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("AdminTotpEnrollResponse", AdminTotpEnrollResponseSchema);
   registry.register("AdminTotpVerifyRequest", AdminTotpVerifyRequestSchema);
   registry.register("AdminTotpVerifyResponse", AdminTotpVerifyResponseSchema);
+  registry.register("SignInMethodChangeRequest", SignInMethodChangeRequestSchema);
+  registry.register(
+    "SignInMethodChangeVerifyRequest",
+    SignInMethodChangeVerifyRequestSchema,
+  );
+  registry.register("SignInMethodChangeResponse", SignInMethodChangeResponseSchema);
 
   // Admin report schemas
   registry.register("CreateReportRequest", CreateReportRequestSchema);
@@ -472,6 +481,72 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
       },
       401: {
         description: "Invalid or expired refresh token",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/me/sign-in-methods/request",
+    summary: "Request a code to add or replace a Sign-in Method",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: S(SignInMethodChangeRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Sign-in Method code sent",
+        content: {
+          "application/json": { schema: S(OtpRequestResponseSchema) },
+        },
+      },
+      400: {
+        description: "Validation or rate-limit error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      401: {
+        description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/me/sign-in-methods/verify",
+    summary: "Confirm and apply a Sign-in Method change",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: S(SignInMethodChangeVerifyRequestSchema),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Sign-in Method changed",
+        content: {
+          "application/json": { schema: S(SignInMethodChangeResponseSchema) },
+        },
+      },
+      400: {
+        description: "Invalid, expired, or used code",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      401: {
+        description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      409: {
+        description: "Sign-in Method belongs to another User",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },

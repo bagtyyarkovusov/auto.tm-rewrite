@@ -3,6 +3,9 @@ import { describe, it, expect } from "vitest";
 import {
   OtpRequestRequestSchema,
   OtpVerifyRequestSchema,
+  SignInMethodChangeRequestSchema,
+  SignInMethodChangeVerifyRequestSchema,
+  SignInMethodChangeResponseSchema,
 } from "../src/schemas/auth";
 import {
   ListingSummarySchema,
@@ -123,6 +126,38 @@ describe("OTP verify schema", () => {
       email: "buyer@example.com",
       code: "123456",
     }).success).toBe(false);
+  });
+});
+
+describe("Sign-in Method change schemas", () => {
+  it("accepts exactly one normalized destination on request and verify", () => {
+    expect(SignInMethodChangeRequestSchema.parse({
+      email: " New@Example.COM ",
+    })).toEqual({ email: "new@example.com" });
+    expect(SignInMethodChangeVerifyRequestSchema.parse({
+      phone: "+99365001122",
+      code: "123456",
+    })).toEqual({ phone: "+99365001122", code: "123456" });
+    expect(SignInMethodChangeVerifyRequestSchema.safeParse({
+      phone: "+99365001122",
+      email: "new@example.com",
+      code: "123456",
+    }).success).toBe(false);
+  });
+
+  it("returns the current nullable Sign-in Methods", () => {
+    expect(SignInMethodChangeResponseSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      phone: null,
+      email: "new@example.com",
+      phoneVerified: false,
+      displayName: null,
+      role: "buyer",
+      avatarUrl: null,
+      locale: "ru",
+      createdAt: "2026-09-24T00:00:00.000Z",
+      deletionScheduledAt: null,
+    }).success).toBe(true);
   });
 });
 
@@ -1144,6 +1179,8 @@ describe("OpenAPI document", () => {
     };
     expect(doc.paths).toHaveProperty("/api/v1/auth/otp/request");
     expect(doc.paths).toHaveProperty("/api/v1/auth/otp/verify");
+    expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/request");
+    expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/verify");
   });
 
   it("contains new listings schemas", () => {

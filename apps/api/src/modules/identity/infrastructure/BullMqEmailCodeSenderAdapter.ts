@@ -24,6 +24,7 @@ export class BullMqEmailCodeSenderAdapter implements EmailCodeSenderPort {
     email: string;
     code: string;
     locale: "ru" | "tk" | "en";
+    purpose: "sign-in" | "sign-in-method" | "account-deletion";
   }): Promise<void> {
     await this.queue.add(
       AuthSchemas.EMAIL_CODE_JOB_NAME,
@@ -31,7 +32,7 @@ export class BullMqEmailCodeSenderAdapter implements EmailCodeSenderPort {
         to: input.email,
         code: input.code,
         locale: input.locale,
-        purpose: "sign-in",
+        purpose: input.purpose,
       },
       { ...EMAIL_CODE_JOB_OPTIONS, jobId: input.requestId },
     );

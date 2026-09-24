@@ -15,6 +15,7 @@ describe("BullMqEmailCodeSenderAdapter", () => {
       email: "buyer@example.com",
       code: "123456",
       locale: "ru",
+      purpose: "sign-in-method",
     });
 
     expect(add).toHaveBeenCalledWith(
@@ -23,7 +24,7 @@ describe("BullMqEmailCodeSenderAdapter", () => {
         to: "buyer@example.com",
         code: "123456",
         locale: "ru",
-        purpose: "sign-in",
+        purpose: "sign-in-method",
       },
       {
         ...EMAIL_CODE_JOB_OPTIONS,

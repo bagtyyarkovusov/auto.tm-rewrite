@@ -4,6 +4,7 @@ export interface EmailCodeSenderPort {
     email: string;
     code: string;
     locale: "ru" | "tk" | "en";
+    purpose: "sign-in" | "sign-in-method" | "account-deletion";
   }): Promise<void>;
 }
 
