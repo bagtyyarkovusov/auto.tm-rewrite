@@ -78,6 +78,13 @@ describe("MeController e2e - Sign-in Method changes", () => {
     const user = await prisma.user.create({
       data: { email: "buyer@example.com", emailVerifiedAt: new Date() },
     });
+    const session = await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: "existing-session-hash",
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
     const authorization = bearer(user.id);
 
     const codeResponse = await request
@@ -97,7 +104,7 @@ describe("MeController e2e - Sign-in Method changes", () => {
       email: "buyer@example.com",
       phoneVerified: true,
     });
-    await expect(prisma.session.count({ where: { userId: user.id } })).resolves.toBe(0);
+    await expect(prisma.session.findUnique({ where: { id: session.id } })).resolves.toBeDefined();
   });
 
   it("adds an email to a phone-only User and sends Sign-in Method email copy", async () => {
