@@ -1,10 +1,13 @@
 import { useMemo } from "react";
-import { View } from "react-native";
-import { ChevronLeft, User } from "lucide-react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { router } from "expo-router";
+import { CheckCircle2, ChevronLeft, ChevronRight, User } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useMe } from "../src/api/identity/useMe";
+import { maskEmail } from "../src/auth/email";
+import { maskTmPhone } from "../src/auth/phone";
 import { localeTag } from "../src/i18n/resources";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,6 +31,50 @@ function LoadingState() {
       </View>
       <Skeleton className="h-24 w-full rounded-xl" />
     </View>
+  );
+}
+
+interface SignInMethodRowProps {
+  label: string;
+  /** Masked value, or null when the User has not added this method. */
+  value: string | null;
+  href: "/account/add-phone" | "/account/add-email";
+}
+
+function SignInMethodRow({ label, value, href }: SignInMethodRowProps) {
+  const { t } = useTranslation("account");
+  const action = value ? t("change") : t("add");
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${value ?? t("notAdded")}. ${action}`}
+      className="min-h-14 flex-row items-center gap-3 py-2 active:opacity-70"
+      onPress={() => router.push(href)}
+    >
+      <View className="flex-1 gap-0.5">
+        <Text className="text-sm text-muted-foreground">{label}</Text>
+        {value ? (
+          <View className="flex-row flex-wrap items-center gap-x-2">
+            <Text className="text-base font-medium text-foreground">
+              {value}
+            </Text>
+            <View className="flex-row items-center gap-1">
+              <Icon as={CheckCircle2} className="size-3.5 text-success-500" />
+              <Text className="text-xs text-muted-foreground">
+                {t("verified")}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <Text className="text-base text-muted-foreground">
+            {t("notAdded")}
+          </Text>
+        )}
+      </View>
+      <Text className="text-sm font-medium text-foreground">{action}</Text>
+      <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+    </Pressable>
   );
 }
 
@@ -67,6 +114,14 @@ export default function ProfileScreen() {
 
   // Only a real name yields a meaningful initial — the first character of a
   // phone number is "+", which reads as an add-photo affordance.
+  // Without a display name the header falls back to a Sign-in Method, masked
+  // like the rows below.
+  const fallbackName = data?.phone
+    ? maskTmPhone(data.phone)
+    : data?.email
+      ? maskEmail(data.email)
+      : "";
+
   const avatarInitial = useMemo(() => {
     if (data?.displayName) return data.displayName.charAt(0).toUpperCase();
     return undefined;
@@ -89,10 +144,16 @@ export default function ProfileScreen() {
       ) : isError ? (
         <ErrorState error={error} onRetry={() => refetch()} />
       ) : data ? (
-        <View className="flex-1 px-4 pt-4 gap-4">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+        >
           {/* Identity card */}
           <View className="items-center gap-3 py-6">
-            <Avatar className="size-24" alt={data.displayName ?? data.phone ?? ""}>
+            <Avatar
+              className="size-24"
+              alt={data.displayName ?? fallbackName}
+            >
               {data.avatarUrl ? (
                 <AvatarImage source={{ uri: data.avatarUrl }} />
               ) : null}
@@ -108,7 +169,7 @@ export default function ProfileScreen() {
             </Avatar>
 
             <Text className="text-xl font-heading text-foreground">
-              {data.displayName ?? data.phone}
+              {data.displayName ?? fallbackName}
             </Text>
 
             <Badge variant="secondary">
@@ -116,17 +177,34 @@ export default function ProfileScreen() {
             </Badge>
           </View>
 
+          <View className="gap-2">
+            <View className="gap-0.5 px-1">
+              <Text className="text-base font-semibold text-foreground">
+                {t("account:signInMethods")}
+              </Text>
+              <Text className="text-sm text-muted-foreground">
+                {t("account:signInMethodsHelper")}
+              </Text>
+            </View>
+            <Card>
+              <CardContent className="gap-1">
+                <SignInMethodRow
+                  label={t("account:phone")}
+                  value={data.phone ? maskTmPhone(data.phone) : null}
+                  href="/account/add-phone"
+                />
+                <Separator />
+                <SignInMethodRow
+                  label={t("account:email")}
+                  value={data.email ? maskEmail(data.email) : null}
+                  href="/account/add-email"
+                />
+              </CardContent>
+            </Card>
+          </View>
+
           <Card>
             <CardContent className="gap-1">
-              <View className="flex-row items-center justify-between py-2">
-                <Text className="text-sm text-muted-foreground">
-                  {t("account:phone")}
-                </Text>
-                <Text className="text-base text-foreground font-medium">
-                  {data.phone}
-                </Text>
-              </View>
-              <Separator />
               <View className="flex-row items-center justify-between py-2">
                 <Text className="text-sm text-muted-foreground">
                   {t("account:memberSince")}
@@ -137,7 +215,7 @@ export default function ProfileScreen() {
               </View>
             </CardContent>
           </Card>
-        </View>
+        </ScrollView>
       ) : null}
     </SafeScreen>
   );
