@@ -29,12 +29,33 @@ describe("useAuthIntentStore", () => {
       action: { kind: "favorite", listingId: LISTING_ID },
     });
 
-    expect(navigator.push).toHaveBeenCalledWith("/(auth)/phone");
+    expect(navigator.push).toHaveBeenCalledWith({
+      pathname: "/(auth)/phone",
+      params: { authRoot: "1" },
+    });
     expect(useAuthIntentStore.getState().intent).toEqual({
       returnTo: LISTING_ROUTE,
       action: { kind: "favorite", listingId: LISTING_ID },
     });
     expect(useAuthIntentStore.getState().replayAction).toBeNull();
+  });
+
+  it("opens email as an equal sign-in entry while keeping the same intent", () => {
+    const navigator = fakeNavigator();
+
+    useAuthIntentStore.getState().requireSignIn(
+      navigator,
+      { returnTo: "/(tabs)/favorites" },
+      "email",
+    );
+
+    expect(navigator.push).toHaveBeenCalledWith({
+      pathname: "/(auth)/email",
+      params: { authRoot: "1" },
+    });
+    expect(useAuthIntentStore.getState().intent).toEqual({
+      returnTo: "/(tabs)/favorites",
+    });
   });
 
   it("keeps the pending action serializable", () => {
@@ -179,9 +200,9 @@ describe("auth intent return mechanism", () => {
     expect(otpSource).not.toContain("router.dismissAll()");
   });
 
-  it("the OTP back button cancels while Change number pops to the existing phone screen", () => {
+  it("the OTP back button cancels while changing the identifier pops to its entry screen", () => {
     expect(otpSource).toContain("authNavigation.cancel()");
-    expect(otpSource).toContain("authNavigation.changePhone()");
+    expect(otpSource).toContain("authNavigation.changeMethod()");
     expect(otpSource).not.toContain('pathname: "/(auth)/phone"');
   });
 
@@ -191,5 +212,13 @@ describe("auth intent return mechanism", () => {
       "utf-8",
     );
     expect(phoneSource).toContain("useAuthIntentStore.getState().cancelSignIn()");
+  });
+
+  it("the email screen cancels an abandoned root sign-in", () => {
+    const emailSource = readFileSync(
+      resolve(__dirname, "../../app/(auth)/email.tsx"),
+      "utf-8",
+    );
+    expect(emailSource).toContain("useAuthIntentStore.getState().cancelSignIn()");
   });
 });

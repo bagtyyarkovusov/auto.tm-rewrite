@@ -4,7 +4,13 @@ import type { Router } from "expo-router";
 
 import { useAuthIntentStore } from "./intentStore";
 
-type OtpExit = "cancel" | "change-phone" | "complete" | "invalid-phone";
+type SignInMethod = "phone" | "email";
+
+type OtpExit =
+  | "cancel"
+  | "change-method"
+  | "complete"
+  | { invalidDestination: SignInMethod };
 
 /**
  * Owns every way the OTP screen can leave. Native Back and swipe gestures are
@@ -23,13 +29,17 @@ export function useOtpAuthNavigation(router: Router) {
       return;
     }
 
-    if (exit === "change-phone") {
+    if (exit === "change-method") {
       router.back();
       return;
     }
 
-    if (exit === "invalid-phone") {
-      router.replace("/(auth)/phone");
+    if (typeof exit === "object") {
+      router.replace(
+        exit.invalidDestination === "email"
+          ? "/(auth)/email"
+          : "/(auth)/phone",
+      );
       return;
     }
 
@@ -49,8 +59,9 @@ export function useOtpAuthNavigation(router: Router) {
 
   return {
     cancel: () => setExit("cancel"),
-    changePhone: () => setExit("change-phone"),
+    changeMethod: () => setExit("change-method"),
     complete: () => setExit("complete"),
-    invalidPhone: () => setExit("invalid-phone"),
+    invalidDestination: (method: SignInMethod) =>
+      setExit({ invalidDestination: method }),
   };
 }

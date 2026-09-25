@@ -571,7 +571,6 @@ export default function SellScreen() {
       </View>
 
       <SignInDialog
-        actionLabel={t("continueWithPhone")}
         description={t("signInToSellDescription")}
         open={showSignIn}
         returnTo="/(tabs)/sell"
