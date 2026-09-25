@@ -16,11 +16,16 @@ export function useVerifySignInMethodChange() {
         AuthSchemas.SignInMethodChangeResponseSchema,
       ),
     // The API answers with the updated /me, so Profile and Cabinet show the
-    // new Sign-in Method without a refetch. The stored session keeps its
-    // tokens; only its User copy (read by useAuth) is brought up to date.
+    // new Sign-in Method at once. The stored session keeps its tokens; only
+    // its User copy (read by useAuth) is brought up to date.
     onSuccess: async (me) => {
       queryClient.setQueryData(queryKeys.me(), me);
-      await updateStoredSessionUser({ phone: me.phone, email: me.email });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.me() });
+      // Best-effort: the server already applied the change, so a SecureStore
+      // failure must not reject the mutation and report it as failed.
+      await updateStoredSessionUser({ phone: me.phone, email: me.email }).catch(
+        () => undefined,
+      );
     },
   });
 }

@@ -86,6 +86,31 @@ describe("useVerifySignInMethodChange", () => {
     });
   });
 
+  it("still succeeds when the stored session cannot be updated", async () => {
+    server.use(
+      http.post("*/me/sign-in-methods/verify", () =>
+        HttpResponse.json({
+          ...emailOnlyMe,
+          phone: "+99361000000",
+          phoneVerified: true,
+        }),
+      ),
+    );
+    updateStoredSessionUser.mockRejectedValueOnce(new Error("SecureStore"));
+    const { client, wrapper } = setup();
+
+    const { result } = renderHook(() => useVerifySignInMethodChange(), {
+      wrapper,
+    });
+
+    await expect(
+      result.current.mutateAsync({ phone: "+99361000000", code: "123456" }),
+    ).resolves.toMatchObject({ phone: "+99361000000" });
+    expect(client.getQueryData(queryKeys.me())).toMatchObject({
+      phone: "+99361000000",
+    });
+  });
+
   it("leaves the cached /me alone when the Sign-in Method belongs to another User", async () => {
     server.use(
       http.post("*/me/sign-in-methods/verify", () =>
