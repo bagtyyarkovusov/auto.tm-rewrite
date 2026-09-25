@@ -98,7 +98,7 @@ function AuthenticatedIdentityCard() {
     <Pressable onPress={handlePress} className="active:opacity-90">
       <Card>
         <CardContent className="flex-row items-center gap-4 py-5">
-          <Avatar className="size-16" alt={data.displayName ?? data.phone ?? ""}>
+          <Avatar className="size-16" alt={data.displayName ?? data.phone ?? data.email ?? ""}>
             {data.avatarUrl ? (
               <AvatarImage source={{ uri: data.avatarUrl }} />
             ) : null}
@@ -115,11 +115,11 @@ function AuthenticatedIdentityCard() {
 
           <View className="flex-1">
             <Text className="text-lg font-semibold text-foreground">
-              {data.displayName ?? data.phone}
+              {data.displayName ?? data.phone ?? data.email}
             </Text>
             {data.displayName ? (
               <Text className="text-sm text-muted-foreground">
-                {data.phone}
+                {data.phone ?? data.email}
               </Text>
             ) : null}
           </View>
