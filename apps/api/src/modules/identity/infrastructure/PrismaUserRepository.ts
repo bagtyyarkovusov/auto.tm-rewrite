@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaService } from "@auto-tm/db";
+import { Prisma, PrismaService } from "@auto-tm/db";
 import {
   assertLiveUserSignInMethods,
   assertSignInMethodsVerified,
@@ -8,9 +8,16 @@ import {
 } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { UserRepository } from "../domain/ports/UserRepository";
+import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
+import {
+  IDENTITY_ERROR_CODES,
+  IdentityDomainError,
+  SIGN_IN_CODE_CHANNELS,
+  type SignInCodeChannel,
+} from "../domain/types";
 
 @Injectable()
-export class PrismaUserRepository implements UserRepository {
+export class PrismaUserRepository implements UserRepository, SignInMethodRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async findByPhone(phone: string): Promise<User | null> {
@@ -39,6 +46,34 @@ export class PrismaUserRepository implements UserRepository {
       },
     });
     return this.toDomain(row);
+  }
+
+  async replaceSignInMethod(input: {
+    userId: string;
+    channel: SignInCodeChannel;
+    destination: string;
+    verifiedAt: Date;
+  }): Promise<User> {
+    try {
+      const row = await this.prisma.user.update({
+        where: { id: input.userId },
+        data: input.channel === SIGN_IN_CODE_CHANNELS.PHONE
+          ? { phone: input.destination, phoneVerifiedAt: input.verifiedAt }
+          : { email: input.destination, emailVerifiedAt: input.verifiedAt },
+      });
+      return this.toDomain(row);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new IdentityDomainError(
+          IDENTITY_ERROR_CODES.SIGN_IN_METHOD_TAKEN,
+          "Sign-in Method is already held by another User",
+        );
+      }
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<void> {

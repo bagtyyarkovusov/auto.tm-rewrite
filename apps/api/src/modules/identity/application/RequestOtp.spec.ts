@@ -55,6 +55,19 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
   }
 
+  async findLatestByDestinationAndUser(
+    channel: SignInCodeChannel,
+    destination: string,
+    userId: string,
+  ): Promise<OtpRequest | null> {
+    return this.records
+      .filter((record) =>
+        record.channel === channel &&
+        record.destination === destination &&
+        record.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
+  }
+
   async countByDestinationSince(
     channel: SignInCodeChannel,
     destination: string,
@@ -86,12 +99,13 @@ class FakeOtpSender implements OtpSenderPort {
 }
 
 class FakeEmailCodeSender implements EmailCodeSenderPort {
-  jobs: Array<{ requestId: string; email: string; code: string; locale: "ru" | "tk" | "en" }> = [];
+  jobs: Array<Parameters<EmailCodeSenderPort["enqueue"]>[0]> = [];
   async enqueue(input: {
     requestId: string;
     email: string;
     code: string;
     locale: "ru" | "tk" | "en";
+    purpose: "sign-in" | "sign-in-method" | "account-deletion";
   }): Promise<void> {
     this.jobs.push(input);
   }
@@ -161,6 +175,7 @@ describe("RequestOtp", () => {
       requestId: repo.records[0]!.id,
       email: "buyer@example.com",
       locale: "ru",
+      purpose: "sign-in",
     });
     expect(email.jobs[0]!.code).toMatch(/^\d{6}$/);
     expect(sms.sent).toHaveLength(0);

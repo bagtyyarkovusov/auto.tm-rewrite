@@ -17,6 +17,12 @@ export interface OtpRequestRepository {
     destination: string,
   ): Promise<OtpRequest | null>;
 
+  findLatestByDestinationAndUser(
+    channel: SignInCodeChannel,
+    destination: string,
+    userId: string,
+  ): Promise<OtpRequest | null>;
+
   countByDestinationSince(
     channel: SignInCodeChannel,
     destination: string,

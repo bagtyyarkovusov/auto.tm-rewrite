@@ -3,6 +3,9 @@ import { describe, it, expect } from "vitest";
 import {
   OtpRequestRequestSchema,
   OtpVerifyRequestSchema,
+  SignInMethodChangeRequestSchema,
+  SignInMethodChangeVerifyRequestSchema,
+  SignInMethodChangeResponseSchema,
 } from "../src/schemas/auth";
 import {
   ListingSummarySchema,
@@ -39,6 +42,7 @@ import {
   ListMessagesResponseSchema,
   ListConversationsResponseSchema,
 } from "../src/schemas/conversations";
+import { ErrorResponseSchema } from "../src/errors";
 import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
@@ -123,6 +127,77 @@ describe("OTP verify schema", () => {
       email: "buyer@example.com",
       code: "123456",
     }).success).toBe(false);
+  });
+});
+
+describe("Sign-in Method change schemas", () => {
+  it("accepts exactly one normalized destination on request and verify", () => {
+    expect(SignInMethodChangeRequestSchema.parse({
+      email: " New@Example.COM ",
+    })).toEqual({ email: "new@example.com" });
+    expect(SignInMethodChangeVerifyRequestSchema.parse({
+      phone: "+99365001122",
+      code: "123456",
+    })).toEqual({ phone: "+99365001122", code: "123456" });
+    expect(SignInMethodChangeVerifyRequestSchema.safeParse({
+      phone: "+99365001122",
+      email: "new@example.com",
+      code: "123456",
+    }).success).toBe(false);
+  });
+
+  it("returns the current nullable Sign-in Methods", () => {
+    expect(SignInMethodChangeResponseSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      phone: null,
+      email: "new@example.com",
+      phoneVerified: false,
+      displayName: null,
+      role: "buyer",
+      avatarUrl: null,
+      locale: "ru",
+      createdAt: "2026-09-24T00:00:00.000Z",
+      deletionScheduledAt: null,
+    }).success).toBe(true);
+  });
+
+  it("accepts the runtime SIGN_IN_METHOD_TAKEN error envelope", () => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode: 409,
+      code: "SIGN_IN_METHOD_TAKEN",
+      message: "This Sign-in Method belongs to another User.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
+  });
+
+  it.each([
+    "OTP_EXPIRED",
+    "OTP_ALREADY_USED",
+    "INVALID_OTP",
+    "OTP_LOCKED",
+    "OTP_NOT_FOUND",
+  ])("accepts the runtime %s error envelope", (code) => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode: 400,
+      code,
+      message: "The verification code could not be used.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
+  });
+
+  it.each([
+    { statusCode: 401, code: "UNAUTHORIZED" },
+    { statusCode: 404, code: "USER_NOT_FOUND" },
+  ])("accepts the runtime $code error envelope", ({ statusCode, code }) => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode,
+      code,
+      message: "The request could not be completed.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
   });
 });
 
@@ -1144,6 +1219,25 @@ describe("OpenAPI document", () => {
     };
     expect(doc.paths).toHaveProperty("/api/v1/auth/otp/request");
     expect(doc.paths).toHaveProperty("/api/v1/auth/otp/verify");
+    expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/request");
+    expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/verify");
+  });
+
+  it("documents every reachable Sign-in Method route status", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, {
+        post?: { responses?: Record<string, unknown> };
+      }>;
+    };
+    for (const path of [
+      "/api/v1/me/sign-in-methods/request",
+      "/api/v1/me/sign-in-methods/verify",
+    ]) {
+      expect(doc.paths[path]?.post?.responses).toHaveProperty("401");
+      expect(doc.paths[path]?.post?.responses).toHaveProperty("404");
+    }
+    expect(doc.paths["/api/v1/me/sign-in-methods/verify"]?.post?.responses)
+      .toHaveProperty("409");
   });
 
   it("contains new listings schemas", () => {

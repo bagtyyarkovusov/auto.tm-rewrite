@@ -52,6 +52,19 @@ export const OtpVerifyResponseSchema = z.object({
 });
 export type OtpVerifyResponse = z.infer<typeof OtpVerifyResponseSchema>;
 
+export const SignInMethodChangeRequestSchema = OtpRequestRequestSchema;
+export type SignInMethodChangeRequest = z.infer<
+  typeof SignInMethodChangeRequestSchema
+>;
+
+export const SignInMethodChangeVerifyRequestSchema = z.union([
+  z.object({ phone: PhoneTm, code: OtpVerifyFields.code }).strict(),
+  z.object({ email: EmailAddress, code: OtpVerifyFields.code }).strict(),
+]);
+export type SignInMethodChangeVerifyRequest = z.infer<
+  typeof SignInMethodChangeVerifyRequestSchema
+>;
+
 export const RefreshRequestSchema = z.object({
   refreshToken: z.string(),
 });
@@ -85,6 +98,11 @@ export const MeResponseSchema = z.object({
   deletionScheduledAt: z.string().datetime().nullable(),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;
+
+export const SignInMethodChangeResponseSchema = MeResponseSchema;
+export type SignInMethodChangeResponse = z.infer<
+  typeof SignInMethodChangeResponseSchema
+>;
 
 // No request body — uses bearer access token; returns 204
 export const DeleteMeResponseSchema = z.object({});

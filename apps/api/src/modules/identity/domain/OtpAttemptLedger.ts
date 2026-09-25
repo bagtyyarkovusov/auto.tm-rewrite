@@ -11,6 +11,14 @@ export interface RateLimitResult {
   reason?: "DESTINATION_LIMIT" | "IP_LIMIT" | "BACKOFF";
 }
 
+export const SIGN_IN_CODE_RATE_POLICY = {
+  destinationLimit: 5,
+  destinationWindowMs: 24 * 60 * 60 * 1000,
+  ipLimit: 10,
+  ipWindowMs: 60 * 60 * 1000,
+  baseBackoffSeconds: 60,
+} as const;
+
 export class OtpAttemptLedger {
   constructor(
     private readonly destinationLimit: number,

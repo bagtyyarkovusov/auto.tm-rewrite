@@ -23,6 +23,8 @@ import { VerifyAdminTotp } from "./application/VerifyAdminTotp";
 import { BlockUser } from "./application/BlockUser";
 import { UnblockUser } from "./application/UnblockUser";
 import { IsBlocked } from "./application/IsBlocked";
+import { RequestSignInMethodChange } from "./application/RequestSignInMethodChange";
+import { ConfirmSignInMethodChange } from "./application/ConfirmSignInMethodChange";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -178,6 +180,8 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     BlockUser,
     UnblockUser,
     IsBlocked,
+    RequestSignInMethodChange,
+    ConfirmSignInMethodChange,
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,

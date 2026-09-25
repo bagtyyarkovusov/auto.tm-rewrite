@@ -21,11 +21,18 @@ export class VerifySignInCode {
   async execute(
     destination: SignInCodeDestination,
     code: string,
+    userId?: string,
   ): Promise<OtpRequest> {
-    const request = await this.otpRequestRepo.findLatestByDestination(
-      destination.channel,
-      destination.value,
-    );
+    const request = userId === undefined
+      ? await this.otpRequestRepo.findLatestByDestination(
+          destination.channel,
+          destination.value,
+        )
+      : await this.otpRequestRepo.findLatestByDestinationAndUser(
+          destination.channel,
+          destination.value,
+          userId,
+        );
     if (!request) throw new Error("No Sign-in Code request found");
     if (request.verifiedAt !== null) {
       throw new Error("OTP code has already been used");
