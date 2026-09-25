@@ -74,10 +74,13 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async markVerified(id: string, userId: string): Promise<OtpRequest> {
+  async markVerified(id: string, userId?: string): Promise<OtpRequest> {
     const row = await this.prisma.otpRequest.update({
       where: { id },
-      data: { verifiedAt: new Date(), userId },
+      data: {
+        verifiedAt: new Date(),
+        ...(userId !== undefined ? { userId } : {}),
+      },
     });
     return this.toDomain(row);
   }

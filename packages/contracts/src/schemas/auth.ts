@@ -65,6 +65,22 @@ export type SignInMethodChangeVerifyRequest = z.infer<
   typeof SignInMethodChangeVerifyRequestSchema
 >;
 
+// Public web deletion request (ADR-0054). Both endpoints answer the same way
+// whether or not a User holds the value.
+export const AccountDeletionRequestSchema = OtpRequestRequestSchema;
+export type AccountDeletionRequest = z.infer<typeof AccountDeletionRequestSchema>;
+
+export const AccountDeletionRequestResponseSchema = OtpRequestResponseSchema;
+export type AccountDeletionRequestResponse = z.infer<
+  typeof AccountDeletionRequestResponseSchema
+>;
+
+export const AccountDeletionConfirmRequestSchema =
+  SignInMethodChangeVerifyRequestSchema;
+export type AccountDeletionConfirmRequest = z.infer<
+  typeof AccountDeletionConfirmRequestSchema
+>;
+
 export const RefreshRequestSchema = z.object({
   refreshToken: z.string(),
 });

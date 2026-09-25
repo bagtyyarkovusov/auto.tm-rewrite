@@ -6,6 +6,9 @@ import {
   SignInMethodChangeRequestSchema,
   SignInMethodChangeVerifyRequestSchema,
   SignInMethodChangeResponseSchema,
+  AccountDeletionRequestSchema,
+  AccountDeletionRequestResponseSchema,
+  AccountDeletionConfirmRequestSchema,
 } from "../src/schemas/auth";
 import {
   ListingSummarySchema,
@@ -1210,6 +1213,35 @@ describe("ValidateStepResponseSchema", () => {
   });
 });
 
+describe("Account deletion schemas", () => {
+  it("accepts exactly one normalized destination on request and confirm", () => {
+    expect(AccountDeletionRequestSchema.parse({
+      email: " Seller@Example.COM ",
+    })).toEqual({ email: "seller@example.com" });
+    expect(AccountDeletionConfirmRequestSchema.parse({
+      phone: "+99365001122",
+      code: "123456",
+    })).toEqual({ phone: "+99365001122", code: "123456" });
+    expect(AccountDeletionConfirmRequestSchema.safeParse({
+      phone: "+99365001122",
+      email: "seller@example.com",
+      code: "123456",
+    }).success).toBe(false);
+    expect(AccountDeletionConfirmRequestSchema.safeParse({
+      email: "seller@example.com",
+      code: "123456",
+      deviceLabel: "web",
+    }).success).toBe(false);
+  });
+
+  it("answers a request with the Sign-in Code request shape", () => {
+    expect(AccountDeletionRequestResponseSchema.safeParse({
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+      resendInSeconds: 60,
+    }).success).toBe(true);
+  });
+});
+
 // ── OpenAPI document ──
 
 describe("OpenAPI document", () => {
@@ -1238,6 +1270,20 @@ describe("OpenAPI document", () => {
     }
     expect(doc.paths["/api/v1/me/sign-in-methods/verify"]?.post?.responses)
       .toHaveProperty("409");
+  });
+
+  it("documents the public account deletion routes", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, {
+        post?: { responses?: Record<string, unknown> };
+      }>;
+    };
+    expect(doc.paths["/api/v1/account-deletion/request"]?.post?.responses)
+      .toHaveProperty("201");
+    const confirm = doc.paths["/api/v1/account-deletion/confirm"]?.post?.responses;
+    expect(confirm).toHaveProperty("204");
+    expect(confirm).toHaveProperty("400");
+    expect(confirm).not.toHaveProperty("404");
   });
 
   it("contains new listings schemas", () => {
