@@ -11,7 +11,10 @@ import { queryKeys } from "../queryKeys";
 
 import { useVerifySignInMethodChange } from "./useVerifySignInMethodChange";
 
+const updateStoredSessionUser = vi.fn((_user: unknown) => Promise.resolve());
+
 vi.mock("../../auth/session", () => ({
+  updateStoredSessionUser: (user: unknown) => updateStoredSessionUser(user),
   loadAuthSession: vi.fn(() =>
     Promise.resolve({ accessToken: "access", refreshToken: "refresh" }),
   ),
@@ -46,6 +49,7 @@ function setup() {
 describe("useVerifySignInMethodChange", () => {
   beforeEach(() => {
     server.resetHandlers();
+    updateStoredSessionUser.mockClear();
   });
 
   it("replaces the cached /me with the updated User so Profile shows the new phone", async () => {
@@ -75,6 +79,11 @@ describe("useVerifySignInMethodChange", () => {
       email: "buyer@example.com",
       phoneVerified: true,
     });
+    // The stored session keeps its tokens; only its User copy is refreshed.
+    expect(updateStoredSessionUser).toHaveBeenCalledWith({
+      phone: "+99361000000",
+      email: "buyer@example.com",
+    });
   });
 
   it("leaves the cached /me alone when the Sign-in Method belongs to another User", async () => {
@@ -102,5 +111,6 @@ describe("useVerifySignInMethodChange", () => {
       "SIGN_IN_METHOD_TAKEN",
     );
     expect(client.getQueryData(queryKeys.me())).toEqual(emailOnlyMe);
+    expect(updateStoredSessionUser).not.toHaveBeenCalled();
   });
 });

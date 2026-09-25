@@ -15,6 +15,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { maskEmail } from "../../src/auth/email";
+import { maskTmPhone } from "../../src/auth/phone";
 import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { useMe } from "../../src/api/identity/useMe";
@@ -93,12 +95,18 @@ function AuthenticatedIdentityCard() {
   const avatarInitial = data.displayName
     ? data.displayName.charAt(0).toUpperCase()
     : undefined;
+  // Sign-in Methods are masked as on Profile.
+  const signInMethodLabel = data.phone
+    ? maskTmPhone(data.phone)
+    : data.email
+      ? maskEmail(data.email)
+      : "";
 
   return (
     <Pressable onPress={handlePress} className="active:opacity-90">
       <Card>
         <CardContent className="flex-row items-center gap-4 py-5">
-          <Avatar className="size-16" alt={data.displayName ?? data.phone ?? data.email ?? ""}>
+          <Avatar className="size-16" alt={data.displayName ?? signInMethodLabel}>
             {data.avatarUrl ? (
               <AvatarImage source={{ uri: data.avatarUrl }} />
             ) : null}
@@ -115,11 +123,11 @@ function AuthenticatedIdentityCard() {
 
           <View className="flex-1">
             <Text className="text-lg font-semibold text-foreground">
-              {data.displayName ?? data.phone ?? data.email}
+              {data.displayName ?? signInMethodLabel}
             </Text>
             {data.displayName ? (
               <Text className="text-sm text-muted-foreground">
-                {data.phone ?? data.email}
+                {signInMethodLabel}
               </Text>
             ) : null}
           </View>
