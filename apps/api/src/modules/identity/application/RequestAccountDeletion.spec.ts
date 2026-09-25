@@ -74,6 +74,7 @@ class FakeOtpRepo implements OtpRequestRepository {
 
   async findById(): Promise<OtpRequest | null> { return null; }
   async findLatestByDestinationAndUser(): Promise<OtpRequest | null> { return null; }
+  async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
   async markVerified(): Promise<OtpRequest> { throw new Error("unused"); }
   async incrementAttempts(): Promise<OtpRequest> { throw new Error("unused"); }
 }

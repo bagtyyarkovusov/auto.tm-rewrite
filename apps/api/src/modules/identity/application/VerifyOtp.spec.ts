@@ -142,6 +142,8 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
     return 0;
   }
 
+  async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
+
   async markVerified(id: string, userId: string): Promise<OtpRequest> {
     const record = this.records.find((r) => r.id === id);
     if (!record) throw new Error("Not found");

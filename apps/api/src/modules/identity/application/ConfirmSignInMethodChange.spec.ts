@@ -78,6 +78,8 @@ class FakeOtpRepo implements OtpRequestRepository {
       : null;
   }
 
+  async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
+
   async markVerified(): Promise<OtpRequest> {
     this.request = { ...this.request, verifiedAt: NOW };
     return this.request;

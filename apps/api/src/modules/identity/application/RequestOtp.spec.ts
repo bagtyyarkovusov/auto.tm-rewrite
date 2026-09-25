@@ -87,6 +87,8 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
     ).length;
   }
 
+  async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
+
   async markVerified(): Promise<OtpRequest> { throw new Error("unused"); }
   async incrementAttempts(): Promise<OtpRequest> { throw new Error("unused"); }
 }

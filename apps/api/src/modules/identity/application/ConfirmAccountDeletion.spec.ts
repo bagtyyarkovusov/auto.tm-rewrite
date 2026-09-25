@@ -45,7 +45,7 @@ function hash(code: string): string {
 
 class FakeOtpRepo implements OtpRequestRepository {
   records: OtpRequest[] = [];
-  verified: Array<{ id: string; userId: string | undefined }> = [];
+  consumed: string[] = [];
 
   add(input: {
     destination: string;
@@ -91,19 +91,19 @@ class FakeOtpRepo implements OtpRequestRepository {
     ) ?? null;
   }
 
-  async markVerified(id: string, userId?: string): Promise<OtpRequest> {
-    this.verified.push({ id, userId });
-    return this.update(id, (record) => ({
-      ...record,
-      verifiedAt: NOW,
-      userId: userId ?? record.userId,
-    }));
+  async consumeIfUnused(id: string): Promise<boolean> {
+    const record = this.records.find((candidate) => candidate.id === id);
+    if (!record || record.verifiedAt !== null) return false;
+    this.update(id, (current) => ({ ...current, verifiedAt: NOW }));
+    this.consumed.push(id);
+    return true;
   }
 
   async incrementAttempts(id: string): Promise<OtpRequest> {
     return this.update(id, (record) => ({ ...record, attempts: record.attempts + 1 }));
   }
 
+  async markVerified(): Promise<OtpRequest> { throw new Error("unused"); }
   async create(): Promise<OtpRequest> { throw new Error("unused"); }
   async findById(): Promise<OtpRequest | null> { return null; }
   async countByDestinationSince(): Promise<number> { return 0; }
@@ -148,8 +148,13 @@ class FakeUsers implements UserRepository, SignInMethodRepository {
 
 class FakeSessions implements Pick<SessionRepository, "deleteAllByUserId"> {
   revokedFor: string[] = [];
+  failNext = false;
 
   async deleteAllByUserId(userId: string): Promise<number> {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error("database unavailable");
+    }
     this.revokedFor.push(userId);
     return 2;
   }
@@ -200,7 +205,7 @@ describe("ConfirmAccountDeletion", () => {
     expect(userRepo.scheduled.get("user-1")).toEqual(GRACE_END);
     expect(sessions.revokedFor).toEqual(["user-1"]);
     expect(listings.archivedFor).toEqual(["user-1"]);
-    expect(otpRepo.verified).toEqual([{ id: "request-1", userId: "user-1" }]);
+    expect(otpRepo.consumed).toEqual(["request-1"]);
   });
 
   it("starts the grace period for the holder of a normalized email", async () => {
@@ -225,15 +230,15 @@ describe("ConfirmAccountDeletion", () => {
     expect(userRepo.scheduled.size).toBe(0);
     expect(sessions.revokedFor).toEqual([]);
     expect(listings.archivedFor).toEqual([]);
-    expect(otpRepo.verified).toEqual([{ id: "request-1", userId: undefined }]);
+    expect(otpRepo.consumed).toEqual(["request-1"]);
     await expect(
       useCase.execute({ email: "nobody@example.com", code: CODE }),
     ).rejects.toThrow("OTP code has already been used");
   });
 
-  it("rejects a wrong code for held and unheld values alike", async () => {
+  it("treats a wrong code the same way whether or not a User holds the value", async () => {
     const held = setup([makeUser()]);
-    held.otpRepo.add({ destination: "+99361234567", userId: "user-1" });
+    held.otpRepo.add({ destination: "+99361234567", userId: null });
     const unheld = setup();
     unheld.otpRepo.add({ destination: "+99361234567", userId: null });
 
@@ -243,6 +248,8 @@ describe("ConfirmAccountDeletion", () => {
     await expect(
       unheld.useCase.execute({ phone: "+99361234567", code: "000000" }),
     ).rejects.toThrow("Invalid OTP code");
+    expect(held.otpRepo.records[0]?.attempts).toBe(1);
+    expect(unheld.otpRepo.records[0]?.attempts).toBe(1);
     expect(held.userRepo.scheduled.size).toBe(0);
   });
 
@@ -278,7 +285,7 @@ describe("ConfirmAccountDeletion", () => {
     expect(userRepo.scheduled.size).toBe(0);
   });
 
-  it("ignores an unbound sign-in request, so a reviewer fixed code cannot delete", async () => {
+  it("refuses an unbound sign-in request, so a reviewer fixed code cannot delete", async () => {
     const reviewer = makeUser({
       phone: null,
       phoneVerifiedAt: null,
@@ -297,6 +304,7 @@ describe("ConfirmAccountDeletion", () => {
       useCase.execute({ email: "reviewer@review.auto.tm", code: REVIEWER_CODE }),
     ).rejects.toThrow("Invalid OTP code");
     expect(userRepo.scheduled.size).toBe(0);
+    expect(otpRepo.consumed).toEqual([]);
   });
 
   it("refuses a code issued while another User held the value", async () => {
@@ -305,21 +313,43 @@ describe("ConfirmAccountDeletion", () => {
 
     await expect(
       useCase.execute({ phone: "+99361234567", code: CODE }),
-    ).rejects.toThrow("No Sign-in Code request found");
+    ).rejects.toThrow("Invalid OTP code");
     expect(userRepo.scheduled.size).toBe(0);
   });
 
-  it("keeps the original purge date when the holder is already in grace", async () => {
-    const scheduledAt = new Date("2026-10-01T00:00:00.000Z");
-    const { useCase, otpRepo, userRepo, sessions } = setup([
-      makeUser({ deletionScheduledAt: scheduledAt }),
-    ]);
+  it("runs the deletion once when the same code is confirmed concurrently", async () => {
+    const { useCase, otpRepo, sessions } = setup([makeUser()]);
     otpRepo.add({ destination: "+99361234567", userId: "user-1" });
 
-    await useCase.execute({ phone: "+99361234567", code: CODE });
+    const results = await Promise.allSettled([
+      useCase.execute({ phone: "+99361234567", code: CODE }),
+      useCase.execute({ phone: "+99361234567", code: CODE }),
+    ]);
 
-    expect(userRepo.scheduled.size).toBe(0);
-    expect(sessions.revokedFor).toEqual([]);
-    expect(otpRepo.verified).toEqual([{ id: "request-1", userId: "user-1" }]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({
+      reason: new Error("OTP code has already been used"),
+    });
+    expect(sessions.revokedFor).toEqual(["user-1"]);
+  });
+
+  it("completes every DELETE /me effect when a new code is confirmed after a partial failure", async () => {
+    const { useCase, otpRepo, userRepo, sessions, listings } = setup([makeUser()]);
+    otpRepo.add({ destination: "+99361234567", userId: "user-1" });
+    sessions.failNext = true;
+
+    await expect(
+      useCase.execute({ phone: "+99361234567", code: CODE }),
+    ).rejects.toThrow("database unavailable");
+    expect(userRepo.scheduled.get("user-1")).toEqual(GRACE_END);
+    expect(listings.archivedFor).toEqual([]);
+
+    const inGrace = await userRepo.findById("user-1");
+    Object.assign(inGrace as User, { deletionScheduledAt: GRACE_END });
+    otpRepo.add({ destination: "+99361234567", userId: "user-1", code: "222222" });
+    await useCase.execute({ phone: "+99361234567", code: "222222" });
+
+    expect(sessions.revokedFor).toEqual(["user-1"]);
+    expect(listings.archivedFor).toEqual(["user-1"]);
   });
 });

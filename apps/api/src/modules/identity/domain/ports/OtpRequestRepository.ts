@@ -31,8 +31,10 @@ export interface OtpRequestRepository {
 
   countByIpSince(ip: string, since: Date): Promise<number>;
 
-  /** Consumes the code; binds it to `userId` when given, otherwise keeps the stored binding. */
-  markVerified(id: string, userId?: string): Promise<OtpRequest>;
+  markVerified(id: string, userId: string): Promise<OtpRequest>;
+
+  /** Atomically marks an unused request as used; false when another caller already used it. */
+  consumeIfUnused(id: string): Promise<boolean>;
 
   incrementAttempts(id: string): Promise<OtpRequest>;
 }

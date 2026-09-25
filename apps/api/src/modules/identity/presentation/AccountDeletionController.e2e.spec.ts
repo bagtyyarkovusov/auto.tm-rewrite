@@ -179,9 +179,62 @@ describe("AccountDeletionController e2e", () => {
       .send({ phone: "+99361234567", code: signIn.body.testCode })
       .expect(400);
 
-    expect(response.body.code).toBe("OTP_NOT_FOUND");
+    expect(response.body.code).toBe("INVALID_OTP");
     const unchanged = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     expect(unchanged.deletionScheduledAt).toBeNull();
+  });
+
+  it("fails a confirmation identically for held and unheld values", async () => {
+    const holder = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const signIn = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ phone: "+99361234567" })
+      .expect(201);
+    await request
+      .post("/api/v1/auth/otp/verify")
+      .send({ phone: "+99361234567", code: signIn.body.testCode })
+      .expect(201);
+
+    const held = await request
+      .post("/api/v1/account-deletion/confirm")
+      .send({ phone: "+99361234567", code: "000000" })
+      .expect(400);
+    const unheld = await request
+      .post("/api/v1/account-deletion/confirm")
+      .send({ phone: "+99365999999", code: "000000" })
+      .expect(400);
+
+    expect({ code: held.body.code, message: held.body.message }).toEqual({
+      code: unheld.body.code,
+      message: unheld.body.message,
+    });
+    const unchanged = await prisma.user.findUniqueOrThrow({ where: { id: holder.id } });
+    expect(unchanged.deletionScheduledAt).toBeNull();
+  });
+
+  it("runs the deletion once when the same code is confirmed concurrently", async () => {
+    const user = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const codeResponse = await request
+      .post("/api/v1/account-deletion/request")
+      .send({ phone: "+99361234567" })
+      .expect(201);
+
+    const body = { phone: "+99361234567", code: codeResponse.body.testCode };
+    const statuses = await Promise.all([
+      request.post("/api/v1/account-deletion/confirm").send(body),
+      request.post("/api/v1/account-deletion/confirm").send(body),
+    ]).then((responses) => responses.map((response) => response.status).sort());
+
+    expect(statuses).toEqual([204, 400]);
+    const deleted = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(deleted.deletionScheduledAt).not.toBeNull();
+    await expect(
+      prisma.otpRequest.count({ where: { destination: "+99361234567", verifiedAt: { not: null } } }),
+    ).resolves.toBe(1);
   });
 
   it("shares the destination cooldown with sign-in codes", async () => {

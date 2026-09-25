@@ -16,28 +16,15 @@ import { ConfirmAccountDeletion } from "../application/ConfirmAccountDeletion";
 
 type LocalizedRequest = FastifyRequest & { locale?: "ru" | "tk" | "en" };
 
-const CODE_ERRORS: Record<string, { code: string; message: string }> = {
-  "OTP code has expired": {
-    code: "OTP_EXPIRED",
-    message: "The code has expired. Please request a new one.",
-  },
-  "OTP code has already been used": {
-    code: "OTP_ALREADY_USED",
-    message: "This code has already been used.",
-  },
-  "Invalid OTP code": {
-    code: "INVALID_OTP",
-    message: "Invalid code. Please try again.",
-  },
-  "Too many attempts": {
-    code: "OTP_LOCKED",
-    message: "Too many failed attempts. Please request a new code.",
-  },
-  "No Sign-in Code request found": {
-    code: "OTP_NOT_FOUND",
-    message: "No code request found. Please request a code first.",
-  },
-};
+// Every way a code can fail maps to one public error, because the state of the
+// latest request (used, expired, locked) can hint whether a User holds it.
+const CODE_FAILURES = new Set([
+  "OTP code has expired",
+  "OTP code has already been used",
+  "Invalid OTP code",
+  "Too many attempts",
+  "No Sign-in Code request found",
+]);
 
 /**
  * Public account deletion without the app (ADR-0054, Google Play). Responses
@@ -121,8 +108,11 @@ export class AccountDeletionController {
         message: error.message,
       });
     }
-    if (error instanceof Error && CODE_ERRORS[error.message]) {
-      throw new BadRequestException(CODE_ERRORS[error.message]);
+    if (error instanceof Error && CODE_FAILURES.has(error.message)) {
+      throw new BadRequestException({
+        code: "INVALID_OTP",
+        message: "The code is wrong, expired, or already used. Please request a new code.",
+      });
     }
     throw error;
   }

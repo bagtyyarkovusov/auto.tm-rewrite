@@ -36,27 +36,28 @@ export class ConfirmAccountDeletion {
 
   async execute(input: ConfirmAccountDeletionInput): Promise<void> {
     const destination = signInCodeDestination(input);
+
+    // The latest request is checked the same way whether or not a User holds
+    // the value, so wrong-code attempts cannot reveal ownership.
+    const request = await this.verifySignInCode.execute(destination, input.code);
+
     const holder = destination.channel === SIGN_IN_CODE_CHANNELS.PHONE
       ? await this.userRepo.findByPhone(destination.value)
       : await this.userRepo.findByEmail(destination.value);
 
-    // A held value only accepts a code bound to its holder, which excludes
-    // unbound sign-in requests such as a reviewer's fixed email code.
-    const request = await this.verifySignInCode.execute(
-      destination,
-      input.code,
-      holder?.id,
-    );
-
-    if (holder === null) {
-      await this.otpRequestRepo.markVerified(request.id);
-      return;
+    // Only a code issued for this holder counts. This rejects unbound sign-in
+    // requests, such as a reviewer's fixed email code, and codes issued while
+    // another User held the value.
+    if (request.userId !== (holder?.id ?? null)) {
+      throw new Error("Invalid OTP code");
     }
 
-    // A second confirmation during grace keeps the original purge date.
-    if (holder.deletionScheduledAt === null) {
+    if (!(await this.otpRequestRepo.consumeIfUnused(request.id))) {
+      throw new Error("OTP code has already been used");
+    }
+
+    if (holder !== null) {
       await this.deleteMe.execute({ userId: holder.id });
     }
-    await this.otpRequestRepo.markVerified(request.id, holder.id);
   }
 }

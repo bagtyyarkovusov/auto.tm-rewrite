@@ -621,7 +621,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
     responses: {
       204: { description: "Code accepted" },
       400: {
-        description: "Invalid, expired, used, or missing code",
+        description:
+          "Validation error, or INVALID_OTP for any wrong, expired, used, locked, or missing code",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },
