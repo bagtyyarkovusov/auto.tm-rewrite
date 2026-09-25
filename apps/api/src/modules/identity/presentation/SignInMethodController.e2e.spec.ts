@@ -1,5 +1,7 @@
 import "reflect-metadata";
 
+import { createHash } from "node:crypto";
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
@@ -136,6 +138,47 @@ describe("MeController e2e - Sign-in Method changes", () => {
     });
   });
 
+  it.each([
+    { name: "a public sign-in request", owner: "public" as const },
+    { name: "another User's change request", owner: "other-user" as const },
+  ])("uses the current User's code when $name is newer", async ({ owner }) => {
+    const current = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const authorization = bearer(current.id);
+    const destination = "interleaved@example.com";
+    const codeResponse = await request
+      .post("/api/v1/me/sign-in-methods/request")
+      .set("Authorization", authorization)
+      .send({ email: destination })
+      .expect(201);
+    const otherUser = owner === "other-user"
+      ? await prisma.user.create({
+          data: { phone: "+99362234567", phoneVerifiedAt: new Date() },
+        })
+      : null;
+    const shadow = await prisma.otpRequest.create({
+      data: {
+        channel: "email",
+        destination,
+        codeHash: createHash("sha256").update("654321").digest("hex"),
+        expiresAt: new Date(Date.now() + 10 * 60_000),
+        userId: otherUser?.id ?? null,
+        ip: "127.0.0.2",
+        createdAt: new Date(Date.now() + 1_000),
+      },
+    });
+
+    await request
+      .post("/api/v1/me/sign-in-methods/verify")
+      .set("Authorization", authorization)
+      .send({ email: destination, code: codeResponse.body.testCode })
+      .expect(201);
+
+    await expect(prisma.otpRequest.findUnique({ where: { id: shadow.id } }))
+      .resolves.toMatchObject({ attempts: 0, verifiedAt: null });
+  });
+
   it("replaces either method and frees both old values immediately", async () => {
     const user = await prisma.user.create({
       data: {
@@ -268,10 +311,24 @@ describe("MeController e2e - Sign-in Method changes", () => {
     ]);
   });
 
-  it("requires bearer authentication", async () => {
-    await request
-      .post("/api/v1/me/sign-in-methods/request")
-      .send({ email: "new@example.com" })
-      .expect(401);
+  it.each([
+    ["/api/v1/me/sign-in-methods/request", { email: "new@example.com" }],
+    ["/api/v1/me/sign-in-methods/verify", { email: "new@example.com", code: "123456" }],
+  ])("returns the published 401 envelope for %s", async (path, body) => {
+    const response = await request.post(path).send(body).expect(401);
+    expect(response.body).toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it.each([
+    ["/api/v1/me/sign-in-methods/request", { email: "new@example.com" }],
+    ["/api/v1/me/sign-in-methods/verify", { email: "new@example.com", code: "123456" }],
+  ])("returns the published 404 envelope for %s", async (path, body) => {
+    const authorization = bearer("00000000-0000-4000-8000-000000000000");
+    const response = await request
+      .post(path)
+      .set("Authorization", authorization)
+      .send(body)
+      .expect(404);
+    expect(response.body).toMatchObject({ code: "USER_NOT_FOUND" });
   });
 });

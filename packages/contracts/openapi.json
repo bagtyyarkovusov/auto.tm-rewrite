@@ -25,6 +25,7 @@
               "UNAUTHORIZED",
               "FORBIDDEN",
               "NOT_FOUND",
+              "USER_NOT_FOUND",
               "CONFLICT",
               "RATE_LIMITED",
               "OTP_EXPIRED",
@@ -7242,6 +7243,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -7296,6 +7298,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -7861,6 +7864,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8102,6 +8106,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8156,6 +8161,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8210,6 +8216,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8337,6 +8344,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8523,6 +8531,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8626,6 +8635,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8753,6 +8763,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8807,6 +8818,62 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Signed-in User no longer exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -8989,6 +9056,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9043,6 +9111,62 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Signed-in User no longer exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9097,6 +9221,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9334,6 +9459,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9388,6 +9514,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9442,6 +9569,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9610,6 +9738,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9787,6 +9916,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",
@@ -9958,6 +10088,7 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
                         "OTP_EXPIRED",

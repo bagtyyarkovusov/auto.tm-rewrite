@@ -513,6 +513,10 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         description: "Authentication required",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
+      404: {
+        description: "Signed-in User no longer exists",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
     },
   });
 
@@ -543,6 +547,10 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
       },
       401: {
         description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Signed-in User no longer exists",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
       409: {

@@ -186,6 +186,19 @@ describe("Sign-in Method change schemas", () => {
       requestId: "550e8400-e29b-41d4-a716-446655440000",
     }).success).toBe(true);
   });
+
+  it.each([
+    { statusCode: 401, code: "UNAUTHORIZED" },
+    { statusCode: 404, code: "USER_NOT_FOUND" },
+  ])("accepts the runtime $code error envelope", ({ statusCode, code }) => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode,
+      code,
+      message: "The request could not be completed.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
+  });
 });
 
 // ── Listings schemas ──
@@ -1208,6 +1221,23 @@ describe("OpenAPI document", () => {
     expect(doc.paths).toHaveProperty("/api/v1/auth/otp/verify");
     expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/request");
     expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/verify");
+  });
+
+  it("documents every reachable Sign-in Method route status", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, {
+        post?: { responses?: Record<string, unknown> };
+      }>;
+    };
+    for (const path of [
+      "/api/v1/me/sign-in-methods/request",
+      "/api/v1/me/sign-in-methods/verify",
+    ]) {
+      expect(doc.paths[path]?.post?.responses).toHaveProperty("401");
+      expect(doc.paths[path]?.post?.responses).toHaveProperty("404");
+    }
+    expect(doc.paths["/api/v1/me/sign-in-methods/verify"]?.post?.responses)
+      .toHaveProperty("409");
   });
 
   it("contains new listings schemas", () => {

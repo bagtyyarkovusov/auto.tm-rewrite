@@ -5,6 +5,7 @@ export const ErrorCode = {
   Unauthorized: "UNAUTHORIZED",
   Forbidden: "FORBIDDEN",
   NotFound: "NOT_FOUND",
+  UserNotFound: "USER_NOT_FOUND",
   Conflict: "CONFLICT",
   RateLimited: "RATE_LIMITED",
   OtpExpired: "OTP_EXPIRED",

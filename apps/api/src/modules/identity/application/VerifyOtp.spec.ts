@@ -120,6 +120,20 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
     return sorted[0] ?? null;
   }
 
+  async findLatestByDestinationAndUser(
+    channel: SignInCodeChannel,
+    destination: string,
+    userId: string,
+  ): Promise<OtpRequest | null> {
+    const sorted = this.records
+      .filter((r) =>
+        r.channel === channel &&
+        r.destination === destination &&
+        r.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return sorted[0] ?? null;
+  }
+
   async countByDestinationSince(): Promise<number> {
     return 0;
   }

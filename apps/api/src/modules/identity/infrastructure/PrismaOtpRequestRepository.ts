@@ -62,6 +62,18 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findLatestByDestinationAndUser(
+    channel: SignInCodeChannel,
+    destination: string,
+    userId: string,
+  ): Promise<OtpRequest | null> {
+    const row = await this.prisma.otpRequest.findFirst({
+      where: { channel, destination, userId },
+      orderBy: { createdAt: "desc" },
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
   async markVerified(id: string, userId: string): Promise<OtpRequest> {
     const row = await this.prisma.otpRequest.update({
       where: { id },

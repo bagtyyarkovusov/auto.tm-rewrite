@@ -42,10 +42,11 @@ export class ConfirmSignInMethodChange {
     }
 
     const destination = signInCodeDestination(input);
-    const request = await this.verifySignInCode.execute(destination, input.code);
-    if (request.userId !== input.userId) {
-      throw new Error("No Sign-in Method change request found");
-    }
+    const request = await this.verifySignInCode.execute(
+      destination,
+      input.code,
+      input.userId,
+    );
 
     const owner = destination.channel === SIGN_IN_CODE_CHANNELS.PHONE
       ? await this.userRepo.findByPhone(destination.value)

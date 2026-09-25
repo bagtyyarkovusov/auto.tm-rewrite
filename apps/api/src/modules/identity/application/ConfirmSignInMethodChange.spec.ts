@@ -66,6 +66,18 @@ class FakeOtpRepo implements OtpRequestRepository {
       : null;
   }
 
+  async findLatestByDestinationAndUser(
+    channel: SignInCodeChannel,
+    destination: string,
+    userId: string,
+  ): Promise<OtpRequest | null> {
+    return this.request.channel === channel &&
+      this.request.destination === destination &&
+      this.request.userId === userId
+      ? this.request
+      : null;
+  }
+
   async markVerified(): Promise<OtpRequest> {
     this.request = { ...this.request, verifiedAt: NOW };
     return this.request;
