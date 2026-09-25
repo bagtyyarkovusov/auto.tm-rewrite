@@ -7,6 +7,8 @@ on:
 jobs:
   bundle:
     runs-on: [self-hosted, tm-proxy]
+    env:
+      npm_config_store_dir: ${HOME}/Library/pnpm/store
 
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +20,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
+
+      - name: Report dependency cache state
+        shell: bash
+        run: |
+          echo "Node: $(node --version)"
+          echo "pnpm: $(pnpm --version)"
+          store_path="$(pnpm store path --silent)"
+          echo "pnpm store: $store_path"
+          if [ -d "$store_path" ]; then
+            ls -ld "$store_path"
+            df -h "$store_path"
+          else
+            echo "pnpm store does not exist yet"
+            df -h .
+          fi
 
       - run: pnpm install --frozen-lockfile
 
