@@ -7,6 +7,11 @@ export const ErrorCode = {
   NotFound: "NOT_FOUND",
   Conflict: "CONFLICT",
   RateLimited: "RATE_LIMITED",
+  OtpExpired: "OTP_EXPIRED",
+  OtpAlreadyUsed: "OTP_ALREADY_USED",
+  InvalidOtp: "INVALID_OTP",
+  OtpLocked: "OTP_LOCKED",
+  OtpNotFound: "OTP_NOT_FOUND",
   SignInMethodTaken: "SIGN_IN_METHOD_TAKEN",
   Internal: "INTERNAL",
 } as const;

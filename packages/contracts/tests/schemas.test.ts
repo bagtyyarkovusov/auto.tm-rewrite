@@ -170,6 +170,22 @@ describe("Sign-in Method change schemas", () => {
       requestId: "550e8400-e29b-41d4-a716-446655440000",
     }).success).toBe(true);
   });
+
+  it.each([
+    "OTP_EXPIRED",
+    "OTP_ALREADY_USED",
+    "INVALID_OTP",
+    "OTP_LOCKED",
+    "OTP_NOT_FOUND",
+  ])("accepts the runtime %s error envelope", (code) => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode: 400,
+      code,
+      message: "The verification code could not be used.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
+  });
 });
 
 // ── Listings schemas ──

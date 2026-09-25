@@ -27,6 +27,11 @@
               "NOT_FOUND",
               "CONFLICT",
               "RATE_LIMITED",
+              "OTP_EXPIRED",
+              "OTP_ALREADY_USED",
+              "INVALID_OTP",
+              "OTP_LOCKED",
+              "OTP_NOT_FOUND",
               "SIGN_IN_METHOD_TAKEN",
               "INTERNAL"
             ]
@@ -7239,6 +7244,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -7288,6 +7298,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -7848,6 +7863,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8084,6 +8104,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8133,6 +8158,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8182,6 +8212,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8304,6 +8339,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8485,6 +8525,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8583,6 +8628,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8705,6 +8755,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8754,6 +8809,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8931,6 +8991,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -8980,6 +9045,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -9029,6 +9099,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -9261,6 +9336,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -9310,6 +9390,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -9359,6 +9444,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -9522,6 +9612,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -9694,6 +9789,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
@@ -9860,6 +9960,11 @@
                         "NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
