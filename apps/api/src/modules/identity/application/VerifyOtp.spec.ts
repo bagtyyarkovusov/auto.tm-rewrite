@@ -142,7 +142,13 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
     return 0;
   }
 
-  async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
+  async consumeIfUnused(id: string): Promise<boolean> {
+    const record = this.records.find((r) => r.id === id);
+    if (!record || record.verifiedAt !== null) return false;
+    this.records = this.records.map((r) =>
+      r.id === id ? { ...r, verifiedAt: NOW } : r);
+    return true;
+  }
 
   async markVerified(id: string, userId: string): Promise<OtpRequest> {
     const record = this.records.find((r) => r.id === id);
@@ -435,6 +441,39 @@ describe("VerifyOtp", () => {
 
     const record = await otpRepo.findById(otpRequest.id);
     expect(record!.verifiedAt).not.toBeNull();
+  });
+
+  it("creates one session when the same code is verified concurrently", async () => {
+    otpRepo.addRecord(makeOtpRequest());
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
+    const results = await Promise.allSettled([
+      uc.execute({ phone: "+99361234567", code: "123456" }),
+      uc.execute({ phone: "+99361234567", code: "123456" }),
+    ]);
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((r) => r.status === "rejected")).toMatchObject({
+      reason: new Error("OTP code has already been used"),
+    });
+    expect(sessionRepo.sessions).toHaveLength(1);
+  });
+
+  it("does not sign in when another flow consumes the code first", async () => {
+    const otpRequest = makeOtpRequest();
+    otpRepo.addRecord(otpRequest);
+    const claim = otpRepo.consumeIfUnused.bind(otpRepo);
+    otpRepo.consumeIfUnused = async (id: string) => {
+      await claim(id);
+      return claim(id);
+    };
+
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus, listingsPort });
+    await expect(
+      uc.execute({ phone: "+99361234567", code: "123456" }),
+    ).rejects.toThrow("OTP code has already been used");
+    expect(userRepo.users).toHaveLength(0);
+    expect(sessionRepo.sessions).toHaveLength(0);
   });
 
   // --- Expired code ---

@@ -150,14 +150,15 @@ describe("AccountDeletionController e2e", () => {
     const user = await prisma.user.create({
       data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
     });
-    await request
+    const codeResponse = await request
       .post("/api/v1/account-deletion/request")
       .send({ phone: "+99361234567" })
       .expect(201);
+    const wrongCode = codeResponse.body.testCode === "000000" ? "111111" : "000000";
 
     const response = await request
       .post("/api/v1/account-deletion/confirm")
-      .send({ phone: "+99361234567", code: "000000" })
+      .send({ phone: "+99361234567", code: wrongCode })
       .expect(400);
 
     expect(response.body.code).toBe("INVALID_OTP");
@@ -235,6 +236,34 @@ describe("AccountDeletionController e2e", () => {
     await expect(
       prisma.otpRequest.count({ where: { destination: "+99361234567", verifiedAt: { not: null } } }),
     ).resolves.toBe(1);
+  });
+
+  it("lets a deletion code succeed at most once across deletion and sign-in", async () => {
+    const user = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const codeResponse = await request
+      .post("/api/v1/account-deletion/request")
+      .send({ phone: "+99361234567" })
+      .expect(201);
+
+    const body = { phone: "+99361234567", code: codeResponse.body.testCode };
+    const [signIn, deletion] = await Promise.all([
+      request.post("/api/v1/auth/otp/verify").send(body),
+      request.post("/api/v1/account-deletion/confirm").send(body),
+    ]);
+
+    const successes = [signIn.status === 201, deletion.status === 204].filter(Boolean);
+    expect(successes).toHaveLength(1);
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    const sessions = await prisma.session.count({ where: { userId: user.id } });
+    if (deletion.status === 204) {
+      expect(after.deletionScheduledAt).not.toBeNull();
+      expect(sessions).toBe(0);
+    } else {
+      expect(after.deletionScheduledAt).toBeNull();
+      expect(sessions).toBe(1);
+    }
   });
 
   it("shares the destination cooldown with sign-in codes", async () => {
