@@ -78,12 +78,13 @@ class FakeOtpRepo implements OtpRequestRepository {
       : null;
   }
 
-  async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
-
-  async markVerified(): Promise<OtpRequest> {
+  async consumeIfUnused(id: string): Promise<boolean> {
+    if (this.request.id !== id || this.request.verifiedAt !== null) return false;
     this.request = { ...this.request, verifiedAt: NOW };
-    return this.request;
+    return true;
   }
+
+  async markVerified(): Promise<OtpRequest> { throw new Error("unused"); }
 
   async incrementAttempts(): Promise<OtpRequest> {
     this.request = { ...this.request, attempts: this.request.attempts + 1 };
@@ -220,5 +221,38 @@ describe("ConfirmSignInMethodChange", () => {
     })).rejects.toMatchObject({ code: IDENTITY_ERROR_CODES.SIGN_IN_METHOD_TAKEN });
     expect(users.users).toEqual([current]);
     expect(otpRepo.request.verifiedAt).toEqual(NOW);
+  });
+
+  it("changes the Sign-in Method once when the same code is confirmed concurrently", async () => {
+    const current = makeUser({ id: "user-1", phone: "+99361234567", email: null });
+    const { useCase, otpRepo } = harness(current, "new@example.com");
+
+    const results = await Promise.allSettled([
+      useCase.execute({ userId: current.id, email: "new@example.com", code: CODE }),
+      useCase.execute({ userId: current.id, email: "new@example.com", code: CODE }),
+    ]);
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((r) => r.status === "rejected")).toMatchObject({
+      reason: new Error("OTP code has already been used"),
+    });
+    expect(otpRepo.request.verifiedAt).toEqual(NOW);
+  });
+
+  it("changes nothing when another flow consumes the code first", async () => {
+    const current = makeUser({ id: "user-1", phone: "+99361234567", email: null });
+    const { useCase, users, otpRepo } = harness(current, "new@example.com");
+    const claim = otpRepo.consumeIfUnused.bind(otpRepo);
+    otpRepo.consumeIfUnused = async (id: string) => {
+      await claim(id);
+      return claim(id);
+    };
+
+    await expect(useCase.execute({
+      userId: current.id,
+      email: "new@example.com",
+      code: CODE,
+    })).rejects.toThrow("OTP code has already been used");
+    expect(users.users).toEqual([current]);
   });
 });
