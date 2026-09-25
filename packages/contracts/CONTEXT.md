@@ -17,7 +17,7 @@ Shared API contracts. Owns:
 packages/contracts/
 ├── src/
 │   ├── schemas/
-│   │   ├── auth.ts             Sign-in Code request/verify strict unions (`{ phone } | { email }`), authenticated Sign-in Method change request/verify schemas, nullable-method responses, refresh/logout schemas, admin TOTP schemas, and the `email-code` queue job payload
+│   │   ├── auth.ts             Sign-in Code request/verify strict unions (`{ phone } | { email }`), authenticated Sign-in Method change request/verify schemas, public account deletion request/confirm schemas, nullable-method responses, refresh/logout schemas, admin TOTP schemas, and the `email-code` queue job payload
 │   │   ├── identity.ts         User, Dealership, Garage schemas
 │   │   ├── catalog.ts          Brand, Model, Generation, Color, BodyType, Region, City schemas
 │   │   ├── listings.ts         ListingSummary (card fields: photoKeys, photoCount, specs, isFavorited?), FavoriteListingSummary, ListingDetail, ListingMedia, ListingDraft, ListingFilter, request/response DTOs, cursor helpers, error codes
