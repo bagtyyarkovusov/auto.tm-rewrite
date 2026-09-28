@@ -1,6 +1,6 @@
 # Auto.ru and Kolesa reference screens, index
 
-> Noncanonical research, written 2026-09-21 for [Inventory and label the Auto.ru and Kolesa screen archives](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/343). It indexes the founder's local captures so a design agent can find the right image by ID instead of guessing from numbered filenames. It does not set release scope. [ADR-0051](../../../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) and the founder-approved AutoTM screen map do that. This work did not edit the separate Kolesa browse note, `kolesa-browse-2026-09-21.md`, which is not yet committed.
+> Noncanonical research, written 2026-09-21 for [Inventory and label the Auto.ru and Kolesa screen archives](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/343). It indexes the founder's local captures so a design agent can find the right image by ID instead of guessing from numbered filenames. It does not set release scope. [ADR-0051](../../../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) and the founder-approved AutoTM screen map do that. This work did not edit the separate Kolesa browse note, [`kolesa-browse-2026-09-21.md`](kolesa-browse-2026-09-21.md).
 
 ## Files
 

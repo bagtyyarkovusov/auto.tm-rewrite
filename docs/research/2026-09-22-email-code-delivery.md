@@ -1,6 +1,6 @@
 # Email sign-in code delivery: Railway now, TM later
 
-> Noncanonical research, dated 2026-09-22. It compares options and does not set policy. The decision is [ADR-0055](../adr/0055-resend-sends-sign-in-codes-from-the-worker.md); quotes of repository instructions reflect that date.
+> Noncanonical research, dated 2026-09-22. It compares options and does not set policy. The decision is [ADR-0055](../adr/0055-resend-sends-sign-in-codes-from-the-worker.md); its statements about repository code and instructions reflect that date.
 
 - **Date**: 2026-09-22 (every external source below was accessed on this date)
 - **Question**: Which email delivery option should send sign-in codes during the Railway phase ([ADR-0039](../adr/0039-phased-cloud-first-hosting.md)), and how does it carry over to the air-gapped TM phase ([ADR-0005](../adr/0005-hosting.md))?
