@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
 import { useCallback } from "react";
 
+import { HOME_HREF } from "./homeHref";
+
 /**
  * Wrapper around `router.back()` that checks `canGoBack()` first.
  * Falls back to `fallback` when there is no previous screen in the stack
  * (e.g. deep-link or tab direct entry).
  */
-export function useSafeBack(fallback: string = "/(tabs)/(search)") {
+export function useSafeBack(fallback: string = HOME_HREF) {
   const router = useRouter();
 
   const goBack = useCallback(() => {

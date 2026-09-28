@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../../navigation/useSafeBack";
+import { HOME_HREF } from "../../navigation/homeHref";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -21,7 +22,7 @@ interface InterimDiscoveryScreenProps {
  */
 export function InterimDiscoveryScreen({ title }: InterimDiscoveryScreenProps) {
   const { t } = useTranslation();
-  const goBack = useSafeBack("/(tabs)/(search)");
+  const goBack = useSafeBack(HOME_HREF);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>

@@ -3,11 +3,7 @@ import { useEffect, useState } from "react";
 
 import { useFavoriteListing } from "../../api/listings/useFavoriteListing";
 import { useUnfavoriteListing } from "../../api/listings/useUnfavoriteListing";
-import {
-  type AuthHref,
-  useAuthIntentStore,
-  useReplayAuthAction,
-} from "../../auth/intentStore";
+import { type AuthHref, useAuthIntentStore } from "../../auth/intentStore";
 
 interface UseCardFavoriteOptions {
   listingId: string;
@@ -20,8 +16,9 @@ interface UseCardFavoriteOptions {
 
 /**
  * ♡ on a feed card. Signed in, it toggles optimistically and rolls back on
- * failure. Signed out, it opens sign-in with a pending Favorite that this card
- * finishes once the User is back on the calling screen.
+ * failure. Signed out, it opens sign-in with a pending Favorite; the list
+ * screen finishes it through `useFeedFavoriteReplay`, because this card may
+ * not be mounted when sign-in returns.
  */
 export function useCardFavorite({
   listingId,
@@ -38,16 +35,12 @@ export function useCardFavorite({
     setFavorited(isFavorited);
   }, [isFavorited]);
 
-  // The action body only: a replay after sign-in must not re-check
-  // `isAuthenticated`, which can still hold the signed-out value.
   const addFavorite = () => {
     setFavorited(true);
     favorite.mutate(listingId, {
       onError: () => setFavorited(false),
     });
   };
-
-  useReplayAuthAction("favorite", listingId, addFavorite);
 
   const toggle = () => {
     if (isAuthenticated === false) {

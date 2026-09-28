@@ -122,6 +122,60 @@ describe("apiClient", () => {
     });
   });
 
+  describe("expired access token", () => {
+    function jwt(exp: number): string {
+      const encode = (value: unknown) =>
+        Buffer.from(JSON.stringify(value)).toString("base64url");
+      return `${encode({ alg: "HS256" })}.${encode({ sub: "u1", exp })}.sig`;
+    }
+    const user = {
+      id: "u1",
+      phone: "+99361000000",
+      email: null,
+      displayName: null,
+      role: "buyer" as const,
+    };
+
+    it("refreshes before sending, so a public route still sees the viewer", async () => {
+      const expired = jwt(Math.floor(Date.now() / 1000) - 60);
+      mockedLoadAuthSession
+        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
+        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
+        .mockResolvedValue({ accessToken: "fresh-token", refreshToken: "r2", user, storedAt: "" });
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ accessToken: "fresh-token", refreshToken: "r2" }))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await apiClient.get("/listings?limit=20");
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/auth/refresh");
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer fresh-token");
+    });
+
+    it("sends the request anonymously when the refresh is rejected", async () => {
+      const expired = jwt(Math.floor(Date.now() / 1000) - 60);
+      mockedLoadAuthSession
+        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
+        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
+        .mockResolvedValue(null);
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "UNAUTHENTICATED" }, 401))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await expect(apiClient.get("/listings?limit=20")).resolves.toEqual({ items: [] });
+
+      expect(mockedClearAuthSession).toHaveBeenCalled();
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBeUndefined();
+    });
+  });
+
   describe("401 refresh-retry", () => {
     it("refreshes token on 401 and retries the request", async () => {
       mockedLoadAuthSession.mockResolvedValue({

@@ -20,6 +20,7 @@ import { FilterSheet } from "../../../src/listings/search/FilterSheet";
 import { useListingFilters } from "../../../src/listings/search/useListingFilters";
 import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMaps";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
+import { HOME_HREF } from "../../../src/navigation/homeHref";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ import { Text } from "@/components/ui/text";
  */
 export default function ResultsScreen() {
   const { t } = useTranslation();
-  const goBack = useSafeBack("/(tabs)/(search)");
+  const goBack = useSafeBack(HOME_HREF);
   const [sheetOpen, setSheetOpen] = useState(false);
   const filters = useListingFilters();
   const { brandId, modelId } = useLocalSearchParams<{

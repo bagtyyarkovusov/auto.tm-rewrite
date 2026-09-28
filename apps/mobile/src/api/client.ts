@@ -1,6 +1,7 @@
 import type { ZodSchema } from "zod";
 import { AuthSchemas } from "@auto-tm/contracts";
 
+import { isAccessTokenExpired } from "../auth/accessTokenExpiry";
 import {
   clearAuthSession,
   loadAuthSession,
@@ -142,7 +143,19 @@ async function rawRequest<TResponse>(
   }
 
   if (opts.auth !== false) {
-    const session = await loadAuthSession();
+    let session = await loadAuthSession();
+    // Public routes that personalise their response (the feed's `isFavorited`)
+    // ignore an expired bearer instead of answering 401, so the 401 refresh
+    // below would never run for them. Refresh an expired token up front.
+    if (session && !isRetry && isAccessTokenExpired(session.accessToken)) {
+      try {
+        await refreshOnce();
+      } catch {
+        // A rejected refresh has already cleared the session, so the request
+        // goes out anonymous; a protected route still reaches the 401 path.
+      }
+      session = await loadAuthSession();
+    }
     if (session) {
       headers["Authorization"] = `Bearer ${session.accessToken}`;
     }

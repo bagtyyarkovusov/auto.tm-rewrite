@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import type { Router } from "expo-router";
 import { create } from "zustand";
 
+import { HOME_HREF } from "../navigation/homeHref";
+
 /**
  * Work a User asked for while signed out. Held as serializable data rather than
  * a closure so it survives the re-renders, and the screen suspensions, that
@@ -38,7 +40,6 @@ export type AuthNavigator = Pick<Router, "push" | "dismissTo">;
 export type SignInMethod = "phone" | "email";
 
 const PHONE_ROUTE = "/(auth)/phone";
-const HOME_ROUTE = "/(tabs)/(search)";
 
 interface AuthIntentStore {
   /** Set while the User is inside the authentication screens. */
@@ -74,7 +75,7 @@ export const useAuthIntentStore = create<AuthIntentStore>()((set, get) => ({
     // Dismiss only the authentication screens. `dismissTo` pops back to the
     // calling screen and leaves everything under it — Results and its scroll
     // position — alive, which `replace` could not do.
-    navigator.dismissTo(intent?.returnTo ?? HOME_ROUTE);
+    navigator.dismissTo(intent?.returnTo ?? HOME_HREF);
   },
 
   cancelSignIn(navigator) {
@@ -126,4 +127,33 @@ export function useReplayAuthAction(
     useAuthIntentStore.getState().clearReplayAction();
     performRef.current();
   }, [replayAction, kind, listingId]);
+}
+
+/**
+ * Performs a pending action of `kind` once, for whichever Listing it names,
+ * while `enabled`. For screens that list many Listings: the card that asked
+ * may not be mounted when authentication returns (a signed-in feed refetches
+ * only its first page), so the list screen finishes the action itself. Gate
+ * `enabled` on focus so a screen underneath never takes another screen's action.
+ */
+export function useReplayAuthActionOfKind(
+  kind: PendingActionKind,
+  perform: (listingId: string) => void,
+  enabled: boolean,
+): void {
+  const replayAction = useAuthIntentStore((state) => state.replayAction);
+  const performRef = useRef(perform);
+
+  useEffect(() => {
+    performRef.current = perform;
+  });
+
+  useEffect(() => {
+    if (!enabled || replayAction === null || replayAction.kind !== kind) {
+      return;
+    }
+
+    useAuthIntentStore.getState().clearReplayAction();
+    performRef.current(replayAction.listingId);
+  }, [replayAction, kind, enabled]);
 }

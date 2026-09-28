@@ -29,8 +29,22 @@ describe("Home (the Search tab's first screen)", () => {
 
   it("asks for the viewer's feed so ♡ reflects saved Favorites", () => {
     expect(source).toContain("viewerId: viewer?.userId ?? null");
-    expect(source).toContain('const HOME_HREF: AuthHref = "/(tabs)/(search)"');
+    expect(source).toContain('import { HOME_HREF } from "../../../src/navigation/homeHref"');
     expect(source).toContain("returnTo={HOME_HREF}");
+  });
+
+  it("finishes a signed-out ♡ at screen level, not in the card", () => {
+    expect(source).toContain("useFeedFavoriteReplay();");
+  });
+
+  it("pads an odd last row so the last card keeps half width", () => {
+    expect(source).toContain("items.length % 2 === 1 ? [...items, GRID_SPACER] : items");
+    expect(source).toContain("data={cells}");
+  });
+
+  it("uses the RNR Button for 🔍 and See all", () => {
+    expect(source).toContain('import { Button } from "@/components/ui/button"');
+    expect(source).not.toMatch(/<Pressable[^>]*accessibilityLabel=\{t\("search"\)\}/);
   });
 
   it("has no filters, filter chips, or safety banner", () => {

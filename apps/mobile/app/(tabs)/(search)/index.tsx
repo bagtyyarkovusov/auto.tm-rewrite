@@ -14,7 +14,6 @@ import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { useListingCount } from "../../../src/api/listings/useListingCount";
 import { useListings } from "../../../src/api/listings/useListings";
-import type { AuthHref } from "../../../src/auth/intentStore";
 import { useViewer } from "../../../src/auth/useViewer";
 import { FeedEmpty } from "../../../src/listings/feed/FeedEmpty";
 import { FeedError } from "../../../src/listings/feed/FeedError";
@@ -23,14 +22,24 @@ import {
   ListingGridCardSkeleton,
 } from "../../../src/listings/feed/ListingGridCard";
 import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMaps";
+import { useFeedFavoriteReplay } from "../../../src/listings/feed/useFeedFavoriteReplay";
+import { HOME_HREF } from "../../../src/navigation/homeHref";
 
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { localeTag } from "@/src/i18n/resources";
 
-const HOME_HREF: AuthHref = "/(tabs)/(search)";
 const SKELETON_ROWS = [0, 1, 2];
+
+/**
+ * Fills the second column of an odd last row. Without it the last card's
+ * `flex-1` would take the whole row and read as a large card.
+ */
+const GRID_SPACER = { id: "grid-spacer" } as const;
+type GridCell = ListingsSchemas.ListingSummary | typeof GRID_SPACER;
+const isSpacer = (cell: GridCell): cell is typeof GRID_SPACER => cell === GRID_SPACER;
 
 function HomeHeader() {
   const { t, i18n } = useTranslation();
@@ -40,14 +49,15 @@ function HomeHeader() {
     <View className="gap-2">
       <View className="flex-row items-center justify-between pl-4 pr-1">
         <Text className="text-2xl font-heading text-foreground">AutoTM</Text>
-        <Pressable
-          className="h-12 w-12 items-center justify-center rounded-full active:bg-muted"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-12 w-12 rounded-full"
           onPress={() => router.push("/(tabs)/(search)/search")}
-          accessibilityRole="button"
           accessibilityLabel={t("search")}
         >
           <Icon as={Search} className="size-6 text-foreground" />
-        </Pressable>
+        </Button>
       </View>
 
       <Pressable
@@ -81,13 +91,13 @@ function HomeHeader() {
         <Text className="text-lg font-semibold text-foreground">
           {t("newListings")}
         </Text>
-        <Pressable
-          className="h-11 justify-center px-3 active:opacity-70"
+        <Button
+          variant="ghost"
+          className="h-11 px-3"
           onPress={() => router.push("/(tabs)/(search)/results")}
-          accessibilityRole="button"
         >
           <Text className="text-base font-medium text-primary">{t("seeAll")}</Text>
-        </Pressable>
+        </Button>
       </View>
     </View>
   );
@@ -116,6 +126,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const viewer = useViewer();
   const isAuthenticated = viewer === undefined ? null : viewer !== null;
+  useFeedFavoriteReplay();
 
   const {
     data,
@@ -139,22 +150,29 @@ export default function HomeScreen() {
     [data],
   );
   const catalogMaps = useFeedCatalogMaps(items);
+  const cells = useMemo<GridCell[]>(
+    () => (items.length % 2 === 1 ? [...items, GRID_SPACER] : items),
+    [items],
+  );
 
   const openListing = useCallback((id: string) => {
     router.push(`/(public)/listings/${id}`);
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: ListingsSchemas.ListingSummary }) => (
-      <ListingGridCard
-        listing={item}
-        onPress={openListing}
-        brandName={catalogMaps.brandName(item.brandId)}
-        modelName={catalogMaps.modelName(item.modelId)}
-        isAuthenticated={isAuthenticated}
-        returnTo={HOME_HREF}
-      />
-    ),
+    ({ item }: { item: GridCell }) =>
+      isSpacer(item) ? (
+        <View className="flex-1" />
+      ) : (
+        <ListingGridCard
+          listing={item}
+          onPress={openListing}
+          brandName={catalogMaps.brandName(item.brandId)}
+          modelName={catalogMaps.modelName(item.modelId)}
+          isAuthenticated={isAuthenticated}
+          returnTo={HOME_HREF}
+        />
+      ),
     [catalogMaps, isAuthenticated, openListing],
   );
 
@@ -181,7 +199,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
       <FlatList
-        data={items}
+        data={cells}
         keyExtractor={(item) => item.id}
         numColumns={2}
         renderItem={renderItem}

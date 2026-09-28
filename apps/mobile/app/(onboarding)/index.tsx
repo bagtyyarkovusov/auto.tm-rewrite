@@ -5,12 +5,13 @@ import { View } from "react-native";
 
 import LaunchMark from "../../assets/launch-mark.svg";
 import { getOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
+import { HOME_HREF } from "../../src/navigation/homeHref";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 export default function OnboardingSplashScreen() {
   const [destination, setDestination] = useState<
-    "/(tabs)/(search)" | "/(onboarding)/language" | null
+    typeof HOME_HREF | "/(onboarding)/language" | null
   >(null);
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export default function OnboardingSplashScreen() {
     void getOnboardingCompleted().then((completed) => {
       if (!mounted) return;
 
-      setDestination(completed ? "/(tabs)/(search)" : "/(onboarding)/language");
+      setDestination(completed ? HOME_HREF : "/(onboarding)/language");
     });
 
     return () => {

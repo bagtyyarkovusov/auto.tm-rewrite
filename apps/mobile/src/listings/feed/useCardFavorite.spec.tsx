@@ -63,8 +63,8 @@ describe("useCardFavorite", () => {
     );
   });
 
-  it("finishes the Favorite once sign-in hands the action back", () => {
-    const { result } = render(false);
+  it("leaves a waiting Favorite to the list screen", () => {
+    render(false);
 
     act(() => {
       useAuthIntentStore.setState({
@@ -72,10 +72,8 @@ describe("useCardFavorite", () => {
       });
     });
 
-    expect(mockFavorite).toHaveBeenCalledTimes(1);
-    expect(mockFavorite).toHaveBeenCalledWith(LISTING_ID, expect.any(Object));
-    expect(result.current.favorited).toBe(true);
-    expect(useAuthIntentStore.getState().replayAction).toBeNull();
+    expect(mockFavorite).not.toHaveBeenCalled();
+    expect(useAuthIntentStore.getState().replayAction).not.toBeNull();
   });
 
   it("signed in, favorites optimistically and rolls back on failure", () => {
