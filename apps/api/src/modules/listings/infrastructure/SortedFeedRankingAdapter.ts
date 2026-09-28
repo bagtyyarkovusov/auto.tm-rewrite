@@ -99,7 +99,9 @@ export class SortedFeedRankingAdapter implements FeedRankingPort {
       rows.push(
         ...(await this.prisma.listing.findMany({
           where: { AND: [...base, { [key]: null }, ...afterId] },
-          orderBy: [{ id: direction }],
+          // Every key here is NULL; ordering by it too matches the (status, key, id)
+          // index so Postgres reads it in order instead of sorting or using the pkey.
+          orderBy: [{ [key]: direction }, { id: direction }],
           take: take - rows.length,
           include: { media: { orderBy: { sortOrder: "asc" }, take: 1 } },
         })),
