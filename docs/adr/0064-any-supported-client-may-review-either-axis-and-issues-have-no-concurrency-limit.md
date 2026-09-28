@@ -3,13 +3,13 @@
 - **Status**: Accepted
 - **Date**: 2026-09-28
 - **Deciders**: AutoTM founder
-- **Supersedes**: [ADR-0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) in full; the high-risk review-provider rule in [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) and [ADR-0059](0059-kimi-code-as-a-third-interactive-coding-agent.md); and ADR-0058's limit of two issues in flight during its pilot. The rest of ADR-0058 and ADR-0059 remains in force.
+- **Supersedes**: [ADR-0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) in full; the high-risk review-provider rule in [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) and [ADR-0059](0059-kimi-code-as-a-third-interactive-coding-agent.md); and ADR-0058's limit of two issues in flight during its pilot, including ADR-0059's restatement of it. The rest of ADR-0058 and ADR-0059 remains in force.
 
 ## Context
 
 ADR-0058 requires one Codex review and one Claude Code review across the Standards and Spec axes for authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes. ADR-0059 narrowed that to an OpenAI-backed Codex desktop review and an Anthropic-backed Claude Code desktop review, so the Kimi-backed `claude-kimi` CLI could not fill either slot. ADR-0062 then let the founder assign both axes to Kimi one pull request at a time. ADR-0058 also caps its pilot at two implementation issues in flight.
 
-In practice the provider rule holds finished work waiting for one specific client's capacity. On 2026-09-28 the founder waived it by hand for PR #357, PR #414 and PR #416. Each waiver needed its own durable record, and the work sat idle until the founder answered. The two-issue cap blocks parallel work across the three available clients for the same reason. Each review already runs in a fresh read-only context pinned to a fixed commit, and that independence from the implementer is what the review gate relies on.
+In practice the provider rule holds finished work waiting for one specific client's capacity. On 2026-09-28 the founder had to waive it by hand, in chat, for PR #357, PR #414 and PR #416; each waiver then needed its own record on the pull request, and the work sat idle until the founder answered. The two-issue cap blocks parallel work across the three available clients for the same reason. Each review already runs in a fresh read-only context pinned to a fixed commit, and that independence from the implementer is what the review gate relies on.
 
 ## Decision
 
@@ -39,6 +39,7 @@ In practice the provider rule holds finished work waiting for one specific clien
 
 - The two review axes, fixed-commit pinning, reviewer independence from the implementer, and provider and client attribution do not change.
 - The founder may still ask for a particular client or a second-provider review on a specific pull request.
+- The review rule and the concurrency limit are recorded together because the founder decided them together, for the same reason, and both replace provisions of ADR-0058.
 
 ## Alternatives considered
 
@@ -53,4 +54,4 @@ In practice the provider rule holds finished work waiting for one specific clien
 - [ADR-0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) - per-PR Kimi review exception, superseded here
 - [`docs/agents/coding-workflow.md`](../agents/coding-workflow.md) - review contract
 - [`.claude/skills/run-issue/FINALIZATION.md`](../../.claude/skills/run-issue/FINALIZATION.md) - fixed-commit finalization
-- PR #357, PR #414, PR #416 - founder waivers recorded on 2026-09-28
+- PR #357, PR #414, PR #416 - pull requests the founder waived by hand on 2026-09-28
