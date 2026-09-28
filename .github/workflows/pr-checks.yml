@@ -7,9 +7,20 @@ on:
 jobs:
   pr:
     runs-on: [self-hosted, tm-proxy]
+    env:
+      # Safe unreachable defaults override any endpoints inherited from the
+      # runner. The service step replaces them with this run's mapped ports.
+      DATABASE_URL: postgresql://auto_tm_ci:auto_tm_ci_pass@127.0.0.1:1/auto_tm_ci
+      REDIS_URL: redis://127.0.0.1:1
+      MINIO_ENDPOINT: http://127.0.0.1:1
+      MINIO_PUBLIC_URL: http://127.0.0.1:1
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Start disposable test services
+        shell: bash
+        run: bash scripts/ci-services.sh up
 
       - uses: pnpm/action-setup@v4
         with:
@@ -59,6 +70,12 @@ jobs:
 
       - run: pnpm --filter @auto-tm/db generate
 
+      - name: Deploy migrations to the disposable database
+        run: pnpm db:migrate:deploy
+
+      - name: Create disposable media buckets
+        run: pnpm minio:bootstrap
+
       - run: pnpm check:glossary
 
       - run: pnpm lint
@@ -66,3 +83,16 @@ jobs:
       - run: pnpm typecheck
 
       - run: pnpm test
+        env:
+          NODE_ENV: test
+          APP_ENV: test
+
+      - name: Show test service logs on failure
+        if: ${{ failure() }}
+        shell: bash
+        run: bash scripts/ci-services.sh logs
+
+      - name: Remove disposable test services
+        if: ${{ always() }}
+        shell: bash
+        run: bash scripts/ci-services.sh down
