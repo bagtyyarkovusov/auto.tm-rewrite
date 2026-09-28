@@ -13,7 +13,7 @@ Settle design for one UI-heavy issue. Facts come from agents and repository evid
 
 ## Resolve the issue
 
-1. Read `CLAUDE.md`, charter, roadmap, [the domain glossary](../../../docs/domain/GLOSSARY.md), ADR-0019, ADR-0020, issue-tracker guidance, the issue, and every referenced PRD/flow/sprint/`CONTEXT.md` file.
+1. Follow [AGENTS.md](../../../AGENTS.md). Read the issue and its governing product/design references, affected overview and source, and [the glossary](../../../docs/domain/GLOSSARY.md) for relevant terms. Consult `docs/agents/domain.md` for document roles and charter/roadmap decisions when they constrain this design.
 2. If `$issue` is empty, list eligible UI issues and require selection.
 3. Accept rich or lean bodies when problem and acceptance criteria are discoverable. Derive screens/files from read-only inspection; stop only when user-facing intent remains ambiguous.
 4. Require a clean worktree and inspect existing design artifacts/branches/PRs before mutation.

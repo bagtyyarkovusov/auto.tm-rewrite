@@ -16,7 +16,7 @@ Apply the authority order used by the design skills:
 
 1. locked charter and accepted ADRs;
 2. target PRD/flow and the active issue/sprint delta;
-3. current-state `CONTEXT.md` and code;
+3. current source/tests and runtime evidence, located through the local overview;
 4. actual token/component/i18n sources;
 5. mutable UI guidance.
 

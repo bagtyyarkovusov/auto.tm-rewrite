@@ -14,8 +14,8 @@ Turn an unsettled product idea into reviewed AutoTM documentation. Do not create
 ## Establish the evidence base
 
 1. Resolve `$topic`; if it is empty or could identify more than one capability, ask the user to name the shaping target.
-2. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, [the domain glossary](../../../docs/domain/GLOSSARY.md), `CONTEXT-MAP.md`, and the relevant current-state `CONTEXT.md` files.
-3. Read the relevant target PRDs, flows, pending sprint documents, existing issues, and code. Always include [ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md), [ADR-0020](../../../docs/adr/0020-document-hierarchy-and-mutability.md), and [ADR-0042](../../../docs/adr/0042-domain-glossary-authority-and-mutability.md), plus every topic-specific ADR.
+2. Follow [AGENTS.md](../../../AGENTS.md). Read [the domain glossary](../../../docs/domain/GLOSSARY.md) for relevant terms and use `CONTEXT-MAP.md` to locate affected overviews, source, and tests. Load the roadmap or charter where scheduling or locked scope affects the proposal.
+3. Read the relevant target PRDs, flows, pending sprint documents, existing issues, and code. For document changes include [ADR-0060](../../../docs/adr/0060-source-first-agent-context-and-task-scoped-guidance.md), [ADR-0020](../../../docs/adr/0020-document-hierarchy-and-mutability.md), and [ADR-0042](../../../docs/adr/0042-domain-glossary-authority-and-mutability.md), plus every topic-specific ADR.
 4. State the evidence already settled by the repository separately from decisions that still require the user. Do not ask the user questions the repository can answer.
 
 ## Grill the decision space
@@ -40,7 +40,7 @@ Do not silently resolve a product choice, material scope change, or architecture
 | Canonical term, definition, or rejected synonym | `docs/domain/GLOSSARY.md` |
 | Target capability or end-to-end behavior | Mutable file under `docs/prd/features/` or `docs/prd/flows/` |
 | Pending sprint delta, DoD, risks, or file/test plan | Eligible pending file under `docs/prd/sprints/` |
-| Current implemented entities, invariants, ports, events, routes, or package shape | No shaping edit; update the relevant `CONTEXT.md` only in the implementation PR that ships the change |
+| Proposed ownership, boundaries, or constraints | Record the proposal in its specification or decision; update an affected overview when implementation changes what it documents. Source and tests own routine implementation details |
 | Material semantic redefinition, bounded-context ownership change, or architecture/product decision | A new ADR through [`new-adr`](../new-adr/SKILL.md), with its approval gates |
 | Routine vocabulary addition or clarification within accepted decisions | Glossary edit without a new ADR |
 

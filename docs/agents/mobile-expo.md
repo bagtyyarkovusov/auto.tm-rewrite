@@ -64,9 +64,11 @@ Stop Metro before handing back the task.
 - Keep `react-native-screens` on its React Native/Fabric source path. Do not redirect it to `lib/commonjs`; that caused `RNSSafeAreaView` view-config crashes.
 - Do not patch `@react-native/codegen` for `react-native-screens` unless the package check is already clean and a fresh Codegen/parser repro proves the current aligned toolchain still fails.
 - `expo-router@55.0.14` ships the internal router modules needed by SDK 55. Do not restore old `expo-router@6.0.23` shims or postinstall patches.
-- **Expo Go can no longer run this app.** `app/(tabs)/chat.tsx` imports `useChatPushTokenRegistration`, which pulls in `expo-notifications` at module load; Expo Go dropped remote-push native code in SDK 53, so the app throws on launch. A development build is required for every runtime check, not just for `react-native-compressor`. This regressed when S10 added push registration to the chat tab.
+- **Expo Go can no longer run this app.** `app/(tabs)/chat.tsx` imports `useChatPushTokenRegistration`, which pulls in `expo-notifications` at module load; Expo Go dropped remote-push native code in SDK 53, so the app throws on launch. A development build is required for every runtime check. This regressed when S10 added push registration to the chat tab.
 
 ## Local Android build pitfalls
+
+- **Use an installed JDK 17 for Android builds and set `JAVA_HOME` explicitly.** With a JDK 21 daemon and no discoverable JDK 17, React Native 0.83.10 attempts toolchain provisioning through Foojay 0.5.0. That resolver references `IBM_SEMERU`, removed in Gradle 9, and configuration fails before compilation. Selecting the installed JDK 17 avoids that provisioning path. On macOS with Homebrew's `openjdk@17`, its home is `<brew-prefix>/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`. Do not patch `node_modules` to work around a missing local JDK. See the [upstream resolver compatibility report](https://github.com/gradle/foojay-toolchains/issues/151).
 
 - **`ANDROID_HOME` must be exported in the shell that runs `expo run:android`.** `apps/mobile/android/local.properties` is not committed and `expo prebuild` does not generate it, so a shell without the SDK env fails at configuration time with `SDK location not found`, even though `adb` may work from an interactive terminal that sources a profile. Export it before building:
 
@@ -95,4 +97,4 @@ cd apps/mobile/android
 
 ## Documentation duty
 
-If this checklist changes the diagnosis, update `apps/mobile/CONTEXT.md`. If it changes the architecture decision, add a dated ADR or errata note instead of leaving stale guidance in agent docs.
+Update this guide when the operating procedure changes. Update `apps/mobile/CONTEXT.md` only when its documented boundary, constraint, or important limitation changes. Keep individual diagnoses in task evidence. Supersede changed architecture decisions with a new ADR; preserve merged ADR text.

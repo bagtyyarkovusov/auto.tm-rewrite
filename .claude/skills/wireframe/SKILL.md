@@ -20,7 +20,7 @@ Read [the domain glossary](../../../docs/domain/GLOSSARY.md) for canonical engin
 
 1. `GRILL-OUTCOME.md` and accepted ADRs.
 2. Target PRD/flow, current roadmap, and active issue/sprint delta.
-3. Relevant `CONTEXT.md` and current implementation.
+3. Current source/tests and runtime evidence, located through the relevant overview.
 4. Actual routes, components, i18n, and token sources.
 5. Mutable UI guidance: IA, the reference screens index, the Kolesa guide (screens outside discovery only), design principles, accessibility, and platform split.
 

@@ -1,5 +1,5 @@
 import type { CardPhotos } from "../CardPhotos";
-import type { FeedCursor } from "../types";
+import type { TimestampCursor } from "../types";
 import type { ListingSummary } from "./ListingsReadPort";
 
 /**
@@ -29,8 +29,8 @@ export interface ListingCardReadPort {
   /** The owner's non-deleted Listings (any status), newest `updatedAt` first. */
   getOwnerCards(
     ownerId: string,
-    query?: { cursor?: FeedCursor; limit?: number },
-  ): Promise<{ items: ListingCard[]; nextCursor?: FeedCursor }>;
+    query?: { cursor?: TimestampCursor; limit?: number },
+  ): Promise<{ items: ListingCard[]; nextCursor?: TimestampCursor }>;
 }
 
 export const LISTING_CARD_READ_PORT = Symbol("ListingCardReadPort");

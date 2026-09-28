@@ -96,7 +96,7 @@ Context7 is for *library* docs. The repo's own docs sit alongside it. Use both:
 | **Context7** | External library API, version-specific behavior, migration guide, configuration, CLI flags |
 | `CLAUDE.md` / `AGENTS.md` | This repo's policies, never-dos, verification gates |
 | `docs/adr/*` | Why the repo made architectural choices |
-| `CONTEXT.md` (per workspace) | What a bounded context owns, its ports, its invariants |
+| `CONTEXT.md` (per workspace) | Ownership, non-obvious constraints, and source/test entry points; inspect implementation directly |
 | `docs/agents/*` | Domain-specific agent guides (this file, `mobile-expo.md`, `nativewind-v4.md`, etc.) |
 | `docs/prd/*` | Product scope, sprint state |
 
@@ -151,7 +151,7 @@ These IDs are pre-resolved for this repo's stack. Copy-paste them into `query-do
 
 ### Utility libraries (no pin — resolve on demand)
 
-`clsx`, `tailwind-merge`, `class-variance-authority`, `lucide-react`, `lucide-react-native`, `bcryptjs`, `pg`, `@formatjs/intl-localematcher`, `negotiator`, `tailwindcss-animate`, `tw-animate-css`, `react-native-gesture-handler`, `react-native-screens`, `react-native-safe-area-context`, `react-native-svg`, `react-native-css-interop`, `react-native-compressor`, `expo-secure-store`, `expo-linking`, `expo-constants`, `expo-image-manipulator`, `expo-status-bar`, `@asteasolutions/zod-to-openapi`, ESLint plugins.
+`clsx`, `tailwind-merge`, `class-variance-authority`, `lucide-react`, `lucide-react-native`, `bcryptjs`, `pg`, `@formatjs/intl-localematcher`, `negotiator`, `tailwindcss-animate`, `tw-animate-css`, `react-native-gesture-handler`, `react-native-screens`, `react-native-safe-area-context`, `react-native-svg`, `react-native-css-interop`, `expo-secure-store`, `expo-linking`, `expo-constants`, `expo-image-manipulator`, `expo-status-bar`, `@asteasolutions/zod-to-openapi`, ESLint plugins.
 
 For these, run `resolve-library-id` on the fly. They're small enough that pinning would be more maintenance than payoff.
 

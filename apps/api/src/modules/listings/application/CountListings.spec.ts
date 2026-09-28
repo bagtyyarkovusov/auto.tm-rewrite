@@ -2,22 +2,26 @@ import { describe, it, expect, beforeEach } from "vitest";
 
 import { CountListings } from "./CountListings";
 import type { FeedRankingPort } from "../domain/ports/FeedRankingPort";
-import type { ListingFilterCriteria } from "../domain/types";
+import type { FeedCountSummary, ListingFilterCriteria } from "../domain/types";
 
 class FakeFeedRankingPort implements FeedRankingPort {
-  countResult = 0;
+  summary: FeedCountSummary = { totalMatching: 0, priceMinTmt: null, priceMaxTmt: null };
   lastCountFilters?: ListingFilterCriteria | undefined;
 
   async rank(): Promise<{ items: [] }> {
     return { items: [] };
   }
 
-  async count(query: { filters?: ListingFilterCriteria }): Promise<number> {
+  async count(query: { filters?: ListingFilterCriteria }): Promise<FeedCountSummary> {
     this.lastCountFilters = query.filters;
-    return this.countResult;
+    return this.summary;
   }
 
   async modelCounts(): Promise<Array<{ modelId: string; totalMatching: number }>> {
+    return [];
+  }
+
+  async brandCounts(): Promise<Array<{ brandId: string; totalMatching: number }>> {
     return [];
   }
 }
@@ -33,17 +37,16 @@ describe("CountListings", () => {
     ranking = new FakeFeedRankingPort();
   });
 
-  it("returns totalMatching from ranking port", async () => {
-    ranking.countResult = 42;
+  it("returns totalMatching and the TMT price range from the ranking port", async () => {
+    ranking.summary = { totalMatching: 42, priceMinTmt: 35000, priceMaxTmt: 1_150_000 };
 
     const uc = makeUseCase(ranking);
     const result = await uc.execute({});
 
-    expect(result.totalMatching).toBe(42);
+    expect(result).toEqual({ totalMatching: 42, priceMinTmt: 35000, priceMaxTmt: 1_150_000 });
   });
 
   it("forwards filters to ranking port", async () => {
-    ranking.countResult = 5;
     const filters: ListingFilterCriteria = {
       brandId: "brand-1",
       priceMin: 50000,
@@ -56,12 +59,12 @@ describe("CountListings", () => {
     expect(ranking.lastCountFilters).toEqual(filters);
   });
 
-  it("returns zero when ranking port reports zero", async () => {
-    ranking.countResult = 0;
+  it("returns a null price range when nothing matches", async () => {
+    ranking.summary = { totalMatching: 0, priceMinTmt: 1, priceMaxTmt: 2 };
 
     const uc = makeUseCase(ranking);
     const result = await uc.execute({});
 
-    expect(result.totalMatching).toBe(0);
+    expect(result).toEqual({ totalMatching: 0, priceMinTmt: null, priceMaxTmt: null });
   });
 });

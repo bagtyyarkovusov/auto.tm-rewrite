@@ -3,7 +3,7 @@
  * Extends @auto-tm/ui/theme/tailwind with shadcn-style semantic colors
  * resolving via CSS vars from global.css. Locked to v3 due to NativeWind +
  * Metro constraints. Web/admin use v4 in a different config shape.
- * Rules: docs/agents/nativewind-v4.md §0.5, §2.5.
+ * Rules: docs/agents/nativewind-v4.md (component and theme conventions).
  */
 const { hairlineWidth } = require("nativewind/theme");
 const { tailwindTheme } = require("@auto-tm/ui/theme/tailwind");

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaService } from "@auto-tm/db";
+import { PrismaService, recomputeListingPricesTmt } from "@auto-tm/db";
 
 import { Listing } from "../domain/Listing";
 import type { ListingRepository } from "../domain/ports/ListingRepository";
@@ -94,10 +94,11 @@ export class PrismaListingRepository implements ListingRepository {
     return result;
   }
 
-  async update(listing: Listing): Promise<Listing> {
+  async update(listing: Listing, derived?: { priceTmt: number }): Promise<Listing> {
     const row = await this.prisma.listing.update({
       where: { id: listing.id },
       data: {
+        ...(derived !== undefined ? { priceTmt: derived.priceTmt } : {}),
         status: listing.status,
         brandId: listing.brandId,
         modelId: listing.modelId,
@@ -136,6 +137,10 @@ export class PrismaListingRepository implements ListingRepository {
       },
     });
     return this.toDomain(row);
+  }
+
+  async recomputePriceTmt(): Promise<number> {
+    return recomputeListingPricesTmt(this.prisma);
   }
 
   async softDelete(id: string, at: Date): Promise<void> {
