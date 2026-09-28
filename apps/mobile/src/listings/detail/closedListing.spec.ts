@@ -46,9 +46,9 @@ describe("closedListingBannerKey", () => {
 });
 
 describe("similarListingsHref", () => {
-  it("opens the Home feed filtered by the Listing's brand and model", () => {
+  it("opens Results filtered by the Listing's brand and model", () => {
     expect(similarListingsHref({ brandId: "brand-1", modelId: "model-1" })).toEqual({
-      pathname: "/(tabs)",
+      pathname: "/(tabs)/(search)/results",
       params: { brandId: "brand-1", modelId: "model-1" },
     });
   });

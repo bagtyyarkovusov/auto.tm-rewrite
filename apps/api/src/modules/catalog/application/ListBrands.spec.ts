@@ -43,6 +43,10 @@ class FakeBrandRepository implements BrandRepository {
     return this.brands[0] ?? null;
   }
 
+  async listAllBrands(): Promise<Brand[]> {
+    return this.brands;
+  }
+
   async getBySlug(_slug: string): Promise<Brand | null> {
     return this.brands.find((b) => b.slug === _slug) ?? null;
   }

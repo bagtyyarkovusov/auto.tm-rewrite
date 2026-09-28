@@ -45,6 +45,10 @@ class FakeModelRepository implements ModelRepository {
     return this.models[0] ?? null;
   }
 
+  async listAllModels(): Promise<Model[]> {
+    return this.models;
+  }
+
   async getBySlug(_slug: string): Promise<Model | null> {
     return this.models.find((m) => m.slug === _slug) ?? null;
   }

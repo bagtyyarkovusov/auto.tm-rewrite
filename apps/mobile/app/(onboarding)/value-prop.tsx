@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 
 import { setOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
+import { HOME_HREF } from "../../src/navigation/homeHref";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,7 @@ function useSlides() {
 
 async function finishOnboarding() {
   await setOnboardingCompleted();
-  router.replace("/(tabs)");
+  router.replace(HOME_HREF);
 }
 
 export default function ValuePropScreen() {

@@ -5,6 +5,7 @@ import {
   MODEL_REPOSITORY,
   type ModelRepository,
 } from "../domain/ports/ModelRepository";
+import { CatalogSearchIndex } from "./CatalogSearchIndex";
 
 export interface DeleteModelInput {
   id: string;
@@ -15,6 +16,8 @@ export class DeleteModel {
   constructor(
     @Inject(MODEL_REPOSITORY) private readonly models: ModelRepository,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(CatalogSearchIndex)
+    private readonly searchIndex: CatalogSearchIndex,
   ) {}
 
   async execute(input: DeleteModelInput, actorUserId: string): Promise<void> {
@@ -36,6 +39,7 @@ export class DeleteModel {
       }
       throw err;
     }
+    this.searchIndex.invalidate();
 
     await this.prisma.auditLog.create({
       data: {

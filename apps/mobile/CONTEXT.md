@@ -4,9 +4,11 @@ Mobile is the primary marketplace client. The route tree, API hooks, feature mod
 
 ## Boundaries that matter
 
-- All API calls go through `src/api/client.ts`; it owns single-flight refresh. Hooks use shared contracts and query-key factories. Keep session isolation and cache cleanup when identity changes. Follow the [data-fetching guide](../../docs/agents/mobile-data-fetching.md) before changing this boundary.
+- All API calls go through `src/api/client.ts`; it owns single-flight refresh, both after a 401 and before sending when the stored token has passed its lifetime ([ADR-0063](../../docs/adr/0063-mobile-refreshes-an-expired-access-token-before-sending.md)). Hooks use shared contracts and query-key factories. Keep session isolation and cache cleanup when identity changes. Follow the [data-fetching guide](../../docs/agents/mobile-data-fetching.md) before changing this boundary.
 - Mobile components use React Native Reusables under `components/ui`. Shared browser components are not native components. Follow the [styling guide](../../docs/agents/nativewind-v4.md); actual tokens, utilities, and fonts are in the app configuration and theme sources.
 - Sign-in Methods and listing contact phones have different meanings. Preserve auth-on-action for anonymous browsing, and use the glossary when changing identity/contact flows.
+- Auth-on-action stores a serializable pending action in `src/auth/intentStore.ts`. Screens replay it with `useReplayAuthAction`, or, for a screen-level consumer such as Home's feed, `useReplayAuthActionOfKind` while focused.
+- Home is the Search tab's stack root, `/(tabs)/(search)`. Import `HOME_HREF` from `src/navigation/homeHref.ts` for every "go home" navigation instead of writing the literal.
 - The locked five-tab navigation and Auto.ru structural discovery reference follow [ADR-0051](../../docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md). Read the affected approved screen specification before UI work. Do not treat an old Kolesa reference as authority for discovery.
 - Chat sockets complement HTTP state. Push uses native FCM/APNS tokens; provider setup and device delivery require runtime evidence, not just passing hook tests.
 

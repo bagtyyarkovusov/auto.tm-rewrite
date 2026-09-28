@@ -1,5 +1,7 @@
 import type { Router } from "expo-router";
 
+import { HOME_HREF } from "../navigation/homeHref";
+
 import { useAuthIntentStore } from "./intentStore";
 
 type AuthCloseNavigator = Pick<
@@ -20,5 +22,5 @@ export function closeAuth(navigator: AuthCloseNavigator): void {
     return;
   }
 
-  navigator.replace("/(tabs)");
+  navigator.replace(HOME_HREF);
 }

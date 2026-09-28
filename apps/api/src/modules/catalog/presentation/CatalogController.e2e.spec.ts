@@ -11,6 +11,7 @@ import { PrismaService } from "@auto-tm/db";
 import { JwtModule } from "@nestjs/jwt";
 
 import { CatalogModule } from "../catalog.module";
+import { CatalogSearchIndex } from "../application/CatalogSearchIndex";
 import { registerAcceptLanguageHook } from "../../../common/accept-language";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 
@@ -311,6 +312,173 @@ describe("CatalogController e2e", () => {
         .expect(200);
 
       expect(res.body.items).toHaveLength(0);
+    });
+  });
+
+  describe("GET /api/v1/catalog/search", () => {
+    beforeEach(async () => {
+      await prisma.brand.createMany({
+        data: [
+          {
+            id: "b1",
+            slug: "toyota",
+            nameRu: "Тойота",
+            nameTk: "Toýota",
+            nameEn: "Toyota",
+          },
+          {
+            id: "b2",
+            slug: "lexus",
+            nameRu: "Лексус",
+            nameTk: "Lexus",
+            nameEn: "Lexus",
+          },
+        ],
+      });
+      await prisma.model.createMany({
+        data: [
+          {
+            id: "m1",
+            brandId: "b1",
+            slug: "camry",
+            nameRu: "Камри",
+            nameTk: "Kamri",
+            nameEn: "Camry",
+          },
+          {
+            id: "m2",
+            brandId: "b1",
+            slug: "corolla",
+            nameRu: "Королла",
+            nameTk: "Korolla",
+            nameEn: "Corolla",
+          },
+        ],
+      });
+    });
+
+    it.each(["тойота", "toyota", "Тойота", "toyta"])(
+      "returns Toyota first for %j",
+      async (q) => {
+        const res = await request
+          .get(`/api/v1/catalog/search?q=${encodeURIComponent(q)}&locale=ru`)
+          .expect(200);
+
+        expect(res.body.results[0]).toMatchObject({
+          kind: "brand",
+          brandId: "b1",
+          label: "Тойота",
+        });
+      },
+    );
+
+    it.each(["камри", "camry"])(
+      "returns Camry as a model result with its brand for %j",
+      async (q) => {
+        const res = await request
+          .get(`/api/v1/catalog/search?q=${encodeURIComponent(q)}&locale=en`)
+          .expect(200);
+
+        const camry = res.body.results.find(
+          (r: { modelId?: string }) => r.modelId === "m1",
+        );
+        expect(camry).toMatchObject({
+          kind: "model",
+          brandId: "b1",
+          label: "Camry",
+          brandLabel: "Toyota",
+        });
+      },
+    );
+
+    it("returns brand and model results together in one list", async () => {
+      const res = await request
+        .get("/api/v1/catalog/search?q=toyota&locale=en")
+        .expect(200);
+
+      const kinds = res.body.results.map((r: { kind: string }) => r.kind);
+      expect(kinds).toContain("brand");
+      expect(kinds).toContain("model");
+      expect(res.body.results.length).toBeLessThanOrEqual(20);
+    });
+
+    it("understands a year after the model name", async () => {
+      const res = await request
+        .get(`/api/v1/catalog/search?q=${encodeURIComponent("camry 2018")}&locale=en`)
+        .expect(200);
+
+      expect(res.body.results[0]).toMatchObject({ kind: "model", modelId: "m1" });
+      expect(res.body.yearFrom).toBe(2018);
+      expect(res.body.yearTo).toBe(2018);
+    });
+
+    it("understands a year range after a Russian brand name", async () => {
+      const res = await request
+        .get(
+          `/api/v1/catalog/search?q=${encodeURIComponent("лексус 2014-2019")}&locale=ru`,
+        )
+        .expect(200);
+
+      expect(res.body.results[0]).toMatchObject({ kind: "brand", brandId: "b2" });
+      expect(res.body.yearFrom).toBe(2014);
+      expect(res.body.yearTo).toBe(2019);
+    });
+
+    it("returns only the year range for a bare year query", async () => {
+      const res = await request
+        .get("/api/v1/catalog/search?q=2018&locale=ru")
+        .expect(200);
+
+      expect(res.body.results).toEqual([]);
+      expect(res.body.yearFrom).toBe(2018);
+      expect(res.body.yearTo).toBe(2018);
+    });
+
+    it("ignores years outside the valid range", async () => {
+      const res = await request
+        .get(`/api/v1/catalog/search?q=${encodeURIComponent("camry 1800")}&locale=en`)
+        .expect(200);
+
+      expect(res.body.yearFrom).toBeUndefined();
+      expect(res.body.results.length).toBeGreaterThan(0);
+    });
+
+    it("returns an empty list for an empty or one-character query", async () => {
+      for (const q of ["", "т"]) {
+        const res = await request
+          .get(`/api/v1/catalog/search?q=${encodeURIComponent(q)}`)
+          .expect(200);
+
+        expect(res.body.results).toEqual([]);
+      }
+    });
+
+    it("reflects admin catalog edits after invalidation", async () => {
+      await request
+        .get("/api/v1/catalog/search?q=haval&locale=en")
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.results).toEqual([]);
+        });
+
+      await prisma.brand.create({
+        data: {
+          id: "b3",
+          slug: "haval",
+          nameRu: "Хавал",
+          nameTk: "Haval",
+          nameEn: "Haval",
+        },
+      });
+      // The use-case invalidation path is covered by application specs; direct
+      // seeding bypasses it, so invalidate through the module's index here.
+      app.get(CatalogSearchIndex).invalidate();
+
+      const res = await request
+        .get("/api/v1/catalog/search?q=haval&locale=en")
+        .expect(200);
+
+      expect(res.body.results[0]).toMatchObject({ kind: "brand", brandId: "b3" });
     });
   });
 

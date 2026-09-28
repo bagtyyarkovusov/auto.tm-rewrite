@@ -3,9 +3,9 @@ import { resolve } from "path";
 
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync(resolve(__dirname, "../../app/(tabs)/index.tsx"), "utf-8");
+const source = readFileSync(resolve(__dirname, "../../app/(tabs)/(search)/results.tsx"), "utf-8");
 
-describe("Home feed brand + model params", () => {
+describe("Interim Results brand + model params", () => {
   it("reads brandId and modelId route params", () => {
     expect(source).toContain("useLocalSearchParams<{");
     expect(source).toContain("brandId?: string;");

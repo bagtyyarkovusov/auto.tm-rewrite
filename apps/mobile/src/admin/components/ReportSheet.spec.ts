@@ -23,7 +23,7 @@ describe("ReportSheet auth-on-action", () => {
 
   it("returns a user report to the tabs without a Listing-scoped action", () => {
     expect(source).toContain('targetType === "listing"');
-    expect(source).toContain(': { returnTo: "/(tabs)" }');
+    expect(source).toContain(": { returnTo: HOME_HREF }");
   });
 
   it("closes the portal-rendered sheet before the auth screens open", () => {

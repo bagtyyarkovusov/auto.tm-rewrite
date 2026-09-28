@@ -11,6 +11,7 @@ import {
   type AuthIntent,
 } from "../../auth/intentStore";
 import { useCreateReport } from "../../api/admin/useCreateReport";
+import { HOME_HREF } from "../../navigation/homeHref";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -102,7 +103,7 @@ export function ReportSheet({
               returnTo: `/(public)/listings/${targetId}`,
               action: { kind: "report", listingId: targetId },
             }
-          : { returnTo: "/(tabs)" };
+          : { returnTo: HOME_HREF };
       useAuthIntentStore.getState().requireSignIn(router, intent);
       return;
     }

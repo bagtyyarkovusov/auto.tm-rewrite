@@ -47,6 +47,11 @@ export class PrismaModelRepository implements ModelRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async listAllModels(): Promise<Model[]> {
+    const rows = await this.prisma.model.findMany({ orderBy: { id: "asc" } });
+    return rows.map((r) => this.toDomain(r));
+  }
+
   async getBySlug(slug: string): Promise<Model | null> {
     const row = await this.prisma.model.findFirst({ where: { slug } });
     return row ? this.toDomain(row) : null;

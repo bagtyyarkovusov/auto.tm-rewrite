@@ -45,6 +45,11 @@ export class PrismaBrandRepository implements BrandRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async listAllBrands(): Promise<Brand[]> {
+    const rows = await this.prisma.brand.findMany({ orderBy: { id: "asc" } });
+    return rows.map((r) => this.toDomain(r));
+  }
+
   async getBySlug(slug: string): Promise<Brand | null> {
     const row = await this.prisma.brand.findUnique({ where: { slug } });
     return row ? this.toDomain(row) : null;

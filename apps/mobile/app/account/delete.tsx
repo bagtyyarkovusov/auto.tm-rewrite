@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { useDeleteAccount } from "../../src/api/identity/useDeleteAccount";
 import { clearAuthSession } from "../../src/auth/session";
+import { HOME_HREF } from "../../src/navigation/homeHref";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -59,7 +60,7 @@ export default function DeleteAccountScreen() {
 
   function handleScheduledDismiss() {
     setShowScheduled(false);
-    router.replace("/(tabs)");
+    router.replace(HOME_HREF);
   }
 
   return (

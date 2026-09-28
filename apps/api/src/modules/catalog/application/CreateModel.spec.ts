@@ -7,6 +7,14 @@ import type { BrandRepository } from "../domain/ports/BrandRepository";
 import type { ModelRepository } from "../domain/ports/ModelRepository";
 
 import { CreateModel } from "./CreateModel";
+import type { CatalogSearchIndex } from "./CatalogSearchIndex";
+
+class FakeSearchIndex {
+  invalidated = false;
+  invalidate(): void {
+    this.invalidated = true;
+  }
+}
 
 class FakeBrandRepository implements BrandRepository {
   brands: Brand[] = [];
@@ -17,6 +25,10 @@ class FakeBrandRepository implements BrandRepository {
 
   async getBrandById(id: string): Promise<Brand | null> {
     return this.brands.find((b) => b.id === id) ?? null;
+  }
+
+  async listAllBrands(): Promise<Brand[]> {
+    return this.brands;
   }
 
   async getBySlug(): Promise<Brand | null> {
@@ -46,6 +58,10 @@ class FakeModelRepository implements ModelRepository {
 
   async getModelById(id: string): Promise<Model | null> {
     return this.models.find((m) => m.id === id) ?? null;
+  }
+
+  async listAllModels(): Promise<Model[]> {
+    return this.models;
   }
 
   async getBySlug(): Promise<Model | null> {
@@ -96,11 +112,13 @@ function makeUseCase(
   modelRepo?: FakeModelRepository,
   brandRepo?: FakeBrandRepository,
   prisma?: FakePrisma,
+  searchIndex?: FakeSearchIndex,
 ) {
   return new CreateModel(
     modelRepo ?? new FakeModelRepository(),
     brandRepo ?? new FakeBrandRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof CreateModel>[2],
+    (searchIndex ?? new FakeSearchIndex()) as unknown as CatalogSearchIndex,
   );
 }
 
@@ -201,5 +219,26 @@ describe("CreateModel", () => {
       targetType: "Model",
       targetId: result.id,
     });
+  });
+
+  it("invalidates the catalog search index", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const searchIndex = new FakeSearchIndex();
+    const uc = makeUseCase(modelRepo, brandRepo, prisma, searchIndex);
+    await uc.execute(
+      { brandId: "b1", slug: "camry", nameRu: "Камри", nameTk: "Kamri", nameEn: "Camry" },
+      "admin-1",
+    );
+
+    expect(searchIndex.invalidated).toBe(true);
   });
 });

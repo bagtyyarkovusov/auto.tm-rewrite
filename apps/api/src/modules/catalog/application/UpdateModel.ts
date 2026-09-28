@@ -10,6 +10,7 @@ import {
   BRAND_REPOSITORY,
   type BrandRepository,
 } from "../domain/ports/BrandRepository";
+import { CatalogSearchIndex } from "./CatalogSearchIndex";
 
 export interface UpdateModelInput {
   id: string;
@@ -26,6 +27,8 @@ export class UpdateModel {
     @Inject(MODEL_REPOSITORY) private readonly models: ModelRepository,
     @Inject(BRAND_REPOSITORY) private readonly brands: BrandRepository,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(CatalogSearchIndex)
+    private readonly searchIndex: CatalogSearchIndex,
   ) {}
 
   async execute(input: UpdateModelInput, actorUserId: string): Promise<Model> {
@@ -63,6 +66,7 @@ export class UpdateModel {
       ...(input.nameTk !== undefined && { nameTk: input.nameTk }),
       ...(input.nameEn !== undefined && { nameEn: input.nameEn }),
     });
+    this.searchIndex.invalidate();
 
     await this.prisma.auditLog.create({
       data: {

@@ -215,6 +215,33 @@ export const CityDetailSchema = z.object({
 });
 export type CityDetail = z.infer<typeof CityDetailSchema>;
 
+// ── Search ──
+
+export const CatalogSearchQuerySchema = z.object({
+  q: z.string().max(100).optional(),
+  locale: z.enum(["tk", "ru", "en"]).optional(),
+});
+export type CatalogSearchQuery = z.infer<typeof CatalogSearchQuerySchema>;
+
+export const CatalogSearchResultItemSchema = z.object({
+  kind: z.enum(["brand", "model"]),
+  brandId: z.string(),
+  modelId: z.string().optional(),
+  label: z.string(),
+  brandLabel: z.string().optional(),
+  localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+});
+export type CatalogSearchResultItem = z.infer<
+  typeof CatalogSearchResultItemSchema
+>;
+
+export const CatalogSearchResponseSchema = z.object({
+  results: z.array(CatalogSearchResultItemSchema),
+  yearFrom: z.number().int().optional(),
+  yearTo: z.number().int().optional(),
+});
+export type CatalogSearchResponse = z.infer<typeof CatalogSearchResponseSchema>;
+
 // ── List Response Schemas ──
 
 export const BrandSummaryListResponseSchema = z.object({

@@ -49,6 +49,9 @@ import {
   CreateModelRequestSchema,
   UpdateModelRequestSchema,
   DeleteModelParamSchema,
+  CatalogSearchQuerySchema,
+  CatalogSearchResultItemSchema,
+  CatalogSearchResponseSchema,
 } from "./schemas/catalog";
 import {
   ListingSummarySchema,
@@ -175,6 +178,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("RegionDetail", RegionDetailSchema);
   registry.register("CitySummary", CitySummarySchema);
   registry.register("CityDetail", CityDetailSchema);
+  registry.register("CatalogSearchResultItem", CatalogSearchResultItemSchema);
+  registry.register("CatalogSearchResponse", CatalogSearchResponseSchema);
 
   // Catalog admin write schemas
   registry.register("CreateBrandRequest", CreateBrandRequestSchema);
@@ -709,6 +714,30 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
           "application/json": {
             schema: S(ListInspectionInterestStatsResponseSchema),
           },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/catalog/search",
+    summary: "Search brands and models in any spelling",
+    description:
+      "Matches Russian, English and Turkmen spellings with Cyrillic–Latin transliteration and one forgiven typo. Understands year tokens (\"camry 2018\", \"лексус 2014-2019\", \"2018\").",
+    tags: ["Catalog"],
+    request: {
+      query: CatalogSearchQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Ranked brand and model results with the parsed year range",
+        content: {
+          "application/json": { schema: S(CatalogSearchResponseSchema) },
         },
       },
       400: {
