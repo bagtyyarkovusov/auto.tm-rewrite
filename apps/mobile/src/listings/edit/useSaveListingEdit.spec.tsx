@@ -196,6 +196,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
           sellerTrust: { phoneVerified: true },
         });
       }),
@@ -273,6 +275,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
           sellerTrust: { phoneVerified: true },
         });
       }),
@@ -372,6 +376,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
           sellerTrust: { phoneVerified: true },
         });
       }),
@@ -430,6 +436,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
           sellerTrust: { phoneVerified: true },
         });
       }),

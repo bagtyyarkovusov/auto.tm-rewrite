@@ -627,6 +627,36 @@ describe("ListingsController e2e", () => {
       expect(res.body.media[0].variants.thumbnail).toContain("thumbnail.jpg");
     });
 
+    it("does not claim phone verification after the seller has no verified phone", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+      const published = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      await prisma.user.update({
+        where: { id: suite.id("user-1") },
+        data: {
+          phone: null,
+          phoneVerifiedAt: null,
+          email: `seller-${suite.id("user-1")}@example.test`,
+          emailVerifiedAt: new Date(),
+        },
+      });
+
+      const detail = await request.get(`/api/v1/listings/${published.body.id}`).expect(200);
+      expect(detail.body.sellerTrust).toEqual({ phoneVerified: false });
+
+      const feed = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+      expect(feed.body.items[0].sellerTrust).toEqual({ phoneVerified: false });
+    });
+
     it("returns 404 for soft-deleted listing", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
@@ -883,8 +913,9 @@ describe("ListingsController e2e", () => {
         // Guards against a spy that never fires (0 === 0).
         expect(small).toBeGreaterThan(0);
         expect(large).toBe(small);
-        // listings + cover media include + card photos + exchange rates + favorites.
-        expect(large).toBeLessThanOrEqual(5);
+        // listings + cover media include + card photos + exchange rates +
+        // favorites + one batched identity seller-profile read.
+        expect(large).toBeLessThanOrEqual(6);
       } finally {
         querySpy.mockRestore();
       }
