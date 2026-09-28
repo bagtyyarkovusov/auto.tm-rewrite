@@ -8,7 +8,7 @@ Media upload staging and server attachment are distinct steps. Preserve ownershi
 
 Ranking/filtering belongs to the existing read adapters. Other contexts use exported read/admin ports. When changing publication, contact, or deletion, inspect conversation and moderation consumers as well as mobile create/edit flows.
 
-Feed price sort and price-range counts read the stored `Listing.priceTmt` ([ADR-0061](../../../../../docs/adr/0061-stored-tmt-listing-price-for-feed-sort-and-range.md)). Publish, edit, and republish write it in the same statement as the Listing; after any `exchange_rates` change an operator must run the recompute (`packages/db` `listing-prices:recompute`). Display prices and the `priceMin`/`priceMax` filter convert at request time, so a stale `priceTmt` mis-orders and mis-counts but never shows a wrong price.
+Feed price sort and price-range counts read the stored `Listing.priceTmt` ([ADR-0061](../../../../../docs/adr/0061-stored-tmt-listing-price-for-feed-sort-and-range.md)). Publish, edit, and republish write it in the same statement as the Listing; after any `exchange_rates` change an operator must run the recompute (`packages/db` `listing-prices:recompute`). Display prices and the `priceMin`/`priceMax` filter convert at request time, so a stale `priceTmt` mis-orders and mis-counts but never shows a wrong price. The public feed pages in six orders (`newest` default, `price_asc`, `price_desc`, `year_desc`, `year_asc`, `mileage_asc`) with per-order keyset cursors, alongside `GET /api/v1/listings/count` (match count with the TMT price range of the matches) and `GET /api/v1/listings/filter-options/brands` (active-Listing counts per brand).
 
 ## Start here
 

@@ -762,6 +762,28 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
     },
   });
 
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/listings/filter-options/brands",
+    summary: "Brand-level listing counts for the current filters",
+    tags: ["Listings"],
+    request: {
+      query: ListingBrandCountQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Brands with feed-eligible listing counts",
+        content: {
+          "application/json": { schema: S(ListingBrandCountResponseSchema) },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
   return registry;
 }
 
