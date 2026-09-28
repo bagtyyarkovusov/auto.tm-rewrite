@@ -3,7 +3,6 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../auth/useAuth";
@@ -12,8 +11,7 @@ import {
   useReplayAuthAction,
 } from "../../auth/intentStore";
 import { useOpenConversation } from "../../api/conversations/useOpenConversation";
-import { useFavoriteListing } from "../../api/listings/useFavoriteListing";
-import { useUnfavoriteListing } from "../../api/listings/useUnfavoriteListing";
+import { useListingFavorite } from "../useListingFavorite";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
@@ -40,22 +38,25 @@ export function ContactCtaBar({
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const openConversation = useOpenConversation();
-  const favorite = useFavoriteListing();
-  const unfavorite = useUnfavoriteListing();
   const { t } = useTranslation();
-
-  const [optimisticFavorited, setOptimisticFavorited] = useState(isFavorited);
-
-  // Sync local optimistic state with server truth when detail refetches.
-  useEffect(() => {
-    setOptimisticFavorited(isFavorited);
-  }, [isFavorited]);
+  const listingHref = `/(public)/listings/${listingId}` as const;
+  const {
+    favorited,
+    pending: isFavoritePending,
+    toggle: handleFavorite,
+  } = useListingFavorite({
+    listingId,
+    isFavorited,
+    isAuthenticated,
+    returnTo: listingHref,
+    replayAfterSignIn: true,
+  });
+  const favoriteDisabled = isFavoritePending || isAuthenticated === null;
 
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
   const canCall = allowCalls && !!contactPhone && !isSold && !isArchived;
   const canMessage = allowChat && !isSold && !isArchived;
-  const isFavoritePending = favorite.isPending || unfavorite.isPending;
 
   const handleCall = async () => {
     if (!canCall || !contactPhone) return;
@@ -66,9 +67,9 @@ export function ContactCtaBar({
     }
   };
 
-  // `openListingConversation` and `addFavorite` are the action bodies without
-  // the auth gate, so one code path serves a signed-in tap and a pending action
-  // replayed after sign-in. A replay must not re-check `isAuthenticated`: that
+  // `openListingConversation` is the action body without the auth gate, so one
+  // code path serves a signed-in tap and a pending action replayed after
+  // sign-in. A replay must not re-check `isAuthenticated`: that
   // flag is refreshed asynchronously and is still false for a beat after the
   // session is stored, while the API client already reads the new token per
   // request.
@@ -99,24 +100,14 @@ export function ContactCtaBar({
     );
   };
 
-  const addFavorite = () => {
-    setOptimisticFavorited(true);
-    favorite.mutate(listingId, {
-      onError: () => {
-        setOptimisticFavorited(false);
-      },
-    });
-  };
-
   useReplayAuthAction("message", listingId, openListingConversation);
-  useReplayAuthAction("favorite", listingId, addFavorite);
 
   const handleMessage = () => {
     if (!canMessage) return;
 
     if (isAuthenticated === false) {
       useAuthIntentStore.getState().requireSignIn(router, {
-        returnTo: `/(public)/listings/${listingId}`,
+        returnTo: listingHref,
         action: { kind: "message", listingId },
       });
       return;
@@ -142,29 +133,6 @@ export function ContactCtaBar({
     } catch {
       // Silently ignore share cancellation or errors
     }
-  };
-
-  const handleFavorite = () => {
-    if (isAuthenticated === false) {
-      useAuthIntentStore.getState().requireSignIn(router, {
-        returnTo: `/(public)/listings/${listingId}`,
-        action: { kind: "favorite", listingId },
-      });
-      return;
-    }
-
-    if (!optimisticFavorited) {
-      addFavorite();
-      return;
-    }
-
-    setOptimisticFavorited(false);
-    unfavorite.mutate(listingId, {
-      onError: () => {
-        // Rollback on error
-        setOptimisticFavorited(true);
-      },
-    });
   };
 
   return (
@@ -211,10 +179,10 @@ export function ContactCtaBar({
         <Button
           variant="secondary"
           size="icon"
-          disabled={isFavoritePending}
+          disabled={favoriteDisabled}
           onPress={handleFavorite}
           accessibilityLabel={t("favorite")}
-          accessibilityState={{ disabled: isFavoritePending }}
+          accessibilityState={{ disabled: favoriteDisabled }}
         >
           {isFavoritePending ? (
             <ActivityIndicator size="small" />
@@ -222,8 +190,8 @@ export function ContactCtaBar({
             <Icon
               as={Heart}
               className={
-                optimisticFavorited
-                  ? "size-5 text-brand-500 fill-current"
+                favorited
+                  ? "size-5 text-brand-500 fill-brand-500"
                   : "size-5 text-muted-foreground"
               }
             />

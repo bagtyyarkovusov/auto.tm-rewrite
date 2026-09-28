@@ -105,7 +105,7 @@ describe("ContactCtaBar", () => {
     expect(contactCtaSource).toContain("useOpenConversation");
   });
 
-  it("disables Favorite without implementing favorites behavior", () => {
+  it("renders a Favorite control that can be disabled", () => {
     expect(contactCtaSource).toContain('t("favorite")');
     expect(contactCtaSource).toContain("Heart");
     expect(contactCtaSource).toContain("disabled");

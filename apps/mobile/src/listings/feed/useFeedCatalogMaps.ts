@@ -90,6 +90,9 @@ export function useFeedCatalogMaps(listings: ListingSummary[]) {
       brandName: (id: string) => brandNames.get(id),
       modelName: (id: string) => modelNames.get(id),
       cityName: (id: string) => cityNames.get(id),
+      // True only while brand or model names have not arrived yet. A failed
+      // lookup is not pending, so cards stop showing a title placeholder.
+      namesPending: brands.isPending || modelQueries.some((query) => query.isPending),
     };
-  }, [brands.data?.items, modelQueries, cityQueries]);
+  }, [brands.data?.items, brands.isPending, modelQueries, cityQueries]);
 }

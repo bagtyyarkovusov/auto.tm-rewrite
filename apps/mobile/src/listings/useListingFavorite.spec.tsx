@@ -3,9 +3,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useAuthIntentStore } from "../../auth/intentStore";
+import { useAuthIntentStore } from "../auth/intentStore";
 
-import { useCardFavorite } from "./useCardFavorite";
+import { useListingFavorite } from "./useListingFavorite";
 
 const mockPush = vi.fn();
 const mockFavorite = vi.fn();
@@ -18,34 +18,41 @@ vi.mock("expo-router", () => ({
   },
 }));
 
-vi.mock("../../api/listings/useFavoriteListing", () => ({
+vi.mock("../api/listings/useFavoriteListing", () => ({
   useFavoriteListing: () => ({ mutate: mockFavorite, isPending: false }),
 }));
 
-vi.mock("../../api/listings/useUnfavoriteListing", () => ({
+vi.mock("../api/listings/useUnfavoriteListing", () => ({
   useUnfavoriteListing: () => ({ mutate: mockUnfavorite, isPending: false }),
 }));
 
 const LISTING_ID = "listing-1";
 const HOME = "/(tabs)/(search)" as const;
 
-function render(isAuthenticated: boolean | null, isFavorited = false) {
-  return renderHook(() =>
-    useCardFavorite({
-      listingId: LISTING_ID,
-      isFavorited,
-      isAuthenticated,
-      returnTo: HOME,
-    }),
+function render(
+  isAuthenticated: boolean | null,
+  isFavorited = false,
+  replayAfterSignIn = false,
+) {
+  return renderHook(
+    ({ favoritedProp }: { favoritedProp: boolean }) =>
+      useListingFavorite({
+        listingId: LISTING_ID,
+        isFavorited: favoritedProp,
+        isAuthenticated,
+        returnTo: HOME,
+        replayAfterSignIn,
+      }),
+    { initialProps: { favoritedProp: isFavorited } },
   );
 }
 
-describe("useCardFavorite", () => {
+describe("useListingFavorite", () => {
   beforeEach(() => {
     mockPush.mockReset();
     mockFavorite.mockReset();
     mockUnfavorite.mockReset();
-    useAuthIntentStore.setState({ intent: null, replayAction: null });
+    useAuthIntentStore.setState({ intent: null, replayAction: null, replayReturnTo: null });
   });
 
   it("signed out, opens sign-in with a pending Favorite that returns to Home", () => {
@@ -103,5 +110,44 @@ describe("useCardFavorite", () => {
 
     expect(mockFavorite).not.toHaveBeenCalled();
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("with replayAfterSignIn, finishes a pending Favorite for this Listing once", () => {
+    // Signed-in state has not caught up yet when the replay runs.
+    const { result, rerender } = render(false, false, true);
+
+    act(() => {
+      useAuthIntentStore.setState({
+        replayAction: { kind: "favorite", listingId: LISTING_ID },
+      });
+    });
+
+    expect(mockFavorite).toHaveBeenCalledTimes(1);
+    expect(mockFavorite).toHaveBeenCalledWith(LISTING_ID, expect.any(Object));
+    expect(result.current.favorited).toBe(true);
+    expect(useAuthIntentStore.getState().replayAction).toBeNull();
+
+    rerender({ favoritedProp: false });
+    expect(mockFavorite).toHaveBeenCalledTimes(1);
+  });
+
+  it("with replayAfterSignIn, ignores a pending Favorite for another Listing", () => {
+    render(false, false, true);
+
+    act(() => {
+      useAuthIntentStore.setState({
+        replayAction: { kind: "favorite", listingId: "other-listing" },
+      });
+    });
+
+    expect(mockFavorite).not.toHaveBeenCalled();
+  });
+
+  it("follows the isFavorited prop when the Listing refetches", () => {
+    const { result, rerender } = render(true, false);
+
+    rerender({ favoritedProp: true });
+
+    expect(result.current.favorited).toBe(true);
   });
 });
