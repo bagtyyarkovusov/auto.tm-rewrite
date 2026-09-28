@@ -13,8 +13,8 @@ Turn settled structure into an implementation-ready spec. Do not use visual prec
 Read [the domain glossary](../../../docs/domain/GLOSSARY.md) for canonical engineering and domain vocabulary. It does not own user-facing wording or translations.
 
 1. Parse `$ARGUMENTS` and locate the owning wireframe, issue, PRD/flow, and platform.
-2. Read authority in this order: charter/ADRs → target PRD/flow and issue/sprint delta → `CONTEXT.md`/code → actual tokens/components/i18n → mutable UI guidance.
-3. Treat code and current-state docs as present reality, the PRD/issue as target behavior, and shipped UI specs as current mirrors. Label a redesign proposal until it ships.
+2. Read authority in this order: charter/ADRs → target PRD/flow and issue/sprint delta → source/tests, located through the relevant overview → actual tokens/components/i18n → mutable UI guidance.
+3. Use source and runtime evidence to establish present reality, the PRD/issue as target behavior, and shipped UI specs as current mirrors. Label a redesign proposal until it ships.
 4. If structure or product decisions remain open, return them to the user or `/wireframe`; do not guess.
 
 ## Apply UX and interaction frameworks

@@ -10,6 +10,26 @@ GitHub Actions workflows.
 | `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | install → db generate → glossary check → lint → typecheck → `pnpm test` |
 | `bundle.yml` | Tag push `v*` | self-hosted (`tm-proxy`) | `make bundle TAG=<tag>`, uploads `images/auto-tm-<tag>.tar.gz` as a workflow artifact (90-day retention) |
 
+### pnpm store
+
+All three workflows install from `$HOME/Library/pnpm/store`, which survives checkout cleaning and reboots. A shell step writes the path to `$GITHUB_ENV` as both `npm_config_store_dir` (read by pnpm 9 and 10) and `pnpm_config_store_dir` (read by later pnpm), because Actions does not expand `$HOME` in `env:`. The environment overrides the Mac user's pnpm `rc` file, which points at a `/tmp` store that macOS clears. The bundle workflow uses the same local store without a GitHub cache restore/save. Revisit the path if the `tm-proxy` label moves to a non-macOS runner.
+
+Each workflow then reports the Node and pnpm versions, pnpm store path, and free space before `pnpm install`. This diagnostic step is kept on purpose and cannot fail the job. It warns when pnpm resolves a different store or the volume has less than 10 GiB free. Compare its output with pnpm's `reused` and `downloaded` counts when an install is slow. The investigation and baseline timings are in [the runner performance research](../../docs/research/github-actions-self-hosted-performance.md).
+
+This is pnpm's default macOS store location. CI uses its pnpm 9 `v3` directory; pnpm 10 keeps a separate `v10` directory beside it. Local installs and agent worktrees on this Mac will share the CI store once the `store-dir` line is removed from `~/Library/Preferences/pnpm/rc`; until then they use the `/tmp` store. Do not prune a store while any install is using it. The repository is public, and `pull_request` jobs from outside contributors need approval only for first-time contributors. Those jobs can write to this store. Treat the store as no more trusted than the pull requests the runner accepts.
+
+To reclaim space, confirm the runner is idle (`busy: false`), then stop it and make sure no local `pnpm install` is running. Prune with CI's pnpm version, because a global pnpm 10 would prune only the `v10` directory. Keep `--store-dir`, because the `rc` file would otherwise redirect pnpm to `/tmp`.
+
+```bash
+gh api repos/bagtyyarkovusov/auto.tm-rewrite/actions/runners --jq '.runners[] | {name, busy}'
+cd ~/actions-runner && ./svc.sh stop
+npx -y pnpm@9.12.0 store path --store-dir "$HOME/Library/pnpm/store"   # must end in /v3
+npx -y pnpm@9.12.0 store prune --store-dir "$HOME/Library/pnpm/store"
+./svc.sh start
+```
+
+The next install downloads anything a lockfile still needs. Update the pinned version here when the workflows' `pnpm/action-setup` version changes.
+
 ## Self-hosted runner
 
 One runner is registered: **`tm-build-mac`** (labels `self-hosted, macOS, ARM64, tm-proxy`), the developer's Mac, registered repo-scoped. ADR-0005 designates the dev Mac as the backup build box; it is currently the only one.

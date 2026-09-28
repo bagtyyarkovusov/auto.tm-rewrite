@@ -12,7 +12,7 @@ Create root ADRs under `docs/adr/`. Never edit a merged ADR or invent the decisi
 ## Resolve and research
 
 1. Require a non-empty topic from `$ARGUMENTS`.
-2. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, ADR-0019, ADR-0020, `docs/adr/README.md`, related ADRs/PRDs/CONTEXT, and repository facts.
+2. Follow [AGENTS.md](../../../AGENTS.md). Read `docs/adr/README.md`, `docs/agents/domain.md`, the related decisions/specifications, and affected source/tests. Consult the charter only when the decision touches its locked scope.
 3. Run the read-only helper:
 
    `node ${CLAUDE_SKILL_DIR}/scripts/prepare.mjs "$ARGUMENTS"`

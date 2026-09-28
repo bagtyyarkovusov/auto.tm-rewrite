@@ -190,10 +190,6 @@ class FakeListingsReadPort implements ListingsReadPort {
   async getListingsForOwner() {
     return { items: [] };
   }
-
-  async matchesFilters() {
-    return true;
-  }
 }
 
 function makeUseCase(

@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenEx
 import { PrismaService } from "@auto-tm/db";
 
 import { Listing } from "../domain/Listing";
+import { toPriceTmt } from "../domain/Price";
 import { DomainError, LISTING_ERROR_CODES, LOCKED_FIELDS } from "../domain/types";
 import type { ConditionDisclosure } from "../domain/types";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -82,16 +83,15 @@ export class EditListing {
       });
     }
 
-    // Validate exchange rate if currency changes to non-TMT
+    // The saved price needs a current rate to TMT: it re-derives priceTmt.
     const newCurrency = patch.priceCurrency ?? existing.priceCurrency;
-    if (newCurrency !== "TMT") {
-      const rate = await this.exchangeRates.getRate(newCurrency, "TMT");
-      if (rate <= 0) {
-        throw new BadRequestException({
-          code: LISTING_ERROR_CODES.EXCHANGE_RATE_MISSING,
-          message: `Exchange rate from ${newCurrency} to TMT is not available`,
-        });
-      }
+    const rateToTmt =
+      newCurrency === "TMT" ? 1 : await this.exchangeRates.getRate(newCurrency, "TMT");
+    if (rateToTmt <= 0) {
+      throw new BadRequestException({
+        code: LISTING_ERROR_CODES.EXCHANGE_RATE_MISSING,
+        message: `Exchange rate from ${newCurrency} to TMT is not available`,
+      });
     }
 
     const oldPriceAmount = existing.priceAmount;
@@ -171,7 +171,9 @@ export class EditListing {
       throw err;
     }
 
-    const saved = await this.listings.update(updated);
+    const saved = await this.listings.update(updated, {
+      priceTmt: toPriceTmt(updated.priceAmount, updated.priceCurrency, rateToTmt),
+    });
 
     const priceChanged =
       saved.priceAmount !== oldPriceAmount || saved.priceCurrency !== oldPriceCurrency;

@@ -1,168 +1,21 @@
-# identity — CONTEXT
+# Identity
 
-> Current implemented state per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md). Aspirational content lives in [`docs/prd/features/30-identity.md`](../../../../../docs/prd/features/30-identity.md) and the relevant sprint files under [`docs/prd/sprints/`](../../../../../docs/prd/sprints/).
+Identity owns Users, Sign-in Methods, sessions, admin elevation, account deletion, and identity checks consumed by other contexts. Marketplace Role and Dealership Member role are different concepts. Listing contact verification belongs to Listings and cannot authenticate a User.
 
-## Purpose
+Refresh tokens are hashed on Session. Refresh rotates in place with a compare-and-swap check so a concurrent retry cannot reuse the old token. Admin TOTP elevation has its own deadline; ordinary refresh preserves it without extending it. Pending TOTP enrollment is idempotent, including concurrent creation, so returning to setup does not invalidate an already scanned secret.
 
-User identity, authentication, sessions, dealerships, and personal garage. The single source of "who is this person and what are they allowed to do."
+Phone and email code flows share ownership and one-time-consumption rules. Account-deletion codes bind to the holder at request time; do not replace that with an unbound sign-in lookup. Reviewer bypass is narrower than normal authentication and never authorizes deletion. Inspect the use-cases and integration tests before changing rate limits, verification, or enumeration protection.
 
-## Owns (entities + tables)
+Suspension blocks marketplace mutations while preserving permitted reads and account deletion. Deletion has a grace period followed by worker purge; inspect both sides and database history-retention rules before changing the lifecycle.
 
-- `User` — id, phone? (unique), phoneVerifiedAt?, email? (unique), emailVerifiedAt?, displayName?, avatarUrl?, locale (default "ru"), role (`UserRole` enum: buyer | seller | moderator | admin; default buyer), createdAt, updatedAt, suspendedAt?, suspendedById?, suspensionReason?, deletionScheduledAt?
-- `OtpRequest` — id, channel (`phone | email`), normalized destination, codeHash, expiresAt, verifiedAt?, attempts, userId?, ip, createdAt, updatedAt. The nullable `phone` compatibility alias and its index remain for one rollout; a database trigger keeps old phone-only writers and new channel-aware writers compatible.
-- `Session` — id, userId, refreshTokenHash (unique, bcrypt), deviceLabel?, userAgent?, expiresAt, createdAt, lastSeenAt, adminTotpExpiresAt?. `onDelete: Cascade` on userId → User.id.
-- `TotpEnrollment` — id, userId (unique), encryptedSecret (AES-256-GCM), verifiedAt?, createdAt, updatedAt. `onDelete: Cascade` on userId → User.id.
-- `TotpBackupCode` — id, totpEnrollmentId, codeHash (SHA-256), usedAt?. `onDelete: Cascade` on totpEnrollmentId → TotpEnrollment.id.
-- `Dealership` — id, slug (unique), name, logoUrl?, cityId?, createdAt, updatedAt
-- `DealershipMember` — id, dealershipId, userId (unique — at most one dealership per user), role (`DealershipMemberRole` enum: owner | sales), createdAt
-- `OwnedVehicle` (Garage entry) — id, userId, dealershipId?, brand (String), model (String), year?, createdAt, updatedAt
-- `BlockedUser` — id, blockerId, blockedId, createdAt; unique on `(blockerId, blockedId)`. One-way relationship: a block by A on B does not imply a block by B on A.
+## Start here
 
-## Invariants
-
-- **Sign-in Methods** ([ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md)) — `User.phone` and `User.email` are each optional and unique, and each is stored only together with its verified-at time (`phoneVerifiedAt` / `emailVerifiedAt`). Enforced by the database check constraints `users_phone_verified_check` / `users_email_verified_check` and by `domain/SignInMethods.ts` (`assertSignInMethodsVerified` when mapping every row; `assertLiveUserSignInMethods` — at least one method, and a stored email already normalised — when `UserRepository.create` runs). A User purged after deletion has neither; "at least one" is checked only at creation because nothing else marks a User as live.
-- Email is stored trimmed and lowercased through the `Email` value object (`domain/Email.ts`); no provider-specific rewriting. A confirmed email code creates an email-only User when the destination is unheld and signups are enabled.
-- `User.role` values: `buyer` (default), `seller`, `moderator`, `admin`. Marketplace identity only — dealership membership role is separate (`DealershipMember.role`). Per ADR-0013.
-- A `User` can belong to **at most one** `Dealership` (enforced via `@@unique([userId])` on `DealershipMember`).
-- `Session.refreshTokenHash` is bcrypt-hashed; plaintext is never stored. Per ADR-0012.
-- **Multi-device sessions** — up to 10 concurrent sessions per user. 11th login evicts oldest active session (application-level invariant, enforced in `VerifyOtp`). Per ADR-0012.
-- Refresh rotates in-place on the same Session row: `refreshTokenHash` overwritten, `lastSeenAt` bumped, `expiresAt = lastSeenAt + 30 days` sliding. Per ADR-0012.
-- **Admin TOTP elevation** — `Session.adminTotpExpiresAt` stores a 12-hour elevation window created by successful admin TOTP verification. Refresh preserves but does not extend `adminTotpExpiresAt`. Per ADR-0006.
-- **TOTP secret encryption** — `TotpEnrollment.encryptedSecret` is encrypted with AES-256-GCM via `TOTP_SECRET_ENCRYPTION_KEY` (32-byte base64). Backup codes are stored one-way hashed with SHA-256, separately. Per ADR-0006.
-- **TOTP verification** — accepts the current 30-second step plus one adjacent step for small clock skew (`epochTolerance = period`). Backup codes are 16-character hex strings; 10 generated exactly once on first successful enrollment verify. First enrollment completion (mark verified + backup-code insert + session elevation) is one Prisma transaction. Backup-code consumption and session elevation are also one transaction, with atomic `usedAt: null` consumption. Post-enrollment verify accepts either a TOTP code or one unused backup code.
-- **TOTP throttling** — max 5 failed TOTP/backup-code attempts per admin user/session per 10 minutes. Wrong TOTP and wrong backup code return the same generic failure. Throttled attempts return rate-limit error. Successful verification resets the counter.
-- `OtpRequest.codeHash` is SHA-256; plaintext never stored.
-- Phone Sign-in Codes expire after 5 minutes and email codes after 10 minutes; the fifth wrong attempt invalidates either channel (application-level).
-- Rate limits: 5 requests per channel/destination per 24h; 10 per IP per hour shared across both channels. The enforced cooldown is `60 × 2^N` seconds, where N is the number of requests accepted before the current one.
-- Adding or replacing a Sign-in Method uses the same destination and IP budgets. The request is bound to the signed-in User, and the new value is written only after its code passes. A value held by any other User, including one in deletion grace, returns `SIGN_IN_METHOD_TAKEN` after confirmation. The `User.phone` and `User.email` unique indexes settle concurrent claims; the losing claim changes neither User. Replacing a method frees the old value in the same update and does not touch Sessions or Listings.
-- **Sign-in Codes for account deletion** ([ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md)) — the public deletion request always issues a real code through the same destination and IP budgets, whether or not a User holds the value; reviewer bypass never applies. The stored request is bound to the User holding the value at request time (`userId`), or to no User. Confirmation checks the latest request for the destination the same way whatever the ownership, then accepts the code only when that request is bound to the current holder (or to no User for an unheld value). Unbound sign-in requests (including a reviewer's fixed email code) and codes issued while another User held the value therefore cannot delete it. Every failed confirmation returns the same `INVALID_OTP` error, and every success returns the same `204`; a valid code for an unheld value is consumed and changes nothing. The code is consumed atomically (`OtpRequestRepository.consumeIfUnused`, a conditional update on `verifiedAt IS NULL`) before deletion runs, so concurrent confirmations of one code run the deletion once. Because sign-in verification checks the latest request for a destination whatever it was issued for, a Sign-in Code requested for deletion also works at `POST /api/v1/auth/otp/verify`; whoever uses it has proved control of the value. `VerifyOtp` also claims the code through `consumeIfUnused` before creating a User, recovering, or issuing a Session, and `ConfirmSignInMethodChange` claims it the same way before checking ownership, so one code succeeds at most once across sign-in, deletion, and a Sign-in Method change.
-- `SMS_DRIVER=mock` (default) logs the OTP code; `SMS_DRIVER=gateway` sends via SMS gateway. `OTP_TEST_MODE=true` returns the plaintext code in the API response.
-- Reviewer demo bypass is disabled by default. When enabled, `REVIEW_DEMO_ACCOUNTS_JSON` provides 3-5 secret-managed entries with a reserved `+993` phone, normalized reserved email, and exactly-6-digit code. Reserved phone requests remain issuance-free and rate-limit exempt. Reserved email requests use the normal destination/IP budgets, persist the fixed code hash, and never enqueue an email because the reviewer domain has no MX; email verification therefore requires a request. Either channel authenticates only a pre-existing `buyer` or `seller`, never creates or elevates a User, compares credentials through `ConstantTimeComparatorPort`, and emits `ReviewerOtpBypassAuthenticated` without credential values.
-- `BlockedUser` is one-way (block by A on B). If both want, both must block. Self-blocking is rejected at the application layer (`BlockUser`) and the domain entity (`BlockedUser`).
-- **S7 user suspension enforcement** — `User.suspendedAt` blocks authenticated marketplace mutations across `listings/` (create/edit/publish/media/state), `conversations/` (new contact/send when either participant is suspended), and `admin/` (report creation). Suspended users may still authenticate, log out, browse public surfaces, view their generic suspension state, and delete their account. Enforcement is synchronous via `IdentityCheckPort.isSuspended` (no event side effects). `IdentityAdminPort` owns the suspension field writes and participates in the caller's transaction for S7 admin moderation.
-
-## Ports exposed (consumed by other contexts)
-
-```ts
-interface IdentityCheckPort {
-  isAdmin(userId): Promise<boolean>
-  isInDealership(userId, dealershipId): Promise<boolean>
-  isSuspended(userId): Promise<boolean>
-}
-```
-
-- `IdentityCheckPort` is implemented by `PrismaIdentityCheckAdapter` and exported from `IdentityModule` under DI token `IDENTITY_TOKENS.IdentityCheckPort`.
-- `IdentityReadPort` (`IDENTITY_READ_PORT`) is implemented by `PrismaIdentityReadAdapter` and exported from `IdentityModule`. It exposes `findUserById`, `findUsersByIds`, and `isUserBlockedBy(blockerId, blockedId)`; user summaries include the stored `locale` so cross-context user-directed copy can be localized. `isUserBlockedBy` is consumed by `conversations/` (S10) to enforce block checks before new contact or message sends, while `notifications/` `EvaluateDirectMessagePush` reads the recipient locale for direct-message push copy as part of eligibility.
-- `IdentityAdminPort` (`IDENTITY_ADMIN_PORT`) is implemented by `PrismaIdentityAdminRepository` and exported from `IdentityModule`. It exposes `suspendUser(userId, adminUserId, reason, tx?)`, `unsuspendUser(userId, tx?)`, and `isSuspended(userId)`. `suspendUser` and `unsuspendUser` participate in the caller's transaction (transaction-scoped) for S7 admin moderation; `isSuspended` is a standalone read.
-- `AdminGuard` (`apps/api/src/common/admin.guard.ts`) composes on top of `JwtAuthGuard` and requires: authenticated user, `role = admin`, `sid` owned by the JWT subject, an unexpired session row (`expiresAt > now`), and current TOTP elevation (`adminTotpExpiresAt > now`) loaded via that session.
-
-## Internal ports (within identity context)
-
-```ts
-ClockPort                  // injectable clock for time-based tests
-OtpRequestRepository       // persisted OTP request storage; consumeIfUnused atomically marks a request used
-OtpSenderPort              // abstracts SMS driver (mock / gateway)
-EmailCodeSenderPort        // enqueues the worker email-code/sign-in-code job through BullMQ
-PasswordHasherPort         // bcrypt hash + compare for refresh tokens
-SessionRepository          // Session persistence (create, count, deleteExpired, deleteOldest, findById, updateAdminTotpExpiresAt)
-UserRepository             // User persistence (findByPhone, findByEmail, findById, create(SignInMethods), delete, scheduleDeletion, clearDeletionSchedule, findUsersWithExpiredDeletionGrace, purgePersonalData)
-SignInMethodRepository     // focused User reads + unique-index-backed replaceSignInMethod for add/change flows
-TotpSecretCipherPort       // AES-256-GCM encrypt/decrypt for TOTP secrets
-TotpVerifierPort           // TOTP secret generation, otpauth URI generation, code verification with skew
-TotpEnrollmentRepository   // TotpEnrollment persistence (findByUserId, createPending, markVerified, addBackupCodes, findBackupCodes, consumeBackupCode, completeFirstVerification transaction, consumeBackupCodeAndElevate transaction, deleteByUserId)
-TotpThrottlePort           // failed-attempt counting per user/session with window expiry
-SecurityLoggerPort         // structured security logging for TOTP failures
-BlockedUserRepository      // one-way block/unblock persistence and check
-ConstantTimeComparatorPort // constant-time string comparison seam for reviewer demo phone/email/code matching
-ReviewerOtpBypassConfig    // parsed reviewer demo account flag + 3-5 secret-managed entries
-```
-
-## Ports consumed (from other contexts)
-
-- `admin/` consumes `ReviewerOtpBypassAuthenticated` via the Nest event bus and records a durable audit row. `identity/` does not import admin internals.
-
-## Shipped use-cases
-
-- `RequestOtp` — accepts exactly one phone or email, normalizes it, enforces shared limits and cooldown, stores only the code hash, sends phone codes through `OtpSenderPort`, and enqueues ordinary email codes through `EmailCodeSenderPort` using the request UUID as BullMQ job id. It never reads User state, so registered and unregistered destinations follow the same path. Exposed as `POST /api/v1/auth/otp/request` (public).
-- `VerifySignInCode` — loads the latest request bound to the normalized channel/destination, rejects used or expired records, increments wrong attempts, and locks the request on the fifth wrong code. It returns the valid request to `VerifyOtp`; it does not create Users or Sessions.
-- `VerifyOtp` — verifies the latest code bound to the supplied channel/destination, claims it atomically before any side effect (a concurrent consumer of the same code gets `OTP_ALREADY_USED`), creates a User holding only that verified Sign-in Method or loads the existing User, and returns both nullable methods. It creates a multi-device Session, enforces the 10-session cap, issues a JWT with `sid`, `phone`, `email`, and role, emits `UserRegistered` on first sign-in, recovers deletion-grace Users, and honors `SIGNUPS_ENABLED=false` for new Users on both channels. Reviewer phone bypass does not require a request; reviewer email bypass does. Exposed as `POST /api/v1/auth/otp/verify` (public).
-- `RequestSignInMethodChange` — requires a signed-in User, normalizes exactly one phone or email, applies the shared destination/IP budgets, stores a hashed code bound to that User, and sends it through the normal SMS or email adapter. Reviewer bypass never applies; email jobs use purpose `sign-in-method`. Exposed as `POST /api/v1/me/sign-in-methods/request`.
-- `ConfirmSignInMethodChange` — verifies the latest User-bound code, claims it atomically through `consumeIfUnused` before checking ownership or changing the User (so a code already used for sign-in or deletion changes nothing), adds or replaces the selected method, and maps both an existing owner and a concurrent unique-index loss to `SIGN_IN_METHOD_TAKEN`. Exposed as `POST /api/v1/me/sign-in-methods/verify`; the response is the updated `GET /me` shape.
-- `RequestAccountDeletion` — public web deletion request. Normalizes exactly one phone or email, applies the shared destination/IP budgets and cooldown, stores a hashed code bound to the current holder (or to no User), and sends it through SMS or the email queue with purpose `account-deletion`. Its answer does not depend on whether a User holds the value. Exposed as `POST /api/v1/account-deletion/request` (public).
-- `ConfirmAccountDeletion` — verifies the code through `VerifySignInCode` against the latest request for the destination, requires that request to be bound to the current holder (or to no User), consumes it atomically, and then, for a held value, runs `DeleteMe` for that User: the same grace period, session revocation and listing archive as `DELETE /me`, including restarting the 30 days when the User is already in grace. Exposed as `POST /api/v1/account-deletion/confirm` (public, `204`).
-- `RefreshSession` — locates a session by bcrypt-scanning all session rows against the provided refresh token, validates expiry, rotates the refresh token hash in-place with optimistic locking (old-hash match via `updateMany`), bumps `lastSeenAt`, extends `expiresAt` to `now + 30 days`, preserves existing `adminTotpExpiresAt` without extending it, and issues a fresh JWT access token (includes `sid`). Rejects unknown, expired, and already-used tokens with 401. Exposed as `POST /api/v1/auth/refresh` (public).
-- `Logout` — locates the session matching the supplied refresh token via bcrypt comparison and deletes that single session row. Returns 204 on success; throws 401 when no match. Idempotent. Exposed as `POST /api/v1/auth/logout` (public).
-- `LogoutAll` — deletes every session for the authenticated user (identified by bearer JWT). Returns 204. Exposed as `POST /api/v1/auth/logout-all` (requires bearer auth).
-- `GetMe` — returns the contract user shape (id, `phone: string | null`, `email: string | null`, `phoneVerified: boolean`, displayName, role, avatarUrl, locale, createdAt, deletionScheduledAt) for the authenticated user. `phoneVerified` is true only when a verified phone is stored. Throws 404 if the user row was deleted after JWT issuance. Exposed as `GET /api/v1/me` (requires bearer auth).
-- `DeleteMe` — starts a 30-day deletion grace period: sets `User.deletionScheduledAt = now + 30d`, revokes all sessions, and archives active listings tagged `archivedByDeletion`. Returns 204. Does NOT delete the User row. Exposed as `DELETE /api/v1/me` (requires bearer auth).
-- `RecoverAccount` — clears `User.deletionScheduledAt` and republishes `archivedByDeletion` listings to active status. Invoked automatically by `VerifyOtp` when an existing user in grace period logs in. Survives `SIGNUPS_ENABLED=false`.
-- `IsAdmin` (query) — thin wrapper over `IdentityCheckPort.isAdmin`. Used by `AdminGuard`.
-- `GetAdminTotpStatus` — returns `enrolled`, `elevated`, and optional `adminTotpExpiresAt` for the current admin session. No secret/backup material. Exposed as `GET /api/v1/auth/admin/totp/status` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
-- `EnrollAdminTotp` — generates a new TOTP secret, encrypts it, creates a pending `TotpEnrollment`, and returns QR URI + plaintext secret. Verified re-enroll returns HTTP 409 `TOTP_ALREADY_ENROLLED`; pending unverified enrollment is idempotent and returns the same encrypted secret/QR across calls and sessions for the same user so a scanned authenticator entry remains usable until first verification. The plaintext secret is decrypted server-side for this response (and again for verification); the tradeoff is recorded in ADR-0038. Concurrent `enroll` calls race on `TotpEnrollment.userId @@unique`; the loser returns the existing pending row instead of throwing. Exposed as `POST /api/v1/auth/admin/totp/enroll` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
-- `VerifyAdminTotp` — verifies a TOTP code (first enrollment) or TOTP code/backup code (post-enrollment). On first success, marks enrollment verified, generates 10 backup codes (SHA-256 hashed, stored), sets `Session.adminTotpExpiresAt = now + 12h`, and returns `adminTotpExpiresAt` + plaintext backup codes exactly once; first-enrollment persistence is atomic so a partial backup-code/enrollment failure cannot leave an elevated unverified session. Post-enrollment returns `adminTotpExpiresAt` only. Implements 5-failure/10-min throttle, adjacent-step skew, atomic backup-code consumption + elevation, and structured security logging on failure. Exposed as `POST /api/v1/auth/admin/totp/verify` (requires bearer auth + `role = admin` + valid `sid` + session ownership; not behind `AdminGuard`).
-- `BlockUser` — creates or confirms a one-way `BlockedUser` relationship from the authenticated user to the target user. Rejects self-blocking with `FORBIDDEN`. Idempotent. Exposed as `POST /api/v1/me/blocked-users` (requires bearer auth).
-- `UnblockUser` — removes the one-way `BlockedUser` relationship from the authenticated user to the target user. Idempotent no-op when no relationship exists. Exposed as `DELETE /api/v1/me/blocked-users/:userId` (requires bearer auth).
-- `IsBlocked` — returns `{ blocked: boolean }` indicating whether the authenticated user has blocked the target user. Exposed as `GET /api/v1/me/blocked-users/:userId` (requires bearer auth).
-
-### Account deletion scope (S8 — 30-day grace + day-30 purge)
-
-`DELETE /api/v1/me`, or a confirmed Sign-in Code for account deletion (`POST /api/v1/account-deletion/confirm`) for a held phone or email, starts a **30-day grace period** rather than hard-deleting:
-1. Sets `User.deletionScheduledAt = now + 30d`.
-2. Revokes all sessions (`sessionRepo.deleteAllByUserId`).
-3. Archives active listings tagged `archivedByDeletion = true` via `AccountDeletionListingsPort`.
-
-**Recovery during grace** — OTP login while `deletionScheduledAt` is set auto-invokes `RecoverAccount`, which:
-- Clears `deletionScheduledAt`.
-- Republishes `archivedByDeletion` listings to `active`.
-- Proceeds with normal session creation.
-- Unaffected by `SIGNUPS_ENABLED=false`.
-
-**Day-30 purge** (`apps/worker` BullMQ repeatable job) — finds `deletionScheduledAt <= now` and:
-- **Frees both Sign-in Methods and clears PII**: `phone`, `phoneVerifiedAt`, `email`, `emailVerifiedAt`, `displayName` and `avatarUrl` → null, clears `deletionScheduledAt`. A later User can take the same phone or email. This replaced the old `phone → deleted:<id>` tombstone; migration `20260922000000_add_user_sign_in_methods` nulled phones still holding that tombstone. `UserRepository.purgePersonalData` is an identity-side equivalent of that User-row update (without clearing `deletionScheduledAt`); no production code calls it today.
-- **Prunes private rows**: `Session`, `TotpEnrollment` (+ backup codes), `FcmDevice`, `NotificationHistory`, `NotificationPreference`, `SavedSearch`, `Favorite`, `OwnedVehicle`, `BlockedUser` (both directions), `DealershipMember`, `ListingDraft`.
-- **Retains content**: `Listing` (left archived), `Conversation` + `Message`, `ContentReport` actor references (`reporterUserId` / `reviewedById` nullable via `SetNull`), `AuditLog` (`actorId` nullable via `SetNull`).
-
-The existing `onDelete: Cascade` relations remain as a safety net for a future admin true-erasure path; they do not fire during normal user-initiated deletion because the User row is never deleted.
-
-### Session lookup detail
-
-Refresh-token lookup scans all `Session` rows and bcrypt-compares the plaintext token against each `refreshTokenHash`. O(sessions) per refresh — acceptable at MVP scale.
-
-### Refresh concurrency
-
-`rotateRefreshToken` uses `updateMany` with `WHERE id = ? AND refreshTokenHash = ?`. If two concurrent refreshes locate the same session, only one matches — the second returns `count = 0` and throws "Token already used" (401). No row-level lock needed.
-
-## Test layering
-
-- **Domain** (no Prisma, pure TS): `OtpCode.spec.ts`, `Phone.spec.ts`, `Email.spec.ts`, `SignInMethods.spec.ts`, `OtpAttemptLedger.spec.ts`.
-- **Application** (no HTTP, fakes for repos / clock / hasher): `RequestOtp.spec.ts`, `VerifyOtp.spec.ts`, `RequestAccountDeletion.spec.ts`, `ConfirmAccountDeletion.spec.ts`, `RefreshSession.spec.ts`, `Logout.spec.ts`, `LogoutAll.spec.ts`, `GetMe.spec.ts`, `DeleteMe.spec.ts`, `RecoverAccount.spec.ts`, `GetAdminTotpStatus.spec.ts`, `EnrollAdminTotp.spec.ts`, `VerifyAdminTotp.spec.ts`. All chaos scenarios live here.
-- **Presentation** (e2e Supertest against running compose Postgres): `AuthController.e2e.spec.ts` covers phone and email request/verify, queue-port capture for email, phone rate-limit response shape, logout / logout-all / GET me / DELETE me, signup kill switch, and grace-period recovery. `SignInMethodController.e2e.spec.ts` covers Sign-in Method add/replace. `AccountDeletionController.e2e.spec.ts` covers the public deletion request/confirm for phone and email holders, the identical unheld response, wrong codes, identical failures for held and unheld values, refusal of sign-in codes, single execution under concurrent confirmation and under a sign-in/deletion race, and the shared cooldown and IP budget. `AdminAuthController.e2e.spec.ts` covers admin TOTP pending-enrollment idempotency and later-session verification with the same enrolled authenticator secret.
-- **Infrastructure layer** — `BullMqEmailCodeSenderAdapter.spec.ts`, `AesGcmTotpSecretCipher.spec.ts`, `OtplibTotpVerifier.spec.ts`, `InMemoryTotpThrottleAdapter.spec.ts`. Prisma adapters are indirectly exercised by `AuthController.e2e.spec.ts` against Postgres.
-
-## Events emitted
-
-- `UserRegistered` — first successful OTP verification creates a User. Emitted via `eventBus.emit("UserRegistered", ...)` in `VerifyOtp`.
-- `ReviewerOtpBypassAuthenticated` — successful reviewer demo bypass for a pre-existing buyer/seller. Payload contains `userId`, `role`, and `occurredAt`; it deliberately omits the fixed code and reviewer credential values.
-
-## Events consumed
-
-- (none today)
-
-## Planned additions (future sprints)
-
-Per [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md), the items below are NOT in this CONTEXT.md as if they exist today. Authoritative spec for each lives in the named sprint file.
-
-- **Post-MLP Garage** — `OwnedVehicle` gets `vin`, `mileage`, `nickname`, `status`, `photoUrl`, `isPublic`, `linkedListingId` columns (currently a thin schema with just brand/model/year strings). See `docs/prd/features/37-garage.md` and [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md).
-- **Post-MLP admin/dealership hardening** —
-  - `Dealership.verifiedAt` column for the dealership-verification flow used by listings + admin UI is post-MLP with showroom/dealer work.
-  - `DealershipVerified` is post-MLP with dealership verification.
-
-## Notable decisions
-
-- [ADR-0006](../../../../../docs/adr/0006-auth.md) — Phone OTP + TOTP for admins (refresh subsection superseded by ADR-0012).
-- [ADR-0012](../../../../../docs/adr/0012-multi-device-sessions.md) — Multi-device sessions, per-session refresh tokens (bcrypt), 10-session cap, sliding 30-day expiry.
-- [ADR-0013](../../../../../docs/adr/0013-user-role-split.md) — `User.role` split from `DealershipMember.role`.
-- [ADR-0054](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md) — Phone and email are optional, verified Sign-in Methods on one User; either method can sign in through a channel-bound code.
-- [ADR-0001](../../../../../docs/adr/0001-architecture.md) — Bounded context architecture.
-- [ADR-0019](../../../../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state.
-- [ADR-0027](../../../../../docs/adr/0027-mlp-beta-scope.md) — Garage and dealership work deferred out of MLP beta.
+- [Module composition](identity.module.ts)
+- [Refresh concurrency and tests](application/RefreshSession.ts)
+- [Idempotent TOTP enrollment and tests](application/EnrollAdminTotp.ts)
+- [Sign-in method invariants](domain/SignInMethods.ts)
+- [Deletion integration tests](presentation/AccountDeletionController.e2e.spec.ts)
+- [Cross-context ports](domain/ports)
+- [Purge implementation](../../../../worker/src/jobs/PurgeExpiredAccounts.ts)
+- [Phone or email decision](../../../../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md)
+- [Schema](../../../../../packages/db/prisma/schema.prisma)
