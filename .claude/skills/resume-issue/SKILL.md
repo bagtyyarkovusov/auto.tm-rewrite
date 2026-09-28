@@ -16,14 +16,14 @@ Git and GitHub state, not the prior chat, own recovery. Preserve the previous at
 1. Follow [AGENTS.md](../../../AGENTS.md) and [the coding workflow](../../../docs/agents/coding-workflow.md). Read the issue, its governing references, and the latest durable state. Load affected overviews, source, tests, and relevant vocabulary; load roadmap/sprint/charter decisions only when they govern this task.
 2. If `$issue` is empty, list candidates from local/remote `agent/issue-*` branches, worktrees, blocked execution states, and open PRs; require selection.
 3. Inspect issue/dependencies, local and remote heads, worktree status and diff, commits versus `main`, PR body/comments/checks, review SHAs, and running processes. Treat missing or interrupted results as `unknown`.
-4. Classify the attempt as reservation-only, local changes, pushed checkpoints without PR, open draft/ready PR, or merged PR with bookkeeping drift.
+4. Classify the attempt as reservation-only, local changes, pushed checkpoints without PR, open draft/ready PR, or merged PR with bookkeeping drift. Also note whether auto-merge is on (`gh pr view <PR> --json autoMergeRequest`) and whether the PR is stacked (its base is not `main`; see `Stacked on` in its Execution state).
 5. Run non-mutating scoped checks needed to understand state. Never query provider quota.
 
 ## Select the recovery path
 
 Choose the safest path from evidence without adding an ordinary confirmation stop:
 
-- **Refresh a reservation-only branch:** if it has no unique commits, worktree changes, or open PR, fast-forward it to current `main` before continuing. This includes a branch preserved while `design-grill` produced and merged design artifacts.
+- **Refresh a reservation-only branch:** if it has no unique commits, worktree changes, or open PR, fast-forward it to current `main` before continuing. A stacked reservation stays on its parent's branch head until the parent merges; then follow [run-queue stacking](../run-queue/SKILL.md#stacking). This includes a branch preserved while `design-grill` produced and merged design artifacts.
 - **Continue:** heads agree or fast-forward safely; preserve the existing base and worktree.
 - **Safety branch and rebase:** the branch diverged but the resolution is mechanical; create a preservation ref, rebase on current `main`, then continue.
 - **Preserve and restart:** the canonical branch is missing or unusable; preserve every recoverable ref/diff before rebuilding `agent/issue-<N>` from `main`.
@@ -36,7 +36,7 @@ Pause and escalate when an issue remains open after its closing PR merged, follo
 1. Restore or create the one draft PR after the first pushed checkpoint and update its `Execution state` using [`../run-issue/EXECUTION-STATE.md`](../run-issue/EXECUTION-STATE.md).
 2. Rebuild the acceptance-criterion evidence map and reconcile terminology without expanding scope.
 3. Run the scoped typecheck, lint, tests, runtime-import checks, Expo gates, host-only checks, and documentation reconciliation required by the touched workspaces.
-4. Follow the [fixed-commit finalization contract](../run-issue/FINALIZATION.md): pin the SHA, obtain independent Standards and Spec verdict comments, resolve findings, wait for checks, merge, and verify closure. Reuse the existing PR.
+4. Follow the [fixed-commit finalization contract](../run-issue/FINALIZATION.md): pin the SHA, obtain independent Standards and Spec verdict comments, resolve findings, set auto-merge, and verify the merge and closure. Turn auto-merge off before pushing to a PR that has it on. Reuse the existing PR.
 5. If completion stops again, preserve and update the same branch and PR state.
 
 ## Completion

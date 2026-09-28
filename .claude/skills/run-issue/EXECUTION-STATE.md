@@ -4,7 +4,7 @@ Git and GitHub are the recovery record for every implementation issue. Chat hist
 
 ## Reservation and first checkpoint
 
-1. Create `agent/issue-<N>` from updated `main` and push it before editing. The remote branch is the issue reservation.
+1. Create `agent/issue-<N>` from updated `main` and push it before editing. The remote branch is the issue reservation. A stacked issue under [run-queue](../run-queue/SKILL.md#stacking) branches from its parent's branch head instead.
 2. Commit and push after the first meaningful checkpoint, then open a draft pull request. The body starts with `Closes #<N>` and contains exactly one mutable `Execution state` section.
 3. Update that section after every checkpoint, verification result, review verdict, failure, or handoff. Do not append competing state summaries.
 4. Never query Codex, Claude, or another provider for remaining quota before starting. Checkpoints make an unexpected stop recoverable.
@@ -15,6 +15,7 @@ Use this shape:
 ## Execution state
 
 - **Status:** implementing | verifying | reviewing | ready-to-merge | blocked
+- **Stacked on:** `<parent PR and parent head SHA, or none>`
 - **Last checkpoint:** `<commit SHA>`
 - **Completed acceptance criteria:** `<issue checkbox references or concise list>`
 - **Verification:** `<command and pass/fail/unknown result>`
@@ -22,7 +23,7 @@ Use this shape:
 - **Interrupted commands:** `<command and last known state or none>`
 - **Documentation:** `<CONTEXT/ADR/PRD status>`
 - **Context7:** `<library IDs consulted or not applicable>`
-- **Reviews:** `Standards <verdict/SHA>; Spec <verdict/SHA>`
+- **Reviews:** `Standards <verdict/SHA>; Spec <verdict/SHA>; Delta <verdict/base SHA..SHA, carries forward> or none`
 - **Next action:** `<one concrete action>`
 ```
 

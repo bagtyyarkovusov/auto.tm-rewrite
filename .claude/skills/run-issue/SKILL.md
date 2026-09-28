@@ -9,21 +9,21 @@ disable-model-invocation: true
 
 # Run one issue
 
-Execute exactly one issue. Invocation authorizes the normal reservation-branch-to-merge flow; pause only at the decision boundaries below. Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may implement, review, resume, or integrate under [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Apply its model-provider rule to reviews.
+Execute exactly one issue per invocation; [run-queue](../run-queue/SKILL.md) invokes it once per queued issue. Invocation authorizes the normal reservation-branch-to-merge flow; pause only at the decision boundaries below. Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may implement, review, resume, or integrate under [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Apply its model-provider rule to reviews.
 
 ## Resolve the issue
 
 1. Follow [AGENTS.md](../../../AGENTS.md). Read the issue and its governing specification, then the affected overview, source, and tests. Use [the glossary](../../../docs/domain/GLOSSARY.md) for relevant terms and [the coding workflow](../../../docs/agents/coding-workflow.md) for execution gates. Read roadmap, sprint, charter, and ADR material when it governs this issue; load `docs/agents/sprint-transitions.md` when reconciling sprint progress.
 2. If `$issue` is empty, list open `ready-for-agent` issues without `blocked` and ask the user to pick. Never auto-pick interactive work.
 3. Fetch the chosen issue, labels, dependencies, comments, local and remote branches/worktrees, and PRs.
-4. Require an open issue, `ready-for-agent`, no `blocked`, closed dependencies, and an intelligible problem plus testable acceptance criteria.
+4. Require an open issue, `ready-for-agent`, no `blocked`, closed dependencies, and an intelligible problem plus testable acceptance criteria. Under [run-queue](../run-queue/SKILL.md#stacking) stacking, the only open dependency may be a reviewed PR owned by the same queue, and a `blocked` label caused only by that dependency does not stop the issue.
 5. Accept either the rich sprint-child template or a lean issue. Derive missing file/read/test details from repository facts; stop if product intent remains ambiguous.
 
 ## Preflight and reservation
 
 - Require a clean working tree. Report overlapping user changes and stop; never stash, discard, or absorb them.
 - Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). Reuse a host-created isolated worktree and record any unchanged scaffold branch for later cleanup.
-- Start from updated `main` on `agent/issue-<N>` and push that branch before editing. The remote branch is the reservation.
+- Start from updated `main` on `agent/issue-<N>` and push that branch before editing. The remote branch is the reservation. A stacked issue under `run-queue` starts from its parent's branch head instead.
 - If a local/remote canonical branch, issue worktree, or PR already exists, including a reservation-only branch with no checkpoint commits, route through `resume-issue <N>` and continue the existing attempt instead of creating a duplicate.
 - A design pause may leave only the reservation branch. After its design PR merges, `resume-issue` verifies that the branch has no unique work and fast-forwards it to current `main` before implementation.
 - Build a scoped execution plan mapping every acceptance criterion to implementation and evidence.
@@ -50,10 +50,12 @@ Do not add confirmation gates for ordinary implementation mechanics. Keep one is
 3. Select single-session or mandatory [SUBAGENT-MODE.md](SUBAGENT-MODE.md) using its auto-detect gate.
 4. Implement the smallest complete vertical slice. Tests and required current-state docs are in scope even when omitted from a file list.
 5. Follow [VERIFICATION.md](VERIFICATION.md). Repair an in-scope root failure at most three focused times. Update the PR after each completed or failed verification phase.
-6. Follow [FINALIZATION.md](FINALIZATION.md) to pin the implementation commit, pass independent Standards and Spec review, make the PR ready, wait for required checks, squash-merge, sync, and unblock dependents.
+6. Follow [FINALIZATION.md](FINALIZATION.md) to pin the implementation commit, pass independent Standards and Spec review, make the PR ready, set auto-merge, confirm the merge, sync, and unblock dependents.
 7. Resolve valid findings in new checkpoint commits, rerun proportionate verification, and repeat each affected review axis against the new SHA. A small in-scope fix needs only a delta review under [ADR-0065](../../../docs/adr/0065-small-changes-skip-the-issue-ceremony.md).
 8. On any stop or failed finalization, follow [BAIL-AND-RECOVERY.md](BAIL-AND-RECOVERY.md).
 
 ## Completion
 
-Report the issue and PR, merged commit, evidence by acceptance criterion, tests and host-only gates, documentation changes, dependent labels changed, and any honest residual risks. Stop after this issue.
+Report the issue and PR, merged commit, evidence by acceptance criterion, tests and host-only gates, documentation changes, dependent labels changed, and any honest residual risks. Stop after this issue, unless [run-queue](../run-queue/SKILL.md) invoked it; then return to the queue.
+
+A batch PR for several deferred follow-ups is not a `run-issue` run; follow [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065).
