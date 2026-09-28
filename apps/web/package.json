@@ -12,6 +12,7 @@
     "test:unit": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@auto-tm/contracts": "workspace:*",
     "@auto-tm/ui": "workspace:*",
     "@formatjs/intl-localematcher": "^0.5.10",
     "clsx": "^2.1.1",
