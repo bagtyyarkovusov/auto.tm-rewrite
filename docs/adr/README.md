@@ -74,7 +74,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) | The human in the loop may assign both review axes to Kimi per pull request (amends ADR-0059 high-risk review-provider rule) | Superseded by ADR-0064 | 2026-09-28 |
 | [0063](0063-mobile-refreshes-an-expired-access-token-before-sending.md) | Mobile refreshes an expired access token before sending (extends ADR-0015 refresh contract) | Accepted | 2026-09-28 |
 | [0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md) | Any supported client may review either axis, and issues have no concurrency limit (supersedes ADR-0062 and the review-provider and in-flight rules of ADR-0058/0059) | Accepted | 2026-09-28 |
-| [0065](0065-small-changes-skip-the-issue-ceremony.md) | Small changes skip the issue ceremony (amends ADR-0058 re-review and issue-for-every-change rules) | Accepted | 2026-09-28 |
+| [0065](0065-small-changes-skip-the-issue-ceremony.md) | Small changes skip the issue ceremony (amends ADR-0058 re-review, separate-axes, and issue-for-every-change rules, and ADR-0064's both-verdicts rule) | Accepted | 2026-09-28 |
 
 ## Per-app ADRs
 
