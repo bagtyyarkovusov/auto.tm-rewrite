@@ -1,5 +1,5 @@
 import type { ListingStatus } from "../ListingStatus";
-import type { TimestampCursor, ListingFilterCriteria } from "../types";
+import type { TimestampCursor } from "../types";
 
 export interface ListingSummary {
   id: string;
@@ -34,10 +34,6 @@ export interface ListingsReadPort {
     ownerId: string,
     query?: { cursor?: TimestampCursor; limit?: number },
   ): Promise<{ items: ListingSummary[]; nextCursor?: TimestampCursor }>;
-  matchesFilters(
-    listingId: string,
-    filters: ListingFilterCriteria,
-  ): Promise<boolean>;
 }
 
 export const LISTINGS_READ_PORT = Symbol("ListingsReadPort");

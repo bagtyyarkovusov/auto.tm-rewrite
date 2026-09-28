@@ -1,114 +1,16 @@
-# packages/ui — CONTEXT
+# Shared design tokens and web components
 
-> Current implemented state per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md).
+This package owns shared tokens and browser components for web/admin. Mobile consumes tokens but implements components with React Native primitives in its own `components/ui` directory. Do not import browser components into mobile.
 
-## Purpose
+The shared CSS theme serves Tailwind v4 web apps; mobile uses the NativeWind/Tailwind configuration entry. Inspect each app's overrides before changing a shared token, since an override can hide or alter its effect. Preserve the distinction between brand actions and error/status colors.
 
-Design tokens (the single source of truth) + shared shadcn/ui components for `apps/admin` and `apps/web`. Mobile (`apps/mobile`) consumes the tokens but has its own React Native component implementations because the rendering primitives differ.
+Package exports define supported import paths. Changes to tokens or browser components need checks in their consuming apps; a package typecheck alone does not verify appearance, contrast, dark mode, or native rendering.
 
-## What it contains
+## Start here
 
-```
-packages/ui/
-├── tokens/                  Design tokens — used by all 3 frontends
-│   ├── colors.ts            Palette + semantic colors
-│   ├── type.ts              Font scale + weights + line-heights
-│   ├── spacing.ts           4px-grid spacing
-│   ├── radius.ts            Border-radius scale
-│   ├── shadow.ts            Elevation shadows
-│   ├── motion.ts            Durations + easings
-│   └── index.ts             Re-exports
-├── theme/
-│   ├── theme.css            Tailwind v4 @theme directive — imported by web + admin globals.css
-│   └── tailwind.ts          JS token export — consumed by NativeWind v4 (mobile)
-├── components/              Shared shadcn components (web + admin only — mobile has its own RNR-based set at apps/mobile/components/ui/)
-│   ├── Button.tsx           Installed
-│   ├── Card.tsx             Installed
-│   ├── Input.tsx            Installed
-│   ├── cn.ts                clsx + tailwind-merge helper
-│   └── index.ts             Re-exports the 3 installed components
-│   (Additional shadcn components install via the shadcn CLI as web/admin sprints need them — S4+ will add more)
-├── package.json
-└── CONTEXT.md
-```
-
-## Token system
-
-| Token | What it controls |
-|---|---|
-| `palette` | Raw color values: `red[50-900]`, `neutral[0-950]`, `green/amber/rose[500]`, `blue[400/500/600]` |
-| `colors` | Semantic mappings: `primary`, `surface`, `textPrimary`, `error`, etc. — resolved by theme mode |
-| `type` | Font family (`Inter`), scale (xs/sm/base/lg/xl/2xl/3xl/4xl/5xl), weights (400/500/600/700), line-heights |
-| `spacing` | 4px-base grid: `0`, `1`, `2`, `3`, ... `16` (multiples of 4px) |
-| `radius` | Border-radius: `none / sm / md / lg / xl / 2xl / full` |
-| `shadow` | Elevation: `sm / md / lg` |
-| `motion` | Durations (`instant / fast / base / slow`) + standard easing |
-
-## Critical token decision
-
-Brand red is `#E60000` (palette `red[500]`).
-Error red is rose `#F43F5E` (palette `rose[500]`) — distinct hue from brand, fixes the previous app's brand-vs-error collision.
-
-## Theme mode
-
-- Light mode + dark mode supported
-- Resolved by `useColorScheme()` (system) + per-user override (stored in profile prefs)
-- Mode-aware tokens declared as `{ light, dark }` pairs in `colors.ts`
-- shadcn uses CSS variables; mobile uses runtime theme provider
-
-## Implementation per frontend
-
-| App | Style system | How tokens consumed |
-|---|---|---|
-| `apps/web` (Next.js) | Tailwind v4 + shadcn | `globals.css` imports `theme/theme.css` via `@import`; the shared theme registers `components/` for class detection and exposes semantic CSS variables as Tailwind color utilities |
-| `apps/admin` (Next.js) | Tailwind v4 + shadcn | Same as web |
-| `apps/mobile` (Expo) | NativeWind v4 (Tailwind for RN) | `tailwind.config.js` extends `theme/tailwind.ts`; theme provider supplies mode |
-
-## Iconography
-
-Lucide:
-- `lucide-react` on web + admin
-- `lucide-react-native` on mobile
-- Same icon names, same visual style, just different bindings
-
-## Component library scope
-
-For web + admin only. Mobile re-implements equivalents using React Native primitives because:
-- React Native primitives differ (`<View>` vs `<div>`)
-- Accessibility props differ
-- Gesture handling differs (touch vs click)
-
-The component **names** match across platforms (`Button`, `Card`, `Input`, etc.) so designers / engineers can think in one vocabulary.
-
-## Public API surface
-
-```ts
-export * as tokens from './tokens'
-export * from './components'  // web/admin only — mobile imports from its own component lib
-```
-
-## Dependencies
-
-- `tailwindcss`
-- `@radix-ui/*` (underlying shadcn primitives)
-- `class-variance-authority`, `clsx`, `tailwind-merge`
-- `lucide-react`
-
-## Tailwind v4 migration note
-
-Sprint 1 uplifted Tailwind from v3 (charter baseline) to **v4.1** per ADR-0011.
-
-What changes:
-- `packages/ui` uses CSS-first configuration: `@import "tailwindcss"` and `@theme` blocks in a CSS file.
-- No `tailwind.config.js` / `tailwind.config.ts` preset file in `packages/ui`.
-- Web and admin apps extend the CSS theme via `@import` rather than a JS preset.
-- NativeWind v4 is used on mobile; its configuration syntax differs from v3 — consult NativeWind v4 docs when wiring `tailwindcss` in `apps/mobile`.
-
-## Notable decisions
-
-- Charter §12 — Token system structure
-- shadcn/ui chosen for web (code copied into repo, no `node_modules` dependency for components)
-- NativeWind chosen for mobile (Tailwind classnames in React Native, consistent DX)
-- [ADR-0011](../../docs/adr/0011-version-deltas.md) — Tailwind v4 uplift from charter v3
-- [ADR-0014](../../docs/adr/0014-mobile-component-library.md) — Mobile uses RNR; mobile/RNR components live in `apps/mobile/components/ui/`, NOT here
-- [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
+- [Tokens](tokens)
+- [Web theme](theme/theme.css)
+- [Mobile token adapter](theme/tailwind.ts)
+- [Browser components](components)
+- [Export contract](package.json)
+- [Native component boundary](../../docs/adr/0014-mobile-component-library.md)

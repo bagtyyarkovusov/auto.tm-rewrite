@@ -1,74 +1,41 @@
 # AutoTM
 
-Turkmenistan car marketplace. Mobile-first, multilingual (Russian / Turkmen / English), self-hosted inside Turkmenistan.
+A mobile-first vehicle marketplace for Turkmenistan, with Russian, Turkmen, and English interfaces. Staging and production use the cloud-first Railway topology in [ADR-0039](docs/adr/0039-phased-cloud-first-hosting.md). The fully in-TM deployment remains a later phase.
 
-## Architecture at a glance
+## Find the right area
 
-- **Mobile app**: Expo (Android + iOS)
-- **Public web**: Next.js 16 (`auto.tm`) — landing, listings, dealers, blog
-- **Admin web**: Next.js 16 (`admin.auto.tm`) — moderation, user mgmt, push, reports
-- **API**: NestJS 11 + Prisma 7 + Postgres + Redis + Socket.IO
-- **SMS gateway**: Custom Node service + Kotlin Android phone agent (TM has no commercial SMS API)
-- **Object storage**: Self-hosted MinIO
-- **All hosted inside Turkmenistan** (air-gapped, builds shipped via Docker image tarballs)
+Start with [AGENTS.md](AGENTS.md) for coding instructions, [CONTEXT-MAP.md](CONTEXT-MAP.md) for ownership and source entry points, or the [roadmap](docs/prd/03-roadmap.md) for product delivery scope. The [glossary](docs/domain/GLOSSARY.md) defines project terms; the [ADR index](docs/adr/README.md) records decisions and supersession.
 
-## Where to start
-
-1. **`GRILL-OUTCOME.md`** — the design charter (locked decisions, the spec)
-2. **`docs/adr/`** — architectural decisions (numbered, immutable)
-3. **`docs/prd/`** — product requirements (mutable, structured)
-4. **`CONTEXT-MAP.md`** — points to every `CONTEXT.md` in the tree
-5. **`CLAUDE.md`** — agent policy for AI-assisted development
-
-## Monorepo layout
-
-```
-apps/
-  api/             NestJS API
-  admin/           Next.js + shadcn — admin.auto.tm
-  web/             Next.js + shadcn — auto.tm (public)
-  mobile/          Expo (Android + iOS)
-  sms-gateway/     Node service — OTP routing
-  phone-agent/     Kotlin Android — runs on each OTP phone
-  worker/          NestJS standalone — BullMQ consumer
-packages/
-  db/              Prisma schema + generated client
-  contracts/       Zod schemas + OpenAPI export
-  ui/              Design tokens + shared components
-  tsconfig/        Shared tsconfig presets
-  eslint-config/   Shared lint rules
-infra/
-  docker/          Dockerfiles
-  compose/         docker-compose.dev.yml + docker-compose.prod.yml
-```
+| Workspace | Responsibility |
+|---|---|
+| `apps/mobile` | Expo Android/iOS marketplace client |
+| `apps/api` | NestJS API, business use-cases, authenticated chat sockets |
+| `apps/admin` | Staff moderation, report review, audit UI |
+| `apps/web` | Public landing, legal, and trust pages; inspect routes for shipped scope |
+| `apps/worker` | Queued push delivery, sign-in email, account purge |
+| `apps/sms-gateway`, `apps/phone-agent` | Scaffolds for future physical-phone SMS delivery |
+| `packages/db` | Schema, migrations, client boundary, seed data |
+| `packages/contracts` | Shared schemas and generated OpenAPI JSON |
+| `packages/ui` | Shared tokens and browser components |
+| `packages/tsconfig`, `packages/eslint-config` | Workspace compiler/lint configuration |
+| `infra`, `railway` | Local infrastructure, container images, deployment configuration |
 
 ## Local development
 
-The scaffold is complete (May 2026). `pnpm install && pnpm dev` starts the full local stack.
-See `docs/adr/0003-monorepo.md` for monorepo conventions.
+Use the Node/pnpm versions declared in [package.json](package.json). Install with `pnpm install --frozen-lockfile`. Configure each service from its checked-in `.env.template`; keep local credentials untracked. Database package commands also need a local `DATABASE_URL`.
 
-```bash
-# Install (once we have package.json deps wired up)
-pnpm install
+Start local data services with `pnpm compose:up`, generate the client with `pnpm db:generate`, and apply committed migrations to the local database with `pnpm db:migrate:deploy`. Seed local reference data when needed with `pnpm db:seed`. These commands are setup steps, not permission to mutate a deployed database.
 
-# Develop everything
-pnpm dev
+`pnpm dev` starts workspace development processes after their dependencies and environment are ready. Mobile needs the [development-build setup and verification](docs/agents/mobile-expo.md); Expo Go cannot run the complete app.
 
-# Test everything
-pnpm test
+Run `pnpm lint`, `pnpm typecheck`, and `pnpm test`. Migration and some integration tests use Docker/Testcontainers; other API integration suites use `DATABASE_URL` and clear fixture tables. Point test runs at a dedicated disposable database and Redis instance, not a shared development database. Package build steps need the configured database URL even when only generating the client. Workspace scripts are the command authority.
 
-# Lint + typecheck
-pnpm lint && pnpm typecheck
-```
+## Deployment and operations
 
-## Deployment
+Use the [deployment runbook](docs/prd/ops/80-deployment-runbook.md) and the effective hosting decision. The API pre-deploy command owns deployed schema migrations. Do not infer current hosting from the original air-gap charter.
 
-Air-gapped to Turkmenistan. See `docs/adr/0005-hosting.md` and `docs/prd/ops/80-deployment-runbook.md`.
-
-```
-build (on TM Proxy PC) → docker save → .tar.gz bundle → SCP to TM servers → docker load → docker compose up -d
-```
+Sandcastle dispatch is suspended pending [#406](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/406). Use the [portable coding workflow](docs/agents/coding-workflow.md) for issue execution and resume.
 
 ## License
 
-UNLICENSED — proprietary. See `LICENSE`.
+UNLICENSED. Proprietary.

@@ -11,7 +11,7 @@ Read the owning product/flow and current implementation first. Then resolve curr
 - `docs/prd/ui/70-design-principles.md` through `79-web-vs-mobile.md`; and
 - ADR-0051 with `docs/prd/features/33-search-discovery.md` and `32-listings.md` for the mobile discovery journey, cards and Listing detail; `docs/prd/ui/kolesa-findability-reference.md` only for other mobile IA without an approved spec.
 
-When guidance conflicts with code/current `CONTEXT.md` or a later ADR, cite the conflict and use higher authority. Never repeat stale constants from memory.
+When guidance conflicts with source or an applicable decision, cite the conflict. Source establishes current behavior; governing product/design decisions establish the intended behavior. Never repeat stale constants from memory.
 
 ## UX and microinteraction gate
 

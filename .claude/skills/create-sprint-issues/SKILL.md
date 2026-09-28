@@ -13,7 +13,7 @@ Create issues for exactly one already-shaped sprint. Do not shape a sprint, inve
 
 ## Read and resolve
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, [the domain glossary](../../../docs/domain/GLOSSARY.md), ADR-0019, ADR-0020, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/sprint-transitions.md`, and the candidate sprint file.
+1. Follow [AGENTS.md](../../../AGENTS.md). Read the roadmap, candidate sprint file, and `docs/agents/{issue-tracker,triage-labels,sprint-transitions}.md`. Use [the glossary](../../../docs/domain/GLOSSARY.md) for relevant terms. Read the owning PRDs, source/tests, and decisions needed to define slices; document routing follows `docs/agents/domain.md`.
 2. If `$sprint` is empty, list eligible pending sprint files and ask the user to choose. If none exist, report that sprint shaping is required and stop.
 3. Verify the prior sprint is shipped, the sprint plan exists and is still eligible to start, required labels exist, and no completed issue set already owns the sprint.
 4. If a parent or children already exist, inspect the partial run. Report a complete set and stop; otherwise offer repair rather than duplication.
