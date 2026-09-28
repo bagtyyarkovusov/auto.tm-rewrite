@@ -51,7 +51,7 @@ Do not add confirmation gates for ordinary implementation mechanics. Keep one is
 4. Implement the smallest complete vertical slice. Tests and required current-state docs are in scope even when omitted from a file list.
 5. Follow [VERIFICATION.md](VERIFICATION.md). Repair an in-scope root failure at most three focused times. Update the PR after each completed or failed verification phase.
 6. Follow [FINALIZATION.md](FINALIZATION.md) to pin the implementation commit, pass independent Standards and Spec review, make the PR ready, wait for required checks, squash-merge, sync, and unblock dependents.
-7. Resolve valid findings in new checkpoint commits, rerun proportionate verification, and repeat each affected review axis against the new SHA.
+7. Resolve valid findings in new checkpoint commits, rerun proportionate verification, and repeat each affected review axis against the new SHA. A small in-scope fix needs only a delta review under [ADR-0065](../../../docs/adr/0065-small-changes-skip-the-issue-ceremony.md).
 8. On any stop or failed finalization, follow [BAIL-AND-RECOVERY.md](BAIL-AND-RECOVERY.md).
 
 ## Completion
