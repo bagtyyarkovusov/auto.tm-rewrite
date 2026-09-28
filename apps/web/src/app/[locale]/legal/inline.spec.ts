@@ -16,7 +16,8 @@ describe("inlineMarkupToHtml", () => {
   });
 
   it("leaves external and script links as text", () => {
-    const text = "[a](https://example.com) [b](javascript:alert(1))";
+    const text =
+      '[a](https://example.com) [b](javascript:alert(1)) [c](//evil.example) [d](/\\evil.example) [e](/x"onclick=y)';
     expect(inlineMarkupToHtml(text)).toBe(text);
   });
 });

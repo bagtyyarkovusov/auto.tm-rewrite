@@ -30,9 +30,9 @@ export interface DeletionApiContext {
   baseUrl: string;
   locale: Locale;
   /**
-   * The visitor's IP. The API applies its per-IP code budget to the first
-   * `X-Forwarded-For` entry, so without it every visitor would share the web
-   * server's budget.
+   * The visitor's IP, from `visitorIp`. The API applies its per-IP code budget
+   * to the first `X-Forwarded-For` entry, so without it every visitor would
+   * share the web server's budget.
    */
   clientIp: string | null;
   fetch?: typeof fetch;
@@ -64,6 +64,22 @@ export function firstForwardedIp(header: string | null): string | null {
   return first ? first : null;
 }
 
+/**
+ * The visitor's IP from the incoming request. Railway's edge sets `X-Real-IP`
+ * to the client's address, while `X-Forwarded-For` can arrive from the visitor
+ * unchanged, so `X-Real-IP` wins and `X-Forwarded-For` is only a fallback
+ * (local development, other proxies).
+ */
+export function visitorIp(headers: { get(name: string): string | null }): string | null {
+  return (
+    firstForwardedIp(headers.get("x-real-ip")) ??
+    firstForwardedIp(headers.get("x-forwarded-for"))
+  );
+}
+
+/** Keeps a hung API from holding the Server Function and the pending form. */
+const API_TIMEOUT_MS = 10_000;
+
 async function post(
   path: string,
   body: unknown,
@@ -81,8 +97,14 @@ async function post(
       headers,
       body: JSON.stringify(body),
       cache: "no-store",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
-  } catch {
+  } catch (error) {
+    // Never log the destination or the code.
+    console.error("[account-deletion] API unreachable", {
+      path,
+      error: error instanceof Error ? error.name : String(error),
+    });
     return null;
   }
 }
@@ -93,9 +115,8 @@ async function failureFrom(response: Response): Promise<DeletionFailure> {
   // The API's global throttler answers 429 with a code outside `ErrorCode`.
   if (response.status === 429) return "rate-limited";
   const parsed = ErrorCodeBody.safeParse(await response.json().catch(() => null));
-  if (!parsed.success) return "unavailable";
 
-  switch (parsed.data.code) {
+  switch (parsed.success ? parsed.data.code : null) {
     case ErrorCode.RateLimited:
       return "rate-limited";
     case ErrorCode.InvalidOtp:
@@ -103,6 +124,11 @@ async function failureFrom(response: Response): Promise<DeletionFailure> {
     case ErrorCode.ValidationFailed:
       return "invalid-value";
     default:
+      console.error("[account-deletion] API error", {
+        url: response.url,
+        status: response.status,
+        code: parsed.success ? parsed.data.code : null,
+      });
       return "unavailable";
   }
 }
@@ -124,7 +150,10 @@ export async function requestAccountDeletion(
   const body = AuthSchemas.AccountDeletionRequestResponseSchema.safeParse(
     await response.json().catch(() => null),
   );
-  if (!body.success) return { ok: false, error: "unavailable" };
+  if (!body.success) {
+    console.error("[account-deletion] unexpected request response", { status: response.status });
+    return { ok: false, error: "unavailable" };
+  }
 
   return {
     ok: true,

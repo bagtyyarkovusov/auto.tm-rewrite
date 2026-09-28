@@ -12,8 +12,8 @@ import type {
 } from "@/lib/account-deletion";
 import {
   confirmAccountDeletion,
-  firstForwardedIp,
   requestAccountDeletion,
+  visitorIp,
 } from "@/lib/account-deletion";
 
 // The API has no CORS, so the browser reaches it through these Server Functions.
@@ -32,9 +32,7 @@ async function apiContext(locale: unknown): Promise<DeletionApiContext> {
   return {
     baseUrl: API_BASE_URL,
     locale: locales.includes(locale as Locale) ? (locale as Locale) : defaultLocale,
-    clientIp:
-      firstForwardedIp(requestHeaders.get("x-forwarded-for")) ??
-      firstForwardedIp(requestHeaders.get("x-real-ip")),
+    clientIp: visitorIp(requestHeaders),
   };
 }
 

@@ -7,6 +7,7 @@ import {
   firstForwardedIp,
   normalizePhoneInput,
   requestAccountDeletion,
+  visitorIp,
 } from "./account-deletion";
 
 const BASE_URL = "https://api.test/api/v1";
@@ -80,6 +81,23 @@ describe("firstForwardedIp", () => {
     expect(firstForwardedIp("203.0.113.7, 10.0.0.1")).toBe("203.0.113.7");
     expect(firstForwardedIp(null)).toBeNull();
     expect(firstForwardedIp("  ")).toBeNull();
+  });
+});
+
+describe("visitorIp", () => {
+  const from = (values: Record<string, string>) => ({
+    get: (name: string) => values[name] ?? null,
+  });
+
+  it("prefers X-Real-IP, which the Railway edge sets, over a visitor-supplied X-Forwarded-For", () => {
+    expect(visitorIp(from({ "x-real-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1" }))).toBe(
+      "203.0.113.7",
+    );
+  });
+
+  it("falls back to the first X-Forwarded-For entry, then to nothing", () => {
+    expect(visitorIp(from({ "x-forwarded-for": "198.51.100.1, 10.0.0.1" }))).toBe("198.51.100.1");
+    expect(visitorIp(from({}))).toBeNull();
   });
 });
 
@@ -170,12 +188,42 @@ describe("requestAccountDeletion", () => {
     expect(result).toEqual({ ok: false, error });
   });
 
-  it("reports an unreachable API as unavailable", async () => {
+  it("reports an unreachable API as unavailable and logs it without the value", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(new TypeError("fetch failed"));
 
     const result = await requestAccountDeletion("phone", "61234567", context(fetchMock));
 
     expect(result).toEqual({ ok: false, error: "unavailable" });
+    expect(log).toHaveBeenCalledWith("[account-deletion] API unreachable", {
+      path: "/account-deletion/request",
+      error: "TypeError",
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("61234567");
+    log.mockRestore();
+  });
+
+  it("gives the API call a timeout", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(codeSent());
+
+    await requestAccountDeletion("phone", "61234567", context(fetchMock));
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("logs an unexpected API error by status and code", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(apiError(500, "INTERNAL", "Internal server error"));
+
+    await requestAccountDeletion("phone", "61234567", context(fetchMock));
+
+    expect(log).toHaveBeenCalledWith(
+      "[account-deletion] API error",
+      expect.objectContaining({ status: 500, code: "INTERNAL" }),
+    );
+    log.mockRestore();
   });
 });
 

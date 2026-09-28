@@ -118,7 +118,7 @@ generated per environment.
 | `NEXT_PUBLIC_MINIO_PUBLIC_URL` | — | — | yes | yes | R/G (S11-02) |
 | `SESSION_SECRET` | — | — | yes | — | G |
 | `PORT` | yes | — | yes | yes | F: must match the port the image listens on; Railway injects `PORT=8080` and it overrides the Dockerfile `ENV PORT` |
-| `API_BASE_URL` | — | — | yes | — | R: API private origin for server-side admin calls |
+| `API_BASE_URL` | — | — | yes | yes | R: API private `*.railway.internal` origin for server-side admin calls and web's account deletion Server Functions; web falls back to `NEXT_PUBLIC_API_URL` when unset |
 | `ADMIN_ORIGIN` | — | — | yes | — | R: admin public origin |
 | `SIGNUPS_ENABLED` | yes | — | — | — | F: `false` in staging and production until public launch |
 
