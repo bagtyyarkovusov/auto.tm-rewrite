@@ -148,12 +148,10 @@ export class ListingsController {
   @Public()
   @Get("count")
   async countListings(@Query() query: unknown) {
-    // `sort` is validated but does not change the count or the price range.
-    const { sort: _sort, ...filterFields } = this.parseZodQuery(
-      ListingsSchemas.ListingCountQuerySchema,
-      query,
-    );
-    const filters = this.parseAndValidateFilters(filterFields);
+    // `sort` is validated here but changes neither the count nor the price range,
+    // and parseAndValidateFilters reads filter fields only.
+    const parsed = this.parseZodQuery(ListingsSchemas.ListingCountQuerySchema, query);
+    const filters = this.parseAndValidateFilters(parsed);
 
     return this.countListingsUC.execute({
       ...(filters !== undefined ? { filters } : {}),

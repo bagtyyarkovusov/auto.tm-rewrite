@@ -41,8 +41,8 @@ import {
   MessageKind,
   UserRole,
 } from "../generated/prisma/client/enums";
-
 import { recomputeListingPricesTmt } from "../src/listing-prices";
+
 import { FIXTURE_PHOTOS } from "./fixture-photos";
 
 const DATABASE_URL = process.env["DATABASE_URL"] ?? "";
