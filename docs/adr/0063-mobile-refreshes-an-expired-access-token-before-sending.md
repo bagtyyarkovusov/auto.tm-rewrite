@@ -18,7 +18,7 @@ The access token is a JWT that carries `exp` and `iat`, both set by the API's `J
 - The lifetime is the token's own `exp - iat`, counted from `storedAt`, with a 30-second margin. The device clock's offset from the server does not matter.
 - A token whose payload, `exp`, `iat` or `storedAt` cannot be read counts as not expired, so the existing 401 path is the fallback.
 - The pre-send refresh uses the same single-flight refresh as the 401 path, so concurrent requests share one `/auth/refresh`. A retried request does not refresh before sending again.
-- If the server rejects the refresh, the session is cleared, as on the 401 path, and the request goes out anonymous. If the refresh fails on the network or times out, the session is kept and the request goes out with the old bearer; a protected route still reaches the 401 path.
+- If the refresh answers with any non-2xx status (including a 5xx) or an unreadable body, the session is cleared, as on the 401 path, and the request goes out anonymous. If the refresh fails on the network or times out, the session is kept and the request goes out with the old bearer; a protected route still reaches the 401 path.
 - Hooks still never read tokens or refresh on their own.
 
 ## Consequences
@@ -32,7 +32,7 @@ The access token is a JWT that carries `exp` and `iat`, both set by the API's `J
 ### Negative / accepted costs
 
 - The first request after the token lapses costs one extra round trip, including on public reads.
-- A rejected refresh on a public read signs the User out silently, as the 401 path already does for protected routes.
+- A failed refresh answer on a public read, including a transient 5xx, signs the User out silently, as the 401 path already does for protected routes.
 - The lifetime estimate trusts the device's clock between `storedAt` and now; changing the device clock in between can make it refresh early or late, and the 401 path still covers protected routes.
 
 ### Neutral
