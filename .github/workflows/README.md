@@ -10,9 +10,23 @@ GitHub Actions workflows.
 | `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | install → db generate → glossary check → lint → typecheck → `pnpm test` |
 | `bundle.yml` | Tag push `v*` | self-hosted (`tm-proxy`) | `make bundle TAG=<tag>`, uploads `images/auto-tm-<tag>.tar.gz` as a workflow artifact (90-day retention) |
 
-Each workflow reports the Node and pnpm versions, pnpm store path, and free space before `pnpm install`. Compare these lines with pnpm's `reused` and `downloaded` counts when an install is unexpectedly slow. The investigation and baseline timings are in [the runner performance research](../../docs/research/github-actions-self-hosted-performance.md).
+### pnpm store
 
-The current Mac runner uses `${HOME}/Library/pnpm/store` for all three workflows. This path survives worktree cleaning and avoids pnpm's previous store under `/tmp`. The bundle workflow uses the same local store without a GitHub cache restore/save. Revisit the path if the `tm-proxy` label moves to a non-macOS runner.
+All three workflows install from `$HOME/Library/pnpm/store`, which survives checkout cleaning and reboots. A shell step writes the path to `$GITHUB_ENV` as both `npm_config_store_dir` (read by pnpm 9 and 10) and `pnpm_config_store_dir` (read by later pnpm), because Actions does not expand `$HOME` in `env:`. The environment overrides the Mac user's pnpm `rc` file, which pointed at a `/tmp` store that macOS clears. The bundle workflow uses the same local store without a GitHub cache restore/save. Revisit the path if the `tm-proxy` label moves to a non-macOS runner.
+
+Each workflow then reports the Node and pnpm versions, pnpm store path, and free space before `pnpm install`. This diagnostic step is kept on purpose and cannot fail the job. It warns when pnpm resolves a different store or the volume has less than 10 GiB free. Compare its output with pnpm's `reused` and `downloaded` counts when an install is slow. The investigation and baseline timings are in [the runner performance research](../../docs/research/github-actions-self-hosted-performance.md).
+
+This is the developer's default pnpm store. CI jobs, local installs, and agent worktrees on this Mac share it through hard links. pnpm supports concurrent installs into one store, but not a prune during an install. The repository is public, and `pull_request` jobs from outside contributors need approval only for first-time contributors. Those jobs can write to this store. Treat the store as no more trusted than the pull requests the runner accepts.
+
+To reclaim space, stop the runner and make sure no local `pnpm install` is running, then prune:
+
+```bash
+cd ~/actions-runner && ./svc.sh stop
+pnpm store prune --store-dir "$HOME/Library/pnpm/store"
+./svc.sh start
+```
+
+The next install downloads anything a lockfile still needs.
 
 ## Self-hosted runner
 

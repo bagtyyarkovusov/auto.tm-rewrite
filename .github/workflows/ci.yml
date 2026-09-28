@@ -7,8 +7,6 @@ on:
 jobs:
   build:
     runs-on: [self-hosted, tm-proxy]
-    env:
-      npm_config_store_dir: ${HOME}/Library/pnpm/store
 
     steps:
       - uses: actions/checkout@v4
@@ -21,13 +19,32 @@ jobs:
         with:
           node-version: 22
 
+      # Actions does not expand $HOME in `env:`, so the shell sets the store.
+      # pnpm 9 and 10 read npm_config_*; later pnpm reads only pnpm_config_*.
+      - name: Use the persistent pnpm store
+        shell: bash
+        run: |
+          store_dir="$HOME/Library/pnpm/store"
+          echo "npm_config_store_dir=$store_dir" >> "$GITHUB_ENV"
+          echo "pnpm_config_store_dir=$store_dir" >> "$GITHUB_ENV"
+
+      # Diagnostic only; kept on purpose (see .github/workflows/README.md).
       - name: Report dependency cache state
         shell: bash
+        continue-on-error: true
         run: |
           echo "Node: $(node --version)"
           echo "pnpm: $(pnpm --version)"
-          store_path="$(pnpm store path --silent)"
+          store_path="$(pnpm store path --silent)" || store_path="(unavailable)"
           echo "pnpm store: $store_path"
+          case "$store_path" in
+            "$HOME/Library/pnpm/store"*) ;;
+            *) echo "::warning::pnpm store is $store_path, not $HOME/Library/pnpm/store; installs may be cold" ;;
+          esac
+          avail_kib="$(df -Pk "$HOME" | awk 'NR==2 {print $4}')"
+          if [ "${avail_kib:-0}" -lt 10485760 ]; then
+            echo "::warning::Less than 10 GiB free on the runner volume; see the pnpm store section of .github/workflows/README.md"
+          fi
           if [ -d "$store_path" ]; then
             ls -ld "$store_path"
             df -h "$store_path"

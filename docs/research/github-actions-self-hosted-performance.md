@@ -1,10 +1,12 @@
 # GitHub Actions performance on the self-hosted Mac
 
+> Noncanonical research, dated 2026-09-22 with a 2026-09-28 follow-up. It records an investigation and does not set scope or policy. The current runner and pnpm store rules live in [`.github/workflows/README.md`](../../.github/workflows/README.md).
+
 Researched 2026-09-22. Scope: GitHub.com Actions on AutoTM's persistent macOS self-hosted runner. The first section measures this repository; later sections summarize external source research.
 
 ## What AutoTM's runs show
 
-The [CI workflow](../../.github/workflows/ci.yml) and [PR workflow](../../.github/workflows/pr-checks.yml) use the same `tm-build-mac` runner. Each checks out the repository, installs all pnpm workspace dependencies, generates Prisma, then runs lint, typecheck, and tests. Main also builds. Neither workflow enables `setup-node`'s pnpm cache; the [bundle workflow](../../.github/workflows/bundle.yml) does.
+The [CI workflow](../../.github/workflows/ci.yml) and [PR workflow](../../.github/workflows/pr-checks.yml) use the same `tm-build-mac` runner. Each checks out the repository, installs all pnpm workspace dependencies, generates Prisma, then runs lint, typecheck, and tests. Main also builds. Before PR #357, neither workflow enabled `setup-node`'s pnpm cache; the [bundle workflow](../../.github/workflows/bundle.yml) did.
 
 | Successful run | Job start to completion | Setup | Checkout | Install | Tests | Source |
 |---|---:|---:|---:|---:|---:|---|
@@ -21,9 +23,15 @@ The 64-second setup on the sampled PR includes two failed `codeload.github.com` 
 
 The diagnostic PR confirms the runner currently uses `/tmp/pnpm-gvs-fetch-lNi5eI/store/v3`, with Node 22.23.1 and pnpm 9.12.0. It reused 2,044 packages and downloaded none. The temporary store path is a durability concern because the operating system or a cleanup process may clear it; the logs do not prove that happened before the cold run. The same diagnostic run retried downloads of both `actions/checkout` and `pnpm/action-setup` from `codeload.github.com`, adding roughly 40 seconds of explicit backoff. [Diagnostic run](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35628364395).
 
-The PR sets `npm_config_store_dir` to `${HOME}/Library/pnpm/store`, a location outside the checkout worktree. This removes reliance on the `/tmp` path. Bundle also stops restoring and saving the pnpm store through GitHub's remote cache.
+PR #357 set `npm_config_store_dir` to `${HOME}/Library/pnpm/store`, a location outside the checkout worktree, to remove reliance on the `/tmp` path. It also stopped bundle from restoring and saving the pnpm store through GitHub's remote cache.
 
 Verification on the same PR commit: [attempt 1](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35629115802/attempts/1) used the Library store, reused 1,785 packages, downloaded 259 missing packages, and installed in 43.5 seconds. [Attempt 2](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/35629115802/attempts/2) reused 2,044 packages, downloaded none, and installed in 8.9 seconds. Both PR checks passed. This demonstrates a warm install after the initial population. It does not prove how often the old `/tmp` store was cleared or that total job time will stay low when `codeload.github.com` retries occur.
+
+### Store-path follow-up, 2026-09-28
+
+The `/tmp` store came from the Mac user's pnpm configuration, not from pnpm's built-in default. `~/Library/Preferences/pnpm/rc`, last modified 2026-06-07, contains `store-dir=/tmp/pnpm-gvs-fetch-lNi5eI/store`, and `pnpm config get store-dir` outside the repository returns that path. macOS removes `/tmp` contents on reboot and in periodic cleanup, which is a plausible mechanism for the cold main install. It is not proven for that specific run. On 2026-09-28 that directory held 1.9 GiB, and its parent directory had been recreated on 2026-09-23.
+
+Actions did not expand `${HOME}` in the job-level `env:` of the first version of PR #357. pnpm 9 expanded the literal `${HOME}` itself. The revised workflows write the expanded path to `$GITHUB_ENV` from a shell step. Local checks from `/tmp`: pnpm 9.12.0 and pnpm 10.33.2 both honor `npm_config_store_dir` over the `rc` value, and pnpm 10.33.2 ignores `pnpm_config_store_dir`. Current pnpm documentation says later versions read only `pnpm_config_*`, so the workflows set both names.
 
 ### Action-download follow-up
 
