@@ -48,6 +48,8 @@ jobs:
           if [ -d "$store_path" ]; then
             ls -ld "$store_path"
             df -h "$store_path"
+          elif [ "$store_path" = "(unavailable)" ]; then
+            df -h .
           else
             echo "pnpm store does not exist yet"
             df -h .
