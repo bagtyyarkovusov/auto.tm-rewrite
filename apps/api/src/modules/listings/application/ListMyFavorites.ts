@@ -3,7 +3,6 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import { VERIFIED_PHONE_TRUST } from "../domain/types";
 import {
   FAVORITE_REPOSITORY,
   type FavoriteRepository,
@@ -75,7 +74,6 @@ export class ListMyFavorites {
         engineTypeId: item.engineTypeId,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
-        sellerTrust: VERIFIED_PHONE_TRUST,
         contactPhone: item.contactPhone,
         allowCalls: item.allowCalls,
         allowChat: item.allowChat,

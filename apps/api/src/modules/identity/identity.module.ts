@@ -51,6 +51,8 @@ import { BullMqEmailCodeSenderAdapter } from "./infrastructure/BullMqEmailCodeSe
 import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
+import { SELLER_PROFILE_READ_PORT } from "./domain/ports/SellerProfileReadPort";
+import { PrismaSellerProfileReadAdapter } from "./infrastructure/PrismaSellerProfileReadAdapter";
 import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
@@ -80,6 +82,7 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     SystemClockAdapter,
     PrismaIdentityCheckAdapter,
     PrismaIdentityReadAdapter,
+    PrismaSellerProfileReadAdapter,
     PrismaIdentityAdminRepository,
     PrismaBlockedUserRepository,
     AesGcmTotpSecretCipher,
@@ -109,6 +112,10 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     {
       provide: IDENTITY_READ_PORT,
       useClass: PrismaIdentityReadAdapter,
+    },
+    {
+      provide: SELLER_PROFILE_READ_PORT,
+      useExisting: PrismaSellerProfileReadAdapter,
     },
     {
       provide: IDENTITY_ADMIN_PORT,
@@ -195,6 +202,7 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     ConfirmAccountDeletion,
   ],
   exports: [
+    SELLER_PROFILE_READ_PORT,
     IDENTITY_TOKENS.IdentityCheckPort,
     IDENTITY_READ_PORT,
     IDENTITY_TOKENS.SessionRepository,

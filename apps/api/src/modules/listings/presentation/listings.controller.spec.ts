@@ -3,7 +3,7 @@ import type { FastifyRequest } from "fastify";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { ListingsController } from "./listings.controller";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityCheckPort } from "../../identity/identity.public";
 import type { CountListings } from "../application/CountListings";
 import type { CountListingModels } from "../application/CountListingModels";
 import type { CountListingBrands } from "../application/CountListingBrands";

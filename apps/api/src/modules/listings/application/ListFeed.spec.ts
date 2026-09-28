@@ -278,13 +278,13 @@ describe("ListFeed", () => {
     await expect(uc.execute({ cursor: legacy })).rejects.toThrow(BadRequestException);
   });
 
-  it("includes sellerTrust.phoneVerified on summary DTOs", async () => {
+  it("does not return a per-Listing seller trust signal on summaries", async () => {
     ranking.items = [seedListing({ id: "l1" })];
 
     const uc = makeUseCase(ranking, exchangeRates);
     const result = await uc.execute({});
 
-    expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
+    expect(result.items[0]!).not.toHaveProperty("sellerTrust");
   });
 
   it("throws on missing exchange rate for non-TMT currency", async () => {

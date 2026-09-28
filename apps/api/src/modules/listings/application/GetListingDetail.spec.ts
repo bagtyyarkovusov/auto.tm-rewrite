@@ -8,6 +8,10 @@ import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
 import type { VinDecoderPort } from "../domain/ports/VinDecoderPort";
+import type {
+  SellerProfile,
+  SellerProfilePort,
+} from "../domain/ports/SellerProfilePort";
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -122,6 +126,16 @@ class FakeVinDecoder implements VinDecoderPort {
   }
 }
 
+class FakeSellerProfilePort implements SellerProfilePort {
+  profiles = new Map<string, SellerProfile>([
+    ["user-1", { displayName: "Seller", memberSince: new Date("2025-01-01T00:00:00.000Z") }],
+  ]);
+
+  async getSellerProfile(userId: string): Promise<SellerProfile | null> {
+    return this.profiles.get(userId) ?? null;
+  }
+}
+
 function makeUseCase(
   repo?: FakeListingRepository,
   mediaRepo?: FakeListingMediaRepository,
@@ -129,6 +143,7 @@ function makeUseCase(
   storage?: FakeMediaStoragePort,
   favorites?: FakeFavoriteRepository,
   vinDecoder?: FakeVinDecoder,
+  sellerProfiles?: FakeSellerProfilePort,
 ) {
   return new GetListingDetail(
     repo ?? new FakeListingRepository(),
@@ -137,6 +152,7 @@ function makeUseCase(
     storage ?? new FakeMediaStoragePort(),
     favorites ?? new FakeFavoriteRepository(),
     vinDecoder ?? new FakeVinDecoder(),
+    sellerProfiles ?? new FakeSellerProfilePort(),
   );
 }
 
@@ -160,6 +176,7 @@ describe("GetListingDetail", () => {
   function seedListing(overrides?: Partial<Parameters<typeof Listing.create>[0]>) {
     const listing = Listing.create({
       id: "listing-1",
+      publicNumber: 10482,
       sellerId: "user-1",
       status: "active",
       brandId: "brand-1",
@@ -186,12 +203,49 @@ describe("GetListingDetail", () => {
     expect(result.displayPriceTmt).toBe(100000);
   });
 
-  it("includes sellerTrust.phoneVerified on detail DTO", async () => {
+  it("does not return a per-Listing seller trust signal", async () => {
     seedListing();
     const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     const result = await uc.execute({ listingId: "listing-1" });
 
-    expect(result.sellerTrust).toEqual({ phoneVerified: true });
+    expect(result).not.toHaveProperty("sellerTrust");
+  });
+
+  it("returns a named seller, join date, and public number from persisted data", async () => {
+    seedListing();
+    const profiles = new FakeSellerProfilePort();
+    profiles.profiles.set("user-1", {
+      displayName: "Aýgül",
+      memberSince: new Date("2024-06-10T12:00:00Z"),
+    });
+
+    const result = await makeUseCase(
+      repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
+    ).execute({ listingId: "listing-1" });
+
+    expect(result.publicNumber).toBe(10482);
+    expect(result.seller).toEqual({
+      displayName: "Aýgül",
+      memberSince: "2024-06-10T12:00:00.000Z",
+    });
+  });
+
+  it("returns a null display name for an unnamed seller", async () => {
+    seedListing();
+    const profiles = new FakeSellerProfilePort();
+    profiles.profiles.set("user-1", {
+      displayName: null,
+      memberSince: new Date("2024-06-10T12:00:00Z"),
+    });
+
+    const result = await makeUseCase(
+      repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
+    ).execute({ listingId: "listing-1" });
+
+    expect(result.seller).toEqual({
+      displayName: null,
+      memberSince: "2024-06-10T12:00:00.000Z",
+    });
   });
 
   it("returns 404 for soft-deleted listing", async () => {

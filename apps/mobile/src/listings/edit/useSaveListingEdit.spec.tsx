@@ -196,7 +196,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
-          sellerTrust: { phoneVerified: true },
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
         });
       }),
       http.post("*/listings/:id/media/attach", () => {
@@ -273,7 +274,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
-          sellerTrust: { phoneVerified: true },
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
         });
       }),
       http.post("*/listings/:id/media/attach", () => {
@@ -372,7 +374,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
-          sellerTrust: { phoneVerified: true },
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
         });
       }),
       http.put("*/listings/:id/media/order", () => {
@@ -430,7 +433,8 @@ describe("useSaveListingEdit", () => {
           soldAt: undefined,
           createdAt: "2026-05-21T12:00:00.000Z",
           updatedAt: "2026-05-21T12:00:00.000Z",
-          sellerTrust: { phoneVerified: true },
+          publicNumber: 10482,
+          seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
         });
       }),
       http.put("*/listings/:id/media/order", () => {

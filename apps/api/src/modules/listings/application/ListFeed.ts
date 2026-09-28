@@ -6,7 +6,6 @@ import type { z } from "zod";
 import {
   DEFAULT_FEED_SORT,
   LISTING_ERROR_CODES,
-  VERIFIED_PHONE_TRUST,
   type Currency,
   type FeedCursor,
   type FeedSort,
@@ -115,7 +114,6 @@ export class ListFeed {
         ...(listing.engineTypeId !== undefined ? { engineTypeId: listing.engineTypeId } : {}),
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
-        sellerTrust: VERIFIED_PHONE_TRUST,
         ...(favorited !== undefined ? { isFavorited: favorited.has(listing.id) } : {}),
       };
     });

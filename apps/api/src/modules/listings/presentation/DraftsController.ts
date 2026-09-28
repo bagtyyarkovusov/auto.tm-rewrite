@@ -18,7 +18,7 @@ import { ZodError } from "zod";
 import { ListingsSchemas, WizardSchemas, AdminSchemas } from "@auto-tm/contracts";
 
 import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityCheckPort } from "../../identity/identity.public";
 import { CreateDraft } from "../application/CreateDraft";
 import { UpdateDraft } from "../application/UpdateDraft";
 import { DiscardDraft } from "../application/DiscardDraft";

@@ -370,6 +370,7 @@ enum Currency {
 
 model Listing {
   id            String        @id @default(uuid())
+  publicNumber  Int           @unique @default(autoincrement())
   sellerId      String
   seller        User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   status        ListingStatus @default(draft)

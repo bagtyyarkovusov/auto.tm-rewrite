@@ -238,7 +238,6 @@ export function ListingDetailView({
             locationText={listing.locationText}
             contactPhone={isClosedForBuyer ? undefined : listing.contactPhone}
             allowCalls={listing.allowCalls && !isClosedForBuyer}
-            phoneVerified={!isClosedForBuyer && listing.sellerTrust?.phoneVerified}
           />
         )}
 

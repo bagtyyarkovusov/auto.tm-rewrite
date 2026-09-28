@@ -2,6 +2,8 @@
 
 The schema, migration history, generated-client boundary, and seed inputs live here. Inspect `schema.prisma` for fields and relations instead of copying them into documentation. Runtime consumers load the compiled package.
 
+`Listing.publicNumber` is a unique, database-assigned integer for the public detail footer. Its migration numbers existing Listings; subsequent inserts take the next sequence value. UUIDs remain the internal identity and route key.
+
 Cross-context foreign keys are allowed; application use-cases still use ports for cross-context access. Database integrity does not waive the application boundary. Keep schema changes with their committed migration, use forward corrective migrations, and reserve `db push` for localhost. The API pre-deploy step is the sole deployed migration authority under ADR-0039.
 
 Deletion intentionally preserves some history while erasing or nulling personal data. Check identity deletion, worker purge, and migration tests before changing cascades, nullable audit actors, or retained messages. Seeds and reviewer scenarios have separate purposes; do not run operational scripts against a live database as a cleanup check. Keep credential values out of seed/audit evidence.

@@ -3,7 +3,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import { VERIFIED_PHONE_TRUST, type Currency } from "../domain/types";
+import type { Currency } from "../domain/types";
 import {
   LISTING_REPOSITORY,
   type ListingRepository,
@@ -28,6 +28,10 @@ import {
   VIN_DECODER_PORT,
   type VinDecoderPort,
 } from "../domain/ports/VinDecoderPort";
+import {
+  SELLER_PROFILE_PORT,
+  type SellerProfilePort,
+} from "../domain/ports/SellerProfilePort";
 
 export interface GetListingDetailInput {
   listingId: string;
@@ -51,6 +55,8 @@ export class GetListingDetail {
     private readonly favorites: FavoriteRepository,
     @Inject(VIN_DECODER_PORT)
     private readonly vinDecoder: VinDecoderPort,
+    @Inject(SELLER_PROFILE_PORT)
+    private readonly sellerProfiles: SellerProfilePort,
   ) {}
 
   async execute(input: GetListingDetailInput): Promise<ListingDetailDto> {
@@ -59,6 +65,9 @@ export class GetListingDetail {
     if (!listing || listing.deletedAt) {
       throw new NotFoundException("Listing not found");
     }
+    if (listing.publicNumber === undefined) {
+      throw new Error("Persisted Listing missing public number");
+    }
 
     // Banned listings: non-owner → 404; owner → show detail (frontend shows generic notice)
     if (listing.status === "banned") {
@@ -66,6 +75,8 @@ export class GetListingDetail {
         throw new NotFoundException("Listing not found");
       }
     }
+    const seller = await this.sellerProfiles.getSellerProfile(listing.sellerId);
+    if (!seller) throw new NotFoundException("Seller not found");
 
     const media = await this.mediaRepo.findByListingId(input.listingId);
     const displayPriceTmt = await this.computeDisplayPriceTmt(
@@ -81,7 +92,12 @@ export class GetListingDetail {
 
     return {
       id: listing.id,
+      publicNumber: listing.publicNumber,
       sellerId: listing.sellerId,
+      seller: {
+        displayName: seller.displayName,
+        memberSince: seller.memberSince.toISOString(),
+      },
       status: listing.status,
       brandId: listing.brandId,
       modelId: listing.modelId,
@@ -128,7 +144,6 @@ export class GetListingDetail {
       soldAt: listing.soldAt?.toISOString(),
       createdAt: listing.createdAt.toISOString(),
       updatedAt: listing.updatedAt.toISOString(),
-      sellerTrust: VERIFIED_PHONE_TRUST,
     };
   }
 

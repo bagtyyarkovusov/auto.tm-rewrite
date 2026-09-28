@@ -19,7 +19,7 @@ import type { z } from "zod";
 
 import { Public } from "../../../common/public.decorator";
 import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityCheckPort } from "../../identity/identity.public";
 import { ArchiveListing } from "../application/ArchiveListing";
 import { CountListings } from "../application/CountListings";
 import { CountListingModels } from "../application/CountListingModels";

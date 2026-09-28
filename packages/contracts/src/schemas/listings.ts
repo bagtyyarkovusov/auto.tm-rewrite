@@ -13,13 +13,6 @@ export type CurrencyType = z.infer<typeof CurrencySchema>;
 export const ListingConditionSchema = z.nativeEnum(ListingCondition);
 export type ListingConditionType = z.infer<typeof ListingConditionSchema>;
 
-// ── Seller trust signal ──
-
-export const SellerTrustSchema = z.object({
-  phoneVerified: z.boolean(),
-});
-export type SellerTrust = z.infer<typeof SellerTrustSchema>;
-
 // ── Structured condition disclosure (S9a) ──
 
 export const ConditionDisclosureSchema = z.object({
@@ -69,7 +62,6 @@ export const ListingSummarySchema = z.object({
   engineTypeId: z.string().uuid().optional(),
   cityId: z.string().uuid(),
   publishedAt: z.string().datetime(),
-  sellerTrust: SellerTrustSchema,
   /** Present only when the request carries a signed-in viewer. */
   isFavorited: z.boolean().optional(),
 });
@@ -111,7 +103,12 @@ export type ListingMedia = z.infer<typeof ListingMediaSchema>;
 
 export const ListingDetailSchema = z.object({
   id: z.string().uuid(),
+  publicNumber: z.number().int().positive(),
   sellerId: z.string().uuid(),
+  seller: z.object({
+    displayName: z.string().nullable(),
+    memberSince: z.string().datetime(),
+  }),
   status: ListingStatusSchema,
   brandId: z.string().uuid(),
   modelId: z.string().uuid(),
@@ -148,7 +145,6 @@ export const ListingDetailSchema = z.object({
   soldAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  sellerTrust: SellerTrustSchema,
 });
 export type ListingDetail = z.infer<typeof ListingDetailSchema>;
 

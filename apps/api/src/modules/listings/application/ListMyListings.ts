@@ -3,7 +3,6 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import { VERIFIED_PHONE_TRUST } from "../domain/types";
 import {
   LISTING_CARD_READ_PORT,
   type ListingCardReadPort,
@@ -56,7 +55,6 @@ export class ListMyListings {
         engineTypeId: item.engineTypeId,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
-        sellerTrust: VERIFIED_PHONE_TRUST,
       })),
       nextCursor: result.nextCursor
         ? ListingsSchemas.encodeCursor(result.nextCursor)

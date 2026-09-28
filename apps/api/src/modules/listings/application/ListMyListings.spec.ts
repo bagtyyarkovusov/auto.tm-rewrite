@@ -80,12 +80,12 @@ describe("ListMyListings", () => {
     expect(result.items[0]!.photoCount).toBe(3);
   });
 
-  it("includes sellerTrust.phoneVerified on owner summaries", async () => {
+  it("does not return a per-Listing seller trust signal on owner summaries", async () => {
     seedSummary();
     const uc = makeUseCase(port);
     const result = await uc.execute({ userId: "user-1" });
 
-    expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
+    expect(result.items[0]!).not.toHaveProperty("sellerTrust");
   });
 
   it("returns encoded nextCursor", async () => {

@@ -859,17 +859,6 @@
             "type": "string",
             "format": "date-time"
           },
-          "sellerTrust": {
-            "type": "object",
-            "properties": {
-              "phoneVerified": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "phoneVerified"
-            ]
-          },
           "isFavorited": {
             "type": "boolean"
           }
@@ -886,8 +875,7 @@
           "photoKeys",
           "photoCount",
           "cityId",
-          "publishedAt",
-          "sellerTrust"
+          "publishedAt"
         ]
       },
       "ListingDetail": {
@@ -897,9 +885,31 @@
             "type": "string",
             "format": "uuid"
           },
+          "publicNumber": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
           "sellerId": {
             "type": "string",
             "format": "uuid"
+          },
+          "seller": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              },
+              "memberSince": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "displayName",
+              "memberSince"
+            ]
           },
           "status": {
             "type": "string",
@@ -1200,22 +1210,13 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
-          },
-          "sellerTrust": {
-            "type": "object",
-            "properties": {
-              "phoneVerified": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "phoneVerified"
-            ]
           }
         },
         "required": [
           "id",
+          "publicNumber",
           "sellerId",
+          "seller",
           "status",
           "brandId",
           "modelId",
@@ -1233,8 +1234,7 @@
           "favoriteCount",
           "publishedAt",
           "createdAt",
-          "updatedAt",
-          "sellerTrust"
+          "updatedAt"
         ]
       },
       "ListingMedia": {
@@ -2290,17 +2290,6 @@
                   "type": "string",
                   "format": "date-time"
                 },
-                "sellerTrust": {
-                  "type": "object",
-                  "properties": {
-                    "phoneVerified": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "phoneVerified"
-                  ]
-                },
                 "isFavorited": {
                   "type": "boolean"
                 }
@@ -2317,8 +2306,7 @@
                 "photoKeys",
                 "photoCount",
                 "cityId",
-                "publishedAt",
-                "sellerTrust"
+                "publishedAt"
               ]
             }
           },
@@ -2665,17 +2653,6 @@
                   "type": "string",
                   "format": "date-time"
                 },
-                "sellerTrust": {
-                  "type": "object",
-                  "properties": {
-                    "phoneVerified": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "phoneVerified"
-                  ]
-                },
                 "isFavorited": {
                   "type": "boolean"
                 }
@@ -2692,8 +2669,7 @@
                 "photoKeys",
                 "photoCount",
                 "cityId",
-                "publishedAt",
-                "sellerTrust"
+                "publishedAt"
               ]
             }
           },
@@ -3010,17 +2986,6 @@
             "type": "string",
             "format": "date-time"
           },
-          "sellerTrust": {
-            "type": "object",
-            "properties": {
-              "phoneVerified": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "phoneVerified"
-            ]
-          },
           "isFavorited": {
             "type": "boolean"
           },
@@ -3047,7 +3012,6 @@
           "photoCount",
           "cityId",
           "publishedAt",
-          "sellerTrust",
           "allowCalls",
           "allowChat"
         ]
@@ -3150,17 +3114,6 @@
                   "type": "string",
                   "format": "date-time"
                 },
-                "sellerTrust": {
-                  "type": "object",
-                  "properties": {
-                    "phoneVerified": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "phoneVerified"
-                  ]
-                },
                 "isFavorited": {
                   "type": "boolean"
                 },
@@ -3187,7 +3140,6 @@
                 "photoCount",
                 "cityId",
                 "publishedAt",
-                "sellerTrust",
                 "allowCalls",
                 "allowChat"
               ]

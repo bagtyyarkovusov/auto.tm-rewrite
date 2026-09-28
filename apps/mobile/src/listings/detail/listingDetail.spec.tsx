@@ -81,9 +81,9 @@ describe("SellerBlock", () => {
     expect(sellerBlockSource).toContain("locationText");
   });
 
-  it("renders verified-phone badge without implying inspection or dealer status", () => {
-    expect(sellerBlockSource).toContain("phoneVerified");
-    expect(sellerBlockSource).toContain('t("verifiedPhone")');
+  it("shows no per-Listing phone badge and no inspection or dealer status", () => {
+    expect(sellerBlockSource).not.toContain("phoneVerified");
+    expect(sellerBlockSource).not.toContain('t("verifiedPhone")');
     expect(sellerBlockSource).not.toContain("inspection");
     expect(sellerBlockSource).not.toContain("dealer");
   });
@@ -173,9 +173,9 @@ describe("ListingDetailView", () => {
     expect(listingDetailSource).toContain('t("vin")');
   });
 
-  it("passes sellerTrust.phoneVerified to SellerBlock", () => {
-    expect(listingDetailSource).toContain("sellerTrust?.phoneVerified");
-    expect(listingDetailSource).toContain("listing.sellerTrust?.phoneVerified}");
+  it("passes no seller trust signal to SellerBlock", () => {
+    expect(listingDetailSource).not.toContain("sellerTrust");
+    expect(listingDetailSource).not.toContain("phoneVerified");
   });
 });
 
@@ -349,15 +349,12 @@ describe("Closed Listing (sold / archived) for buyers", () => {
     );
   });
 
-  it("hides the seller phone and verified badge", () => {
+  it("hides the seller phone", () => {
     expect(listingDetailSource).toContain(
       "contactPhone={isClosedForBuyer ? undefined : listing.contactPhone}",
     );
     expect(listingDetailSource).toContain(
       "allowCalls={listing.allowCalls && !isClosedForBuyer}",
-    );
-    expect(listingDetailSource).toContain(
-      "phoneVerified={!isClosedForBuyer && listing.sellerTrust?.phoneVerified}",
     );
   });
 
