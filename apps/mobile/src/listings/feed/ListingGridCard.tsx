@@ -7,9 +7,9 @@ import { useTranslation } from "react-i18next";
 
 import type { AuthHref } from "../../auth/intentStore";
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
+import { useListingFavorite } from "../useListingFavorite";
 
 import { listingGridCardText } from "./listingGridCardText";
-import { useCardFavorite } from "./useCardFavorite";
 
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,8 @@ interface ListingGridCardProps {
   modelName?: string;
   isAuthenticated: boolean | null;
   returnTo: AuthHref;
+  /** Brand and model names are still loading; show a title placeholder. */
+  titlePending?: boolean;
 }
 
 /**
@@ -36,11 +38,12 @@ export const ListingGridCard = memo(function ListingGridCard({
   modelName,
   isAuthenticated,
   returnTo,
+  titlePending = false,
 }: ListingGridCardProps) {
   const { t, i18n } = useTranslation();
   const coverKey = listing.photoKeys[0] ?? listing.coverMediaKey;
   const [useOriginalImage, setUseOriginalImage] = useState(false);
-  const { favorited, pending, toggle } = useCardFavorite({
+  const { favorited, pending, toggle } = useListingFavorite({
     listingId: listing.id,
     isFavorited: listing.isFavorited ?? false,
     isAuthenticated,
@@ -115,9 +118,9 @@ export const ListingGridCard = memo(function ListingGridCard({
           <Text className="text-sm leading-5 text-foreground" numberOfLines={1}>
             {text.title}
           </Text>
-        ) : (
+        ) : titlePending ? (
           <Skeleton className="my-1 h-3 w-3/4" />
-        )}
+        ) : null}
         {text.meta ? (
           <Text className="text-sm leading-5 text-muted-foreground" numberOfLines={1}>
             {text.meta}
@@ -144,6 +147,22 @@ export function ListingGridCardSkeleton() {
         <Skeleton className="my-1 h-3 w-3/4" />
         <Skeleton className="my-1 h-3 w-1/3" />
       </View>
+    </View>
+  );
+}
+
+const SKELETON_ROWS = [0, 1, 2];
+
+/** Three rows of two card skeletons, for the grid's first load. */
+export function ListingGridSkeleton() {
+  return (
+    <View className="mt-3 gap-3 px-4">
+      {SKELETON_ROWS.map((row) => (
+        <View key={row} className="flex-row gap-3">
+          <ListingGridCardSkeleton />
+          <ListingGridCardSkeleton />
+        </View>
+      ))}
     </View>
   );
 }

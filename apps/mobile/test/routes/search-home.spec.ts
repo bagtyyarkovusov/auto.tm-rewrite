@@ -4,27 +4,31 @@ import { resolve } from "path";
 import { describe, expect, it } from "vitest";
 
 const appDir = resolve(__dirname, "../../app");
+const feedDir = resolve(__dirname, "../../src/listings/feed");
 const source = readFileSync(resolve(appDir, "(tabs)/(search)/index.tsx"), "utf-8");
+const header = readFileSync(resolve(feedDir, "HomeHeader.tsx"), "utf-8");
+const gridCard = readFileSync(resolve(feedDir, "ListingGridCard.tsx"), "utf-8");
 
 describe("Home (the Search tab's first screen)", () => {
   it("opens Search from 🔍 in the header", () => {
-    expect(source).toContain('router.push("/(tabs)/(search)/search")');
-    expect(source).toContain('accessibilityLabel={t("search")}');
+    expect(source).toContain("<HomeHeader />");
+    expect(header).toContain('router.push("/(tabs)/(search)/search")');
+    expect(header).toContain('accessibilityLabel={t("search")}');
   });
 
   it("opens the Brand picker from the Brand, model card with the live count", () => {
-    expect(source).toContain('router.push("/(tabs)/(search)/brands")');
-    expect(source).toContain('t("brandModel")');
-    expect(source).toContain("useListingCount({})");
-    expect(source).toContain("count.data.totalMatching");
+    expect(header).toContain('router.push("/(tabs)/(search)/brands")');
+    expect(header).toContain('t("brandModel")');
+    expect(header).toContain("useListingCount({})");
+    expect(header).toContain("count.data.totalMatching");
   });
 
   it("shows New listings as a two-column grid with See all to unfiltered Results", () => {
-    expect(source).toContain('t("newListings")');
+    expect(header).toContain('t("newListings")');
     expect(source).toContain("numColumns={2}");
     expect(source).toContain("<ListingGridCard");
-    expect(source).toContain('router.push("/(tabs)/(search)/results")');
-    expect(source).toContain('t("seeAll")');
+    expect(header).toContain('router.push("/(tabs)/(search)/results")');
+    expect(header).toContain('t("seeAll")');
   });
 
   it("asks for the viewer's feed so ♡ reflects saved Favorites", () => {
@@ -43,8 +47,8 @@ describe("Home (the Search tab's first screen)", () => {
   });
 
   it("uses the RNR Button for 🔍 and See all", () => {
-    expect(source).toContain('import { Button } from "@/components/ui/button"');
-    expect(source).not.toMatch(/<Pressable[^>]*accessibilityLabel=\{t\("search"\)\}/);
+    expect(header).toContain('import { Button } from "@/components/ui/button"');
+    expect(header).not.toMatch(/<Pressable[^>]*accessibilityLabel=\{t\("search"\)\}/);
   });
 
   it("has no filters, filter chips, or safety banner", () => {
@@ -58,12 +62,13 @@ describe("Home (the Search tab's first screen)", () => {
       "Badge",
     ]) {
       expect(source).not.toContain(absent);
+      expect(header).not.toContain(absent);
     }
   });
 
   it("shows grid skeletons while loading and the shared error state offline", () => {
-    expect(source).toContain("<GridSkeleton />");
-    expect(source).toContain("<ListingGridCardSkeleton />");
+    expect(source).toContain("<ListingGridSkeleton />");
+    expect(gridCard).toContain("<ListingGridCardSkeleton />");
     expect(source).toContain("<FeedError error={error}");
   });
 

@@ -35,10 +35,10 @@ describe("ListingGridCard", () => {
     expect(source).toContain("{text.meta ? (");
   });
 
-  it("puts ♡ on the rounded photo and routes it through useCardFavorite", () => {
+  it("puts ♡ on the rounded photo and routes it through useListingFavorite", () => {
     expect(source).toContain("rounded-xl");
     expect(source).toContain("absolute right-1 top-1");
-    expect(source).toContain("useCardFavorite({");
+    expect(source).toContain("useListingFavorite({");
     expect(source).toContain("onPress={toggle}");
     expect(source).toContain("accessibilityState={{ selected: favorited");
   });

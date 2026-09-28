@@ -17,7 +17,7 @@ export function useUnfavoriteListing() {
       ),
 
     onSuccess: (_data, listingId) => {
-      setFeedFavorited(queryClient, listingId, false);
+      setFeedFavorited(queryClient, listingId, false, { viewerOnly: true });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.listings.detail(listingId),
       });
