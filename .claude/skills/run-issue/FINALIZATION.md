@@ -16,7 +16,7 @@ Keep terms in the PR, reviews, and reconciliation aligned with the canonical [do
 
 Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
 
-The same provider may perform both axes for ordinary work. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one Codex and one Claude review across the two axes.
+The same model provider may perform both axes for ordinary work. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one Codex review backed by OpenAI and one Claude Code review backed by Anthropic across the two axes. A client backed by another provider does not fill either slot. See [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md).
 
 Each reviewer posts a PR comment with:
 
@@ -25,7 +25,8 @@ Each reviewer posts a PR comment with:
 
 - **Review axis:** <Standards|Spec>
 - **Reviewer:** <agent/context identifier>
-- **Provider:** <Codex|Claude>
+- **Provider:** <OpenAI|Anthropic|Kimi; actual model provider>
+- **Client:** <Codex|Claude Code|Kimi CLI|other; required when its usual provider differs from Provider, otherwise optional>
 - **Commit:** `<full SHA>`
 - **Verdict:** pass | findings
 

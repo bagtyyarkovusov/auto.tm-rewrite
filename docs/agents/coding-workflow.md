@@ -9,7 +9,7 @@ This is the repository router for moving an idea from shaping to shipped code. I
 | Shaping | [`shape-with-docs`](../../.claude/skills/shape-with-docs/SKILL.md) | Reviewed vocabulary and mutable product, flow, or pending-sprint documents; a new ADR when required | Work stays on `shape/<slug>` and contains no executable tickets or implementation |
 | Specification | The same shaping PRD, flow, and pending-sprint artifacts governed by ADR-0020 | Testable outcomes, scope, non-goals, scenarios, invariants, risks, DoD, and evidence plan | There is no duplicate standalone specification artifact |
 | Sprint issue creation | [`create-sprint-issues`](../../.claude/skills/create-sprint-issues/SKILL.md) using [`sprint-transitions.md`](sprint-transitions.md) | Confirmed parent and dependency-ordered child issues plus the roadmap-start PR | Starts only after the shaping documentation PR is reviewed and merged |
-| Issue execution | [`run-issue`](../../.claude/skills/run-issue/SKILL.md), or `resume-issue` for an interrupted run | One pushed reservation branch, early draft PR, durable execution state, and verified implementation | Codex and Claude may exchange roles; one issue and one integration owner |
+| Issue execution | [`run-issue`](../../.claude/skills/run-issue/SKILL.md), or `resume-issue` for an interrupted run | One pushed reservation branch, early draft PR, durable execution state, and verified implementation | Codex, Claude Code, and Kimi CLI may exchange roles; one issue and one integration owner |
 | Review | Independent Standards review and Spec review of the fixed implementation commit | SHA-pinned PR comments with findings resolved or explicitly rejected with evidence | Both axes pass against the current commit before merge |
 | Sprint control | `sprint-status`, then `close-sprint` when the sprint is complete | Queue visibility, shipped-vs-planned verification, retro, and roadmap update | Retros remain append-only; sprint locks remain in force |
 
@@ -30,7 +30,11 @@ The interactive path follows this state machine. Sandcastle must not dispatch im
 
 No workflow queries provider quota before accepting work. A quota stop, crash, or lost context is handled by the last pushed checkpoint and PR state. Silence, incomplete output, or an interrupted command is `unknown` rather than evidence of success.
 
-The same agent vendor may perform both review axes for ordinary work when each review starts in a fresh read-only context that did not implement the commit. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one Codex and one Claude review across the two axes.
+Kimi Code is a supported interactive implementer, resumer, and reviewer under [ADR-0059](../adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Whether it runs through the native Kimi CLI or through Claude Code pointed at Kimi Code, it uses the same tracked skill files and issue record. The client does not determine the provider: a Claude Code session backed by Kimi records `Provider: Kimi`.
+
+To use the subscription, configure the client with the [Kimi Code membership endpoint and key](https://www.kimi.com/code/docs/en/kimi-code/faq.html); Kimi's Open Platform is a separate billing path. Keep the local `claude-kimi` shell function and credentials outside the repository. Do not add a Kimi-specific skill copy or start Sandcastle to run this interactive path. Confirm the chosen client can read the repository instructions, use Context7, and run the required verification before treating its result as complete.
+
+The same model provider may perform both review axes for ordinary work when each review starts in a fresh read-only context that did not implement the commit. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one Codex review backed by OpenAI and one Claude Code review backed by Anthropic across the two axes. Kimi can implement those changes or add an optional review. A client backed by another provider does not fill either required slot.
 
 ## Document routing
 
@@ -77,7 +81,7 @@ The Spec reviewer uses canonical definitions to interpret terms in the issue and
 
 Pre-existing inconsistent names outside the diff are follow-up observations, not automatic migrations or blockers, unless the change worsens them or the ambiguity prevents reliable runtime/spec evaluation. The reviewers work independently; implementation ownership and review ownership must remain distinct when subagents are used.
 
-Each verdict is a PR comment with `Review axis`, `Reviewer`, `Provider`, `Commit`, and `Verdict`. Record evidence for accepting or rejecting every finding. Resolve accepted findings with focused changes, rerun proportionate verification, and repeat the affected review axis. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates affected earlier verdicts. Only the current fixed, green commit proceeds to pull-request merge.
+Each verdict is a PR comment with `Review axis`, `Reviewer`, `Provider`, `Commit`, and `Verdict`. `Provider` names the actual model provider: `OpenAI`, `Anthropic`, or `Kimi`. Record `Client` when its usual provider differs from `Provider`, such as `Client: Claude Code` with `Provider: Kimi`; otherwise it is optional. Record evidence for accepting or rejecting every finding. Resolve accepted findings with focused changes, rerun proportionate verification, and repeat the affected review axis. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates affected earlier verdicts. Only the current fixed, green commit proceeds to pull-request merge.
 
 ## Integration, closure, and recovery
 
@@ -89,6 +93,6 @@ Each verdict is a PR comment with `Review axis`, `Reviewer`, `Provider`, `Commit
 
 ## Using the workflow from different hosts
 
-Codex, Claude Desktop/Code, and Claude-Kimi use the same root AGENTS.md policy. CLAUDE.md loads that policy for Claude-compatible hosts. Open this checkout in the host that will execute the task; verify its working directory and Git head before editing. A chat without checkout or command access cannot supply implementation or verification evidence.
+Codex, Claude Desktop/Code, and Claude-Kimi use the same root AGENTS.md policy. CLAUDE.md loads that policy for Claude-compatible hosts. Open this checkout in the host that will execute the task; verify its working directory and Git head before editing. A chat without checkout or command access cannot supply implementation or verification evidence. [ADR-0059](../adr/0059-kimi-code-as-a-third-interactive-coding-agent.md) governs provider attribution for reviews.
 
 Use a discovered repository skill when supported. Otherwise open its linked `.claude/skills/<name>/SKILL.md` and follow the workflow with the host's file, shell, and GitHub tools. Skill names are workflow entry points, not a guarantee that every host has a slash command. Keep one canonical skill layer and record the actual agent/provider in Execution state and reviews. Changing providers does not waive independent review or host-only verification.
