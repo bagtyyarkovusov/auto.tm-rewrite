@@ -82,6 +82,14 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
     return this.toDomain(row);
   }
 
+  async consumeIfUnused(id: string): Promise<boolean> {
+    const { count } = await this.prisma.otpRequest.updateMany({
+      where: { id, verifiedAt: null },
+      data: { verifiedAt: new Date() },
+    });
+    return count === 1;
+  }
+
   async incrementAttempts(id: string): Promise<OtpRequest> {
     const row = await this.prisma.otpRequest.update({
       where: { id },

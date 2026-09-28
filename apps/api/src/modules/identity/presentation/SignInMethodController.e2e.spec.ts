@@ -311,6 +311,57 @@ describe("MeController e2e - Sign-in Method changes", () => {
     ]);
   });
 
+  it("lets a deletion code succeed at most once across deletion and a method change", async () => {
+    const user = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const codeResponse = await request
+      .post("/api/v1/account-deletion/request")
+      .send({ phone: "+99361234567" })
+      .expect(201);
+
+    const body = { phone: "+99361234567", code: codeResponse.body.testCode };
+    const [change, deletion] = await Promise.all([
+      request
+        .post("/api/v1/me/sign-in-methods/verify")
+        .set("Authorization", bearer(user.id))
+        .send(body),
+      request.post("/api/v1/account-deletion/confirm").send(body),
+    ]);
+
+    const successes = [change.status === 201, deletion.status === 204].filter(Boolean);
+    expect(successes).toHaveLength(1);
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.deletionScheduledAt === null).toBe(change.status === 201);
+  });
+
+  it("lets a method-change code succeed at most once across the change and sign-in", async () => {
+    const user = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const authorization = bearer(user.id);
+    const codeResponse = await request
+      .post("/api/v1/me/sign-in-methods/request")
+      .set("Authorization", authorization)
+      .send({ email: "race@example.com" })
+      .expect(201);
+
+    const body = { email: "race@example.com", code: codeResponse.body.testCode };
+    const [change, signIn] = await Promise.all([
+      request
+        .post("/api/v1/me/sign-in-methods/verify")
+        .set("Authorization", authorization)
+        .send(body),
+      request.post("/api/v1/auth/otp/verify").send(body),
+    ]);
+
+    const successes = [change.status === 201, signIn.status === 201].filter(Boolean);
+    expect(successes).toHaveLength(1);
+    await expect(prisma.user.count({ where: { email: "race@example.com" } })).resolves.toBe(1);
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.email === "race@example.com").toBe(change.status === 201);
+  });
+
   it.each([
     ["/api/v1/me/sign-in-methods/request", { email: "new@example.com" }],
     ["/api/v1/me/sign-in-methods/verify", { email: "new@example.com", code: "123456" }],

@@ -117,6 +117,12 @@ export class VerifyOtp {
       throw err;
     }
 
+    // Claim the code before any side effect, so a code accepted by another
+    // flow (such as web deletion) cannot also be used here concurrently.
+    if (!(await this.otpRequestRepo.consumeIfUnused(otpRequest.id))) {
+      throw new Error("OTP code has already been used");
+    }
+
     const user =
       existingUser ??
       (await this.userRepo.create(
@@ -129,7 +135,7 @@ export class VerifyOtp {
       await this.recoverAccount.execute({ userId: user.id });
     }
 
-    // Mark OTP as verified
+    // Bind the consumed code to the signed-in User
     await this.otpRequestRepo.markVerified(otpRequest.id, user.id);
 
     if (isReviewerEmail) {

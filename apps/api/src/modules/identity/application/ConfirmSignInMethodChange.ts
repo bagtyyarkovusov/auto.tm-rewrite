@@ -48,36 +48,28 @@ export class ConfirmSignInMethodChange {
       input.userId,
     );
 
+    // Claim the code before any side effect, so a code accepted by another
+    // flow (sign-in or deletion) cannot also change a Sign-in Method. The
+    // request is already bound to this User, so the claim is the only write.
+    if (!(await this.otpRequestRepo.consumeIfUnused(request.id))) {
+      throw new Error("OTP code has already been used");
+    }
+
     const owner = destination.channel === SIGN_IN_CODE_CHANNELS.PHONE
       ? await this.userRepo.findByPhone(destination.value)
       : await this.userRepo.findByEmail(destination.value);
     if (owner !== null && owner.id !== input.userId) {
-      await this.otpRequestRepo.markVerified(request.id, input.userId);
       throw new IdentityDomainError(
         IDENTITY_ERROR_CODES.SIGN_IN_METHOD_TAKEN,
         "Sign-in Method is already held by another User",
       );
     }
 
-    let updated: User;
-    try {
-      updated = await this.userRepo.replaceSignInMethod({
-        userId: input.userId,
-        channel: destination.channel,
-        destination: destination.value,
-        verifiedAt: this.clock.now(),
-      });
-    } catch (error) {
-      if (
-        error instanceof IdentityDomainError &&
-        error.code === IDENTITY_ERROR_CODES.SIGN_IN_METHOD_TAKEN
-      ) {
-        await this.otpRequestRepo.markVerified(request.id, input.userId);
-      }
-      throw error;
-    }
-
-    await this.otpRequestRepo.markVerified(request.id, input.userId);
-    return updated;
+    return this.userRepo.replaceSignInMethod({
+      userId: input.userId,
+      channel: destination.channel,
+      destination: destination.value,
+      verifiedAt: this.clock.now(),
+    });
   }
 }

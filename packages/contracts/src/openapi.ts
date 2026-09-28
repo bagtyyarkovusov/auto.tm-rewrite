@@ -17,6 +17,9 @@ import {
   SignInMethodChangeRequestSchema,
   SignInMethodChangeVerifyRequestSchema,
   SignInMethodChangeResponseSchema,
+  AccountDeletionRequestSchema,
+  AccountDeletionRequestResponseSchema,
+  AccountDeletionConfirmRequestSchema,
   RefreshRequestSchema,
   RefreshResponseSchema,
   LogoutRequestSchema,
@@ -260,6 +263,15 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
     SignInMethodChangeVerifyRequestSchema,
   );
   registry.register("SignInMethodChangeResponse", SignInMethodChangeResponseSchema);
+  registry.register("AccountDeletionRequest", AccountDeletionRequestSchema);
+  registry.register(
+    "AccountDeletionRequestResponse",
+    AccountDeletionRequestResponseSchema,
+  );
+  registry.register(
+    "AccountDeletionConfirmRequest",
+    AccountDeletionConfirmRequestSchema,
+  );
 
   // Admin report schemas
   registry.register("CreateReportRequest", CreateReportRequestSchema);
@@ -555,6 +567,62 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
       },
       409: {
         description: "Sign-in Method belongs to another User",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/account-deletion/request",
+    summary: "Request a code to delete the account holding a phone or email",
+    description:
+      "Public. Answers the same way whether or not a User holds the value.",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: S(AccountDeletionRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Deletion code sent",
+        content: {
+          "application/json": {
+            schema: S(AccountDeletionRequestResponseSchema),
+          },
+        },
+      },
+      400: {
+        description: "Validation or rate-limit error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/account-deletion/confirm",
+    summary: "Confirm a deletion code and start the 30-day grace period",
+    description:
+      "Public. A valid code for a value no User holds gets the same 204 and changes nothing.",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: S(AccountDeletionConfirmRequestSchema),
+          },
+        },
+      },
+    },
+    responses: {
+      204: { description: "Code accepted" },
+      400: {
+        description:
+          "Validation error, or INVALID_OTP for any wrong, expired, used, locked, or missing code",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },

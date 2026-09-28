@@ -8,6 +8,7 @@ import { IdentityController } from "./presentation/identity.controller";
 import { AuthController } from "./presentation/AuthController";
 import { MeController } from "./presentation/MeController";
 import { AdminAuthController } from "./presentation/AdminAuthController";
+import { AccountDeletionController } from "./presentation/AccountDeletionController";
 import { RequestOtp } from "./application/RequestOtp";
 import { VerifyOtp } from "./application/VerifyOtp";
 import { VerifySignInCode } from "./application/VerifySignInCode";
@@ -25,6 +26,8 @@ import { UnblockUser } from "./application/UnblockUser";
 import { IsBlocked } from "./application/IsBlocked";
 import { RequestSignInMethodChange } from "./application/RequestSignInMethodChange";
 import { ConfirmSignInMethodChange } from "./application/ConfirmSignInMethodChange";
+import { RequestAccountDeletion } from "./application/RequestAccountDeletion";
+import { ConfirmAccountDeletion } from "./application/ConfirmAccountDeletion";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -60,7 +63,13 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     PrismaModule,
     BullModule.registerQueue({ name: AuthSchemas.EMAIL_CODE_QUEUE }),
   ],
-  controllers: [IdentityController, AuthController, MeController, AdminAuthController],
+  controllers: [
+    IdentityController,
+    AuthController,
+    MeController,
+    AdminAuthController,
+    AccountDeletionController,
+  ],
   providers: [
     PrismaOtpRequestRepository,
     PrismaUserRepository,
@@ -182,6 +191,8 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     IsBlocked,
     RequestSignInMethodChange,
     ConfirmSignInMethodChange,
+    RequestAccountDeletion,
+    ConfirmAccountDeletion,
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,
