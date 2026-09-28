@@ -5,6 +5,14 @@ import type { Model } from "../domain/Model";
 import type { ModelRepository } from "../domain/ports/ModelRepository";
 
 import { DeleteModel } from "./DeleteModel";
+import type { CatalogSearchIndex } from "./CatalogSearchIndex";
+
+class FakeSearchIndex {
+  invalidated = false;
+  invalidate(): void {
+    this.invalidated = true;
+  }
+}
 
 class FakeModelRepository implements ModelRepository {
   models: Model[] = [];
@@ -16,6 +24,10 @@ class FakeModelRepository implements ModelRepository {
 
   async getModelById(id: string): Promise<Model | null> {
     return this.models.find((m) => m.id === id) ?? null;
+  }
+
+  async listAllModels(): Promise<Model[]> {
+    return this.models;
   }
 
   async getBySlug(): Promise<Model | null> {
@@ -57,10 +69,15 @@ class FakePrisma {
   };
 }
 
-function makeUseCase(modelRepo?: FakeModelRepository, prisma?: FakePrisma) {
+function makeUseCase(
+  modelRepo?: FakeModelRepository,
+  prisma?: FakePrisma,
+  searchIndex?: FakeSearchIndex,
+) {
   return new DeleteModel(
     modelRepo ?? new FakeModelRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof DeleteModel>[1],
+    (searchIndex ?? new FakeSearchIndex()) as unknown as CatalogSearchIndex,
   );
 }
 
@@ -121,5 +138,24 @@ describe("DeleteModel", () => {
     await expect(uc.execute({ id: "m1" }, "admin-1")).rejects.toThrow(
       ConflictException,
     );
+  });
+
+  it("invalidates the catalog search index after deletion", async () => {
+    modelRepo.models.push({
+      id: "m1",
+      brandId: "b1",
+      slug: "camry",
+      nameRu: "Камри",
+      nameTk: "Kamri",
+      nameEn: "Camry",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const searchIndex = new FakeSearchIndex();
+    const uc = makeUseCase(modelRepo, prisma, searchIndex);
+    await uc.execute({ id: "m1" }, "admin-1");
+
+    expect(searchIndex.invalidated).toBe(true);
   });
 });

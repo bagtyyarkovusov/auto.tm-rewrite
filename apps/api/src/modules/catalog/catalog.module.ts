@@ -15,6 +15,8 @@ import { ListColors } from "./application/ListColors";
 import { ListDriveTypes } from "./application/ListDriveTypes";
 import { ListEngineTypes } from "./application/ListEngineTypes";
 import { ListTransmissions } from "./application/ListTransmissions";
+import { SearchCatalog } from "./application/SearchCatalog";
+import { CatalogSearchIndex } from "./application/CatalogSearchIndex";
 import { CreateBrand } from "./application/CreateBrand";
 import { UpdateBrand } from "./application/UpdateBrand";
 import { DeleteBrand } from "./application/DeleteBrand";
@@ -106,6 +108,8 @@ import { TRANSMISSION_REPOSITORY } from "./domain/ports/TransmissionRepository";
     ListDriveTypes,
     ListEngineTypes,
     ListTransmissions,
+    CatalogSearchIndex,
+    SearchCatalog,
     CreateBrand,
     UpdateBrand,
     DeleteBrand,

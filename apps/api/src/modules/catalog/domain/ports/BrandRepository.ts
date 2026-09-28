@@ -9,6 +9,9 @@ export interface BrandRepository {
 
   getBrandById(id: string): Promise<Brand | null>;
 
+  /** Unpaginated full list for the in-memory catalog search snapshot. */
+  listAllBrands(): Promise<Brand[]>;
+
   getBySlug(slug: string): Promise<Brand | null>;
 
   create(data: {

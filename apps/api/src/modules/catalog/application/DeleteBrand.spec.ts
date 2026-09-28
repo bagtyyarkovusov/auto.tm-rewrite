@@ -5,6 +5,14 @@ import type { Brand } from "../domain/Brand";
 import type { BrandRepository } from "../domain/ports/BrandRepository";
 
 import { DeleteBrand } from "./DeleteBrand";
+import type { CatalogSearchIndex } from "./CatalogSearchIndex";
+
+class FakeSearchIndex {
+  invalidated = false;
+  invalidate(): void {
+    this.invalidated = true;
+  }
+}
 
 class FakeBrandRepository implements BrandRepository {
   brands: Brand[] = [];
@@ -16,6 +24,10 @@ class FakeBrandRepository implements BrandRepository {
 
   async getBrandById(id: string): Promise<Brand | null> {
     return this.brands.find((b) => b.id === id) ?? null;
+  }
+
+  async listAllBrands(): Promise<Brand[]> {
+    return this.brands;
   }
 
   async getBySlug(): Promise<Brand | null> {
@@ -54,10 +66,15 @@ class FakePrisma {
   };
 }
 
-function makeUseCase(brandRepo?: FakeBrandRepository, prisma?: FakePrisma) {
+function makeUseCase(
+  brandRepo?: FakeBrandRepository,
+  prisma?: FakePrisma,
+  searchIndex?: FakeSearchIndex,
+) {
   return new DeleteBrand(
     brandRepo ?? new FakeBrandRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof DeleteBrand>[1],
+    (searchIndex ?? new FakeSearchIndex()) as unknown as CatalogSearchIndex,
   );
 }
 
@@ -116,5 +133,23 @@ describe("DeleteBrand", () => {
     await expect(uc.execute({ id: "b1" }, "admin-1")).rejects.toThrow(
       ConflictException,
     );
+  });
+
+  it("invalidates the catalog search index after deletion", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const searchIndex = new FakeSearchIndex();
+    const uc = makeUseCase(brandRepo, prisma, searchIndex);
+    await uc.execute({ id: "b1" }, "admin-1");
+
+    expect(searchIndex.invalidated).toBe(true);
   });
 });
