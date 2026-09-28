@@ -26,7 +26,7 @@ export type RequestDeletionResult =
 export type ConfirmDeletionResult = { ok: true } | { ok: false; error: DeletionFailure };
 
 export interface DeletionApiContext {
-  /** API base including `/api/v1`. */
+  /** API origin, with or without `/api/v1`; deployments set either form. */
   baseUrl: string;
   locale: Locale;
   /**
@@ -54,6 +54,11 @@ function destinationBody(channel: DeletionChannel, value: string) {
     : { email: value };
 }
 
+export function apiUrl(baseUrl: string, path: string): string {
+  const origin = baseUrl.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
+  return `${origin}/api/v1${path}`;
+}
+
 export function firstForwardedIp(header: string | null): string | null {
   const first = header?.split(",")[0]?.trim();
   return first ? first : null;
@@ -71,7 +76,7 @@ async function post(
   if (context.clientIp) headers["X-Forwarded-For"] = context.clientIp;
 
   try {
-    return await (context.fetch ?? fetch)(`${context.baseUrl}${path}`, {
+    return await (context.fetch ?? fetch)(apiUrl(context.baseUrl, path), {
       method: "POST",
       headers,
       body: JSON.stringify(body),

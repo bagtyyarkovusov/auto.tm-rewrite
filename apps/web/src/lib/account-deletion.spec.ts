@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DeletionApiContext } from "./account-deletion";
 import {
+  apiUrl,
   confirmAccountDeletion,
   firstForwardedIp,
   normalizePhoneInput,
@@ -58,6 +59,19 @@ describe("normalizePhoneInput", () => {
     ["061234567", "+99361234567"],
   ])("normalizes %s", (input, expected) => {
     expect(normalizePhoneInput(input)).toBe(expected);
+  });
+});
+
+describe("apiUrl", () => {
+  it.each([
+    "https://api.test",
+    "https://api.test/",
+    "https://api.test/api/v1",
+    "https://api.test/api/v1/",
+  ])("adds the /api/v1 prefix once to %s", (base) => {
+    expect(apiUrl(base, "/account-deletion/request")).toBe(
+      "https://api.test/api/v1/account-deletion/request",
+    );
   });
 });
 
