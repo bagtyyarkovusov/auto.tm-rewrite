@@ -148,6 +148,16 @@ describe("requestAccountDeletion", () => {
 
   it.each([
     [apiError(400, "RATE_LIMITED", "Too many code requests."), "rate-limited"],
+    [
+      json(429, {
+        statusCode: 429,
+        code: "HTTP_ERROR",
+        message: "ThrottlerException: Too Many Requests",
+        timestamp: "2026-09-28T10:00:00.000Z",
+        requestId: REQUEST_ID,
+      }),
+      "rate-limited",
+    ],
     [apiError(400, "VALIDATION_FAILED", "Invalid account deletion request"), "invalid-value"],
     [apiError(500, "INTERNAL", "Internal server error"), "unavailable"],
     [new Response("<html>Bad gateway</html>", { status: 502 }), "unavailable"],

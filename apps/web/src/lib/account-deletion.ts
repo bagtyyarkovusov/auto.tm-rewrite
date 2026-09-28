@@ -90,6 +90,8 @@ async function post(
 const ErrorCodeBody = ErrorResponseSchema.pick({ code: true });
 
 async function failureFrom(response: Response): Promise<DeletionFailure> {
+  // The API's global throttler answers 429 with a code outside `ErrorCode`.
+  if (response.status === 429) return "rate-limited";
   const parsed = ErrorCodeBody.safeParse(await response.json().catch(() => null));
   if (!parsed.success) return "unavailable";
 
