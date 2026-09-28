@@ -1,6 +1,6 @@
 # ADR-0059: Kimi Code as a third interactive coding agent
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-28
 - **Deciders**: AutoTM founder + AI architect
 - **Amends**: ADR-0058's supported-agent and high-risk review-provider rules. Its issue, review, CI, merge, and pilot gates remain in force.
