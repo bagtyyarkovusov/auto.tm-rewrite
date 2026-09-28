@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import type { CardPhotos } from "../domain/CardPhotos";
 import { ListMyListings } from "./ListMyListings";
 import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
+import { FakeSellerProfilePort } from "../test/FakeSellerProfilePort";
 
 class FakeListingCardReadPort implements ListingCardReadPort {
   summaries: ListingCard[] = [];
@@ -29,8 +30,11 @@ class FakeListingCardReadPort implements ListingCardReadPort {
   }
 }
 
-function makeUseCase(port?: FakeListingCardReadPort) {
-  return new ListMyListings(port ?? new FakeListingCardReadPort());
+function makeUseCase(port?: FakeListingCardReadPort, profiles?: FakeSellerProfilePort) {
+  return new ListMyListings(
+    port ?? new FakeListingCardReadPort(),
+    profiles ?? new FakeSellerProfilePort(),
+  );
 }
 
 describe("ListMyListings", () => {
@@ -86,6 +90,18 @@ describe("ListMyListings", () => {
     const result = await uc.execute({ userId: "user-1" });
 
     expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
+  });
+
+  it("uses the owner's false phone verification", async () => {
+    seedSummary();
+    const profiles = new FakeSellerProfilePort();
+    profiles.profiles.set("user-1", {
+      displayName: null,
+      memberSince: new Date("2025-01-01T00:00:00Z"),
+      phoneVerified: false,
+    });
+    const result = await makeUseCase(port, profiles).execute({ userId: "user-1" });
+    expect(result.items[0]!.sellerTrust.phoneVerified).toBe(false);
   });
 
   it("returns encoded nextCursor", async () => {

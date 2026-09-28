@@ -4,7 +4,7 @@ import type { FastifyRequest } from "fastify";
 import { UploadsSchemas, AdminSchemas } from "@auto-tm/contracts";
 
 import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityCheckPort } from "../../identity/identity.public";
 import { PresignUpload } from "../application/PresignUpload";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };

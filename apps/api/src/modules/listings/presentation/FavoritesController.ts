@@ -15,7 +15,7 @@ import { ZodError } from "zod";
 import { ListingsSchemas, AdminSchemas } from "@auto-tm/contracts";
 
 import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityCheckPort } from "../../identity/identity.public";
 import { AddFavorite } from "../application/AddFavorite";
 import { RemoveFavorite } from "../application/RemoveFavorite";
 import { ListMyFavorites } from "../application/ListMyFavorites";

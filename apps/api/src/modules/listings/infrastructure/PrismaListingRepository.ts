@@ -152,6 +152,7 @@ export class PrismaListingRepository implements ListingRepository {
 
   private toDomain(row: {
     id: string;
+    publicNumber: number;
     sellerId: string;
     status: string;
     brandId: string;
@@ -193,6 +194,7 @@ export class PrismaListingRepository implements ListingRepository {
   }): Listing {
     return Listing.create({
       id: row.id,
+      publicNumber: row.publicNumber,
       sellerId: row.sellerId,
       status: row.status as "active" | "sold" | "archived" | "banned",
       brandId: row.brandId,

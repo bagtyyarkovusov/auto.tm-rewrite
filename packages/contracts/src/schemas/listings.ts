@@ -111,7 +111,12 @@ export type ListingMedia = z.infer<typeof ListingMediaSchema>;
 
 export const ListingDetailSchema = z.object({
   id: z.string().uuid(),
+  publicNumber: z.number().int().positive(),
   sellerId: z.string().uuid(),
+  seller: z.object({
+    displayName: z.string().nullable(),
+    memberSince: z.string().datetime(),
+  }),
   status: ListingStatusSchema,
   brandId: z.string().uuid(),
   modelId: z.string().uuid(),

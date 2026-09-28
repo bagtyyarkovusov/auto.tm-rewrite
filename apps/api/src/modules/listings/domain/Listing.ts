@@ -40,6 +40,7 @@ export class Listing {
     readonly conditionDisclosure: ConditionDisclosure | undefined,
     readonly createdAt: Date,
     readonly updatedAt: Date,
+    readonly publicNumber: number | undefined,
   ) {
     if (!allowCalls && !allowChat) {
       throw new DomainError(
@@ -51,6 +52,7 @@ export class Listing {
 
   static create(data: {
     id: string;
+    publicNumber?: number;
     sellerId: string;
     status: ListingStatus;
     brandId: string;
@@ -124,6 +126,7 @@ export class Listing {
       data.conditionDisclosure,
       data.createdAt ?? new Date(),
       data.updatedAt ?? new Date(),
+      data.publicNumber,
     );
   }
 
@@ -175,6 +178,7 @@ export class Listing {
       this.conditionDisclosure,
       this.createdAt,
       new Date(),
+      this.publicNumber,
     );
   }
 
@@ -222,6 +226,7 @@ export class Listing {
       this.conditionDisclosure,
       this.createdAt,
       new Date(),
+      this.publicNumber,
     );
   }
 
@@ -269,6 +274,7 @@ export class Listing {
       this.conditionDisclosure,
       this.createdAt,
       new Date(),
+      this.publicNumber,
     );
   }
 
@@ -310,6 +316,7 @@ export class Listing {
       this.conditionDisclosure,
       this.createdAt,
       new Date(),
+      this.publicNumber,
     );
   }
 }

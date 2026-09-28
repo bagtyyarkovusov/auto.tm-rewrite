@@ -8,6 +8,7 @@ import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
 import type { VinDecoderPort } from "../domain/ports/VinDecoderPort";
+import { FakeSellerProfilePort } from "../test/FakeSellerProfilePort";
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -129,6 +130,7 @@ function makeUseCase(
   storage?: FakeMediaStoragePort,
   favorites?: FakeFavoriteRepository,
   vinDecoder?: FakeVinDecoder,
+  sellerProfiles?: FakeSellerProfilePort,
 ) {
   return new GetListingDetail(
     repo ?? new FakeListingRepository(),
@@ -137,6 +139,7 @@ function makeUseCase(
     storage ?? new FakeMediaStoragePort(),
     favorites ?? new FakeFavoriteRepository(),
     vinDecoder ?? new FakeVinDecoder(),
+    sellerProfiles ?? new FakeSellerProfilePort(),
   );
 }
 
@@ -160,6 +163,7 @@ describe("GetListingDetail", () => {
   function seedListing(overrides?: Partial<Parameters<typeof Listing.create>[0]>) {
     const listing = Listing.create({
       id: "listing-1",
+      publicNumber: 10482,
       sellerId: "user-1",
       status: "active",
       brandId: "brand-1",
@@ -192,6 +196,43 @@ describe("GetListingDetail", () => {
     const result = await uc.execute({ listingId: "listing-1" });
 
     expect(result.sellerTrust).toEqual({ phoneVerified: true });
+  });
+
+  it("returns a named seller, join date, and public number from persisted data", async () => {
+    seedListing();
+    const profiles = new FakeSellerProfilePort();
+    profiles.profiles.set("user-1", {
+      displayName: "Aýgül",
+      memberSince: new Date("2024-06-10T12:00:00Z"),
+      phoneVerified: true,
+    });
+
+    const result = await makeUseCase(
+      repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
+    ).execute({ listingId: "listing-1" });
+
+    expect(result.publicNumber).toBe(10482);
+    expect(result.seller).toEqual({
+      displayName: "Aýgül",
+      memberSince: "2024-06-10T12:00:00.000Z",
+    });
+  });
+
+  it("returns null display name and the port's false phone verification", async () => {
+    seedListing();
+    const profiles = new FakeSellerProfilePort();
+    profiles.profiles.set("user-1", {
+      displayName: null,
+      memberSince: new Date("2024-06-10T12:00:00Z"),
+      phoneVerified: false,
+    });
+
+    const result = await makeUseCase(
+      repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
+    ).execute({ listingId: "listing-1" });
+
+    expect(result.seller.displayName).toBeNull();
+    expect(result.sellerTrust.phoneVerified).toBe(false);
   });
 
   it("returns 404 for soft-deleted listing", async () => {

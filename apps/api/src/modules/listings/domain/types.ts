@@ -4,8 +4,6 @@ export interface SellerTrust {
   phoneVerified: boolean;
 }
 
-export const VERIFIED_PHONE_TRUST: SellerTrust = { phoneVerified: true };
-
 export interface ConditionDisclosure {
   accidentReported: boolean;
   mileageAccurate: boolean;

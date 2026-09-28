@@ -21,6 +21,7 @@ import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRat
 import { PrismaListingsReadRepository } from "./infrastructure/PrismaListingsReadRepository";
 import { PrismaListingsAdminRepository } from "./infrastructure/PrismaListingsAdminRepository";
 import { PrismaFavoriteRepository } from "./infrastructure/PrismaFavoriteRepository";
+import { IdentitySellerProfileAdapter } from "./infrastructure/IdentitySellerProfileAdapter";
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
@@ -63,6 +64,7 @@ import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
 import { LISTING_CARD_READ_PORT } from "./domain/ports/ListingCardReadPort";
 import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
 import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
+import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
 
 @Module({
   imports: [PrismaModule, EventEmitterModule, IdentityModule],
@@ -80,6 +82,7 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     PrismaListingsReadRepository,
     PrismaListingsAdminRepository,
     PrismaFavoriteRepository,
+    IdentitySellerProfileAdapter,
     MinioMediaStorageAdapter,
     SharpImageVariantGenerator,
 
@@ -139,6 +142,10 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     {
       provide: FAVORITE_REPOSITORY,
       useClass: PrismaFavoriteRepository,
+    },
+    {
+      provide: SELLER_PROFILE_PORT,
+      useExisting: IdentitySellerProfileAdapter,
     },
 
     // Application use-cases

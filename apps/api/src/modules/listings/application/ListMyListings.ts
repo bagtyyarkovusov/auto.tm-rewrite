@@ -3,7 +3,10 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import { VERIFIED_PHONE_TRUST } from "../domain/types";
+import {
+  SELLER_PROFILE_PORT,
+  type SellerProfilePort,
+} from "../domain/ports/SellerProfilePort";
 import {
   LISTING_CARD_READ_PORT,
   type ListingCardReadPort,
@@ -22,6 +25,8 @@ export class ListMyListings {
   constructor(
     @Inject(LISTING_CARD_READ_PORT)
     private readonly cards: ListingCardReadPort,
+    @Inject(SELLER_PROFILE_PORT)
+    private readonly sellerProfiles: SellerProfilePort,
   ) {}
 
   async execute(input: ListMyListingsInput): Promise<MyListingsResponseDto> {
@@ -35,6 +40,7 @@ export class ListMyListings {
       ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
       limit,
     });
+    const seller = await this.sellerProfiles.getSellerProfile(input.userId);
 
     return {
       items: result.items.map((item) => ({
@@ -56,7 +62,7 @@ export class ListMyListings {
         engineTypeId: item.engineTypeId,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
-        sellerTrust: VERIFIED_PHONE_TRUST,
+        sellerTrust: { phoneVerified: seller?.phoneVerified ?? false },
       })),
       nextCursor: result.nextCursor
         ? ListingsSchemas.encodeCursor(result.nextCursor)

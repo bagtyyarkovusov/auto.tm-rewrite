@@ -593,6 +593,11 @@ describe("ListingsController e2e", () => {
     it("returns detail for a published listing", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
+      const memberSince = new Date("2024-06-10T12:00:00.000Z");
+      await prisma.user.update({
+        where: { id: suite.id("user-1") },
+        data: { displayName: "Aýgül", createdAt: memberSince },
+      });
       const draft = await seedDraft("user-1", validPayload);
 
       const publishRes = await request
@@ -607,6 +612,14 @@ describe("ListingsController e2e", () => {
         .expect(200);
 
       expect(res.body.id).toBe(listingId);
+      const persisted = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
+      expect(res.body.publicNumber).toBe(persisted.publicNumber);
+      expect(res.body.publicNumber).toBeGreaterThan(0);
+      expect(res.body.seller).toEqual({
+        displayName: "Aýgül",
+        memberSince: memberSince.toISOString(),
+      });
+      expect(res.body.sellerTrust).toEqual({ phoneVerified: true });
       expect(res.body.status).toBe("active");
       expect(res.body.priceAmount).toBe(validPayload.priceAmount);
       expect(res.body.displayPriceTmt).toBe(validPayload.priceAmount);
@@ -654,6 +667,7 @@ describe("ListingsController e2e", () => {
         .expect(200);
 
       expect(res.body.id).toBe(listingId);
+      expect(res.body.seller.displayName).toBeNull();
       expect(res.body.conditionDisclosure).toMatchObject(validPayload.conditionDisclosure);
     });
 

@@ -6,6 +6,8 @@ Refresh tokens are hashed on Session. Refresh rotates in place with a compare-an
 
 Phone and email code flows share ownership and one-time-consumption rules. Account-deletion codes bind to the holder at request time; do not replace that with an unbound sign-in lookup. Reviewer bypass is narrower than normal authentication and never authorizes deletion. Inspect the use-cases and integration tests before changing rate limits, verification, or enumeration protection.
 
+The exported `GetSellerProfiles` read gives Listings a seller's display name, join date from `User.createdAt`, and `phoneVerified` from `phoneVerifiedAt`. It selects profiles in one batch and does not expose Sign-in Method values.
+
 Suspension blocks marketplace mutations while preserving permitted reads and account deletion. Deletion has a grace period followed by worker purge; inspect both sides and database history-retention rules before changing the lifecycle.
 
 ## Start here

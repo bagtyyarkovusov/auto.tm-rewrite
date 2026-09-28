@@ -5,6 +5,7 @@ import { ListMyFavorites } from "./ListMyFavorites";
 import { Favorite } from "../domain/Favorite";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
 import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
+import { FakeSellerProfilePort } from "../test/FakeSellerProfilePort";
 
 let favCounter = 0;
 function nextFavId(): string {
@@ -88,10 +89,12 @@ class FakeListingCardReadPort implements ListingCardReadPort {
 function makeUseCase(
   favorites?: FakeFavoriteRepository,
   listingsRead?: FakeListingCardReadPort,
+  sellerProfiles?: FakeSellerProfilePort,
 ) {
   return new ListMyFavorites(
     favorites ?? new FakeFavoriteRepository(),
     listingsRead ?? new FakeListingCardReadPort(),
+    sellerProfiles ?? new FakeSellerProfilePort(),
   );
 }
 
@@ -146,6 +149,23 @@ describe("ListMyFavorites", () => {
     const result = await uc.execute({ userId: "user-1" });
 
     expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
+  });
+
+  it("uses the seller profile's false phone verification", async () => {
+    seedSummary({ id: "listing-1" });
+    await favorites.add("user-1", "listing-1");
+    const profiles = new FakeSellerProfilePort();
+    profiles.profiles.set("user-1", {
+      displayName: null,
+      memberSince: new Date("2025-01-01T00:00:00Z"),
+      phoneVerified: false,
+    });
+
+    const result = await makeUseCase(favorites, listingsRead, profiles)
+      .execute({ userId: "user-1" });
+
+    expect(result.items[0]!.sellerTrust.phoneVerified).toBe(false);
+    expect(profiles.batchCalls).toBe(1);
   });
 
   it("excludes listings no longer visible (banned/deleted)", async () => {

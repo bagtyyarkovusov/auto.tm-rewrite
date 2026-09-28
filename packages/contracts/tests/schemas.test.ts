@@ -332,9 +332,18 @@ describe("FavoriteListingSummarySchema", () => {
 });
 
 describe("ListingDetailSchema", () => {
+  const sellerFields = {
+    publicNumber: 10482,
+    seller: {
+      displayName: null,
+      memberSince: "2025-01-01T00:00:00.000Z",
+    },
+  };
+
   it("accepts a valid detail", () => {
     const result = ListingDetailSchema.safeParse({
       ...validListingSummary,
+      ...sellerFields,
       media: [],
       allowCalls: true,
       allowChat: true,
@@ -352,6 +361,7 @@ describe("ListingDetailSchema", () => {
   it("rejects description over 2000 chars", () => {
     const result = ListingDetailSchema.safeParse({
       ...validListingSummary,
+      ...sellerFields,
       media: [],
       allowCalls: true,
       allowChat: true,
@@ -370,6 +380,7 @@ describe("ListingDetailSchema", () => {
     delete (withoutSellerTrust as Partial<typeof withoutSellerTrust>).sellerTrust;
     const result = ListingDetailSchema.safeParse({
       ...withoutSellerTrust,
+      ...sellerFields,
       media: [],
       allowCalls: true,
       allowChat: true,
@@ -382,6 +393,28 @@ describe("ListingDetailSchema", () => {
       installmentAvailable: false,
     });
     expect(result.success).toBe(false);
+  });
+
+  it("requires the public number and seller join date", () => {
+    const base = {
+      ...validListingSummary,
+      ...sellerFields,
+      media: [],
+      allowCalls: true,
+      allowChat: true,
+      viewCount: 0,
+      favoriteCount: 0,
+      regionId: "550e8400-e29b-41d4-a716-446655440005",
+      createdAt: "2026-05-17T14:32:01Z",
+      updatedAt: "2026-05-17T14:32:01Z",
+      acceptsExchange: false,
+      installmentAvailable: false,
+    };
+    expect(ListingDetailSchema.safeParse({ ...base, publicNumber: undefined }).success).toBe(false);
+    expect(ListingDetailSchema.safeParse({
+      ...base,
+      seller: { displayName: null },
+    }).success).toBe(false);
   });
 });
 
