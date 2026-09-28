@@ -1,6 +1,6 @@
 # ADR-0062: The human in the loop may assign both review axes to Kimi per pull request
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-28
 - **Deciders**: AutoTM founder
 - **Amends**: [ADR-0059](0059-kimi-code-as-a-third-interactive-coding-agent.md)'s high-risk review-provider rule. ADR-0059's remaining provisions and ADR-0058's gates stay in force.
