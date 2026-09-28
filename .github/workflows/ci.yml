@@ -8,8 +8,6 @@ jobs:
   build:
     runs-on: [self-hosted, tm-proxy]
     env:
-      NODE_ENV: test
-      APP_ENV: test
       # Safe unreachable defaults override any endpoints inherited from the
       # runner. The service step replaces them with this run's mapped ports.
       DATABASE_URL: postgresql://auto_tm_ci:auto_tm_ci_pass@127.0.0.1:1/auto_tm_ci
@@ -85,6 +83,9 @@ jobs:
       - run: pnpm typecheck
 
       - run: pnpm test
+        env:
+          NODE_ENV: test
+          APP_ENV: test
 
       # The reviewer-flow smoke's pure helpers (base32, TOTP, formatting). The
       # smoke itself needs a deployed environment and credentials, so it is an
