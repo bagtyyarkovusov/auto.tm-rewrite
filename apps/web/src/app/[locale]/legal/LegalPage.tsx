@@ -1,4 +1,5 @@
 import type { LegalDocument } from "./content";
+import { inlineMarkupToHtml } from "./inline";
 
 import type { Locale } from "@/i18n/locales";
 
@@ -59,9 +60,7 @@ export function LegalPage({ locale, document, canonicalPath }: LegalPageProps) {
                             <li key={lIndex}>
                               <span
                                 dangerouslySetInnerHTML={{
-                                  __html: text
-                                    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-                                    .replace(/`([^`]+)`/g, "<code>$1</code>"),
+                                  __html: inlineMarkupToHtml(text),
                                 }}
                               />
                             </li>
@@ -84,9 +83,7 @@ export function LegalPage({ locale, document, canonicalPath }: LegalPageProps) {
                   <p
                     key={pIndex}
                     dangerouslySetInnerHTML={{
-                      __html: paragraph
-                        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-                        .replace(/`([^`]+)`/g, "<code>$1</code>"),
+                      __html: inlineMarkupToHtml(paragraph),
                     }}
                   />
                 );
