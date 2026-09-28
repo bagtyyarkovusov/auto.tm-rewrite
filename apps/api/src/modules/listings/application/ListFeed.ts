@@ -1,9 +1,17 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import { VERIFIED_PHONE_TRUST, type Currency, type ListingFilterCriteria } from "../domain/types";
+import {
+  DEFAULT_FEED_SORT,
+  LISTING_ERROR_CODES,
+  VERIFIED_PHONE_TRUST,
+  type Currency,
+  type FeedCursor,
+  type FeedSort,
+  type ListingFilterCriteria,
+} from "../domain/types";
 import {
   FEED_RANKING_PORT,
   type FeedRankingPort,
@@ -16,8 +24,21 @@ import {
   MEDIA_STORAGE_PORT,
   type MediaStoragePort,
 } from "../domain/ports/MediaStoragePort";
+import {
+  FAVORITE_REPOSITORY,
+  type FavoriteRepository,
+} from "../domain/ports/FavoriteRepository";
+import {
+  LISTING_CARD_READ_PORT,
+  type ListingCardReadPort,
+} from "../domain/ports/ListingCardReadPort";
+import { toCardPhotos } from "../domain/CardPhotos";
 
 export interface ListFeedInput {
+  /** Signed-in viewer, when the request carries one; drives `isFavorited`. */
+  viewerId?: string;
+  /** Defaults to `newest`. */
+  sort?: FeedSort;
   cursor?: string;
   limit?: number;
   filters?: ListingFilterCriteria;
@@ -34,24 +55,39 @@ export class ListFeed {
     private readonly exchangeRates: ExchangeRatePort,
     @Inject(MEDIA_STORAGE_PORT)
     private readonly storage: MediaStoragePort,
+    @Inject(FAVORITE_REPOSITORY)
+    private readonly favorites: FavoriteRepository,
+    @Inject(LISTING_CARD_READ_PORT)
+    private readonly cards: ListingCardReadPort,
   ) {}
 
   async execute(input: ListFeedInput): Promise<FeedResponseDto> {
     const limit = Math.min(input.limit ?? 20, 50);
 
-    const decodedCursor = input.cursor
-      ? ListingsSchemas.decodeCursor(input.cursor)
-      : undefined;
+    const sort = input.sort ?? DEFAULT_FEED_SORT;
+    const decodedCursor =
+      input.cursor !== undefined ? decodeCursorFor(sort, input.cursor) : undefined;
 
     const rankResult = await this.ranking.rank({
+      ...(input.viewerId !== undefined ? { viewerId: input.viewerId } : {}),
+      sort,
       ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
       limit,
       ...(input.filters !== undefined ? { filters: input.filters } : {}),
     });
 
+    const listingIds = rankResult.items.map((listing) => listing.id);
     const rateMap = await this.buildRateMap();
+    // Batched per page, never per Listing: one media read, one favorites read.
+    const photosById = await this.cards.getCardPhotos(listingIds);
+    const favorited =
+      input.viewerId !== undefined
+        ? await this.favorites.favoritedListingIds(input.viewerId, listingIds)
+        : undefined;
+    const noPhotos = toCardPhotos([]);
 
     const items = rankResult.items.map((listing) => {
+      const photos = photosById.get(listing.id) ?? noPhotos;
       const displayPriceTmt = this.computeDisplayPriceTmt(
         listing.priceAmount,
         listing.priceCurrency,
@@ -69,16 +105,25 @@ export class ListFeed {
         priceCurrency: listing.priceCurrency,
         displayPriceTmt,
         coverMediaKey: listing.coverMediaKey,
+        photoKeys: photos.photoKeys,
+        photoCount: photos.photoCount,
+        ...(listing.mileageKm !== undefined ? { mileageKm: listing.mileageKm } : {}),
+        ...(listing.condition !== undefined ? { condition: listing.condition } : {}),
+        ...(listing.transmissionId !== undefined
+          ? { transmissionId: listing.transmissionId }
+          : {}),
+        ...(listing.engineTypeId !== undefined ? { engineTypeId: listing.engineTypeId } : {}),
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
         sellerTrust: VERIFIED_PHONE_TRUST,
+        ...(favorited !== undefined ? { isFavorited: favorited.has(listing.id) } : {}),
       };
     });
 
     return {
       items,
       nextCursor: rankResult.nextCursor
-        ? ListingsSchemas.encodeCursor(rankResult.nextCursor)
+        ? ListingsSchemas.encodeFeedCursor(rankResult.nextCursor)
         : null,
     };
   }
@@ -104,4 +149,26 @@ export class ListFeed {
     }
     return priceAmount * rate;
   }
+}
+
+/** A malformed cursor, or one issued for another order, is a 400. */
+function decodeCursorFor(sort: FeedSort, token: string): FeedCursor {
+  let cursor: FeedCursor;
+  try {
+    cursor = ListingsSchemas.decodeFeedCursor(token);
+  } catch {
+    throw invalidCursor("Invalid feed cursor");
+  }
+  if (cursor.sort !== sort) {
+    throw invalidCursor(`Cursor for "${cursor.sort}" cannot page "${sort}"`);
+  }
+  return cursor;
+}
+
+function invalidCursor(message: string): BadRequestException {
+  return new BadRequestException({
+    code: "VALIDATION_ERROR",
+    message,
+    details: { reason: LISTING_ERROR_CODES.INVALID_FEED_CURSOR },
+  });
 }

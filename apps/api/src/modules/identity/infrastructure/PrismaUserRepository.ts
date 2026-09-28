@@ -1,14 +1,32 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { PrismaService } from "@auto-tm/db";
+import { Prisma, PrismaService } from "@auto-tm/db";
+import {
+  assertLiveUserSignInMethods,
+  assertSignInMethodsVerified,
+  NO_SIGN_IN_METHODS,
+  type SignInMethods,
+} from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { UserRepository } from "../domain/ports/UserRepository";
+import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
+import {
+  IDENTITY_ERROR_CODES,
+  IdentityDomainError,
+  SIGN_IN_CODE_CHANNELS,
+  type SignInCodeChannel,
+} from "../domain/types";
 
 @Injectable()
-export class PrismaUserRepository implements UserRepository {
+export class PrismaUserRepository implements UserRepository, SignInMethodRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async findByPhone(phone: string): Promise<User | null> {
     const row = await this.prisma.user.findUnique({ where: { phone } });
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    const row = await this.prisma.user.findUnique({ where: { email } });
     return row ? this.toDomain(row) : null;
   }
 
@@ -17,11 +35,45 @@ export class PrismaUserRepository implements UserRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async create(input: { phone: string }): Promise<User> {
+  async create(signInMethods: SignInMethods): Promise<User> {
+    assertLiveUserSignInMethods(signInMethods);
     const row = await this.prisma.user.create({
-      data: { phone: input.phone },
+      data: {
+        phone: signInMethods.phone,
+        phoneVerifiedAt: signInMethods.phoneVerifiedAt,
+        email: signInMethods.email,
+        emailVerifiedAt: signInMethods.emailVerifiedAt,
+      },
     });
     return this.toDomain(row);
+  }
+
+  async replaceSignInMethod(input: {
+    userId: string;
+    channel: SignInCodeChannel;
+    destination: string;
+    verifiedAt: Date;
+  }): Promise<User> {
+    try {
+      const row = await this.prisma.user.update({
+        where: { id: input.userId },
+        data: input.channel === SIGN_IN_CODE_CHANNELS.PHONE
+          ? { phone: input.destination, phoneVerifiedAt: input.verifiedAt }
+          : { email: input.destination, emailVerifiedAt: input.verifiedAt },
+      });
+      return this.toDomain(row);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new IdentityDomainError(
+          IDENTITY_ERROR_CODES.SIGN_IN_METHOD_TAKEN,
+          "Sign-in Method is already held by another User",
+        );
+      }
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<void> {
@@ -49,11 +101,11 @@ export class PrismaUserRepository implements UserRepository {
     return rows.map((row) => this.toDomain(row));
   }
 
-  async tombstoneUser(userId: string): Promise<void> {
+  async purgePersonalData(userId: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        phone: `deleted:${userId}`,
+        ...NO_SIGN_IN_METHODS,
         displayName: null,
         avatarUrl: null,
       },
@@ -63,9 +115,16 @@ export class PrismaUserRepository implements UserRepository {
   private toDomain(
     row: Awaited<ReturnType<PrismaService["user"]["create"]>>,
   ): User {
+    const signInMethods: SignInMethods = {
+      phone: row.phone,
+      phoneVerifiedAt: row.phoneVerifiedAt,
+      email: row.email,
+      emailVerifiedAt: row.emailVerifiedAt,
+    };
+    assertSignInMethodsVerified(signInMethods);
     return {
       id: row.id,
-      phone: row.phone,
+      ...signInMethods,
       displayName: row.displayName,
       avatarUrl: row.avatarUrl,
       locale: row.locale,

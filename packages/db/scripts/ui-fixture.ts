@@ -41,6 +41,7 @@ import {
   MessageKind,
   UserRole,
 } from "../generated/prisma/client/enums";
+import { recomputeListingPricesTmt } from "../src/listing-prices";
 
 import { FIXTURE_PHOTOS } from "./fixture-photos";
 
@@ -593,6 +594,7 @@ async function main(): Promise<void> {
       {
         id: SELLER_IDS.aygul,
         phone: "+99361000001",
+        phoneVerifiedAt: new Date(),
         displayName: "Aýgül Amanowa",
         locale: "tk",
         role: UserRole.seller,
@@ -600,6 +602,7 @@ async function main(): Promise<void> {
       {
         id: SELLER_IDS.merdan,
         phone: "+99361000002",
+        phoneVerifiedAt: new Date(),
         displayName: "Merdan Hojaýew",
         locale: "ru",
         role: UserRole.seller,
@@ -607,6 +610,7 @@ async function main(): Promise<void> {
       {
         id: SELLER_IDS.salamat,
         phone: "+99361000003",
+        phoneVerifiedAt: new Date(),
         displayName: "Salamat Motors",
         locale: "ru",
         role: UserRole.seller,
@@ -614,6 +618,7 @@ async function main(): Promise<void> {
       {
         id: BUYER_ID,
         phone: "+99361000009",
+        phoneVerifiedAt: new Date(),
         displayName: "Öwez Berdiýew",
         locale: "tk",
         role: UserRole.buyer,
@@ -714,6 +719,10 @@ async function main(): Promise<void> {
       },
     });
   }
+
+  // Fixture listings mix TMT, USD and AED; give them the stored TMT price that
+  // price sort and the Results price range read.
+  await recomputeListingPricesTmt(prisma);
 
   // Favourites, so the Halanlarym tab has content for the fixture buyer.
   const favouriteSlugs = new Set(["prado-white", "lx-black", "corolla-silver"]);

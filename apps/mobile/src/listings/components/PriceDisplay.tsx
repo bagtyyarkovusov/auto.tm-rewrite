@@ -2,6 +2,7 @@ import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { localeTag } from "@/src/i18n/resources";
 import { formatPrice } from "@/src/listings/formatPrice";
@@ -13,6 +14,8 @@ interface PriceDisplayProps {
   acceptsExchange: boolean;
   installmentAvailable: boolean;
   isOwner?: boolean;
+  /** Greys the price, e.g. on a sold or removed-from-sale Listing. */
+  muted?: boolean;
 }
 
 export function PriceDisplay({
@@ -22,13 +25,20 @@ export function PriceDisplay({
   acceptsExchange,
   installmentAvailable,
   isOwner = false,
+  muted = false,
 }: PriceDisplayProps) {
   const { t, i18n } = useTranslation();
   const showOriginal = isOwner && priceCurrency !== "TMT";
 
   return (
     <View className="gap-2">
-      <Text className="text-3xl font-heading text-primary" numberOfLines={1}>
+      <Text
+        className={cn(
+          "text-3xl font-heading",
+          muted ? "text-muted-foreground" : "text-primary",
+        )}
+        numberOfLines={1}
+      >
         {formatPrice(displayPriceTmt, i18n.language)}
       </Text>
 

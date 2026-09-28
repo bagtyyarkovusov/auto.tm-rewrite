@@ -1,6 +1,6 @@
 import "reflect-metadata";
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { ConfigModule } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
@@ -11,7 +11,7 @@ import {
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
 import { ListingsSchemas } from "@auto-tm/contracts";
-import { PrismaService } from "@auto-tm/db";
+import { PrismaService, recomputeListingPricesTmt } from "@auto-tm/db";
 import type { Prisma } from "@auto-tm/db";
 
 import { ListingsModule } from "../listings.module";
@@ -82,6 +82,14 @@ describe("ListingsController e2e", () => {
   });
 
   afterAll(async () => {
+    // Card-field fixtures reference suite-owned transmission / engine type
+    // rows, so drop the suite's listings first, then those lookup rows.
+    await cleanSuiteFixtures(prisma, suite, {
+      userAliases: SUITE_USERS,
+      exchangeRatePairs: [{ from: "USD", to: "TMT" }],
+    });
+    await prisma.transmission.deleteMany({ where: { id: suite.id("transmission") } });
+    await prisma.engineType.deleteMany({ where: { id: suite.id("engine-type") } });
     await app.close();
   });
 
@@ -97,7 +105,7 @@ describe("ListingsController e2e", () => {
 
   async function createUser(alias: SuiteUser): Promise<string> {
     await prisma.user.create({
-      data: { id: suite.id(alias), phone: suite.phone(alias), role: "buyer" },
+      data: { id: suite.id(alias), phone: suite.phone(alias), phoneVerifiedAt: new Date(), role: "buyer" },
     });
     return mintUserJwt(suite.id(alias));
   }
@@ -175,9 +183,10 @@ describe("ListingsController e2e", () => {
       const media = await prisma.listingMedia.findMany({ where: { listingId: res.body.id } });
       expect(media).toHaveLength(1);
 
-      // Condition disclosure should be persisted
+      // Condition disclosure and the stored TMT price should be persisted
       const listing = await prisma.listing.findUnique({ where: { id: res.body.id } });
       expect(listing).toMatchObject({
+        priceTmt: validPayload.priceAmount,
         accidentReported: validPayload.conditionDisclosure.accidentReported,
         mileageAccurate: validPayload.conditionDisclosure.mileageAccurate,
         ownerCount: validPayload.conditionDisclosure.ownerCount,
@@ -219,6 +228,62 @@ describe("ListingsController e2e", () => {
         .expect(201);
 
       expect(res.body.priceCurrency).toBe("USD");
+      const listing = await prisma.listing.findUniqueOrThrow({ where: { id: res.body.id } });
+      expect(listing.priceTmt).toBe(validPayload.priceAmount * 3.5);
+    });
+
+    it("keeps priceTmt at the current rate through edit and republish", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      await seedExchangeRate("USD", "TMT", 3.5);
+      const draft = await seedDraft("user-1", {
+        ...validPayload,
+        priceAmount: 10000,
+        priceCurrency: "USD",
+      });
+      const { body } = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const priceTmt = async () =>
+        (await prisma.listing.findUniqueOrThrow({ where: { id: body.id } })).priceTmt;
+      expect(await priceTmt()).toBe(35000);
+
+      await seedExchangeRate("USD", "TMT", 4);
+      await request
+        .patch(`/api/v1/listings/${body.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ description: "New tyres" })
+        .expect(200);
+      expect(await priceTmt()).toBe(40000);
+
+      await request
+        .patch(`/api/v1/listings/${body.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ priceAmount: 150000, priceCurrency: "TMT" })
+        .expect(200);
+      expect(await priceTmt()).toBe(150000);
+
+      await request
+        .patch(`/api/v1/listings/${body.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ priceAmount: 12000, priceCurrency: "USD" })
+        .expect(200);
+      expect(await priceTmt()).toBe(48000);
+
+      await request
+        .post(`/api/v1/listings/${body.id}/archive`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      await seedExchangeRate("USD", "TMT", 5);
+      await request
+        .post(`/api/v1/listings/${body.id}/republish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      expect(await priceTmt()).toBe(60000);
     });
 
     it("rejects for another user's draft", async () => {
@@ -649,6 +714,168 @@ describe("ListingsController e2e", () => {
       expect(parsed.items).toHaveLength(1);
     });
 
+    async function seedFeedListing(overrides: Partial<Prisma.ListingUncheckedCreateInput> = {}) {
+      return prisma.listing.create({
+        data: {
+          sellerId: suite.id("user-1"),
+          status: "active",
+          brandId: validPayload.brandId,
+          modelId: validPayload.modelId,
+          cityId: validPayload.cityId,
+          priceAmount: validPayload.priceAmount,
+          priceCurrency: "TMT",
+          publishedAt: new Date(),
+          ...overrides,
+        },
+      });
+    }
+
+    it("returns card photo and spec fields, omitting unset specs", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      const transmission = await prisma.transmission.upsert({
+        where: { id: suite.id("transmission") },
+        create: { id: suite.id("transmission"), nameRu: "e2e", nameTk: "e2e", nameEn: "e2e" },
+        update: {},
+      });
+      const engineType = await prisma.engineType.upsert({
+        where: { id: suite.id("engine-type") },
+        create: { id: suite.id("engine-type"), nameRu: "e2e", nameTk: "e2e", nameEn: "e2e" },
+        update: {},
+      });
+
+      const full = await seedFeedListing({
+        mileageKm: 0,
+        condition: "new",
+        transmissionId: transmission.id,
+        engineTypeId: engineType.id,
+        publishedAt: new Date("2026-07-18T12:00:00.000Z"),
+      });
+      const bare = await seedFeedListing({
+        publishedAt: new Date("2026-07-17T12:00:00.000Z"),
+      });
+      await prisma.listingMedia.createMany({
+        data: [
+          { listingId: full.id, kind: "image", key: "p2", sortOrder: 2 },
+          { listingId: full.id, kind: "image", key: "p0", sortOrder: 0 },
+          { listingId: full.id, kind: "video", key: "v1", sortOrder: 1 },
+          { listingId: full.id, kind: "image", key: "p3", sortOrder: 3 },
+        ],
+      });
+
+      const feed = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+      const parsed = ListingsSchemas.FeedResponseSchema.parse(feed.body);
+
+      const fullItem = parsed.items.find((i) => i.id === full.id);
+      expect(fullItem).toMatchObject({
+        photoKeys: ["p0", "p2"],
+        photoCount: 3,
+        mileageKm: 0,
+        condition: "new",
+        transmissionId: transmission.id,
+        engineTypeId: engineType.id,
+      });
+
+      const bareItem = feed.body.items.find((i: { id: string }) => i.id === bare.id);
+      expect(bareItem.photoKeys).toEqual([]);
+      expect(bareItem.photoCount).toBe(0);
+      expect(bareItem).not.toHaveProperty("mileageKm");
+      expect(bareItem).not.toHaveProperty("condition");
+      expect(bareItem).not.toHaveProperty("transmissionId");
+      expect(bareItem).not.toHaveProperty("engineTypeId");
+    });
+
+    it("marks isFavorited for a signed-in viewer and omits it for an anonymous one", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      const viewerToken = await createUser("user-2");
+      const favorited = await seedFeedListing();
+      const other = await seedFeedListing();
+      await prisma.favorite.create({
+        data: { userId: suite.id("user-2"), listingId: favorited.id },
+      });
+
+      const signedIn = await request
+        .get("/api/v1/listings")
+        .set("Authorization", `Bearer ${viewerToken}`)
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+      const byId = new Map(
+        signedIn.body.items.map((i: { id: string; isFavorited?: boolean }) => [i.id, i.isFavorited]),
+      );
+      expect(byId.get(favorited.id)).toBe(true);
+      expect(byId.get(other.id)).toBe(false);
+
+      const anonymous = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+      expect(anonymous.body.items).toHaveLength(2);
+      for (const item of anonymous.body.items) {
+        expect(item).not.toHaveProperty("isFavorited");
+      }
+    });
+
+    it("makes the same number of SQL queries regardless of page size", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      const viewerToken = await createUser("user-2");
+      await seedExchangeRate("USD", "TMT", 20);
+      for (let i = 0; i < 12; i++) {
+        const listing = await seedFeedListing({
+          priceCurrency: i % 2 === 0 ? "TMT" : "USD",
+          publishedAt: new Date(Date.now() - i * 1000),
+        });
+        await prisma.listingMedia.createMany({
+          data: [0, 1, 2].map((sortOrder) => ({
+            listingId: listing.id,
+            kind: "image" as const,
+            key: `${listing.id}/${sortOrder}`,
+            sortOrder,
+          })),
+        });
+        if (i % 3 === 0) {
+          await prisma.favorite.create({
+            data: { userId: suite.id("user-2"), listingId: listing.id },
+          });
+        }
+      }
+
+      // PrismaService (@auto-tm/db) hands its private pg Pool to PrismaPg
+      // (@prisma/adapter-pg 7.x), which sends every non-transaction SQL
+      // statement through pool.query(). If that wiring changes, the
+      // `small > 0` guard below fails loudly instead of passing vacuously.
+      const pool = (prisma as unknown as { pool: { query: (...args: unknown[]) => unknown } }).pool;
+      const querySpy = vi.spyOn(pool, "query");
+
+      async function queriesForPage(limit: number): Promise<number> {
+        querySpy.mockClear();
+        const res = await request
+          .get("/api/v1/listings")
+          .set("Authorization", `Bearer ${viewerToken}`)
+          .query({ brandId: suite.catalog.brandId, limit })
+          .expect(200);
+        expect(res.body.items).toHaveLength(limit);
+        return querySpy.mock.calls.length;
+      }
+
+      try {
+        const small = await queriesForPage(2);
+        const large = await queriesForPage(12);
+
+        // Guards against a spy that never fires (0 === 0).
+        expect(small).toBeGreaterThan(0);
+        expect(large).toBe(small);
+        // listings + cover media include + card photos + exchange rates + favorites.
+        expect(large).toBeLessThanOrEqual(5);
+      } finally {
+        querySpy.mockRestore();
+      }
+    });
+
     it("returns coverMediaKey for published listings with media", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
@@ -707,7 +934,7 @@ describe("ListingsController e2e", () => {
       expect(page2.body.nextCursor).toBeNull();
     });
 
-    it("shows sold listings within 14 days", async () => {
+    it("hides sold listings from the feed", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
       const draft = await seedDraft("user-1", validPayload);
@@ -719,34 +946,18 @@ describe("ListingsController e2e", () => {
         .expect(201);
       const listingId = publishRes.body.id;
 
-      // Mark sold
       await request
         .post(`/api/v1/listings/${listingId}/sold`)
         .set("Authorization", `Bearer ${token}`)
         .send({})
         .expect(201);
 
-      // Should still be in feed
       const feed = await request
         .get("/api/v1/listings")
         .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
-      expect(feed.body.items.some((item: { id: string }) => item.id === listingId)).toBe(true);
-
-      // Rewind soldAt to 15 days ago
-      await prisma.listing.update({
-        where: { id: listingId },
-        data: { soldAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) },
-      });
-
-      // Should no longer be in feed
-      const feedAfter = await request
-        .get("/api/v1/listings")
-        .query({ brandId: suite.catalog.brandId })
-        .expect(200);
-
-      expect(feedAfter.body.items.some((item: { id: string }) => item.id === listingId)).toBe(false);
+      expect(feed.body.items.some((item: { id: string }) => item.id === listingId)).toBe(false);
     });
 
     it("excludes soft-deleted listings from feed", async () => {
@@ -922,6 +1133,237 @@ describe("ListingsController e2e", () => {
     });
   });
 
+  describe("GET /api/v1/listings?sort", () => {
+    type Row = {
+      id: string;
+      priceTmt: number | null;
+      year: number | null;
+      mileageKm: number | null;
+      publishedAt: Date;
+    };
+    const SPECS: Record<ListingsSchemas.FeedSort, { key: keyof Row; dir: 1 | -1 }> = {
+      newest: { key: "publishedAt", dir: -1 },
+      price_asc: { key: "priceTmt", dir: 1 },
+      price_desc: { key: "priceTmt", dir: -1 },
+      year_desc: { key: "year", dir: -1 },
+      year_asc: { key: "year", dir: 1 },
+      mileage_asc: { key: "mileageKm", dir: 1 },
+    };
+
+    /** Reference order: key then id in the order's direction; missing keys last. */
+    function expectedOrder(rows: Row[], sort: ListingsSchemas.FeedSort): string[] {
+      const { key, dir } = SPECS[sort];
+      const value = (r: Row) => {
+        const v = r[key];
+        return v instanceof Date ? v.getTime() : (v as number | null);
+      };
+      return [...rows]
+        .sort((a, b) => {
+          const va = value(a);
+          const vb = value(b);
+          if (va === null && vb !== null) return 1;
+          if (va !== null && vb === null) return -1;
+          if (va !== null && vb !== null && va !== vb) return (va - vb) * dir;
+          return (a.id < b.id ? -1 : 1) * dir;
+        })
+        .map((r) => r.id);
+    }
+
+    async function seedMixedListings(): Promise<Row[]> {
+      await seedCatalog();
+      await createUser("user-1");
+      await seedExchangeRate("USD", "TMT", 19.5);
+      const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000);
+      const listings = [
+        { alias: "sort-a", priceAmount: 10000, priceCurrency: "USD", year: 2018, mileageKm: 50000, publishedAt: at(1) },
+        { alias: "sort-b", priceAmount: 100000, priceCurrency: "TMT", year: null, mileageKm: null, publishedAt: at(2) },
+        { alias: "sort-c", priceAmount: 100000, priceCurrency: "TMT", year: 2020, mileageKm: 0, publishedAt: at(2) },
+        { alias: "sort-d", priceAmount: 60000, priceCurrency: "TMT", year: 2018, mileageKm: null, publishedAt: at(4) },
+        { alias: "sort-e", priceAmount: 250000, priceCurrency: "TMT", year: null, mileageKm: 200000, publishedAt: at(5) },
+        { alias: "sort-sold", priceAmount: 1000, priceCurrency: "TMT", year: 2024, mileageKm: 1, publishedAt: at(1), status: "sold" },
+        { alias: "sort-archived", priceAmount: 2000, priceCurrency: "TMT", year: 2024, mileageKm: 1, publishedAt: at(1), status: "archived" },
+      ] as const;
+      for (const l of listings) {
+        await prisma.listing.create({
+          data: {
+            id: suite.id(l.alias),
+            sellerId: suite.id("user-1"),
+            status: "status" in l ? l.status : "active",
+            brandId: suite.catalog.brandId,
+            modelId: suite.catalog.modelId,
+            cityId: suite.catalog.cityId,
+            priceAmount: l.priceAmount,
+            priceCurrency: l.priceCurrency,
+            year: l.year,
+            mileageKm: l.mileageKm,
+            publishedAt: l.publishedAt,
+            allowCalls: true,
+            allowChat: true,
+          },
+        });
+      }
+      await recomputeListingPricesTmt(prisma);
+      return prisma.listing.findMany({
+        where: { sellerId: suite.id("user-1"), status: "active" },
+        select: { id: true, priceTmt: true, year: true, mileageKm: true, publishedAt: true },
+      }) as Promise<Row[]>;
+    }
+
+    async function pageThrough(sort: ListingsSchemas.FeedSort, limit: number): Promise<string[]> {
+      const ids: string[] = [];
+      let cursor: string | null = null;
+      do {
+        const res = await request
+          .get("/api/v1/listings")
+          .query({ brandId: suite.catalog.brandId, sort, limit, ...(cursor ? { cursor } : {}) })
+          .expect(200);
+        const page = ListingsSchemas.FeedResponseSchema.parse(res.body);
+        ids.push(...page.items.map((item) => item.id));
+        cursor = page.nextCursor;
+        expect(ids.length).toBeLessThanOrEqual(10);
+      } while (cursor);
+      return ids;
+    }
+
+    it("pages every order through each active Listing exactly once", async () => {
+      const rows = await seedMixedListings();
+      expect(rows).toHaveLength(5);
+
+      for (const sort of ListingsSchemas.FEED_SORT_VALUES) {
+        const ids = await pageThrough(sort, 2);
+        expect({ sort, ids }).toEqual({ sort, ids: expectedOrder(rows, sort) });
+        expect(new Set(ids).size).toBe(5);
+      }
+      // The 10,000 USD Listing (195,000 TMT) is the second most expensive.
+      expect((await pageThrough("price_desc", 50)).slice(0, 2)).toEqual([
+        suite.id("sort-e"),
+        suite.id("sort-a"),
+      ]);
+    });
+
+    it("defaults to newest when sort is missing", async () => {
+      const rows = await seedMixedListings();
+
+      const res = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId })
+        .expect(200);
+
+      expect(res.body.items.map((item: { id: string }) => item.id)).toEqual(
+        expectedOrder(rows, "newest"),
+      );
+    });
+
+    it("returns 400 for an unknown sort", async () => {
+      const res = await request.get("/api/v1/listings").query({ sort: "best_deal" }).expect(400);
+      expect(res.body.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("returns 400 for a cursor from another order or a malformed cursor", async () => {
+      await seedMixedListings();
+      const first = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId, sort: "price_asc", limit: 2 })
+        .expect(200);
+      expect(first.body.nextCursor).toEqual(expect.any(String));
+
+      for (const query of [
+        { sort: "year_asc", cursor: first.body.nextCursor },
+        { cursor: first.body.nextCursor },
+        { sort: "price_asc", cursor: "not-a-cursor" },
+      ]) {
+        const res = await request
+          .get("/api/v1/listings")
+          .query({ brandId: suite.catalog.brandId, ...query })
+          .expect(400);
+        expect(res.body.code).toBe("VALIDATION_ERROR");
+      }
+    });
+  });
+
+  describe("GET /api/v1/listings/filter-options/brands", () => {
+    it("returns active-Listing counts per brand, most first", async () => {
+      await seedBrandCountListings();
+
+      const res = await request
+        .get("/api/v1/listings/filter-options/brands")
+        .query({ cityId: suite.catalog.cityId })
+        .expect(200);
+
+      expect(ListingsSchemas.ListingBrandCountResponseSchema.parse(res.body)).toEqual({
+        items: [
+          { brandId: suite.catalog.brandId, totalMatching: 2 },
+          { brandId: suite.id("brand-popular-2"), totalMatching: 1 },
+        ],
+      });
+
+      const newOnly = await request
+        .get("/api/v1/listings/filter-options/brands")
+        .query({ cityId: suite.catalog.cityId, condition: "new" })
+        .expect(200);
+      expect(newOnly.body).toEqual({
+        items: [{ brandId: suite.id("brand-popular-2"), totalMatching: 1 }],
+      });
+    });
+
+    it("returns 400 when a brand filter is sent", async () => {
+      const res = await request
+        .get("/api/v1/listings/filter-options/brands")
+        .query({ brandId: suite.catalog.brandId })
+        .expect(400);
+      expect(res.body.code).toBe("VALIDATION_ERROR");
+    });
+
+    async function seedBrandCountListings(): Promise<void> {
+      await seedCatalog();
+      await createUser("user-1");
+      await prisma.brand.create({
+        data: {
+          id: suite.id("brand-popular-2"),
+          slug: suite.slugFor("brand-popular-2"),
+          nameRu: "Popular 2",
+          nameTk: "Popular 2",
+          nameEn: "Popular 2",
+        },
+      });
+      await prisma.model.create({
+        data: {
+          id: suite.id("model-popular-2"),
+          brandId: suite.id("brand-popular-2"),
+          slug: suite.slugFor("model-popular-2"),
+          nameRu: "Popular 2",
+          nameTk: "Popular 2",
+          nameEn: "Popular 2",
+        },
+      });
+      const rows = [
+        { alias: "brand-l1", brandId: suite.catalog.brandId, modelId: suite.catalog.modelId, condition: "used", status: "active" },
+        { alias: "brand-l2", brandId: suite.catalog.brandId, modelId: suite.catalog.modelId, condition: "used", status: "active" },
+        { alias: "brand-l3", brandId: suite.catalog.brandId, modelId: suite.catalog.modelId, condition: "used", status: "sold" },
+        { alias: "brand-l4", brandId: suite.id("brand-popular-2"), modelId: suite.id("model-popular-2"), condition: "new", status: "active" },
+      ] as const;
+      for (const row of rows) {
+        await prisma.listing.create({
+          data: {
+            id: suite.id(row.alias),
+            sellerId: suite.id("user-1"),
+            status: row.status,
+            brandId: row.brandId,
+            modelId: row.modelId,
+            cityId: suite.catalog.cityId,
+            condition: row.condition,
+            priceAmount: 100000,
+            priceCurrency: "TMT",
+            priceTmt: 100000,
+            publishedAt: new Date(),
+            allowCalls: true,
+            allowChat: true,
+          },
+        });
+      }
+    }
+  });
+
   describe("GET /api/v1/listings/count", () => {
     it("returns zero when no listings exist", async () => {
       // Scoped to this suite's brand — see the empty-feed note above.
@@ -1040,7 +1482,7 @@ describe("ListingsController e2e", () => {
       expect(res.body.totalMatching).toBe(0);
     });
 
-    it("includes sold listings within 14 days in count", async () => {
+    it("excludes sold listings from the count", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
       const draft = await seedDraft("user-1", validPayload);
@@ -1063,19 +1505,50 @@ describe("ListingsController e2e", () => {
         .query({ brandId: suite.catalog.brandId })
         .expect(200);
 
-      expect(res.body.totalMatching).toBe(1);
+      expect(res.body).toEqual({ totalMatching: 0, priceMinTmt: null, priceMaxTmt: null });
+    });
 
-      await prisma.listing.update({
-        where: { id: listingId },
-        data: { soldAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) },
-      });
+    it("returns the TMT price range of the matches", async () => {
+      await seedCatalog();
+      await seedExchangeRate("USD", "TMT", 19.5);
+      const token = await createUser("user-1");
+      const prices = [
+        { priceAmount: 100000, priceCurrency: "TMT" },
+        { priceAmount: 10000, priceCurrency: "USD" },
+        { priceAmount: 60000, priceCurrency: "TMT" },
+      ];
+      for (const [i, price] of prices.entries()) {
+        const draft = await seedDraft("user-1", {
+          ...validPayload,
+          ...price,
+          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
+        });
+        await request
+          .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+          .set("Authorization", `Bearer ${token}`)
+          .send({})
+          .expect(201);
+      }
 
-      const resAfter = await request
+      const res = await request
         .get("/api/v1/listings/count")
-        .query({ brandId: suite.catalog.brandId })
+        .query({ brandId: suite.catalog.brandId, sort: "price_desc" })
         .expect(200);
 
-      expect(resAfter.body.totalMatching).toBe(0);
+      expect(ListingsSchemas.ListingCountResponseSchema.parse(res.body)).toEqual({
+        totalMatching: 3,
+        priceMinTmt: 60000,
+        priceMaxTmt: 195000,
+      });
+    });
+
+    it("returns 400 VALIDATION_ERROR for an unknown sort", async () => {
+      const res = await request
+        .get("/api/v1/listings/count")
+        .query({ sort: "relevance" })
+        .expect(400);
+
+      expect(res.body.code).toBe("VALIDATION_ERROR");
     });
 
     it("respects FX-aware price filters", async () => {

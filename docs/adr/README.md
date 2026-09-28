@@ -2,6 +2,10 @@
 
 This directory contains architecture decisions for AutoTM. ADRs are **immutable after merge** — they document what was decided, when, and why.
 
+## Effective documentation policy
+
+[ADR-0060](0060-source-first-agent-context-and-task-scoped-guidance.md) replaces ADR-0019's exhaustive implementation mirrors with source-first, task-scoped orientation. ADR-0042 still owns vocabulary; ADR-0020 still governs all other document roles and historical mutability. Older records below remain unchanged.
+
 ## Index
 
 | # | Title | Status | Date |
@@ -57,6 +61,17 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0049](0049-defer-listing-detail-share-to-chat-until-recipient-selection.md) | Defer listing-detail share to chat until the recipient is chosen | Accepted | 2026-09-17 |
 | [0050](0050-wizard-validation-messages-as-translation-keys.md) | Wizard validation messages are translation keys, not prose | Accepted | 2026-09-18 |
 | [0051](0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) | Auto.ru-inspired mobile discovery before Google Play review (supersedes ADR-0034 for mobile discovery and conflicting ADR-0035 browse clauses) | Accepted | 2026-09-21 |
+| [0052](0052-seller-condition-disclosure-is-damaged-plus-known-issues.md) | Seller condition disclosure is "Damaged / needs repair" plus known issues (amends ADR-0037 condition disclosure) | Accepted | 2026-09-21 |
+| [0053](0053-defer-vin-decoding-until-a-real-decoder-exists.md) | Defer VIN decoding until a real decoder exists (amends ADR-0037 VIN history signal) | Accepted | 2026-09-22 |
+| [0054](0054-phone-or-email-sign-in-share-one-user.md) | Phone or email sign-in share one User (supersedes ADR-0006 phone-only sign-in; amends ADR-0030 reviewer entries) | Accepted | 2026-09-22 |
+| [0055](0055-resend-sends-sign-in-codes-from-the-worker.md) | Resend sends sign-in codes by email from the worker (complements ADR-0054) | Accepted | 2026-09-22 |
+| [0056](0056-listing-contact-phones-are-verified.md) | Listing contact phones are verified (supersedes ADR-0054 publishing and seller-trust parts) | Accepted | 2026-09-22 |
+| [0057](0057-defer-the-in-app-inspection-demand-signal.md) | Defer the in-app inspection demand signal (amends ADR-0037 demand instrumentation) | Accepted | 2026-09-22 |
+| [0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) | Portable coding-agent issue execution and pull-request gates | Accepted | 2026-09-23 |
+| [0059](0059-kimi-code-as-a-third-interactive-coding-agent.md) | Kimi Code as a third interactive coding agent (amends ADR-0058 supported agents and review-provider rules) | Accepted | 2026-09-28 |
+| [0060](0060-source-first-agent-context-and-task-scoped-guidance.md) | Source-first agent context and task-scoped guidance | Accepted direction; #417 implementation/review | 2026-09-28 |
+| [0061](0061-stored-tmt-listing-price-for-feed-sort-and-range.md) | Stored TMT listing price for feed sort and range filtering (amends ADR-0021 stored-column rejection) | Accepted | 2026-09-28 |
+| [0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) | The human in the loop may assign both review axes to Kimi per pull request (amends ADR-0059 high-risk review-provider rule) | Accepted | 2026-09-28 |
 
 ## Per-app ADRs
 

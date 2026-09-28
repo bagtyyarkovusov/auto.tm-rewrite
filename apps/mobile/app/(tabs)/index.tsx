@@ -1,7 +1,7 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Linking from "expo-linking";
 import { ChevronRight, ShieldCheck, SlidersHorizontal } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -62,6 +62,23 @@ export default function FeedScreen() {
   const { t, i18n } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
   const filters = useListingFilters();
+  const { brandId, modelId } = useLocalSearchParams<{
+    brandId?: string;
+    modelId?: string;
+  }>();
+  const { reset: resetFilters, setField, apply: applyFilters } = filters;
+
+  // "See other Brand Model" on a closed Listing opens the feed with exactly
+  // that brand + model filter. Params are cleared once applied so the same
+  // link re-applies the filter after the buyer changes it.
+  useEffect(() => {
+    if (!brandId || !modelId) return;
+    resetFilters();
+    setField("brandId", brandId);
+    setField("modelIds", [modelId]);
+    applyFilters();
+    router.setParams({ brandId: undefined, modelId: undefined });
+  }, [brandId, modelId, resetFilters, setField, applyFilters]);
 
   const {
     data,

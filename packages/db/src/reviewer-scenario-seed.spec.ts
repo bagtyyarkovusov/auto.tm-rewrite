@@ -11,8 +11,12 @@ import {
 
 const NOW = new Date("2026-08-09T12:00:00.000Z");
 
-function account(phone: string, code = "123456"): { phone: string; code: string } {
-  return { phone, code };
+function account(
+  phone: string,
+  code = "123456",
+  email = `${phone.slice(-4)}@autotm.bagtyyar.dev`,
+): { phone: string; email: string; code: string } {
+  return { phone, email, code };
 }
 
 function reviewerJson(phones = ["+99365000001", "+99365000002", "+99365000003"]): string {
@@ -59,6 +63,7 @@ interface MessageRow {
 class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   users = new Map<string, ReviewerScenarioUser>();
   usersByPhone = new Map<string, string>();
+  usersByEmail = new Map<string, string>();
   listings = new Map<string, ListingRow>();
   conversations = new Map<string, ConversationRow>();
   participants = new Map<string, { id: string; conversationId: string; userId: string }>();
@@ -83,19 +88,32 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
     return id ? (this.users.get(id) ?? null) : null;
   }
 
+  async findUserByEmail(email: string): Promise<ReviewerScenarioUser | null> {
+    const id = this.usersByEmail.get(email);
+    return id ? (this.users.get(id) ?? null) : null;
+  }
+
   async upsertUser(input: {
     id: string;
     phone: string;
+    email: string;
     displayName: string;
     role: "buyer" | "seller";
   }): Promise<ReviewerScenarioUser> {
     const existing = this.users.get(input.id);
     if (existing) {
-      this.usersByPhone.delete(existing.phone);
+      if (existing.phone) this.usersByPhone.delete(existing.phone);
+      if (existing.email) this.usersByEmail.delete(existing.email);
     }
-    const row = { id: input.id, phone: input.phone, role: input.role };
+    const row = {
+      id: input.id,
+      phone: input.phone,
+      email: input.email,
+      role: input.role,
+    };
     this.users.set(input.id, row);
     this.usersByPhone.set(input.phone, input.id);
+    this.usersByEmail.set(input.email, input.id);
     return row;
   }
 
@@ -106,8 +124,9 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   }): Promise<void> {
     const existing = this.users.get(input.id);
     if (!existing) return;
-    this.usersByPhone.delete(existing.phone);
-    const row = { ...existing, phone: input.revokedPhone };
+    if (existing.phone) this.usersByPhone.delete(existing.phone);
+    if (existing.email) this.usersByEmail.delete(existing.email);
+    const row = { ...existing, phone: input.revokedPhone, email: null };
     this.users.set(input.id, row);
     this.usersByPhone.set(input.revokedPhone, input.id);
   }
@@ -210,7 +229,7 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
 }
 
 describe("parseReviewerScenarioAccounts", () => {
-  it("maps 3 to 5 secret-managed phones to deterministic buyer/seller slots without exposing codes", () => {
+  it("maps 3 to 5 secret-managed accounts to deterministic buyer/seller slots without exposing codes", () => {
     const parsed = parseReviewerScenarioAccounts(
       reviewerJson([
         "+99365000001",
@@ -229,7 +248,7 @@ describe("parseReviewerScenarioAccounts", () => {
     expect(JSON.stringify(parsed)).not.toContain("123456");
   });
 
-  it("rejects malformed or duplicate phone input", () => {
+  it("rejects malformed or duplicate phone and email input", () => {
     expect(() => parseReviewerScenarioAccounts("not-json")).toThrow(/invalid/);
     expect(() => parseReviewerScenarioAccounts(JSON.stringify([account("+99365000001")]))).toThrow(/3 to 5/);
     expect(() =>
@@ -238,6 +257,24 @@ describe("parseReviewerScenarioAccounts", () => {
           account("+99365000001"),
           account("+99365000001"),
           account("+99365000003"),
+        ]),
+      ),
+    ).toThrow(/unique/);
+    expect(() =>
+      parseReviewerScenarioAccounts(
+        JSON.stringify([
+          account("+99365000001", "12345"),
+          account("+99365000002", "222222"),
+          account("+99365000003", "333333"),
+        ]),
+      ),
+    ).toThrow(/exactly 6 digits/);
+    expect(() =>
+      parseReviewerScenarioAccounts(
+        JSON.stringify([
+          account("+99365000001", "111111", "shared@autotm.bagtyyar.dev"),
+          account("+99365000002", "222222", "shared@autotm.bagtyyar.dev"),
+          account("+99365000003", "333333"),
         ]),
       ),
     ).toThrow(/unique/);
@@ -338,6 +375,7 @@ describe("runReviewerScenarioSeed", () => {
     store.users.set(reviewerScenarioSeedIds.buyerIds[0], {
       id: reviewerScenarioSeedIds.buyerIds[0],
       phone: "+99365000001",
+      email: "0001@autotm.bagtyyar.dev",
       role: "admin",
     });
     store.usersByPhone.set("+99365000001", reviewerScenarioSeedIds.buyerIds[0]);
@@ -350,7 +388,7 @@ describe("runReviewerScenarioSeed", () => {
     expect(store.auditLogs).toHaveLength(0);
   });
 
-  it("rotates phones by updating stable users and revoking existing sessions without logging credential values", async () => {
+  it("rotates sign-in destinations on stable users and revokes existing sessions without logging credential values", async () => {
     const store = new FakeReviewerScenarioSeedStore();
 
     await runReviewerScenarioSeed(store, seedOptions());
@@ -375,6 +413,7 @@ describe("runReviewerScenarioSeed", () => {
     const auditJson = JSON.stringify(store.auditLogs);
     expect(auditJson).toContain("REVIEWER_SCENARIO_ROTATE");
     expect(auditJson).not.toContain("+99365000901");
+    expect(auditJson).not.toContain("0901@autotm.bagtyyar.dev");
     expect(auditJson).not.toContain("111111");
   });
 
@@ -389,6 +428,7 @@ describe("runReviewerScenarioSeed", () => {
     expect(store.users.get(reviewerScenarioSeedIds.buyerIds[0])?.phone).toBe(
       `revoked:${reviewerScenarioSeedIds.buyerIds[0]}`,
     );
+    expect(store.users.get(reviewerScenarioSeedIds.buyerIds[0])?.email).toBeNull();
     expect(store.deletedSessionUserIds).toEqual(result.revokedUserIds);
     expect(store.auditLogs.at(-1)?.action).toBe("REVIEWER_SCENARIO_REVOKE");
   });

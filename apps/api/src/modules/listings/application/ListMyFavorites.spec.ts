@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import type { CardPhotos } from "../domain/CardPhotos";
 
 import { ListMyFavorites } from "./ListMyFavorites";
 import { Favorite } from "../domain/Favorite";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
-import type { ListingsReadPort, ListingSummary } from "../domain/ports/ListingsReadPort";
+import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
 
 let favCounter = 0;
 function nextFavId(): string {
@@ -31,6 +32,10 @@ class FakeFavoriteRepository implements FavoriteRepository {
 
   async exists(_userId: string, _listingId: string): Promise<boolean> {
     return true;
+  }
+
+  async favoritedListingIds(_userId: string, listingIds: string[]): Promise<Set<string>> {
+    return new Set(listingIds);
   }
 
   async listByUserId(
@@ -64,55 +69,44 @@ class FakeFavoriteRepository implements FavoriteRepository {
   }
 }
 
-class FakeListingsReadPort implements ListingsReadPort {
-  summaries: ListingSummary[] = [];
+class FakeListingCardReadPort implements ListingCardReadPort {
+  summaries: ListingCard[] = [];
 
-  async getListingSummary(_id: string): Promise<ListingSummary | null> {
-    return this.summaries[0] ?? null;
+  async getCardPhotos(): Promise<Map<string, CardPhotos>> {
+    return new Map();
   }
 
-  async getListingSummaries(ids: string[]): Promise<ListingSummary[]> {
+  async getVisibleCards(ids: string[]): Promise<ListingCard[]> {
     return this.summaries.filter((s) => ids.includes(s.id));
   }
 
-  async getListingAdminSummaries(): Promise<[]> {
-    return [];
-  }
-
-  async getListingsForOwner(
-    _ownerId: string,
-    _query?: { cursor?: { timestamp: string; id: string }; limit?: number },
-  ): Promise<{ items: ListingSummary[]; nextCursor?: { timestamp: string; id: string } }> {
+  async getOwnerCards(): Promise<{ items: ListingCard[] }> {
     return { items: this.summaries };
-  }
-
-  async matchesFilters(_listingId: string, _filters: Record<string, unknown>): Promise<boolean> {
-    return true;
   }
 }
 
 function makeUseCase(
   favorites?: FakeFavoriteRepository,
-  listingsRead?: FakeListingsReadPort,
+  listingsRead?: FakeListingCardReadPort,
 ) {
   return new ListMyFavorites(
     favorites ?? new FakeFavoriteRepository(),
-    listingsRead ?? new FakeListingsReadPort(),
+    listingsRead ?? new FakeListingCardReadPort(),
   );
 }
 
 describe("ListMyFavorites", () => {
   let favorites: FakeFavoriteRepository;
-  let listingsRead: FakeListingsReadPort;
+  let listingsRead: FakeListingCardReadPort;
 
   beforeEach(() => {
     favCounter = 0;
     favorites = new FakeFavoriteRepository();
-    listingsRead = new FakeListingsReadPort();
+    listingsRead = new FakeListingCardReadPort();
   });
 
-  function seedSummary(overrides?: Partial<ListingSummary>): ListingSummary {
-    const summary: ListingSummary = {
+  function seedSummary(overrides?: Partial<ListingCard>): ListingCard {
+    const summary: ListingCard = {
       id: "listing-1",
       sellerId: "user-1",
       status: "active",
@@ -123,6 +117,9 @@ describe("ListMyFavorites", () => {
       displayPriceTmt: 100000,
       cityId: "city-1",
       publishedAt: new Date("2026-05-01T00:00:00Z"),
+      photoKeys: [],
+      photoCount: 0,
+      allowCalls: true,
       allowChat: true,
       ...overrides,
     };
@@ -218,5 +215,36 @@ describe("ListMyFavorites", () => {
 
     expect(result.items).toHaveLength(0);
     expect(result.nextCursor).toBeNull();
+  });
+
+  it("returns card fields and contact preferences on favorite items", async () => {
+    seedSummary({
+      id: "listing-1",
+      photoKeys: ["a", "b"],
+      photoCount: 4,
+      mileageKm: 90000,
+      condition: "used",
+      transmissionId: "transmission-1",
+      engineTypeId: "engine-1",
+      contactPhone: "+99365000000",
+      allowCalls: false,
+      allowChat: true,
+    });
+    await favorites.add("user-1", "listing-1");
+
+    const uc = makeUseCase(favorites, listingsRead);
+    const [item] = (await uc.execute({ userId: "user-1" })).items;
+
+    expect(item).toMatchObject({
+      photoKeys: ["a", "b"],
+      photoCount: 4,
+      mileageKm: 90000,
+      condition: "used",
+      transmissionId: "transmission-1",
+      engineTypeId: "engine-1",
+      contactPhone: "+99365000000",
+      allowCalls: false,
+      allowChat: true,
+    });
   });
 });

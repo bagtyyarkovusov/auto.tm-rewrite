@@ -14,10 +14,9 @@ describe("ContactCtaBar", () => {
     expect(source).toContain('import { useAuth } from "../../auth/useAuth"');
   });
 
-  it("imports useAuthIntentStore for anonymous resume", () => {
-    expect(source).toContain(
-      'import { useAuthIntentStore } from "../../auth/intentStore"',
-    );
+  it("imports the auth intent store and the replay hook", () => {
+    expect(source).toContain("useAuthIntentStore");
+    expect(source).toContain("useReplayAuthAction");
   });
 
   it("imports useOpenConversation for authenticated flow", () => {
@@ -43,18 +42,44 @@ describe("ContactCtaBar", () => {
     expect(source).toContain("canMessage = allowChat");
   });
 
-  it("stores auth intent and routes to phone when anonymous user taps Message", () => {
+  it("parks a Message action on the calling Listing when the User is signed out", () => {
     expect(source).toContain("isAuthenticated === false");
-    expect(source).toContain("useAuthIntentStore.getState().setIntent");
-    expect(source).toContain("conversations/open-listing");
-    expect(source).toContain("listingId");
-    expect(source).toContain('router.push("/(auth)/phone")');
+    expect(source).toContain("useAuthIntentStore.getState().requireSignIn(router, {");
+    expect(source).toContain("returnTo: `/(public)/listings/${listingId}`");
+    expect(source).toContain('action: { kind: "message", listingId }');
   });
 
-  it("calls useOpenConversation and navigates when authenticated user taps Message", () => {
-    expect(source).toContain("isAuthenticated === true");
+  it("parks a Favorite action on the calling Listing when the User is signed out", () => {
+    expect(source).toContain('action: { kind: "favorite", listingId }');
+  });
+
+  it("never opens authentication with a bare push or a return replace", () => {
+    expect(source).not.toContain('router.push("/(auth)/phone")');
+    expect(source).not.toContain("conversations/open-listing");
+  });
+
+  it("replays Message and Favorite on the same screen after sign-in", () => {
+    expect(source).toContain(
+      'useReplayAuthAction("message", listingId, openListingConversation)',
+    );
+    expect(source).toContain(
+      'useReplayAuthAction("favorite", listingId, addFavorite)',
+    );
+  });
+
+  // The replay runs before `useAuth` has re-read the stored session, so it must
+  // share the signed-in code path rather than re-check the flag.
+  it("shares one conversation-open path between tap and replay", () => {
+    expect(source).toContain("const openListingConversation = () => {");
     expect(source).toContain("openConversation.mutate");
-    expect(source).toContain('router.push({\n              pathname:');
+    expect(source).toContain("isAuthenticated === true");
+    expect(source).toContain("openListingConversation();");
+  });
+
+  it("shares one add-favorite path between tap and replay", () => {
+    expect(source).toContain("const addFavorite = () => {");
+    expect(source).toContain("setOptimisticFavorited(true)");
+    expect(source).toContain("addFavorite();");
   });
 
   it("shows disabled state with muted icon when Message is unavailable", () => {

@@ -20,7 +20,7 @@ The pilot tests the single biggest risk in the trust wedge: **does a real buyer,
 |---|---|---|
 | **Who does it** | Founder / remote team | Founder or trusted helper + pilot mechanic |
 | **Location** | China / anywhere with dev stack | Turkmenistan, Aşgabat first |
-| **Output** | Trust signals, fake-door demand instrument, rubric v1, this runbook | 5-10 free inspections + case studies + demand summary |
+| **Output** | Trust signals, fake-door demand instrument (removed from the app by ADR-0057), rubric v1, this runbook | 5-10 free inspections + case studies + demand summary |
 | **Software needed** | S8a app + S9a changes | No new software; hand-filled rubric + PDF template |
 | **Go/no-go decision** | Prepares inputs | Feeds the later betting-table decision |
 
@@ -181,7 +181,6 @@ Record every data point in a single spreadsheet or note. Do not rely on memory.
 
 | Metric | How to count | Why it matters |
 |---|---|---|
-| **Fake-door taps** | S9a app counter for "Request AutoTM inspection" taps (from S9a T4) | Baseline interest before the pilot |
 | **Buyer offers made** | Number of friendly buyers who said yes to a free inspection | Real-world uptake from interested buyers |
 | **Seller acceptances** | Number of sellers who agreed | Seller-side friction |
 | **Inspections completed** | Number of inspections where mechanic filled a rubric | Pilot throughput |
@@ -264,7 +263,6 @@ After the pilot, produce a one-page summary in this exact format. The betting ta
 **Case studies written:** N / target 3-5
 
 ### Demand summary
-- Fake-door taps (S9a): N
 - Friendly buyer offers made: N
 - Seller acceptances: N / seller refusals: N
 - Inspections completed: N
@@ -307,7 +305,7 @@ These rules are non-negotiable. Violating any of them ends the pilot.
 2. **No warranty promise.** The report is an opinion based on a point-in-time visual check. It does not guarantee the car.
 3. **No legal or insurance promise.** AutoTM is not a licensed inspection body in this pilot.
 4. **No pressure tactics.** Buyers can walk away. Sellers can refuse. No one is penalized for opting out.
-5. **No dark-pattern fake-door.** The S9a "Request AutoTM inspection" CTA must say "coming soon" or equivalent and must record real interest. Do not manufacture fake interest.
+5. **No in-app demand prompt, and no manufactured interest.** [ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md) removed the S9a "Request AutoTM inspection" fake door, so the pilot measures demand only from the metrics above. If a later ADR brings an in-app signal back, it must say "coming soon" or equivalent and record real interest.
 6. **No conflict of interest.** The mechanic must not be related to sellers, flipping cars, or working for a competing marketplace.
 7. **Data privacy.** Store buyer/seller names and phone numbers only in the coordinator's secure notes, not in public case studies.
 8. **Safety first.** If a car is unsafe to inspect (e.g., lifted improperly, hostile location), skip it and record why.
@@ -335,5 +333,6 @@ When S9b triggers, the coordinator follows this runbook and records outputs. The
 - [`business/README.md`](../business/README.md) — competitive context
 - [`../00-vision.md`](../00-vision.md) — anti-goals, especially no test-drive scheduling and no escrow
 - [ADR-0037](../../adr/0037-trust-inspection-competitive-wedge.md) — trust wedge rationale
+- [ADR-0057](../../adr/0057-defer-the-in-app-inspection-demand-signal.md) — no in-app inspection demand signal; the pilot measures demand
 - [ADR-0020](../../adr/0020-document-hierarchy-and-mutability.md) — doc mutability rules
 - [ADR-0019](../../adr/0019-context-md-describes-current-state.md) — CONTEXT.md current-state rule

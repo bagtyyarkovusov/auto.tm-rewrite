@@ -7,6 +7,7 @@
  * Boundary rules: docs/prd/ui/79-web-vs-mobile.md.
  */
 @import "tailwindcss";
+@source "../components";
 
 @theme {
   /* Brand — AutoTM red */
@@ -60,6 +61,14 @@
   --duration-fast: 150ms;
   --duration-base: 250ms;
   --duration-slow: 400ms;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
 }
 
 :root {

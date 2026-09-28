@@ -1,13 +1,17 @@
 import { Module } from "@nestjs/common";
+import { BullModule } from "@nestjs/bullmq";
 import { EventEmitterModule } from "@nestjs/event-emitter";
+import { AuthSchemas } from "@auto-tm/contracts";
 
 import { PrismaModule } from "../../common/prisma.module";
 import { IdentityController } from "./presentation/identity.controller";
 import { AuthController } from "./presentation/AuthController";
 import { MeController } from "./presentation/MeController";
 import { AdminAuthController } from "./presentation/AdminAuthController";
+import { AccountDeletionController } from "./presentation/AccountDeletionController";
 import { RequestOtp } from "./application/RequestOtp";
 import { VerifyOtp } from "./application/VerifyOtp";
+import { VerifySignInCode } from "./application/VerifySignInCode";
 import { RefreshSession } from "./application/RefreshSession";
 import { Logout } from "./application/Logout";
 import { LogoutAll } from "./application/LogoutAll";
@@ -20,6 +24,10 @@ import { VerifyAdminTotp } from "./application/VerifyAdminTotp";
 import { BlockUser } from "./application/BlockUser";
 import { UnblockUser } from "./application/UnblockUser";
 import { IsBlocked } from "./application/IsBlocked";
+import { RequestSignInMethodChange } from "./application/RequestSignInMethodChange";
+import { ConfirmSignInMethodChange } from "./application/ConfirmSignInMethodChange";
+import { RequestAccountDeletion } from "./application/RequestAccountDeletion";
+import { ConfirmAccountDeletion } from "./application/ConfirmAccountDeletion";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -39,6 +47,7 @@ import { PrismaAccountDeletionListingsAdapter } from "./infrastructure/PrismaAcc
 import { NodeConstantTimeComparator } from "./infrastructure/NodeConstantTimeComparator";
 import { parseReviewerOtpBypassConfig } from "./infrastructure/ReviewerOtpBypassConfigFactory";
 import { EventEmitterIdentityEventBus } from "./infrastructure/EventEmitterIdentityEventBus";
+import { BullMqEmailCodeSenderAdapter } from "./infrastructure/BullMqEmailCodeSenderAdapter";
 import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
@@ -46,13 +55,21 @@ import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionLi
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
 import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConfig";
+import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
 
 @Module({
   imports: [
     EventEmitterModule,
     PrismaModule,
+    BullModule.registerQueue({ name: AuthSchemas.EMAIL_CODE_QUEUE }),
   ],
-  controllers: [IdentityController, AuthController, MeController, AdminAuthController],
+  controllers: [
+    IdentityController,
+    AuthController,
+    MeController,
+    AdminAuthController,
+    AccountDeletionController,
+  ],
   providers: [
     PrismaOtpRequestRepository,
     PrismaUserRepository,
@@ -72,6 +89,11 @@ import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConf
     PrismaAccountDeletionListingsAdapter,
     NodeConstantTimeComparator,
     EventEmitterIdentityEventBus,
+    BullMqEmailCodeSenderAdapter,
+    {
+      provide: EMAIL_CODE_SENDER_PORT,
+      useExisting: BullMqEmailCodeSenderAdapter,
+    },
     {
       provide: ACCOUNT_DELETION_LISTINGS_PORT,
       useClass: PrismaAccountDeletionListingsAdapter,
@@ -107,6 +129,10 @@ import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConf
           REVIEW_DEMO_ACCOUNT_ENABLED: process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] === "true",
           REVIEW_DEMO_ACCOUNTS_JSON: process.env["REVIEW_DEMO_ACCOUNTS_JSON"] ?? "[]",
         }),
+    },
+    {
+      provide: IDENTITY_TOKENS.OtpRequestRepository,
+      useExisting: PrismaOtpRequestRepository,
     },
     {
       provide: IDENTITY_TOKENS.ClockPort,
@@ -150,6 +176,7 @@ import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConf
     },
     RequestOtp,
     VerifyOtp,
+    VerifySignInCode,
     RefreshSession,
     Logout,
     LogoutAll,
@@ -162,6 +189,10 @@ import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConf
     BlockUser,
     UnblockUser,
     IsBlocked,
+    RequestSignInMethodChange,
+    ConfirmSignInMethodChange,
+    RequestAccountDeletion,
+    ConfirmAccountDeletion,
   ],
   exports: [
     IDENTITY_TOKENS.IdentityCheckPort,

@@ -264,10 +264,9 @@ export default function ManageListingsScreen() {
           </Button>
         </View>
         <SignInDialog
-          actionLabel={t("continueWithPhone")}
           description={t("signInToManageDescription")}
           open={showSignIn}
-          returnPath="/listings/manage"
+          returnTo="/listings/manage"
           title={t("signInToManageTitle")}
           onOpenChange={setShowSignIn}
         />

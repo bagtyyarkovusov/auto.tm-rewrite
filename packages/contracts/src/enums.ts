@@ -66,6 +66,15 @@ export const Locale = {
 } as const;
 export type Locale = (typeof Locale)[keyof typeof Locale];
 
+/** Why a Sign-in Code was issued (ADR-0054). Selects the email wording. */
+export const SignInCodePurpose = {
+  SignIn: "sign-in",
+  SignInMethod: "sign-in-method",
+  AccountDeletion: "account-deletion",
+} as const;
+export type SignInCodePurpose =
+  (typeof SignInCodePurpose)[keyof typeof SignInCodePurpose];
+
 export const ListingCondition = {
   New: "new",
   Used: "used",

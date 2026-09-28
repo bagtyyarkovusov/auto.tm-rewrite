@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
@@ -9,8 +9,13 @@ import { useListingDetail } from "../../../src/api/listings/useListingDetail";
 import { useCatalogMaps } from "../../../src/listings/detail/useCatalogMaps";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
 import { ListingDetailView } from "../../../src/listings/components/ListingDetail";
+import {
+  isClosedForContact,
+  similarListingsHref,
+} from "../../../src/listings/detail/closedListing";
 import { ContactCtaBar } from "../../../src/listings/components/ContactCtaBar";
 import { useViewer } from "../../../src/auth/useViewer";
+import { useReplayAuthAction } from "../../../src/auth/intentStore";
 import { useConfig } from "../../../src/api/admin/useConfig";
 import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
@@ -102,6 +107,10 @@ export default function ListingDetailScreen() {
   const isOwner =
     viewer != null && data != null && viewer.userId === data.sellerId;
 
+  // Reporting while signed out parks a pending action; returning from
+  // authentication reopens the report sheet on this same screen.
+  useReplayAuthAction("report", id, () => setReportOpen(true));
+
   useEffect(() => {
     if (
       !interestAutoOpened.current &&
@@ -167,11 +176,12 @@ export default function ListingDetailScreen() {
           inspectionInterestEnabled={config?.inspectionInterestEnabled !== false}
           inspectionInterestOpen={interestOpen}
           onInspectionInterestOpenChange={setInterestOpen}
+          onSeeSimilar={() => router.navigate(similarListingsHref(data))}
         />
       </View>
 
-      {/* Buyer CTAs only for non-owners */}
-      {!isOwner && (
+      {/* Buyer CTAs only for non-owners on Listings still open for contact */}
+      {!isOwner && !isClosedForContact(data.status) && (
         <View className="border-t border-border" style={{ paddingBottom: insets.bottom }}>
           <ContactCtaBar
             listingId={data.id}

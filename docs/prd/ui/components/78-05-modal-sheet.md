@@ -9,7 +9,7 @@ Surface that overlays the current screen to focus the user's attention on a sing
 - Confirming a destructive action ("Delete listing?")
 - Picking a date / region (small form)
 - Sign-in prompt (action-gated auth)
-- Filter sheet (a sheet, not a modal)
+- Sort sheet on Results (a sheet, not a modal)
 - Quick share menu
 
 ## When NOT to use
@@ -65,7 +65,7 @@ Layout:
 ## When to pick which
 
 - **Confirming a destructive action**: Modal on web, Sheet on mobile
-- **Filter sheet**: Sheet on both (mobile-style)
+- **Sort sheet**: Sheet on both (mobile-style). Search parameters is a full-screen form, not a sheet ([33](../../features/33-search-discovery.md#search-parameters))
 - **Selecting from a list**: Sheet on both
 - **Sign-in prompt**: Sheet on both
 - **Quick edit form**: Modal on web (640px); full-screen Sheet on mobile

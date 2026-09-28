@@ -7,7 +7,6 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { BullModule } from "@nestjs/bullmq";
 import { LoggerModule } from "nestjs-pino";
 
-// import { PrismaModule } from "./common/prisma.module";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { GlobalErrorFilter } from "./common/error.filter";
 import { HealthController } from "./common/health.controller";
@@ -16,10 +15,8 @@ import { parseEnv } from "./env.schema";
 import { IdentityModule } from "./modules/identity/identity.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
 import { ListingsModule } from "./modules/listings/listings.module";
-import { SubscriptionsModule } from "./modules/subscriptions/subscriptions.module";
 import { ConversationsModule } from "./modules/conversations/conversations.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
-import { ContentModule } from "./modules/content/content.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
@@ -35,7 +32,6 @@ import { RealtimeModule } from "./modules/realtime/realtime.module";
         level: process.env["LOG_LEVEL"] ?? "info",
       },
     }),
-    // PrismaModule,  // TODO(#16): re-enable when API is ESM or db package is compiled
     EventEmitterModule.forRoot(),
     JwtModule.register({
       global: true,
@@ -55,10 +51,8 @@ import { RealtimeModule } from "./modules/realtime/realtime.module";
     IdentityModule,
     CatalogModule,
     ListingsModule,
-    SubscriptionsModule,
     ConversationsModule,
     NotificationsModule,
-    ContentModule,
     ReportsModule,
     AdminModule,
     RealtimeModule,

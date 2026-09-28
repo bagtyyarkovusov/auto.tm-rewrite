@@ -11,7 +11,10 @@ import {
 } from "lucide-react-native";
 
 import { useAuth } from "../../auth/useAuth";
-import { useAuthIntentStore } from "../../auth/intentStore";
+import {
+  useAuthIntentStore,
+  useReplayAuthAction,
+} from "../../auth/intentStore";
 import { useCreateInspectionInterest } from "../../api/reports/useCreateInspectionInterest";
 import { mapErrorToCopy } from "../../api/getErrorCopy";
 
@@ -85,13 +88,16 @@ export function InspectionInterestCta({
     setValidationError(null);
   };
 
+  // Reopening the sheet is stored as data — `{ kind: "inspection", listingId }`
+  // — instead of a closure, so nothing has to survive this component's unmount.
+  useReplayAuthAction("inspection", listingId, () => onOpenChange(true));
+
   const handleAnonymousContinue = () => {
-    useAuthIntentStore.getState().setIntent({
-      returnPath: `/(public)/listings/${listingId}`,
-      replay: async () => onOpenChange(true),
-    });
     onOpenChange(false);
-    router.push("/(auth)/phone");
+    useAuthIntentStore.getState().requireSignIn(router, {
+      returnTo: `/(public)/listings/${listingId}`,
+      action: { kind: "inspection", listingId },
+    });
   };
 
   const handleSubmit = () => {

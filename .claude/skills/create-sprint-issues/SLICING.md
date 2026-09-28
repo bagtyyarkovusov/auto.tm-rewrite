@@ -6,7 +6,7 @@ The sprint file owns the sprint-wide promise. Issues own independently reviewabl
 
 - sprint number/name, phase, milestone, demo line, DoD, risks, explicit files, tests, references, and no-gos;
 - relevant canonical glossary terms and avoided synonyms;
-- current implementation from relevant `CONTEXT.md` and code;
+- current implementation from source and tests, located through relevant overviews;
 - dependencies already established by ADRs or earlier sprints; and
 - host-only gates such as Testcontainers, CI credentials, Expo export, or simulator/runtime checks.
 
@@ -58,7 +58,7 @@ HITL children may adapt the execution details but still require a testable compl
 Distinguish three environments:
 
 - common agent gate: typecheck, lint, and Docker-free unit tests;
-- Claude host `/run-issue` gate: all relevant repository tests and guides;
+- interactive host `run-issue` gate: all relevant repository tests and guides;
 - CI/host-only gates: Testcontainers/e2e, credentials, hardware, and Expo simulator/runtime evidence.
 
-ADR-0019 always requires invariant-changing code and its current-state `CONTEXT.md` update in the same PR.
+ADR-0060 requires an overview update in the same PR when its documented ownership, boundary, constraint, or important limitation changes. Routine implementation details remain in source and tests.

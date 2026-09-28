@@ -16,9 +16,21 @@ _Avoid_: Account type, dealership role
 
 **User**
 
-A phone-authenticated person with one Marketplace Role who can participate in AutoTM. Dealership permissions are not encoded in this identity.
+A person who signs in to AutoTM with a Sign-in Code sent to one of their Sign-in Methods, and who holds one Marketplace Role. Dealership permissions are not encoded in this identity.
 
 _Avoid_: Account, customer
+
+**Sign-in Method**
+
+A phone number or email address that belongs to exactly one User and that the User proved they control by confirming a Sign-in Code sent to it. A User has at most one of each kind, and a live User has at least one.
+
+_Avoid_: Login, credential, contact method
+
+**Sign-in Code**
+
+A short-lived numeric code sent to a phone or email to prove control of it, used to sign in, to add or change a Sign-in Method, or to request account deletion.
+
+_Avoid_: Password, OTP, magic link
 
 **Dealership Member**
 
@@ -33,6 +45,12 @@ _Avoid_: Dealer user, dealer account
 A seller's offer of a vehicle to people browsing the marketplace.
 
 _Avoid_: Advert, post
+
+**Verified Contact Phone**
+
+A `+993` phone number a seller proved can receive listing-contact SMS codes, so AutoTM may show it on that seller's Listing. It never signs the seller in, may belong to another person, and can be reused only while the Listings spec allows.
+
+_Avoid_: Account phone, login phone, phone verified badge, credential
 
 ## Conversations
 

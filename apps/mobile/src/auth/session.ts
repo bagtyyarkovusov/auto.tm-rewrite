@@ -48,6 +48,25 @@ export async function loadAuthSession(): Promise<StoredAuthSession | null> {
   };
 }
 
+/**
+ * Keeps the stored session's copy of the User's Sign-in Methods in step with
+ * the server after one is added or replaced. Tokens are left untouched.
+ */
+export async function updateStoredSessionUser(
+  user: Pick<AuthSchemas.OtpVerifyResponse["user"], "phone" | "email">,
+): Promise<void> {
+  const session = await loadAuthSession();
+  if (!session) return;
+
+  const value: StoredAuthSession = {
+    ...session,
+    user: { ...session.user, phone: user.phone, email: user.email },
+  };
+
+  await SecureStore.setItemAsync(AUTH_SESSION_KEY, JSON.stringify(value));
+  notifySessionChanged();
+}
+
 export async function clearAuthSession(): Promise<void> {
   await SecureStore.deleteItemAsync(AUTH_SESSION_KEY);
   notifySessionChanged();

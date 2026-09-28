@@ -43,7 +43,13 @@ class FakeSessionRepository implements SessionRepository {
   async findByRefreshToken(plaintext: string): Promise<SessionLookupResult | null> {
     const session = this.hashLookup.get(plaintext) ?? null;
     if (!session) return null;
-    return { session, userId: session.userId, phone: "+99361234567", role: "buyer" };
+    return {
+      session,
+      userId: session.userId,
+      phone: "+99361234567",
+      email: null,
+      role: "buyer",
+    };
   }
 
   async rotateRefreshToken(): Promise<boolean> { return true; }

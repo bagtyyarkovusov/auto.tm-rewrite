@@ -28,11 +28,14 @@ export class PurgeExpiredAccounts {
 
   private async purgeUser(userId: string): Promise<void> {
     await this.prisma.$transaction([
-      // Tombstone PII
+      // Free both Sign-in Methods and clear profile PII (ADR-0054)
       this.prisma.user.update({
         where: { id: userId },
         data: {
-          phone: `deleted:${userId}`,
+          phone: null,
+          phoneVerifiedAt: null,
+          email: null,
+          emailVerifiedAt: null,
           displayName: null,
           avatarUrl: null,
           deletionScheduledAt: null,

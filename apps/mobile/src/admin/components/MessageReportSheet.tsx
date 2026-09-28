@@ -86,10 +86,12 @@ export function MessageReportSheet({
     if (!reason) return;
 
     if (isAuthenticated === false) {
-      useAuthIntentStore.getState().setIntent({
-        returnPath: `/conversations/${conversationId}`,
+      // Close first: the sheet renders through the root portal and would
+      // otherwise cover the authentication screens.
+      onOpenChange(false);
+      useAuthIntentStore.getState().requireSignIn(router, {
+        returnTo: `/conversations/${conversationId}`,
       });
-      router.push("/(auth)/phone");
       return;
     }
 

@@ -110,7 +110,7 @@ describe("AdminModerationController e2e smoke", () => {
 
   async function createUser(alias: SuiteUser, role: "buyer" | "admin" = "buyer") {
     await prisma.user.create({
-      data: { id: suite.id(alias), phone: suite.phone(alias), role },
+      data: { id: suite.id(alias), phone: suite.phone(alias), phoneVerifiedAt: new Date(), role },
     });
     return role === "admin" ? null : mintUserJwt(suite.id(alias));
   }

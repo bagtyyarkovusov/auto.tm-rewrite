@@ -1,15 +1,23 @@
 import { z } from "zod";
 
-import { UserRole } from "../enums";
+import { Locale, SignInCodePurpose, UserRole } from "../enums";
 
 export const PhoneTm = z.string().regex(
   /^\+993[67]\d{7}$/,
   "Phone must be +993[6-7]XXXXXXX (TM mobile)",
 );
 
-export const OtpRequestRequestSchema = z.object({
-  phone: PhoneTm,
-});
+export const EmailAddress = z
+  .string()
+  .trim()
+  .email()
+  .max(254)
+  .transform((value) => value.toLowerCase());
+
+export const OtpRequestRequestSchema = z.union([
+  z.object({ phone: PhoneTm }).strict(),
+  z.object({ email: EmailAddress }).strict(),
+]);
 export type OtpRequestRequest = z.infer<typeof OtpRequestRequestSchema>;
 
 export const OtpRequestResponseSchema = z.object({
@@ -19,11 +27,15 @@ export const OtpRequestResponseSchema = z.object({
 });
 export type OtpRequestResponse = z.infer<typeof OtpRequestResponseSchema>;
 
-export const OtpVerifyRequestSchema = z.object({
-  phone: PhoneTm,
+const OtpVerifyFields = {
   code: z.string().regex(/^\d{6}$/),
   deviceLabel: z.string().max(200).optional(),
-});
+};
+
+export const OtpVerifyRequestSchema = z.union([
+  z.object({ phone: PhoneTm, ...OtpVerifyFields }).strict(),
+  z.object({ email: EmailAddress, ...OtpVerifyFields }).strict(),
+]);
 export type OtpVerifyRequest = z.infer<typeof OtpVerifyRequestSchema>;
 
 export const OtpVerifyResponseSchema = z.object({
@@ -31,13 +43,43 @@ export const OtpVerifyResponseSchema = z.object({
   refreshToken: z.string(),
   user: z.object({
     id: z.string().uuid(),
-    phone: PhoneTm,
+    phone: PhoneTm.nullable(),
+    email: z.string().email().nullable(),
     displayName: z.string().nullable(),
     role: z.nativeEnum(UserRole),
     deletionScheduledAt: z.string().datetime().nullable().optional(),
   }),
 });
 export type OtpVerifyResponse = z.infer<typeof OtpVerifyResponseSchema>;
+
+export const SignInMethodChangeRequestSchema = OtpRequestRequestSchema;
+export type SignInMethodChangeRequest = z.infer<
+  typeof SignInMethodChangeRequestSchema
+>;
+
+export const SignInMethodChangeVerifyRequestSchema = z.union([
+  z.object({ phone: PhoneTm, code: OtpVerifyFields.code }).strict(),
+  z.object({ email: EmailAddress, code: OtpVerifyFields.code }).strict(),
+]);
+export type SignInMethodChangeVerifyRequest = z.infer<
+  typeof SignInMethodChangeVerifyRequestSchema
+>;
+
+// Public web deletion request (ADR-0054). Both endpoints answer the same way
+// whether or not a User holds the value.
+export const AccountDeletionRequestSchema = OtpRequestRequestSchema;
+export type AccountDeletionRequest = z.infer<typeof AccountDeletionRequestSchema>;
+
+export const AccountDeletionRequestResponseSchema = OtpRequestResponseSchema;
+export type AccountDeletionRequestResponse = z.infer<
+  typeof AccountDeletionRequestResponseSchema
+>;
+
+export const AccountDeletionConfirmRequestSchema =
+  SignInMethodChangeVerifyRequestSchema;
+export type AccountDeletionConfirmRequest = z.infer<
+  typeof AccountDeletionConfirmRequestSchema
+>;
 
 export const RefreshRequestSchema = z.object({
   refreshToken: z.string(),
@@ -60,7 +102,10 @@ export const LogoutAllResponseSchema = z.object({});
 
 export const MeResponseSchema = z.object({
   id: z.string().uuid(),
-  phone: PhoneTm,
+  // Sign-in Methods (ADR-0054): each is optional; phoneVerified reflects a stored verified phone.
+  phone: PhoneTm.nullable(),
+  email: z.string().email().nullable(),
+  phoneVerified: z.boolean(),
   displayName: z.string().nullable(),
   role: z.nativeEnum(UserRole),
   avatarUrl: z.string().nullable(),
@@ -69,6 +114,11 @@ export const MeResponseSchema = z.object({
   deletionScheduledAt: z.string().datetime().nullable(),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;
+
+export const SignInMethodChangeResponseSchema = MeResponseSchema;
+export type SignInMethodChangeResponse = z.infer<
+  typeof SignInMethodChangeResponseSchema
+>;
 
 // No request body — uses bearer access token; returns 204
 export const DeleteMeResponseSchema = z.object({});
@@ -113,3 +163,21 @@ export const AdminTotpVerifyResponseSchema = z
 export type AdminTotpVerifyResponse = z.infer<
   typeof AdminTotpVerifyResponseSchema
 >;
+
+// ── Worker sign-in code email job payload (API → worker, ADR-0055) ──
+
+export const EMAIL_CODE_QUEUE = "email-code" as const;
+export const EMAIL_CODE_JOB_NAME = "sign-in-code" as const;
+
+/**
+ * The job ID is the Resend idempotency key, so the producer must give every
+ * job a globally unique `jobId` (for example the code request's UUID), not
+ * BullMQ's per-queue counter.
+ */
+export const EmailCodeJobSchema = z.object({
+  to: z.string().email(),
+  code: z.string().regex(/^\d{6}$/),
+  locale: z.nativeEnum(Locale),
+  purpose: z.nativeEnum(SignInCodePurpose),
+});
+export type EmailCodeJob = z.infer<typeof EmailCodeJobSchema>;

@@ -7,7 +7,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../auth/useAuth";
-import { useAuthIntentStore } from "../../auth/intentStore";
+import {
+  useAuthIntentStore,
+  useReplayAuthAction,
+} from "../../auth/intentStore";
 import { useOpenConversation } from "../../api/conversations/useOpenConversation";
 import { useFavoriteListing } from "../../api/listings/useFavoriteListing";
 import { useUnfavoriteListing } from "../../api/listings/useUnfavoriteListing";
@@ -63,42 +66,64 @@ export function ContactCtaBar({
     }
   };
 
+  // `openListingConversation` and `addFavorite` are the action bodies without
+  // the auth gate, so one code path serves a signed-in tap and a pending action
+  // replayed after sign-in. A replay must not re-check `isAuthenticated`: that
+  // flag is refreshed asynchronously and is still false for a beat after the
+  // session is stored, while the API client already reads the new token per
+  // request.
+  const openListingConversation = () => {
+    openConversation.mutate(
+      { listingId },
+      {
+        onSuccess: (data) => {
+          const listing = data.listing;
+          router.push({
+            pathname: "/conversations/[id]",
+            params: {
+              id: data.id,
+              listingId: listing?.id ?? "",
+              brandId: listing?.brandId ?? "",
+              modelId: listing?.modelId ?? "",
+              year: listing?.year ? String(listing.year) : "",
+              displayPriceTmt: listing?.displayPriceTmt
+                ? String(listing.displayPriceTmt)
+                : "",
+              priceCurrency: listing?.priceCurrency ?? "",
+              coverMediaKey: listing?.coverMediaKey ?? "",
+              status: listing?.status ?? "",
+            },
+          });
+        },
+      },
+    );
+  };
+
+  const addFavorite = () => {
+    setOptimisticFavorited(true);
+    favorite.mutate(listingId, {
+      onError: () => {
+        setOptimisticFavorited(false);
+      },
+    });
+  };
+
+  useReplayAuthAction("message", listingId, openListingConversation);
+  useReplayAuthAction("favorite", listingId, addFavorite);
+
   const handleMessage = () => {
     if (!canMessage) return;
 
     if (isAuthenticated === false) {
-      useAuthIntentStore.getState().setIntent({
-        returnPath: `/conversations/open-listing?listingId=${listingId}`,
+      useAuthIntentStore.getState().requireSignIn(router, {
+        returnTo: `/(public)/listings/${listingId}`,
+        action: { kind: "message", listingId },
       });
-      router.push("/(auth)/phone");
       return;
     }
 
     if (isAuthenticated === true) {
-      openConversation.mutate(
-        { listingId },
-        {
-          onSuccess: (data) => {
-            const listing = data.listing;
-            router.push({
-              pathname: "/conversations/[id]",
-              params: {
-                id: data.id,
-                listingId: listing?.id ?? "",
-                brandId: listing?.brandId ?? "",
-                modelId: listing?.modelId ?? "",
-                year: listing?.year ? String(listing.year) : "",
-                displayPriceTmt: listing?.displayPriceTmt
-                  ? String(listing.displayPriceTmt)
-                  : "",
-                priceCurrency: listing?.priceCurrency ?? "",
-                coverMediaKey: listing?.coverMediaKey ?? "",
-                status: listing?.status ?? "",
-              },
-            });
-          },
-        },
-      );
+      openListingConversation();
     }
   };
 
@@ -121,21 +146,23 @@ export function ContactCtaBar({
 
   const handleFavorite = () => {
     if (isAuthenticated === false) {
-      useAuthIntentStore.getState().setIntent({
-        returnPath: `/(public)/listings/${listingId}`,
+      useAuthIntentStore.getState().requireSignIn(router, {
+        returnTo: `/(public)/listings/${listingId}`,
+        action: { kind: "favorite", listingId },
       });
-      router.push("/(auth)/phone");
       return;
     }
 
-    const next = !optimisticFavorited;
-    setOptimisticFavorited(next);
+    if (!optimisticFavorited) {
+      addFavorite();
+      return;
+    }
 
-    const mutation = next ? favorite : unfavorite;
-    mutation.mutate(listingId, {
+    setOptimisticFavorited(false);
+    unfavorite.mutate(listingId, {
       onError: () => {
         // Rollback on error
-        setOptimisticFavorited(!next);
+        setOptimisticFavorited(true);
       },
     });
   };

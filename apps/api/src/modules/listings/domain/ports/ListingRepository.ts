@@ -7,8 +7,11 @@ export interface ListingRepository {
     sellerId: string,
     opts?: { cursor?: { timestamp: string; id: string }; limit?: number },
   ): Promise<{ items: Listing[]; nextCursor?: { timestamp: string; id: string } }>;
-  update(listing: Listing): Promise<Listing>;
+  /** `priceTmt`, when given, is written in the same statement as the Listing. */
+  update(listing: Listing, derived?: { priceTmt: number }): Promise<Listing>;
   softDelete(id: string, at: Date): Promise<void>;
+  /** Rewrites every Listing's `priceTmt` from the stored rates; returns rows changed. */
+  recomputePriceTmt(): Promise<number>;
 }
 
 export const LISTING_REPOSITORY = Symbol("ListingRepository");

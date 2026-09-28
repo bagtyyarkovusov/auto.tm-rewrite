@@ -101,9 +101,6 @@ For responsive web exports, treat these as a modern breakpoint system for one ad
 - `fonts/UberMoveTextRegular.otf`
 - `mpcrl63k-image.png`
 - `mpcs9oe8-Screenshot-2026-05-19-at-23.24.01.png`
-- `mpcszi4g-image.png`
-- `mpct03dp-image.png`
-- `mpct180j-image.png`
 - `mpctigza-Screenshot-2026-05-19-at-23.58.51.png`
 - `mpcv4x7k-Screenshot-2026-05-20-at-00.44.18.png`
 - `mpcv6icc-Screenshot-2026-05-20-at-00.45.32.png`

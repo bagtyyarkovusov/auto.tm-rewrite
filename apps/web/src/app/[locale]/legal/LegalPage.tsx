@@ -23,7 +23,7 @@ export function LegalPage({ locale, document, canonicalPath }: LegalPageProps) {
               : locale === "ru"
                 ? "Дата вступления в силу:"
                 : "Effective date:"}{" "}
-            <time dateTime="2026-06-10">{document.effectiveDate}</time>
+            <time dateTime={document.effectiveDateISO}>{document.effectiveDate}</time>
           </span>
           <span>
             {locale === "tk"
@@ -31,7 +31,7 @@ export function LegalPage({ locale, document, canonicalPath }: LegalPageProps) {
               : locale === "ru"
                 ? "Последнее изменение:"
                 : "Last revised:"}{" "}
-            <time dateTime="2026-06-10">{document.lastRevised}</time>
+            <time dateTime={document.lastRevisedISO}>{document.lastRevised}</time>
           </span>
         </div>
       </header>

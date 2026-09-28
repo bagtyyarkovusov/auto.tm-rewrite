@@ -1,10 +1,12 @@
 import { BadRequestException } from "@nestjs/common";
+import type { FastifyRequest } from "fastify";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { ListingsController } from "./listings.controller";
 import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
 import type { CountListings } from "../application/CountListings";
 import type { CountListingModels } from "../application/CountListingModels";
+import type { CountListingBrands } from "../application/CountListingBrands";
 import type { ListFeed } from "../application/ListFeed";
 import type { GetListingDetail } from "../application/GetListingDetail";
 import type { PublishListing } from "../application/PublishListing";
@@ -20,6 +22,7 @@ import type { ReorderMedia } from "../application/ReorderMedia";
 function buildController(overrides: {
   countListings?: CountListings;
   countListingModels?: CountListingModels;
+  countListingBrands?: CountListingBrands;
   listFeed?: ListFeed;
 } = {}) {
   const identityCheck: IdentityCheckPort = {
@@ -44,6 +47,8 @@ function buildController(overrides: {
       ({ execute: vi.fn().mockResolvedValue({ totalMatching: 0 }) } as unknown as CountListings),
     overrides.countListingModels ??
       ({ execute: vi.fn().mockResolvedValue({ items: [] }) } as unknown as CountListingModels),
+    overrides.countListingBrands ??
+      ({ execute: vi.fn().mockResolvedValue({ items: [] }) } as unknown as CountListingBrands),
     identityCheck,
   );
 }
@@ -103,10 +108,13 @@ describe("ListingsController filter validation", () => {
     } as unknown as ListFeed;
     const controller = buildController({ listFeed });
 
-    await controller.listFeed({
-      brandId: "550e8400-e29b-41d4-a716-446655440000",
-      modelIds: ["550e8400-e29b-41d4-a716-446655440001"],
-    });
+    await controller.listFeed(
+      {
+        brandId: "550e8400-e29b-41d4-a716-446655440000",
+        modelIds: ["550e8400-e29b-41d4-a716-446655440001"],
+      },
+      {} as FastifyRequest,
+    );
 
     expect(listFeed.execute).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -116,6 +124,94 @@ describe("ListingsController filter validation", () => {
         },
       }),
     );
+    expect(listFeed.execute).toHaveBeenCalledWith(
+      expect.not.objectContaining({ viewerId: expect.anything() }),
+    );
+  });
+
+  it("forwards the signed-in viewer to the feed use-case", async () => {
+    const listFeed = {
+      execute: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    } as unknown as ListFeed;
+    const controller = buildController({ listFeed });
+
+    await controller.listFeed({}, { user: { sub: "viewer-1" } } as unknown as FastifyRequest);
+
+    expect(listFeed.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ viewerId: "viewer-1" }),
+    );
+  });
+});
+
+describe("ListingsController sort", () => {
+  function feedSpy() {
+    return {
+      execute: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    } as unknown as ListFeed;
+  }
+
+  it("defaults the feed to the newest order", async () => {
+    const listFeed = feedSpy();
+    await buildController({ listFeed }).listFeed({}, {} as FastifyRequest);
+
+    expect(listFeed.execute).toHaveBeenCalledWith(expect.objectContaining({ sort: "newest" }));
+  });
+
+  it("forwards the requested order", async () => {
+    const listFeed = feedSpy();
+    await buildController({ listFeed }).listFeed({ sort: "price_desc" }, {} as FastifyRequest);
+
+    expect(listFeed.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: "price_desc" }),
+    );
+  });
+
+  it("rejects an unknown feed order with a 400", async () => {
+    await expect(
+      buildController().listFeed({ sort: "best_deal" }, {} as FastifyRequest),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("accepts sort on the count without passing it on as a filter", async () => {
+    const countListings = {
+      execute: vi.fn().mockResolvedValue({ totalMatching: 0, priceMinTmt: null, priceMaxTmt: null }),
+    } as unknown as CountListings;
+    await buildController({ countListings }).countListings({ sort: "year_asc" });
+
+    expect(countListings.execute).toHaveBeenCalledWith({});
+    await expect(
+      buildController({ countListings }).countListings({ sort: "relevance" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe("ListingsController filter-options/brands", () => {
+  it("calls CountListingBrands with scalar filters", async () => {
+    const countListingBrands = {
+      execute: vi.fn().mockResolvedValue({ items: [{ brandId: "b1", totalMatching: 4 }] }),
+    } as unknown as CountListingBrands;
+    const controller = buildController({ countListingBrands });
+
+    const result = await controller.countBrands({
+      cityId: "550e8400-e29b-41d4-a716-446655440010",
+      yearMin: "2015",
+    });
+
+    expect(result).toEqual({ items: [{ brandId: "b1", totalMatching: 4 }] });
+    expect(countListingBrands.execute).toHaveBeenCalledWith({
+      filters: { cityId: "550e8400-e29b-41d4-a716-446655440010", yearMin: 2015 },
+    });
+  });
+
+  it("rejects brand and model filters in the brand-count query", async () => {
+    const controller = buildController();
+
+    await expect(
+      controller.countBrands({ brandId: "550e8400-e29b-41d4-a716-446655440000" }),
+    ).rejects.toThrow(BadRequestException);
+    await expect(
+      controller.countBrands({ modelId: "550e8400-e29b-41d4-a716-446655440001" }),
+    ).rejects.toThrow(BadRequestException);
   });
 });
 

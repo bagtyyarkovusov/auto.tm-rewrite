@@ -41,8 +41,11 @@ gh issue view <number>
 ```bash
 gh issue edit <n> --add-label "ready-for-human" --remove-label "needs-triage"
 gh issue comment <n> --body "<update>"
-gh issue close <n>
+# Parent dashboards and non-implementation bookkeeping only:
+gh issue close <n> --comment "<why this dashboard/bookkeeping issue is complete>"
 ```
+
+Implementation issues close only through a merged pull request whose body contains `Closes #<n>`.
 
 ## Issue types
 
@@ -51,7 +54,7 @@ Two kinds of issues coexist in this repo, **one parent per sprint** plus **one c
 | Type | Used for | Body shape |
 |---|---|---|
 | **Sprint PRD (parent)** | One per sprint (S1, S2, ...). Tracks child sub-issues. | Dashboard + tasklist — no agent prompt. |
-| **Sprint child** | One independently mergeable vertical slice. Executed synchronously by `/run-issue` or, when eligible, by Sandcastle. | Self-contained implementation contract (see below). |
+| **Sprint child** | One independently mergeable vertical slice. Executed synchronously by `/run-issue`; Sandcastle becomes eligible again only after issue #406 replaces its suspended legacy path. | Self-contained implementation contract (see below). |
 
 ## Sprint PRD body template (parent)
 
@@ -78,8 +81,8 @@ Canonical in the sprint doc. The list above is the slice-level rollup; when ever
 The unblocked queue is:
 \`gh issue list --label "ready-for-agent" --search "-label:blocked" --json number,title,labels\`
 
-- Synchronous: the user selects an issue and invokes `/run-issue <N>` in Claude Code.
-- AFK: Sandcastle selects eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
+- Interactive: the user selects an issue and invokes `run-issue <N>` in Codex desktop, Claude Code desktop, or the `claude-kimi` CLI.
+- AFK: Sandcastle dispatch is suspended until issue #406 replaces its legacy integration path. After that issue merges, it may select eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
 
 Both paths treat the issue body as the slice contract. The parent remains a dashboard, never an executable prompt.
 ```
@@ -99,7 +102,7 @@ When domain vocabulary matters, the reading contract includes the [canonical glo
 
 1. `docs/prd/sprints/sprint-NN-<name>.md` — sprint goal + sprint-wide DoD
 2. `docs/domain/GLOSSARY.md` — relevant canonical terms and avoided synonyms (when domain vocabulary matters; not product behavior or implementation status)
-3. `apps/api/src/modules/<context>/CONTEXT.md` — domain invariants + ports (if API-side)
+3. `apps/api/src/modules/<context>/CONTEXT.md` — orientation and source/test entry points (if API-side)
 4. `docs/adr/<NNNN>-<name>.md` — relevant ADRs
 5. `CLAUDE.md` — architecture rules (no Prisma in domain, ports for cross-context, etc.)
 6. `docs/agents/mobile-expo.md` — required for `mobile` area issues, Expo package work, Metro failures, or Expo Go runtime crashes
@@ -129,7 +132,7 @@ When domain vocabulary matters, the reading contract includes the [canonical glo
 The slice is complete only when:
 1. `pnpm typecheck` passes for every workspace touched
 2. `pnpm test` passes for every workspace touched
-3. The relevant `CONTEXT.md` reflects the new state — **updated in the same PR as the code change** (per [ADR-0019](../adr/0019-context-md-describes-current-state.md)). If the PR adds or changes a Prisma field, domain invariant, port, use-case, event, route, or app/package structure, the owning `CONTEXT.md` must describe it in that PR. There is no sprint-final exception. The full hierarchy and mutability rules live in [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md).
+3. Follow [ADR-0060](../adr/0060-source-first-agent-context-and-task-scoped-guidance.md): update the relevant overview in the same PR when its documented ownership, boundary, constraint, or important limitation changes. Source and tests own routine implementation details. Other document roles and mutability rules remain governed by [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md).
 4. For mobile / Expo issues, the check gate in `docs/agents/mobile-expo.md` passes, including Expo dependency check and runtime/simulator verification when the issue is a runtime crash
 ```
 
@@ -164,20 +167,20 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 
 ## `/run-issue` integration
 
-`/run-issue <N>` is the Claude Code skill that drives one issue end-to-end. Per invocation it:
+`run-issue <N>` is the tracked repository skill that Codex desktop, Claude Code desktop, or the `claude-kimi` CLI can use to drive one issue end-to-end. The `claude-kimi` client runs Claude Code CLI against Kimi Code and records `Provider: Kimi` under [ADR-0059](../adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Per invocation it:
 
 1. Reads the issue body via `gh issue view <N> --json body,title,labels`
 2. Reads CLAUDE.md house rules + the issue's referenced docs (`## Read first` section)
-3. Creates an `agent/issue-<N>` branch off main
-4. Implements, tests, and runs the verification gate (typecheck, tests, Expo gate for mobile)
-5. Opens a PR with title mirroring the issue + body starting `Closes #<N>` so the issue auto-closes on merge
-6. Waits for required checks and squash-merges the PR; it never self-approves
-7. Syncs `main` locally
-8. Reconciles the Sprint parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`
+3. Creates and pushes an `agent/issue-<N>` reservation branch off `main`; existing branch/worktree/PR state routes to `resume-issue`
+4. Commits and pushes meaningful checkpoints, then opens a draft PR after the first checkpoint with `Closes #<N>` and one mutable `Execution state`
+5. Implements, tests, and runs the verification gate (typecheck, tests, Expo gate for mobile) while keeping the PR state current
+6. Runs independent read-only Standards and Spec reviews against the exact commit and records verdicts as PR comments
+7. Waits for required checks and squash-merges the PR; it never self-approves or closes the issue directly
+8. Syncs `main` locally and reconciles the Sprint parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`
 
 Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.
 
-`/run-issue` is the synchronous Claude Code path. Sandcastle is the separate Docker AFK path described in [`sandcastle.md`](sandcastle.md) and ADR-0028; it does not consume the repository skill files. No `.github/workflows/unblock.yml` exists, so each successful merger owns dependent unblocking.
+`run-issue` is the interactive path and is provider-neutral. Sandcastle is the separate Docker AFK path described in [`sandcastle.md`](sandcastle.md) and ADR-0028; it does not execute the repository skill files. Its current wrapper still uses the retired batch-merger path, so do not dispatch implementation work through it until `.sandcastle/main.mts` and its operating guide implement ADR-0058's branch, draft-PR, execution-state, review, CI, merge, and recovery evidence. No `.github/workflows/unblock.yml` exists, so each successful integration owner reconciles dependents after merge.
 
 ## Body template (general / non-sprint issues)
 

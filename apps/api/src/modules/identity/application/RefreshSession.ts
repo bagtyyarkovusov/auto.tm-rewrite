@@ -65,6 +65,7 @@ export class RefreshSession {
       sub: lookup.userId,
       sid: lookup.session.id,
       phone: lookup.phone,
+      email: lookup.email,
       role: lookup.role,
     });
 

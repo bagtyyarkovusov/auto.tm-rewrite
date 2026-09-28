@@ -3,6 +3,12 @@ import { describe, it, expect } from "vitest";
 import {
   OtpRequestRequestSchema,
   OtpVerifyRequestSchema,
+  SignInMethodChangeRequestSchema,
+  SignInMethodChangeVerifyRequestSchema,
+  SignInMethodChangeResponseSchema,
+  AccountDeletionRequestSchema,
+  AccountDeletionRequestResponseSchema,
+  AccountDeletionConfirmRequestSchema,
 } from "../src/schemas/auth";
 import {
   ListingSummarySchema,
@@ -13,9 +19,18 @@ import {
   EditListingRequestSchema,
   FeedQuerySchema,
   FeedResponseSchema,
+  FavoriteListingSummarySchema,
+  MyFavoritesResponseSchema,
   ListingFilterSchema,
   encodeCursor,
   decodeCursor,
+  encodeFeedCursor,
+  decodeFeedCursor,
+  FEED_SORT_VALUES,
+  ListingCountQuerySchema,
+  ListingCountResponseSchema,
+  ListingBrandCountQuerySchema,
+  ListingBrandCountResponseSchema,
   ConditionDisclosureSchema,
 } from "../src/schemas/listings";
 import {
@@ -37,6 +52,7 @@ import {
   ListMessagesResponseSchema,
   ListConversationsResponseSchema,
 } from "../src/schemas/conversations";
+import { ErrorResponseSchema } from "../src/errors";
 import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
@@ -76,6 +92,22 @@ describe("OTP request schema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts and normalizes an email address", () => {
+    const result = OtpRequestRequestSchema.safeParse({
+      email: " Buyer@Example.COM ",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toEqual({ email: "buyer@example.com" });
+  });
+
+  it("rejects both destinations and rejects neither", () => {
+    expect(OtpRequestRequestSchema.safeParse({}).success).toBe(false);
+    expect(OtpRequestRequestSchema.safeParse({
+      phone: "+99362001122",
+      email: "buyer@example.com",
+    }).success).toBe(false);
+  });
 });
 
 describe("OTP verify schema", () => {
@@ -94,6 +126,89 @@ describe("OTP verify schema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts email plus a 6-digit code and rejects both destinations", () => {
+    expect(OtpVerifyRequestSchema.safeParse({
+      email: "buyer@example.com",
+      code: "123456",
+    }).success).toBe(true);
+    expect(OtpVerifyRequestSchema.safeParse({
+      phone: "+99365001122",
+      email: "buyer@example.com",
+      code: "123456",
+    }).success).toBe(false);
+  });
+});
+
+describe("Sign-in Method change schemas", () => {
+  it("accepts exactly one normalized destination on request and verify", () => {
+    expect(SignInMethodChangeRequestSchema.parse({
+      email: " New@Example.COM ",
+    })).toEqual({ email: "new@example.com" });
+    expect(SignInMethodChangeVerifyRequestSchema.parse({
+      phone: "+99365001122",
+      code: "123456",
+    })).toEqual({ phone: "+99365001122", code: "123456" });
+    expect(SignInMethodChangeVerifyRequestSchema.safeParse({
+      phone: "+99365001122",
+      email: "new@example.com",
+      code: "123456",
+    }).success).toBe(false);
+  });
+
+  it("returns the current nullable Sign-in Methods", () => {
+    expect(SignInMethodChangeResponseSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      phone: null,
+      email: "new@example.com",
+      phoneVerified: false,
+      displayName: null,
+      role: "buyer",
+      avatarUrl: null,
+      locale: "ru",
+      createdAt: "2026-09-24T00:00:00.000Z",
+      deletionScheduledAt: null,
+    }).success).toBe(true);
+  });
+
+  it("accepts the runtime SIGN_IN_METHOD_TAKEN error envelope", () => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode: 409,
+      code: "SIGN_IN_METHOD_TAKEN",
+      message: "This Sign-in Method belongs to another User.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
+  });
+
+  it.each([
+    "OTP_EXPIRED",
+    "OTP_ALREADY_USED",
+    "INVALID_OTP",
+    "OTP_LOCKED",
+    "OTP_NOT_FOUND",
+  ])("accepts the runtime %s error envelope", (code) => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode: 400,
+      code,
+      message: "The verification code could not be used.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
+  });
+
+  it.each([
+    { statusCode: 401, code: "UNAUTHORIZED" },
+    { statusCode: 404, code: "USER_NOT_FOUND" },
+  ])("accepts the runtime $code error envelope", ({ statusCode, code }) => {
+    expect(ErrorResponseSchema.safeParse({
+      statusCode,
+      code,
+      message: "The request could not be completed.",
+      timestamp: "2026-09-24T00:00:00.000Z",
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    }).success).toBe(true);
+  });
 });
 
 // ── Listings schemas ──
@@ -107,10 +222,18 @@ const validListingSummary = {
   priceAmount: 1890000,
   priceCurrency: "TMT" as const,
   displayPriceTmt: 1890000,
+  photoKeys: [] as string[],
+  photoCount: 0,
   cityId: "550e8400-e29b-41d4-a716-446655440004",
   publishedAt: "2026-05-17T14:32:01Z",
   sellerTrust: { phoneVerified: true },
 };
+
+function without<T extends object>(obj: T, key: keyof T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([k]) => k !== key),
+  ) as Partial<T>;
+}
 
 describe("ListingSummarySchema", () => {
   it("accepts a valid summary", () => {
@@ -139,6 +262,72 @@ describe("ListingSummarySchema", () => {
     delete (withoutSellerTrust as Partial<typeof withoutSellerTrust>).sellerTrust;
     const result = ListingSummarySchema.safeParse(withoutSellerTrust);
     expect(result.success).toBe(false);
+  });
+
+  it("accepts card fields and a signed-in isFavorited flag", () => {
+    const result = ListingSummarySchema.safeParse({
+      ...validListingSummary,
+      photoKeys: ["listings/a/0.jpg", "listings/a/1.jpg"],
+      photoCount: 7,
+      mileageKm: 120000,
+      condition: "used",
+      transmissionId: "550e8400-e29b-41d4-a716-446655440010",
+      engineTypeId: "550e8400-e29b-41d4-a716-446655440011",
+      isFavorited: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires photoKeys and photoCount", () => {
+    const withoutKeys = without(validListingSummary, "photoKeys");
+    const withoutCount = without(validListingSummary, "photoCount");
+    expect(ListingSummarySchema.safeParse(withoutKeys).success).toBe(false);
+    expect(ListingSummarySchema.safeParse(withoutCount).success).toBe(false);
+  });
+
+  it("rejects more than two photoKeys", () => {
+    const result = ListingSummarySchema.safeParse({
+      ...validListingSummary,
+      photoKeys: ["a", "b", "c"],
+      photoCount: 3,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("FavoriteListingSummarySchema", () => {
+  const validFavorite = {
+    ...validListingSummary,
+    contactPhone: "+99365000000",
+    allowCalls: true,
+    allowChat: false,
+  };
+
+  it("accepts a summary with contact preferences", () => {
+    expect(FavoriteListingSummarySchema.safeParse(validFavorite).success).toBe(true);
+  });
+
+  it("allows contactPhone to be absent", () => {
+    const withoutPhone = without(validFavorite, "contactPhone");
+    expect(FavoriteListingSummarySchema.safeParse(withoutPhone).success).toBe(true);
+  });
+
+  it("requires allowCalls and allowChat", () => {
+    const withoutCalls = without(validFavorite, "allowCalls");
+    const withoutChat = without(validFavorite, "allowChat");
+    expect(FavoriteListingSummarySchema.safeParse(withoutCalls).success).toBe(false);
+    expect(FavoriteListingSummarySchema.safeParse(withoutChat).success).toBe(false);
+  });
+
+  it("is the MyFavoritesResponse item shape", () => {
+    const result = MyFavoritesResponseSchema.safeParse({
+      items: [validListingSummary],
+      nextCursor: null,
+    });
+    expect(result.success).toBe(false);
+    expect(
+      MyFavoritesResponseSchema.safeParse({ items: [validFavorite], nextCursor: null }).success,
+    ).toBe(true);
   });
 });
 
@@ -319,6 +508,39 @@ describe("Feed cursor helpers", () => {
   });
 });
 
+describe("Sort-aware feed cursor helpers", () => {
+  const id = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("round-trips a cursor for every order", () => {
+    const cursors = [
+      { sort: "newest", value: "2026-05-17T14:32:01.000Z", id },
+      { sort: "price_asc", value: 35000.5, id },
+      { sort: "price_desc", value: null, id },
+      { sort: "year_desc", value: 2018, id },
+      { sort: "year_asc", value: null, id },
+      { sort: "mileage_asc", value: 0, id },
+    ] as const;
+    for (const cursor of cursors) {
+      expect(decodeFeedCursor(encodeFeedCursor(cursor))).toEqual(cursor);
+    }
+  });
+
+  it("rejects a value that does not fit the cursor's order", () => {
+    const token = (payload: unknown) =>
+      Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+    expect(() => decodeFeedCursor(token({ sort: "newest", value: null, id }))).toThrow();
+    expect(() => decodeFeedCursor(token({ sort: "year_asc", value: 2018.5, id }))).toThrow();
+    expect(() => decodeFeedCursor(token({ sort: "price_asc", value: "cheap", id }))).toThrow();
+    expect(() => decodeFeedCursor(token({ sort: "best_deal", value: 1, id }))).toThrow();
+  });
+
+  it("rejects the sortless cursor shape", () => {
+    expect(() =>
+      decodeFeedCursor(encodeCursor({ timestamp: "2026-05-17T14:32:01Z", id })),
+    ).toThrow();
+  });
+});
+
 describe("FeedQuerySchema", () => {
   it("accepts valid query with defaults", () => {
     const result = FeedQuerySchema.safeParse({});
@@ -326,6 +548,18 @@ describe("FeedQuerySchema", () => {
     if (result.success) {
       expect(result.data.limit).toBe(20);
     }
+  });
+
+  it("defaults sort to newest and accepts every approved order", () => {
+    const parsed = FeedQuerySchema.parse({});
+    expect(parsed.sort).toBe("newest");
+    for (const sort of FEED_SORT_VALUES) {
+      expect(FeedQuerySchema.parse({ sort }).sort).toBe(sort);
+    }
+  });
+
+  it("rejects an unknown sort", () => {
+    expect(FeedQuerySchema.safeParse({ sort: "best_deal" }).success).toBe(false);
   });
 
   it("rejects limit over 50", () => {
@@ -385,6 +619,65 @@ describe("FeedQuerySchema", () => {
   it("rejects invalid condition", () => {
     const result = FeedQuerySchema.safeParse({ condition: "broken" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("ListingCountQuerySchema / ListingCountResponseSchema", () => {
+  it("accepts an optional sort and rejects an unknown one", () => {
+    expect(ListingCountQuerySchema.parse({}).sort).toBeUndefined();
+    expect(ListingCountQuerySchema.parse({ sort: "price_desc" }).sort).toBe("price_desc");
+    expect(ListingCountQuerySchema.safeParse({ sort: "relevance" }).success).toBe(false);
+  });
+
+  it("keeps the model-filter rules", () => {
+    expect(
+      ListingCountQuerySchema.safeParse({
+        modelIds: ["550e8400-e29b-41d4-a716-446655440001"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires the price range, null when nothing matches", () => {
+    expect(
+      ListingCountResponseSchema.safeParse({
+        totalMatching: 0,
+        priceMinTmt: null,
+        priceMaxTmt: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      ListingCountResponseSchema.safeParse({
+        totalMatching: 3,
+        priceMinTmt: 35000,
+        priceMaxTmt: 350000,
+      }).success,
+    ).toBe(true);
+    expect(ListingCountResponseSchema.safeParse({ totalMatching: 3 }).success).toBe(false);
+  });
+});
+
+describe("ListingBrandCountQuerySchema / ListingBrandCountResponseSchema", () => {
+  it("accepts scalar filters and rejects brand or model filters", () => {
+    expect(
+      ListingBrandCountQuerySchema.safeParse({ cityId: "550e8400-e29b-41d4-a716-446655440003" })
+        .success,
+    ).toBe(true);
+    expect(
+      ListingBrandCountQuerySchema.safeParse({ brandId: "550e8400-e29b-41d4-a716-446655440002" })
+        .success,
+    ).toBe(false);
+    expect(
+      ListingBrandCountQuerySchema.safeParse({ modelId: "550e8400-e29b-41d4-a716-446655440001" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("parses brand counts", () => {
+    expect(
+      ListingBrandCountResponseSchema.safeParse({
+        items: [{ brandId: "550e8400-e29b-41d4-a716-446655440002", totalMatching: 4 }],
+      }).success,
+    ).toBe(true);
   });
 });
 
@@ -1031,6 +1324,35 @@ describe("ValidateStepResponseSchema", () => {
   });
 });
 
+describe("Account deletion schemas", () => {
+  it("accepts exactly one normalized destination on request and confirm", () => {
+    expect(AccountDeletionRequestSchema.parse({
+      email: " Seller@Example.COM ",
+    })).toEqual({ email: "seller@example.com" });
+    expect(AccountDeletionConfirmRequestSchema.parse({
+      phone: "+99365001122",
+      code: "123456",
+    })).toEqual({ phone: "+99365001122", code: "123456" });
+    expect(AccountDeletionConfirmRequestSchema.safeParse({
+      phone: "+99365001122",
+      email: "seller@example.com",
+      code: "123456",
+    }).success).toBe(false);
+    expect(AccountDeletionConfirmRequestSchema.safeParse({
+      email: "seller@example.com",
+      code: "123456",
+      deviceLabel: "web",
+    }).success).toBe(false);
+  });
+
+  it("answers a request with the Sign-in Code request shape", () => {
+    expect(AccountDeletionRequestResponseSchema.safeParse({
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+      resendInSeconds: 60,
+    }).success).toBe(true);
+  });
+});
+
 // ── OpenAPI document ──
 
 describe("OpenAPI document", () => {
@@ -1040,6 +1362,39 @@ describe("OpenAPI document", () => {
     };
     expect(doc.paths).toHaveProperty("/api/v1/auth/otp/request");
     expect(doc.paths).toHaveProperty("/api/v1/auth/otp/verify");
+    expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/request");
+    expect(doc.paths).toHaveProperty("/api/v1/me/sign-in-methods/verify");
+  });
+
+  it("documents every reachable Sign-in Method route status", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, {
+        post?: { responses?: Record<string, unknown> };
+      }>;
+    };
+    for (const path of [
+      "/api/v1/me/sign-in-methods/request",
+      "/api/v1/me/sign-in-methods/verify",
+    ]) {
+      expect(doc.paths[path]?.post?.responses).toHaveProperty("401");
+      expect(doc.paths[path]?.post?.responses).toHaveProperty("404");
+    }
+    expect(doc.paths["/api/v1/me/sign-in-methods/verify"]?.post?.responses)
+      .toHaveProperty("409");
+  });
+
+  it("documents the public account deletion routes", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, {
+        post?: { responses?: Record<string, unknown> };
+      }>;
+    };
+    expect(doc.paths["/api/v1/account-deletion/request"]?.post?.responses)
+      .toHaveProperty("201");
+    const confirm = doc.paths["/api/v1/account-deletion/confirm"]?.post?.responses;
+    expect(confirm).toHaveProperty("204");
+    expect(confirm).toHaveProperty("400");
+    expect(confirm).not.toHaveProperty("404");
   });
 
   it("contains new listings schemas", () => {
@@ -1051,6 +1406,8 @@ describe("OpenAPI document", () => {
     expect(doc.components.schemas).toHaveProperty("ListingMedia");
     expect(doc.components.schemas).toHaveProperty("ListingDraft");
     expect(doc.components.schemas).toHaveProperty("FeedResponse");
+    expect(doc.components.schemas).toHaveProperty("FavoriteListingSummary");
+    expect(doc.components.schemas).toHaveProperty("MyFavoritesResponse");
   });
 
   it("contains uploads and exchange-rates schemas", () => {

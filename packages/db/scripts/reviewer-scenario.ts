@@ -37,7 +37,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   async findUserById(id: string): Promise<ReviewerScenarioUser | null> {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: { id: true, phone: true, role: true },
+      select: { id: true, phone: true, email: true, role: true },
     });
     return user;
   }
@@ -45,14 +45,22 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   async findUserByPhone(phone: string): Promise<ReviewerScenarioUser | null> {
     const user = await this.prisma.user.findUnique({
       where: { phone },
-      select: { id: true, phone: true, role: true },
+      select: { id: true, phone: true, email: true, role: true },
     });
     return user;
+  }
+
+  async findUserByEmail(email: string): Promise<ReviewerScenarioUser | null> {
+    return this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, phone: true, email: true, role: true },
+    });
   }
 
   async upsertUser(input: {
     id: string;
     phone: string;
+    email: string;
     displayName: string;
     role: "buyer" | "seller";
   }): Promise<ReviewerScenarioUser> {
@@ -60,6 +68,9 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
       where: { id: input.id },
       update: {
         phone: input.phone,
+        phoneVerifiedAt: new Date(),
+        email: input.email,
+        emailVerifiedAt: new Date(),
         displayName: input.displayName,
         role: input.role,
         deletionScheduledAt: null,
@@ -67,10 +78,13 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
       create: {
         id: input.id,
         phone: input.phone,
+        phoneVerifiedAt: new Date(),
+        email: input.email,
+        emailVerifiedAt: new Date(),
         displayName: input.displayName,
         role: input.role,
       },
-      select: { id: true, phone: true, role: true },
+      select: { id: true, phone: true, email: true, role: true },
     });
   }
 
@@ -83,6 +97,8 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
       where: { id: input.id },
       data: {
         phone: input.revokedPhone,
+        email: null,
+        emailVerifiedAt: null,
         displayName: input.displayName,
       },
     });
@@ -206,6 +222,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         mileageKm: 72000,
         priceAmount: input.priceAmount,
         priceCurrency: "TMT",
+        priceTmt: input.priceAmount,
         description: input.description,
         deletedAt: null,
         publishedAt: input.publishedAt,
@@ -232,6 +249,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         mileageKm: 72000,
         priceAmount: input.priceAmount,
         priceCurrency: "TMT",
+        priceTmt: input.priceAmount,
         description: input.description,
         publishedAt: input.publishedAt,
         condition: "used",

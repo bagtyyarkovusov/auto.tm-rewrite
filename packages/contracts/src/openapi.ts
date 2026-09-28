@@ -14,6 +14,12 @@ import {
   OtpRequestResponseSchema,
   OtpVerifyRequestSchema,
   OtpVerifyResponseSchema,
+  SignInMethodChangeRequestSchema,
+  SignInMethodChangeVerifyRequestSchema,
+  SignInMethodChangeResponseSchema,
+  AccountDeletionRequestSchema,
+  AccountDeletionRequestResponseSchema,
+  AccountDeletionConfirmRequestSchema,
   RefreshRequestSchema,
   RefreshResponseSchema,
   LogoutRequestSchema,
@@ -61,8 +67,13 @@ import {
   ListingCountResponseSchema,
   ListingModelCountQuerySchema,
   ListingModelCountResponseSchema,
+  ListingBrandCountQuerySchema,
+  ListingBrandCountResponseSchema,
+  FeedSortSchema,
   MyListingsResponseSchema,
   MyDraftsResponseSchema,
+  FavoriteListingSummarySchema,
+  MyFavoritesResponseSchema,
 } from "./schemas/listings";
 import {
   PresignRequestSchema,
@@ -190,8 +201,13 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("ListingCountResponse", ListingCountResponseSchema);
   registry.register("ListingModelCountQuery", ListingModelCountQuerySchema);
   registry.register("ListingModelCountResponse", ListingModelCountResponseSchema);
+  registry.register("ListingBrandCountQuery", ListingBrandCountQuerySchema);
+  registry.register("ListingBrandCountResponse", ListingBrandCountResponseSchema);
+  registry.register("FeedSort", FeedSortSchema);
   registry.register("MyListingsResponse", MyListingsResponseSchema);
   registry.register("MyDraftsResponse", MyDraftsResponseSchema);
+  registry.register("FavoriteListingSummary", FavoriteListingSummarySchema);
+  registry.register("MyFavoritesResponse", MyFavoritesResponseSchema);
 
   // Uploads schemas
   registry.register("PresignRequest", PresignRequestSchema);
@@ -247,6 +263,21 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("AdminTotpEnrollResponse", AdminTotpEnrollResponseSchema);
   registry.register("AdminTotpVerifyRequest", AdminTotpVerifyRequestSchema);
   registry.register("AdminTotpVerifyResponse", AdminTotpVerifyResponseSchema);
+  registry.register("SignInMethodChangeRequest", SignInMethodChangeRequestSchema);
+  registry.register(
+    "SignInMethodChangeVerifyRequest",
+    SignInMethodChangeVerifyRequestSchema,
+  );
+  registry.register("SignInMethodChangeResponse", SignInMethodChangeResponseSchema);
+  registry.register("AccountDeletionRequest", AccountDeletionRequestSchema);
+  registry.register(
+    "AccountDeletionRequestResponse",
+    AccountDeletionRequestResponseSchema,
+  );
+  registry.register(
+    "AccountDeletionConfirmRequest",
+    AccountDeletionConfirmRequestSchema,
+  );
 
   // Admin report schemas
   registry.register("CreateReportRequest", CreateReportRequestSchema);
@@ -475,6 +506,136 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
 
   registry.registerPath({
     method: "post",
+    path: "/api/v1/me/sign-in-methods/request",
+    summary: "Request a code to add or replace a Sign-in Method",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: S(SignInMethodChangeRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Sign-in Method code sent",
+        content: {
+          "application/json": { schema: S(OtpRequestResponseSchema) },
+        },
+      },
+      400: {
+        description: "Validation or rate-limit error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      401: {
+        description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Signed-in User no longer exists",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/me/sign-in-methods/verify",
+    summary: "Confirm and apply a Sign-in Method change",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: S(SignInMethodChangeVerifyRequestSchema),
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Sign-in Method changed",
+        content: {
+          "application/json": { schema: S(SignInMethodChangeResponseSchema) },
+        },
+      },
+      400: {
+        description: "Invalid, expired, or used code",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      401: {
+        description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Signed-in User no longer exists",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      409: {
+        description: "Sign-in Method belongs to another User",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/account-deletion/request",
+    summary: "Request a code to delete the account holding a phone or email",
+    description:
+      "Public. Answers the same way whether or not a User holds the value.",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: S(AccountDeletionRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: "Deletion code sent",
+        content: {
+          "application/json": {
+            schema: S(AccountDeletionRequestResponseSchema),
+          },
+        },
+      },
+      400: {
+        description: "Validation or rate-limit error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/account-deletion/confirm",
+    summary: "Confirm a deletion code and start the 30-day grace period",
+    description:
+      "Public. A valid code for a value no User holds gets the same 204 and changes nothing.",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: S(AccountDeletionConfirmRequestSchema),
+          },
+        },
+      },
+    },
+    responses: {
+      204: { description: "Code accepted" },
+      400: {
+        description:
+          "Validation error, or INVALID_OTP for any wrong, expired, used, locked, or missing code",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
     path: "/api/v1/auth/logout",
     summary: "Logout",
     tags: ["Auth"],
@@ -592,6 +753,28 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         description: "Models with feed-eligible listing counts",
         content: {
           "application/json": { schema: S(ListingModelCountResponseSchema) },
+        },
+      },
+      400: {
+        description: "Validation error",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/listings/filter-options/brands",
+    summary: "Brand-level listing counts for the current filters",
+    tags: ["Listings"],
+    request: {
+      query: ListingBrandCountQuerySchema,
+    },
+    responses: {
+      200: {
+        description: "Brands with feed-eligible listing counts",
+        content: {
+          "application/json": { schema: S(ListingBrandCountResponseSchema) },
         },
       },
       400: {

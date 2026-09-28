@@ -16,9 +16,10 @@ S8a adds saved-listing Favorites to this loop. Saved-search notifications, rich 
 
 ### Step 1 — Discover
 
-- Maral opens the feed (anonymous OK)
-- Browses latest listings
-- Uses explicit Region / City, Brand / Model, Price, Year, and Condition filters
+- Maral opens Home (anonymous OK) and browses New listings
+- Picks a brand and models, or searches for them, and lands on Results
+- Refines with explicit condition, city, price and year filters, and sorts
+- Screens and states: [33 — Search & discovery](../features/33-search-discovery.md)
 - No first-open GPS prompt
 - No saved-search carousel
 

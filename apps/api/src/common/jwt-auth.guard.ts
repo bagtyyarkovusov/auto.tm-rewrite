@@ -45,7 +45,10 @@ export class JwtAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     if (!authHeader?.startsWith("Bearer ")) {
-      throw new UnauthorizedException("Missing or malformed Authorization header");
+      throw new UnauthorizedException({
+        code: "UNAUTHORIZED",
+        message: "Missing or malformed Authorization header",
+      });
     }
 
     const token = authHeader.slice(7);
@@ -57,7 +60,10 @@ export class JwtAuthGuard implements CanActivate {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("[JwtAuthGuard] token verification failed:", (err as Error).message);
-      throw new UnauthorizedException("Invalid or expired token");
+      throw new UnauthorizedException({
+        code: "UNAUTHORIZED",
+        message: "Invalid or expired token",
+      });
     }
   }
 }

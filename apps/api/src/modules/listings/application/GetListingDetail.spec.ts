@@ -34,6 +34,10 @@ class FakeListingRepository implements ListingRepository {
     return listing;
   }
 
+  async recomputePriceTmt(): Promise<number> {
+    return 0;
+  }
+
   async softDelete(_id: string, _at: Date): Promise<void> {}
 }
 
@@ -99,6 +103,10 @@ class FakeFavoriteRepository implements FavoriteRepository {
 
   async exists(userId: string, listingId: string): Promise<boolean> {
     return this.favorites.has(`${userId}:${listingId}`);
+  }
+
+  async favoritedListingIds(userId: string, listingIds: string[]): Promise<Set<string>> {
+    return new Set(listingIds.filter((id) => this.favorites.has(`${userId}:${id}`)));
   }
 
   async listByUserId(_userId: string) {
@@ -265,6 +273,42 @@ describe("GetListingDetail", () => {
 
     expect(result.id).toBe("listing-1");
     expect(result.status).toBe("banned");
+  });
+
+  describe("buyer visibility regression (#366)", () => {
+    it("returns 404 for a soft-deleted listing requested by a buyer", async () => {
+      const listing = seedListing({ sellerId: "user-1" });
+      repo.listings = [listing.softDelete(new Date())];
+
+      const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+      await expect(
+        uc.execute({ listingId: "listing-1", requestingUserId: "user-2" }),
+      ).rejects.toThrow("Listing not found");
+    });
+
+    it("returns 404 for a banned listing requested anonymously", async () => {
+      seedListing({ status: "banned", sellerId: "user-1" });
+
+      const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+      await expect(uc.execute({ listingId: "listing-1" })).rejects.toThrow(
+        "Listing not found",
+      );
+    });
+
+    it.each(["sold", "archived"] as const)(
+      "serves a %s listing to buyers so the client can show it closed for contact",
+      async (status) => {
+        seedListing({ status, sellerId: "user-1" });
+
+        const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
+        const result = await uc.execute({
+          listingId: "listing-1",
+          requestingUserId: "user-2",
+        });
+
+        expect(result.status).toBe(status);
+      },
+    );
   });
 
   it("returns isFavorited=false when no requestingUserId", async () => {

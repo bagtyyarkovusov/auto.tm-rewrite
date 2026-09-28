@@ -19,9 +19,19 @@ enum UserRole {
   admin
 }
 
+enum SignInCodeChannel {
+  phone
+  email
+}
+
 model User {
   id          String   @id @default(uuid())
-  phone       String   @unique
+  /// Sign-in Methods (ADR-0054). Each value is stored only with its verified-at
+  /// time; the migration adds `users_phone_verified_check` / `users_email_verified_check`.
+  phone           String?   @unique
+  phoneVerifiedAt DateTime?
+  email           String?   @unique
+  emailVerifiedAt DateTime?
   displayName String?
   avatarUrl   String?
   locale      String   @default("ru")
@@ -65,7 +75,10 @@ model User {
 
 model OtpRequest {
   id         String    @id @default(uuid())
-  phone      String
+  channel    SignInCodeChannel
+  destination String
+  /// Temporary deployment compatibility alias. New code reads channel + destination.
+  phone      String?
   codeHash   String
   expiresAt  DateTime
   verifiedAt DateTime?
@@ -76,6 +89,7 @@ model OtpRequest {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  @@index([channel, destination, createdAt])
   @@index([phone, createdAt])
   @@index([ip, createdAt])
   @@map("otp_requests")
@@ -372,6 +386,8 @@ model Listing {
   mileageKm     Int?
   priceAmount   Float
   priceCurrency Currency      @default(TMT)
+  /// priceAmount converted to TMT at the current exchange rate; drives price sort and range.
+  priceTmt      Float?
   description   String?
   deletedAt     DateTime?
   publishedAt   DateTime?
@@ -414,6 +430,9 @@ model Listing {
   inspectionInterests InspectionInterest[]
 
   @@index([status, publishedAt(sort: Desc)])
+  @@index([status, priceTmt, id])
+  @@index([status, year, id])
+  @@index([status, mileageKm, id])
   @@index([brandId, modelId, status])
   @@index([cityId, status])
   @@map("listings")

@@ -36,6 +36,14 @@ class FakeFavoriteRepository implements FavoriteRepository {
     );
   }
 
+  async favoritedListingIds(userId: string, listingIds: string[]): Promise<Set<string>> {
+    return new Set(
+      listingIds.filter((id) =>
+        this.favorites.some((f) => f.userId === userId && f.listingId === id),
+      ),
+    );
+  }
+
   async listByUserId(
     _userId: string,
     _opts?: { cursor?: { timestamp: string; id: string }; limit?: number },
@@ -67,6 +75,10 @@ class FakeListingRepository implements ListingRepository {
     const idx = this.listings.findIndex((l) => l.id === listing.id);
     if (idx >= 0) this.listings[idx] = listing;
     return listing;
+  }
+
+  async recomputePriceTmt(): Promise<number> {
+    return 0;
   }
 
   async softDelete(_id: string, _at: Date): Promise<void> {}

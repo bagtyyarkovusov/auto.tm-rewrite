@@ -21,20 +21,13 @@ Verification is evidence collection, not a ceremonial command list. Map each iss
 - For mobile UI, also read `docs/agents/nativewind-v4.md` and the current UI sources named by the design spec.
 - For external libraries, record the Context7 library ID and what was verified.
 
-The Claude host flow is not the Sandcastle sandbox gate. Run all relevant host-capable tests. If Testcontainers, CI, credentials, hardware, or a simulator is genuinely unavailable, name the skipped gate, why it is unavailable, and where it must run; never report it as passed.
+The interactive host flow is not the Sandcastle sandbox gate. Run all relevant host-capable tests. If Testcontainers, CI, credentials, hardware, or a simulator is genuinely unavailable, name the skipped gate, why it is unavailable, and where it must run; never report it as passed.
 
 ## Documentation gate
 
-ADR-0019 has no sprint-final exception. In the same PR as an invariant change, update the relevant current-state `CONTEXT.md` for any added or changed:
+Follow [ADR-0060](../../../docs/adr/0060-source-first-agent-context-and-task-scoped-guidance.md). Inspect source and tests for changed implementation facts. Update the relevant overview in the same PR if its documented ownership, boundary, constraint, or important limitation changes. A routine field, method, route, or use-case does not require a prose inventory update.
 
-- Prisma model or field;
-- domain invariant or type;
-- port or use-case;
-- event or consumer;
-- HTTP/WS route; or
-- app/package/context structure.
-
-Update `CONTEXT-MAP.md` when the set or ownership of contexts changes. Do not put future state in `CONTEXT.md`.
+Update `CONTEXT-MAP.md` when context ownership or locations change. Keep future requirements in their owning PRD or issue. Verify that any retained overview claims and links agree with the implementation.
 
 Under ADR-0020:
 

@@ -9,7 +9,10 @@ function makeFakePrisma() {
   const state = {
     users: [] as Array<{
       id: string;
-      phone: string;
+      phone: string | null;
+      phoneVerifiedAt?: Date | null;
+      email?: string | null;
+      emailVerifiedAt?: Date | null;
       displayName: string | null;
       avatarUrl: string | null;
       deletionScheduledAt: Date | null;
@@ -166,10 +169,13 @@ describe("PurgeExpiredAccounts", () => {
     job = new PurgeExpiredAccounts(fake.prisma);
   });
 
-  it("purges users whose deletion grace has expired", async () => {
+  it("frees both Sign-in Methods and clears PII for users whose deletion grace has expired", async () => {
     fake.users.push({
       id: "user-expired",
       phone: "+99361234567",
+      phoneVerifiedAt: new Date("2026-01-01T00:00:00Z"),
+      email: "expired@example.com",
+      emailVerifiedAt: new Date("2026-02-01T00:00:00Z"),
       displayName: "Expired",
       avatarUrl: "https://example.com/avatar.jpg",
       deletionScheduledAt: new Date(NOW.getTime() - 24 * 60 * 60 * 1000),
@@ -190,7 +196,10 @@ describe("PurgeExpiredAccounts", () => {
 
     const purged = fake.users.find((u) => u.id === "user-expired");
     expect(purged).toBeDefined();
-    expect(purged?.phone).toBe("deleted:user-expired");
+    expect(purged?.phone).toBeNull();
+    expect(purged?.phoneVerifiedAt).toBeNull();
+    expect(purged?.email).toBeNull();
+    expect(purged?.emailVerifiedAt).toBeNull();
     expect(purged?.displayName).toBeNull();
     expect(purged?.avatarUrl).toBeNull();
     expect(purged?.deletionScheduledAt).toBeNull();

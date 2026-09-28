@@ -5,7 +5,8 @@
 Read only what the target needs, but never skip higher authority:
 
 - product/scope: `docs/prd/20-information-architecture.md`, owning feature/flow, roadmap, issue/sprint;
-- mobile findability: `docs/prd/ui/kolesa-findability-reference.md`;
+- mobile discovery journey: ADR-0051, `docs/prd/features/33-search-discovery.md`, `docs/prd/features/32-listings.md`, and the capture index `docs/prd/ui/research/reference-screens-2026-09-21.md`;
+- other mobile findability, where no approved spec exists: `docs/prd/ui/kolesa-findability-reference.md`;
 - design principles: `docs/prd/ui/70-design-principles.md`;
 - accessibility: `docs/prd/ui/77-accessibility.md`;
 - platform boundary: `docs/prd/ui/79-web-vs-mobile.md`;

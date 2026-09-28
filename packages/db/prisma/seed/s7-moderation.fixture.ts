@@ -21,7 +21,7 @@ async function upsertFixtureUser(
   const existing = await prisma.user.findUnique({ where: { phone } });
   if (existing) return existing;
   return prisma.user.create({
-    data: { id, phone, displayName, role },
+    data: { id, phone, phoneVerifiedAt: new Date(), displayName, role },
   });
 }
 

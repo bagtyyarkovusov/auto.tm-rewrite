@@ -1,5 +1,6 @@
 export interface ReviewerOtpBypassAccount {
   phone: string;
+  email: string;
   code: string;
 }
 

@@ -6,7 +6,10 @@ import { Check, X } from "lucide-react-native";
 import type { AdminSchemas } from "@auto-tm/contracts";
 
 import { useAuth } from "../../auth/useAuth";
-import { useAuthIntentStore } from "../../auth/intentStore";
+import {
+  useAuthIntentStore,
+  type AuthIntent,
+} from "../../auth/intentStore";
 import { useCreateReport } from "../../api/admin/useCreateReport";
 
 import { Button } from "@/components/ui/button";
@@ -87,13 +90,20 @@ export function ReportSheet({
     if (!reason) return;
 
     if (isAuthenticated === false) {
-      useAuthIntentStore.getState().setIntent({
-        returnPath:
-          targetType === "listing"
-            ? `/(public)/listings/${targetId}`
-            : `/(tabs)`,
-      });
-      router.push("/(auth)/phone");
+      // Close first: this sheet renders through the root portal, so it would
+      // otherwise sit on top of the authentication screens. The pending action
+      // reopens it — with the chosen reason still filled in — on return.
+      onOpenChange(false);
+      // A user report has no Listing to come back to, so it carries no action
+      // and the User re-submits from the tabs.
+      const intent: AuthIntent =
+        targetType === "listing"
+          ? {
+              returnTo: `/(public)/listings/${targetId}`,
+              action: { kind: "report", listingId: targetId },
+            }
+          : { returnTo: "/(tabs)" };
+      useAuthIntentStore.getState().requireSignIn(router, intent);
       return;
     }
 

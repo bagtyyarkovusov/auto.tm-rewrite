@@ -182,7 +182,7 @@ describe("MLP AFK e2e smoke", () => {
   async function createElevatedAdmin(): Promise<{ adminId: string; token: string }> {
     const adminId = "admin-afk-001";
     await prisma.user.create({
-      data: { id: adminId, phone: "+99369990001", role: "admin" },
+      data: { id: adminId, phone: "+99369990001", phoneVerifiedAt: new Date(), role: "admin" },
     });
     const session = await prisma.session.create({
       data: {
@@ -300,6 +300,13 @@ describe("MLP AFK e2e smoke", () => {
       where: { userId: seller.userId },
     });
     expect(sellerSessionsAfterDelete).toBe(0);
+
+    // The smoke flow covers recovery rather than retry throttling. Move the
+    // earlier successful request beyond its first 60-second backoff window.
+    await prisma.otpRequest.updateMany({
+      where: { channel: "phone", destination: "+99361234001" },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
 
     const recoveryOtpRes = await request
       .post("/api/v1/auth/otp/request")

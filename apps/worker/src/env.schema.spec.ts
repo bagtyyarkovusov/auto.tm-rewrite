@@ -282,3 +282,36 @@ describe("worker EnvSchema deploy metadata", () => {
     expect(env.AUTOTM_COMMIT_SHA).toBe("unknown");
   });
 });
+
+describe("worker EnvSchema email contract (ADR-0055)", () => {
+  it("defaults to the mock driver and a daily cap of 80", () => {
+    const env = EnvSchema.parse(baseEnv);
+    expect(env.EMAIL_DRIVER).toBe("mock");
+    expect(env.EMAIL_DAILY_CAP).toBe(80);
+  });
+
+  it("reads EMAIL_DAILY_CAP from a string", () => {
+    expect(EnvSchema.parse({ ...baseEnv, EMAIL_DAILY_CAP: "40" }).EMAIL_DAILY_CAP).toBe(40);
+  });
+
+  it("rejects a zero daily cap", () => {
+    expect(EnvSchema.safeParse({ ...baseEnv, EMAIL_DAILY_CAP: "0" }).success).toBe(false);
+  });
+
+  it("requires RESEND_API_KEY and EMAIL_FROM for the resend driver", () => {
+    const result = EnvSchema.safeParse({ ...baseEnv, EMAIL_DRIVER: "resend", RESEND_API_KEY: " " });
+    expect(result.success).toBe(false);
+    const paths = result.success ? [] : result.error.issues.map((issue) => issue.path[0]);
+    expect(paths).toEqual(expect.arrayContaining(["RESEND_API_KEY", "EMAIL_FROM"]));
+  });
+
+  it("accepts the resend driver with a key and a From address", () => {
+    const env = EnvSchema.parse({
+      ...baseEnv,
+      EMAIL_DRIVER: "resend",
+      RESEND_API_KEY: "re_test_key",
+      EMAIL_FROM: "AutoTM <no-reply@autotm.bagtyyar.dev>",
+    });
+    expect(env.EMAIL_DRIVER).toBe("resend");
+  });
+});

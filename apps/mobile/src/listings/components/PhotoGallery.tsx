@@ -23,6 +23,18 @@ type ExpoImageStyle = ComponentProps<typeof Image>["style"];
 
 interface PhotoGalleryProps {
   media: ListingMedia[];
+  /** Status strip across the bottom of the photo, e.g. "Sold" on a closed Listing. */
+  banner?: string;
+}
+
+function GalleryBanner({ label }: { label: string }) {
+  return (
+    <View className="absolute bottom-0 left-0 right-0 bg-black/70 px-4 py-2">
+      <Text className="text-base font-bold text-white" numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
 }
 
 function GalleryImage({
@@ -54,7 +66,7 @@ function GalleryImage({
   );
 }
 
-export function PhotoGallery({ media }: PhotoGalleryProps) {
+export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
   const { t } = useTranslation();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -86,6 +98,7 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
     return (
       <View className="h-[240px] w-full items-center justify-center bg-muted">
         <Text className="text-sm text-muted-foreground">{t("noPhotos")}</Text>
+        {banner && <GalleryBanner label={banner} />}
       </View>
     );
   }
@@ -126,7 +139,11 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
 
       {/* Page indicator */}
       {media.length > 1 && (
-        <View className="absolute bottom-2 left-0 right-0 flex-row items-center justify-center gap-1.5">
+        <View
+          className={`absolute left-0 right-0 flex-row items-center justify-center gap-1.5 ${
+            banner ? "bottom-12" : "bottom-2"
+          }`}
+        >
           {media.map((_, i) => (
             <View
               key={i}
@@ -139,6 +156,8 @@ export function PhotoGallery({ media }: PhotoGalleryProps) {
           ))}
         </View>
       )}
+
+      {banner && <GalleryBanner label={banner} />}
 
       {/* Fullscreen viewer */}
       <Modal

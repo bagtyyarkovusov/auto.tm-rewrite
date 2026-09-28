@@ -1,33 +1,51 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { ListFeed } from "./ListFeed";
 import { Listing } from "../domain/Listing";
+import type { CardPhotos } from "../domain/CardPhotos";
+import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
 import type { FeedRankingPort } from "../domain/ports/FeedRankingPort";
+import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
-import type { ListingFilterCriteria } from "../domain/types";
+import { BadRequestException } from "@nestjs/common";
+import { ListingsSchemas } from "@auto-tm/contracts";
+import type { FeedCursor, FeedSort, ListingFilterCriteria } from "../domain/types";
 
 class FakeFeedRankingPort implements FeedRankingPort {
   items: Listing[] = [];
-  nextCursor?: { timestamp: string; id: string };
+  nextCursor?: FeedCursor;
+  lastViewerId: string | undefined;
+  lastSort: FeedSort | undefined;
+  lastCursor: FeedCursor | undefined;
 
-  async rank(_query: {
+  async rank(query: {
     viewerId?: string;
     filters?: ListingFilterCriteria;
-    cursor?: { timestamp: string; id: string };
+    sort: FeedSort;
+    cursor?: FeedCursor;
     limit: number;
-  }): Promise<{ items: Listing[]; nextCursor?: { timestamp: string; id: string } }> {
-    const result: { items: Listing[]; nextCursor?: { timestamp: string; id: string } } = { items: this.items };
+  }): Promise<{ items: Listing[]; nextCursor?: FeedCursor }> {
+    this.lastViewerId = query.viewerId;
+    this.lastSort = query.sort;
+    this.lastCursor = query.cursor;
+    const result: { items: Listing[]; nextCursor?: FeedCursor } = {
+      items: this.items,
+    };
     if (this.nextCursor !== undefined) {
       result.nextCursor = this.nextCursor;
     }
     return result;
   }
 
-  async count(): Promise<number> {
-    return this.items.length;
+  async count() {
+    return { totalMatching: this.items.length, priceMinTmt: null, priceMaxTmt: null };
   }
 
   async modelCounts(): Promise<Array<{ modelId: string; totalMatching: number }>> {
+    return [];
+  }
+
+  async brandCounts(): Promise<Array<{ brandId: string; totalMatching: number }>> {
     return [];
   }
 }
@@ -60,15 +78,63 @@ class FakeMediaStoragePort implements MediaStoragePort {
   async deleteObject(): Promise<void> {}
 }
 
+class FakeFavoriteRepository implements FavoriteRepository {
+  favorites = new Set<string>();
+  lookups = 0;
+
+  async add(): Promise<never> {
+    throw new Error("not used");
+  }
+
+  async remove(): Promise<boolean> {
+    return false;
+  }
+
+  async exists(userId: string, listingId: string): Promise<boolean> {
+    return this.favorites.has(`${userId}:${listingId}`);
+  }
+
+  async favoritedListingIds(userId: string, listingIds: string[]): Promise<Set<string>> {
+    this.lookups += 1;
+    return new Set(listingIds.filter((id) => this.favorites.has(`${userId}:${id}`)));
+  }
+
+  async listByUserId() {
+    return { items: [] };
+  }
+}
+
+class FakeListingCardReadPort implements ListingCardReadPort {
+  photos = new Map<string, CardPhotos>();
+  photoLookups = 0;
+
+  async getCardPhotos(listingIds: string[]): Promise<Map<string, CardPhotos>> {
+    this.photoLookups += 1;
+    return new Map([...this.photos].filter(([id]) => listingIds.includes(id)));
+  }
+
+  async getVisibleCards(): Promise<ListingCard[]> {
+    return [];
+  }
+
+  async getOwnerCards(): Promise<{ items: ListingCard[] }> {
+    return { items: [] };
+  }
+}
+
 function makeUseCase(
   ranking?: FakeFeedRankingPort,
   exchangeRates?: FakeExchangeRatePort,
   storage?: FakeMediaStoragePort,
+  favorites?: FakeFavoriteRepository,
+  cards?: FakeListingCardReadPort,
 ) {
   return new ListFeed(
     ranking ?? new FakeFeedRankingPort(),
     exchangeRates ?? new FakeExchangeRatePort(),
     storage ?? new FakeMediaStoragePort(),
+    favorites ?? new FakeFavoriteRepository(),
+    cards ?? new FakeListingCardReadPort(),
   );
 }
 
@@ -147,39 +213,69 @@ describe("ListFeed", () => {
 
   it("encodes nextCursor from ranking result", async () => {
     ranking.items = [seedListing({ id: "l1" })];
-    ranking.nextCursor = { timestamp: "2026-05-01T00:00:00Z", id: "l1" };
-
-    const uc = makeUseCase(ranking, exchangeRates);
-    const result = await uc.execute({});
-
-    expect(result.nextCursor).not.toBeNull();
-    expect(typeof result.nextCursor).toBe("string");
-  });
-
-  it("decodes cursor and passes to ranking port", async () => {
-    let receivedCursor: { timestamp: string; id: string } | undefined;
-
-    const spyRanking: FeedRankingPort = {
-      async rank(query) {
-        receivedCursor = query.cursor;
-        return { items: [] };
-      },
-      async count() {
-        return 0;
-      },
-      async modelCounts() {
-        return [];
-      },
+    ranking.nextCursor = {
+      sort: "price_asc",
+      value: 35000,
+      id: "00000000-0000-0000-0000-000000000001",
     };
 
-    const uc = new ListFeed(spyRanking, exchangeRates, new FakeMediaStoragePort());
-    const cursor = Buffer.from(
+    const uc = makeUseCase(ranking, exchangeRates);
+    const result = await uc.execute({ sort: "price_asc" });
+
+    expect(ListingsSchemas.decodeFeedCursor(result.nextCursor as string)).toEqual(
+      ranking.nextCursor,
+    );
+  });
+
+  it("defaults to the newest order", async () => {
+    await makeUseCase(ranking, exchangeRates).execute({});
+    expect(ranking.lastSort).toBe("newest");
+  });
+
+  it("passes the requested order to the ranking port", async () => {
+    await makeUseCase(ranking, exchangeRates).execute({ sort: "mileage_asc" });
+    expect(ranking.lastSort).toBe("mileage_asc");
+  });
+
+  it("decodes a cursor for the requested order and passes it on", async () => {
+    const cursor = {
+      sort: "year_desc",
+      value: null,
+      id: "00000000-0000-0000-0000-000000000001",
+    } as const;
+
+    await makeUseCase(ranking, exchangeRates).execute({
+      sort: "year_desc",
+      cursor: ListingsSchemas.encodeFeedCursor(cursor),
+    });
+
+    expect(ranking.lastCursor).toEqual(cursor);
+  });
+
+  it("rejects a cursor from another order with a 400", async () => {
+    const cursor = ListingsSchemas.encodeFeedCursor({
+      sort: "price_asc",
+      value: 1000,
+      id: "00000000-0000-0000-0000-000000000001",
+    });
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    await expect(uc.execute({ sort: "price_desc", cursor })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(uc.execute({ cursor })).rejects.toThrow(BadRequestException);
+    expect(ranking.lastSort).toBeUndefined();
+  });
+
+  it("rejects a malformed cursor with a 400", async () => {
+    const legacy = Buffer.from(
       JSON.stringify({ timestamp: "2026-05-01T00:00:00Z", id: "00000000-0000-0000-0000-000000000001" }),
       "utf8",
     ).toString("base64url");
 
-    await uc.execute({ cursor });
-    expect(receivedCursor).toEqual({ timestamp: "2026-05-01T00:00:00Z", id: "00000000-0000-0000-0000-000000000001" });
+    const uc = makeUseCase(ranking, exchangeRates);
+    await expect(uc.execute({ cursor: "not-a-cursor" })).rejects.toThrow(BadRequestException);
+    await expect(uc.execute({ cursor: legacy })).rejects.toThrow(BadRequestException);
   });
 
   it("includes sellerTrust.phoneVerified on summary DTOs", async () => {
@@ -207,16 +303,98 @@ describe("ListFeed", () => {
         return { items: [] };
       },
       async count() {
-        return 0;
+        return { totalMatching: 0, priceMinTmt: null, priceMaxTmt: null };
       },
       async modelCounts() {
         return [];
       },
+      async brandCounts() {
+        return [];
+      },
     };
 
-    const uc = new ListFeed(spyRanking, exchangeRates, new FakeMediaStoragePort());
+    const uc = new ListFeed(
+      spyRanking,
+      exchangeRates,
+      new FakeMediaStoragePort(),
+      new FakeFavoriteRepository(),
+      new FakeListingCardReadPort(),
+    );
     await uc.execute({ filters: { brandId: "brand-x", priceMin: 50000 } });
 
     expect(receivedFilters).toEqual({ brandId: "brand-x", priceMin: 50000 });
+  });
+
+  it("returns photoKeys and photoCount from one batched photo read", async () => {
+    ranking.items = [seedListing({ id: "l1" }), seedListing({ id: "l2" })];
+    const cards = new FakeListingCardReadPort();
+    cards.photos.set("l1", { coverMediaKey: "a", photoKeys: ["a", "b"], photoCount: 5 });
+
+    const uc = makeUseCase(ranking, exchangeRates, undefined, undefined, cards);
+    const result = await uc.execute({});
+
+    expect(cards.photoLookups).toBe(1);
+    expect(result.items[0]!.photoKeys).toEqual(["a", "b"]);
+    expect(result.items[0]!.photoCount).toBe(5);
+    expect(result.items[1]!.photoKeys).toEqual([]);
+    expect(result.items[1]!.photoCount).toBe(0);
+  });
+
+  it("returns mileageKm, condition, transmissionId, and engineTypeId when set", async () => {
+    ranking.items = [
+      seedListing({
+        id: "l1",
+        mileageKm: 0,
+        condition: "new",
+        transmissionId: "transmission-1",
+        engineTypeId: "engine-1",
+      }),
+    ];
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    const [item] = (await uc.execute({})).items;
+
+    expect(item).toMatchObject({
+      mileageKm: 0,
+      condition: "new",
+      transmissionId: "transmission-1",
+      engineTypeId: "engine-1",
+    });
+  });
+
+  it("omits mileageKm, condition, transmissionId, and engineTypeId when not set", async () => {
+    ranking.items = [seedListing({ id: "l1" })];
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    const [item] = (await uc.execute({})).items;
+
+    expect(item).not.toHaveProperty("mileageKm");
+    expect(item).not.toHaveProperty("condition");
+    expect(item).not.toHaveProperty("transmissionId");
+    expect(item).not.toHaveProperty("engineTypeId");
+  });
+
+  it("marks isFavorited for a signed-in viewer with one favorites lookup per page", async () => {
+    ranking.items = [seedListing({ id: "l1" }), seedListing({ id: "l2" })];
+    const favorites = new FakeFavoriteRepository();
+    favorites.favorites.add("viewer-1:l2");
+
+    const uc = makeUseCase(ranking, exchangeRates, undefined, favorites);
+    const result = await uc.execute({ viewerId: "viewer-1" });
+
+    expect(result.items.map((i) => i.isFavorited)).toEqual([false, true]);
+    expect(favorites.lookups).toBe(1);
+    expect(ranking.lastViewerId).toBe("viewer-1");
+  });
+
+  it("omits isFavorited and skips the favorites lookup for an anonymous viewer", async () => {
+    ranking.items = [seedListing({ id: "l1" })];
+    const favorites = new FakeFavoriteRepository();
+
+    const uc = makeUseCase(ranking, exchangeRates, undefined, favorites);
+    const result = await uc.execute({});
+
+    expect(result.items[0]).not.toHaveProperty("isFavorited");
+    expect(favorites.lookups).toBe(0);
   });
 });

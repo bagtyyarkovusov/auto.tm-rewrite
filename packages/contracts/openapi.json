@@ -25,8 +25,15 @@
               "UNAUTHORIZED",
               "FORBIDDEN",
               "NOT_FOUND",
+              "USER_NOT_FOUND",
               "CONFLICT",
               "RATE_LIMITED",
+              "OTP_EXPIRED",
+              "OTP_ALREADY_USED",
+              "INVALID_OTP",
+              "OTP_LOCKED",
+              "OTP_NOT_FOUND",
+              "SIGN_IN_METHOD_TAKEN",
               "INTERNAL"
             ]
           },
@@ -723,6 +730,36 @@
           "coverMediaKey": {
             "type": "string"
           },
+          "photoKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2
+          },
+          "photoCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "cityId": {
             "type": "string",
             "format": "uuid"
@@ -741,6 +778,9 @@
             "required": [
               "phoneVerified"
             ]
+          },
+          "isFavorited": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -752,6 +792,8 @@
           "priceAmount",
           "priceCurrency",
           "displayPriceTmt",
+          "photoKeys",
+          "photoCount",
           "cityId",
           "publishedAt",
           "sellerTrust"
@@ -2119,6 +2161,36 @@
                 "coverMediaKey": {
                   "type": "string"
                 },
+                "photoKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 2
+                },
+                "photoCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mileageKm": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "condition": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "used"
+                  ]
+                },
+                "transmissionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "engineTypeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "cityId": {
                   "type": "string",
                   "format": "uuid"
@@ -2137,6 +2209,9 @@
                   "required": [
                     "phoneVerified"
                   ]
+                },
+                "isFavorited": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -2148,6 +2223,8 @@
                 "priceAmount",
                 "priceCurrency",
                 "displayPriceTmt",
+                "photoKeys",
+                "photoCount",
                 "cityId",
                 "publishedAt",
                 "sellerTrust"
@@ -2213,6 +2290,17 @@
               "new",
               "used"
             ]
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "newest",
+              "price_asc",
+              "price_desc",
+              "year_desc",
+              "year_asc",
+              "mileage_asc"
+            ]
           }
         }
       },
@@ -2222,10 +2310,22 @@
           "totalMatching": {
             "type": "integer",
             "minimum": 0
+          },
+          "priceMinTmt": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "priceMaxTmt": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
           }
         },
         "required": [
-          "totalMatching"
+          "totalMatching",
+          "priceMinTmt",
+          "priceMaxTmt"
         ]
       },
       "ListingModelCountQuery": {
@@ -2300,6 +2400,82 @@
           "items"
         ]
       },
+      "ListingBrandCountQuery": {
+        "type": "object",
+        "properties": {
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceMin": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceMax": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "yearMin": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "yearMax": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListingBrandCountResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "totalMatching": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "brandId",
+                "totalMatching"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "FeedSort": {
+        "type": "string",
+        "enum": [
+          "newest",
+          "price_asc",
+          "price_desc",
+          "year_desc",
+          "year_asc",
+          "mileage_asc"
+        ]
+      },
       "MyListingsResponse": {
         "type": "object",
         "properties": {
@@ -2360,6 +2536,36 @@
                 "coverMediaKey": {
                   "type": "string"
                 },
+                "photoKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 2
+                },
+                "photoCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mileageKm": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "condition": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "used"
+                  ]
+                },
+                "transmissionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "engineTypeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "cityId": {
                   "type": "string",
                   "format": "uuid"
@@ -2378,6 +2584,9 @@
                   "required": [
                     "phoneVerified"
                   ]
+                },
+                "isFavorited": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -2389,6 +2598,8 @@
                 "priceAmount",
                 "priceCurrency",
                 "displayPriceTmt",
+                "photoKeys",
+                "photoCount",
                 "cityId",
                 "publishedAt",
                 "sellerTrust"
@@ -2602,6 +2813,292 @@
                 "payload",
                 "createdAt",
                 "updatedAt"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "FavoriteListingSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "active",
+              "sold",
+              "archived",
+              "rejected",
+              "banned"
+            ]
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "displayPriceTmt": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "coverMediaKey": {
+            "type": "string"
+          },
+          "photoKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2
+          },
+          "photoCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sellerTrust": {
+            "type": "object",
+            "properties": {
+              "phoneVerified": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "phoneVerified"
+            ]
+          },
+          "isFavorited": {
+            "type": "boolean"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "allowCalls": {
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sellerId",
+          "status",
+          "brandId",
+          "modelId",
+          "priceAmount",
+          "priceCurrency",
+          "displayPriceTmt",
+          "photoKeys",
+          "photoCount",
+          "cityId",
+          "publishedAt",
+          "sellerTrust",
+          "allowCalls",
+          "allowChat"
+        ]
+      },
+      "MyFavoritesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sellerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "pending_review",
+                    "active",
+                    "sold",
+                    "archived",
+                    "rejected",
+                    "banned"
+                  ]
+                },
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "modelId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "year": {
+                  "type": "integer"
+                },
+                "priceAmount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "priceCurrency": {
+                  "type": "string",
+                  "enum": [
+                    "TMT",
+                    "USD",
+                    "AED"
+                  ]
+                },
+                "displayPriceTmt": {
+                  "type": "number",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "coverMediaKey": {
+                  "type": "string"
+                },
+                "photoKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 2
+                },
+                "photoCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "mileageKm": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "condition": {
+                  "type": "string",
+                  "enum": [
+                    "new",
+                    "used"
+                  ]
+                },
+                "transmissionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "engineTypeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "cityId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "sellerTrust": {
+                  "type": "object",
+                  "properties": {
+                    "phoneVerified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "phoneVerified"
+                  ]
+                },
+                "isFavorited": {
+                  "type": "boolean"
+                },
+                "contactPhone": {
+                  "type": "string"
+                },
+                "allowCalls": {
+                  "type": "boolean"
+                },
+                "allowChat": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "sellerId",
+                "status",
+                "brandId",
+                "modelId",
+                "priceAmount",
+                "priceCurrency",
+                "displayPriceTmt",
+                "photoKeys",
+                "photoCount",
+                "cityId",
+                "publishedAt",
+                "sellerTrust",
+                "allowCalls",
+                "allowChat"
               ]
             }
           },
@@ -4928,6 +5425,233 @@
         ],
         "additionalProperties": false
       },
+      "SignInMethodChangeRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "pattern": "^\\+993[67]\\d{7}$"
+              }
+            },
+            "required": [
+              "phone"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email"
+              }
+            },
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SignInMethodChangeVerifyRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "pattern": "^\\+993[67]\\d{7}$"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "phone",
+              "code"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "email",
+              "code"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SignInMethodChangeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\+993[67]\\d{7}$"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "format": "email"
+          },
+          "phoneVerified": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "seller",
+              "moderator",
+              "admin"
+            ]
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletionScheduledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "email",
+          "phoneVerified",
+          "displayName",
+          "role",
+          "avatarUrl",
+          "locale",
+          "createdAt",
+          "deletionScheduledAt"
+        ]
+      },
+      "AccountDeletionRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "pattern": "^\\+993[67]\\d{7}$"
+              }
+            },
+            "required": [
+              "phone"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email"
+              }
+            },
+            "required": [
+              "email"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "AccountDeletionRequestResponse": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resendInSeconds": {
+            "type": "integer"
+          },
+          "testCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "resendInSeconds"
+        ]
+      },
+      "AccountDeletionConfirmRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "pattern": "^\\+993[67]\\d{7}$"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "phone",
+              "code"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "maxLength": 254,
+                "format": "email"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^\\d{6}$"
+              }
+            },
+            "required": [
+              "email",
+              "code"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
       "CreateReportRequest": {
         "type": "object",
         "properties": {
@@ -6709,8 +7433,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -6757,8 +7488,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -7316,8 +8054,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -7551,8 +8296,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -7599,8 +8351,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -7647,8 +8406,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -7691,15 +8457,34 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+993[67]\\d{7}$"
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      }
+                    },
+                    "required": [
+                      "phone"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      }
+                    },
+                    "required": [
+                      "email"
+                    ],
+                    "additionalProperties": false
                   }
-                },
-                "required": [
-                  "phone"
                 ]
               }
             }
@@ -7749,8 +8534,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -7793,24 +8585,52 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+993[67]\\d{7}$"
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      },
+                      "deviceLabel": {
+                        "type": "string",
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "phone",
+                      "code"
+                    ],
+                    "additionalProperties": false
                   },
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{6}$"
-                  },
-                  "deviceLabel": {
-                    "type": "string",
-                    "maxLength": 200
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      },
+                      "deviceLabel": {
+                        "type": "string",
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "code"
+                    ],
+                    "additionalProperties": false
                   }
-                },
-                "required": [
-                  "phone",
-                  "code"
                 ]
               }
             }
@@ -7839,7 +8659,13 @@
                         },
                         "phone": {
                           "type": "string",
+                          "nullable": true,
                           "pattern": "^\\+993[67]\\d{7}$"
+                        },
+                        "email": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -7863,6 +8689,7 @@
                       "required": [
                         "id",
                         "phone",
+                        "email",
                         "displayName",
                         "role"
                       ]
@@ -7894,8 +8721,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -7991,8 +8825,846 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/sign-in-methods/request": {
+      "post": {
+        "summary": "Request a code to add or replace a Sign-in Method",
+        "tags": [
+          "Identity"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      }
+                    },
+                    "required": [
+                      "phone"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      }
+                    },
+                    "required": [
+                      "email"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sign-in Method code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resendInSeconds": {
+                      "type": "integer"
+                    },
+                    "testCode": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "requestId",
+                    "resendInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or rate-limit error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Signed-in User no longer exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/sign-in-methods/verify": {
+      "post": {
+        "summary": "Confirm and apply a Sign-in Method change",
+        "tags": [
+          "Identity"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      }
+                    },
+                    "required": [
+                      "phone",
+                      "code"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "code"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sign-in Method changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^\\+993[67]\\d{7}$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "email"
+                    },
+                    "phoneVerified": {
+                      "type": "boolean"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "buyer",
+                        "seller",
+                        "moderator",
+                        "admin"
+                      ]
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "deletionScheduledAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "phone",
+                    "email",
+                    "phoneVerified",
+                    "displayName",
+                    "role",
+                    "avatarUrl",
+                    "locale",
+                    "createdAt",
+                    "deletionScheduledAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, expired, or used code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Signed-in User no longer exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sign-in Method belongs to another User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account-deletion/request": {
+      "post": {
+        "summary": "Request a code to delete the account holding a phone or email",
+        "description": "Public. Answers the same way whether or not a User holds the value.",
+        "tags": [
+          "Identity"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      }
+                    },
+                    "required": [
+                      "phone"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      }
+                    },
+                    "required": [
+                      "email"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Deletion code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resendInSeconds": {
+                      "type": "integer"
+                    },
+                    "testCode": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "requestId",
+                    "resendInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or rate-limit error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account-deletion/confirm": {
+      "post": {
+        "summary": "Confirm a deletion code and start the 30-day grace period",
+        "description": "Public. A valid code for a value no User holds gets the same 204 and changes nothing.",
+        "tags": [
+          "Identity"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^\\+993[67]\\d{7}$"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      }
+                    },
+                    "required": [
+                      "phone",
+                      "code"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email"
+                      },
+                      "code": {
+                        "type": "string",
+                        "pattern": "^\\d{6}$"
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "code"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Code accepted"
+          },
+          "400": {
+            "description": "Validation error, or INVALID_OTP for any wrong, expired, used, locked, or missing code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -8222,8 +9894,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -8270,8 +9949,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -8318,8 +10004,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -8480,8 +10173,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -8612,6 +10312,22 @@
             "required": false,
             "name": "condition",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc",
+                "year_desc",
+                "year_asc",
+                "mileage_asc"
+              ]
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
           }
         ],
         "responses": {
@@ -8625,10 +10341,22 @@
                     "totalMatching": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "priceMinTmt": {
+                      "type": "number",
+                      "nullable": true,
+                      "minimum": 0
+                    },
+                    "priceMaxTmt": {
+                      "type": "number",
+                      "nullable": true,
+                      "minimum": 0
                     }
                   },
                   "required": [
-                    "totalMatching"
+                    "totalMatching",
+                    "priceMinTmt",
+                    "priceMaxTmt"
                   ]
                 }
               }
@@ -8651,8 +10379,15 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },
@@ -8816,8 +10551,178 @@
                         "UNAUTHORIZED",
                         "FORBIDDEN",
                         "NOT_FOUND",
+                        "USER_NOT_FOUND",
                         "CONFLICT",
                         "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings/filter-options/brands": {
+      "get": {
+        "summary": "Brand-level listing counts for the current filters",
+        "tags": [
+          "Listings"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "cityId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "priceMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": false,
+            "name": "priceMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "yearMin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "required": false,
+            "name": "yearMax",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "used"
+              ]
+            },
+            "required": false,
+            "name": "condition",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brands with feed-eligible listing counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "brandId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "totalMatching": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "brandId",
+                          "totalMatching"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
                         "INTERNAL"
                       ]
                     },

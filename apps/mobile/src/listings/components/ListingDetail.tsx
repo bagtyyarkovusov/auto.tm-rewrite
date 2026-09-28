@@ -6,6 +6,10 @@ import { ChevronRight, Flag, ShieldCheck } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { CatalogMaps } from "../detail/useCatalogMaps";
+import {
+  closedListingBannerKey,
+  isClosedForContact,
+} from "../detail/closedListing";
 
 import { PhotoGallery } from "./PhotoGallery";
 import { PriceDisplay } from "./PriceDisplay";
@@ -31,6 +35,8 @@ interface ListingDetailProps {
   inspectionInterestEnabled?: boolean;
   inspectionInterestOpen?: boolean;
   onInspectionInterestOpenChange?: (open: boolean) => void;
+  /** "See other Brand Model" on a closed Listing. */
+  onSeeSimilar?: () => void;
 }
 
 function buildTitle(listing: ListingDetail, maps: CatalogMaps): string {
@@ -68,9 +74,17 @@ export function ListingDetailView({
   inspectionInterestEnabled = true,
   inspectionInterestOpen = false,
   onInspectionInterestOpenChange,
+  onSeeSimilar,
 }: ListingDetailProps) {
   const { t, i18n } = useTranslation();
   const isSold = listing.status === Enums.ListingStatus.Sold;
+  // Buyers see sold/archived Listings as closed for contact; the owner view is unchanged.
+  const isClosedForBuyer = !isOwner && isClosedForContact(listing.status);
+  const closedBannerKey = isClosedForBuyer
+    ? closedListingBannerKey(listing.status)
+    : null;
+  const brandName = maps.brandName(listing.brandId);
+  const modelName = maps.modelName(listing.modelId);
 
   const specs: SpecItemProps[] = [
     { label: t("year"), value: listing.year ? String(listing.year) : undefined },
@@ -129,7 +143,10 @@ export function ListingDetailView({
 
   return (
     <ScrollView className="flex-1">
-      <PhotoGallery media={listing.media} />
+      <PhotoGallery
+        media={listing.media}
+        banner={closedBannerKey ? t(closedBannerKey) : undefined}
+      />
 
       <View className="px-5 py-4 gap-3">
         {/* Title + status */}
@@ -138,7 +155,7 @@ export function ListingDetailView({
             <Text className="min-w-0 flex-1 text-2xl font-heading text-foreground" numberOfLines={2}>
               {buildTitle(listing, maps) || t("listing")}
             </Text>
-            {isSold && (
+            {isSold && !isClosedForBuyer && (
               <Badge variant="secondary" className="shrink-0 px-2 py-0.5">
                 <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
               </Badge>
@@ -154,7 +171,22 @@ export function ListingDetailView({
           acceptsExchange={listing.acceptsExchange}
           installmentAvailable={listing.installmentAvailable}
           isOwner={isOwner}
+          muted={isClosedForBuyer}
         />
+
+        {isClosedForBuyer && onSeeSimilar && brandName && modelName && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="self-start"
+            onPress={onSeeSimilar}
+          >
+            <Text className="text-sm text-secondary-foreground" numberOfLines={1}>
+              {t("seeOtherBrandModel", { brand: brandName, model: modelName })}
+            </Text>
+            <Icon as={ChevronRight} className="size-4 text-secondary-foreground" />
+          </Button>
+        )}
 
         {visibleSpecs.length > 0 && (
           <>
@@ -204,9 +236,9 @@ export function ListingDetailView({
             cityName={maps.cityName(listing.cityId)}
             regionName={maps.regionName(listing.regionId)}
             locationText={listing.locationText}
-            contactPhone={listing.contactPhone}
-            allowCalls={listing.allowCalls}
-            phoneVerified={listing.sellerTrust?.phoneVerified}
+            contactPhone={isClosedForBuyer ? undefined : listing.contactPhone}
+            allowCalls={listing.allowCalls && !isClosedForBuyer}
+            phoneVerified={!isClosedForBuyer && listing.sellerTrust?.phoneVerified}
           />
         )}
 

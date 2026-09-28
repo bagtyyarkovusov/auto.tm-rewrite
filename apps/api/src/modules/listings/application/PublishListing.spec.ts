@@ -362,6 +362,18 @@ describe("PublishListing", () => {
 
     expect(result.listing.priceCurrency).toBe("USD");
     expect(prisma.createdListings).toHaveLength(1);
+    expect(prisma.createdListings[0]?.["priceTmt"]).toBe(
+      (validPayload.priceAmount as number) * 3.5,
+    );
+  });
+
+  it("stores a TMT price as its own priceTmt", async () => {
+    seedDraft(draftRepo, validPayload);
+
+    const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
+    await uc.execute({ draftId: "draft-1", userId: "user-1" });
+
+    expect(prisma.createdListings[0]?.["priceTmt"]).toBe(validPayload.priceAmount);
   });
 
   it("publishes an AED-priced draft when exchange rate exists", async () => {

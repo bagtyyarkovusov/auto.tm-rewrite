@@ -1,6 +1,8 @@
 # Kolesa.kz findability reference (the "Line")
 
-> **Read this before building or polishing any mobile screen.** It is the agent-facing companion to [ADR-0034](../../adr/0034-kolesa-ux-findability-reference.md): Kolesa.kz is AutoTM's reference for **UX / information architecture / findability** — *not* its visual design.
+> **Superseded for Home, search, filters, Results, Listing cards, and Listing detail (2026-09-21).** [ADR-0051](../../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) made Auto.ru the structural reference for the mobile discovery journey. For Home, the brand and model pickers, Search, Results, Sort, Search parameters, and Listing cards and detail, follow [33 — Search & discovery](../features/33-search-discovery.md) and [32 — Listings](../features/32-listings.md). Auto.ru and Kolesa captures are indexed in [the reference screens index](research/reference-screens-2026-09-21.md). Do not apply §5 (Home / cars browse), §5a (Listing card), §6 (filter funnel), §6a (Make/Model drill-in), §7 (Sort), §8 (Listing detail), the card layout in §11 (Favorites), the Home and cars-browse rows in §2–§3, or §14 decision 3 and the browse-route part of decision 7; they are kept as history. The rest of this guide applies only to other mobile screens that have no approved spec.
+
+> **Read this before building or polishing any mobile screen that has no approved spec.** It is the agent-facing companion to [ADR-0034](../../adr/0034-kolesa-ux-findability-reference.md): Kolesa.kz is AutoTM's reference for **UX / information architecture / findability** — *not* its visual design.
 >
 > **Scope boundary (do not cross):**
 > - ✅ **Mirror:** category/taxonomy structure, the search→filter funnel, content hierarchy, "where each thing lives," section placement, progressive disclosure.

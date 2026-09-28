@@ -73,7 +73,14 @@ describe("AdminAuthController e2e — admin TOTP", () => {
     await prisma.user.upsert({
       where: { phone: ADMIN_PHONE },
       update: { role: "admin" },
-      create: { phone: ADMIN_PHONE, role: "admin" },
+      create: { phone: ADMIN_PHONE, phoneVerifiedAt: new Date(), role: "admin" },
+    });
+
+    // This suite tests TOTP enrollment across sessions. Give each helper call
+    // a fresh sign-in budget so the identity backoff does not become the
+    // subject of these tests.
+    await prisma.otpRequest.deleteMany({
+      where: { channel: "phone", destination: ADMIN_PHONE },
     });
 
     const otpRes = await request

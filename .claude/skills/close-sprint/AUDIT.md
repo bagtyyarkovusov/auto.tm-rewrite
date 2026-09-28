@@ -12,8 +12,8 @@ Use bounded evidence. A grep hit is a lead, not a verdict.
 
 ## Current-state documentation
 
-- Identify invariant-changing PRs and their owning `CONTEXT.md` files.
-- Compare current code to `CONTEXT.md` and `CONTEXT-MAP.md` in both directions.
+- Identify PRs that changed documented ownership, boundaries, constraints, or important limitations.
+- Verify the relevant overview claims and map links against source and tests. Do not require prose coverage for every field, method, or route; ADR-0060 replaces that mirror requirement.
 - Propose factual corrections only; never insert future state.
 - Treat structural ambiguity as unknown until inspected.
 

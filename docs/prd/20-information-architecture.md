@@ -8,7 +8,7 @@ Five tabs. Center button is the visual "do something" CTA.
 
 | Tab | Label (RU) | Label (TK) | Label (EN) | Default route |
 |---|---|---|---|---|
-| 1 | Поиск | Gözle | Search | Feed (latest listings + MLP filters) |
+| 1 | Поиск | Gözle | Search | Home (new listings + "Brand, model" entry) |
 | 2 | Избранное | Saýlanan | Favorites | Favorites list (saved listings; S8a) |
 | 3 | + | + | + | Sell entry point |
 | 4 | Сообщения | Habarlar | Messages | Simple contact threads |
@@ -18,7 +18,7 @@ Five tabs. Center button is the visual "do something" CTA.
 
 ```
 /(tabs)/
-  index                Feed
+  index                Home
   favorites            Favorites list (saved listings; saved searches post-MLP)
   sell                 Sell entry — New listing
   chat                 Simple contact thread list
@@ -51,12 +51,12 @@ Five tabs. Center button is the visual "do something" CTA.
 
 ### Tab 1 — category browse surface (multi-vertical seam)
 
-Tab 1 is structured as a self-contained **category browse surface** (today: cars), not a hardcoded "home." Per [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) and [ADR-0036](../adr/0036-multi-vertical-seam-resolutions-mlp.md), when a second vertical lands a home-hub can slot in front of it with no rebuild, and the browse body lives in a reusable `CategoryBrowse`-style surface reached through a **dedicated filter funnel — not feed chips**. In MLP the single cars category renders as the default surface; the hub appears with the second vertical. The browse-body extraction is owned by issue #200 (blocked pending S8a), not built ahead of it.
+Tab 1 follows the Auto.ru-inspired discovery journey of [ADR-0051](../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md): **Home** (new listings and a "Brand, model" entry) → Brand picker → Model picker → a separate **Results** screen, with Search (🔍), Sort and a full-screen Search parameters form alongside. The screens, states and rejected patterns are specified in [33 — Search & discovery](features/33-search-discovery.md). ADR-0051 supersedes the "dedicated filter funnel" browse route that [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) and [ADR-0036](../adr/0036-multi-vertical-seam-resolutions-mlp.md) prescribed; their cars-first, multi-vertical direction stays, so a category hub can still slot in front of Home when a second vertical is bet on.
 
 ## Mobile navigation patterns
 
 - **Stack navigation** inside each tab via expo-router
-- **Modal sheets** for filter, login, action sheets (cancel-able from anywhere)
+- **Modal sheets** for sign-in, Sort and action sheets (cancel-able from anywhere). Search parameters is a full-screen form, not a sheet.
 - **Deep linking** opens at the correct nested route (e.g., `/chat/abc-123` lands inside the chat tab stack)
 - **Action-gated auth** — tapping any auth-required action triggers the `(auth)/phone` modal stack with intent state; returns to original screen after success
 

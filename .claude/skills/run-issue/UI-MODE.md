@@ -16,11 +16,11 @@ Apply the authority order used by the design skills:
 
 1. locked charter and accepted ADRs;
 2. target PRD/flow and the active issue/sprint delta;
-3. current-state `CONTEXT.md` and code;
+3. current source/tests and runtime evidence, located through the local overview;
 4. actual token/component/i18n sources;
 5. mutable UI guidance.
 
-For mobile IA/findability, use the Kolesa reference without copying its visual language or deferred feature breadth. For UI details, require clear user goal, affordances/signifiers, constraints, feedback, recovery, page states, accessibility, localization, and microinteraction behavior.
+For mobile discovery (Home, the brand and model pickers, Search, Results, Sort, Search parameters) and Listing cards and detail, follow ADR-0051 and the approved specs in `docs/prd/features/33-search-discovery.md` and `32-listings.md`: Auto.ru is the journey reference, never a visual template or a feature list. Use the Kolesa guide only for other mobile screens without an approved spec, and never copy its visual language or deferred feature breadth. For UI details, require clear user goal, affordances/signifiers, constraints, feedback, recovery, page states, accessibility, localization, and microinteraction behavior.
 
 ## Implementation grouping
 

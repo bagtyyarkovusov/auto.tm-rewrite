@@ -22,10 +22,9 @@ function AnonymousFavoritesEntry() {
   const { t } = useTranslation();
 
   const handleSignIn = () => {
-    useAuthIntentStore.getState().setIntent({
-      returnPath: "/(tabs)/favorites",
+    useAuthIntentStore.getState().requireSignIn(router, {
+      returnTo: "/(tabs)/favorites",
     });
-    router.push("/(auth)/phone");
   };
 
   return (
