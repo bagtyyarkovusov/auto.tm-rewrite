@@ -10,7 +10,6 @@ import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import { BadRequestException } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { FeedCursor, FeedSort, ListingFilterCriteria } from "../domain/types";
-import { FakeSellerProfilePort } from "../test/FakeSellerProfilePort";
 
 class FakeFeedRankingPort implements FeedRankingPort {
   items: Listing[] = [];
@@ -129,7 +128,6 @@ function makeUseCase(
   storage?: FakeMediaStoragePort,
   favorites?: FakeFavoriteRepository,
   cards?: FakeListingCardReadPort,
-  sellerProfiles?: FakeSellerProfilePort,
 ) {
   return new ListFeed(
     ranking ?? new FakeFeedRankingPort(),
@@ -137,7 +135,6 @@ function makeUseCase(
     storage ?? new FakeMediaStoragePort(),
     favorites ?? new FakeFavoriteRepository(),
     cards ?? new FakeListingCardReadPort(),
-    sellerProfiles ?? new FakeSellerProfilePort(),
   );
 }
 
@@ -281,33 +278,13 @@ describe("ListFeed", () => {
     await expect(uc.execute({ cursor: legacy })).rejects.toThrow(BadRequestException);
   });
 
-  it("includes sellerTrust.phoneVerified on summary DTOs", async () => {
+  it("does not return a per-Listing seller trust signal on summaries", async () => {
     ranking.items = [seedListing({ id: "l1" })];
 
     const uc = makeUseCase(ranking, exchangeRates);
     const result = await uc.execute({});
 
-    expect(result.items[0]!.sellerTrust).toEqual({ phoneVerified: true });
-  });
-
-  it("uses the seller profile for feed trust and reads a page in one batch", async () => {
-    ranking.items = [
-      seedListing({ id: "l1", sellerId: "user-1" }),
-      seedListing({ id: "l2", sellerId: "user-1" }),
-    ];
-    const profiles = new FakeSellerProfilePort();
-    profiles.profiles.set("user-1", {
-      displayName: null,
-      memberSince: new Date("2025-01-01T00:00:00Z"),
-      phoneVerified: false,
-    });
-
-    const result = await makeUseCase(
-      ranking, exchangeRates, undefined, undefined, undefined, profiles,
-    ).execute({});
-
-    expect(result.items.map((item) => item.sellerTrust.phoneVerified)).toEqual([false, false]);
-    expect(profiles.batchCalls).toBe(1);
+    expect(result.items[0]!).not.toHaveProperty("sellerTrust");
   });
 
   it("throws on missing exchange rate for non-TMT currency", async () => {
@@ -342,7 +319,6 @@ describe("ListFeed", () => {
       new FakeMediaStoragePort(),
       new FakeFavoriteRepository(),
       new FakeListingCardReadPort(),
-      new FakeSellerProfilePort(),
     );
     await uc.execute({ filters: { brandId: "brand-x", priceMin: 50000 } });
 

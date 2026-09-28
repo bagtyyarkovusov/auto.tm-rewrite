@@ -32,10 +32,6 @@ import {
   type ListingCardReadPort,
 } from "../domain/ports/ListingCardReadPort";
 import { toCardPhotos } from "../domain/CardPhotos";
-import {
-  SELLER_PROFILE_PORT,
-  type SellerProfilePort,
-} from "../domain/ports/SellerProfilePort";
 
 export interface ListFeedInput {
   /** Signed-in viewer, when the request carries one; drives `isFavorited`. */
@@ -62,8 +58,6 @@ export class ListFeed {
     private readonly favorites: FavoriteRepository,
     @Inject(LISTING_CARD_READ_PORT)
     private readonly cards: ListingCardReadPort,
-    @Inject(SELLER_PROFILE_PORT)
-    private readonly sellerProfiles: SellerProfilePort,
   ) {}
 
   async execute(input: ListFeedInput): Promise<FeedResponseDto> {
@@ -85,9 +79,6 @@ export class ListFeed {
     const rateMap = await this.buildRateMap();
     // Batched per page, never per Listing: one media read, one favorites read.
     const photosById = await this.cards.getCardPhotos(listingIds);
-    const profiles = await this.sellerProfiles.getSellerProfiles(
-      rankResult.items.map((listing) => listing.sellerId),
-    );
     const favorited =
       input.viewerId !== undefined
         ? await this.favorites.favoritedListingIds(input.viewerId, listingIds)
@@ -123,7 +114,6 @@ export class ListFeed {
         ...(listing.engineTypeId !== undefined ? { engineTypeId: listing.engineTypeId } : {}),
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
-        sellerTrust: { phoneVerified: profiles.get(listing.sellerId)?.phoneVerified ?? false },
         ...(favorited !== undefined ? { isFavorited: favorited.has(listing.id) } : {}),
       };
     });

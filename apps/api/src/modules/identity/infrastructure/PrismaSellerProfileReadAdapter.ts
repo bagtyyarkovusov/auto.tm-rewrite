@@ -19,7 +19,6 @@ export class PrismaSellerProfileReadAdapter implements SellerProfileReadPort {
         id: true,
         displayName: true,
         createdAt: true,
-        phoneVerifiedAt: true,
       },
     });
 
@@ -29,7 +28,6 @@ export class PrismaSellerProfileReadAdapter implements SellerProfileReadPort {
         {
           displayName: user.displayName,
           memberSince: user.createdAt,
-          phoneVerified: user.phoneVerifiedAt !== null,
         },
       ]),
     );

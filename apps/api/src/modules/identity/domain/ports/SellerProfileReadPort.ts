@@ -1,7 +1,6 @@
 export interface SellerProfile {
   displayName: string | null;
   memberSince: Date;
-  phoneVerified: boolean;
 }
 
 export interface SellerProfileReadPort {

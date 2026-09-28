@@ -4,7 +4,7 @@ Listings owns listing lifecycle, drafts, media associations, favorites, discover
 
 A Verified Contact Phone is independent of a User's Sign-in Methods. Preserve verification and publish gates instead of inferring contact eligibility from the identity phone. Owner mutations and public reads have different visibility and suspension rules. Banned listings cannot be restored through ordinary owner transitions.
 
-Listing detail exposes the auto-numbered public ID and seller name/join date. Detail and summary trust signals come through `SellerProfilePort`, backed by identity's public `GetSellerProfiles` read. The phone badge reflects the User's verified phone Sign-in Method, not the separately verified Listing contact number; list reads batch seller profiles.
+Listing detail exposes the auto-numbered public ID and the seller's display name and join date through `SellerProfilePort`, backed by identity's public `GetSellerProfiles` read. Summaries carry no seller data. Under ADR-0056 no response carries a per-Listing phone-trust signal; every displayed contact number is already verified.
 
 Media upload staging and server attachment are distinct steps. Preserve ownership checks, image limits, ordering, and variant behavior. Database columns alone do not guarantee consistency among every optional catalog ID; inspect the actual validators before claiming a relationship is enforced.
 

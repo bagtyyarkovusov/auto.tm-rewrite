@@ -226,7 +226,6 @@ const validListingSummary = {
   photoCount: 0,
   cityId: "550e8400-e29b-41d4-a716-446655440004",
   publishedAt: "2026-05-17T14:32:01Z",
-  sellerTrust: { phoneVerified: true },
 };
 
 function without<T extends object>(obj: T, key: keyof T): Partial<T> {
@@ -257,11 +256,13 @@ describe("ListingSummarySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects missing sellerTrust", () => {
-    const withoutSellerTrust = { ...validListingSummary };
-    delete (withoutSellerTrust as Partial<typeof withoutSellerTrust>).sellerTrust;
-    const result = ListingSummarySchema.safeParse(withoutSellerTrust);
-    expect(result.success).toBe(false);
+  it("does not carry a per-Listing seller trust signal", () => {
+    const result = ListingSummarySchema.safeParse({
+      ...validListingSummary,
+      sellerTrust: { phoneVerified: true },
+    });
+    expect(result.success).toBe(true);
+    expect(result.data).not.toHaveProperty("sellerTrust");
   });
 
   it("accepts card fields and a signed-in isFavorited flag", () => {
@@ -375,12 +376,11 @@ describe("ListingDetailSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects missing sellerTrust", () => {
-    const withoutSellerTrust = { ...validListingSummary };
-    delete (withoutSellerTrust as Partial<typeof withoutSellerTrust>).sellerTrust;
+  it("does not carry a per-Listing seller trust signal", () => {
     const result = ListingDetailSchema.safeParse({
-      ...withoutSellerTrust,
+      ...validListingSummary,
       ...sellerFields,
+      sellerTrust: { phoneVerified: true },
       media: [],
       allowCalls: true,
       allowChat: true,
@@ -392,7 +392,8 @@ describe("ListingDetailSchema", () => {
       acceptsExchange: false,
       installmentAvailable: false,
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    expect(result.data).not.toHaveProperty("sellerTrust");
   });
 
   it("requires the public number and seller join date", () => {

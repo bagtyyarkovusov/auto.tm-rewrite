@@ -4,10 +4,6 @@ import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
 import {
-  SELLER_PROFILE_PORT,
-  type SellerProfilePort,
-} from "../domain/ports/SellerProfilePort";
-import {
   FAVORITE_REPOSITORY,
   type FavoriteRepository,
 } from "../domain/ports/FavoriteRepository";
@@ -33,8 +29,6 @@ export class ListMyFavorites {
     private readonly favorites: FavoriteRepository,
     @Inject(LISTING_CARD_READ_PORT)
     private readonly cards: ListingCardReadPort,
-    @Inject(SELLER_PROFILE_PORT)
-    private readonly sellerProfiles: SellerProfilePort,
   ) {}
 
   async execute(input: ListMyFavoritesInput): Promise<MyFavoritesResponseDto> {
@@ -59,9 +53,6 @@ export class ListMyFavorites {
     const items = favoriteResult.items
       .map((f) => cardMap.get(f.listingId))
       .filter((s): s is NonNullable<typeof s> => s !== undefined);
-    const profiles = await this.sellerProfiles.getSellerProfiles(
-      items.map((item) => item.sellerId),
-    );
 
     return {
       items: items.map((item) => ({
@@ -83,7 +74,6 @@ export class ListMyFavorites {
         engineTypeId: item.engineTypeId,
         cityId: item.cityId,
         publishedAt: item.publishedAt.toISOString(),
-        sellerTrust: { phoneVerified: profiles.get(item.sellerId)?.phoneVerified ?? false },
         contactPhone: item.contactPhone,
         allowCalls: item.allowCalls,
         allowChat: item.allowChat,

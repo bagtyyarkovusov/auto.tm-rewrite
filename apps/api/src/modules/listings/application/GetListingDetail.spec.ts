@@ -190,12 +190,12 @@ describe("GetListingDetail", () => {
     expect(result.displayPriceTmt).toBe(100000);
   });
 
-  it("includes sellerTrust.phoneVerified on detail DTO", async () => {
+  it("does not return a per-Listing seller trust signal", async () => {
     seedListing();
     const uc = makeUseCase(repo, mediaRepo, exchangeRates, storage, favorites);
     const result = await uc.execute({ listingId: "listing-1" });
 
-    expect(result.sellerTrust).toEqual({ phoneVerified: true });
+    expect(result).not.toHaveProperty("sellerTrust");
   });
 
   it("returns a named seller, join date, and public number from persisted data", async () => {
@@ -204,7 +204,6 @@ describe("GetListingDetail", () => {
     profiles.profiles.set("user-1", {
       displayName: "Aýgül",
       memberSince: new Date("2024-06-10T12:00:00Z"),
-      phoneVerified: true,
     });
 
     const result = await makeUseCase(
@@ -218,21 +217,22 @@ describe("GetListingDetail", () => {
     });
   });
 
-  it("returns null display name and the port's false phone verification", async () => {
+  it("returns a null display name for an unnamed seller", async () => {
     seedListing();
     const profiles = new FakeSellerProfilePort();
     profiles.profiles.set("user-1", {
       displayName: null,
       memberSince: new Date("2024-06-10T12:00:00Z"),
-      phoneVerified: false,
     });
 
     const result = await makeUseCase(
       repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
     ).execute({ listingId: "listing-1" });
 
-    expect(result.seller.displayName).toBeNull();
-    expect(result.sellerTrust.phoneVerified).toBe(false);
+    expect(result.seller).toEqual({
+      displayName: null,
+      memberSince: "2024-06-10T12:00:00.000Z",
+    });
   });
 
   it("returns 404 for soft-deleted listing", async () => {

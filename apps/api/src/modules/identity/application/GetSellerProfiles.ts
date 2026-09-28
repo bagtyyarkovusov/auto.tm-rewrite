@@ -6,7 +6,7 @@ import {
   type SellerProfileReadPort,
 } from "../domain/ports/SellerProfileReadPort";
 
-/** Public identity read for listing seller cards and trust signals. */
+/** Public identity read for the seller name and join date shown on Listings. */
 @Injectable()
 export class GetSellerProfiles {
   constructor(

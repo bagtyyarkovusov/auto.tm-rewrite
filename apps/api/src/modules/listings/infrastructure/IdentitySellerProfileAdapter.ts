@@ -16,8 +16,4 @@ export class IdentitySellerProfileAdapter implements SellerProfilePort {
   async getSellerProfile(userId: string): Promise<SellerProfile | null> {
     return (await this.getSellerProfilesUseCase.execute([userId])).get(userId) ?? null;
   }
-
-  getSellerProfiles(userIds: string[]): Promise<Map<string, SellerProfile>> {
-    return this.getSellerProfilesUseCase.execute(userIds);
-  }
 }
