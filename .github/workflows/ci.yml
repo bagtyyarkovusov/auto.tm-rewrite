@@ -27,8 +27,8 @@ jobs:
           node-version: 22
 
       # "docs" only when every file changed since the previous push to main is
-      # Markdown or under docs/. Steps below run on anything else, including
-      # a previous commit that cannot be fetched.
+      # Markdown or under docs/. A previous commit that cannot be fetched
+      # takes the full lane; a failed lane step fails the job.
       - name: Choose the CI lane
         id: lane
         env:

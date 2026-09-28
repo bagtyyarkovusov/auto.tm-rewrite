@@ -37,7 +37,8 @@ jobs:
           node-version: 22
 
       # "docs" only when every changed file is Markdown or under docs/.
-      # Steps below run on anything else, including a failed lane choice.
+      # An empty change or unreadable base takes the full lane; a failed
+      # lane step fails the job.
       - name: Choose the CI lane
         id: lane
         run: node scripts/ci-lane.mjs HEAD^1

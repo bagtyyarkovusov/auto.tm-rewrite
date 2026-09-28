@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { chooseLane, laneFor } from "./ci-lane.mjs";
@@ -30,6 +31,7 @@ function repo(t) {
   git("init", "-q");
   git("config", "user.email", "ci@example.test");
   git("config", "user.name", "CI");
+  git("config", "commit.gpgsign", "false");
   const commit = (files) => {
     for (const [path, content] of Object.entries(files)) {
       mkdirSync(dirname(join(cwd, path)), { recursive: true });
@@ -67,4 +69,14 @@ test("a missing, all-zero, or unknown base takes the full lane", (t) => {
   const unknown = chooseLane("1234567890abcdef1234567890abcdef12345678", cwd);
   assert.equal(unknown.lane, "full");
   assert.match(unknown.reason, /could not list changed files/);
+});
+
+test("the command writes the lane to GITHUB_OUTPUT for the workflow", (t) => {
+  const { cwd, commit } = repo(t);
+  const base = commit({ "src/app.ts": "one" });
+  commit({ "docs/a.md": "two" });
+  const output = join(cwd, "github-output");
+  const script = resolve(dirname(fileURLToPath(import.meta.url)), "ci-lane.mjs");
+  execFileSync(process.execPath, [script, base], { cwd, env: { ...process.env, GITHUB_OUTPUT: output } });
+  assert.equal(readFileSync(output, "utf8"), "lane=docs\n");
 });
