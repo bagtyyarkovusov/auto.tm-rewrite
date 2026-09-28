@@ -30,15 +30,17 @@ Scope is intentionally **minimal** for MVP — full marketplace functionality st
 - `@auto-tm/web` consuming `next@^16.2.2`, workspace deps `@auto-tm/contracts` + `@auto-tm/ui`
 - **Legal pages** — `/[locale]/legal/privacy` and `/[locale]/legal/terms` with RU/TK/EN content, print-friendly CSS, effective date, and static generation
 - **Trust info page** — `/[locale]/trust` with static RU/TK/EN content explaining verified phones, condition disclosure, VIN history, and the coming-soon inspection pilot; linked from the landing page (`/[locale]`)
-- No listing/dealer/blog routes yet; no SSR data fetching; no OG metadata logic; no Universal Links / App Links manifests
+- **Account deletion page** — `/[locale]/account/delete` (Google Play's deletion link; `/account/delete` redirects to a locale through the middleware). A person picks phone or email, enters the value, gets a Sign-in Code, and confirms it; the done state says the 30-day grace period has started for an account that uses the value. RU/TK/EN copy in `account/delete/content.ts`; the client form (`AccountDeletionForm.tsx`) calls Server Functions in `account/delete/actions.ts`, which call `POST /api/v1/account-deletion/request` and `/confirm` through `src/lib/account-deletion.ts`. The API has no CORS, so the browser never calls it directly. That module validates with the `@auto-tm/contracts` `AuthSchemas.AccountDeletion*` schemas, forwards the visitor's first `X-Forwarded-For` entry (so the API's per-IP code budget applies per visitor) and the page locale as `Accept-Language`, ignores any `testCode`, and maps `ErrorResponse.code` to plain RU/TK/EN messages (`RATE_LIMITED`, `INVALID_OTP`, `VALIDATION_FAILED`, anything else → "try again later"). Every message after a request is worded to be true whether or not a User holds the value, so the page reveals no more than the API. The privacy policy's deletion paragraph links to it (legal inline markup supports `[text](/path)` links via `legal/inline.ts`)
+- API base URL for server-side calls: `API_BASE_URL`, falling back to `NEXT_PUBLIC_API_URL`, then `http://localhost:3006/api/v1` (same order as `apps/admin`)
+- No listing/dealer/blog routes yet; no listing SSR data fetching; no OG metadata logic; no Universal Links / App Links manifests
 
 ## Public API surface
 
-None — web calls `apps/api` for listing/dealer/blog data via SSR.
+None. Web calls `apps/api` server-side: today only the public account deletion endpoints.
 
 ## Dependencies
 
-- `apps/api` (HTTP, SSR data fetching)
+- `apps/api` (HTTP from the Next.js server; public account deletion today)
 - `packages/contracts` (typed client)
 - `packages/ui` (tokens + shadcn theme)
 
@@ -65,4 +67,5 @@ Per [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md), the i
 
 - [ADR-0002](../../docs/adr/0002-stack.md) — Next.js for SSR + OG
 - [ADR-0019](../../docs/adr/0019-context-md-describes-current-state.md) — This CONTEXT.md describes current state
+- [ADR-0054](../../docs/adr/0054-phone-or-email-sign-in-share-one-user.md) — the public account deletion page accepts a phone or email and confirms with a Sign-in Code
 - [ADR-0039](../../docs/adr/0039-phased-cloud-first-hosting.md) — Railway-era hosting; web is deploy-critical for the public legal pages and ships a dependency-free `/healthz`

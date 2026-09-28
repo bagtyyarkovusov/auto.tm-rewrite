@@ -71,7 +71,7 @@ Apple App Store policy requires every app with account creation to offer in-app 
 - 30-day grace period: user can recover by signing back in with either Sign-in Method (clears `deletedAt`)
 - After 30 days: hard-delete personally identifiable data, including nulling `phone`, `email` and both verified-at times; preserve listings, messages, moderation reports, and audit rows as "Deleted user" / historical attribution for audit trail
 - API endpoint: `DELETE /api/v1/me`
-- Web deletion page (Google Play requirement): the person enters a phone or email, confirms a code sent to it, and the same 30-day grace period starts. Backed by public `POST /api/v1/account-deletion/request` and `/confirm`.
+- Web deletion page (Google Play requirement): the person enters a phone or email, confirms a code sent to it, and the same 30-day grace period starts. Backed by public `POST /api/v1/account-deletion/request` and `/confirm`, and served at `https://auto.tm/<locale>/account/delete` (linked from the privacy policy). The page's wording is the same whether or not an account uses the value.
 - Admin can see deletion requests in the audit log; cannot reverse them after the 30-day window
 - S8 deletion must preserve S7 moderation history: `ContentReport` rows survive reporter/reviewer deletion with nullable user references, no reporter/reviewer PII snapshots are stored on reports in the MLP, and reporter deletion or suspension does not invalidate existing reports.
 

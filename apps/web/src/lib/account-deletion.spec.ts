@@ -38,6 +38,12 @@ function context(fetchMock: typeof fetch, overrides: Partial<DeletionApiContext>
   };
 }
 
+function firstCall(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>) {
+  const call = fetchMock.mock.calls[0];
+  if (!call) throw new Error("the API was not called");
+  return call;
+}
+
 const codeSent = () =>
   json(200, {
     requestId: "9f2d8c1a-3b4e-4c5d-8e6f-7a8b9c0d1e2f",
@@ -70,7 +76,7 @@ describe("requestAccountDeletion", () => {
     const result = await requestAccountDeletion("phone", "61 23-45-67", context(fetchMock));
 
     expect(result).toEqual({ ok: true, destination: "+99361234567", resendInSeconds: 60 });
-    const [url, init] = fetchMock.mock.calls[0]!;
+    const [url, init] = firstCall(fetchMock);
     expect(url).toBe(`${BASE_URL}/account-deletion/request`);
     expect(init?.method).toBe("POST");
     expect(JSON.parse(String(init?.body))).toEqual({ phone: "+99361234567" });
@@ -86,7 +92,7 @@ describe("requestAccountDeletion", () => {
     const result = await requestAccountDeletion("email", "  Seller@Example.COM ", context(fetchMock));
 
     expect(result).toEqual({ ok: true, destination: "seller@example.com", resendInSeconds: 60 });
-    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({
+    expect(JSON.parse(String(firstCall(fetchMock)[1]?.body))).toEqual({
       email: "seller@example.com",
     });
   });
@@ -96,7 +102,7 @@ describe("requestAccountDeletion", () => {
 
     await requestAccountDeletion("phone", "61234567", context(fetchMock, { clientIp: null }));
 
-    expect(fetchMock.mock.calls[0]![1]?.headers).not.toHaveProperty("X-Forwarded-For");
+    expect(firstCall(fetchMock)[1]?.headers).not.toHaveProperty("X-Forwarded-For");
   });
 
   it("never exposes a test code from the response", async () => {
@@ -161,7 +167,7 @@ describe("confirmAccountDeletion", () => {
     );
 
     expect(result).toEqual({ ok: true });
-    const [url, init] = fetchMock.mock.calls[0]!;
+    const [url, init] = firstCall(fetchMock);
     expect(url).toBe(`${BASE_URL}/account-deletion/confirm`);
     expect(JSON.parse(String(init?.body))).toEqual({
       email: "seller@example.com",
