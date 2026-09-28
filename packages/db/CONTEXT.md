@@ -15,3 +15,5 @@ Deletion intentionally preserves some history while erasing or nulling personal 
 - [Tests](tests)
 - [Runtime boundary guide](../../docs/agents/typescript-runtime.md)
 - [Migration deployment](../../docs/adr/0039-phased-cloud-first-hosting.md)
+
+The seed `_legacy/cars.brands.json` is retained as the source snapshot for the S3 brand/model import recorded in the locked [catalog sprint](../../docs/prd/sprints/sprint-03-catalog.md). It is provenance, not a runtime seed input; read it only when investigating that import.
