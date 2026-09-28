@@ -22,7 +22,7 @@ Use this shape:
 - **Interrupted commands:** `<command and last known state or none>`
 - **Documentation:** `<CONTEXT/ADR/PRD status>`
 - **Context7:** `<library IDs consulted or not applicable>`
-- **Reviews:** `Standards <verdict/SHA>; Spec <verdict/SHA>`
+- **Reviews:** `Standards <verdict/SHA>; Spec <verdict/SHA>; Delta <verdict/base SHA..SHA, carries forward> or none`
 - **Next action:** `<one concrete action>`
 ```
 

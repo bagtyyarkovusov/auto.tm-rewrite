@@ -82,6 +82,7 @@ The unblocked queue is:
 \`gh issue list --label "ready-for-agent" --search "-label:blocked" --json number,title,labels\`
 
 - Interactive: the user selects an issue and invokes `run-issue <N>` in Codex desktop, Claude Code desktop, or the `claude-kimi` CLI.
+- Queue: the user gives one long-running session an ordered list of issues through [`run-queue`](../../.claude/skills/run-queue/SKILL.md). Each issue still goes through `run-issue`.
 - AFK: Sandcastle dispatch is suspended until issue #406 replaces its legacy integration path. After that issue merges, it may select eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
 
 Both paths treat the issue body as the slice contract. The parent remains a dashboard, never an executable prompt.
@@ -175,7 +176,7 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 4. Commits and pushes meaningful checkpoints, then opens a draft PR after the first checkpoint with `Closes #<N>` and one mutable `Execution state`
 5. Implements, tests, and runs the verification gate (typecheck, tests, Expo gate for mobile) while keeping the PR state current
 6. Runs independent read-only Standards and Spec reviews against the exact commit and records verdicts as PR comments
-7. Waits for required checks and squash-merges the PR; it never self-approves or closes the issue directly
+7. Sets auto-merge (`gh pr merge --auto --squash`) once both reviews pass, so GitHub squash-merges after the required `pr` check; it never self-approves or closes the issue directly
 8. Syncs `main` locally and reconciles the Sprint parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`
 
 Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.

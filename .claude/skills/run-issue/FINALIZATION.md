@@ -59,15 +59,18 @@ The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one
 - <wireframe/hi-fi/UX evidence, or omit>
 ```
 
-Mark the draft ready only after verification and both reviews pass on its current SHA.
+Mark the draft ready only after verification passes and both axes pass on its current SHA, directly or carried forward by a `Delta` review.
 
 ## Checks and merge
 
-- Wait for required checks. Pending, missing output, or an interrupted run is `unknown`, never `pass`.
+`main` is protected: it requires a pull request and the `pr` check, allows only squash merges, requires linear history, and applies to administrators. Nobody can merge a PR with a failing or pending `pr` check or push to `main` directly.
+
+- Once both axes pass on the current commit, run `gh pr ready <PR>` and then `gh pr merge <PR> --auto --squash`. GitHub merges the PR when the `pr` check passes. A new push to the PR cancels auto-merge; set it again only after the affected reviews pass on the new commit.
+- Wait for required checks, or, under [run-queue](../run-queue/SKILL.md), continue with the next issue and come back when the check finishes. Pending, missing output, or an interrupted run is `unknown`, never `pass`.
 - Repair an in-scope CI defect and push within the same three-attempt cap; repeat affected review axes.
 - On a failed check, conflict, or protection failure, leave the PR open and preserve exact state.
 - Never self-approve.
-- Squash merge with branch deletion once required checks and reviews pass.
+- Never bypass protection, merge by hand while a check is pending, or use another merge method.
 - Verify PR merge and issue closure independently from the merge command's exit status.
 
 ## Integrity and sync
