@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 # Run one issue
 
-Execute exactly one issue. Invocation authorizes the normal reservation-branch-to-merge flow; pause only at the decision boundaries below. Codex, Claude Code, and Kimi CLI may implement, review, resume, or integrate under [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Apply its model-provider rule to reviews.
+Execute exactly one issue. Invocation authorizes the normal reservation-branch-to-merge flow; pause only at the decision boundaries below. Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may implement, review, resume, or integrate under [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Apply its model-provider rule to reviews.
 
 ## Resolve the issue
 

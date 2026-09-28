@@ -2,7 +2,7 @@
 
 Use one linked worktree per agent session and retire it after its PR merges. This prevents host-created scaffold branches, canonical task branches, and full dependency trees from accumulating after successful work.
 
-The canonical `agent/issue-<N>` branch and its pull request are the durable reservation and recovery record. Codex, Claude Code, Kimi CLI, or another supported client that finds either resumes it after inspecting the issue, local and remote heads, worktree, PR body/comments/checks, running processes, and diff. It never creates a parallel attempt because the prior chat is unavailable.
+The canonical `agent/issue-<N>` branch and its pull request are the durable reservation and recovery record. Codex desktop, Claude Code desktop, the `claude-kimi` CLI, or another supported client that finds either resumes it after inspecting the issue, local and remote heads, worktree, PR body/comments/checks, running processes, and diff. It never creates a parallel attempt because the prior chat is unavailable.
 
 ## Start in the worktree you already have
 

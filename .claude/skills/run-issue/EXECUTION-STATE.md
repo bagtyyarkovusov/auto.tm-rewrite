@@ -43,4 +43,4 @@ Checkpoint commits may be small. The final squash keeps `main` history focused.
 
 ## Handoff inspection
 
-An incoming Codex, Claude Code, Kimi CLI, or other supported client inspects the issue, local and remote branch heads, worktree status, draft PR body and comments, checks, running processes, and the complete diff before changing anything. It resumes the existing record instead of creating another branch, worktree, PR, or summary document.
+An incoming Codex desktop, Claude Code desktop, `claude-kimi` CLI, or other supported client inspects the issue, local and remote branch heads, worktree status, draft PR body and comments, checks, running processes, and the complete diff before changing anything. It resumes the existing record instead of creating another branch, worktree, PR, or summary document.

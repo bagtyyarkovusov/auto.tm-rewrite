@@ -1,6 +1,6 @@
 # AutoTM agent instructions
 
-AutoTM is a vehicle marketplace monorepo. Use pnpm workspaces; workspace scripts and configuration are the source for commands and installed versions. This policy applies to Codex, Claude Desktop/Code, and Claude-Kimi.
+AutoTM is a vehicle marketplace monorepo. Use pnpm workspaces; workspace scripts and configuration are the source for commands and installed versions. This policy applies to Codex desktop, Claude Code desktop, and the `claude-kimi` CLI.
 
 ## Start with the task
 
