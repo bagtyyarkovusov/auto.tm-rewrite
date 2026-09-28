@@ -471,6 +471,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@auto-tm/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@auto-tm/ui':
         specifier: workspace:*
         version: link:../../packages/ui

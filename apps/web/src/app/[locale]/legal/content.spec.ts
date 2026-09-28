@@ -236,6 +236,14 @@ describe("privacy policy promises", () => {
   });
 });
 
+describe("privacy policy deletion link", () => {
+  it.each(locales)("links the %s policy to the account deletion page in the same language", (locale) => {
+    expect(fullText(privacyPolicy[locale])).toMatch(
+      new RegExp(`\\[[^\\]]+\\]\\(/${locale}/account/delete\\)`),
+    );
+  });
+});
+
 describe("terms of service promises", () => {
   it.each(termsPromises)("states in every locale that $name", ({ phrases }) => {
     for (const locale of locales) {
