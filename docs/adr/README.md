@@ -4,7 +4,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 
 ## Effective documentation policy
 
-[ADR-0059](0059-source-first-agent-context-and-task-scoped-guidance.md) replaces ADR-0019's exhaustive implementation mirrors with source-first, task-scoped orientation. ADR-0042 still owns vocabulary; ADR-0020 still governs all other document roles and historical mutability. Older records below remain unchanged.
+[ADR-0060](0060-source-first-agent-context-and-task-scoped-guidance.md) replaces ADR-0019's exhaustive implementation mirrors with source-first, task-scoped orientation. ADR-0042 still owns vocabulary; ADR-0020 still governs all other document roles and historical mutability. Older records below remain unchanged.
 
 ## Index
 
@@ -68,7 +68,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0056](0056-listing-contact-phones-are-verified.md) | Listing contact phones are verified (supersedes ADR-0054 publishing and seller-trust parts) | Accepted | 2026-09-22 |
 | [0057](0057-defer-the-in-app-inspection-demand-signal.md) | Defer the in-app inspection demand signal (amends ADR-0037 demand instrumentation) | Accepted | 2026-09-22 |
 | [0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) | Portable coding-agent issue execution and pull-request gates | Accepted | 2026-09-23 |
-| [0059](0059-source-first-agent-context-and-task-scoped-guidance.md) | Source-first agent context and task-scoped guidance | Accepted direction; #417 implementation/review | 2026-09-28 |
+| [0060](0060-source-first-agent-context-and-task-scoped-guidance.md) | Source-first agent context and task-scoped guidance | Accepted direction; #417 implementation/review | 2026-09-28 |
 
 ## Per-app ADRs
 

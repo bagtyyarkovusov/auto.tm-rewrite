@@ -1,96 +1,37 @@
-# Agents — auto.tm-rewrite
+# AutoTM agent instructions
 
-Same policy as `CLAUDE.md` in this repository. AI agents working in this repo should treat the two files as identical sources of truth.
+AutoTM is a vehicle marketplace monorepo. Use pnpm workspaces; workspace scripts and configuration are the source for commands and installed versions. This policy applies to Codex, Claude Desktop/Code, and Claude-Kimi.
 
-## Read first
+## Start with the task
 
-1. `GRILL-OUTCOME.md` — locked design decisions
-2. `docs/prd/03-roadmap.md` — current sprint + cross-sprint trajectory
-3. [`docs/domain/GLOSSARY.md`](docs/domain/GLOSSARY.md) — canonical vocabulary; a term's presence does not claim implementation
-4. `CONTEXT-MAP.md` — index of every `CONTEXT.md` (mirrors current code, per ADR-0019)
-5. The local `CONTEXT.md` for the area you're working in
-6. Relevant ADRs in `docs/adr/`. **Always include [ADR-0019](docs/adr/0019-context-md-describes-current-state.md) (CONTEXT.md = current state) and [ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) (doc hierarchy + mutability rules).** These two ADRs govern every artifact in the repo.
-7. `docs/prd/sprints/sprint-NN-<name>.md` — current sprint's DoD + file list + risks
+Read the request or issue and its acceptance criteria. Find the owning area through [CONTEXT-MAP.md](CONTEXT-MAP.md), read its short overview, then inspect the relevant source and tests. Load linked requirements and decisions when they govern the change. Read the roadmap and sprint plan for scheduling or sprint scope, not as universal startup material.
 
-For the full agent policy (architecture rules, never-do list, verification checklist, documentation system), read `CLAUDE.md`.
+Use the [glossary](docs/domain/GLOSSARY.md) when interpreting or changing domain terms. A definition does not establish implementation or scope. Source and runtime evidence establish current behavior; the issue and product specification establish intended behavior.
 
-## Documentation hierarchy + CONTEXT.md rule (load-bearing)
+## Follow the relevant route
 
-Two ADRs lock how docs work in this repo. Read both before editing any artifact:
-
-- **[ADR-0019](docs/adr/0019-context-md-describes-current-state.md) — CONTEXT.md describes current state.** Every `CONTEXT.md` file mirrors current implemented code, not aspirational spec. **Any PR that changes domain invariants (Prisma field, port, use-case, event, route, app/package structure) must update the relevant CONTEXT.md in the same PR.** Enforced by item 3 of the verification gate in `CLAUDE.md` and by the tracked [`run-issue`](.claude/skills/run-issue/SKILL.md) verification flow.
-
-- **[ADR-0020](docs/adr/0020-document-hierarchy-and-mutability.md) — Document hierarchy and mutability rules.** Each artifact has exactly one job + one mutability rule. PRD features describe target capability (mutable; material revisions get an ADR). Sprint files describe per-sprint DoD (mutable until the sprint starts; locked at 🟡). Retros are append-only. ADRs are immutable after merge. ADR-0020 contains the full table, the workflow for adding a new PRD, and the rules for when a PRD revision requires its own ADR.
-
-Where each kind of state lives:
-
-| Question | Answer artifact |
+| Task | Read before changing it |
 |---|---|
-| "What does this term mean?" | `docs/domain/GLOSSARY.md` |
-| "What does this feature DO when complete?" | `docs/prd/features/*.md` |
-| "What does this sprint ADD?" | `docs/prd/sprints/sprint-NN-*.md` |
-| "Why did we decide this approach?" | `docs/adr/*.md` |
-| "What's in code today?" | `CONTEXT.md` |
-| "Where are we in the trajectory?" | `docs/prd/03-roadmap.md` |
-| "What did we agree at the charter level?" | `GRILL-OUTCOME.md` |
+| Shape, ticket, implement, resume, or review an issue | [Coding workflow](docs/agents/coding-workflow.md) and its linked skill |
+| API domain logic, cross-context ownership, or domain documentation | [Domain guidance](docs/agents/domain.md) |
+| External library, framework, SDK, API, CLI, or cloud service | [Documentation lookups](docs/agents/documentation-lookups.md); resolve and query Context7 before relying on library APIs |
+| Mobile work, especially packages, Metro, or native runtime failures | [Mobile/Expo checks](docs/agents/mobile-expo.md) |
+| Mobile styling or components | [NativeWind conventions](docs/agents/nativewind-v4.md) |
+| Mobile API calls or caching | [Mobile data fetching](docs/agents/mobile-data-fetching.md) |
+| Mobile screen, navigation, or discovery | [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md), then the affected approved UI specification |
+| TypeScript imports, package exports, or shared runtime packages | [Runtime boundaries](docs/agents/typescript-runtime.md) |
+| Document roles, new PRDs, or decision/sprint changes | [Domain documentation policy](docs/agents/domain.md#document-authority) |
 
-If two artifacts try to answer the same question → that's drift. Pick the canonical one (per ADR-0020) and prune the other.
+## Guardrails
 
-## Agent skills
+- Keep domain code framework-free. Cross-context calls use injected ports or events. Prisma rows stay behind infrastructure boundaries. Use one use-case per file and test business behavior in domain/application tests.
+- Commit schema changes as migrations. `db push` is localhost-only. Store timestamps in UTC. Never commit secrets or plaintext refresh tokens; refresh state belongs to Session, not User.
+- External service egress needs an approved decision. Existing push and sign-in email delivery run in the worker. Hosting follows [ADR-0039](docs/adr/0039-phased-cloud-first-hosting.md); preserve the future TM deployment constraints.
+- Preserve `.npmrc` hoisting and mobile media limits. Follow the mobile gate before changing package resolution or compression.
+- Keep merged ADRs immutable, started sprint plans locked, and retros append-only. [ADR-0060](docs/adr/0060-source-first-agent-context-and-task-scoped-guidance.md) replaces exhaustive code mirrors with selective orientation. Update an overview when its documented boundary, constraint, ownership, or limitation changes.
 
-### Coding workflow
+## Finish with evidence
 
-Shape, specify, ticket, implement, and review through [`docs/agents/coding-workflow.md`](docs/agents/coding-workflow.md).
+Run affected typecheck, lint, and tests; before committing run the repository test and typecheck gates. Run the applicable build, runtime, integration, and UI checks from the task's guide. Report unavailable gates as missing evidence. Issue work requires a pushed reservation branch, early draft PR, durable Execution state, fixed-commit independent reviews, and green required CI before merge. See the coding workflow for the exact contract.
 
-Every implementation issue uses one pushed `agent/issue-<N>` reservation branch, one early draft pull request, and one mutable `Execution state`. Codex and Claude can resume each other's work from Git and GitHub evidence. Reviews are fresh, read-only, and fixed to the current commit; high-risk work needs one Codex and one Claude review. Implementation issues close through the merged pull request. Never query provider quota before starting.
-
-Sandcastle implementation dispatch is suspended until issue #406 replaces its legacy batch merger, host push, reviewer mutation, and direct issue-closure path with the ADR-0058 contract.
-
-### Issue tracker
-
-GitHub Issues via `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Canonical five-role vocabulary. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Canonical vocabulary — see [`docs/domain/GLOSSARY.md`](docs/domain/GLOSSARY.md). Current implementation remains multi-context — see `CONTEXT-MAP.md` and `docs/agents/domain.md`.
-
-### Mobile / Expo checks
-
-For any `mobile` issue, SDK/package debugging, Metro failure, or Expo Go runtime crash, read `docs/agents/mobile-expo.md` before changing package versions, Metro config, Codegen, or `node_modules` resolution.
-
-### Mobile discovery reference
-
-For any mobile screen, navigation, IA, or findability work, read [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md) first. Auto.ru is AutoTM's **structural reference for the mobile discovery journey**: Home, the brand and model pickers, Search, Results, Sort, and Search parameters. The approved target lives in [33 — Search & discovery](docs/prd/features/33-search-discovery.md) and, for Listing cards and Listing detail, [32 — Listings](docs/prd/features/32-listings.md). Auto.ru is a journey reference, **not** a visual template or a feature list: keep AutoTM's own Uber-style tokens and the locked five tabs, and the [00-vision anti-goals](docs/prd/00-vision.md#anti-goals-things-we-explicitly-will-not-build) and MLP scope still apply. Capture IDs (`AR-…`, `KZ-…`) are indexed in [the reference screens index](docs/prd/ui/research/reference-screens-2026-09-21.md). The [Kolesa findability guide](docs/prd/ui/kolesa-findability-reference.md) no longer governs Home, search, filters, Results, Listing cards, or Listing detail; use it only for other mobile screens that have no approved spec. Locked in [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md), which supersedes [ADR-0034](docs/adr/0034-kolesa-ux-findability-reference.md) for these surfaces.
-
-### TypeScript runtime boundaries
-
-For any TypeScript module-resolution, package `exports`, `.js`/extensionless import, or runtime-shared workspace package issue, read `docs/agents/typescript-runtime.md` first. `@auto-tm/db` and `@auto-tm/contracts` are built packages for runtime consumers; do not point their exports back at raw `src/*.ts`.
-
-### Library documentation lookups (Context7 MCP)
-
-**Use Context7 MCP for every library doc lookup.** Before writing or debugging code that touches an external library, framework, SDK, API, CLI, or cloud service — including well-known ones (React, Next.js, Prisma, Expo, Tailwind, NestJS) — resolve and query it via Context7. Your training data lags; the version we run may have renamed, removed, or changed the API you remember.
-
-The canonical workflow, the pinned library-ID table for this stack (NestJS 11, Prisma 7, Next.js 16, React 19, Expo SDK 55, NativeWind v4, TanStack Query v5, and ~25 others), and recipes for the most-touched libraries live in [`docs/agents/documentation-lookups.md`](docs/agents/documentation-lookups.md). Locked in [ADR-0017](docs/adr/0017-context7-as-canonical-doc-source.md).
-
-The verification gate requires that you consulted Context7 for every external library your change touched (or recorded in the PR description why you didn't).
-
-### Sprint + design skill set (project skills, `.claude/skills/`)
-
-Ten project-specific skills live under [`.claude/skills/`](./.claude/skills/) in Claude Code skill format (YAML frontmatter + progressive-disclosure reference files), tracked in git and reviewed via PR. This is the **only** agent-skill layer in the repo — there are no slash-command mirrors and no cross-agent copies. Locked in [ADR-0040](docs/adr/0040-repo-canonical-workflow-skills.md). Generic skills (grilling, tdd, write-a-skill, …) are user-global personal tooling and are never committed.
-
-| Skill | Phase of sprint lifecycle |
-|---|---|
-| [`shape-with-docs`](./.claude/skills/shape-with-docs/SKILL.md) | Before tickets — grills an unsettled capability, routes vocabulary and specifications to canonical docs, and delivers a reviewed shaping PR |
-| [`create-sprint-issues`](./.claude/skills/create-sprint-issues/SKILL.md) | Start of sprint — reads `docs/prd/sprints/sprint-NN-*.md`, proposes a slicing, creates parent + child issues on GitHub, bumps roadmap to 🟡 |
-| [`run-issue`](./.claude/skills/run-issue/SKILL.md) | During sprint — picks one issue, branches, optional design check, implements, PRs, self-merges, syncs main, unblocks dependents |
-| [`resume-issue`](./.claude/skills/resume-issue/SKILL.md) | During sprint — reconstructs durable Git/GitHub state and takes the safest deterministic recovery path; pauses only at an exceptional boundary |
-| [`sprint-status`](./.claude/skills/sprint-status/SKILL.md) | Anytime — read-only dashboard of current sprint, open PRs, unblocked queue, suggested next action |
-| [`close-sprint`](./.claude/skills/close-sprint/SKILL.md) | End of sprint — verifies shipped-vs-planned, detects drift, writes retro doc, proposes doc-update commits |
-| [`new-adr`](./.claude/skills/new-adr/SKILL.md) | Anytime — scaffolds a new ADR at `docs/adr/`, auto-numbers, offers PR rhythm (ADRs are immutable after merge) |
-| [`wireframe`](./.claude/skills/wireframe/SKILL.md) | Pre-implementation — low-fi structural sketch of a screen, mobile-first, brand-aware, anti-pattern-free |
-| [`hifi-design`](./.claude/skills/hifi-design/SKILL.md) | Pre-implementation — token-precise hi-fi spec with light+dark, all 5 states, motion, accessibility, trilingual copy, component shape |
-| [`design-grill`](./.claude/skills/design-grill/SKILL.md) | Pre-implementation design phase for UI-heavy issues — foundation check, wireframe + hi-fi via design subagents, handoff, then `/run-issue` |
+Repository skills live only in [.claude/skills](.claude/skills). If the host does not discover them, open the workflow's linked `SKILL.md` and follow it manually with available tools. Do not create host-specific copies. Sandcastle dispatch stays suspended pending #406. Never query provider quota before starting work.

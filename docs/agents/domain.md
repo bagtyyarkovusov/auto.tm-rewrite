@@ -1,87 +1,40 @@
-# Domain docs — multi-context layout
+# Domain and documentation guidance
 
-> **Three foundational ADRs govern domain documentation in this repo:**
-> - [ADR-0019](../adr/0019-context-md-describes-current-state.md) — `CONTEXT.md` describes **current implemented state** (mirrors code; updated in the same PR that changes invariants). Aspirational content lives in PRD features / sprint files.
-> - [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md) — full doc hierarchy + mutability rules (PRD features, sprint files, retros, ADRs, CONTEXT.md). Read this before adding a new PRD, revising a sprint file mid-flight, or editing any merged ADR.
-> - [ADR-0042](../adr/0042-domain-glossary-authority-and-mutability.md) — [`docs/domain/GLOSSARY.md`](../domain/GLOSSARY.md) is the canonical source for domain and engineering vocabulary. A term may precede implementation; it does not make `CONTEXT.md` aspirational.
+## Working in a domain
 
-This repo uses a **multi-context** layout. There is no single top-level `CONTEXT.md`. Instead:
+Use the [glossary](../domain/GLOSSARY.md) for project meanings and avoided synonyms. In particular, a Verified Contact Phone is not a Sign-in Method. A term can exist before its feature ships.
 
-- `CONTEXT-MAP.md` at the repo root is the **index** — it points to every `CONTEXT.md` in the tree
-- Each app has its own `CONTEXT.md` describing what that workspace owns **today**
-- Each bounded context under `apps/api/src/modules/<context>/` has its own `CONTEXT.md` describing its **current** domain language, invariants, ports, and events
+Find the owning area in [CONTEXT-MAP.md](../../CONTEXT-MAP.md). Read that area's overview and follow its source/test links. Inspect callers and neighboring boundaries when the change crosses contexts. Use the issue and relevant PRD for expected behavior; do not infer capability from a table, glossary entry, or historical sprint label.
 
-Skills that reason about the domain must:
+API contexts have framework-free `domain/` rules, `application/` use-cases, `infrastructure/` adapters, and `presentation/` transports. Keep Nest and Prisma out of domain code; map database rows at the infrastructure boundary. Cross-context calls go through injected ports or events rather than importing another context's internal domain/application code. Keep one use-case per file with one job, and verify business rules with domain/application tests.
 
-1. **Read the canonical glossary** for term meanings, synonyms to avoid, and bounded-context ownership.
-2. **Start at `CONTEXT-MAP.md`** to find the right context file for the area they're working in.
-3. **Read the relevant `CONTEXT.md`** for **current** domain invariants, ports, events, and implemented language (per ADR-0019, this describes shipped code, not what's planned).
-4. **Cross-reference ADRs** in `docs/adr/` and `apps/*/docs/adr/` for the "why" behind decisions.
-5. **For "what's planned but not yet shipped"**, read the relevant PRD feature file in `docs/prd/features/` or sprint file in `docs/prd/sprints/` — never CONTEXT.md (per ADR-0020).
-6. **For deferred features**, check `docs/prd/03-roadmap.md` first, then the owning feature PRD/flow. Do not infer scheduled work from old sprint labels or historical retros.
+## Document authority
 
-## File locations
+[ADR-0060](../adr/0060-source-first-agent-context-and-task-scoped-guidance.md) supersedes ADR-0019's exhaustive implementation mirrors and amends the CONTEXT.md role in ADR-0020/0042. Historical ADRs retain their original text; consult the [ADR index](../adr/README.md) for supersession.
 
-| File | Purpose |
+| Question | Read or update |
 |---|---|
-| `/docs/domain/GLOSSARY.md` | Canonical domain and engineering terms; no implementation status, feature scope, or translations |
-| `/CONTEXT-MAP.md` | Index of every CONTEXT.md |
-| `/apps/api/CONTEXT.md` | API service overview, layering rules |
-| `/apps/api/src/modules/<context>/CONTEXT.md` | Per-bounded-context domain language, ports, events |
-| `/apps/admin/CONTEXT.md` | Admin app overview |
-| `/apps/web/CONTEXT.md` | Public web app overview |
-| `/apps/mobile/CONTEXT.md` | Mobile app overview |
-| `/apps/sms-gateway/CONTEXT.md` | SMS gateway service |
-| `/apps/phone-agent/CONTEXT.md` | Kotlin Android phone agent |
-| `/apps/worker/CONTEXT.md` | BullMQ worker |
-| `/packages/db/CONTEXT.md` | Prisma schema overview |
-| `/packages/contracts/CONTEXT.md` | Shared type contracts |
-| `/packages/ui/CONTEXT.md` | Design tokens + shared components |
-| `/docs/adr/` | Global ADRs (cross-cutting decisions) |
-| `/apps/*/docs/adr/` | Per-app ADRs (UI choices, frame­work-specific) |
+| What does a term mean? | [Glossary](../domain/GLOSSARY.md), governed by [ADR-0042](../adr/0042-domain-glossary-authority-and-mutability.md) |
+| What is implemented? | Source, schema, tests, and runtime evidence |
+| Where should I look and what boundary matters? | Map and owning CONTEXT.md |
+| What should a capability do? | Owning PRD feature or flow |
+| What must this task deliver? | Issue acceptance criteria and linked specification |
+| Why was this chosen? | Relevant ADR or charter decision |
+| What is scheduled? | Roadmap and relevant sprint plan |
+| What did this attempt finish? | The PR's Execution state |
 
-## CONTEXT.md template
+For new PRDs, material capability revisions, or sprint changes, follow [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md). Merged ADRs are immutable; write a superseding ADR. Started sprint plans stay locked and retros are append-only. Semantic vocabulary changes and ownership changes follow ADR-0042; routine definitions go into the glossary. User-facing copy belongs to approved designs and i18n resources.
 
-Every `CONTEXT.md` follows this skeleton:
+## Writing local overviews
 
-```markdown
-# <Context name>
+Keep only material that helps someone choose the right code or avoid a non-obvious mistake:
 
-## Purpose
-<one paragraph — what this context is for>
+- What this area owns and where its responsibility ends.
+- Current constraints or important limitations, with links to evidence.
+- The few source, test, specification, or decision entry points needed to investigate it.
 
-## Owns (entities + tables)
-- `EntityA` — <one-line description>
-- `EntityB` — ...
+Headings are optional; do not create empty sections. Do not inventory every field, method, route, event payload, dependency version, or file. Do not copy resolved bugs, task progress, tutorials, or future specifications into an overview.
 
-## Invariants
-- <a rule that always holds, e.g. "a Listing has exactly one User as owner">
-- <another rule>
+Update an overview in the same PR when its documented ownership, boundary, constraint, or important limitation changes. Routine internal changes do not independently require prose updates. Update the map when context ownership or locations change. Keep source links accurate; documentation cannot replace inspecting implementation.
 
-## Ports exposed (for other contexts to consume)
-- `interface XReadPort { ... }`
-
-## Ports consumed (from other contexts)
-- `SomethingReadPort` from `<other context>`
-
-## Events emitted
-- `EventName` — fired when <condition>; payload: `{ ... }`
-
-## Events consumed
-- `EventName` from `<other context>` — handler: `<UseCase>`
-
-## Notable decisions (ADR refs)
-- ADR-0006 (auth)
-- ADR-0009 (notifications) — for the FCM port abstraction
-```
-
-## When to update a CONTEXT.md
-
-- **Add a new entity / table** → update Owns
-- **Change a domain invariant** → update Invariants (consider an ADR if it's an architectural shift)
-- **Add a new port or event** → update Ports / Events
-- **Rename or split a context** → update CONTEXT.md + CONTEXT-MAP.md + write an ADR
-- **Move a planned capability between phases** → update roadmap + owning PRD/flow; add an ADR if the move changes material capability scope
-- **Close a phase/beta gate** → verify `CONTEXT-MAP.md`, local `CONTEXT.md` files, roadmap bet table, and open issues agree before marking the phase complete
-
-Treat `CONTEXT.md` as living code documentation — drift = bugs.
+Generic domain-modeling skills sometimes call their glossary CONTEXT.md. In AutoTM, route those writes to `docs/domain/GLOSSARY.md`; our local CONTEXT.md files are orientation notes. Do not introduce a second glossary or copy global skills into the repo.

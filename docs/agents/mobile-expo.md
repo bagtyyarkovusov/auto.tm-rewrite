@@ -95,4 +95,4 @@ cd apps/mobile/android
 
 ## Documentation duty
 
-If this checklist changes the diagnosis, update `apps/mobile/CONTEXT.md`. If it changes the architecture decision, add a dated ADR or errata note instead of leaving stale guidance in agent docs.
+Update this guide when the operating procedure changes. Update `apps/mobile/CONTEXT.md` only when its documented boundary, constraint, or important limitation changes. Keep individual diagnoses in task evidence. Supersede changed architecture decisions with a new ADR; preserve merged ADR text.

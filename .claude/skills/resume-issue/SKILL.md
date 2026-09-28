@@ -13,7 +13,7 @@ Git and GitHub state, not the prior chat, own recovery. Preserve the previous at
 
 ## Resolve and inspect
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, the roadmap, glossary, CONTEXT map, ADR-0019, ADR-0020, ADR-0058, the issue, its references, and the latest durable state.
+1. Follow [AGENTS.md](../../../AGENTS.md) and [the coding workflow](../../../docs/agents/coding-workflow.md). Read the issue, its governing references, and the latest durable state. Load affected overviews, source, tests, and relevant vocabulary; load roadmap/sprint/charter decisions only when they govern this task.
 2. If `$issue` is empty, list candidates from local/remote `agent/issue-*` branches, worktrees, blocked execution states, and open PRs; require selection.
 3. Inspect issue/dependencies, local and remote heads, worktree status and diff, commits versus `main`, PR body/comments/checks, review SHAs, and running processes. Treat missing or interrupted results as `unknown`.
 4. Classify the attempt as reservation-only, local changes, pushed checkpoints without PR, open draft/ready PR, or merged PR with bookkeeping drift.

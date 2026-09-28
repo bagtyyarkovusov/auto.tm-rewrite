@@ -123,7 +123,7 @@ if (existsSync(packagePath)) {
 if (packageJson?.scripts?.["check:glossary"] !== "node scripts/check-domain-glossary.mjs") {
   errors.push("package.json is missing the check:glossary script");
 }
-if (packageJson?.scripts?.test !== "pnpm test:glossary && turbo run test") {
+if (packageJson?.scripts?.test !== "pnpm test:agent-docs && pnpm test:glossary && turbo run test") {
   errors.push("package.json does not run glossary tests in the root test gate");
 }
 requireMarkdownLink("docs/domain/GLOSSARY.md", "../adr/0042-domain-glossary-authority-and-mutability.md", "docs/domain/GLOSSARY.md is missing its ADR-0042 link");
@@ -142,7 +142,7 @@ for (const workflow of ["ci.yml", "pr-checks.yml"]) {
 
 for (const [source, target, diagnostic] of [
   [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/domain/GLOSSARY.md", "shape-with-docs is missing its glossary link"],
-  [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/adr/0019-context-md-describes-current-state.md", "shape-with-docs is missing its ADR-0019 link"],
+  [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/adr/0060-source-first-agent-context-and-task-scoped-guidance.md", "shape-with-docs is missing its ADR-0060 link"],
   [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/adr/0020-document-hierarchy-and-mutability.md", "shape-with-docs is missing its ADR-0020 link"],
   [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/adr/0042-domain-glossary-authority-and-mutability.md", "shape-with-docs is missing its ADR-0042 link"],
   [".claude/skills/shape-with-docs/SKILL.md", "../../../docs/agents/coding-workflow.md", "shape-with-docs is missing its workflow-router link"],
@@ -156,8 +156,7 @@ for (const [source, target, diagnostic] of [
   ["docs/agents/domain.md", "../domain/GLOSSARY.md", "domain documentation is missing its glossary link"],
   ["AGENTS.md", "docs/domain/GLOSSARY.md", "AGENTS.md is missing its glossary link"],
   ["AGENTS.md", "docs/agents/coding-workflow.md", "AGENTS.md is missing its workflow-router link"],
-  ["CLAUDE.md", "docs/domain/GLOSSARY.md", "CLAUDE.md is missing its glossary link"],
-  ["CLAUDE.md", "docs/agents/coding-workflow.md", "CLAUDE.md is missing its workflow-router link"],
+  ["CLAUDE.md", "AGENTS.md", "CLAUDE.md is missing its shared-policy link"],
   [".claude/skills/create-sprint-issues/SKILL.md", "../../../docs/domain/GLOSSARY.md", "create-sprint-issues is missing its glossary link"],
   ["docs/agents/issue-tracker.md", "../domain/GLOSSARY.md", "issue tracker guidance is missing its glossary link"],
   [".claude/skills/run-issue/SKILL.md", "../../../docs/domain/GLOSSARY.md", "run-issue is missing its glossary link"],

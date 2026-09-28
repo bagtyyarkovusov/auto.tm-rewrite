@@ -1,4 +1,4 @@
-# ADR-0059: Source-first agent context and task-scoped guidance
+# ADR-0060: Source-first agent context and task-scoped guidance
 
 - **Status**: Accepted direction; implementation and review tracked in #417
 - **Date**: 2026-09-28

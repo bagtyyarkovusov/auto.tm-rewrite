@@ -29,7 +29,7 @@ function createFixture(glossary) {
   writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: {
     "check:glossary": "node scripts/check-domain-glossary.mjs",
     "test:glossary": "node --test scripts/check-domain-glossary.test.mjs",
-    test: "pnpm test:glossary && turbo run test",
+    test: "pnpm test:agent-docs && pnpm test:glossary && turbo run test",
   } }));
   writeFileSync(join(root, "docs", "adr", "0042-domain-glossary-authority-and-mutability.md"), [
     "[`docs/domain/GLOSSARY.md`](../domain/GLOSSARY.md)",
@@ -40,10 +40,11 @@ function createFixture(glossary) {
   for (const name of ["0019-context-md-describes-current-state.md", "0020-document-hierarchy-and-mutability.md", "0040-repo-canonical-workflow-skills.md"]) {
     writeFileSync(join(root, "docs", "adr", name), "fixture\n");
   }
+  writeFileSync(join(root, "docs", "adr", "0060-source-first-agent-context-and-task-scoped-guidance.md"), "fixture\n");
   writeFileSync(join(root, "docs", "adr", "README.md"), "[0042](0042-domain-glossary-authority-and-mutability.md)\n");
   writeFileSync(join(root, ".claude", "skills", "shape-with-docs", "SKILL.md"), [
     "[Glossary](../../../docs/domain/GLOSSARY.md)",
-    "[ADR-0019](../../../docs/adr/0019-context-md-describes-current-state.md)",
+    "[ADR-0060](../../../docs/adr/0060-source-first-agent-context-and-task-scoped-guidance.md)",
     "[ADR-0020](../../../docs/adr/0020-document-hierarchy-and-mutability.md)",
     "[ADR-0042](../../../docs/adr/0042-domain-glossary-authority-and-mutability.md)",
     "[Workflow](../../../docs/agents/coding-workflow.md)",
@@ -65,9 +66,8 @@ function createFixture(glossary) {
   ].join("\n"));
   writeFileSync(join(root, "docs", "agents", "domain.md"), "[Glossary](../domain/GLOSSARY.md)\n");
   writeFileSync(join(root, "docs", "agents", "issue-tracker.md"), "[Glossary](../domain/GLOSSARY.md)\n");
-  for (const name of ["AGENTS.md", "CLAUDE.md"]) {
-    writeFileSync(join(root, name), "[Glossary](docs/domain/GLOSSARY.md)\n[Workflow](docs/agents/coding-workflow.md)\n");
-  }
+  writeFileSync(join(root, "AGENTS.md"), "[Glossary](docs/domain/GLOSSARY.md)\n[Workflow](docs/agents/coding-workflow.md)\n");
+  writeFileSync(join(root, "CLAUDE.md"), "[Shared policy](AGENTS.md)\n");
   for (const name of ["ci.yml", "pr-checks.yml"]) writeFileSync(join(root, ".github", "workflows", name), "- run: pnpm check:glossary\n");
   return root;
 }
@@ -177,3 +177,8 @@ for (const [label, source, target, diagnostic] of [
     assert.match(failure(root), diagnostic);
   }));
 }
+
+test("rejects a broken Claude shared-policy route", () => withFixture(valid, (root) => {
+  writeFileSync(join(root, "CLAUDE.md"), "[Shared policy](AGENTS-wrong.md)\n");
+  assert.match(failure(root), /CLAUDE.md is missing its shared-policy link/);
+}));

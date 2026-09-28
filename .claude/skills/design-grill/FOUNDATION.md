@@ -35,7 +35,7 @@ A reusable component, token, navigation contract, product rule, or prerequisite 
 - None | #...
 
 ## Completion signal
-<repository gates and same-PR CONTEXT rule>
+<repository gates and ADR-0060 overview update trigger>
 ```
 
 Preview title/body/labels/dependency update. After approval, create it with existing labels, link/comment on #N, mark #N blocked when appropriate, and stop. Do not create a tenth project skill.

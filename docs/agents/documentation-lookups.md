@@ -96,7 +96,7 @@ Context7 is for *library* docs. The repo's own docs sit alongside it. Use both:
 | **Context7** | External library API, version-specific behavior, migration guide, configuration, CLI flags |
 | `CLAUDE.md` / `AGENTS.md` | This repo's policies, never-dos, verification gates |
 | `docs/adr/*` | Why the repo made architectural choices |
-| `CONTEXT.md` (per workspace) | What a bounded context owns, its ports, its invariants |
+| `CONTEXT.md` (per workspace) | Ownership, non-obvious constraints, and source/test entry points; inspect implementation directly |
 | `docs/agents/*` | Domain-specific agent guides (this file, `mobile-expo.md`, `nativewind-v4.md`, etc.) |
 | `docs/prd/*` | Product scope, sprint state |
 
