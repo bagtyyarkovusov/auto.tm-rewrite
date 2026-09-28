@@ -19,6 +19,7 @@ packages/db/
 │   │   ├── 20260719010000_align_prisma_schema_with_existing_database/
 │   │   ├── 20260922000000_add_user_sign_in_methods/
 │   │   ├── 20260923000000_add_sign_in_code_channel/
+│   │   ├── 20260928000000_add_listing_price_tmt/
 │   │   └── migration_lock.toml
 │   └── seed/
 │       ├── _legacy/cars.brands.json   Monolingual snapshot from old backend; historical port source
@@ -38,11 +39,13 @@ packages/db/
 │   ├── index.ts              Public re-export
 │   ├── prisma.service.ts     NestJS-injectable wrapper around PrismaClient
 │   ├── seed.ts               Seed script (`pnpm db:seed`)
+│   ├── listing-prices.ts     `recomputeListingPricesTmt` — shared Listing `priceTmt` recompute query
 │   ├── promote-admin.ts      Testable core for the admin bootstrap script
 │   └── reviewer-scenario-seed.ts Testable core for the reviewer scenario seed
 ├── scripts/
 │   ├── build.cjs             Build helper that serializes prisma generate + tsc with .build.lock
 │   ├── promote-admin.ts      CLI entry point for first-admin bootstrap (`pnpm admin:promote`)
+│   ├── recompute-listing-prices.ts Operator step after an exchange-rate change (`pnpm listing-prices:recompute`)
 │   ├── reviewer-scenario.ts  CLI entry point for guarded store-review scenario seed/rotation/revocation (`pnpm reviewer:scenario`)
 │   ├── ui-fixture.ts         Local-only UI review fixture: feed listings with photos in MinIO, favourites, chat threads (`pnpm ui:fixture`)
 │   └── fixture-photos.ts     Wikimedia Commons photo list used by `ui-fixture.ts`
@@ -51,6 +54,12 @@ packages/db/
 ├── package.json
 └── CONTEXT.md
 ```
+
+Listing price in TMT:
+- `Listing.priceTmt` stores `priceAmount` converted to TMT so feed price sort and the Results price range use one currency and one index. Migration `20260928000000_add_listing_price_tmt` adds the column, backfills it from `exchange_rates`, and adds `(status, priceTmt, id)`, `(status, year, id)`, and `(status, mileageKm, id)` indexes for the feed sort orders.
+- `src/listing-prices.ts` exports `recomputeListingPricesTmt(db)` from the package root. It rewrites `priceTmt` for every Listing from the stored `<currency> -> TMT` rates (TMT keeps its amount; a foreign currency without a positive rate becomes NULL), touches only rows whose value changes, leaves `updatedAt` alone, and returns the number changed. The migration backfill uses the same expression.
+- Exchange rates have no API write path. After changing a row in `exchange_rates`, the operator runs `pnpm --filter @auto-tm/db listing-prices:recompute` against that environment's `DATABASE_URL`; it prints the number of Listings changed and warns about Listings left without a TMT price. The API's `listings/` context writes `priceTmt` itself on publish, edit, and republish.
+- `scripts/ui-fixture.ts` runs the recompute after creating its mixed-currency listings; `scripts/reviewer-scenario.ts` writes `priceTmt` directly because its listings are priced in TMT.
 
 Local UI fixture:
 - `scripts/ui-fixture.ts` (`pnpm --filter @auto-tm/db ui:fixture`) populates a local database and MinIO with active listings, real car photographs at every media variant path, favourites, and conversations so mobile screens can be reviewed on an emulator. It is idempotent.
