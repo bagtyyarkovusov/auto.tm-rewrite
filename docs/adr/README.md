@@ -37,12 +37,12 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0025](0025-edit-save-atomicity.md) | Edit-mode Save changes uses sequential best-effort, not server-side atomic bundle | Accepted | 2026-05-22 |
 | [0026](0026-edit-mode-review-first-entry.md) | Edit mode opens at Review; create mode stays linear | Accepted | 2026-05-22 |
 | [0027](0027-mlp-beta-scope.md) | MLP beta scope before full marketplace MVP | Accepted | 2026-05-22 |
-| [0028](0028-kimi-sandcastle-afk-orchestrator.md) | Kimi-Sandcastle as the AFK parallel orchestrator | Accepted | 2026-06-04 |
+| [0028](0028-kimi-sandcastle-afk-orchestrator.md) | Kimi-Sandcastle as the AFK parallel orchestrator | Superseded by ADR-0066 | 2026-06-04 |
 | [0029](0029-self-hosted-ota-air-gap-delivery.md) | Self-hosted Expo Updates (OTA) + hybrid air-gapped app delivery | Accepted | 2026-06-07 |
 | [0030](0030-reviewer-demo-account-otp-bypass.md) | Reviewer demo-account OTP bypass for store review | Accepted | 2026-06-07 |
 | [0031](0031-mobile-i18n.md) | Mobile i18n runtime — locale store + Accept-Language transport + query-key cache (implements ADR-0007; supersedes its §catalog client-side rendering) | Accepted | 2026-06-09 |
 | [0032](0032-account-deletion-grace-period.md) | Account deletion — 30-day grace, tombstone-retain content, recoverable by login | Accepted | 2026-06-09 |
-| [0033](0033-sandcastle-copy-to-worktree-dependencies.md) | Sandcastle dependencies via copy-to-worktree — prebuilt Linux node_modules cloned per worktree (supersedes ADR-0028 §D3) | Accepted | 2026-06-10 |
+| [0033](0033-sandcastle-copy-to-worktree-dependencies.md) | Sandcastle dependencies via copy-to-worktree — prebuilt Linux node_modules cloned per worktree (supersedes ADR-0028 §D3) | Superseded by ADR-0066 | 2026-06-10 |
 | [0034](0034-kolesa-ux-findability-reference.md) | Kolesa.kz as the UX / information-architecture reference (revises charter §1 auto.ru, findability scope only) | Accepted | 2026-06-10 |
 | [0035](0035-multi-vertical-platform-direction.md) | Multi-vertical platform direction — cars as the MLP wedge (extends ADR-0034; MLP stays cars-only) | Accepted | 2026-06-11 |
 | [0036](0036-multi-vertical-seam-resolutions-mlp.md) | Multi-vertical seam resolutions (MLP) — defer all four ADR-0035 seams, record the contracts (implements ADR-0035) | Accepted | 2026-06-11 |
@@ -75,6 +75,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0063](0063-mobile-refreshes-an-expired-access-token-before-sending.md) | Mobile refreshes an expired access token before sending (extends ADR-0015 refresh contract) | Accepted | 2026-09-28 |
 | [0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md) | Any supported client may review either axis, and issues have no concurrency limit (supersedes ADR-0062 and the review-provider and in-flight rules of ADR-0058/0059) | Accepted | 2026-09-28 |
 | [0065](0065-small-changes-skip-the-issue-ceremony.md) | Small changes skip the issue ceremony (amends ADR-0058 re-review and separate-axes rules, ADR-0064's both-verdicts rule, and one-branch-per-issue for batch PRs; extends ADR-0058 with no-issue PRs) | Accepted | 2026-09-28 |
+| [0066](0066-retire-sandcastle.md) | Retire Sandcastle; queue agents replace unattended dispatch (supersedes ADR-0028 and ADR-0033; amends ADR-0041's `.sandcastle/` retention and ADR-0058's Sandcastle boundaries) | Accepted | 2026-09-29 |
 
 ## Per-app ADRs
 
