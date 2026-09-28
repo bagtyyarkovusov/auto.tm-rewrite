@@ -43,12 +43,17 @@ describe("ListingGridCard", () => {
     expect(source).toContain("accessibilityState={{ selected: favorited");
   });
 
+  it("fills the saved ♥ with an explicit colour, since currentColor does not resolve natively", () => {
+    expect(source).toContain("fill-brand-500");
+    expect(source).not.toContain("fill-current");
+  });
+
   it("uses the first photo key and falls back to the cover key", () => {
     expect(source).toContain("listing.photoKeys[0] ?? listing.coverMediaKey");
   });
 
   it("exports a skeleton with the same photo shape", () => {
     expect(source).toContain("export function ListingGridCardSkeleton");
-    expect(source.match(/aspect-\[4\/3\] w-full/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(source.match(/aspect-\[3\/2\] w-full/g)?.length).toBeGreaterThanOrEqual(2);
   });
 });

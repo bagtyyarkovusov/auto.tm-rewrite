@@ -37,7 +37,7 @@ function HomeHeader() {
   const count = useListingCount({});
 
   return (
-    <View className="gap-3 pb-3">
+    <View className="gap-2">
       <View className="flex-row items-center justify-between pl-4 pr-1">
         <Text className="text-2xl font-heading text-foreground">AutoTM</Text>
         <Pressable
@@ -70,7 +70,8 @@ function HomeHeader() {
               })}
             </Text>
           ) : count.isPending ? (
-            <Skeleton className="my-1 h-3 w-24" />
+            // The default skeleton colour matches the card's bg-secondary.
+            <Skeleton className="my-1 h-3 w-24 bg-muted-foreground/25" />
           ) : null}
         </View>
         <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
@@ -94,7 +95,7 @@ function HomeHeader() {
 
 function GridSkeleton() {
   return (
-    <View className="gap-4 px-4">
+    <View className="mt-3 gap-3 px-4">
       {SKELETON_ROWS.map((row) => (
         <View key={row} className="flex-row gap-3">
           <ListingGridCardSkeleton />
@@ -187,7 +188,7 @@ export default function HomeScreen() {
         ListHeaderComponent={header}
         ListEmptyComponent={<FeedEmpty />}
         columnWrapperClassName="gap-3 px-4"
-        contentContainerClassName="gap-4 pb-4"
+        contentContainerClassName="gap-3 pb-4"
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} />
         }

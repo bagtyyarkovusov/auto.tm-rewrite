@@ -26,7 +26,7 @@ interface ListingGridCardProps {
 
 /**
  * Home "New listings" card (32 — Listings, Cards; Auto.ru AR-01-002): a
- * rounded photo with ♡ on it, the price, "Brand Model" on one line, and
+ * rounded 3:2 photo with ♡ on it, the price, "Brand Model" on one line, and
  * "year, km" or "year, New". Two sit side by side.
  */
 export const ListingGridCard = memo(function ListingGridCard({
@@ -71,7 +71,7 @@ export const ListingGridCard = memo(function ListingGridCard({
         .filter(Boolean)
         .join(", ")}
     >
-      <View className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted">
+      <View className="aspect-[3/2] w-full overflow-hidden rounded-xl bg-muted">
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
@@ -100,7 +100,7 @@ export const ListingGridCard = memo(function ListingGridCard({
             as={Heart}
             className={
               favorited
-                ? "size-5 text-brand-500 fill-current"
+                ? "size-5 text-brand-500 fill-brand-500"
                 : "size-5 text-white"
             }
           />
@@ -132,7 +132,11 @@ export const ListingGridCard = memo(function ListingGridCard({
 export function ListingGridCardSkeleton() {
   return (
     <View className="min-w-0 flex-1">
-      <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+      {/* aspect-ratio does not reach the animated Skeleton, so a plain View
+          owns the 3:2 frame. */}
+      <View className="aspect-[3/2] w-full">
+        <Skeleton className="h-full w-full rounded-xl" />
+      </View>
       {/* Each bar fills one 20dp text line, so the grid does not jump when
           the first page replaces the skeletons. */}
       <View className="mt-2 gap-0.5">
