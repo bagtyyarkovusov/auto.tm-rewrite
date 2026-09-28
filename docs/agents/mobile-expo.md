@@ -68,6 +68,8 @@ Stop Metro before handing back the task.
 
 ## Local Android build pitfalls
 
+- **Use an installed JDK 17 for Android builds and set `JAVA_HOME` explicitly.** With a JDK 21 daemon and no discoverable JDK 17, React Native 0.83.10 attempts toolchain provisioning through Foojay 0.5.0. That resolver references `IBM_SEMERU`, removed in Gradle 9, and configuration fails before compilation. Selecting the installed JDK 17 avoids that provisioning path. On macOS with Homebrew's `openjdk@17`, its home is `<brew-prefix>/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`. Do not patch `node_modules` to work around a missing local JDK. See the [upstream resolver compatibility report](https://github.com/gradle/foojay-toolchains/issues/151).
+
 - **`ANDROID_HOME` must be exported in the shell that runs `expo run:android`.** `apps/mobile/android/local.properties` is not committed and `expo prebuild` does not generate it, so a shell without the SDK env fails at configuration time with `SDK location not found`, even though `adb` may work from an interactive terminal that sources a profile. Export it before building:
 
 ```bash
