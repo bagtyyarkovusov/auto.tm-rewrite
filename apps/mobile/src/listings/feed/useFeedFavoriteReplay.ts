@@ -11,10 +11,11 @@ import { useReplayAuthActionOfKind, type AuthHref } from "../../auth/intentStore
  * sign-in returns to this screen (`returnTo`, the href the card passed to
  * `requireSignIn`). It lives on the screen, not the card: after sign-in the
  * feed refetches for the viewer and reloads only its first page, so a card
- * from a later page is gone. Writing the ♥ into the cached feeds first shows it
- * on any card that is (or comes back) on screen. The viewer's feed may still be
- * loading when the Favorite is saved and could land without the ♥, so the feeds
- * are refetched once the save succeeds.
+ * from a later page is gone. Writing the ♥ into the viewer's cached feeds first
+ * shows it on any card that is (or comes back) on screen; anonymous feeds are
+ * left alone so a later sign-out cannot show this User's ♥ (#430). The viewer's
+ * feed may still be loading when the Favorite is saved and could land without
+ * the ♥, so the feeds are refetched once the save succeeds.
  */
 export function useFeedFavoriteReplay(returnTo: AuthHref): void {
   const isFocused = useIsFocused();
@@ -25,11 +26,12 @@ export function useFeedFavoriteReplay(returnTo: AuthHref): void {
     "favorite",
     returnTo,
     (listingId) => {
-      setFeedFavorited(queryClient, listingId, true);
+      setFeedFavorited(queryClient, listingId, true, { viewerOnly: true });
       favorite.mutate(listingId, {
         onSuccess: () =>
           queryClient.invalidateQueries({ queryKey: queryKeys.listings.lists() }),
-        onError: () => setFeedFavorited(queryClient, listingId, false),
+        onError: () =>
+          setFeedFavorited(queryClient, listingId, false, { viewerOnly: true }),
       });
     },
     isFocused,

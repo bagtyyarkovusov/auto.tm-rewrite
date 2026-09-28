@@ -45,12 +45,21 @@ describe("ContactCtaBar", () => {
   it("parks a Message action on the calling Listing when the User is signed out", () => {
     expect(source).toContain("isAuthenticated === false");
     expect(source).toContain("useAuthIntentStore.getState().requireSignIn(router, {");
-    expect(source).toContain("returnTo: `/(public)/listings/${listingId}`");
+    expect(source).toContain("const listingHref = `/(public)/listings/${listingId}` as const;");
+    expect(source).toContain("returnTo: listingHref,");
     expect(source).toContain('action: { kind: "message", listingId }');
   });
 
-  it("parks a Favorite action on the calling Listing when the User is signed out", () => {
-    expect(source).toContain('action: { kind: "favorite", listingId }');
+  it("routes ♡ through the shared useListingFavorite hook with this Listing as returnTo", () => {
+    expect(source).toContain('import { useListingFavorite } from "../useListingFavorite"');
+    expect(source).toMatch(
+      /useListingFavorite\(\{[^}]*returnTo: listingHref,\s*replayAfterSignIn: true,/,
+    );
+  });
+
+  it("disables ♡ until the session check finishes, so a tap is never silently dropped", () => {
+    expect(source).toContain("const favoriteDisabled = isFavoritePending || isAuthenticated === null;");
+    expect(source).toContain("disabled={favoriteDisabled}");
   });
 
   it("never opens authentication with a bare push or a return replace", () => {
@@ -62,9 +71,7 @@ describe("ContactCtaBar", () => {
     expect(source).toContain(
       'useReplayAuthAction("message", listingId, openListingConversation)',
     );
-    expect(source).toContain(
-      'useReplayAuthAction("favorite", listingId, addFavorite)',
-    );
+    expect(source).toContain("replayAfterSignIn: true");
   });
 
   // The replay runs before `useAuth` has re-read the stored session, so it must
@@ -74,12 +81,6 @@ describe("ContactCtaBar", () => {
     expect(source).toContain("openConversation.mutate");
     expect(source).toContain("isAuthenticated === true");
     expect(source).toContain("openListingConversation();");
-  });
-
-  it("shares one add-favorite path between tap and replay", () => {
-    expect(source).toContain("const addFavorite = () => {");
-    expect(source).toContain("setOptimisticFavorited(true)");
-    expect(source).toContain("addFavorite();");
   });
 
   it("shows disabled state with muted icon when Message is unavailable", () => {
@@ -111,11 +112,6 @@ describe("ContactCtaBar", () => {
 
   it("shares the canonical auto.tm listing URL", () => {
     expect(source).toContain("`https://auto.tm/listings/${listingId}`");
-  });
-
-  it("syncs optimistic favorite state with the isFavorited prop", () => {
-    expect(source).toContain("useEffect");
-    expect(source).toContain("setOptimisticFavorited(isFavorited)");
   });
 
   it("prevents Call button text from overflowing on narrow screens", () => {

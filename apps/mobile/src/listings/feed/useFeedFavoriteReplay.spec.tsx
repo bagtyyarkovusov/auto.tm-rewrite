@@ -70,26 +70,31 @@ describe("useFeedFavoriteReplay", () => {
     expect(useAuthIntentStore.getState().replayAction).toBeNull();
   });
 
-  it("shows the ♥ in cached feeds at once and rolls it back on failure", () => {
+  it("shows the ♥ in the viewer's cached feeds at once and rolls it back on failure", () => {
     const { client } = setup();
+    const signedIn = queryKeys.listings.list({ limit: 20 }, "user-1");
     const anonymous = queryKeys.listings.list({ limit: 20 });
-    client.setQueryData<FeedPages>(anonymous, {
-      pages: [page(["p1-a"]), page(["p2-listing"])],
-      pageParams: [null, "c1"],
-    });
+    for (const key of [signedIn, anonymous]) {
+      client.setQueryData<FeedPages>(key, {
+        pages: [page(["p1-a"]), page(["p2-listing"])],
+        pageParams: [null, "c1"],
+      });
+    }
 
     hand("p2-listing");
 
-    const favorited = () =>
+    const favorited = (key: typeof signedIn) =>
       client
-        .getQueryData<FeedPages>(anonymous)
+        .getQueryData<FeedPages>(key)
         ?.pages.flatMap((p) => p.items)
         .find((item) => item.id === "p2-listing")?.isFavorited;
-    expect(favorited()).toBe(true);
+    expect(favorited(signedIn)).toBe(true);
+    // A ♥ in the anonymous feed would show after a silent sign-out (#430).
+    expect(favorited(anonymous)).toBe(false);
 
     const [, callbacks] = mockFavorite.mock.calls[0] as [string, { onError: () => void }];
     act(() => callbacks.onError());
-    expect(favorited()).toBe(false);
+    expect(favorited(signedIn)).toBe(false);
   });
 
   it("leaves the action alone while the screen is not focused", () => {
