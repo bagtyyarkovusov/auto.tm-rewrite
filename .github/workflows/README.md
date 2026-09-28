@@ -58,10 +58,10 @@ To inspect an interrupted run, identify its Compose project as `auto_tm_ci_<run-
 
 ### Turbo strict env mode (load-bearing)
 
-`turbo.json` runs in strict env mode: any variable not listed in `globalPassThroughEnv` is **stripped from task processes on any runner**. Adding a new CI-required variable means changing two places together:
+`turbo.json` runs in strict env mode: a variable not listed in `globalEnv` or `globalPassThroughEnv` is **stripped from task processes on any runner**. `globalEnv` also includes the value in task cache hashes; `globalPassThroughEnv` does not. Adding a new CI-required variable means changing two places together:
 
 1. `scripts/ci-services.sh` or the workflow job `env:` (value), and
-2. `globalPassThroughEnv` in `turbo.json` (name).
+2. `globalEnv` or `globalPassThroughEnv` in `turbo.json` (name). `APP_ENV` is in `globalEnv` so its value reaches test tasks and changes their cache key.
 
 Missing (2) was the root cause of the PR-#257 CI failure (fixed in `1a64d4e`).
 
