@@ -5,7 +5,6 @@ import { toCardPhotos, type CardPhotos } from "../domain/CardPhotos";
 import type {
   Currency,
   FeedCursor,
-  ListingFilterCriteria,
   MediaKind,
 } from "../domain/types";
 import type {
@@ -192,35 +191,6 @@ export class PrismaListingsReadRepository
     }
 
     return result;
-  }
-
-  async matchesFilters(
-    listingId: string,
-    filters: ListingFilterCriteria,
-  ): Promise<boolean> {
-    const listing = await this.getListingSummary(listingId);
-    if (!listing) return false;
-
-    if (filters.brandId && listing.brandId !== filters.brandId) return false;
-    if (filters.modelId && listing.modelId !== filters.modelId) return false;
-    if (filters.cityId && listing.cityId !== filters.cityId) return false;
-    if (filters.priceMin != null && listing.displayPriceTmt < filters.priceMin)
-      return false;
-    if (filters.priceMax != null && listing.displayPriceTmt > filters.priceMax)
-      return false;
-    if (filters.yearMin != null &&
-      (listing.year == null || listing.year < filters.yearMin))
-      return false;
-    if (filters.yearMax != null &&
-      (listing.year == null || listing.year > filters.yearMax))
-      return false;
-    if (filters.condition) {
-      // condition is not part of ListingSummary; would need to fetch full row
-      // For S4, no consumer calls this yet; return true for condition check
-      // TODO: extend ListingSummary with condition when S5 activates filters
-    }
-
-    return true;
   }
 
   /** Maps a page of rows to cards, reading exchange rates at most once. */

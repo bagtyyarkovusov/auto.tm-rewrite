@@ -13,7 +13,7 @@ Run a two-phase workflow: read-only audit first, approved writes second. Never m
 
 ## Resolve and check readiness
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, the roadmap, ADR-0019, ADR-0020, issue-tracker guidance, the sprint plan, and any existing retro.
+1. Follow [AGENTS.md](../../../AGENTS.md). Read the roadmap, sprint plan, existing retro, issue-tracker guidance, and document rules in `docs/agents/domain.md`. Load affected decisions and implementation evidence while auditing the sprint.
 2. Use `$sprint` when supplied. Otherwise inspect the most recently shipped sprint; do not silently walk backward past an existing retro.
 3. Verify the parent and every child are closed and the roadmap row is `🟢`.
 4. If any precondition fails, produce a closure-readiness report and stop before drafting or writing a retro.

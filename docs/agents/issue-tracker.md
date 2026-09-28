@@ -102,7 +102,7 @@ When domain vocabulary matters, the reading contract includes the [canonical glo
 
 1. `docs/prd/sprints/sprint-NN-<name>.md` — sprint goal + sprint-wide DoD
 2. `docs/domain/GLOSSARY.md` — relevant canonical terms and avoided synonyms (when domain vocabulary matters; not product behavior or implementation status)
-3. `apps/api/src/modules/<context>/CONTEXT.md` — domain invariants + ports (if API-side)
+3. `apps/api/src/modules/<context>/CONTEXT.md` — orientation and source/test entry points (if API-side)
 4. `docs/adr/<NNNN>-<name>.md` — relevant ADRs
 5. `CLAUDE.md` — architecture rules (no Prisma in domain, ports for cross-context, etc.)
 6. `docs/agents/mobile-expo.md` — required for `mobile` area issues, Expo package work, Metro failures, or Expo Go runtime crashes
@@ -132,7 +132,7 @@ When domain vocabulary matters, the reading contract includes the [canonical glo
 The slice is complete only when:
 1. `pnpm typecheck` passes for every workspace touched
 2. `pnpm test` passes for every workspace touched
-3. The relevant `CONTEXT.md` reflects the new state — **updated in the same PR as the code change** (per [ADR-0019](../adr/0019-context-md-describes-current-state.md)). If the PR adds or changes a Prisma field, domain invariant, port, use-case, event, route, or app/package structure, the owning `CONTEXT.md` must describe it in that PR. There is no sprint-final exception. The full hierarchy and mutability rules live in [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md).
+3. Follow [ADR-0060](../adr/0060-source-first-agent-context-and-task-scoped-guidance.md): update the relevant overview in the same PR when its documented ownership, boundary, constraint, or important limitation changes. Source and tests own routine implementation details. Other document roles and mutability rules remain governed by [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md).
 4. For mobile / Expo issues, the check gate in `docs/agents/mobile-expo.md` passes, including Expo dependency check and runtime/simulator verification when the issue is a runtime crash
 ```
 

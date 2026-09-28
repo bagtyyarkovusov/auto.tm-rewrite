@@ -61,10 +61,6 @@ class FakeListingsReadPort implements ListingsReadPort {
     return { items: [] };
   }
 
-  async matchesFilters(): Promise<boolean> {
-    return true;
-  }
-
   seed(id: string, summary: ListingSummary) {
     this.listings[id] = summary;
   }

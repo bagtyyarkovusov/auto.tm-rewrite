@@ -13,7 +13,7 @@ Execute exactly one issue. Invocation authorizes the normal reservation-branch-t
 
 ## Resolve the issue
 
-1. Read `CLAUDE.md`, `GRILL-OUTCOME.md`, `docs/prd/03-roadmap.md`, [the domain glossary](../../../docs/domain/GLOSSARY.md), `CONTEXT-MAP.md`, ADR-0019, ADR-0020, ADR-0058, `docs/agents/sprint-transitions.md`, and the issue-relevant sprint, ADR, agent, and `CONTEXT.md` files. Definitions settle vocabulary, not requirements or implementation status.
+1. Follow [AGENTS.md](../../../AGENTS.md). Read the issue and its governing specification, then the affected overview, source, and tests. Use [the glossary](../../../docs/domain/GLOSSARY.md) for relevant terms and [the coding workflow](../../../docs/agents/coding-workflow.md) for execution gates. Read roadmap, sprint, charter, and ADR material when it governs this issue; load `docs/agents/sprint-transitions.md` when reconciling sprint progress.
 2. If `$issue` is empty, list open `ready-for-agent` issues without `blocked` and ask the user to pick. Never auto-pick interactive work.
 3. Fetch the chosen issue, labels, dependencies, comments, local and remote branches/worktrees, and PRs.
 4. Require an open issue, `ready-for-agent`, no `blocked`, closed dependencies, and an intelligible problem plus testable acceptance criteria.

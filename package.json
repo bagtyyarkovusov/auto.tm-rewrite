@@ -2,7 +2,7 @@
   "name": "auto-tm-rewrite",
   "version": "0.1.0",
   "private": true,
-  "description": "AutoTM — Turkmenistan car marketplace (rewrite). Monorepo for API, web, admin, mobile, SMS gateway, phone agent, worker.",
+  "description": "AutoTM \u2014 Turkmenistan car marketplace (rewrite). Monorepo for API, web, admin, mobile, SMS gateway, phone agent, worker.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.11.0",
@@ -13,7 +13,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "test": "pnpm test:glossary && turbo run test",
+    "test": "pnpm test:agent-docs && pnpm test:glossary && turbo run test",
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
     "sandcastle": "tsx .sandcastle/main.mts",
@@ -33,7 +33,9 @@
     "compose:logs": "docker compose -f infra/compose/docker-compose.dev.yml logs -f",
     "minio:bootstrap": "node infra/minio/bootstrap.mjs",
     "minio:backup": "node infra/minio/backup.mjs",
-    "minio:restore": "node infra/minio/restore.mjs"
+    "minio:restore": "node infra/minio/restore.mjs",
+    "check:agent-docs": "node scripts/check-agent-docs.mjs",
+    "test:agent-docs": "pnpm check:agent-docs && node --test scripts/check-agent-docs.test.mjs scripts/sandcastle-suspension.test.mjs"
   },
   "devDependencies": {
     "@ai-hero/sandcastle": "file:vendor/ai-hero-sandcastle-0.5.10-d4b7db7-1df6ad8f.tgz",

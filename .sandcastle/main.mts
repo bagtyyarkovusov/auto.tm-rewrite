@@ -1,3 +1,7 @@
+// Dispatch is suspended until #406 replaces the legacy integration flow.
+// Keep this first: exit before loading credentials or starting any agents.
+import "./dispatch-suspended.mjs";
+
 // Kimi-Sandcastle — parallel planner + review orchestration loop for auto.tm-rewrite.
 //
 // Providers — pick one via SANDCASTLE_AGENT_PROVIDER in .sandcastle/.env:
