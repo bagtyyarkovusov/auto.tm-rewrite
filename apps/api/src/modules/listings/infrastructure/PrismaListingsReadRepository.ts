@@ -4,7 +4,7 @@ import { PrismaService } from "@auto-tm/db";
 import { toCardPhotos, type CardPhotos } from "../domain/CardPhotos";
 import type {
   Currency,
-  FeedCursor,
+  TimestampCursor,
   MediaKind,
 } from "../domain/types";
 import type {
@@ -144,16 +144,16 @@ export class PrismaListingsReadRepository
 
   async getListingsForOwner(
     ownerId: string,
-    query?: { cursor?: FeedCursor; limit?: number },
-  ): Promise<{ items: ListingSummary[]; nextCursor?: FeedCursor }> {
+    query?: { cursor?: TimestampCursor; limit?: number },
+  ): Promise<{ items: ListingSummary[]; nextCursor?: TimestampCursor }> {
     const result = await this.getOwnerCards(ownerId, query);
     return { ...result, items: result.items.map(toListingSummary) };
   }
 
   async getOwnerCards(
     ownerId: string,
-    query?: { cursor?: FeedCursor; limit?: number },
-  ): Promise<{ items: ListingCard[]; nextCursor?: FeedCursor }> {
+    query?: { cursor?: TimestampCursor; limit?: number },
+  ): Promise<{ items: ListingCard[]; nextCursor?: TimestampCursor }> {
     const take = (query?.limit ?? 20) + 1;
 
     const rows = await this.prisma.listing.findMany({
@@ -178,7 +178,7 @@ export class PrismaListingsReadRepository
 
     const result: {
       items: ListingCard[];
-      nextCursor?: FeedCursor;
+      nextCursor?: TimestampCursor;
     } = {
       items: await this.toCards(items),
     };

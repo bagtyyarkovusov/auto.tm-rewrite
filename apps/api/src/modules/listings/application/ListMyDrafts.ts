@@ -5,17 +5,17 @@ import {
   LISTING_DRAFT_REPOSITORY,
   type ListingDraftRepository,
 } from "../domain/ports/ListingDraftRepository";
-import type { FeedCursor } from "../domain/types";
+import type { TimestampCursor } from "../domain/types";
 
 export interface ListMyDraftsInput {
   userId: string;
-  cursor?: FeedCursor | undefined;
+  cursor?: TimestampCursor | undefined;
   limit?: number | undefined;
 }
 
 export interface ListMyDraftsResult {
   items: ListingDraft[];
-  nextCursor?: FeedCursor | undefined;
+  nextCursor?: TimestampCursor | undefined;
 }
 
 @Injectable()

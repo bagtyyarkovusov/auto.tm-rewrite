@@ -324,6 +324,54 @@ export function decodeCursor(token: string): {
     .parse(JSON.parse(json));
 }
 
+// ── Feed sort + sort-aware feed cursor ──
+
+/** The six Results orders. `newest` is the default. */
+export const FEED_SORT_VALUES = [
+  "newest",
+  "price_asc",
+  "price_desc",
+  "year_desc",
+  "year_asc",
+  "mileage_asc",
+] as const;
+export const FeedSortSchema = z.enum(FEED_SORT_VALUES);
+export type FeedSort = z.infer<typeof FeedSortSchema>;
+
+/**
+ * Decoded public-feed cursor. It names the order it was issued for, the last
+ * Listing's sort-key value (`null` once paging has reached Listings without that
+ * value, which always sort last), and the last Listing's id.
+ */
+export const FeedCursorPayloadSchema = z.union([
+  z.object({
+    sort: z.literal("newest"),
+    value: z.string().datetime(),
+    id: z.string().uuid(),
+  }),
+  z.object({
+    sort: z.enum(["price_asc", "price_desc"]),
+    value: z.number().finite().nullable(),
+    id: z.string().uuid(),
+  }),
+  z.object({
+    sort: z.enum(["year_desc", "year_asc", "mileage_asc"]),
+    value: z.number().int().nullable(),
+    id: z.string().uuid(),
+  }),
+]);
+export type FeedCursorPayload = z.infer<typeof FeedCursorPayloadSchema>;
+
+export function encodeFeedCursor(cursor: FeedCursorPayload): string {
+  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+}
+
+/** Throws when the token is not a well-formed feed cursor. */
+export function decodeFeedCursor(token: string): FeedCursorPayload {
+  const json = Buffer.from(token, "base64url").toString("utf8");
+  return FeedCursorPayloadSchema.parse(JSON.parse(json));
+}
+
 const ModelIdsFilterSchema = z.preprocess(
   (val) => {
     if (Array.isArray(val)) return val;
@@ -385,6 +433,7 @@ export const FeedQuerySchema = refineListingFilter(
     .object({
       cursor: z.string().optional(),
       limit: z.coerce.number().int().min(1).max(50).default(20),
+      sort: FeedSortSchema.default("newest"),
     })
     .merge(ListingFilterFieldsSchema),
 );
@@ -398,11 +447,18 @@ export type FeedResponse = z.infer<typeof FeedResponseSchema>;
 
 // ── Listing count query / response ──
 
-export const ListingCountQuerySchema = ListingFilterSchema;
+// `sort` is accepted so Results can send one query to the feed and the count; the
+// count and price range do not depend on it.
+export const ListingCountQuerySchema = refineListingFilter(
+  ListingFilterFieldsSchema.extend({ sort: FeedSortSchema.optional() }),
+);
 export type ListingCountQuery = z.infer<typeof ListingCountQuerySchema>;
 
+/** `priceMinTmt` / `priceMaxTmt` are both null when nothing matches. */
 export const ListingCountResponseSchema = z.object({
   totalMatching: z.number().int().nonnegative(),
+  priceMinTmt: z.number().nonnegative().nullable(),
+  priceMaxTmt: z.number().nonnegative().nullable(),
 });
 export type ListingCountResponse = z.infer<typeof ListingCountResponseSchema>;
 
@@ -430,6 +486,26 @@ export const ListingModelCountResponseSchema = z.object({
   items: z.array(ListingModelCountItemSchema),
 });
 export type ListingModelCountResponse = z.infer<typeof ListingModelCountResponseSchema>;
+
+// ── Brand count / filter-options query / response ──
+
+export const ListingBrandCountQuerySchema = ListingFilterFieldsSchema.omit({
+  brandId: true,
+  modelId: true,
+  modelIds: true,
+}).strict();
+export type ListingBrandCountQuery = z.infer<typeof ListingBrandCountQuerySchema>;
+
+export const ListingBrandCountItemSchema = z.object({
+  brandId: z.string().uuid(),
+  totalMatching: z.number().int().nonnegative(),
+});
+export type ListingBrandCountItem = z.infer<typeof ListingBrandCountItemSchema>;
+
+export const ListingBrandCountResponseSchema = z.object({
+  items: z.array(ListingBrandCountItemSchema),
+});
+export type ListingBrandCountResponse = z.infer<typeof ListingBrandCountResponseSchema>;
 
 // ── My listings / drafts responses ──
 

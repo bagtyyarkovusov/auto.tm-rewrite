@@ -24,6 +24,13 @@ import {
   ListingFilterSchema,
   encodeCursor,
   decodeCursor,
+  encodeFeedCursor,
+  decodeFeedCursor,
+  FEED_SORT_VALUES,
+  ListingCountQuerySchema,
+  ListingCountResponseSchema,
+  ListingBrandCountQuerySchema,
+  ListingBrandCountResponseSchema,
   ConditionDisclosureSchema,
 } from "../src/schemas/listings";
 import {
@@ -501,6 +508,39 @@ describe("Feed cursor helpers", () => {
   });
 });
 
+describe("Sort-aware feed cursor helpers", () => {
+  const id = "550e8400-e29b-41d4-a716-446655440000";
+
+  it("round-trips a cursor for every order", () => {
+    const cursors = [
+      { sort: "newest", value: "2026-05-17T14:32:01.000Z", id },
+      { sort: "price_asc", value: 35000.5, id },
+      { sort: "price_desc", value: null, id },
+      { sort: "year_desc", value: 2018, id },
+      { sort: "year_asc", value: null, id },
+      { sort: "mileage_asc", value: 0, id },
+    ] as const;
+    for (const cursor of cursors) {
+      expect(decodeFeedCursor(encodeFeedCursor(cursor))).toEqual(cursor);
+    }
+  });
+
+  it("rejects a value that does not fit the cursor's order", () => {
+    const token = (payload: unknown) =>
+      Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+    expect(() => decodeFeedCursor(token({ sort: "newest", value: null, id }))).toThrow();
+    expect(() => decodeFeedCursor(token({ sort: "year_asc", value: 2018.5, id }))).toThrow();
+    expect(() => decodeFeedCursor(token({ sort: "price_asc", value: "cheap", id }))).toThrow();
+    expect(() => decodeFeedCursor(token({ sort: "best_deal", value: 1, id }))).toThrow();
+  });
+
+  it("rejects the sortless cursor shape", () => {
+    expect(() =>
+      decodeFeedCursor(encodeCursor({ timestamp: "2026-05-17T14:32:01Z", id })),
+    ).toThrow();
+  });
+});
+
 describe("FeedQuerySchema", () => {
   it("accepts valid query with defaults", () => {
     const result = FeedQuerySchema.safeParse({});
@@ -508,6 +548,18 @@ describe("FeedQuerySchema", () => {
     if (result.success) {
       expect(result.data.limit).toBe(20);
     }
+  });
+
+  it("defaults sort to newest and accepts every approved order", () => {
+    const parsed = FeedQuerySchema.parse({});
+    expect(parsed.sort).toBe("newest");
+    for (const sort of FEED_SORT_VALUES) {
+      expect(FeedQuerySchema.parse({ sort }).sort).toBe(sort);
+    }
+  });
+
+  it("rejects an unknown sort", () => {
+    expect(FeedQuerySchema.safeParse({ sort: "best_deal" }).success).toBe(false);
   });
 
   it("rejects limit over 50", () => {
@@ -567,6 +619,65 @@ describe("FeedQuerySchema", () => {
   it("rejects invalid condition", () => {
     const result = FeedQuerySchema.safeParse({ condition: "broken" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("ListingCountQuerySchema / ListingCountResponseSchema", () => {
+  it("accepts an optional sort and rejects an unknown one", () => {
+    expect(ListingCountQuerySchema.parse({}).sort).toBeUndefined();
+    expect(ListingCountQuerySchema.parse({ sort: "price_desc" }).sort).toBe("price_desc");
+    expect(ListingCountQuerySchema.safeParse({ sort: "relevance" }).success).toBe(false);
+  });
+
+  it("keeps the model-filter rules", () => {
+    expect(
+      ListingCountQuerySchema.safeParse({
+        modelIds: ["550e8400-e29b-41d4-a716-446655440001"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires the price range, null when nothing matches", () => {
+    expect(
+      ListingCountResponseSchema.safeParse({
+        totalMatching: 0,
+        priceMinTmt: null,
+        priceMaxTmt: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      ListingCountResponseSchema.safeParse({
+        totalMatching: 3,
+        priceMinTmt: 35000,
+        priceMaxTmt: 350000,
+      }).success,
+    ).toBe(true);
+    expect(ListingCountResponseSchema.safeParse({ totalMatching: 3 }).success).toBe(false);
+  });
+});
+
+describe("ListingBrandCountQuerySchema / ListingBrandCountResponseSchema", () => {
+  it("accepts scalar filters and rejects brand or model filters", () => {
+    expect(
+      ListingBrandCountQuerySchema.safeParse({ cityId: "550e8400-e29b-41d4-a716-446655440003" })
+        .success,
+    ).toBe(true);
+    expect(
+      ListingBrandCountQuerySchema.safeParse({ brandId: "550e8400-e29b-41d4-a716-446655440002" })
+        .success,
+    ).toBe(false);
+    expect(
+      ListingBrandCountQuerySchema.safeParse({ modelId: "550e8400-e29b-41d4-a716-446655440001" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("parses brand counts", () => {
+    expect(
+      ListingBrandCountResponseSchema.safeParse({
+        items: [{ brandId: "550e8400-e29b-41d4-a716-446655440002", totalMatching: 4 }],
+      }).success,
+    ).toBe(true);
   });
 });
 

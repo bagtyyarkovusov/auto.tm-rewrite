@@ -1,5 +1,5 @@
 import type { ListingStatus } from "../ListingStatus";
-import type { FeedCursor } from "../types";
+import type { TimestampCursor } from "../types";
 
 export interface ListingSummary {
   id: string;
@@ -32,8 +32,8 @@ export interface ListingsReadPort {
   getListingAdminSummaries(ids: string[]): Promise<AdminListingSummary[]>;
   getListingsForOwner(
     ownerId: string,
-    query?: { cursor?: FeedCursor; limit?: number },
-  ): Promise<{ items: ListingSummary[]; nextCursor?: FeedCursor }>;
+    query?: { cursor?: TimestampCursor; limit?: number },
+  ): Promise<{ items: ListingSummary[]; nextCursor?: TimestampCursor }>;
 }
 
 export const LISTINGS_READ_PORT = Symbol("ListingsReadPort");

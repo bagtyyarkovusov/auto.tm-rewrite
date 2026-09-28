@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Price } from "./Price";
+import { Price, toPriceTmt } from "./Price";
 import { LISTING_ERROR_CODES } from "./types";
 
 describe("Price", () => {
@@ -42,5 +42,22 @@ describe("Price", () => {
     const a = Price.create(50000, "TMT");
     const b = Price.create(50000, "USD");
     expect(a.equals(b)).toBe(false);
+  });
+});
+
+describe("toPriceTmt", () => {
+  it("keeps a TMT amount as is", () => {
+    expect(toPriceTmt(100_000, "TMT", 1)).toBe(100_000);
+  });
+
+  it("converts a foreign amount at the rate to TMT", () => {
+    expect(toPriceTmt(10_000, "USD", 19.5)).toBe(195_000);
+    expect(toPriceTmt(20_000, "AED", 0.95)).toBe(19_000);
+  });
+
+  it("rejects a foreign amount without a positive rate", () => {
+    expect(() => toPriceTmt(10_000, "USD", 0)).toThrowError(
+      LISTING_ERROR_CODES.EXCHANGE_RATE_MISSING,
+    );
   });
 });
