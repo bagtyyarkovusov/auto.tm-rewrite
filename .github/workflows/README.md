@@ -6,9 +6,19 @@ GitHub Actions workflows.
 
 | Workflow | Trigger | Runner | Purpose |
 |---|---|---|---|
-| `ci.yml` | Push to `main` | self-hosted (`tm-proxy`) | disposable test services → install → db generate and migrate → MinIO buckets → glossary check → lint → typecheck → `pnpm test` → `pnpm build` → service cleanup |
-| `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | disposable test services → install → db generate and migrate → MinIO buckets → glossary check → lint → typecheck → `pnpm test` → service cleanup |
+| `ci.yml` | Push to `main` | self-hosted (`tm-proxy`) | lane choice → disposable test services → install → glossary check → lane tests → db generate and migrate → MinIO buckets → lint → typecheck → `pnpm test` → `pnpm build` → service cleanup. Docs-only pushes stop after the docs checks |
+| `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | lane choice → disposable test services → install → glossary check → lane tests → db generate and migrate → MinIO buckets → lint → typecheck → `pnpm test` → service cleanup. Docs-only pull requests stop after the docs checks; a new push cancels the older run |
 | `bundle.yml` | Tag push `v*` | self-hosted (`tm-proxy`) | `make bundle TAG=<tag>`, uploads `images/auto-tm-<tag>.tar.gz` as a workflow artifact (90-day retention) |
+
+### Lanes and cancellation
+
+One runner serves every job, so both workflows avoid work that cannot change the result.
+
+- **Cancellation.** PR Checks uses one concurrency group per pull request with `cancel-in-progress`. A new push cancels that pull request's queued or running run; other pull requests are unaffected. `main` has no concurrency group: every push to `main` is checked, in order.
+- **Docs-only lane.** `scripts/ci-lane.mjs` lists the changed files and prints `lane=docs` only when every one is Markdown (`*.md`, anywhere) or lives under `docs/`. PR Checks compares the pull request merge commit with its base parent (`fetch-depth: 2`); CI compares the push with the previous `main` commit (`github.event.before`). The docs lane runs install, the glossary check, `pnpm test:agent-docs`, and `pnpm test:glossary`, and skips test services, migrations, MinIO, lint, typecheck, workspace tests, and the build. Renames list both paths, so moving code into `docs/` takes the full lane.
+- **Fail-safe.** Every skipped step is guarded by `lane != 'docs'`, so an empty change, an unreadable base commit, or a failed lane step runs the full pipeline. The lane rule is tested by `pnpm test:ci-lane`, which both lanes run.
+- **Required check.** Branch protection requires the `pr` job. Do not add a workflow-level `paths` or `paths-ignore` filter to PR Checks: a pull request whose workflow never starts leaves `pr` pending forever, and auto-merge never fires. Skip steps inside the job instead.
+- **Cleanup on cancel.** The service cleanup step uses `always()`, which also runs when a newer push cancels the run.
 
 ### pnpm store
 
