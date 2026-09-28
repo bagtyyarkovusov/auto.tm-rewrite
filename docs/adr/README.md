@@ -50,7 +50,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0038](0038-admin-totp-pending-enrollment-idempotent.md) | Admin TOTP pending enrollment is idempotent instead of replaceable | Accepted | 2026-06-13 |
 | [0039](0039-phased-cloud-first-hosting.md) | Phased cloud-first hosting — Railway until store verification, then TM cutover (amends ADR-0005 Railway exclusion scope; supersedes ADR-0030 single-account scoping) | Accepted | 2026-07-20 |
 | [0040](0040-repo-canonical-workflow-skills.md) | Repo-canonical workflow skills — one layer at `.claude/skills/`; commands, mirrors, and global variants retired | Accepted | 2026-07-22 |
-| [0041](0041-git-history-is-the-archive-for-retired-agent-tool-artifacts.md) | Git history is the archive for retired agent-tool artifacts (supersedes ADR-0040's historical-document retention consequence) | Accepted | 2026-07-22 |
+| [0041](0041-git-history-is-the-archive-for-retired-agent-tool-artifacts.md) | Git history is the archive for retired agent-tool artifacts (supersedes ADR-0040's historical-document retention consequence) | Accepted; `.sandcastle/` retention superseded by ADR-0066 | 2026-07-22 |
 | [0042](0042-domain-glossary-authority-and-mutability.md) | Domain glossary authority and mutability | Accepted | 2026-08-25 |
 | [0043](0043-native-apns-delivery-via-node-apn.md) | Native APNS delivery via node-apn, not firebase-admin (supersedes ADR-0009's firebase-admin-for-both clause and its `PUSH_TRANSPORT` value list) | Accepted | 2026-09-03 |
 | [0044](0044-railway-deploy-settings-live-provider-side.md) | Railway deploy settings live provider-side; `railway/*.json` is a declared-state record only (corrects ADR-0039's config-as-code assumption) | Accepted | 2026-09-05 |
@@ -67,7 +67,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0055](0055-resend-sends-sign-in-codes-from-the-worker.md) | Resend sends sign-in codes by email from the worker (complements ADR-0054) | Accepted | 2026-09-22 |
 | [0056](0056-listing-contact-phones-are-verified.md) | Listing contact phones are verified (supersedes ADR-0054 publishing and seller-trust parts) | Accepted | 2026-09-22 |
 | [0057](0057-defer-the-in-app-inspection-demand-signal.md) | Defer the in-app inspection demand signal (amends ADR-0037 demand instrumentation) | Accepted | 2026-09-22 |
-| [0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) | Portable coding-agent issue execution and pull-request gates | Accepted; high-risk review-provider rule and two-issue pilot limit superseded by ADR-0064 | 2026-09-23 |
+| [0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) | Portable coding-agent issue execution and pull-request gates | Accepted; high-risk review-provider rule and two-issue pilot limit superseded by ADR-0064; Sandcastle boundaries superseded by ADR-0066 | 2026-09-23 |
 | [0059](0059-kimi-code-as-a-third-interactive-coding-agent.md) | Kimi Code as a third interactive coding agent (amends ADR-0058 supported agents and review-provider rules) | Accepted; high-risk review-provider rule and restated pilot limit superseded by ADR-0064 | 2026-09-28 |
 | [0060](0060-source-first-agent-context-and-task-scoped-guidance.md) | Source-first agent context and task-scoped guidance | Accepted direction; #417 implementation/review | 2026-09-28 |
 | [0061](0061-stored-tmt-listing-price-for-feed-sort-and-range.md) | Stored TMT listing price for feed sort and range filtering (amends ADR-0021 stored-column rejection) | Accepted | 2026-09-28 |
@@ -75,7 +75,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0063](0063-mobile-refreshes-an-expired-access-token-before-sending.md) | Mobile refreshes an expired access token before sending (extends ADR-0015 refresh contract) | Accepted | 2026-09-28 |
 | [0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md) | Any supported client may review either axis, and issues have no concurrency limit (supersedes ADR-0062 and the review-provider and in-flight rules of ADR-0058/0059) | Accepted | 2026-09-28 |
 | [0065](0065-small-changes-skip-the-issue-ceremony.md) | Small changes skip the issue ceremony (amends ADR-0058 re-review and separate-axes rules, ADR-0064's both-verdicts rule, and one-branch-per-issue for batch PRs; extends ADR-0058 with no-issue PRs) | Accepted | 2026-09-28 |
-| [0066](0066-retire-sandcastle.md) | Retire Sandcastle; queue agents replace unattended dispatch (supersedes ADR-0028 and ADR-0033; amends ADR-0041's `.sandcastle/` retention and ADR-0058's Sandcastle boundaries) | Accepted | 2026-09-29 |
+| [0066](0066-retire-sandcastle-queue-agents-replace-unattended-dispatch.md) | Retire Sandcastle; queue agents replace unattended dispatch (supersedes ADR-0028 and ADR-0033; amends ADR-0041's `.sandcastle/` retention and ADR-0058's Sandcastle boundaries) | Accepted | 2026-09-29 |
 
 ## Per-app ADRs
 
