@@ -1,6 +1,6 @@
 # ADR-0061: Stored TMT listing price for feed sort and range filtering
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-28
 - **Deciders**: AutoTM founder
 - **Amends**: the "Score column on `Listing` only" rejection in [ADR-0021](0021-feed-ranking-port.md)'s Alternatives considered. The rest of ADR-0021 remains in force.

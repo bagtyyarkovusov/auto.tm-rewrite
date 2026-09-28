@@ -70,7 +70,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) | Portable coding-agent issue execution and pull-request gates | Accepted | 2026-09-23 |
 | [0059](0059-kimi-code-as-a-third-interactive-coding-agent.md) | Kimi Code as a third interactive coding agent (amends ADR-0058 supported agents and review-provider rules) | Accepted | 2026-09-28 |
 | [0060](0060-source-first-agent-context-and-task-scoped-guidance.md) | Source-first agent context and task-scoped guidance | Accepted direction; #417 implementation/review | 2026-09-28 |
-| [0061](0061-stored-tmt-listing-price-for-feed-sort-and-range.md) | Stored TMT listing price for feed sort and range filtering (amends ADR-0021 stored-column rejection) | Proposed | 2026-09-28 |
+| [0061](0061-stored-tmt-listing-price-for-feed-sort-and-range.md) | Stored TMT listing price for feed sort and range filtering (amends ADR-0021 stored-column rejection) | Accepted | 2026-09-28 |
 
 ## Per-app ADRs
 
