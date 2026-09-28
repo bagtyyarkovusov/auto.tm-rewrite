@@ -63,10 +63,11 @@ Mark the draft ready only after verification passes and both axes pass on its cu
 
 ## Checks and merge
 
-`main` is protected: it requires a pull request and the `pr` check, allows only squash merges, requires linear history, and applies to administrators. Nobody can merge a PR with a failing or pending `pr` check or push to `main` directly.
+`main` is protected: it requires a pull request and the `pr` check, allows only squash merges, requires linear history, and applies to administrators. Nobody can merge a PR with a failing or pending `pr` check or push to `main` directly. GitHub deletes a PR's head branch when it merges and retargets PRs based on that branch to `main`.
 
-- Once both axes pass on the current commit, run `gh pr ready <PR>` and then `gh pr merge <PR> --auto --squash`. GitHub merges the PR when the `pr` check passes. A new push to the PR cancels auto-merge; set it again only after the affected reviews pass on the new commit.
-- Wait for required checks, or, under [run-queue](../run-queue/SKILL.md), continue with the next issue and come back when the check finishes. Pending, missing output, or an interrupted run is `unknown`, never `pass`.
+- Once both axes pass on the current commit, run `gh pr ready <PR>` and then `gh pr merge <PR> --auto --squash`. GitHub merges the PR when the `pr` check passes.
+- A push does not cancel auto-merge. Before pushing any commit to a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`, then set it again only after the affected reviews pass on the new commit. Otherwise GitHub merges the unreviewed commit as soon as `pr` passes.
+- Wait for required checks, or, under [run-queue](../run-queue/SKILL.md), continue with the next issue and come back when the check finishes. Read the state with `gh pr view <PR> --json state,mergedAt,autoMergeRequest,statusCheckRollup`. Pending, missing output, or an interrupted run is `unknown`, never `pass`.
 - Repair an in-scope CI defect and push within the same three-attempt cap; repeat affected review axes.
 - On a failed check, conflict, or protection failure, leave the PR open and preserve exact state.
 - Never self-approve.

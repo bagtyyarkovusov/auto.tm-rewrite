@@ -17,6 +17,7 @@ One session owns a queue from start to finish, so it keeps context between relat
 2. For each listed issue, read its `## Depends on` section, labels, comments, and any branch or PR. Build the order: listed order, moved later only when a dependency is still open.
 3. Skip, and report, any issue that is closed, labelled `ready-for-human`, or already owned by another open branch or PR. An existing branch or PR for a listed issue is resumed through [resume-issue](../resume-issue/SKILL.md) only when it has no other live owner.
 4. Never query provider quota. Push checkpoints often, so another agent can resume any issue from its PR if this session stops.
+5. Give each queued issue its own linked worktree, as ADR-0058 requires, so a PR waiting on CI or review is never disturbed by the next issue. Retire each worktree after its PR merges, following [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md).
 
 ## Per-issue loop
 
@@ -24,8 +25,9 @@ For the next issue whose dependencies are all closed, or whose only open depende
 
 1. Run the issue through `run-issue`: reservation branch `agent/issue-<N>`, draft PR, `Execution state`, verification, and independent Standards and Spec reviews pinned to the current commit. Fix findings under [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065) when they qualify.
 2. When both axes pass on the current commit, directly or carried forward by a `Delta` review, set auto-merge as [FINALIZATION.md](../run-issue/FINALIZATION.md#checks-and-merge) describes. GitHub merges the PR once the required `pr` check passes.
-3. Do not wait for CI. Start the next ready issue. Come back to a PR when its check fails, when a reviewer or the founder comments, or when it merges.
-4. After each merge, verify the issue closed through `Closes #N`, sync local `main`, and remove `blocked` from queued issues whose dependencies are now all closed, following [sprint-transitions.md](../../../docs/agents/sprint-transitions.md).
+3. Do not wait for CI. Start the next ready issue. Between issues, read each open queue PR with `gh pr view <PR> --json state,mergedAt,autoMergeRequest,statusCheckRollup,comments`, and come back to it when its check fails, a reviewer or the founder comments, or it merges.
+4. Before pushing any commit to a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`. A push does not cancel auto-merge, so without this GitHub would merge the unreviewed commit. Set auto-merge again after the affected reviews pass.
+5. After each merge, verify the issue closed through `Closes #N`, sync local `main`, and remove `blocked` from queued issues whose dependencies are now all closed, following [sprint-transitions.md](../../../docs/agents/sprint-transitions.md).
 
 A failed check on an auto-merge PR leaves it open. Repair it within `run-issue`'s three-attempt cap; a content change re-runs the affected review before auto-merge is set again.
 
@@ -33,12 +35,14 @@ A failed check on an auto-merge PR leaves it open. Repair it within `run-issue`'
 
 When the next issue depends on a PR of this queue that is reviewed but not merged yet:
 
-1. Branch `agent/issue-<N>` from the parent's branch head, push it, and open the draft PR with the parent branch as its base. State the parent PR in the `Execution state`.
-2. Review the stacked PR against its own diff. Do not set auto-merge on it and never merge it into its parent branch.
-3. After the parent squash-merges, rebase the child onto `main`, dropping the parent's commits: `git rebase --onto origin/main <old-parent-head>`. Push with `--force-with-lease`, then `gh pr edit <PR> --base main`.
-4. Rebasing changes the child's commit. Re-run the review axes whose evidence the rebase changed, or record a `Delta` review of the rebased commit, then set auto-merge.
+1. The parent PR's own base must be `main`: stacks are one level deep. A child waits instead when its parent is itself stacked, or when it depends on more than one unmerged PR.
+2. The child's `blocked` label, if it is caused only by that parent, does not stop it. Leave the label on until the parent merges.
+3. Branch `agent/issue-<N>` from the parent's branch head, push it, and open the draft PR with the parent branch as its base. Record `Stacked on: #<parent PR> at <parent head SHA>` in the `Execution state`. Update that SHA whenever you rebase the child onto new parent commits.
+4. Review the stacked PR against its own diff. Do not set auto-merge on it and never merge it into its parent branch. PR Checks runs only for pull requests into `main`, so a stacked PR has no `pr` check yet. Run the local gates as its evidence.
+5. After the parent squash-merges, GitHub deletes the parent branch and retargets the child PR to `main`. If the base is still the parent branch, run `gh pr edit <PR> --base main` first. Then `git fetch origin`, `git rebase --onto origin/main <recorded parent head SHA>`, and `git push --force-with-lease`. The push after retargeting starts the `pr` check. If the check still does not start, close and reopen the PR.
+6. Remove the child's `blocked` label. A clean rebase leaves the child's own diff unchanged: record a `Delta` review of the rebased commit that confirms this and carries the earlier verdicts forward. If a conflict changed the child's content, re-run the affected axes. Then set auto-merge.
 
-Keep stacks shallow: at most one unmerged parent per child. Wait instead when a rebase would need a semantic conflict resolution.
+Wait instead of stacking when a rebase would need a semantic conflict resolution.
 
 ## Stop and report
 
