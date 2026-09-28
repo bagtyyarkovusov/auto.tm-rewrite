@@ -42,6 +42,7 @@ import {
   UserRole,
 } from "../generated/prisma/client/enums";
 
+import { recomputeListingPricesTmt } from "../src/listing-prices";
 import { FIXTURE_PHOTOS } from "./fixture-photos";
 
 const DATABASE_URL = process.env["DATABASE_URL"] ?? "";
@@ -718,6 +719,10 @@ async function main(): Promise<void> {
       },
     });
   }
+
+  // Fixture listings mix TMT, USD and AED; give them the stored TMT price that
+  // price sort and the Results price range read.
+  await recomputeListingPricesTmt(prisma);
 
   // Favourites, so the Halanlarym tab has content for the fixture buyer.
   const favouriteSlugs = new Set(["prado-white", "lx-black", "corolla-silver"]);

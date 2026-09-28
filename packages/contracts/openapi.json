@@ -2290,6 +2290,17 @@
               "new",
               "used"
             ]
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "newest",
+              "price_asc",
+              "price_desc",
+              "year_desc",
+              "year_asc",
+              "mileage_asc"
+            ]
           }
         }
       },
@@ -2299,10 +2310,22 @@
           "totalMatching": {
             "type": "integer",
             "minimum": 0
+          },
+          "priceMinTmt": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "priceMaxTmt": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
           }
         },
         "required": [
-          "totalMatching"
+          "totalMatching",
+          "priceMinTmt",
+          "priceMaxTmt"
         ]
       },
       "ListingModelCountQuery": {
@@ -2375,6 +2398,82 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "ListingBrandCountQuery": {
+        "type": "object",
+        "properties": {
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceMin": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceMax": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "yearMin": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "yearMax": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ListingBrandCountResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "totalMatching": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "brandId",
+                "totalMatching"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "FeedSort": {
+        "type": "string",
+        "enum": [
+          "newest",
+          "price_asc",
+          "price_desc",
+          "year_desc",
+          "year_asc",
+          "mileage_asc"
         ]
       },
       "MyListingsResponse": {
@@ -10213,6 +10312,22 @@
             "required": false,
             "name": "condition",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc",
+                "year_desc",
+                "year_asc",
+                "mileage_asc"
+              ]
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
           }
         ],
         "responses": {
@@ -10226,10 +10341,22 @@
                     "totalMatching": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "priceMinTmt": {
+                      "type": "number",
+                      "nullable": true,
+                      "minimum": 0
+                    },
+                    "priceMaxTmt": {
+                      "type": "number",
+                      "nullable": true,
+                      "minimum": 0
                     }
                   },
                   "required": [
-                    "totalMatching"
+                    "totalMatching",
+                    "priceMinTmt",
+                    "priceMaxTmt"
                   ]
                 }
               }
