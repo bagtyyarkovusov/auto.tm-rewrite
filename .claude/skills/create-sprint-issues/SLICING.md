@@ -24,7 +24,7 @@ A good child issue:
 - has explicit out-of-scope siblings; and
 - leaves the repository valid when merged before later children.
 
-Split unrelated bounded-context behavior. Keep schema + contract + enforcement together when splitting would create an unusable intermediate state.
+Do not slice below one outcome that can be verified on its own; pieces that cannot be reviewed or verified alone stay in one issue ([ADR-0065](../../../docs/adr/0065-small-changes-skip-the-issue-ceremony.md)). Split unrelated bounded-context behavior. Keep schema + contract + enforcement together when splitting would create an unusable intermediate state.
 
 ## AFK versus HITL
 
