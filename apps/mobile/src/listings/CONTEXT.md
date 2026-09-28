@@ -14,6 +14,8 @@ The compressor currently uses the contextual ImageManipulator chain. Consult cur
 
 Search/filter UI separates editing state from applied query state. Check the stores, serializers, query keys, and API ranking adapter together when changing filters or result counts. Approved discovery requirements are in the Search specification, not old planned-refactor notes.
 
+Home (`app/(tabs)/(search)/index.tsx`) is the root of the Search tab's own stack, anchored at `index` so a deep link still has Home underneath. `AutoTmTabBar` always emits `tabPress` and navigates only to an unfocused tab, so re-tapping Search pops to Home while other tabs keep their history. Home has no filters: a Brand/model card with the live count and a two-column New listings grid of `ListingGridCard`. Results, the Brand picker, and Search under that stack are interim stand-ins until their slices land. A signed-out ♡ on a card stores a pending Favorite; `useFeedFavoriteReplay` finishes it at screen level when Home regains focus, because the tapped card may no longer be mounted. `setFeedFavorited` writes a ♡ state into every cached feed page.
+
 ## Start here
 
 - [Parent application](../../CONTEXT.md)
@@ -22,5 +24,6 @@ Search/filter UI separates editing state from applied query state. Check the sto
 - [Upload queue and tests](uploadStaging/useUploadQueue.ts)
 - [Compressor and regression tests](uploadStaging/compressor.ts)
 - [Feature implementation and tests](.)
+- [Home screen](../../app/(tabs)/(search)/index.tsx)
 - [Discovery specification](../../../../docs/prd/features/33-search-discovery.md)
 - [Media decision](../../../../docs/adr/0008-media.md)

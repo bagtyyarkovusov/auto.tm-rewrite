@@ -7,6 +7,12 @@ import { queryKeys } from "../queryKeys";
 interface UseListingsOptions {
   filters?: ListingsSchemas.ListingFilter;
   limit?: number;
+  /**
+   * The signed-in viewer's id. When set, the request carries the session so
+   * each item reports `isFavorited`; `null` keeps the request anonymous.
+   */
+  viewerId?: string | null;
+  enabled?: boolean;
 }
 
 function buildFeedParams(
@@ -45,19 +51,21 @@ function buildFeedParams(
 export function useListings(opts?: UseListingsOptions) {
   const limit = opts?.limit ?? 20;
   const filters = opts?.filters;
+  const viewerId = opts?.viewerId ?? null;
 
   return useInfiniteQuery({
-    queryKey: queryKeys.listings.list({ ...filters, limit }),
+    queryKey: queryKeys.listings.list({ ...filters, limit }, viewerId),
     queryFn: async ({ pageParam }) => {
       const params = buildFeedParams(filters, limit, pageParam);
       return apiClient.get(
         `/listings?${params.toString()}`,
         ListingsSchemas.FeedResponseSchema,
-        { auth: false },
+        { auth: viewerId !== null },
       );
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     staleTime: 30_000,
+    enabled: opts?.enabled ?? true,
   });
 }

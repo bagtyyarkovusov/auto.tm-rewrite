@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import type { Router } from "expo-router";
 import { create } from "zustand";
 
+import { HOME_HREF } from "../navigation/homeHref";
+
 /**
  * Work a User asked for while signed out. Held as serializable data rather than
  * a closure so it survives the re-renders, and the screen suspensions, that
@@ -38,13 +40,14 @@ export type AuthNavigator = Pick<Router, "push" | "dismissTo">;
 export type SignInMethod = "phone" | "email";
 
 const PHONE_ROUTE = "/(auth)/phone";
-const HOME_ROUTE = "/(tabs)";
 
 interface AuthIntentStore {
   /** Set while the User is inside the authentication screens. */
   intent: AuthIntent | null;
   /** Set once authentication succeeded, until the owning screen performs it. */
   replayAction: PendingAction | null;
+  /** The `returnTo` of the intent that produced `replayAction`. */
+  replayReturnTo: AuthHref | null;
   requireSignIn(
     navigator: AuthNavigator,
     intent: AuthIntent,
@@ -58,9 +61,10 @@ interface AuthIntentStore {
 export const useAuthIntentStore = create<AuthIntentStore>()((set, get) => ({
   intent: null,
   replayAction: null,
+  replayReturnTo: null,
 
   requireSignIn(navigator, intent, method = "phone") {
-    set({ intent, replayAction: null });
+    set({ intent, replayAction: null, replayReturnTo: null });
     navigator.push({
       pathname: method === "email" ? "/(auth)/email" : PHONE_ROUTE,
       params: { authRoot: "1" },
@@ -69,12 +73,16 @@ export const useAuthIntentStore = create<AuthIntentStore>()((set, get) => ({
 
   completeSignIn(navigator) {
     const { intent } = get();
-    set({ intent: null, replayAction: intent?.action ?? null });
+    set({
+      intent: null,
+      replayAction: intent?.action ?? null,
+      replayReturnTo: intent?.action ? intent.returnTo : null,
+    });
 
     // Dismiss only the authentication screens. `dismissTo` pops back to the
     // calling screen and leaves everything under it — Results and its scroll
     // position — alive, which `replace` could not do.
-    navigator.dismissTo(intent?.returnTo ?? HOME_ROUTE);
+    navigator.dismissTo(intent?.returnTo ?? HOME_HREF);
   },
 
   cancelSignIn(navigator) {
@@ -85,12 +93,12 @@ export const useAuthIntentStore = create<AuthIntentStore>()((set, get) => ({
     if (intent === null) {
       return;
     }
-    set({ intent: null, replayAction: null });
+    set({ intent: null, replayAction: null, replayReturnTo: null });
     navigator?.dismissTo(intent.returnTo);
   },
 
   clearReplayAction() {
-    set({ replayAction: null });
+    set({ replayAction: null, replayReturnTo: null });
   },
 }));
 
@@ -126,4 +134,42 @@ export function useReplayAuthAction(
     useAuthIntentStore.getState().clearReplayAction();
     performRef.current();
   }, [replayAction, kind, listingId]);
+}
+
+/**
+ * Performs a pending action of `kind` once, for whichever Listing it names,
+ * while `enabled`. For screens that list many Listings: the card that asked
+ * may not be mounted when authentication returns (a signed-in feed refetches
+ * only its first page), so the list screen finishes the action itself. Only an
+ * action whose sign-in started from `returnTo` is taken, so a screen never
+ * finishes work another screen left behind. Gate `enabled` on focus so the
+ * screen does not act while another screen is on top of it.
+ */
+export function useReplayAuthActionOfKind(
+  kind: PendingActionKind,
+  returnTo: AuthHref,
+  perform: (listingId: string) => void,
+  enabled: boolean,
+): void {
+  const replayAction = useAuthIntentStore((state) => state.replayAction);
+  const replayReturnTo = useAuthIntentStore((state) => state.replayReturnTo);
+  const performRef = useRef(perform);
+
+  useEffect(() => {
+    performRef.current = perform;
+  });
+
+  useEffect(() => {
+    if (
+      !enabled ||
+      replayAction === null ||
+      replayAction.kind !== kind ||
+      replayReturnTo !== returnTo
+    ) {
+      return;
+    }
+
+    useAuthIntentStore.getState().clearReplayAction();
+    performRef.current(replayAction.listingId);
+  }, [replayAction, replayReturnTo, kind, returnTo, enabled]);
 }

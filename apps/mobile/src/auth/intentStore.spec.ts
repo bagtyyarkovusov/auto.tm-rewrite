@@ -18,7 +18,7 @@ const LISTING_ROUTE = `/(public)/listings/${LISTING_ID}` as const;
 
 describe("useAuthIntentStore", () => {
   beforeEach(() => {
-    useAuthIntentStore.setState({ intent: null, replayAction: null });
+    useAuthIntentStore.setState({ intent: null, replayAction: null, replayReturnTo: null });
   });
 
   it("opens authentication without a replay waiting", () => {
@@ -89,6 +89,7 @@ describe("useAuthIntentStore", () => {
 
       expect(navigator.dismissTo).toHaveBeenCalledWith(LISTING_ROUTE);
       expect(useAuthIntentStore.getState().replayAction).toEqual(action);
+      expect(useAuthIntentStore.getState().replayReturnTo).toBe(LISTING_ROUTE);
       expect(useAuthIntentStore.getState().intent).toBeNull();
     },
   );
@@ -110,7 +111,7 @@ describe("useAuthIntentStore", () => {
 
     useAuthIntentStore.getState().completeSignIn(navigator);
 
-    expect(navigator.dismissTo).toHaveBeenCalledWith("/(tabs)");
+    expect(navigator.dismissTo).toHaveBeenCalledWith("/(tabs)/(search)");
     expect(useAuthIntentStore.getState().replayAction).toBeNull();
   });
 

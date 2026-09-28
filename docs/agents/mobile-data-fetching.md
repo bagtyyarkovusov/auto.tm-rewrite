@@ -1,6 +1,6 @@
 # Mobile data fetching
 
-Use this guide when changing mobile API calls, server-state caching, refresh, or realtime reconciliation. [ADR-0015](../adr/0015-mobile-data-fetching.md) records the architecture. Query Context7 for the specific TanStack Query or native-library API involved; use [documentation lookups](documentation-lookups.md).
+Use this guide when changing mobile API calls, server-state caching, refresh, or realtime reconciliation. [ADR-0015](../adr/0015-mobile-data-fetching.md) records the architecture; [ADR-0063](../adr/0063-mobile-refreshes-an-expired-access-token-before-sending.md) extends its refresh to run before sending when the stored token has expired. Query Context7 for the specific TanStack Query or native-library API involved; use [documentation lookups](documentation-lookups.md).
 
 ## Ownership
 

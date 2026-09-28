@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 function useTabConfig() {
   const { t } = useTranslation();
   return [
-    { name: "index", label: t("search"), icon: Search },
+    { name: "(search)", label: t("search"), icon: Search },
     { name: "favorites", label: t("favorites"), icon: Heart },
     { name: "sell", label: t("sell"), icon: Plus },
     { name: "chat", label: t("chat"), icon: MessageSquare },

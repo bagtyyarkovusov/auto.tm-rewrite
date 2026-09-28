@@ -72,6 +72,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0060](0060-source-first-agent-context-and-task-scoped-guidance.md) | Source-first agent context and task-scoped guidance | Accepted direction; #417 implementation/review | 2026-09-28 |
 | [0061](0061-stored-tmt-listing-price-for-feed-sort-and-range.md) | Stored TMT listing price for feed sort and range filtering (amends ADR-0021 stored-column rejection) | Accepted | 2026-09-28 |
 | [0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) | The human in the loop may assign both review axes to Kimi per pull request (amends ADR-0059 high-risk review-provider rule) | Accepted | 2026-09-28 |
+| [0063](0063-mobile-refreshes-an-expired-access-token-before-sending.md) | Mobile refreshes an expired access token before sending (extends ADR-0015 refresh contract) | Accepted | 2026-09-28 |
 
 ## Per-app ADRs
 

@@ -77,6 +77,35 @@ describe("useListings", () => {
     );
   });
 
+  it("sends the session for a signed-in viewer so items carry isFavorited", async () => {
+    mockGet.mockResolvedValue({
+      items: [makeFeedItem("l1", { isFavorited: true })],
+      nextCursor: null,
+    });
+
+    const { result } = renderHook(() => useListings({ viewerId: "user-1" }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.pages[0]?.items[0]?.isFavorited).toBe(true);
+    expect(mockGet).toHaveBeenCalledWith(
+      "/listings?limit=20",
+      expect.any(Object),
+      { auth: true },
+    );
+  });
+
+  it("does not fetch while disabled", async () => {
+    const { result } = renderHook(() => useListings({ enabled: false }), {
+      wrapper,
+    });
+
+    await new Promise((settle) => setTimeout(settle, 10));
+    expect(mockGet).not.toHaveBeenCalled();
+    expect(result.current.isPending).toBe(true);
+  });
+
   it("fetches next page using cursor", async () => {
     mockGet.mockResolvedValueOnce({
       items: [makeFeedItem("l1")],
