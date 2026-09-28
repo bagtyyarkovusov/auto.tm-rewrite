@@ -126,7 +126,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const viewer = useViewer();
   const isAuthenticated = viewer === undefined ? null : viewer !== null;
-  useFeedFavoriteReplay();
+  useFeedFavoriteReplay(HOME_HREF);
 
   const {
     data,

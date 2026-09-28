@@ -6,9 +6,11 @@ import { queryKeys } from "../queryKeys";
 type FeedPages = InfiniteData<ListingsSchemas.FeedResponse>;
 
 /**
- * Writes a confirmed ♡ change into every cached feed page that holds the
- * Listing, so a card that scrolls back into view, or the Home grid after a
- * ♡ on Listing detail, shows the saved state without refetching the feed.
+ * Writes a ♡ state into every cached feed page that holds the Listing, so a
+ * card that scrolls back into view, or the Home grid after a ♡ on Listing
+ * detail, shows it without refetching the feed. `useFavoriteListing` and
+ * `useUnfavoriteListing` call it on success; `useFeedFavoriteReplay` also calls
+ * it optimistically and rolls it back on error, so the cache is not server truth.
  */
 export function setFeedFavorited(
   queryClient: QueryClient,

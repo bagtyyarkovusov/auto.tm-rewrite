@@ -123,10 +123,10 @@ describe("apiClient", () => {
   });
 
   describe("expired access token", () => {
-    function jwt(exp: number): string {
+    function jwt(): string {
       const encode = (value: unknown) =>
         Buffer.from(JSON.stringify(value)).toString("base64url");
-      return `${encode({ alg: "HS256" })}.${encode({ sub: "u1", exp })}.sig`;
+      return `${encode({ alg: "HS256" })}.${encode({ sub: "u1", iat: 1_000, exp: 1_900 })}.sig`;
     }
     const user = {
       id: "u1",
@@ -135,13 +135,19 @@ describe("apiClient", () => {
       displayName: null,
       role: "buyer" as const,
     };
+    // The 15-minute token was stored an hour ago, so it has expired.
+    const expired = () => ({
+      accessToken: jwt(),
+      refreshToken: "r1",
+      user,
+      storedAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+    });
 
     it("refreshes before sending, so a public route still sees the viewer", async () => {
-      const expired = jwt(Math.floor(Date.now() / 1000) - 60);
       mockedLoadAuthSession
-        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
-        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
-        .mockResolvedValue({ accessToken: "fresh-token", refreshToken: "r2", user, storedAt: "" });
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValue({ accessToken: "fresh-token", refreshToken: "r2", user, storedAt: new Date().toISOString() });
 
       const fetchSpy = vi
         .spyOn(globalThis, "fetch")
@@ -156,11 +162,25 @@ describe("apiClient", () => {
       expect(headers.Authorization).toBe("Bearer fresh-token");
     });
 
+    it("does not refresh a stored token that is still valid", async () => {
+      mockedLoadAuthSession.mockResolvedValue({ ...expired(), storedAt: new Date().toISOString() });
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await apiClient.get("/listings?limit=20");
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(String(fetchSpy.mock.calls[0]?.[0])).not.toContain("/auth/refresh");
+      const headers = (fetchSpy.mock.calls[0]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
+    });
+
     it("sends the request anonymously when the refresh is rejected", async () => {
-      const expired = jwt(Math.floor(Date.now() / 1000) - 60);
       mockedLoadAuthSession
-        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
-        .mockResolvedValueOnce({ accessToken: expired, refreshToken: "r1", user, storedAt: "" })
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
         .mockResolvedValue(null);
 
       const fetchSpy = vi
@@ -173,6 +193,52 @@ describe("apiClient", () => {
       expect(mockedClearAuthSession).toHaveBeenCalled();
       const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
       expect(headers.Authorization).toBeUndefined();
+    });
+
+    it("keeps the session and sends the old bearer when the refresh fails on the network", async () => {
+      mockedLoadAuthSession.mockResolvedValue(expired());
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockRejectedValueOnce(new TypeError("Network request failed"))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await expect(apiClient.get("/listings?limit=20")).resolves.toEqual({ items: [] });
+
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/auth/refresh");
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
+    });
+
+    it("shares one refresh between concurrent requests with an expired token", async () => {
+      let refreshed = false;
+      mockedLoadAuthSession.mockImplementation(async () =>
+        refreshed
+          ? { accessToken: "fresh-token", refreshToken: "r2", user, storedAt: new Date().toISOString() }
+          : expired(),
+      );
+      mockedStoreAuthSession.mockImplementation(async () => {
+        refreshed = true;
+      });
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
+        String(url).includes("/auth/refresh")
+          ? jsonResponse({ accessToken: "fresh-token", refreshToken: "r2" })
+          : jsonResponse({ ok: true }),
+      );
+
+      await Promise.all([apiClient.get("/a"), apiClient.get("/b")]);
+
+      const refreshCalls = fetchSpy.mock.calls.filter((call) =>
+        String(call[0]).includes("/auth/refresh"),
+      );
+      expect(refreshCalls).toHaveLength(1);
+      for (const call of fetchSpy.mock.calls.filter((c) => !String(c[0]).includes("/auth/refresh"))) {
+        expect(((call[1] as RequestInit).headers as Record<string, string>).Authorization).toBe(
+          "Bearer fresh-token",
+        );
+      }
     });
   });
 

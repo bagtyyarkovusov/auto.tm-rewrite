@@ -147,12 +147,14 @@ async function rawRequest<TResponse>(
     // Public routes that personalise their response (the feed's `isFavorited`)
     // ignore an expired bearer instead of answering 401, so the 401 refresh
     // below would never run for them. Refresh an expired token up front.
-    if (session && !isRetry && isAccessTokenExpired(session.accessToken)) {
+    if (session && !isRetry && isAccessTokenExpired(session)) {
       try {
         await refreshOnce();
       } catch {
-        // A rejected refresh has already cleared the session, so the request
-        // goes out anonymous; a protected route still reaches the 401 path.
+        // A rejected refresh has cleared the session, so the request goes out
+        // anonymous. A refresh that failed on the network or timed out keeps
+        // the session, so the request goes out with the old bearer. Either
+        // way a protected route still reaches the 401 path below.
       }
       session = await loadAuthSession();
     }

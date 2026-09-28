@@ -34,7 +34,7 @@ describe("Home (the Search tab's first screen)", () => {
   });
 
   it("finishes a signed-out ♡ at screen level, not in the card", () => {
-    expect(source).toContain("useFeedFavoriteReplay();");
+    expect(source).toContain("useFeedFavoriteReplay(HOME_HREF);");
   });
 
   it("pads an odd last row so the last card keeps half width", () => {
