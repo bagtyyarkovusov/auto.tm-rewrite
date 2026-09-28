@@ -16,7 +16,7 @@ Keep terms in the PR, reviews, and reconciliation aligned with the canonical [do
 
 Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
 
-The same model provider may perform both axes for ordinary work. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one OpenAI-backed Codex desktop review and one Anthropic-backed Claude Code desktop review across the two axes. The Kimi-backed `claude-kimi` CLI does not fill the Anthropic slot. See [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Exception: when the human in the loop explicitly specifies it for a pull request, recorded durably on that PR with the decision and its date, two independent Kimi reviews satisfy both axes, including for high-risk changes. Never infer this from silence or apply it across PRs. See [ADR-0062](../../../docs/adr/0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md).
+Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may each perform either axis, or both, on any pull request, including high-risk changes. There is no provider-diversity requirement or per-PR waiver. See [ADR-0064](../../../docs/adr/0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md).
 
 Each review produces a PR comment with:
 
