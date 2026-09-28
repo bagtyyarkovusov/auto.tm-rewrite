@@ -24,15 +24,15 @@ export function closedListingBannerKey(
 }
 
 /**
- * Home feed route for "See other Brand Model". Results does not exist yet, so
- * this opens the feed with the brand + model filter applied.
+ * Results route for "See other Brand Model", filtered by that brand + model.
+ * Results is the interim filtered feed until #370 replaces it.
  */
 export function similarListingsHref(listing: {
   brandId: string;
   modelId: string;
 }) {
   return {
-    pathname: "/(tabs)",
+    pathname: "/(tabs)/(search)/results",
     params: { brandId: listing.brandId, modelId: listing.modelId },
   } as const;
 }

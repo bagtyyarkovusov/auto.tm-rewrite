@@ -10,7 +10,7 @@ import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 export default function OnboardingSplashScreen() {
   const [destination, setDestination] = useState<
-    "/(tabs)" | "/(onboarding)/language" | null
+    "/(tabs)/(search)" | "/(onboarding)/language" | null
   >(null);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function OnboardingSplashScreen() {
     void getOnboardingCompleted().then((completed) => {
       if (!mounted) return;
 
-      setDestination(completed ? "/(tabs)" : "/(onboarding)/language");
+      setDestination(completed ? "/(tabs)/(search)" : "/(onboarding)/language");
     });
 
     return () => {

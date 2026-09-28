@@ -1,65 +1,40 @@
 import { router, useLocalSearchParams } from "expo-router";
-import * as Linking from "expo-linking";
-import { ChevronRight, ShieldCheck, SlidersHorizontal } from "lucide-react-native";
+import { ChevronLeft, SlidersHorizontal } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { useListings } from "../../src/api/listings/useListings";
-import { FeedEmpty } from "../../src/listings/feed/FeedEmpty";
-import { FilteredEmpty } from "../../src/listings/feed/FilteredEmpty";
-import { FeedError } from "../../src/listings/feed/FeedError";
-import { FeedSkeleton } from "../../src/listings/feed/FeedSkeleton";
-import { ListingCard } from "../../src/listings/feed/ListingCard";
-import { FilterSheet } from "../../src/listings/search/FilterSheet";
-import { useListingFilters } from "../../src/listings/search/useListingFilters";
-import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
+import { useListings } from "../../../src/api/listings/useListings";
+import { FeedEmpty } from "../../../src/listings/feed/FeedEmpty";
+import { FilteredEmpty } from "../../../src/listings/feed/FilteredEmpty";
+import { FeedError } from "../../../src/listings/feed/FeedError";
+import { FeedSkeleton } from "../../../src/listings/feed/FeedSkeleton";
+import { ListingCard } from "../../../src/listings/feed/ListingCard";
+import { FilterSheet } from "../../../src/listings/search/FilterSheet";
+import { useListingFilters } from "../../../src/listings/search/useListingFilters";
+import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMaps";
+import { useSafeBack } from "../../../src/navigation/useSafeBack";
 
 import { Badge } from "@/components/ui/badge";
-import { resolveLocale } from "@/src/i18n/resources";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
-function openTrustPage(locale: string) {
-  void Linking.openURL(`https://auto.tm/${locale}/trust`);
-}
-
-function TrustBanner({ locale }: { locale: string }) {
+/**
+ * Interim Results (#367). Until the Results slice (#370) replaces it, this is
+ * the chronological feed with today's filter sheet, reached from "See all" on
+ * Home and from "See other Brand Model" on a closed Listing (`brandId` +
+ * `modelId` params). With no filters it is the full feed.
+ */
+export default function ResultsScreen() {
   const { t } = useTranslation();
-
-  return (
-    <Pressable
-      onPress={() => openTrustPage(locale)}
-      className="mx-4 mb-4 flex-row items-center gap-3 rounded-2xl bg-muted p-3 active:opacity-70"
-      accessibilityRole="button"
-      accessibilityLabel={t("trustInfoTitle")}
-    >
-      <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-        <Icon as={ShieldCheck} className="size-5 text-primary" />
-      </View>
-      <View className="flex-1">
-        <Text className="text-sm font-semibold text-foreground">
-          {t("trustInfoTitle")}
-        </Text>
-        <Text className="text-xs text-muted-foreground" numberOfLines={2}>
-          {t("trustInfoSubtitle")}
-        </Text>
-      </View>
-      <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
-    </Pressable>
-  );
-}
-
-export default function FeedScreen() {
-  const { t, i18n } = useTranslation();
+  const goBack = useSafeBack("/(tabs)/(search)");
   const [sheetOpen, setSheetOpen] = useState(false);
   const filters = useListingFilters();
   const { brandId, modelId } = useLocalSearchParams<{
@@ -105,13 +80,19 @@ export default function FeedScreen() {
       : t("filterSearchCtaHint");
 
   const header = (
-    <View className="gap-4 px-4 pt-6 pb-4">
-      <View className="gap-1">
+    <View className="gap-4 px-4 pt-2 pb-4">
+      <View className="-ml-3 flex-row items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11"
+          onPress={goBack}
+          accessibilityLabel={t("back")}
+        >
+          <Icon as={ChevronLeft} className="size-6 text-foreground" />
+        </Button>
         <Text className="text-2xl font-heading text-foreground">
           {t("carsBrowseTitle")}
-        </Text>
-        <Text className="text-sm text-muted-foreground">
-          {t("carsBrowseSubtitle")}
         </Text>
       </View>
 
@@ -146,7 +127,6 @@ export default function FeedScreen() {
         ) : null}
       </Button>
 
-      <TrustBanner locale={resolveLocale(i18n.language)} />
     </View>
   );
 

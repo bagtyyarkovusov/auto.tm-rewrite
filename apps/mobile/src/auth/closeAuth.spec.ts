@@ -48,6 +48,6 @@ describe("closeAuth", () => {
 
     closeAuth(router);
 
-    expect(router.replace).toHaveBeenCalledWith("/(tabs)");
+    expect(router.replace).toHaveBeenCalledWith("/(tabs)/(search)");
   });
 });

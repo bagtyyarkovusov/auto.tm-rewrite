@@ -38,7 +38,7 @@ export type AuthNavigator = Pick<Router, "push" | "dismissTo">;
 export type SignInMethod = "phone" | "email";
 
 const PHONE_ROUTE = "/(auth)/phone";
-const HOME_ROUTE = "/(tabs)";
+const HOME_ROUTE = "/(tabs)/(search)";
 
 interface AuthIntentStore {
   /** Set while the User is inside the authentication screens. */

@@ -4,6 +4,8 @@ import { ListingsSchemas } from "@auto-tm/contracts";
 import { apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
+import { setFeedFavorited } from "./setFeedFavorited";
+
 export function useFavoriteListing() {
   const queryClient = useQueryClient();
 
@@ -16,6 +18,7 @@ export function useFavoriteListing() {
       ),
 
     onSuccess: (_data, listingId) => {
+      setFeedFavorited(queryClient, listingId, true);
       void queryClient.invalidateQueries({
         queryKey: queryKeys.listings.detail(listingId),
       });

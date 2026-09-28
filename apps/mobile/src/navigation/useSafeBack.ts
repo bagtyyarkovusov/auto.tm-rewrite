@@ -6,7 +6,7 @@ import { useCallback } from "react";
  * Falls back to `fallback` when there is no previous screen in the stack
  * (e.g. deep-link or tab direct entry).
  */
-export function useSafeBack(fallback: string = "/(tabs)") {
+export function useSafeBack(fallback: string = "/(tabs)/(search)") {
   const router = useRouter();
 
   const goBack = useCallback(() => {

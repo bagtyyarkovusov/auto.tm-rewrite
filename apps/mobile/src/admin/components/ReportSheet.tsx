@@ -102,7 +102,7 @@ export function ReportSheet({
               returnTo: `/(public)/listings/${targetId}`,
               action: { kind: "report", listingId: targetId },
             }
-          : { returnTo: "/(tabs)" };
+          : { returnTo: "/(tabs)/(search)" };
       useAuthIntentStore.getState().requireSignIn(router, intent);
       return;
     }

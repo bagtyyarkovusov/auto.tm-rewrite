@@ -28,8 +28,13 @@ export const queryKeys = {
 
   listings: {
     all: () => ["listings"] as const,
-    list: (filters: unknown) =>
-      [...queryKeys.listings.all(), "list", filters] as const,
+    lists: () => [...queryKeys.listings.all(), "list"] as const,
+    /**
+     * `viewerId` separates a signed-in feed (items carry `isFavorited`) from
+     * the anonymous one, so a cached anonymous page never shows a stale ♡.
+     */
+    list: (filters: unknown, viewerId: string | null = null) =>
+      [...queryKeys.listings.lists(), filters, viewerId] as const,
     count: (filters: unknown) =>
       [...queryKeys.listings.all(), "count", filters] as const,
     modelCounts: (filters: unknown) =>

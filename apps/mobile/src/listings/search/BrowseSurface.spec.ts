@@ -4,11 +4,11 @@ import { resolve } from "path";
 import { describe, expect, it } from "vitest";
 
 const source = readFileSync(
-  resolve(__dirname, "../../../app/(tabs)/index.tsx"),
+  resolve(__dirname, "../../../app/(tabs)/(search)/results.tsx"),
   "utf-8",
 );
 
-describe("cars browse surface", () => {
+describe("interim Results browse surface", () => {
   it("renders a prominent dedicated Filter/Search entry above the feed body", () => {
     expect(source).toContain('t("carsBrowseTitle")');
     expect(source).toContain('t("filterSearchCta")');

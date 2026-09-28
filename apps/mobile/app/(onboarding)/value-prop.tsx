@@ -25,7 +25,7 @@ function useSlides() {
 
 async function finishOnboarding() {
   await setOnboardingCompleted();
-  router.replace("/(tabs)");
+  router.replace("/(tabs)/(search)");
 }
 
 export default function ValuePropScreen() {

@@ -28,7 +28,7 @@ export function useLogout() {
     },
     onSuccess: () => {
       queryClient.clear();
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/(search)");
     },
   });
 }

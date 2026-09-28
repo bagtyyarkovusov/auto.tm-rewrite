@@ -110,7 +110,7 @@ describe("useAuthIntentStore", () => {
 
     useAuthIntentStore.getState().completeSignIn(navigator);
 
-    expect(navigator.dismissTo).toHaveBeenCalledWith("/(tabs)");
+    expect(navigator.dismissTo).toHaveBeenCalledWith("/(tabs)/(search)");
     expect(useAuthIntentStore.getState().replayAction).toBeNull();
   });
 

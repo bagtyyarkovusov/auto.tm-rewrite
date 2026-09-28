@@ -59,7 +59,7 @@ export default function DeleteAccountScreen() {
 
   function handleScheduledDismiss() {
     setShowScheduled(false);
-    router.replace("/(tabs)");
+    router.replace("/(tabs)/(search)");
   }
 
   return (

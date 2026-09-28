@@ -20,5 +20,5 @@ export function closeAuth(navigator: AuthCloseNavigator): void {
     return;
   }
 
-  navigator.replace("/(tabs)");
+  navigator.replace("/(tabs)/(search)");
 }
