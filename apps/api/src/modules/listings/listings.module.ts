@@ -12,7 +12,7 @@ import { ExchangeRatesController } from "./presentation/ExchangeRatesController"
 import { FavoritesController } from "./presentation/FavoritesController";
 import { NullVinDecoder } from "./infrastructure/NullVinDecoder";
 import { NullContentClassifier } from "./infrastructure/NullContentClassifier";
-import { ChronologicalRankingAdapter } from "./infrastructure/ChronologicalRankingAdapter";
+import { SortedFeedRankingAdapter } from "./infrastructure/SortedFeedRankingAdapter";
 import { EventEmitterListingEventPublisher } from "./infrastructure/EventEmitterListingEventPublisher";
 import { PrismaListingDraftRepository } from "./infrastructure/PrismaListingDraftRepository";
 import { PrismaListingRepository } from "./infrastructure/PrismaListingRepository";
@@ -26,6 +26,8 @@ import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGe
 import { CreateDraft } from "./application/CreateDraft";
 import { CountListings } from "./application/CountListings";
 import { CountListingModels } from "./application/CountListingModels";
+import { CountListingBrands } from "./application/CountListingBrands";
+import { RecomputeListingPrices } from "./application/RecomputeListingPrices";
 import { UpdateDraft } from "./application/UpdateDraft";
 import { ValidateDraftStep } from "./application/ValidateDraftStep";
 import { ListMyDrafts } from "./application/ListMyDrafts";
@@ -69,7 +71,7 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     // Infrastructure adapters
     NullVinDecoder,
     NullContentClassifier,
-    ChronologicalRankingAdapter,
+    SortedFeedRankingAdapter,
     EventEmitterListingEventPublisher,
     PrismaListingDraftRepository,
     PrismaListingRepository,
@@ -92,7 +94,7 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     },
     {
       provide: FEED_RANKING_PORT,
-      useClass: ChronologicalRankingAdapter,
+      useClass: SortedFeedRankingAdapter,
     },
     {
       provide: LISTING_EVENT_PUBLISHER,
@@ -143,6 +145,8 @@ import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
     CreateDraft,
     CountListings,
     CountListingModels,
+    CountListingBrands,
+    RecomputeListingPrices,
     UpdateDraft,
     ValidateDraftStep,
     ListMyDrafts,

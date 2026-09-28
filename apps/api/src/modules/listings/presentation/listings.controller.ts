@@ -23,6 +23,7 @@ import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityChec
 import { ArchiveListing } from "../application/ArchiveListing";
 import { CountListings } from "../application/CountListings";
 import { CountListingModels } from "../application/CountListingModels";
+import { CountListingBrands } from "../application/CountListingBrands";
 import { DeleteListing } from "../application/DeleteListing";
 import { EditListing } from "../application/EditListing";
 import { MarkSold } from "../application/MarkSold";
@@ -52,6 +53,7 @@ export class ListingsController {
     @Inject(ListFeed) private readonly listFeedUC: ListFeed,
     @Inject(CountListings) private readonly countListingsUC: CountListings,
     @Inject(CountListingModels) private readonly countListingModelsUC: CountListingModels,
+    @Inject(CountListingBrands) private readonly countListingBrandsUC: CountListingBrands,
     @Inject(IDENTITY_TOKENS.IdentityCheckPort)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
@@ -130,12 +132,13 @@ export class ListingsController {
   @Get()
   async listFeed(@Query() query: unknown, @Req() req: FastifyRequest) {
     const parsed = this.parseZodQuery(ListingsSchemas.FeedQuerySchema, query);
-    const { cursor, limit, ...filterFields } = parsed;
+    const { cursor, limit, sort, ...filterFields } = parsed;
     const filters = this.parseAndValidateFilters(filterFields);
     const viewerId = (req as { user?: { sub: string } }).user?.sub;
 
     return this.listFeedUC.execute({
       ...(viewerId !== undefined ? { viewerId } : {}),
+      sort,
       ...(cursor !== undefined ? { cursor } : {}),
       limit,
       ...(filters !== undefined ? { filters } : {}),
@@ -145,8 +148,12 @@ export class ListingsController {
   @Public()
   @Get("count")
   async countListings(@Query() query: unknown) {
-    const parsed = this.parseZodQuery(ListingsSchemas.ListingCountQuerySchema, query);
-    const filters = this.parseAndValidateFilters(parsed);
+    // `sort` is validated but does not change the count or the price range.
+    const { sort: _sort, ...filterFields } = this.parseZodQuery(
+      ListingsSchemas.ListingCountQuerySchema,
+      query,
+    );
+    const filters = this.parseAndValidateFilters(filterFields);
 
     return this.countListingsUC.execute({
       ...(filters !== undefined ? { filters } : {}),
@@ -166,6 +173,17 @@ export class ListingsController {
 
     return this.countListingModelsUC.execute({
       brandId,
+      ...(filters !== undefined ? { filters } : {}),
+    });
+  }
+
+  @Public()
+  @Get("filter-options/brands")
+  async countBrands(@Query() query: unknown) {
+    const parsed = this.parseZodQuery(ListingsSchemas.ListingBrandCountQuerySchema, query);
+    const filters = this.parseAndValidateFilters(parsed);
+
+    return this.countListingBrandsUC.execute({
       ...(filters !== undefined ? { filters } : {}),
     });
   }

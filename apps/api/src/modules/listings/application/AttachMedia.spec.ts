@@ -35,6 +35,10 @@ class FakeListingRepository implements ListingRepository {
     return listing;
   }
 
+  async recomputePriceTmt(): Promise<number> {
+    return 0;
+  }
+
   async softDelete(_id: string, _at: Date): Promise<void> {
     const existing = this.listings.find((l) => l.id === _id);
     if (existing) {

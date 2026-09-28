@@ -6,6 +6,7 @@ import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
 import { Listing } from "../domain/Listing";
+import { toPriceTmt } from "../domain/Price";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import {
   LISTING_DRAFT_REPOSITORY,
@@ -112,15 +113,17 @@ export class PublishListing {
       throw err;
     }
 
-    if (payload.priceCurrency !== "TMT") {
-      const rate = await this.exchangeRates.getRate(payload.priceCurrency, "TMT");
-      if (rate <= 0) {
-        throw new BadRequestException({
-          code: LISTING_ERROR_CODES.EXCHANGE_RATE_MISSING,
-          message: `Exchange rate from ${payload.priceCurrency} to TMT is not available`,
-        });
-      }
+    const rateToTmt =
+      payload.priceCurrency === "TMT"
+        ? 1
+        : await this.exchangeRates.getRate(payload.priceCurrency, "TMT");
+    if (rateToTmt <= 0) {
+      throw new BadRequestException({
+        code: LISTING_ERROR_CODES.EXCHANGE_RATE_MISSING,
+        message: `Exchange rate from ${payload.priceCurrency} to TMT is not available`,
+      });
     }
+    const priceTmt = toPriceTmt(payload.priceAmount, payload.priceCurrency, rateToTmt);
 
     const now = new Date();
     const listingId = randomUUID();
@@ -151,6 +154,7 @@ export class PublishListing {
             regionId: payload.regionId ?? null,
             priceAmount: payload.priceAmount,
             priceCurrency: payload.priceCurrency,
+            priceTmt,
             contactPhone: payload.contactPhone ?? null,
             allowCalls: payload.allowCalls,
             allowChat: payload.allowChat,

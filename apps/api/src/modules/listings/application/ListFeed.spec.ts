@@ -7,21 +7,28 @@ import type { FeedRankingPort } from "../domain/ports/FeedRankingPort";
 import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
-import type { ListingFilterCriteria } from "../domain/types";
+import { BadRequestException } from "@nestjs/common";
+import { ListingsSchemas } from "@auto-tm/contracts";
+import type { FeedCursor, FeedSort, ListingFilterCriteria } from "../domain/types";
 
 class FakeFeedRankingPort implements FeedRankingPort {
   items: Listing[] = [];
-  nextCursor?: { timestamp: string; id: string };
+  nextCursor?: FeedCursor;
   lastViewerId: string | undefined;
+  lastSort: FeedSort | undefined;
+  lastCursor: FeedCursor | undefined;
 
   async rank(query: {
     viewerId?: string;
     filters?: ListingFilterCriteria;
-    cursor?: { timestamp: string; id: string };
+    sort: FeedSort;
+    cursor?: FeedCursor;
     limit: number;
-  }): Promise<{ items: Listing[]; nextCursor?: { timestamp: string; id: string } }> {
+  }): Promise<{ items: Listing[]; nextCursor?: FeedCursor }> {
     this.lastViewerId = query.viewerId;
-    const result: { items: Listing[]; nextCursor?: { timestamp: string; id: string } } = {
+    this.lastSort = query.sort;
+    this.lastCursor = query.cursor;
+    const result: { items: Listing[]; nextCursor?: FeedCursor } = {
       items: this.items,
     };
     if (this.nextCursor !== undefined) {
@@ -30,11 +37,15 @@ class FakeFeedRankingPort implements FeedRankingPort {
     return result;
   }
 
-  async count(): Promise<number> {
-    return this.items.length;
+  async count() {
+    return { totalMatching: this.items.length, priceMinTmt: null, priceMaxTmt: null };
   }
 
   async modelCounts(): Promise<Array<{ modelId: string; totalMatching: number }>> {
+    return [];
+  }
+
+  async brandCounts(): Promise<Array<{ brandId: string; totalMatching: number }>> {
     return [];
   }
 }
@@ -202,45 +213,69 @@ describe("ListFeed", () => {
 
   it("encodes nextCursor from ranking result", async () => {
     ranking.items = [seedListing({ id: "l1" })];
-    ranking.nextCursor = { timestamp: "2026-05-01T00:00:00Z", id: "l1" };
-
-    const uc = makeUseCase(ranking, exchangeRates);
-    const result = await uc.execute({});
-
-    expect(result.nextCursor).not.toBeNull();
-    expect(typeof result.nextCursor).toBe("string");
-  });
-
-  it("decodes cursor and passes to ranking port", async () => {
-    let receivedCursor: { timestamp: string; id: string } | undefined;
-
-    const spyRanking: FeedRankingPort = {
-      async rank(query) {
-        receivedCursor = query.cursor;
-        return { items: [] };
-      },
-      async count() {
-        return 0;
-      },
-      async modelCounts() {
-        return [];
-      },
+    ranking.nextCursor = {
+      sort: "price_asc",
+      value: 35000,
+      id: "00000000-0000-0000-0000-000000000001",
     };
 
-    const uc = new ListFeed(
-      spyRanking,
-      exchangeRates,
-      new FakeMediaStoragePort(),
-      new FakeFavoriteRepository(),
-      new FakeListingCardReadPort(),
+    const uc = makeUseCase(ranking, exchangeRates);
+    const result = await uc.execute({ sort: "price_asc" });
+
+    expect(ListingsSchemas.decodeFeedCursor(result.nextCursor as string)).toEqual(
+      ranking.nextCursor,
     );
-    const cursor = Buffer.from(
+  });
+
+  it("defaults to the newest order", async () => {
+    await makeUseCase(ranking, exchangeRates).execute({});
+    expect(ranking.lastSort).toBe("newest");
+  });
+
+  it("passes the requested order to the ranking port", async () => {
+    await makeUseCase(ranking, exchangeRates).execute({ sort: "mileage_asc" });
+    expect(ranking.lastSort).toBe("mileage_asc");
+  });
+
+  it("decodes a cursor for the requested order and passes it on", async () => {
+    const cursor = {
+      sort: "year_desc",
+      value: null,
+      id: "00000000-0000-0000-0000-000000000001",
+    } as const;
+
+    await makeUseCase(ranking, exchangeRates).execute({
+      sort: "year_desc",
+      cursor: ListingsSchemas.encodeFeedCursor(cursor),
+    });
+
+    expect(ranking.lastCursor).toEqual(cursor);
+  });
+
+  it("rejects a cursor from another order with a 400", async () => {
+    const cursor = ListingsSchemas.encodeFeedCursor({
+      sort: "price_asc",
+      value: 1000,
+      id: "00000000-0000-0000-0000-000000000001",
+    });
+
+    const uc = makeUseCase(ranking, exchangeRates);
+    await expect(uc.execute({ sort: "price_desc", cursor })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(uc.execute({ cursor })).rejects.toThrow(BadRequestException);
+    expect(ranking.lastSort).toBeUndefined();
+  });
+
+  it("rejects a malformed cursor with a 400", async () => {
+    const legacy = Buffer.from(
       JSON.stringify({ timestamp: "2026-05-01T00:00:00Z", id: "00000000-0000-0000-0000-000000000001" }),
       "utf8",
     ).toString("base64url");
 
-    await uc.execute({ cursor });
-    expect(receivedCursor).toEqual({ timestamp: "2026-05-01T00:00:00Z", id: "00000000-0000-0000-0000-000000000001" });
+    const uc = makeUseCase(ranking, exchangeRates);
+    await expect(uc.execute({ cursor: "not-a-cursor" })).rejects.toThrow(BadRequestException);
+    await expect(uc.execute({ cursor: legacy })).rejects.toThrow(BadRequestException);
   });
 
   it("includes sellerTrust.phoneVerified on summary DTOs", async () => {
@@ -268,9 +303,12 @@ describe("ListFeed", () => {
         return { items: [] };
       },
       async count() {
-        return 0;
+        return { totalMatching: 0, priceMinTmt: null, priceMaxTmt: null };
       },
       async modelCounts() {
+        return [];
+      },
+      async brandCounts() {
         return [];
       },
     };
