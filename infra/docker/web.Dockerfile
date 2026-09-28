@@ -20,7 +20,6 @@ WORKDIR /app
 FROM base AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ openssl && rm -rf /var/lib/apt/lists/*
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
-COPY vendor/ai-hero-sandcastle-0.5.10-d4b7db7-1df6ad8f.tgz vendor/ai-hero-sandcastle-0.5.10-d4b7db7-1df6ad8f.tgz
 COPY apps/api/package.json apps/api/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY apps/admin/package.json apps/admin/package.json

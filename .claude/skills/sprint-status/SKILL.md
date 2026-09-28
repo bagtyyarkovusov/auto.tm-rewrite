@@ -24,7 +24,7 @@ When a sprint exists, query:
 - its parent and all child issues, open and closed;
 - labels and open dependencies;
 - open PRs against `main` plus recently merged sprint PRs;
-- relevant `agent/issue-*` and `sandcastle/issue-*` branch signals;
+- relevant `agent/issue-*` branch signals;
 - sprint DoD versus issue/PR evidence; and
 - roadmap, retro, ADR, `CONTEXT.md`, and `CONTEXT-MAP.md` consistency.
 

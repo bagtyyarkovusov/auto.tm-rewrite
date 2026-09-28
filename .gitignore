@@ -85,10 +85,6 @@ tmp/
 # Agent tooling is user-global; project workflow skills live in .claude/skills/.
 .agents/
 
-# Sandcastle — the .sandcastle/ orchestrator config IS tracked (Dockerfile,
-# main.mts, prompts). Its own .sandcastle/.gitignore ignores the ephemeral
-# .env, logs/, and worktrees/.
-
 # Expo prebuild generated native projects
 apps/mobile/android/
 apps/mobile/ios/
