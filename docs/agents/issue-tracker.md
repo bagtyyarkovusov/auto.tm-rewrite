@@ -81,7 +81,7 @@ Canonical in the sprint doc. The list above is the slice-level rollup; when ever
 The unblocked queue is:
 \`gh issue list --label "ready-for-agent" --search "-label:blocked" --json number,title,labels\`
 
-- Interactive: the user selects an issue and invokes `run-issue <N>` in Codex or Claude.
+- Interactive: the user selects an issue and invokes `run-issue <N>` in Codex desktop, Claude Code desktop, or the `claude-kimi` CLI.
 - AFK: Sandcastle dispatch is suspended until issue #406 replaces its legacy integration path. After that issue merges, it may select eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
 
 Both paths treat the issue body as the slice contract. The parent remains a dashboard, never an executable prompt.
@@ -167,7 +167,7 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 
 ## `/run-issue` integration
 
-`run-issue <N>` is the tracked repository skill that Codex or Claude can use to drive one issue end-to-end. Per invocation it:
+`run-issue <N>` is the tracked repository skill that Codex desktop, Claude Code desktop, or the `claude-kimi` CLI can use to drive one issue end-to-end. The `claude-kimi` client runs Claude Code CLI against Kimi Code and records `Provider: Kimi` under [ADR-0059](../adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Per invocation it:
 
 1. Reads the issue body via `gh issue view <N> --json body,title,labels`
 2. Reads CLAUDE.md house rules + the issue's referenced docs (`## Read first` section)

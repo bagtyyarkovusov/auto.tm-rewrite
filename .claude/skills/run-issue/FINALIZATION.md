@@ -16,23 +16,24 @@ Keep terms in the PR, reviews, and reconciliation aligned with the canonical [do
 
 Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
 
-The same provider may perform both axes for ordinary work. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one Codex and one Claude review across the two axes.
+The same model provider may perform both axes for ordinary work. Authentication, authorization, database migrations, deployment workflows, production configuration, credential handling, destructive operations, and agent-workflow changes require one OpenAI-backed Codex desktop review and one Anthropic-backed Claude Code desktop review across the two axes. The Kimi-backed `claude-kimi` CLI does not fill the Anthropic slot. See [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md).
 
-Each reviewer posts a PR comment with:
+Each review produces a PR comment with:
 
 ```markdown
 ## <Standards|Spec> review
 
 - **Review axis:** <Standards|Spec>
 - **Reviewer:** <agent/context identifier>
-- **Provider:** <Codex|Claude>
+- **Provider:** <OpenAI|Anthropic|Kimi; actual model provider>
+- **Client:** <Codex desktop|Claude Code desktop|claude-kimi (Claude Code CLI); actual interface>
 - **Commit:** `<full SHA>`
 - **Verdict:** pass | findings
 
 <concrete findings and evidence, or “No findings.”>
 ```
 
-Record the evidence for accepting or rejecting every finding in the PR. Resolve accepted findings, rerun proportionate verification, commit and push the fixes, and pin the new SHA. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates the affected earlier verdict. Continue only when both axes pass against the latest commit.
+If Claude Code desktop cannot post the PR comment, the integration owner transfers its read-only, SHA-pinned verdict and evidence to the PR with the original reviewer, provider, and client attribution. Record the evidence for accepting or rejecting every finding in the PR. Resolve accepted findings, rerun proportionate verification, commit and push the fixes, and pin the new SHA. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates the affected earlier verdict. Continue only when both axes pass against the latest commit.
 
 ## Ready PR
 

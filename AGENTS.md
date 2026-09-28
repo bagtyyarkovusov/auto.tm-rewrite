@@ -1,6 +1,6 @@
 # AutoTM agent instructions
 
-AutoTM is a vehicle marketplace monorepo. Use pnpm workspaces; workspace scripts and configuration are the source for commands and installed versions. This policy applies to Codex, Claude Desktop/Code, and Claude-Kimi.
+AutoTM is a vehicle marketplace monorepo. Use pnpm workspaces; workspace scripts and configuration are the source for commands and installed versions. This policy applies to Codex desktop, Claude Code desktop, and the `claude-kimi` CLI.
 
 ## Start with the task
 
@@ -34,4 +34,4 @@ Use the [glossary](docs/domain/GLOSSARY.md) when interpreting or changing domain
 
 Run affected typecheck, lint, and tests; before committing run the repository test and typecheck gates. Run the applicable build, runtime, integration, and UI checks from the task's guide. Report unavailable gates as missing evidence. Issue work requires a pushed reservation branch, early draft PR, durable Execution state, fixed-commit independent reviews, and green required CI before merge. See the coding workflow for the exact contract.
 
-Repository skills live only in [.claude/skills](.claude/skills). If the host does not discover them, open the workflow's linked `SKILL.md` and follow it manually with available tools. Do not create host-specific copies. Sandcastle dispatch stays suspended pending #406. Never query provider quota before starting work.
+Repository skills live only in [.claude/skills](.claude/skills). If the host does not discover them, open the workflow's linked `SKILL.md` and follow it manually with available tools. For Kimi implementation and review, follow [ADR-0059](docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md) through the coding workflow. Sandcastle dispatch stays suspended pending #406. Never query provider quota before starting work.

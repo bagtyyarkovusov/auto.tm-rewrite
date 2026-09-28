@@ -1,6 +1,6 @@
 ---
 name: resume-issue
-description: Inspects and safely resumes a previously interrupted AutoTM issue from its durable branch, worktree, draft pull request, execution state, comments, and checks. Codex or Claude may resume an attempt created by the other.
+description: Inspects and safely resumes a previously interrupted AutoTM issue from its durable branch, worktree, draft pull request, execution state, comments, and checks. Codex desktop, Claude Code desktop, or the claude-kimi CLI may resume another client's attempt.
 argument-hint: "[issue-number]"
 arguments:
   - issue
