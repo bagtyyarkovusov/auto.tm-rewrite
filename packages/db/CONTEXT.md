@@ -6,6 +6,8 @@ Cross-context foreign keys are allowed; application use-cases still use ports fo
 
 Deletion intentionally preserves some history while erasing or nulling personal data. Check identity deletion, worker purge, and migration tests before changing cascades, nullable audit actors, or retained messages. Seeds and reviewer scenarios have separate purposes; do not run operational scripts against a live database as a cleanup check. Keep credential values out of seed/audit evidence.
 
+`listings.priceTmt` is a stored TMT price derived from `priceAmount` and the `<currency> -> TMT` rate; feed price sort and price-range counts read it ([ADR-0061](../../docs/adr/0061-stored-tmt-listing-price-for-feed-sort-and-range.md)). The conversion expression is shared between `src/listing-prices.ts` (`recomputeListingPricesTmt`) and the `20260928000000_add_listing_price_tmt` backfill — keep them identical. After any `exchange_rates` change, run `pnpm --filter @auto-tm/db listing-prices:recompute` against that environment's database.
+
 ## Start here
 
 - [Schema](prisma/schema.prisma)

@@ -1,9 +1,17 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import { VERIFIED_PHONE_TRUST, type Currency, type ListingFilterCriteria } from "../domain/types";
+import {
+  DEFAULT_FEED_SORT,
+  LISTING_ERROR_CODES,
+  VERIFIED_PHONE_TRUST,
+  type Currency,
+  type FeedCursor,
+  type FeedSort,
+  type ListingFilterCriteria,
+} from "../domain/types";
 import {
   FEED_RANKING_PORT,
   type FeedRankingPort,
@@ -29,6 +37,8 @@ import { toCardPhotos } from "../domain/CardPhotos";
 export interface ListFeedInput {
   /** Signed-in viewer, when the request carries one; drives `isFavorited`. */
   viewerId?: string;
+  /** Defaults to `newest`. */
+  sort?: FeedSort;
   cursor?: string;
   limit?: number;
   filters?: ListingFilterCriteria;
@@ -54,12 +64,13 @@ export class ListFeed {
   async execute(input: ListFeedInput): Promise<FeedResponseDto> {
     const limit = Math.min(input.limit ?? 20, 50);
 
-    const decodedCursor = input.cursor
-      ? ListingsSchemas.decodeCursor(input.cursor)
-      : undefined;
+    const sort = input.sort ?? DEFAULT_FEED_SORT;
+    const decodedCursor =
+      input.cursor !== undefined ? decodeCursorFor(sort, input.cursor) : undefined;
 
     const rankResult = await this.ranking.rank({
       ...(input.viewerId !== undefined ? { viewerId: input.viewerId } : {}),
+      sort,
       ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
       limit,
       ...(input.filters !== undefined ? { filters: input.filters } : {}),
@@ -112,7 +123,7 @@ export class ListFeed {
     return {
       items,
       nextCursor: rankResult.nextCursor
-        ? ListingsSchemas.encodeCursor(rankResult.nextCursor)
+        ? ListingsSchemas.encodeFeedCursor(rankResult.nextCursor)
         : null,
     };
   }
@@ -138,4 +149,26 @@ export class ListFeed {
     }
     return priceAmount * rate;
   }
+}
+
+/** A malformed cursor, or one issued for another order, is a 400. */
+function decodeCursorFor(sort: FeedSort, token: string): FeedCursor {
+  let cursor: FeedCursor;
+  try {
+    cursor = ListingsSchemas.decodeFeedCursor(token);
+  } catch {
+    throw invalidCursor("Invalid feed cursor");
+  }
+  if (cursor.sort !== sort) {
+    throw invalidCursor(`Cursor for "${cursor.sort}" cannot page "${sort}"`);
+  }
+  return cursor;
+}
+
+function invalidCursor(message: string): BadRequestException {
+  return new BadRequestException({
+    code: "VALIDATION_ERROR",
+    message,
+    details: { reason: LISTING_ERROR_CODES.INVALID_FEED_CURSOR },
+  });
 }

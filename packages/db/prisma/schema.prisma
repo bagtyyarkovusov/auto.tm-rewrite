@@ -386,6 +386,8 @@ model Listing {
   mileageKm     Int?
   priceAmount   Float
   priceCurrency Currency      @default(TMT)
+  /// priceAmount converted to TMT at the current exchange rate; drives price sort and range.
+  priceTmt      Float?
   description   String?
   deletedAt     DateTime?
   publishedAt   DateTime?
@@ -428,6 +430,9 @@ model Listing {
   inspectionInterests InspectionInterest[]
 
   @@index([status, publishedAt(sort: Desc)])
+  @@index([status, priceTmt, id])
+  @@index([status, year, id])
+  @@index([status, mileageKm, id])
   @@index([brandId, modelId, status])
   @@index([cityId, status])
   @@map("listings")

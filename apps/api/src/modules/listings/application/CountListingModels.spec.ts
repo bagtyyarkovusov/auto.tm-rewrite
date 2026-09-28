@@ -12,8 +12,12 @@ class FakeFeedRankingPort implements FeedRankingPort {
     return { items: [] };
   }
 
-  async count(): Promise<number> {
-    return 0;
+  async count() {
+    return { totalMatching: 0, priceMinTmt: null, priceMaxTmt: null };
+  }
+
+  async brandCounts(): Promise<Array<{ brandId: string; totalMatching: number }>> {
+    return [];
   }
 
   async modelCounts(query: {

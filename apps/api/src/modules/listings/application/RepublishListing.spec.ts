@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { NotFoundException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, ForbiddenException } from "@nestjs/common";
 
 import { Listing } from "../domain/Listing";
 import type { ListingRepository } from "../domain/ports/ListingRepository";
+import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 
 import { RepublishListing } from "./RepublishListing";
 
@@ -25,10 +26,17 @@ class FakeListingRepository implements ListingRepository {
     return { items: this.listings };
   }
 
-  async update(listing: Listing): Promise<Listing> {
+  priceTmtWrites: Array<number | undefined> = [];
+
+  async update(listing: Listing, derived?: { priceTmt: number }): Promise<Listing> {
+    this.priceTmtWrites.push(derived?.priceTmt);
     const idx = this.listings.findIndex((l) => l.id === listing.id);
     if (idx >= 0) this.listings[idx] = listing;
     return listing;
+  }
+
+  async recomputePriceTmt(): Promise<number> {
+    return 0;
   }
 
   async softDelete(_id: string, _at: Date): Promise<void> {
@@ -55,10 +63,27 @@ class FakePrisma {
   };
 }
 
-function makeUseCase(repo?: FakeListingRepository, prisma?: FakePrisma) {
+class FakeExchangeRatePort implements ExchangeRatePort {
+  rates: Record<string, number> = {};
+
+  async getRate(from: string, to: string): Promise<number> {
+    return this.rates[`${from}:${to}`] ?? 0;
+  }
+
+  async listAll() {
+    return [];
+  }
+}
+
+function makeUseCase(
+  repo?: FakeListingRepository,
+  prisma?: FakePrisma,
+  exchangeRates?: FakeExchangeRatePort,
+) {
   return new RepublishListing(
     repo ?? new FakeListingRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof RepublishListing>[1],
+    exchangeRates ?? new FakeExchangeRatePort(),
   );
 }
 
@@ -107,6 +132,34 @@ describe("RepublishListing", () => {
       action: "listing.republished",
       targetId: "listing-1",
     });
+  });
+
+  it("writes priceTmt at today's rate when a foreign-currency Listing returns", async () => {
+    seedListing(repo, "archived", { priceAmount: 10000, priceCurrency: "USD" });
+    const rates = new FakeExchangeRatePort();
+    rates.rates["USD:TMT"] = 19.5;
+
+    await makeUseCase(repo, prisma, rates).execute({ listingId: "listing-1", userId: "user-1" });
+
+    expect(repo.priceTmtWrites).toEqual([195000]);
+  });
+
+  it("writes a TMT price as its own priceTmt", async () => {
+    seedListing(repo, "archived");
+
+    await makeUseCase(repo, prisma).execute({ listingId: "listing-1", userId: "user-1" });
+
+    expect(repo.priceTmtWrites).toEqual([100000]);
+  });
+
+  it("rejects with EXCHANGE_RATE_MISSING when the currency has no rate", async () => {
+    seedListing(repo, "archived", { priceAmount: 10000, priceCurrency: "AED" });
+
+    await expect(
+      makeUseCase(repo, prisma).execute({ listingId: "listing-1", userId: "user-1" }),
+    ).rejects.toThrow(BadRequestException);
+    expect(repo.priceTmtWrites).toEqual([]);
+    expect(repo.listings[0]?.status).toBe("archived");
   });
 
   it("throws NotFoundException for non-existent listing", async () => {

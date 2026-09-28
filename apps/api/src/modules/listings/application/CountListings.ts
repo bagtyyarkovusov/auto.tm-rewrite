@@ -4,15 +4,14 @@ import {
   FEED_RANKING_PORT,
   type FeedRankingPort,
 } from "../domain/ports/FeedRankingPort";
-import type { ListingFilterCriteria } from "../domain/types";
+import type { FeedCountSummary, ListingFilterCriteria } from "../domain/types";
 
 export interface CountListingsInput {
   filters?: ListingFilterCriteria;
 }
 
-export interface CountListingsOutput {
-  totalMatching: number;
-}
+/** `totalMatching` plus the TMT price range of the matches (null when none match). */
+export type CountListingsOutput = FeedCountSummary;
 
 @Injectable()
 export class CountListings {
@@ -22,10 +21,13 @@ export class CountListings {
   ) {}
 
   async execute(input: CountListingsInput): Promise<CountListingsOutput> {
-    const totalMatching = await this.ranking.count({
+    const summary = await this.ranking.count({
       ...(input.filters !== undefined ? { filters: input.filters } : {}),
     });
 
-    return { totalMatching };
+    if (summary.totalMatching === 0) {
+      return { totalMatching: 0, priceMinTmt: null, priceMaxTmt: null };
+    }
+    return summary;
   }
 }

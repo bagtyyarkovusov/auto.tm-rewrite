@@ -28,10 +28,17 @@ class FakeListingRepository implements ListingRepository {
     return { items: this.listings };
   }
 
-  async update(listing: Listing): Promise<Listing> {
+  priceTmtWrites: Array<number | undefined> = [];
+
+  async update(listing: Listing, derived?: { priceTmt: number }): Promise<Listing> {
+    this.priceTmtWrites.push(derived?.priceTmt);
     const idx = this.listings.findIndex((l) => l.id === listing.id);
     if (idx >= 0) this.listings[idx] = listing;
     return listing;
+  }
+
+  async recomputePriceTmt(): Promise<number> {
+    return 0;
   }
 
   async softDelete(_id: string, _at: Date): Promise<void> {
@@ -371,6 +378,34 @@ describe("EditListing", () => {
       const response = ex.getResponse() as Record<string, unknown>;
       expect(response['code']).toBe("EXCHANGE_RATE_MISSING");
     }
+  });
+
+  it("writes priceTmt with the saved TMT price", async () => {
+    const repo = new FakeListingRepository();
+    seedActiveListing(repo);
+
+    await makeUseCase(repo).execute({
+      listingId: "listing-1",
+      userId: "user-1",
+      patch: { priceAmount: 120000 },
+    });
+
+    expect(repo.priceTmtWrites).toEqual([120000]);
+  });
+
+  it("re-derives priceTmt at the current rate even when the price is unchanged", async () => {
+    const repo = new FakeListingRepository();
+    const rates = new FakeExchangeRatePort();
+    rates.seed("USD", "TMT", 19.5);
+    seedActiveListing(repo, { priceAmount: 10000, priceCurrency: "USD" });
+
+    await makeUseCase(repo, undefined, undefined, rates).execute({
+      listingId: "listing-1",
+      userId: "user-1",
+      patch: { description: "Fresh tyres" },
+    });
+
+    expect(repo.priceTmtWrites).toEqual([195000]);
   });
 
   it("returns 404 for non-owner", async () => {

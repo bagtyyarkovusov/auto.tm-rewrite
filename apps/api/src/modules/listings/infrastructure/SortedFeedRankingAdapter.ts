@@ -7,10 +7,45 @@ import {
   EXCHANGE_RATE_PORT,
   type ExchangeRatePort,
 } from "../domain/ports/ExchangeRatePort";
-import type { Currency, FeedCursor, ListingFilterCriteria } from "../domain/types";
+import {
+  DomainError,
+  LISTING_ERROR_CODES,
+  type Currency,
+  type FeedCountSummary,
+  type FeedCursor,
+  type FeedSort,
+  type ListingFilterCriteria,
+} from "../domain/types";
 
+type SortKey = "publishedAt" | "priceTmt" | "year" | "mileageKm";
+type Direction = "asc" | "desc";
+
+/**
+ * Each order pages by `(key, id)` in one direction. Every key has a
+ * `(status, key, id)` index (`publishedAt` uses `(status, publishedAt DESC)`).
+ * Listings without the key come after all others, still ordered by id.
+ */
+const SORT_SPECS: Record<FeedSort, { key: SortKey; direction: Direction }> = {
+  newest: { key: "publishedAt", direction: "desc" },
+  price_asc: { key: "priceTmt", direction: "asc" },
+  price_desc: { key: "priceTmt", direction: "desc" },
+  year_desc: { key: "year", direction: "desc" },
+  year_asc: { key: "year", direction: "asc" },
+  mileage_asc: { key: "mileageKm", direction: "asc" },
+};
+
+type ListingRow = Prisma.ListingGetPayload<{
+  include: { media: true };
+}>;
+
+/**
+ * Public feed per ADR-0021: active, non-deleted Listings in one of the six
+ * orders, paged by keyset. Nullable keys are read in two index-ordered phases
+ * (Listings with the key, then Listings without it) so nulls stay last in both
+ * directions without a sort over the whole feed.
+ */
 @Injectable()
-export class ChronologicalRankingAdapter implements FeedRankingPort {
+export class SortedFeedRankingAdapter implements FeedRankingPort {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(EXCHANGE_RATE_PORT)
@@ -20,45 +55,83 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
   async rank(query: {
     viewerId?: string;
     filters?: ListingFilterCriteria;
+    sort: FeedSort;
     cursor?: FeedCursor;
     limit: number;
   }): Promise<{ items: Listing[]; nextCursor?: FeedCursor }> {
-    const take = query.limit + 1;
-    const where = await this.buildWhere(query.filters, query.cursor);
+    const { cursor, sort, limit } = query;
+    if (cursor && cursor.sort !== sort) {
+      throw new DomainError(
+        LISTING_ERROR_CODES.INVALID_FEED_CURSOR,
+        `Cursor for "${cursor.sort}" cannot page "${sort}"`,
+      );
+    }
 
-    const rows = await this.prisma.listing.findMany({
-      where,
-      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-      take,
-      include: {
-        media: {
-          orderBy: { sortOrder: "asc" },
-          take: 1,
-        },
-      },
-    });
+    const { key, direction } = SORT_SPECS[sort];
+    const take = limit + 1;
+    const base = await this.buildConditions(query.filters);
+    const rows: ListingRow[] = [];
 
-    const hasMore = rows.length === take;
-    const items = hasMore ? rows.slice(0, -1) : rows;
+    if (!cursor || cursor.value !== null) {
+      rows.push(
+        ...(await this.prisma.listing.findMany({
+          where: {
+            AND: [
+              ...base,
+              { [key]: { not: null } },
+              ...(cursor && cursor.value !== null
+                ? this.afterValue(key, direction, cursor.value, cursor.id)
+                : []),
+            ],
+          },
+          orderBy: [{ [key]: direction }, { id: direction }],
+          take,
+          include: { media: { orderBy: { sortOrder: "asc" }, take: 1 } },
+        })),
+      );
+    }
+
+    if (key !== "publishedAt" && rows.length < take) {
+      const afterId =
+        cursor?.value === null
+          ? [{ id: direction === "asc" ? { gt: cursor.id } : { lt: cursor.id } }]
+          : [];
+      rows.push(
+        ...(await this.prisma.listing.findMany({
+          where: { AND: [...base, { [key]: null }, ...afterId] },
+          // Every key here is NULL; ordering by it too matches the (status, key, id)
+          // index so Postgres reads it in order instead of sorting or using the pkey.
+          orderBy: [{ [key]: direction }, { id: direction }],
+          take: take - rows.length,
+          include: { media: { orderBy: { sortOrder: "asc" }, take: 1 } },
+        })),
+      );
+    }
+
+    const items = rows.slice(0, limit);
     const last = items[items.length - 1];
-
     const result: { items: Listing[]; nextCursor?: FeedCursor } = {
       items: items.map((r) => this.toDomain(r)),
     };
-
-    if (hasMore && last && last.publishedAt) {
-      result.nextCursor = {
-        timestamp: last.publishedAt.toISOString(),
-        id: last.id,
-      };
+    if (rows.length > limit && last) {
+      result.nextCursor = this.cursorAfter(sort, key, last);
     }
-
     return result;
   }
 
-  async count(query: { filters?: ListingFilterCriteria }): Promise<number> {
-    const where = await this.buildWhere(query.filters, undefined);
-    return this.prisma.listing.count({ where });
+  async count(query: { filters?: ListingFilterCriteria }): Promise<FeedCountSummary> {
+    const where = { AND: await this.buildConditions(query.filters) };
+    const summary = await this.prisma.listing.aggregate({
+      where,
+      _count: { _all: true },
+      _min: { priceTmt: true },
+      _max: { priceTmt: true },
+    });
+    return {
+      totalMatching: summary._count._all,
+      priceMinTmt: summary._min.priceTmt,
+      priceMaxTmt: summary._max.priceTmt,
+    };
   }
 
   async modelCounts(query: {
@@ -68,11 +141,9 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     delete countFilters.modelId;
     delete countFilters.modelIds;
 
-    const where = await this.buildWhere(countFilters, undefined);
-
     const rows = await this.prisma.listing.groupBy({
       by: ["modelId"],
-      where,
+      where: { AND: await this.buildConditions(countFilters) },
       _count: { modelId: true },
       orderBy: [{ _count: { modelId: "desc" } }, { modelId: "asc" }],
     });
@@ -83,19 +154,61 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     }));
   }
 
-  private async buildWhere(
+  async brandCounts(query: {
+    filters?: ListingFilterCriteria;
+  }): Promise<Array<{ brandId: string; totalMatching: number }>> {
+    const countFilters: ListingFilterCriteria = { ...query.filters };
+    delete countFilters.brandId;
+    delete countFilters.modelId;
+    delete countFilters.modelIds;
+
+    const rows = await this.prisma.listing.groupBy({
+      by: ["brandId"],
+      where: { AND: await this.buildConditions(countFilters) },
+      _count: { brandId: true },
+      orderBy: [{ _count: { brandId: "desc" } }, { brandId: "asc" }],
+    });
+
+    return rows.map((row) => ({
+      brandId: row.brandId,
+      totalMatching: row._count.brandId,
+    }));
+  }
+
+  /**
+   * Rows strictly after `(value, id)` in the order. The redundant `lte`/`gte`
+   * bound lets Postgres start the index scan at the cursor instead of filtering
+   * every earlier row.
+   */
+  private afterValue(
+    key: SortKey,
+    direction: Direction,
+    rawValue: string | number,
+    id: string,
+  ): Prisma.ListingWhereInput[] {
+    const value = key === "publishedAt" ? new Date(rawValue) : rawValue;
+    const [bound, past, pastId] =
+      direction === "desc" ? (["lte", "lt", "lt"] as const) : (["gte", "gt", "gt"] as const);
+    return [
+      { [key]: { [bound]: value } },
+      { OR: [{ [key]: { [past]: value } }, { [key]: value, id: { [pastId]: id } }] },
+    ];
+  }
+
+  private cursorAfter(sort: FeedSort, key: SortKey, row: ListingRow): FeedCursor {
+    if (sort === "newest") {
+      return { sort, value: (row.publishedAt as Date).toISOString(), id: row.id };
+    }
+    const value = row[key as Exclude<SortKey, "publishedAt">];
+    return { sort, value: value ?? null, id: row.id };
+  }
+
+  private async buildConditions(
     filters: ListingFilterCriteria | undefined,
-    cursor: FeedCursor | undefined,
-  ): Promise<Prisma.ListingWhereInput> {
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  ): Promise<Prisma.ListingWhereInput[]> {
     const conditions: Prisma.ListingWhereInput[] = [
       { deletedAt: null },
-      {
-        OR: [
-          { status: "active" },
-          { status: "sold", soldAt: { gt: fourteenDaysAgo } },
-        ],
-      },
+      { status: "active" },
     ];
 
     if (filters?.brandId) {
@@ -130,19 +243,7 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
       }
     }
 
-    if (cursor) {
-      conditions.push({
-        OR: [
-          { publishedAt: { lt: new Date(cursor.timestamp) } },
-          {
-            publishedAt: { equals: new Date(cursor.timestamp) },
-            id: { lt: cursor.id },
-          },
-        ],
-      });
-    }
-
-    return { AND: conditions };
+    return conditions;
   }
 
   private async buildPriceFilter(
@@ -190,43 +291,7 @@ export class ChronologicalRankingAdapter implements FeedRankingPort {
     return branches;
   }
 
-  private toDomain(row: {
-    id: string;
-    sellerId: string;
-    status: string;
-    brandId: string;
-    modelId: string;
-    generationId: string | null;
-    year: number | null;
-    vin: string | null;
-    cityId: string;
-    regionId: string | null;
-    priceAmount: number;
-    priceCurrency: string;
-    contactPhone: string | null;
-    allowCalls: boolean;
-    allowChat: boolean;
-    publishedAt: Date | null;
-    soldAt: Date | null;
-    deletedAt: Date | null;
-    condition: string | null;
-    colorId: string | null;
-    bodyTypeId: string | null;
-    engineTypeId: string | null;
-    transmissionId: string | null;
-    driveTypeId: string | null;
-    enginePower: number | null;
-    mileageKm: number | null;
-    locationText: string | null;
-    description: string | null;
-    viewCount: number;
-    favoriteCount: number;
-    acceptsExchange: boolean;
-    installmentAvailable: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    media: Array<{ key: string }>;
-  }): Listing {
+  private toDomain(row: ListingRow): Listing {
     return Listing.create({
       id: row.id,
       sellerId: row.sellerId,
