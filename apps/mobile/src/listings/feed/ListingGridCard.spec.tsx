@@ -31,6 +31,11 @@ describe("ListingGridCard", () => {
     }
   });
 
+  it("shows a title placeholder only while catalog names load, then drops an unknown title", () => {
+    expect(source).toContain(") : titlePending ? (");
+    expect(source).toContain("titlePending = false,");
+  });
+
   it("drops the meta line when it has nothing to show", () => {
     expect(source).toContain("{text.meta ? (");
   });

@@ -52,8 +52,14 @@ describe("ContactCtaBar", () => {
 
   it("routes ♡ through the shared useListingFavorite hook with this Listing as returnTo", () => {
     expect(source).toContain('import { useListingFavorite } from "../useListingFavorite"');
-    expect(source).toContain("useListingFavorite({");
-    expect(source).toContain("returnTo: listingHref,");
+    expect(source).toMatch(
+      /useListingFavorite\(\{[^}]*returnTo: listingHref,\s*replayAfterSignIn: true,/,
+    );
+  });
+
+  it("disables ♡ until the session check finishes, so a tap is never silently dropped", () => {
+    expect(source).toContain("const favoriteDisabled = isFavoritePending || isAuthenticated === null;");
+    expect(source).toContain("disabled={favoriteDisabled}");
   });
 
   it("never opens authentication with a bare push or a return replace", () => {

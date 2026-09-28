@@ -41,7 +41,8 @@ export function useListingFavorite({
   const unfavorite = useUnfavoriteListing();
   const [favorited, setFavorited] = useState(isFavorited);
 
-  // A refetched feed page is the source of truth once it arrives.
+  // The refetched Listing (a feed page or Listing detail) is the source of
+  // truth once it arrives.
   useEffect(() => {
     setFavorited(isFavorited);
   }, [isFavorited]);

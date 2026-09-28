@@ -51,6 +51,7 @@ export function ContactCtaBar({
     returnTo: listingHref,
     replayAfterSignIn: true,
   });
+  const favoriteDisabled = isFavoritePending || isAuthenticated === null;
 
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
@@ -178,10 +179,10 @@ export function ContactCtaBar({
         <Button
           variant="secondary"
           size="icon"
-          disabled={isFavoritePending}
+          disabled={favoriteDisabled}
           onPress={handleFavorite}
           accessibilityLabel={t("favorite")}
-          accessibilityState={{ disabled: isFavoritePending }}
+          accessibilityState={{ disabled: favoriteDisabled }}
         >
           {isFavoritePending ? (
             <ActivityIndicator size="small" />
