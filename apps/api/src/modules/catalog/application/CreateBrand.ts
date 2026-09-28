@@ -6,6 +6,7 @@ import {
   BRAND_REPOSITORY,
   type BrandRepository,
 } from "../domain/ports/BrandRepository";
+import { CatalogSearchIndex } from "./CatalogSearchIndex";
 
 export interface CreateBrandInput {
   slug: string;
@@ -19,6 +20,8 @@ export class CreateBrand {
   constructor(
     @Inject(BRAND_REPOSITORY) private readonly brands: BrandRepository,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(CatalogSearchIndex)
+    private readonly searchIndex: CatalogSearchIndex,
   ) {}
 
   async execute(input: CreateBrandInput, actorUserId: string): Promise<Brand> {
@@ -28,6 +31,7 @@ export class CreateBrand {
     }
 
     const brand = await this.brands.create(input);
+    this.searchIndex.invalidate();
 
     await this.prisma.auditLog.create({
       data: {

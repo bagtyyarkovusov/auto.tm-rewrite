@@ -5,6 +5,14 @@ import type { Brand } from "../domain/Brand";
 import type { BrandRepository } from "../domain/ports/BrandRepository";
 
 import { CreateBrand } from "./CreateBrand";
+import type { CatalogSearchIndex } from "./CatalogSearchIndex";
+
+class FakeSearchIndex {
+  invalidated = false;
+  invalidate(): void {
+    this.invalidated = true;
+  }
+}
 
 class FakeBrandRepository implements BrandRepository {
   brands: Brand[] = [];
@@ -16,6 +24,10 @@ class FakeBrandRepository implements BrandRepository {
 
   async getBrandById(id: string): Promise<Brand | null> {
     return this.brands.find((b) => b.id === id) ?? null;
+  }
+
+  async listAllBrands(): Promise<Brand[]> {
+    return this.brands;
   }
 
   async getBySlug(slug: string): Promise<Brand | null> {
@@ -58,10 +70,15 @@ class FakePrisma {
   };
 }
 
-function makeUseCase(brandRepo?: FakeBrandRepository, prisma?: FakePrisma) {
+function makeUseCase(
+  brandRepo?: FakeBrandRepository,
+  prisma?: FakePrisma,
+  searchIndex?: FakeSearchIndex,
+) {
   return new CreateBrand(
     brandRepo ?? new FakeBrandRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof CreateBrand>[1],
+    (searchIndex ?? new FakeSearchIndex()) as unknown as CatalogSearchIndex,
   );
 }
 
@@ -120,5 +137,16 @@ describe("CreateBrand", () => {
       targetType: "Brand",
       targetId: result.id,
     });
+  });
+
+  it("invalidates the catalog search index", async () => {
+    const searchIndex = new FakeSearchIndex();
+    const uc = makeUseCase(brandRepo, prisma, searchIndex);
+    await uc.execute(
+      { slug: "toyota", nameRu: "Тойота", nameTk: "Toýota", nameEn: "Toyota" },
+      "admin-1",
+    );
+
+    expect(searchIndex.invalidated).toBe(true);
   });
 });

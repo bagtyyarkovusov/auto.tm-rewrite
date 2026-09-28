@@ -17,6 +17,7 @@ import { ListColors } from "../application/ListColors";
 import { ListDriveTypes } from "../application/ListDriveTypes";
 import { ListEngineTypes } from "../application/ListEngineTypes";
 import { ListTransmissions } from "../application/ListTransmissions";
+import { SearchCatalog } from "../application/SearchCatalog";
 
 @Controller("api/v1/catalog")
 export class CatalogController {
@@ -34,7 +35,26 @@ export class CatalogController {
     @Inject(ListEngineTypes) private readonly listEngineTypesUC: ListEngineTypes,
     @Inject(ListTransmissions) private readonly listTransmissionsUC: ListTransmissions,
     @Inject(ListDriveTypes) private readonly listDriveTypesUC: ListDriveTypes,
+    @Inject(SearchCatalog) private readonly searchCatalogUC: SearchCatalog,
   ) {}
+
+  @Public()
+  @Get("search")
+  async search(
+    @Query() query: CatalogSchemas.CatalogSearchQuery,
+    @Req() req: FastifyRequest & LocalizedRequest,
+  ) {
+    const parsed = CatalogSchemas.CatalogSearchQuerySchema.parse({
+      q: query.q,
+      locale: query.locale,
+    });
+    const locale = parsed.locale ?? req.locale ?? "ru";
+
+    return this.searchCatalogUC.execute({
+      query: parsed.q ?? "",
+      locale: locale as "tk" | "ru" | "en",
+    });
+  }
 
   @Public()
   @Get("brands")

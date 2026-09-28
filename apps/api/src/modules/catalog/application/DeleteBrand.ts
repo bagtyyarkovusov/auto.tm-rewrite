@@ -5,6 +5,7 @@ import {
   BRAND_REPOSITORY,
   type BrandRepository,
 } from "../domain/ports/BrandRepository";
+import { CatalogSearchIndex } from "./CatalogSearchIndex";
 
 export interface DeleteBrandInput {
   id: string;
@@ -15,6 +16,8 @@ export class DeleteBrand {
   constructor(
     @Inject(BRAND_REPOSITORY) private readonly brands: BrandRepository,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(CatalogSearchIndex)
+    private readonly searchIndex: CatalogSearchIndex,
   ) {}
 
   async execute(input: DeleteBrandInput, actorUserId: string): Promise<void> {
@@ -36,6 +39,7 @@ export class DeleteBrand {
       }
       throw err;
     }
+    this.searchIndex.invalidate();
 
     await this.prisma.auditLog.create({
       data: {

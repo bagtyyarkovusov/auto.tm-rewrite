@@ -1,0 +1,269 @@
+import { describe, it, expect, beforeEach } from "vitest";
+
+import type { Brand } from "../domain/Brand";
+import type { Model } from "../domain/Model";
+import type { BrandRepository } from "../domain/ports/BrandRepository";
+import type { ModelRepository } from "../domain/ports/ModelRepository";
+
+import { CatalogSearchIndex } from "./CatalogSearchIndex";
+import { SearchCatalog } from "./SearchCatalog";
+
+function makeBrand(overrides: Partial<Brand> = {}): Brand {
+  return {
+    id: "brand-1",
+    slug: "toyota",
+    nameRu: "Тойота",
+    nameTk: "Toýota",
+    nameEn: "Toyota",
+    createdAt: new Date("2026-05-14T12:00:00Z"),
+    updatedAt: new Date("2026-05-14T12:00:00Z"),
+    ...overrides,
+  };
+}
+
+function makeModel(overrides: Partial<Model> = {}): Model {
+  return {
+    id: "model-1",
+    brandId: "brand-1",
+    slug: "camry",
+    nameRu: "Камри",
+    nameTk: "Kamri",
+    nameEn: "Camry",
+    createdAt: new Date("2026-05-14T12:00:00Z"),
+    updatedAt: new Date("2026-05-14T12:00:00Z"),
+    ...overrides,
+  };
+}
+
+class FakeBrandRepository implements BrandRepository {
+  brands: Brand[] = [];
+  listAllCalls = 0;
+
+  async listBrands(): Promise<{
+    items: Brand[];
+    nextCursor?: { name: string; id: string };
+  }> {
+    return { items: this.brands };
+  }
+
+  async getBrandById(id: string): Promise<Brand | null> {
+    return this.brands.find((b) => b.id === id) ?? null;
+  }
+
+  async listAllBrands(): Promise<Brand[]> {
+    this.listAllCalls += 1;
+    return this.brands;
+  }
+
+  async getBySlug(): Promise<Brand | null> {
+    throw new Error("not implemented");
+  }
+
+  async create(): Promise<Brand> {
+    throw new Error("not implemented");
+  }
+
+  async update(): Promise<Brand> {
+    throw new Error("not implemented");
+  }
+
+  async delete(): Promise<void> {
+    throw new Error("not implemented");
+  }
+}
+
+class FakeModelRepository implements ModelRepository {
+  models: Model[] = [];
+  listAllCalls = 0;
+
+  async listModelsByBrand(): Promise<{
+    items: Model[];
+    nextCursor?: { name: string; id: string };
+  }> {
+    return { items: this.models };
+  }
+
+  async getModelById(id: string): Promise<Model | null> {
+    return this.models.find((m) => m.id === id) ?? null;
+  }
+
+  async listAllModels(): Promise<Model[]> {
+    this.listAllCalls += 1;
+    return this.models;
+  }
+
+  async getBySlug(): Promise<Model | null> {
+    throw new Error("not implemented");
+  }
+
+  async getByBrandIdAndSlug(): Promise<Model | null> {
+    throw new Error("not implemented");
+  }
+
+  async create(): Promise<Model> {
+    throw new Error("not implemented");
+  }
+
+  async update(): Promise<Model> {
+    throw new Error("not implemented");
+  }
+
+  async delete(): Promise<void> {
+    throw new Error("not implemented");
+  }
+}
+
+describe("SearchCatalog", () => {
+  let brandRepo: FakeBrandRepository;
+  let modelRepo: FakeModelRepository;
+  let index: CatalogSearchIndex;
+  let uc: SearchCatalog;
+
+  beforeEach(() => {
+    brandRepo = new FakeBrandRepository();
+    modelRepo = new FakeModelRepository();
+    brandRepo.brands = [
+      makeBrand(),
+      makeBrand({
+        id: "brand-2",
+        slug: "lexus",
+        nameRu: "Лексус",
+        nameTk: "Lexus",
+        nameEn: "Lexus",
+      }),
+    ];
+    modelRepo.models = [
+      makeModel(),
+      makeModel({
+        id: "model-2",
+        brandId: "brand-1",
+        slug: "corolla",
+        nameRu: "Королла",
+        nameTk: "Korolla",
+        nameEn: "Corolla",
+      }),
+    ];
+    index = new CatalogSearchIndex(brandRepo, modelRepo);
+    uc = new SearchCatalog(index);
+  });
+
+  it("finds Toyota first for Russian, English, Turkmen and one-typo spellings", async () => {
+    for (const q of ["тойота", "toyota", "Тойота", "toyta"]) {
+      const result = await uc.execute({ query: q, locale: "ru" });
+      expect(result.results[0]).toMatchObject({
+        kind: "brand",
+        brandId: "brand-1",
+        label: "Тойота",
+      });
+    }
+  });
+
+  it("returns Camry as a model result with its brand for Russian and English spellings", async () => {
+    for (const q of ["камри", "camry"]) {
+      const result = await uc.execute({ query: q, locale: "en" });
+      const camry = result.results.find((r) => r.modelId === "model-1");
+      expect(camry).toMatchObject({
+        kind: "model",
+        brandId: "brand-1",
+        label: "Camry",
+        brandLabel: "Toyota",
+      });
+    }
+  });
+
+  it("returns brand and model results together in one list", async () => {
+    const result = await uc.execute({ query: "toyota", locale: "en" });
+    const kinds = result.results.map((r) => r.kind);
+    expect(kinds).toContain("brand");
+    expect(kinds).toContain("model");
+    expect(result.results[0]!.kind).toBe("brand");
+  });
+
+  it("caps results at 20", async () => {
+    modelRepo.models = Array.from({ length: 30 }, (_, i) =>
+      makeModel({
+        id: `model-${i + 1}`,
+        slug: `camry-${i + 1}`,
+        nameEn: `Camry ${i + 1}`,
+        nameRu: `Камри ${i + 1}`,
+        nameTk: `Kamri ${i + 1}`,
+      }),
+    );
+    index.invalidate();
+
+    const result = await uc.execute({ query: "camry", locale: "en" });
+    expect(result.results.length).toBeLessThanOrEqual(20);
+  });
+
+  it("parses a single year after the model name", async () => {
+    const result = await uc.execute({ query: "camry 2018", locale: "en" });
+    expect(result.results[0]).toMatchObject({
+      kind: "model",
+      modelId: "model-1",
+    });
+    expect(result.yearFrom).toBe(2018);
+    expect(result.yearTo).toBe(2018);
+  });
+
+  it("parses a year range after a Russian brand name", async () => {
+    const result = await uc.execute({
+      query: "лексус 2014-2019",
+      locale: "ru",
+    });
+    expect(result.results[0]).toMatchObject({
+      kind: "brand",
+      brandId: "brand-2",
+      label: "Лексус",
+    });
+    expect(result.yearFrom).toBe(2014);
+    expect(result.yearTo).toBe(2019);
+  });
+
+  it("returns only the year range for a bare year query", async () => {
+    const result = await uc.execute({ query: "2018", locale: "ru" });
+    expect(result.results).toEqual([]);
+    expect(result.yearFrom).toBe(2018);
+    expect(result.yearTo).toBe(2018);
+  });
+
+  it("ignores years outside the valid range", async () => {
+    const result = await uc.execute({ query: "camry 1800", locale: "en" });
+    expect(result.yearFrom).toBeUndefined();
+    expect(result.yearTo).toBeUndefined();
+    expect(result.results.length).toBeGreaterThan(0);
+  });
+
+  it("returns an empty list for an empty or one-character query", async () => {
+    for (const q of ["", " ", "т"]) {
+      const result = await uc.execute({ query: q, locale: "ru" });
+      expect(result.results).toEqual([]);
+      expect(result.yearFrom).toBeUndefined();
+    }
+  });
+
+  it("localizes labels with the existing en → ru → tk fallback", async () => {
+    brandRepo.brands = [
+      makeBrand({ nameTk: "", nameRu: "", nameEn: "Toyota" }),
+    ];
+    modelRepo.models = [];
+    index.invalidate();
+
+    const result = await uc.execute({ query: "toyota", locale: "tk" });
+    expect(result.results[0]).toMatchObject({
+      label: "Toyota",
+      localeFallback: "en",
+    });
+  });
+
+  it("caches the snapshot per process and reloads after invalidation", async () => {
+    await uc.execute({ query: "toyota", locale: "en" });
+    await uc.execute({ query: "camry", locale: "en" });
+    expect(brandRepo.listAllCalls).toBe(1);
+    expect(modelRepo.listAllCalls).toBe(1);
+
+    index.invalidate();
+    await uc.execute({ query: "toyota", locale: "en" });
+    expect(brandRepo.listAllCalls).toBe(2);
+    expect(modelRepo.listAllCalls).toBe(2);
+  });
+});

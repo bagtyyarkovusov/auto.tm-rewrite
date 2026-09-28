@@ -6,6 +6,20 @@ Preserve stable IDs used by persisted listings and seed idempotence. Names are t
 
 Seed inputs and migrations are operational data. An old data snapshot is not permission to overwrite current catalog records. Cross-context callers use catalog ports rather than importing repositories.
 
+## Search
+
+`GET /api/v1/catalog/search?q=&locale=` runs one public search over brands and models together, capped at 20 results. It is served from a per-process in-memory snapshot (`CatalogSearchIndex`) loaded through the brand/model repository ports; the admin Brand/Model write use-cases invalidate the snapshot after a successful mutation. No Postgres extension or outbound service is involved.
+
+Matching rules live in pure domain functions ([CatalogSearchMatcher](domain/CatalogSearchMatcher.ts), [YearQueryParser](domain/YearQueryParser.ts)):
+
+- Normalization: lowercase, Unicode NFD with combining marks stripped (folds the Turkmen letters ä/ç/ň/ö/ş/ü/ý/ž and also й→и), ё→е, punctuation collapsed to spaces.
+- Transliteration: Cyrillic↔Latin in both directions, so "toyota" matches "Тойота" and "камри" matches "Camry".
+- Tiers: exact > prefix > one forgiven edit (only for words of 4+ letters). Multi-token queries match token by token; a model also matches on its combined "Brand Model" names. Ties put brands before models.
+- Years: standalone four-digit tokens are year candidates. Candidates in [1950, current year + 1] become `yearFrom`/`yearTo` (a "2014-2019" style range with hyphen, en or em dash included); out-of-range candidates are ignored. Digits glued to letters ("B2000") are name text, never years. A bare year query returns only the range with empty results.
+- An empty or one-character query returns an empty result list, not an error.
+
+Response items are `{ kind: "brand" | "model", brandId, modelId?, label, brandLabel?, localeFallback? }` with the same locale fallback order as the list endpoints.
+
 ## Start here
 
 - [Module composition](catalog.module.ts)
