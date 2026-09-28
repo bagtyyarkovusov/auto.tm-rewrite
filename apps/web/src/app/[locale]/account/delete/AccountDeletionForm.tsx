@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 type Step =
   | { kind: "value" }
-  | { kind: "code"; destination: string; resendAt: number }
+  | { kind: "code"; destination: string }
   | { kind: "done"; destination: string };
 
 const CHANNELS: DeletionChannel[] = ["phone", "email"];
@@ -45,15 +45,28 @@ function displayDestination(channel: DeletionChannel, destination: string): stri
   return `+993 ${local.slice(0, 2)} ${local.slice(2, 4)}-${local.slice(4, 6)}-${local.slice(6, 8)}`;
 }
 
-function useSecondsUntil(deadline: number | null): number {
+/** Seconds left before a new code may be requested. */
+function useResendCountdown() {
+  const [deadline, setDeadline] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (deadline === null) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [deadline]);
-  return deadline === null ? 0 : Math.max(0, Math.ceil((deadline - now) / 1000));
+
+  function start(seconds: number) {
+    const current = Date.now();
+    setNow(current);
+    setDeadline(current + seconds * 1000);
+  }
+
+  const secondsLeft =
+    deadline === null ? 0 : Math.max(0, Math.ceil((deadline - now) / 1000));
+  return { secondsLeft, start, stop: () => setDeadline(null) };
 }
+
+const pendingButtonClass = "w-full aria-disabled:cursor-wait aria-disabled:opacity-60";
 
 const linkButtonClass =
   "text-sm font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand-600 hover:decoration-brand-600 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline";
@@ -66,20 +79,25 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
   const [step, setStep] = useState<Step>({ kind: "value" });
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const secondsToResend = useSecondsUntil(step.kind === "code" ? step.resendAt : null);
+  const resend = useResendCountdown();
 
-  // Move focus to the new step's heading so screen readers announce it.
+  // Move focus into the new step (its heading, or the value field when going
+  // back) so keyboard and screen-reader users are not left on the page body.
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const valueInputRef = useRef<HTMLInputElement>(null);
   const firstRender = useRef(true);
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
-    headingRef.current?.focus();
+    (step.kind === "value" ? valueInputRef.current : headingRef.current)?.focus();
   }, [step.kind]);
 
+  // Submit buttons stay enabled while pending so keyboard focus is kept;
+  // this guard stops a second submission instead.
   function run(action: () => Promise<void>) {
+    if (isPending) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -98,11 +116,8 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
         return;
       }
       setCode("");
-      setStep({
-        kind: "code",
-        destination: result.destination,
-        resendAt: Date.now() + result.resendInSeconds * 1000,
-      });
+      resend.start(result.resendInSeconds);
+      setStep({ kind: "code", destination: result.destination });
     });
   }
 
@@ -121,6 +136,7 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
         setError(failureMessage(copy, channel, result.error));
         return;
       }
+      resend.stop();
       setStep({ kind: "done", destination });
     });
   }
@@ -132,6 +148,7 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
   }
 
   function startOver() {
+    resend.stop();
     setCode("");
     setError(null);
     setStep({ kind: "value" });
@@ -185,11 +202,17 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? errorId : undefined}
               className="h-12 border-border text-lg tracking-[0.3em] tabular-nums"
-              disabled={isPending}
+              readOnly={isPending}
             />
           </div>
           {errorMessage}
-          <Button type="submit" variant="destructive" size="lg" className="w-full" disabled={isPending}>
+          <Button
+            type="submit"
+            variant="destructive"
+            size="lg"
+            className={pendingButtonClass}
+            aria-disabled={isPending}
+          >
             {isPending ? copy.confirming : copy.confirm}
           </Button>
         </form>
@@ -197,10 +220,10 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
           <button
             type="button"
             className={linkButtonClass}
-            disabled={isPending || secondsToResend > 0}
+            disabled={isPending || resend.secondsLeft > 0}
             onClick={() => sendCode(step.destination)}
           >
-            {secondsToResend > 0 ? copy.resendIn(secondsToResend) : copy.resend}
+            {resend.secondsLeft > 0 ? copy.resendIn(resend.secondsLeft) : copy.resend}
           </button>
           <button type="button" className={linkButtonClass} disabled={isPending} onClick={startOver}>
             {copy.changeValue}
@@ -256,6 +279,7 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
             ) : null}
             <Input
               key={channel}
+              ref={valueInputRef}
               id="account-deletion-value"
               name={channel}
               type={isPhone ? "tel" : "email"}
@@ -267,7 +291,7 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? `${helperId} ${errorId}` : helperId}
               className={cn("h-12 border-border text-base", isPhone && "rounded-l-none")}
-              disabled={isPending}
+              readOnly={isPending}
             />
           </div>
           <p id={helperId} className="text-sm text-muted-foreground">
@@ -276,7 +300,7 @@ export function AccountDeletionForm({ locale }: { locale: Locale }) {
         </div>
 
         {errorMessage}
-        <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+        <Button type="submit" size="lg" className={pendingButtonClass} aria-disabled={isPending}>
           {isPending ? copy.sending : copy.sendCode}
         </Button>
       </form>
