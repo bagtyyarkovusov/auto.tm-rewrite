@@ -25,7 +25,6 @@
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/platform-fastify": "^11.1.16",
     "@nestjs/platform-socket.io": "^11.1.16",
-    "@nestjs/swagger": "^11.0.0",
     "bullmq": "^5.76.8",
     "@nestjs/throttler": "^6.4.0",
     "@nestjs/websockets": "^11.1.16",

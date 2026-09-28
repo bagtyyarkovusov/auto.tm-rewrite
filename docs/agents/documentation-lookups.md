@@ -151,7 +151,7 @@ These IDs are pre-resolved for this repo's stack. Copy-paste them into `query-do
 
 ### Utility libraries (no pin — resolve on demand)
 
-`clsx`, `tailwind-merge`, `class-variance-authority`, `lucide-react`, `lucide-react-native`, `bcryptjs`, `pg`, `@formatjs/intl-localematcher`, `negotiator`, `tailwindcss-animate`, `tw-animate-css`, `react-native-gesture-handler`, `react-native-screens`, `react-native-safe-area-context`, `react-native-svg`, `react-native-css-interop`, `react-native-compressor`, `expo-secure-store`, `expo-linking`, `expo-constants`, `expo-image-manipulator`, `expo-status-bar`, `@asteasolutions/zod-to-openapi`, ESLint plugins.
+`clsx`, `tailwind-merge`, `class-variance-authority`, `lucide-react`, `lucide-react-native`, `bcryptjs`, `pg`, `@formatjs/intl-localematcher`, `negotiator`, `tailwindcss-animate`, `tw-animate-css`, `react-native-gesture-handler`, `react-native-screens`, `react-native-safe-area-context`, `react-native-svg`, `react-native-css-interop`, `expo-secure-store`, `expo-linking`, `expo-constants`, `expo-image-manipulator`, `expo-status-bar`, `@asteasolutions/zod-to-openapi`, ESLint plugins.
 
 For these, run `resolve-library-id` on the fly. They're small enough that pinning would be more maintenance than payoff.
 
