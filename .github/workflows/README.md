@@ -6,8 +6,8 @@ GitHub Actions workflows.
 
 | Workflow | Trigger | Runner | Purpose |
 |---|---|---|---|
-| `ci.yml` | Push to `main` | self-hosted (`tm-proxy`) | install → db generate → glossary check → lint → typecheck → `pnpm test` → `pnpm build` |
-| `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | install → db generate → glossary check → lint → typecheck → `pnpm test` |
+| `ci.yml` | Push to `main` | self-hosted (`tm-proxy`) | disposable test services → install → db generate and migrate → MinIO buckets → glossary check → lint → typecheck → `pnpm test` → `pnpm build` → service cleanup |
+| `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | disposable test services → install → db generate and migrate → MinIO buckets → glossary check → lint → typecheck → `pnpm test` → service cleanup |
 | `bundle.yml` | Tag push `v*` | self-hosted (`tm-proxy`) | `make bundle TAG=<tag>`, uploads `images/auto-tm-<tag>.tar.gz` as a workflow artifact (90-day retention) |
 
 ### pnpm store
@@ -44,32 +44,23 @@ launchctl list | grep actions.runner
 
 Logs: `~/Library/Logs/actions.runner.bagtyyarkovusov-auto.tm-rewrite.tm-build-mac/{stdout,stderr}.log`.
 
-### Env hook (load-bearing, local modification)
+## Disposable CI services
 
-`~/actions-runner/runsvc.sh` sources `~/actions-runner/.env` before launching the listener (`set -a; . ./.env; set +a`). Neither `run.sh` nor the stock `runsvc.sh` loads `.env` by themselves — without this hook the listener has no env and every e2e suite fails at collection (first symptom: `Error: Region is missing` from the MinIO/S3 client). **Re-apply the hook after every `svc.sh install`** — install copies a fresh `runsvc.sh` from `bin/runsvc.sh`.
+PR Checks and CI each start `infra/compose/docker-compose.ci.yml` through `scripts/ci-services.sh`. The Compose project name includes `GITHUB_RUN_ID` and `GITHUB_RUN_ATTEMPT`, so concurrent runs get separate containers, networks, and volumes. Docker assigns random host ports bound to `127.0.0.1`; the script reads them with `docker compose port` and writes `DATABASE_URL`, `REDIS_URL`, `MINIO_ENDPOINT`, and `MINIO_PUBLIC_URL` to `$GITHUB_ENV` for later steps. The job's initial endpoint values point to unreachable port 1, overriding any development URLs inherited from the runner before services start.
 
-## CI env contract (12 variables)
+`docker compose up --wait` waits for Postgres, Redis, and MinIO health checks. After `pnpm install` and Prisma client generation, `pnpm db:migrate:deploy` applies this checkout's committed migrations to the empty CI database. `pnpm minio:bootstrap` creates its media buckets before tests. The last step uses `if: always()` and `docker compose down --volumes --remove-orphans`, including when an earlier step fails. A cancelled or killed job may skip that step; see recovery below.
 
-Test processes require these variables, supplied by the runner-root `.env`:
+The runner needs Docker Desktop or another reachable Docker Engine with Compose v2 and enough disk for the three existing service images. The current Mac keeps those images cached. Do not prune images or the pnpm store while a job is running. The CI Compose file uses disposable volumes, never the development Compose project's volumes or fixed ports. The development stack can remain running during CI.
 
-| Variable | Why |
-|---|---|
-| `DATABASE_URL` | Prisma — e2e suites hit the dev Postgres directly |
-| `REDIS_URL` | cache/queue clients |
-| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | token minting in identity tests |
-| `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` / `MINIO_REGION` / `MINIO_PUBLIC_URL` | S3-compatible media storage clients |
-| `TOTP_SECRET_ENCRYPTION_KEY` | AES-256-GCM cipher for admin TOTP secrets |
-| `REPORT_ENTRY_ENABLED` / `ADMIN_MODERATION_ACTIONS_ENABLED` | feature flags under test |
+All test credentials and flags are public, nonproduction placeholders written by `scripts/ci-services.sh`: the MinIO keys and region, JWT secrets, TOTP key, and report/moderation flags. `NODE_ENV` and `APP_ENV` are `test` in both jobs. **No test variable is required in `~/actions-runner/.env`**, and CI no longer needs the local `runsvc.sh` patch that sources it. A pre-existing patch or `.env` may remain on the Mac; the workflow overrides its test endpoints and credentials. Production values never belong in CI (ADR-0005).
 
-All values are the **public dev placeholders** from `apps/api/.env.template`, pointing at the local dev stack (`infra/compose/docker-compose.dev.yml` — Postgres 5432, Redis 6379, MinIO 9000, started with `docker compose up`). E2e suites wipe tables in these databases; do not point the runner `.env` at anything you care about.
-
-**NO production env vars in CI** — production values live on the TM servers in `.env` files, never in CI (ADR-0005).
+To inspect an interrupted run, identify its Compose project as `auto_tm_ci_<run-id>_<run-attempt>`. Run `docker compose -f infra/compose/docker-compose.ci.yml -p <project> ps -a` and inspect logs before cleanup. Once the corresponding Actions job has stopped, remove only that exact project with `docker compose -f infra/compose/docker-compose.ci.yml -p <project> down --volumes --remove-orphans`. Do not run `down` against the development `compose` project. Confirm no `auto_tm_ci_` volumes remain with `docker volume ls` if disk use stays high.
 
 ### Turbo strict env mode (load-bearing)
 
 `turbo.json` runs in strict env mode: any variable not listed in `globalPassThroughEnv` is **stripped from task processes on any runner**. Adding a new CI-required variable means changing two places together:
 
-1. the runner `.env` (value), and
+1. `scripts/ci-services.sh` or the workflow job `env:` (value), and
 2. `globalPassThroughEnv` in `turbo.json` (name).
 
 Missing (2) was the root cause of the PR-#257 CI failure (fixed in `1a64d4e`).
@@ -84,13 +75,13 @@ gh api -X POST repos/bagtyyarkovusov/auto.tm-rewrite/actions/runners/registratio
 ./config.sh --url https://github.com/bagtyyarkovusov/auto.tm-rewrite \
   --token <token> --name tm-build-mac --labels tm-proxy --unattended
 
-# 3. .env with the 12 variables above (dev placeholders), then the runsvc.sh env hook
+# 3. Install and start Docker Desktop; confirm `docker compose version` works
 
 # 4. service
 ./svc.sh install && ./svc.sh start
 ```
 
-Verify: `gh api repos/bagtyyarkovusov/auto.tm-rewrite/actions/runners` shows `tm-build-mac` online, and `ps eww <listener-pid>` shows the 12 variables in the listener environment.
+Verify: `gh api repos/bagtyyarkovusov/auto.tm-rewrite/actions/runners` shows `tm-build-mac` online, then run a PR Check. Its service step should report three healthy containers, migrations should apply to `auto_tm_ci`, and cleanup should remove that run's Compose project.
 
 ## Release secrets
 
