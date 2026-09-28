@@ -10,6 +10,7 @@ This is the repository router for moving an idea from shaping to shipped code. I
 | Specification | The same shaping PRD, flow, and pending-sprint artifacts governed by ADR-0020 | Testable outcomes, scope, non-goals, scenarios, invariants, risks, DoD, and evidence plan | There is no duplicate standalone specification artifact |
 | Sprint issue creation | [`create-sprint-issues`](../../.claude/skills/create-sprint-issues/SKILL.md) using [`sprint-transitions.md`](sprint-transitions.md) | Confirmed parent and dependency-ordered child issues plus the roadmap-start PR | Starts only after the shaping documentation PR is reviewed and merged |
 | Issue execution | [`run-issue`](../../.claude/skills/run-issue/SKILL.md), or `resume-issue` for an interrupted run | One pushed reservation branch, early draft PR, durable execution state, and verified implementation | Codex desktop, Claude Code desktop, and `claude-kimi` CLI may exchange roles; one issue and one integration owner |
+| Small change | [Small changes](#small-changes-adr-0065); no issue required | A `fix/<slug>` or `chore/<slug>` PR, or a fix in the PR that found it | One fresh `Standards + Spec` review and green CI; excluded change types take the issue path |
 | Review | Independent Standards review and Spec review of the fixed implementation commit | SHA-pinned PR comments with findings resolved or explicitly rejected with evidence | Both axes pass against the current commit before merge |
 | Sprint control | `sprint-status`, then `close-sprint` when the sprint is complete | Queue visibility, shipped-vs-planned verification, retro, and roadmap update | Retros remain append-only; sprint locks remain in force |
 
@@ -26,13 +27,13 @@ The interactive path follows this state machine. Sandcastle must not dispatch im
 3. Commit and push meaningful checkpoints. After the first checkpoint, open a draft PR whose body starts `Closes #<N>` and contains the single mutable `Execution state` defined in [`run-issue/EXECUTION-STATE.md`](../../.claude/skills/run-issue/EXECUTION-STATE.md).
 4. Implement and verify. Update execution state with the latest checkpoint, completed criteria, commands and results, failures, interrupted commands, documentation/Context7 status, and one next action.
 5. Run independent Standards and Spec reviews against the exact current commit. Record each verdict as a PR comment naming its axis, agent, provider, SHA, and either `pass` or concrete findings.
-6. Resolve findings, repeat affected verification and review on the new SHA, wait for required checks, and squash-merge. The PR's `Closes #N` closes the issue.
+6. Resolve findings, repeat affected verification and review on the new SHA (or only a delta review for a small fix, under [Small changes](#small-changes-adr-0065)), wait for required checks, and squash-merge. The PR's `Closes #N` closes the issue.
 
 ### Small changes ([ADR-0065](../adr/0065-small-changes-skip-the-issue-ceremony.md))
 
-- **Fix in place.** A small review finding in files the PR already changes, with no migration, contract change, or product decision, is fixed in the same PR. One fresh read-only reviewer checks only the new commits; earlier verdicts carry forward unless that reviewer finds the delta changes what they covered.
-- **No-issue PR.** About 50 lines or fewer excluding tests, with no migration, API contract, auth, deployment or production-configuration change, and no product decision: use a `fix/<slug>` or `chore/<slug>` branch, a PR that states the problem and fix, one fresh read-only review covering standards and correctness, and green CI. No reservation branch, `Execution state`, or `Closes #N`.
-- **Batch follow-ups.** Findings that cannot be fixed in place go into one issue or PR per area. A finding gets its own issue only when it needs a decision, a human, or one of the excluded change types.
+- **Fix in place.** A small review finding within the PR's scope, with no migration, contract change, or product decision, is fixed in the same PR. One fresh read-only reviewer checks only the new commits; earlier verdicts carry forward unless that reviewer finds the delta changes what they covered, and an axis whose verdict no longer holds gets a full re-review.
+- **No-issue PR.** About 50 lines or fewer excluding tests, with no migration, API contract, auth, deployment or production-configuration change, and no product decision: use a `fix/<slug>` or `chore/<slug>` branch, a PR that states the problem and fix, one fresh read-only review recorded as `Review axis: Standards + Spec`, and green CI. No reservation branch, `Execution state`, or `Closes #N`.
+- **Batch follow-ups.** Blocking findings are fixed before merge. Non-blocking findings deferred from the PR go into one issue or PR per area. A finding gets its own issue only when it needs a decision, a human, or one of the excluded change types.
 
 No workflow queries provider quota before accepting work. A quota stop, crash, or lost context is handled by the last pushed checkpoint and PR state. Silence, incomplete output, or an interrupted command is `unknown` rather than evidence of success.
 
