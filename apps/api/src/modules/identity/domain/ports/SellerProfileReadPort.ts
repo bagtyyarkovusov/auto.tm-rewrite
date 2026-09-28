@@ -3,8 +3,9 @@ export interface SellerProfile {
   memberSince: Date;
 }
 
+/** Public seller facts for other contexts; exposes no Sign-in Method data. */
 export interface SellerProfileReadPort {
-  getSellerProfiles(userIds: string[]): Promise<Map<string, SellerProfile>>;
+  getSellerProfile(userId: string): Promise<SellerProfile | null>;
 }
 
 export const SELLER_PROFILE_READ_PORT = Symbol("SellerProfileReadPort");

@@ -52,7 +52,6 @@ import { IDENTITY_TOKENS } from "./identity.tokens";
 import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
 import { SELLER_PROFILE_READ_PORT } from "./domain/ports/SellerProfileReadPort";
-import { GetSellerProfiles } from "./application/GetSellerProfiles";
 import { PrismaSellerProfileReadAdapter } from "./infrastructure/PrismaSellerProfileReadAdapter";
 import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
@@ -189,7 +188,6 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     Logout,
     LogoutAll,
     GetMe,
-    GetSellerProfiles,
     DeleteMe,
     RecoverAccount,
     GetAdminTotpStatus,
@@ -204,7 +202,7 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     ConfirmAccountDeletion,
   ],
   exports: [
-    GetSellerProfiles,
+    SELLER_PROFILE_READ_PORT,
     IDENTITY_TOKENS.IdentityCheckPort,
     IDENTITY_READ_PORT,
     IDENTITY_TOKENS.SessionRepository,

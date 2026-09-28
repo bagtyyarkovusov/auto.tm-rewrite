@@ -8,7 +8,10 @@ import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
 import type { VinDecoderPort } from "../domain/ports/VinDecoderPort";
-import { FakeSellerProfilePort } from "../test/FakeSellerProfilePort";
+import type {
+  SellerProfile,
+  SellerProfilePort,
+} from "../domain/ports/SellerProfilePort";
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -120,6 +123,16 @@ class FakeVinDecoder implements VinDecoderPort {
 
   async decode(_vin: string) {
     return this.result;
+  }
+}
+
+class FakeSellerProfilePort implements SellerProfilePort {
+  profiles = new Map<string, SellerProfile>([
+    ["user-1", { displayName: "Seller", memberSince: new Date("2025-01-01T00:00:00.000Z") }],
+  ]);
+
+  async getSellerProfile(userId: string): Promise<SellerProfile | null> {
+    return this.profiles.get(userId) ?? null;
   }
 }
 

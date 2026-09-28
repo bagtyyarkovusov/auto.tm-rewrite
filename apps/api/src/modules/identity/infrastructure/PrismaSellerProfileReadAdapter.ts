@@ -10,26 +10,11 @@ import type {
 export class PrismaSellerProfileReadAdapter implements SellerProfileReadPort {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async getSellerProfiles(userIds: string[]): Promise<Map<string, SellerProfile>> {
-    if (userIds.length === 0) return new Map();
-
-    const users = await this.prisma.user.findMany({
-      where: { id: { in: [...new Set(userIds)] } },
-      select: {
-        id: true,
-        displayName: true,
-        createdAt: true,
-      },
+  async getSellerProfile(userId: string): Promise<SellerProfile | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { displayName: true, createdAt: true },
     });
-
-    return new Map(
-      users.map((user) => [
-        user.id,
-        {
-          displayName: user.displayName,
-          memberSince: user.createdAt,
-        },
-      ]),
-    );
+    return user ? { displayName: user.displayName, memberSince: user.createdAt } : null;
   }
 }

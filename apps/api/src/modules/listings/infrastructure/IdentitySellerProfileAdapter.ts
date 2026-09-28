@@ -1,6 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { GetSellerProfiles } from "../../identity/identity.public";
+import {
+  SELLER_PROFILE_READ_PORT,
+  type SellerProfileReadPort,
+} from "../../identity/identity.public";
 import type {
   SellerProfile,
   SellerProfilePort,
@@ -9,11 +12,11 @@ import type {
 @Injectable()
 export class IdentitySellerProfileAdapter implements SellerProfilePort {
   constructor(
-    @Inject(GetSellerProfiles)
-    private readonly getSellerProfilesUseCase: GetSellerProfiles,
+    @Inject(SELLER_PROFILE_READ_PORT)
+    private readonly identityProfiles: SellerProfileReadPort,
   ) {}
 
-  async getSellerProfile(userId: string): Promise<SellerProfile | null> {
-    return (await this.getSellerProfilesUseCase.execute([userId])).get(userId) ?? null;
+  getSellerProfile(userId: string): Promise<SellerProfile | null> {
+    return this.identityProfiles.getSellerProfile(userId);
   }
 }
