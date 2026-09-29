@@ -36,7 +36,7 @@ Buckets:
 - `listing-photos`
 - `listing-videos`
 - `chat-attachments`
-- `catalog-assets` (brand logos under versioned `brands/<slug>/v<n>/` keys, and short-lived admin uploads under `pending/`)
+- `catalog-assets` (brand logos under versioned `brands/<slug>/v<n>/` keys, and admin uploads under `pending/`, which the API deletes on confirm; an upload that is never confirmed stays until removed by hand, and like every object in the bucket it is readable by anyone who knows its random key)
 
 When a bucket is added to this list, re-run `pnpm minio:bootstrap` against each
 environment's MinIO before deploying the API that uses it. Until then, requests

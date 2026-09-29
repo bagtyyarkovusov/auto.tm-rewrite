@@ -1,3 +1,5 @@
+import { CatalogSchemas } from "@auto-tm/contracts";
+
 import { listAllBrands } from "./actions";
 import { BrandLogoControls } from "./BrandLogoControls";
 
@@ -11,7 +13,8 @@ export default async function BrandsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Бренды</h1>
         <p className="text-sm text-neutral-500">
-          Логотипы: {withLogo} из {brands.length}. SVG, PNG или WebP, до 200 КБ, почти
+          Логотипы: {withLogo} из {brands.length}. SVG, PNG или WebP, до{" "}
+          {CatalogSchemas.BRAND_LOGO_MAX_BYTES / 1024} КБ, почти
           квадратные. Без логотипа приложение показывает первую букву.
         </p>
       </div>

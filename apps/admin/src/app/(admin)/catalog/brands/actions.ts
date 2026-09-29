@@ -13,15 +13,17 @@ export type BrandLogoActionResult<T> = { ok: true; data: T } | { ok: false; erro
 
 const MAX_PAGES = 20;
 
+const BRAND_LOGO_MAX_KB = CatalogSchemas.BRAND_LOGO_MAX_BYTES / 1024;
+
 const REJECTION_MESSAGES: Record<CatalogSchemas.BrandLogoRejectionReason, string> = {
   LOGO_UNSUPPORTED_TYPE: "Загрузите файл SVG, PNG или WebP.",
-  LOGO_TOO_LARGE: "Файл больше 200 КБ.",
+  LOGO_TOO_LARGE: `Файл больше ${BRAND_LOGO_MAX_KB} КБ.`,
   LOGO_EMPTY: "Файл пустой.",
   LOGO_UNREADABLE: "Файл не читается как изображение.",
   LOGO_TYPE_MISMATCH: "Содержимое файла не совпадает с его типом.",
   LOGO_NOT_SQUARE: "Логотип должен быть почти квадратным (стороны не больше 1:1,25).",
   LOGO_UNSAFE_SVG:
-    "SVG содержит скрипты, обработчики событий, внешние ссылки или встроенное содержимое.",
+    "SVG содержит DOCTYPE, элементы с префиксом пространства имён, скрипты, обработчики событий, внешние ссылки или встроенное содержимое.",
   LOGO_UPLOAD_MISSING: "Загруженный файл не найден. Попробуйте ещё раз.",
 };
 
