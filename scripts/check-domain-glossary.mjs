@@ -125,10 +125,10 @@ if (packageJson?.scripts?.["check:glossary"] !== "node scripts/check-domain-glos
 }
 // The root gate may add checks or change their order. Require these steps as
 // standalone &&-chained commands so each failure still stops the test gate.
-const testSteps = typeof packageJson?.scripts?.test === "string"
-  ? packageJson.scripts.test.split(/\s*&&\s*/).map((step) => step.trim())
-  : [];
-if (!["pnpm test:agent-docs", "pnpm test:glossary", "turbo run test"].every((step) => testSteps.includes(step))) {
+const testScript = typeof packageJson?.scripts?.test === "string" ? packageJson.scripts.test : "";
+const testSteps = testScript.split(/\s*&&\s*/).map((step) => step.trim());
+const hasOtherShellOperator = /[;|\r\n]/.test(testScript) || testScript.replaceAll("&&", "").includes("&");
+if (hasOtherShellOperator || !["pnpm test:agent-docs", "pnpm test:glossary", "turbo run test"].every((step) => testSteps.includes(step))) {
   errors.push("package.json root test gate must run agent-docs, glossary, and workspace tests");
 }
 requireMarkdownLink("docs/domain/GLOSSARY.md", "../adr/0042-domain-glossary-authority-and-mutability.md", "docs/domain/GLOSSARY.md is missing its ADR-0042 link");

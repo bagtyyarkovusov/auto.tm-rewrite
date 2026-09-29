@@ -114,6 +114,15 @@ test("accepts an equivalent root gate with reordered required checks", () => wit
   writeFileSync(packagePath, JSON.stringify(packageJson));
   assert.equal(run(root).status, 0);
 }));
+for (const operator of [" || true", "; true", " | cat", " & true"]) {
+  test(`rejects a root gate with ${operator.trim()}`, () => withFixture(valid, (root) => {
+    const packagePath = join(root, "package.json");
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
+    packageJson.scripts.test += operator;
+    writeFileSync(packagePath, JSON.stringify(packageJson));
+    assert.match(failure(root), /package.json root test gate must run agent-docs, glossary, and workspace tests/);
+  }));
+}
 for (const step of ["pnpm test:agent-docs", "pnpm test:glossary", "turbo run test"]) {
   test(`rejects a root gate missing ${step}`, () => withFixture(valid, (root) => {
     const packagePath = join(root, "package.json");
