@@ -1,6 +1,6 @@
 # ADR-0068: Resolve Context7 IDs at lookup time
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-29
 - **Deciders**: AutoTM founder
 - **Amends**: ADR-0017's pre-resolved library-ID shortcut; preserves its mandatory Context7 lookup policy
