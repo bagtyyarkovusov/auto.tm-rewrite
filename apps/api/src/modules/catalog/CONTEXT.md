@@ -6,6 +6,12 @@ Preserve stable IDs used by persisted listings and seed idempotence. Names are t
 
 Seed inputs and migrations are operational data. An old data snapshot is not permission to overwrite current catalog records. Cross-context callers use catalog ports rather than importing repositories.
 
+## Brand logos
+
+A Brand may have a logo. `Brand.logoKey` is an object key in the public-read `catalog-assets` MinIO bucket, laid out as `brands/<slug>/v<epoch-ms>/logo.<svg|png|webp>`. Keys are versioned and immutable, so a replaced logo gets a new URL. `GET /api/v1/catalog/brands` returns `logoUrl` (built from `MINIO_PUBLIC_URL`) only for brands with a key; clients show a letter fallback otherwise.
+
+Admins (AdminGuard) set a logo with `PUT /api/v1/admin/catalog/brands/:id/logo` (`{ contentType, dataBase64 }`) and clear it with `DELETE` on the same path. The API receives the bytes instead of a presigned PUT because it must decode them first: SVG, PNG, or WebP only, at most 200 KB, the decoded format must match the declared type, and the sides must be within 1:1.25. An SVG is **rejected, not sanitized**, when it has a DOCTYPE, scripts, event handlers, animation elements, `foreignObject`, embedded images, or any non-`#` reference. Rejections are 400 `VALIDATION_FAILED` with `details.reason` (`LOGO_*`). Replacing or removing a logo deletes the previous object after the database points elsewhere; a failed delete is logged with its key and does not undo the change. Both actions write `CATALOG_BRAND_LOGO_SET` / `CATALOG_BRAND_LOGO_REMOVE` audit entries. The rules live in [BrandLogo](domain/BrandLogo.ts); storage and decoding sit behind the `BrandLogoStorage` and `LogoImageProbe` ports.
+
 ## Search
 
 `GET /api/v1/catalog/search?q=&locale=` runs one public search over brands and models together, capped at 20 results. It is served from a per-process in-memory snapshot (`CatalogSearchIndex`) loaded through the brand/model repository ports; the admin Brand/Model write use-cases invalidate the snapshot after a successful mutation. No Postgres extension or outbound service is involved.
