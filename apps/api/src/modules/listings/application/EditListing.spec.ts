@@ -501,7 +501,30 @@ describe("EditListing", () => {
     expect(result.listing.conditionDisclosure).toEqual({ damaged: true });
   });
 
-  it("rejects an edit that leaves the Listing without a Damaged answer", async () => {
+  it("rejects an edit of an unanswered Listing that does not answer Damaged", async () => {
+    seedActiveListing(repo, {}, { answered: false });
+
+    const uc = makeUseCase(repo, prisma, events, exchangeRates);
+    const error = await uc
+      .execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { description: "Updated" },
+      })
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      code: "DAMAGED_REQUIRED",
+      details: { field: "conditionDisclosure.damaged" },
+    });
+    expect(repo.listings[0]!.description).not.toBe("Updated");
+    expect(repo.listings[0]!.conditionDisclosure).toBeUndefined();
+  });
+
+  // The HTTP contract rejects this patch earlier; the guard still holds for
+  // any other caller of the use-case.
+  it("rejects a disclosure patch without damaged on an unanswered Listing", async () => {
     seedActiveListing(repo, {}, { answered: false });
 
     const uc = makeUseCase(repo, prisma, events, exchangeRates);

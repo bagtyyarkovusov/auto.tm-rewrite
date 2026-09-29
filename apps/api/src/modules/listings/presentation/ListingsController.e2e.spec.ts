@@ -483,11 +483,39 @@ describe("ListingsController e2e", () => {
         .send({})
         .expect(201);
 
-      await request
+      const res = await request
         .patch(`/api/v1/listings/${publishRes.body.id}`)
         .set("Authorization", `Bearer ${token}`)
         .send({ conditionDisclosure: { knownIssuesText: "Rust" } })
         .expect(400);
+
+      expect(res.body.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rejects an edit of a Listing without a Damaged answer until it is answered", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+      // A row from before the migration has no answer.
+      await prisma.listing.update({ where: { id: listingId }, data: { damaged: null } });
+
+      const res = await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ description: "Updated description" })
+        .expect(400);
+
+      expect(res.body.code).toBe("DAMAGED_REQUIRED");
+      const row = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
+      expect(row.damaged).toBeNull();
+      expect(row.description).not.toBe("Updated description");
     });
 
     it("rejects conditionDisclosure with knownIssuesText over 1000 chars", async () => {
