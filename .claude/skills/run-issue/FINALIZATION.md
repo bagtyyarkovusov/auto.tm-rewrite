@@ -14,7 +14,7 @@ Keep terms in the PR, reviews, and reconciliation aligned with the canonical [do
 
 ## Independent review
 
-Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
+Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. They may work concurrently against the same fixed SHA. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
 
 Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may each perform either axis, or both, on any pull request, including high-risk changes. There is no provider-diversity requirement or per-PR waiver. See [ADR-0064](../../../docs/adr/0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md).
 

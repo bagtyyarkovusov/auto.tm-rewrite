@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
+import { ConfigModule } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { JwtModule, JwtService } from "@nestjs/jwt";
 import {
@@ -10,11 +11,14 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
+import sharp from "sharp";
+import { GetObjectCommand, HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaService } from "@auto-tm/db";
 
 import { CatalogModule } from "../catalog.module";
 import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
+import { EnvSchema } from "../../../env.schema";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintAdminJwt } from "../../../../test/helpers/mintAdminJwt";
 
@@ -26,6 +30,10 @@ describe("AdminCatalogController e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          validate: (cfg) => EnvSchema.parse(cfg),
+        }),
         CatalogModule,
         IdentityModule,
         JwtModule.register({
@@ -43,8 +51,7 @@ describe("AdminCatalogController e2e", () => {
     const jwtService = app.get(JwtService);
     app.useGlobalGuards(new JwtAuthGuard(reflector, jwtService));
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -355,6 +362,211 @@ describe("AdminCatalogController e2e", () => {
       const audit = await getAuditLog("CATALOG_MODEL_DELETE");
       expect(audit).not.toBeNull();
       expect(unwrapAuditLog(audit).targetId).toBe(model.id);
+    });
+  });
+
+  describe("brand logo endpoints", () => {
+    const s3 = new S3Client({
+      endpoint: process.env["MINIO_ENDPOINT"] ?? "http://localhost:9000",
+      region: process.env["MINIO_REGION"] ?? "us-east-1",
+      credentials: {
+        accessKeyId: process.env["MINIO_ACCESS_KEY"] ?? "minioadmin",
+        secretAccessKey: process.env["MINIO_SECRET_KEY"] ?? "minioadmin",
+      },
+      forcePathStyle: true,
+    });
+
+    async function head(key: string) {
+      try {
+        return await s3.send(new HeadObjectCommand({ Bucket: "catalog-assets", Key: key }));
+      } catch {
+        return null;
+      }
+    }
+
+    async function png(width: number, height: number): Promise<Buffer> {
+      return sharp({
+        create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } },
+      })
+        .png()
+        .toBuffer();
+    }
+
+    const svg = (body: string) =>
+      Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">${body}</svg>`,
+      );
+
+    async function presign(brandId: string, token: string, contentType: string, sizeBytes: number) {
+      return request
+        .post(`/api/v1/admin/catalog/brands/${brandId}/logo/presign`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ contentType, sizeBytes });
+    }
+
+    /** Presign, PUT the bytes to MinIO the way the admin app does, and return the key. */
+    async function uploadPending(
+      brandId: string,
+      token: string,
+      contentType: string,
+      bytes: Buffer,
+    ): Promise<string> {
+      const res = await presign(brandId, token, contentType, bytes.byteLength);
+      expect(res.status).toBe(201);
+      const put = await fetch(res.body.uploadUrl, {
+        method: "PUT",
+        headers: res.body.headers,
+        body: new Uint8Array(bytes),
+      });
+      expect(put.status).toBe(200);
+      return res.body.key as string;
+    }
+
+    async function confirm(brandId: string, token: string, key: string) {
+      return request
+        .put(`/api/v1/admin/catalog/brands/${brandId}/logo`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ key });
+    }
+
+    it("returns 401 without bearer token and 403 for a non-admin", async () => {
+      const brand = await createBrand();
+      await request
+        .post(`/api/v1/admin/catalog/brands/${brand.id}/logo/presign`)
+        .send({ contentType: "image/png", sizeBytes: 10 })
+        .expect(401);
+
+      const { token } = await createNonAdminUser();
+      expect((await presign(brand.id, token, "image/png", 10)).status).toBe(403);
+      expect((await confirm(brand.id, token, "pending/x")).status).toBe(403);
+      await request
+        .delete(`/api/v1/admin/catalog/brands/${brand.id}/logo`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it("uploads, replaces, and removes a logo without leaving orphan objects", async () => {
+      const brand = await createBrand();
+      const { token } = await createAdminUser();
+
+      const firstPending = await uploadPending(brand.id, token, "image/png", await png(90, 90));
+      expect(firstPending).toMatch(new RegExp(`^pending/brands/${brand.slug}/`));
+      expect((await head(firstPending))?.ContentDisposition).toBe("attachment");
+
+      const first = await confirm(brand.id, token, firstPending);
+      expect(first.status).toBe(200);
+      const firstKey = (await prisma.brand.findUniqueOrThrow({ where: { id: brand.id } })).logoKey;
+      expect(firstKey).toMatch(new RegExp(`^brands/${brand.slug}/v\\d+/logo\\.png$`));
+      expect(first.body.logoUrl).toMatch(new RegExp(`/catalog-assets/${firstKey}$`));
+      expect((await head(firstKey as string))?.ContentType).toBe("image/png");
+      expect(await head(firstPending)).toBeNull();
+
+      const secondPending = await uploadPending(
+        brand.id,
+        token,
+        "image/svg+xml",
+        svg('<defs><linearGradient id="g"><stop offset="0"/></linearGradient></defs><path fill="url(#g)" d="M0 0h24v24H0z"/>'),
+      );
+      const second = await confirm(brand.id, token, secondPending);
+      expect(second.status).toBe(200);
+      const secondKey = (await prisma.brand.findUniqueOrThrow({ where: { id: brand.id } }))
+        .logoKey as string;
+      // An SVG upload is served as a rendered PNG, never as SVG.
+      expect(secondKey).toMatch(/\/logo\.png$/);
+      expect((await head(secondKey))?.ContentType).toBe("image/png");
+      const rendered = await s3.send(new GetObjectCommand({ Bucket: "catalog-assets", Key: secondKey }));
+      const meta = await sharp(await rendered.Body!.transformToByteArray()).metadata();
+      expect([meta.format, meta.width, meta.height]).toEqual(["png", 256, 256]);
+      expect(await head(firstKey as string)).toBeNull();
+      expect(await head(secondPending)).toBeNull();
+      expect(unwrapAuditLog(await getAuditLog("CATALOG_BRAND_LOGO_SET")).targetId).toBe(brand.id);
+
+      await request
+        .delete(`/api/v1/admin/catalog/brands/${brand.id}/logo`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      const cleared = await prisma.brand.findUniqueOrThrow({ where: { id: brand.id } });
+      expect(cleared.logoKey).toBeNull();
+      expect(await head(secondKey)).toBeNull();
+      expect(unwrapAuditLog(await getAuditLog("CATALOG_BRAND_LOGO_REMOVE")).targetId).toBe(
+        brand.id,
+      );
+    });
+
+    it("rejects unsupported and oversized files at presign", async () => {
+      const brand = await createBrand();
+      const { token } = await createAdminUser();
+
+      for (const [contentType, size, reason] of [
+        ["image/jpeg", 100, "LOGO_UNSUPPORTED_TYPE"],
+        ["image/png", 200 * 1024 + 1, "LOGO_TOO_LARGE"],
+      ] as const) {
+        const res = await presign(brand.id, token, contentType, size);
+        expect(res.status, reason).toBe(400);
+        expect(res.body).toMatchObject({ code: "VALIDATION_FAILED", details: { reason } });
+      }
+    });
+
+    it("rejects bad uploads at confirm and deletes the pending object", async () => {
+      const brand = await createBrand();
+      const { token } = await createAdminUser();
+
+      const cases: Array<[string, Buffer, string]> = [
+        ["image/webp", await png(90, 90), "LOGO_TYPE_MISMATCH"],
+        ["image/png", await png(200, 90), "LOGO_NOT_SQUARE"],
+        ["image/png", Buffer.from("not an image"), "LOGO_UNREADABLE"],
+        [
+          "image/svg+xml",
+          svg('<s:script xmlns:s="http://www.w3.org/2000/svg">alert(1)</s:script>'),
+          "LOGO_UNSAFE_SVG",
+        ],
+      ];
+      for (const [contentType, bytes, reason] of cases) {
+        const pending = await uploadPending(brand.id, token, contentType, bytes);
+        const res = await confirm(brand.id, token, pending);
+        expect(res.status, reason).toBe(400);
+        expect(res.body).toMatchObject({ code: "VALIDATION_FAILED", details: { reason } });
+        expect(await head(pending)).toBeNull();
+      }
+
+      // A file bigger than the presigned size is caught when it is read back.
+      const res = await presign(brand.id, token, "image/png", 100);
+      await fetch(res.body.uploadUrl, {
+        method: "PUT",
+        headers: res.body.headers,
+        body: new Uint8Array(200 * 1024 + 1),
+      });
+      const tooLarge = await confirm(brand.id, token, res.body.key);
+      expect(tooLarge.body.details).toEqual({ reason: "LOGO_TOO_LARGE" });
+
+      const missing = await confirm(
+        brand.id,
+        token,
+        `pending/brands/${brand.slug}/00000000-0000-4000-8000-000000000000`,
+      );
+      expect(missing.body.details).toEqual({ reason: "LOGO_UPLOAD_MISSING" });
+
+      const unchanged = await prisma.brand.findUniqueOrThrow({ where: { id: brand.id } });
+      expect(unchanged.logoKey).toBeNull();
+    });
+
+    it("deletes the logo object when the brand is deleted", async () => {
+      const brand = await createBrand();
+      const { token } = await createAdminUser();
+      await confirm(brand.id, token, await uploadPending(brand.id, token, "image/png", await png(60, 60)));
+      const key = (await prisma.brand.findUniqueOrThrow({ where: { id: brand.id } })).logoKey as string;
+
+      await request
+        .delete(`/api/v1/admin/catalog/brands/${brand.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(await head(key)).toBeNull();
+    });
+
+    it("returns 404 for an unknown brand", async () => {
+      const { token } = await createAdminUser();
+      expect((await presign(randomUUID(), token, "image/png", 10)).status).toBe(404);
     });
   });
 });

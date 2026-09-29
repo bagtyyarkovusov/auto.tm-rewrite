@@ -2,6 +2,7 @@ import "reflect-metadata";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
+import { ConfigModule } from "@nestjs/config";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -14,6 +15,7 @@ import { CatalogModule } from "../catalog.module";
 import { CatalogSearchIndex } from "../application/CatalogSearchIndex";
 import { registerAcceptLanguageHook } from "../../../common/accept-language";
 import { GlobalErrorFilter } from "../../../common/error.filter";
+import { EnvSchema } from "../../../env.schema";
 
 describe("CatalogController e2e", () => {
   let app: NestFastifyApplication;
@@ -23,6 +25,10 @@ describe("CatalogController e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          validate: (cfg) => EnvSchema.parse(cfg),
+        }),
         CatalogModule,
         JwtModule.register({
           global: true,
@@ -37,8 +43,7 @@ describe("CatalogController e2e", () => {
     );
     app.useGlobalFilters(new GlobalErrorFilter());
     registerAcceptLanguageHook(app.getHttpAdapter().getInstance());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -63,6 +68,41 @@ describe("CatalogController e2e", () => {
   });
 
   describe("GET /api/v1/catalog/brands", () => {
+    it("returns logoUrl only for brands with a logo", async () => {
+      await prisma.brand.createMany({
+        data: [
+          {
+            id: "logo-b1",
+            slug: "with-logo",
+            nameRu: "Алфа",
+            nameTk: "Alfa",
+            nameEn: "Alfa",
+            logoKey: "brands/with-logo/v1/logo.png",
+          },
+          {
+            id: "logo-b2",
+            slug: "without-logo",
+            nameRu: "Бета",
+            nameTk: "Beta",
+            nameEn: "Beta",
+          },
+        ],
+      });
+
+      const res = await request.get("/api/v1/catalog/brands?locale=en").expect(200);
+
+      const withLogo = res.body.items.find((b: { id: string }) => b.id === "logo-b1");
+      const withoutLogo = res.body.items.find((b: { id: string }) => b.id === "logo-b2");
+      const publicUrl = (process.env["MINIO_PUBLIC_URL"] ?? "http://localhost:9000").replace(
+        /\/$/,
+        "",
+      );
+      expect(withLogo.logoUrl).toBe(
+        `${publicUrl}/catalog-assets/brands/with-logo/v1/logo.png`,
+      );
+      expect(withoutLogo).not.toHaveProperty("logoUrl");
+    });
+
     it("returns 200 with brand list sorted by locale", async () => {
       await prisma.brand.createMany({
         data: [

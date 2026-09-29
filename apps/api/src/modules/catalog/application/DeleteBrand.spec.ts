@@ -3,6 +3,7 @@ import { NotFoundException, ConflictException } from "@nestjs/common";
 
 import type { Brand } from "../domain/Brand";
 import type { BrandRepository } from "../domain/ports/BrandRepository";
+import type { BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 
 import { DeleteBrand } from "./DeleteBrand";
 import type { CatalogSearchIndex } from "./CatalogSearchIndex";
@@ -66,15 +67,34 @@ class FakePrisma {
   };
 }
 
+class FakeLogoStorage implements BrandLogoStorage {
+  deleted: string[] = [];
+  async presignUpload(): Promise<{ url: string; headers: Record<string, string> }> {
+    throw new Error("not used");
+  }
+  async get(): Promise<null> {
+    return null;
+  }
+  async put(): Promise<void> {}
+  async delete(key: string): Promise<void> {
+    this.deleted.push(key);
+  }
+  publicUrl(key: string): string {
+    return key;
+  }
+}
+
 function makeUseCase(
   brandRepo?: FakeBrandRepository,
   prisma?: FakePrisma,
   searchIndex?: FakeSearchIndex,
+  logoStorage?: FakeLogoStorage,
 ) {
   return new DeleteBrand(
     brandRepo ?? new FakeBrandRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof DeleteBrand>[1],
     (searchIndex ?? new FakeSearchIndex()) as unknown as CatalogSearchIndex,
+    logoStorage ?? new FakeLogoStorage(),
   );
 }
 
@@ -108,6 +128,24 @@ describe("DeleteBrand", () => {
       targetType: "Brand",
       targetId: "b1",
     });
+  });
+
+  it("deletes the brand's logo object", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      logoKey: "brands/toyota/v1/logo.png",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const logoStorage = new FakeLogoStorage();
+
+    await makeUseCase(brandRepo, prisma, undefined, logoStorage).execute({ id: "b1" }, "admin-1");
+
+    expect(logoStorage.deleted).toEqual(["brands/toyota/v1/logo.png"]);
   });
 
   it("throws NotFoundException when brand does not exist", async () => {

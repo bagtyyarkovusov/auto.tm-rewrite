@@ -42,6 +42,8 @@ Create a checkpoint when any of these becomes true:
 
 Checkpoint commits may be small. The final squash keeps `main` history focused.
 
+Run focused checks for each changed behavior before its checkpoint. Record the exact result in Execution state. A checkpoint is recoverable progress, not a verified final commit. [Verification](VERIFICATION.md) owns the complete gates before final review; a later change invalidates evidence for inputs it affects.
+
 ## Handoff inspection
 
 An incoming Codex desktop, Claude Code desktop, `claude-kimi` CLI, or other supported client inspects the issue, local and remote branch heads, worktree status, draft PR body and comments, checks, running processes, and the complete diff before changing anything. It resumes the existing record instead of creating another branch, worktree, PR, or summary document.

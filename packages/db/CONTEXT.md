@@ -6,6 +6,8 @@ The schema, migration history, generated-client boundary, and seed inputs live h
 
 `listings.damaged` is the seller's "Damaged / needs repair" answer (ADR-0052). It is nullable only so its migration applies to existing rows; the API requires it, and the fixture and reviewer seeds set it on every Listing. The earlier accident, mileage-accurate, owner-count, and service-history columns were dropped without data migration, so environments are reseeded.
 
+`Brand.logoKey` is a nullable object key in the `catalog-assets` bucket (see the catalog overview for the layout). Null means no logo.
+
 Cross-context foreign keys are allowed; application use-cases still use ports for cross-context access. Database integrity does not waive the application boundary. Keep schema changes with their committed migration, use forward corrective migrations, and reserve `db push` for localhost. The API pre-deploy step is the sole deployed migration authority under ADR-0039.
 
 Deletion intentionally preserves some history while erasing or nulling personal data. Check identity deletion, worker purge, and migration tests before changing cascades, nullable audit actors, or retained messages. Seeds and reviewer scenarios have separate purposes; do not run operational scripts against a live database as a cleanup check. Keep credential values out of seed/audit evidence.

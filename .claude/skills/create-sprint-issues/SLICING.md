@@ -38,18 +38,16 @@ For user-visible slices, name every screen/platform and link existing wireframe/
 
 ## Body quality
 
-AFK sprint children use the rich canonical body in `docs/agents/issue-tracker.md`:
+AFK sprint children use the canonical body in `docs/agents/issue-tracker.md`:
 
 - Summary
-- Read first
-- Files to create / modify
-- Implementation notes when needed
+- Governing references and owning area
 - Acceptance criteria
 - Out of scope
 - Depends on
-- Completion signal
+- Special verification when the standard gate cannot prove the outcome
 
-When domain vocabulary matters, `Read first` includes `docs/domain/GLOSSARY.md`, and the child uses its canonical terms without treating the glossary as behavioral requirements. Existing inconsistent names remain out of scope unless the sprint explicitly owns a migration; harmful ambiguity becomes separately scoped follow-up work.
+When domain vocabulary matters, reference `docs/domain/GLOSSARY.md` and use its canonical terms without treating definitions as behavioral requirements. Existing inconsistent names remain out of scope unless the sprint explicitly owns a migration; harmful ambiguity becomes separately scoped follow-up work.
 
 HITL children may adapt the execution details but still require a testable completion signal. Parent issues are dashboards, not executable prompts.
 

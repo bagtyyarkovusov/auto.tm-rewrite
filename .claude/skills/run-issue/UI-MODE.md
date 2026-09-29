@@ -24,11 +24,11 @@ For mobile discovery (Home, the brand and model pickers, Search, Results, Sort, 
 
 ## Implementation grouping
 
-The main session remains the owner. Apply [SUBAGENT-MODE.md](SUBAGENT-MODE.md) when its mandatory gate triggers; outside that gate, subagents are optional mechanics. Whenever they are used:
+The main session remains the owner. Use [SUBAGENT-MODE.md](SUBAGENT-MODE.md) when the work has separable groups. Whenever subagents are used:
 
 - group work by non-overlapping files and coherent acceptance criteria;
 - give each implementer the issue, exact scope, relevant design specs, and verification target;
-- review each group against the spec, UX decisions, code quality, and project rules;
+- inspect and test each integrated group; request an intermediate review for a named risk under SUBAGENT-MODE.md;
 - integrate centrally and run the full cross-workspace verification gate after all groups.
 
 Do not let a subagent invent product behavior, modify locked documents, or claim a host-only gate it did not run.
