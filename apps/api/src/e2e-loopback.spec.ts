@@ -10,7 +10,8 @@ import { describe, expect, it } from "vitest";
 // 401, and 404 responses and `socket hang up` in CI (#442). A server
 // listening on 127.0.0.1 keeps its port for the suite.
 const apiRoot = resolve(__dirname, "..");
-const supertestImport = /import\s+(\w+)\s+from\s+"supertest"/;
+const supertestImport =
+  /import\s+(?:\*\s+as\s+)?(\w+)(?:\s*,\s*\{[^}]*\})?\s+from\s+["']supertest["']/;
 
 function specFiles(dir: string): string[] {
   return readdirSync(join(apiRoot, dir), { recursive: true, encoding: "utf8" })
@@ -40,8 +41,9 @@ describe("API supertest suites", () => {
     "%s starts every app on 127.0.0.1",
     (_path, code) => {
       const name = supertestImport.exec(code)?.[1] ?? "supertest";
+      const servers = count(code, `${name}(`) + count(code, `${name}.agent(`);
 
-      expect(count(code, 'app.listen(0, "127.0.0.1")')).toBe(count(code, `${name}(`));
+      expect(count(code, 'app.listen(0, "127.0.0.1")')).toBe(servers);
       expect(code).not.toContain("app.init()");
       expect(code).not.toContain(".ready()");
     },
