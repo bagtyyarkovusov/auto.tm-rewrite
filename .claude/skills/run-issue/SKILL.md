@@ -28,7 +28,7 @@ Execute exactly one issue per invocation; [run-queue](../run-queue/SKILL.md) inv
 - A design pause may leave only the reservation branch. After its design PR merges, `resume-issue` verifies that the branch has no unique work and fast-forwards it to current `main` before implementation.
 - Build a scoped execution plan mapping every acceptance criterion to implementation and evidence.
 - Record relevant canonical terms and avoided synonyms. Do not silently migrate unrelated names.
-- Consult Context7 for every external library touched, following `docs/agents/documentation-lookups.md`.
+- Before writing or debugging code that touches an external dependency, resolve and query it through Context7, following `docs/agents/documentation-lookups.md` and ADR-0017.
 - Never query an agent provider for remaining quota before starting.
 
 ## Decision boundaries
@@ -47,7 +47,7 @@ Do not add confirmation gates for ordinary implementation mechanics. Keep one is
 
 1. Read [EXECUTION-STATE.md](EXECUTION-STATE.md). Commit and push meaningful checkpoints. After the first checkpoint, open the one draft PR and keep its `Execution state` current.
 2. For UI work, follow [UI-MODE.md](UI-MODE.md).
-3. Select single-session or mandatory [SUBAGENT-MODE.md](SUBAGENT-MODE.md) using its auto-detect gate.
+3. Use [SUBAGENT-MODE.md](SUBAGENT-MODE.md) when dividing substantial UI work. The integration owner always inspects and tests each group.
 4. Implement the smallest complete vertical slice. Tests and required current-state docs are in scope even when omitted from a file list.
 5. Follow [VERIFICATION.md](VERIFICATION.md). Repair an in-scope root failure at most three focused times. Update the PR after each completed or failed verification phase.
 6. Follow [FINALIZATION.md](FINALIZATION.md) to pin the implementation commit, pass independent Standards and Spec review, make the PR ready, set auto-merge, confirm the merge, sync, and unblock dependents.
