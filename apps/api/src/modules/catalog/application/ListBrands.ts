@@ -4,6 +4,7 @@ import {
   BRAND_REPOSITORY,
   type BrandRepository,
 } from "../domain/ports/BrandRepository";
+import { BRAND_LOGO_STORAGE, type BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 import type { CatalogSchemas } from "@auto-tm/contracts";
 
 export interface ListBrandsInput {
@@ -21,12 +22,18 @@ export interface ListBrandsResult {
 export class ListBrands {
   constructor(
     @Inject(BRAND_REPOSITORY) private readonly brands: BrandRepository,
+    @Inject(BRAND_LOGO_STORAGE) private readonly logoStorage: BrandLogoStorage,
   ) {}
 
   async execute(input: ListBrandsInput): Promise<ListBrandsResult> {
     const { items, nextCursor } = await this.brands.listBrands(input);
     return {
-      items: items.map((b) => toBrandSummary(b, input.locale)),
+      items: items.map((b) => {
+        const summary = toBrandSummary(b, input.locale);
+        return b.logoKey
+          ? { ...summary, logoUrl: this.logoStorage.publicUrl(b.logoKey) }
+          : summary;
+      }),
       nextCursor,
     };
   }

@@ -79,6 +79,10 @@
               "tk",
               "en"
             ]
+          },
+          "logoUrl": {
+            "type": "string",
+            "format": "uri"
           }
         },
         "required": [
@@ -695,6 +699,80 @@
         },
         "required": [
           "id"
+        ]
+      },
+      "PresignBrandLogoRequest": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "contentType",
+          "sizeBytes"
+        ]
+      },
+      "PresignBrandLogoResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "key": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "uploadUrl",
+          "key",
+          "expiresIn",
+          "headers"
+        ]
+      },
+      "SetBrandLogoRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "SetBrandLogoResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "id",
+          "logoUrl"
         ]
       },
       "CreateModelRequest": {

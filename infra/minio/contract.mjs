@@ -20,6 +20,7 @@ export const MEDIA_BUCKETS = [
   "listing-photos",
   "listing-videos",
   "chat-attachments",
+  "catalog-assets",
 ];
 
 export function publicReadPolicy(bucket) {

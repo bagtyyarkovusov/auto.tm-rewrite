@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 
 import { requireAuthWithReturnTo } from "../actions";
 
+import { AdminNav } from "./components/AdminNav";
+
 import { ADMIN_RETURN_TO_HEADER } from "@/lib/validators";
 
 export default async function AdminLayout({
@@ -12,5 +14,10 @@ export default async function AdminLayout({
   // Auth gate: checks TOTP elevation via API; redirects to login or TOTP verify on failure
   const returnTo = (await headers()).get(ADMIN_RETURN_TO_HEADER);
   await requireAuthWithReturnTo(returnTo);
-  return <>{children}</>;
+  return (
+    <>
+      <AdminNav />
+      {children}
+    </>
+  );
 }

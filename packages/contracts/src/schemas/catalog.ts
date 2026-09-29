@@ -12,6 +12,8 @@ export const BrandSummarySchema = z.object({
   name: z.string(),
   slug: z.string(),
   localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+  /** Public URL of the brand logo; omitted when the brand has none (show a letter fallback). */
+  logoUrl: z.string().url().optional(),
 });
 export type BrandSummary = z.infer<typeof BrandSummarySchema>;
 
@@ -265,6 +267,54 @@ export type CreateBrandRequest = z.infer<typeof CreateBrandRequestSchema>;
 
 export const UpdateBrandRequestSchema = CreateBrandRequestSchema.partial();
 export type UpdateBrandRequest = z.infer<typeof UpdateBrandRequestSchema>;
+
+export const BRAND_LOGO_MAX_BYTES = 200 * 1024;
+export const BrandLogoContentTypeSchema = z.enum(["image/svg+xml", "image/png", "image/webp"]);
+export type BrandLogoContentType = z.infer<typeof BrandLogoContentTypeSchema>;
+
+/** Why the API rejected a logo; sent as `details.reason` on a 400 `VALIDATION_FAILED`. */
+export const BrandLogoRejectionReasonSchema = z.enum([
+  "LOGO_UNSUPPORTED_TYPE",
+  "LOGO_TOO_LARGE",
+  "LOGO_EMPTY",
+  "LOGO_UNREADABLE",
+  "LOGO_TYPE_MISMATCH",
+  "LOGO_NOT_SQUARE",
+  "LOGO_UNSAFE_SVG",
+  "LOGO_UPLOAD_MISSING",
+]);
+export type BrandLogoRejectionReason = z.infer<typeof BrandLogoRejectionReasonSchema>;
+
+/**
+ * Step 1 of an admin logo upload (ADR-0008 presigned path). The content type
+ * is checked by the API so an unsupported type gets a specific reason.
+ */
+export const PresignBrandLogoRequestSchema = z.object({
+  contentType: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+});
+export type PresignBrandLogoRequest = z.infer<typeof PresignBrandLogoRequestSchema>;
+
+/** The uploader PUTs the file to `uploadUrl` sending exactly `headers`. */
+export const PresignBrandLogoResponseSchema = z.object({
+  uploadUrl: z.string().url(),
+  key: z.string(),
+  expiresIn: z.number().int().positive(),
+  headers: z.record(z.string()),
+});
+export type PresignBrandLogoResponse = z.infer<typeof PresignBrandLogoResponseSchema>;
+
+/** Step 2: the API reads the uploaded object, validates it, and makes it the logo. */
+export const SetBrandLogoRequestSchema = z.object({
+  key: z.string().min(1),
+});
+export type SetBrandLogoRequest = z.infer<typeof SetBrandLogoRequestSchema>;
+
+export const SetBrandLogoResponseSchema = z.object({
+  id: z.string(),
+  logoUrl: z.string().url(),
+});
+export type SetBrandLogoResponse = z.infer<typeof SetBrandLogoResponseSchema>;
 
 export const DeleteBrandParamSchema = z.object({
   id: z.string().uuid(),

@@ -3,9 +3,10 @@ import { PrismaService } from "@auto-tm/db";
 
 import type { Brand } from "../domain/Brand";
 import type { BrandRepository } from "../domain/ports/BrandRepository";
+import type { BrandLogoRepository } from "../domain/ports/BrandLogoRepository";
 
 @Injectable()
-export class PrismaBrandRepository implements BrandRepository {
+export class PrismaBrandRepository implements BrandRepository, BrandLogoRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async listBrands(opts: {
@@ -78,6 +79,11 @@ export class PrismaBrandRepository implements BrandRepository {
     return this.toDomain(row);
   }
 
+  async setLogoKey(id: string, logoKey: string | null): Promise<Brand> {
+    const row = await this.prisma.brand.update({ where: { id }, data: { logoKey } });
+    return this.toDomain(row);
+  }
+
   async delete(id: string): Promise<void> {
     await this.prisma.brand.delete({ where: { id } });
   }
@@ -92,6 +98,7 @@ export class PrismaBrandRepository implements BrandRepository {
       nameRu: row.nameRu,
       nameTk: row.nameTk,
       nameEn: row.nameEn,
+      logoKey: row.logoKey,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

@@ -6,6 +6,16 @@ Preserve stable IDs used by persisted listings and seed idempotence. Names are t
 
 Seed inputs and migrations are operational data. An old data snapshot is not permission to overwrite current catalog records. Cross-context callers use catalog ports rather than importing repositories.
 
+## Brand logos
+
+A Brand may have a logo. `Brand.logoKey` is an object key in the public-read `catalog-assets` MinIO bucket, laid out as `brands/<slug>/v<epoch-ms>/logo.<png|webp>`. Keys are versioned and immutable, so a replaced logo gets a new URL. `GET /api/v1/catalog/brands` returns `logoUrl` (built from `MINIO_PUBLIC_URL`) only for brands with a key; clients show a letter fallback otherwise.
+
+Admins (AdminGuard) upload through the ADR-0008 presigned path. `POST /api/v1/admin/catalog/brands/:id/logo/presign` (`{ contentType, sizeBytes }`) returns a PUT URL for `pending/brands/<slug>/<uuid>` and the headers to send, including `Content-Disposition: attachment` so a pending file is never shown inline. `PUT /api/v1/admin/catalog/brands/:id/logo` (`{ key }`) then reads that object back, validates it, stores the logo, and deletes the pending object whether or not it was accepted. `DELETE` on the same path clears the logo.
+
+Accepted files are SVG, PNG, or WebP, at most 200 KB, whose decoded format matches the declared type and whose sides are within 1:1.25. **SVG is never served:** it is rendered to a 256 px PNG. Before rendering, an SVG is rejected if it has a DOCTYPE, any namespace-prefixed element, scripts, event handlers, animation elements, `foreignObject`, embedded images, CSS escapes or `@import`, or any non-`#` reference. That check runs on the raw text, before XML character references are decoded, so it is defense in depth. What keeps the renderer from reading files is that librsvg gets the SVG as a buffer with no base URL and refuses `file:` and relative references; a `data:` URL can still render, and it is self-contained. `SharpLogoImageProcessor.spec.ts` pins that behaviour. Rejections are 400 `VALIDATION_FAILED` with `details.reason`, one of the `BrandLogoRejectionReason` values in `@auto-tm/contracts`.
+
+Replacing, removing, or deleting a Brand deletes the previous logo object after the database points elsewhere; a failed delete is logged with its key and does not undo the change. Two known leftovers are logged or left for manual cleanup: a pending upload that is never confirmed, and the losing object when two admins replace the same logo at once. Set and remove write `CATALOG_BRAND_LOGO_SET` / `CATALOG_BRAND_LOGO_REMOVE` audit entries. The rules live in [BrandLogo](domain/BrandLogo.ts); storage and image work sit behind the `BrandLogoStorage` and `LogoImageProcessor` ports.
+
 ## Search
 
 `GET /api/v1/catalog/search?q=&locale=` runs one public search over brands and models together, capped at 20 results. It is served from a per-process in-memory snapshot (`CatalogSearchIndex`) loaded through the brand/model repository ports; the admin Brand/Model write use-cases invalidate the snapshot after a successful mutation. No Postgres extension or outbound service is involved.

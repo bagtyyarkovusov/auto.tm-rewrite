@@ -23,6 +23,14 @@ import { DeleteBrand } from "./application/DeleteBrand";
 import { CreateModel } from "./application/CreateModel";
 import { UpdateModel } from "./application/UpdateModel";
 import { DeleteModel } from "./application/DeleteModel";
+import { PresignBrandLogoUpload } from "./application/PresignBrandLogoUpload";
+import { SetBrandLogo } from "./application/SetBrandLogo";
+import { RemoveBrandLogo } from "./application/RemoveBrandLogo";
+import { MinioBrandLogoStorage } from "./infrastructure/MinioBrandLogoStorage";
+import { SharpLogoImageProcessor } from "./infrastructure/SharpLogoImageProcessor";
+import { BRAND_LOGO_REPOSITORY } from "./domain/ports/BrandLogoRepository";
+import { BRAND_LOGO_STORAGE } from "./domain/ports/BrandLogoStorage";
+import { LOGO_IMAGE_PROCESSOR } from "./domain/ports/LogoImageProcessor";
 import { PrismaBrandRepository } from "./infrastructure/PrismaBrandRepository";
 import { PrismaModelRepository } from "./infrastructure/PrismaModelRepository";
 import { PrismaGenerationRepository } from "./infrastructure/PrismaGenerationRepository";
@@ -61,6 +69,18 @@ import { TRANSMISSION_REPOSITORY } from "./domain/ports/TransmissionRepository";
     {
       provide: BRAND_REPOSITORY,
       useClass: PrismaBrandRepository,
+    },
+    {
+      provide: BRAND_LOGO_REPOSITORY,
+      useExisting: PrismaBrandRepository,
+    },
+    {
+      provide: BRAND_LOGO_STORAGE,
+      useClass: MinioBrandLogoStorage,
+    },
+    {
+      provide: LOGO_IMAGE_PROCESSOR,
+      useClass: SharpLogoImageProcessor,
     },
     {
       provide: MODEL_REPOSITORY,
@@ -116,6 +136,9 @@ import { TRANSMISSION_REPOSITORY } from "./domain/ports/TransmissionRepository";
     CreateModel,
     UpdateModel,
     DeleteModel,
+    PresignBrandLogoUpload,
+    SetBrandLogo,
+    RemoveBrandLogo,
   ],
 })
 export class CatalogModule {}
