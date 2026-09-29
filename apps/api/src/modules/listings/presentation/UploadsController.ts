@@ -3,8 +3,7 @@ import { SkipThrottle } from "@nestjs/throttler";
 import type { FastifyRequest } from "fastify";
 import { UploadsSchemas, AdminSchemas } from "@auto-tm/contracts";
 
-import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/identity.public";
+import { IDENTITY_CHECK_PORT, type IdentityCheckPort } from "../../identity/identity.public";
 import { PresignUpload } from "../application/PresignUpload";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
@@ -13,7 +12,7 @@ type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 export class UploadsController {
   constructor(
     @Inject(PresignUpload) private readonly presignUploadUC: PresignUpload,
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    @Inject(IDENTITY_CHECK_PORT)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
 

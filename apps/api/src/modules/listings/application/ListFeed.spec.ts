@@ -150,6 +150,7 @@ describe("ListFeed", () => {
   function seedListing(overrides?: Partial<Parameters<typeof Listing.create>[0]>) {
     return Listing.create({
       id: "listing-1",
+      publicNumber: 1,
       sellerId: "user-1",
       status: "active",
       brandId: "brand-1",

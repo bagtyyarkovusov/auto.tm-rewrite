@@ -3,7 +3,7 @@ import { BadRequestException } from "@nestjs/common";
 
 import type { AuditLogRepository, AuditLogRow } from "../domain/ports/AuditLogRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityReadPort } from "../../identity/identity.public";
 
 import { ListAuditEntries } from "./ListAuditEntries";
 

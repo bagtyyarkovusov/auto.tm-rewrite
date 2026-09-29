@@ -7,10 +7,14 @@ import {
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
-import type { IdentityCheckPort } from "../modules/identity/domain/ports/IdentityCheckPort";
-import type { SessionRepository } from "../modules/identity/domain/ports/SessionRepository";
-import type { ClockPort } from "../modules/identity/domain/ports/ClockPort";
-import { IDENTITY_TOKENS } from "../modules/identity/identity.tokens";
+import {
+  IDENTITY_CHECK_PORT,
+  IDENTITY_CLOCK_PORT,
+  IDENTITY_SESSION_REPOSITORY,
+  type ClockPort,
+  type IdentityCheckPort,
+  type SessionRepository,
+} from "../modules/identity/identity.public";
 
 interface JwtPayload {
   sub?: string;
@@ -21,11 +25,11 @@ interface JwtPayload {
 @Injectable()
 export class AdminGuard implements CanActivate {
   constructor(
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    @Inject(IDENTITY_CHECK_PORT)
     private readonly identityCheck: IdentityCheckPort,
-    @Inject(IDENTITY_TOKENS.SessionRepository)
+    @Inject(IDENTITY_SESSION_REPOSITORY)
     private readonly sessionRepo: SessionRepository,
-    @Inject(IDENTITY_TOKENS.ClockPort)
+    @Inject(IDENTITY_CLOCK_PORT)
     private readonly clock: ClockPort,
   ) {}
 

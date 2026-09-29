@@ -10,8 +10,7 @@ import { randomUUID } from "node:crypto";
 
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
+import { IDENTITY_READ_PORT, type IdentityReadPort } from "../../identity/identity.public";
 import { AdminSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 

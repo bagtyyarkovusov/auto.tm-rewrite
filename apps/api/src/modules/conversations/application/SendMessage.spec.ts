@@ -6,8 +6,7 @@ import { Message } from "../domain/Message";
 import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
 import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/MessageEventPublisher";
 
 import { SendMessage } from "./SendMessage";

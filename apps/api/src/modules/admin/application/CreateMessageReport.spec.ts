@@ -3,7 +3,7 @@ import { NotFoundException, BadRequestException, ForbiddenException } from "@nes
 
 import { ContentReport } from "../domain/ContentReport";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityReadPort } from "../../identity/identity.public";
 import type {
   ConversationReportContextPort,
   MessageReportContext,

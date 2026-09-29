@@ -4,8 +4,7 @@ import { AdminSchemas } from "@auto-tm/contracts";
 
 import { Conversation } from "../domain/Conversation";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
 import type { Message } from "../domain/Message";
 
 import { ValidateConversationAccess } from "./ValidateConversationAccess";

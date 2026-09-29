@@ -6,8 +6,7 @@ import type { ContentReportRepository } from "../domain/ports/ContentReportRepos
 import { CONTENT_REPORT_REPOSITORY } from "../domain/ports/ContentReportRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
+import { IDENTITY_READ_PORT, type IdentityReadPort } from "../../identity/identity.public";
 
 export interface ListReportsInput {
   status?: string | undefined;

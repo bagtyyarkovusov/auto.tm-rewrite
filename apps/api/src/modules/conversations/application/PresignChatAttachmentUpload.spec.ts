@@ -4,7 +4,7 @@ import { NotFoundException, ForbiddenException, BadRequestException } from "@nes
 import { Conversation } from "../domain/Conversation";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
 import type { MediaStoragePort } from "../../listings/domain/ports/MediaStoragePort";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
+import type { IdentityCheckPort } from "../../identity/identity.public";
 
 import { PresignChatAttachmentUpload } from "./PresignChatAttachmentUpload";
 

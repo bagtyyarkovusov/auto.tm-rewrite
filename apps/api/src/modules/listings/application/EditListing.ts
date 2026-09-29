@@ -105,6 +105,7 @@ export class EditListing {
     // Build updated listing data
     const updatedData: Parameters<typeof Listing.create>[0] = {
       id: existing.id,
+      publicNumber: existing.publicNumber,
       sellerId: existing.sellerId,
       status: existing.status,
       brandId: existing.brandId,

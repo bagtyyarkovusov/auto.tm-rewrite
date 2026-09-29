@@ -18,8 +18,7 @@ import { ListingsSchemas, AdminSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
 import { Public } from "../../../common/public.decorator";
-import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/identity.public";
+import { IDENTITY_CHECK_PORT, type IdentityCheckPort } from "../../identity/identity.public";
 import { ArchiveListing } from "../application/ArchiveListing";
 import { CountListings } from "../application/CountListings";
 import { CountListingModels } from "../application/CountListingModels";
@@ -54,7 +53,7 @@ export class ListingsController {
     @Inject(CountListings) private readonly countListingsUC: CountListings,
     @Inject(CountListingModels) private readonly countListingModelsUC: CountListingModels,
     @Inject(CountListingBrands) private readonly countListingBrandsUC: CountListingBrands,
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    @Inject(IDENTITY_CHECK_PORT)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
 
