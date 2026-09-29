@@ -12,6 +12,8 @@ export const BrandSummarySchema = z.object({
   name: z.string(),
   slug: z.string(),
   localeFallback: z.enum(["ru", "tk", "en"]).optional(),
+  /** Public URL of the brand logo; omitted when the brand has none (show a letter fallback). */
+  logoUrl: z.string().url().optional(),
 });
 export type BrandSummary = z.infer<typeof BrandSummarySchema>;
 
@@ -265,6 +267,30 @@ export type CreateBrandRequest = z.infer<typeof CreateBrandRequestSchema>;
 
 export const UpdateBrandRequestSchema = CreateBrandRequestSchema.partial();
 export type UpdateBrandRequest = z.infer<typeof UpdateBrandRequestSchema>;
+
+export const BRAND_LOGO_MAX_BYTES = 200 * 1024;
+export const BrandLogoContentTypeSchema = z.enum(["image/svg+xml", "image/png", "image/webp"]);
+export type BrandLogoContentType = z.infer<typeof BrandLogoContentTypeSchema>;
+
+/**
+ * Admin logo upload. The file travels base64-encoded because it is small and
+ * the API must decode it to check its type, size, and shape before storing it.
+ * The content type is checked by the API, so an unsupported type gets a
+ * specific error instead of a schema failure.
+ */
+export const SetBrandLogoRequestSchema = z.object({
+  contentType: z.string().min(1),
+  // Base64 of a file at most 200 KB, with a little room so the API, not the
+  // schema, reports an oversized file.
+  dataBase64: z.string().min(1).max(Math.ceil((BRAND_LOGO_MAX_BYTES * 2 * 4) / 3)),
+});
+export type SetBrandLogoRequest = z.infer<typeof SetBrandLogoRequestSchema>;
+
+export const SetBrandLogoResponseSchema = z.object({
+  id: z.string(),
+  logoUrl: z.string().url(),
+});
+export type SetBrandLogoResponse = z.infer<typeof SetBrandLogoResponseSchema>;
 
 export const DeleteBrandParamSchema = z.object({
   id: z.string().uuid(),

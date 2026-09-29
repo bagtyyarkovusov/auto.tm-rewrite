@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { Brand } from "../domain/Brand";
 import type { BrandRepository } from "../domain/ports/BrandRepository";
+import type { BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 import { ListBrands } from "./ListBrands";
 
 function makeBrand(overrides: Partial<Brand> = {}): Brand {
@@ -71,8 +72,14 @@ class FakeBrandRepository implements BrandRepository {
   }
 }
 
+const fakeLogoStorage: BrandLogoStorage = {
+  put: async () => undefined,
+  delete: async () => undefined,
+  publicUrl: (key) => `https://media.example/catalog-assets/${key}`,
+};
+
 function makeUseCase(brandRepo?: FakeBrandRepository) {
-  return new ListBrands(brandRepo ?? new FakeBrandRepository());
+  return new ListBrands(brandRepo ?? new FakeBrandRepository(), fakeLogoStorage);
 }
 
 describe("ListBrands", () => {
@@ -92,6 +99,19 @@ describe("ListBrands", () => {
     expect(result.items[0]!.slug).toBe("toyota");
     expect(result.items[0]!.id).toBe("brand-1");
     expect(result.items[0]!.localeFallback).toBeUndefined();
+  });
+
+  it("adds logoUrl only for brands with a logo key", async () => {
+    brandRepo.brands = [
+      makeBrand({ id: "b1", logoKey: "brands/toyota/v1/logo.png" }),
+      makeBrand({ id: "b2", slug: "bmw", logoKey: null }),
+    ];
+    const result = await makeUseCase(brandRepo).execute({ locale: "en" });
+
+    expect(result.items[0]!.logoUrl).toBe(
+      "https://media.example/catalog-assets/brands/toyota/v1/logo.png",
+    );
+    expect(result.items[1]).not.toHaveProperty("logoUrl");
   });
 
   it("falls back to another locale when the requested locale is empty", async () => {
