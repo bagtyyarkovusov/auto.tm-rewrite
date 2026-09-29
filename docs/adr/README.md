@@ -76,7 +76,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md) | Any supported client may review either axis, and issues have no concurrency limit (supersedes ADR-0062 and the review-provider and in-flight rules of ADR-0058/0059) | Accepted | 2026-09-28 |
 | [0065](0065-small-changes-skip-the-issue-ceremony.md) | Small changes skip the issue ceremony (amends ADR-0058 re-review and separate-axes rules, ADR-0064's both-verdicts rule, and one-branch-per-issue for batch PRs; extends ADR-0058 with no-issue PRs) | Accepted | 2026-09-28 |
 | [0066](0066-retire-sandcastle-queue-agents-replace-unattended-dispatch.md) | Retire Sandcastle; queue agents replace unattended dispatch (supersedes ADR-0028 and ADR-0033; amends ADR-0041's `.sandcastle/` retention and ADR-0058's Sandcastle boundaries) | Accepted | 2026-09-29 |
-| [0067](0067-targeted-intermediate-reviews-and-final-verification.md) | Target intermediate reviews and verify the final commit (amends ADR-0058's checkpoint and review procedure) | Proposed | 2026-09-29 |
+| [0067](0067-targeted-intermediate-reviews-and-final-verification.md) | Target intermediate reviews and verify the final commit (amends ADR-0058's checkpoint and review procedure) | Accepted | 2026-09-29 |
 | [0068](0068-resolve-context7-ids-at-lookup-time.md) | Resolve Context7 IDs at lookup time (amends ADR-0017's ID selection shortcut) | Proposed | 2026-09-29 |
 
 ## Per-app ADRs

@@ -1,6 +1,6 @@
 # ADR-0067: Target intermediate reviews and verify the final commit
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-29
 - **Deciders**: AutoTM founder
 - **Amends**: ADR-0058's checkpoint and review procedure; preserves its fixed-commit Standards and Spec gate
