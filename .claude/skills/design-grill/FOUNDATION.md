@@ -16,17 +16,14 @@ A reusable component, token, navigation contract, product rule, or prerequisite 
 ## Summary
 <foundation capability and why target issue needs it>
 
-## Read first
-- <charter/ADR/PRD/CONTEXT/current component sources>
+## Governing references
+- <relevant charter/ADR/PRD/design decisions>
 
-## Direction
-<settled implementation boundary, not invented product scope>
-
-## Files to create / modify
-- `<path>` — <purpose>
+## Owning area
+<workspace or context, and the settled boundary>
 
 ## Acceptance criteria
-- [ ] <testable behavior and documentation>
+- [ ] <observable behavior and proof>
 
 ## Out of scope
 - Target issue #N implementation
@@ -34,8 +31,8 @@ A reusable component, token, navigation contract, product rule, or prerequisite 
 ## Depends on
 - None | #...
 
-## Completion signal
-<repository gates and ADR-0060 overview update trigger>
+## Special verification
+<evidence beyond the repository and affected-area gates, or omit>
 ```
 
 Preview title/body/labels/dependency update. After approval, create it with existing labels, link/comment on #N, mark #N blocked when appropriate, and stop. Do not create a tenth project skill.

@@ -13,7 +13,7 @@ Verification is evidence collection, not a ceremonial command list. Map each iss
 ## Required gates
 
 - Run typecheck, lint, and tests for every touched workspace.
-- Run the narrowest useful tests during development, then the repository-required gate before finalization.
+- Run the narrowest useful tests during development. Before final review of the fixed commit, run the repository test and typecheck gates, affected lint, and the applicable checks below. Record commands and results in Execution state. If later changes affect a checked input, rerun the affected check before relying on its result.
 - For API/domain changes, verify layer boundaries, one-use-case-per-file, cross-context ports/events, and absence of Prisma imports in domain code.
 - For schema changes, require a committed Prisma migration and verify runtime consumers.
 - For TypeScript package-boundary changes, follow `docs/agents/typescript-runtime.md` and run the runtime-import gate.

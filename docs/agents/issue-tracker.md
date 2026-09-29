@@ -89,51 +89,36 @@ Both paths treat the issue body as the slice contract. The parent remains a dash
 
 ## Sprint child body template (execution contract)
 
-The body must be self-contained enough for either execution path. Reference repository files by path; the executor resolves current facts inside its working tree rather than treating the body as a frozen code snapshot.
-
-When domain vocabulary matters, the reading contract includes the [canonical glossary](../domain/GLOSSARY.md). The issue keeps the repository path as text so it remains usable when copied into GitHub.
+The body must state one verifiable outcome and the decisions that govern it. Reference repository paths without copying source code, generic agent instructions, or command lists. The executor resolves current facts inside its worktree. When domain vocabulary matters, link the [canonical glossary](../domain/GLOSSARY.md); a definition does not add behavior to the issue.
 
 ```markdown
 ## Summary
 
-<one paragraph — what this slice ships, why, and how it fits the sprint's demo line>
+<observable outcome and why it belongs in this sprint>
 
-## Read first (inside the sandbox)
+## Governing references
 
-1. `docs/prd/sprints/sprint-NN-<name>.md` — sprint goal + sprint-wide DoD
-2. `docs/domain/GLOSSARY.md` — relevant canonical terms and avoided synonyms (when domain vocabulary matters; not product behavior or implementation status)
-3. `apps/api/src/modules/<context>/CONTEXT.md` — orientation and source/test entry points (if API-side)
-4. `docs/adr/<NNNN>-<name>.md` — relevant ADRs
-5. `CLAUDE.md` — architecture rules (no Prisma in domain, ports for cross-context, etc.)
-6. `docs/agents/mobile-expo.md` — required for `mobile` area issues, Expo package work, Metro failures, or Expo Go runtime crashes
+<only the sprint delta, PRD, design, or ADR that governs this slice; the agent starts from AGENTS.md and CONTEXT-MAP.md>
 
-## Files to create / modify
+## Owning area
 
-<list of paths with one-line purpose each>
-
-## Implementation notes
-
-<minimum-viable code skeletons, type signatures, or config snippets the agent needs that aren't in the referenced files. Skip if everything is captured by reference.>
+<workspace or bounded context, plus a non-obvious boundary if needed>
 
 ## Acceptance criteria (slice-scoped)
 
-- [ ] <one bullet per behavior — domain / application / infra / presentation / test>
+- [ ] <observable behavior and evidence that proves it>
 
 ## Out of scope
 
-- <sibling slices in the same sprint, deliberately deferred>
+- <specific adjacent behavior deferred from this slice>
 
 ## Depends on
 
-- #<blocker> (must merge first) — or "None"
+- #<blocker> (must merge first), or "None"
 
-## Completion signal
+## Special verification
 
-The slice is complete only when:
-1. `pnpm typecheck` passes for every workspace touched
-2. `pnpm test` passes for every workspace touched
-3. Follow [ADR-0060](../adr/0060-source-first-agent-context-and-task-scoped-guidance.md): update the relevant overview in the same PR when its documented ownership, boundary, constraint, or important limitation changes. Source and tests own routine implementation details. Other document roles and mutability rules remain governed by [ADR-0020](../adr/0020-document-hierarchy-and-mutability.md).
-4. For mobile / Expo issues, the check gate in `docs/agents/mobile-expo.md` passes, including Expo dependency check and runtime/simulator verification when the issue is a runtime crash
+<only evidence beyond the repository and affected-area gates, or omit>
 ```
 
 ## Labels applied at creation
@@ -153,7 +138,7 @@ Parent PRD issues get `phase-N` + `feature` only — no triage label, since they
 - **Slice-specific AC** lives in the child issue body. Once a `/run-issue` agent picks it up, the body is effectively immutable for that run.
 - The two never overlap semantically: sprint DoD describes the sprint demo; slice AC describes one vertical PR.
 - For decision-heavy sprints, prefer a `Recommended child issue map` in the sprint file over copying every sprint decision into every issue body. Child issues should reference the sprint file and local `CONTEXT.md`, then restate only the acceptance criteria needed for that slice.
-- When a child uses domain vocabulary, include the glossary in `Read first` and use canonical terms in new issue text. Do not infer behavior from a definition or silently add migration of inconsistent existing names.
+- When a child uses domain vocabulary, put the glossary under `Governing references` and use canonical terms in new issue text. Do not infer behavior from a definition or silently add migration of inconsistent existing names.
 - If a child issue would need more than one unrelated bounded context behavior to pass, split it. If splitting would make one behavior land without its enforcement/tests, keep it together as one vertical slice.
 
 ## Dependency tracking (`Depends on`)
@@ -167,20 +152,7 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 
 ## `/run-issue` integration
 
-`run-issue <N>` is the tracked repository skill that Codex desktop, Claude Code desktop, or the `claude-kimi` CLI can use to drive one issue end-to-end. The `claude-kimi` client runs Claude Code CLI against Kimi Code and records `Provider: Kimi` under [ADR-0059](../adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Per invocation it:
-
-1. Reads the issue body via `gh issue view <N> --json body,title,labels`
-2. Reads CLAUDE.md house rules + the issue's referenced docs (`## Read first` section)
-3. Creates and pushes an `agent/issue-<N>` reservation branch off `main`; existing branch/worktree/PR state routes to `resume-issue`
-4. Commits and pushes meaningful checkpoints, then opens a draft PR after the first checkpoint with `Closes #<N>` and one mutable `Execution state`
-5. Implements, tests, and runs the verification gate (typecheck, tests, Expo gate for mobile) while keeping the PR state current
-6. Runs independent read-only Standards and Spec reviews against the exact commit and records verdicts as PR comments
-7. Sets auto-merge (`gh pr merge --auto --squash`) once both reviews pass, so GitHub squash-merges after the required `pr` check; it never self-approves or closes the issue directly
-8. Syncs `main` locally and reconciles the Sprint parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`
-
-Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.
-
-`run-issue` is provider-neutral and is the only issue execution path; there is no unattended orchestrator. No `.github/workflows/unblock.yml` exists, so each successful integration owner reconciles dependents after merge.
+Use [run-issue](../../.claude/skills/run-issue/SKILL.md) for one ready issue, [resume-issue](../../.claude/skills/resume-issue/SKILL.md) when its execution state exists, and [run-queue](../../.claude/skills/run-queue/SKILL.md) for a founder-ordered set. The [coding workflow](coding-workflow.md) routes their shared gates. The issue body stays a task contract; its branch and PR Execution state record implementation progress. The successful integration owner reconciles affected dependency labels through [sprint-transitions](sprint-transitions.md).
 
 ## Body template (general / non-sprint issues)
 
