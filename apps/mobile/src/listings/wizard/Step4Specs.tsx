@@ -835,7 +835,7 @@ function ConditionDisclosureSection({
                 onPress={() => updateDisclosure({ damaged: answer })}
                 disabled={disabled}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                accessibilityState={{ checked: selected }}
                 accessibilityLabel={`${t("damaged")}: ${answer ? t("yes") : t("no")}`}
                 className={cn(
                   "flex-1 items-center justify-center rounded-md py-2.5",

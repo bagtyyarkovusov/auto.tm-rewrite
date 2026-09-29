@@ -246,6 +246,7 @@ describe("Step4Specs condition disclosure inputs", () => {
     expect(step4SpecsSource).toContain('t("damaged")');
     expect(step4SpecsSource).toContain("updateDisclosure({ damaged: answer })");
     expect(step4SpecsSource).toContain('accessibilityRole="radio"');
+    expect(step4SpecsSource).toContain("accessibilityState={{ checked: selected }}");
     expect(step4SpecsSource).toContain("knownIssuesText");
     for (const dropped of ["accidentReported", "mileageAccurate", "ownerCount", "serviceHistoryAvailable", "Switch"]) {
       expect(step4SpecsSource).not.toContain(dropped);
