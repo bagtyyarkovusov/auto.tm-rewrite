@@ -3,8 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import type { MediaStoragePort } from "../../listings/domain/ports/MediaStoragePort";
 import { MEDIA_STORAGE_PORT } from "../../listings/domain/ports/MediaStoragePort";
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
-import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
+import { IDENTITY_CHECK_PORT, type IdentityCheckPort } from "../../identity/identity.public";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 import {
@@ -40,7 +39,7 @@ export class PresignChatAttachmentUpload {
     private readonly conversations: ConversationRepository,
     @Inject(MEDIA_STORAGE_PORT)
     private readonly storage: MediaStoragePort,
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    @Inject(IDENTITY_CHECK_PORT)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
 

@@ -1,10 +1,12 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import { AdminSchemas } from "@auto-tm/contracts";
 
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
-import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
+import {
+  IDENTITY_CHECK_PORT,
+  IDENTITY_READ_PORT,
+  type IdentityCheckPort,
+  type IdentityReadPort,
+} from "../../identity/identity.public";
 import type { Conversation } from "../domain/Conversation";
 import { CONVERSATION_ERROR_CODES } from "../domain/types";
 
@@ -17,7 +19,7 @@ export interface AssertConversationParticipantAccessInput {
 @Injectable()
 export class ConversationAccessPolicy {
   constructor(
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    @Inject(IDENTITY_CHECK_PORT)
     private readonly identityCheck: IdentityCheckPort,
     @Inject(IDENTITY_READ_PORT)
     private readonly identityRead: IdentityReadPort,

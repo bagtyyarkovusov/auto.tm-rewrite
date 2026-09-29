@@ -1,7 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
+import { IDENTITY_READ_PORT, type IdentityReadPort } from "../../identity/identity.public";
 import type { PushTokenRepository } from "../domain/ports/PushTokenRepository";
 import { PUSH_TOKEN_REPOSITORY } from "../domain/ports/PushTokenRepository";
 import { DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS } from "../domain/types";

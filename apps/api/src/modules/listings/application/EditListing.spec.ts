@@ -112,6 +112,7 @@ function seedActiveListing(
 ) {
   const listing = Listing.create({
     id: "listing-1",
+    publicNumber: 1,
     sellerId: "user-1",
     status: "active",
     brandId: "brand-1",

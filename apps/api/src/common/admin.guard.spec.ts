@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { UnauthorizedException, ForbiddenException } from "@nestjs/common";
 import type { ExecutionContext } from "@nestjs/common";
 import { AdminGuard } from "./admin.guard";
-import type { IdentityCheckPort } from "../modules/identity/domain/ports/IdentityCheckPort";
-import type { SessionRepository } from "../modules/identity/domain/ports/SessionRepository";
-import type { ClockPort } from "../modules/identity/domain/ports/ClockPort";
-import type { Session } from "../modules/identity/domain/Session";
+import type {
+  ClockPort,
+  IdentityCheckPort,
+  Session,
+  SessionRepository,
+} from "../modules/identity/identity.public";
 import { randomUUID } from "node:crypto";
 
 const NOW = new Date("2026-05-14T12:00:00Z");

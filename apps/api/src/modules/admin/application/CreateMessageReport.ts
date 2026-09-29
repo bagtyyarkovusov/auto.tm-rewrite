@@ -11,8 +11,7 @@ import { randomUUID } from "node:crypto";
 import { AdminSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
+import { IDENTITY_READ_PORT, type IdentityReadPort } from "../../identity/identity.public";
 import type {
   ConversationReportContextPort,
   MessageReportContext,

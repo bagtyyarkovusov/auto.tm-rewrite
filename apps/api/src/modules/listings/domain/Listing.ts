@@ -40,7 +40,7 @@ export class Listing {
     readonly conditionDisclosure: ConditionDisclosure | undefined,
     readonly createdAt: Date,
     readonly updatedAt: Date,
-    readonly publicNumber: number | undefined,
+    readonly publicNumber: number,
   ) {
     if (!allowCalls && !allowChat) {
       throw new DomainError(
@@ -52,7 +52,7 @@ export class Listing {
 
   static create(data: {
     id: string;
-    publicNumber?: number;
+    publicNumber: number;
     sellerId: string;
     status: ListingStatus;
     brandId: string;

@@ -4,7 +4,7 @@ import { NotFoundException, ForbiddenException, BadRequestException } from "@nes
 import { InspectionInterest } from "../domain/InspectionInterest";
 import type { InspectionInterestRepository } from "../domain/ports/InspectionInterestRepository";
 import type { ListingsReadPort, ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityReadPort } from "../../identity/identity.public";
 
 import { CreateInspectionInterest } from "./CreateInspectionInterest";
 

@@ -83,6 +83,7 @@ function makeUseCase(
 function seedActiveListing(repo: FakeListingRepository, overrides?: Partial<Parameters<typeof Listing.create>[0]>) {
   const listing = Listing.create({
     id: "listing-1",
+    publicNumber: 1,
     sellerId: "user-1",
     status: "active",
     brandId: "brand-1",

@@ -8,10 +8,12 @@ import {
 import { PrismaService } from "@auto-tm/db";
 import { AdminSchemas } from "@auto-tm/contracts";
 
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import { IDENTITY_READ_PORT } from "../../identity/domain/ports/IdentityReadPort";
-import type { IdentityAdminPort } from "../../identity/domain/ports/IdentityAdminPort";
-import { IDENTITY_ADMIN_PORT } from "../../identity/domain/ports/IdentityAdminPort";
+import {
+  IDENTITY_ADMIN_PORT,
+  IDENTITY_READ_PORT,
+  type IdentityAdminPort,
+  type IdentityReadPort,
+} from "../../identity/identity.public";
 import type { AuditLogRepository } from "../domain/ports/AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY } from "../domain/ports/AuditLogRepository";
 

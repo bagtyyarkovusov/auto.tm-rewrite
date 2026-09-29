@@ -209,6 +209,7 @@ export class PublishListing {
 
       const listing = Listing.create({
         id: listingRow.id,
+        publicNumber: listingRow.publicNumber,
         sellerId: listingRow.sellerId,
         status: listingRow.status as "active" | "sold" | "archived",
         brandId: listingRow.brandId,

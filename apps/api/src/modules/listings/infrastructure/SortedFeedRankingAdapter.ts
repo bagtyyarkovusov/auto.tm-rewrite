@@ -294,6 +294,7 @@ export class SortedFeedRankingAdapter implements FeedRankingPort {
   private toDomain(row: ListingRow): Listing {
     return Listing.create({
       id: row.id,
+      publicNumber: row.publicNumber,
       sellerId: row.sellerId,
       status: row.status as "active" | "sold" | "archived" | "banned",
       brandId: row.brandId,

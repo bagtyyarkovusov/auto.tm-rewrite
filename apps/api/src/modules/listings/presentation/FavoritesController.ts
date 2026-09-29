@@ -14,8 +14,7 @@ import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import { ListingsSchemas, AdminSchemas } from "@auto-tm/contracts";
 
-import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/identity.public";
+import { IDENTITY_CHECK_PORT, type IdentityCheckPort } from "../../identity/identity.public";
 import { AddFavorite } from "../application/AddFavorite";
 import { RemoveFavorite } from "../application/RemoveFavorite";
 import { ListMyFavorites } from "../application/ListMyFavorites";
@@ -28,7 +27,7 @@ export class FavoritesController {
     @Inject(AddFavorite) private readonly addFavoriteUC: AddFavorite,
     @Inject(RemoveFavorite) private readonly removeFavoriteUC: RemoveFavorite,
     @Inject(ListMyFavorites) private readonly listMyFavoritesUC: ListMyFavorites,
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    @Inject(IDENTITY_CHECK_PORT)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
 

@@ -65,9 +65,6 @@ export class GetListingDetail {
     if (!listing || listing.deletedAt) {
       throw new NotFoundException("Listing not found");
     }
-    if (listing.publicNumber === undefined) {
-      throw new Error("Persisted Listing missing public number");
-    }
 
     // Banned listings: non-owner → 404; owner → show detail (frontend shows generic notice)
     if (listing.status === "banned") {

@@ -17,6 +17,24 @@ export default [
     },
   },
   {
+    files: ["**/*.ts"],
+    ignores: ["src/modules/identity/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "(^|/)identity/(?!identity\\.(public|module)$)",
+              message:
+                "Import identity through identity/identity.public (or identity.module for Nest composition).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.spec.ts", "**/*.e2e.spec.ts"],
     rules: {
       "@typescript-eslint/consistent-type-imports": "off",

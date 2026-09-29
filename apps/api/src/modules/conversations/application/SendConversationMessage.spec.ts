@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { IdentityCheckPort } from "../../identity/domain/ports/IdentityCheckPort";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
 import type {
   ListingSummary,
   ListingsReadPort,

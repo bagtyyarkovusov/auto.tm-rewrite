@@ -17,8 +17,7 @@ import type { FastifyRequest } from "fastify";
 import { ZodError } from "zod";
 import { ListingsSchemas, WizardSchemas, AdminSchemas } from "@auto-tm/contracts";
 
-import { IDENTITY_TOKENS } from "../../identity/identity.tokens";
-import type { IdentityCheckPort } from "../../identity/identity.public";
+import { IDENTITY_CHECK_PORT, type IdentityCheckPort } from "../../identity/identity.public";
 import { CreateDraft } from "../application/CreateDraft";
 import { UpdateDraft } from "../application/UpdateDraft";
 import { DiscardDraft } from "../application/DiscardDraft";
@@ -35,7 +34,7 @@ export class DraftsController {
     @Inject(DiscardDraft) private readonly discardDraftUC: DiscardDraft,
     @Inject(ListMyDrafts) private readonly listMyDraftsUC: ListMyDrafts,
     @Inject(ValidateDraftStep) private readonly validateStepUC: ValidateDraftStep,
-    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    @Inject(IDENTITY_CHECK_PORT)
     private readonly identityCheck: IdentityCheckPort,
   ) {}
 

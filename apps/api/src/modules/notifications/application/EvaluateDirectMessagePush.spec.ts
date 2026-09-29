@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import type { IdentityReadPort, IdentityUserSummary } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityReadPort, IdentityUserSummary } from "../../identity/identity.public";
 import type { PushToken } from "../domain/PushToken";
 import type { PushTokenRepository } from "../domain/ports/PushTokenRepository";
 import { DIRECT_MESSAGE_PUSH_SUPPRESSION_REASONS } from "../domain/types";

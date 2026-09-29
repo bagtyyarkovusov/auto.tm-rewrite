@@ -10,8 +10,7 @@ import { SuspendUser } from "./SuspendUser";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
 import { ContentReport } from "../domain/ContentReport";
 import type { AuditLogRepository, AuditLogRow } from "../domain/ports/AuditLogRepository";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import type { IdentityAdminPort } from "../../identity/domain/ports/IdentityAdminPort";
+import type { IdentityAdminPort, IdentityReadPort } from "../../identity/identity.public";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 class FakeContentReportRepository implements ContentReportRepository {

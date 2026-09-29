@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
+import type { IdentityReadPort } from "../../identity/identity.public";
 import type { PresencePort } from "../../realtime/domain/ports/PresencePort";
 import type { ConversationStatePort } from "../../conversations/domain/ports/ConversationStatePort";
 import type { MessageSentEvent } from "../../conversations/domain/ports/MessageEventPublisher";

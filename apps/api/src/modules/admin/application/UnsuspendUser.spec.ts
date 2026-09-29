@@ -3,8 +3,7 @@ import { NotFoundException, ConflictException, ForbiddenException } from "@nestj
 
 import { UnsuspendUser } from "./UnsuspendUser";
 import type { AuditLogRepository, AuditLogRow } from "../domain/ports/AuditLogRepository";
-import type { IdentityReadPort } from "../../identity/domain/ports/IdentityReadPort";
-import type { IdentityAdminPort } from "../../identity/domain/ports/IdentityAdminPort";
+import type { IdentityAdminPort, IdentityReadPort } from "../../identity/identity.public";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 class FakeAuditLogRepository implements AuditLogRepository {
