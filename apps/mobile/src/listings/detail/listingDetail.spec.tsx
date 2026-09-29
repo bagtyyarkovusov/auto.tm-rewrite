@@ -3,7 +3,10 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
+import { WizardSchemas } from "@auto-tm/contracts";
 import { describe, it, expect } from "vitest";
+
+import { conditionDisclosureFieldErrors } from "../wizard/conditionDisclosureErrors";
 
 const priceDisplaySource = readFileSync(
   resolve(__dirname, "../components/PriceDisplay.tsx"),
@@ -254,7 +257,38 @@ describe("Step4Specs condition disclosure inputs", () => {
   });
 
   it("shows the required-answer error under the question", () => {
-    expect(step4SpecsSource).toContain('fieldErrors?.["conditionDisclosure.damaged"]');
+    const disclosure = { knownIssuesText: "Rust on the sill" };
+    const { fieldErrors } = WizardSchemas.validateStep("specs", {
+      condition: "new",
+      conditionDisclosure: disclosure,
+    });
+
+    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({
+      damaged: "wizardErrors.damagedRequired",
+    });
+    expect(step4SpecsSource).toContain("conditionDisclosureFieldErrors(fieldErrors, disclosure)");
+  });
+
+  it("shows a Known issues error under Known issues once Damaged is answered", () => {
+    const disclosure = { damaged: true, knownIssuesText: "x".repeat(1001) };
+    const { fieldErrors } = WizardSchemas.validateStep("specs", {
+      condition: "new",
+      conditionDisclosure: disclosure,
+    });
+
+    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({
+      knownIssuesText: "wizardErrors.invalidValue",
+    });
+  });
+
+  it("shows no disclosure error once the step is valid", () => {
+    const disclosure = { damaged: false };
+    const { fieldErrors } = WizardSchemas.validateStep("specs", {
+      condition: "new",
+      conditionDisclosure: disclosure,
+    });
+
+    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({});
   });
 
   it("caps known issues text at 1000 characters", () => {

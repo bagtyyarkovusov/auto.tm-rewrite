@@ -11,6 +11,8 @@ import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 
+import { conditionDisclosureFieldErrors } from "./conditionDisclosureErrors";
+
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -807,6 +809,7 @@ function ConditionDisclosureSection({
 }) {
   const { t } = useTranslation();
   const disclosure = payload.conditionDisclosure;
+  const errors = conditionDisclosureFieldErrors(fieldErrors, disclosure);
 
   const updateDisclosure = useCallback(
     (patch: Partial<ListingsSchemas.DraftConditionDisclosure>) => {
@@ -852,9 +855,9 @@ function ConditionDisclosureSection({
             );
           })}
         </View>
-        {fieldErrors?.["conditionDisclosure.damaged"] && (
+        {errors.damaged && (
           <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-            {fieldErrors["conditionDisclosure.damaged"]}
+            {errors.damaged}
           </Text>
         )}
       </View>
@@ -879,9 +882,9 @@ function ConditionDisclosureSection({
           />,
           disabled,
         )}
-        {fieldErrors?.["conditionDisclosure.knownIssuesText"] && (
+        {errors.knownIssuesText && (
           <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-            {fieldErrors["conditionDisclosure.knownIssuesText"]}
+            {errors.knownIssuesText}
           </Text>
         )}
       </View>
