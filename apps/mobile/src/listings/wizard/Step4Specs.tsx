@@ -22,7 +22,6 @@ import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Switch } from "@/components/ui/switch";
 
 interface Step4SpecsProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -810,16 +809,8 @@ function ConditionDisclosureSection({
   const disclosure = payload.conditionDisclosure;
 
   const updateDisclosure = useCallback(
-    (patch: Partial<ListingsSchemas.ConditionDisclosure>) => {
-      onChange({
-        conditionDisclosure: {
-          accidentReported: disclosure?.accidentReported ?? false,
-          mileageAccurate: disclosure?.mileageAccurate ?? false,
-          serviceHistoryAvailable: disclosure?.serviceHistoryAvailable ?? false,
-          ...disclosure,
-          ...patch,
-        },
-      });
+    (patch: Partial<ListingsSchemas.DraftConditionDisclosure>) => {
+      onChange({ conditionDisclosure: { ...disclosure, ...patch } });
     },
     [disclosure, onChange],
   );
@@ -830,54 +821,43 @@ function ConditionDisclosureSection({
         {t("conditionDisclosure")}
       </Text>
 
-      <BooleanRow
-        label={t("accidentReported")}
-        value={disclosure?.accidentReported ?? false}
-        onChange={(accidentReported) => updateDisclosure({ accidentReported })}
-        disabled={disabled}
-      />
-
-      <BooleanRow
-        label={t("mileageAccurate")}
-        value={disclosure?.mileageAccurate ?? false}
-        onChange={(mileageAccurate) => updateDisclosure({ mileageAccurate })}
-        disabled={disabled}
-      />
-
       <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">
-          {t("ownerCount")}
-        </Text>
-        {wrapDisabled(
-          <Input
-            value={disclosure?.ownerCount?.toString() ?? ""}
-            onChangeText={(text) => {
-              const num = parseInt(text, 10);
-              updateDisclosure({
-                ownerCount: Number.isNaN(num) ? undefined : num,
-              });
-            }}
-            placeholder={t("ownerCountPlaceholder")}
-            keyboardType="number-pad"
-            editable={!disabled}
-          />,
-          disabled,
-        )}
-        {fieldErrors?.["conditionDisclosure.ownerCount"] && (
+        <Text className="text-sm font-medium text-foreground">{t("damaged")}</Text>
+        <View className="flex-row rounded-lg bg-muted p-1" accessibilityRole="radiogroup">
+          {([true, false] as const).map((answer) => {
+            const selected = disclosure?.damaged === answer;
+            return (
+              <Pressable
+                key={String(answer)}
+                onPress={() => updateDisclosure({ damaged: answer })}
+                disabled={disabled}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+                accessibilityLabel={`${t("damaged")}: ${answer ? t("yes") : t("no")}`}
+                className={cn(
+                  "flex-1 items-center justify-center rounded-md py-2.5",
+                  selected && "bg-card",
+                  disabled && "opacity-50",
+                )}
+              >
+                <Text
+                  className={cn(
+                    "text-sm font-medium",
+                    selected ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {answer ? t("yes") : t("no")}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {fieldErrors?.["conditionDisclosure.damaged"] && (
           <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-            {fieldErrors["conditionDisclosure.ownerCount"]}
+            {fieldErrors["conditionDisclosure.damaged"]}
           </Text>
         )}
       </View>
-
-      <BooleanRow
-        label={t("serviceHistoryAvailable")}
-        value={disclosure?.serviceHistoryAvailable ?? false}
-        onChange={(serviceHistoryAvailable) =>
-          updateDisclosure({ serviceHistoryAvailable })
-        }
-        disabled={disabled}
-      />
 
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
@@ -905,29 +885,6 @@ function ConditionDisclosureSection({
           </Text>
         )}
       </View>
-    </View>
-  );
-}
-
-function BooleanRow({
-  label,
-  value,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-  disabled: boolean;
-}) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Text className="text-sm font-medium text-foreground">{label}</Text>
-      <Switch
-        checked={value}
-        onCheckedChange={onChange}
-        disabled={disabled}
-      />
     </View>
   );
 }
