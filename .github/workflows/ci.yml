@@ -111,13 +111,6 @@ jobs:
           NODE_ENV: test
           APP_ENV: test
 
-      # The reviewer-flow smoke's pure helpers (base32, TOTP, formatting). The
-      # smoke itself needs a deployed environment and credentials, so it is an
-      # operator command, not a CI step. Kept out of `pnpm test` because
-      # ADR-0042's glossary check pins that script's exact contents.
-      - if: steps.lane.outputs.lane != 'docs'
-        run: pnpm test:reviewer-flow-smoke
-
       - if: steps.lane.outputs.lane != 'docs'
         run: pnpm build
 

@@ -29,7 +29,7 @@ function createFixture(glossary) {
   writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: {
     "check:glossary": "node scripts/check-domain-glossary.mjs",
     "test:glossary": "node --test scripts/check-domain-glossary.test.mjs",
-    test: "pnpm test:agent-docs && pnpm test:glossary && turbo run test",
+    test: "pnpm test:agent-docs && pnpm test:glossary && turbo run test && pnpm test:reviewer-flow-smoke",
   } }));
   writeFileSync(join(root, "docs", "adr", "0042-domain-glossary-authority-and-mutability.md"), [
     "[`docs/domain/GLOSSARY.md`](../domain/GLOSSARY.md)",
@@ -107,13 +107,38 @@ test("rejects forbidden sections", () => withFixture(valid.replace("## Listings"
 test("rejects malformed entries", () => withFixture(valid.replace("**Listing**", "**Listing** — inline"), (root) => assert.match(failure(root), /malformed term entry/)));
 test("rejects synonym and canonical collisions", () => withFixture(`${valid}\n_Avoid_: Advert\n\n## Cross-context\n\n**Advert**\n\nA promoted placement.\n`, (root) => assert.match(failure(root), /avoided synonym "Advert" collides/)));
 test("accepts complete repository integration", () => withFixture(valid, (root) => assert.equal(run(root).status, 0)));
+test("accepts an equivalent root gate with reordered required checks", () => withFixture(valid, (root) => {
+  const packagePath = join(root, "package.json");
+  const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
+  packageJson.scripts.test = "pnpm test:glossary && pnpm test:agent-docs && turbo run test && pnpm test:reviewer-flow-smoke";
+  writeFileSync(packagePath, JSON.stringify(packageJson));
+  assert.equal(run(root).status, 0);
+}));
+for (const operator of [" || true", "; true", " | cat", " & true"]) {
+  test(`rejects a root gate with ${operator.trim()}`, () => withFixture(valid, (root) => {
+    const packagePath = join(root, "package.json");
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
+    packageJson.scripts.test += operator;
+    writeFileSync(packagePath, JSON.stringify(packageJson));
+    assert.match(failure(root), /package.json root test gate must run agent-docs, glossary, and workspace tests/);
+  }));
+}
+for (const step of ["pnpm test:agent-docs", "pnpm test:glossary", "turbo run test"]) {
+  test(`rejects a root gate missing ${step}`, () => withFixture(valid, (root) => {
+    const packagePath = join(root, "package.json");
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
+    packageJson.scripts.test = packageJson.scripts.test.split(" && ").filter((part) => part !== step).join(" && ");
+    writeFileSync(packagePath, JSON.stringify(packageJson));
+    assert.match(failure(root), /package.json root test gate must run agent-docs, glossary, and workspace tests/);
+  }));
+}
 test("rejects missing repository references", () => withFixture(valid, (root) => {
   writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: {} }));
   writeFileSync(join(root, "docs", "adr", "README.md"), "");
   writeFileSync(join(root, ".github", "workflows", "ci.yml"), "");
   const output = failure(root);
   assert.match(output, /package.json is missing the check:glossary script/);
-  assert.match(output, /package.json does not run glossary tests in the root test gate/);
+  assert.match(output, /package.json root test gate must run agent-docs, glossary, and workspace tests/);
   assert.match(output, /docs\/adr\/README.md is missing the ADR-0042 link/);
   assert.match(output, /.github\/workflows\/ci.yml is missing pnpm check:glossary/);
 }));
