@@ -37,8 +37,7 @@ describe("CatalogController e2e", () => {
     );
     app.useGlobalFilters(new GlobalErrorFilter());
     registerAcceptLanguageHook(app.getHttpAdapter().getInstance());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });

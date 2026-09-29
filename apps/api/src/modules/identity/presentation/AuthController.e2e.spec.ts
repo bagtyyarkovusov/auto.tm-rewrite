@@ -52,8 +52,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
       new FastifyAdapter(),
     );
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -163,8 +162,7 @@ describe("AuthController e2e — email Sign-in Method", () => {
       new FastifyAdapter(),
     );
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -275,8 +273,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
       new FastifyAdapter(),
     );
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -478,8 +475,7 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
       new FastifyAdapter(),
     );
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -564,8 +560,7 @@ describe("AuthController e2e — POST /api/v1/auth/logout", () => {
       new FastifyAdapter(),
     );
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -673,8 +668,7 @@ describe("AuthController e2e — POST /api/v1/auth/logout-all", () => {
     const jwtService = app.get(JwtService);
     app.useGlobalGuards(new JwtAuthGuard(reflector, jwtService));
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -775,8 +769,7 @@ describe("MeController e2e — GET /api/v1/me", () => {
     const jwtService = app.get(JwtService);
     app.useGlobalGuards(new JwtAuthGuard(reflector, jwtService));
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });
@@ -871,8 +864,7 @@ describe("MeController e2e — DELETE /api/v1/me", () => {
     const jwtService = app.get(JwtService);
     app.useGlobalGuards(new JwtAuthGuard(reflector, jwtService));
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   });

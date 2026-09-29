@@ -67,8 +67,7 @@ describe("UploadsController e2e", () => {
     const jwtService = app.get(JwtService);
     app.useGlobalGuards(new JwtAuthGuard(reflector, jwtService));
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
   });
 
