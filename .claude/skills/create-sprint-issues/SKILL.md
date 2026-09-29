@@ -31,7 +31,7 @@ Show before mutation:
 - dependency graph and topological creation order; and
 - roadmap change and proposed branch/PR.
 
-Allow edits and re-preview until the user confirms or cancels. One explicit confirmation authorizes issue creation and the roadmap-start branch/PR; it does not authorize running Sandcastle or `/run-issue`.
+Allow edits and re-preview until the user confirms or cancels. One explicit confirmation authorizes issue creation and the roadmap-start branch/PR; it does not authorize running `/run-issue` or `/run-queue`.
 
 The glossary supplies vocabulary, not sprint scope or behavior. Use canonical terms in new issue text, but do not silently rename existing code or turn unrelated terminology drift into child scope; report harmful ambiguity as a separately proposed issue.
 

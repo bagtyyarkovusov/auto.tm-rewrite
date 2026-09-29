@@ -20,7 +20,7 @@ Note: `apps/mobile` (Expo) and `apps/phone-agent` (Kotlin Android) do NOT have D
 
 - **Multi-stage**: deps + build + runtime stages
 - **Slim base**: `node:22-bookworm-slim`
-- **Reproducible**: `pnpm install --frozen-lockfile` from the committed lockfile; root `.dockerignore` keeps the build context clean (no `node_modules`, `.next`, `dist`, `.env`, or `.git`). The deps stage also copies the checked-in Sandcastle tarball from `vendor/` because the root workspace declares it as a local `file:` dev dependency.
+- **Reproducible**: `pnpm install --frozen-lockfile` from the committed lockfile; root `.dockerignore` keeps the build context clean (no `node_modules`, `.next`, `dist`, `.env`, or `.git`).
 - **Native build tooling stays in the deps/build stages**: `python3`, `make`, `g++`, and `openssl` are installed before `pnpm install` so optional native packages and Prisma can build cleanly; runtime stages do not inherit that compiler toolchain.
 - **Runtime-shared packages are built before app builds**: `@auto-tm/db` and `@auto-tm/contracts` export `dist/`, so every image builds those packages before building the consuming app.
 - **Prisma client generation is build-time only**: `.env` files are excluded from the Docker context, so each build stage supplies a harmless local placeholder `DATABASE_URL` only for `@auto-tm/db` build/generate. Runtime migrations and database access use the service's real `DATABASE_URL`.

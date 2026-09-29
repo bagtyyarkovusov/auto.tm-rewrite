@@ -34,7 +34,7 @@ Run `pnpm lint`, `pnpm typecheck`, and `pnpm test`. Migration and some integrati
 
 Use the [deployment runbook](docs/prd/ops/80-deployment-runbook.md) and the effective hosting decision. The API pre-deploy command owns deployed schema migrations. Do not infer current hosting from the original air-gap charter.
 
-Sandcastle dispatch is suspended pending [#406](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/406). Use the [portable coding workflow](docs/agents/coding-workflow.md) for issue execution and resume.
+Use the [portable coding workflow](docs/agents/coding-workflow.md) for issue execution, queues of issues, and resume.
 
 ## License
 

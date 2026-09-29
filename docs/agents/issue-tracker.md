@@ -54,7 +54,7 @@ Two kinds of issues coexist in this repo, **one parent per sprint** plus **one c
 | Type | Used for | Body shape |
 |---|---|---|
 | **Sprint PRD (parent)** | One per sprint (S1, S2, ...). Tracks child sub-issues. | Dashboard + tasklist — no agent prompt. |
-| **Sprint child** | One independently mergeable vertical slice. Executed synchronously by `/run-issue`; Sandcastle becomes eligible again only after issue #406 replaces its suspended legacy path. | Self-contained implementation contract (see below). |
+| **Sprint child** | One independently mergeable vertical slice. Executed by `/run-issue`, alone or as part of a `/run-queue` queue. | Self-contained implementation contract (see below). |
 
 ## Sprint PRD body template (parent)
 
@@ -83,7 +83,6 @@ The unblocked queue is:
 
 - Interactive: the user selects an issue and invokes `run-issue <N>` in Codex desktop, Claude Code desktop, or the `claude-kimi` CLI.
 - Queue: the user gives one long-running session an ordered list of issues through [`run-queue`](../../.claude/skills/run-queue/SKILL.md). Each issue still goes through `run-issue`.
-- AFK: Sandcastle dispatch is suspended until issue #406 replaces its legacy integration path. After that issue merges, it may select eligible `ready-for-agent` work under the constraints in [`sandcastle.md`](sandcastle.md).
 
 Both paths treat the issue body as the slice contract. The parent remains a dashboard, never an executable prompt.
 ```
@@ -181,7 +180,7 @@ Each child issue body has a `## Depends on` section listing zero or more issue n
 
 Branch convention: `agent/issue-<N>`. The user picks the issue; `/run-issue` does the rest.
 
-`run-issue` is the interactive path and is provider-neutral. Sandcastle is the separate Docker AFK path described in [`sandcastle.md`](sandcastle.md) and ADR-0028; it does not execute the repository skill files. Its current wrapper still uses the retired batch-merger path, so do not dispatch implementation work through it until `.sandcastle/main.mts` and its operating guide implement ADR-0058's branch, draft-PR, execution-state, review, CI, merge, and recovery evidence. No `.github/workflows/unblock.yml` exists, so each successful integration owner reconciles dependents after merge.
+`run-issue` is provider-neutral and is the only issue execution path; there is no unattended orchestrator. No `.github/workflows/unblock.yml` exists, so each successful integration owner reconciles dependents after merge.
 
 ## Body template (general / non-sprint issues)
 

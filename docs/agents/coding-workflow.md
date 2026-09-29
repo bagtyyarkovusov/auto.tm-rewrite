@@ -21,7 +21,7 @@ All phases use the shared [worktree lifecycle](worktree-lifecycle.md): reuse a h
 
 ## Portable issue execution
 
-The interactive path follows this state machine. Sandcastle must not dispatch implementation work while its current wrapper still uses batch integration; AFK execution resumes only after the wrapper and its operating guide implement the same state machine.
+Every issue follows this state machine, whether a session runs it alone or as part of a queue.
 
 1. Confirm the issue is open, labelled `ready-for-agent`, not `blocked`, has closed dependencies, and has intelligible acceptance criteria. Under `run-queue` stacking, the only open dependency may be a reviewed PR owned by the same queue, and a `blocked` label caused only by it does not stop the issue.
 2. Reserve it by pushing `agent/issue-<N>` from updated `main` (or, for a stacked issue, from its parent's branch head) before editing. An existing branch, worktree, or PR means resume; never create a duplicate. A reservation-only branch left by a design pause fast-forwards to current `main` after the design PR merges and before implementation continues.
@@ -42,7 +42,7 @@ No workflow queries provider quota before accepting work. A quota stop, crash, o
 
 Kimi Code is a supported interactive implementer, resumer, and reviewer under [ADR-0059](../adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). This project's Kimi setup is the `claude-kimi` shell function, which runs Claude Code CLI against Kimi Code. It uses the same tracked skill files and issue record as Codex desktop and Claude Code desktop. Record its reviews as `Provider: Kimi` and `Client: claude-kimi (Claude Code CLI)`.
 
-The local `claude-kimi` function uses the Kimi Code membership endpoint and key; Kimi's Open Platform is a separate billing path. Keep the function and credentials outside the repository. Do not add a Kimi-specific skill copy or start Sandcastle to run this interactive path. Confirm the chosen client can read the repository instructions, use Context7, and run the required verification before treating its result as complete.
+The local `claude-kimi` function uses the Kimi Code membership endpoint and key; Kimi's Open Platform is a separate billing path. Keep the function and credentials outside the repository. Do not add a Kimi-specific skill copy. Confirm the chosen client can read the repository instructions, use Context7, and run the required verification before treating its result as complete.
 
 Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may each perform either review axis, or both, on any pull request, including authentication, migration, deployment, credential, destructive, and agent-workflow changes ([ADR-0064](../adr/0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md)). Each review starts in a fresh read-only context that did not implement the commit. Any number of issues may be in flight; each keeps one branch, worktree, draft PR, and integration owner.
 
