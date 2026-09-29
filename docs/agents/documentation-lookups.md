@@ -13,6 +13,37 @@ Read this repository's source, tests, package files, and lockfile for our implem
 
 A useful query names the actual operation and version, such as “How does TanStack Query v5 match hierarchical keys in `invalidateQueries`?” A one-word query rarely identifies the needed behavior.
 
+## Library-ID reference
+
+These IDs are candidates for the major stack libraries, not proof that a version or ID is still current. Start with `resolve-library-id` unless the user supplies an exact ID; use the result to choose the best current match. Resolve unlisted libraries on demand.
+
+| Area | Library | Candidate ID |
+|---|---|---|
+| Backend | NestJS | `/nestjs/docs.nestjs.com` |
+| Backend | `@nestjs/jwt` | `/nestjs/jwt` |
+| Backend | `nestjs-pino` | `/iamolegga/nestjs-pino` |
+| Backend | Prisma | `/prisma/prisma` |
+| Backend | Fastify | `/fastify/fastify` |
+| Backend | Socket.IO | `/websites/socket_io_v4` |
+| Backend | BullMQ | `/taskforcesh/bullmq` |
+| Backend | ioredis | `/redis/ioredis` |
+| Backend | Pino | `/pinojs/pino` |
+| Shared | Zod | `/colinhacks/zod` |
+| Shared | TypeScript | `/microsoft/typescript` |
+| Shared | Vitest | `/vitest-dev/vitest` |
+| Shared | Turborepo | `/vercel/turborepo` |
+| Web | Next.js | `/vercel/next.js` |
+| Web | React | `/reactjs/react.dev` |
+| Web | Tailwind CSS | `/tailwindlabs/tailwindcss.com` |
+| Web | shadcn/ui | `/shadcn-ui/ui` |
+| Web | Base UI | `/mui/base-ui` |
+| Mobile | Expo, expo-router | `/expo/expo` |
+| Mobile | React Native | `/facebook/react-native-website` |
+| Mobile | NativeWind | `/nativewind/nativewind` |
+| Mobile | React Native Reusables | `/founded-labs/react-native-reusables` |
+| Mobile | TanStack Query | `/tanstack/query` |
+| Mobile | react-native-reanimated | `/software-mansion/react-native-reanimated` |
+
 ## Boundaries
 
 The [issue and owning specification](coding-workflow.md) define intended behavior; source, schema, tests, and runtime evidence define AutoTM's current behavior. The [local overview](../../CONTEXT-MAP.md) locates source and names important boundaries. Context7 does not establish either project-specific truth.
