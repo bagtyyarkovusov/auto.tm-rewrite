@@ -109,6 +109,7 @@ function makeUseCase(
 function seedActiveListing(
   repo: FakeListingRepository,
   overrides?: Partial<Parameters<typeof Listing.create>[0]>,
+  { answered = true }: { answered?: boolean } = {},
 ) {
   const listing = Listing.create({
     id: "listing-1",
@@ -123,6 +124,7 @@ function seedActiveListing(
     allowCalls: true,
     allowChat: true,
     publishedAt: new Date("2026-05-01T00:00:00Z"),
+    ...(answered && { conditionDisclosure: { damaged: false } }),
     ...overrides,
   });
   repo.listings.push(listing);
@@ -451,64 +453,76 @@ describe("EditListing", () => {
     expect(prisma.auditLogs).toHaveLength(0);
   });
 
-  it("edits conditionDisclosure successfully", async () => {
+  it.each([true, false])("saves damaged: %s with Known issues", async (damaged) => {
     seedActiveListing(repo);
 
     const uc = makeUseCase(repo, prisma, events, exchangeRates);
     const result = await uc.execute({
       listingId: "listing-1",
       userId: "user-1",
-      patch: {
-        conditionDisclosure: {
-          accidentReported: false,
-          mileageAccurate: true,
-          ownerCount: 2,
-          serviceHistoryAvailable: true,
-          knownIssuesText: "Minor scratches",
-        },
-      },
+      patch: { conditionDisclosure: { damaged, knownIssuesText: "Minor scratches" } },
     });
 
-    expect(result.listing.conditionDisclosure).toMatchObject({
-      accidentReported: false,
-      mileageAccurate: true,
-      ownerCount: 2,
-      serviceHistoryAvailable: true,
+    expect(result.listing.conditionDisclosure).toEqual({
+      damaged,
       knownIssuesText: "Minor scratches",
     });
     expect(prisma.auditLogs).toHaveLength(0);
   });
 
-  it("merges conditionDisclosure edits partially", async () => {
+  it("keeps the existing Known issues when a patch only changes damaged", async () => {
     seedActiveListing(repo, {
-      conditionDisclosure: {
-        accidentReported: false,
-        mileageAccurate: true,
-        ownerCount: 2,
-        serviceHistoryAvailable: true,
-        knownIssuesText: "Old scratch",
-      },
+      conditionDisclosure: { damaged: false, knownIssuesText: "Old scratch" },
     });
 
     const uc = makeUseCase(repo, prisma, events, exchangeRates);
     const result = await uc.execute({
       listingId: "listing-1",
       userId: "user-1",
-      patch: {
-        conditionDisclosure: {
-          accidentReported: true,
-          mileageAccurate: true,
-          serviceHistoryAvailable: false,
-        },
-      },
+      patch: { conditionDisclosure: { damaged: true } },
     });
 
-    expect(result.listing.conditionDisclosure).toMatchObject({
-      accidentReported: true,
-      mileageAccurate: true,
-      ownerCount: 2,
-      serviceHistoryAvailable: false,
+    expect(result.listing.conditionDisclosure).toEqual({
+      damaged: true,
       knownIssuesText: "Old scratch",
     });
+  });
+
+  it("keeps the existing Damaged answer when the patch does not touch the disclosure", async () => {
+    seedActiveListing(repo, { conditionDisclosure: { damaged: true } });
+
+    const uc = makeUseCase(repo, prisma, events, exchangeRates);
+    const result = await uc.execute({
+      listingId: "listing-1",
+      userId: "user-1",
+      patch: { description: "Updated" },
+    });
+
+    expect(result.listing.conditionDisclosure).toEqual({ damaged: true });
+  });
+
+  it("rejects an edit that leaves the Listing without a Damaged answer", async () => {
+    seedActiveListing(repo, {}, { answered: false });
+
+    const uc = makeUseCase(repo, prisma, events, exchangeRates);
+    const error = await uc
+      .execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: {
+          conditionDisclosure: { knownIssuesText: "Rust" } as unknown as {
+            damaged: boolean;
+            knownIssuesText?: string;
+          },
+        },
+      })
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      code: "DAMAGED_REQUIRED",
+      details: { field: "conditionDisclosure.damaged" },
+    });
+    expect(repo.listings[0]!.conditionDisclosure).toBeUndefined();
   });
 });

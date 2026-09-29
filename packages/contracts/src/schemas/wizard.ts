@@ -5,7 +5,7 @@ import {
   CurrencySchema,
   ListingConditionSchema,
   DraftPhotoSchema,
-  ConditionDisclosureSchema,
+  DraftConditionDisclosureSchema,
 } from "./listings";
 
 // ── Wizard step enum ──
@@ -68,6 +68,7 @@ const WIZARD_ERROR_NAMES = [
   "mileageNegative",
   "enginePowerNotPositive",
   "mileageRequiredForUsed",
+  "damagedRequired",
   "priceRequired",
   "priceNotPositive",
   "priceTooLarge",
@@ -139,7 +140,7 @@ export const StepSpecsSchema = z
     driveTypeId: z.string().uuid().optional(),
     engineTypeId: z.string().uuid().optional(),
     enginePower: z.number().int().positive(KEY.enginePowerNotPositive).optional(),
-    conditionDisclosure: ConditionDisclosureSchema.optional(),
+    conditionDisclosure: DraftConditionDisclosureSchema.optional(),
   })
   .refine(
     (data) => {
@@ -149,7 +150,11 @@ export const StepSpecsSchema = z
       return true;
     },
     { message: KEY.mileageRequiredForUsed, path: ["mileageKm"] },
-  );
+  )
+  .refine((data) => data.conditionDisclosure?.damaged !== undefined, {
+    message: KEY.damagedRequired,
+    path: ["conditionDisclosure", "damaged"],
+  });
 export type StepSpecsInput = z.infer<typeof StepSpecsSchema>;
 
 export const StepPriceSchema = z.object({

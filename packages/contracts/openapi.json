@@ -1115,18 +1115,7 @@
           "conditionDisclosure": {
             "type": "object",
             "properties": {
-              "accidentReported": {
-                "type": "boolean"
-              },
-              "mileageAccurate": {
-                "type": "boolean"
-              },
-              "ownerCount": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 20
-              },
-              "serviceHistoryAvailable": {
+              "damaged": {
                 "type": "boolean"
               },
               "knownIssuesText": {
@@ -1135,9 +1124,7 @@
               }
             },
             "required": [
-              "accidentReported",
-              "mileageAccurate",
-              "serviceHistoryAvailable"
+              "damaged"
             ]
           },
           "vinHistory": {
@@ -1452,30 +1439,14 @@
               "conditionDisclosure": {
                 "type": "object",
                 "properties": {
-                  "accidentReported": {
-                    "type": "boolean"
-                  },
-                  "mileageAccurate": {
-                    "type": "boolean"
-                  },
-                  "ownerCount": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 20
-                  },
-                  "serviceHistoryAvailable": {
+                  "damaged": {
                     "type": "boolean"
                   },
                   "knownIssuesText": {
                     "type": "string",
                     "maxLength": 1000
                   }
-                },
-                "required": [
-                  "accidentReported",
-                  "mileageAccurate",
-                  "serviceHistoryAvailable"
-                ]
+                }
               },
               "validatedSteps": {
                 "type": "array",
@@ -1635,30 +1606,14 @@
           "conditionDisclosure": {
             "type": "object",
             "properties": {
-              "accidentReported": {
-                "type": "boolean"
-              },
-              "mileageAccurate": {
-                "type": "boolean"
-              },
-              "ownerCount": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 20
-              },
-              "serviceHistoryAvailable": {
+              "damaged": {
                 "type": "boolean"
               },
               "knownIssuesText": {
                 "type": "string",
                 "maxLength": 1000
               }
-            },
-            "required": [
-              "accidentReported",
-              "mileageAccurate",
-              "serviceHistoryAvailable"
-            ]
+            }
           },
           "validatedSteps": {
             "type": "array",
@@ -1804,30 +1759,14 @@
               "conditionDisclosure": {
                 "type": "object",
                 "properties": {
-                  "accidentReported": {
-                    "type": "boolean"
-                  },
-                  "mileageAccurate": {
-                    "type": "boolean"
-                  },
-                  "ownerCount": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 20
-                  },
-                  "serviceHistoryAvailable": {
+                  "damaged": {
                     "type": "boolean"
                   },
                   "knownIssuesText": {
                     "type": "string",
                     "maxLength": 1000
                   }
-                },
-                "required": [
-                  "accidentReported",
-                  "mileageAccurate",
-                  "serviceHistoryAvailable"
-                ]
+                }
               },
               "validatedSteps": {
                 "type": "array",
@@ -1972,30 +1911,14 @@
           "conditionDisclosure": {
             "type": "object",
             "properties": {
-              "accidentReported": {
-                "type": "boolean"
-              },
-              "mileageAccurate": {
-                "type": "boolean"
-              },
-              "ownerCount": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 20
-              },
-              "serviceHistoryAvailable": {
+              "damaged": {
                 "type": "boolean"
               },
               "knownIssuesText": {
                 "type": "string",
                 "maxLength": 1000
               }
-            },
-            "required": [
-              "accidentReported",
-              "mileageAccurate",
-              "serviceHistoryAvailable"
-            ]
+            }
           },
           "validatedSteps": {
             "type": "array",
@@ -2094,18 +2017,7 @@
           "conditionDisclosure": {
             "type": "object",
             "properties": {
-              "accidentReported": {
-                "type": "boolean"
-              },
-              "mileageAccurate": {
-                "type": "boolean"
-              },
-              "ownerCount": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 20
-              },
-              "serviceHistoryAvailable": {
+              "damaged": {
                 "type": "boolean"
               },
               "knownIssuesText": {
@@ -2114,9 +2026,7 @@
               }
             },
             "required": [
-              "accidentReported",
-              "mileageAccurate",
-              "serviceHistoryAvailable"
+              "damaged"
             ]
           }
         },
@@ -2832,30 +2742,14 @@
                     "conditionDisclosure": {
                       "type": "object",
                       "properties": {
-                        "accidentReported": {
-                          "type": "boolean"
-                        },
-                        "mileageAccurate": {
-                          "type": "boolean"
-                        },
-                        "ownerCount": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 20
-                        },
-                        "serviceHistoryAvailable": {
+                        "damaged": {
                           "type": "boolean"
                         },
                         "knownIssuesText": {
                           "type": "string",
                           "maxLength": 1000
                         }
-                      },
-                      "required": [
-                        "accidentReported",
-                        "mileageAccurate",
-                        "serviceHistoryAvailable"
-                      ]
+                      }
                     },
                     "validatedSteps": {
                       "type": "array",

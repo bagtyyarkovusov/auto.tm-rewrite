@@ -160,6 +160,7 @@ describe("ReportsController e2e", () => {
     description: "Great car",
     allowCalls: true,
     allowChat: true,
+    conditionDisclosure: { damaged: false },
     photos: [
       {
         photoId: suite.id("photo-1"),

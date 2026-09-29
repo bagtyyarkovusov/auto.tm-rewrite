@@ -391,6 +391,7 @@ async function main() {
             description: `Reviewer smoke listing ${new Date().toISOString()}`,
             allowCalls: true,
             allowChat: true,
+            conditionDisclosure: { damaged: false },
             acceptsExchange: false,
             installmentAvailable: false,
             photos: [{ photoId: randomUUID(), key, sortOrder: 0 }],

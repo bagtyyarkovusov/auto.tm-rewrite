@@ -1,10 +1,8 @@
 export type Currency = "TMT" | "USD" | "AED";
 
+/** The seller's statement about the car's condition (ADR-0052). */
 export interface ConditionDisclosure {
-  accidentReported: boolean;
-  mileageAccurate: boolean;
-  ownerCount?: number | undefined;
-  serviceHistoryAvailable: boolean;
+  damaged: boolean;
   knownIssuesText?: string | undefined;
 }
 
@@ -69,6 +67,7 @@ export type LockedField = (typeof LOCKED_FIELDS)[number];
 
 export const LISTING_ERROR_CODES = {
   CONTACT_METHOD_REQUIRED: "CONTACT_METHOD_REQUIRED",
+  DAMAGED_REQUIRED: "DAMAGED_REQUIRED",
   LISTING_FIELD_LOCKED: "LISTING_FIELD_LOCKED",
   EXCHANGE_RATE_MISSING: "EXCHANGE_RATE_MISSING",
   INVALID_TRANSITION: "INVALID_TRANSITION",

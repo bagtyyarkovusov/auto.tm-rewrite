@@ -47,10 +47,7 @@ export class PrismaListingRepository implements ListingRepository {
         installmentAvailable: listing.installmentAvailable,
         viewCount: listing.viewCount,
         favoriteCount: listing.favoriteCount,
-        accidentReported: n(listing.conditionDisclosure?.accidentReported),
-        mileageAccurate: n(listing.conditionDisclosure?.mileageAccurate),
-        ownerCount: n(listing.conditionDisclosure?.ownerCount),
-        serviceHistoryAvailable: n(listing.conditionDisclosure?.serviceHistoryAvailable),
+        damaged: n(listing.conditionDisclosure?.damaged),
         knownIssuesText: n(listing.conditionDisclosure?.knownIssuesText),
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
@@ -129,10 +126,7 @@ export class PrismaListingRepository implements ListingRepository {
         installmentAvailable: listing.installmentAvailable,
         viewCount: listing.viewCount,
         favoriteCount: listing.favoriteCount,
-        accidentReported: n(listing.conditionDisclosure?.accidentReported),
-        mileageAccurate: n(listing.conditionDisclosure?.mileageAccurate),
-        ownerCount: n(listing.conditionDisclosure?.ownerCount),
-        serviceHistoryAvailable: n(listing.conditionDisclosure?.serviceHistoryAvailable),
+        damaged: n(listing.conditionDisclosure?.damaged),
         knownIssuesText: n(listing.conditionDisclosure?.knownIssuesText),
       },
     });
@@ -184,10 +178,7 @@ export class PrismaListingRepository implements ListingRepository {
     favoriteCount: number;
     acceptsExchange: boolean;
     installmentAvailable: boolean;
-    accidentReported: boolean | null;
-    mileageAccurate: boolean | null;
-    ownerCount: number | null;
-    serviceHistoryAvailable: boolean | null;
+    damaged: boolean | null;
     knownIssuesText: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -228,15 +219,11 @@ export class PrismaListingRepository implements ListingRepository {
       ...(row.description ? { description: row.description } : {}),
       acceptsExchange: row.acceptsExchange,
       installmentAvailable: row.installmentAvailable,
-      ...(row.accidentReported !== null &&
-      row.mileageAccurate !== null &&
-      row.serviceHistoryAvailable !== null
+      // A Listing without a Damaged answer has no disclosure to show.
+      ...(row.damaged !== null
         ? {
             conditionDisclosure: {
-              accidentReported: row.accidentReported,
-              mileageAccurate: row.mileageAccurate,
-              serviceHistoryAvailable: row.serviceHistoryAvailable,
-              ...(row.ownerCount !== null ? { ownerCount: row.ownerCount } : {}),
+              damaged: row.damaged,
               ...(row.knownIssuesText !== null ? { knownIssuesText: row.knownIssuesText } : {}),
             },
           }
