@@ -28,7 +28,7 @@ Execute exactly one issue per invocation; [run-queue](../run-queue/SKILL.md) inv
 - A design pause may leave only the reservation branch. After its design PR merges, `resume-issue` verifies that the branch has no unique work and fast-forwards it to current `main` before implementation.
 - Build a scoped execution plan mapping every acceptance criterion to implementation and evidence.
 - Record relevant canonical terms and avoided synonyms. Do not silently migrate unrelated names.
-- Consult Context7 for external library behavior used or changed by the issue, following `docs/agents/documentation-lookups.md`.
+- Before writing or debugging code that touches an external dependency, resolve and query it through Context7, following `docs/agents/documentation-lookups.md` and ADR-0017.
 - Never query an agent provider for remaining quota before starting.
 
 ## Decision boundaries

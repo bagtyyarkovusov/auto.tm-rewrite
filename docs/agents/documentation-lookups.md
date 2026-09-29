@@ -1,8 +1,8 @@
 # Documentation lookups
 
-Use Context7 when a task asks about or depends on an external library, framework, SDK, API, CLI, or cloud service. This includes API syntax, configuration, version migration, package-specific debugging, and setup. Use it even for familiar libraries. [ADR-0017](../adr/0017-context7-as-canonical-doc-source.md) records the decision.
+Use Context7 when a task asks about an external library, framework, SDK, API, CLI, or cloud service. Before writing or debugging code that touches one of these dependencies, resolve and query it through Context7, even if the API seems familiar. This includes API syntax, configuration, version migration, package-specific debugging, and setup. [ADR-0017](../adr/0017-context7-as-canonical-doc-source.md) records the decision.
 
-Read this repository's source, tests, package files, and lockfile for our implementation and installed versions. Context7 answers questions about the external dependency. A business-logic bug, code review, internal refactor, or general programming question needs repository evidence rather than a library lookup. Importing a library without relying on or changing its behavior does not create a documentation question.
+Read this repository's source, tests, package files, and lockfile for our implementation and installed versions. Context7 answers questions about the external dependency. A business-logic bug, code review, internal refactor, or general programming question with no external dependency touched needs repository evidence rather than a library lookup.
 
 ## Lookup procedure
 

@@ -4,7 +4,7 @@ Verification is evidence collection, not a ceremonial command list. Map each iss
 
 ## Authority and scope
 
-1. Re-read the issue and every referenced document after implementation.
+1. Recheck the issue criteria and the governing requirements or decisions affected by the diff. Follow references needed to resolve a changed behavior or claim.
 2. Inspect the diff for accidental scope growth and unrelated user files.
 3. Check the relevant `CONTEXT.md` before and after the change.
 4. Treat issue file lists as expected scope, not a ban on mechanically required tests, migrations, generated lockfiles, or documentation.
