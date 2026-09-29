@@ -18,10 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start disposable test services
-        shell: bash
-        run: bash scripts/ci-services.sh up
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9.12.0
@@ -29,6 +25,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      # "docs" only when every file changed since the previous push to main is
+      # Markdown or under docs/. A previous commit that cannot be fetched
+      # takes the full lane; a failed lane step fails the job.
+      - name: Choose the CI lane
+        id: lane
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BEFORE" || true
+          node scripts/ci-lane.mjs "$BEFORE"
+
+      - name: Start disposable test services
+        if: steps.lane.outputs.lane != 'docs'
+        shell: bash
+        run: bash scripts/ci-services.sh up
 
       # Actions does not expand $HOME in `env:`, so the shell sets the store.
       # pnpm 9 and 10 read npm_config_*; later pnpm reads only pnpm_config_*.
@@ -68,21 +80,33 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter @auto-tm/db generate
+      - run: pnpm check:glossary
+
+      - run: pnpm test:ci-lane
+
+      - name: Docs checks
+        if: steps.lane.outputs.lane == 'docs'
+        run: pnpm test:agent-docs && pnpm test:glossary
+
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm --filter @auto-tm/db generate
 
       - name: Deploy migrations to the disposable database
+        if: steps.lane.outputs.lane != 'docs'
         run: pnpm db:migrate:deploy
 
       - name: Create disposable media buckets
+        if: steps.lane.outputs.lane != 'docs'
         run: pnpm minio:bootstrap
 
-      - run: pnpm check:glossary
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm lint
 
-      - run: pnpm lint
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm typecheck
 
-      - run: pnpm typecheck
-
-      - run: pnpm test
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm test
         env:
           NODE_ENV: test
           APP_ENV: test
@@ -91,16 +115,18 @@ jobs:
       # smoke itself needs a deployed environment and credentials, so it is an
       # operator command, not a CI step. Kept out of `pnpm test` because
       # ADR-0042's glossary check pins that script's exact contents.
-      - run: pnpm test:reviewer-flow-smoke
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm test:reviewer-flow-smoke
 
-      - run: pnpm build
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm build
 
       - name: Show test service logs on failure
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.lane.outputs.lane != 'docs' }}
         shell: bash
         run: bash scripts/ci-services.sh logs
 
       - name: Remove disposable test services
-        if: ${{ always() }}
+        if: ${{ always() && steps.lane.outputs.lane != 'docs' }}
         shell: bash
         run: bash scripts/ci-services.sh down

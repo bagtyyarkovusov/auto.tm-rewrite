@@ -18,6 +18,7 @@
     "typecheck": "turbo run typecheck",
     "check:glossary": "node scripts/check-domain-glossary.mjs",
     "test:glossary": "node --test scripts/check-domain-glossary.test.mjs",
+    "test:ci-lane": "node --test scripts/ci-lane.test.mjs",
     "check:runtime-imports": "node scripts/check-runtime-imports.cjs",
     "smoke:reviewer-flow": "node scripts/staging-reviewer-flow-smoke.mjs",
     "test:reviewer-flow-smoke": "node --test scripts/staging-reviewer-flow-smoke.test.mjs",

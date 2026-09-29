@@ -4,6 +4,12 @@ on:
   pull_request:
     branches: [main]
 
+# A new push to a pull request cancels that pull request's older run, so the
+# single runner never tests a commit that has already been replaced.
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   pr:
     runs-on: [self-hosted, tm-proxy]
@@ -16,11 +22,11 @@ jobs:
       MINIO_PUBLIC_URL: http://127.0.0.1:1
 
     steps:
+      # Depth 2 fetches the pull request merge commit and its base parent, so
+      # the lane step can list exactly the files this pull request changes.
       - uses: actions/checkout@v4
-
-      - name: Start disposable test services
-        shell: bash
-        run: bash scripts/ci-services.sh up
+        with:
+          fetch-depth: 2
 
       - uses: pnpm/action-setup@v4
         with:
@@ -29,6 +35,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      # "docs" only when every changed file is Markdown or under docs/.
+      # An empty change or unreadable base takes the full lane; a failed
+      # lane step fails the job.
+      - name: Choose the CI lane
+        id: lane
+        run: node scripts/ci-lane.mjs HEAD^1
+
+      - name: Start disposable test services
+        if: steps.lane.outputs.lane != 'docs'
+        shell: bash
+        run: bash scripts/ci-services.sh up
 
       # Actions does not expand $HOME in `env:`, so the shell sets the store.
       # pnpm 9 and 10 read npm_config_*; later pnpm reads only pnpm_config_*.
@@ -68,31 +86,44 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter @auto-tm/db generate
+      - run: pnpm check:glossary
+
+      - run: pnpm test:ci-lane
+
+      - name: Docs checks
+        if: steps.lane.outputs.lane == 'docs'
+        run: pnpm test:agent-docs && pnpm test:glossary
+
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm --filter @auto-tm/db generate
 
       - name: Deploy migrations to the disposable database
+        if: steps.lane.outputs.lane != 'docs'
         run: pnpm db:migrate:deploy
 
       - name: Create disposable media buckets
+        if: steps.lane.outputs.lane != 'docs'
         run: pnpm minio:bootstrap
 
-      - run: pnpm check:glossary
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm lint
 
-      - run: pnpm lint
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm typecheck
 
-      - run: pnpm typecheck
-
-      - run: pnpm test
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm test
         env:
           NODE_ENV: test
           APP_ENV: test
 
       - name: Show test service logs on failure
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.lane.outputs.lane != 'docs' }}
         shell: bash
         run: bash scripts/ci-services.sh logs
 
+      # always() also runs this step when a newer push cancels the run.
       - name: Remove disposable test services
-        if: ${{ always() }}
+        if: ${{ always() && steps.lane.outputs.lane != 'docs' }}
         shell: bash
         run: bash scripts/ci-services.sh down
