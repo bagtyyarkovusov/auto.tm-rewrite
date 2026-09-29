@@ -7,12 +7,13 @@ import { apiFetch, ApiError } from "@/lib/api-client";
 type BrandSummary = CatalogSchemas.BrandSummary;
 type BrandSummaryListResponse = CatalogSchemas.BrandSummaryListResponse;
 type SetBrandLogoResponse = CatalogSchemas.SetBrandLogoResponse;
+type PresignBrandLogoResponse = CatalogSchemas.PresignBrandLogoResponse;
 
 export type BrandLogoActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 const MAX_PAGES = 20;
 
-const REJECTION_MESSAGES: Record<string, string> = {
+const REJECTION_MESSAGES: Record<CatalogSchemas.BrandLogoRejectionReason, string> = {
   LOGO_UNSUPPORTED_TYPE: "Загрузите файл SVG, PNG или WebP.",
   LOGO_TOO_LARGE: "Файл больше 200 КБ.",
   LOGO_EMPTY: "Файл пустой.",
@@ -21,14 +22,16 @@ const REJECTION_MESSAGES: Record<string, string> = {
   LOGO_NOT_SQUARE: "Логотип должен быть почти квадратным (стороны не больше 1:1,25).",
   LOGO_UNSAFE_SVG:
     "SVG содержит скрипты, обработчики событий, внешние ссылки или встроенное содержимое.",
+  LOGO_UPLOAD_MISSING: "Загруженный файл не найден. Попробуйте ещё раз.",
 };
 
 function toError(err: unknown): { ok: false; error: string } {
   if (err instanceof ApiError) {
     const reason = (err.responseBody as { details?: { reason?: string } } | undefined)?.details
       ?.reason;
-    if (reason && REJECTION_MESSAGES[reason]) {
-      return { ok: false, error: REJECTION_MESSAGES[reason] };
+    const known = CatalogSchemas.BrandLogoRejectionReasonSchema.safeParse(reason);
+    if (known.success) {
+      return { ok: false, error: REJECTION_MESSAGES[known.data] };
     }
     if (err.status === 403) return { ok: false, error: "Недостаточно прав." };
     if (err.status === 404) return { ok: false, error: "Бренд не найден." };
@@ -67,18 +70,32 @@ export async function uploadBrandLogo(
     return { ok: false, error: "Выберите файл логотипа." };
   }
   if (!CatalogSchemas.BrandLogoContentTypeSchema.safeParse(file.type).success) {
-    return { ok: false, error: REJECTION_MESSAGES["LOGO_UNSUPPORTED_TYPE"] as string };
+    return { ok: false, error: REJECTION_MESSAGES.LOGO_UNSUPPORTED_TYPE };
   }
   if (file.size > CatalogSchemas.BRAND_LOGO_MAX_BYTES) {
-    return { ok: false, error: REJECTION_MESSAGES["LOGO_TOO_LARGE"] as string };
+    return { ok: false, error: REJECTION_MESSAGES.LOGO_TOO_LARGE };
   }
 
   try {
-    const dataBase64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-    const data = await apiFetch<SetBrandLogoResponse>(
-      `/admin/catalog/brands/${encodeURIComponent(brandId)}/logo`,
-      { method: "PUT", body: { contentType: file.type, dataBase64 } },
-    );
+    const brandPath = `/admin/catalog/brands/${encodeURIComponent(brandId)}/logo`;
+    // ADR-0008: the file goes to storage through a presigned PUT, then the API
+    // reads it back to validate it and make it the logo.
+    const presigned = await apiFetch<PresignBrandLogoResponse>(`${brandPath}/presign`, {
+      method: "POST",
+      body: { contentType: file.type, sizeBytes: file.size },
+    });
+    const put = await fetch(presigned.uploadUrl, {
+      method: "PUT",
+      headers: presigned.headers,
+      body: new Uint8Array(await file.arrayBuffer()),
+    });
+    if (!put.ok) {
+      return { ok: false, error: "Не удалось загрузить файл в хранилище. Попробуйте ещё раз." };
+    }
+    const data = await apiFetch<SetBrandLogoResponse>(brandPath, {
+      method: "PUT",
+      body: { key: presigned.key },
+    });
     return { ok: true, data };
   } catch (err) {
     return toError(err);

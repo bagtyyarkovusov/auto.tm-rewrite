@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { CatalogSchemas } from "@auto-tm/contracts";
+
 import {
+  BRAND_LOGO_CONTENT_TYPES,
   BRAND_LOGO_MAX_BYTES,
+  BRAND_LOGO_REJECTIONS,
   brandLogoKey,
+  isPendingBrandLogoKey,
+  pendingBrandLogoKey,
+  storedBrandLogoType,
   checkBrandLogoFile,
   checkBrandLogoImage,
   checkBrandLogoSvgSafety,
@@ -66,15 +73,41 @@ describe("checkBrandLogoSvgSafety", () => {
     ["embedded image", svg('<image href="data:image/png;base64,AAAA"/>')],
     ["DOCTYPE entity", `<!DOCTYPE svg [<!ENTITY x "y">]>${svg("")}`],
     ["css import", svg('<style>@import "https://evil.example/a.css";</style>')],
+    ["escaped css import", svg('<style>@\\69mport "https://evil.example/a.css";</style>')],
+    ["prefixed script", svg('<s:script xmlns:s="http://www.w3.org/2000/svg">alert(1)</s:script>')],
+    ["prefixed set", svg('<s:set attributeName="fill" to="red"/>')],
+    ["xinclude", svg('<xi:include href="/etc/passwd"/>')],
     ["animation", svg('<set attributeName="href" to="javascript:alert(1)"/>')],
   ])("rejects %s", (_name, text) => {
     expect(checkBrandLogoSvgSafety(text)).toBe("LOGO_UNSAFE_SVG");
   });
 });
 
-describe("brandLogoKey", () => {
-  it("builds a versioned key under the brand slug with the file extension", () => {
-    expect(brandLogoKey("toyota", "v17", "image/svg+xml")).toBe("brands/toyota/v17/logo.svg");
+describe("keys", () => {
+  it("stores SVG and PNG uploads as PNG and keeps WebP", () => {
+    expect(storedBrandLogoType("image/svg+xml")).toBe("image/png");
+    expect(storedBrandLogoType("image/png")).toBe("image/png");
+    expect(storedBrandLogoType("image/webp")).toBe("image/webp");
+  });
+
+  it("builds a versioned key under the brand slug", () => {
+    expect(brandLogoKey("toyota", "v17", "image/png")).toBe("brands/toyota/v17/logo.png");
     expect(brandLogoKey("bmw", "v2", "image/webp")).toBe("brands/bmw/v2/logo.webp");
+  });
+
+  it("accepts only this brand's pending keys", () => {
+    const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+    expect(isPendingBrandLogoKey("toyota", pendingBrandLogoKey("toyota", id))).toBe(true);
+    expect(isPendingBrandLogoKey("toyota", pendingBrandLogoKey("bmw", id))).toBe(false);
+    expect(isPendingBrandLogoKey("toyota", "brands/toyota/v1/logo.png")).toBe(false);
+    expect(isPendingBrandLogoKey("toyota", `pending/brands/toyota/../../brands/x`)).toBe(false);
+  });
+});
+
+describe("contract parity", () => {
+  it("matches the limits and reasons published in @auto-tm/contracts", () => {
+    expect(BRAND_LOGO_MAX_BYTES).toBe(CatalogSchemas.BRAND_LOGO_MAX_BYTES);
+    expect([...BRAND_LOGO_CONTENT_TYPES]).toEqual(CatalogSchemas.BrandLogoContentTypeSchema.options);
+    expect([...BRAND_LOGO_REJECTIONS]).toEqual(CatalogSchemas.BrandLogoRejectionReasonSchema.options);
   });
 });

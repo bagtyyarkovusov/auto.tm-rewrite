@@ -1,10 +1,11 @@
-import { Inject, Injectable, NotFoundException, ConflictException } from "@nestjs/common";
+import { Inject, Injectable, Logger, NotFoundException, ConflictException } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
 import {
   BRAND_REPOSITORY,
   type BrandRepository,
 } from "../domain/ports/BrandRepository";
+import { BRAND_LOGO_STORAGE, type BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 import { CatalogSearchIndex } from "./CatalogSearchIndex";
 
 export interface DeleteBrandInput {
@@ -13,11 +14,14 @@ export interface DeleteBrandInput {
 
 @Injectable()
 export class DeleteBrand {
+  private readonly logger = new Logger(DeleteBrand.name);
+
   constructor(
     @Inject(BRAND_REPOSITORY) private readonly brands: BrandRepository,
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(CatalogSearchIndex)
     private readonly searchIndex: CatalogSearchIndex,
+    @Inject(BRAND_LOGO_STORAGE) private readonly logoStorage: BrandLogoStorage,
   ) {}
 
   async execute(input: DeleteBrandInput, actorUserId: string): Promise<void> {
@@ -40,6 +44,14 @@ export class DeleteBrand {
       throw err;
     }
     this.searchIndex.invalidate();
+
+    if (brand.logoKey) {
+      try {
+        await this.logoStorage.delete(brand.logoKey);
+      } catch (err) {
+        this.logger.warn({ key: brand.logoKey, err }, "Failed to delete brand logo object");
+      }
+    }
 
     await this.prisma.auditLog.create({
       data: {

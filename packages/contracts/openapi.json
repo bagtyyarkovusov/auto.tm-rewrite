@@ -701,22 +701,62 @@
           "id"
         ]
       },
-      "SetBrandLogoRequest": {
+      "PresignBrandLogoRequest": {
         "type": "object",
         "properties": {
           "contentType": {
             "type": "string",
             "minLength": 1
           },
-          "dataBase64": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 546134
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
           "contentType",
-          "dataBase64"
+          "sizeBytes"
+        ]
+      },
+      "PresignBrandLogoResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "key": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "uploadUrl",
+          "key",
+          "expiresIn",
+          "headers"
+        ]
+      },
+      "SetBrandLogoRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "key"
         ]
       },
       "SetBrandLogoResponse": {

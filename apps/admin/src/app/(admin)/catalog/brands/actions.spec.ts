@@ -78,8 +78,18 @@ describe("brand logo server actions", () => {
   });
 
   describe("uploadBrandLogo", () => {
-    it("sends the file as base64 with its content type and bearer token", async () => {
+    it("presigns, PUTs the file to storage, then confirms the key", async () => {
       const fetchMock = mockFetchSequence([
+        {
+          status: 201,
+          body: {
+            uploadUrl: "https://media.example/catalog-assets/pending/brands/audi/u1?sig",
+            key: "pending/brands/audi/u1",
+            expiresIn: 600,
+            headers: { "Content-Type": "image/png", "Content-Disposition": "attachment" },
+          },
+        },
+        { status: 200, body: {} },
         { status: 200, body: { id: "b1", logoUrl: "https://m/catalog-assets/x.png" } },
       ]);
 
@@ -89,14 +99,45 @@ describe("brand logo server actions", () => {
         ok: true,
         data: { id: "b1", logoUrl: "https://m/catalog-assets/x.png" },
       });
-      const [url, init] = fetchMock.mock.calls[0] as FetchCall;
-      expect(url).toMatch(/\/admin\/catalog\/brands\/b1\/logo$/);
-      expect(init.method).toBe("PUT");
-      expect(new Headers(init.headers).get("Authorization")).toBe("Bearer acc_tok");
-      expect(JSON.parse(init.body as string)).toEqual({
+      const [presignCall, putCall, confirmCall] = fetchMock.mock.calls as [
+        FetchCall,
+        FetchCall,
+        FetchCall,
+      ];
+      expect(presignCall[0]).toMatch(/\/admin\/catalog\/brands\/b1\/logo\/presign$/);
+      expect(new Headers(presignCall[1].headers).get("Authorization")).toBe("Bearer acc_tok");
+      expect(JSON.parse(presignCall[1].body as string)).toEqual({
         contentType: "image/png",
-        dataBase64: Buffer.from([7, 7, 7]).toString("base64"),
+        sizeBytes: 3,
       });
+
+      expect(putCall[0]).toBe("https://media.example/catalog-assets/pending/brands/audi/u1?sig");
+      expect(putCall[1].method).toBe("PUT");
+      expect(putCall[1].headers).toEqual({
+        "Content-Type": "image/png",
+        "Content-Disposition": "attachment",
+      });
+      expect([...(putCall[1].body as Uint8Array)]).toEqual([7, 7, 7]);
+
+      expect(confirmCall[0]).toMatch(/\/admin\/catalog\/brands\/b1\/logo$/);
+      expect(confirmCall[1].method).toBe("PUT");
+      expect(JSON.parse(confirmCall[1].body as string)).toEqual({ key: "pending/brands/audi/u1" });
+    });
+
+    it("reports a failed storage PUT without confirming", async () => {
+      const fetchMock = mockFetchSequence([
+        {
+          status: 201,
+          body: { uploadUrl: "https://m/u?sig", key: "pending/brands/audi/u1", expiresIn: 600, headers: {} },
+        },
+        { status: 403, body: {} },
+      ]);
+
+      expect(await uploadBrandLogo("b1", logoForm(3, "image/png"))).toEqual({
+        ok: false,
+        error: "Не удалось загрузить файл в хранилище. Попробуйте ещё раз.",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it("rejects a missing, unsupported, or oversized file without calling the API", async () => {

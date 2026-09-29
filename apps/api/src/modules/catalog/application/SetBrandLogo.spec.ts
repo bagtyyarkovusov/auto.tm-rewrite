@@ -4,9 +4,11 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import type { Brand } from "../domain/Brand";
 import type { BrandLogoRepository } from "../domain/ports/BrandLogoRepository";
 import type { BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
-import type { LogoImageProbe } from "../domain/ports/LogoImageProbe";
+import type { LogoImageProcessor } from "../domain/ports/LogoImageProcessor";
 
 import { SetBrandLogo } from "./SetBrandLogo";
+
+const PENDING = "pending/brands/toyota/0f8fad5b-d9cb-469f-a165-70867728950e";
 
 class FakeBrands implements BrandLogoRepository {
   brands = new Map<string, Brand>();
@@ -26,11 +28,24 @@ class FakeBrands implements BrandLogoRepository {
 }
 
 class FakeStorage implements BrandLogoStorage {
-  objects = new Map<string, string>();
+  objects = new Map<string, { bytes: Uint8Array; contentType: string }>();
   failDelete = false;
 
-  async put(key: string, _bytes: Uint8Array, contentType: string): Promise<void> {
-    this.objects.set(key, contentType);
+  async presignUpload(): Promise<{ url: string; headers: Record<string, string> }> {
+    throw new Error("not used");
+  }
+
+  async get(
+    key: string,
+    maxBytes: number,
+  ): Promise<{ bytes: Uint8Array; contentType: string } | "too-large" | null> {
+    const object = this.objects.get(key);
+    if (!object) return null;
+    return object.bytes.byteLength > maxBytes ? "too-large" : object;
+  }
+
+  async put(key: string, bytes: Uint8Array, contentType: string): Promise<void> {
+    this.objects.set(key, { bytes, contentType });
   }
 
   async delete(key: string): Promise<void> {
@@ -43,15 +58,21 @@ class FakeStorage implements BrandLogoStorage {
   }
 }
 
-class FakeProbe implements LogoImageProbe {
-  result: { format: string; width: number; height: number } | null = {
+class FakeImages implements LogoImageProcessor {
+  probed: { format: string; width: number; height: number } | null = {
     format: "png",
     width: 90,
     height: 90,
   };
+  rasterized: number[] = [];
 
   async probe(): Promise<{ format: string; width: number; height: number } | null> {
-    return this.result;
+    return this.probed;
+  }
+
+  async rasterizeSvg(_bytes: Uint8Array, size: number): Promise<Uint8Array> {
+    this.rasterized.push(size);
+    return new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
   }
 }
 
@@ -69,14 +90,19 @@ const bytes = (n = 100) => new Uint8Array(n).fill(1);
 describe("SetBrandLogo", () => {
   let brands: FakeBrands;
   let storage: FakeStorage;
-  let probe: FakeProbe;
+  let images: FakeImages;
   let prisma: FakePrisma;
   let useCase: SetBrandLogo;
+
+  const upload = (contentType: string, data: Uint8Array = bytes()) =>
+    storage.objects.set(PENDING, { bytes: data, contentType });
+
+  const logoObjects = () => [...storage.objects.keys()].filter((k) => k.startsWith("brands/"));
 
   beforeEach(() => {
     brands = new FakeBrands();
     storage = new FakeStorage();
-    probe = new FakeProbe();
+    images = new FakeImages();
     prisma = new FakePrisma();
     brands.brands.set("b1", {
       id: "b1",
@@ -91,77 +117,115 @@ describe("SetBrandLogo", () => {
     useCase = new SetBrandLogo(
       brands,
       storage,
-      probe,
+      images,
       prisma as unknown as ConstructorParameters<typeof SetBrandLogo>[3],
     );
   });
 
-  it("stores the file under a versioned key, points the brand at it, and audits", async () => {
-    const result = await useCase.execute(
-      { brandId: "b1", contentType: "image/png", bytes: bytes() },
-      "admin-1",
-    );
+  it("stores the upload under a versioned key, points the brand at it, and audits", async () => {
+    upload("image/png");
+
+    const result = await useCase.execute({ brandId: "b1", key: PENDING }, "admin-1");
 
     const key = brands.brands.get("b1")!.logoKey!;
     expect(key).toMatch(/^brands\/toyota\/v\d+\/logo\.png$/);
-    expect(storage.objects.get(key)).toBe("image/png");
+    expect(storage.objects.get(key)?.contentType).toBe("image/png");
+    expect(storage.objects.has(PENDING)).toBe(false);
     expect(result).toEqual({ id: "b1", logoUrl: `https://media.example/catalog-assets/${key}` });
-    expect(prisma.auditLogs[0]).toMatchObject({
-      action: "CATALOG_BRAND_LOGO_SET",
-      targetId: "b1",
-    });
+    expect(prisma.auditLogs[0]).toMatchObject({ action: "CATALOG_BRAND_LOGO_SET", targetId: "b1" });
+  });
+
+  it("keeps WebP as WebP", async () => {
+    images.probed = { format: "webp", width: 60, height: 60 };
+    upload("image/webp");
+
+    await useCase.execute({ brandId: "b1", key: PENDING }, "admin-1");
+
+    expect(brands.brands.get("b1")!.logoKey).toMatch(/logo\.webp$/);
+  });
+
+  it("renders an SVG to PNG so no SVG is stored", async () => {
+    images.probed = { format: "svg", width: 24, height: 24 };
+    upload("image/svg+xml", new TextEncoder().encode('<svg><path d="M0 0h1v1z"/></svg>'));
+
+    await useCase.execute({ brandId: "b1", key: PENDING }, "admin-1");
+
+    const key = brands.brands.get("b1")!.logoKey!;
+    expect(key).toMatch(/logo\.png$/);
+    expect(storage.objects.get(key)?.contentType).toBe("image/png");
+    expect(images.rasterized).toEqual([256]);
   });
 
   it("deletes the previous object when replacing a logo", async () => {
-    brands.brands.get("b1")!.logoKey = "brands/toyota/v1/logo.svg";
-    storage.objects.set("brands/toyota/v1/logo.svg", "image/svg+xml");
+    brands.brands.get("b1")!.logoKey = "brands/toyota/v1/logo.png";
+    storage.objects.set("brands/toyota/v1/logo.png", { bytes: bytes(), contentType: "image/png" });
+    upload("image/png");
 
-    await useCase.execute({ brandId: "b1", contentType: "image/png", bytes: bytes() }, "admin-1");
+    await useCase.execute({ brandId: "b1", key: PENDING }, "admin-1");
 
-    expect(storage.objects.has("brands/toyota/v1/logo.svg")).toBe(false);
-    expect(storage.objects.size).toBe(1);
+    expect(storage.objects.has("brands/toyota/v1/logo.png")).toBe(false);
+    expect(logoObjects()).toHaveLength(1);
   });
 
   it("keeps the new logo when deleting the previous object fails", async () => {
-    brands.brands.get("b1")!.logoKey = "brands/toyota/v1/logo.svg";
+    brands.brands.get("b1")!.logoKey = "brands/toyota/v1/logo.png";
+    upload("image/png");
     storage.failDelete = true;
 
-    await useCase.execute({ brandId: "b1", contentType: "image/png", bytes: bytes() }, "admin-1");
+    await useCase.execute({ brandId: "b1", key: PENDING }, "admin-1");
 
-    expect(brands.brands.get("b1")!.logoKey).toMatch(/logo\.png$/);
+    expect(brands.brands.get("b1")!.logoKey).not.toBe("brands/toyota/v1/logo.png");
   });
 
-  it("removes the uploaded object when the brand update fails", async () => {
+  it("removes the stored object when the brand update fails", async () => {
+    upload("image/png");
     brands.failNextSet = true;
 
-    await expect(
-      useCase.execute({ brandId: "b1", contentType: "image/png", bytes: bytes() }, "admin-1"),
-    ).rejects.toThrow("db down");
-    expect(storage.objects.size).toBe(0);
+    await expect(useCase.execute({ brandId: "b1", key: PENDING }, "admin-1")).rejects.toThrow(
+      "db down",
+    );
+    expect(logoObjects()).toEqual([]);
   });
 
   it("throws NotFoundException for an unknown brand", async () => {
-    await expect(
-      useCase.execute({ brandId: "nope", contentType: "image/png", bytes: bytes() }, "admin-1"),
-    ).rejects.toThrow(NotFoundException);
+    await expect(useCase.execute({ brandId: "nope", key: PENDING }, "admin-1")).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it.each([
-    ["image/jpeg", bytes(), null, "LOGO_UNSUPPORTED_TYPE"],
-    ["image/png", bytes(200 * 1024 + 1), null, "LOGO_TOO_LARGE"],
-    ["image/png", bytes(0), null, "LOGO_EMPTY"],
-    ["image/webp", bytes(), { format: "png", width: 90, height: 90 }, "LOGO_TYPE_MISMATCH"],
-    ["image/png", bytes(), { format: "png", width: 300, height: 90 }, "LOGO_NOT_SQUARE"],
+    ["a key outside the brand's pending area", "brands/toyota/v1/logo.png", null, "LOGO_UPLOAD_MISSING"],
+    ["another brand's pending key", "pending/brands/bmw/0f8fad5b-d9cb-469f-a165-70867728950e", null, "LOGO_UPLOAD_MISSING"],
+  ])("rejects %s", async (_name, key, _unused, reason) => {
+    const error = await useCase.execute({ brandId: "b1", key }, "admin-1").catch((e: unknown) => e);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      code: "VALIDATION_FAILED",
+      details: { reason },
+    });
+  });
+
+  it.each([
+    ["a missing upload", null, null, null, "LOGO_UPLOAD_MISSING"],
+    ["an oversized upload", "image/png", bytes(200 * 1024 + 1), null, "LOGO_TOO_LARGE"],
+    ["an unsupported type", "image/jpeg", bytes(), null, "LOGO_UNSUPPORTED_TYPE"],
+    ["an empty file", "image/png", bytes(0), null, "LOGO_EMPTY"],
+    ["undecodable bytes", "image/png", bytes(), "unreadable", "LOGO_UNREADABLE"],
+    ["a mismatched type", "image/webp", bytes(), { format: "png", width: 90, height: 90 }, "LOGO_TYPE_MISMATCH"],
+    ["an elongated image", "image/png", bytes(), { format: "png", width: 300, height: 90 }, "LOGO_NOT_SQUARE"],
     [
+      "an unsafe SVG",
       "image/svg+xml",
-      new TextEncoder().encode('<svg><script>alert(1)</script></svg>'),
+      new TextEncoder().encode('<svg xmlns:s="http://www.w3.org/2000/svg"><s:script>alert(1)</s:script></svg>'),
       { format: "svg", width: 24, height: 24 },
       "LOGO_UNSAFE_SVG",
     ],
-  ] as const)("rejects %s with %s", async (contentType, input, probed, reason) => {
-    if (probed) probe.result = { ...probed };
+  ] as const)("rejects %s and deletes the pending upload", async (_name, type, data, probed, reason) => {
+    if (type && data) upload(type, data);
+    if (probed === "unreadable") images.probed = null;
+    else if (probed) images.probed = { ...probed };
+
     const error = await useCase
-      .execute({ brandId: "b1", contentType, bytes: input }, "admin-1")
+      .execute({ brandId: "b1", key: PENDING }, "admin-1")
       .catch((err: unknown) => err);
 
     expect(error).toBeInstanceOf(BadRequestException);
@@ -171,15 +235,6 @@ describe("SetBrandLogo", () => {
     });
     expect(storage.objects.size).toBe(0);
     expect(brands.brands.get("b1")!.logoKey).toBeNull();
-  });
-
-  it("rejects bytes that do not decode as an image", async () => {
-    probe.result = null;
-    const error = await useCase
-      .execute({ brandId: "b1", contentType: "image/png", bytes: bytes() }, "admin-1")
-      .catch((err: unknown) => err);
-    expect((error as BadRequestException).getResponse()).toMatchObject({
-      details: { reason: "LOGO_UNREADABLE" },
-    });
+    expect(images.rasterized).toEqual([]);
   });
 });

@@ -36,7 +36,11 @@ Buckets:
 - `listing-photos`
 - `listing-videos`
 - `chat-attachments`
-- `catalog-assets` (brand logos under versioned `brands/<slug>/v<n>/` keys)
+- `catalog-assets` (brand logos under versioned `brands/<slug>/v<n>/` keys, and short-lived admin uploads under `pending/`)
+
+When a bucket is added to this list, re-run `pnpm minio:bootstrap` against each
+environment's MinIO before deploying the API that uses it. Until then, requests
+that write to the missing bucket fail. `catalog-assets` was added for brand logos.
 
 Each bucket receives an anonymous policy for `s3:GetObject` only. Anonymous
 `s3:PutObject` is not granted; uploads use short-lived signed PUT URLs produced

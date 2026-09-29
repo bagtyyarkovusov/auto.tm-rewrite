@@ -21,6 +21,7 @@ import { DeleteBrand } from "../application/DeleteBrand";
 import { CreateModel } from "../application/CreateModel";
 import { UpdateModel } from "../application/UpdateModel";
 import { DeleteModel } from "../application/DeleteModel";
+import { PresignBrandLogoUpload } from "../application/PresignBrandLogoUpload";
 import { SetBrandLogo } from "../application/SetBrandLogo";
 import { RemoveBrandLogo } from "../application/RemoveBrandLogo";
 
@@ -34,6 +35,8 @@ export class AdminCatalogController {
     @Inject(CreateModel) private readonly createModelUC: CreateModel,
     @Inject(UpdateModel) private readonly updateModelUC: UpdateModel,
     @Inject(DeleteModel) private readonly deleteModelUC: DeleteModel,
+    @Inject(PresignBrandLogoUpload)
+    private readonly presignBrandLogoUC: PresignBrandLogoUpload,
     @Inject(SetBrandLogo) private readonly setBrandLogoUC: SetBrandLogo,
     @Inject(RemoveBrandLogo) private readonly removeBrandLogoUC: RemoveBrandLogo,
   ) {}
@@ -69,29 +72,24 @@ export class AdminCatalogController {
     return { success: true };
   }
 
+  @Post("brands/:id/logo/presign")
+  async presignBrandLogo(
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ): Promise<CatalogSchemas.PresignBrandLogoResponse> {
+    const parsed = parseOrThrow(CatalogSchemas.PresignBrandLogoRequestSchema, body);
+    return this.presignBrandLogoUC.execute({ brandId: id, ...parsed });
+  }
+
   @Put("brands/:id/logo")
   async setBrandLogo(
     @Param("id") id: string,
     @Body() body: unknown,
     @Req() req: FastifyRequest & { user?: { sub: string } },
   ): Promise<CatalogSchemas.SetBrandLogoResponse> {
-    const result = CatalogSchemas.SetBrandLogoRequestSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException({
-        code: "VALIDATION_FAILED",
-        message: "Invalid logo upload",
-        details: result.error.flatten(),
-      });
-    }
+    const parsed = parseOrThrow(CatalogSchemas.SetBrandLogoRequestSchema, body);
     const actorUserId = (req.user as { sub: string }).sub;
-    return this.setBrandLogoUC.execute(
-      {
-        brandId: id,
-        contentType: result.data.contentType,
-        bytes: Buffer.from(result.data.dataBase64, "base64"),
-      },
-      actorUserId,
-    );
+    return this.setBrandLogoUC.execute({ brandId: id, key: parsed.key }, actorUserId);
   }
 
   @Delete("brands/:id/logo")
@@ -139,3 +137,19 @@ export class AdminCatalogController {
     return { success: true };
   }
 }
+
+function parseOrThrow<T>(schema: { safeParse: (data: unknown) => SafeParse<T> }, body: unknown): T {
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    throw new BadRequestException({
+      code: "VALIDATION_FAILED",
+      message: "Invalid logo request",
+      details: result.error.flatten(),
+    });
+  }
+  return result.data;
+}
+
+type SafeParse<T> =
+  | { success: true; data: T }
+  | { success: false; error: { flatten: () => unknown } };

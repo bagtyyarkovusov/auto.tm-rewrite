@@ -272,17 +272,41 @@ export const BRAND_LOGO_MAX_BYTES = 200 * 1024;
 export const BrandLogoContentTypeSchema = z.enum(["image/svg+xml", "image/png", "image/webp"]);
 export type BrandLogoContentType = z.infer<typeof BrandLogoContentTypeSchema>;
 
+/** Why the API rejected a logo; sent as `details.reason` on a 400 `VALIDATION_FAILED`. */
+export const BrandLogoRejectionReasonSchema = z.enum([
+  "LOGO_UNSUPPORTED_TYPE",
+  "LOGO_TOO_LARGE",
+  "LOGO_EMPTY",
+  "LOGO_UNREADABLE",
+  "LOGO_TYPE_MISMATCH",
+  "LOGO_NOT_SQUARE",
+  "LOGO_UNSAFE_SVG",
+  "LOGO_UPLOAD_MISSING",
+]);
+export type BrandLogoRejectionReason = z.infer<typeof BrandLogoRejectionReasonSchema>;
+
 /**
- * Admin logo upload. The file travels base64-encoded because it is small and
- * the API must decode it to check its type, size, and shape before storing it.
- * The content type is checked by the API, so an unsupported type gets a
- * specific error instead of a schema failure.
+ * Step 1 of an admin logo upload (ADR-0008 presigned path). The content type
+ * is checked by the API so an unsupported type gets a specific reason.
  */
-export const SetBrandLogoRequestSchema = z.object({
+export const PresignBrandLogoRequestSchema = z.object({
   contentType: z.string().min(1),
-  // Base64 of a file at most 200 KB, with a little room so the API, not the
-  // schema, reports an oversized file.
-  dataBase64: z.string().min(1).max(Math.ceil((BRAND_LOGO_MAX_BYTES * 2 * 4) / 3)),
+  sizeBytes: z.number().int().nonnegative(),
+});
+export type PresignBrandLogoRequest = z.infer<typeof PresignBrandLogoRequestSchema>;
+
+/** The uploader PUTs the file to `uploadUrl` sending exactly `headers`. */
+export const PresignBrandLogoResponseSchema = z.object({
+  uploadUrl: z.string().url(),
+  key: z.string(),
+  expiresIn: z.number().int().positive(),
+  headers: z.record(z.string()),
+});
+export type PresignBrandLogoResponse = z.infer<typeof PresignBrandLogoResponseSchema>;
+
+/** Step 2: the API reads the uploaded object, validates it, and makes it the logo. */
+export const SetBrandLogoRequestSchema = z.object({
+  key: z.string().min(1),
 });
 export type SetBrandLogoRequest = z.infer<typeof SetBrandLogoRequestSchema>;
 

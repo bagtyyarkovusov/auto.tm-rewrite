@@ -23,6 +23,12 @@ class FakeBrands implements BrandLogoRepository {
 
 class FakeStorage implements BrandLogoStorage {
   deleted: string[] = [];
+  async presignUpload(): Promise<{ url: string; headers: Record<string, string> }> {
+    throw new Error("not used");
+  }
+  async get(): Promise<null> {
+    return null;
+  }
   async put(): Promise<void> {}
   async delete(key: string): Promise<void> {
     this.deleted.push(key);

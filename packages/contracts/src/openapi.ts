@@ -46,6 +46,8 @@ import {
   CreateBrandRequestSchema,
   UpdateBrandRequestSchema,
   DeleteBrandParamSchema,
+  PresignBrandLogoRequestSchema,
+  PresignBrandLogoResponseSchema,
   SetBrandLogoRequestSchema,
   SetBrandLogoResponseSchema,
   CreateModelRequestSchema,
@@ -187,6 +189,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("CreateBrandRequest", CreateBrandRequestSchema);
   registry.register("UpdateBrandRequest", UpdateBrandRequestSchema);
   registry.register("DeleteBrandParam", DeleteBrandParamSchema);
+  registry.register("PresignBrandLogoRequest", PresignBrandLogoRequestSchema);
+  registry.register("PresignBrandLogoResponse", PresignBrandLogoResponseSchema);
   registry.register("SetBrandLogoRequest", SetBrandLogoRequestSchema);
   registry.register("SetBrandLogoResponse", SetBrandLogoResponseSchema);
   registry.register("CreateModelRequest", CreateModelRequestSchema);

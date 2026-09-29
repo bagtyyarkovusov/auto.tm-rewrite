@@ -6,7 +6,7 @@ The browser never receives API tokens. Server-side code stores them in HTTP-only
 
 Sign-in creates an ordinary session. Admin access additionally needs TOTP elevation. Pending enrollment reuses the same secret until verification; refresh does not extend the elevation deadline. Logout clears local cookies even if API revocation fails. Keep token and credential values out of logs and errors.
 
-The Brands page (`/catalog/brands`) lists every brand with its logo or a letter fallback and uploads, replaces, or removes a logo through server actions. The browser sends the file to the server action, which checks type and size, then forwards it base64-encoded to the admin catalog API; the API owns the full validation.
+The Brands page (`/catalog/brands`) lists every brand with its logo or a letter fallback and uploads, replaces, or removes a logo through server actions. The browser sends the file to the server action, which checks type and size, asks the API for a presigned PUT, uploads the file to storage from the server, and confirms the key with the API; the API owns the full validation.
 
 Tests beside the API client, cookies, validators, and server actions cover these boundaries. `/healthz` remains independent of the API and data stores.
 

@@ -73,6 +73,8 @@ class FakeBrandRepository implements BrandRepository {
 }
 
 const fakeLogoStorage: BrandLogoStorage = {
+  presignUpload: async () => ({ url: "", headers: {} }),
+  get: async () => null,
   put: async () => undefined,
   delete: async () => undefined,
   publicUrl: (key) => `https://media.example/catalog-assets/${key}`,
