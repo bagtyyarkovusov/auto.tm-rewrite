@@ -532,25 +532,16 @@ function ReviewSection({
 function ConditionDisclosureSummary({
   disclosure,
 }: {
-  disclosure: ListingsSchemas.ConditionDisclosure;
+  disclosure: ListingsSchemas.DraftConditionDisclosure;
 }) {
   const { t } = useTranslation();
   return (
     <View className="gap-1">
-      <Text className="text-sm text-foreground">
-        {t("accidentReported")}: {disclosure.accidentReported ? t("yes") : t("no")}
-      </Text>
-      <Text className="text-sm text-foreground">
-        {t("mileageAccurate")}: {disclosure.mileageAccurate ? t("yes") : t("no")}
-      </Text>
-      {disclosure.ownerCount !== undefined && (
+      {disclosure.damaged !== undefined && (
         <Text className="text-sm text-foreground">
-          {t("ownerCount")}: {disclosure.ownerCount}
+          {t("damaged")}: {disclosure.damaged ? t("yes") : t("no")}
         </Text>
       )}
-      <Text className="text-sm text-foreground">
-        {t("serviceHistoryAvailable")}: {disclosure.serviceHistoryAvailable ? t("yes") : t("no")}
-      </Text>
       {disclosure.knownIssuesText && (
         <Text className="text-sm text-foreground" numberOfLines={2}>
           {t("knownIssuesText")}: {disclosure.knownIssuesText}

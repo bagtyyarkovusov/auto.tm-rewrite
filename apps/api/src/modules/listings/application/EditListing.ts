@@ -101,6 +101,14 @@ export class EditListing {
       existing.conditionDisclosure,
       patch.conditionDisclosure,
     );
+    // ADR-0052: a Listing keeps a Damaged answer through every edit.
+    if (nextConditionDisclosure?.damaged === undefined) {
+      throw new BadRequestException({
+        code: LISTING_ERROR_CODES.DAMAGED_REQUIRED,
+        message: "Answer whether the car is damaged or needs repair.",
+        details: { field: "conditionDisclosure.damaged" },
+      });
+    }
 
     // Build updated listing data
     const updatedData: Parameters<typeof Listing.create>[0] = {
@@ -156,7 +164,12 @@ export class EditListing {
       ...(patch.allowChat !== undefined && { allowChat: patch.allowChat }),
       ...(patch.acceptsExchange !== undefined && { acceptsExchange: patch.acceptsExchange }),
       ...(patch.installmentAvailable !== undefined && { installmentAvailable: patch.installmentAvailable }),
-      ...(nextConditionDisclosure !== undefined && { conditionDisclosure: nextConditionDisclosure }),
+      conditionDisclosure: {
+        damaged: nextConditionDisclosure.damaged,
+        ...(nextConditionDisclosure.knownIssuesText !== undefined && {
+          knownIssuesText: nextConditionDisclosure.knownIssuesText,
+        }),
+      },
     };
 
     let updated: Listing;
@@ -206,29 +219,15 @@ export class EditListing {
 
 function mergeConditionDisclosure(
   existing: ConditionDisclosure | undefined,
-  patch: ConditionDisclosure | undefined,
-): ConditionDisclosure | undefined {
+  patch: Partial<ConditionDisclosure> | undefined,
+): Partial<ConditionDisclosure> | undefined {
   if (!existing && !patch) return undefined;
-  if (!existing) return patch;
   if (!patch) return existing;
 
-  const merged: ConditionDisclosure = {
-    accidentReported: patch.accidentReported,
-    mileageAccurate: patch.mileageAccurate,
-    serviceHistoryAvailable: patch.serviceHistoryAvailable,
+  const damaged = patch.damaged ?? existing?.damaged;
+  const knownIssuesText = patch.knownIssuesText ?? existing?.knownIssuesText;
+  return {
+    ...(damaged !== undefined && { damaged }),
+    ...(knownIssuesText !== undefined && { knownIssuesText }),
   };
-
-  if (patch.ownerCount !== undefined) {
-    merged.ownerCount = patch.ownerCount;
-  } else if (existing.ownerCount !== undefined) {
-    merged.ownerCount = existing.ownerCount;
-  }
-
-  if (patch.knownIssuesText !== undefined) {
-    merged.knownIssuesText = patch.knownIssuesText;
-  } else if (existing.knownIssuesText !== undefined) {
-    merged.knownIssuesText = existing.knownIssuesText;
-  }
-
-  return merged;
 }

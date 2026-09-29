@@ -152,6 +152,7 @@ describe("MLP AFK e2e smoke", () => {
       description: input.description ?? "Clean AFK smoke listing",
       allowCalls: true,
       allowChat: true,
+      conditionDisclosure: { damaged: false },
       photos: [
         {
           photoId: suite.id("photo-1"),

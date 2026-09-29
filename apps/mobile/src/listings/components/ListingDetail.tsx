@@ -220,9 +220,12 @@ export function ListingDetailView({
 
         <Separator className="my-1" />
 
-        <ConditionDisclosureSection disclosure={listing.conditionDisclosure} />
-
-        <Separator className="my-1" />
+        {listing.conditionDisclosure && (
+          <>
+            <ConditionDisclosureSection disclosure={listing.conditionDisclosure} />
+            <Separator className="my-1" />
+          </>
+        )}
 
         <VinHistorySection vin={listing.vin} vinHistory={listing.vinHistory} />
 
@@ -344,50 +347,37 @@ function VinHistoryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** ADR-0052: the seller's own statement; renders nothing without an answer. */
 function ConditionDisclosureSection({
   disclosure,
 }: {
   disclosure: ListingsSchemas.ListingDetail["conditionDisclosure"];
 }) {
   const { t } = useTranslation();
+  if (!disclosure) return null;
 
   return (
     <View className="gap-1">
       <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {t("conditionDisclosure")}
+        {t("conditionAsStatedBySeller")}
       </Text>
-      {disclosure ? (
-        <View className="gap-1">
-          <DisclosureRow label={t("accidentReported")} value={disclosure.accidentReported} />
-          <DisclosureRow label={t("mileageAccurate")} value={disclosure.mileageAccurate} />
-          {disclosure.ownerCount !== undefined && (
-            <Text className="text-base text-foreground">
-              {t("ownerCountValue", { count: disclosure.ownerCount })}
-            </Text>
+      <View className="flex-row items-start gap-2">
+        <Text className="text-base text-foreground">{t("damaged")}:</Text>
+        <Text
+          className={cn(
+            "min-w-0 flex-1 text-base font-medium",
+            disclosure.damaged ? "text-foreground" : "text-muted-foreground",
           )}
-          <DisclosureRow label={t("serviceHistoryAvailable")} value={disclosure.serviceHistoryAvailable} />
-          {disclosure.knownIssuesText && (
-            <View className="gap-0.5">
-              <Text className="text-sm text-muted-foreground">{t("knownIssuesText")}</Text>
-              <Text className="text-base text-foreground">{disclosure.knownIssuesText}</Text>
-            </View>
-          )}
+        >
+          {disclosure.damaged ? t("yes") : t("no")}
+        </Text>
+      </View>
+      {disclosure.knownIssuesText && (
+        <View className="gap-0.5">
+          <Text className="text-sm text-muted-foreground">{t("knownIssuesText")}</Text>
+          <Text className="text-base text-foreground">{disclosure.knownIssuesText}</Text>
         </View>
-      ) : (
-        <Text className="text-base text-muted-foreground">{t("noConditionDisclosure")}</Text>
       )}
-    </View>
-  );
-}
-
-function DisclosureRow({ label, value }: { label: string; value: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <View className="flex-row items-start gap-2">
-      <Text className="text-base text-foreground">{label}:</Text>
-      <Text className={cn("min-w-0 flex-1 text-base font-medium", value ? "text-foreground" : "text-muted-foreground")}>
-        {value ? t("yes") : t("no")}
-      </Text>
     </View>
   );
 }

@@ -138,6 +138,8 @@ export interface ReviewerScenarioSeedStore {
     priceAmount: number;
     description: string;
     publishedAt: Date;
+    damaged: boolean;
+    knownIssuesText: string | null;
   }): Promise<void>;
   upsertConversation(input: {
     id: string;
@@ -446,6 +448,8 @@ export async function runReviewerScenarioSeed(
     description:
       "Store review scenario listing. Deterministic demo data only; not a real vehicle.",
     publishedAt: options.now,
+    damaged: false,
+    knownIssuesText: null,
   });
   await store.upsertListing({
     id: REPORTABLE_LISTING_ID,
@@ -454,6 +458,8 @@ export async function runReviewerScenarioSeed(
     description:
       "Reportable store review scenario listing with intentionally incomplete disclosure copy.",
     publishedAt: options.now,
+    damaged: true,
+    knownIssuesText: "Rear bumper needs repainting. Demo data only.",
   });
 
   const firstMessageAt = new Date(options.now.getTime() - 60_000);

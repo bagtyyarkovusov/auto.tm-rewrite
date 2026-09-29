@@ -208,6 +208,8 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
     priceAmount: number;
     description: string;
     publishedAt: Date;
+    damaged: boolean;
+    knownIssuesText: string | null;
   }): Promise<void> {
     await this.prisma.listing.upsert({
       where: { id: input.id },
@@ -231,11 +233,8 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         allowCalls: false,
         allowChat: true,
         contactPhone: null,
-        accidentReported: false,
-        mileageAccurate: true,
-        ownerCount: 1,
-        serviceHistoryAvailable: true,
-        knownIssuesText: null,
+        damaged: input.damaged,
+        knownIssuesText: input.knownIssuesText,
       },
       create: {
         id: input.id,
@@ -256,10 +255,8 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         locationText: "Review City",
         allowCalls: false,
         allowChat: true,
-        accidentReported: false,
-        mileageAccurate: true,
-        ownerCount: 1,
-        serviceHistoryAvailable: true,
+        damaged: input.damaged,
+        knownIssuesText: input.knownIssuesText,
       },
     });
   }
