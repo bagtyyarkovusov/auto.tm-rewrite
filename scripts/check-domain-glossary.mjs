@@ -123,8 +123,13 @@ if (existsSync(packagePath)) {
 if (packageJson?.scripts?.["check:glossary"] !== "node scripts/check-domain-glossary.mjs") {
   errors.push("package.json is missing the check:glossary script");
 }
-if (packageJson?.scripts?.test !== "pnpm test:agent-docs && pnpm test:glossary && turbo run test") {
-  errors.push("package.json does not run glossary tests in the root test gate");
+// The root gate may add checks or change their order. Require these steps as
+// standalone &&-chained commands so each failure still stops the test gate.
+const testSteps = typeof packageJson?.scripts?.test === "string"
+  ? packageJson.scripts.test.split(/\s*&&\s*/).map((step) => step.trim())
+  : [];
+if (!["pnpm test:agent-docs", "pnpm test:glossary", "turbo run test"].every((step) => testSteps.includes(step))) {
+  errors.push("package.json root test gate must run agent-docs, glossary, and workspace tests");
 }
 requireMarkdownLink("docs/domain/GLOSSARY.md", "../adr/0042-domain-glossary-authority-and-mutability.md", "docs/domain/GLOSSARY.md is missing its ADR-0042 link");
 requireMarkdownLink("docs/adr/0042-domain-glossary-authority-and-mutability.md", "../domain/GLOSSARY.md", "ADR-0042 is missing or has a broken docs/domain/GLOSSARY.md link");

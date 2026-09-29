@@ -13,7 +13,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "test": "pnpm test:agent-docs && pnpm test:glossary && turbo run test",
+    "test": "pnpm test:agent-docs && pnpm test:glossary && turbo run test && pnpm test:reviewer-flow-smoke",
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
     "check:glossary": "node scripts/check-domain-glossary.mjs",
