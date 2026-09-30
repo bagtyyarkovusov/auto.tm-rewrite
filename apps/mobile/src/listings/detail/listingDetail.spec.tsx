@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-import { Share, Pressable } from "react-native";
+import { Share, Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import * as Linking from "expo-linking";
 
@@ -27,7 +27,6 @@ vi.mock("../../api/admin/useConfig", () => ({ useConfig: () => ({ data: state.co
 vi.mock("expo-secure-store", () => ({ getItemAsync: vi.fn(async () => null), setItemAsync: vi.fn(), deleteItemAsync: vi.fn() }));
 vi.mock("../../api/client", async (importOriginal) => ({ ...await importOriginal<typeof ClientModule>(), apiClient: { post: state.post, get: vi.fn(), delete: vi.fn() } }));
 vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => true), openURL: vi.fn(async () => {}) }));
-vi.mock("@/components/ui/skeleton", async () => ({ Skeleton: (await import("react-native")).View }));
 vi.mock("../../admin/components/ReportSheet", () => ({ ReportSheet: () => null }));
 vi.mock("./useCatalogMaps", () => ({ useCatalogMaps: () => ({ maps }) }));
 
@@ -174,6 +173,19 @@ describe("ListingDetailScreen", () => {
     state.isPending = true;
     const screen = renderMobile(<ListingDetailScreen />);
     expect(screen.queryByText("2020 Toyota Camry XV70")).toBeNull();
+    const placeholders = screen.UNSAFE_getAllByType(View)
+      .filter((node) => node.props.className?.includes("animate-pulse"));
+    expect(placeholders.map((node) => node.props.className)).toEqual([
+      "bg-accent animate-pulse h-[260px] w-full rounded-none",
+      "bg-accent animate-pulse rounded-md h-8 w-3/4",
+      "bg-accent animate-pulse rounded-md h-6 w-1/3",
+      ...Array(4).fill("bg-accent animate-pulse rounded-md h-10 w-[45%]"),
+      ...Array(2).fill("bg-accent animate-pulse rounded-md h-4 w-full"),
+      "bg-accent animate-pulse rounded-md h-4 w-2/3",
+      "bg-accent animate-pulse h-10 w-10 rounded-full",
+      "bg-accent animate-pulse rounded-md h-4 w-24",
+      "bg-accent animate-pulse rounded-md h-3 w-32",
+    ]);
     state.isPending = false; state.error = { status: 404 };
     screen.rerender(<ListingDetailScreen />);
     expect(screen.getByText("This listing is no longer available")).toBeTruthy();

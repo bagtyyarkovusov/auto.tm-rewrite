@@ -33,7 +33,13 @@ describe("PhotoThumbnail", () => {
     if (!drag) throw new Error("Photo drag target missing");
     fireEvent(drag, "longPress", { nativeEvent: { pageX: 20, pageY: 30 } });
     fireEvent(drag, "touchMove", { nativeEvent: { touches: [{ pageX: 40, pageY: 50 }] } });
+    screen.rerender(<PhotoThumbnail {...callbacks} isDragging dragOffset={{ x: 20, y: 20 }} />);
+    const tileStyle = () => StyleSheet.flatten(screen.UNSAFE_getAllByType(View)
+      .find((node) => StyleSheet.flatten(node.props.style)?.width === 111)?.props.style);
+    expect(tileStyle()?.transform).toEqual([{ translateX: 20 }, { translateY: 20 }, { scale: 1.04 }]);
     fireEvent(drag, "pressOut");
+    screen.rerender(<PhotoThumbnail {...callbacks} isDragging={false} dragOffset={{ x: 20, y: 20 }} />);
+    expect(tileStyle()?.transform).toBeUndefined();
     expect(callbacks.onDragStart).toHaveBeenCalledWith(0, 20, 30);
     expect(callbacks.onDragMove).toHaveBeenCalledWith(40, 50);
     expect(callbacks.onDragEnd).toHaveBeenCalledOnce();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Pressable } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -36,7 +36,11 @@ describe("Step2Photos", () => {
     if (!drag) throw new Error("Photo drag target missing");
     fireEvent(drag, "longPress", { nativeEvent: { pageX: 10, pageY: 10 } });
     fireEvent(drag, "touchMove", { nativeEvent: { touches: [{ pageX: 130, pageY: 10 }] } });
+    const tileStyle = () => StyleSheet.flatten(screen.UNSAFE_getAllByType(View)
+      .find((node) => StyleSheet.flatten(node.props.style)?.width === 111)?.props.style);
+    expect(tileStyle()?.transform).toEqual([{ translateX: 120 }, { translateY: 0 }, { scale: 1.04 }]);
     fireEvent(drag, "pressOut");
+    expect(tileStyle()?.transform).toBeUndefined();
     expect(props.onReorderPhotos).toHaveBeenCalledWith(["b", "a", "c"]);
   });
 
