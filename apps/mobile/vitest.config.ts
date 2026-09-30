@@ -5,10 +5,10 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   esbuild: { jsx: "automatic" },
   resolve: {
-    alias: {
-      "@/": resolve(__dirname, "./") + "/",
-      "react-native": resolve(__dirname, "test/native-host.cjs"),
-    },
+    alias: [
+      { find: "@/", replacement: resolve(__dirname, "./") + "/" },
+      { find: /^react-native$/, replacement: resolve(__dirname, "test/native-host.cjs") },
+    ],
   },
   test: {
     globals: true,

@@ -1,4 +1,5 @@
 import { createRequire, Module } from "node:module";
+
 import { beforeEach, vi } from "vitest";
 
 // vi.mock cannot intercept CommonJS require. Register the same test adapter
@@ -14,7 +15,7 @@ vi.mock("nativewind", () => ({ cssInterop: vi.fn(), remapProps: vi.fn(),
   useColorScheme: () => ({ colorScheme: "light", setColorScheme: vi.fn() }) }));
 vi.mock("lucide-react-native", async () => {
   const React = await import("react");
-  return new Proxy({}, { get: (_, name) => name === "then" ? undefined
+  return new Proxy({}, { has: () => true, get: (_, name) => name === "then" ? undefined
     : name === "__esModule" ? true : () => React.createElement("Icon", { name }) });
 });
 vi.mock("expo-image", async () => ({ Image: (await import("react-native")).Image }));
@@ -34,7 +35,7 @@ vi.mock("expo-router", () => ({
 }));
 beforeEach(() => {
   Object.values(routerMock).forEach((mock) => mock.mockClear());
-  Object.keys(routeParams).forEach((key) => delete routeParams[key]);
+  Object.keys(routeParams).forEach((key) => Reflect.deleteProperty(routeParams, key));
 });
 
 export { routerMock, routeParams };
@@ -57,14 +58,14 @@ vi.mock("@/components/ui/dropdown-menu", async () => {
 vi.mock("@/components/ui/sheet", async () => {
   const shell = await import("./native-overlays");
   return { Sheet: shell.Overlay, SheetContent: shell.Container,
-    SheetHeader: shell.Container, SheetTitle: shell.Container,
-    SheetDescription: shell.Container, SheetFooter: shell.Container };
+    SheetHeader: shell.Container, SheetTitle: shell.TextContainer,
+    SheetDescription: shell.TextContainer, SheetFooter: shell.Container, SheetClose: shell.MenuItem };
 });
 vi.mock("@/components/ui/alert-dialog", async () => {
   const shell = await import("./native-overlays");
   return { AlertDialog: shell.Overlay, AlertDialogContent: shell.Container,
     AlertDialogAction: shell.MenuItem, AlertDialogCancel: shell.MenuItem,
-    AlertDialogHeader: shell.Container, AlertDialogTitle: shell.Container,
-    AlertDialogDescription: shell.Container, AlertDialogFooter: shell.Container };
+    AlertDialogHeader: shell.Container, AlertDialogTitle: shell.TextContainer,
+    AlertDialogDescription: shell.TextContainer, AlertDialogFooter: shell.Container };
 });
 vi.mock("@rn-primitives/separator", async () => ({ Root: (await import("react-native")).View }));

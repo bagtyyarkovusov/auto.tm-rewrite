@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type PropsWithChildren } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, View, Text } from "react-native";
 
 // Test shells model visibility and selection only. Portals, animation, native
 // measurement, focus management and dismissal gestures need a device.
@@ -20,3 +20,5 @@ export function Overlay({ open, children }: PropsWithChildren<{ open?: boolean }
   return open ? <View>{children}</View> : null;
 }
 export const Container = View;
+
+export const TextContainer = Text;

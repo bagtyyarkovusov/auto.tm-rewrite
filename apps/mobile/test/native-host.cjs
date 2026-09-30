@@ -1,5 +1,8 @@
+/* global require, module */
 // Test-only host components. Both Vite imports and RNTL's CommonJS require use
 // this adapter, so no React Native native bridge or Flow source runs in Node.
+// CommonJS is required here because RNTL loads React Native with require.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const React = require("react");
 const host = (name, defaults = {}) => {
   const Component = React.forwardRef(({ children, ...props }, ref) =>
@@ -32,5 +35,6 @@ module.exports = {
     absoluteFillObject: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },
     absoluteFill: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 } },
   useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
+  Share: { share: async () => ({ action: "sharedAction" }) },
   useColorScheme: () => "light",
 };

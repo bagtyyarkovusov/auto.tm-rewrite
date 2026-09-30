@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Button } from "../components/ui/button";
 import { Text } from "../components/ui/text";
+
 import { renderMobile, routerMock } from "./render";
 
 function Example() {

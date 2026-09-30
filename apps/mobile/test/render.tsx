@@ -13,7 +13,7 @@ afterEach(() => { clients.forEach((client) => client.clear()); clients.clear(); 
 export function renderMobile(element: ReactElement, { locale = "en" } = {}) {
   const i18n = createInstance();
   void i18n.init({ lng: locale, resources, defaultNS: "common", initImmediate: false });
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
   clients.add(queryClient);
   function Wrapper({ children }: PropsWithChildren) {
     return <I18nextProvider i18n={i18n}>
