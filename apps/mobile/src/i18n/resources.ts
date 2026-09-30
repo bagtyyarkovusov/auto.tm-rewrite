@@ -424,6 +424,7 @@ export const resources: Resource = {
       noModelPickedHint: "Модель не выбрана: все модели {{brand}}",
       changeBrand: "Сменить марку",
       moreFilters: "Другие фильтры",
+      failedToLoadListingCount: "Не удалось загрузить число объявлений",
       doneWithCount: "Готово · {{count}} объявлений",
       brandLogosNotice:
         "Названия и логотипы марок принадлежат их владельцам и используются только для обозначения автомобилей. AutoTM не связан с ними.",
@@ -1017,6 +1018,7 @@ export const resources: Resource = {
       noModelPickedHint: "Model saýlanmady: ähli {{brand}} modelleri",
       changeBrand: "Markany çalyş",
       moreFilters: "Beýleki filtrler",
+      failedToLoadListingCount: "Bildirişleriň sanyny ýüklemek başartmady",
       doneWithCount: "Tamam · {{count}} bildiriş",
       brandLogosNotice:
         "Markalaryň atlary we nyşanlary olaryň eýelerine degişlidir we diňe awtoulaglary kesgitlemek üçin ulanylýar. AutoTM olar bilen baglanyşykly däl.",
@@ -1610,6 +1612,7 @@ export const resources: Resource = {
       noModelPickedHint: "No model picked: all {{brand}} models",
       changeBrand: "Change brand",
       moreFilters: "More filters",
+      failedToLoadListingCount: "Could not load listing count",
       doneWithCount: "Done · {{count}} listings",
       brandLogosNotice:
         "Brand names and logos belong to their owners and are used only to identify vehicles. AutoTM is not affiliated with them.",

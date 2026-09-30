@@ -88,6 +88,7 @@ export function useModelPicker({
     /** Listings for the current selection; undefined until the count loads. */
     count: total.data?.totalMatching,
     countPending: total.isPending,
+    countError: total.isError ? total.error : null,
     /** The choice to hand on, named in tick order. */
     choice: () =>
       toBrandModelChoice(
@@ -98,6 +99,7 @@ export function useModelPicker({
     retry: () => {
       void models.refetch();
       void modelCounts.refetch();
+      void total.refetch();
     },
   };
 }

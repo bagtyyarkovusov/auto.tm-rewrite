@@ -64,7 +64,9 @@ export function ModelPicker({
   }, [content, t]);
 
   const countLabel =
-    picker.count === undefined
+    picker.countError
+      ? t(actions.mode === "done" ? "done" : "showResults")
+      : picker.count === undefined
       ? t("loadingEllipsis")
       : actions.mode === "done"
         ? t("doneWithCount", { count: picker.count })
@@ -150,6 +152,14 @@ export function ModelPicker({
           <Text className="text-center text-sm text-muted-foreground">
             {t("noModelPickedHint", { brand: picker.brandName })}
           </Text>
+        ) : null}
+        {picker.countError ? (
+          <View accessibilityRole="alert" className="gap-1">
+            <Text className="text-center text-sm text-destructive">{t("failedToLoadListingCount")}</Text>
+            <Button variant="ghost" onPress={picker.retry}>
+              <Text>{t("retry")}</Text>
+            </Button>
+          </View>
         ) : null}
         <Button
           variant="brand"
