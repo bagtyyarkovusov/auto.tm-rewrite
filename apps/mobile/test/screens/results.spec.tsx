@@ -50,6 +50,13 @@ const sorts = [
   ["Newest first", "newest"], ["Cheapest first", "price_asc"], ["Most expensive first", "price_desc"],
   ["Newest year first", "year_desc"], ["Oldest year first", "year_asc"], ["Lowest mileage first", "mileage_asc"],
 ];
+/** The match at `index`, failing the test with a clear message when it is missing. */
+function matchAt<T>(matches: readonly T[], index: number): T {
+  const match = matches.at(index);
+  if (match === undefined) throw new Error(`Expected a match at index ${index}, found ${matches.length}`);
+  return match;
+}
+
 describe("Results approved behavior", () => {
   it("shows the full feed, count, TMT price range and current sort without a brand", () => {
     const view = renderMobile(<ResultsScreen />);
@@ -154,9 +161,9 @@ describe("Results floating filters row", () => {
     Object.assign(routeParams, { cityId: "ashgabat" });
     const view = renderMobile(<ResultsScreen />);
     scrollTo(view, 300);
-    fireEvent.press(view.getAllByLabelText("Filters: 1")[1]!);
+    fireEvent.press(matchAt(view.getAllByLabelText("Filters: 1"), 1));
     expect(view.getByText("Car filters")).toBeTruthy();
-    fireEvent.press(view.getAllByLabelText("Remove city filter")[1]!);
+    fireEvent.press(matchAt(view.getAllByLabelText("Remove city filter"), 1));
     expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "newest" } }));
     expect(view.getAllByLabelText("Filters: 0")).toHaveLength(2);
   });
@@ -191,7 +198,7 @@ describe("Results filter sheet and route write-back", () => {
     fireEvent.press(view.getByLabelText("Filters: 0"));
     // The sheet renders after the header switch, so its Used button is the last one.
     const used = view.getAllByRole("button", { name: "Used Condition" });
-    fireEvent.press(used[used.length - 1]!);
+    fireEvent.press(matchAt(used, -1));
     expect(routerMock.setParams).not.toHaveBeenCalled();
     fireEvent.press(view.getByRole("button", { name: "Show 12 listings" }));
     expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ condition: "used", sort: "newest" }));

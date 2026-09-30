@@ -3,6 +3,8 @@ import { waitFor } from "@testing-library/react-native";
 
 import { renderMobile, fireEvent, routeParams, routerMock, act } from "../render";
 import ResultsScreen from "../../app/(tabs)/(search)/results";
+import { useAuthIntentStore } from "../../src/auth/intentStore";
+import { queryKeys } from "../../src/api/queryKeys";
 
 const state = vi.hoisted(() => ({
   feed: vi.fn(), count: vi.fn(), pending: false, error: false, empty: false, viewer: null as null | { userId: string }, focused: true, post: vi.fn(),
@@ -47,8 +49,6 @@ vi.mock("expo-router", async () => {
   const mocks = await import("../native-setup");
   return { router: mocks.routerMock, useRouter: () => mocks.routerMock, useLocalSearchParams: () => mocks.routeParams, useIsFocused: () => state.focused, useFocusEffect: vi.fn() };
 });
-import { useAuthIntentStore } from "../../src/auth/intentStore";
-import { queryKeys } from "../../src/api/queryKeys";
 
 beforeEach(() => {
   state.viewer = null; state.focused = true; state.empty = false; state.post.mockReset(); state.feed.mockClear();
