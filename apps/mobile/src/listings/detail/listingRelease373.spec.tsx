@@ -134,6 +134,13 @@ describe("issue 373 approved detail content", () => {
 });
 
 describe("issue 373 screen controls", () => {
+  it("does not open the deferred inspection prompt after publishing", () => {
+    state.viewer = { userId: fixture().sellerId };
+    routeParams.inspectionInterest = "1";
+    const screen = renderMobile(<ListingDetailScreen />);
+    expect(screen.queryByText("An AutoTM mechanic inspection is coming soon. Register your interest to join the pilot.")).toBeNull();
+  });
+
   it("keeps Back, Share, Favorite and More options visible, then reveals the price/title after the photos scroll away", () => {
     const screen = renderMobile(<ListingDetailScreen />);
     for (const name of ["Back", "Share", "Favorite", "More options"]) expect(screen.getByRole("button", { name })).toBeTruthy();

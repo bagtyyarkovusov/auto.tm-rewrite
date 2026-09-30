@@ -25,5 +25,12 @@ The approved listing-content prototype and release-screen-map evidence branches 
 
 - The stale Phone verified criterion was reconciled by [issue comment 5913238601](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/373#issuecomment-5913238601) and the updated issue body. Follow ADR-0056 and the current Listings PRD: no per-Listing badge, one SMS caption by Call.
 - API inspection-interest and VIN decoder code remain unchanged.
+- The stale request to delete inspection code was reconciled by [issue comment 5913481344](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/373#issuecomment-5913481344). ADR-0057 keeps the component, hook and tests unused. This slice removes the entry, route state/config reads and post-publish inspection parameter.
 - Runtime work will use fresh isolated services and API 3473 / Metro 8473, never the issue 458 stack. Simulator ownership is coordinated before each proof window; no simulator or service has been started for this issue yet.
 - Context7 was resolved and queried for Reanimated, Expo SDK 55 / Router and React Native. Clipboard will receive its own lookup if selected.
+
+## Preparation checkpoint
+
+Dependencies installed from the frozen lockfile; contracts build and Expo dependency alignment passed. Rendered acceptance tests are drafted in `listingRelease373.spec.tsx`, including separate assertions for public footer, trust link, inspection entry and post-publish inspection prompt. They have not run because main does not contain the issue 457 test helper. Red, green, final repository gates, iOS export and simulator proof remain unknown. No production files changed. The coordinator will schedule continuation after PR 464 merges.
+
+Current Context7 consultations cover Reanimated scroll APIs, Expo SDK 55 Router and Clipboard, React Native native events/accessibility, RNTL 13.3.3 render/query/event APIs, NativeWind 4.2 and RNR dropdown/portal composition. Versioned NativeWind results also contain main snippets; only static class composition and existing project primitives are planned, with no configuration migration.
