@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ScrollView, Share, Text } from "react-native";
 import * as Linking from "expo-linking";
+import * as Clipboard from "expo-clipboard";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import { renderMobile, fireEvent, act, routeParams, routerMock } from "../../../test/render";
 import ListingDetailScreen from "../../../app/(public)/listings/[id]";
 import { ListingDetailView } from "../components/ListingDetail";
 import { ContactCtaBar } from "../components/ContactCtaBar";
+import { PhotoGallery } from "../components/PhotoGallery";
 
 import type { CatalogMaps } from "./useCatalogMaps";
 
@@ -27,6 +29,7 @@ vi.mock("../../api/client", async (importOriginal) => ({
 }));
 vi.mock("expo-secure-store", () => ({ getItemAsync: vi.fn(async () => null), setItemAsync: vi.fn(), deleteItemAsync: vi.fn() }));
 vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => true), openURL: vi.fn(async () => {}) }));
+vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
 vi.mock("@/components/ui/skeleton", async () => ({ Skeleton: (await import("react-native")).View }));
 vi.mock("../../admin/components/ReportSheet", () => ({ ReportSheet: () => null }));
 vi.mock("./useCatalogMaps", () => ({ useCatalogMaps: () => ({ maps }) }));
@@ -56,6 +59,10 @@ beforeEach(() => {
 });
 
 describe("issue 373 approved detail content", () => {
+  it("shows the numeric photo counter even for one photo", () => {
+    const screen = renderMobile(<PhotoGallery media={[{ id: "photo", kind: "image", key: "photo.jpg", sortOrder: 0, variants: {} }]} />);
+    expect(screen.getByText("1 / 1")).toBeTruthy();
+  });
   it("renders title, price, date/city, specs, description, condition, seller, report and footer in order", () => {
     const screen = renderMobile(<ListingDetailView listing={fixture({ mileageKm: 12000, transmissionId: "transmission", engineTypeId: "engine", enginePower: 180, driveTypeId: "drive", condition: "used", bodyTypeId: "body", colorId: "color", vin: "VIN373" })} maps={maps} onReport={vi.fn()} />);
     const text = screen.UNSAFE_getAllByType(Text).map((node) => node.props.children).flat(Infinity).filter((value) => typeof value === "string");
@@ -158,6 +165,8 @@ describe("issue 373 screen controls", () => {
     fireEvent.press(screen.getByRole("button", { name: "More options" }));
     expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Report" }).length).toBeGreaterThan(0);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Copy link" })); });
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(`https://auto.tm/listings/${fixture().id}`);
   });
 
   it("shows sticky owner Edit and Mark sold, with Archive and Delete in overflow", () => {
