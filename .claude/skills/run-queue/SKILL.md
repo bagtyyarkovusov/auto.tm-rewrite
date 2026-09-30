@@ -19,6 +19,17 @@ One orchestrator session owns a queue from start to finish, so it keeps context 
 4. Never query provider quota. Implementers push checkpoints often, so another agent can resume any issue from its PR if a session stops.
 5. Confirm the host can start a subagent in a worktree it creates for that subagent, such as Claude Code's Agent tool with `isolation: "worktree"`. If it cannot, see [Hosts without isolated subagents](#hosts-without-isolated-subagents).
 
+## Agent types and models
+
+The founder fixed the model per role ([#455](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/455)). Launch these project agent types from [.claude/agents](../../agents):
+
+| Role | Agent type | Model | Effort |
+|---|---|---|---|
+| Implementer, bug fixer, review-finding fixer | `queue-implementer` | Sonnet 5.5 | high |
+| Standards, Spec, or Delta reviewer | `queue-reviewer` | Opus 5.5 | high |
+
+The first file in a new `.claude/agents/` directory needs a session restart before the host picks it up. Until then, the agent types are missing: pass `model: "sonnet"` for an implementer and `model: "opus"` for a reviewer on each Agent call, and effort follows the session. Keep `isolation: "worktree"` on implementers.
+
 ## Implementers and worktrees
 
 Each issue gets its own linked worktree, as ADR-0058 requires. The host creates it; the orchestrator never does.
@@ -53,8 +64,8 @@ When the host cannot start a subagent in its own worktree, do not create worktre
 
 For the next issue whose dependencies are all closed, or whose only open dependency is a PR this queue owns (see stacking):
 
-1. Launch the issue's implementer as above. It runs `run-issue`: reservation branch `agent/issue-<N>`, draft PR, `Execution state`, and verification.
-2. Read its report and the PR. Launch independent Standards and Spec reviewers as separate fresh, read-only agents pinned to the reported head SHA. Post their verdicts with their attribution, as [FINALIZATION.md](../run-issue/FINALIZATION.md#independent-review) describes. For findings, launch a fresh implementer for the fix round, then a `Delta` review when the fix qualifies under [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065).
+1. Launch the issue's `queue-implementer` as above. It runs `run-issue`: reservation branch `agent/issue-<N>`, draft PR, `Execution state`, and verification.
+2. Read its report and the PR. Launch independent Standards and Spec reviewers as separate fresh `queue-reviewer` agents, read-only and pinned to the reported head SHA. Post their verdicts with their attribution, as [FINALIZATION.md](../run-issue/FINALIZATION.md#independent-review) describes. For findings, launch a fresh implementer for the fix round, then a `Delta` review when the fix qualifies under [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065).
 3. When both axes pass on the current commit, directly or carried forward by a `Delta` review, set auto-merge as [FINALIZATION.md](../run-issue/FINALIZATION.md#checks-and-merge) describes. GitHub merges the PR once the required `pr` check passes.
 4. Do not wait for CI. Start the next ready issue. Between issues, read each open queue PR with `gh pr view <PR> --json state,mergedAt,autoMergeRequest,statusCheckRollup,comments`, and come back to it when its check fails, a reviewer or the founder comments, or it merges.
 5. Before launching an implementer for a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`. A push does not cancel auto-merge, so without this GitHub would merge the unreviewed commit. Set auto-merge again after the affected reviews pass.
