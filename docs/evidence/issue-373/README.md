@@ -8,7 +8,7 @@ The issue reservation starts at `5a77104` on `agent/issue-373`. This worktree be
 |---|---|
 | Approved section order and absent fields | Render detail with complete and sparse fixtures; assert ordered visible text, grid versus rows, title, date/city, clamped description and More tap |
 | Collapsing header and persistent actions | Render route, scroll past measured gallery, assert price/title and Back, Share, Favorite, overflow; tap share, copy and report |
-| Seller identity and verification | Render real name, fallback, join month and city/place; verification criterion awaits resolution of ADR-0056 conflict |
+| Seller identity and verification | Render real name, fallback, join month and city/place; assert no Phone verified badge and the SMS caption by Call under ADR-0056 |
 | Public footer | Render ID, Published and Updated using API publicNumber and timestamps |
 | Owner actions and private counts | Render buyer and owner; assert counts only for owner, original currency, sticky Edit/Mark sold, overflow Archive/Share/Delete |
 | Missing listing | Render 404; tap Home and Back |
@@ -23,7 +23,7 @@ The approved listing-content prototype and release-screen-map evidence branches 
 
 ## Decisions and boundaries
 
-- The issue asks for Phone verified in the seller card, but ADR-0056 and the current Listings PRD prohibit a per-Listing phone badge. The coordinator has been notified before implementation.
+- The stale Phone verified criterion was reconciled by [issue comment 5913238601](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/373#issuecomment-5913238601) and the updated issue body. Follow ADR-0056 and the current Listings PRD: no per-Listing badge, one SMS caption by Call.
 - API inspection-interest and VIN decoder code remain unchanged.
-- The implementer owns iPhone 17 simulator `38747B85-BB39-48A2-BF0D-4DD6A5ED1D13` after issue 458 released it. Runtime work will use fresh isolated services and API 3473 / Metro 8473, never the issue 458 stack.
+- Runtime work will use fresh isolated services and API 3473 / Metro 8473, never the issue 458 stack. Simulator ownership is coordinated before each proof window; no simulator or service has been started for this issue yet.
 - Context7 was resolved and queried for Reanimated, Expo SDK 55 / Router and React Native. Clipboard will receive its own lookup if selected.

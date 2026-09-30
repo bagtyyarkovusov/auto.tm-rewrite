@@ -59,13 +59,23 @@ describe("issue 373 approved detail content", () => {
   it("renders title, price, date/city, specs, description, condition, seller, report and footer in order", () => {
     const screen = renderMobile(<ListingDetailView listing={fixture({ mileageKm: 12000, transmissionId: "transmission", engineTypeId: "engine", enginePower: 180, driveTypeId: "drive", condition: "used", bodyTypeId: "body", colorId: "color", vin: "VIN373" })} maps={maps} onReport={vi.fn()} />);
     const text = screen.UNSAFE_getAllByType(Text).map((node) => node.props.children).flat(Infinity).filter((value) => typeof value === "string");
-    const expected = ["Toyota Camry XV70, 2020", "35,000 TMT", "20 Sep · Ashgabat", "Specifications", "Year", "Mileage", "Transmission", "Fuel type", "Engine power", "Drive type", "Condition", "Body type", "Color", "VIN", "Description", fixture().description, "Condition, as stated by the seller", "Seller", "Merdan", "Report", "ID 373", "Published", "Updated"];
+    const expected = ["Toyota Camry XV70, 2020", "35,000 TMT", "20 Sep · Ashgabat", "Specifications", "Year", "Mileage", "Transmission", "Engine type", "Engine power", "Drive type", "Condition", "Body type", "Color", "VIN", "Description", fixture().description, "Condition, as stated by the seller", "Seller", "Merdan", "Report", "ID 373", "Published", "Updated"];
     let last = -1;
     for (const value of expected) {
       const next = text.indexOf(value);
       expect(next, `${value} follows ${expected[expected.indexOf(value) - 1]}`).toBeGreaterThan(last);
       last = next;
     }
+  });
+
+  it("renders the stable public number and both dates in the footer", () => {
+    const screen = renderMobile(<ListingDetailView listing={fixture()} maps={maps} />);
+    expect(screen.getByText("ID 373")).toBeTruthy();
+    expect(screen.getByText("Published")).toBeTruthy();
+    expect(screen.getByText("Updated")).toBeTruthy();
+    expect(screen.getByText("20 Sep")).toBeTruthy();
+    expect(screen.getByText("22 Sep")).toBeTruthy();
+    expect(screen.queryByText(fixture().id)).toBeNull();
   });
 
   it("clamps the seller description and expands after More", () => {
