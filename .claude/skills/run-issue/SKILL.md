@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 # Run one issue
 
-Execute exactly one issue per invocation; [run-queue](../run-queue/SKILL.md) invokes it once per queued issue. Invocation authorizes the normal reservation-branch-to-merge flow; pause only at the decision boundaries below. Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may implement, review, resume, or integrate under [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Apply its model-provider rule to reviews.
+Execute exactly one issue per invocation. Under [run-queue](../run-queue/SKILL.md), each queued issue's implementer runs it in its own host-created worktree through verification, and the queue orchestrator runs review and merge ([ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md)). Invocation authorizes the normal reservation-branch-to-merge flow; pause only at the decision boundaries below. Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may implement, review, resume, or integrate under [ADR-0059](../../../docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md). Reviewer eligibility follows [ADR-0064](../../../docs/adr/0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md).
 
 ## Resolve the issue
 
@@ -22,8 +22,9 @@ Execute exactly one issue per invocation; [run-queue](../run-queue/SKILL.md) inv
 ## Preflight and reservation
 
 - Require a clean working tree. Report overlapping user changes and stop; never stash, discard, or absorb them.
-- Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). Reuse a host-created isolated worktree and record any unchanged scaffold branch for later cleanup.
-- Start from updated `main` on `agent/issue-<N>` and push that branch before editing. The remote branch is the reservation. A stacked issue under `run-queue` starts from its parent's branch head instead.
+- Follow [the worktree lifecycle](../../../docs/agents/worktree-lifecycle.md). Reuse a host-created isolated worktree and record any unchanged scaffold branch for later cleanup. Under `run-queue`, the host creates each implementer's worktree, and the host or the user retires it; a host that cannot do this runs one `run-issue` session per issue instead ([queue implementer worktrees](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees)).
+- Write only in your own worktree and in `/tmp`. Never create or write to a worktree another session or agent owns. If the host refuses a write, stop and report the exact message; never retry it through a shell command, a script, or another tool.
+- Start from updated `main` on `agent/issue-<N>` and push that branch before editing. The remote branch is the reservation. A stacked issue under `run-queue` starts from its parent's branch head instead. When the branch already exists and is checked out in another worktree, run `git switch --detach origin/agent/issue-<N>` and push with `git push origin HEAD:agent/issue-<N>`, as [run-queue](../run-queue/SKILL.md#implementers-and-worktrees) describes.
 - If a local/remote canonical branch, issue worktree, or PR already exists, including a reservation-only branch with no checkpoint commits, route through `resume-issue <N>` and continue the existing attempt instead of creating a duplicate.
 - A design pause may leave only the reservation branch. After its design PR merges, `resume-issue` verifies that the branch has no unique work and fast-forwards it to current `main` before implementation.
 - Build a scoped execution plan mapping every acceptance criterion to implementation and evidence.
@@ -47,7 +48,7 @@ Do not add confirmation gates for ordinary implementation mechanics. Keep one is
 
 1. Read [EXECUTION-STATE.md](EXECUTION-STATE.md). Commit and push meaningful checkpoints. After the first checkpoint, open the one draft PR and keep its `Execution state` current.
 2. For UI work, follow [UI-MODE.md](UI-MODE.md).
-3. Use [SUBAGENT-MODE.md](SUBAGENT-MODE.md) when dividing substantial UI work. The integration owner always inspects and tests each group.
+3. Use [SUBAGENT-MODE.md](SUBAGENT-MODE.md) when dividing substantial UI work. The integration owner always inspects and tests each group. A run-queue implementer does not use it, because it starts no subagents.
 4. Implement the smallest complete vertical slice. Tests and required current-state docs are in scope even when omitted from a file list.
 5. Follow [VERIFICATION.md](VERIFICATION.md). Repair an in-scope root failure at most three focused times. Update the PR after each completed or failed verification phase.
 6. Follow [FINALIZATION.md](FINALIZATION.md) to pin the implementation commit, pass independent Standards and Spec review, make the PR ready, set auto-merge, confirm the merge, sync, and unblock dependents.
@@ -56,6 +57,6 @@ Do not add confirmation gates for ordinary implementation mechanics. Keep one is
 
 ## Completion
 
-Report the issue and PR, merged commit, evidence by acceptance criterion, tests and host-only gates, documentation changes, dependent labels changed, and any honest residual risks. Stop after this issue, unless [run-queue](../run-queue/SKILL.md) invoked it; then return to the queue.
+Report the issue and PR, merged commit, evidence by acceptance criterion, tests and host-only gates, documentation changes, dependent labels changed, and any honest residual risks. Stop after this issue. A [run-queue](../run-queue/SKILL.md) implementer stops after verification and returns its report to the orchestrator.
 
 A batch PR for several deferred follow-ups is not a `run-issue` run; follow [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065).

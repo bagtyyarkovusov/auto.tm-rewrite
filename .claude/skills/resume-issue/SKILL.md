@@ -24,7 +24,7 @@ Git and GitHub state, not the prior chat, own recovery. Preserve the previous at
 Choose the safest path from evidence without adding an ordinary confirmation stop:
 
 - **Refresh a reservation-only branch:** if it has no unique commits, worktree changes, or open PR, fast-forward it to current `main` before continuing. A stacked reservation stays on its parent's branch head until the parent merges; then follow [run-queue stacking](../run-queue/SKILL.md#stacking). This includes a branch preserved while `design-grill` produced and merged design artifacts.
-- **Continue:** heads agree or fast-forward safely; preserve the existing base and worktree.
+- **Continue:** heads agree or fast-forward safely; preserve the existing base and worktree. When another session or agent, including a finished or stopped one, owns that worktree, only read it. Continue in your own worktree from the pushed head, as [run-queue](../run-queue/SKILL.md#resume-a-stopped-implementer) describes.
 - **Safety branch and rebase:** the branch diverged but the resolution is mechanical; create a preservation ref, rebase on current `main`, then continue.
 - **Preserve and restart:** the canonical branch is missing or unusable; preserve every recoverable ref/diff before rebuilding `agent/issue-<N>` from `main`.
 - **Bookkeeping repair:** code already merged and closure is intact; reconcile only the parent tasklist and affected `blocked` labels through `docs/agents/sprint-transitions.md`. Do not change an implementation issue's open/closed state directly.
@@ -36,7 +36,7 @@ Pause and escalate when an issue remains open after its closing PR merged, follo
 1. Restore or create the one draft PR after the first pushed checkpoint and update its `Execution state` using [`../run-issue/EXECUTION-STATE.md`](../run-issue/EXECUTION-STATE.md).
 2. Rebuild the acceptance-criterion evidence map and reconcile terminology without expanding scope.
 3. Run the scoped typecheck, lint, tests, runtime-import checks, Expo gates, host-only checks, and documentation reconciliation required by the touched workspaces.
-4. Follow the [fixed-commit finalization contract](../run-issue/FINALIZATION.md): pin the SHA, obtain independent Standards and Spec verdict comments, resolve findings, set auto-merge, and verify the merge and closure. Turn auto-merge off before pushing to a PR that has it on. Reuse the existing PR.
+4. A run-queue implementer stops after verification and returns its report to the orchestrator, which owns reviews, ready, and merge. Everyone else follows the [fixed-commit finalization contract](../run-issue/FINALIZATION.md): pin the SHA, obtain independent Standards and Spec verdict comments, resolve findings, set auto-merge, and verify the merge and closure. Turn auto-merge off before pushing to a PR that has it on. Reuse the existing PR.
 5. If completion stops again, preserve and update the same branch and PR state.
 
 ## Completion
