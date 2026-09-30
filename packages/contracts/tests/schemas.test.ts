@@ -31,6 +31,7 @@ import {
   ListingCountResponseSchema,
   ListingBrandCountQuerySchema,
   ListingBrandCountResponseSchema,
+  ListingsErrorCode,
   ConditionDisclosureSchema,
   DraftConditionDisclosureSchema,
 } from "../src/schemas/listings";
@@ -1692,5 +1693,11 @@ describe("ListConversationsResponseSchema", () => {
       nextCursor: null,
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("Listings error codes", () => {
+  it("publishes the required Damaged answer code returned by edit", () => {
+    expect(ListingsErrorCode).toHaveProperty("DamagedRequired", "DAMAGED_REQUIRED");
   });
 });

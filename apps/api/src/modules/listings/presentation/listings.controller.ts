@@ -289,41 +289,9 @@ export class ListingsController {
       throw err;
     }
 
-    const result = await this.editListingUC.execute({ listingId, userId, patch: parsed });
+    await this.editListingUC.execute({ listingId, userId, patch: parsed });
 
-    return {
-      id: result.listing.id,
-      sellerId: result.listing.sellerId,
-      status: result.listing.status,
-      brandId: result.listing.brandId,
-      modelId: result.listing.modelId,
-      generationId: result.listing.generationId,
-      year: result.listing.year,
-      vin: result.listing.vin,
-      cityId: result.listing.cityId,
-      regionId: result.listing.regionId,
-      priceAmount: result.listing.priceAmount,
-      priceCurrency: result.listing.priceCurrency,
-      contactPhone: result.listing.contactPhone,
-      allowCalls: result.listing.allowCalls,
-      allowChat: result.listing.allowChat,
-      acceptsExchange: result.listing.acceptsExchange,
-      installmentAvailable: result.listing.installmentAvailable,
-      condition: result.listing.condition,
-      colorId: result.listing.colorId,
-      bodyTypeId: result.listing.bodyTypeId,
-      engineTypeId: result.listing.engineTypeId,
-      transmissionId: result.listing.transmissionId,
-      driveTypeId: result.listing.driveTypeId,
-      enginePower: result.listing.enginePower,
-      mileageKm: result.listing.mileageKm,
-      locationText: result.listing.locationText,
-      description: result.listing.description,
-      conditionDisclosure: result.listing.conditionDisclosure,
-      publishedAt: result.listing.publishedAt.toISOString(),
-      soldAt: result.listing.soldAt?.toISOString(),
-      updatedAt: result.listing.updatedAt.toISOString(),
-    };
+    return this.getListingDetailUC.execute({ listingId, requestingUserId: userId });
   }
 
   @Delete(":id")

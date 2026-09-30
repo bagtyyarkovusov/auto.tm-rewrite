@@ -160,7 +160,7 @@ export function wizardMachineReducer(
           editEntryAtReview: true,
           payload,
           validatedSteps: DATA_STEPS,
-          currentStep: "review",
+          currentStep: payload.conditionDisclosure?.damaged === undefined ? "specs" : "review",
           saveError: null,
           publishError: null,
         };
