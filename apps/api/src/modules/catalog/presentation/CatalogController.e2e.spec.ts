@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
@@ -16,6 +18,7 @@ import { CatalogSearchIndex } from "../application/CatalogSearchIndex";
 import { registerAcceptLanguageHook } from "../../../common/accept-language";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { EnvSchema } from "../../../env.schema";
+import { BRAND_LOGO_STORAGE, type BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 
 describe("CatalogController e2e", () => {
   let app: NestFastifyApplication;
@@ -101,6 +104,36 @@ describe("CatalogController e2e", () => {
         `${publicUrl}/catalog-assets/brands/with-logo/v1/logo.png`,
       );
       expect(withoutLogo).not.toHaveProperty("logoUrl");
+    });
+
+    it("returns an encoded non-ASCII catalog logo URL that can be fetched from MinIO", async () => {
+      const catalog = JSON.parse(readFileSync(
+        resolve(__dirname, "../../../../../../packages/db/prisma/seed/brands.json"),
+        "utf-8",
+      )) as { slug: string; nameRu: string; nameTk: string; nameEn: string }[];
+      const brand = catalog.find((entry) => entry.slug === "москвич")!;
+      expect(brand).toBeDefined();
+      const key = `brands/${brand.slug}/imp-url-test/logo.png`;
+      const png = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1sAAAAASUVORK5CYII=",
+        "base64",
+      );
+      const storage = app.get<BrandLogoStorage>(BRAND_LOGO_STORAGE);
+      await storage.put(key, png, "image/png");
+      try {
+        await prisma.brand.create({ data: { ...brand, id: "non-ascii-logo", logoKey: key } });
+        const res = await request.get("/api/v1/catalog/brands?locale=en").expect(200);
+        const logoUrl = res.body.items[0].logoUrl as string;
+        expect(logoUrl).toBe(
+          `${process.env["MINIO_PUBLIC_URL"]}/catalog-assets/brands/%D0%BC%D0%BE%D1%81%D0%BA%D0%B2%D0%B8%D1%87/imp-url-test/logo.png`,
+        );
+        const image = await fetch(logoUrl);
+        expect(image.status).toBe(200);
+        expect(image.headers.get("content-type")).toBe("image/png");
+        expect(Buffer.from(await image.arrayBuffer())).toEqual(png);
+      } finally {
+        await storage.delete(key);
+      }
     });
 
     it("returns 200 with brand list sorted by locale", async () => {
