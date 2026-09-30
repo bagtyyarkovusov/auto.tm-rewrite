@@ -170,4 +170,21 @@ describe("useModelPicker", () => {
 
     await waitFor(() => expect(result.current.content.kind).toBe("ready"));
   });
+  it("keeps models usable after count failure and retries the total for Show and Done", async () => {
+    const ok = mockGet.getMockImplementation();
+    mockGet.mockImplementation((url: string) => url.startsWith("/listings/count")
+      ? Promise.reject(new Error("count offline")) : ok?.(url));
+    const { result } = renderHook(() => useModelPicker({ brandId: "toyota" }), { wrapper });
+    await waitFor(() => expect(result.current.content.kind).toBe("ready"));
+    await waitFor(() => expect(result.current.countError).toBeInstanceOf(Error));
+    expect(result.current.countPending).toBe(false);
+    expect(result.current.count).toBeUndefined();
+    const requestsBefore = countUrls().length;
+    mockGet.mockImplementation((url: string) => ok?.(url));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.count).toBe(100));
+    expect(countUrls().length).toBeGreaterThan(requestsBefore);
+    expect(result.current.countError).toBeNull();
+  });
+
 });
