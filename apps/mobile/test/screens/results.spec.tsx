@@ -1,5 +1,3 @@
-import type * as Native from "react-native";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderMobile, fireEvent, routeParams, routerMock } from "../render";
@@ -12,21 +10,17 @@ vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
-vi.mock("react-native", async (original) => {
-  const native = await original<typeof Native>();
-  const React = await import("react");
-  return { ...native, RefreshControl: native.View,
-    FlatList: ({ data = [], renderItem, ListHeaderComponent, ListEmptyComponent, ...props }: { data?: { id: string }[]; renderItem: (arg: { item: { id: string }; index: number }) => ReactNode; ListHeaderComponent?: ReactNode; ListEmptyComponent?: ReactNode } & Record<string, unknown>) => React.createElement(native.ScrollView, props,
-      ListHeaderComponent, data.map((item, index) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))), data.length ? null : ListEmptyComponent),
-  };
-});
 vi.mock("react-native-reanimated", async () => {
   const native = await import("react-native");
   return { default: { View: native.View }, useSharedValue: (value: number) => ({ value }),
     useAnimatedStyle: (fn: () => unknown) => fn(), withTiming: (value: number) => value };
 });
 vi.mock("../../src/api/client", () => ({ apiClient: { get: vi.fn() }, ApiError: class ApiError extends Error { constructor(public code: string, public status: number) { super(code); } } }));
-vi.mock("../../src/listings/search/FilterSheet", () => ({ FilterSheet: () => null }));
+// The real FilterSheet renders. Only the catalog hooks and device storage behind it are replaced.
+vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined), removeItem: vi.fn(async () => undefined) } }));
+vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "toyota", name: "Toyota" }] } }) }));
+vi.mock("../../src/api/catalog/useRegions", () => ({ useRegions: () => ({ data: { items: [] }, isPending: false, isError: false }) }));
+vi.mock("../../src/api/catalog/useCities", () => ({ useCities: () => ({ data: { items: [] }, isPending: false, isError: false }) }));
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => null }));
 vi.mock("../../src/listings/feed/useFeedFavoriteReplay", () => ({ useFeedFavoriteReplay: vi.fn() }));
 vi.mock("../../src/listings/useListingFavorite", () => ({ useListingFavorite: () => ({ favorited: false, pending: false, toggle: vi.fn() }) }));
@@ -99,7 +93,7 @@ describe("Results approved behavior", () => {
     Object.assign(routeParams, { cityId: "ashgabat", priceMin: "70000", priceMax: "120000", yearMin: "2018", yearMax: "2020" });
     const view = renderMobile(<ResultsScreen />);
     expect(view.getByText("No listings match")).toBeTruthy();
-    expect(view.getByLabelText("Filters, 3 active filters")).toBeTruthy();
+    expect(view.getByLabelText("Filters: 3")).toBeTruthy();
     fireEvent.press(view.getByLabelText("Remove price filter"));
     expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "newest", cityId: "ashgabat", yearMin: 2018, yearMax: 2020 } }));
     fireEvent.press(view.getByLabelText("Remove year filter"));
@@ -112,7 +106,7 @@ describe("Results approved behavior", () => {
     expect(view.getByLabelText("Loading listings")).toBeTruthy();
     state.pending = false; state.error = true;
     view.rerender(<ResultsScreen />);
-    expect(view.getByLabelText("Filters, 0 active filters")).toBeTruthy();
+    expect(view.getByLabelText("Filters: 0")).toBeTruthy();
     expect(view.getByText("Retry")).toBeTruthy();
   });
   it("shows an offline recovery instead of indefinite skeletons when the initial query is paused", () => {
@@ -129,10 +123,80 @@ describe("Results approved behavior", () => {
     expect(view.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(view.getByText("80,000 km · Automatic · Petrol")).toBeTruthy();
     expect(view.getByText("Ashgabat · Today")).toBeTruthy();
-    expect(view.getByLabelText("7 photos")).toBeTruthy();
+    expect(view.getByLabelText("Photos: 7")).toBeTruthy();
     expect(view.getAllByTestId("listing-photo")).toHaveLength(2);
     fireEvent.press(view.getByRole("button", { name: /Toyota Camry, 2018/ }));
     expect(routerMock.push).toHaveBeenCalledWith("/(public)/listings/listing-1");
+  });
+});
+
+describe("Results floating filters row", () => {
+  const scrollTo = (view: ReturnType<typeof renderMobile>, y: number) =>
+    fireEvent.scroll(view.getByTestId("results-list"), { nativeEvent: { contentOffset: { y } } });
+  it("adds a second filters row past 180pt of scrolling and removes it when scrolled back", () => {
+    Object.assign(routeParams, { cityId: "ashgabat" });
+    const view = renderMobile(<ResultsScreen />);
+    const rows = () => view.getAllByLabelText("Filters: 1");
+    expect(rows()).toHaveLength(1);
+    scrollTo(view, 180);
+    expect(rows()).toHaveLength(1);
+    scrollTo(view, 181);
+    expect(rows()).toHaveLength(2);
+    expect(view.getAllByLabelText("Remove city filter")).toHaveLength(2);
+    scrollTo(view, 400);
+    expect(rows()).toHaveLength(2);
+    scrollTo(view, 0);
+    expect(rows()).toHaveLength(1);
+  });
+  it("keeps the floating row working: its chip removes the filter and its Filters button opens the sheet", () => {
+    Object.assign(routeParams, { cityId: "ashgabat" });
+    const view = renderMobile(<ResultsScreen />);
+    scrollTo(view, 300);
+    fireEvent.press(view.getAllByLabelText("Filters: 1")[1]!);
+    expect(view.getByText("Car filters")).toBeTruthy();
+    fireEvent.press(view.getAllByLabelText("Remove city filter")[1]!);
+    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "newest" } }));
+    expect(view.getAllByLabelText("Filters: 0")).toHaveLength(2);
+  });
+});
+
+describe("Results filter sheet and route write-back", () => {
+  const sheetTitle = "Car filters";
+  it("opens the filter sheet from the Filters button", () => {
+    const view = renderMobile(<ResultsScreen />);
+    expect(view.queryByText(sheetTitle)).toBeNull();
+    fireEvent.press(view.getByLabelText("Filters: 0"));
+    expect(view.getByText(sheetTitle)).toBeTruthy();
+    fireEvent.press(view.getByLabelText("Close"));
+    expect(view.queryByText(sheetTitle)).toBeNull();
+  });
+  it("opens the sheet when Search exits with openFilters=1 and clears that parameter once", () => {
+    Object.assign(routeParams, { openFilters: "1" });
+    const view = renderMobile(<ResultsScreen />);
+    expect(view.getByText(sheetTitle)).toBeTruthy();
+    expect(routerMock.setParams.mock.calls.filter(([params]) => "openFilters" in params)).toEqual([[{ openFilters: undefined }]]);
+  });
+  it("writes sheet edits to the route and reloads Results in place on Apply", () => {
+    const view = renderMobile(<ResultsScreen />);
+    fireEvent.press(view.getByLabelText("Filters: 0"));
+    // The sheet renders after the header switch, so its Used button is the last one.
+    const used = view.getAllByRole("button", { name: "Used Condition" });
+    fireEvent.press(used[used.length - 1]!);
+    expect(routerMock.setParams).not.toHaveBeenCalled();
+    fireEvent.press(view.getByRole("button", { name: "Show 12 listings" }));
+    expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ condition: "used", sort: "newest" }));
+    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { condition: "used", sort: "newest" } }));
+    expect(view.queryByText(sheetTitle)).toBeNull();
+    expect(routerMock.push).not.toHaveBeenCalled();
+  });
+  it("clears the route filters and keeps the sheet open on Reset all", () => {
+    Object.assign(routeParams, { cityId: "ashgabat", condition: "used", sort: "price_asc" });
+    const view = renderMobile(<ResultsScreen />);
+    fireEvent.press(view.getByLabelText("Filters: 1"));
+    fireEvent.press(view.getByLabelText("Reset all"));
+    expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ cityId: undefined, condition: undefined, sort: "newest" }));
+    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "newest" } }));
+    expect(view.getByText(sheetTitle)).toBeTruthy();
   });
 });
 
@@ -145,7 +209,7 @@ describe("Results large card replacement", () => {
   it("shows two fixed photos and total photo count", () => {
     const view = renderMobile(<ResultsScreen />);
     expect(view.getAllByTestId("listing-photo")).toHaveLength(2);
-    expect(view.getByLabelText("7 photos")).toBeTruthy();
+    expect(view.getByLabelText("Photos: 7")).toBeTruthy();
   });
   it("shows city and a relative publication date", () => {
     const view = renderMobile(<ResultsScreen />);

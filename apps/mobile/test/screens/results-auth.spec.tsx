@@ -1,5 +1,3 @@
-import type * as Native from "react-native";
-import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react-native";
 
@@ -13,21 +11,17 @@ vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
-vi.mock("react-native", async (original) => {
-  const native = await original<typeof Native>();
-  const React = await import("react");
-  return { ...native, RefreshControl: native.View,
-    FlatList: ({ data = [], renderItem, ListHeaderComponent, ListEmptyComponent, ...props }: { data?: { id: string }[]; renderItem: (arg: { item: { id: string }; index: number }) => ReactNode; ListHeaderComponent?: ReactNode; ListEmptyComponent?: ReactNode } & Record<string, unknown>) => React.createElement(native.ScrollView, props,
-      ListHeaderComponent, data.map((item, index) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))), data.length ? null : ListEmptyComponent),
-  };
-});
 vi.mock("react-native-reanimated", async () => {
   const native = await import("react-native");
   return { default: { View: native.View }, useSharedValue: (value: number) => ({ value }),
     useAnimatedStyle: (fn: () => unknown) => fn(), withTiming: (value: number) => value };
 });
 vi.mock("../../src/api/client", () => ({ apiClient: { get: vi.fn(), post: state.post, delete: vi.fn() }, ApiError: class ApiError extends Error {} }));
-vi.mock("../../src/listings/search/FilterSheet", () => ({ FilterSheet: () => null }));
+// The real FilterSheet renders. Only the catalog hooks and device storage behind it are replaced.
+vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined), removeItem: vi.fn(async () => undefined) } }));
+vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "toyota", name: "Toyota" }] } }) }));
+vi.mock("../../src/api/catalog/useRegions", () => ({ useRegions: () => ({ data: { items: [] }, isPending: false, isError: false }) }));
+vi.mock("../../src/api/catalog/useCities", () => ({ useCities: () => ({ data: { items: [] }, isPending: false, isError: false }) }));
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => state.viewer }));
 vi.mock("../../src/listings/feed/useFeedCatalogMaps", () => ({ useFeedCatalogMaps: () => ({ brandName: () => "Toyota", modelName: (id: string) => ({ camry: "Camry", corolla: "Corolla", rav4: "RAV4" })[id], cityName: () => "Ashgabat" }) }));
 vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [{ id: "camry", name: "Camry" }, { id: "corolla", name: "Corolla" }, { id: "rav4", name: "RAV4" }] } }) }));

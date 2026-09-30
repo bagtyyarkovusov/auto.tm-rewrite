@@ -8,13 +8,13 @@ describe("Results filter entry", () => {
   it("opens Search parameters from the approved Filters control", () => {
     const onOpen = vi.fn();
     const view = renderMobile(<FilterChipsRow filters={{}} onOpen={onOpen} onRemove={vi.fn()} />);
-    fireEvent.press(view.getByRole("button", { name: "Filters, 0 active filters" }));
+    fireEvent.press(view.getByRole("button", { name: "Filters: 0" }));
     expect(onOpen).toHaveBeenCalledOnce();
   });
 
   it("shows the committed chip group count on the entry", () => {
     const view = renderMobile(<FilterChipsRow filters={{ cityId: "ashgabat", priceMin: 70000, priceMax: 120000 }} onOpen={vi.fn()} onRemove={vi.fn()} />);
-    expect(view.getByRole("button", { name: "Filters, 2 active filters" })).toBeTruthy();
+    expect(view.getByRole("button", { name: "Filters: 2" })).toBeTruthy();
     expect(view.getByText("2")).toBeTruthy();
   });
 });

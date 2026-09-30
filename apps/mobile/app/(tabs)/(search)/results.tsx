@@ -99,7 +99,7 @@ export default function ResultsScreen() {
       : filters.count ? <FilteredEmpty onReset={reset} /> : <FeedEmpty />;
   return <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
     <ResultsHeader count={count.data} sort={sort} onSort={() => setSortOpen(true)} onBack={goBack} />
-    <FlatList data={feed.isPending || feed.isError ? [] : items} keyExtractor={(item) => item.id} ListHeaderComponent={header} ListEmptyComponent={empty}
+    <FlatList testID="results-list" data={feed.isPending || feed.isError ? [] : items} keyExtractor={(item) => item.id} ListHeaderComponent={header} ListEmptyComponent={empty}
       contentContainerStyle={{ paddingBottom: 76, flexGrow: 1 }} onScroll={onScroll} scrollEventThrottle={16}
       renderItem={({ item }) => <ListingLargeCard listing={item} onPress={(id) => router.push(`/(public)/listings/${id}`)}
         brandName={catalog.brandName(item.brandId)} modelName={catalog.modelName(item.modelId)} cityName={catalog.cityName(item.cityId)}
