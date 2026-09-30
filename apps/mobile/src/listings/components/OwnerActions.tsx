@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { Pencil, CheckCircle, MoreHorizontal } from "lucide-react-native";
@@ -8,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 type ListingStatus = ListingsSchemas.ListingDetail["status"];
 
+import { queryKeys } from "../../api/queryKeys";
 import { useArchiveListing } from "../../api/listings/useArchiveListing";
 import { useDeleteListing } from "../../api/listings/useDeleteListing";
 import { useMarkSold } from "../../api/listings/useMarkSold";
@@ -62,11 +64,10 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
 
+  // Bar and overflow are separate instances; any in-flight lifecycle request
+  // disables both.
   const isPending =
-    markSold.isPending ||
-    archive.isPending ||
-    republish.isPending ||
-    deleteListing.isPending;
+    useIsMutating({ mutationKey: queryKeys.listings.lifecycleMutation() }) > 0;
 
   const handleConfirm = () => {
     if (!confirmAction) return;
