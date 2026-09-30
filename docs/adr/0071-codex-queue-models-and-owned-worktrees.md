@@ -3,7 +3,7 @@
 - **Status**: Accepted
 - **Date**: 2026-09-30
 - **Deciders**: AutoTM founder
-- **Amends**: [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s model and host-created-worktree requirements for Codex only
+- **Amends**: [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s model, host-created-worktree, and concurrency requirements for Codex only
 
 ## Context
 
@@ -15,7 +15,7 @@ Codex implementers, bug fixers, review-finding fixers, and other writing subagen
 
 Each Codex writing subagent creates and owns its own fresh separate linked worktree from the supplied base or pushed issue branch. All its edits and commands target that absolute worktree directory. The coordinator does not implement issue code, create worktrees for writers, or write in their worktrees. One issue has at most one writer. A refused write stops work and is reported exactly; this exception authorizes no guard bypass.
 
-The queue runs about two writing agents at a time. An agent reports once and stops; the coordinator wakes it only for new work. Canonical reservation branches, early draft PRs, pushed checkpoints, durable Execution state, independent reviews, and protected merges remain required.
+Codex queues may run up to four full issue implementers in parallel. Reviewers and bug or review-finding fixers do not count toward that implementer allowance; dispatch remains limited by actual host capacity. Keep one writer per issue and avoid shared service, file, and simulator collisions. This replaces the earlier about-two preference for Codex; Claude concurrency guidance remains unchanged. An agent reports once and stops; the coordinator wakes it only for new work. Canonical reservation branches, early draft PRs, pushed checkpoints, durable Execution state, independent reviews, and protected merges remain required.
 
 The host-specific model profile lives in [queue models](../agents/queue-models.md). Claude's model defaults and host-created worktrees remain unchanged. Worktree retention and cleanup continue to follow the lifecycle's safety gate. Dirty, locked, active, unmerged, evidence, and app-managed Codex worktrees are preserved. This decision grants no blanket cleanup authorization.
 
@@ -46,5 +46,6 @@ The host-specific model profile lives in [queue models](../agents/queue-models.m
 ## References
 
 - [Founder approval on #456](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/456#issuecomment-5911861282)
+- [Founder concurrency update on #456](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/456#issuecomment-5912282304)
 - [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)
 - [Worktree lifecycle](../agents/worktree-lifecycle.md)

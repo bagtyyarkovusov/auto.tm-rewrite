@@ -41,7 +41,7 @@ Each implementer gets its own linked worktree, and an issue has at most one writ
 
 - On a host that cannot message a finished agent, a finished or stopped implementer cannot be messaged or resumed with its context. Each fix round starts a fresh implementer from the PR: its `Execution state`, the review comments, and the branch head.
 - Agents report once and stop. Wake an agent only for new work, rather than repeated status reports.
-- Run about two implementers at a time. Each worktree needs its own install, each full gate run starts its own service stack, self-hosted CI may share the machine, and parallel agents share one account's API session limit. ADR-0064 still sets no limit on issues in flight; issues waiting on CI or review need no running implementer.
+- Apply the [host-specific concurrency profile](../../../docs/agents/queue-models.md) when dispatching implementers, reviewers, and fixers. Each worktree needs its own install; isolate service stacks and avoid shared file or simulator collisions. ADR-0064 still sets no limit on issues in flight; issues waiting on CI or review need no running implementer.
 
 ### Resume a stopped implementer
 
