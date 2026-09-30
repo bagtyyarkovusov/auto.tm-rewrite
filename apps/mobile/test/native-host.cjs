@@ -12,6 +12,7 @@ const Text = host("Text");
 const Pressable = React.forwardRef(({ children, disabled, accessibilityState, ...props }, ref) =>
   React.createElement("View", {
     accessible: true, ...props, ref, disabled,
+    onStartShouldSetResponder: () => !disabled,
     accessibilityState: { ...accessibilityState, disabled: disabled ?? accessibilityState?.disabled },
   }, typeof children === "function" ? children({ pressed: false }) : children));
 Pressable.displayName = "Pressable";
