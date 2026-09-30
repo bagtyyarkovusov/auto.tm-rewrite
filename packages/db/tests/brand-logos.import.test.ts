@@ -286,6 +286,53 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
     }
   });
 
+  it("keeps the active objects when another manifest restores a version during old cleanup", async () => {
+    const manifestA = manifestOf(simpleIconsEntry("toyota", "A", siToyota.svg));
+    const manifestB = manifestOf(simpleIconsEntry("toyota", "A", siBmw.svg));
+    await run({}, manifestA, { toyota: enc(siToyota.svg) });
+    const keyA = (await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey as string;
+    const directoryA = keyA.replace("logo.png", "");
+    const clientB = new S3Client({
+      endpoint: `http://${minio.getHost()}:${minio.getMappedPort(9000)}`,
+      region: "us-east-1",
+      credentials: { accessKeyId: "minioadmin", secretAccessKey: "minioadmin" },
+      forcePathStyle: true,
+    });
+    let signalCleanup!: () => void;
+    let resumeCleanup!: () => void;
+    const cleanupStarted = new Promise<void>((resolve) => { signalCleanup = resolve; });
+    const cleanupReleased = new Promise<void>((resolve) => { resumeCleanup = resolve; });
+    clientB.middlewareStack.add((next, context) => async (args) => {
+      if (context.commandName === "ListObjectsV2Command" &&
+        (args.input as { Prefix?: string }).Prefix === directoryA) {
+        signalCleanup();
+        await cleanupReleased;
+      }
+      return next(args);
+    }, { step: "initialize", name: "oldImportCleanupBarrier" });
+    const replacing = importBrandLogos(
+      { db, s3: clientB, bucket: BUCKET, manifest: manifestB, masters: providerFor({ toyota: enc(siBmw.svg) }) },
+      { dryRun: false, force: false },
+    );
+    try {
+      // Old code pauses after A -> B. Retaining imported versions finishes without cleanup.
+      await Promise.race([cleanupStarted, replacing]);
+      expect((await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey).not.toBe(keyA);
+      const restoring = await run({}, manifestA, { toyota: enc(siToyota.svg) });
+      expect(outcomeOf(restoring, "toyota")).toBe("replaced-import");
+      resumeCleanup();
+      expect(outcomeOf(await replacing, "toyota")).toBe("replaced-import");
+      expect((await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey).toBe(keyA);
+      for (const file of ["logo.png", "mono@1x.png", "mono@2x.png", "mono@3x.png"]) {
+        await expect(s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: `${directoryA}${file}` }))).resolves.toBeDefined();
+      }
+    } finally {
+      resumeCleanup();
+      await replacing;
+      clientB.destroy();
+    }
+  });
+
   it("reports individual cleanup errors while preserving the successful replacement", async () => {
     await run();
     const previous = (await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey as string;
