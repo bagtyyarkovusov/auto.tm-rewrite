@@ -1,6 +1,6 @@
 # ADR-0069: Queue implementers run in host-created worktrees
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-29
 - **Deciders**: AutoTM founder
 - **Amends**: [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)'s one-worktree-per-issue and resume-the-found-worktree rules, and [ADR-0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md)'s restatement of them. The rest of both remains in force.
