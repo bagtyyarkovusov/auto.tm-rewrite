@@ -13,6 +13,19 @@ Some hosts create a linked worktree and a `claude/<name>` or `codex/<name>` bran
 3. Record any host scaffold branch and its starting SHA. It is cleanup-eligible only while it remains unchanged and has no PR or remote work.
 4. Create a new linked worktree only when the current checkout is the shared repository checkout or the task explicitly needs another isolated checkout.
 
+Write only in your own worktree and in `/tmp`. Never create a worktree for another session, and never write to one that another session or agent owns. If the host refuses a write, stop and report the exact message; never retry it through a shell command, a script, or another tool.
+
+## Queue implementer worktrees
+
+[ADR-0069](../adr/0069-queue-implementers-run-in-host-created-worktrees.md) sets who owns each worktree under [run-queue](../../.claude/skills/run-queue/SKILL.md).
+
+- **Who creates it.** The orchestrator launches each implementer with worktree isolation, such as Claude Code's Agent tool with `isolation: "worktree"`. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch. It is that issue's worktree, and only its implementer writes there.
+- **How it reaches the issue branch.** The first implementer runs `git switch -c agent/issue-<N> origin/main`, or starts from the parent branch head when stacked, and pushes the reservation. A later implementer runs `git switch --detach origin/agent/issue-<N>` and pushes with `git push origin HEAD:agent/issue-<N>`, because the named branch may be checked out in an earlier worktree.
+- **Checkpoints.** Implementers commit and push small checkpoints often. Only pushed work survives an agent that stops.
+- **Who retires it.** The host removes it when its implementer made no changes. Otherwise it stays after the agent ends, and the host's sweep removes it only once it holds no changed or untracked files and no unpushed commits. The orchestrator never removes another agent's worktree. After the PR merges, it records the cleanup tuple and gives the user the commands below, or leaves the worktree to the sweep.
+- **A stopped implementer.** A fresh implementer continues from the pushed branch in its own new worktree. It may read the stopped worktree to salvage uncommitted drafts, but never writes there or runs git against it. The user or the host removes the stopped worktree.
+- **Hosts without isolated subagents.** The orchestrator does not create or write to issue worktrees. The founder runs one `run-issue` session per issue in the queue order, and each session uses the worktree its host gave it or creates its own under this lifecycle.
+
 ## Treat merge and cleanup as separate results
 
 `gh pr merge --squash --delete-branch` can merge the PR and delete the remote branch, then exit non-zero because the local branch is still checked out in a linked worktree. Always verify the PR state and merge commit independently from the command's exit status.
@@ -24,11 +37,11 @@ After a successful merge, record this cleanup tuple:
 - task branch HEAD, which must equal the PR's final `headRefOid`;
 - PR URL and merge commit.
 
-An agent whose live session uses that linked worktree reports the tuple instead of deleting its own working directory. The root or integration session removes it after the worker session finishes.
+An agent whose live session uses that linked worktree reports the tuple instead of deleting its own working directory. The root or integration session removes it after the worker session finishes, unless the worktree belongs to a queue implementer; then only the user or the host removes it.
 
 ## Safe cleanup gate
 
-The root or integration session may retire a completed worktree only when every condition holds:
+The root or integration session, or the user for a queue implementer's worktree, may retire a completed worktree only when every condition holds:
 
 - the worker session has finished and the worktree is not locked or active;
 - `git status --porcelain` in the worktree is empty;
