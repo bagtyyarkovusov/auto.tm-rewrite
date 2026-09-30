@@ -178,6 +178,14 @@ describe("Results filter sheet and route write-back", () => {
     expect(view.getByText(sheetTitle)).toBeTruthy();
     expect(routerMock.setParams.mock.calls.filter(([params]) => "openFilters" in params)).toEqual([[{ openFilters: undefined }]]);
   });
+  it("opens the sheet when openFilters arrives while Results is already mounted", () => {
+    const view = renderMobile(<ResultsScreen />);
+    expect(view.queryByText(sheetTitle)).toBeNull();
+    routeParams.openFilters = "1";
+    view.rerender(<ResultsScreen />);
+    expect(view.getByText(sheetTitle)).toBeTruthy();
+    expect(routerMock.setParams).toHaveBeenLastCalledWith({ openFilters: undefined });
+  });
   it("writes sheet edits to the route and reloads Results in place on Apply", () => {
     const view = renderMobile(<ResultsScreen />);
     fireEvent.press(view.getByLabelText("Filters: 0"));
