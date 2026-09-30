@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 # Run a queue of issues
 
-One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Each issue's implementer is a separate agent in its own worktree, as [ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md) decides. Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, and stacking.
+One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Under this skill the orchestrator is the issue's integration owner, as run-issue, FINALIZATION, and ADR-0064 and ADR-0067 mean the term. Each issue's implementer is a separate agent in its own worktree, as [ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md) decides. Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, and stacking.
 
 ## Accept the queue
 
@@ -25,14 +25,14 @@ The founder fixed the model per role ([#455](https://github.com/bagtyyarkovusov/
 
 | Role | Agent type | Model | Effort |
 |---|---|---|---|
-| Implementer, bug fixer, review-finding fixer | `queue-implementer` | Sonnet 5.5 | high |
-| Standards, Spec, or Delta reviewer | `queue-reviewer` | Opus 5.5 | high |
+| Implementer, bug fixer, review-finding fixer | `queue-implementer` | Sonnet 5.5 (`claude-sonnet-5-5`) | high |
+| Standards, Spec, or Delta reviewer | `queue-reviewer` | Opus 5.5 (`claude-opus-5-5`) | high |
 
-The first file in a new `.claude/agents/` directory needs a session restart before the host picks it up. Until then, the agent types are missing: pass `model: "sonnet"` for an implementer and `model: "opus"` for a reviewer on each Agent call, and effort follows the session. Keep `isolation: "worktree"` on implementers.
+The first file in a new `.claude/agents/` directory needs a session restart before the host picks it up. Until then, the agent types are missing. Launch a reviewer as the built-in `Plan` type, which has no Edit or Write, with `model` set to Opus. Launch an implementer as `general-purpose` with `model` set to Sonnet and `isolation: "worktree"`. Effort follows the session.
 
 ## Implementers and worktrees
 
-Each issue gets its own linked worktree, as ADR-0058 requires. The host creates it; the orchestrator never does.
+Each implementer gets its own linked worktree, and an issue has at most one writing worktree at a time ([ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md), amending ADR-0058). The host creates it; the orchestrator never does.
 
 - **Who creates it.** The orchestrator launches the implementer with worktree isolation. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch, and it belongs to that implementer.
 - **Who writes to it.** Only its implementer. Every agent writes only in its own worktree and in `/tmp`. If the host refuses a write, the agent stops and reports the exact message. It never retries through a shell command, a script, or another tool. The orchestrator never edits, formats, or commits in an implementer's worktree, and never creates issue worktrees with `git worktree add`.
@@ -44,7 +44,7 @@ Each issue gets its own linked worktree, as ADR-0058 requires. The host creates 
 
 ### Limits
 
-- A finished or stopped implementer cannot be messaged or resumed with its context. Each fix round starts a fresh implementer from the PR: its `Execution state`, the review comments, and the branch head.
+- On a host that cannot message a finished agent, a finished or stopped implementer cannot be messaged or resumed with its context. Each fix round starts a fresh implementer from the PR: its `Execution state`, the review comments, and the branch head.
 - Run about two implementers at a time. Each worktree needs its own install, each full gate run starts its own service stack, self-hosted CI may share the machine, and parallel agents share one account's API session limit. ADR-0064 still sets no limit on issues in flight; issues waiting on CI or review need no running implementer.
 
 ### Resume a stopped implementer
