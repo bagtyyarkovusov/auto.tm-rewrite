@@ -1,7 +1,7 @@
-import { ActivityIndicator, Platform, Share, View } from "react-native";
+import { View } from "react-native";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import { Phone, MessageCircle, Share2, Heart } from "lucide-react-native";
+import { Phone, MessageCircle } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
@@ -11,7 +11,6 @@ import {
   useReplayAuthAction,
 } from "../../auth/intentStore";
 import { useOpenConversation } from "../../api/conversations/useOpenConversation";
-import { useListingFavorite } from "../useListingFavorite";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,6 @@ interface ContactCtaBarProps {
   allowCalls: boolean;
   allowChat: boolean;
   status: Enums.ListingStatus;
-  isFavorited?: boolean;
 }
 
 export function ContactCtaBar({
@@ -33,26 +31,12 @@ export function ContactCtaBar({
   allowCalls,
   allowChat,
   status,
-  isFavorited = false,
 }: ContactCtaBarProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const openConversation = useOpenConversation();
   const { t } = useTranslation();
   const listingHref = `/(public)/listings/${listingId}` as const;
-  const {
-    favorited,
-    pending: isFavoritePending,
-    toggle: handleFavorite,
-  } = useListingFavorite({
-    listingId,
-    isFavorited,
-    isAuthenticated,
-    returnTo: listingHref,
-    replayAfterSignIn: true,
-  });
-  const favoriteDisabled = isFavoritePending || isAuthenticated === null;
-
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
   const canCall = allowCalls && !!contactPhone && !isSold && !isArchived;
@@ -118,23 +102,6 @@ export function ContactCtaBar({
     }
   };
 
-  const handleShare = async () => {
-    const url = `https://auto.tm/listings/${listingId}`;
-    try {
-      // React Native's Android Share bridge forwards only `title` and
-      // `message` and drops `url` entirely (Libraries/Share/Share.js), so the
-      // link has to be inlined into the message there. iOS keeps them separate
-      // so the share sheet can render a rich link preview.
-      await Share.share(
-        Platform.OS === "android"
-          ? { message: `${t("shareMessage")} ${url}` }
-          : { message: t("shareMessage"), url },
-      );
-    } catch {
-      // Silently ignore share cancellation or errors
-    }
-  };
-
   return (
     <View>
       <View className="flex-row items-center gap-2 px-4 py-3">
@@ -151,11 +118,14 @@ export function ContactCtaBar({
 
         <Button
           variant={canMessage ? "default" : "secondary"}
-          size="icon"
+          size="lg"
+          className="flex-1"
           disabled={!canMessage || openConversation.isPending}
           onPress={handleMessage}
           accessibilityLabel={t("message")}
-          accessibilityState={{ disabled: !canMessage || openConversation.isPending }}
+          accessibilityState={{
+            disabled: !canMessage || openConversation.isPending,
+          }}
         >
           <Icon
             as={MessageCircle}
@@ -165,39 +135,14 @@ export function ContactCtaBar({
                 : "size-5 text-muted-foreground"
             }
           />
-        </Button>
-
-        <Button
-          variant="secondary"
-          size="icon"
-          onPress={handleShare}
-          accessibilityLabel={t("share")}
-        >
-          <Icon as={Share2} className="size-5 text-foreground" />
-        </Button>
-
-        <Button
-          variant="secondary"
-          size="icon"
-          disabled={favoriteDisabled}
-          onPress={handleFavorite}
-          accessibilityLabel={t("favorite")}
-          accessibilityState={{ disabled: favoriteDisabled }}
-        >
-          {isFavoritePending ? (
-            <ActivityIndicator size="small" />
-          ) : (
-            <Icon
-              as={Heart}
-              className={
-                favorited
-                  ? "size-5 text-brand-500 fill-brand-500"
-                  : "size-5 text-muted-foreground"
-              }
-            />
-          )}
+          <Text numberOfLines={1}>{t("message")}</Text>
         </Button>
       </View>
+      {canCall && (
+        <Text className="px-4 pb-2 text-center text-xs text-muted-foreground">
+          {t("contactSmsCaption")}
+        </Text>
+      )}
 
       {openConversation.error && (
         <View className="px-4 pb-3">

@@ -1,20 +1,26 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
+import { expect, it } from "vitest";
 
-import { describe, it, expect } from "vitest";
+import { renderMobile } from "../../../test/render";
+import { fixture } from "../../../test/fixtures/listing";
 
-const source = readFileSync(resolve(__dirname, "./SellerBlock.tsx"), "utf-8");
+import { SellerBlock } from "./SellerBlock";
 
-describe("SellerBlock seller signal", () => {
-  it("shows no per-Listing phone badge (ADR-0056)", () => {
-    expect(source).not.toContain("phoneVerified");
-    expect(source).not.toContain("verifiedPhone");
-    expect(source).not.toContain("<Badge");
-  });
-
-  it("labels the seller without implying inspection status", () => {
-    expect(source).toContain('t("seller")');
-    expect(source).not.toContain("inspection");
-    expect(source).not.toContain("dealer");
-  });
+it("shows real seller identity and city/place without contact-phone badges", () => {
+  const screen = renderMobile(
+    <SellerBlock
+      seller={fixture().seller}
+      cityName="Ashgabat"
+      locationText="Parahat 7"
+    />,
+  );
+  expect(screen.getByText("Merdan")).toBeTruthy();
+  expect(screen.getByText("Private seller")).toBeTruthy();
+  expect(screen.getByText("On AutoTM since January 2024")).toBeTruthy();
+  expect(screen.getByText("Ashgabat · Parahat 7")).toBeTruthy();
+  expect(screen.queryByText(/verified|inspection|dealer/i)).toBeNull();
+  screen.rerender(
+    <SellerBlock seller={{ ...fixture().seller, displayName: " " }} />,
+  );
+  expect(screen.getByText("Private seller")).toBeTruthy();
+  expect(screen.queryByText("Ashgabat · Parahat 7")).toBeNull();
 });
