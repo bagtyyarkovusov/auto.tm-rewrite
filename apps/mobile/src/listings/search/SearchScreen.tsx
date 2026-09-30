@@ -9,6 +9,7 @@ import { Calendar, ChevronLeft, ChevronRight, History, SlidersHorizontal, X } fr
 import { useTranslation } from "react-i18next";
 import type { CatalogSchemas } from "@auto-tm/contracts";
 
+import { ApiError } from "../../api/client";
 import { useBrands } from "../../api/catalog/useBrands";
 import { CATALOG_SEARCH_MIN_LENGTH, useCatalogSearch } from "../../api/catalog/useCatalogSearch";
 import { useListingBrandCounts } from "../../api/listings/useListingBrandCounts";
@@ -48,7 +49,7 @@ export function SearchScreen() {
   const enoughText = [...query.trim()].length >= CATALOG_SEARCH_MIN_LENGTH;
   // Previous data is useful in pickers, but cannot authorize a new Search selection.
   const waiting = search.isSettling || search.isPlaceholderData || (enoughText && search.isPending);
-  const current = !waiting && enoughText ? search.data : undefined;
+  const current = !waiting && !search.isPaused && enoughText ? search.data : undefined;
   const years = current?.yearFrom !== undefined
     ? current.yearFrom === current.yearTo
       ? String(current.yearFrom)
@@ -77,7 +78,8 @@ export function SearchScreen() {
       modelNames: match.kind === "model" ? [match.label] : [],
     }, true);
   };
-  const browseError = brands.isError ? brands.error : counts.isError ? counts.error : undefined;
+  const pausedError = new ApiError("NETWORK_ERROR", 0);
+  const browseError = brands.isPaused || counts.isPaused ? pausedError : brands.isError ? brands.error : counts.isError ? counts.error : undefined;
   const browseLoading = !brands.data || !counts.data;
   const retryBrowse = () => { void brands.refetch(); void counts.refetch(); };
 
@@ -119,13 +121,13 @@ export function SearchScreen() {
               leading={<CarBrandLogo name={brand.name} logoUrl={brand.logoUrl} />}
               detail={brand.count ? String(brand.count) : undefined}
               onPress={() => openResults({ brandId: brand.id, brandName: brand.name, modelIds: [], modelNames: [] })} />)}
-        </> : waiting ? <Loading /> : search.isError && enoughText ?
+        </> : search.isPaused && enoughText ? <ErrorState error={pausedError} onRetry={() => void search.refetch()} /> : waiting ? <Loading /> : search.isError && enoughText ?
           <ErrorState error={search.error} onRetry={() => void search.refetch()} /> : current?.results.length ? <>
             {current.results.map((match) => <SearchRow key={`${match.kind}-${match.brandId}-${match.modelId ?? ""}`}
               label={match.kind === "model" ? `${match.brandLabel ?? brandMap.get(match.brandId)?.name ?? match.brandId} ${match.label}` : match.label}
               leading={match.kind === "brand" ? <CarBrandLogo name={match.label} logoUrl={brandMap.get(match.brandId)?.logoUrl} /> : <View className="size-8" />}
               detail={years ?? (match.kind === "brand" ? t("brand") : undefined)} onPress={() => pickMatch(match)} />)}
-          </> : years ? <SearchRow label={t("allCarsYear", { years })}
+          </> : years && /^[\d\s–—-]+$/u.test(query.trim()) ? <SearchRow label={t("allCarsYear", { years })}
             leading={<Icon as={Calendar} className="size-8 text-muted-foreground" />} onPress={() => openResults(undefined, true)} /> :
           <Text className="px-6 py-8 text-center text-base text-muted-foreground">{t("noCatalogMatch", { query: query.trim() })}</Text>}
       </ScrollView>

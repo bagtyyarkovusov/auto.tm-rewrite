@@ -10,7 +10,7 @@ import { act, fireEvent, renderMobile, routerMock } from "../../../test/render";
 import { useRecentChoicesStore } from "./recentSearches";
 
 const get = vi.fn();
-vi.mock("../../api/client", () => ({ apiClient: { get: (...args: unknown[]) => get(...args) }, ApiError: class extends Error {} }));
+vi.mock("../../api/client", () => ({ apiClient: { get: (...args: unknown[]) => get(...args) }, ApiError: class extends Error { constructor(public code: string, public status: number) { super(code); } } }));
 vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 vi.mock("react-native", async (importOriginal) => {
   const native = await importOriginal<typeof Native>();
