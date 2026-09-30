@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onlineManager } from "@tanstack/react-query";
 import type * as Native from "react-native";
-
 import { waitFor } from "@testing-library/react-native";
 
 import SearchRoute from "../../../app/(tabs)/(search)/search";
@@ -163,8 +162,9 @@ describe("Search route", () => {
     expect(routerMock.replace).not.toHaveBeenCalled();
   });
 
-  it("opens all filters through Results until Search parameters lands", () => {
+  it("opens all filters through Results until Search parameters lands", async () => {
     const screen = setup();
+    await screen.findByText("Toyota");
     fireEvent.press(screen.getByText("All filters"));
     expect(routerMock.replace).toHaveBeenCalledWith({ pathname: "/(tabs)/(search)/results", params: { openFilters: "1" } });
   });
@@ -198,8 +198,9 @@ describe("Search route", () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it("requests keyboard focus on entry and Back returns to Home", () => {
+  it("requests keyboard focus on entry and Back returns to Home", async () => {
     const screen = setup();
+    await screen.findByText("Toyota");
     expect(screen.getByLabelText("Search brand or model").props.autoFocus).toBe(true);
     fireEvent.press(screen.getByLabelText("Back"));
     expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/(search)");
