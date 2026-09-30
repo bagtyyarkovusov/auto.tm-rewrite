@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 import EditListingScreen from "../../app/listings/[id]/edit";
 
