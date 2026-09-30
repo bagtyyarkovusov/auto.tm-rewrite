@@ -23,7 +23,7 @@ On 2026-09-29 a queue session piloted this for issue #359 (PR #453):
 - Issues #368, #377, and #455 started the same way with `git switch -c agent/issue-<N> origin/main`.
 - The host had no way to message an agent after it finished, so each fix round needed a fresh agent.
 
-Later the same day the queue ran four implementers in parallel. The account's API session limit stopped all four. The host could not resume a stopped agent with its context, and the work each had not committed and pushed was stranded in its worktree. A fresh agent could read those files but could not continue in that worktree, because it belongs to the stopped agent.
+After the pilot, the queue ran four implementers in parallel. The account's API session limit stopped all four. The host could not resume a stopped agent with its context, and the work each had not committed and pushed was stranded in its worktree. A fresh agent could read those files but could not continue in that worktree, because it belongs to the stopped agent.
 
 ## Decision
 
