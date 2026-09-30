@@ -54,6 +54,9 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
     return true;
   },
   { message: "MILEAGE_REQUIRED_FOR_USED" },
+).refine(
+  (data) => data.conditionDisclosure?.damaged !== undefined,
+  { message: "DAMAGED_REQUIRED", path: ["conditionDisclosure", "damaged"] },
 );
 
 export interface PublishListingInput {
@@ -171,10 +174,7 @@ export class PublishListing {
             description: payload.description,
             acceptsExchange: payload.acceptsExchange ?? false,
             installmentAvailable: payload.installmentAvailable ?? false,
-            accidentReported: payload.conditionDisclosure?.accidentReported ?? null,
-            mileageAccurate: payload.conditionDisclosure?.mileageAccurate ?? null,
-            ownerCount: payload.conditionDisclosure?.ownerCount ?? null,
-            serviceHistoryAvailable: payload.conditionDisclosure?.serviceHistoryAvailable ?? null,
+            damaged: payload.conditionDisclosure?.damaged ?? null,
             knownIssuesText: payload.conditionDisclosure?.knownIssuesText ?? null,
           },
         }),
@@ -239,15 +239,10 @@ export class PublishListing {
         ...(listingRow.description ? { description: listingRow.description } : {}),
         acceptsExchange: listingRow.acceptsExchange,
         installmentAvailable: listingRow.installmentAvailable,
-        ...(listingRow.accidentReported !== null &&
-        listingRow.mileageAccurate !== null &&
-        listingRow.serviceHistoryAvailable !== null
+        ...(listingRow.damaged !== null
           ? {
               conditionDisclosure: {
-                accidentReported: listingRow.accidentReported,
-                mileageAccurate: listingRow.mileageAccurate,
-                serviceHistoryAvailable: listingRow.serviceHistoryAvailable,
-                ...(listingRow.ownerCount ? { ownerCount: listingRow.ownerCount } : {}),
+                damaged: listingRow.damaged,
                 ...(listingRow.knownIssuesText ? { knownIssuesText: listingRow.knownIssuesText } : {}),
               },
             }

@@ -15,14 +15,18 @@ export type ListingConditionType = z.infer<typeof ListingConditionSchema>;
 
 // ── Structured condition disclosure (S9a) ──
 
+// The seller's own statement (ADR-0052): whether the car is damaged or needs
+// repair today, plus optional known issues. Neither is verified.
 export const ConditionDisclosureSchema = z.object({
-  accidentReported: z.boolean(),
-  mileageAccurate: z.boolean(),
-  ownerCount: z.number().int().min(1).max(20).optional(),
-  serviceHistoryAvailable: z.boolean(),
+  damaged: z.boolean(),
   knownIssuesText: z.string().trim().max(1000).optional(),
 });
 export type ConditionDisclosure = z.infer<typeof ConditionDisclosureSchema>;
+
+// While a draft is being filled in, Known issues may be typed before the
+// Damaged question is answered. Publishing requires the answer.
+export const DraftConditionDisclosureSchema = ConditionDisclosureSchema.partial({ damaged: true });
+export type DraftConditionDisclosure = z.infer<typeof DraftConditionDisclosureSchema>;
 
 // ── VIN history surfacing (S9a) ──
 
@@ -184,7 +188,7 @@ export const ListingDraftPayloadSchema = z.object({
   allowChat: z.boolean().optional(),
   acceptsExchange: z.boolean().optional(),
   installmentAvailable: z.boolean().optional(),
-  conditionDisclosure: ConditionDisclosureSchema.optional(),
+  conditionDisclosure: DraftConditionDisclosureSchema.optional(),
   validatedSteps: z.array(z.string()).optional(),
 });
 export type ListingDraftPayload = z.infer<typeof ListingDraftPayloadSchema>;

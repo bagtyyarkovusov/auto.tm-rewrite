@@ -32,6 +32,7 @@ import {
   ListingBrandCountQuerySchema,
   ListingBrandCountResponseSchema,
   ConditionDisclosureSchema,
+  DraftConditionDisclosureSchema,
 } from "../src/schemas/listings";
 import {
   PresignRequestSchema,
@@ -778,10 +779,7 @@ describe("ListingFilterSchema", () => {
 
 describe("ConditionDisclosureSchema", () => {
   const validDisclosure = {
-    accidentReported: false,
-    mileageAccurate: true,
-    ownerCount: 2,
-    serviceHistoryAvailable: true,
+    damaged: true,
     knownIssuesText: "Small scratch",
   };
 
@@ -790,29 +788,28 @@ describe("ConditionDisclosureSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts minimal disclosure without optional fields", () => {
-    const result = ConditionDisclosureSchema.safeParse({
-      accidentReported: false,
-      mileageAccurate: true,
-      serviceHistoryAvailable: true,
-    });
+  it("accepts damaged: false without Known issues", () => {
+    const result = ConditionDisclosureSchema.safeParse({ damaged: false });
     expect(result.success).toBe(true);
   });
 
-  it("rejects ownerCount below 1", () => {
-    const result = ConditionDisclosureSchema.safeParse({
-      ...validDisclosure,
-      ownerCount: 0,
-    });
+  it("requires the Damaged answer", () => {
+    const result = ConditionDisclosureSchema.safeParse({ knownIssuesText: "Rust" });
     expect(result.success).toBe(false);
   });
 
-  it("rejects ownerCount above 20", () => {
+  it("drops the removed S9a fields", () => {
     const result = ConditionDisclosureSchema.safeParse({
-      ...validDisclosure,
-      ownerCount: 21,
+      damaged: false,
+      accidentReported: true,
+      ownerCount: 2,
     });
-    expect(result.success).toBe(false);
+    expect(result.success && result.data).toEqual({ damaged: false });
+  });
+
+  it("lets a draft hold Known issues before the Damaged answer", () => {
+    const result = DraftConditionDisclosureSchema.safeParse({ knownIssuesText: "Rust" });
+    expect(result.success).toBe(true);
   });
 
   it("rejects knownIssuesText over 1000 characters", () => {
@@ -1013,10 +1010,32 @@ describe("StepVehicleSchema", () => {
 });
 
 describe("StepSpecsSchema", () => {
+  const answered = { conditionDisclosure: { damaged: false } };
+
   it("accepts new vehicle without mileage", () => {
     expect(
-      StepSpecsSchema.safeParse({ condition: "new" }).success,
+      StepSpecsSchema.safeParse({ condition: "new", ...answered }).success,
     ).toBe(true);
+  });
+
+  it("requires the Damaged answer", () => {
+    const result = StepSpecsSchema.safeParse({
+      condition: "new",
+      conditionDisclosure: { knownIssuesText: "Rust" },
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      message: "wizardErrors.damagedRequired",
+      path: ["conditionDisclosure", "damaged"],
+    });
+  });
+
+  it("accepts either Damaged answer", () => {
+    for (const damaged of [true, false]) {
+      expect(
+        StepSpecsSchema.safeParse({ condition: "new", conditionDisclosure: { damaged } }).success,
+      ).toBe(true);
+    }
   });
 
   it("rejects used vehicle without mileage", () => {
@@ -1027,7 +1046,7 @@ describe("StepSpecsSchema", () => {
 
   it("accepts used vehicle with mileage", () => {
     expect(
-      StepSpecsSchema.safeParse({ condition: "used", mileageKm: 50000 }).success,
+      StepSpecsSchema.safeParse({ condition: "used", mileageKm: 50000, ...answered }).success,
     ).toBe(true);
   });
 

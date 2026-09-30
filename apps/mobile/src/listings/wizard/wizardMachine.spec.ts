@@ -16,6 +16,7 @@ const completePayload = {
   year: 2020,
   condition: "used" as const,
   mileageKm: 10000,
+  conditionDisclosure: { damaged: false },
   priceAmount: 100000,
   priceCurrency: "TMT" as const,
   regionId: validUuid,
@@ -93,7 +94,10 @@ describe("INIT", () => {
       type: "INIT",
       draftId: "draft-1",
       entryStep: "specs",
-      payload: { validatedSteps: ["vin", "photos", "vehicle"] },
+      payload: {
+        validatedSteps: ["vin", "photos", "vehicle"],
+        conditionDisclosure: { damaged: true },
+      },
     });
     const withMileage = wizardMachineReducer(resumed, {
       type: "UPDATE_FIELDS",
@@ -102,6 +106,26 @@ describe("INIT", () => {
 
     expect(withMileage.currentStep).toBe("specs");
     expect(buildMachineContext(withMileage).canContinue).toBe(true);
+  });
+
+  it("keeps the specs step blocked until the Damaged question is answered", () => {
+    const resumed = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: "draft-1",
+      entryStep: "specs",
+      payload: {
+        validatedSteps: ["vin", "photos", "vehicle"],
+        condition: "new",
+        conditionDisclosure: { knownIssuesText: "Rust" },
+      },
+    });
+    expect(buildMachineContext(resumed).canContinue).toBe(false);
+
+    const answered = wizardMachineReducer(resumed, {
+      type: "UPDATE_FIELDS",
+      updates: { conditionDisclosure: { damaged: false, knownIssuesText: "Rust" } },
+    });
+    expect(buildMachineContext(answered).canContinue).toBe(true);
   });
 
   it("initializes edit mode at review with all data steps validated", () => {
@@ -216,6 +240,7 @@ describe("NEXT", () => {
         modelId: validUuid,
         year: 2020,
         condition: "new",
+        conditionDisclosure: { damaged: false },
         priceAmount: 100000,
         priceCurrency: "TMT",
         regionId: validUuid,

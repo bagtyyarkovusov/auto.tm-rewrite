@@ -3,7 +3,10 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
+import { WizardSchemas } from "@auto-tm/contracts";
 import { describe, it, expect } from "vitest";
+
+import { conditionDisclosureFieldErrors } from "../wizard/conditionDisclosureErrors";
 
 const priceDisplaySource = readFileSync(
   resolve(__dirname, "../components/PriceDisplay.tsx"),
@@ -216,51 +219,84 @@ const step4SpecsSource = readFileSync(
 );
 
 describe("ListingDetailView condition disclosure", () => {
-  it("renders a structured condition disclosure section", () => {
+  it("labels the block as the seller's statement", () => {
     expect(listingDetailSource).toContain("ConditionDisclosureSection");
-    expect(listingDetailSource).toContain("conditionDisclosure");
-    expect(listingDetailSource).toContain('t("conditionDisclosure")');
+    expect(listingDetailSource).toContain('t("conditionAsStatedBySeller")');
   });
 
-  it("shows honest empty state when disclosure is absent", () => {
-    expect(listingDetailSource).toContain('t("noConditionDisclosure")');
-    expect(listingDetailSource).toContain("disclosure ?");
+  it("shows nothing for a Listing without an answer", () => {
+    expect(listingDetailSource).toContain("if (!disclosure) return null;");
+    expect(listingDetailSource).toContain("{listing.conditionDisclosure && (");
+    expect(listingDetailSource).not.toContain("noConditionDisclosure");
   });
 
-  it("renders all disclosure fields when present", () => {
-    expect(listingDetailSource).toContain('t("accidentReported")');
-    expect(listingDetailSource).toContain('t("mileageAccurate")');
-    expect(listingDetailSource).toContain('t("ownerCountValue"');
-    expect(listingDetailSource).toContain('t("serviceHistoryAvailable")');
+  it("shows Damaged / needs repair and Known issues only", () => {
+    expect(listingDetailSource).toContain('t("damaged")');
+    expect(listingDetailSource).toContain("disclosure.damaged ? t(\"yes\") : t(\"no\")");
     expect(listingDetailSource).toContain('t("knownIssuesText")');
+    for (const dropped of ["accidentReported", "mileageAccurate", "ownerCount", "serviceHistoryAvailable"]) {
+      expect(listingDetailSource).not.toContain(dropped);
+    }
   });
 });
 
 describe("Step4Specs condition disclosure inputs", () => {
-  it("captures accident, mileage accuracy, service history, owners, and known issues", () => {
+  it("asks one Yes/No Damaged question plus Known issues", () => {
     expect(step4SpecsSource).toContain("ConditionDisclosureSection");
-    expect(step4SpecsSource).toContain("accidentReported");
-    expect(step4SpecsSource).toContain("mileageAccurate");
-    expect(step4SpecsSource).toContain("serviceHistoryAvailable");
-    expect(step4SpecsSource).toContain("ownerCount");
+    expect(step4SpecsSource).toContain('t("damaged")');
+    expect(step4SpecsSource).toContain("updateDisclosure({ damaged: answer })");
+    expect(step4SpecsSource).toContain('accessibilityRole="radio"');
+    expect(step4SpecsSource).toContain("accessibilityState={{ checked: selected }}");
     expect(step4SpecsSource).toContain("knownIssuesText");
+    for (const dropped of ["accidentReported", "mileageAccurate", "ownerCount", "serviceHistoryAvailable", "Switch"]) {
+      expect(step4SpecsSource).not.toContain(dropped);
+    }
   });
 
-  it("uses a Switch for boolean disclosure fields", () => {
-    expect(step4SpecsSource).toContain("BooleanRow");
-    expect(step4SpecsSource).toContain("Switch");
+  it("leaves Damaged unanswered until the seller picks one", () => {
+    expect(step4SpecsSource).toContain("disclosure?.damaged === answer");
+  });
+
+  it("shows the required-answer error under the question", () => {
+    const disclosure = { knownIssuesText: "Rust on the sill" };
+    const { fieldErrors } = WizardSchemas.validateStep("specs", {
+      condition: "new",
+      conditionDisclosure: disclosure,
+    });
+
+    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({
+      damaged: "wizardErrors.damagedRequired",
+    });
+    expect(step4SpecsSource).toContain("conditionDisclosureFieldErrors(fieldErrors, disclosure)");
+  });
+
+  it("shows a Known issues error under Known issues once Damaged is answered", () => {
+    const disclosure = { damaged: true, knownIssuesText: "x".repeat(1001) };
+    const { fieldErrors } = WizardSchemas.validateStep("specs", {
+      condition: "new",
+      conditionDisclosure: disclosure,
+    });
+
+    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({
+      knownIssuesText: "wizardErrors.invalidValue",
+    });
+  });
+
+  it("shows no disclosure error once the step is valid", () => {
+    const disclosure = { damaged: false };
+    const { fieldErrors } = WizardSchemas.validateStep("specs", {
+      condition: "new",
+      conditionDisclosure: disclosure,
+    });
+
+    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({});
   });
 
   it("caps known issues text at 1000 characters", () => {
     expect(step4SpecsSource).toContain("maxLength={1000}");
-    expect(step4SpecsSource).toContain("knownIssuesText");
-  });
-
-  it("accepts numeric owner count", () => {
-    expect(step4SpecsSource).toContain("ownerCount");
-    expect(step4SpecsSource).toContain('keyboardType="number-pad"');
   });
 });
+
 describe("ListingDetailView inspection interest", () => {
   it("renders InspectionInterestCta for active listings", () => {
     expect(listingDetailSource).toContain("<InspectionInterestCta");

@@ -420,12 +420,10 @@ model Listing {
   installmentAvailable Boolean           @default(false)
   archivedByDeletion   Boolean           @default(false)
 
-  // S9a additions — structured condition disclosure
-  accidentReported        Boolean?
-  mileageAccurate         Boolean?
-  ownerCount              Int?
-  serviceHistoryAvailable Boolean?
-  knownIssuesText         String?
+  // Seller condition disclosure (ADR-0052). `damaged` is nullable only so the
+  // migration applies to existing rows; publish and edit require it.
+  damaged         Boolean?
+  knownIssuesText String?
 
   media               ListingMedia[]
   favorites           Favorite[]

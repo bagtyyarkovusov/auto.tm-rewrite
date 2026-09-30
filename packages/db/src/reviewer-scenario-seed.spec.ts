@@ -41,6 +41,8 @@ function seedOptions(overrides: Partial<ReviewerScenarioSeedOptions> = {}): Revi
 interface ListingRow {
   id: string;
   sellerId: string;
+  damaged: boolean;
+  knownIssuesText: string | null;
 }
 
 interface ConversationRow {
@@ -151,8 +153,15 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
     priceAmount: number;
     description: string;
     publishedAt: Date;
+    damaged: boolean;
+    knownIssuesText: string | null;
   }): Promise<void> {
-    this.listings.set(input.id, { id: input.id, sellerId: input.sellerId });
+    this.listings.set(input.id, {
+      id: input.id,
+      sellerId: input.sellerId,
+      damaged: input.damaged,
+      knownIssuesText: input.knownIssuesText,
+    });
   }
 
   async upsertConversation(input: {
@@ -343,6 +352,9 @@ describe("runReviewerScenarioSeed", () => {
     expect(store.users.get(reviewerScenarioSeedIds.buyerIds[0])?.role).toBe("buyer");
     expect(store.users.get(reviewerScenarioSeedIds.sellerIds[0])?.role).toBe("seller");
     expect(store.listings.size).toBe(2);
+    const listings = [...store.listings.values()];
+    expect(listings.every((l) => typeof l.damaged === "boolean")).toBe(true);
+    expect(listings.some((l) => l.damaged && l.knownIssuesText)).toBe(true);
     expect(store.conversations.get(reviewerScenarioSeedIds.conversationId)).toMatchObject({
       buyerId: reviewerScenarioSeedIds.buyerIds[0],
       sellerId: reviewerScenarioSeedIds.sellerIds[0],

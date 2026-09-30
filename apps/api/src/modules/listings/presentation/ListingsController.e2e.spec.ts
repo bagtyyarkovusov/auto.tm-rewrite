@@ -143,10 +143,7 @@ describe("ListingsController e2e", () => {
     allowChat: true,
     photos: [{ photoId: suite.id("photo-1"), key: "photo1.jpg", sortOrder: 0 }],
     conditionDisclosure: {
-      accidentReported: false,
-      mileageAccurate: true,
-      ownerCount: 2,
-      serviceHistoryAvailable: true,
+      damaged: true,
       knownIssuesText: "Small scratch",
     },
   };
@@ -186,10 +183,7 @@ describe("ListingsController e2e", () => {
       const listing = await prisma.listing.findUnique({ where: { id: res.body.id } });
       expect(listing).toMatchObject({
         priceTmt: validPayload.priceAmount,
-        accidentReported: validPayload.conditionDisclosure.accidentReported,
-        mileageAccurate: validPayload.conditionDisclosure.mileageAccurate,
-        ownerCount: validPayload.conditionDisclosure.ownerCount,
-        serviceHistoryAvailable: validPayload.conditionDisclosure.serviceHistoryAvailable,
+        damaged: true,
         knownIssuesText: validPayload.conditionDisclosure.knownIssuesText,
       });
 
@@ -451,7 +445,7 @@ describe("ListingsController e2e", () => {
       expect(res.body.code).toBe("VALIDATION_ERROR");
     });
 
-    it("edits conditionDisclosure", async () => {
+    it("edits conditionDisclosure and returns { damaged, knownIssuesText }", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
       const draft = await seedDraft("user-1", validPayload);
@@ -466,25 +460,38 @@ describe("ListingsController e2e", () => {
       const editRes = await request
         .patch(`/api/v1/listings/${listingId}`)
         .set("Authorization", `Bearer ${token}`)
-        .send({
-          conditionDisclosure: {
-            accidentReported: true,
-            mileageAccurate: true,
-            serviceHistoryAvailable: false,
-          },
-        })
+        .send({ conditionDisclosure: { damaged: false } })
         .expect(200);
 
-      expect(editRes.body.conditionDisclosure).toMatchObject({
-        accidentReported: true,
-        mileageAccurate: true,
-        ownerCount: validPayload.conditionDisclosure.ownerCount,
-        serviceHistoryAvailable: false,
+      expect(editRes.body.conditionDisclosure).toEqual({
+        damaged: false,
         knownIssuesText: validPayload.conditionDisclosure.knownIssuesText,
       });
+      const row = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
+      expect(row.damaged).toBe(false);
     });
 
-    it("rejects conditionDisclosure with ownerCount out of bounds", async () => {
+    it("rejects an edit whose disclosure has no Damaged answer", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      const res = await request
+        .patch(`/api/v1/listings/${publishRes.body.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ conditionDisclosure: { knownIssuesText: "Rust" } })
+        .expect(400);
+
+      expect(res.body.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rejects an edit of a Listing without a Damaged answer until it is answered", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
       const draft = await seedDraft("user-1", validPayload);
@@ -495,32 +502,19 @@ describe("ListingsController e2e", () => {
         .send({})
         .expect(201);
       const listingId = publishRes.body.id;
+      // A row from before the migration has no answer.
+      await prisma.listing.update({ where: { id: listingId }, data: { damaged: null } });
 
-      await request
+      const res = await request
         .patch(`/api/v1/listings/${listingId}`)
         .set("Authorization", `Bearer ${token}`)
-        .send({
-          conditionDisclosure: {
-            accidentReported: false,
-            mileageAccurate: true,
-            serviceHistoryAvailable: true,
-            ownerCount: 0,
-          },
-        })
+        .send({ description: "Updated description" })
         .expect(400);
 
-      await request
-        .patch(`/api/v1/listings/${listingId}`)
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          conditionDisclosure: {
-            accidentReported: false,
-            mileageAccurate: true,
-            serviceHistoryAvailable: true,
-            ownerCount: 21,
-          },
-        })
-        .expect(400);
+      expect(res.body.code).toBe("DAMAGED_REQUIRED");
+      const row = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
+      expect(row.damaged).toBeNull();
+      expect(row.description).not.toBe("Updated description");
     });
 
     it("rejects conditionDisclosure with knownIssuesText over 1000 chars", async () => {
@@ -540,9 +534,7 @@ describe("ListingsController e2e", () => {
         .set("Authorization", `Bearer ${token}`)
         .send({
           conditionDisclosure: {
-            accidentReported: false,
-            mileageAccurate: true,
-            serviceHistoryAvailable: true,
+            damaged: false,
             knownIssuesText: "x".repeat(1001),
           },
         })
@@ -670,11 +662,10 @@ describe("ListingsController e2e", () => {
       expect(res.body.conditionDisclosure).toMatchObject(validPayload.conditionDisclosure);
     });
 
-    it("returns detail without conditionDisclosure for older listings", async () => {
+    it("returns detail without conditionDisclosure when a Listing has no Damaged answer", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
-      const { conditionDisclosure: _, ...payloadWithoutDisclosure } = validPayload;
-      const draft = await seedDraft("user-1", payloadWithoutDisclosure);
+      const draft = await seedDraft("user-1", validPayload);
 
       const publishRes = await request
         .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -682,12 +673,30 @@ describe("ListingsController e2e", () => {
         .send({})
         .expect(201);
       const listingId = publishRes.body.id;
+      // A Listing published before the migration has no answer.
+      await prisma.listing.update({ where: { id: listingId }, data: { damaged: null } });
 
       const res = await request
         .get(`/api/v1/listings/${listingId}`)
         .expect(200);
 
       expect(res.body.conditionDisclosure).toBeUndefined();
+    });
+
+    it("rejects publishing a draft without a Damaged answer", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const { conditionDisclosure: _, ...payloadWithoutDisclosure } = validPayload;
+      const draft = await seedDraft("user-1", payloadWithoutDisclosure);
+
+      const res = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(400);
+
+      expect(res.body.code).toBe("INVALID_DRAFT_PAYLOAD");
+      expect(res.body.details.fieldErrors.conditionDisclosure).toEqual(["DAMAGED_REQUIRED"]);
     });
   });
 

@@ -155,6 +155,7 @@ describe("Conversation message broadcast e2e", () => {
           description: "Broadcast test car",
           allowCalls: true,
           allowChat: true,
+          conditionDisclosure: { damaged: false },
           photos: [
             { photoId: suite.id("photo-1"), key: "photo1.jpg", sortOrder: 0 },
           ],
