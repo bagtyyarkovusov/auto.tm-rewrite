@@ -2,6 +2,18 @@
 
 Verification is evidence collection, not a ceremonial command list. Map each issue acceptance criterion to a test, inspection, or manual proof.
 
+## Acceptance evidence
+
+[ADR-0070](../../../docs/adr/0070-test-first-behaviour-and-ui-evidence.md) is Proposed pending founder acceptance. The procedure requested by #456 is recorded here as the single workflow source for test-first and UI evidence.
+
+1. Map every acceptance criterion to its behaviour test or an explicit exemption. Before writing production code for a code-testable criterion, write and run its test. Confirm the failure is the unmet criterion, rather than a setup, import, or dependency error.
+2. Commit and push the failing-test checkpoint, and record red evidence using [Execution state](EXECUTION-STATE.md#acceptance-evidence-record). Then write production code and run the same test to green. Keep earlier red evidence available when updating the state.
+3. Exempt visual look, generated files, and docs-only work from red tests, recording the reason and alternative proof. Testable behaviour behind generated output still needs red evidence.
+4. Prove UI behaviour with tests that render the component or screen, covering the relevant rendered content, taps, disabled states, errors, empty states, and loading states. Source-text searches do not count as behaviour evidence.
+5. Prove UI look with simulator or emulator screenshots of every state listed by the governing design spec. Attach them to the PR, identify each state and spec reference, and give them to the Spec reviewer for comparison. Screenshot or snapshot matching is not required.
+
+Missing render infrastructure or simulator/emulator access is missing evidence. Record the gate, reason, and where it must run; do not substitute source-text checks. #457 owns mobile renderer setup and conversion of existing source-reading specs. Its presence in a dependency list or a renderer package in `package.json` does not prove a working render harness. Inspect current configuration and tests before deciding that the capability exists.
+
 ## Authority and scope
 
 1. Recheck the issue criteria and the governing requirements or decisions affected by the diff. Follow references needed to resolve a changed behavior or claim.

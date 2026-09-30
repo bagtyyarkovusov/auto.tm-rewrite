@@ -9,7 +9,7 @@ The canonical `agent/issue-<N>` branch and its pull request are the durable rese
 Some hosts create a linked worktree and a `claude/<name>` or `codex/<name>` branch before the task begins.
 
 1. Inspect `git worktree list --porcelain`, the current branch, status, local/remote task branches, and open PRs.
-2. If the current checkout is already an isolated linked worktree, reuse it. Create or switch to the workflow's canonical branch in that worktree; do not create a second linked worktree for the same task.
+2. If this is a queue implementer, follow the host-specific creation route below and preserve the parent chat's checkout. Otherwise, if the current checkout is already an isolated linked worktree, reuse it. Create or switch to the workflow's canonical branch in that worktree; do not create a second linked worktree for the same task.
 3. Record any host scaffold branch and its starting SHA. It is cleanup-eligible only while it remains unchanged and has no PR or remote work.
 4. Create a new linked worktree only when the current checkout is the shared repository checkout or the task explicitly needs another isolated checkout.
 
@@ -17,14 +17,15 @@ Write only in your own worktree and in `/tmp`. Never create a worktree for anoth
 
 ## Queue implementer worktrees
 
-[ADR-0069](../adr/0069-queue-implementers-run-in-host-created-worktrees.md) sets who owns each worktree under [run-queue](../../.claude/skills/run-queue/SKILL.md).
+[ADR-0069](../adr/0069-queue-implementers-run-in-host-created-worktrees.md), amended for Codex by [ADR-0071](../adr/0071-codex-queue-models-and-owned-worktrees.md), sets who owns each worktree under [run-queue](../../.claude/skills/run-queue/SKILL.md).
 
-- **Who creates it.** The orchestrator launches each implementer with worktree isolation, such as Claude Code's Agent tool with `isolation: "worktree"`. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch. Only its implementer writes there. An issue has at most one writing worktree at a time; each fix round or resume gets a new one, and earlier ones follow the cleanup rules below.
+- **Who creates it on Claude Code.** The orchestrator launches each implementer with worktree isolation, such as Claude Code's Agent tool with `isolation: "worktree"`. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch. Only its implementer writes there. An issue has at most one writing worktree at a time; each fix round or resume gets a new one, and earlier ones follow the cleanup rules below.
+- **Who creates it on Codex.** Each writing subagent creates and owns a fresh separate linked worktree. Fetch the supplied base, then create an absolute unique path with `git worktree add --detach <absolute-path> <base>`, where the base is `origin/main`, the stacked parent head, or the pushed canonical issue branch for a resume. All subsequent commands and edits target that absolute directory. The coordinator supplies scope and base but never creates or writes in a writer's worktree. The parent chat's worktree stays in place. Reservation, checkpoint, refusal, and cleanup rules below still apply.
 - **How it reaches the issue branch.** The first implementer runs `git fetch origin`, then `git switch -c agent/issue-<N> origin/main`, or starts from the parent branch head when stacked, and pushes the reservation. A later implementer runs `git fetch origin`, then `git switch --detach origin/agent/issue-<N>` and pushes with `git push origin HEAD:agent/issue-<N>`, because the named branch may be checked out in an earlier worktree.
 - **Checkpoints.** Implementers commit and push small checkpoints often. Only pushed work survives an agent that stops.
-- **Who retires it.** The host removes it when its implementer made no changes. Otherwise it stays after the agent ends, and the host's sweep removes it only once it holds no changed or untracked files and no unpushed commits. The orchestrator never removes another agent's worktree. After the PR merges, it records the cleanup tuple and gives the user the commands below, or leaves the worktree to the sweep. A removed worktree can leave its unchanged `worktree-agent-<id>` branch behind; the user deletes it with the conditional `update-ref` below.
+- **Who retires it.** Claude's host may remove an unchanged worktree or sweep an eligible one. A Codex writer-created worktree stays for the user to retire under the cleanup gate; automatic host cleanup is not assumed. The orchestrator never removes another agent's worktree. After the PR merges, it records the cleanup tuple and gives the user the commands below, or leaves the worktree to the sweep. A removed worktree can leave its unchanged `worktree-agent-<id>` branch behind; the user deletes it with the conditional `update-ref` below.
 - **A stopped implementer.** A fresh implementer continues from the pushed branch in its own new worktree. It may read the stopped worktree to salvage uncommitted drafts, but never writes there or runs git against it. The user or the host removes the stopped worktree.
-- **Hosts without isolated subagents.** The orchestrator does not create or write to issue worktrees. The founder runs one `run-issue` session per issue in the queue order, and each session uses the worktree its host gave it or creates its own under this lifecycle.
+- **Hosts without either isolation route.** The orchestrator does not create or write to issue worktrees. The founder runs one `run-issue` session per issue in the queue order, and each session uses the worktree its host gave it or creates its own under this lifecycle.
 
 ## Treat merge and cleanup as separate results
 

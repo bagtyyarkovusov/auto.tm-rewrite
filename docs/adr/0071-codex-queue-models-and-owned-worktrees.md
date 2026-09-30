@@ -45,6 +45,6 @@ The host-specific model profile lives in [queue models](../agents/queue-models.m
 
 ## References
 
-- [Founder approval on #456](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/456)
+- [Founder approval on #456](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/456#issuecomment-5911861282)
 - [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)
 - [Worktree lifecycle](../agents/worktree-lifecycle.md)

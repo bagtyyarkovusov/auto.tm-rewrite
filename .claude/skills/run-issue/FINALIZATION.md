@@ -37,6 +37,15 @@ A fix-in-place delta review ([ADR-0065](../../../docs/adr/0065-small-changes-ski
 
 If Claude Code desktop cannot post the PR comment, the integration owner transfers its read-only, SHA-pinned verdict and evidence to the PR with the original reviewer, provider, and client attribution. Record the evidence for accepting or rejecting every finding in the PR. Resolve accepted findings, rerun proportionate verification, commit and push the fixes, and pin the new SHA. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates the affected earlier verdict. Exception ([ADR-0065](../../../docs/adr/0065-small-changes-skip-the-issue-ceremony.md)): a fix for a finding of about 50 lines or fewer, within the PR's scope and with no migration, contract change, or product decision, needs only a fresh read-only review of the new commits, recorded with `Review axis: Delta`, the base and new commits, and the verdicts it carries forward; earlier verdicts carry forward unless that reviewer finds the delta changes what they covered, and an axis whose verdict no longer holds gets a full re-review. Non-blocking findings deferred from the PR are batched into one follow-up issue or batch PR per area, as [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065) describes. Continue only when both axes pass against the latest commit, directly or carried forward by a `Delta` review.
 
+### Spec evidence checklist
+
+For each acceptance criterion, inspect the [acceptance evidence](VERIFICATION.md#acceptance-evidence) and its [PR record](EXECUTION-STATE.md#acceptance-evidence-record):
+
+- Would the criterion's test fail if the required behaviour broke? Inspect the assertion and exercised path; a green command alone is insufficient.
+- Does its recorded failing run demonstrate the unmet criterion before production implementation, followed by the same test passing, or a valid exemption?
+- For UI behaviour, does the test actually render and exercise the component or screen?
+- For UI look, are PR-attached simulator or emulator screenshots present for every governing design state, and does each agree with its spec? Record mismatches and missing states as findings. No screenshot or snapshot matcher is required.
+
 ## Ready PR
 
 The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one mutable `Execution state`, followed by:

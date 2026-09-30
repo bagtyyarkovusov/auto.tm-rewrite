@@ -1,6 +1,6 @@
 ---
 name: run-queue
-description: Works a founder-given ordered list of AutoTM issues from one orchestrator session. The orchestrator starts each issue's implementer in a worktree the host creates for it; each issue still gets its own run-issue branch, draft pull request, execution state, and fixed-commit reviews. The orchestrator sets auto-merge when both axes pass and starts the next ready issue without waiting for CI. Use when the user invokes /run-queue with issue numbers or asks one agent to work a queue of issues.
+description: Works a founder-given ordered list of AutoTM issues from one orchestrator session. The orchestrator dispatches each implementer into its own worktree using the host-specific lifecycle; each issue still gets its own run-issue branch, draft pull request, execution state, and fixed-commit reviews. The orchestrator sets auto-merge when both axes pass and starts the next ready issue without waiting for CI. Use when the user invokes /run-queue with issue numbers or asks one agent to work a queue of issues.
 argument-hint: "[issue numbers in order, with dependencies]"
 arguments:
   - queue
@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 # Run a queue of issues
 
-One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Under this skill the orchestrator is the issue's integration owner, as run-issue, FINALIZATION, and ADR-0064 and ADR-0067 mean the term. Each issue's implementer is a separate agent in its own worktree, as [ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md) decides. Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, and stacking.
+One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Under this skill the orchestrator is the issue's integration owner, as run-issue, FINALIZATION, and ADR-0064 and ADR-0067 mean the term. Each issue's implementer is a separate agent in its own worktree, under the [host-specific lifecycle](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees). Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, and stacking.
 
 ## Accept the queue
 
@@ -17,24 +17,19 @@ One orchestrator session owns a queue from start to finish, so it keeps context 
 2. For each listed issue, read its `## Depends on` section, labels, comments, and any branch or PR. Build the order: listed order, moved later only when a dependency is still open.
 3. Skip, and report, any issue that is closed, labelled `ready-for-human`, or already owned by another open branch or PR. An existing branch or PR for a listed issue is resumed through [resume-issue](../resume-issue/SKILL.md) only when it has no other live owner.
 4. Never query provider quota. Implementers push checkpoints often, so another agent can resume any issue from its PR if a session stops.
-5. Confirm the host can start a subagent in a worktree it creates for that subagent, such as Claude Code's Agent tool with `isolation: "worktree"`. If it cannot, see [Hosts without isolated subagents](#hosts-without-isolated-subagents).
+5. Confirm a supported worktree route: Claude host-created isolation or Codex writer-created ownership under [ADR-0071](../../../docs/adr/0071-codex-queue-models-and-owned-worktrees.md). If neither is available, see [Hosts without isolated subagents](#hosts-without-isolated-subagents).
 
 ## Agent types and models
 
-The founder fixed the model per role ([#455](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/455)). Launch these project agent types from [.claude/agents](../../agents):
+Use the [queue model profile](../../../docs/agents/queue-models.md) for the actual host. On Codex, dispatch separate writing and review tasks with that profile; the writing agent creates its own worktree. The Claude project agent types live in [.claude/agents](../../agents).
 
-| Role | Agent type | Model | Effort |
-|---|---|---|---|
-| Implementer, bug fixer, review-finding fixer | `queue-implementer` | Sonnet 5.5 (`claude-sonnet-5-5`) | high |
-| Standards, Spec, or Delta reviewer | `queue-reviewer` | Opus 5.5 (`claude-opus-5-5`) | high |
-
-The first file in a new `.claude/agents/` directory needs a session restart before the host picks it up. Until then, the agent types are missing. Launch a reviewer as the built-in `Plan` type, which has no Edit or Write, with `model` set to Opus. Launch an implementer as `general-purpose` with `model` set to Sonnet and `isolation: "worktree"`. Effort follows the session.
+On Claude Code, the first file in a new `.claude/agents/` directory needs a session restart before the host picks it up. Until then, the agent types are missing. Launch a reviewer as the built-in `Plan` type, which has no Edit or Write, with `model` set to Opus. Launch an implementer as `general-purpose` with `model` set to Sonnet and `isolation: "worktree"`. Effort follows the session.
 
 ## Implementers and worktrees
 
-Each implementer gets its own linked worktree, and an issue has at most one writing worktree at a time ([ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md), amending ADR-0058). The host creates it; the orchestrator never does.
+Each implementer gets its own linked worktree, and an issue has at most one writing worktree at a time ([ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md), amending ADR-0058). Creation follows the [host-specific lifecycle](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees); the orchestrator never creates it.
 
-- **Who creates it.** The orchestrator launches the implementer with worktree isolation. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch, and it belongs to that implementer.
+- **Who creates it.** Use the lifecycle's Claude or Codex route. Give Codex writers an absolute unique worktree path and the supplied base; the writer creates and owns that worktree before editing.
 - **Who writes to it.** Only its implementer. Every agent writes only in its own worktree and in `/tmp`. If the host refuses a write, the agent stops and reports the exact message. It never retries through a shell command, a script, or another tool. The orchestrator never edits, formats, or commits in an implementer's worktree, and never creates issue worktrees with `git worktree add`.
 - **How it reaches the issue branch.** The first implementer runs `git fetch origin`, then `git switch -c agent/issue-<N> origin/main` (or from the parent branch head when stacked), and pushes the reservation with `git push -u origin agent/issue-<N>`. A later implementer for the same issue runs `git fetch origin`, `git switch --detach origin/agent/issue-<N>`, and pushes with `git push origin HEAD:agent/issue-<N>`, because the named branch may still be checked out in the earlier worktree.
 - **Guard-friendly commands.** Keep Bash commands plain and separate. Pass environment values, such as the CI-only values in `scripts/ci-services.sh`, as literal `VAR=value` prefixes, not through `source` or `env $(…)`. The guard refuses commands it cannot verify.
@@ -45,6 +40,7 @@ Each implementer gets its own linked worktree, and an issue has at most one writ
 ### Limits
 
 - On a host that cannot message a finished agent, a finished or stopped implementer cannot be messaged or resumed with its context. Each fix round starts a fresh implementer from the PR: its `Execution state`, the review comments, and the branch head.
+- Agents report once and stop. Wake an agent only for new work, rather than repeated status reports.
 - Run about two implementers at a time. Each worktree needs its own install, each full gate run starts its own service stack, self-hosted CI may share the machine, and parallel agents share one account's API session limit. ADR-0064 still sets no limit on issues in flight; issues waiting on CI or review need no running implementer.
 
 ### Resume a stopped implementer
@@ -52,13 +48,13 @@ Each implementer gets its own linked worktree, and an issue has at most one writ
 When an implementer stops before it reports, for example at an API session limit:
 
 1. Read the PR's `Execution state` and the pushed branch head.
-2. Launch a fresh implementer in a new host-created worktree. It checks out the pushed head with `git switch --detach origin/agent/issue-<N>`.
+2. Launch a fresh implementer in a new worktree through the host-specific lifecycle. It checks out the pushed head with `git switch --detach origin/agent/issue-<N>`.
 3. Give it the stopped agent's worktree path. It may read files there, for example with `cat`, and copy uncommitted drafts into its own worktree. It never writes in that worktree and never runs git against it.
 4. Leave the stopped worktree to the user or the host's sweep, and list it in the final report.
 
 ### Hosts without isolated subagents
 
-When the host cannot start a subagent in its own worktree, do not create worktrees for other issues or write to them. Tell the founder, who runs one session per issue with `/run-issue <N>` in the queue order. Each of those sessions works in the worktree its host gave it, or in one it created for itself under the [worktree lifecycle](../../../docs/agents/worktree-lifecycle.md).
+When neither the Claude isolation route nor the Codex owned-worktree route is available, do not create worktrees for other issues or write to them. Tell the founder, who runs one session per issue with `/run-issue <N>` in the queue order. Each of those sessions works in the worktree its host gave it, or in one it created for itself under the [worktree lifecycle](../../../docs/agents/worktree-lifecycle.md).
 
 ## Per-issue loop
 
