@@ -12,6 +12,7 @@ import {
   HeadBucketCommand,
   ListObjectsV2Command,
   PutBucketPolicyCommand,
+  PutBucketLifecycleConfigurationCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -32,10 +33,14 @@ export function publicReadPolicy(bucket) {
         Effect: "Allow",
         Principal: { AWS: ["*"] },
         Action: ["s3:GetObject"],
-        Resource: [`arn:aws:s3:::${bucket}/*`],
+        Resource: [publicReadResource(bucket)],
       },
     ],
   };
+}
+
+function publicReadResource(bucket) {
+  return `arn:aws:s3:::${bucket}/${bucket === "catalog-assets" ? "brands/" : ""}*`;
 }
 
 export function assertPublicReadOnlyPolicy(policy, bucket) {
@@ -43,37 +48,34 @@ export function assertPublicReadOnlyPolicy(policy, bucket) {
   const statements = Array.isArray(parsed.Statement)
     ? parsed.Statement
     : [parsed.Statement].filter(Boolean);
-  const allowedActions = new Set();
-
+  let grantsRead = false;
   for (const statement of statements) {
     if (statement?.Effect !== "Allow") continue;
-    const actions = Array.isArray(statement.Action)
-      ? statement.Action
-      : [statement.Action].filter(Boolean);
-    const resources = Array.isArray(statement.Resource)
-      ? statement.Resource
-      : [statement.Resource].filter(Boolean);
-    const appliesToBucket = resources.includes(`arn:aws:s3:::${bucket}/*`);
-    const isAnonymous =
-      statement.Principal === "*" ||
-      statement.Principal?.AWS === "*" ||
-      statement.Principal?.AWS?.includes?.("*");
-
-    if (appliesToBucket && isAnonymous) {
-      for (const action of actions) {
-        allowedActions.add(action);
-      }
+    const isAnonymous = statement.Principal === "*" ||
+      statement.Principal?.AWS === "*" || statement.Principal?.AWS?.includes?.("*");
+    if (!isAnonymous) continue;
+    const actions = Array.isArray(statement.Action) ? statement.Action : [statement.Action];
+    const resources = Array.isArray(statement.Resource) ? statement.Resource : [statement.Resource];
+    // Backup/restore accept only the repository-owned anonymous grant. Checking
+    // every anonymous statement also catches broad grants and narrower writes.
+    if (!actions.length || actions.some((action) => action !== "s3:GetObject") ||
+        !resources.length || resources.some((resource) => resource !== publicReadResource(bucket))) {
+      throw new Error(`Bucket ${bucket} policy must grant anonymous s3:GetObject only on ${publicReadResource(bucket)}`);
     }
+    grantsRead = true;
   }
+  if (!grantsRead) {
+    throw new Error(`Bucket ${bucket} policy must grant anonymous s3:GetObject only on ${publicReadResource(bucket)}`);
+  }
+}
 
-  const extras = [...allowedActions].filter((action) => action !== "s3:GetObject");
-  if (!allowedActions.has("s3:GetObject") || extras.length > 0) {
-    throw new Error(
-      `Bucket ${bucket} policy must grant anonymous s3:GetObject only; got ${[
-        ...allowedActions,
-      ].join(", ") || "none"}`,
-    );
-  }
+export function catalogPendingLifecycle() {
+  return { Rules: [{
+    ID: "ExpirePendingBrandLogos",
+    Status: "Enabled",
+    Filter: { Prefix: "pending/" },
+    Expiration: { Days: 1 },
+  }] };
 }
 
 export function createMinioClientFromEnv(env = process.env) {
@@ -110,6 +112,12 @@ export async function bootstrapBuckets(client, buckets = MEDIA_BUCKETS) {
       }),
     );
     assertPublicReadOnlyPolicy(policy, bucket);
+    if (bucket === "catalog-assets") {
+      await client.send(new PutBucketLifecycleConfigurationCommand({
+        Bucket: bucket,
+        LifecycleConfiguration: catalogPendingLifecycle(),
+      }));
+    }
     results.push({ bucket, created });
   }
 
