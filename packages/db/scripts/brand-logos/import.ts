@@ -182,7 +182,7 @@ class Importer {
         data: { logoKey },
       });
       if (swapped.count === 0) {
-        await this.deleteObjects(files.map((f) => f.key));
+        // Deterministic keys may already belong to the winning import. Retain them.
         return result("failed", current, "the logo changed while importing; run the import again");
       }
 
@@ -249,12 +249,17 @@ class Importer {
   }
 
   private async deleteObjects(keys: string[]): Promise<void> {
-    await this.deps.s3.send(
+    const response = await this.deps.s3.send(
       new DeleteObjectsCommand({
         Bucket: this.deps.bucket,
         Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
       }),
     );
+    if (response.Errors?.length) {
+      throw new Error(response.Errors.map((error) =>
+        `${error.Key ?? "unknown key"}: ${error.Code ?? "unknown error"}: ${error.Message ?? "no message"}`,
+      ).join("; "));
+    }
   }
 }
 

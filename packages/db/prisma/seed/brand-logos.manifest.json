@@ -235,17 +235,8 @@
     {
       "slug": "chrysler",
       "tier": "A",
-      "source": "simple-icons",
-      "simpleIconsSlug": "chrysler",
-      "simpleIconsVersion": "16.33.0",
-      "sourceUrl": "https://github.com/simple-icons/simple-icons/blob/16.33.0/icons/chrysler.svg",
-      "upstreamSource": "https://www.stellantis.com/en/brands/chrysler",
-      "licence": "CC0-1.0",
-      "licenceUrl": "https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md",
-      "trademark": "Trademark of the Chrysler manufacturer; shown only to identify the vehicle make. This manifest licenses the file, not the mark.",
-      "retrievedAt": "2026-09-30",
-      "sha256Master": "760fe7ef4fccc504bee0a9f4ac91e2ca23bffd9c294aa92a3922538b50c3c403",
-      "transform": "alpha"
+      "source": null,
+      "reason": "Founder excluded the Simple Icons 16.33.0 chrysler wordmark on 2026-09-30: too thin at 30 px. Former CC0-1.0 source: https://github.com/simple-icons/simple-icons/blob/16.33.0/icons/chrysler.svg; master sha256: 760fe7ef4fccc504bee0a9f4ac91e2ca23bffd9c294aa92a3922538b50c3c403."
     },
     {
       "slug": "man",
@@ -466,17 +457,8 @@
     {
       "slug": "iveco",
       "tier": "D",
-      "source": "simple-icons",
-      "simpleIconsSlug": "iveco",
-      "simpleIconsVersion": "16.33.0",
-      "sourceUrl": "https://github.com/simple-icons/simple-icons/blob/16.33.0/icons/iveco.svg",
-      "upstreamSource": "https://www.iveco.com/global/welcome",
-      "licence": "CC0-1.0",
-      "licenceUrl": "https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md",
-      "trademark": "Trademark of the Iveco manufacturer; shown only to identify the vehicle make. This manifest licenses the file, not the mark.",
-      "retrievedAt": "2026-09-30",
-      "sha256Master": "24b581068086f82937486f53b2f6220bb0830368693ff258aa675aae94c9068c",
-      "transform": "alpha"
+      "source": null,
+      "reason": "Founder excluded the Simple Icons 16.33.0 iveco wordmark on 2026-09-30: too thin at 30 px. Former CC0-1.0 source: https://github.com/simple-icons/simple-icons/blob/16.33.0/icons/iveco.svg; master sha256: 24b581068086f82937486f53b2f6220bb0830368693ff258aa675aae94c9068c."
     },
     {
       "slug": "gaz",
