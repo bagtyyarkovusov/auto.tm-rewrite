@@ -1,0 +1,26 @@
+import { useMemo } from "react";
+import { router, type Href } from "expo-router";
+
+import { createRoutePickerActions, type PickerRouter } from "./pickerActions";
+import { useRecentChoicesStore } from "./recentSearches";
+
+/** expo-router's imperative router, narrowed to what the pickers use. */
+const pickerRouter: PickerRouter = {
+  push: (href) => router.push(href as Href),
+  dismissAll: () => router.dismissAll(),
+  dismissTo: (href) => router.dismissTo(href as Href),
+  canDismiss: () => router.canDismiss(),
+};
+
+/** Picker actions for the pushed Brand and Model picker screens. */
+export function useRoutePickerActions() {
+  const record = useRecentChoicesStore((s) => s.record);
+  return useMemo(
+    () =>
+      createRoutePickerActions({
+        router: pickerRouter,
+        record: (choice) => void record(choice),
+      }),
+    [record],
+  );
+}

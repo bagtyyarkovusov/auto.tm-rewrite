@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useListingCount } from "../../api/listings/useListingCount";
 
 import type { UseListingFiltersReturn } from "./useListingFilters";
+import { useApplyFilterChoice } from "./useApplyFilterChoice";
 import { BrandModelFilterControl } from "./BrandModelFilterControl";
 import { CityFilterControl } from "./CityFilterControl";
 import { ConditionFilterControl } from "./ConditionFilterControl";
@@ -49,8 +50,9 @@ export function FilterSheet({ open, onOpenChange, filters }: FilterSheetProps) {
     }
   }
 
+  const applyChoice = useApplyFilterChoice(draft, apply);
   const handleApply = () => {
-    apply();
+    applyChoice();
     onOpenChange(false);
   };
 

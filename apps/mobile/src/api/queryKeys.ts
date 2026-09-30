@@ -24,6 +24,8 @@ export const queryKeys = {
       [...queryKeys.catalog.all(), "regions", locale] as const,
     cities: (regionId: string, locale: string = "ru") =>
       [...queryKeys.catalog.all(), "cities", regionId, locale] as const,
+    search: (query: string, locale: string) =>
+      [...queryKeys.catalog.all(), "search", query, locale] as const,
   },
 
   listings: {
@@ -39,6 +41,8 @@ export const queryKeys = {
       [...queryKeys.listings.all(), "count", filters] as const,
     modelCounts: (filters: unknown) =>
       [...queryKeys.listings.all(), "model-counts", filters] as const,
+    brandCounts: (filters: unknown) =>
+      [...queryKeys.listings.all(), "brand-counts", filters] as const,
     detail: (id: string) =>
       [...queryKeys.listings.all(), "detail", id] as const,
     myListings: () => [...queryKeys.listings.all(), "my-listings"] as const,
