@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../src/api/client";
@@ -60,6 +61,7 @@ export default function ResultsScreen() {
   const sort = filters.active.sort ?? "newest";
   const applied = useMemo(() => ({ ...filters.active, sort }), [filters.active, sort]);
   const viewer = useViewer();
+  const queryClient = useQueryClient();
   const returnTo = useMemo(() => ({ pathname: "/(tabs)/(search)/results" as const, params: writeResultsRouteState(applied) }), [applied]);
   useFeedFavoriteReplay(returnTo);
   const feed = useListings({ filters: applied, viewerId: viewer?.userId ?? null });
@@ -94,8 +96,10 @@ export default function ResultsScreen() {
     {chips}
   </View>;
   const offline = feed.fetchStatus === "paused" && items.length === 0;
-  const empty = offline ? <FeedError error={new ApiError("NETWORK_ERROR", 0)} onRetry={() => void feed.refetch()} /> : feed.isPending ? <View accessibilityLabel={t("resultsLoading")} className="gap-2">{[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} />)}</View>
-    : feed.isError ? <FeedError error={feed.error} onRetry={() => void feed.refetch()} />
+  // The count and the brand/city names are separate queries. After an outage they must reload with the feed.
+  const retry = () => { void queryClient.refetchQueries({ predicate: (query) => query.state.status === "error" || query.state.fetchStatus === "paused" }); };
+  const empty = offline ? <FeedError error={new ApiError("NETWORK_ERROR", 0)} onRetry={retry} /> : feed.isPending ? <View accessibilityLabel={t("resultsLoading")} className="gap-2">{[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} />)}</View>
+    : feed.isError ? <FeedError error={feed.error} onRetry={retry} />
       : filters.count ? <FilteredEmpty onReset={reset} /> : <FeedEmpty />;
   return <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
     <ResultsHeader count={count.data} sort={sort} onSort={() => setSortOpen(true)} onBack={goBack} />

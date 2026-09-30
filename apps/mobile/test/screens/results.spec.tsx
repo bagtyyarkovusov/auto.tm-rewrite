@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { renderMobile, fireEvent, routeParams, routerMock } from "../render";
+import { renderMobile, act, fireEvent, routeParams, routerMock } from "../render";
 import ResultsScreen from "../../app/(tabs)/(search)/results";
 
 const state = vi.hoisted(() => ({
@@ -117,6 +117,17 @@ describe("Results approved behavior", () => {
     view.rerender(<ResultsScreen />);
     expect(view.getByLabelText("Filters: 0")).toBeTruthy();
     expect(view.getByText("Retry")).toBeTruthy();
+  });
+  it("Retry reloads every failed query behind the screen (count, catalog names), not only the feed", async () => {
+    state.error = true;
+    const view = renderMobile(<ResultsScreen />);
+    const failed = vi.fn().mockRejectedValueOnce(new Error("Network request failed")).mockResolvedValue("ok");
+    const healthy = vi.fn().mockResolvedValue("ok");
+    await view.queryClient.fetchQuery({ queryKey: ["failed-while-offline"], queryFn: failed }).catch(() => undefined);
+    await view.queryClient.fetchQuery({ queryKey: ["loaded-before-the-outage"], queryFn: healthy });
+    await act(async () => { fireEvent.press(view.getByText("Retry")); });
+    expect(failed).toHaveBeenCalledTimes(2);
+    expect(healthy).toHaveBeenCalledTimes(1);
   });
   it("shows an offline recovery instead of indefinite skeletons when the initial query is paused", () => {
     state.pending = true; state.paused = true;
