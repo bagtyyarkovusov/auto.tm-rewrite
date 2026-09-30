@@ -129,7 +129,7 @@ export function ModelPicker({
         <Text className="min-w-0 flex-1 text-2xl font-heading text-foreground" numberOfLines={1}>
           {picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
         </Text>
-        <Button variant="ghost" className="h-11 px-3" onPress={actions.changeBrand}>
+        <Button variant="ghost" className="h-11 px-3 py-0" onPress={actions.changeBrand}>
           <Text className="text-base font-medium text-primary">{t("changeBrand")}</Text>
         </Button>
       </View>
@@ -163,7 +163,7 @@ export function ModelPicker({
         {actions.moreFilters ? (
           <Button
             variant="ghost"
-            className="h-11"
+            className="h-11 py-0"
             disabled={!ready}
             onPress={() => actions.moreFilters?.(picker.choice())}
           >
