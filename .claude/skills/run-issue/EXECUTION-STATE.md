@@ -18,6 +18,7 @@ Use this shape:
 - **Stacked on:** `<parent PR and parent head SHA, or none>`
 - **Last checkpoint:** `<commit SHA>`
 - **Completed acceptance criteria:** `<issue checkbox references or concise list>`
+- **Acceptance evidence:** `<criterion, red checkpoint/run, green run, or exemption; UI state/spec/screenshot links>`
 - **Verification:** `<command and pass/fail/unknown result>`
 - **Current failure:** `<root cause or none>`
 - **Interrupted commands:** `<command and last known state or none>`
@@ -44,6 +45,16 @@ Checkpoint commits may be small. The final squash keeps `main` history focused.
 
 Run focused checks for each changed behavior before its checkpoint. Record the exact result in Execution state. A checkpoint is recoverable progress, not a verified final commit. [Verification](VERIFICATION.md) owns the complete gates before final review; a later change invalidates evidence for inputs it affects.
 
+## Acceptance evidence record
+
+For the [acceptance-evidence procedure](VERIFICATION.md#acceptance-evidence), keep one row per criterion in the mutable PR state:
+
+| Criterion | Red checkpoint and run | Green run | Exemption or visual evidence |
+|---|---|---|---|
+| `<criterion>` | `<pushed SHA, exact command, assertion/failure output>` | `<SHA, same command, result>` | `<reason and inspection proof, or state/spec/screenshot links>` |
+
+Record the actual failure reason and preserve the red checkpoint SHA and output after the test passes. Mark unavailable or interrupted evidence `unknown`, with its next action. For docs-only work record the exemption and documentation checks; no artificial failing test is needed.
+
 ## Handoff inspection
 
-An incoming Codex desktop, Claude Code desktop, `claude-kimi` CLI, or other supported client inspects the issue, local and remote branch heads, worktree status, draft PR body and comments, checks, running processes, and the complete diff before changing anything. It resumes the existing record instead of creating another branch, PR, or summary document. It reuses the worktree only when no other session or agent owns it; otherwise it works in its own new worktree from the pushed branch ([ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md)).
+An incoming Codex desktop, Claude Code desktop, `claude-kimi` CLI, or other supported client inspects the issue, local and remote branch heads, worktree status, draft PR body and comments, checks, running processes, and the complete diff before changing anything. It resumes the existing record instead of creating another branch, PR, or summary document. It reuses the worktree only when no other session or agent owns it; otherwise it works in its own new worktree from the pushed branch under the [host-specific lifecycle](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees).

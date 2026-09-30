@@ -22,6 +22,10 @@ Apply the authority order used by the design skills:
 
 For mobile discovery (Home, the brand and model pickers, Search, Results, Sort, Search parameters) and Listing cards and detail, follow ADR-0051 and the approved specs in `docs/prd/features/33-search-discovery.md` and `32-listings.md`: Auto.ru is the journey reference, never a visual template or a feature list. Use the Kolesa guide only for other mobile screens without an approved spec, and never copy its visual language or deferred feature breadth. For UI details, require clear user goal, affordances/signifiers, constraints, feedback, recovery, page states, accessibility, localization, and microinteraction behavior.
 
+## UI proof
+
+After identifying the governing design, inventory its required states before implementation and follow [Acceptance evidence](VERIFICATION.md#acceptance-evidence) for behaviour tests and visual proof. Keep state-to-spec evidence in the [PR record](EXECUTION-STATE.md#acceptance-evidence-record); [Spec review](FINALIZATION.md#spec-evidence-checklist) owns the comparison.
+
 ## Implementation grouping
 
 The main session remains the owner. Use [SUBAGENT-MODE.md](SUBAGENT-MODE.md) when the work has separable groups. Whenever subagents are used:
