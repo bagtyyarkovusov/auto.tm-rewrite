@@ -23,7 +23,7 @@ const listings = [
 ] as unknown as ListingsSchemas.ListingSummary[];
 
 const brandsPage = {
-  items: [{ id: "brand-1", name: "Toyota" }],
+  items: [{ id: "brand-1", name: "Toyota", logoUrl: "https://files.test/toyota.png" }],
   nextCursor: null,
   hasMore: false,
 };
@@ -71,6 +71,8 @@ describe("useFeedCatalogMaps namesPending", () => {
     await waitFor(() => expect(result.current.namesPending).toBe(false));
     expect(result.current.brandName("brand-1")).toBe("Toyota");
     expect(result.current.modelName("model-1")).toBe("Camry");
+    expect(result.current.brandLogoUrl("brand-1")).toBe("https://files.test/toyota.png");
+    expect(result.current.brandLogoUrl("unknown")).toBeUndefined();
   });
 
   it("stops pending when the brands query fails, leaving the brand unnamed", async () => {

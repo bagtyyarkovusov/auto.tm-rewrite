@@ -217,7 +217,7 @@ describe("useListingFilters route write-back", () => {
     expect(result.current.active).toEqual({ sort: "newest", cityId: "ashgabat" });
   });
 
-  it("reports an empty filter to onApply on reset", () => {
+  it("clears the filters but keeps the current sort on reset", () => {
     const onApply = vi.fn();
     const { result } = renderHook(() => useListingFilters({ sort: "price_asc", cityId: "ashgabat" }, onApply));
 
@@ -226,9 +226,10 @@ describe("useListingFilters route write-back", () => {
     });
 
     expect(onApply).toHaveBeenCalledOnce();
-    expect(onApply).toHaveBeenCalledWith({});
-    expect(result.current.active).toEqual({});
-    expect(result.current.draft).toEqual({});
+    expect(onApply).toHaveBeenCalledWith({ sort: "price_asc" });
+    expect(result.current.active).toEqual({ sort: "price_asc" });
+    expect(result.current.draft).toEqual({ sort: "price_asc" });
+    expect(result.current.count).toBe(0);
   });
 
   it("calls the latest onApply after a rerender", () => {

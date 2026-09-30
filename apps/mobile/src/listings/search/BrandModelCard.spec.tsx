@@ -20,4 +20,17 @@ describe("Brand/model card", () => {
     view.rerender(<BrandModelCard hasBrand brandName="Toyota" modelNames={[]} onEdit={vi.fn()} onClear={vi.fn()} />);
     expect(view.getByText("All models · choose models")).toBeTruthy();
   });
+  it("shows the chosen brand's logo, or its letter when there is none, instead of the generic car", () => {
+    const view = renderMobile(<BrandModelCard hasBrand brandName="Toyota" brandLogoUrl="https://files.test/toyota.png" modelNames={[]} onEdit={vi.fn()} onClear={vi.fn()} />);
+    expect(view.UNSAFE_getByProps({ source: { uri: "https://files.test/toyota.png" } })).toBeTruthy();
+    expect(view.UNSAFE_queryAllByProps({ name: "Car" })).toHaveLength(0);
+    view.rerender(<BrandModelCard hasBrand brandName="Toyota" modelNames={[]} onEdit={vi.fn()} onClear={vi.fn()} />);
+    expect(view.getByText("T", { includeHiddenElements: true })).toBeTruthy();
+    expect(view.UNSAFE_queryAllByProps({ name: "Car" })).toHaveLength(0);
+  });
+  it("keeps the generic car when no brand is chosen", () => {
+    const view = renderMobile(<BrandModelCard hasBrand={false} modelNames={[]} onEdit={vi.fn()} onClear={vi.fn()} />);
+    expect(view.UNSAFE_queryAllByProps({ name: "Car" })).toHaveLength(1);
+    expect(view.queryByText("T", { includeHiddenElements: true })).toBeNull();
+  });
 });

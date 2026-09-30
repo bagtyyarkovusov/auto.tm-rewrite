@@ -1,3 +1,4 @@
+import { onlineManager, useQuery } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderMobile, act, fireEvent, routeParams, routerMock } from "../render";
@@ -26,7 +27,7 @@ vi.mock("../../src/api/catalog/useCities", () => ({ useCities: () => ({ data: { 
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => null }));
 vi.mock("../../src/listings/feed/useFeedFavoriteReplay", () => ({ useFeedFavoriteReplay: vi.fn() }));
 vi.mock("../../src/listings/useListingFavorite", () => ({ useListingFavorite: () => ({ favorited: false, pending: false, toggle: vi.fn() }) }));
-vi.mock("../../src/listings/feed/useFeedCatalogMaps", () => ({ useFeedCatalogMaps: () => ({ brandName: () => "Toyota", modelName: (id: string) => ({ camry: "Camry", corolla: "Corolla", rav4: "RAV4" })[id], cityName: () => "Ashgabat" }) }));
+vi.mock("../../src/listings/feed/useFeedCatalogMaps", () => ({ useFeedCatalogMaps: () => ({ brandName: () => "Toyota", brandLogoUrl: () => "https://files.test/toyota.png", modelName: (id: string) => ({ camry: "Camry", corolla: "Corolla", rav4: "RAV4" })[id], cityName: () => "Ashgabat" }) }));
 vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [{ id: "camry", name: "Camry" }, { id: "corolla", name: "Corolla" }, { id: "rav4", name: "RAV4" }] } }) }));
 vi.mock("../../src/api/catalog/useTransmissions", () => ({ useTransmissions: () => ({ data: { items: [{ id: "auto", name: "Automatic" }] } }) }));
 vi.mock("../../src/api/catalog/useEngineTypes", () => ({ useEngineTypes: () => ({ data: { items: [{ id: "petrol", name: "Petrol" }] } }) }));
@@ -50,6 +51,10 @@ const sorts = [
   ["Newest first", "newest"], ["Cheapest first", "price_asc"], ["Most expensive first", "price_desc"],
   ["Newest year first", "year_desc"], ["Oldest year first", "year_asc"], ["Lowest mileage first", "mileage_asc"],
 ];
+function QueryProbe(options: { queryKey: string[]; queryFn: () => Promise<unknown>; networkMode?: "offlineFirst"; retry?: number; retryDelay?: number }) {
+  useQuery(options);
+  return null;
+}
 /** The match at `index`, failing the test with a clear message when it is missing. */
 function matchAt<T>(matches: readonly T[], index: number): T {
   const match = matches.at(index);
@@ -118,16 +123,36 @@ describe("Results approved behavior", () => {
     expect(view.getByLabelText("Filters: 0")).toBeTruthy();
     expect(view.getByText("Retry")).toBeTruthy();
   });
-  it("Retry reloads every failed query behind the screen (count, catalog names), not only the feed", async () => {
+  it("Retry reloads the failed queries a mounted screen uses (count, catalog names) and leaves other screens' failed queries alone", async () => {
     state.error = true;
-    const view = renderMobile(<ResultsScreen />);
-    const failed = vi.fn().mockRejectedValueOnce(new Error("Network request failed")).mockResolvedValue("ok");
+    const failedOnce = () => vi.fn().mockRejectedValueOnce(new Error("Network request failed")).mockResolvedValue("ok");
+    const active = failedOnce();
+    const inactive = failedOnce();
     const healthy = vi.fn().mockResolvedValue("ok");
-    await view.queryClient.fetchQuery({ queryKey: ["failed-while-offline"], queryFn: failed }).catch(() => undefined);
+    const view = renderMobile(<><ResultsScreen /><QueryProbe queryKey={["failed-behind-the-screen"]} queryFn={active} /></>);
+    await view.queryClient.fetchQuery({ queryKey: ["failed-on-another-screen"], queryFn: inactive }).catch(() => undefined);
     await view.queryClient.fetchQuery({ queryKey: ["loaded-before-the-outage"], queryFn: healthy });
+    await act(async () => { await Promise.resolve(); });
+    expect(active).toHaveBeenCalledTimes(1);
     await act(async () => { fireEvent.press(view.getByText("Retry")); });
-    expect(failed).toHaveBeenCalledTimes(2);
+    expect(active).toHaveBeenCalledTimes(2);
+    expect(inactive).toHaveBeenCalledTimes(1);
     expect(healthy).toHaveBeenCalledTimes(1);
+  });
+  it("Retry also restarts a query that is paused behind the screen, not only failed ones", async () => {
+    state.error = true;
+    const values = vi.fn().mockResolvedValueOnce("first").mockRejectedValue(new Error("Network request failed"));
+    const view = renderMobile(<><ResultsScreen /><QueryProbe queryKey={["paused-behind-the-screen"]} queryFn={values} networkMode="offlineFirst" retry={1} retryDelay={0} /></>);
+    await act(async () => { await Promise.resolve(); });
+    expect(values).toHaveBeenCalledTimes(1);
+    try {
+      onlineManager.setOnline(false);
+      await act(async () => { void view.queryClient.refetchQueries({ queryKey: ["paused-behind-the-screen"] }); await new Promise((resolve) => setTimeout(resolve, 20)); });
+      expect(view.queryClient.getQueryState(["paused-behind-the-screen"])?.fetchStatus).toBe("paused");
+      const calls = values.mock.calls.length;
+      await act(async () => { fireEvent.press(view.getByText("Retry")); });
+      expect(values.mock.calls.length).toBeGreaterThan(calls);
+    } finally { onlineManager.setOnline(true); }
   });
   it("shows an offline recovery instead of indefinite skeletons when the initial query is paused", () => {
     state.pending = true; state.paused = true;
@@ -140,6 +165,7 @@ describe("Results approved behavior", () => {
     Object.assign(routeParams, { brandId: "toyota" });
     const view = renderMobile(<ResultsScreen />);
     expect(view.getByText("All models · choose models")).toBeTruthy();
+    expect(view.UNSAFE_getByProps({ source: { uri: "https://files.test/toyota.png" } })).toBeTruthy();
     expect(view.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(view.getByText("80,000 km · Automatic · Petrol")).toBeTruthy();
     expect(view.getByText("Ashgabat · Today")).toBeTruthy();
@@ -222,9 +248,18 @@ describe("Results filter sheet and route write-back", () => {
     const view = renderMobile(<ResultsScreen />);
     fireEvent.press(view.getByLabelText("Filters: 1"));
     fireEvent.press(view.getByLabelText("Reset all"));
-    expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ cityId: undefined, condition: undefined, sort: "newest" }));
-    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "newest" } }));
+    expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ cityId: undefined, condition: undefined, sort: "price_asc" }));
+    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "price_asc" } }));
     expect(view.getByText(sheetTitle)).toBeTruthy();
+  });
+  it("keeps the current sort when no-match Reset filters clears the filters", () => {
+    state.empty = true;
+    Object.assign(routeParams, { cityId: "ashgabat", condition: "used", sort: "year_asc" });
+    const view = renderMobile(<ResultsScreen />);
+    fireEvent.press(view.getByText("Reset filters"));
+    expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ cityId: undefined, condition: undefined, sort: "year_asc" }));
+    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "year_asc" } }));
+    expect(view.getByText("Oldest year first")).toBeTruthy();
   });
 });
 
@@ -234,7 +269,7 @@ describe("Results large card replacement", () => {
     expect(view.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(view.getByText("80,000 km · Automatic · Petrol")).toBeTruthy();
   });
-  it("shows two fixed photos and total photo count", () => {
+  it("shows the two-photo grid and total photo count for a Listing with photos", () => {
     const view = renderMobile(<ResultsScreen />);
     expect(view.getAllByTestId("listing-photo")).toHaveLength(2);
     expect(view.getByLabelText("Photos: 7")).toBeTruthy();
