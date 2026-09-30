@@ -2,12 +2,14 @@ import { Car, ChevronRight, X } from "lucide-react-native";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { CarBrandLogo } from "./CarBrandLogo";
+
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
-export function BrandModelCard({ brandName, modelNames, hasBrand, onEdit, onClear }: {
-  brandName?: string; modelNames: string[]; hasBrand: boolean; onEdit: () => void; onClear: () => void;
+export function BrandModelCard({ brandName, brandLogoUrl, modelNames, hasBrand, onEdit, onClear }: {
+  brandName?: string; brandLogoUrl?: string; modelNames: string[]; hasBrand: boolean; onEdit: () => void; onClear: () => void;
 }) {
   const { t } = useTranslation();
   const title = hasBrand ? [brandName ?? t("loading"), modelNames[0]].filter(Boolean).join(" ") + (modelNames.length > 1 ? `, +${modelNames.length - 1}` : "") : t("brandModel");
@@ -15,7 +17,7 @@ export function BrandModelCard({ brandName, modelNames, hasBrand, onEdit, onClea
   return <View className="flex-row items-center rounded-2xl bg-muted px-3">
     <Pressable className="min-h-16 min-w-0 flex-1 flex-row items-center gap-3 py-3" onPress={onEdit}
       accessibilityRole="button" accessibilityLabel={`${title}, ${hint}`}>
-      <Icon as={Car} className="size-6 text-primary" />
+      {hasBrand && brandName ? <CarBrandLogo name={brandName} logoUrl={brandLogoUrl} /> : <Icon as={Car} className="size-6 text-primary" />}
       <View className="min-w-0 flex-1 gap-0.5"><Text className="text-base font-semibold text-foreground" numberOfLines={1}>{title}</Text><Text className="text-xs text-muted-foreground">{hint}</Text></View>
       {!hasBrand ? <Icon as={ChevronRight} className="size-5 text-muted-foreground" /> : null}
     </Pressable>

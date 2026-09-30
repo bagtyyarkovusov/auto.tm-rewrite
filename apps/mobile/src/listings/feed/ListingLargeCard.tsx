@@ -30,13 +30,14 @@ interface ListingLargeCardProps {
   brandName?: string; modelName?: string; cityName?: string; transmissionName?: string; engineTypeName?: string;
   isAuthenticated: boolean | null; returnTo: AuthHref;
 }
-function Photo({ mediaKey }: { mediaKey?: string }) {
+/** A photo frame. `flex` is its share of the row: one wide frame, or 62 and 38 for the two-photo grid. */
+function Photo({ mediaKey, flex }: { mediaKey?: string; flex: number }) {
   const { t } = useTranslation();
   const [original, setOriginal] = useState(false);
-  return <View testID="listing-photo" className="h-[170px] min-w-0 flex-1 overflow-hidden bg-muted">
+  return <View testID="listing-photo" style={{ flex }} className="h-[170px] min-w-0 overflow-hidden bg-muted">
     {mediaKey ? <Image source={{ uri: original ? buildOriginalUrl(mediaKey) : buildVariantUrl(mediaKey, "list") }}
       className="h-full w-full" contentFit="cover" cachePolicy="memory-disk" onError={() => setOriginal(true)} />
-      : <View className="h-full items-center justify-center"><Text className="text-xs text-muted-foreground">{t("noPhoto")}</Text></View>}
+      : <View className="h-full items-center justify-center"><Text className="text-xs text-muted-foreground">{t("noPhotos")}</Text></View>}
   </View>;
 }
 
@@ -44,6 +45,7 @@ function Photo({ mediaKey }: { mediaKey?: string }) {
 export const ListingLargeCard = memo(function ListingLargeCard({ listing, onPress, brandName, modelName, cityName, transmissionName, engineTypeName, isAuthenticated, returnTo }: ListingLargeCardProps) {
   const { t, i18n } = useTranslation();
   const { favorited, pending, toggle } = useListingFavorite({ listingId: listing.id, isFavorited: listing.isFavorited ?? false, isAuthenticated, returnTo });
+  const photoKeys = listing.photoKeys.length ? listing.photoKeys : listing.coverMediaKey ? [listing.coverMediaKey] : [];
   const price = formatPrice(listing.displayPriceTmt, i18n.language);
   const identity = [brandName, modelName].filter(Boolean).join(" ");
   const title = [identity, listing.year].filter((value) => value != null && value !== "").join(", ");
@@ -52,9 +54,11 @@ export const ListingLargeCard = memo(function ListingLargeCard({ listing, onPres
   return <View className="bg-card pb-2">
     <Pressable onPress={() => onPress(listing.id)} accessibilityRole="button" accessibilityLabel={[title, price].filter(Boolean).join(", ")} className="active:opacity-90">
       <View className="flex-row gap-0.5">
-        <Photo mediaKey={listing.photoKeys[0] ?? listing.coverMediaKey} />
-        <Photo mediaKey={listing.photoKeys[1]} />
-        {listing.photoCount > 0 ? <View accessibilityLabel={t("resultsPhotoCount", { count: listing.photoCount })} className="absolute bottom-2 left-2 flex-row items-center gap-1 rounded-md bg-black/60 px-2 py-1">
+        {photoKeys.length > 1 ? <>
+          <Photo mediaKey={photoKeys[0]} flex={62} />
+          <Photo mediaKey={photoKeys[1]} flex={38} />
+        </> : <Photo mediaKey={photoKeys[0]} flex={1} />}
+        {listing.photoCount > 1 ? <View accessibilityLabel={t("resultsPhotoCount", { count: listing.photoCount })} className="absolute bottom-2 left-2 flex-row items-center gap-1 rounded-md bg-black/60 px-2 py-1">
           <Icon as={Camera} className="size-3 text-white" /><Text className="text-xs text-white">{listing.photoCount}</Text>
         </View> : null}
       </View>
@@ -76,7 +80,7 @@ export const ListingLargeCard = memo(function ListingLargeCard({ listing, onPres
 
 export function ListingLargeCardSkeleton() {
   return <View className="bg-card pb-2">
-    <View className="h-[170px] flex-row gap-0.5"><Skeleton className="h-full flex-1 rounded-none" /><Skeleton className="h-full flex-1 rounded-none" /></View>
+    <View testID="listing-photo-skeleton" className="h-[170px]"><Skeleton className="h-full w-full rounded-none" /></View>
     <View className="gap-0.5 px-4 pt-3"><Skeleton className="my-1 h-5 w-1/2" /><Skeleton className="my-1 h-3 w-3/4" /><Skeleton className="my-1 h-3 w-2/3" /></View>
     <View className="min-h-11 flex-row items-center justify-between px-4"><Skeleton className="h-3 w-1/3" /><Skeleton className="h-6 w-6 rounded-full" /></View>
   </View>;

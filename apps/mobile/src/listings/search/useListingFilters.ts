@@ -15,7 +15,7 @@ export interface UseListingFiltersReturn {
   setField: <K extends FilterKey>(key: K, value: ListingFilter[K]) => void;
   /** Commit draft → active. */
   apply: () => void;
-  /** Clear both draft and active. */
+  /** Clear the filters in both draft and active; the current sort stays. */
   reset: () => void;
   /** Number of fields with a non-empty value in active. */
   count: number;
@@ -78,11 +78,14 @@ export function useListingFilters(initial: ListingFilter = {}, onApply?: (next: 
     onApplyRef.current?.(next as ListingFilter);
   }, []);
 
+  // Reset clears the filters; the sort order is not a filter, so it stays.
   const reset = useCallback(() => {
-    draftRef.current = {};
-    setDraft({});
-    setActive({});
-    onApplyRef.current?.({});
+    const { sort } = activeRef.current;
+    const next: ListingFilter = sort ? { sort } : {};
+    draftRef.current = next;
+    setDraft(next);
+    setActive(next);
+    onApplyRef.current?.(next);
   }, []);
 
   const replace = useCallback((next: ListingFilter) => {

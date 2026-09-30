@@ -75,6 +75,9 @@ export function useFeedCatalogMaps(listings: ListingSummary[], selectedBrandIds:
     const brandNames = new Map(
       brands.data?.items.map((brand) => [brand.id, brand.name]) ?? [],
     );
+    const brandLogoUrls = new Map(
+      brands.data?.items.flatMap((brand) => (brand.logoUrl ? [[brand.id, brand.logoUrl] as const] : [])) ?? [],
+    );
     const modelNames = new Map(
       modelQueries.flatMap(
         (query) => query.data?.items.map((model) => [model.id, model.name] as const) ?? [],
@@ -88,6 +91,7 @@ export function useFeedCatalogMaps(listings: ListingSummary[], selectedBrandIds:
 
     return {
       brandName: (id: string) => brandNames.get(id),
+      brandLogoUrl: (id: string) => brandLogoUrls.get(id),
       modelName: (id: string) => modelNames.get(id),
       cityName: (id: string) => cityNames.get(id),
       // True only while brand or model names have not arrived yet. A failed

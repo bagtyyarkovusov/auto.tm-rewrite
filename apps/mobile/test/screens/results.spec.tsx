@@ -1,4 +1,5 @@
 import { onlineManager, useQuery } from "@tanstack/react-query";
+import { Image } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderMobile, act, fireEvent, routeParams, routerMock } from "../render";
@@ -165,7 +166,7 @@ describe("Results approved behavior", () => {
     Object.assign(routeParams, { brandId: "toyota" });
     const view = renderMobile(<ResultsScreen />);
     expect(view.getByText("All models · choose models")).toBeTruthy();
-    expect(view.UNSAFE_getByProps({ source: { uri: "https://files.test/toyota.png" } })).toBeTruthy();
+    expect(view.UNSAFE_getAllByType(Image).map((image) => image.props.source?.uri)).toContain("https://files.test/toyota.png");
     expect(view.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(view.getByText("80,000 km · Automatic · Petrol")).toBeTruthy();
     expect(view.getByText("Ashgabat · Today")).toBeTruthy();

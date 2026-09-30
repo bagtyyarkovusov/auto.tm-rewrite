@@ -83,13 +83,13 @@ export default function ResultsScreen() {
     setFloating((previous) => previous === next ? previous : next);
     floated.value = withTiming(next ? 1 : 0, { duration: 150 });
   }, [floated]);
-  const reset = () => { filters.replace({ sort: "newest" }); router.setParams(writeResultsRouteState({ sort: "newest" })); };
+  const reset = () => { filters.replace({ sort }); router.setParams(writeResultsRouteState({ sort })); };
   const remove = (group: ChipGroup) => commit(group === "city" ? { cityId: undefined } : group === "price" ? { priceMin: undefined, priceMax: undefined } : { yearMin: undefined, yearMax: undefined });
   const chips = <FilterChipsRow filters={applied} cityName={filters.active.cityId ? catalog.cityName(filters.active.cityId) : undefined} onOpen={() => setSheetOpen(true)} onRemove={remove} />;
   const header = <View>
     <View className="gap-3 px-4 pt-1 pb-2">
       <ConditionSwitch value={applied.condition} onChange={(condition) => commit({ condition })} />
-      <BrandModelCard brandName={applied.brandId ? catalog.brandName(applied.brandId) : undefined} modelNames={modelNames} hasBrand={!!applied.brandId}
+      <BrandModelCard brandName={applied.brandId ? catalog.brandName(applied.brandId) : undefined} brandLogoUrl={applied.brandId ? catalog.brandLogoUrl(applied.brandId) : undefined} modelNames={modelNames} hasBrand={!!applied.brandId}
         onClear={() => commit({ brandId: undefined, modelIds: undefined, modelId: undefined })}
         onEdit={() => router.push(applied.brandId ? { pathname: "/(tabs)/(search)/models", params: { brandId: applied.brandId, modelIds: applied.modelIds?.join(","), returnToResults: "1", resultsState: JSON.stringify(writeResultsRouteState(applied)) } } : { pathname: "/(tabs)/(search)/brands", params: { returnToResults: "1", resultsState: JSON.stringify(writeResultsRouteState(applied)) } })} />
     </View>
@@ -97,7 +97,8 @@ export default function ResultsScreen() {
   </View>;
   const offline = feed.fetchStatus === "paused" && items.length === 0;
   // The count and the brand/city names are separate queries. After an outage they must reload with the feed.
-  const retry = () => { void queryClient.refetchQueries({ predicate: (query) => query.state.status === "error" || query.state.fetchStatus === "paused" }); };
+  // Only queries a mounted screen is watching: failed queries left behind by other screens stay untouched.
+  const retry = () => { void queryClient.refetchQueries({ type: "active", predicate: (query) => query.state.status === "error" || query.state.fetchStatus === "paused" }); };
   const empty = offline ? <FeedError error={new ApiError("NETWORK_ERROR", 0)} onRetry={retry} /> : feed.isPending ? <View accessibilityLabel={t("resultsLoading")} className="gap-2">{[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} />)}</View>
     : feed.isError ? <FeedError error={feed.error} onRetry={retry} />
       : filters.count ? <FilteredEmpty onReset={reset} /> : <FeedEmpty />;

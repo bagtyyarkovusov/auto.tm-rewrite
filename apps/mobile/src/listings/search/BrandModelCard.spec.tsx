@@ -1,8 +1,11 @@
+import { Image } from "react-native";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderMobile, fireEvent } from "../../../test/render";
 
 import { BrandModelCard } from "./BrandModelCard";
+
+vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 
 describe("Brand/model card", () => {
   it("uses one compact summary and separate edit and clear actions", () => {
@@ -22,9 +25,10 @@ describe("Brand/model card", () => {
   });
   it("shows the chosen brand's logo, or its letter when there is none, instead of the generic car", () => {
     const view = renderMobile(<BrandModelCard hasBrand brandName="Toyota" brandLogoUrl="https://files.test/toyota.png" modelNames={[]} onEdit={vi.fn()} onClear={vi.fn()} />);
-    expect(view.UNSAFE_getByProps({ source: { uri: "https://files.test/toyota.png" } })).toBeTruthy();
+    expect(view.UNSAFE_getAllByType(Image).map((image) => image.props.source)).toEqual([{ uri: "https://files.test/toyota.png" }]);
     expect(view.UNSAFE_queryAllByProps({ name: "Car" })).toHaveLength(0);
     view.rerender(<BrandModelCard hasBrand brandName="Toyota" modelNames={[]} onEdit={vi.fn()} onClear={vi.fn()} />);
+    expect(view.UNSAFE_queryAllByType(Image)).toHaveLength(0);
     expect(view.getByText("T", { includeHiddenElements: true })).toBeTruthy();
     expect(view.UNSAFE_queryAllByProps({ name: "Car" })).toHaveLength(0);
   });
