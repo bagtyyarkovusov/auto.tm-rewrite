@@ -463,12 +463,10 @@ describe("ListingsController e2e", () => {
         .send({ conditionDisclosure: { damaged: false } })
         .expect(200);
 
-      expect(editRes.body.conditionDisclosure).toEqual({
-        damaged: false,
-        knownIssuesText: validPayload.conditionDisclosure.knownIssuesText,
-      });
+      expect(editRes.body.conditionDisclosure).toEqual({ damaged: false });
       const row = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
       expect(row.damaged).toBe(false);
+      expect(row.knownIssuesText).toBeNull();
     });
 
     it("rejects an edit whose disclosure has no Damaged answer", async () => {

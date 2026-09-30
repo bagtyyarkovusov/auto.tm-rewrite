@@ -596,7 +596,7 @@ describe("buildMachineContext", () => {
 });
 
 describe("legacy Listing edit disclosure", () => {
-  it("asks for Damaged before save, then returns to a saveable review after answering", () => {
+  it.each([true, false])("asks for Damaged before save, then accepts answer %s and returns to review", (damaged) => {
     let state = wizardMachineReducer(createInitialState(), {
       type: "INIT", draftId: null, listingId: "listing-1", mode: "edit", entryStep: "review",
       payload: { ...completePayload, conditionDisclosure: undefined },
@@ -607,7 +607,7 @@ describe("legacy Listing edit disclosure", () => {
       fieldErrors: { conditionDisclosure: "wizardErrors.damagedRequired" },
     });
     state = wizardMachineReducer(state, {
-      type: "UPDATE_FIELDS", updates: { conditionDisclosure: { damaged: false } },
+      type: "UPDATE_FIELDS", updates: { conditionDisclosure: { damaged } },
     });
     expect(buildMachineContext(state).canContinue).toBe(true);
     state = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "review" });

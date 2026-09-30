@@ -112,7 +112,7 @@ const EDITABLE_FIELDS: (keyof ListingsSchemas.EditListingRequest)[] = [
 export function buildFieldsPatch(
   payload: WizardSchemas.WizardDraftPayload,
 ): ListingsSchemas.EditListingRequest {
-  const patch: ListingsSchemas.EditListingRequest = {
+  const fields: ListingsSchemas.EditListingRequest = {
     priceAmount: payload.priceAmount,
     priceCurrency: payload.priceCurrency,
     description: payload.description,
@@ -136,9 +136,12 @@ export function buildFieldsPatch(
       ? undefined
       : ListingsSchemas.ConditionDisclosureSchema.parse(payload.conditionDisclosure),
   };
-  for (const field of EDITABLE_FIELDS) {
-    if (patch[field] === undefined) delete patch[field];
+  const patch: ListingsSchemas.EditListingRequest = {};
+  function copyDefinedField<K extends keyof ListingsSchemas.EditListingRequest>(field: K) {
+    const value = fields[field];
+    if (value !== undefined) patch[field] = value;
   }
+  EDITABLE_FIELDS.forEach(copyDefinedField);
   return patch;
 }
 
