@@ -23,6 +23,7 @@
     "listing-prices:recompute": "tsx scripts/recompute-listing-prices.ts",
     "reviewer:scenario": "tsx scripts/reviewer-scenario.ts",
     "ui:fixture": "tsx scripts/ui-fixture.ts",
+    "logos:import": "tsx scripts/import-brand-logos.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
@@ -46,6 +47,10 @@
     "@types/pg": "^8.11.10",
     "@types/node": "^22.10.0",
     "typescript": "^5.7.3",
-    "eslint": "^9.18.0"
+    "eslint": "^9.18.0",
+    "@aws-sdk/client-s3": "^3.1048.0",
+    "sharp": "^0.34.5",
+    "simple-icons": "16.33.0",
+    "testcontainers": "^10.28.0"
   }
 }
