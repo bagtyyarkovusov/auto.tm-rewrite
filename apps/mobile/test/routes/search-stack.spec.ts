@@ -36,11 +36,10 @@ describe("Search tab stack", () => {
     expect(tabBar).toContain("if (!isFocused && !event.defaultPrevented)");
   });
 
-  it("registers the routes Home opens, stubbed until their slices land", () => {
-    for (const route of ["results", "brands", "search"]) {
+  it("registers the routes Home opens and the pickers push, Search stubbed until its slice lands", () => {
+    for (const route of ["results", "brands", "models", "search"]) {
       expect(existsSync(resolve(appDir, `(tabs)/(search)/${route}.tsx`))).toBe(true);
     }
-    expect(read("(tabs)/(search)/brands.tsx")).toContain("<InterimDiscoveryScreen");
     expect(read("(tabs)/(search)/search.tsx")).toContain("<InterimDiscoveryScreen");
   });
 });
