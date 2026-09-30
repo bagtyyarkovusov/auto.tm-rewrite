@@ -79,7 +79,7 @@ describe("ContactCtaBar", () => {
       fireEvent.press(screen.getByRole("button", { name: "Message" }));
       expect(state.mutate).not.toHaveBeenCalled();
       expect(
-        screen.queryByText("The seller’s phone number was verified by SMS."),
+        screen.queryByText("AutoTM verifies sellers' numbers by SMS."),
       ).toBeNull();
     },
   );
