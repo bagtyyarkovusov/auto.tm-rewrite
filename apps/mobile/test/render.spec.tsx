@@ -17,7 +17,7 @@ function Example() {
   const [pressed, setPressed] = useState(false);
   const { data } = useQuery({ queryKey: ["example"], queryFn: async () => "Loaded" });
   return <View className="gap-3"><TextInput accessibilityLabel="Name" />
-    <Button onPress={() => { setPressed(true); router.push("/saved"); }}><Text>{t("save")}</Text></Button>
+    <Button onPress={() => { setPressed(true); router.push("/settings"); }}><Text>{t("save")}</Text></Button>
     {pressed && <Text>Saved</Text>}{data && <Text>{data}</Text>}
   </View>;
 }
@@ -34,7 +34,7 @@ describe("mobile renderer", () => {
     expect(screen.getByLabelText("Name")).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByText("Saved")).toBeTruthy();
-    expect(routerMock.push).toHaveBeenCalledWith("/saved");
+    expect(routerMock.push).toHaveBeenCalledWith("/settings");
     screen.rerender(<Example />);
     expect(screen.getByRole("button", { name: "Save" })).toBeTruthy();
     expect(await screen.findByText("Loaded")).toBeTruthy();

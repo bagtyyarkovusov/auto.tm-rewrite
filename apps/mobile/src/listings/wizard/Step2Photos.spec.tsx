@@ -15,7 +15,7 @@ vi.mock("expo-file-system/legacy", () => ({ documentDirectory: "file:///document
 
 const photo = (photoId: string, sortOrder: number): StagedPhoto => ({ photoId, sortOrder,
   localUri: `file:///${photoId}.jpg`, state: "attached", retryCount: 0 });
-const defaults = () => ({ photos: [], onAddPhoto: vi.fn(async () => {}), onRemovePhoto: vi.fn(),
+const defaults = () => ({ photos: [], onAddPhoto: vi.fn<(uri: string) => Promise<void>>(async () => {}), onRemovePhoto: vi.fn(),
   onReorderPhotos: vi.fn(), onRetryPhoto: vi.fn(), isCompressing: false, isUploading: false });
 
 describe("Step2Photos", () => {

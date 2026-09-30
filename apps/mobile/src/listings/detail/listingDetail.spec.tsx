@@ -112,7 +112,7 @@ describe("PhotoGallery", () => {
   });
   it("opens a full-screen image and falls back to the original after a load error", () => {
     const media: ListingsSchemas.ListingMedia[] = [{ id: "image-1", kind: "image", key: "listings/a.jpg", sortOrder: 0,
-      variants: { detail: "https://media/detail.jpg", fullscreen: "https://media/fullscreen.jpg" } }];
+      variants: { thumbnail: "https://media/thumbnail.jpg", list: "https://media/list.jpg", detail: "https://media/detail.jpg", fullscreen: "https://media/fullscreen.jpg" } }];
     const screen = renderMobile(<PhotoGallery media={media} />);
     expect(screen.UNSAFE_getByType(Image).props.source.uri).toBe("https://media/detail.jpg");
     const opener = screen.UNSAFE_getAllByType(Pressable).find((node) => node.props.onPress);
@@ -209,6 +209,26 @@ describe("ListingDetailScreen", () => {
 });
 
 describe("InspectionInterestCta", () => {
+  it("shows a submit error and allows another attempt", async () => {
+    state.post.mockRejectedValueOnce(new Error("Request failed"));
+    const screen = renderMobile(<InspectionInterestCta listingId="listing-1" open onOpenChange={vi.fn()} />);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Register interest" })); });
+    expect(await screen.findByText("Something went wrong")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Register interest", disabled: false })).toBeTruthy();
+    expect(screen.queryByText("Done")).toBeNull();
+  });
+  it("disables the entry and routes anonymous submission to sign-in", () => {
+    const onOpenChange = vi.fn();
+    const screen = renderMobile(<InspectionInterestCta listingId="listing-1" open={false} disabled onOpenChange={onOpenChange} />);
+    fireEvent.press(screen.getByRole("button", { name: /Request AutoTM inspection/ }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+    state.authenticated = false;
+    screen.rerender(<InspectionInterestCta listingId="listing-1" open onOpenChange={onOpenChange} />);
+    fireEvent.press(screen.getByRole("button", { name: "Continue with phone" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(routerMock.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/(auth)/phone" }));
+    expect(state.post).not.toHaveBeenCalled();
+  });
   it("submits interest and shows a success state", async () => {
     state.post.mockResolvedValue({ id: "interest-1" });
     const screen = renderMobile(<InspectionInterestCta listingId="listing-1" open onOpenChange={vi.fn()} />);
