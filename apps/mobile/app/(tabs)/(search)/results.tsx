@@ -100,7 +100,7 @@ export default function ResultsScreen() {
   return <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
     <ResultsHeader count={count.data} sort={sort} onSort={() => setSortOpen(true)} onBack={goBack} />
     <FlatList testID="results-list" data={feed.isPending || feed.isError ? [] : items} keyExtractor={(item) => item.id} ListHeaderComponent={header} ListEmptyComponent={empty}
-      contentContainerStyle={{ paddingBottom: 76, flexGrow: 1 }} onScroll={onScroll} scrollEventThrottle={16}
+      contentContainerClassName="grow pb-[76px]" onScroll={onScroll} scrollEventThrottle={16}
       renderItem={({ item }) => <ListingLargeCard listing={item} onPress={(id) => router.push(`/(public)/listings/${id}`)}
         brandName={catalog.brandName(item.brandId)} modelName={catalog.modelName(item.modelId)} cityName={catalog.cityName(item.cityId)}
         transmissionName={transmissions.data?.items.find((entry) => entry.id === item.transmissionId)?.name}

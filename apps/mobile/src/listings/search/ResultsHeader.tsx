@@ -3,7 +3,7 @@ import { ArrowDownUp, ChevronLeft } from "lucide-react-native";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { localeTag } from "../../i18n/resources";
+import { formatPriceRange } from "../formatPrice";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -14,7 +14,7 @@ export function ResultsHeader({ count, sort, onSort, onBack }: {
 }) {
   const { t, i18n } = useTranslation();
   const range = count?.priceMinTmt != null && count.priceMaxTmt != null
-    ? `${count.priceMinTmt.toLocaleString(localeTag(i18n.language))} – ${count.priceMaxTmt.toLocaleString(localeTag(i18n.language))} TMT` : null;
+    ? formatPriceRange(count.priceMinTmt, count.priceMaxTmt, i18n.language) : null;
   return <View className="flex-row items-center gap-1 px-1 py-2">
     <Button variant="ghost" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}><Icon as={ChevronLeft} className="size-6 text-foreground" /></Button>
     <View className="min-w-0 flex-1 gap-0.5">
