@@ -141,9 +141,19 @@ describe("logo masks", () => {
     expect(ink.covered).toBeGreaterThan(200);
   });
 
+  it("renders an SVG sized in millimetres at every size (a Commons file once rendered to nothing at 30 px)", async () => {
+    const svg = enc(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="296.88791mm" height="72.167114mm" viewBox="0 0 296.88791 72.167114"><rect width="296.88791" height="72.167114"/></svg>',
+    );
+    for (const size of LOGO_SIZES) {
+      const png = await renderLogoMask(svg, "alpha", size);
+      expect((await inkOf(png)).covered).toBeGreaterThan(size / 3);
+    }
+  });
+
   it("refuses a wide wordmark that would be unreadable at 30 px", async () => {
     const wordmark = enc(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 60"><rect width="400" height="60"/></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 60"><rect width="1000" height="60"/></svg>',
     );
     await expect(renderLogoMasks(wordmark, "alpha")).rejects.toThrow(/wordmark|aspect|too wide/i);
   });

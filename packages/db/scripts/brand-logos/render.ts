@@ -16,14 +16,16 @@ const PADDING = 0.08;
 /** Pixels with less alpha than this do not count as ink when measuring the mark. */
 const INK_ALPHA = 20;
 /**
- * The shorter side of the mark must fill at least this share of the tile, or
- * the mark is a wordmark that cannot be read at 30 px.
+ * The shorter side of the mark must fill at least this share of the tile. A
+ * thinner mark (a long wordmark, or a broken file) is a few pixels tall at
+ * 30 px, so the import refuses it rather than store an unreadable icon.
  */
-export const MIN_INK_SHARE = 0.25;
+export const MIN_INK_SHARE = 0.1;
 
 const LIMIT_INPUT_PIXELS = 4096 * 4096;
 const DEFAULT_SVG_DENSITY = 72;
 const MAX_SVG_DENSITY = 10_000;
+const MIN_WORKING_SIZE = 512;
 
 /**
  * Renders a master (SVG or PNG) to a square, black-on-transparent PNG mask.
@@ -41,12 +43,14 @@ export async function renderLogoMask(
   const { width = inner, height = inner, format } = await sharp(input, {
     limitInputPixels: LIMIT_INPUT_PIXELS,
   }).metadata();
-  // Render a vector at the target size instead of upscaling a small bitmap.
+  // Rasterize a vector well above the target size, then shrink it: a very low density
+  // can round an SVG down to nothing, and shrinking a large render keeps edges crisp.
+  const working = Math.max(inner * 4, MIN_WORKING_SIZE);
   const density =
     format === "svg"
       ? Math.min(
           MAX_SVG_DENSITY,
-          Math.max(1, Math.ceil((DEFAULT_SVG_DENSITY * inner) / Math.max(width, height))),
+          Math.max(1, Math.ceil((DEFAULT_SVG_DENSITY * working) / Math.max(width, height))),
         )
       : undefined;
 

@@ -46,7 +46,8 @@ export function assertMasterFormat(entry: SourcedLogoEntry, bytes: Uint8Array): 
     throw new MasterIntegrityError(`${entry.slug}: the master file is empty`);
   }
   if (PNG_SIGNATURE.every((byte, i) => bytes[i] === byte)) return;
-  const text = new TextDecoder("utf-8").decode(bytes).replace(/^﻿/, "").trimStart();
+  // TextDecoder drops a leading byte order mark, so it never hides the SVG start.
+  const text = new TextDecoder("utf-8").decode(bytes).trimStart();
   if (SVG_START.test(text) && /<svg[\s>]/i.test(text)) return;
   throw new MasterIntegrityError(`${entry.slug}: the master file is neither an SVG nor a PNG`);
 }
