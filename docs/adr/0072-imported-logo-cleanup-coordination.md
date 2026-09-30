@@ -19,7 +19,7 @@ Every new logo activation gets a directory that has never been active before. No
 
 Keep `importVersion(entry)` as the content/render identity `imp-<hash12>`. New activations use `brands/<slug>/imp-<hash12>-<randomUUID>/logo.png` and its three `mono@Nx.png` siblings. UUIDs come from Node's cryptographic randomUUID. Losing CAS uploads retain their directory and are never reused by another activation. This preserves #377's no-GC rule for importer failure artifacts.
 
-If the currently active imported key matches the entry's content/render identity, the importer remains idempotent and repairs missing objects in that exact current directory. The repair branch never writes Brand.logoKey. Both legacy `imp-<hash12>` and new `imp-<hash12>-<UUID>` keys are recognized as imported ownership. A legacy directory remains usable only while it is the active key; a later activation of the same content uses a new UUID directory. Source-null entries continue preserving any existing key.
+If the currently active imported key matches the entry's content/render identity, the importer remains idempotent and repairs missing objects in that exact current directory. The repair branch never writes Brand.logoKey. Parse imported ownership and content/render identity from the actual stored key, independently of the current Brand.slug. Both legacy `imp-<hash12>` and new `imp-<hash12>-<UUID>` keys are recognized as imported ownership, even after a brand rename. A legacy directory remains usable only while it is the active key; a later activation of the same content uses a new UUID directory. Source-null entries continue preserving any existing key.
 
 A stale snapshot may repair a directory that has since become inactive. That can recreate orphan files, but cannot make them active. Never turn a repair into reactivation or derive its target directory from a newly computed activation key.
 
@@ -35,13 +35,13 @@ Brand deletion likewise locks/reads/deletes in a short transaction and returns t
 
 Affected boundaries: BrandLogoRepository needs an atomic replacement operation returning the previous key; BrandRepository deletion needs the deleted logo key result; PrismaBrandRepository implements both. SetBrandLogo, RemoveBrandLogo, and DeleteBrand consume those results. MinioBrandLogoStorage gains best-effort version-directory cleanup. The DB importer updates imported-key parsing, activation-directory generation, and repair-directory selection. No new shared runtime coordinator, retirement table, or migration is needed for this recommendation.
 
-Importer activation retains the existing `updateMany` CAS against the observed logoKey. It writes all objects to its new unique directory before CAS and keeps lost-CAS objects. Forced replacement cleanup targets only the previous admin directory after successful CAS. The importer still does not garbage-collect imported versions.
+Before each activation or repair, the importer fresh-reads the brand by immutable Brand.id and rechecks that its current slug remains eligible for that manifest entry. A rename makes the stale entry ineligible. Activation uses `updateMany` CAS against both the fresh current slug and observed logoKey, so a rename during upload cannot activate a directory under a stale slug. The current-prefix repair directory always comes from the stored key, not the current slug. Importer activation otherwise retains the existing key CAS behavior. It writes all objects to its new unique directory before CAS and keeps lost-CAS objects. Forced replacement cleanup targets only the previous admin directory after successful CAS. The importer still does not garbage-collect imported versions.
 
 The protocol does not assume updatedAt is monotonic. Logo-key CAS can accept timestamp/null ABA, as it already can today. Unique directories establish active-object safety even in that case; they do not add a stronger guarantee that an import always loses to an intervening admin removal that returns the key to null. A stronger mutation-revision guarantee would need a separate explicit design and migration.
 
 ### Cleanup and failure bounds
 
-Only an exact validated `brands/<slug>/<supported-version>/` directory is deleted. Enumerate all pages, delete batches of at most 1,000 keys, and report partial S3 errors. Legacy/admin single-object keys outside recognized directories use single-object deletion. Cleanup is best effort, logs failures, and never rolls back a committed brand mutation.
+Parse the exact validated `brands/<stored-slug>/<supported-version>/` directory from the actual previous key returned by the atomic mutation, independently of current Brand.slug. Cleanup must target that stored directory even when UpdateBrand renamed the brand. Do not reconstruct cleanup paths from the current slug. Enumerate all pages, delete batches of at most 1,000 keys, and report partial S3 errors. Legacy/admin single-object keys outside recognized directories use single-object deletion. Cleanup is best effort, logs failures, and never rolls back a committed brand mutation.
 
 Use short DB transaction acquisition and execution limits, for example maxWait 5 seconds and timeout 5 seconds, without storage work. A DB timeout before commit must not trigger old-prefix cleanup. Retain and log uploaded candidates on every ambiguous repository/DB failure. Existing SetBrandLogo deletes the candidate on any repository exception; that catch must change because an unknown commit may already have activated the candidate. Delete a candidate only when the repository positively reports that it was not activated, never merely because an exception occurred. Storage request timeouts may leave orphan files; delayed deletion remains safe because the prefix can never become active again. No total cleanup-time claim is made for unbounded pagination.
 
@@ -53,14 +53,14 @@ Stop all old API logo writers and deterministic importer processes before enabli
 
 Concurrent missing-object repair can recreate inactive siblings after admin cleanup. Crashes, lost CAS, and uncertain storage requests can also leave inactive files. Therefore this delivers whole-prefix best-effort cleanup and active-object safety, not a permanent guarantee of zero orphan files. The founder must explicitly accept that limitation for #454.
 
-A stronger zero-recreation guarantee requires durable retirement fencing that every writer observes before writing, with a defined same-master reimport policy and recovery after delayed storage requests. That requires more state and likely a migration. Keeping retired deterministic prefixes permanently forbidden or generating fresh incarnations for reuse is a product/key-policy decision, not a silent cleanup adjustment.
+A stronger zero-recreation protocol is unshaped. A durable retirement check before PUT alone does not cancel an already-issued delayed PUT, so it is insufficient. Any stronger design must handle in-flight remote writes, same-master reimport, uncertain requests and recovery rather than promising zero recreation from a preflight fence. That requires more state and likely a migration. Keeping retired deterministic prefixes permanently forbidden or generating fresh incarnations for reuse is a product/key-policy decision, not a silent cleanup adjustment.
 
 ## Verification before production changes
 
 1. Push red tests for all four imported files removed by set/remove/delete, pagination and partial errors, with other versions untouched.
 2. Push red tests for unique new import activations of the same content and same-millisecond admin uploads. Prove current legacy/new imports remain idempotent and repair uses the active directory without updating the database.
 3. Use isolated MinIO and two real PostgreSQL clients to delay prior-prefix deletion while a new import activates identical content. The active directory and all siblings must survive. Repeat with overlapping set/remove/full brand deletion and null ABA; assert safety without treating updatedAt as a revision.
-4. Force late repair of a removed directory. Verify it cannot reactivate that directory and document any recreated inactive files as the accepted limitation.
+4. Rename a brand before and during import upload; verify stale-slug activation is rejected and cleanup still uses the actual returned previous key. Force late repair of a removed directory. Verify it cannot reactivate that directory and document any recreated inactive files as the accepted limitation.
 5. Exercise failed CAS, DB rollback/timeout, uncertain storage response, and restart. Retain #377's importer failure/no-GC behavior.
 6. After founder acceptance, implement and rerun the same cases green, then repository test/typecheck, affected lint/build/runtime gates and documentation checks.
 
@@ -90,7 +90,7 @@ No key-policy or automatic prefix-cleanup production code is implemented by this
 
 - Deterministic directory reuse plus a current-key check: rejected because reactivation can occur after the check.
 - Bounded DB or session lock across storage: rejected because timeout or connection loss can release the lock before a remote deletion settles.
-- Durable retirement fencing: stronger orphan-prevention protocol, deferred pending a need for that guarantee and defined reimport/recovery behavior.
+- Durable retirement fencing: a pre-write check alone cannot cancel delayed remote writes. A stronger orphan-prevention protocol remains unshaped and needs separate reimport, in-flight-write and recovery design.
 - Exclusive maintenance-window cleanup: avoids concurrent writers but does not provide automatic admin cleanup.
 
 ## References
