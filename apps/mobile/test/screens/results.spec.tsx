@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderMobile, fireEvent, routeParams, routerMock } from "../render";
 import ResultsScreen from "../../app/(tabs)/(search)/results";
 
 const state = vi.hoisted(() => ({
-  feed: vi.fn(), count: vi.fn(), pending: false, error: false, empty: false,
+  feed: vi.fn(), count: vi.fn(), pending: false, error: false, empty: false, paused: false,
 }));
 vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
@@ -38,14 +38,15 @@ const listing = {
 };
 vi.mock("../../src/api/listings/useListings", () => ({ useListings: (options: unknown) => {
   state.feed(options); return { data: { pages: [{ items: state.empty ? [] : [listing] }] }, isPending: state.pending,
-    isError: state.error, error: new Error("Network request failed"), refetch: vi.fn(), isRefetching: false,
+    fetchStatus: state.paused ? "paused" : "idle", isError: state.error, error: new Error("Network request failed"), refetch: vi.fn(), isRefetching: false,
     fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false };
 } }));
 vi.mock("../../src/api/listings/useListingCount", () => ({ useListingCount: (options: unknown) => {
   state.count(options); return { data: { totalMatching: state.empty ? 0 : 12, priceMinTmt: state.empty ? null : 70000, priceMaxTmt: state.empty ? null : 120000 }, isPending: false };
 } }));
 
-beforeEach(() => { state.feed.mockClear(); state.count.mockClear(); state.pending = false; state.error = false; state.empty = false; });
+afterEach(() => vi.useRealTimers());
+beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-09-30T12:00:00Z")); state.feed.mockClear(); state.count.mockClear(); state.pending = false; state.error = false; state.empty = false; state.paused = false; });
 const sorts = [
   ["Newest first", "newest"], ["Cheapest first", "price_asc"], ["Most expensive first", "price_desc"],
   ["Newest year first", "year_desc"], ["Oldest year first", "year_asc"], ["Lowest mileage first", "mileage_asc"],
@@ -110,6 +111,13 @@ describe("Results approved behavior", () => {
     view.rerender(<ResultsScreen />);
     expect(view.getByLabelText("Filters, 0 active filters")).toBeTruthy();
     expect(view.getByText("Retry")).toBeTruthy();
+  });
+  it("shows an offline recovery instead of indefinite skeletons when the initial query is paused", () => {
+    state.pending = true; state.paused = true;
+    const view = renderMobile(<ResultsScreen />);
+    expect(view.getByText("No internet connection. Try again when you are online.")).toBeTruthy();
+    expect(view.getByText("Retry")).toBeTruthy();
+    expect(view.queryByLabelText("Loading listings")).toBeNull();
   });
   it("shows brand-only selection and the approved large-card content", () => {
     Object.assign(routeParams, { brandId: "toyota" });
