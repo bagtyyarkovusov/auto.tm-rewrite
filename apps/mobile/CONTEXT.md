@@ -18,6 +18,10 @@ Read [mobile/Expo checks](../../docs/agents/mobile-expo.md) before packages, Met
 
 For listing media, preserve client compression and staging safeguards in the local overview. New screens must retain localized copy, accessibility, loading/empty/error states, and theme behavior. Do not copy route inventories or old bug plans into this file.
 
+Component tests use a test-only native host adapter with real i18n and Query
+providers. See the [mobile testing guide](../../docs/agents/mobile-testing.md)
+for supported queries, shared helpers and native runtime limitations.
+
 ## Start here
 
 - [Routes and root providers](app)

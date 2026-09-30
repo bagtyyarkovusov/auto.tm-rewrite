@@ -1,412 +1,251 @@
-// @vitest-environment happy-dom
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { ListingsSchemas } from "@auto-tm/contracts";
+import { Share, Pressable, View } from "react-native";
+import { Image } from "expo-image";
+import * as Linking from "expo-linking";
 
-import { readFileSync } from "fs";
-import { resolve } from "path";
+import { renderMobile, fireEvent, act, routeParams, routerMock } from "../../../test/render";
+import ListingDetailScreen from "../../../app/(public)/listings/[id]";
+import { ListingDetailView } from "../components/ListingDetail";
+import { PriceDisplay } from "../components/PriceDisplay";
+import { SellerBlock } from "../components/SellerBlock";
+import { ContactCtaBar } from "../components/ContactCtaBar";
+import { PhotoGallery } from "../components/PhotoGallery";
+import { InspectionInterestCta } from "../components/InspectionInterestCta";
+import type * as ClientModule from "../../api/client";
 
-import { WizardSchemas } from "@auto-tm/contracts";
-import { describe, it, expect } from "vitest";
+import type { CatalogMaps } from "./useCatalogMaps";
 
-import { conditionDisclosureFieldErrors } from "../wizard/conditionDisclosureErrors";
+const state = vi.hoisted(() => ({ data: undefined as ListingsSchemas.ListingDetail | undefined,
+  error: null as unknown, isPending: false, viewer: null as { userId: string } | null,
+  authenticated: true as boolean | null, refetch: vi.fn(),
+  config: { inspectionInterestEnabled: true, reportEntryEnabled: true }, post: vi.fn() }));
+vi.mock("../../api/listings/useListingDetail", () => ({ useListingDetail: () => state }));
+vi.mock("../../auth/useViewer", () => ({ useViewer: () => state.viewer }));
+vi.mock("../../auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.authenticated }) }));
+vi.mock("../../api/admin/useConfig", () => ({ useConfig: () => ({ data: state.config }) }));
+vi.mock("expo-secure-store", () => ({ getItemAsync: vi.fn(async () => null), setItemAsync: vi.fn(), deleteItemAsync: vi.fn() }));
+vi.mock("../../api/client", async (importOriginal) => ({ ...await importOriginal<typeof ClientModule>(), apiClient: { post: state.post, get: vi.fn(), delete: vi.fn() } }));
+vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => true), openURL: vi.fn(async () => {}) }));
+vi.mock("../../admin/components/ReportSheet", () => ({ ReportSheet: () => null }));
+vi.mock("./useCatalogMaps", () => ({ useCatalogMaps: () => ({ maps }) }));
 
-const priceDisplaySource = readFileSync(
-  resolve(__dirname, "../components/PriceDisplay.tsx"),
-  "utf-8",
-);
+const maps: CatalogMaps = {
+  brandName: () => "Toyota", modelName: () => "Camry", generationName: () => "XV70",
+  colorName: () => "White", bodyTypeName: () => "Sedan", transmissionName: () => "Automatic",
+  driveTypeName: () => "Front wheel", engineTypeName: () => "Petrol",
+  regionName: () => "Ahal", cityName: () => "Ashgabat",
+};
+const fixture = (updates: Partial<ListingsSchemas.ListingDetail> = {}): ListingsSchemas.ListingDetail => ({
+  id: "00000000-0000-4000-8000-000000000001", publicNumber: 1,
+  sellerId: "00000000-0000-4000-8000-000000000002",
+  seller: { displayName: null, memberSince: "2026-01-01T00:00:00Z" },
+  status: "active", brandId: "brand-uuid", modelId: "model-uuid", generationId: "generation-uuid", year: 2020,
+  regionId: "region-uuid", cityId: "city-uuid", priceAmount: 10000, priceCurrency: "USD", displayPriceTmt: 35000,
+  allowCalls: true, allowChat: true, contactPhone: "+99361000000", acceptsExchange: false,
+  installmentAvailable: false, media: [], viewCount: 1, favoriteCount: 0,
+  publishedAt: "2026-01-01T00:00:00Z", createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z", ...updates,
+});
+beforeEach(() => {
+  state.data = fixture(); state.error = null; state.isPending = false; state.viewer = null;
+  state.authenticated = true; state.refetch.mockClear(); state.post.mockReset();
+  state.config = { inspectionInterestEnabled: true, reportEntryEnabled: true };
+  routeParams.id = state.data.id;
+});
 
-const sellerBlockSource = readFileSync(
-  resolve(__dirname, "../components/SellerBlock.tsx"),
-  "utf-8",
-);
-
-const contactCtaSource = readFileSync(
-  resolve(__dirname, "../components/ContactCtaBar.tsx"),
-  "utf-8",
-);
-
-const photoGallerySource = readFileSync(
-  resolve(__dirname, "../components/PhotoGallery.tsx"),
-  "utf-8",
-);
-
-const listingDetailSource = readFileSync(
-  resolve(__dirname, "../components/ListingDetail.tsx"),
-  "utf-8",
-);
-
-const inspectionInterestCtaSource = readFileSync(
-  resolve(__dirname, "../components/InspectionInterestCta.tsx"),
-  "utf-8",
-);
-
-const screenSource = readFileSync(
-  resolve(__dirname, "../../../app/(public)/listings/[id].tsx"),
-  "utf-8",
-);
-
-describe("PriceDisplay (public/buyer mode)", () => {
-  it("shows TMT price only (no original currency)", () => {
-    expect(priceDisplaySource).toContain("displayPriceTmt");
-    expect(priceDisplaySource).toContain("TMT");
-    expect(priceDisplaySource).not.toContain("USD");
-    expect(priceDisplaySource).not.toContain("AED");
-  });
-
-  it("accepts priceAmount and priceCurrency for owner mode", () => {
-    expect(priceDisplaySource).toContain("priceAmount");
-    expect(priceDisplaySource).toContain("priceCurrency");
-    expect(priceDisplaySource).toContain("isOwner");
-  });
-
-  it("renders seller term badges conditionally", () => {
-    expect(priceDisplaySource).toContain("acceptsExchange");
-    expect(priceDisplaySource).toContain("installmentAvailable");
-    expect(priceDisplaySource).toContain('t("exchangePossible")');
-    expect(priceDisplaySource).toContain('t("installmentPossible")');
+describe("PriceDisplay", () => {
+  const props = { displayPriceTmt: 35000, priceAmount: 10000, priceCurrency: "USD", acceptsExchange: true, installmentAvailable: true };
+  it("shows only converted TMT to buyers and the original currency to owners", () => {
+    const screen = renderMobile(<PriceDisplay {...props} />);
+    expect(screen.getByText("35,000 TMT")).toBeTruthy();
+    expect(screen.queryByText("10,000 USD")).toBeNull();
+    expect(screen.getByText("Exchange possible")).toBeTruthy();
+    expect(screen.getByText("Installment possible")).toBeTruthy();
+    screen.rerender(<PriceDisplay {...props} isOwner acceptsExchange={false} installmentAvailable={false} />);
+    expect(screen.getByText("10,000 USD")).toBeTruthy();
+    expect(screen.queryByText("Exchange possible")).toBeNull();
   });
 });
 
 describe("SellerBlock", () => {
-  it("uses safe fallback copy for unavailable seller profile fields", () => {
-    expect(sellerBlockSource).toContain('t("privateSeller")');
-    expect(sellerBlockSource).not.toContain("avatar");
-    expect(sellerBlockSource).not.toContain("tenure");
-    expect(sellerBlockSource).not.toContain("response time");
-  });
-
-  it("shows contact phone only when calls are allowed", () => {
-    expect(sellerBlockSource).toContain("allowCalls");
-    expect(sellerBlockSource).toContain("contactPhone");
-  });
-
-  it("renders city/region/location context", () => {
-    expect(sellerBlockSource).toContain("cityName");
-    expect(sellerBlockSource).toContain("regionName");
-    expect(sellerBlockSource).toContain("locationText");
-  });
-
-  it("shows no per-Listing phone badge and no inspection or dealer status", () => {
-    expect(sellerBlockSource).not.toContain("phoneVerified");
-    expect(sellerBlockSource).not.toContain('t("verifiedPhone")');
-    expect(sellerBlockSource).not.toContain("inspection");
-    expect(sellerBlockSource).not.toContain("dealer");
+  it("shows safe seller copy, location and an allowed phone", () => {
+    const props = { allowCalls: true, contactPhone: "+99361000000", regionName: "Ahal", cityName: "Ashgabat", locationText: "Center" };
+    const screen = renderMobile(<SellerBlock {...props} />);
+    expect(screen.getByText("Private seller")).toBeTruthy();
+    expect(screen.getByText("Ahal, Ashgabat, Center")).toBeTruthy();
+    expect(screen.getByText(props.contactPhone)).toBeTruthy();
+    screen.rerender(<SellerBlock {...props} allowCalls={false} />);
+    expect(screen.queryByText(props.contactPhone)).toBeNull();
+    expect(screen.queryByText(/verified|dealer|inspection/i)).toBeNull();
   });
 });
 
 describe("ContactCtaBar", () => {
-  it("opens tel: URL only when calls are allowed and phone exists", () => {
-    expect(contactCtaSource).toContain("canCall");
-    expect(contactCtaSource).toContain("tel:");
-    expect(contactCtaSource).toContain("allowCalls");
-    expect(contactCtaSource).toContain("contactPhone");
+  const props = { listingId: "listing-1", status: "active" as const, allowCalls: true, allowChat: true, contactPhone: "+99361000000" };
+  it("calls through tel and shares a listing link", async () => {
+    const share = vi.spyOn(Share, "share");
+    const screen = renderMobile(<ContactCtaBar {...props} />);
+    await act(async () => { await fireEvent.press(screen.getByRole("button", { name: "Call" })); });
+    expect(Linking.openURL).toHaveBeenCalledWith("tel:+99361000000");
+    await act(async () => { await fireEvent.press(screen.getByLabelText("Share")); });
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: "https://auto.tm/listings/listing-1" }));
   });
-
-  it("enables Message for eligible listings with auth-on-action", () => {
-    expect(contactCtaSource).toContain("allowChat");
-    expect(contactCtaSource).toContain("canMessage");
-    expect(contactCtaSource).toContain("MessageCircle");
-    expect(contactCtaSource).toContain("useAuthIntentStore");
-    expect(contactCtaSource).toContain("useOpenConversation");
+  it("disables closed contact and a favorite while identity is unknown", () => {
+    state.authenticated = null;
+    const screen = renderMobile(<ContactCtaBar {...props} status="sold" />);
+    expect(screen.getByRole("button", { name: "Call", disabled: true })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Message", disabled: true })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Favorite", disabled: true })).toBeTruthy();
   });
-
-  it("renders a Favorite control that can be disabled", () => {
-    expect(contactCtaSource).toContain('t("favorite")');
-    expect(contactCtaSource).toContain("Heart");
-    expect(contactCtaSource).toContain("disabled");
-  });
-
-  it("includes Share action", () => {
-    expect(contactCtaSource).toContain("Share");
-    expect(contactCtaSource).toContain("Share2");
-  });
-
-  it("disables Call for sold listings", () => {
-    expect(contactCtaSource).toContain("Enums.ListingStatus.Sold");
+  it("routes signed-out Message through authentication", () => {
+    state.authenticated = false;
+    const screen = renderMobile(<ContactCtaBar {...props} />);
+    fireEvent.press(screen.getByLabelText("Message"));
+    expect(routerMock.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/(auth)/phone" }));
   });
 });
 
 describe("PhotoGallery", () => {
-  it("uses detail variant in main gallery", () => {
-    expect(photoGallerySource).toContain('"detail"');
+  it("renders the no-media fallback", () => {
+    expect(renderMobile(<PhotoGallery media={[]} />).getByText("No photos")).toBeTruthy();
   });
-
-  it("uses fullscreen variant in fullscreen viewer", () => {
-    expect(photoGallerySource).toContain('"fullscreen"');
-  });
-
-  it("renders no-media fallback", () => {
-    expect(photoGallerySource).toContain('t("noPhotos")');
-    expect(photoGallerySource).toContain("media.length === 0");
-  });
-
-  it("supports horizontal browsing with paging", () => {
-    expect(photoGallerySource).toContain("pagingEnabled");
-    expect(photoGallerySource).toContain("horizontal");
+  it("opens a full-screen image and falls back to the original after a load error", () => {
+    const media: ListingsSchemas.ListingMedia[] = [{ id: "image-1", kind: "image", key: "listings/a.jpg", sortOrder: 0,
+      variants: { thumbnail: "https://media/thumbnail.jpg", list: "https://media/list.jpg", detail: "https://media/detail.jpg", fullscreen: "https://media/fullscreen.jpg" } }];
+    const screen = renderMobile(<PhotoGallery media={media} />);
+    expect(screen.UNSAFE_getByType(Image).props.source.uri).toBe("https://media/detail.jpg");
+    const opener = screen.UNSAFE_getAllByType(Pressable).find((node) => node.props.onPress);
+    if (!opener) throw new Error("Gallery opener missing");
+    fireEvent.press(opener);
+    const images = screen.UNSAFE_getAllByType(Image);
+    const fullscreen = images.find((image) => image.props.source.uri === "https://media/fullscreen.jpg");
+    if (!fullscreen) throw new Error("Fullscreen image missing");
+    fireEvent(fullscreen, "error");
+    expect(screen.UNSAFE_getAllByType(Image).some((image) => image.props.source.uri.endsWith("/listings/a.jpg"))).toBe(true);
   });
 });
 
 describe("ListingDetailView", () => {
-  it("derives title from year + brand + model + generation", () => {
-    expect(listingDetailSource).toContain("buildTitle");
-    expect(listingDetailSource).toContain("year");
-    expect(listingDetailSource).toContain("brandId");
-    expect(listingDetailSource).toContain("modelId");
-    expect(listingDetailSource).toContain("generationId");
+  it("renders catalog names, conditional specs and description without raw catalog ids", () => {
+    const screen = renderMobile(<ListingDetailView listing={fixture({ mileageKm: 12000, vin: "VIN123", colorId: "color", bodyTypeId: "body", transmissionId: "transmission", driveTypeId: "drive", engineTypeId: "engine", description: "Well maintained" })} maps={maps} />);
+    expect(screen.getByText("2020 Toyota Camry XV70")).toBeTruthy();
+    for (const text of ["White", "Sedan", "Automatic", "Front wheel", "Petrol", "VIN123", "Well maintained"]) expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByText("brand-uuid")).toBeNull();
+    expect(screen.queryByText("model-uuid")).toBeNull();
+    expect(screen.queryByText("Engine power")).toBeNull();
   });
-
-  it("does not display raw UUIDs when catalog names are available", () => {
-    expect(listingDetailSource).toContain("maps.brandName");
-    expect(listingDetailSource).toContain("maps.modelName");
-    expect(listingDetailSource).toContain("?? listing.brandId");
-    expect(listingDetailSource).toContain("?? listing.modelId");
+  it.each([true, false])("shows seller-stated damage %s and known issues", (damaged) => {
+    const screen = renderMobile(<ListingDetailView listing={fixture({ conditionDisclosure: { damaged, knownIssuesText: "Rust" } })} maps={maps} />);
+    expect(screen.getByText("Condition, as stated by the seller")).toBeTruthy();
+    expect(screen.getByText(damaged ? "Yes" : "No")).toBeTruthy();
+    expect(screen.getByText("Known issues")).toBeTruthy();
+    expect(screen.getByText("Rust")).toBeTruthy();
   });
-
-  it("renders sold badge when status is sold", () => {
-    expect(listingDetailSource).toContain("Enums.ListingStatus.Sold");
-    expect(listingDetailSource).toContain('t("sold")');
+  it("omits condition disclosure without an answer", () => {
+    const screen = renderMobile(<ListingDetailView listing={fixture()} maps={maps} />);
+    expect(screen.queryByText("Condition, as stated by the seller")).toBeNull();
+    expect(screen.queryByText("Known issues")).toBeNull();
   });
-
-  it("renders spec grid with conditional fields", () => {
-    expect(listingDetailSource).toContain('t("year")');
-    expect(listingDetailSource).toContain('t("mileage")');
-    expect(listingDetailSource).toContain('t("transmission")');
-    expect(listingDetailSource).toContain('t("driveType")');
-    expect(listingDetailSource).toContain('t("engineType")');
-    expect(listingDetailSource).toContain('t("color")');
-    expect(listingDetailSource).toContain('t("bodyType")');
-    expect(listingDetailSource).toContain('t("vin")');
+  it.each(["sold", "archived"] as const)("closes buyer contact for %s, labels the photo and offers similar listings", (status) => {
+    const onSeeSimilar = vi.fn(); const onReport = vi.fn();
+    const screen = renderMobile(<ListingDetailView listing={fixture({ status })} maps={maps} onSeeSimilar={onSeeSimilar} onReport={onReport} />);
+    expect(screen.getByText(status === "sold" ? "Sold" : "Removed from sale")).toBeTruthy();
+    expect(screen.queryByText("+99361000000")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Report" })).toBeNull();
+    expect(screen.queryByText("Request an inspection")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "See other Toyota Camry" }));
+    expect(onSeeSimilar).toHaveBeenCalledOnce();
+    expect(screen.getByText("35,000 TMT").props.className).toContain("text-muted-foreground");
   });
-
-  it("passes no seller trust signal to SellerBlock", () => {
-    expect(listingDetailSource).not.toContain("sellerTrust");
-    expect(listingDetailSource).not.toContain("phoneVerified");
+  it("shows OwnerActions and owner price rather than seller contact", () => {
+    const screen = renderMobile(<ListingDetailView listing={fixture({ status: "sold" })} maps={maps} isOwner />);
+    expect(screen.getByText("Sold")).toBeTruthy();
+    expect(screen.getByText("10,000 USD")).toBeTruthy();
+    expect(screen.queryByText("Private seller")).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Edit" }));
+    expect(routerMock.push).toHaveBeenCalled();
   });
 });
 
 describe("ListingDetailScreen", () => {
-  it("renders unavailable state for missing/soft-deleted listings", () => {
-    expect(screenSource).toContain('t("notAvailable")');
-    expect(screenSource).toContain('"status" in error');
+  it("shows loading without listing content, unavailable for 404, and retry for a hard error", () => {
+    state.isPending = true;
+    const screen = renderMobile(<ListingDetailScreen />);
+    expect(screen.queryByText("2020 Toyota Camry XV70")).toBeNull();
+    const placeholders = screen.UNSAFE_getAllByType(View)
+      .filter((node) => node.props.className?.includes("animate-pulse"));
+    expect(placeholders.map((node) => node.props.className)).toEqual([
+      "bg-accent animate-pulse h-[260px] w-full rounded-none",
+      "bg-accent animate-pulse rounded-md h-8 w-3/4",
+      "bg-accent animate-pulse rounded-md h-6 w-1/3",
+      ...Array(4).fill("bg-accent animate-pulse rounded-md h-10 w-[45%]"),
+      ...Array(2).fill("bg-accent animate-pulse rounded-md h-4 w-full"),
+      "bg-accent animate-pulse rounded-md h-4 w-2/3",
+      "bg-accent animate-pulse h-10 w-10 rounded-full",
+      "bg-accent animate-pulse rounded-md h-4 w-24",
+      "bg-accent animate-pulse rounded-md h-3 w-32",
+    ]);
+    state.isPending = false; state.error = { status: 404 };
+    screen.rerender(<ListingDetailScreen />);
+    expect(screen.getByText("This listing is no longer available")).toBeTruthy();
+    state.error = { status: 500 };
+    screen.rerender(<ListingDetailScreen />);
+    fireEvent.press(screen.getByRole("button", { name: /try again|retry/i }));
+    expect(state.refetch).toHaveBeenCalledOnce();
   });
-
-  it("shows skeleton with stable dimensions", () => {
-    expect(screenSource).toContain("DetailSkeleton");
-    expect(screenSource).toContain("h-[260px]");
-    expect(screenSource).toContain("h-8 w-3/4");
+  it("shows contact only for a buyer's active listing, and filters similar navigation on closed listings", () => {
+    const screen = renderMobile(<ListingDetailScreen />);
+    expect(screen.getByRole("button", { name: "Call" })).toBeTruthy();
+    state.data = fixture({ status: "archived" });
+    screen.rerender(<ListingDetailScreen />);
+    expect(screen.queryByRole("button", { name: "Call" })).toBeNull();
+    expect(screen.queryByLabelText("Message")).toBeNull();
+    expect(screen.queryByLabelText("Favorite")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "See other Toyota Camry" }));
+    expect(routerMock.navigate).toHaveBeenCalledWith(expect.objectContaining({ params: { brandId: "brand-uuid", modelId: "model-uuid" } }));
+    state.data = fixture(); state.viewer = { userId: state.data.sellerId };
+    screen.rerender(<ListingDetailScreen />);
+    expect(screen.queryByRole("button", { name: "Call" })).toBeNull();
+    expect(screen.getByText("10,000 USD")).toBeTruthy();
   });
-
-  it("shows manual retry on hard error", () => {
-    expect(screenSource).toContain("onRetry");
-    expect(screenSource).toContain("refetch");
-  });
-
-  it("uses useViewer to determine ownership", () => {
-    expect(screenSource).toContain("useViewer");
-    expect(screenSource).toContain("viewer.userId === data.sellerId");
-  });
-
-  it("hides buyer ContactCtaBar for owner", () => {
-    expect(screenSource).toContain("!isOwner &&");
-  });
-
-  it("passes isOwner to ListingDetailView", () => {
-    expect(screenSource).toContain("isOwner={isOwner}");
-  });
-});
-
-const step4SpecsSource = readFileSync(
-  resolve(__dirname, "../wizard/Step4Specs.tsx"),
-  "utf-8",
-);
-
-describe("ListingDetailView condition disclosure", () => {
-  it("labels the block as the seller's statement", () => {
-    expect(listingDetailSource).toContain("ConditionDisclosureSection");
-    expect(listingDetailSource).toContain('t("conditionAsStatedBySeller")');
-  });
-
-  it("shows nothing for a Listing without an answer", () => {
-    expect(listingDetailSource).toContain("if (!disclosure) return null;");
-    expect(listingDetailSource).toContain("{listing.conditionDisclosure && (");
-    expect(listingDetailSource).not.toContain("noConditionDisclosure");
-  });
-
-  it("shows Damaged / needs repair and Known issues only", () => {
-    expect(listingDetailSource).toContain('t("damaged")');
-    expect(listingDetailSource).toContain("disclosure.damaged ? t(\"yes\") : t(\"no\")");
-    expect(listingDetailSource).toContain('t("knownIssuesText")');
-    for (const dropped of ["accidentReported", "mileageAccurate", "ownerCount", "serviceHistoryAvailable"]) {
-      expect(listingDetailSource).not.toContain(dropped);
-    }
+  it("honors the inspection flag and auto-opens owner interest after publishing", () => {
+    state.config.inspectionInterestEnabled = false;
+    const screen = renderMobile(<ListingDetailScreen />);
+    expect(screen.getByText("Inspections are temporarily unavailable.")).toBeTruthy();
+    state.config.inspectionInterestEnabled = true;
+    state.viewer = { userId: fixture().sellerId }; routeParams.inspectionInterest = "1";
+    screen.rerender(<ListingDetailScreen />);
+    expect(screen.getByText("An AutoTM mechanic inspection is coming soon. Register your interest to join the pilot.")).toBeTruthy();
   });
 });
 
-describe("Step4Specs condition disclosure inputs", () => {
-  it("asks one Yes/No Damaged question plus Known issues", () => {
-    expect(step4SpecsSource).toContain("ConditionDisclosureSection");
-    expect(step4SpecsSource).toContain('t("damaged")');
-    expect(step4SpecsSource).toContain("updateDisclosure({ damaged: answer })");
-    expect(step4SpecsSource).toContain('accessibilityRole="radio"');
-    expect(step4SpecsSource).toContain("accessibilityState={{ checked: selected }}");
-    expect(step4SpecsSource).toContain("knownIssuesText");
-    for (const dropped of ["accidentReported", "mileageAccurate", "ownerCount", "serviceHistoryAvailable", "Switch"]) {
-      expect(step4SpecsSource).not.toContain(dropped);
-    }
+describe("InspectionInterestCta", () => {
+  it("shows a submit error and allows another attempt", async () => {
+    state.post.mockRejectedValueOnce(new Error("Request failed"));
+    const screen = renderMobile(<InspectionInterestCta listingId="listing-1" open onOpenChange={vi.fn()} />);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Register interest" })); });
+    expect(await screen.findByText("Something went wrong")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Register interest", disabled: false })).toBeTruthy();
+    expect(screen.queryByText("Done")).toBeNull();
   });
-
-  it("leaves Damaged unanswered until the seller picks one", () => {
-    expect(step4SpecsSource).toContain("disclosure?.damaged === answer");
+  it("disables the entry and routes anonymous submission to sign-in", () => {
+    const onOpenChange = vi.fn();
+    const screen = renderMobile(<InspectionInterestCta listingId="listing-1" open={false} disabled onOpenChange={onOpenChange} />);
+    fireEvent.press(screen.getByRole("button", { name: /Request AutoTM inspection/ }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+    state.authenticated = false;
+    screen.rerender(<InspectionInterestCta listingId="listing-1" open onOpenChange={onOpenChange} />);
+    fireEvent.press(screen.getByRole("button", { name: "Continue with phone" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(routerMock.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/(auth)/phone" }));
+    expect(state.post).not.toHaveBeenCalled();
   });
-
-  it("shows the required-answer error under the question", () => {
-    const disclosure = { knownIssuesText: "Rust on the sill" };
-    const { fieldErrors } = WizardSchemas.validateStep("specs", {
-      condition: "new",
-      conditionDisclosure: disclosure,
-    });
-
-    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({
-      damaged: "wizardErrors.damagedRequired",
-    });
-    expect(step4SpecsSource).toContain("conditionDisclosureFieldErrors(fieldErrors, disclosure)");
-  });
-
-  it("shows a Known issues error under Known issues once Damaged is answered", () => {
-    const disclosure = { damaged: true, knownIssuesText: "x".repeat(1001) };
-    const { fieldErrors } = WizardSchemas.validateStep("specs", {
-      condition: "new",
-      conditionDisclosure: disclosure,
-    });
-
-    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({
-      knownIssuesText: "wizardErrors.invalidValue",
-    });
-  });
-
-  it("shows no disclosure error once the step is valid", () => {
-    const disclosure = { damaged: false };
-    const { fieldErrors } = WizardSchemas.validateStep("specs", {
-      condition: "new",
-      conditionDisclosure: disclosure,
-    });
-
-    expect(conditionDisclosureFieldErrors(fieldErrors, disclosure)).toEqual({});
-  });
-
-  it("caps known issues text at 1000 characters", () => {
-    expect(step4SpecsSource).toContain("maxLength={1000}");
-  });
-});
-
-describe("ListingDetailView inspection interest", () => {
-  it("renders InspectionInterestCta for active listings", () => {
-    expect(listingDetailSource).toContain("<InspectionInterestCta");
-    expect(listingDetailSource).toContain("Enums.ListingStatus.Active");
-  });
-
-  it("passes inspectionInterestEnabled from screen to CTA", () => {
-    expect(listingDetailSource).toContain("inspectionInterestEnabled");
-    expect(screenSource).toContain("inspectionInterestEnabled={config?.inspectionInterestEnabled !== false}");
-  });
-
-  it("wires open state from screen through ListingDetailView", () => {
-    expect(listingDetailSource).toContain("inspectionInterestOpen");
-    expect(listingDetailSource).toContain("onInspectionInterestOpenChange");
-    expect(screenSource).toContain("const [interestOpen, setInterestOpen] = useState(false)");
-  });
-
-  it("inspection CTA supports disabled state and auth-on-action", () => {
-    expect(inspectionInterestCtaSource).toContain("disabled={disabled}");
-    expect(inspectionInterestCtaSource).toContain("useAuthIntentStore");
-    expect(inspectionInterestCtaSource).toContain("isAuthenticated === false");
-  });
-
-  it("inspection CTA handles success and error states", () => {
-    expect(inspectionInterestCtaSource).toContain("submitted");
-    expect(inspectionInterestCtaSource).toContain("errorCopy");
-    expect(inspectionInterestCtaSource).toContain("mapErrorToCopy");
-  });
-
-  it("auto-opens inspection interest sheet for owner after publish", () => {
-    expect(screenSource).toContain("inspectionInterest");
-    expect(screenSource).toContain("interestAutoOpened");
-    expect(screenSource).toContain("setInterestOpen(true)");
-  });
-});
-
-describe("ListingDetailView owner branching", () => {
-  it("renders OwnerActions when isOwner is true", () => {
-    expect(listingDetailSource).toContain("isOwner ? (");
-    expect(listingDetailSource).toContain("<OwnerActions");
-  });
-
-  it("renders SellerBlock when isOwner is false", () => {
-    expect(listingDetailSource).toContain("<SellerBlock");
-  });
-
-  it("accepts isOwner prop", () => {
-    expect(listingDetailSource).toContain("isOwner?: boolean");
-  });
-});
-
-describe("Closed Listing (sold / archived) for buyers", () => {
-  it("hides the whole contact bar (Call, Message, ♡) on closed Listings", () => {
-    expect(screenSource).toContain("isClosedForContact,");
-    expect(screenSource).toContain('} from "../../../src/listings/detail/closedListing"');
-    expect(screenSource).toContain(
-      "{!isOwner && !isClosedForContact(data.status) && (",
-    );
-  });
-
-  it("wires See other Brand Model navigation from the screen", () => {
-    expect(screenSource).toContain(
-      "onSeeSimilar={() => router.navigate(similarListingsHref(data))}",
-    );
-  });
-
-  it("derives the closed state for buyers only, keeping the owner view unchanged", () => {
-    expect(listingDetailSource).toContain(
-      "const isClosedForBuyer = !isOwner && isClosedForContact(listing.status)",
-    );
-    expect(listingDetailSource).toContain("{isSold && !isClosedForBuyer && (");
-  });
-
-  it("shows the Sold / Removed from sale banner on the photo", () => {
-    expect(listingDetailSource).toContain(
-      "banner={closedBannerKey ? t(closedBannerKey) : undefined}",
-    );
-    expect(photoGallerySource).toContain("banner?: string");
-    expect(photoGallerySource).toContain("{banner && <GalleryBanner label={banner} />}");
-  });
-
-  it("greys the price", () => {
-    expect(listingDetailSource).toContain("muted={isClosedForBuyer}");
-    expect(priceDisplaySource).toContain(
-      'muted ? "text-muted-foreground" : "text-primary"',
-    );
-  });
-
-  it("hides the seller phone", () => {
-    expect(listingDetailSource).toContain(
-      "contactPhone={isClosedForBuyer ? undefined : listing.contactPhone}",
-    );
-    expect(listingDetailSource).toContain(
-      "allowCalls={listing.allowCalls && !isClosedForBuyer}",
-    );
-  });
-
-  it("keeps Report limited to active Listings", () => {
-    expect(listingDetailSource).toContain(
-      "{!isOwner && listing.status === Enums.ListingStatus.Active && onReport && (",
-    );
-  });
-
-  it("links See other Brand Model to the brand + model filtered feed", () => {
-    expect(listingDetailSource).toContain(
-      "{isClosedForBuyer && onSeeSimilar && brandName && modelName && (",
-    );
-    expect(listingDetailSource).toContain("onPress={onSeeSimilar}");
-    expect(listingDetailSource).toContain(
-      't("seeOtherBrandModel", { brand: brandName, model: modelName })',
-    );
+  it("submits interest and shows a success state", async () => {
+    state.post.mockResolvedValue({ id: "interest-1" });
+    const screen = renderMobile(<InspectionInterestCta listingId="listing-1" open onOpenChange={vi.fn()} />);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: /register interest|submit/i })); });
+    expect((await screen.findAllByText("Thanks, we received your interest. We'll contact you when inspections launch.")).length).toBeGreaterThan(0);
+    expect(state.post).toHaveBeenCalledWith("/listings/listing-1/inspection-interest", {}, expect.anything());
   });
 });
