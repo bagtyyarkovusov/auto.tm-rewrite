@@ -35,7 +35,7 @@ The host-specific model profile lives in [queue models](../agents/queue-models.m
 
 - ADR-0069 remains immutable and governs hosts outside this Codex exception.
 - No global configuration, application behaviour, or CI changes are introduced.
-- Test-first adoption remains the separate Proposed ADR-0070.
+- Test-first adoption is recorded in the separate Accepted ADR-0070.
 
 ## Alternatives considered
 

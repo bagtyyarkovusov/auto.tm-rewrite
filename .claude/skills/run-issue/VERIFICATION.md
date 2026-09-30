@@ -4,7 +4,7 @@ Verification is evidence collection, not a ceremonial command list. Map each iss
 
 ## Acceptance evidence
 
-[ADR-0070](../../../docs/adr/0070-test-first-behaviour-and-ui-evidence.md) is Proposed pending founder acceptance. The procedure requested by #456 is recorded here as the single workflow source for test-first and UI evidence.
+[ADR-0070](../../../docs/adr/0070-test-first-behaviour-and-ui-evidence.md) was accepted by the founder on 2026-09-30. Its procedure is recorded here as the single workflow source for test-first and UI evidence.
 
 1. Map every acceptance criterion to its behaviour test or an explicit exemption. Before writing production code for a code-testable criterion, write and run its test. Confirm the failure is the unmet criterion, rather than a setup, import, or dependency error.
 2. Commit and push the failing-test checkpoint, and record red evidence using [Execution state](EXECUTION-STATE.md#acceptance-evidence-record). Then write production code and run the same test to green. Keep earlier red evidence available when updating the state.

@@ -79,7 +79,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0067](0067-targeted-intermediate-reviews-and-final-verification.md) | Target intermediate reviews and verify the final commit (amends ADR-0058's checkpoint and review procedure) | Accepted | 2026-09-29 |
 | [0068](0068-resolve-context7-ids-at-lookup-time.md) | Resolve Context7 IDs at lookup time (amends ADR-0017's ID selection shortcut) | Accepted | 2026-09-29 |
 | [0069](0069-queue-implementers-run-in-host-created-worktrees.md) | Queue implementers run in host-created worktrees (amends ADR-0058's one worktree per issue and resume-the-found-worktree rules and ADR-0064's restatement of them; complements ADR-0066's queue sessions) | Accepted | 2026-09-29 |
-| [0070](0070-test-first-behaviour-and-ui-evidence.md) | Test-first behaviour and UI evidence | Proposed | 2026-09-30 |
+| [0070](0070-test-first-behaviour-and-ui-evidence.md) | Test-first behaviour and UI evidence | Accepted | 2026-09-30 |
 | [0071](0071-codex-queue-models-and-owned-worktrees.md) | Codex queue models and owned worktrees (amends ADR-0069 for Codex only) | Accepted | 2026-09-30 |
 
 ## Per-app ADRs
