@@ -1,4 +1,7 @@
+import type * as Native from "react-native";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { renderMobile, routeParams } from "../render";
 import ModelPickerScreen from "../../app/(tabs)/(search)/models";
 import BrandPickerScreen from "../../app/(tabs)/(search)/brands";
@@ -6,9 +9,9 @@ const counts = vi.hoisted(() => ({ models: vi.fn(), brands: vi.fn(), total: vi.f
 vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 vi.mock("react-native-safe-area-context", async () => ({ SafeAreaView: (await import("react-native")).View }));
 vi.mock("react-native", async (original) => {
-  const native = await original<typeof import("react-native")>();
+  const native = await original<typeof Native>();
   const React = await import("react");
-  type SectionProps = { sections: { data: unknown[] }[]; renderItem: (arg: { item: unknown }) => React.ReactNode; ListHeaderComponent?: React.ReactNode };
+  type SectionProps = { sections: { data: unknown[] }[]; renderItem: (arg: { item: unknown }) => ReactNode; ListHeaderComponent?: ReactNode };
   return { ...native, SectionList: ({ sections, renderItem, ListHeaderComponent }: SectionProps) => React.createElement(native.ScrollView, null, ListHeaderComponent, sections.flatMap((section) => section.data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item }))))) };
 });
 vi.mock("@/components/ui/checkbox", async () => ({ Checkbox: (await import("react-native")).Pressable }));

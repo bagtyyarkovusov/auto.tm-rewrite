@@ -5,6 +5,8 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+
+import { ApiError } from "../../../src/api/client";
 import { useListings } from "../../../src/api/listings/useListings";
 import { useListingCount } from "../../../src/api/listings/useListingCount";
 import { useModels } from "../../../src/api/catalog/useModels";
@@ -27,6 +29,7 @@ import { useListingFilters } from "../../../src/listings/search/useListingFilter
 import { readResultsRouteState, writeResultsRouteState, type ResultsRouteState } from "../../../src/listings/search/resultsRouteState";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
+
 import { Text } from "@/components/ui/text";
 
 /** Results keeps the applied query in search params and leaves its list mounted on Listing navigation. */
@@ -90,7 +93,8 @@ export default function ResultsScreen() {
     </View>
     {chips}
   </View>;
-  const empty = feed.isPending ? <View accessibilityLabel={t("resultsLoading")} className="gap-2">{[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} />)}</View>
+  const offline = feed.fetchStatus === "paused" && items.length === 0;
+  const empty = offline ? <FeedError error={new ApiError("NETWORK_ERROR", 0)} onRetry={() => void feed.refetch()} /> : feed.isPending ? <View accessibilityLabel={t("resultsLoading")} className="gap-2">{[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} />)}</View>
     : feed.isError ? <FeedError error={feed.error} onRetry={() => void feed.refetch()} />
       : filters.count ? <FilteredEmpty onReset={reset} /> : <FeedEmpty />;
   return <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 
 import { createRoutePickerActions, type PickerRouter } from "./pickerActions";
-import { readResultsRouteState, writeResultsRouteState } from "./resultsRouteState";
+import { readPickerResultsFilters, writeResultsRouteState } from "./resultsRouteState";
 import { useRecentChoicesStore } from "./recentSearches";
 
 /** expo-router's imperative router, narrowed to what the pickers use. */
@@ -17,13 +17,8 @@ const pickerRouter: PickerRouter = {
 export function useRoutePickerActions() {
   const params = useLocalSearchParams<{ returnToResults?: string; resultsState?: string }>();
   const resultsState = useMemo(() => {
-    if (params.returnToResults !== "1") return undefined;
-    try {
-      const raw: unknown = JSON.parse(params.resultsState ?? "{}");
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-      const strings = Object.fromEntries(Object.entries(raw).filter(([, value]) => typeof value === "string"));
-      return writeResultsRouteState(readResultsRouteState(strings));
-    } catch { return undefined; }
+    const filters = readPickerResultsFilters(params);
+    return filters ? writeResultsRouteState(filters) : undefined;
   }, [params.returnToResults, params.resultsState]);
   const record = useRecentChoicesStore((s) => s.record);
   return useMemo(

@@ -1,8 +1,11 @@
 import { SlidersHorizontal, X } from "lucide-react-native";
 import { Pressable, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import type { ListingFilter } from "./useListingFilters";
+
 import { localeTag } from "../../i18n/resources";
+
+import type { ListingFilter } from "./useListingFilters";
+
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 

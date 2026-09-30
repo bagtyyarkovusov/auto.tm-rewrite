@@ -1,4 +1,7 @@
+import type * as Native from "react-native";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { renderMobile, fireEvent, routeParams, routerMock } from "../render";
 import ResultsScreen from "../../app/(tabs)/(search)/results";
 
@@ -10,11 +13,11 @@ vi.mock("react-native-safe-area-context", async () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 vi.mock("react-native", async (original) => {
-  const native = await original<typeof import("react-native")>();
+  const native = await original<typeof Native>();
   const React = await import("react");
   return { ...native, RefreshControl: native.View,
-    FlatList: ({ data = [], renderItem, ListHeaderComponent, ListEmptyComponent, ...props }: Record<string, any>) => React.createElement(native.ScrollView, props,
-      ListHeaderComponent, data.map((item: any, index: number) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))), data.length ? null : ListEmptyComponent),
+    FlatList: ({ data = [], renderItem, ListHeaderComponent, ListEmptyComponent, ...props }: { data?: { id: string }[]; renderItem: (arg: { item: { id: string }; index: number }) => ReactNode; ListHeaderComponent?: ReactNode; ListEmptyComponent?: ReactNode } & Record<string, unknown>) => React.createElement(native.ScrollView, props,
+      ListHeaderComponent, data.map((item, index) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))), data.length ? null : ListEmptyComponent),
   };
 });
 vi.mock("react-native-reanimated", async () => {
@@ -22,7 +25,7 @@ vi.mock("react-native-reanimated", async () => {
   return { default: { View: native.View }, useSharedValue: (value: number) => ({ value }),
     useAnimatedStyle: (fn: () => unknown) => fn(), withTiming: (value: number) => value };
 });
-vi.mock("../../src/api/client", () => ({ apiClient: { get: vi.fn() }, ApiError: class ApiError extends Error {} }));
+vi.mock("../../src/api/client", () => ({ apiClient: { get: vi.fn() }, ApiError: class ApiError extends Error { constructor(public code: string, public status: number) { super(code); } } }));
 vi.mock("../../src/listings/search/FilterSheet", () => ({ FilterSheet: () => null }));
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => null }));
 vi.mock("../../src/listings/feed/useFeedFavoriteReplay", () => ({ useFeedFavoriteReplay: vi.fn() }));
@@ -37,7 +40,7 @@ const listing = {
   mileageKm: 80000, transmissionId: "auto", engineTypeId: "petrol", cityId: "ashgabat", publishedAt: "2026-09-30T04:00:00.000Z",
 };
 vi.mock("../../src/api/listings/useListings", () => ({ useListings: (options: unknown) => {
-  state.feed(options); return { data: { pages: [{ items: state.empty ? [] : [listing] }] }, isPending: state.pending,
+  state.feed(options); return { data: { pages: [{ items: state.empty || state.pending ? [] : [listing] }] }, isPending: state.pending,
     fetchStatus: state.paused ? "paused" : "idle", isError: state.error, error: new Error("Network request failed"), refetch: vi.fn(), isRefetching: false,
     fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false };
 } }));

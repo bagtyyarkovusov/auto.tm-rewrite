@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { renderMobile, fireEvent } from "../../../test/render";
+
 import { SortSheet } from "./SortSheet";
 
 describe("Sort sheet", () => {

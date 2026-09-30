@@ -1,6 +1,7 @@
 import type { Enums } from "@auto-tm/contracts";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
+
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 

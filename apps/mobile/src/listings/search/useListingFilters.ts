@@ -93,10 +93,7 @@ export function useListingFilters(initial: ListingFilter = {}, onApply?: (next: 
   }, []);
 
   const commit = useCallback((patch: Partial<ListingFilter>) => {
-    const next = { ...activeRef.current, ...patch };
-    for (const key of Object.keys(next) as FilterKey[]) {
-      if (!isNonEmptyFilterValue(next[key])) delete next[key];
-    }
+    const next = Object.fromEntries(Object.entries({ ...activeRef.current, ...patch }).filter(([, value]) => isNonEmptyFilterValue(value)));
     replace(next);
     onApplyRef.current?.(next);
   }, [replace]);

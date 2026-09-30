@@ -4,11 +4,13 @@ import { Camera, Heart } from "lucide-react-native";
 import { memo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
+
 import type { AuthHref } from "../../auth/intentStore";
 import { localeTag } from "../../i18n/resources";
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { formatPrice } from "../formatPrice";
 import { useListingFavorite } from "../useListingFavorite";
+
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -19,7 +21,8 @@ export function formatListingDate(publishedAt: string, locale: string, t: (key: 
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   if (day(published) === day(now)) return t("resultsToday");
   if (day(published) === day(yesterday)) return t("resultsYesterday");
-  return published.toLocaleDateString(localeTag(locale), { day: "numeric", month: "short", ...(published.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}) });
+  const month = published.toLocaleDateString(localeTag(locale), { month: "short" });
+  return `${published.getDate()} ${month}${published.getFullYear() !== now.getFullYear() ? ` ${published.getFullYear()}` : ""}`;
 }
 
 interface ListingLargeCardProps {

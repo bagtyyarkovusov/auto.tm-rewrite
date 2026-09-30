@@ -1,4 +1,8 @@
+import type * as Native from "react-native";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { waitFor } from "@testing-library/react-native";
+
 import { renderMobile, fireEvent, routeParams, routerMock, act } from "../render";
 import ResultsScreen from "../../app/(tabs)/(search)/results";
 
@@ -10,11 +14,11 @@ vi.mock("react-native-safe-area-context", async () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 vi.mock("react-native", async (original) => {
-  const native = await original<typeof import("react-native")>();
+  const native = await original<typeof Native>();
   const React = await import("react");
   return { ...native, RefreshControl: native.View,
-    FlatList: ({ data = [], renderItem, ListHeaderComponent, ListEmptyComponent, ...props }: Record<string, any>) => React.createElement(native.ScrollView, props,
-      ListHeaderComponent, data.map((item: any, index: number) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))), data.length ? null : ListEmptyComponent),
+    FlatList: ({ data = [], renderItem, ListHeaderComponent, ListEmptyComponent, ...props }: { data?: { id: string }[]; renderItem: (arg: { item: { id: string }; index: number }) => ReactNode; ListHeaderComponent?: ReactNode; ListEmptyComponent?: ReactNode } & Record<string, unknown>) => React.createElement(native.ScrollView, props,
+      ListHeaderComponent, data.map((item, index) => React.createElement(React.Fragment, { key: item.id }, renderItem({ item, index }))), data.length ? null : ListEmptyComponent),
   };
 });
 vi.mock("react-native-reanimated", async () => {
@@ -47,12 +51,11 @@ vi.mock("expo-router", async () => {
   const mocks = await import("../native-setup");
   return { router: mocks.routerMock, useRouter: () => mocks.routerMock, useLocalSearchParams: () => mocks.routeParams, useIsFocused: () => state.focused, useFocusEffect: vi.fn() };
 });
-import { waitFor } from "@testing-library/react-native";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { queryKeys } from "../../src/api/queryKeys";
 
 beforeEach(() => {
-  state.viewer = null; state.focused = true; state.post.mockReset(); state.feed.mockClear();
+  state.viewer = null; state.focused = true; state.empty = false; state.post.mockReset(); state.feed.mockClear();
   state.post.mockResolvedValue({ id: "favorite", listingId: listing.id });
   useAuthIntentStore.setState({ intent: null, replayAction: null, replayReturnTo: null });
 });
@@ -62,21 +65,22 @@ describe("Results favorite sign-in boundary", () => {
     const view = renderMobile(<ResultsScreen />);
     const signedIn = queryKeys.listings.list({ sort: "price_asc", limit: 20 }, "buyer");
     const anonymous = queryKeys.listings.list({ sort: "price_asc", limit: 20 }, null);
-    for (const key of [signedIn, anonymous]) view.queryClient.setQueryData(key, { pages: [{ items: [{ ...listing, isFavorited: false }], nextCursor: null }], pageParams: [null] });
+    for (const key of [signedIn, anonymous]) view.queryClient.setQueryData(key, { pages: [{ items: [{ ...listing, id: "page-1-listing", isFavorited: false }], nextCursor: "page-2" }, { items: [{ ...listing, isFavorited: false }], nextCursor: null }], pageParams: [null, "page-2"] });
     fireEvent.press(view.getByRole("button", { name: "Favorite" }));
     const intent = useAuthIntentStore.getState().intent;
     expect(intent).toEqual(expect.objectContaining({ action: { kind: "favorite", listingId: listing.id }, returnTo: expect.objectContaining({ pathname: "/(tabs)/(search)/results", params: expect.objectContaining({ brandId: "toyota", modelIds: "camry,corolla", cityId: "ashgabat", sort: "price_asc", yearMin: "2018" }) }) }));
     expect(routerMock.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/(auth)/phone" }));
     expect(state.post).not.toHaveBeenCalled();
-    state.focused = false; view.rerender(<ResultsScreen />);
+    state.focused = false; state.empty = true; view.rerender(<ResultsScreen />);
     act(() => useAuthIntentStore.getState().completeSignIn({ push: routerMock.push, dismissTo: vi.fn() }));
     expect(state.post).not.toHaveBeenCalled();
+    expect(view.queryByRole("button", { name: "Favorite" })).toBeNull();
     state.viewer = { userId: "buyer" }; state.focused = true; view.rerender(<ResultsScreen />);
     await waitFor(() => expect(state.post).toHaveBeenCalledOnce());
     expect(state.post).toHaveBeenCalledWith(`/listings/${listing.id}/favorite`, {}, expect.anything());
     expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ viewerId: "buyer" }));
     expect(useAuthIntentStore.getState().replayAction).toBeNull();
-    const saved = (key: typeof signedIn) => view.queryClient.getQueryData<{ pages: { items: { isFavorited: boolean }[] }[] }>(key)?.pages[0]?.items[0]?.isFavorited;
+    const saved = (key: typeof signedIn) => view.queryClient.getQueryData<{ pages: { items: { id: string; isFavorited: boolean }[] }[] }>(key)?.pages.flatMap((page) => page.items).find((item) => item.id === listing.id)?.isFavorited;
     expect(saved(signedIn)).toBe(true); expect(saved(anonymous)).toBe(false);
     view.rerender(<ResultsScreen />); expect(state.post).toHaveBeenCalledOnce();
   });

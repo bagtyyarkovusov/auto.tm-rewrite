@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { renderMobile, fireEvent } from "../../../test/render";
+
 import { FilterChipsRow } from "./FilterChipsRow";
 
 describe("Results filter chips", () => {

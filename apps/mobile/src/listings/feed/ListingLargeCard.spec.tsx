@@ -1,8 +1,10 @@
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { renderMobile, fireEvent } from "../../../test/render";
-import { ListingLargeCard, formatListingDate } from "./ListingLargeCard";
 import { useAuthIntentStore } from "../../auth/intentStore";
+
+import { ListingLargeCard, formatListingDate } from "./ListingLargeCard";
 vi.mock("../../api/client", () => ({ apiClient: { post: vi.fn(), delete: vi.fn() }, ApiError: class ApiError extends Error {} }));
 const listing: ListingsSchemas.ListingSummary = { id: "listing", sellerId: "seller", status: "active", brandId: "brand", modelId: "model", year: 2018, priceAmount: 2, priceCurrency: "USD", displayPriceTmt: 70000, photoKeys: ["one.jpg", "two.jpg"], photoCount: 7, cityId: "city", publishedAt: "2026-09-30T04:00:00.000Z" };
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-09-30T12:00:00Z")); useAuthIntentStore.setState({ intent: null, replayAction: null, replayReturnTo: null }); });

@@ -136,3 +136,13 @@ describe("useListingCount", () => {
     expect(mockGet).not.toHaveBeenCalled();
   });
 });
+
+it("passes Results sort/multiple models and exposes the server TMT price range", async () => {
+  mockGet.mockReset();
+  mockGet.mockResolvedValue({ totalMatching: 2, priceMinTmt: 70000, priceMaxTmt: 120000 });
+  const { result } = renderHook(() => useListingCount({ filters: { brandId: "toyota", modelIds: ["camry", "corolla"], sort: "price_desc" } }), { wrapper });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  const url = new URL(String(mockGet.mock.lastCall?.[0]), "http://example.test");
+  expect(url.searchParams.get("sort")).toBe("price_desc"); expect(url.searchParams.getAll("modelIds")).toEqual(["camry", "corolla"]);
+  expect(result.current.data).toEqual({ totalMatching: 2, priceMinTmt: 70000, priceMaxTmt: 120000 });
+});

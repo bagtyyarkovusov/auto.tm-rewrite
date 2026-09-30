@@ -1,4 +1,5 @@
 import { ListingsSchemas } from "@auto-tm/contracts";
+
 import type { ListingFilter } from "./useListingFilters";
 
 export const RESULTS_FILTER_KEYS = ["brandId", "modelIds", "modelId", "cityId", "priceMin", "priceMax", "yearMin", "yearMax", "condition", "sort"] as const;
@@ -31,4 +32,15 @@ export function writeResultsRouteState(filters: ListingFilter): Record<string, s
     const value = key === "sort" ? filters.sort ?? "newest" : filters[key];
     return [key, Array.isArray(value) ? value.join(",") : value == null ? undefined : String(value)];
   }));
+}
+
+/** Public Results origin carried by picker routes. Ignore malformed/deferred inputs. */
+export function readPickerResultsFilters(params: { returnToResults?: string | string[]; resultsState?: string | string[] }): ListingFilter | undefined {
+  if (one(params.returnToResults) !== "1") return undefined;
+  try {
+    const raw: unknown = JSON.parse(one(params.resultsState) ?? "{}");
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+    const strings = Object.fromEntries(Object.entries(raw).filter(([, value]) => typeof value === "string"));
+    return readResultsRouteState(strings);
+  } catch { return undefined; }
 }

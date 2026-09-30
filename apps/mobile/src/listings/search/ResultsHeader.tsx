@@ -2,7 +2,9 @@ import type { ListingsSchemas } from "@auto-tm/contracts";
 import { ArrowDownUp, ChevronLeft } from "lucide-react-native";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
+
 import { localeTag } from "../../i18n/resources";
+
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";

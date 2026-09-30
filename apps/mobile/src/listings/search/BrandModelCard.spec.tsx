@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { renderMobile, fireEvent } from "../../../test/render";
+
 import { BrandModelCard } from "./BrandModelCard";
 
 describe("Brand/model card", () => {
