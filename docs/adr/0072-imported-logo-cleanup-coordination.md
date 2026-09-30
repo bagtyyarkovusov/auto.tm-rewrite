@@ -5,13 +5,13 @@
 - **Deciders**: AutoTM founder, decision pending
 - **Scope**: Issue #454's whole imported-version cleanup on admin replacement or removal
 
-## Problem
+## Context
 
 PR #461 retains old imported versions and losing uploads because deterministic `brands/<slug>/imp-<hash>/` directories can become active again in another CLI process. An admin's delayed deletion can therefore delete active assets. Checking the current key before deletion has a time-of-check race. Compare-and-swap protects a database write, but does not serialize deletion against reactivation. The repository has no established cross-process storage lock.
 
 A 60-second transaction lock across S3 calls is insufficient. Parallel uploads, retries, repair HEADs, and paginated deletion have no proven worst-case duration below 60 seconds. Transaction timeout can release the lock while storage is still running. An AbortSignal or rejected request does not prove the remote server stopped deletion. A session lock has the same uncertain-response and connection-loss problem. Do not implement either as the safety mechanism.
 
-## Recommended decision
+## Decision proposed for founder approval
 
 Every new logo activation gets a directory that has never been active before. No inactive directory is reactivated. Cleanup can then remove the actual previous directory after the database swap without threatening a later active logo, including when deletion completes late.
 
@@ -65,3 +65,38 @@ A stronger zero-recreation guarantee requires durable retirement fencing that ev
 6. After founder acceptance, implement and rerun the same cases green, then repository test/typecheck, affected lint/build/runtime gates and documentation checks.
 
 No key-policy or automatic prefix-cleanup production code is implemented by this proposal.
+
+
+## Consequences
+
+### Positive
+
+- Delayed previous-prefix deletion cannot delete active objects after all writers use the protocol.
+- Admin cleanup includes all imported siblings without holding a DB transaction during storage calls.
+- Current imports keep idempotence and missing-object repair, including legacy active keys.
+
+### Negative / proposed accepted costs
+
+- Late repair and failed storage operations can leave inactive orphan files.
+- Key parsing and API tests must support new unique version segments.
+- Enabling cleanup requires an operator barrier that stops old writers.
+
+### Neutral
+
+- No database migration is required for active-object safety. A stronger mutation-revision guarantee remains a separate decision.
+- Pending lifecycle and upload-length signing are independent of this proposal.
+
+## Alternatives considered
+
+- Deterministic directory reuse plus a current-key check: rejected because reactivation can occur after the check.
+- Bounded DB or session lock across storage: rejected because timeout or connection loss can release the lock before a remote deletion settles.
+- Durable retirement fencing: stronger orphan-prevention protocol, deferred pending a need for that guarantee and defined reimport/recovery behavior.
+- Exclusive maintenance-window cleanup: avoids concurrent writers but does not provide automatic admin cleanup.
+
+## References
+
+- [Issue #454 and founder scope comment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/454#issuecomment-5910480337)
+- [PR #461's immutable imported-version safety fix](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/461)
+- [Catalog ownership and logo constraints](../../apps/api/src/modules/catalog/CONTEXT.md)
+- [Current importer](../../packages/db/scripts/brand-logos/import.ts)
+- [Current admin replacement](../../apps/api/src/modules/catalog/application/SetBrandLogo.ts)

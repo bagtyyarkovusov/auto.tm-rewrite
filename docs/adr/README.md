@@ -127,6 +127,8 @@ Every ADR follows this skeleton:
 - Related ADR-NNNN
 ```
 
+| [0072](0072-imported-logo-cleanup-coordination.md) | Give logo activations unique object directories | Proposed | 2026-09-30 |
+
 ## Rules
 
 1. **Numbered sequentially.** Don't reuse numbers.
