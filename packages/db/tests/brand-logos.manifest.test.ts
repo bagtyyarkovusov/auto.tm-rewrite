@@ -163,7 +163,7 @@ describe("brand logo manifest schema", () => {
   );
 
   it("rejects a slug that cannot be a plain object-key segment when a logo is imported", () => {
-    for (const slug of ["Toyota", "toyota/../x", "то́йота", "a b"]) {
+    for (const slug of ["Toyota", "toyota/../x", "toyota%2F..%2Fx", "..", "a?b", "a#b", "то́йота", "a b"]) {
       expect(problemsOf(manifestOf({ ...simpleIconsEntry, slug }))).toMatch(/slug/);
     }
   });
