@@ -257,6 +257,63 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
     });
   });
 
+  it("keeps every active object when two imports race from the same snapshot", async () => {
+    let arrivals = 0;
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+    const masters: MasterProvider = {
+      async load() {
+        if (++arrivals === 2) release();
+        await barrier;
+        return enc(siToyota.svg);
+      },
+    };
+    const deps = {
+      db, s3, bucket: BUCKET,
+      manifest: manifestOf(simpleIconsEntry("toyota", "A", siToyota.svg)),
+      masters,
+    };
+    const reports = await Promise.all([
+      importBrandLogos(deps, { dryRun: false, force: false }),
+      importBrandLogos(deps, { dryRun: false, force: false }),
+    ]);
+
+    expect(reports.map((report) => outcomeOf(report, "toyota")).sort()).toEqual(["failed", "imported"]);
+    const brand = await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } });
+    const directory = (brand.logoKey as string).replace("logo.png", "");
+    for (const file of ["logo.png", "mono@1x.png", "mono@2x.png", "mono@3x.png"]) {
+      await expect(s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: `${directory}${file}` }))).resolves.toBeDefined();
+    }
+  });
+
+  it("reports individual cleanup errors while preserving the successful replacement", async () => {
+    await run();
+    const previous = (await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey as string;
+    s3.middlewareStack.add((next, context) => async (args) => {
+      if (context.commandName === "DeleteObjectsCommand") {
+        return {
+          response: {},
+          output: { $metadata: {}, Errors: [{ Key: previous, Code: "AccessDenied", Message: "cleanup denied" }] },
+        };
+      }
+      return next(args);
+    }, { step: "initialize", name: "cleanupErrorFixture" });
+    try {
+      const report = await run({}, manifestOf(simpleIconsEntry("toyota", "A", siBmw.svg)), { toyota: enc(siBmw.svg) });
+      const result = report.results.find((r) => r.slug === "toyota");
+      expect(result?.outcome).toBe("replaced-import");
+      expect(result?.detail).toContain(previous);
+      expect(result?.detail).toContain("AccessDenied");
+      expect(result?.detail).toContain("cleanup denied");
+      const brand = await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } });
+      expect(brand.logoKey).toBe(result?.logoKeyAfter);
+      expect(brand.logoKey).not.toBe(previous);
+      await expect(s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: brand.logoKey as string }))).resolves.toBeDefined();
+    } finally {
+      s3.middlewareStack.remove("cleanupErrorFixture");
+    }
+  });
+
   it("restores a missing object without touching the database", async () => {
     await run();
     const toyota = await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } });
