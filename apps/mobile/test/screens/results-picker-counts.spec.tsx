@@ -41,4 +41,10 @@ describe("Results picker route count wiring", () => {
     renderMobile(<BrandPickerScreen />);
     expect(counts.brands).toHaveBeenLastCalledWith({ filters: expect.objectContaining(otherFilters) });
   });
+  it("never sends the Results sort order to the brand or model counts endpoints, which reject it", () => {
+    renderMobile(<ModelPickerScreen />);
+    expect(counts.models.mock.lastCall?.[0].filters).not.toHaveProperty("sort");
+    renderMobile(<BrandPickerScreen />);
+    expect(counts.brands.mock.lastCall?.[0].filters).not.toHaveProperty("sort");
+  });
 });

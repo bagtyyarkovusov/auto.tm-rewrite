@@ -125,9 +125,10 @@ export function brandCountFilters(
   return withoutBrandAndModels(filters);
 }
 
-const BRAND_AND_MODEL_KEYS = new Set(["brandId", "modelId", "modelIds"]);
+// Sort is Results-only ordering. The brand and model counts endpoints reject it with a 400.
+const BRAND_AND_MODEL_KEYS = new Set(["brandId", "modelId", "modelIds", "sort"]);
 
-/** The buyer's other filters (city, year, price, condition), without empty values. */
+/** The buyer's other filters (city, year, price, condition), without empty values or sort. */
 export function withoutBrandAndModels(
   filters: ListingsSchemas.ListingFilter,
 ): ListingsSchemas.ListingBrandCountQuery {

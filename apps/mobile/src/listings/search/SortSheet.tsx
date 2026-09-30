@@ -1,6 +1,6 @@
 import { ListingsSchemas } from "@auto-tm/contracts";
 import { Check, X } from "lucide-react-native";
-import { Pressable, View } from "react-native";
+import { Pressable, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,10 @@ export function SortSheet({ open, onOpenChange, value, onChange }: {
   value: ListingsSchemas.FeedSort; onChange: (sort: ListingsSchemas.FeedSort) => void;
 }) {
   const { t } = useTranslation();
+  // The iOS full-window overlay gives an auto-height sheet no room, so like FilterSheet this one sets a height.
+  const sheetHeight = Math.min(useWindowDimensions().height * 0.85, 480);
   return <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent>
+    <SheetContent style={{ height: sheetHeight }}>
       <SheetHeader className="flex-row items-center justify-between">
         <SheetTitle>{t("resultsSort")}</SheetTitle>
         <Button variant="ghost" size="icon" onPress={() => onOpenChange(false)} accessibilityLabel={t("close")}><Icon as={X} className="size-5 text-foreground" /></Button>
