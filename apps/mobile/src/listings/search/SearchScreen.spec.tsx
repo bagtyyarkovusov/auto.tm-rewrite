@@ -3,10 +3,16 @@ import { waitFor } from "@testing-library/react-native";
 
 import SearchRoute from "../../../app/(tabs)/(search)/search";
 import { fireEvent, renderMobile, routerMock } from "../../../test/render";
+
 import { useRecentChoicesStore } from "./recentSearches";
 
 const get = vi.fn();
-vi.mock("../../api/client", () => ({ apiClient: { get: (...args: unknown[]) => get(...args) } }));
+vi.mock("../../api/client", () => ({ apiClient: { get: (...args: unknown[]) => get(...args) }, ApiError: class extends Error {} }));
+vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
+vi.mock("react-native", async (importOriginal) => {
+  const native = await importOriginal<typeof import("react-native")>();
+  return { ...native, KeyboardAvoidingView: native.View, Keyboard: { dismiss: vi.fn() } };
+});
 vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),

@@ -1,9 +1,11 @@
-import { useTranslation } from "react-i18next";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { InterimDiscoveryScreen } from "../../../src/listings/search/InterimDiscoveryScreen";
+import { SearchScreen } from "../../../src/listings/search/SearchScreen";
 
-/** Search (🔍) route. Interim stand-in until #369 ships brand/model search. */
-export default function SearchScreen() {
-  const { t } = useTranslation();
-  return <InterimDiscoveryScreen title={t("search")} />;
+export default function SearchRoute() {
+  return (
+    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+      <SearchScreen />
+    </SafeAreaView>
+  );
 }
