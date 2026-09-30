@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
@@ -107,7 +108,7 @@ describe("CatalogController e2e", () => {
 
     it("returns an encoded non-ASCII catalog logo URL that can be fetched from MinIO", async () => {
       const catalog = JSON.parse(readFileSync(
-        new URL("../../../../../../packages/db/prisma/seed/brands.json", import.meta.url),
+        resolve(__dirname, "../../../../../../packages/db/prisma/seed/brands.json"),
         "utf-8",
       )) as { slug: string; nameRu: string; nameTk: string; nameEn: string }[];
       const brand = catalog.find((entry) => entry.slug === "москвич")!;
