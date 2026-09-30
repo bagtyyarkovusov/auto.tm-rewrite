@@ -12,7 +12,7 @@ import {
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
 import sharp from "sharp";
-import { GetObjectCommand, HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaService } from "@auto-tm/db";
 
 import { CatalogModule } from "../catalog.module";
@@ -529,15 +529,21 @@ describe("AdminCatalogController e2e", () => {
         expect(await head(pending)).toBeNull();
       }
 
-      // A file bigger than the presigned size is caught when it is read back.
+      // A different length is rejected before storage accepts the upload.
       const res = await presign(brand.id, token, "image/png", 100);
-      await fetch(res.body.uploadUrl, {
+      const rejected = await fetch(res.body.uploadUrl, {
         method: "PUT",
         headers: res.body.headers,
         body: new Uint8Array(200 * 1024 + 1),
       });
+      expect(rejected.status).toBe(403);
+      expect(await head(res.body.key)).toBeNull();
+      // Privileged writes can bypass a presign; confirm still enforces its cap.
+      await s3.send(new PutObjectCommand({ Bucket: "catalog-assets", Key: res.body.key,
+        ContentType: "image/png", Body: new Uint8Array(200 * 1024 + 1) }));
       const tooLarge = await confirm(brand.id, token, res.body.key);
       expect(tooLarge.body.details).toEqual({ reason: "LOGO_TOO_LARGE" });
+      expect(await head(res.body.key)).toBeNull();
 
       const missing = await confirm(
         brand.id,
