@@ -1,5 +1,5 @@
 import { useCallback, useReducer } from "react";
-import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 
 import { useEditListing } from "../../api/listings/useEditListing";
 import { useAttachMedia } from "../../api/listings/useAttachMedia";
@@ -112,12 +112,32 @@ const EDITABLE_FIELDS: (keyof ListingsSchemas.EditListingRequest)[] = [
 export function buildFieldsPatch(
   payload: WizardSchemas.WizardDraftPayload,
 ): ListingsSchemas.EditListingRequest {
-  const patch: ListingsSchemas.EditListingRequest = {};
+  const patch: ListingsSchemas.EditListingRequest = {
+    priceAmount: payload.priceAmount,
+    priceCurrency: payload.priceCurrency,
+    description: payload.description,
+    condition: payload.condition,
+    mileageKm: payload.mileageKm,
+    colorId: payload.colorId,
+    bodyTypeId: payload.bodyTypeId,
+    transmissionId: payload.transmissionId,
+    driveTypeId: payload.driveTypeId,
+    engineTypeId: payload.engineTypeId,
+    enginePower: payload.enginePower,
+    regionId: payload.regionId,
+    cityId: payload.cityId,
+    locationText: payload.locationText,
+    contactPhone: payload.contactPhone,
+    allowCalls: payload.allowCalls,
+    allowChat: payload.allowChat,
+    acceptsExchange: payload.acceptsExchange,
+    installmentAvailable: payload.installmentAvailable,
+    conditionDisclosure: payload.conditionDisclosure === undefined
+      ? undefined
+      : ListingsSchemas.ConditionDisclosureSchema.parse(payload.conditionDisclosure),
+  };
   for (const field of EDITABLE_FIELDS) {
-    const value = payload[field as keyof WizardSchemas.WizardDraftPayload];
-    if (value !== undefined) {
-      (patch as Record<string, unknown>)[field] = value;
-    }
+    if (patch[field] === undefined) delete patch[field];
   }
   return patch;
 }

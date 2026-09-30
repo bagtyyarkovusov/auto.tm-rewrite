@@ -548,6 +548,7 @@ export const ListingsErrorCode = {
   ListingFieldLocked: "LISTING_FIELD_LOCKED",
   ExchangeRateMissing: "EXCHANGE_RATE_MISSING",
   ContactMethodRequired: "CONTACT_METHOD_REQUIRED",
+  DamagedRequired: "DAMAGED_REQUIRED",
   ListingDeleted: "LISTING_DELETED",
   ListingNotFound: "LISTING_NOT_FOUND",
   MediaLimitExceeded: "MEDIA_LIMIT_EXCEEDED",
