@@ -88,7 +88,7 @@ const COMMONS_PAGE_HOST = "commons.wikimedia.org";
 
 const SHA256 = /^[0-9a-f]{64}$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const OBJECT_KEY_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const OBJECT_KEY_SLUG = /^[\p{Ll}\p{Lo}0-9]+(?:-[\p{Ll}\p{Lo}0-9]+)*$/u;
 
 type Json = Record<string, unknown>;
 
@@ -135,7 +135,7 @@ function checkSourcedFields(raw: Json, at: string, problems: string[]): void {
     problems.push(`${at}: transform must be one of ${LOGO_TRANSFORMS.join(", ")}`);
   }
   if (typeof raw["slug"] === "string" && !OBJECT_KEY_SLUG.test(raw["slug"])) {
-    problems.push(`${at}: slug must be lowercase ASCII letters, digits and hyphens to be used in an object key`);
+    problems.push(`${at}: slug must be lowercase letters, digits and hyphens to be used in an object key`);
   }
 }
 

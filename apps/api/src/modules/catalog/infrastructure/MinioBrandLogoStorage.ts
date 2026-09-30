@@ -105,7 +105,8 @@ export class MinioBrandLogoStorage implements BrandLogoStorage {
   }
 
   publicUrl(key: string): string {
-    return `${this.publicBaseUrl}/${CATALOG_ASSETS_BUCKET}/${key}`;
+    const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+    return `${this.publicBaseUrl}/${CATALOG_ASSETS_BUCKET}/${encodedKey}`;
   }
 }
 
