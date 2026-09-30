@@ -349,6 +349,38 @@ describe("issue 373 screen controls", () => {
     expect(screen.queryByRole("button", { name: "Report" })).toBeNull();
   });
 
+  it.each(["Mark as sold", "Archive listing"] as const)(
+    "disables every lifecycle control in the bar and overflow while %s is in flight",
+    async (started) => {
+      state.viewer = { userId: fixture().sellerId };
+      let finish: (value: unknown) => void = () => {};
+      state.post.mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+      const screen = renderMobile(<ListingDetailScreen />);
+      fireEvent.press(screen.getByRole("button", { name: "More options" }));
+      fireEvent.press(screen.getByRole("button", { name: started }));
+      await act(async () => {
+        fireEvent.press(screen.getByText("Confirm"));
+      });
+      expect(state.post).toHaveBeenCalledTimes(1);
+      // React Query publishes pending state on a timer, so wait for it.
+      await screen.findByRole("button", { name: started, disabled: true });
+      for (const name of [
+        "Edit",
+        "Mark as sold",
+        "Archive listing",
+        "Delete",
+      ])
+        expect(
+          screen.getByRole("button", { name, disabled: true }),
+        ).toBeTruthy();
+      await act(async () => finish({}));
+    },
+  );
+
   it.each(["sold", "archived"] as const)(
     "hides contact, Favorite and Report for a %s buyer",
     (status) => {
