@@ -1,5 +1,6 @@
 import { ConfigService } from "@nestjs/config";
 import { describe, expect, it } from "vitest";
+import { CreateBucketCommand, DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import type { Env } from "../../../env.schema";
 import { MinioMediaStorageAdapter } from "../../listings/infrastructure/MinioMediaStorageAdapter";
@@ -25,4 +26,34 @@ describe("presigned PUT length enforcement", () => {
     const result = await storage.presignUpload({ key: "pending/test/original.jpg", contentType: "image/jpeg", sizeBytes: 4 });
     expect(new URL(result.url).searchParams.get("X-Amz-SignedHeaders")?.split(";")).toContain("content-length");
   });
+});
+
+
+it.skipIf(!process.env["AUTOTM_454_MINIO_ENDPOINT"])("isolated MinIO accepts exact lengths and rejects changed lengths for both adapters", async () => {
+  const endpoint = process.env["AUTOTM_454_MINIO_ENDPOINT"]!;
+  const config = new ConfigService({ MINIO_ENDPOINT: endpoint, MINIO_PUBLIC_URL: endpoint,
+    MINIO_REGION: "us-east-1", MINIO_ACCESS_KEY: "minioadmin", MINIO_SECRET_KEY: "minioadmin" }) as ConfigService<Env, true>;
+  const s3 = new S3Client({ endpoint, region: "us-east-1", forcePathStyle: true,
+    credentials: { accessKeyId: "minioadmin", secretAccessKey: "minioadmin" } });
+  const logo = new MinioBrandLogoStorage(config);
+  const media = new MinioMediaStorageAdapter(config);
+  for (const bucket of ["catalog-assets", "listing-photos"]) {
+    try { await s3.send(new CreateBucketCommand({ Bucket: bucket })); }
+    catch (error) { if ((error as { name: string }).name !== "BucketAlreadyOwnedByYou") throw error; }
+  }
+  try {
+    for (const kind of ["logo", "media"] as const) {
+      const key = `pending/length-${kind}-${Date.now()}`;
+      const result = kind === "logo"
+        ? await logo.presignUpload(key, "image/png", 600, 4)
+        : await media.presignUpload({ key, contentType: "image/jpeg", sizeBytes: 4 });
+      const headers = "headers" in result ? result.headers : { "Content-Type": "image/jpeg" };
+      const accepted = await fetch(result.url, { method: "PUT", headers, body: new Uint8Array(4) });
+      expect(accepted.status).toBe(200);
+      const rejected = await fetch(result.url, { method: "PUT", headers, body: new Uint8Array(5) });
+      expect(rejected.status).toBe(403);
+      expect(await rejected.text()).toContain("SignatureDoesNotMatch");
+      await s3.send(new DeleteObjectCommand({ Bucket: kind === "logo" ? "catalog-assets" : "listing-photos", Key: key }));
+    }
+  } finally { s3.destroy(); }
 });

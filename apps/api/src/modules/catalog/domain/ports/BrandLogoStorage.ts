@@ -5,6 +5,7 @@ export interface BrandLogoStorage {
     key: string,
     contentType: string,
     expirySeconds: number,
+    sizeBytes: number,
   ): Promise<{ url: string; headers: Record<string, string> }>;
   /** The object's bytes and type, or null when it is missing or larger than `maxBytes`. */
   get(

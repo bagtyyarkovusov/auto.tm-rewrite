@@ -47,12 +47,14 @@ export class MinioBrandLogoStorage implements BrandLogoStorage {
     key: string,
     contentType: string,
     expirySeconds: number,
+    sizeBytes: number,
   ): Promise<{ url: string; headers: Record<string, string> }> {
     const command = new PutObjectCommand({
       Bucket: CATALOG_ASSETS_BUCKET,
       Key: key,
       ContentType: contentType,
-      // The bucket is public-read; a pending upload is never shown inline.
+      ContentLength: sizeBytes,
+      // Pending objects are private; attachment remains defense in depth.
       ContentDisposition: "attachment",
     });
     const url = await getSignedUrl(this.signingS3, command, {

@@ -36,19 +36,19 @@ Buckets:
 - `listing-photos`
 - `listing-videos`
 - `chat-attachments`
-- `catalog-assets` (brand logos under versioned `brands/<slug>/v<n>/` keys, and admin uploads under `pending/`, which the API deletes on confirm; an upload that is never confirmed stays until removed by hand, and like every object in the bucket it is readable by anyone who knows its random key)
+- `catalog-assets`: anonymous reads cover only `brands/*`, including imported `imp-<hash>` and admin `v<n>` versions. Admin uploads under `pending/` are private. Confirmation deletes them; abandoned uploads are eligible for lifecycle expiration after one day. MinIO scanning is asynchronous, so deletion can occur later than that threshold.
 
 When a bucket is added to this list, re-run `pnpm minio:bootstrap` against each
 environment's MinIO before deploying the API that uses it. Until then, requests
 that write to the missing bucket fail. `catalog-assets` was added for brand logos.
 
-Each bucket receives an anonymous policy for `s3:GetObject` only. Anonymous
+Each bucket receives an anonymous policy for `s3:GetObject` only. The catalog grant is restricted to `brands/*`; the other buckets retain their full object read scope. Bootstrap reapplies the catalog pending-only lifecycle on every run. Re-run it in each environment before deploying this change, through the environment's authorized operator. Anonymous
 `s3:PutObject` is not granted; uploads use short-lived signed PUT URLs produced
 by the API.
 
 ## Backup And Restore
 
-Backups capture object bytes, bucket policies, and a SHA-256 manifest:
+Backups capture object bytes, bucket policies, and a SHA-256 manifest. Catalog backups must contain the scoped `brands/*` policy. Legacy whole-bucket catalog policies are rejected, so re-bootstrap before creating a new backup. Lifecycle settings are repository-owned rather than captured in the v1 manifest; restore reestablishes the one-day pending rule during bootstrap:
 
 ```sh
 pnpm minio:backup /tmp/autotm-minio-backup
@@ -65,3 +65,7 @@ pnpm minio:restore /tmp/autotm-minio-backup
 
 Do not run restore over production as a drill. Restore into isolated data first
 and record the evidence in the deployment runbook.
+
+## Direct upload length
+
+Brand-logo and listing-media presigned PUTs bind the declared `sizeBytes` as `Content-Length`. Uploaders send the exact binary body; their HTTP transport supplies its length. No client-set Content-Length header is required. A different length fails signature verification before the upload is accepted. Brand confirmation still checks HEAD and downloaded byte length and validates image content. Signing length does not establish MIME type or image safety.
