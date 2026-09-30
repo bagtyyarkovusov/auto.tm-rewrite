@@ -28,7 +28,7 @@ export function useCatalogSearch(query: string, localeOverride?: Locale) {
     return () => clearTimeout(timer);
   }, [trimmed]);
 
-  return useQuery({
+  const result = useQuery({
     queryKey: queryKeys.catalog.search(debounced, locale),
     queryFn: () =>
       apiClient.get(
@@ -40,4 +40,7 @@ export function useCatalogSearch(query: string, localeOverride?: Locale) {
     placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
   });
+
+  // While typing is still settling, the results belong to earlier text.
+  return { ...result, isSettling: debounced !== trimmed };
 }
