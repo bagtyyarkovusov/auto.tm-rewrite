@@ -10,10 +10,13 @@ export interface PickedBrand {
   name: string;
 }
 
+export interface PickerOriginParams { returnToResults?: "1"; resultsState?: string }
+
 export type PickerHref =
   | typeof BRANDS_PATH
-  | { pathname: typeof MODELS_PATH; params: { brandId: string; modelIds?: string } }
-  | { pathname: typeof RESULTS_PATH; params: ResultsParams };
+  | { pathname: typeof BRANDS_PATH; params: PickerOriginParams }
+  | { pathname: typeof MODELS_PATH; params: { brandId: string; modelIds?: string } & PickerOriginParams }
+  | { pathname: typeof RESULTS_PATH; params: ResultsParams & Record<string, string | undefined> };
 
 /** The part of expo-router's router the pickers use; tests pass a fake. */
 export interface PickerRouter {
@@ -52,10 +55,10 @@ export interface RoutePickerActions extends PickerActions {
 
 type RecordChoice = (choice: BrandModelChoice) => void;
 
-export function modelsHref(brandId: string, modelIds: readonly string[] = []): PickerHref {
+export function modelsHref(brandId: string, modelIds: readonly string[] = [], origin: PickerOriginParams = {}): PickerHref {
   return {
     pathname: MODELS_PATH,
-    params: modelIds.length > 0 ? { brandId, modelIds: modelIds.join(",") } : { brandId },
+    params: { ...origin, ...(modelIds.length > 0 ? { brandId, modelIds: modelIds.join(",") } : { brandId }) },
   };
 }
 
@@ -67,7 +70,16 @@ function openResults(
   router: PickerRouter,
   choice: BrandModelChoice,
   options: { openFilters?: boolean } = {},
+  resultsState?: Record<string, string | undefined>,
 ) {
+  if (resultsState) {
+    router.dismissTo({ pathname: RESULTS_PATH, params: {
+      ...resultsState, ...buildResultsParams(choice, options),
+      modelIds: choice.modelIds.length ? choice.modelIds.join(",") : undefined,
+      modelId: undefined,
+    } });
+    return;
+  }
   if (router.canDismiss()) router.dismissAll();
   router.push({ pathname: RESULTS_PATH, params: buildResultsParams(choice, options) });
 }
@@ -75,25 +87,28 @@ function openResults(
 export function createRoutePickerActions({
   router,
   record,
+  resultsState,
 }: {
   router: PickerRouter;
   record: RecordChoice;
+  resultsState?: Record<string, string | undefined>;
 }): RoutePickerActions {
+  const origin: PickerOriginParams = resultsState ? { returnToResults: "1", resultsState: JSON.stringify(resultsState) } : {};
   return {
     mode: "show",
-    pickBrand: (brand) => router.push(modelsHref(brand.id)),
+    pickBrand: (brand) => router.push(modelsHref(brand.id, [], origin)),
     confirm(choice) {
       record(choice);
-      openResults(router, choice);
+      openResults(router, choice, {}, resultsState);
     },
     // Search parameters is still the Results filter sheet until its own
     // full-screen form lands (#371), so "More filters" opens Results with the
     // sheet open and the brand and models filled in.
-    moreFilters: (choice) => openResults(router, choice, { openFilters: true }),
-    changeBrand: () => router.dismissTo(BRANDS_PATH),
+    moreFilters: (choice) => openResults(router, choice, { openFilters: true }, resultsState),
+    changeBrand: () => router.dismissTo(resultsState ? { pathname: BRANDS_PATH, params: origin } : BRANDS_PATH),
     pickRecent(choice) {
       record(choice);
-      openResults(router, choice);
+      openResults(router, choice, {}, resultsState);
     },
   };
 }

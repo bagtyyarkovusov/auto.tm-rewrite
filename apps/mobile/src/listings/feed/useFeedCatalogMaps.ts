@@ -30,14 +30,14 @@ function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean))).sort();
 }
 
-export function useFeedCatalogMaps(listings: ListingSummary[]) {
+export function useFeedCatalogMaps(listings: ListingSummary[], selectedBrandIds: string[] = []) {
   const locale = useCatalogLocale();
   const brands = useBrands(locale);
   const regions = useRegions(locale);
 
   const brandIds = useMemo(
-    () => unique(listings.map((listing) => listing.brandId)),
-    [listings],
+    () => unique([...listings.map((listing) => listing.brandId), ...selectedBrandIds]),
+    [listings, selectedBrandIds],
   );
 
   const modelQueries = useQueries({

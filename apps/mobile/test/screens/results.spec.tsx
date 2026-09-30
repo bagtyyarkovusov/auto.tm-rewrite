@@ -72,7 +72,7 @@ describe("Results approved behavior", () => {
     const view = renderMobile(<ResultsScreen />);
     for (const [label, condition] of [["New", "new"], ["Used", "used"], ["All", undefined]] as const) {
       fireEvent.press(view.getByRole("button", { name: `${label} Condition` }));
-      expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: expect.objectContaining({ condition }) }));
+      expect(state.feed.mock.lastCall?.[0].filters.condition).toBe(condition);
       expect(routerMock.push).not.toHaveBeenCalled();
     }
   });

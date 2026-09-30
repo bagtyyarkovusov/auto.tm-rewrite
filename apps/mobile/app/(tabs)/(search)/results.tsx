@@ -1,233 +1,113 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft, SlidersHorizontal } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  View,
-} from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-
 import { useListings } from "../../../src/api/listings/useListings";
+import { useListingCount } from "../../../src/api/listings/useListingCount";
+import { useModels } from "../../../src/api/catalog/useModels";
+import { useTransmissions } from "../../../src/api/catalog/useTransmissions";
+import { useEngineTypes } from "../../../src/api/catalog/useEngineTypes";
+import { useViewer } from "../../../src/auth/useViewer";
+import { ListingLargeCard, ListingLargeCardSkeleton } from "../../../src/listings/feed/ListingLargeCard";
 import { FeedEmpty } from "../../../src/listings/feed/FeedEmpty";
-import { FilteredEmpty } from "../../../src/listings/feed/FilteredEmpty";
 import { FeedError } from "../../../src/listings/feed/FeedError";
-import { FeedSkeleton } from "../../../src/listings/feed/FeedSkeleton";
-import { ListingCard } from "../../../src/listings/feed/ListingCard";
-import { FilterSheet } from "../../../src/listings/search/FilterSheet";
-import { useListingFilters } from "../../../src/listings/search/useListingFilters";
-import {
-  parseResultsParams,
-  type ResultsSelection,
-} from "../../../src/listings/search/resultsParams";
+import { FilteredEmpty } from "../../../src/listings/feed/FilteredEmpty";
 import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMaps";
-import { useSafeBack } from "../../../src/navigation/useSafeBack";
+import { useFeedFavoriteReplay } from "../../../src/listings/feed/useFeedFavoriteReplay";
+import { FilterSheet } from "../../../src/listings/search/FilterSheet";
+import { ResultsHeader } from "../../../src/listings/search/ResultsHeader";
+import { SortSheet } from "../../../src/listings/search/SortSheet";
+import { ConditionSwitch } from "../../../src/listings/search/ConditionSwitch";
+import { BrandModelCard } from "../../../src/listings/search/BrandModelCard";
+import { FilterChipsRow, type ChipGroup } from "../../../src/listings/search/FilterChipsRow";
+import { useListingFilters } from "../../../src/listings/search/useListingFilters";
+import { readResultsRouteState, writeResultsRouteState, type ResultsRouteState } from "../../../src/listings/search/resultsRouteState";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { useSafeBack } from "../../../src/navigation/useSafeBack";
 import { Text } from "@/components/ui/text";
 
-/**
- * Interim Results (#367). Until the Results slice (#370) replaces it, this is
- * the chronological feed with today's filter sheet, reached from "See all" on
- * Home, from the Brand and Model pickers and Recent (#368), and from "See
- * other Brand Model" on a closed Listing. `resultsParams` owns the route
- * params. With no filters it is the full feed.
- */
+/** Results keeps the applied query in search params and leaves its list mounted on Listing navigation. */
 export default function ResultsScreen() {
   const { t } = useTranslation();
   const goBack = useSafeBack(HOME_HREF);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const filters = useListingFilters();
-  const params = useLocalSearchParams<{
-    brandId?: string;
-    modelIds?: string;
-    modelId?: string;
-    openFilters?: string;
-  }>();
-  const selection = parseResultsParams(params);
-  const selectionKey = selection ? JSON.stringify(selection) : null;
-  const { reset: resetFilters, setField, apply: applyFilters } = filters;
-
-  // The pickers, Recent, and "See other Brand Model" on a closed Listing open
-  // the feed with exactly that brand and models (none = every model of the
-  // brand); the Model picker's "More filters" also opens the filter sheet.
-  // Params are cleared once applied, so the same link re-applies them after
-  // the buyer changes the filters.
+  const params = useLocalSearchParams<ResultsRouteState>();
+  const routeState = readResultsRouteState(params);
+  const routeKey = JSON.stringify(routeState);
+  const previousRouteKey = useRef(routeKey);
+  const [sheetOpen, setSheetOpen] = useState(params.openFilters === "1");
+  const [sortOpen, setSortOpen] = useState(false);
+  const filters = useListingFilters(routeState, (next) => router.setParams(writeResultsRouteState(next)));
+  const { replace, commit } = filters;
   useEffect(() => {
-    if (!selectionKey) return;
-    const { brandId, modelIds, openFilters } = JSON.parse(selectionKey) as ResultsSelection;
-    resetFilters();
-    setField("brandId", brandId);
-    setField("modelIds", modelIds.length > 0 ? modelIds : undefined);
-    applyFilters();
-    if (openFilters) setSheetOpen(true);
-    router.setParams({
-      brandId: undefined,
-      modelIds: undefined,
-      modelId: undefined,
-      openFilters: undefined,
-    });
-  }, [selectionKey, resetFilters, setField, applyFilters]);
+    if (previousRouteKey.current !== routeKey) {
+      previousRouteKey.current = routeKey;
+      replace(JSON.parse(routeKey));
+    }
+  }, [routeKey, replace]);
+  useEffect(() => {
+    if (params.openFilters === "1") {
+      setSheetOpen(true);
+      router.setParams({ openFilters: undefined });
+    }
+  }, [params.openFilters]);
 
-  const {
-    data,
-    isPending,
-    isError,
-    error,
-    refetch,
-    isRefetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useListings({ filters: filters.active });
-
-  const handlePress = useCallback((id: string) => {
-    router.push(`/(public)/listings/${id}`);
-  }, []);
-
-  const allItems = data?.pages.flatMap((page) => page.items) ?? [];
-  const catalogMaps = useFeedCatalogMaps(allItems);
-
-  const activeFilterSummary =
-    filters.count > 0
-      ? t("activeFiltersCount", { count: filters.count })
-      : t("filterSearchCtaHint");
-
-  const header = (
-    <View className="gap-4 px-4 pt-2 pb-4">
-      <View className="-ml-3 flex-row items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-11 w-11"
-          onPress={goBack}
-          accessibilityLabel={t("back")}
-        >
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
-        <Text className="text-2xl font-heading text-foreground">
-          {t("carsBrowseTitle")}
-        </Text>
-      </View>
-
-      <Button
-        variant="outline"
-        size="lg"
-        onPress={() => setSheetOpen(true)}
-        accessibilityLabel={t("openFilters")}
-        className="h-auto justify-between rounded-2xl border-border bg-card px-4 py-4 active:bg-muted"
-      >
-        <View className="min-w-0 flex-1 flex-row items-center gap-3">
-          <View className="h-11 w-11 items-center justify-center rounded-full bg-primary/10">
-            <Icon as={SlidersHorizontal} className="size-5 text-primary" />
-          </View>
-          <View className="min-w-0 flex-1 gap-0.5">
-            <Text className="text-base font-semibold text-foreground">
-              {t("filterSearchCta")}
-            </Text>
-            <Text
-              className="text-sm text-muted-foreground"
-              numberOfLines={1}
-            >
-              {activeFilterSummary}
-            </Text>
-          </View>
-        </View>
-
-        {filters.count > 0 ? (
-          <Badge variant="brand" className="ml-3">
-            <Text>{filters.count}</Text>
-          </Badge>
-        ) : null}
-      </Button>
-
+  const sort = filters.active.sort ?? "newest";
+  const applied = useMemo(() => ({ ...filters.active, sort }), [filters.active, sort]);
+  const viewer = useViewer();
+  const returnTo = useMemo(() => ({ pathname: "/(tabs)/(search)/results" as const, params: writeResultsRouteState(applied) }), [applied]);
+  useFeedFavoriteReplay(returnTo);
+  const feed = useListings({ filters: applied, viewerId: viewer?.userId ?? null });
+  const count = useListingCount({ filters: applied });
+  const items = feed.data?.pages.flatMap((page) => page.items) ?? [];
+  // Include a selected brand even when there are no matching Listings, so its names remain visible.
+  const catalog = useFeedCatalogMaps(items, filters.active.brandId ? [filters.active.brandId] : []);
+  const models = useModels(filters.active.brandId ?? "");
+  const modelNames = (filters.active.modelIds ?? []).map((id) => models.data?.items.find((model) => model.id === id)?.name ?? t("loading"));
+  const transmissions = useTransmissions();
+  const engineTypes = useEngineTypes();
+  const scrollY = useRef(0);
+  const [floating, setFloating] = useState(false);
+  const floated = useSharedValue(0);
+  const floatingStyle = useAnimatedStyle(() => ({ opacity: floated.value, transform: [{ translateY: (1 - floated.value) * 12 }] }));
+  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.current = event.nativeEvent.contentOffset.y;
+    const next = scrollY.current > 180;
+    setFloating((previous) => previous === next ? previous : next);
+    floated.value = withTiming(next ? 1 : 0, { duration: 150 });
+  }, [floated]);
+  const reset = () => { filters.replace({ sort: "newest" }); router.setParams(writeResultsRouteState({ sort: "newest" })); };
+  const remove = (group: ChipGroup) => commit(group === "city" ? { cityId: undefined } : group === "price" ? { priceMin: undefined, priceMax: undefined } : { yearMin: undefined, yearMax: undefined });
+  const chips = <FilterChipsRow filters={applied} cityName={filters.active.cityId ? catalog.cityName(filters.active.cityId) : undefined} onOpen={() => setSheetOpen(true)} onRemove={remove} />;
+  const header = <View>
+    <View className="gap-3 px-4 pt-1 pb-2">
+      <ConditionSwitch value={applied.condition} onChange={(condition) => commit({ condition })} />
+      <BrandModelCard brandName={applied.brandId ? catalog.brandName(applied.brandId) : undefined} modelNames={modelNames} hasBrand={!!applied.brandId}
+        onClear={() => commit({ brandId: undefined, modelIds: undefined, modelId: undefined })}
+        onEdit={() => router.push(applied.brandId ? { pathname: "/(tabs)/(search)/models", params: { brandId: applied.brandId, modelIds: applied.modelIds?.join(","), returnToResults: "1", resultsState: JSON.stringify(writeResultsRouteState(applied)) } } : { pathname: "/(tabs)/(search)/brands", params: { returnToResults: "1", resultsState: JSON.stringify(writeResultsRouteState(applied)) } })} />
     </View>
-  );
-
-  if (isPending) {
-    return (
-      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-        {header}
-        <FeedSkeleton />
-        <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
-      </SafeAreaView>
-    );
-  }
-
-  if (isError) {
-    return (
-      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-        {header}
-        <FeedError error={error} onRetry={() => refetch()} />
-        <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
-      </SafeAreaView>
-    );
-  }
-
-  if (allItems.length === 0) {
-    return (
-      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-        {header}
-        {filters.count > 0 ? (
-          <FilteredEmpty onReset={filters.reset} />
-        ) : (
-          <FeedEmpty />
-        )}
-        <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-      {header}
-      <FlatList
-        data={allItems}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ListingCard
-            listing={item}
-            onPress={handlePress}
-            brandName={catalogMaps.brandName(item.brandId)}
-            modelName={catalogMaps.modelName(item.modelId)}
-            cityName={catalogMaps.cityName(item.cityId)}
-          />
-        )}
-        ItemSeparatorComponent={() => (
-          <View className="h-px mx-4 bg-border" />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => refetch()}
-          />
-        }
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
-          }
-        }}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View className="py-4 items-center">
-              <ActivityIndicator />
-            </View>
-          ) : !hasNextPage ? (
-            <View className="py-4 items-center">
-              <Text className="text-xs text-muted-foreground">
-                {t("noMore")}
-              </Text>
-            </View>
-          ) : null
-        }
-      />
-      <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
-    </SafeAreaView>
-  );
+    {chips}
+  </View>;
+  const empty = feed.isPending ? <View accessibilityLabel={t("resultsLoading")} className="gap-2">{[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} />)}</View>
+    : feed.isError ? <FeedError error={feed.error} onRetry={() => void feed.refetch()} />
+      : filters.count ? <FilteredEmpty onReset={reset} /> : <FeedEmpty />;
+  return <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <ResultsHeader count={count.data} sort={sort} onSort={() => setSortOpen(true)} onBack={goBack} />
+    <FlatList data={feed.isPending || feed.isError ? [] : items} keyExtractor={(item) => item.id} ListHeaderComponent={header} ListEmptyComponent={empty}
+      contentContainerStyle={{ paddingBottom: 76, flexGrow: 1 }} onScroll={onScroll} scrollEventThrottle={16}
+      renderItem={({ item }) => <ListingLargeCard listing={item} onPress={(id) => router.push(`/(public)/listings/${id}`)}
+        brandName={catalog.brandName(item.brandId)} modelName={catalog.modelName(item.modelId)} cityName={catalog.cityName(item.cityId)}
+        transmissionName={transmissions.data?.items.find((entry) => entry.id === item.transmissionId)?.name}
+        engineTypeName={engineTypes.data?.items.find((entry) => entry.id === item.engineTypeId)?.name}
+        isAuthenticated={viewer === undefined ? null : viewer !== null} returnTo={returnTo} />}
+      ItemSeparatorComponent={() => <View className="h-2 bg-background" />}
+      refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={() => void feed.refetch()} />}
+      onEndReached={() => { if (feed.hasNextPage && !feed.isFetchingNextPage && !feed.isRefetching) void feed.fetchNextPage(); }} onEndReachedThreshold={0.5}
+      ListFooterComponent={items.length && !feed.isPending && !feed.isError ? <View className="items-center py-4">{feed.isFetchingNextPage ? <ActivityIndicator /> : !feed.hasNextPage ? <Text className="text-xs text-muted-foreground">{t("noMore")}</Text> : null}</View> : null} />
+    {floating ? <Animated.View style={floatingStyle} className="absolute bottom-0 left-0 right-0 border-t border-border bg-background">{chips}</Animated.View> : null}
+    <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
+    <SortSheet open={sortOpen} onOpenChange={setSortOpen} value={sort} onChange={(value) => commit({ sort: value })} />
+  </SafeAreaView>;
 }
