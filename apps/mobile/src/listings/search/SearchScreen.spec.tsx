@@ -1,8 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { onlineManager } from "@tanstack/react-query";
+import type * as Native from "react-native";
+
 import { waitFor } from "@testing-library/react-native";
 
 import SearchRoute from "../../../app/(tabs)/(search)/search";
-import { fireEvent, renderMobile, routerMock } from "../../../test/render";
+import { act, fireEvent, renderMobile, routerMock } from "../../../test/render";
 
 import { useRecentChoicesStore } from "./recentSearches";
 
@@ -10,7 +13,7 @@ const get = vi.fn();
 vi.mock("../../api/client", () => ({ apiClient: { get: (...args: unknown[]) => get(...args) }, ApiError: class extends Error {} }));
 vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 vi.mock("react-native", async (importOriginal) => {
-  const native = await importOriginal<typeof import("react-native")>();
+  const native = await importOriginal<typeof Native>();
   return { ...native, KeyboardAvoidingView: native.View, Keyboard: { dismiss: vi.fn() } };
 });
 vi.mock("react-native-safe-area-context", async () => ({
@@ -39,6 +42,7 @@ async function search(screen: ReturnType<typeof setup>, text: string) {
 }
 
 describe("Search route", () => {
+  afterEach(() => { onlineManager.setOnline(true); });
   beforeEach(() => {
     useRecentChoicesStore.getState().resetForTests();
     searchResponse = { results: [camry] };
@@ -163,6 +167,35 @@ describe("Search route", () => {
     const screen = setup();
     fireEvent.press(screen.getByText("All filters"));
     expect(routerMock.replace).toHaveBeenCalledWith({ pathname: "/(tabs)/(search)/results", params: { openFilters: "1" } });
+  });
+
+  it("keeps an unknown name plus a parsed year as no match rather than broadening to all cars", async () => {
+    searchResponse = { results: [], yearFrom: 2018, yearTo: 2018 };
+    const screen = setup();
+    await search(screen, "zzzz 2018");
+    expect(await screen.findByText('No brand or model matches "zzzz 2018"')).toBeTruthy();
+    expect(screen.queryByText("All cars, 2018")).toBeNull();
+    expect(screen.getByLabelText("Search brand or model").props.value).toBe("zzzz 2018");
+  });
+
+  it("shows offline for a paused catalog query and resumes the same text on reconnect", async () => {
+    const screen = setup();
+    await screen.findByText("Toyota");
+    act(() => onlineManager.setOnline(false));
+    type(screen, "camry");
+    expect(await screen.findByText("No internet connection. Try again when you are online.")).toBeTruthy();
+    expect(screen.queryByLabelText("Loading...")).toBeNull();
+    expect(screen.getByLabelText("Search brand or model").props.value).toBe("camry");
+    act(() => onlineManager.setOnline(true));
+    expect(await screen.findByText("Toyota Camry")).toBeTruthy();
+  });
+
+  it("shows offline instead of infinite loading when entering without cached catalog", async () => {
+    onlineManager.setOnline(false);
+    const screen = setup();
+    expect(await screen.findByText("No internet connection. Try again when you are online.")).toBeTruthy();
+    expect(screen.queryByLabelText("Loading...")).toBeNull();
+    expect(get).not.toHaveBeenCalled();
   });
 
   it("requests keyboard focus on entry and Back returns to Home", () => {
