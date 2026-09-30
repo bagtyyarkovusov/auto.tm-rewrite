@@ -4,6 +4,7 @@ import {
   BRANDS_PATH,
   MODELS_PATH,
   RESULTS_PATH,
+  choiceFormFields,
   createDonePickerActions,
   createRoutePickerActions,
   type PickerRouter,
@@ -171,5 +172,23 @@ describe("Done mode, opened from Search parameters", () => {
     expect(actions.moreFilters).toBeUndefined();
     expect(actions.pickRecent).toBeUndefined();
     expect(actions.mode).toBe("done");
+  });
+});
+
+describe("Done writes the choice back to the form", () => {
+  it("sets the brand and the ticked models, clearing a legacy single model", () => {
+    expect(choiceFormFields(camryRav4)).toEqual({
+      brandId: "toyota",
+      modelId: undefined,
+      modelIds: ["camry", "rav4"],
+    });
+  });
+
+  it("replaces the models of a previously chosen brand; none means every model", () => {
+    // The form had Lexus RX; the buyer changed brand to Toyota with no model.
+    const form: Record<string, unknown> = { brandId: "lexus", modelIds: ["rx"], cityId: "c1" };
+    Object.assign(form, choiceFormFields(toyotaOnly));
+    expect(form).toEqual({ brandId: "toyota", cityId: "c1" });
+    expect("modelIds" in form && form["modelIds"] === undefined).toBe(true);
   });
 });

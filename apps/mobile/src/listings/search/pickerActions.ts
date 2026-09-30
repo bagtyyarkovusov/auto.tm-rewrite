@@ -43,6 +43,13 @@ export interface PickerActions {
   pickRecent?: (choice: BrandModelChoice) => void;
 }
 
+/** From Home or Results: "More filters" and Recent are always available. */
+export interface RoutePickerActions extends PickerActions {
+  mode: "show";
+  moreFilters: (choice: BrandModelChoice) => void;
+  pickRecent: (choice: BrandModelChoice) => void;
+}
+
 type RecordChoice = (choice: BrandModelChoice) => void;
 
 export function modelsHref(brandId: string, modelIds: readonly string[] = []): PickerHref {
@@ -71,7 +78,7 @@ export function createRoutePickerActions({
 }: {
   router: PickerRouter;
   record: RecordChoice;
-}): PickerActions {
+}): RoutePickerActions {
   return {
     mode: "show",
     pickBrand: (brand) => router.push(modelsHref(brand.id)),
@@ -92,6 +99,23 @@ export function createRoutePickerActions({
 }
 
 export type DonePickerStep = { step: "brand" } | { step: "model"; brand: PickedBrand };
+
+/**
+ * The Search parameters form fields a Done choice sets: the brand, and the
+ * ticked models or none for every model of the brand. A legacy single
+ * `modelId` is cleared, since the feed rejects it next to `modelIds`.
+ */
+export function choiceFormFields(choice: BrandModelChoice): {
+  brandId: string;
+  modelId: undefined;
+  modelIds: string[] | undefined;
+} {
+  return {
+    brandId: choice.brandId,
+    modelId: undefined,
+    modelIds: choice.modelIds.length > 0 ? [...choice.modelIds] : undefined,
+  };
+}
 
 export function createDonePickerActions({
   setStep,

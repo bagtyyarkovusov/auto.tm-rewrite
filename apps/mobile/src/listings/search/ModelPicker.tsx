@@ -1,0 +1,208 @@
+import { useMemo, type ReactNode } from "react";
+import { Pressable, SectionList, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import type { ListingsSchemas } from "@auto-tm/contracts";
+
+import type { ModelRow } from "./modelPickerLogic";
+import type { PickerActions } from "./pickerActions";
+import { useModelPicker } from "./useModelPicker";
+
+import { ErrorState } from "@/components/ErrorState";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Text } from "@/components/ui/text";
+
+interface ModelPickerProps {
+  actions: PickerActions;
+  brandId: string;
+  brandName?: string;
+  /** Models already ticked when the picker opens. */
+  initialModelIds?: readonly string[];
+  /** The buyer's other filters; counts respect them. */
+  filters?: ListingsSchemas.ListingFilter;
+  /** Back (a pushed screen) or Close (inside Search parameters). */
+  leading: ReactNode;
+}
+
+interface Section {
+  key: string;
+  title: string;
+  data: ModelRow[];
+}
+
+/**
+ * The Model picker (33 — Search & discovery): any number of models, or none
+ * for every model of the brand. From Home or Results it ends with "Show N
+ * listings" and "More filters"; inside Search parameters it ends with "Done".
+ */
+export function ModelPicker({
+  actions,
+  brandId,
+  brandName,
+  initialModelIds,
+  filters,
+  leading,
+}: ModelPickerProps) {
+  const { t } = useTranslation();
+  const picker = useModelPicker({ brandId, brandName, initialModelIds, filters });
+  const { content, selected } = picker;
+  const ready = content.kind === "ready";
+
+  const sections = useMemo<Section[]>(() => {
+    if (content.kind !== "ready") return [];
+    const result: Section[] = [];
+    if (content.rows.popular.length > 0) {
+      result.push({ key: "popular", title: t("popularModels"), data: content.rows.popular });
+    }
+    if (content.rows.others.length > 0) {
+      result.push({ key: "others", title: t("otherModels"), data: content.rows.others });
+    }
+    return result;
+  }, [content, t]);
+
+  const countLabel =
+    picker.count === undefined
+      ? t("loadingEllipsis")
+      : actions.mode === "done"
+        ? t("doneWithCount", { count: picker.count })
+        : t("showResultsCount", { count: picker.count });
+
+  let body: ReactNode;
+  if (content.kind === "loading") {
+    body = (
+      <View className="gap-3 px-4 py-2" accessibilityLabel={t("loadingEllipsis")}>
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} className="h-12" />
+        ))}
+      </View>
+    );
+  } else if (content.kind === "error") {
+    body = <ErrorState error={content.error} onRetry={picker.retry} />;
+  } else {
+    body = (
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        stickySectionHeadersEnabled={false}
+        className="min-h-0 flex-1"
+        contentContainerClassName="pb-4"
+        ListHeaderComponent={
+          picker.query.trim() ? null : (
+            <ModelCheckRow
+              name={t("allModels")}
+              checked={selected.length === 0}
+              onPress={picker.selectAll}
+            />
+          )
+        }
+        ListEmptyComponent={
+          <Text className="px-4 py-8 text-center text-base text-muted-foreground">
+            {t("noModelsMatch")}
+          </Text>
+        }
+        renderSectionHeader={({ section }) => (
+          <Text className="bg-background px-4 pt-4 pb-1 text-sm font-medium text-muted-foreground">
+            {section.title}
+          </Text>
+        )}
+        renderItem={({ item }) => (
+          <ModelCheckRow
+            name={item.name}
+            count={item.count}
+            checked={selected.includes(item.id)}
+            onPress={() => picker.toggle(item.id)}
+          />
+        )}
+      />
+    );
+  }
+
+  return (
+    <View className="min-h-0 flex-1">
+      <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
+        {leading}
+        <Text className="min-w-0 flex-1 text-2xl font-heading text-foreground" numberOfLines={1}>
+          {picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
+        </Text>
+        <Button variant="ghost" className="h-11 px-3" onPress={actions.changeBrand}>
+          <Text className="text-base font-medium text-primary">{t("changeBrand")}</Text>
+        </Button>
+      </View>
+      <View className="px-4 pb-2">
+        <Input
+          value={picker.query}
+          onChangeText={picker.setQuery}
+          placeholder={t("searchModel")}
+          accessibilityLabel={t("searchModel")}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+        />
+      </View>
+      {body}
+      <View className="gap-2 border-t border-border px-4 pt-3 pb-4">
+        {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
+          <Text className="text-center text-sm text-muted-foreground">
+            {t("noModelPickedHint", { brand: picker.brandName })}
+          </Text>
+        ) : null}
+        <Button
+          variant="brand"
+          size="pill"
+          disabled={!ready}
+          onPress={() => actions.confirm(picker.choice())}
+          accessibilityLabel={countLabel}
+        >
+          <Text numberOfLines={1}>{countLabel}</Text>
+        </Button>
+        {actions.moreFilters ? (
+          <Button
+            variant="ghost"
+            className="h-11"
+            disabled={!ready}
+            onPress={() => actions.moreFilters?.(picker.choice())}
+          >
+            <Text className="text-base font-medium text-primary">{t("moreFilters")}</Text>
+          </Button>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function ModelCheckRow({
+  name,
+  count,
+  checked,
+  onPress,
+}: {
+  name: string;
+  count?: number;
+  checked: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked }}
+        className="min-h-12 flex-row items-center gap-3 px-4 py-3 active:bg-muted/60"
+      >
+        <Checkbox checked={checked} pointerEvents="none" />
+        <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+          {name}
+        </Text>
+        {count !== undefined && count > 0 ? (
+          <Text className="text-sm text-muted-foreground">{count}</Text>
+        ) : null}
+      </Pressable>
+      <Separator className="ml-4" />
+    </>
+  );
+}

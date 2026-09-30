@@ -122,12 +122,18 @@ export function matchBrands(
 export function brandCountFilters(
   filters: ListingsSchemas.ListingFilter,
 ): ListingsSchemas.ListingBrandCountQuery {
-  const { brandId: _brand, modelId: _model, modelIds: _models, ...rest } = filters;
-  return dropUndefined(rest);
+  return withoutBrandAndModels(filters);
 }
 
-export function dropUndefined<T extends object>(value: T): T {
+const BRAND_AND_MODEL_KEYS = new Set(["brandId", "modelId", "modelIds"]);
+
+/** The buyer's other filters (city, year, price, condition), without empty values. */
+export function withoutBrandAndModels(
+  filters: ListingsSchemas.ListingFilter,
+): ListingsSchemas.ListingBrandCountQuery {
   return Object.fromEntries(
-    Object.entries(value).filter(([, v]) => v !== undefined),
-  ) as T;
+    Object.entries(filters).filter(
+      ([key, value]) => value !== undefined && !BRAND_AND_MODEL_KEYS.has(key),
+    ),
+  ) as ListingsSchemas.ListingBrandCountQuery;
 }

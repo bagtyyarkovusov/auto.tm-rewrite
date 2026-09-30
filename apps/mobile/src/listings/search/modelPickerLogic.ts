@@ -1,6 +1,6 @@
 import type { CatalogSchemas, ListingsSchemas } from "@auto-tm/contracts";
 
-import { dropUndefined } from "./brandPickerLogic";
+import { withoutBrandAndModels } from "./brandPickerLogic";
 import type { BrandModelChoice } from "./recentSearches";
 
 /**
@@ -62,11 +62,6 @@ export function buildModelRows(
 }
 
 type AnyFilter = ListingsSchemas.ListingFilter;
-
-function withoutBrandAndModels(filters: AnyFilter) {
-  const { brandId: _brand, modelId: _model, modelIds: _models, ...rest } = filters;
-  return dropUndefined(rest);
-}
 
 /**
  * The filters "Show N listings" counts: the buyer's other filters with this

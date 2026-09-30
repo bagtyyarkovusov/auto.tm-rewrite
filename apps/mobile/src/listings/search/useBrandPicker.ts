@@ -38,6 +38,7 @@ export type BrandPickerContent =
       searching: boolean;
       /** The catalog search failed; the picker offers a retry, not "no match". */
       failed: boolean;
+      error: unknown;
     };
 
 interface UseBrandPickerOptions {
@@ -92,7 +93,7 @@ export function useBrandPicker({ filters, showRecent }: UseBrandPickerOptions) {
         matches.length === 0 &&
         (search.isSettling || search.isFetching || search.isPlaceholderData);
       const failed = matches.length === 0 && !searching && search.isError;
-      return { kind: "matches", rows: matches, searching, failed };
+      return { kind: "matches", rows: matches, searching, failed, error: search.error };
     }
 
     const byId = new Map(brandList.map((b) => [b.id, b]));
@@ -118,6 +119,7 @@ export function useBrandPicker({ filters, showRecent }: UseBrandPickerOptions) {
     search.isPlaceholderData,
     search.isSettling,
     search.isError,
+    search.error,
     showRecent,
     recentItems,
   ]);

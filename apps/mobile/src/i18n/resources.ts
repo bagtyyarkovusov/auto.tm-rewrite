@@ -420,12 +420,11 @@ export const resources: Resource = {
       matchingBrands: "Найденные марки",
       brandAllModels: "{{brand}}, все модели",
       modelsOfBrand: "Модели {{brand}}",
+      otherModels: "Остальные модели",
       noModelPickedHint: "Модель не выбрана: все модели {{brand}}",
       changeBrand: "Сменить марку",
       moreFilters: "Другие фильтры",
       doneWithCount: "Готово · {{count}} объявлений",
-      brandPickerLoadFailed: "Не удалось загрузить марки",
-      modelPickerLoadFailed: "Не удалось загрузить модели",
       brandLogosNotice:
         "Названия и логотипы марок принадлежат их владельцам и используются только для обозначения автомобилей. AutoTM не связан с ними.",
 
@@ -1014,12 +1013,11 @@ export const resources: Resource = {
       matchingBrands: "Tapylan markalar",
       brandAllModels: "{{brand}}, ähli modeller",
       modelsOfBrand: "{{brand}} modelleri",
+      otherModels: "Beýleki modeller",
       noModelPickedHint: "Model saýlanmady: ähli {{brand}} modelleri",
       changeBrand: "Markany çalyş",
       moreFilters: "Beýleki filtrler",
       doneWithCount: "Tamam · {{count}} bildiriş",
-      brandPickerLoadFailed: "Markalary ýükläp bolmady",
-      modelPickerLoadFailed: "Modelleri ýükläp bolmady",
       brandLogosNotice:
         "Markalaryň atlary we nyşanlary olaryň eýelerine degişlidir we diňe awtoulaglary kesgitlemek üçin ulanylýar. AutoTM olar bilen baglanyşykly däl.",
 
@@ -1608,12 +1606,11 @@ export const resources: Resource = {
       matchingBrands: "Matching brands",
       brandAllModels: "{{brand}}, all models",
       modelsOfBrand: "{{brand}} models",
+      otherModels: "Other models",
       noModelPickedHint: "No model picked: all {{brand}} models",
       changeBrand: "Change brand",
       moreFilters: "More filters",
       doneWithCount: "Done · {{count}} listings",
-      brandPickerLoadFailed: "Couldn't load brands",
-      modelPickerLoadFailed: "Couldn't load models",
       brandLogosNotice:
         "Brand names and logos belong to their owners and are used only to identify vehicles. AutoTM is not affiliated with them.",
       editListing: "Edit listing",
