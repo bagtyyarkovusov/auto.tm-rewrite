@@ -99,10 +99,20 @@ describe("issue 373 approved detail content", () => {
     for (const label of ["Year", "Mileage", "Engine power", "VIN", "Description", "Condition, as stated by the seller", "Not provided", "Not decoded"]) expect(screen.queryByText(label)).toBeNull();
   });
 
-  it.each([undefined, { decoded: false }])("hides unavailable VIN decoding and removes inspection/trust entries", (vinHistory) => {
+  it.each([undefined, { decoded: false }])("hides unavailable VIN decoding", (vinHistory) => {
     const screen = renderMobile(<ListingDetailView listing={fixture({ vin: "VIN373", vinHistory })} maps={maps} />);
     expect(screen.getByText("VIN373")).toBeTruthy();
-    for (const label of [/VIN history/i, /not decoded/i, /How to buy safely/i, /Request AutoTM inspection/i]) expect(screen.queryByText(label)).toBeNull();
+    for (const label of [/VIN history/i, /not decoded/i]) expect(screen.queryByText(label)).toBeNull();
+  });
+
+  it("does not render the inspection demand entry", () => {
+    const screen = renderMobile(<ListingDetailView listing={fixture()} maps={maps} />);
+    expect(screen.queryByRole("button", { name: /Request AutoTM inspection/i })).toBeNull();
+  });
+
+  it("does not render the extra trust link", () => {
+    const screen = renderMobile(<ListingDetailView listing={fixture()} maps={maps} />);
+    expect(screen.queryByRole("button", { name: "How AutoTM keeps you safe" })).toBeNull();
   });
 
   it("keeps the decoded VIN case usable", () => {
