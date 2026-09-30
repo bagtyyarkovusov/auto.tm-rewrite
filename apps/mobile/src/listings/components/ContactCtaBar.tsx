@@ -131,7 +131,7 @@ export function ContactCtaBar({
             as={MessageCircle}
             className={
               canMessage
-                ? "size-5 text-primary-foreground"
+                ? "size-5 text-background"
                 : "size-5 text-muted-foreground"
             }
           />

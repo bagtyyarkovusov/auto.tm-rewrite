@@ -42,3 +42,5 @@ AssertionError: expected "spy" to be called with arguments: [ ObjectContaining{â
       Tests  16 failed | 5 passed (21)
    Duration  7.97s (transform 373ms, setup 177ms, collect 729ms, tests 2.51s, environment 0ms, prepare 109ms)
 ```
+
+The added photo-counter and clipboard tests also ran before their production changes at `b40bd45`: 22 tests, 17 behavioral failures, 5 passing. The native dark-state capture later exposed a white Message icon on its white default button; the feature composition now uses `text-background`, matching the default button foreground. This visual token correction uses ADR-0070's visual-only exemption and is verified in the final dark screenshots.
