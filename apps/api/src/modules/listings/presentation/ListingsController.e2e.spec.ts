@@ -445,7 +445,7 @@ describe("ListingsController e2e", () => {
       expect(res.body.code).toBe("VALIDATION_ERROR");
     });
 
-    it("edits conditionDisclosure and returns { damaged, knownIssuesText }", async () => {
+    it("returns a complete mobile edit response and clears Known issues", async () => {
       await seedCatalog();
       const token = await createUser("user-1");
       const draft = await seedDraft("user-1", validPayload);
@@ -463,6 +463,7 @@ describe("ListingsController e2e", () => {
         .send({ conditionDisclosure: { damaged: false } })
         .expect(200);
 
+      expect(ListingsSchemas.ListingDetailSchema.safeParse(editRes.body).success).toBe(true);
       expect(editRes.body.conditionDisclosure).toEqual({ damaged: false });
       const row = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
       expect(row.damaged).toBe(false);
