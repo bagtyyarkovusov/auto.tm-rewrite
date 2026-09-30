@@ -43,7 +43,11 @@ The protocol does not assume updatedAt is monotonic. Logo-key CAS can accept tim
 
 Only an exact validated `brands/<slug>/<supported-version>/` directory is deleted. Enumerate all pages, delete batches of at most 1,000 keys, and report partial S3 errors. Legacy/admin single-object keys outside recognized directories use single-object deletion. Cleanup is best effort, logs failures, and never rolls back a committed brand mutation.
 
-Use short DB transaction acquisition and execution limits, for example maxWait 5 seconds and timeout 5 seconds, without storage work. A DB timeout before commit must not trigger old-prefix cleanup. Uploaded unique candidates may be retained/logged on ambiguous DB failure rather than deleted if commit status is uncertain. Storage request timeouts may leave orphan files; delayed deletion remains safe because the prefix can never become active again. No total cleanup-time claim is made for unbounded pagination.
+Use short DB transaction acquisition and execution limits, for example maxWait 5 seconds and timeout 5 seconds, without storage work. A DB timeout before commit must not trigger old-prefix cleanup. Retain and log uploaded candidates on every ambiguous repository/DB failure. Existing SetBrandLogo deletes the candidate on any repository exception; that catch must change because an unknown commit may already have activated the candidate. Delete a candidate only when the repository positively reports that it was not activated, never merely because an exception occurred. Storage request timeouts may leave orphan files; delayed deletion remains safe because the prefix can never become active again. No total cleanup-time claim is made for unbounded pagination.
+
+### Rollout barrier
+
+Stop all old API logo writers and deterministic importer processes before enabling whole-prefix deletion. A mixed rollout is unsafe: an old importer could reactivate a deterministic legacy directory while a new API deletes it. After all writers use the new protocol, legacy active keys may remain until replaced or removed. Do not present code deployment alone as proof that old CLI writers stopped; the environment operator owns this barrier. Local integration tests use only isolated services. No live rollout is authorized by this proposal.
 
 ## Explicit limitation requiring founder acceptance
 
