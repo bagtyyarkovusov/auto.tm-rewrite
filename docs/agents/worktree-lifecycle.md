@@ -2,7 +2,7 @@
 
 Use one linked worktree per agent session and retire it after its PR merges. This prevents host-created scaffold branches, canonical task branches, and full dependency trees from accumulating after successful work.
 
-The canonical `agent/issue-<N>` branch and its pull request are the durable reservation and recovery record. Codex desktop, Claude Code desktop, the `claude-kimi` CLI, or another supported client that finds either resumes it after inspecting the issue, local and remote heads, worktree, PR body/comments/checks, running processes, and diff. It never creates a parallel attempt because the prior chat is unavailable.
+The canonical `agent/issue-<N>` branch and its pull request are the durable reservation and recovery record. Codex desktop, Claude Code desktop, the `claude-kimi` CLI, or another supported client that finds either resumes it after inspecting the issue, local and remote heads, worktree, PR body/comments/checks, running processes, and diff. It never creates a parallel attempt because the prior chat is unavailable. It resumes in the found worktree only when no other session or agent owns it; otherwise it works in its own new worktree from the pushed branch.
 
 ## Start in the worktree you already have
 
@@ -19,8 +19,8 @@ Write only in your own worktree and in `/tmp`. Never create a worktree for anoth
 
 [ADR-0069](../adr/0069-queue-implementers-run-in-host-created-worktrees.md) sets who owns each worktree under [run-queue](../../.claude/skills/run-queue/SKILL.md).
 
-- **Who creates it.** The orchestrator launches each implementer with worktree isolation, such as Claude Code's Agent tool with `isolation: "worktree"`. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch. It is that issue's worktree, and only its implementer writes there.
-- **How it reaches the issue branch.** The first implementer runs `git switch -c agent/issue-<N> origin/main`, or starts from the parent branch head when stacked, and pushes the reservation. A later implementer runs `git switch --detach origin/agent/issue-<N>` and pushes with `git push origin HEAD:agent/issue-<N>`, because the named branch may be checked out in an earlier worktree.
+- **Who creates it.** The orchestrator launches each implementer with worktree isolation, such as Claude Code's Agent tool with `isolation: "worktree"`. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch. Only its implementer writes there. An issue has at most one writing worktree at a time; each fix round or resume gets a new one, and earlier ones follow the cleanup rules below.
+- **How it reaches the issue branch.** The first implementer runs `git fetch origin`, then `git switch -c agent/issue-<N> origin/main`, or starts from the parent branch head when stacked, and pushes the reservation. A later implementer runs `git fetch origin`, then `git switch --detach origin/agent/issue-<N>` and pushes with `git push origin HEAD:agent/issue-<N>`, because the named branch may be checked out in an earlier worktree.
 - **Checkpoints.** Implementers commit and push small checkpoints often. Only pushed work survives an agent that stops.
 - **Who retires it.** The host removes it when its implementer made no changes. Otherwise it stays after the agent ends, and the host's sweep removes it only once it holds no changed or untracked files and no unpushed commits. The orchestrator never removes another agent's worktree. After the PR merges, it records the cleanup tuple and gives the user the commands below, or leaves the worktree to the sweep. A removed worktree can leave its unchanged `worktree-agent-<id>` branch behind; the user deletes it with the conditional `update-ref` below.
 - **A stopped implementer.** A fresh implementer continues from the pushed branch in its own new worktree. It may read the stopped worktree to salvage uncommitted drafts, but never writes there or runs git against it. The user or the host removes the stopped worktree.
@@ -34,7 +34,7 @@ After a successful merge, record this cleanup tuple:
 
 - linked worktree path;
 - local task branch and any unchanged host scaffold branch;
-- task branch HEAD, which must equal the PR's final `headRefOid`;
+- task branch HEAD, which must equal the PR's final `headRefOid`. For a queue implementer's worktree on a detached HEAD, record the detached HEAD SHA instead of a task branch;
 - PR URL and merge commit.
 
 An agent whose live session uses that linked worktree reports the tuple instead of deleting its own working directory. The root or integration session removes it after the worker session finishes, unless the worktree belongs to a queue implementer; then only the user or the host removes it.
@@ -46,7 +46,7 @@ The root or integration session, or the user for a queue implementer's worktree,
 - the worker session has finished and the worktree is not locked or active;
 - `git status --porcelain` in the worktree is empty;
 - the PR is `MERGED` and the issue is closed when the PR should close it;
-- the worktree HEAD equals the PR's final `headRefOid`, so no post-PR commit would be lost; and
+- the worktree HEAD equals the PR's final `headRefOid`, so no post-PR commit would be lost. For a queue implementer's worktree, a clean HEAD that is an ancestor of the final `headRefOid` also passes (check with `git merge-base --is-ancestor <HEAD> <final headRefOid>`), because earlier fix rounds end on older commits. After a squash merge the deleted branch may leave that head unfetched, so the user or the host is the reliable path to retire these worktrees; and
 - the branch is not an evidence, prototype, research, active draft-PR, or app-managed Codex worktree.
 
 Age, a quiet terminal, or an absent agent session never satisfies the cleanup gate by itself.

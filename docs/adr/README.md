@@ -78,7 +78,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0066](0066-retire-sandcastle-queue-agents-replace-unattended-dispatch.md) | Retire Sandcastle; queue agents replace unattended dispatch (supersedes ADR-0028 and ADR-0033; amends ADR-0041's `.sandcastle/` retention and ADR-0058's Sandcastle boundaries) | Accepted | 2026-09-29 |
 | [0067](0067-targeted-intermediate-reviews-and-final-verification.md) | Target intermediate reviews and verify the final commit (amends ADR-0058's checkpoint and review procedure) | Accepted | 2026-09-29 |
 | [0068](0068-resolve-context7-ids-at-lookup-time.md) | Resolve Context7 IDs at lookup time (amends ADR-0017's ID selection shortcut) | Accepted | 2026-09-29 |
-| [0069](0069-queue-implementers-run-in-host-created-worktrees.md) | Queue implementers run in host-created worktrees (complements ADR-0058's one worktree per issue and ADR-0066's queue sessions) | Proposed | 2026-09-29 |
+| [0069](0069-queue-implementers-run-in-host-created-worktrees.md) | Queue implementers run in host-created worktrees (amends ADR-0058's one worktree per issue and resume-the-found-worktree rules and ADR-0064's restatement of them; complements ADR-0066's queue sessions) | Proposed | 2026-09-29 |
 
 ## Per-app ADRs
 

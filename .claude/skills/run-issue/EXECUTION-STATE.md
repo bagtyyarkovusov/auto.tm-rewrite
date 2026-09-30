@@ -46,4 +46,4 @@ Run focused checks for each changed behavior before its checkpoint. Record the e
 
 ## Handoff inspection
 
-An incoming Codex desktop, Claude Code desktop, `claude-kimi` CLI, or other supported client inspects the issue, local and remote branch heads, worktree status, draft PR body and comments, checks, running processes, and the complete diff before changing anything. It resumes the existing record instead of creating another branch, worktree, PR, or summary document.
+An incoming Codex desktop, Claude Code desktop, `claude-kimi` CLI, or other supported client inspects the issue, local and remote branch heads, worktree status, draft PR body and comments, checks, running processes, and the complete diff before changing anything. It resumes the existing record instead of creating another branch, PR, or summary document. It reuses the worktree only when no other session or agent owns it; otherwise it works in its own new worktree from the pushed branch ([ADR-0069](../../../docs/adr/0069-queue-implementers-run-in-host-created-worktrees.md)).
