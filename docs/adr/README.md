@@ -81,6 +81,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0069](0069-queue-implementers-run-in-host-created-worktrees.md) | Queue implementers run in host-created worktrees (amends ADR-0058's one worktree per issue and resume-the-found-worktree rules and ADR-0064's restatement of them; complements ADR-0066's queue sessions) | Accepted | 2026-09-29 |
 | [0070](0070-test-first-behaviour-and-ui-evidence.md) | Test-first behaviour and UI evidence | Accepted | 2026-09-30 |
 | [0071](0071-codex-queue-models-and-owned-worktrees.md) | Codex queue models and owned worktrees (amends ADR-0069 for Codex only) | Accepted | 2026-09-30 |
+| [0072](0072-imported-logo-cleanup-coordination.md) | Give logo activations unique object directories | Proposed | 2026-09-30 |
 
 ## Per-app ADRs
 
@@ -126,8 +127,6 @@ Every ADR follows this skeleton:
 - Charter §X
 - Related ADR-NNNN
 ```
-
-| [0072](0072-imported-logo-cleanup-coordination.md) | Give logo activations unique object directories | Proposed | 2026-09-30 |
 
 ## Rules
 
