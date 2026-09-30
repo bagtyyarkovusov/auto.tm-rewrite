@@ -334,8 +334,9 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
   });
 
   it("reports individual cleanup errors while preserving the successful replacement", async () => {
-    await run();
-    const previous = (await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey as string;
+    const previous = "brands/toyota/v1790000000000/logo.png";
+    await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: previous, Body: "admin-upload" }));
+    await db.brand.update({ where: { slug: "toyota" }, data: { logoKey: previous } });
     s3.middlewareStack.add((next, context) => async (args) => {
       if (context.commandName === "DeleteObjectsCommand") {
         return {
@@ -346,9 +347,9 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
       return next(args);
     }, { step: "initialize", name: "cleanupErrorFixture" });
     try {
-      const report = await run({}, manifestOf(simpleIconsEntry("toyota", "A", siBmw.svg)), { toyota: enc(siBmw.svg) });
+      const report = await run({ force: true }, manifestOf(simpleIconsEntry("toyota", "A", siBmw.svg)), { toyota: enc(siBmw.svg) });
       const result = report.results.find((r) => r.slug === "toyota");
-      expect(result?.outcome).toBe("replaced-import");
+      expect(result?.outcome).toBe("replaced-admin");
       expect(result?.detail).toContain(previous);
       expect(result?.detail).toContain("AccessDenied");
       expect(result?.detail).toContain("cleanup denied");
@@ -415,7 +416,7 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
     });
   });
 
-  it("replaces an earlier import when the manifest's master changes, and deletes the old objects", async () => {
+  it("replaces an earlier import when the manifest's master changes, and retains immutable versions", async () => {
     await run();
     const first = (await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey as string;
 
@@ -433,8 +434,13 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
     const second = (await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey as string;
     expect(second).not.toBe(first);
     const keys = await listKeys("brands/toyota/");
-    expect(keys).toHaveLength(4);
-    expect(keys.every((k) => k.startsWith(second.replace("logo.png", "")))).toBe(true);
+    expect(keys).toHaveLength(8);
+    for (const versionKey of [first, second]) {
+      expect(keys.filter((k) => k.startsWith(versionKey.replace("logo.png", "")))).toHaveLength(4);
+    }
+    const beforeRepeat = await snapshot();
+    expect(outcomeOf(await run({}, changed, { ...baseMasters(), toyota: enc(siBmw.svg) }), "toyota")).toBe("unchanged");
+    expect(await snapshot()).toEqual(beforeRepeat);
   });
 
   it("leaves the database and the bucket alone on a dry run, but still reports what would happen", async () => {

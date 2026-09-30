@@ -186,7 +186,9 @@ class Importer {
         return result("failed", current, "the logo changed while importing; run the import again");
       }
 
-      const note = current === null ? undefined : await this.deletePrevious(brand.slug, current);
+      // An imported version can become active again in another CLI process while
+      // cleanup runs. Retain immutable import objects, including losing uploads.
+      const note = adminOwned ? await this.deletePrevious(brand.slug, current as string) : undefined;
       return result(outcome, logoKey, note);
     } catch (err) {
       return result("failed", current, messageOf(err));
