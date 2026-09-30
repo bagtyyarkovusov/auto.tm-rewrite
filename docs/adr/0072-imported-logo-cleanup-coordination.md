@@ -1,4 +1,4 @@
-# ADR-0072: Coordinate imported logo cleanup
+# ADR-0072: Give logo activations unique object directories
 
 - **Status**: Proposed, not approved for implementation
 - **Date**: 2026-09-30
@@ -7,45 +7,57 @@
 
 ## Problem
 
-The importer writes four objects under deterministic `brands/<slug>/imp-<hash>/` prefixes before a compare-and-swap of `Brand.logoKey`. PR #461 deliberately retains previous imported versions and losing uploads. A second CLI process can reactivate the same prefix, so deleting it after an admin change can remove active assets.
+PR #461 retains old imported versions and losing uploads because deterministic `brands/<slug>/imp-<hash>/` directories can become active again in another CLI process. An admin's delayed deletion can therefore delete active assets. Checking the current key before deletion has a time-of-check race. Compare-and-swap protects a database write, but does not serialize deletion against reactivation. The repository has no established cross-process storage lock.
 
-Reading the current key immediately before deletion is insufficient. Another process can upload and activate the prefix between the read and deletion. Compare-and-swap prevents an obsolete database write, but does not serialize object deletion against upload or reactivation. In-process locks do not protect separate API or CLI processes.
+A 60-second transaction lock across S3 calls is insufficient. Parallel uploads, retries, repair HEADs, and paginated deletion have no proven worst-case duration below 60 seconds. Transaction timeout can release the lock while storage is still running. An AbortSignal or rejected request does not prove the remote server stopped deletion. A session lock has the same uncertain-response and connection-loss problem. Do not implement either as the safety mechanism.
 
-The repository has no established advisory-lock or row-lock helper. `BrandLogoRepository` currently exposes only reads and `setLogoKey`; `PrismaBrandRepository` uses unconditional writes. The importer performs uploads and repairs outside a database transaction. This proposal therefore changes a coordination boundary and needs founder approval.
+## Recommended decision
 
-## Candidate shared lock
+Every new logo activation gets a directory that has never been active before. No inactive directory is reactivated. Cleanup can then remove the actual previous directory after the database swap without threatening a later active logo, including when deletion completes late.
 
-A PostgreSQL advisory transaction lock, namespaced to catalog brand-logo mutation and keyed by immutable `Brand.id`, would be shared by all API and CLI writers. Lock one brand at a time, never multiple brand locks. Hold it from a fresh read through the complete operation:
+### Imported keys
 
-- Admin set: fresh read, upload stored version, update database, delete previous version.
-- Admin remove: fresh read, clear database key, delete previous version.
-- Brand delete: fresh read, delete database record, delete previous version.
-- Import: fresh read, restore or upload all objects, compare-and-swap, optional previous admin-version cleanup. Continue retaining old and losing imported versions; this is not importer garbage collection.
+Keep `importVersion(entry)` as the content/render identity `imp-<hash12>`. New activations use `brands/<slug>/imp-<hash12>-<randomUUID>/logo.png` and its three `mono@Nx.png` siblings. UUIDs come from Node's cryptographic randomUUID. Losing CAS uploads retain their directory and are never reused by another activation. This preserves #377's no-GC rule for importer failure artifacts.
 
-The API domain would receive a framework-free mutation coordinator port. Its infrastructure adapter and importer would use a common DB-package helper. `SetBrandLogo`, `RemoveBrandLogo`, and `DeleteBrand` would use the coordinator. The importer must join the same protocol before enabling prefix deletion. All cleanup stays within an exact validated version directory and handles pagination, at most 1,000 keys per S3 delete batch, and partial deletion errors.
+If the currently active imported key matches the entry's content/render identity, the importer remains idempotent and repairs missing objects in that exact current directory. The repair branch never writes Brand.logoKey. Both legacy `imp-<hash12>` and new `imp-<hash12>-<UUID>` keys are recognized as imported ownership. A legacy directory remains usable only while it is the active key; a later activation of the same content uses a new UUID directory. Source-null entries continue preserving any existing key.
 
-## Duration and failure problem
+A stale snapshot may repair a directory that has since become inactive. That can recreate orphan files, but cannot make them active. Never turn a repair into reactivation or derive its target directory from a newly computed activation key.
 
-A 5-second lock-acquisition budget and 60-second transaction timeout are attractive load bounds, but they do **not** establish safety. Four parallel uploads, retries, restore HEAD requests, or arbitrarily many paginated siblings have no demonstrated worst-case bound below 60 seconds. Holding a transaction and connection during S3 calls increases DB connection pressure.
+### Admin keys
 
-More seriously, an interactive transaction can time out and release its lock while storage work is still running. Promise cancellation or an AbortSignal does not prove that the remote MinIO server has stopped executing a submitted deletion. A later importer can then reactivate that deterministic prefix before the delayed deletion executes. Therefore the candidate bounded transaction lock must not be implemented as a complete solution.
+New admin activations use `brands/<slug>/v<epoch-ms>-<randomUUID>/logo.<png|webp>`. Time remains descriptive, not an identity or ordering guarantee. Existing `v<epoch-ms>` keys remain supported. Two same-millisecond uploads must use distinct directories. Pending keys are already random UUIDs.
 
-A session advisory lock avoids automatic transaction-timeout release, but connection loss or an uncertain storage response still leaves the same ambiguous deletion. Releasing in `finally` after a rejected request is not proof of safe completion. Retaining a DB connection indefinitely is not an acceptable recovery mechanism.
+### Atomic database-only mutations
 
-## Decision needed
+Admin set/remove must obtain the actual previous key from their mutation, rather than an earlier read. A repository operation uses a short PostgreSQL transaction: lock the Brand row by immutable ID with SELECT FOR UPDATE, read its current key, write the new key or null, return the actual previous key, then commit. Set uploads the new unique object before this transaction. Remove does no storage work before it. After commit, delete the returned previous directory. No storage call is inside the transaction.
 
-Choose a protocol with durable deletion fencing before automatic cleanup is enabled. A durable retirement record committed together with the admin database mutation could prohibit all importer reuse of a retired deterministic prefix, including on failures and delayed storage replies. That requires a migration and a defined policy for later reimport of the same master. Keeping retirement permanent changes importer idempotence; assigning a fresh incarnation on reuse changes its key contract. Those choices exceed ordinary cleanup mechanics and are not silently selected here.
+Brand deletion likewise locks/reads/deletes in a short transaction and returns the logo key of the row actually deleted. A foreign-key failure returns no cleanup work. This prevents an earlier stale Brand read from leaving the concurrently replaced directory unaccounted for. Deleted brand IDs are not reused; a recreated slug has a fresh Brand ID and fresh activation UUIDs.
 
-The alternative is operator cleanup during a verified exclusive maintenance window, with API logo writers and CLI importers stopped for the entire storage operation and recovery period. That does not deliver automatic cleanup from the admin action and must be explicitly accepted as a scope change.
+Affected boundaries: BrandLogoRepository needs an atomic replacement operation returning the previous key; BrandRepository deletion needs the deleted logo key result; PrismaBrandRepository implements both. SetBrandLogo, RemoveBrandLogo, and DeleteBrand consume those results. MinioBrandLogoStorage gains best-effort version-directory cleanup. The DB importer updates imported-key parsing, activation-directory generation, and repair-directory selection. No new shared runtime coordinator, retirement table, or migration is needed for this recommendation.
 
-Until that decision, retain imported prefixes rather than risk deleting active assets. The independently authorized scoped policy, pending lifecycle, and PUT length signing can ship, but #454's added whole-prefix criterion remains incomplete.
+Importer activation retains the existing `updateMany` CAS against the observed logoKey. It writes all objects to its new unique directory before CAS and keeps lost-CAS objects. Forced replacement cleanup targets only the previous admin directory after successful CAS. The importer still does not garbage-collect imported versions.
+
+The protocol does not assume updatedAt is monotonic. Logo-key CAS can accept timestamp/null ABA, as it already can today. Unique directories establish active-object safety even in that case; they do not add a stronger guarantee that an import always loses to an intervening admin removal that returns the key to null. A stronger mutation-revision guarantee would need a separate explicit design and migration.
+
+### Cleanup and failure bounds
+
+Only an exact validated `brands/<slug>/<supported-version>/` directory is deleted. Enumerate all pages, delete batches of at most 1,000 keys, and report partial S3 errors. Legacy/admin single-object keys outside recognized directories use single-object deletion. Cleanup is best effort, logs failures, and never rolls back a committed brand mutation.
+
+Use short DB transaction acquisition and execution limits, for example maxWait 5 seconds and timeout 5 seconds, without storage work. A DB timeout before commit must not trigger old-prefix cleanup. Uploaded unique candidates may be retained/logged on ambiguous DB failure rather than deleted if commit status is uncertain. Storage request timeouts may leave orphan files; delayed deletion remains safe because the prefix can never become active again. No total cleanup-time claim is made for unbounded pagination.
+
+## Explicit limitation requiring founder acceptance
+
+Concurrent missing-object repair can recreate inactive siblings after admin cleanup. Crashes, lost CAS, and uncertain storage requests can also leave inactive files. Therefore this delivers whole-prefix best-effort cleanup and active-object safety, not a permanent guarantee of zero orphan files. The founder must explicitly accept that limitation for #454.
+
+A stronger zero-recreation guarantee requires durable retirement fencing that every writer observes before writing, with a defined same-master reimport policy and recovery after delayed storage requests. That requires more state and likely a migration. Keeping retired deterministic prefixes permanently forbidden or generating fresh incarnations for reuse is a product/key-policy decision, not a silent cleanup adjustment.
 
 ## Verification before production changes
 
-1. Write meaningful failing tests for admin set/remove/delete removing all four imported objects while preserving other versions.
-2. Use two real PostgreSQL clients and isolated MinIO to force upload/activation between admin mutation and delayed cleanup, including cross-process ABA, missing-object repair, and lost CAS.
-3. Prove the chosen fence survives DB timeout, connection loss, storage abort, delayed deletion completion, partial batch errors, and process restart.
-4. Prove a fresh importer cannot activate a retired prefix and define/test intentional reimport behavior.
-5. Push the red checkpoint before implementing the accepted protocol. Then rerun the same cases green, plus existing #377 importer tests, repository gates, runtime-import checks, and affected API/db builds.
+1. Push red tests for all four imported files removed by set/remove/delete, pagination and partial errors, with other versions untouched.
+2. Push red tests for unique new import activations of the same content and same-millisecond admin uploads. Prove current legacy/new imports remain idempotent and repair uses the active directory without updating the database.
+3. Use isolated MinIO and two real PostgreSQL clients to delay prior-prefix deletion while a new import activates identical content. The active directory and all siblings must survive. Repeat with overlapping set/remove/full brand deletion and null ABA; assert safety without treating updatedAt as a revision.
+4. Force late repair of a removed directory. Verify it cannot reactivate that directory and document any recreated inactive files as the accepted limitation.
+5. Exercise failed CAS, DB rollback/timeout, uncertain storage response, and restart. Retain #377's importer failure/no-GC behavior.
+6. After founder acceptance, implement and rerun the same cases green, then repository test/typecheck, affected lint/build/runtime gates and documentation checks.
 
-No new lock helper, migration, importer cleanup, or automatic prefix deletion is implemented by this proposal.
+No key-policy or automatic prefix-cleanup production code is implemented by this proposal.
