@@ -470,7 +470,7 @@ describe("EditListing", () => {
     expect(prisma.auditLogs).toHaveLength(0);
   });
 
-  it("keeps the existing Known issues when a patch only changes damaged", async () => {
+  it("clears existing Known issues when the disclosure patch omits the text", async () => {
     seedActiveListing(repo, {
       conditionDisclosure: { damaged: false, knownIssuesText: "Old scratch" },
     });
@@ -484,7 +484,6 @@ describe("EditListing", () => {
 
     expect(result.listing.conditionDisclosure).toEqual({
       damaged: true,
-      knownIssuesText: "Old scratch",
     });
   });
 
