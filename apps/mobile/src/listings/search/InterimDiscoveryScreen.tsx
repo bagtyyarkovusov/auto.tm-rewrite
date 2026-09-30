@@ -16,9 +16,9 @@ interface InterimDiscoveryScreenProps {
 }
 
 /**
- * Stand-in for a Search-tab screen whose own slice has not landed yet (the
- * Brand picker in #368, Search in #369). It keeps Home's entries routable and
- * offers the full feed meanwhile.
+ * Stand-in for a Search-tab screen whose own slice has not landed yet
+ * (Search in #369). It keeps Home's entries routable and offers the full feed
+ * meanwhile.
  */
 export function InterimDiscoveryScreen({ title }: InterimDiscoveryScreenProps) {
   const { t } = useTranslation();

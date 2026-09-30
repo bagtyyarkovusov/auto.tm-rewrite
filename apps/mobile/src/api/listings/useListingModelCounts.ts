@@ -12,9 +12,8 @@ interface UseListingModelCountsOptions {
 
 const DEBOUNCE_MS = 300;
 
-export function buildSearchParams(
-  filters: ListingsSchemas.ListingModelCountQuery | undefined,
-): URLSearchParams {
+/** Filter-options query string: skips empty values and repeats array keys. */
+export function buildSearchParams(filters: object | undefined): URLSearchParams {
   const params = new URLSearchParams();
 
   if (!filters) {

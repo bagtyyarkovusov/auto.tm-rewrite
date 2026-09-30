@@ -18,6 +18,10 @@ import { FeedSkeleton } from "../../../src/listings/feed/FeedSkeleton";
 import { ListingCard } from "../../../src/listings/feed/ListingCard";
 import { FilterSheet } from "../../../src/listings/search/FilterSheet";
 import { useListingFilters } from "../../../src/listings/search/useListingFilters";
+import {
+  parseResultsParams,
+  type ResultsSelection,
+} from "../../../src/listings/search/resultsParams";
 import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMaps";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
@@ -30,31 +34,45 @@ import { Text } from "@/components/ui/text";
 /**
  * Interim Results (#367). Until the Results slice (#370) replaces it, this is
  * the chronological feed with today's filter sheet, reached from "See all" on
- * Home and from "See other Brand Model" on a closed Listing (`brandId` +
- * `modelId` params). With no filters it is the full feed.
+ * Home, from the Brand and Model pickers and Recent (#368), and from "See
+ * other Brand Model" on a closed Listing. `resultsParams` owns the route
+ * params. With no filters it is the full feed.
  */
 export default function ResultsScreen() {
   const { t } = useTranslation();
   const goBack = useSafeBack(HOME_HREF);
   const [sheetOpen, setSheetOpen] = useState(false);
   const filters = useListingFilters();
-  const { brandId, modelId } = useLocalSearchParams<{
+  const params = useLocalSearchParams<{
     brandId?: string;
+    modelIds?: string;
     modelId?: string;
+    openFilters?: string;
   }>();
+  const selection = parseResultsParams(params);
+  const selectionKey = selection ? JSON.stringify(selection) : null;
   const { reset: resetFilters, setField, apply: applyFilters } = filters;
 
-  // "See other Brand Model" on a closed Listing opens the feed with exactly
-  // that brand + model filter. Params are cleared once applied so the same
-  // link re-applies the filter after the buyer changes it.
+  // The pickers, Recent, and "See other Brand Model" on a closed Listing open
+  // the feed with exactly that brand and models (none = every model of the
+  // brand); the Model picker's "More filters" also opens the filter sheet.
+  // Params are cleared once applied, so the same link re-applies them after
+  // the buyer changes the filters.
   useEffect(() => {
-    if (!brandId || !modelId) return;
+    if (!selectionKey) return;
+    const { brandId, modelIds, openFilters } = JSON.parse(selectionKey) as ResultsSelection;
     resetFilters();
     setField("brandId", brandId);
-    setField("modelIds", [modelId]);
+    setField("modelIds", modelIds.length > 0 ? modelIds : undefined);
     applyFilters();
-    router.setParams({ brandId: undefined, modelId: undefined });
-  }, [brandId, modelId, resetFilters, setField, applyFilters]);
+    if (openFilters) setSheetOpen(true);
+    router.setParams({
+      brandId: undefined,
+      modelIds: undefined,
+      modelId: undefined,
+      openFilters: undefined,
+    });
+  }, [selectionKey, resetFilters, setField, applyFilters]);
 
   const {
     data,
