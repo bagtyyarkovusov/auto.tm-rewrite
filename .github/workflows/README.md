@@ -58,7 +58,7 @@ Missing (2) was the root cause of the PR-#257 CI failure (fixed in `1a64d4e`).
 
 ## Release bundle
 
-`bundle.yml` builds the five service images (`api`, `worker`, `admin`, `web`, `sms-gateway`) with the runner's Docker through `make bundle`, so the images are built for x86 Linux, the architecture of the TM-era servers. The workflow uploads the tarball as an artifact only; it does not push to a registry or create a release. The TM-era runner question reopens at TM cutover (ADR-0073), so this workflow may move again then.
+`bundle.yml` builds the five service images (`api`, `worker`, `admin`, `web`, `sms-gateway`) with the runner's Docker through `make bundle`, so the images are built for x86 Linux, the architecture of the TM-era servers. The Makefile runs recipes with `bash -e -o pipefail`, so a failed image build or `docker save` fails the job instead of uploading an almost empty tarball. The workflow uploads the tarball as an artifact only; it does not push to a registry or create a release. The TM-era runner question reopens at TM cutover (ADR-0073), so this workflow may move again then.
 
 To dry-run it without a tag, once the workflow file is on `main`, run `gh workflow run bundle.yml --ref main -f tag=dev-test` and download the artifact from the run.
 

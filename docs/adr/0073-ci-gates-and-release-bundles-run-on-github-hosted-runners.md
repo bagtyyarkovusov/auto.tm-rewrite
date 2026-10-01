@@ -46,7 +46,7 @@ This decision covers the Railway era and the current CI and bundle workflows. AD
 - A cold-cache run is about 50 seconds slower than the self-hosted run (3m33s against 2m42s). The GitHub cache of the pnpm store, keyed on `pnpm-lock.yaml`, narrows this for later runs.
 - CI depends on GitHub-hosted runner availability and public image registries. A third-party MinIO image is pulled in CI until #475 resolves it.
 - The repository must stay public, or the runner minutes become a cost to review.
-- The bundle workflow stays untested against a real tag until the first release or a manual dispatch.
+- The bundle workflow has not yet run on a real tag. A manual dry run on the hosted runner found three defects that the Mac had hidden or that had never been exercised, fixed with this decision: a missing `DATABASE_URL` for `prisma generate`, a `COPY` of the removed `apps/admin/public` in the admin image, and a `make bundle` recipe that ignored a failed build and uploaded an almost empty tarball.
 
 ### Neutral
 

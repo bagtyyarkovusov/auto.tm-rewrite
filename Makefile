@@ -1,6 +1,12 @@
 TAG ?= dev-$(shell git rev-parse --short HEAD)
 SERVICES = api worker admin web sms-gateway
 
+# Fail on the first failed image build and when `docker save` fails inside the
+# `| gzip` pipe. With the default `sh -c`, a failed build in the loop or in the
+# pipe left a green run and a near-empty tarball.
+SHELL := /bin/bash
+.SHELLFLAGS := -eo pipefail -c
+
 .PHONY: build bundle load deploy rollback
 
 build:
