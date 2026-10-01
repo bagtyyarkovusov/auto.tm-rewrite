@@ -66,7 +66,7 @@ Captures `46` through `54` come from the resumed worktree at `109c226`, which in
 
 Fixture disclosure: the uploaded Toyota emblem is a generated ring-and-bar test image, not Toyota artwork. It proves the selected brand's `logoUrl` reaches the existing `CarBrandLogo` and follows theme tint. The two-photo case uses a second media row pointing at the same fixture Hilux image. Only the disposable database and object store changed. The screenshot proves layout and count, not two distinct photographs. Initial routes for filtered states were opened with the app's `autotm://results` deep link; both reset actions used the actual native controls.
 
-The preserved five-file red run at `3910760` failed 11 assertions and passed 55. The same run at `9968e7f` passed all 66. Logs are [red](spec-fix-red.log) and [green](spec-fix-green.log). The [mutation log](spec-fix-mut.log) shows the paused-query predicate and active-only scope each cause one meaningful failure when removed. Native look is exempt from red tests; these captures provide its alternative proof. True offline remains explicitly handed to #345, with no native pass claimed here.
+The preserved five-file red run at `3910760` failed 11 assertions and passed 55. The same run at `9968e7f` passed all 66. Logs are [red](spec-fix-red.txt) and [green](spec-fix-green.txt). The [mutation log](spec-fix-mut.txt) shows the paused-query predicate and active-only scope each cause one meaningful failure when removed. Native look is exempt from red tests; these captures provide its alternative proof. True offline remains explicitly handed to #345, with no native pass claimed here.
 
 ## Mismatches and defects, stated plainly
 
@@ -82,3 +82,5 @@ The preserved five-file red run at `3910760` failed 11 assertions and passed 55.
 - True offline paused-query appearance is handed to #345 for physical Android capture; the rendered test passes but native proof remains missing.
 - Favorites, Search parameters and other screens outside the issue.
 - Android or a physical device (belongs to the physical Android proof issue).
+
+Full-gate recheck found one missing `brandLogoUrl` method in the Results sign-in spec catalog mock. The root run failed with `TypeError: catalog.brandLogoUrl is not a function`, with 1196 mobile tests passing. The mock was brought up to the real hook interface; the focused sign-in replay/cancel spec then passed both tests. This is test setup repair and changes no native behaviour.
