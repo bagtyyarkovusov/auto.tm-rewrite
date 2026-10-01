@@ -65,7 +65,7 @@ Approved in the [listing content resolution](https://github.com/bagtyyarkovusov/
   - No city, gearbox, fuel or badges.
   - About six Listings fit on the first screen. The Home card does not become the large card.
 - **Results: the large card** (AR-05-001).
-  - Two fixed photos, with a 📷 photo count on the first.
+  - Photos follow the Listing. None gives one "No photos" frame, one gives a single wide photo, and two or more give a two-photo grid (62% and 38%). A 📷 photo count sits on the photos only when there are more than one.
   - Then the price, the "km · gearbox · fuel" line, "Brand Model, year", and "city · date". ♡ sits bottom-right.
 - **Favorites: the large card with contact buttons** (AR-36-001, AR-36-002).
   - The large card plus **Call** and **Message** buttons and a filled ♥. Tapping ♥ removes the card at once, with Undo.
