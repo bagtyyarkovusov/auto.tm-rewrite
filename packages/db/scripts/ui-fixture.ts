@@ -73,17 +73,20 @@ function assertLocalhost(): void {
       !/^auto\.tm-rewrite-pr-[1-9]\d*$/.test(process.env["RAILWAY_ENVIRONMENT_NAME"] ?? "") ||
       process.env["RAILWAY_PROJECT_ID"] !== "176ddec0-dd65-4087-b82c-798599fc2ebe" ||
       !process.env["RAILWAY_ENVIRONMENT_ID"] ||
-      process.env["APP_ENV"] === "production" ||
+      process.env["APP_ENV"] !== "staging" ||
       process.env["SMS_DRIVER"] !== "mock" ||
-      DATABASE_URL !== process.env["DATABASE_PUBLIC_URL"] ||
-      MINIO_ENDPOINT !== process.env["MINIO_PUBLIC_URL"] ||
-      new URL(MINIO_ENDPOINT).hostname !== `minio-autotm-rewrite-pr-${process.env["RAILWAY_ENVIRONMENT_NAME"]?.split("-").at(-1)}.up.railway.app`
+      (process.env["NATIVE_PR_SEED_REMOTE"] === "true"
+        ? new URL(DATABASE_URL).hostname !== "postgres.railway.internal" || new URL(MINIO_ENDPOINT).hostname !== "minio.railway.internal"
+        : DATABASE_URL !== process.env["DATABASE_PUBLIC_URL"] || MINIO_ENDPOINT !== process.env["MINIO_PUBLIC_URL"]) ||
+      new URL(process.env["MINIO_PUBLIC_URL"] ?? "").hostname !== `minio-autotm-rewrite-pr-${process.env["RAILWAY_ENVIRONMENT_NAME"]?.split("-").at(-1)}.up.railway.app`
     ) throw new Error("ui-fixture requires guarded AutoTM Railway PR variables");
     return;
   }
   assertLocalUrl("DATABASE_URL", DATABASE_URL);
   assertLocalUrl("MINIO_ENDPOINT", MINIO_ENDPOINT);
 }
+
+assertLocalhost();
 
 const VARIANTS = ["thumbnail", "list", "detail", "fullscreen"] as const;
 const VARIANT_WIDTHS: Record<(typeof VARIANTS)[number], number> = {
@@ -531,7 +534,6 @@ function required(map: Map<string, string>, name: string, table: string): string
 }
 
 async function main(): Promise<void> {
-  assertLocalhost();
 
   // Reference data must already be seeded (pnpm db:seed). Look everything up by
   // name: the previous fixture used findFirst() for each table, which gave all
