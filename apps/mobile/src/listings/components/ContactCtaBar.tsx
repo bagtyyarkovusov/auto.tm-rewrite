@@ -102,12 +102,17 @@ export function ContactCtaBar({
         <Button
           variant={canCall ? "brand" : "secondary"}
           size="lg"
-          className={cn("flex-1", onDark && !canCall && "bg-white/15")}
+          className={cn(
+            "flex-1",
+            onDark && !canCall && "border-transparent bg-white/15 disabled:border-transparent disabled:bg-white/15",
+          )}
           onPress={handleCall}
           disabled={!canCall}
         >
           <Icon as={Phone} className="size-5" />
-          <Text numberOfLines={1}>{t("call")}</Text>
+          <Text numberOfLines={1} className={cn(onDark && !canCall && "text-white/60")}>
+            {t("call")}
+          </Text>
         </Button>
 
         <Button
@@ -115,7 +120,7 @@ export function ContactCtaBar({
           size="lg"
           className={cn(
             "flex-1",
-            onDark && (canMessage ? "bg-white/15" : "bg-white/10"),
+            onDark && "border-transparent bg-white/15 disabled:border-transparent disabled:bg-white/15",
           )}
           disabled={!canMessage || conversation.isPending}
           onPress={handleMessage}

@@ -117,10 +117,15 @@ function ViewerContent({
     indexRef.current = initialIndex;
   }, [initialIndex, indexRef]);
 
-  // Keep the strip's current thumbnail in view as the photo changes.
+  // Keep the strip's current thumbnail centred as the photo changes, without
+  // scrolling past either end.
   useEffect(() => {
-    stripRef.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
-  }, [index]);
+    const step = THUMB_WIDTH + THUMB_GAP;
+    const contentWidth = STRIP_PADDING * 2 + media.length * step - THUMB_GAP;
+    const centred = STRIP_PADDING + step * index - (width - THUMB_WIDTH) / 2;
+    const offset = Math.max(0, Math.min(centred, contentWidth - width));
+    stripRef.current?.scrollToOffset({ offset, animated: true });
+  }, [index, media.length, width]);
 
   const handleSwipeEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(event.nativeEvent.contentOffset.x / width);
