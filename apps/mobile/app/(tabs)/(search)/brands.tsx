@@ -1,7 +1,9 @@
+import { useLocalSearchParams } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { readPickerResultsFilters } from "../../../src/listings/search/resultsRouteState";
 import { BrandPicker } from "../../../src/listings/search/BrandPicker";
 import { useRoutePickerActions } from "../../../src/listings/search/useRoutePickerActions";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
@@ -19,11 +21,13 @@ export default function BrandPickerScreen() {
   const { t } = useTranslation();
   const goBack = useSafeBack(HOME_HREF);
   const actions = useRoutePickerActions();
+  const params = useLocalSearchParams<{ returnToResults?: string; resultsState?: string }>();
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
       <BrandPicker
         actions={actions}
+        filters={readPickerResultsFilters(params)}
         leading={
           <Button
             variant="ghost"

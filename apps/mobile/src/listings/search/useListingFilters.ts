@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
-export type ListingFilter = z.infer<typeof ListingsSchemas.ListingFilterSchema>;
+export type ListingFilter = z.infer<typeof ListingsSchemas.ListingFilterSchema> & { sort?: ListingsSchemas.FeedSort };
 
 type FilterKey = keyof ListingFilter;
 
@@ -15,10 +15,14 @@ export interface UseListingFiltersReturn {
   setField: <K extends FilterKey>(key: K, value: ListingFilter[K]) => void;
   /** Commit draft → active. */
   apply: () => void;
-  /** Clear both draft and active. */
+  /** Clear the filters in both draft and active; the current sort stays. */
   reset: () => void;
   /** Number of fields with a non-empty value in active. */
   count: number;
+  /** Replace route-provided state without writing it back to the route. */
+  replace: (next: ListingFilter) => void;
+  /** Apply an immediate Results control against committed filters. */
+  commit: (patch: Partial<ListingFilter>) => void;
   /** False when draft contains an invalid combination (e.g. yearMin > yearMax). */
   isValid: boolean;
 }
@@ -38,16 +42,20 @@ function countActiveFields(filter: ListingFilter): number {
   for (const _key of Object.keys(filter)) {
     const key = _key as FilterKey;
     const value = filter[key];
-    if (isNonEmptyFilterValue(value)) {
+    if (key !== "sort" && isNonEmptyFilterValue(value)) {
       count++;
     }
   }
   return count;
 }
 
-export function useListingFilters(): UseListingFiltersReturn {
-  const [draft, setDraft] = useState<ListingFilter>({});
-  const [active, setActive] = useState<ListingFilter>({});
+export function useListingFilters(initial: ListingFilter = {}, onApply?: (next: ListingFilter) => void): UseListingFiltersReturn {
+  const [draft, setDraft] = useState<ListingFilter>(initial);
+  const [active, setActive] = useState<ListingFilter>(initial);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const onApplyRef = useRef(onApply);
+  onApplyRef.current = onApply;
   const draftRef = useRef(draft);
   draftRef.current = draft;
 
@@ -67,13 +75,31 @@ export function useListingFilters(): UseListingFiltersReturn {
       }
     }
     setActive(next as ListingFilter);
+    onApplyRef.current?.(next as ListingFilter);
   }, []);
 
+  // Reset clears the filters; the sort order is not a filter, so it stays.
   const reset = useCallback(() => {
-    draftRef.current = {};
-    setDraft({});
-    setActive({});
+    const { sort } = activeRef.current;
+    const next: ListingFilter = sort ? { sort } : {};
+    draftRef.current = next;
+    setDraft(next);
+    setActive(next);
+    onApplyRef.current?.(next);
   }, []);
+
+  const replace = useCallback((next: ListingFilter) => {
+    draftRef.current = next;
+    activeRef.current = next;
+    setDraft(next);
+    setActive(next);
+  }, []);
+
+  const commit = useCallback((patch: Partial<ListingFilter>) => {
+    const next = Object.fromEntries(Object.entries({ ...activeRef.current, ...patch }).filter(([, value]) => isNonEmptyFilterValue(value)));
+    replace(next);
+    onApplyRef.current?.(next);
+  }, [replace]);
 
   const isValid = useMemo(() => {
     if (
@@ -97,5 +123,5 @@ export function useListingFilters(): UseListingFiltersReturn {
 
   const count = useMemo(() => countActiveFields(active), [active]);
 
-  return { draft, active, setField, apply, reset, count, isValid };
+  return { draft, active, setField, apply, reset, count, isValid, replace, commit };
 }

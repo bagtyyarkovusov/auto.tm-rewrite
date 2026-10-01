@@ -81,6 +81,10 @@ describe("modelCountFilters", () => {
       modelCountFilters({ cityId: "ashgabat", modelIds: ["camry"], modelId: "x" }, "toyota"),
     ).toEqual({ cityId: "ashgabat", brandId: "toyota" });
   });
+
+  it("drops the Results sort order, which the counts endpoint rejects with a 400", () => {
+    expect(modelCountFilters({ cityId: "ashgabat", sort: "year_asc" }, "toyota")).toEqual({ cityId: "ashgabat", brandId: "toyota" });
+  });
 });
 
 describe("toBrandModelChoice", () => {

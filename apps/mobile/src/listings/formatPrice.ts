@@ -10,3 +10,8 @@ import { localeTag } from "@/src/i18n/resources";
 export function formatPrice(amount: number, locale: string): string {
   return `${amount.toLocaleString(localeTag(locale))} TMT`;
 }
+
+/** Formats a TMT price range as "min – max TMT", the unit shown once after the upper bound. */
+export function formatPriceRange(min: number, max: number, locale: string): string {
+  return `${min.toLocaleString(localeTag(locale))} – ${formatPrice(max, locale)}`;
+}

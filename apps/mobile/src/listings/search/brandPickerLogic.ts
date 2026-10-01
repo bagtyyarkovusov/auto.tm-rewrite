@@ -1,5 +1,7 @@
 import type { CatalogSchemas, ListingsSchemas } from "@auto-tm/contracts";
 
+import type { ListingFilter } from "./useListingFilters";
+
 /**
  * Pure rules behind the Brand picker (33 — Search & discovery): Popular with
  * counts, A to Z under letters, and search results limited to brands. The
@@ -120,16 +122,17 @@ export function matchBrands(
  * models, which that endpoint rejects because it counts every brand.
  */
 export function brandCountFilters(
-  filters: ListingsSchemas.ListingFilter,
+  filters: ListingFilter,
 ): ListingsSchemas.ListingBrandCountQuery {
   return withoutBrandAndModels(filters);
 }
 
-const BRAND_AND_MODEL_KEYS = new Set(["brandId", "modelId", "modelIds"]);
+// Sort is Results-only ordering. The brand and model counts endpoints reject it with a 400.
+const BRAND_AND_MODEL_KEYS = new Set(["brandId", "modelId", "modelIds", "sort"]);
 
-/** The buyer's other filters (city, year, price, condition), without empty values. */
+/** The buyer's other filters (city, year, price, condition), without empty values or sort. */
 export function withoutBrandAndModels(
-  filters: ListingsSchemas.ListingFilter,
+  filters: ListingFilter,
 ): ListingsSchemas.ListingBrandCountQuery {
   return Object.fromEntries(
     Object.entries(filters).filter(
