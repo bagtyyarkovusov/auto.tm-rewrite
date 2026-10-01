@@ -26,7 +26,7 @@ import {
   importBrandLogos,
   type ImportReport,
 } from "../scripts/brand-logos/import";
-import type { BrandLogoManifest, ManifestEntry } from "../scripts/brand-logos/manifest";
+import type { BrandLogoManifest, ManifestEntry, SourcedLogoEntry } from "../scripts/brand-logos/manifest";
 import { sha256Hex, type MasterProvider } from "../scripts/brand-logos/sources";
 
 const BUCKET = "catalog-assets";
@@ -50,7 +50,7 @@ function providerFor(masters: Record<string, Uint8Array>): MasterProvider {
   };
 }
 
-const simpleIconsEntry = (slug: string, tier: "A" | "B" | "C", svg: string): ManifestEntry => ({
+const simpleIconsEntry = (slug: string, tier: "A" | "B" | "C", svg: string): SourcedLogoEntry => ({
   slug,
   tier,
   source: "simple-icons",
@@ -66,7 +66,7 @@ const simpleIconsEntry = (slug: string, tier: "A" | "B" | "C", svg: string): Man
   transform: "alpha",
 });
 
-const zazEntry = (): ManifestEntry => ({
+const zazEntry = (): SourcedLogoEntry => ({
   slug: "zaz",
   tier: "C",
   source: "commons",
