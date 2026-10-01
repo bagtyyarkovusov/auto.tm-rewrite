@@ -415,13 +415,13 @@ function makeAncestry(mainPath, oids) {
   };
 }
 
-function loadPrs(prsFile, cwd) {
-  if (prsFile) return JSON.parse(readFileSync(prsFile, "utf8"));
-  const out = run(
+export function loadPrs(prsFile, cwd, runCommand = run) {
+  if (prsFile) return { prs: JSON.parse(readFileSync(prsFile, "utf8")), truncated: false };
+  const out = runCommand(
     ["gh", "pr", "list", "--state", "all", "--limit", "1000", "--json", "number,state,headRefName,headRefOid,url"],
     cwd,
   );
-  return JSON.parse(out);
+  return { prs: JSON.parse(out), truncated: false };
 }
 
 function loadRailway(mainPath, prs) {
@@ -481,8 +481,9 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
   const currentPath = realpathOrSelf(run(["git", "rev-parse", "--show-toplevel"], cwd).trim());
   const homeDir = realpathOrSelf(env.HOME || homedir());
   let prs;
+  let prsTruncated;
   try {
-    prs = loadPrs(options.prsFile, mainPath);
+    ({ prs, truncated: prsTruncated } = (io.loadPrs ?? loadPrs)(options.prsFile, mainPath));
   } catch (error) {
     err(`Cannot evaluate the gate without PR data: ${String(error.stderr || error.message).trim()}`);
     return 1;

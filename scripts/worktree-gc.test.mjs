@@ -11,6 +11,7 @@ import {
   findStaleBranches,
   findStaleRailwayEnvironments,
   formatReport,
+  loadPrs,
   main,
   parseClaudeSessions,
   scanClaudeSessions,
@@ -95,6 +96,7 @@ const pr = (overrides = {}) => ({
   state: "MERGED",
   headRefName: "agent/issue-1",
   headRefOid: SHA(10),
+  baseRefName: "main",
   url: "https://github.com/o/r/pull/12",
   ...overrides,
 });
@@ -550,12 +552,12 @@ function fixtureRepo(t) {
   const behindPrHead = git(behind.path, "rev-parse", "HEAD");
   git(behind.path, "reset", "-q", "--hard", behind.head);
   const prs = [
-    { number: 1, state: "MERGED", headRefName: "agent/issue-1", headRefOid: merged.head, url: "u/1" },
-    { number: 2, state: "MERGED", headRefName: "agent/issue-2", headRefOid: dirty.head, url: "u/2" },
-    { number: 3, state: "OPEN", headRefName: "agent/issue-3", headRefOid: open.head, url: "u/3" },
-    { number: 4, state: "MERGED", headRefName: "agent/issue-4", headRefOid: locked.head, url: "u/4" },
-    { number: 5, state: "MERGED", headRefName: "agent/issue-5", headRefOid: ahead.head, url: "u/5" },
-    { number: 6, state: "MERGED", headRefName: "agent/issue-6", headRefOid: behindPrHead, url: "u/6" },
+    { number: 1, state: "MERGED", headRefName: "agent/issue-1", headRefOid: merged.head, baseRefName: "main", url: "u/1" },
+    { number: 2, state: "MERGED", headRefName: "agent/issue-2", headRefOid: dirty.head, baseRefName: "main", url: "u/2" },
+    { number: 3, state: "OPEN", headRefName: "agent/issue-3", headRefOid: open.head, baseRefName: "main", url: "u/3" },
+    { number: 4, state: "MERGED", headRefName: "agent/issue-4", headRefOid: locked.head, baseRefName: "main", url: "u/4" },
+    { number: 5, state: "MERGED", headRefName: "agent/issue-5", headRefOid: ahead.head, baseRefName: "main", url: "u/5" },
+    { number: 6, state: "MERGED", headRefName: "agent/issue-6", headRefOid: behindPrHead, baseRefName: "main", url: "u/6" },
   ];
   const prsFile = join(root, "prs.json");
   writeFileSync(prsFile, JSON.stringify(prs));
@@ -575,7 +577,7 @@ function fixtureRepo(t) {
   };
   // A worktree at any path under the fixture root, with a merged PR at its head, so the gate would remove it.
   let nextPr = 100;
-  const addMergedWorktree = (relPath, branch) => {
+  const addMergedWorktree = (relPath, branch, base = "main") => {
     const path = join(root, relPath);
     git(main, "worktree", "add", "-q", "-b", branch, path);
     writeFileSync(join(path, "work.txt"), `${branch}\n`);
@@ -584,7 +586,7 @@ function fixtureRepo(t) {
     const head = git(path, "rev-parse", "HEAD");
     nextPr += 1;
     const all = JSON.parse(readFileSync(prsFile, "utf8"));
-    all.push({ number: nextPr, state: "MERGED", headRefName: branch, headRefOid: head, url: `u/${nextPr}` });
+    all.push({ number: nextPr, state: "MERGED", headRefName: branch, headRefOid: head, baseRefName: base, url: `u/${nextPr}` });
     writeFileSync(prsFile, JSON.stringify(all));
     return { path, head };
   };
@@ -949,4 +951,163 @@ test("a stale branch that moved after the scan fails the conditional delete, and
   assert.match(result.stdout, /expected/, "git's own mismatch message is reported");
   assert.equal(repo.git(repo.main, "rev-parse", "refs/heads/agent/issue-7"), base, "the moved branch was not deleted");
   assert.ok(!hasWorktree(repo, repo.merged.path), "the earlier removal had already happened");
+});
+
+// Finding 5: command-line nits.
+
+test("--prs-file without a path is a usage error, not a silent fall back to gh", () => {
+  for (const argv of [["--prs-file"], ["--prs-file", "--apply"]]) {
+    const err = [];
+    const status = main(argv, "/", { stdout: () => {}, stderr: (text) => err.push(text) });
+    assert.equal(status, 2, argv.join(" "));
+    assert.match(err.join("\n"), /--prs-file needs a path/, argv.join(" "));
+  }
+});
+
+// A gh stand-in that returns up to `--limit` PRs from a repository of `total`.
+function fakeGh(total) {
+  const limits = [];
+  const fields = [];
+  const runCommand = (argv) => {
+    const limit = Number(argv[argv.indexOf("--limit") + 1]);
+    limits.push(limit);
+    fields.push(argv[argv.indexOf("--json") + 1]);
+    return JSON.stringify(Array.from({ length: Math.min(limit, total) }, (_, i) => ({ number: i + 1 })));
+  };
+  return { runCommand, limits, fields };
+}
+
+test("loadPrs makes one call for a short list and asks for baseRefName", () => {
+  const gh = fakeGh(3);
+  const loaded = loadPrs(null, "/", gh.runCommand);
+  assert.equal(loaded.prs.length, 3);
+  assert.equal(loaded.truncated, false);
+  assert.deepEqual(gh.limits, [1000]);
+  assert.match(gh.fields[0], /(^|,)baseRefName(,|$)/);
+});
+
+test("loadPrs asks for a larger list when the result fills the limit", () => {
+  const gh = fakeGh(1500);
+  const loaded = loadPrs(null, "/", gh.runCommand);
+  assert.equal(loaded.prs.length, 1500);
+  assert.equal(loaded.truncated, false);
+  assert.deepEqual(gh.limits, [1000, 5000]);
+});
+
+test("loadPrs reports truncation when even the largest limit is full", () => {
+  const gh = fakeGh(Number.MAX_SAFE_INTEGER);
+  const loaded = loadPrs(null, "/", gh.runCommand);
+  assert.equal(loaded.truncated, true);
+  assert.deepEqual(gh.limits, [1000, 5000, 20000]);
+  assert.equal(loaded.prs.length, 20000);
+});
+
+test("a possibly truncated PR list warns on a read-only run and stops --apply", (t) => {
+  const repo = fixtureRepo(t);
+  const prs = JSON.parse(readFileSync(repo.prsFile, "utf8"));
+  const io = { loadPrs: () => ({ prs, truncated: true }) };
+  const before = repo.snapshot();
+  const applied = runMain(repo, ["--apply"], io);
+  assert.equal(applied.status, 1);
+  assert.match(applied.stderr, /PR list may be truncated/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const readOnly = runMain(repo, [], io);
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /PR list may be truncated/);
+});
+
+// Finding 6: stacked PRs merged into a base other than main.
+
+test("a PR merged into a branch other than main keeps the worktree, since the work is not on main yet", () => {
+  const verdict = classifyWorktree(entry(), context({ prs: [pr({ baseRefName: "agent/issue-0" })] }));
+  assert.equal(verdict.verdict, "keep");
+  assert.match(verdict.reason, /^PR #12 merged into agent\/issue-0, not main/);
+});
+
+test("a merged PR with no recorded base is not assumed to be on main", () => {
+  const verdict = classifyWorktree(entry(), context({ prs: [pr({ baseRefName: undefined })] }));
+  assert.equal(verdict.verdict, "keep");
+  assert.match(verdict.reason, /^PR #12 merged into an unknown base, not main/);
+});
+
+test("a PR merged into main still removes the worktree when another matching PR merged into a stacked base", () => {
+  const verdict = classifyWorktree(
+    entry(),
+    context({ prs: [pr({ number: 3, baseRefName: "agent/issue-0" }), pr({ number: 4, baseRefName: "main" })] }),
+  );
+  assert.equal(verdict.verdict, "remove");
+  assert.match(verdict.reason, /PR #4 merged/);
+});
+
+test("a branch inside a PR merged into a stacked base is not a stale branch", () => {
+  const stale = findStaleBranches({
+    branches: [{ name: "agent/issue-2", sha: SHA(20) }],
+    worktrees: [],
+    prs: [pr({ number: 20, headRefName: "agent/issue-2", headRefOid: SHA(20), baseRefName: "agent/issue-1" })],
+    isAncestor: () => false,
+  });
+  assert.deepEqual(stale, []);
+});
+
+test("a worktree whose PR merged into a stacked base is kept by --apply, branch and all", (t) => {
+  const repo = fixtureRepo(t);
+  const stacked = repo.addMergedWorktree("stacked", "agent/issue-30", "agent/issue-29");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.match(readOnly.stdout, new RegExp(`${stacked.path}\\n  verdict: keep: PR #101 merged into agent/issue-29, not main`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(hasWorktree(repo, stacked.path), "the stacked worktree survived");
+  assert.ok(repo.git(repo.main, "branch", "--format=%(refname:short)").split("\n").includes("agent/issue-30"));
+});
+
+// Finding 7: a stale branch whose tip is on main is labelled "on main", not "PR #N merged".
+
+test("a stale branch is flagged when its tip is on main", () => {
+  const stale = findStaleBranches({
+    branches: [
+      { name: "worktree-agent-abc", sha: SHA(40) },
+      { name: "agent/issue-2", sha: SHA(20) },
+    ],
+    worktrees: [],
+    prs: [
+      pr({ number: 20, headRefName: "agent/issue-2", headRefOid: SHA(20) }),
+      pr({ number: 41, headRefName: "x", headRefOid: SHA(41) }),
+    ],
+    mainSha: SHA(99),
+    isAncestor: (a, b) => a === SHA(40) && (b === SHA(41) || b === SHA(99)),
+  });
+  assert.deepEqual(stale.map((item) => [item.name, item.onMain]), [
+    ["worktree-agent-abc", true],
+    ["agent/issue-2", false],
+  ]);
+});
+
+test("the report labels a stale branch on main as such and keeps the PR label for the rest", () => {
+  const text = formatReport({
+    rows: [],
+    staleBranches: [
+      { name: "worktree-agent-abc", sha: SHA(40), pr: pr({ number: 41 }), onMain: true },
+      { name: "agent/issue-2", sha: SHA(20), pr: pr({ number: 20 }), onMain: false },
+    ],
+    railway: null,
+    applied: null,
+  });
+  assert.match(text, /worktree-agent-abc at a{9} \(on main\)/);
+  assert.match(text, /agent\/issue-2 at a{9} \(PR #20 merged\)/);
+  assert.doesNotMatch(text, /worktree-agent-abc[^\n]*PR #41/);
+});
+
+test("--apply still deletes stale branches, and the report says which tips are on main", (t) => {
+  const repo = fixtureRepo(t);
+  const base = repo.git(repo.main, "rev-parse", "main");
+  repo.git(repo.main, "branch", "worktree-agent-scaffold", base);
+  repo.git(repo.main, "branch", "agent/issue-8", repo.merged.head);
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.match(readOnly.stdout, new RegExp(`worktree-agent-scaffold at ${base.slice(0, 9)} \\(on main\\)`));
+  assert.match(readOnly.stdout, new RegExp(`agent/issue-8 at ${repo.merged.head.slice(0, 9)} \\(PR #1 merged\\)`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  const branches = repo.git(repo.main, "branch", "--format=%(refname:short)").split("\n");
+  assert.ok(!branches.includes("worktree-agent-scaffold"));
+  assert.ok(!branches.includes("agent/issue-8"));
 });
