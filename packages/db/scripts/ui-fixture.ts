@@ -14,15 +14,25 @@
  * its photograph actually shows, so the feed reads as real inventory rather
  * than lorem-ipsum rows.
  *
- * Default mode requires localhost. --railway-pr requires the guarded PR identity,
- * mock SMS and explicit public connections supplied by native:seed.
- * This is the only script in the repo that reaches an outside host
- * (upload.wikimedia.org / thumb.wikimedia.org) — a local developer tool, not
- * deployment egress.
+ * Two ways to run it, both decided by the shared guard in
+ * `native-pr-seed-guard.cjs` before anything connects:
  *
- *   pnpm --filter @auto-tm/db ui:fixture
+ *  - Default: a local developer tool. DATABASE_URL and MINIO_ENDPOINT must be on
+ *    localhost.
+ *      pnpm --filter @auto-tm/db ui:fixture
+ *  - `--railway-pr`: one step of `native:seed --remote`, which runs this script
+ *    inside the Railway PR API container (ADR-0075). The guard requires that
+ *    environment's identity, mock SMS, its private Postgres and MinIO, and its
+ *    own public media host.
+ *
+ * This is the only script in the repo that reaches an outside host
+ * (upload.wikimedia.org / thumb.wikimedia.org), for the photo downloads: the
+ * fixture downloads covered by ADR-0075, not deployment egress.
  */
-import "dotenv/config";
+// Keep this import first. It loads `.env` and refuses an unsafe target before any other module
+// (generated Prisma client, sharp, S3) is loaded.
+// eslint-disable-next-line import/order
+import { DATABASE_URL, MINIO_ENDPOINT } from "./ui-fixture-target";
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -31,7 +41,6 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import sharp from "sharp";
-
 
 import { PrismaClient } from "../generated/prisma/client/client";
 import {
@@ -46,47 +55,10 @@ import { recomputeListingPricesTmt } from "../src/listing-prices";
 
 import { FIXTURE_PHOTOS } from "./fixture-photos";
 
-const DATABASE_URL = process.env["DATABASE_URL"] ?? "";
-const MINIO_ENDPOINT = process.env["MINIO_ENDPOINT"] ?? "http://localhost:9000";
 const PHOTO_BUCKET = "listing-photos";
 
 /** Downloaded originals live here so re-runs don't re-fetch from Commons. */
 const PHOTO_CACHE = path.join(__dirname, "../node_modules/.cache/fixture-photos");
-
-const LOCAL_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
-
-function assertLocalUrl(name: string, value: string): void {
-  let host: string;
-  try {
-    host = new URL(value).hostname;
-  } catch {
-    throw new Error(`${name} is missing or unparseable`);
-  }
-  if (!LOCAL_HOSTS.includes(host)) {
-    throw new Error(`ui-fixture refuses to run against a non-local ${name} (host: ${host})`);
-  }
-}
-
-function assertLocalhost(): void {
-  if (process.argv.includes("--railway-pr")) {
-    if (
-      !/^auto\.tm-rewrite-pr-[1-9]\d*$/.test(process.env["RAILWAY_ENVIRONMENT_NAME"] ?? "") ||
-      process.env["RAILWAY_PROJECT_ID"] !== "176ddec0-dd65-4087-b82c-798599fc2ebe" ||
-      !process.env["RAILWAY_ENVIRONMENT_ID"] ||
-      process.env["APP_ENV"] !== "staging" ||
-      process.env["SMS_DRIVER"] !== "mock" ||
-      (process.env["NATIVE_PR_SEED_REMOTE"] === "true"
-        ? new URL(DATABASE_URL).hostname !== "postgres.railway.internal" || new URL(MINIO_ENDPOINT).hostname !== "minio.railway.internal"
-        : DATABASE_URL !== process.env["DATABASE_PUBLIC_URL"] || MINIO_ENDPOINT !== process.env["MINIO_PUBLIC_URL"]) ||
-      new URL(process.env["MINIO_PUBLIC_URL"] ?? "").hostname !== `minio-autotm-rewrite-pr-${process.env["RAILWAY_ENVIRONMENT_NAME"]?.split("-").at(-1)}.up.railway.app`
-    ) throw new Error("ui-fixture requires guarded AutoTM Railway PR variables");
-    return;
-  }
-  assertLocalUrl("DATABASE_URL", DATABASE_URL);
-  assertLocalUrl("MINIO_ENDPOINT", MINIO_ENDPOINT);
-}
-
-assertLocalhost();
 
 const VARIANTS = ["thumbnail", "list", "detail", "fullscreen"] as const;
 const VARIANT_WIDTHS: Record<(typeof VARIANTS)[number], number> = {
@@ -534,7 +506,6 @@ function required(map: Map<string, string>, name: string, table: string): string
 }
 
 async function main(): Promise<void> {
-
   // Reference data must already be seeded (pnpm db:seed). Look everything up by
   // name: the previous fixture used findFirst() for each table, which gave all
   // listings the same colour, body type and transmission and so never exercised

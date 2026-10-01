@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { assertFixtureTarget, assertNativePrSeedEnvironment } from '../packages/db/scripts/native-pr-seed-guard.mjs';
+import { assertFixtureTarget, assertNativePrSeedEnvironment } from '../packages/db/scripts/native-pr-seed-guard.cjs';
 import * as entry from './native-pr-seed.mjs';
 
 const { nativePrSeedSteps, parseNativePrSeedArguments } = entry;
@@ -195,7 +195,7 @@ test('every bare import the seed steps load is declared by the db workspace', ()
   const db = JSON.parse(readFileSync(path.join(root, 'packages/db/package.json'), 'utf8'));
   const declared = new Set([...Object.keys(db.dependencies ?? {}), ...Object.keys(db.devDependencies ?? {})]);
   const brandLogos = readdirSync(path.join(root, 'packages/db/scripts/brand-logos')).map(name => `packages/db/scripts/brand-logos/${name}`);
-  const files = ['packages/db/src/seed.ts', 'packages/db/src/listing-prices.ts', 'packages/db/scripts/ui-fixture.ts', 'packages/db/scripts/fixture-photos.ts', 'packages/db/scripts/import-brand-logos.ts', 'packages/db/scripts/native-pr-seed-guard.mjs', 'infra/minio/bootstrap.mjs', 'infra/minio/contract.mjs', ...brandLogos];
+  const files = ['packages/db/src/seed.ts', 'packages/db/src/listing-prices.ts', 'packages/db/scripts/ui-fixture.ts', 'packages/db/scripts/ui-fixture-target.ts', 'packages/db/scripts/fixture-photos.ts', 'packages/db/scripts/import-brand-logos.ts', 'packages/db/scripts/native-pr-seed-guard.cjs','infra/minio/bootstrap.mjs', 'infra/minio/contract.mjs', ...brandLogos];
   const bare = /(?:from\s+|import\s+|import\(|require\()\s*["']([^./"'][^"']*)["']/g;
   const missing = new Set();
   for (const file of files) {
