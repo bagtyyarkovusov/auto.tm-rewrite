@@ -45,6 +45,7 @@ export class PresignBrandLogoUpload {
       key,
       input.contentType,
       UPLOAD_EXPIRY_SECONDS,
+      input.sizeBytes,
     );
     return { uploadUrl: url, key, expiresIn: UPLOAD_EXPIRY_SECONDS, headers };
   }

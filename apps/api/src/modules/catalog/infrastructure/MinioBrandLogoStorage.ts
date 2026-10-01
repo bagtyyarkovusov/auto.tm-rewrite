@@ -2,18 +2,24 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+import { brandLogoCleanupTarget } from "../domain/BrandLogo";
 import type { BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 import type { Env } from "../../../env.schema";
 
 /** Public-read bucket for catalog assets; bootstrapped by `pnpm minio:bootstrap`. */
 export const CATALOG_ASSETS_BUCKET = "catalog-assets";
+
+/** S3 DeleteObjects accepts at most this many keys per request. */
+const DELETE_BATCH_SIZE = 1_000;
 
 @Injectable()
 export class MinioBrandLogoStorage implements BrandLogoStorage {
@@ -47,12 +53,14 @@ export class MinioBrandLogoStorage implements BrandLogoStorage {
     key: string,
     contentType: string,
     expirySeconds: number,
+    sizeBytes: number,
   ): Promise<{ url: string; headers: Record<string, string> }> {
     const command = new PutObjectCommand({
       Bucket: CATALOG_ASSETS_BUCKET,
       Key: key,
       ContentType: contentType,
-      // The bucket is public-read; a pending upload is never shown inline.
+      ContentLength: sizeBytes,
+      // Pending objects are private; attachment remains defense in depth.
       ContentDisposition: "attachment",
     });
     const url = await getSignedUrl(this.signingS3, command, {
@@ -102,6 +110,53 @@ export class MinioBrandLogoStorage implements BrandLogoStorage {
 
   async delete(key: string): Promise<void> {
     await this.s3.send(new DeleteObjectCommand({ Bucket: CATALOG_ASSETS_BUCKET, Key: key }));
+  }
+
+  async deleteLogoVersion(key: string): Promise<void> {
+    const target = brandLogoCleanupTarget(key);
+    if (target.kind === "object") {
+      await this.delete(target.key);
+      return;
+    }
+
+    const keys = await this.listKeys(target.prefix);
+    const failures: string[] = [];
+    for (let start = 0; start < keys.length; start += DELETE_BATCH_SIZE) {
+      const batch = keys.slice(start, start + DELETE_BATCH_SIZE);
+      const response = await this.s3.send(
+        new DeleteObjectsCommand({
+          Bucket: CATALOG_ASSETS_BUCKET,
+          Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
+        }),
+      );
+      for (const error of response.Errors ?? []) {
+        failures.push(
+          `${error.Key ?? "unknown key"}: ${error.Code ?? "unknown error"}: ${error.Message ?? "no message"}`,
+        );
+      }
+    }
+    if (failures.length > 0) {
+      throw new Error(`Failed to delete ${failures.length} object(s) under ${target.prefix}: ${failures.join("; ")}`);
+    }
+  }
+
+  private async listKeys(prefix: string): Promise<string[]> {
+    const keys: string[] = [];
+    let token: string | undefined;
+    do {
+      const page = await this.s3.send(
+        new ListObjectsV2Command({
+          Bucket: CATALOG_ASSETS_BUCKET,
+          Prefix: prefix,
+          ...(token === undefined ? {} : { ContinuationToken: token }),
+        }),
+      );
+      for (const object of page.Contents ?? []) {
+        if (object.Key) keys.push(object.Key);
+      }
+      token = page.NextContinuationToken;
+    } while (token);
+    return keys;
   }
 
   publicUrl(key: string): string {

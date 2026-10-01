@@ -58,6 +58,7 @@ export class MinioMediaStorageAdapter implements MediaStoragePort {
       Bucket: bucket,
       Key: data.key,
       ContentType: data.contentType,
+      ContentLength: data.sizeBytes,
     });
 
     const url = await getSignedUrl(this.signingS3, command, {

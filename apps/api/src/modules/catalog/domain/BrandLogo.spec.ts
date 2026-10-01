@@ -6,8 +6,11 @@ import {
   BRAND_LOGO_CONTENT_TYPES,
   BRAND_LOGO_MAX_BYTES,
   BRAND_LOGO_REJECTIONS,
+  brandLogoCleanupTarget,
   brandLogoKey,
   isPendingBrandLogoKey,
+  newAdminLogoVersion,
+  parseStoredBrandLogoKey,
   pendingBrandLogoKey,
   storedBrandLogoType,
   checkBrandLogoFile,
@@ -101,6 +104,89 @@ describe("keys", () => {
     expect(isPendingBrandLogoKey("toyota", pendingBrandLogoKey("bmw", id))).toBe(false);
     expect(isPendingBrandLogoKey("toyota", "brands/toyota/v1/logo.png")).toBe(false);
     expect(isPendingBrandLogoKey("toyota", `pending/brands/toyota/../../brands/x`)).toBe(false);
+  });
+});
+
+const UUID_A = "0f8fad5b-d9cb-469f-a165-70867728950e";
+const UUID_B = "6ba7b810-9dad-41d1-80b4-00c04fd430c8";
+
+describe("admin activation versions", () => {
+  it("gives two uploads in the same millisecond distinct directories", () => {
+    const first = newAdminLogoVersion(1790000000000, UUID_A);
+    const second = newAdminLogoVersion(1790000000000, UUID_B);
+    expect(first).toBe(`v1790000000000-${UUID_A}`);
+    expect(first).not.toBe(second);
+    expect(brandLogoKey("toyota", first, "image/png")).toBe(
+      `brands/toyota/v1790000000000-${UUID_A}/logo.png`,
+    );
+  });
+});
+
+describe("parseStoredBrandLogoKey", () => {
+  it.each([
+    [`brands/toyota/imp-0123456789ab/logo.png`, "toyota", "imp-0123456789ab", "imported"],
+    [`brands/toyota/imp-0123456789ab-${UUID_A}/logo.png`, "toyota", `imp-0123456789ab-${UUID_A}`, "imported"],
+    [`brands/toyota/v1790000000000/logo.webp`, "toyota", "v1790000000000", "admin"],
+    [`brands/toyota/v1790000000000-${UUID_A}/logo.png`, "toyota", `v1790000000000-${UUID_A}`, "admin"],
+    [`brands/tofaş/imp-0123456789ab-${UUID_B}/logo.png`, "tofaş", `imp-0123456789ab-${UUID_B}`, "imported"],
+  ])("recognizes %s from the stored key alone", (key, slug, version, owner) => {
+    expect(parseStoredBrandLogoKey(key)).toEqual({
+      slug,
+      version,
+      owner,
+      directory: `brands/${slug}/${version}/`,
+      ...(owner === "imported" ? { contentIdentity: "imp-0123456789ab" } : {}),
+    });
+  });
+
+  it("reads the content identity of an imported key, with or without an activation id", () => {
+    expect(parseStoredBrandLogoKey("brands/bmw/imp-0123456789ab/logo.png")).toMatchObject({
+      contentIdentity: "imp-0123456789ab",
+    });
+    expect(parseStoredBrandLogoKey(`brands/bmw/imp-0123456789ab-${UUID_A}/logo.png`)).toMatchObject({
+      contentIdentity: "imp-0123456789ab",
+    });
+    expect(parseStoredBrandLogoKey("brands/bmw/v1/logo.png")).not.toHaveProperty("contentIdentity");
+  });
+
+  it.each([
+    "brands/toyota/logo.png",
+    "brands/toyota/other/logo.png",
+    "brands/toyota/imp-xyz/logo.png",
+    "brands/toyota/v1/mono@1x.png",
+    "brands/toyota/v1/nested/logo.png",
+    "brands/../v1/logo.png",
+    "brands/./v1/logo.png",
+    "brands/toyota\\other/v1/logo.png",
+    `pending/brands/toyota/${UUID_A}`,
+    `brands/toyota/v1-${UUID_A.toUpperCase()}/logo.png`,
+    "",
+  ])("does not recognize %j", (key) => {
+    expect(parseStoredBrandLogoKey(key)).toBeNull();
+  });
+});
+
+describe("brandLogoCleanupTarget", () => {
+  it("targets the whole stored directory, whatever the brand's current slug", () => {
+    expect(brandLogoCleanupTarget(`brands/oldslug/imp-0123456789ab-${UUID_A}/logo.png`)).toEqual({
+      kind: "directory",
+      prefix: `brands/oldslug/imp-0123456789ab-${UUID_A}/`,
+    });
+    expect(brandLogoCleanupTarget("brands/toyota/v1790000000000/logo.webp")).toEqual({
+      kind: "directory",
+      prefix: "brands/toyota/v1790000000000/",
+    });
+  });
+
+  it("falls back to the single object for a key outside a recognized directory", () => {
+    expect(brandLogoCleanupTarget("brands/toyota/custom/logo.png")).toEqual({
+      kind: "object",
+      key: "brands/toyota/custom/logo.png",
+    });
+    expect(brandLogoCleanupTarget("somewhere/else.png")).toEqual({
+      kind: "object",
+      key: "somewhere/else.png",
+    });
   });
 });
 
