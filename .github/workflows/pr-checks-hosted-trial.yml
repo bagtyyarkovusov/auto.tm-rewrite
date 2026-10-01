@@ -59,6 +59,15 @@ jobs:
         shell: bash
         run: bash scripts/ci-services.sh up
 
+      # packages/db/tests/brand-logos.import.test.ts starts MinIO through
+      # Testcontainers under the quay.io name, which cannot be pulled. The
+      # service step already pulled the replacement, so alias it locally;
+      # Testcontainers uses an image that is already present.
+      - name: Alias the MinIO image for Testcontainers
+        if: steps.lane.outputs.lane != 'docs'
+        shell: bash
+        run: docker tag cgr.dev/chainguard/minio:latest-dev quay.io/minio/minio:latest
+
       # Diagnostic only, mirrors pr-checks.yml.
       - name: Report dependency cache state
         shell: bash
