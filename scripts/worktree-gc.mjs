@@ -51,6 +51,11 @@ export function parseWorktreePorcelain(text) {
   return entries;
 }
 
+// Stub for the red checkpoint: reports no Claude sessions.
+export function parseClaudeSessions() {
+  return [];
+}
+
 function inside(cwd, path) {
   return cwd === path || cwd.startsWith(`${path}/`);
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +11,7 @@ import {
   findStaleBranches,
   findStaleRailwayEnvironments,
   formatReport,
+  parseClaudeSessions,
   parseWorktreePorcelain,
   planApply,
   runApply,
@@ -219,6 +220,47 @@ test("an open PR wins over a merged PR that also matches", () => {
   );
   assert.equal(verdict.verdict, "keep");
   assert.match(verdict.reason, /PR #4 is open/);
+});
+
+test("this branch's own open PR keeps the worktree even when another branch's merged PR contains HEAD", () => {
+  const verdict = classifyWorktree(
+    entry({ head: SHA(11) }),
+    context({
+      prs: [
+        pr({ number: 5, state: "OPEN", headRefName: "agent/issue-1", headRefOid: SHA(12) }),
+        pr({ number: 6, state: "MERGED", headRefName: "agent/issue-0", headRefOid: SHA(10) }),
+      ],
+      isAncestor: (a, b) => a === SHA(11) && b === SHA(10),
+    }),
+  );
+  assert.deepEqual([verdict.verdict, verdict.reason], ["keep", "PR #5 is open"]);
+});
+
+test("a live Claude session working in the worktree keeps it as a running agent", () => {
+  const sessions = parseClaudeSessions(
+    JSON.stringify([
+      { pid: 41, cwd: `${MAIN}/.claude/worktrees/issue-1/apps/api`, kind: "background", name: "AutoTM issue-1", status: "busy" },
+      { pid: 42, cwd: MAIN, kind: "interactive", name: "orchestrator", status: "idle" },
+    ]),
+  );
+  assert.equal(sessions.length, 2);
+  const verdict = classifyWorktree(entry(), context({ activeProcesses: sessions }));
+  assert.equal(verdict.verdict, "keep");
+  assert.match(verdict.reason, /running agent: pid 41 \(claude session "AutoTM issue-1"\)/);
+});
+
+test("a Claude session in a sibling directory with the same prefix does not count", () => {
+  const sessions = parseClaudeSessions(
+    JSON.stringify([{ pid: 41, cwd: `${MAIN}/.claude/worktrees/issue-10`, kind: "background", name: "other" }]),
+  );
+  assert.equal(classifyWorktree(entry(), context({ activeProcesses: sessions })).verdict, "remove");
+});
+
+test("Claude session data that cannot be read is unknown, never an empty list", () => {
+  assert.equal(parseClaudeSessions("not json"), null);
+  assert.equal(parseClaudeSessions(JSON.stringify({ sessions: [] })), null);
+  assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 1, name: "no cwd" }])), null);
+  assert.deepEqual(parseClaudeSessions("[]"), []);
 });
 
 test("no PR match keeps the worktree", () => {
@@ -491,30 +533,52 @@ function fixtureRepo(t) {
   const open = addWorktree("open", "agent/issue-3");
   const locked = addWorktree("locked", "agent/issue-4");
   git(main, "worktree", "lock", "--reason", "held by test", locked.path);
+  // Real ancestry: HEAD is one commit past the merged PR head, so it holds work the PR lacks.
+  const ahead = addWorktree("ahead", "agent/issue-5");
+  writeFileSync(join(ahead.path, "after-pr.txt"), "after the PR head\n");
+  git(ahead.path, "add", "after-pr.txt");
+  git(ahead.path, "commit", "-q", "-m", "after pr");
+  // Real ancestry: HEAD is an ancestor of the merged PR head, so the PR holds everything.
+  const behind = addWorktree("behind", "agent/issue-6");
+  writeFileSync(join(behind.path, "later.txt"), "later\n");
+  git(behind.path, "add", "later.txt");
+  git(behind.path, "commit", "-q", "-m", "later");
+  const behindPrHead = git(behind.path, "rev-parse", "HEAD");
+  git(behind.path, "reset", "-q", "--hard", behind.head);
   const prs = [
     { number: 1, state: "MERGED", headRefName: "agent/issue-1", headRefOid: merged.head, url: "u/1" },
     { number: 2, state: "MERGED", headRefName: "agent/issue-2", headRefOid: dirty.head, url: "u/2" },
     { number: 3, state: "OPEN", headRefName: "agent/issue-3", headRefOid: open.head, url: "u/3" },
     { number: 4, state: "MERGED", headRefName: "agent/issue-4", headRefOid: locked.head, url: "u/4" },
+    { number: 5, state: "MERGED", headRefName: "agent/issue-5", headRefOid: ahead.head, url: "u/5" },
+    { number: 6, state: "MERGED", headRefName: "agent/issue-6", headRefOid: behindPrHead, url: "u/6" },
   ];
   const prsFile = join(root, "prs.json");
   writeFileSync(prsFile, JSON.stringify(prs));
   const snapshot = () =>
     [git(main, "worktree", "list", "--porcelain"), git(main, "for-each-ref", "--format=%(refname) %(objectname)")].join("\n");
-  return { root, main, git, merged, dirty, open, locked, prsFile, snapshot };
+  const bin = join(root, "bin");
+  mkdirSync(bin);
+  // A stand-in for `claude agents --json`; pass `sessions` (an array) or `fail` to change what it reports.
+  const gc = (args, { sessions = [], fail = false, env = {} } = {}) => {
+    const body = fail ? "echo 'claude: boom' >&2\nexit 1\n" : `printf '%s' '${JSON.stringify(sessions)}'\n`;
+    writeFileSync(join(bin, "claude"), `#!/bin/sh\n${body}`, { mode: 0o755 });
+    return spawnSync("node", [script, ...args, "--no-railway", "--no-size"], {
+      cwd: main,
+      encoding: "utf8",
+      env: { ...process.env, HOME: main, PATH: `${bin}:${process.env.PATH}`, ...env },
+    });
+  };
+  return { root, main, git, merged, dirty, open, locked, ahead, behind, prsFile, snapshot, gc };
 }
 
-const gc = (cwd, ...args) =>
-  spawnSync("node", [script, ...args, "--no-railway", "--no-size"], {
-    cwd,
-    encoding: "utf8",
-    env: { ...process.env, HOME: cwd },
-  });
+// The tests below feed hand-written PR data to --apply, which the script refuses unless told it is a test.
+const ALLOW_PRS_FILE = { WORKTREE_GC_ALLOW_PRS_FILE_APPLY: "1" };
 
 test("the default run is read-only and reports every worktree", (t) => {
   const repo = fixtureRepo(t);
   const before = repo.snapshot();
-  const result = gc(repo.main, "--prs-file", repo.prsFile);
+  const result = repo.gc(["--prs-file", repo.prsFile]);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(repo.snapshot(), before, "no worktree or ref changed");
   assert.match(result.stdout, /read-only/i);
@@ -525,26 +589,82 @@ test("the default run is read-only and reports every worktree", (t) => {
   assert.match(result.stdout, new RegExp(`${repo.merged.path}[^\\n]*\\n?[^\\n]*remove`));
 });
 
-test("--apply removes only the passing worktree and its task branch", (t) => {
+test("--apply removes only the passing worktrees and their task branches", (t) => {
   const repo = fixtureRepo(t);
-  const result = gc(repo.main, "--apply", "--prs-file", repo.prsFile);
+  const result = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE });
   assert.equal(result.status, 0, result.stderr);
   const list = repo.git(repo.main, "worktree", "list", "--porcelain");
   assert.ok(!list.includes(repo.merged.path), "merged worktree removed");
-  for (const kept of [repo.dirty, repo.open, repo.locked]) assert.ok(list.includes(kept.path), kept.path);
+  assert.ok(!list.includes(repo.behind.path), "worktree at an ancestor of the merged PR head removed");
+  for (const kept of [repo.dirty, repo.open, repo.locked, repo.ahead]) assert.ok(list.includes(kept.path), kept.path);
   const branches = repo.git(repo.main, "branch", "--format=%(refname:short)").split("\n");
-  assert.ok(!branches.includes("agent/issue-1"), "task branch deleted");
-  for (const kept of ["agent/issue-2", "agent/issue-3", "agent/issue-4", "main"]) assert.ok(branches.includes(kept), kept);
+  for (const gone of ["agent/issue-1", "agent/issue-6"]) assert.ok(!branches.includes(gone), `${gone} deleted`);
+  for (const kept of ["agent/issue-2", "agent/issue-3", "agent/issue-4", "agent/issue-5", "main"]) {
+    assert.ok(branches.includes(kept), kept);
+  }
   assert.match(result.stdout, /removed/i);
+});
+
+test("a worktree whose HEAD is ahead of the merged PR head is kept, so commits after the PR are never lost", (t) => {
+  const repo = fixtureRepo(t);
+  const readOnly = repo.gc(["--prs-file", repo.prsFile]);
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stdout, new RegExp(`${repo.ahead.path}\\n  verdict: keep: no PR match \\(HEAD is not the PR head or its ancestor`));
+  assert.match(readOnly.stdout, new RegExp(`${repo.behind.path}\\n  verdict: remove \\(PR #6 merged; HEAD is an ancestor of PR #6 head`));
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(repo.git(repo.main, "worktree", "list", "--porcelain").includes(repo.ahead.path));
+  assert.equal(repo.git(repo.ahead.path, "log", "-1", "--format=%s"), "after pr");
 });
 
 test("--apply refuses a dirty worktree even when its PR merged", (t) => {
   const repo = fixtureRepo(t);
-  const result = gc(repo.main, "--apply", "--prs-file", repo.prsFile);
+  const result = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(
     execFileSync("git", ["status", "--porcelain"], { cwd: repo.dirty.path, encoding: "utf8" }).trim(),
     "?? scratch.txt",
   );
   assert.match(result.stdout, /keep: dirty tree/);
+});
+
+test("untracked files count as dirty whatever status.showUntrackedFiles says", (t) => {
+  const repo = fixtureRepo(t);
+  repo.git(repo.main, "config", "status.showUntrackedFiles", "no");
+  assert.equal(repo.git(repo.dirty.path, "status", "--porcelain"), "", "the setting hides the untracked file");
+  const result = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /keep: dirty tree \(1 changed paths\)/);
+  assert.ok(repo.git(repo.main, "worktree", "list", "--porcelain").includes(repo.dirty.path));
+  assert.equal(readFileSync(join(repo.dirty.path, "scratch.txt"), "utf8"), "uncommitted\n");
+});
+
+test("--apply keeps a worktree a live Claude session works in, even with no lock", (t) => {
+  const repo = fixtureRepo(t);
+  const sessions = [{ pid: 4242, cwd: join(repo.merged.path, "apps"), kind: "background", name: "subagent", status: "busy" }];
+  const result = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /keep: running agent: pid 4242 \(claude session "subagent"\)/);
+  assert.ok(repo.git(repo.main, "worktree", "list", "--porcelain").includes(repo.merged.path));
+});
+
+test("--apply stops when the Claude session list cannot be read, and a read-only run only warns", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, fail: true });
+  assert.equal(applied.status, 1);
+  assert.match(applied.stderr, /Claude sessions/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const readOnly = repo.gc(["--prs-file", repo.prsFile], { fail: true });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /could not read Claude sessions/);
+});
+
+test("--prs-file together with --apply is refused, so hand-written PR data cannot drive removals", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const result = repo.gc(["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /--prs-file cannot be combined with --apply/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
 });
