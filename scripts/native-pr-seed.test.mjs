@@ -49,3 +49,23 @@ test('remote steps execute with Node and the shipped tsx loader, without pnpm', 
   assert.deepEqual(steps[1].args, ['--import', 'tsx', 'packages/db/src/seed.ts']);
   assert.ok(steps[2].args.includes('--railway-pr'));
 });
+
+test('every bare import the remote seed steps load is declared by the db workspace', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const { builtinModules } = await import('node:module');
+  const db = JSON.parse(readFileSync('packages/db/package.json', 'utf8'));
+  const declared = new Set([...Object.keys(db.dependencies ?? {}), ...Object.keys(db.devDependencies ?? {})]);
+  const brandLogos = readdirSync('packages/db/scripts/brand-logos').map(name => `packages/db/scripts/brand-logos/${name}`);
+  const files = ['packages/db/src/seed.ts', 'packages/db/src/listing-prices.ts', 'packages/db/scripts/ui-fixture.ts', 'packages/db/scripts/fixture-photos.ts', 'packages/db/scripts/import-brand-logos.ts', 'infra/minio/bootstrap.mjs', 'infra/minio/contract.mjs', ...brandLogos];
+  const bare = /(?:from\s+|import\s+|import\(|require\()\s*["']([^./"'][^"']*)["']/g;
+  const missing = new Set();
+  for (const file of files) {
+    for (const [, specifier] of readFileSync(file, 'utf8').matchAll(bare)) {
+      if (specifier.startsWith('node:') || builtinModules.includes(specifier)) continue;
+      const name = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0];
+      if (!declared.has(name)) missing.add(name);
+    }
+  }
+  // The packaged image does not hoist undeclared packages, so each must be declared where the steps run.
+  assert.deepEqual([...missing], []);
+});
