@@ -27,8 +27,8 @@ vi.mock("./recentSearches", () => ({ useRecentChoicesStore: (select: (s: unknown
 vi.mock("../../api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "toyota", name: "Toyota", slug: "toyota" }, { id: "lexus", name: "Lexus", slug: "lexus" }] } }) }));
 vi.mock("../../api/catalog/useModels", () => ({ useModels: (brandId: string) => ({ data: { items: brandId === "lexus" ? [{ id: "rx", name: "RX" }, { id: "es", name: "ES" }] : [{ id: "camry", name: "Camry" }, { id: "corolla", name: "Corolla" }] } }) }));
 vi.mock("../../api/catalog/useCatalogSearch", () => ({ useCatalogSearch: () => ({ data: undefined }) }));
-vi.mock("../../api/catalog/useRegions", () => ({ useRegions: () => ({ data: { items: [] }, isPending: false, isError: false }) }));
-vi.mock("../../api/catalog/useCities", () => ({ useCities: () => ({ data: { items: [] }, isPending: false, isError: false }) }));
+vi.mock("../../api/catalog/useRegions", () => ({ useRegions: () => ({ data: { items: [{ id: "ahal", name: "Ahal" }] }, isPending: false, isError: false }) }));
+vi.mock("../../api/catalog/useCities", () => ({ useCities: (regionId: string) => ({ data: { items: regionId === "ahal" ? [{ id: "anau", name: "Anau" }] : [] }, isPending: false, isError: false }) }));
 vi.mock("../../api/listings/useListingModelCounts", () => ({ useListingModelCounts: () => ({ data: { items: [] } }) }));
 vi.mock("../../api/listings/useListingBrandCounts", () => ({ useListingBrandCounts: () => ({ data: { items: [] } }) }));
 // The count follows the filters it is asked about, so a test sees the button react to each edit.
@@ -40,6 +40,7 @@ vi.mock("../../api/listings/useListingCount", () => ({ useListingCount: (options
   let total = 100;
   if (filters.condition === "used") total = 40;
   if (filters.condition === "new") total = 60;
+  if (filters.cityId) total = Math.floor(total / 5);
   if (filters.brandId) total = Math.floor(total / 4);
   if (filters.priceMax != null) total = Math.floor(total / 2);
   return { data: { totalMatching: total }, isPending: false, isError: false, refetch: vi.fn() };
@@ -126,6 +127,41 @@ describe("Search parameters: the Show N count", () => {
 });
 
 describe("Search parameters: Reset", () => {
+  it("clears a Region selected without a City and disables the City row", () => {
+    const view = open({ sort: "price_asc" });
+    fireEvent.press(view.getByLabelText("Region: Select region"));
+    fireEvent.press(view.getByRole("button", { name: "Ahal" }));
+    fireEvent.press(view.getByRole("button", { name: "Close" }));
+    expect(view.getByLabelText("Region: Ahal")).toBeTruthy();
+    expect(view.getByRole("button", { name: "City: Select city", disabled: false })).toBeTruthy();
+    expect(lastFilters()).toEqual({ sort: "price_asc" });
+
+    fireEvent.press(view.getByRole("button", { name: "Reset" }));
+
+    expect(view.getByLabelText("Region: Select region")).toBeTruthy();
+    expect(view.getByRole("button", { name: "City: Select a region first", disabled: true })).toBeTruthy();
+    expect(lastFilters()).toEqual({ sort: "price_asc" });
+    expect(view.getByRole("button", { name: "Show 100 listings" })).toBeTruthy();
+  });
+
+  it("updates the count for a selected City, then clears City and Region on Reset", () => {
+    const view = open({ sort: "price_asc" });
+    fireEvent.press(view.getByLabelText("Region: Select region"));
+    fireEvent.press(view.getByRole("button", { name: "Ahal" }));
+    fireEvent.press(view.getByRole("button", { name: "Anau" }));
+    expect(view.getByLabelText("Region: Ahal")).toBeTruthy();
+    expect(view.getByLabelText("City: Anau")).toBeTruthy();
+    expect(lastFilters()).toEqual({ cityId: "anau", sort: "price_asc" });
+    expect(view.getByRole("button", { name: "Show 20 listings" })).toBeTruthy();
+
+    fireEvent.press(view.getByRole("button", { name: "Reset" }));
+
+    expect(view.getByLabelText("Region: Select region")).toBeTruthy();
+    expect(view.getByRole("button", { name: "City: Select a region first", disabled: true })).toBeTruthy();
+    expect(lastFilters()).toEqual({ sort: "price_asc" });
+    expect(view.getByRole("button", { name: "Show 100 listings" })).toBeTruthy();
+  });
+
   it("clears every field, keeps the sort, and applies nothing yet", () => {
     const view = open(filled);
     fireEvent.press(view.getByRole("button", { name: "Reset" }));
