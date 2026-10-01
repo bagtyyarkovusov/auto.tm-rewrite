@@ -111,7 +111,7 @@ Update this guide when the operating procedure changes. Update `apps/mobile/CONT
 4. In the PR API service only, set `DATABASE_PUBLIC_URL` to the Railway reference `${{Postgres.DATABASE_PUBLIC_URL}}`. Set `MINIO_PUBLIC_URL` to `https://${{MinIO.RAILWAY_PUBLIC_DOMAIN}}` in the PR API and worker services, and `NEXT_PUBLIC_MINIO_PUBLIC_URL` to the same reference in PR admin/web. Staging may contain literal URLs that duplication preserves, so read back hostnames and confirm they belong to this PR. The seed rejects inherited staging or other PR media origins. Keep `DATABASE_URL` and `MINIO_ENDPOINT` private for deployed services. Confirm `SMS_DRIVER=mock` and `APP_ENV=staging` before seeding. Run from the repository root:
 
    ```bash
-   railway run --environment "$PR_ENVIRONMENT_ID" --service "$PR_API_SERVICE_ID" pnpm native:seed
+   railway run --project "$PR_PROJECT_ID" --environment "$PR_ENVIRONMENT_ID" --no-local --service "$PR_API_SERVICE_ID" pnpm native:seed
    ```
 
    This one command bootstraps all four MinIO buckets, reference catalog, fixture users and listings with 0, 1 and 2 photos, then licensed brand logos. It is rerunnable and touches only demo fixture rows/media. It hard-rejects production, staging, missing or malformed names before running seed steps. `railway run` runs on the Mac, so the guarded command substitutes the public Postgres and MinIO connections. Do not print variable values or token files in evidence. Fixture phones include buyer `+99361000009` and seller `+99361000001`.
