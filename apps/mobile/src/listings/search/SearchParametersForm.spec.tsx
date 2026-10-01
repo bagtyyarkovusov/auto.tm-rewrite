@@ -250,15 +250,14 @@ describe("Search parameters: Show N", () => {
 const prefixes = (digits: string) => Array.from(digits, (_, index) => digits.slice(0, index + 1));
 
 describe("Search parameters: price inputs keep every digit typed or pasted", () => {
-  // These tests cover the React side of a burst: handlers fed successive full-text events with no
-  // re-render between them, from props captured before the first event. They cannot reproduce native
-  // ordering between a native text view and a controlled `value`; the simulator capture in
-  // docs/evidence/issue-472 covers that.
+  // These tests cover the React side of a burst: successive full-text events fired inside one `act`, so
+  // React does not re-render between them. Outside `act` each event renders first, which is the
+  // digit-by-digit case. They cannot reproduce native ordering between a native text view and a
+  // controlled `value`; the simulator capture in docs/evidence/issue-472 covers that.
   const fields = [
     { name: "Min", placeholder: "Min", key: "priceMin" },
     { name: "Max", placeholder: "Max", key: "priceMax" },
   ] as const;
-  const handlerOf = (element: { props: { onChangeText?: unknown } }) => element.props.onChangeText as (text: string) => void;
 
   describe.each(fields)("$name price", ({ placeholder, key }) => {
     it("keeps 7000000 when the digits arrive one at a time with a render between each", () => {
@@ -270,19 +269,9 @@ describe("Search parameters: price inputs keep every digit typed or pasted", () 
 
     it("keeps 7000000 when every digit arrives in one burst, before any render", () => {
       const view = open();
-      const onChangeText = handlerOf(view.getByPlaceholderText(placeholder));
-      act(() => {
-        // One handler captured once, as a native burst delivers events before React re-renders.
-        for (const text of prefixes("7000000")) onChangeText(text);
-      });
-      expect(view.getByDisplayValue("7000000")).toBeTruthy();
-      expect(lastFilters()[key]).toBe(7000000);
-    });
-
-    it("keeps 7000000 when the digits are fired through the field in one batch", () => {
-      const view = open();
       const field = view.getByPlaceholderText(placeholder);
       act(() => {
+        // One act batches the events, so React does not re-render between them, as in a native burst.
         for (const text of prefixes("7000000")) fireEvent.changeText(field, text);
       });
       expect(view.getByDisplayValue("7000000")).toBeTruthy();
@@ -305,25 +294,27 @@ describe("Search parameters: price inputs keep every digit typed or pasted", () 
     });
 
     it("keeps the digits typed after a delete in the same burst", () => {
+      // Opens at 7000000 and ends on a different value, so a handler that drops every event fails.
       const view = open({ [key]: 7000000, sort: "newest" });
-      const onChangeText = handlerOf(view.getByDisplayValue("7000000"));
+      const field = view.getByDisplayValue("7000000");
       act(() => {
-        for (const text of ["700000", "70000", "7000", "70000", "700000", "7000000"]) onChangeText(text);
+        for (const text of ["700000", "70000", "7000", "70005", "700055", "7000555"]) fireEvent.changeText(field, text);
       });
-      expect(view.getByDisplayValue("7000000")).toBeTruthy();
-      expect(lastFilters()[key]).toBe(7000000);
+      expect(view.queryByDisplayValue("7000000")).toBeNull();
+      expect(view.getByDisplayValue("7000555")).toBeTruthy();
+      expect(lastFilters()[key]).toBe(7000555);
     });
   });
 
   it("keeps both whole values when min and max are typed in alternating bursts", () => {
     const view = open();
-    const onChangeMin = handlerOf(view.getByPlaceholderText("Min"));
-    const onChangeMax = handlerOf(view.getByPlaceholderText("Max"));
+    const min = view.getByPlaceholderText("Min");
+    const max = view.getByPlaceholderText("Max");
     act(() => {
       const maxTexts = prefixes("7000000");
       for (const [index, text] of prefixes("1500000").entries()) {
-        onChangeMin(text);
-        onChangeMax(maxTexts[index] as string);
+        fireEvent.changeText(min, text);
+        fireEvent.changeText(max, maxTexts[index] as string);
       }
     });
     expect(view.getByDisplayValue("1500000")).toBeTruthy();
@@ -333,11 +324,11 @@ describe("Search parameters: price inputs keep every digit typed or pasted", () 
 
   it("passes both whole values to Results when Show is pressed after a burst", () => {
     const view = open({ sort: "newest" });
-    const onChangeMin = handlerOf(view.getByPlaceholderText("Min"));
-    const onChangeMax = handlerOf(view.getByPlaceholderText("Max"));
+    const min = view.getByPlaceholderText("Min");
+    const max = view.getByPlaceholderText("Max");
     act(() => {
-      for (const text of prefixes("1500000")) onChangeMin(text);
-      for (const text of prefixes("7000000")) onChangeMax(text);
+      for (const text of prefixes("1500000")) fireEvent.changeText(min, text);
+      for (const text of prefixes("7000000")) fireEvent.changeText(max, text);
     });
     fireEvent.press(view.getByRole("button", { name: /^Show \d+ listings$/ }));
     expect(routerMock.dismissTo).toHaveBeenCalledWith({
