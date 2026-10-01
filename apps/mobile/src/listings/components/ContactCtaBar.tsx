@@ -10,12 +10,13 @@ import {
   useAuthIntentStore,
   useReplayAuthAction,
 } from "../../auth/intentStore";
-import { useOpenConversation } from "../../api/conversations/useOpenConversation";
+import { useOpenListingConversation } from "../../conversations/useOpenListingConversation";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 interface ContactCtaBarProps {
   listingId: string;
@@ -23,6 +24,17 @@ interface ContactCtaBarProps {
   allowCalls: boolean;
   allowChat: boolean;
   status: Enums.ListingStatus;
+  /** The full detail has not loaded: both actions stay disabled until it does. */
+  pending?: boolean;
+  /** `viewer` sits on the black photo viewer: no SMS caption, light-on-dark buttons. */
+  variant?: "bar" | "viewer";
+  /** Runs before a Message starts, e.g. to close the photo viewer over the screen. */
+  onBeforeMessage?: () => void;
+  /**
+   * False for a second bar on the same screen, so a Message replayed after
+   * sign-in opens one Conversation, not two.
+   */
+  replayAuth?: boolean;
 }
 
 export function ContactCtaBar({
@@ -31,16 +43,22 @@ export function ContactCtaBar({
   allowCalls,
   allowChat,
   status,
+  pending = false,
+  variant = "bar",
+  onBeforeMessage,
+  replayAuth = true,
 }: ContactCtaBarProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const openConversation = useOpenConversation();
+  const conversation = useOpenListingConversation(listingId);
   const { t } = useTranslation();
   const listingHref = `/(public)/listings/${listingId}` as const;
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
-  const canCall = allowCalls && !!contactPhone && !isSold && !isArchived;
-  const canMessage = allowChat && !isSold && !isArchived;
+  const canCall =
+    !pending && allowCalls && !!contactPhone && !isSold && !isArchived;
+  const canMessage = !pending && allowChat && !isSold && !isArchived;
+  const onDark = variant === "viewer";
 
   const handleCall = async () => {
     if (!canCall || !contactPhone) return;
@@ -51,43 +69,19 @@ export function ContactCtaBar({
     }
   };
 
-  // `openListingConversation` is the action body without the auth gate, so one
+  // `conversation.open` is the action body without the auth gate, so one
   // code path serves a signed-in tap and a pending action replayed after
   // sign-in. A replay must not re-check `isAuthenticated`: that
   // flag is refreshed asynchronously and is still false for a beat after the
   // session is stored, while the API client already reads the new token per
   // request.
-  const openListingConversation = () => {
-    openConversation.mutate(
-      { listingId },
-      {
-        onSuccess: (data) => {
-          const listing = data.listing;
-          router.push({
-            pathname: "/conversations/[id]",
-            params: {
-              id: data.id,
-              listingId: listing?.id ?? "",
-              brandId: listing?.brandId ?? "",
-              modelId: listing?.modelId ?? "",
-              year: listing?.year ? String(listing.year) : "",
-              displayPriceTmt: listing?.displayPriceTmt
-                ? String(listing.displayPriceTmt)
-                : "",
-              priceCurrency: listing?.priceCurrency ?? "",
-              coverMediaKey: listing?.coverMediaKey ?? "",
-              status: listing?.status ?? "",
-            },
-          });
-        },
-      },
-    );
-  };
-
-  useReplayAuthAction("message", listingId, openListingConversation);
+  useReplayAuthAction("message", replayAuth ? listingId : undefined, () =>
+    conversation.open(),
+  );
 
   const handleMessage = () => {
     if (!canMessage) return;
+    onBeforeMessage?.();
 
     if (isAuthenticated === false) {
       useAuthIntentStore.getState().requireSignIn(router, {
@@ -98,7 +92,7 @@ export function ContactCtaBar({
     }
 
     if (isAuthenticated === true) {
-      openListingConversation();
+      conversation.open();
     }
   };
 
@@ -108,48 +102,60 @@ export function ContactCtaBar({
         <Button
           variant={canCall ? "brand" : "secondary"}
           size="lg"
-          className="flex-1"
+          className={cn(
+            "flex-1",
+            onDark && !canCall && "border-transparent bg-white/15 disabled:border-transparent disabled:bg-white/15",
+          )}
           onPress={handleCall}
           disabled={!canCall}
         >
           <Icon as={Phone} className="size-5" />
-          <Text numberOfLines={1}>{t("call")}</Text>
+          <Text numberOfLines={1} className={cn(onDark && !canCall && "text-white/60")}>
+            {t("call")}
+          </Text>
         </Button>
 
         <Button
           variant={canMessage ? "default" : "secondary"}
           size="lg"
-          className="flex-1"
-          disabled={!canMessage || openConversation.isPending}
+          className={cn(
+            "flex-1",
+            onDark && "border-transparent bg-white/15 disabled:border-transparent disabled:bg-white/15",
+          )}
+          disabled={!canMessage || conversation.isPending}
           onPress={handleMessage}
           accessibilityLabel={t("message")}
           accessibilityState={{
-            disabled: !canMessage || openConversation.isPending,
+            disabled: !canMessage || conversation.isPending,
           }}
         >
           <Icon
             as={MessageCircle}
             className={
-              canMessage
-                ? "size-5 text-background"
-                : "size-5 text-muted-foreground"
+              onDark
+                ? "size-5 text-white"
+                : canMessage
+                  ? "size-5 text-background"
+                  : "size-5 text-muted-foreground"
             }
           />
-          <Text numberOfLines={1}>{t("message")}</Text>
+          <Text numberOfLines={1} className={cn(onDark && "text-white")}>
+            {t("message")}
+          </Text>
         </Button>
       </View>
-      {canCall && (
+      {canCall && !onDark && (
         <Text className="px-4 pb-2 text-center text-xs text-muted-foreground">
           {t("contactSmsCaption")}
         </Text>
       )}
 
-      {openConversation.error && (
+      {conversation.error && (
         <View className="px-4 pb-3">
           <ErrorState
             compact
-            error={openConversation.error}
-            onRetry={() => openConversation.mutate({ listingId })}
+            error={conversation.error}
+            onRetry={conversation.retry}
           />
         </View>
       )}

@@ -7,7 +7,8 @@ import { beforeEach, vi } from "vitest";
 const requireNative = createRequire(import.meta.url);
 const nativePath = requireNative.resolve("react-native");
 const nativeModule = new Module(nativePath);
-nativeModule.exports = requireNative("./native-host.cjs");
+const nativeHost = requireNative("./native-host.cjs") as { scrollRequests: unknown[] };
+nativeModule.exports = nativeHost;
 nativeModule.loaded = true;
 requireNative.cache[nativePath] = nativeModule;
 
@@ -34,6 +35,7 @@ vi.mock("expo-router", () => ({
   useFocusEffect: vi.fn(),
 }));
 beforeEach(() => {
+  nativeHost.scrollRequests.length = 0;
   Object.values(routerMock).forEach((mock) => mock.mockClear());
   Object.keys(routeParams).forEach((key) => Reflect.deleteProperty(routeParams, key));
 });
@@ -69,3 +71,40 @@ vi.mock("@/components/ui/alert-dialog", async () => {
     AlertDialogDescription: shell.TextContainer, AlertDialogFooter: shell.Container };
 });
 vi.mock("@rn-primitives/separator", async () => ({ Root: (await import("react-native")).View }));
+
+// Expo modules that load `expo-modules-core`, which needs the native runtime.
+// A spec that exercises one of them mocks it itself and wins over these stubs.
+vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => false), openURL: vi.fn(async () => {}) }));
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => {}),
+  deleteItemAsync: vi.fn(async () => {}),
+}));
+
+// Gesture Handler, Reanimated and Worklets need a native runtime. These
+// adapters keep the component tree, so a spec can render a screen that holds a
+// zoomable image; they do not run gestures, shared values or animations.
+// Pinch, pan and double-tap are proven on a device.
+vi.mock("react-native-gesture-handler", async () => {
+  const { View } = await import("react-native");
+  const builder = (): unknown =>
+    new Proxy(() => undefined, { get: () => builder, apply: () => builder() });
+  return {
+    GestureHandlerRootView: View,
+    GestureDetector: ({ children }: { children: unknown }) => children,
+    Gesture: new Proxy({}, { get: () => builder }),
+  };
+});
+vi.mock("react-native-reanimated", async () => {
+  const { View } = await import("react-native");
+  return {
+    default: { View },
+    useSharedValue: <T,>(value: T) => ({ value }),
+    useAnimatedStyle: () => ({}),
+    withTiming: <T,>(value: T) => value,
+    withSpring: <T,>(value: T) => value,
+  };
+});
+vi.mock("react-native-worklets", () => ({
+  scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
+}));

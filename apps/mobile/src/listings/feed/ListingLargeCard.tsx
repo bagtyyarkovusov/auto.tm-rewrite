@@ -11,6 +11,8 @@ import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { formatPrice } from "../formatPrice";
 import { useListingFavorite } from "../useListingFavorite";
 
+import { listingSpecLine } from "./listingSpecLine";
+
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -49,7 +51,7 @@ export const ListingLargeCard = memo(function ListingLargeCard({ listing, onPres
   const price = formatPrice(listing.displayPriceTmt, i18n.language);
   const identity = [brandName, modelName].filter(Boolean).join(" ");
   const title = [identity, listing.year].filter((value) => value != null && value !== "").join(", ");
-  const specs = [listing.mileageKm != null ? `${listing.mileageKm.toLocaleString(localeTag(i18n.language))} ${t("km")}` : null, transmissionName, engineTypeName].filter(Boolean).join(" · ");
+  const specs = listingSpecLine({ mileageKm: listing.mileageKm, transmissionName, engineTypeName, locale: i18n.language, kmLabel: t("km") });
   const location = [cityName, formatListingDate(listing.publishedAt, i18n.language, t)].filter(Boolean).join(" · ");
   return <View className="bg-card pb-2">
     <Pressable onPress={() => onPress(listing.id)} accessibilityRole="button" accessibilityLabel={[title, price].filter(Boolean).join(", ")} className="active:opacity-90">

@@ -46,6 +46,8 @@ interface MessageComposerProps {
   onTyping?: () => void;
   onStopTyping?: () => void;
   conversationId?: string;
+  /** Text typed in when the composer first appears (Ask the seller); the buyer still presses Send. */
+  initialText?: string;
 }
 
 export function MessageComposer({
@@ -56,8 +58,9 @@ export function MessageComposer({
   onTyping,
   onStopTyping,
   conversationId,
+  initialText = "",
 }: MessageComposerProps) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [attachment, setAttachment] = useState<ComposerAttachment | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionError, setCompressionError] = useState<string | null>(null);

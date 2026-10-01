@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
+import { useListingPreview } from "../../../src/api/listings/useListingPreview";
 import { useCatalogMaps } from "../../../src/listings/detail/useCatalogMaps";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
 import { ListingDetailView } from "../../../src/listings/components/ListingDetail";
@@ -20,6 +21,8 @@ import {
 } from "../../../src/auth/intentStore";
 import { useAuth } from "../../../src/auth/useAuth";
 import { CollapsingHeader } from "../../../src/listings/detail/CollapsingHeader";
+import { DetailSkeleton } from "../../../src/listings/detail/DetailSkeleton";
+import { ListingPreview } from "../../../src/listings/detail/ListingPreview";
 import { OwnerActions } from "../../../src/listings/components/OwnerActions";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { useConfig } from "../../../src/api/admin/useConfig";
@@ -27,56 +30,7 @@ import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-
-function DetailSkeleton({
-  insets,
-}: {
-  insets: ReturnType<typeof useSafeAreaInsets>;
-}) {
-  return (
-    <View
-      className="flex-1 bg-background"
-      style={{ paddingBottom: insets.bottom }}
-    >
-      {/* Photo skeleton — full-bleed to top edge */}
-      <Skeleton className="h-[260px] w-full rounded-none" />
-
-      <View className="px-5 py-4 gap-4">
-        {/* Title skeleton */}
-        <View className="gap-2">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-6 w-1/3" />
-        </View>
-
-        {/* Spec grid skeleton */}
-        <View className="flex-row flex-wrap gap-y-2">
-          <Skeleton className="h-10 w-[45%]" />
-          <Skeleton className="h-10 w-[45%]" />
-          <Skeleton className="h-10 w-[45%]" />
-          <Skeleton className="h-10 w-[45%]" />
-        </View>
-
-        {/* Description skeleton */}
-        <View className="gap-1.5">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-        </View>
-
-        {/* Seller skeleton */}
-        <View className="flex-row items-center gap-2">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <View className="gap-1">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-32" />
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
 
 function UnavailableState({
   insets,
@@ -108,6 +62,7 @@ export default function ListingDetailScreen() {
   const goBack = useSafeBack();
   const insets = useSafeAreaInsets();
   const { data, isPending, error, refetch } = useListingDetail(id ?? "");
+  const preview = useListingPreview(id ?? "");
   const viewer = useViewer();
   const { data: config } = useConfig();
   const [reportOpen, setReportOpen] = useState(false);
@@ -138,7 +93,16 @@ export default function ListingDetailScreen() {
   };
 
   if (isPending) {
-    return <DetailSkeleton insets={insets} />;
+    // A tapped card seeds the screen at once; a deep link has no card.
+    return preview ? (
+      <ListingPreview
+        summary={preview}
+        isOwner={viewer != null && viewer.userId === preview.sellerId}
+        onBack={goBack}
+      />
+    ) : (
+      <DetailSkeleton bottomInset={insets.bottom} />
+    );
   }
 
   if (error || !data) {
