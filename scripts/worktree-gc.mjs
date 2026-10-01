@@ -379,8 +379,9 @@ export function scanProcesses() {
 }
 
 // Live Claude sessions, interactive and background, with the directory each one
-// works in. No `claude` binary means no Claude sessions to protect. A binary
-// that fails or prints something unreadable is unknown (null).
+// works in. A missing `claude` binary is reported as "missing", never as an
+// empty list, so the report cannot claim the scan ran. A binary that fails or
+// prints something unreadable is unknown (null).
 export function scanClaudeSessions(spawn = spawnSync) {
   const result = spawn("claude", ["agents", "--json"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 60_000 });
   if (result.error?.code === "ENOENT") return { status: "missing", sessions: [], withoutCwd: 0 };
