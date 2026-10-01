@@ -3,7 +3,7 @@ import { ListingsSchemas } from "@auto-tm/contracts";
 import type { ListingFilter } from "./useListingFilters";
 
 export const RESULTS_FILTER_KEYS = ["brandId", "modelIds", "modelId", "cityId", "priceMin", "priceMax", "yearMin", "yearMax", "condition", "sort"] as const;
-export type ResultsRouteState = Partial<Record<typeof RESULTS_FILTER_KEYS[number] | "openFilters", string | string[]>>;
+export type ResultsRouteState = Partial<Record<typeof RESULTS_FILTER_KEYS[number], string | string[]>>;
 const one = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
 
 /** Route search parameters persist the applied Results search across Back and links. */

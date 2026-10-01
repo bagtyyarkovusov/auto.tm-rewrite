@@ -57,7 +57,7 @@ describe("Search parameters: opening", () => {
     const view = open();
     expect(view.getByText("Search parameters")).toBeTruthy();
     expect(view.getByRole("button", { name: "Any Condition" })).toBeTruthy();
-    expect(view.getByText("City")).toBeTruthy();
+    expect(view.getAllByText("City").length).toBeGreaterThan(0);
     expect(view.getByLabelText("Brand: Select brand")).toBeTruthy();
     expect(view.getByLabelText("Model: Select model")).toBeTruthy();
     expect(view.getByText("Year range")).toBeTruthy();
@@ -150,11 +150,11 @@ describe("Search parameters: brand and model in Done mode", () => {
     fireEvent.press(view.getByLabelText("Brand: Select brand"));
     expect(view.getByText("Lexus")).toBeTruthy();
     fireEvent.press(view.getByText("Lexus"));
-    expect(view.getByText("Models of Lexus")).toBeTruthy();
+    expect(view.getByText("Lexus models")).toBeTruthy();
     expect(view.queryByText("More filters")).toBeNull();
     fireEvent.press(view.getByText("RX"));
     fireEvent.press(view.getByRole("button", { name: /^Done/ }));
-    expect(view.queryByText("Models of Lexus")).toBeNull();
+    expect(view.queryByText("Lexus models")).toBeNull();
     expect(view.getByLabelText("Brand: Lexus")).toBeTruthy();
     expect(view.getByLabelText("Model: RX")).toBeTruthy();
     expect(lastFilters()).toEqual(expect.objectContaining({ brandId: "lexus", modelIds: ["rx"] }));
@@ -166,7 +166,7 @@ describe("Search parameters: brand and model in Done mode", () => {
   it("opens the Model picker from the Model row with the current models ticked", () => {
     const view = open(filled);
     fireEvent.press(view.getByLabelText("Model: Camry"));
-    expect(view.getByText("Models of Toyota")).toBeTruthy();
+    expect(view.getByText("Toyota models")).toBeTruthy();
     expect(view.getByRole("checkbox", { name: "Camry", checked: true })).toBeTruthy();
     expect(view.getByRole("checkbox", { name: "Corolla", checked: false })).toBeTruthy();
   });

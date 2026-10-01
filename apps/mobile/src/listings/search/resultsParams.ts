@@ -11,30 +11,24 @@ export interface ResultsParamsInput {
   modelIds?: RawParam;
   /** Legacy single model, still sent by "See other Brand Model". */
   modelId?: RawParam;
-  openFilters?: RawParam;
 }
 
 export interface ResultsSelection {
   brandId: string;
   /** Empty means every model of the brand. */
   modelIds: string[];
-  /** Open Search parameters on arrival (Model picker "More filters"). */
-  openFilters: boolean;
 }
 
 export type ResultsParams = {
   brandId: string;
   modelIds?: string;
-  openFilters?: "1";
 };
 
 export function buildResultsParams(
   selection: { brandId: string; modelIds: readonly string[] },
-  options: { openFilters?: boolean } = {},
 ): ResultsParams {
   const params: ResultsParams = { brandId: selection.brandId };
   if (selection.modelIds.length > 0) params.modelIds = selection.modelIds.join(",");
-  if (options.openFilters) params.openFilters = "1";
   return params;
 }
 
@@ -52,5 +46,5 @@ export function parseResultsParams(params: ResultsParamsInput): ResultsSelection
   const legacy = single(params.modelId);
   const modelIds = listed.length > 0 ? listed : legacy ? [legacy] : [];
 
-  return { brandId, modelIds, openFilters: single(params.openFilters) === "1" };
+  return { brandId, modelIds };
 }

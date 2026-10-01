@@ -8,6 +8,7 @@ vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
+vi.mock("@/components/ui/checkbox", async () => ({ Checkbox: (await import("react-native")).Pressable }));
 vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined), removeItem: vi.fn(async () => undefined) } }));
 vi.mock("../../src/api/client", () => ({ apiClient: { get: vi.fn() }, ApiError: class ApiError extends Error {} }));
 vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "toyota", name: "Toyota", slug: "toyota" }] } }) }));

@@ -29,7 +29,7 @@ module.exports = {
   Switch: host("RCTSwitch", { accessible: true }),
   Modal: ({ visible = true, children, ...props }) => visible
     ? React.createElement("Modal", props, children) : null,
-  RefreshControl: host("RefreshControl"),
+  RefreshControl: host("RefreshControl"), KeyboardAvoidingView: View,
   // Header renders first and the empty component only when there is no data,
   // like the native list. A component or an element is accepted for both.
   FlatList: ({ data = [], renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ...props }) =>
