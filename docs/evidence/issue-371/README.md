@@ -131,3 +131,38 @@ without restoring obsolete sheet keys. Dependency/configuration/native inputs
 are unchanged, so prior dependency alignment evidence carries. Final-head
 repository unit/typecheck, lint, docs/glossary, export and hosted CI remain
 unverified at handoff until explicitly rerun or carried by independent review.
+
+## Native proof of the Search All filters entry, 2026-10-01
+
+Source `6941bda47236c9f34a592706540ed6e783e1754e`, the head with the All
+filters fix `176366d`. This is the native evidence the section above said was
+missing.
+
+| Item | Evidence |
+|---|---|
+| Backend | PR483 public API and MinIO, no seed, redeploy or other cloud write. `/readyz` at session start reported `176366d93e14b7d9e9b1f7ada502c2939d25cc24`; at the end it reported `6941bda47236c9f34a592706540ed6e783e1754e`. Both ready, environment `auto.tm-rewrite-pr-483`, postgres/redis/minio ok. Backend source does not affect these screens |
+| Device | iPhone 17, iOS 26.2 simulator `38747B85-BB39-48A2-BF0D-4DD6A5ED1D13`, `tm.auto.app` development client launched with `-RCT_jsLocation 127.0.0.1:8471`, English UI, Metro 8471 with `--clear` |
+| Driving | Maestro 2.6.0 pinned to that UUID, real app and catalog, no proxy and no login. Flows: `all-filters-entry.maestro.yaml`, `all-filters-show-n.maestro.yaml`; outputs `all-filters-entry-native.txt`, `all-filters-show-n-native.txt`. Context7 `/mobile-dev-inc/maestro-docs` confirmed `back` is Android/web only, so iOS Back taps the form's "Back" accessibility label. Home Search is a point tap on the top-right icon |
+| Result | Both flows passed every assertion. Captures are Maestro PNGs converted to JPEG; the file names below differ from the `takeScreenshot` names inside the flows |
+| Cleanup | Metro stopped, port 8471 has no listener, assigned simulator Shutdown; no Docker Desktop or backend was started |
+
+| # | File | State | Spec / criterion |
+|---|---|---|---|
+| 28 | `28-home-before-search.jpg` | Home with the Search icon and Brand, model row | Start of the All filters entry |
+| 29 | `29-search-all-filters-entry.jpg` | Search over Home: focused query field, Recent, Popular, All filters button | 33 Search parameters: reached from "All filters" in Search |
+| 30 | `30-form-from-all-filters-keyboard-dismissed.jpg` | Search parameters opened empty, Show 12 listings, no focused field | All filters opens the form; Search is gone from the screen |
+| 31 | `31-back-from-form-lands-on-home.jpg` | Back from the form lands directly on Home; Search and All filters are not visible | Search was replaced, not stacked |
+| 32 | `32-form-from-all-filters-used-show-12.jpg` | Form with Used selected, Show 12 listings | Start of Show N from this entry |
+| 33 | `33-results-after-show-n-from-all-filters.jpg` | Show N opened Results: 12 listings, Used segment, Newest first, Filters chip | AC 2: Show N opens Results with the form's filters |
+| 34 | `34-back-from-results-lands-on-home.jpg` | Back from Results lands directly on Home; no Sort, form, Search or All filters | AC 2 and the Home-path rule in the form's overview: pickers and form are off the stack, one Results over Home |
+
+Keyboard limit: in this simulator session the soft keyboard does not render
+even while the Search query field is focused (capture 29 shows the caret and no
+keyboard; the Maestro hierarchy has no keyboard element). Capture 30 therefore
+proves the form shows no focused field, but the visible keyboard state before
+All filters could not be captured. The dismissal call is covered by the rendered
+SearchScreen test only. Earlier #369 capture `02-search-empty-keyboard.jpg` shows
+the keyboard in a different simulator session.
+
+No contradiction with the issue or the approved UI specification was found in
+these flows.
