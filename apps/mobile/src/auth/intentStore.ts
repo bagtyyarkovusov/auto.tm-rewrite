@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { Router } from "expo-router";
 import { create } from "zustand";
 
+import type { QuickReplyIntent } from "../conversations/components/QuickReplies";
 import { HOME_HREF } from "../navigation/homeHref";
 
 /**
@@ -13,7 +14,9 @@ export type PendingAction =
   | { kind: "favorite"; listingId: string }
   | { kind: "message"; listingId: string }
   | { kind: "report"; listingId: string }
-  | { kind: "inspection"; listingId: string };
+  | { kind: "inspection"; listingId: string }
+  /** Ask the seller: `intent` is the chosen QuickReplies key, resolved to text on replay. */
+  | { kind: "ask"; listingId: string; intent: QuickReplyIntent };
 
 export type PendingActionKind = PendingAction["kind"];
 
@@ -110,7 +113,7 @@ export const useAuthIntentStore = create<AuthIntentStore>()((set, get) => ({
 export function useReplayAuthAction(
   kind: PendingActionKind,
   listingId: string | undefined,
-  perform: () => void,
+  perform: (action: PendingAction) => void,
 ): void {
   const replayAction = useAuthIntentStore((state) => state.replayAction);
   const performRef = useRef(perform);
@@ -132,7 +135,7 @@ export function useReplayAuthAction(
 
     // Clear before performing so a re-render cannot run the action twice.
     useAuthIntentStore.getState().clearReplayAction();
-    performRef.current();
+    performRef.current(replayAction);
   }, [replayAction, kind, listingId]);
 }
 

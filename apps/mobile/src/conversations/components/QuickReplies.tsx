@@ -4,8 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 
+/** The four static intents Ask the seller on Listing detail reuses. */
+export type QuickReplyIntent = "available" | "seeIt" | "finalPrice" | "condition";
+
 export interface QuickReply {
-  key: string;
+  key: QuickReplyIntent;
   translationKey: string;
 }
 

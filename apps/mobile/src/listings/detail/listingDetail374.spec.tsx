@@ -186,7 +186,7 @@ describe("issue 374 photo viewer from Listing detail", () => {
     fireEvent.press(viewer(screen).getByRole("button", { name: "Photo 3 of 3" }));
     fireEvent.press(viewer(screen).getByRole("button", { name: "Close" }));
 
-    expect(screen.UNSAFE_queryByType(Modal)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     expect(screen.getByText("3 / 3")).toBeTruthy();
   });
 
@@ -197,7 +197,7 @@ describe("issue 374 photo viewer from Listing detail", () => {
 
     fireEvent.press(viewer(screen).getByRole("button", { name: "Message" }));
 
-    expect(screen.UNSAFE_queryByType(Modal)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     expect(routerMock.push).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: "/(auth)/phone" }),
     );
@@ -214,7 +214,7 @@ describe("issue 374 photo viewer from Listing detail", () => {
 
     fireEvent.press(viewer(screen).getByRole("button", { name: "Favorite" }));
 
-    expect(screen.UNSAFE_queryByType(Modal)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     expect(useAuthIntentStore.getState().intent?.action).toEqual({
       kind: "favorite",
       listingId: fixture().id,

@@ -1,75 +1,42 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import {
   FlatList,
-  Modal,
   Pressable,
   View,
   useWindowDimensions,
   type ViewToken,
 } from "react-native";
-import { Image } from "expo-image";
-import { X } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 
-import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
+import { GalleryBanner, GalleryImage } from "./GalleryImage";
+import { PhotoViewer } from "./PhotoViewer";
 
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
 type ListingMedia = ListingsSchemas.ListingMedia;
-type ExpoImageStyle = ComponentProps<typeof Image>["style"];
 
 interface PhotoGalleryProps {
   media: ListingMedia[];
   /** Status strip across the bottom of the photo, e.g. "Sold" on a closed Listing. */
   banner?: string;
+  /** The photo viewer's top-right action (♡); omit it where the viewer has none. */
+  viewerHeaderAction?: (close: () => void) => ReactNode;
+  /** The photo viewer's bottom actions (Call + Message); omit them where it has none. */
+  viewerFooter?: (close: () => void) => ReactNode;
 }
 
-function GalleryBanner({ label }: { label: string }) {
-  return (
-    <View className="absolute bottom-0 left-0 right-0 bg-black/70 px-4 py-2">
-      <Text className="text-base font-bold text-white" numberOfLines={1}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function GalleryImage({
-  item,
-  variant,
-  contentFit,
-  style,
-}: {
-  item: ListingMedia;
-  variant: "detail" | "fullscreen";
-  contentFit: "cover" | "contain";
-  style: ExpoImageStyle;
-}) {
-  const [useOriginalImage, setUseOriginalImage] = useState(false);
-  const generatedUri = buildVariantUrl(item.key, variant);
-  const sourceUri = useOriginalImage
-    ? buildOriginalUrl(item.key)
-    : item.variants[variant] || generatedUri;
-
-  return (
-    <Image
-      source={{ uri: sourceUri }}
-      style={style}
-      contentFit={contentFit}
-      cachePolicy="memory-disk"
-      onError={() => setUseOriginalImage(true)}
-    />
-  );
-}
-
-export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
+export function PhotoGallery({
+  media,
+  banner,
+  viewerHeaderAction,
+  viewerFooter,
+}: PhotoGalleryProps) {
   const { t } = useTranslation();
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const listRef = useRef<FlatList<ListingMedia>>(null);
 
   const onViewableItemsChanged = useCallback(
     (info: { viewableItems: ViewToken[] }) => {
@@ -81,23 +48,25 @@ export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
     [],
   );
 
-  const onFullscreenViewableItemsChanged = useCallback(
-    (info: { viewableItems: ViewToken[] }) => {
-      const first = info.viewableItems[0];
-      if (first?.index != null) {
-        setFullscreenIndex(first.index);
-      }
-    },
-    [],
-  );
-
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+
+  // Closing the viewer lands the gallery on the photo the viewer was left on.
+  const closeViewer = useCallback(
+    (index: number) => {
+      setViewerIndex(null);
+      setActiveIndex(index);
+      listRef.current?.scrollToOffset({ offset: index * screenWidth, animated: false });
+    },
+    [screenWidth],
+  );
 
   const renderItem = useCallback(
     ({ item, index }: { item: ListingMedia; index: number }) => {
       return (
         <Pressable
-          onPress={() => setFullscreenIndex(index)}
+          accessibilityRole="button"
+          accessibilityLabel={t("photoOf", { n: index + 1, total: media.length })}
+          onPress={() => setViewerIndex(index)}
           className="active:opacity-90"
         >
           <View style={{ width: screenWidth, height: screenWidth * 0.65 }}>
@@ -111,7 +80,7 @@ export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
         </Pressable>
       );
     },
-    [screenWidth],
+    [screenWidth, media.length, t],
   );
 
   if (media.length === 0) {
@@ -126,6 +95,7 @@ export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
   return (
     <View>
       <FlatList
+        ref={listRef}
         data={media}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -148,72 +118,14 @@ export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
 
       {banner && <GalleryBanner label={banner} />}
 
-      {/* Fullscreen viewer */}
-      <Modal
-        visible={fullscreenIndex !== null}
-        transparent={false}
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setFullscreenIndex(null)}
-      >
-        <View className="flex-1 bg-black">
-          <FlatList
-            data={media}
-            keyExtractor={(item) => item.id}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            initialScrollIndex={fullscreenIndex ?? 0}
-            getItemLayout={(_, index) => ({
-              length: screenWidth,
-              offset: screenWidth * index,
-              index,
-            })}
-            onViewableItemsChanged={onFullscreenViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            renderItem={({ item }) => {
-              return (
-                <Pressable
-                  onPress={() => setFullscreenIndex(null)}
-                  className="flex-1 items-center justify-center"
-                  style={{ width: screenWidth, height: screenHeight }}
-                >
-                  <GalleryImage
-                    item={item}
-                    variant="fullscreen"
-                    style={{ width: screenWidth, height: screenHeight * 0.8 }}
-                    contentFit="contain"
-                  />
-                </Pressable>
-              );
-            }}
-          />
-
-          {/* Close button */}
-          <Pressable
-            onPress={() => setFullscreenIndex(null)}
-            className="absolute right-4 top-12 h-10 w-10 items-center justify-center rounded-full bg-black/50"
-          >
-            <Icon as={X} className="size-5 text-white" />
-          </Pressable>
-
-          {/* Fullscreen page indicator */}
-          {media.length > 1 && (
-            <View className="absolute bottom-8 left-0 right-0 flex-row items-center justify-center gap-1.5">
-              {media.map((_, i) => (
-                <View
-                  key={i}
-                  className={`h-1.5 rounded-full ${
-                    i === (fullscreenIndex ?? 0)
-                      ? "w-3 bg-white"
-                      : "w-1.5 bg-white/50"
-                  }`}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      </Modal>
+      <PhotoViewer
+        visible={viewerIndex !== null}
+        media={media}
+        initialIndex={viewerIndex ?? 0}
+        onClose={closeViewer}
+        headerAction={viewerHeaderAction}
+        footer={viewerFooter}
+      />
     </View>
   );
 }

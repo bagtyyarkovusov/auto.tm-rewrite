@@ -21,6 +21,12 @@ vi.mock("../../api/catalog/useEngineTypes", () => ({
   useEngineTypes: () => ({ data: { items: [{ id: "engine", name: "Petrol" }] } }),
 }));
 vi.mock("../../auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: true }) }));
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(),
+  deleteItemAsync: vi.fn(),
+}));
+vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => true), openURL: vi.fn() }));
 vi.mock("@/components/ui/skeleton", async () => ({
   Skeleton: (await import("react-native")).View,
 }));

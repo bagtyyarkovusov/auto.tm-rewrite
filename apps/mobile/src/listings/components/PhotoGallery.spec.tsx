@@ -18,7 +18,7 @@ function viewer(screen: ReturnType<typeof renderMobile>) {
 describe("Photo gallery and viewer", () => {
   it("opens the viewer at the photo that was tapped", () => {
     const screen = renderMobile(<PhotoGallery media={mediaFixture(3)} />);
-    expect(screen.UNSAFE_queryByType(Modal)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
 
     fireEvent.press(screen.getAllByRole("button", { name: "Photo 2 of 3" })[0]!);
 
@@ -35,7 +35,7 @@ describe("Photo gallery and viewer", () => {
     fireEvent.press(viewer(screen).getByRole("button", { name: "Photo 3 of 3" }));
     fireEvent.press(viewer(screen).getByRole("button", { name: "Close" }));
 
-    expect(screen.UNSAFE_queryByType(Modal)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     expect(screen.getByText("3 / 3")).toBeTruthy();
     expect(scrollRequests).toContainEqual(
       expect.objectContaining({
@@ -63,13 +63,13 @@ describe("Photo gallery and viewer", () => {
 
     fireEvent.press(viewer(screen).getByRole("button", { name: "Message" }));
 
-    expect(screen.UNSAFE_queryByType(Modal)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
   });
 
   it("has no viewer to open for a Listing without photos", () => {
     const screen = renderMobile(<PhotoGallery media={[]} />);
 
     expect(screen.getByText("No photos")).toBeTruthy();
-    expect(screen.UNSAFE_queryByType(Modal)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
   });
 });
