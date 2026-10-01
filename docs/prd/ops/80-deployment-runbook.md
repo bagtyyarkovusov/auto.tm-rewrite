@@ -12,7 +12,7 @@ Sprint 11 is in flight. Railway **staging** is live and its data plane, applicat
 Before kicking off a release:
 
 - [ ] Migrations: every new schema change has a Prisma migration file
-- [ ] Tests pass on the self-hosted CI runner
+- [ ] Tests pass on the GitHub-hosted CI runner (ADR-0073)
 - [ ] No `console.log` in API code (or it's intentional and on `LOG_LEVEL=debug`)
 - [ ] `CHANGELOG.md` (or release notes) updated
 - [ ] Verify the date-time + version tag in `package.json` matches what's intended
@@ -64,7 +64,7 @@ wrapper; these commands can otherwise expose every application secret.
 
 ### Step 1 — CI gate and revision selection
 
-1. Merge to `main` only after the required GitHub Actions check passes on `tm-build-mac`.
+1. Merge to `main` only after the required GitHub Actions check (`pr`) passes on the GitHub-hosted runner (ADR-0073).
 2. Railway staging follows `main` with **Wait for CI** enabled (`checkSuites` on each service's deployment trigger). A failed required check must not create a staging deployment; Railway records the trigger as `SKIPPED` and creates no build. A deployment held for a still-running check sits in `WAITING`.
    Railway has **no cross-service deploy ordering**: a green `main` push fans out to every service with a trigger, in parallel. Any release carrying a migration must be ordered by the operator — deploy `api` explicitly, wait for `/readyz`, then deploy the rest.
    A `SKIPPED` trigger is **final for that SHA**. Railway acts on the check suite's first conclusion, so re-running a flaky failed CI job to green does *not* un-skip the deployment — no new deployment appears. Recover by deploying that SHA explicitly, or by carrying it forward in a later commit. Verify with `list-deployments` rather than assuming the re-run was enough.
@@ -229,24 +229,24 @@ Railway production is torn down only after all ADR-0039 cutover conditions pass:
 
 ## TM era — air-gapped production
 
-### Step 1 — Build the bundle (on self-hosted runner)
+### Step 1 — Build the bundle (on a GitHub-hosted runner)
+
+[ADR-0073](../../adr/0073-ci-gates-and-release-bundles-run-on-github-hosted-runners.md) moved the bundle build to a GitHub-hosted x86 Linux runner. Whether TM egress requires a TM-side runner reopens at cutover.
 
 ```
 # Trigger build via GitHub Actions
-# - Either: push to main → workflow runs automatically
-# - Or: gh workflow run build.yml --ref main
+# - Either: push a v* tag → bundle.yml runs automatically
+# - Or: gh workflow run bundle.yml --ref main -f tag=<tag>   (dry run)
 
-# What happens:
-# 1. Runner (TM Proxy PC or your laptop) checks out main
-# 2. pnpm install
-# 3. turbo run build  (parallel, cached)
-# 4. turbo run test
-# 5. docker build for each app (api, admin, web, sms-gateway, worker)
-# 6. docker save → auto-tm-release-v<version>.tar.gz
-# 7. Upload to GitHub Release as artifact OR write to local path
+# What happens (.github/workflows/bundle.yml):
+# 1. ubuntu-latest checks out the ref
+# 2. pnpm install, Prisma client generate
+# 3. make bundle: docker build for each app (api, worker, admin, web, sms-gateway)
+# 4. docker save → images/auto-tm-<tag>.tar.gz
+# 5. Upload as a workflow artifact (90-day retention); nothing else is published
 ```
 
-Output: `auto-tm-release-v<version>.tar.gz` (~400-700 MB)
+Output: `images/auto-tm-<tag>.tar.gz` (~400-700 MB)
 
 If the build is the first one OR base images changed:
 ```
