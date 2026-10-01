@@ -84,3 +84,11 @@ The preserved five-file red run at `3910760` failed 11 assertions and passed 55.
 - Android or a physical device (belongs to the physical Android proof issue).
 
 Full-gate recheck found one missing `brandLogoUrl` method in the Results sign-in spec catalog mock. The root run failed with `TypeError: catalog.brandLogoUrl is not a function`, with 1196 mobile tests passing. The mock was brought up to the real hook interface; the focused sign-in replay/cancel spec then passed both tests. This is test setup repair and changes no native behaviour.
+
+## Resumed verification
+
+The final resumed code and test inputs passed `pnpm test` with 10 tasks, including API 1388 tests, mobile 1197 tests across 152 files, DB 94 and worker 167. Agent-docs, glossary and reviewer-flow smoke tests passed. `pnpm typecheck` passed all 11 tasks, affected mobile lint passed with no warnings/errors, mobile typecheck passed, Expo alignment reported "Dependencies are up to date", and the clear iOS export produced one 7.9 MB bundle in `/tmp/autotm-370-resume-ios-out`. Glossary and diff checks passed.
+
+The first root run's missing catalog-logo test mock is recorded above; its full failed output remains `/tmp/autotm-370-resume-root-test-first-failure.log`. The successful rerun and individual gates are `/tmp/autotm-370-resume-native-*.log`. The API suite printed Redis localhost:6379 connection diagnostics but all 1388 tests passed. No production code changed after these native captures.
+
+The coordinator granted this session the exclusive local heavy phase. Commands used the founder's explicit pressure-admission override after confirming no existing resource lease or self-hosted Runner.Worker; no global monitor settings changed. The owned API, Metro and disposable Compose project were torn down, with no listeners on task ports 3470, 8470, 35470, 36470, 39470 or 39471. The iPhone 17 app was terminated and appearance restored to light; iPhone 16e was untouched.
