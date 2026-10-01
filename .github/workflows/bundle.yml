@@ -42,7 +42,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Prisma 7 loads prisma.config.ts during generate and requires a
+      # DATABASE_URL to be set, though generate never connects. The Mac runner
+      # inherited one from its environment; a hosted runner has none, so use
+      # the same placeholder the service Dockerfiles use.
       - run: pnpm --filter @auto-tm/db generate
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
 
       # Builds the images with the runner's Docker and saves them with
       # `docker save` into images/auto-tm-<tag>.tar.gz.
