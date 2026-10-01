@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 import {
   DeleteObjectsCommand,
@@ -22,11 +22,6 @@ export const RENDER_VERSION = 1;
 
 /** Keys are versioned and never rewritten, so clients can cache them for good. */
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
-
-/** S3 DeleteObjects accepts at most this many keys per request. */
-const DELETE_BATCH_SIZE = 1_000;
-
-const UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
 export interface ImportOptions {
   dryRun: boolean;
@@ -85,10 +80,6 @@ const FILES = [
   { file: "mono@3x.png", size: 90 },
 ] as const;
 
-/**
- * The content/render identity `imp-<hash12>`. It says what the logo looks like,
- * not where it is stored: each activation gets its own directory (ADR-0072).
- */
 export function importVersion(entry: SourcedLogoEntry): string {
   const digest = createHash("sha256")
     .update(`${entry.sha256Master}:${entry.transform}:${RENDER_VERSION}`)
@@ -96,25 +87,13 @@ export function importVersion(entry: SourcedLogoEntry): string {
   return `${IMPORT_VERSION_PREFIX}${digest.slice(0, 12)}`;
 }
 
-/** A directory that has never been active: `brands/<slug>/imp-<hash12>-<randomUUID>/`. */
-function newActivationDirectory(slug: string, entry: SourcedLogoEntry): string {
-  return `brands/${slug}/${importVersion(entry)}-${randomUUID()}/`;
+function directoryOf(slug: string, version: string): string {
+  return `brands/${slug}/${version}/`;
 }
 
-// Both the legacy deterministic `imp-<hash12>` and the new `imp-<hash12>-<uuid>`
-// directories are imported, whatever the brand's current slug is.
-const IMPORTED_KEY = new RegExp(
-  `^(brands/[^/]+/(${IMPORT_VERSION_PREFIX}[0-9a-f]{12})(?:-${UUID_PATTERN})?/)logo\\.png$`,
-);
-
-/** Ownership and identity read from the key actually stored on the brand. */
-function parseImportedKey(key: string): { directory: string; identity: string } | null {
-  const match = IMPORTED_KEY.exec(key);
-  return match ? { directory: match[1] as string, identity: match[2] as string } : null;
+function isImportKey(slug: string, key: string): boolean {
+  return new RegExp(`^brands/${slug}/${IMPORT_VERSION_PREFIX}[0-9a-f]{12}/logo\\.png$`).test(key);
 }
-
-// Admin uploads: `v<epoch-ms>` (legacy) or `v<epoch-ms>-<uuid>`.
-const ADMIN_KEY = new RegExp(`^(brands/[^/]+/v\\d+(?:-${UUID_PATTERN})?/)logo\\.(?:png|webp)$`);
 
 function isNotFound(err: unknown): boolean {
   const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
@@ -153,21 +132,16 @@ class Importer {
       } else if (!brand) {
         results.push({ slug: entry.slug, tier: entry.tier, outcome: "not-in-catalog", logoKeyAfter: null });
       } else {
-        results.push(await this.importOne(entry, brand.id));
+        results.push(await this.importOne(entry, brand));
       }
     }
     return { dryRun: this.options.dryRun, results, coverage: coverageOf(results) };
   }
 
-  /** The brand as it is now. Never trust the run's earlier snapshot for a write. */
-  private readBrand(id: string) {
-    return this.deps.db.brand.findUnique({
-      where: { id },
-      select: { id: true, slug: true, logoKey: true },
-    });
-  }
-
-  private async importOne(entry: SourcedLogoEntry, brandId: string): Promise<BrandImportResult> {
+  private async importOne(
+    entry: SourcedLogoEntry,
+    brand: { id: string; slug: string; logoKey: string | null },
+  ): Promise<BrandImportResult> {
     const result = (outcome: ImportOutcome, logoKeyAfter: string | null, detail?: string) => ({
       slug: entry.slug,
       tier: entry.tier,
@@ -175,73 +149,49 @@ class Importer {
       logoKeyAfter,
       ...(detail === undefined ? {} : { detail }),
     });
-    const changed = (current: string | null) =>
-      result("failed", current, "the logo changed while importing; run the import again");
 
-    // The last key this run saw, so a failure still reports Brand.logoKey truthfully.
-    let known: string | null = null;
+    const current = brand.logoKey;
+    const directory = directoryOf(brand.slug, importVersion(entry));
+    const logoKey = `${directory}logo.png`;
+    const adminOwned = current !== null && current !== logoKey && !isImportKey(brand.slug, current);
+    if (adminOwned && !this.options.force) {
+      return result("skipped-admin", current, "an admin uploaded this logo; use --force to replace it");
+    }
+
     try {
-      const brand = await this.readBrand(brandId);
-      if (!brand) return result("not-in-catalog", null);
-      known = brand.logoKey;
-      if (brand.slug !== entry.slug) {
-        return result("failed", brand.logoKey, `the brand is now ${brand.slug}; run the import again`);
-      }
-
-      const current = brand.logoKey;
-      const imported = current === null ? null : parseImportedKey(current);
-      const adminOwned = current !== null && imported === null;
-      if (adminOwned && !this.options.force) {
-        return result("skipped-admin", current, "an admin uploaded this logo; use --force to replace it");
-      }
-
       const master = await this.deps.masters.load(entry);
       verifyMasterSha(entry, master);
       const rendered = await renderLogoMasks(master, entry.transform);
-      const pngOf = (size: number) => (rendered.find((r) => r.size === size) as { png: Buffer }).png;
+      const files = FILES.map(({ file, size }) => ({
+        key: `${directory}${file}`,
+        png: (rendered.find((r) => r.size === size) as { png: Buffer }).png,
+      }));
 
-      // Rendering takes time: read again right before the first write, and
-      // refuse to continue if the brand was renamed or its logo changed.
-      const latest = await this.readBrand(brandId);
-      if (!latest) return result("not-in-catalog", null);
-      if (latest.slug !== entry.slug) {
-        return result("failed", latest.logoKey, `the brand is now ${latest.slug}; run the import again`);
-      }
-      if (latest.logoKey !== current) return changed(latest.logoKey);
-
-      if (imported !== null && imported.identity === importVersion(entry)) {
-        // Up to date: repair that exact directory (from the stored key, never
-        // the current slug) and never write Brand.logoKey.
-        const restored = await this.restoreMissing(
-          FILES.map(({ file, size }) => ({ key: `${imported.directory}${file}`, png: pngOf(size) })),
-        );
+      if (current === logoKey) {
+        const restored = await this.restoreMissing(files);
         return result("unchanged", current, restored > 0 ? `restored ${restored} missing object(s)` : undefined);
       }
 
-      // A directory that has never been active, so no delayed cleanup can reach it.
-      const directory = newActivationDirectory(latest.slug, entry);
-      const logoKey = `${directory}logo.png`;
       const outcome: ImportOutcome =
         current === null ? "imported" : adminOwned ? "replaced-admin" : "replaced-import";
       if (this.options.dryRun) return result(outcome, logoKey);
 
-      await Promise.all(
-        FILES.map(({ file, size }) => this.put(`${directory}${file}`, pngOf(size))),
-      );
+      await Promise.all(files.map((f) => this.put(f.key, f.png)));
       const swapped = await this.deps.db.brand.updateMany({
-        where: { id: brand.id, slug: latest.slug, logoKey: current },
+        where: { id: brand.id, logoKey: current },
         data: { logoKey },
       });
       if (swapped.count === 0) {
-        // Retain the losing upload: it is never reused, and imports do not garbage-collect.
-        return changed(current);
+        // Deterministic keys may already belong to the winning import. Retain them.
+        return result("failed", current, "the logo changed while importing; run the import again");
       }
 
-      // Only a replaced admin upload is deleted. Imported versions are retained.
-      const note = adminOwned ? await this.deletePrevious(current as string) : undefined;
+      // An imported version can become active again in another CLI process while
+      // cleanup runs. Retain immutable import objects, including losing uploads.
+      const note = adminOwned ? await this.deletePrevious(brand.slug, current as string) : undefined;
       return result(outcome, logoKey, note);
     } catch (err) {
-      return result("failed", known, messageOf(err));
+      return result("failed", current, messageOf(err));
     }
   }
 
@@ -272,16 +222,18 @@ class Importer {
     );
   }
 
-  /** Deletes the previous admin logo's objects once the database points elsewhere. */
-  private async deletePrevious(previousKey: string): Promise<string | undefined> {
-    // The stored key names its own directory, whatever the brand's slug is now.
-    const directory = ADMIN_KEY.exec(previousKey)?.[1] ?? null;
+  /** Deletes the previous logo's objects once the database points elsewhere. */
+  private async deletePrevious(slug: string, previousKey: string): Promise<string | undefined> {
+    const directory = previousKey.slice(0, previousKey.lastIndexOf("/") + 1);
     try {
-      const keys = directory === null ? [] : await this.listKeys(directory);
+      // Only a plain `brands/<slug>/<version>/` directory is deleted as a whole.
+      const keys = new RegExp(`^brands/${slug}/[^/]+/$`).test(directory)
+        ? await this.listKeys(directory)
+        : [previousKey];
       await this.deleteObjects(keys.length > 0 ? keys : [previousKey]);
       return undefined;
     } catch (err) {
-      return `the previous logo's objects under ${directory ?? previousKey} were not deleted: ${messageOf(err)}`;
+      return `the previous logo's objects under ${directory} were not deleted: ${messageOf(err)}`;
     }
   }
 
@@ -298,26 +250,18 @@ class Importer {
     return keys;
   }
 
-  /** Deletes in batches of at most 1000 keys and reports every per-object error. */
   private async deleteObjects(keys: string[]): Promise<void> {
-    const failures: string[] = [];
-    for (let start = 0; start < keys.length; start += DELETE_BATCH_SIZE) {
-      const response = await this.deps.s3.send(
-        new DeleteObjectsCommand({
-          Bucket: this.deps.bucket,
-          Delete: {
-            Objects: keys.slice(start, start + DELETE_BATCH_SIZE).map((Key) => ({ Key })),
-            Quiet: true,
-          },
-        }),
-      );
-      for (const error of response.Errors ?? []) {
-        failures.push(
-          `${error.Key ?? "unknown key"}: ${error.Code ?? "unknown error"}: ${error.Message ?? "no message"}`,
-        );
-      }
+    const response = await this.deps.s3.send(
+      new DeleteObjectsCommand({
+        Bucket: this.deps.bucket,
+        Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
+    if (response.Errors?.length) {
+      throw new Error(response.Errors.map((error) =>
+        `${error.Key ?? "unknown key"}: ${error.Code ?? "unknown error"}: ${error.Message ?? "no message"}`,
+      ).join("; "));
     }
-    if (failures.length > 0) throw new Error(failures.join("; "));
   }
 }
 
