@@ -69,7 +69,8 @@ function assertNativePrSeedEnvironment(env) {
 function assertLocalUrl(key, value) {
   const { hostname } = parseUrl(key, value, 'ui-fixture');
   if (!LOCAL_HOSTS.includes(hostname)) {
-    refuse(`ui-fixture refuses to run against a non-local ${key} (host: ${hostname})`);
+    // Name the variable only: a malformed URL can parse with a credential fragment as its host.
+    refuse(`ui-fixture refuses to run against a non-local ${key}`);
   }
 }
 

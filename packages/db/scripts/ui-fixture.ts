@@ -25,7 +25,8 @@
  *    environment's identity, mock SMS, its private Postgres and MinIO, and its
  *    own public media host.
  *
- * This is the only script in the repo that reaches an outside host
+ * Besides the brand-logo importer, which also downloads Commons masters, this
+ * is the only script in the repo that reaches an outside host
  * (upload.wikimedia.org / thumb.wikimedia.org), for the photo downloads: the
  * fixture downloads covered by ADR-0075, not deployment egress.
  */
