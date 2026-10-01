@@ -47,10 +47,6 @@ describe("readResultsRouteState", () => {
     expect(readResultsRouteState({ condition: "used" }).condition).toBe("used");
     expect(readResultsRouteState({ condition: "damaged" }).condition).toBeUndefined();
   });
-
-  it("ignores the one-shot openFilters flag", () => {
-    expect(readResultsRouteState({ openFilters: "1" })).toEqual({ sort: "newest" });
-  });
 });
 
 describe("writeResultsRouteState", () => {

@@ -26,6 +26,7 @@ vi.mock("react-native-safe-area-context", () => ({
 const routerMock = vi.hoisted(() => ({
   push: vi.fn(), navigate: vi.fn(), replace: vi.fn(), back: vi.fn(),
   canGoBack: vi.fn(() => true), setParams: vi.fn(),
+  dismissTo: vi.fn(), dismissAll: vi.fn(), canDismiss: vi.fn(() => true),
 }));
 const routeParams = vi.hoisted(() => ({} as Record<string, string>));
 vi.mock("expo-router", () => ({

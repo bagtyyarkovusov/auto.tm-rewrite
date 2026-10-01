@@ -19,7 +19,7 @@ vi.mock("react-native-reanimated", async () => {
     useAnimatedStyle: (fn: () => unknown) => fn(), withTiming: (value: number) => value };
 });
 vi.mock("../../src/api/client", () => ({ apiClient: { get: vi.fn(), post: state.post, delete: vi.fn() }, ApiError: class ApiError extends Error {} }));
-// The real FilterSheet renders. Only the catalog hooks and device storage behind it are replaced.
+// Catalog hooks and device storage behind the real screen are replaced.
 vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined), removeItem: vi.fn(async () => undefined) } }));
 vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 vi.mock("@/components/ui/checkbox", async () => ({ Checkbox: (await import("react-native")).Pressable }));

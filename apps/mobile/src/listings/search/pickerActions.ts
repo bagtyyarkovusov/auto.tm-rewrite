@@ -4,6 +4,7 @@ import { buildResultsParams, type ResultsParams } from "./resultsParams";
 export const BRANDS_PATH = "/(tabs)/(search)/brands";
 export const MODELS_PATH = "/(tabs)/(search)/models";
 export const RESULTS_PATH = "/(tabs)/(search)/results";
+export const PARAMETERS_PATH = "/(tabs)/(search)/parameters";
 
 export interface PickedBrand {
   id: string;

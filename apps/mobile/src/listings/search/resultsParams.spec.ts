@@ -8,7 +8,6 @@ describe("Results route params", () => {
     expect(parseResultsParams(params)).toEqual({
       brandId: "toyota",
       modelIds: ["camry", "rav4"],
-      openFilters: false,
     });
   });
 
@@ -18,23 +17,13 @@ describe("Results route params", () => {
     expect(parseResultsParams(params)).toEqual({
       brandId: "toyota",
       modelIds: [],
-      openFilters: false,
     });
-  });
-
-  it("carries the request to open Search parameters", () => {
-    const params = buildResultsParams(
-      { brandId: "toyota", modelIds: ["camry"] },
-      { openFilters: true },
-    );
-    expect(parseResultsParams(params)?.openFilters).toBe(true);
   });
 
   it("still reads the single modelId that 'See other Brand Model' sends", () => {
     expect(parseResultsParams({ brandId: "toyota", modelId: "camry" })).toEqual({
       brandId: "toyota",
       modelIds: ["camry"],
-      openFilters: false,
     });
   });
 
@@ -47,7 +36,6 @@ describe("Results route params", () => {
     expect(parseResultsParams({ brandId: ["toyota"], modelIds: "camry,,rav4," })).toEqual({
       brandId: "toyota",
       modelIds: ["camry", "rav4"],
-      openFilters: false,
     });
   });
 });

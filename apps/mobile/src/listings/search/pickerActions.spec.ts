@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   BRANDS_PATH,
   MODELS_PATH,
+  PARAMETERS_PATH,
   RESULTS_PATH,
   choiceFormFields,
   createDonePickerActions,
@@ -65,7 +66,6 @@ describe("Brand and Model picker from Home or Results", () => {
     expect(parseResultsParams(href.params)).toEqual({
       brandId: "toyota",
       modelIds: ["camry", "rav4"],
-      openFilters: false,
     });
     expect(record).toHaveBeenCalledWith(camryRav4);
   });
@@ -82,7 +82,6 @@ describe("Brand and Model picker from Home or Results", () => {
     expect(parseResultsParams(href.params)).toEqual({
       brandId: "toyota",
       modelIds: [],
-      openFilters: false,
     });
   });
 
@@ -92,7 +91,7 @@ describe("Brand and Model picker from Home or Results", () => {
     expect(calls).toEqual(["push"]);
   });
 
-  it("More filters opens Search parameters with the brand and models kept, not yet saved to Recent", () => {
+  it("More filters opens the Search parameters form with the brand and models kept, not yet saved to Recent", () => {
     const { router } = fakeRouter();
     const record = vi.fn();
     const actions = createRoutePickerActions({ router, record });
@@ -103,13 +102,32 @@ describe("Brand and Model picker from Home or Results", () => {
       pathname: string;
       params: Record<string, string>;
     };
-    expect(href.pathname).toBe(RESULTS_PATH);
+    expect(href.pathname).toBe(PARAMETERS_PATH);
     expect(parseResultsParams(href.params)).toEqual({
       brandId: "toyota",
       modelIds: ["camry", "rav4"],
-      openFilters: true,
     });
+    expect(href.params).not.toHaveProperty("returnToResults");
+    expect(router.dismissAll).not.toHaveBeenCalled();
+    expect(router.dismissTo).not.toHaveBeenCalled();
     expect(record).not.toHaveBeenCalled();
+  });
+
+  it("More filters from Results carries the Results filters and sort into the form and marks Results as below it", () => {
+    const { router } = fakeRouter();
+    const actions = createRoutePickerActions({
+      router,
+      record: vi.fn(),
+      resultsState: { cityId: "city-1", yearMin: "2018", sort: "price_desc", brandId: "old-brand", modelIds: "old-model" },
+    });
+
+    actions.moreFilters(camryRav4);
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: PARAMETERS_PATH,
+      params: { cityId: "city-1", yearMin: "2018", sort: "price_desc", brandId: "toyota", modelIds: "camry,rav4", modelId: undefined, returnToResults: "1" },
+    });
+    expect(router.dismissTo).not.toHaveBeenCalled();
   });
 
   it("Change brand returns to the Brand picker", () => {
