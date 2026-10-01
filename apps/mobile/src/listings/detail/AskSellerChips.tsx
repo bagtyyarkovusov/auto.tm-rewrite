@@ -11,7 +11,7 @@ import {
 import {
   QUICK_REPLIES,
   type QuickReplyIntent,
-} from "../../conversations/components/QuickReplies";
+} from "../../conversations/quickReplyIntents";
 import { useOpenListingConversation } from "../../conversations/useOpenListingConversation";
 
 import { isClosedForContact } from "./closedListing";

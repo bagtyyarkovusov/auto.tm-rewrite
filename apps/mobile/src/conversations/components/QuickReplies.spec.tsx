@@ -3,6 +3,8 @@ import { resolve } from "path";
 
 import { describe, it, expect } from "vitest";
 
+import { QUICK_REPLIES } from "../quickReplyIntents";
+
 const source = readFileSync(resolve(__dirname, "./QuickReplies.tsx"), "utf-8");
 
 describe("QuickReplies", () => {
@@ -25,10 +27,12 @@ describe("QuickReplies", () => {
   });
 
   it("defines four static quick reply intents", () => {
-    expect(source).toContain('key: "available"');
-    expect(source).toContain('key: "seeIt"');
-    expect(source).toContain('key: "finalPrice"');
-    expect(source).toContain('key: "condition"');
+    expect(QUICK_REPLIES.map((reply) => reply.key)).toEqual([
+      "available",
+      "seeIt",
+      "finalPrice",
+      "condition",
+    ]);
   });
 
   it("uses the conversations namespace for localized copy", () => {

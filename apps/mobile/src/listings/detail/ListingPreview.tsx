@@ -11,6 +11,7 @@ import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { GalleryBanner } from "../components/GalleryImage";
 import { ContactCtaBar } from "../components/ContactCtaBar";
 import { PriceDisplay } from "../components/PriceDisplay";
+import { listingSpecLine } from "../feed/listingSpecLine";
 import { useFeedCatalogMaps } from "../feed/useFeedCatalogMaps";
 
 import { buildOriginalUrl, buildVariantUrl } from "./buildVariantUrl";
@@ -18,7 +19,6 @@ import { closedListingBannerKey, isClosedForContact } from "./closedListing";
 import { DetailSkeletonBody } from "./DetailSkeleton";
 import { detailDate } from "./presentation";
 
-import { localeTag } from "@/src/i18n/resources";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -67,19 +67,17 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
     .filter(Boolean)
     .join(", ");
 
-  const specLine = [
-    summary.mileageKm !== undefined
-      ? `${summary.mileageKm.toLocaleString(localeTag(i18n.language))} ${t("km")}`
-      : undefined,
-    summary.transmissionId
+  const specLine = listingSpecLine({
+    mileageKm: summary.mileageKm,
+    transmissionName: summary.transmissionId
       ? transmissions.data?.items.find((item) => item.id === summary.transmissionId)?.name
       : undefined,
-    summary.engineTypeId
+    engineTypeName: summary.engineTypeId
       ? engineTypes.data?.items.find((item) => item.id === summary.engineTypeId)?.name
       : undefined,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+    locale: i18n.language,
+    kmLabel: t("km"),
+  });
 
   const dateAndCity = [
     detailDate(summary.publishedAt, i18n.language),
@@ -165,6 +163,7 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
             allowChat={false}
             status={summary.status}
             pending
+            replayAuth={false}
           />
         </View>
       )}

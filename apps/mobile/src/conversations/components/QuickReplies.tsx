@@ -1,23 +1,10 @@
 import { ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { QUICK_REPLIES } from "../quickReplyIntents";
+
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-
-/** The four static intents Ask the seller on Listing detail reuses. */
-export type QuickReplyIntent = "available" | "seeIt" | "finalPrice" | "condition";
-
-export interface QuickReply {
-  key: QuickReplyIntent;
-  translationKey: string;
-}
-
-export const QUICK_REPLIES: QuickReply[] = [
-  { key: "available", translationKey: "quickReplyAvailable" },
-  { key: "seeIt", translationKey: "quickReplySeeIt" },
-  { key: "finalPrice", translationKey: "quickReplyFinalPrice" },
-  { key: "condition", translationKey: "quickReplyCondition" },
-];
 
 interface QuickRepliesProps {
   onSelect: (text: string) => void;

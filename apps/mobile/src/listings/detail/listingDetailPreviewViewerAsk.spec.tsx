@@ -101,7 +101,7 @@ function texts(screen: ReturnType<typeof renderMobile>) {
     .filter((value): value is string => typeof value === "string");
 }
 
-describe("issue 374 instant loading from a tapped card", () => {
+describe("instant loading from a tapped card", () => {
   beforeEach(() => {
     state.data = undefined;
     state.isPending = true;
@@ -162,7 +162,7 @@ describe("issue 374 instant loading from a tapped card", () => {
   });
 });
 
-describe("issue 374 photo viewer from Listing detail", () => {
+describe("photo viewer from Listing detail", () => {
   const viewer = (screen: ReturnType<typeof renderMobile>) =>
     within(screen.UNSAFE_getByType(Modal));
   const openViewer = (screen: ReturnType<typeof renderMobile>, photo = 2) =>
@@ -248,7 +248,7 @@ describe("issue 374 photo viewer from Listing detail", () => {
   );
 });
 
-describe("issue 374 Ask the seller on Listing detail", () => {
+describe("Ask the seller on Listing detail", () => {
   it("sits after the description and before the seller's condition statement", () => {
     const screen = renderMobile(<ListingDetailScreen />);
     const all = texts(screen);

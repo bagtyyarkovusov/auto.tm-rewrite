@@ -7,7 +7,8 @@ import { beforeEach, vi } from "vitest";
 const requireNative = createRequire(import.meta.url);
 const nativePath = requireNative.resolve("react-native");
 const nativeModule = new Module(nativePath);
-nativeModule.exports = requireNative("./native-host.cjs");
+const nativeHost = requireNative("./native-host.cjs") as { scrollRequests: unknown[] };
+nativeModule.exports = nativeHost;
 nativeModule.loaded = true;
 requireNative.cache[nativePath] = nativeModule;
 
@@ -34,6 +35,7 @@ vi.mock("expo-router", () => ({
   useFocusEffect: vi.fn(),
 }));
 beforeEach(() => {
+  nativeHost.scrollRequests.length = 0;
   Object.values(routerMock).forEach((mock) => mock.mockClear());
   Object.keys(routeParams).forEach((key) => Reflect.deleteProperty(routeParams, key));
 });

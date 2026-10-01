@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { Router } from "expo-router";
 import { create } from "zustand";
 
-import type { QuickReplyIntent } from "../conversations/components/QuickReplies";
+import type { QuickReplyIntent } from "../conversations/quickReplyIntents";
 import { HOME_HREF } from "../navigation/homeHref";
 
 /**

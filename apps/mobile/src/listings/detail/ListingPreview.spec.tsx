@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Image } from "react-native";
 
+import { useAuthIntentStore } from "../../auth/intentStore";
 import { fireEvent, renderMobile } from "../../../test/render";
 import { summaryFixture } from "../../../test/fixtures/listing";
 
@@ -110,5 +111,15 @@ describe("Listing detail preview, from the tapped card's cached data", () => {
       expect(screen.queryByRole("button", { name: "Call" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Message" })).toBeNull();
     }
+  });
+
+  it("leaves a replayed Message to the detail bar that replaces it", () => {
+    const summary = summaryFixture();
+    useAuthIntentStore.setState({ replayAction: { kind: "message", listingId: summary.id } });
+
+    preview();
+
+    expect(useAuthIntentStore.getState().replayAction).not.toBeNull();
+    useAuthIntentStore.setState({ replayAction: null });
   });
 });
