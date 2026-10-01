@@ -10,6 +10,7 @@
 //
 // Usage: node scripts/worktree-gc.mjs [--apply] [--json] [--no-size]
 //          [--no-railway] [--prs-file <json>]
+// `--prs-file` is for read-only experiments; `--apply` refuses it.
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
 import { homedir } from "node:os";
@@ -51,9 +52,23 @@ export function parseWorktreePorcelain(text) {
   return entries;
 }
 
-// Stub for the red checkpoint: reports no Claude sessions.
-export function parseClaudeSessions() {
-  return [];
+// `claude agents --json` output as running-process records. A Claude session
+// may run in a worktree that holds no lock, so its cwd counts as a running
+// agent. Anything unreadable is unknown (null), never an empty list.
+export function parseClaudeSessions(text) {
+  let sessions;
+  try {
+    sessions = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(sessions)) return null;
+  const found = [];
+  for (const session of sessions) {
+    if (typeof session?.cwd !== "string" || !session.cwd) return null;
+    found.push({ pid: session.pid ?? "?", command: `claude session "${session.name ?? session.sessionId ?? "unnamed"}"`, cwd: session.cwd });
+  }
+  return found;
 }
 
 function inside(cwd, path) {
@@ -62,11 +77,14 @@ function inside(cwd, path) {
 
 function matchingPrs(entry, context) {
   const { prs, onMain, isAncestor } = context;
+  const sameName = entry.branch ? prs.filter((pr) => pr.headRefName === entry.branch) : [];
+  // This branch's own open PR decides, whatever other branches' merged PRs contain.
+  const ownOpen = sameName.find((pr) => pr.state === "OPEN");
+  if (ownOpen) return { prs: [ownOpen], how: "own-open" };
   const direct = prs.filter((pr) => pr.headRefOid === entry.head);
   if (direct.length) return { prs: direct, how: "head" };
   if (onMain) return { prs: [], how: null };
   const ancestors = (candidates) => candidates.filter((pr) => isAncestor(entry.head, pr.headRefOid) === true);
-  const sameName = entry.branch ? prs.filter((pr) => pr.headRefName === entry.branch) : [];
   const found = ancestors(sameName);
   if (found.length) return { prs: found, how: "ancestor" };
   const others = ancestors(prs.filter((pr) => !sameName.includes(pr)));
@@ -283,6 +301,23 @@ function scanProcesses() {
   return found;
 }
 
+// Live Claude sessions, interactive and background, with the directory each one
+// works in. No `claude` binary means no Claude sessions to protect. A binary
+// that fails or prints something unreadable is unknown (null).
+function scanClaudeSessions() {
+  const result = spawnSync("claude", ["agents", "--json"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 60_000 });
+  if (result.error?.code === "ENOENT") return [];
+  if (result.error || result.status !== 0 || !result.stdout) return null;
+  return parseClaudeSessions(result.stdout);
+}
+
+// Untracked files count whatever the user's status.showUntrackedFiles says.
+function changedPaths(path) {
+  return run(["git", "--no-optional-locks", "status", "--porcelain", "--untracked-files=all"], path)
+    .split("\n")
+    .filter(Boolean);
+}
+
 function makeAncestry(mainPath, oids) {
   const unique = [...new Set(oids)];
   let present = new Set();
@@ -356,6 +391,13 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
     return 2;
   }
 
+  // Hand-written PR data must never drive removals. The test suite sets the
+  // variable; nothing else should.
+  if (options.apply && options.prsFile && process.env.WORKTREE_GC_ALLOW_PRS_FILE_APPLY !== "1") {
+    console.error("--prs-file cannot be combined with --apply: removals must follow live PR data from gh.");
+    return 2;
+  }
+
   const entries = parseWorktreePorcelain(run(["git", "worktree", "list", "--porcelain"], cwd));
   const mainPath = entries[0].path;
   const currentPath = run(["git", "rev-parse", "--show-toplevel"], cwd).trim();
@@ -374,6 +416,14 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
       return 1;
     }
     console.error("Warning: could not scan running processes; running agents are not detected.");
+  }
+  const claudeSessions = scanClaudeSessions();
+  if (claudeSessions === null) {
+    if (options.apply) {
+      console.error("Cannot read Claude sessions (`claude agents --json`), so --apply refuses to remove anything.");
+      return 1;
+    }
+    console.error("Warning: could not read Claude sessions; agents running in unlocked worktrees are not detected.");
   }
 
   let mainSha = null;
@@ -404,7 +454,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
     let dirtyCount = null;
     if (!entry.prunable && existsSync(entry.path)) {
       try {
-        dirtyCount = run(["git", "--no-optional-locks", "status", "--porcelain"], entry.path).split("\n").filter(Boolean).length;
+        dirtyCount = changedPaths(entry.path).length;
       } catch {
         dirtyCount = null;
       }
@@ -415,7 +465,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
       currentPath,
       homeDir,
       dirtyCount,
-      activeProcesses: activeProcesses ?? [],
+      activeProcesses: [...(activeProcesses ?? []), ...(claudeSessions ?? [])],
       onMain,
       prs,
       isAncestor,
@@ -443,8 +493,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
       step.verify = () => {
         const head = run(["git", "rev-parse", "HEAD"], step.entry.path).trim();
         if (head !== step.entry.head) throw new Error(`HEAD moved from ${step.entry.head} to ${head}`);
-        const changed = run(["git", "--no-optional-locks", "status", "--porcelain"], step.entry.path).trim();
-        if (changed) throw new Error("worktree is no longer clean");
+        if (changedPaths(step.entry.path).length) throw new Error("worktree is no longer clean");
       };
     }
     applied = runApply(steps, (argv) => run(argv, mainPath));

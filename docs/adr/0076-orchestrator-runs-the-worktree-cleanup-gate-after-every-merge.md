@@ -1,23 +1,23 @@
 # ADR-0076: The orchestrator runs the worktree cleanup gate after every merge
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-01
-- **Deciders**: AutoTM founder (orchestration chat, 2026-10-01); acceptance delegated to the orchestrator
+- **Deciders**: AutoTM founder (orchestration chat, 2026-10-01); acceptance delegated to the orchestrator, which [accepted it in the PR #484 review](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/484#issuecomment-5930776917)
 - **Amends**: [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s Cleanup rule, which reserves removal of queue implementer worktrees for the user or the host, and [ADR-0071](0071-codex-queue-models-and-owned-worktrees.md)'s statement that cleanup stays under the lifecycle's safety gate with no blanket authorization. The rest of both remains in force.
 
 ## Context
 
 On 2026-10-01 this Mac held 47 linked worktrees using about 60 GB. 26 of them passed the [safe cleanup gate](../agents/worktree-lifecycle.md#safe-cleanup-gate) and were removed by hand with an ad-hoc script. The gate was written down, but nothing ran it, and ADR-0069 and ADR-0071 left removal of queue implementer worktrees to the user or the host. So cleanup happened only when someone remembered, and every merged queue issue added a worktree with a full dependency tree, a `worktree-agent-<id>` scaffold branch and a task branch.
 
-The founder decided in the orchestration chat on 2026-10-01 to enforce the cleanup rules so the repository stays tidy, and to let the orchestrator apply them. Issue [#482](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/482) builds the mechanism. The founder delegated acceptance of this ADR to the orchestrator, which records it in review.
+The founder decided in the orchestration chat on 2026-10-01 to enforce the cleanup rules so the repository stays tidy, and to let the orchestrator apply them. Issue [#482](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/482) builds the mechanism. The founder delegated acceptance of this ADR to the orchestrator, which recorded it in the PR review.
 
 ## Decision
 
 **The gate becomes code, `scripts/worktree-gc.mjs`. The orchestrator or integration session runs `pnpm worktree:gc` after each merge and at queue end, and `pnpm worktree:gc:apply` (the script's `--apply` mode) removes the worktrees that pass the gate. A worktree that passes needs no separate user approval. The user can still keep any worktree.**
 
 - **Who runs it.** The orchestrator or integration session, after it verifies the PR merged and the issue closed through `Closes #N` and has run `git fetch origin`, and once more at queue end. A session never runs it against a worktree it is itself working in, and an implementer never runs `--apply`.
-- **What passes.** Exactly the existing gate: the worktree is clean, not locked, and holds no running process; its HEAD equals the matching PR's final `headRefOid` or is its ancestor; and that PR is merged. It matches a PR through HEAD, never through branch name alone, so commits after the PR head fail the gate.
-- **What is always kept, with the exact reason reported.** The main checkout; the running session's own worktree; a Codex app-managed worktree under `~/.codex/worktrees`; a locked worktree (including another Claude session's lock); a worktree with a running process in it; a missing directory (prunable); an unborn branch; an evidence, prototype or research worktree; a dirty tree; an open PR; a PR closed without merging; a HEAD already on `main` that belongs to no PR; and no PR match. An unreadable status or process scan keeps the worktree or, for `--apply`, stops the run.
+- **What passes.** The script checks the existing gate except "the issue is closed", which stays the orchestrator's step above: the worktree is clean, not locked, and holds no running process or live Claude session; its HEAD equals the matching PR's final `headRefOid` or is its ancestor; and that PR is merged. It matches a PR through HEAD, never through branch name alone, so commits after the PR head fail the gate. A branch's own open PR always keeps its worktree, even when another branch's merged PR contains HEAD. Untracked files count as dirty whatever `status.showUntrackedFiles` says.
+- **What is always kept, with the exact reason reported.** The main checkout; the running session's own worktree; a Codex app-managed worktree under `~/.codex/worktrees`; a locked worktree (including another Claude session's lock); a worktree with a running process or a live Claude session (from `claude agents --json`) in it; a missing directory (prunable); an unborn branch; an evidence, prototype or research worktree; a dirty tree; an open PR; a PR closed without merging; a HEAD already on `main` that belongs to no PR; and no PR match. An unreadable status, process scan or Claude session list keeps the worktree or, for `--apply`, stops the run. `--apply` also refuses `--prs-file`, so hand-written PR data cannot drive removals.
 - **Read-only by default.** The default run changes nothing. `--apply` uses `git worktree remove` without `--force`, so git itself still refuses a dirty or locked tree. It then deletes the removed worktrees' `agent/issue-*` and `worktree-agent-*` branches, and local branches of those two forms that no worktree holds and whose tip is inside a merged PR head, each with `git update-ref -d refs/heads/<branch> <expected-sha>`, and finally runs `git worktree prune`. It stops at the first failure and prints a completion report of what was removed and kept. Other branches, remote branches and refs are never touched.
 - **Keeping a worktree.** The user keeps any worktree by locking it (`git worktree lock`), leaving it dirty, or naming its branch or directory for evidence, prototype or research work. Nothing else is needed, and the orchestrator does not ask first.
 - **Stale-state report.** Every run also lists local task and scaffold branches with no worktree that are safe to delete, and Railway PR environments whose PR is closed, from the read-only `railway environment list --json`. The Railway part is report only. Deletion stays with Railway's automatic lifecycle under [ADR-0075](0075-railway-pr-backends-for-agent-native-sessions.md).
@@ -38,7 +38,7 @@ Unchanged: the shared pnpm store and Codex app-managed worktrees are never delet
 - An orchestrator session now deletes directories on the shared Mac. The gate is conservative (every unknown is a keep), `--apply` never forces, and ref deletes are conditional, but a bug in the script could remove a worktree that should have stayed.
 - Deleting a worktree discards its ignored files, such as `node_modules` and local `.env` copies, which the gate does not inspect.
 - The ancestor check needs the PR head object in the local object store. A worktree whose PR head was never fetched is kept as "no PR match" until `git fetch origin` supplies it.
-- Process detection sees only processes the user can list. A process outside that view is not detected, though a dirty tree or lock usually covers the work.
+- Process detection sees only processes the user can list, and Claude session detection sees only a session whose own directory is the worktree. An in-process subagent works in a worktree its parent session created, so the parent's directory is not that worktree, and its worktree stays unprotected unless it is locked or dirty. The orchestrator's "no implementer mid-run" rule covers that case.
 
 ### Neutral
 
