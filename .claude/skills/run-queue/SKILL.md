@@ -35,7 +35,7 @@ Each implementer gets its own linked worktree, and an issue has at most one writ
 - **Guard-friendly commands.** Keep Bash commands plain and separate. Pass environment values, such as the CI-only values in `scripts/ci-services.sh`, as literal `VAR=value` prefixes, not through `source` or `env $(…)`. The guard refuses commands it cannot verify.
 - **Checkpoints.** The implementer commits and pushes a small checkpoint after each meaningful step and keeps the draft PR's `Execution state` current. Only pushed work survives an agent that stops.
 - **What to give it.** The issue number, the base (`origin/main` or the parent branch), the rules above, and what to return: PR number, head SHA, gate results, guard messages, and open decisions. The implementer runs `run-issue` through verification. The orchestrator owns review and merge.
-- **Who retires it.** The host removes a worktree whose implementer made no changes. A worktree with commits or uncommitted files stays after its agent ends. The orchestrator never removes another agent's worktree, including a stopped one. After the PR merges, it checks the [cleanup gate](../../../docs/agents/worktree-lifecycle.md#safe-cleanup-gate) and gives the user the cleanup tuple and commands, or leaves the worktree to the host's sweep.
+- **Who retires it.** The host removes a worktree whose implementer made no changes. A worktree with commits or uncommitted files stays after its agent ends. The orchestrator never removes another agent's worktree by hand, never forces a removal, and never removes one the script keeps. It retires worktrees only by running `pnpm worktree:gc` and then `pnpm worktree:gc:apply`, which apply the [cleanup gate](../../../docs/agents/worktree-lifecycle.md#safe-cleanup-gate) ([ADR-0076](../../../docs/adr/0076-orchestrator-runs-the-worktree-cleanup-gate-after-every-merge.md)). A worktree that passes needs no separate user approval, and the user can still keep any worktree by locking it.
 
 ### Limits
 
@@ -50,7 +50,7 @@ When an implementer stops before it reports, for example at an API session limit
 1. Read the PR's `Execution state` and the pushed branch head.
 2. Launch a fresh implementer in a new worktree through the host-specific lifecycle. It checks out the pushed head with `git switch --detach origin/agent/issue-<N>`.
 3. Give it the stopped agent's worktree path. It may read files there, for example with `cat`, and copy uncommitted drafts into its own worktree. It never writes in that worktree and never runs git against it.
-4. Leave the stopped worktree to the user or the host's sweep, and list it in the final report.
+4. Leave the stopped worktree to the cleanup script, which keeps it while it is dirty, locked or unmatched, and list it in the final report.
 
 ### Hosts without isolated subagents
 
@@ -65,7 +65,7 @@ For the next issue whose dependencies are all closed, or whose only open depende
 3. When both axes pass on the current commit, directly or carried forward by a `Delta` review, set auto-merge as [FINALIZATION.md](../run-issue/FINALIZATION.md#checks-and-merge) describes. GitHub merges the PR once the required `pr` check passes.
 4. Do not wait for CI. Start the next ready issue. Between issues, read each open queue PR with `gh pr view <PR> --json state,mergedAt,autoMergeRequest,statusCheckRollup,comments`, and come back to it when its check fails, a reviewer or the founder comments, or it merges.
 5. Before launching an implementer for a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`. A push does not cancel auto-merge, so without this GitHub would merge the unreviewed commit. Set auto-merge again after the affected reviews pass.
-6. After each merge, verify the issue closed through `Closes #N`, run `git fetch origin`, and remove `blocked` from queued issues whose dependencies are now all closed, following [sprint-transitions.md](../../../docs/agents/sprint-transitions.md). Then report the implementer worktree for cleanup.
+6. After each merge, verify the issue closed through `Closes #N`, run `git fetch origin`, and remove `blocked` from queued issues whose dependencies are now all closed, following [sprint-transitions.md](../../../docs/agents/sprint-transitions.md). Then run `pnpm worktree:gc`, read its report, and run `pnpm worktree:gc:apply` to retire the worktrees that pass the gate ([cleanup script](../../../docs/agents/worktree-lifecycle.md#run-the-cleanup-gate)). Apply only from the orchestrator's own checkout, with no implementer mid-run in a worktree it is about to retire; the script already keeps locked, dirty and running worktrees. When the script or a worktree could not be retired, record the cleanup tuple instead.
 
 A failed check on an auto-merge PR leaves it open. A fresh implementer repairs it within `run-issue`'s three-attempt cap; a content change re-runs the affected review before auto-merge is set again.
 
@@ -95,4 +95,4 @@ Label a paused issue `ready-for-human` only when a human must act. Stop the queu
 
 ## Final report
 
-For each listed issue: its PR, merged commit or current state, evidence by acceptance criterion, gates run, missing evidence, follow-up issues filed, labels changed, and its implementer worktrees: cleanup tuples after merge, and the paths of stopped ones. List skipped and paused issues with the reason.
+For each listed issue: its PR, merged commit or current state, evidence by acceptance criterion, gates run, missing evidence, follow-up issues filed, labels changed, and its implementer worktrees. Run `pnpm worktree:gc:apply` once more at queue end, then include its completion report: worktrees removed, worktrees kept with the script's exact reason (stopped ones by path), branches deleted, and stale Railway environments. Add a cleanup tuple only for a worktree the script could not retire. List skipped and paused issues with the reason.
