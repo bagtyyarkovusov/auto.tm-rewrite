@@ -13,6 +13,7 @@ import {
 } from "../../../test/render";
 import ListingDetailScreen from "../../../app/(public)/listings/[id]";
 import { ListingDetailView } from "../components/ListingDetail";
+import { CollapsingHeader } from "./CollapsingHeader";
 import { ContactCtaBar } from "../components/ContactCtaBar";
 import { PhotoGallery } from "../components/PhotoGallery";
 import { fixture, maps } from "../../../test/fixtures/listing";
@@ -316,6 +317,36 @@ describe("issue 373 screen controls", () => {
     expect(
       screen.getAllByRole("button", { name: "Report" }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it.each(["sold", "archived"] as const)(
+    "hides the buyer More options trigger on %s Listings, where the overflow would be empty (#495)",
+    (status) => {
+      state.data = fixture({ status });
+      const screen = renderMobile(<ListingDetailScreen />);
+      expect(screen.getByRole("button", { name: "Back" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "More options" })).toBeNull();
+    },
+  );
+
+  it("hides the buyer More options trigger when Report is unavailable, and keeps the owner menu on closed Listings (#495)", () => {
+    const withoutReport = renderMobile(
+      <CollapsingHeader
+        listing={fixture()}
+        maps={maps}
+        collapsed={false}
+        topInset={0}
+        onBack={vi.fn()}
+      />,
+    );
+    expect(
+      withoutReport.queryByRole("button", { name: "More options" }),
+    ).toBeNull();
+    withoutReport.unmount();
+    state.data = fixture({ status: "archived" });
+    state.viewer = { userId: fixture().sellerId };
+    const owner = renderMobile(<ListingDetailScreen />);
+    expect(owner.getByRole("button", { name: "More options" })).toBeTruthy();
   });
 
   it("shows sticky owner Edit and Mark sold, with Archive and Delete in overflow", () => {
