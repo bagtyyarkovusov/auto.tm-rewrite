@@ -42,3 +42,10 @@ test('remote bucket bootstrap resolves dependencies from the shipped db workspac
   assert.equal(nativePrSeedStepsFor({ remote: true })[0].args[0], 'packages/db/scripts/native-minio/bootstrap.mjs');
   assert.equal(nativePrSeedStepsFor({ remote: false })[0].args[0], 'infra/minio/bootstrap.mjs');
 });
+
+test('remote steps execute with Node and the shipped tsx loader, without pnpm', () => {
+  const steps = nativePrSeedStepsFor({ remote: true });
+  assert.ok(steps.every(step => step.command === process.execPath));
+  assert.deepEqual(steps[1].args, ['--import', 'tsx', 'packages/db/src/seed.ts']);
+  assert.ok(steps[2].args.includes('--railway-pr'));
+});

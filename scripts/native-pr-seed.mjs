@@ -46,9 +46,13 @@ export const nativePrSeedSteps = [
 ];
 
 export function nativePrSeedStepsFor({ remote = false } = {}) {
-  return nativePrSeedSteps.map(step => remote && step.name === 'buckets'
-    ? { ...step, args: ['packages/db/scripts/native-minio/bootstrap.mjs'] }
-    : step);
+  if (!remote) return nativePrSeedSteps;
+  return [
+    { name: 'buckets', command: process.execPath, args: ['packages/db/scripts/native-minio/bootstrap.mjs'] },
+    { name: 'catalog', command: process.execPath, args: ['--import', 'tsx', 'packages/db/src/seed.ts'] },
+    { name: 'native fixtures', command: process.execPath, args: ['--import', 'tsx', 'packages/db/scripts/ui-fixture.ts', '--railway-pr'] },
+    { name: 'brand logos', command: process.execPath, args: ['--import', 'tsx', 'packages/db/scripts/import-brand-logos.ts'] },
+  ];
 }
 
 export function runNativePrSeed(env = process.env, options = {}) {
