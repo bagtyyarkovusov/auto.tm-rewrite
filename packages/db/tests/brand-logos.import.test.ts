@@ -581,7 +581,16 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
     // so the second import legitimately refuses before uploading anything.
     const directories = new Set<string>();
     let releaseUploads!: () => void;
-    const uploadsReady = new Promise<void>((resolve) => { releaseUploads = resolve; });
+    // If the second import never reaches an upload, fail with the cause instead of waiting for the
+    // suite's 120 s test timeout, which would only say the test hung.
+    const uploadsReady = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Upload barrier timed out after 15 s: the two imports did not both reach their first upload, so the lost compare-and-swap was never set up")),
+        15_000,
+      );
+      releaseUploads = () => { clearTimeout(timer); resolve(); };
+    });
+    uploadsReady.catch(() => undefined); // a rejection is still delivered to each awaiting upload below
     s3.middlewareStack.add((next, context) => async (args) => {
       if (context.commandName === "PutObjectCommand") {
         const key = (args.input as { Key?: string }).Key ?? "";
