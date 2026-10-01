@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { ArrowLeft, Heart, MoreHorizontal, Share2 } from "lucide-react-native";
+import { ArrowLeft, Heart, MoreHorizontal } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
@@ -11,7 +11,7 @@ import { formatPrice } from "../formatPrice";
 
 import { isClosedForContact } from "./closedListing";
 import { listingTitle } from "./presentation";
-import { listingPublicUrl, shareListing } from "./shareListing";
+import { listingPublicUrl } from "./shareListing";
 import type { CatalogMaps } from "./useCatalogMaps";
 
 import { Button } from "@/components/ui/button";
@@ -102,15 +102,6 @@ export function CollapsingHeader({
         </View>
         {ownerMenu ?? (
           <>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="rounded-full bg-background/90"
-              accessibilityLabel={t("share")}
-              onPress={() => void shareListing(listing.id, t("shareMessage"))}
-            >
-              <Icon as={Share2} className="size-5 text-foreground" />
-            </Button>
             {!closed && (
               <Button
                 variant="secondary"

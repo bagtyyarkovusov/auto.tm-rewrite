@@ -1,17 +1,3 @@
-import { Platform, Share } from "react-native";
-
+// Share is hidden until a public web Listing page and App Links exist (#495, #322); only the Copy link URL remains.
 export const listingPublicUrl = (listingId: string) =>
   `https://auto.tm/listings/${listingId}`;
-
-export async function shareListing(listingId: string, message: string) {
-  const url = listingPublicUrl(listingId);
-  try {
-    await Share.share(
-      Platform.OS === "android"
-        ? { message: `${message} ${url}` }
-        : { message, url },
-    );
-  } catch {
-    // The native share sheet may be dismissed without sharing.
-  }
-}

@@ -99,7 +99,7 @@ Top to bottom, in Auto.ru's order:
 That is the whole screen. Video is added below the photos only when the video media UX ships.
 
 - **Contact bar:** Call (opens the phone dialer directly, with no warning sheet) and Message stick to the bottom of the screen. The Call area carries one short caption that AutoTM verifies seller numbers by SMS; the fuller explanation lives on the public trust page, not as a per-Listing badge or extra detail link.
-- **Collapsing header:** once the photos scroll away, it turns solid and shows the price plus "Brand Model, year". Back, Share, ♡ and ⋯ (which holds Report listing and Copy link) stay put on active Listings.
+- **Collapsing header:** once the photos scroll away, it turns solid and shows the price plus "Brand Model, year". Back, ♡ and ⋯ (which holds Report listing and Copy link) stay put on active Listings. There is no Share action: it stays hidden until a public web Listing page and App Links exist ([#495](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/495), decided in [#322](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/322)).
 - **Photo viewer:** black, full screen, with "n / N", ✕, ♡, swipe, pinch zoom, a thumbnail strip, and Call + Message. Closing it returns the gallery to the same photo.
 - **Sign-in on action:** ♡, Message, Ask the seller and Report listing need sign-in, then return to this Listing and finish the action. Call needs nothing. See [33 — Search & discovery](33-search-discovery.md#sign-in-on-action).
 - **VIN decoding:** a decoded-VIN section appears only when the VIN is actually decoded. With no real decoder bound, it never appears; there is no "not provided" or "not decoded" state ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)).
@@ -109,7 +109,7 @@ That is the whole screen. Video is added below the photos only when the video me
 - **Owner viewing their own Listing:** no Call or Message bar.
   - A status card with views and saves. Only owners see these counts; buyers never see view counts.
   - The original currency under the price.
-  - Edit and Mark sold in the bottom bar; Archive, Share and Delete in ⋯.
+  - Edit and Mark sold in the bottom bar; Archive and Delete in ⋯ (Republish for archived Listings). Share is hidden, as above.
 - **Sold / Removed from sale (`sold`, `archived`):** closed for contact.
   - A banner on the photo and a greyed price.
   - ♡, the contact bar, Ask the seller and Report listing are hidden.
@@ -147,7 +147,7 @@ That is the whole screen. Video is added below the photos only when the video me
 | State | Visible to | Action available |
 |---|---|---|
 | `draft` | Owner only | Continue / discard |
-| `active` | Public | Favorite, Message, share, owner-edit |
+| `active` | Public | Favorite, Message, owner-edit |
 | `sold` | Detail and Favorites only, labelled Sold; never in Home or Results | Closed for contact: no Call, Message, Ask the seller, ♡ or Report; existing Conversations stay readable |
 | `archived` | Owner + admin; a buyer reaching it from Favorites or a link sees it closed, labelled Removed from sale; never in Home or Results | Closed for contact, as `sold`; owner can republish |
 | `reported` | Admin only | Reserved review-hold status; S7 report submission does not auto-transition active listings here |
@@ -166,7 +166,7 @@ That is the whole screen. Video is added below the photos only when the video me
 | Wizard | Network slow | Show progress + "Slow connection" badge |
 | Listing detail | Loading | Card fields from the tapped card's cache; the rest behind skeletons; contact bar disabled until loaded |
 | Listing detail | Signed out | Call works; ♡, Message, Ask the seller and Report listing lead to sign-in, then finish the action here |
-| Listing detail | Owner viewing own | No contact bar; status card with views and saves; Edit / Mark sold in the bar; Archive / Share / Delete in ⋯ |
+| Listing detail | Owner viewing own | No contact bar; status card with views and saves; Edit / Mark sold in the bar; Archive / Delete in ⋯ |
 | Listing detail | Sold / Removed from sale | Banner on the photo, greyed price; contact, ♡, Ask and Report hidden; "See other Brand Model" link |
 | Listing detail | Deleted, or banned for a buyer | "This listing is no longer available", with Go to Home and Back |
 | Listing detail | Banned, owner | Generic ban notice; admin reasons stay internal |
