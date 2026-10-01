@@ -12,9 +12,9 @@
 //          [--no-railway] [--prs-file <json>]
 // `--prs-file` is for read-only experiments; `--apply` refuses it.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ZERO_SHA = /^0+$/;
@@ -64,20 +64,54 @@ export function parseClaudeSessions(text) {
   }
   if (!Array.isArray(sessions)) return null;
   const found = [];
+  let withoutCwd = 0;
   for (const session of sessions) {
-    if (typeof session?.cwd !== "string" || !session.cwd) return null;
+    // An entry that is not an object means the format is not what we expect.
+    if (!session || typeof session !== "object") return null;
+    // A session with no directory (a remote one, say) cannot sit in any
+    // worktree, so it cannot be matched. It is counted and reported, not
+    // silently dropped and not a reason to distrust the whole list.
+    if (typeof session.cwd !== "string" || !session.cwd) {
+      withoutCwd += 1;
+      continue;
+    }
     found.push({ pid: session.pid ?? "?", command: `claude session "${session.name ?? session.sessionId ?? "unnamed"}"`, cwd: session.cwd });
   }
-  return { sessions: found, withoutCwd: 0 };
+  return { sessions: found, withoutCwd };
 }
 
-// Stub: the real resolution lands with the green checkpoint for finding 1.
+// Resolves symlinks so a path from `lsof`, a Claude session or $HOME compares
+// equal to the path git lists. A path that does not exist (a deleted worktree)
+// keeps its missing tail and resolves only the part that does exist; a path
+// with no existing ancestor comes back unchanged.
 export function realpathOrSelf(path) {
-  return path;
+  let existing = path;
+  const tail = [];
+  for (;;) {
+    try {
+      return join(realpathSync(existing), ...tail.reverse());
+    } catch {
+      const parent = dirname(existing);
+      if (parent === existing) return path;
+      tail.push(basename(existing));
+      existing = parent;
+    }
+  }
 }
 
 function inside(cwd, path) {
   return cwd === path || cwd.startsWith(`${path}/`);
+}
+
+// Codex keeps its app-managed worktrees under `<home>/.codex/worktrees/`. Match
+// the directory wherever it sits, so a different HOME (a sandbox, sudo, a
+// wrapper) does not strip the protection.
+const CODEX_MANAGED = "/.codex/worktrees/";
+
+function isCodexManaged(entry, homeDir) {
+  return [entry.path, entry.listedPath].some(
+    (path) => path && (`${path}/`.includes(CODEX_MANAGED) || (homeDir && inside(path, `${homeDir}/.codex/worktrees`))),
+  );
 }
 
 function matchingPrs(entry, context) {
@@ -101,7 +135,7 @@ function matchingPrs(entry, context) {
 export function classifyWorktree(entry, context) {
   const keep = (reason) => ({ verdict: "keep", reason, pr: null });
   if (entry.path === context.mainPath) return keep("the main checkout");
-  if (inside(entry.path, `${context.homeDir}/.codex/worktrees`)) {
+  if (isCodexManaged(entry, context.homeDir)) {
     return keep("Codex app-managed worktree (~/.codex/worktrees)");
   }
   if (entry.path === context.currentPath) return keep("the current session's own worktree");
@@ -221,7 +255,24 @@ function humanSize(kb) {
   return `${kb} KB`;
 }
 
-export function formatReport({ rows, staleBranches, railway, applied }) {
+// One line saying what the Claude session scan covered. The report never
+// implies the scan ran when it did not.
+export function describeClaudeScan(claude) {
+  if (!claude) return "not recorded";
+  if (claude.status === "missing") return "not checked (`claude` was not found on PATH)";
+  if (claude.status !== "ok") return "not checked (the session list could not be read)";
+  const unmatched = claude.withoutCwd ? `, ${claude.withoutCwd} without one ${claude.withoutCwd === 1 ? "is" : "are"} not matched to any worktree` : "";
+  return `checked (${claude.sessions} with a directory${unmatched})`;
+}
+
+function describeProcessScan(processes) {
+  if (!processes) return "not recorded";
+  if (processes.status === "unavailable") return "not checked (the process list could not be read)";
+  if (processes.status === "partial") return `partial (${processes.count} processes, none is this one, so running agents may be missed)`;
+  return `complete (${processes.count} processes, including this one)`;
+}
+
+export function formatReport({ rows, staleBranches, railway, applied, scans }) {
   const out = [];
   out.push(
     applied
@@ -243,6 +294,11 @@ export function formatReport({ rows, staleBranches, railway, applied }) {
   const remove = rows.filter((row) => row.verdict.verdict === "remove").length;
   out.push("");
   out.push(`Summary: ${remove} remove, ${rows.length - remove} keep`);
+  if (scans) {
+    out.push("");
+    out.push(`Process scan: ${describeProcessScan(scans.processes)}`);
+    out.push(`Claude sessions: ${describeClaudeScan(scans.claude)}`);
+  }
 
   out.push("");
   out.push(`Stale local branches (no worktree, tip inside a merged PR head): ${staleBranches.length}`);
@@ -267,6 +323,10 @@ export function formatReport({ rows, staleBranches, railway, applied }) {
     out.push(`  branches deleted: ${refs.length}`);
     for (const step of refs) out.push(`    ${step.label.replace(/^delete branch /, "")}`);
     out.push(`  worktrees kept: ${rows.length - removed.length}`);
+    if (scans) {
+      out.push(`  Process scan: ${describeProcessScan(scans.processes)}`);
+      out.push(`  Claude sessions: ${describeClaudeScan(scans.claude)}`);
+    }
     if (applied.failed) {
       out.push(`  FAILED at: ${applied.failed.step.label}`);
       out.push(`    ${applied.failed.error}`);
@@ -410,10 +470,16 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
     return 2;
   }
 
-  const entries = parseWorktreePorcelain(run(["git", "worktree", "list", "--porcelain"], cwd));
+  // Compare real paths on both sides: `lsof`, Claude sessions, $HOME and
+  // git's own listing can each spell the same directory differently.
+  const entries = parseWorktreePorcelain(run(["git", "worktree", "list", "--porcelain"], cwd)).map((entry) => ({
+    ...entry,
+    listedPath: entry.path,
+    path: realpathOrSelf(entry.path),
+  }));
   const mainPath = entries[0].path;
-  const currentPath = run(["git", "rev-parse", "--show-toplevel"], cwd).trim();
-  const homeDir = env.HOME || homedir();
+  const currentPath = realpathOrSelf(run(["git", "rev-parse", "--show-toplevel"], cwd).trim());
+  const homeDir = realpathOrSelf(env.HOME || homedir());
   let prs;
   try {
     prs = loadPrs(options.prsFile, mainPath);
@@ -421,22 +487,52 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
     err(`Cannot evaluate the gate without PR data: ${String(error.stderr || error.message).trim()}`);
     return 1;
   }
-  const activeProcesses = (io.scanProcesses ?? scanProcesses)();
-  if (activeProcesses === null) {
+  const pid = io.pid ?? process.pid;
+  const scannedProcesses = (io.scanProcesses ?? scanProcesses)();
+  if (scannedProcesses === null) {
     if (options.apply) {
       err("Cannot scan running processes, so --apply refuses to remove anything.");
       return 1;
     }
     err("Warning: could not scan running processes; running agents are not detected.");
   }
-  const claudeSessions = (io.scanClaudeSessions ?? scanClaudeSessions)();
-  if (claudeSessions === null) {
+  // A scan that cannot see this very process is partial (a sandbox can hide
+  // processes from `lsof`), so what it did not list proves nothing.
+  const includesCurrentProcess = Boolean(scannedProcesses?.some((proc) => proc.pid === pid));
+  if (scannedProcesses && !includesCurrentProcess) {
+    if (options.apply) {
+      err(`The process scan did not include this process (pid ${pid}), so it may be partial; --apply refuses to remove anything.`);
+      return 1;
+    }
+    err(`Warning: the process scan did not include this process (pid ${pid}), so it may be partial; running agents may not be detected.`);
+  }
+  const activeProcesses = scannedProcesses && scannedProcesses.map((proc) => ({ ...proc, cwd: realpathOrSelf(proc.cwd) }));
+  const claudeScan = (io.scanClaudeSessions ?? scanClaudeSessions)();
+  if (claudeScan === null) {
     if (options.apply) {
       err("Cannot read Claude sessions (`claude agents --json`), so --apply refuses to remove anything.");
       return 1;
     }
     err("Warning: could not read Claude sessions; agents running in unlocked worktrees are not detected.");
+  } else if (claudeScan.status === "missing") {
+    err("Warning: `claude` was not found on PATH, so Claude sessions were not checked; agents running in unlocked worktrees are not detected.");
+  } else if (claudeScan.withoutCwd > 0) {
+    const n = claudeScan.withoutCwd;
+    err(`Warning: ${n} Claude ${n === 1 ? "session has" : "sessions have"} no working directory, so ${n === 1 ? "it" : "they"} cannot be matched to a worktree.`);
   }
+  const claudeSessions = claudeScan && claudeScan.sessions.map((session) => ({ ...session, cwd: realpathOrSelf(session.cwd) }));
+  const scans = {
+    processes: {
+      status: scannedProcesses === null ? "unavailable" : includesCurrentProcess ? "complete" : "partial",
+      count: scannedProcesses?.length ?? 0,
+      includesCurrentProcess,
+    },
+    claude: {
+      status: claudeScan === null ? "unreadable" : claudeScan.status,
+      sessions: claudeScan?.sessions.length ?? 0,
+      withoutCwd: claudeScan?.withoutCwd ?? 0,
+    },
+  };
 
   let mainSha = null;
   for (const ref of ["origin/main", "main"]) {
@@ -477,7 +573,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
       currentPath,
       homeDir,
       dirtyCount,
-      activeProcesses: [...(activeProcesses ?? []), ...(claudeSessions?.sessions ?? [])],
+      activeProcesses: [...(activeProcesses ?? []), ...(claudeSessions ?? [])],
       onMain,
       prs,
       isAncestor,
@@ -525,9 +621,9 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
       reason: verdict.reason,
     }));
     const doneSteps = applied && { done: applied.done.map((s) => s.label), failed: applied.failed && { step: applied.failed.step.label, error: applied.failed.error }, skipped: applied.skipped.map((s) => s.label) };
-    out(`${JSON.stringify({ mode: options.apply ? "apply" : "read-only", worktrees: view, staleBranches, railway, applied: doneSteps }, null, 2)}\n`);
+    out(`${JSON.stringify({ mode: options.apply ? "apply" : "read-only", worktrees: view, staleBranches, railway, scans, applied: doneSteps }, null, 2)}\n`);
   } else {
-    out(formatReport({ rows, staleBranches, railway, applied }));
+    out(formatReport({ rows, staleBranches, railway, applied, scans }));
   }
   return applied?.failed ? 1 : 0;
 }
