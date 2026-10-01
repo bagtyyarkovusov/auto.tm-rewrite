@@ -68,7 +68,7 @@ export function parseClaudeSessions(text) {
     if (typeof session?.cwd !== "string" || !session.cwd) return null;
     found.push({ pid: session.pid ?? "?", command: `claude session "${session.name ?? session.sessionId ?? "unnamed"}"`, cwd: session.cwd });
   }
-  return found;
+  return { sessions: found, withoutCwd: 0 };
 }
 
 function inside(cwd, path) {
@@ -273,11 +273,11 @@ export function formatReport({ rows, staleBranches, railway, applied }) {
 
 // --- IO ---------------------------------------------------------------------
 
-function run(argv, cwd) {
+export function run(argv, cwd) {
   return execFileSync(argv[0], argv.slice(1), { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
-function scanProcesses() {
+export function scanProcesses() {
   if (existsSync("/proc/self/cwd")) {
     const found = [];
     for (const pid of readdirSync("/proc").filter((name) => /^\d+$/.test(name))) {
@@ -304,11 +304,12 @@ function scanProcesses() {
 // Live Claude sessions, interactive and background, with the directory each one
 // works in. No `claude` binary means no Claude sessions to protect. A binary
 // that fails or prints something unreadable is unknown (null).
-function scanClaudeSessions() {
-  const result = spawnSync("claude", ["agents", "--json"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 60_000 });
-  if (result.error?.code === "ENOENT") return [];
+export function scanClaudeSessions(spawn = spawnSync) {
+  const result = spawn("claude", ["agents", "--json"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 60_000 });
+  if (result.error?.code === "ENOENT") return { status: "missing", sessions: [], withoutCwd: 0 };
   if (result.error || result.status !== 0 || !result.stdout) return null;
-  return parseClaudeSessions(result.stdout);
+  const parsed = parseClaudeSessions(result.stdout);
+  return parsed && { status: "ok", ...parsed };
 }
 
 // Untracked files count whatever the user's status.showUntrackedFiles says.
@@ -382,48 +383,54 @@ function parseArgs(argv) {
   return options;
 }
 
-export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
+// `io` lets tests inject the environment, the process and Claude scans, the
+// command runner used by --apply, and the output streams.
+export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {}) {
+  const env = io.env ?? process.env;
+  const out = io.stdout ?? ((text) => process.stdout.write(text));
+  const err = io.stderr ?? ((text) => process.stderr.write(`${text}\n`));
+  const exec = io.exec ?? run;
   let options;
   try {
     options = parseArgs(argv);
   } catch (error) {
-    console.error(`${error.message}\nUsage: worktree-gc [--apply] [--json] [--no-size] [--no-railway] [--prs-file <json>]`);
+    err(`${error.message}\nUsage: worktree-gc [--apply] [--json] [--no-size] [--no-railway] [--prs-file <json>]`);
     return 2;
   }
 
   // Hand-written PR data must never drive removals. The test suite sets the
   // variable; nothing else should.
-  if (options.apply && options.prsFile && process.env.WORKTREE_GC_ALLOW_PRS_FILE_APPLY !== "1") {
-    console.error("--prs-file cannot be combined with --apply: removals must follow live PR data from gh.");
+  if (options.apply && options.prsFile && env.WORKTREE_GC_ALLOW_PRS_FILE_APPLY !== "1") {
+    err("--prs-file cannot be combined with --apply: removals must follow live PR data from gh.");
     return 2;
   }
 
   const entries = parseWorktreePorcelain(run(["git", "worktree", "list", "--porcelain"], cwd));
   const mainPath = entries[0].path;
   const currentPath = run(["git", "rev-parse", "--show-toplevel"], cwd).trim();
-  const homeDir = process.env.HOME || homedir();
+  const homeDir = env.HOME || homedir();
   let prs;
   try {
     prs = loadPrs(options.prsFile, mainPath);
   } catch (error) {
-    console.error(`Cannot evaluate the gate without PR data: ${String(error.stderr || error.message).trim()}`);
+    err(`Cannot evaluate the gate without PR data: ${String(error.stderr || error.message).trim()}`);
     return 1;
   }
-  const activeProcesses = scanProcesses();
+  const activeProcesses = (io.scanProcesses ?? scanProcesses)();
   if (activeProcesses === null) {
     if (options.apply) {
-      console.error("Cannot scan running processes, so --apply refuses to remove anything.");
+      err("Cannot scan running processes, so --apply refuses to remove anything.");
       return 1;
     }
-    console.error("Warning: could not scan running processes; running agents are not detected.");
+    err("Warning: could not scan running processes; running agents are not detected.");
   }
-  const claudeSessions = scanClaudeSessions();
+  const claudeSessions = (io.scanClaudeSessions ?? scanClaudeSessions)();
   if (claudeSessions === null) {
     if (options.apply) {
-      console.error("Cannot read Claude sessions (`claude agents --json`), so --apply refuses to remove anything.");
+      err("Cannot read Claude sessions (`claude agents --json`), so --apply refuses to remove anything.");
       return 1;
     }
-    console.error("Warning: could not read Claude sessions; agents running in unlocked worktrees are not detected.");
+    err("Warning: could not read Claude sessions; agents running in unlocked worktrees are not detected.");
   }
 
   let mainSha = null;
@@ -465,7 +472,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
       currentPath,
       homeDir,
       dirtyCount,
-      activeProcesses: [...(activeProcesses ?? []), ...(claudeSessions ?? [])],
+      activeProcesses: [...(activeProcesses ?? []), ...(claudeSessions?.sessions ?? [])],
       onMain,
       prs,
       isAncestor,
@@ -496,7 +503,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         if (changedPaths(step.entry.path).length) throw new Error("worktree is no longer clean");
       };
     }
-    applied = runApply(steps, (argv) => run(argv, mainPath));
+    applied = runApply(steps, (argv) => exec(argv, mainPath));
   }
 
   if (options.json) {
@@ -513,9 +520,9 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
       reason: verdict.reason,
     }));
     const doneSteps = applied && { done: applied.done.map((s) => s.label), failed: applied.failed && { step: applied.failed.step.label, error: applied.failed.error }, skipped: applied.skipped.map((s) => s.label) };
-    console.log(JSON.stringify({ mode: options.apply ? "apply" : "read-only", worktrees: view, staleBranches, railway, applied: doneSteps }, null, 2));
+    out(`${JSON.stringify({ mode: options.apply ? "apply" : "read-only", worktrees: view, staleBranches, railway, applied: doneSteps }, null, 2)}\n`);
   } else {
-    process.stdout.write(formatReport({ rows, staleBranches, railway, applied }));
+    out(formatReport({ rows, staleBranches, railway, applied }));
   }
   return applied?.failed ? 1 : 0;
 }

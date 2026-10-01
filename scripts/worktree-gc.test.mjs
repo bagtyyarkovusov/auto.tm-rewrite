@@ -243,8 +243,8 @@ test("a live Claude session working in the worktree keeps it as a running agent"
       { pid: 42, cwd: MAIN, kind: "interactive", name: "orchestrator", status: "idle" },
     ]),
   );
-  assert.equal(sessions.length, 2);
-  const verdict = classifyWorktree(entry(), context({ activeProcesses: sessions }));
+  assert.equal(sessions.sessions.length, 2);
+  const verdict = classifyWorktree(entry(), context({ activeProcesses: sessions.sessions }));
   assert.equal(verdict.verdict, "keep");
   assert.match(verdict.reason, /running agent: pid 41 \(claude session "AutoTM issue-1"\)/);
 });
@@ -253,14 +253,14 @@ test("a Claude session in a sibling directory with the same prefix does not coun
   const sessions = parseClaudeSessions(
     JSON.stringify([{ pid: 41, cwd: `${MAIN}/.claude/worktrees/issue-10`, kind: "background", name: "other" }]),
   );
-  assert.equal(classifyWorktree(entry(), context({ activeProcesses: sessions })).verdict, "remove");
+  assert.equal(classifyWorktree(entry(), context({ activeProcesses: sessions.sessions })).verdict, "remove");
 });
 
 test("Claude session data that cannot be read is unknown, never an empty list", () => {
   assert.equal(parseClaudeSessions("not json"), null);
   assert.equal(parseClaudeSessions(JSON.stringify({ sessions: [] })), null);
   assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 1, name: "no cwd" }])), null);
-  assert.deepEqual(parseClaudeSessions("[]"), []);
+  assert.deepEqual(parseClaudeSessions("[]"), { sessions: [], withoutCwd: 0 });
 });
 
 test("no PR match keeps the worktree", () => {
