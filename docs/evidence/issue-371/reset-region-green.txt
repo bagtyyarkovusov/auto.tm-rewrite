@@ -64,4 +64,3 @@ react-test-renderer is deprecated. See https://react.dev/warnings/react-test-ren
       Tests  17 passed (17)
    Start at  20:38:40
    Duration  443ms (transform 94ms, setup 41ms, collect 156ms, tests 90ms, environment 0ms, prepare 33ms)
-

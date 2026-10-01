@@ -490,7 +490,7 @@ Error: Unable to find an element with accessibility label: Region: Select region
 [36m</View>[39m
  ❯ src/listings/search/SearchParametersForm.spec.tsx:141:17
     139|     fireEvent.press(view.getByRole("button", { name: "Reset" }));
-    140| 
+    140|
     141|     expect(view.getByLabelText("Region: Select region")).toBeTruthy();
        |                 ^
     142|     expect(view.getByRole("button", { name: "City: Select a region fir…

@@ -1,6 +1,7 @@
 # Issue #371 native evidence: Search parameters form
 
 Simulator screenshots of the full-screen **Search parameters** form that replaces `FilterSheet`, for the Spec review.
+Captures 01-23 are the original session. Captures 24-27 below prove the accepted Reset finding fix at `57d19487164415292dba549fae16046d90e0e24b`.
 The governing design is [33 — Search & discovery, Search parameters](../../prd/features/33-search-discovery.md#search-parameters).
 It lists five states: default, filled, count loading, count error and invalid range.
 
@@ -60,12 +61,48 @@ Dev-client notes:
 
 ## Observations for review
 
-- **Tab bar stays visible under the form.** The spec calls the form "full-screen". Results and the pickers in this app also keep the tab bar, so this follows the existing Search stack. It is not a Spec reviewer's call from these captures alone.
+- **Tab bar stays visible under the form.** The approved release-screen-map prototype renders tabs outside the overlay wrapper. Independent Spec review confirmed this follows the prototype; no tab-bar change is needed.
 - **"Show 1 listings".** The copy has no singular form. This came from the earlier sheet's `showResultsCount` key and was not changed here.
 - **Existing `useListingCount` behavior.** While the draft is invalid the hook copies it into its debounced filters immediately. When the range turns valid again, the first request goes out with the stale invalid filters (observed: `yearMin=2025&yearMax=2020`, HTTP 400, a dev-only LogBox toast) until the 300 ms debounce catches up. The form never showed an error state for it. The hook is not part of this diff.
-- **Popular brands in Done mode.** The Done-mode brand sheet in capture 05 shows only "All brands A to Z", while the normal picker opened from Home showed Recent and Popular (seen live on the way to capture 17, not captured). Condition New (0 matches) was active in 05, which probably explains the missing Popular block, but that was not isolated.
+- **Popular brands in Done mode.** Capture 05 has Condition New with zero matching listings. The picker only shows positive-count popular brands, which explains the A-to-Z-only state. Independent Spec review confirmed this is expected.
 
 ## Not shown
 
-- The city Region → City picker was not opened. It is the existing control reused unchanged.
 - No physical-device or Android capture; this is iOS simulator evidence only (#345 owns the Android matrix).
+
+## Reset finding follow-up, 2026-10-01
+
+The accepted P2 finding was Region-only state surviving Reset when `draft.cityId`
+was already undefined. The real-form regression fails at `0bb0c74` and passes at
+`57d1948`. Reset now changes the CityFilterControl key so its local selection and
+picker state reset with the filter draft. Sort is preserved.
+
+| Item | Follow-up evidence |
+|---|---|
+| App source | `57d19487164415292dba549fae16046d90e0e24b` |
+| Backend | PR483 public API and MinIO, same environment as above; no seed or cloud mutations by this writer |
+| Readiness | At start `/readyz` reported `9b0bec023dca22369d9ec4c6be56a5c5ed91a7a7`; at end it reported `57d19487164415292dba549fae16046d90e0e24b`. Both ready, correct PR environment, postgres/redis/minio ok. The backend source is unchanged by this mobile fix |
+| Device | Assigned iPhone 17 iOS 26.2 UUID `38747B85-BB39-48A2-BF0D-4DD6A5ED1D13`, Metro 8471 |
+| Driving | Maestro with explicit UUID, actual app and catalog. Opened the existing parameters route by `autotm://parameters`; no mocked API or count proxy |
+| Command | `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home maestro --device 38747B85-BB39-48A2-BF0D-4DD6A5ED1D13 test /tmp/371-reset-region.yaml` |
+| Result | All flow assertions passed. `reset-region-native.txt` records output; `reset-region.maestro.yaml` preserves the flow. Captures 24-26 are Maestro PNG captures converted to JPEG; 27 is a simctl JPEG capture of the final asserted state |
+| Cleanup | Metro stopped, port 8471 free, assigned simulator Shutdown; no Docker started |
+
+| # | File | State | Spec / criterion |
+|---|---|---|---|
+| 24 | `24-region-only-before-reset.jpg` | Ahal Region selected, City empty and enabled, Show 12 listings | Region → City drilldown; AC 4 precondition |
+| 25 | `25-region-only-after-reset.jpg` | Reset clears Region, City says Select a region first and is disabled, count remains 12 | AC 4: Reset clears every field, including auxiliary Region |
+| 26 | `26-city-selected-count.jpg` | Ahal Region and Annau selected, count changes from 12 to 0 | AC 2: City edits update Show N; AC 4 precondition |
+| 27 | `27-city-after-reset.jpg` | Reset clears City and Region, City disabled, count returns to 12 | AC 4: selected-City Reset; AC 2 count recovery |
+
+The rendered tests execute the real form, CityFilterControl, catalog picker,
+useListingFilters and native host adapter. Catalog hooks supply a Region/City
+fixture, and the count fixture follows cityId. They assert the filter payload,
+rendered selections, disabled City row, preserved sort and count change.
+`reset-region-red.txt` preserves the Region-only failure, 1 failed and 16 passed;
+`reset-region-green.txt` preserves all 17 passing tests. Log trailing whitespace
+was trimmed without changing output meaning.
+
+The duplicate City heading, singular Show 1 listings copy and inherited
+invalid-to-valid count request remain follow-ups owned by the integration owner.
+Physical Android remains outside this simulator proof, owned by #345.
