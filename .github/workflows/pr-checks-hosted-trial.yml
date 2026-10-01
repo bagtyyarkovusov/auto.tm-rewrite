@@ -21,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      # quay.io/minio/minio is no longer anonymously pullable and a hosted
+      # runner has no cached copy, so swap the MinIO image (see the file).
+      CI_COMPOSE_OVERRIDE: infra/compose/docker-compose.ci.hosted.yml
       # Safe unreachable defaults, replaced by the service step with this
       # run's mapped ports (same as pr-checks.yml).
       DATABASE_URL: postgresql://auto_tm_ci:auto_tm_ci_pass@127.0.0.1:1/auto_tm_ci

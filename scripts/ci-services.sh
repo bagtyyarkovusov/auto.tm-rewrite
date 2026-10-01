@@ -5,8 +5,15 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 compose_file="$repo_root/infra/compose/docker-compose.ci.yml"
 project="auto_tm_ci_${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}_${GITHUB_RUN_ATTEMPT:?GITHUB_RUN_ATTEMPT is required}"
 
+# Optional extra Compose file, relative to the repo root. Unset on the
+# self-hosted runner; the hosted-runner trial uses it to swap the MinIO image.
+compose_files=(--file "$compose_file")
+if [[ -n "${CI_COMPOSE_OVERRIDE:-}" ]]; then
+  compose_files+=(--file "$repo_root/$CI_COMPOSE_OVERRIDE")
+fi
+
 compose() {
-  docker compose --file "$compose_file" --project-name "$project" "$@"
+  docker compose "${compose_files[@]}" --project-name "$project" "$@"
 }
 
 published_port() {
