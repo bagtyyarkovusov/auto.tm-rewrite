@@ -1,66 +1,205 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { readFileSync, readdirSync } from 'node:fs';
+import { builtinModules } from 'node:module';
+import path from 'node:path';
 import test from 'node:test';
-import { validateNativePrSeed, nativePrSeedSteps, nativePrSeedStepsFor } from './native-pr-seed.mjs';
-const valid = { RAILWAY_ENVIRONMENT_NAME: 'auto.tm-rewrite-pr-481', RAILWAY_ENVIRONMENT_ID: 'pr-id', RAILWAY_PROJECT_ID: '176ddec0-dd65-4087-b82c-798599fc2ebe', SMS_DRIVER: 'mock', APP_ENV: 'staging', DATABASE_PUBLIC_URL: 'postgresql://demo:demo@example.com/demo', MINIO_PUBLIC_URL: 'https://minio-autotm-rewrite-pr-481.up.railway.app', MINIO_ACCESS_KEY: 'demo', MINIO_SECRET_KEY: 'demo' };
-test('refuses production, staging, missing and misleading names before any seed operation', () => {
-  for (const name of ['production', 'staging', undefined, 'production-pr-481', 'auto.tm-rewrite-pr-481-production', 'auto.tm-rewrite-pr-0']) {
-    assert.throws(() => validateNativePrSeed({ ...valid, RAILWAY_ENVIRONMENT_NAME: name }), /PR environment/);
+import { fileURLToPath } from 'node:url';
+
+import { assertFixtureTarget, assertNativePrSeedEnvironment } from '../packages/db/scripts/native-pr-seed-guard.mjs';
+import * as entry from './native-pr-seed.mjs';
+
+const { nativePrSeedSteps, parseNativePrSeedArguments } = entry;
+const root = fileURLToPath(new URL('..', import.meta.url));
+const entryPath = path.join(root, 'scripts/native-pr-seed.mjs');
+const fixtureScript = 'packages/db/scripts/ui-fixture.ts';
+
+// Every value is fake. No test here builds a database, MinIO or Railway client, and the spawned
+// processes below only run inputs that must be refused before any client exists.
+const SECRET = 'sk-FAKE-SECRET-must-never-be-printed';
+const valid = {
+  RAILWAY_ENVIRONMENT_NAME: 'auto.tm-rewrite-pr-481',
+  RAILWAY_ENVIRONMENT_ID: 'pr-id',
+  RAILWAY_PROJECT_ID: '176ddec0-dd65-4087-b82c-798599fc2ebe',
+  SMS_DRIVER: 'mock',
+  APP_ENV: 'staging',
+  DATABASE_URL: `postgresql://demo:${SECRET}@postgres.railway.internal:5432/demo`,
+  MINIO_ENDPOINT: 'http://minio.railway.internal:9000',
+  MINIO_PUBLIC_URL: 'https://minio-autotm-rewrite-pr-481.up.railway.app',
+  MINIO_ACCESS_KEY: 'demo',
+  MINIO_SECRET_KEY: SECRET,
+};
+const NAME_REFUSAL = 'Native seed requires an auto.tm-rewrite-pr-<number> PR environment';
+const badNames = ['production', 'staging', undefined, 'production-pr-481', 'auto.tm-rewrite-pr-481-production', 'auto.tm-rewrite-pr-0'];
+const foreignMediaHosts = ['https://minio-staging-5795.up.railway.app', 'https://minio-autotm-rewrite-pr-480.up.railway.app'];
+
+/** Run a script in a clean environment so the parent's real variables can never reach it. */
+function spawnClean(args, env) {
+  const result = spawnSync(process.execPath, args, { cwd: root, env, encoding: 'utf8', timeout: 60_000 });
+  return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
+}
+
+function assertNoLeak(output) {
+  assert.ok(!output.includes(SECRET), 'output must not contain a credential or raw connection string');
+}
+
+test('the shared guard accepts exactly this PR environment on private connections', () => {
+  assert.doesNotThrow(() => assertNativePrSeedEnvironment(valid));
+  assert.doesNotThrow(() => assertFixtureTarget(valid, ['--railway-pr']));
+});
+
+test('the shared guard refuses production, staging, missing and misleading names', () => {
+  for (const name of badNames) {
+    assert.throws(() => assertNativePrSeedEnvironment({ ...valid, RAILWAY_ENVIRONMENT_NAME: name }), { message: NAME_REFUSAL });
   }
 });
-test('requires mock SMS, nonproduction APP_ENV and Railway project identity', () => {
-  for (const patch of [{ SMS_DRIVER: 'http' }, { APP_ENV: 'production' }, { RAILWAY_PROJECT_ID: 'other' }, { RAILWAY_ENVIRONMENT_ID: undefined }]) {
-    assert.throws(() => validateNativePrSeed({ ...valid, ...patch }));
+
+test('the shared guard requires mock SMS, nonproduction APP_ENV and Railway project identity', () => {
+  for (const patch of [{ SMS_DRIVER: 'http' }, { SMS_DRIVER: undefined }, { APP_ENV: 'production' }, { RAILWAY_PROJECT_ID: 'other' }, { RAILWAY_ENVIRONMENT_ID: undefined }]) {
+    assert.throws(() => assertNativePrSeedEnvironment({ ...valid, ...patch }), /Native seed requires/);
   }
 });
-test('uses explicit public connections without logging credentials', () => {
-  const env = validateNativePrSeed({ ...valid, DATABASE_URL: 'private', MINIO_ENDPOINT: 'private' });
-  assert.equal(env.DATABASE_URL, valid.DATABASE_PUBLIC_URL);
-  assert.equal(env.MINIO_ENDPOINT, valid.MINIO_PUBLIC_URL);
+
+test('the shared guard rejects staging or another PR media origin even with a valid PR name', () => {
+  for (const url of foreignMediaHosts) {
+    assert.throws(() => assertNativePrSeedEnvironment({ ...valid, MINIO_PUBLIC_URL: url }), /this PR/);
+  }
 });
-test('one command orders storage and reference seed before fixtures and logos', () => {
+
+test('the shared guard requires this environment private Postgres and MinIO services', () => {
+  for (const patch of [{ DATABASE_URL: 'postgresql://demo:demo@example.com/demo' }, { MINIO_ENDPOINT: valid.MINIO_PUBLIC_URL }]) {
+    assert.throws(() => assertNativePrSeedEnvironment({ ...valid, ...patch }), /private PR Postgres and MinIO/);
+  }
+});
+
+test('the shared guard checks each connection for its own protocol and names the variable', () => {
+  assert.throws(() => assertNativePrSeedEnvironment({ ...valid, DATABASE_URL: 'mysql://demo:demo@postgres.railway.internal/demo' }), /DATABASE_URL to be a PostgreSQL URL/);
+  assert.throws(() => assertNativePrSeedEnvironment({ ...valid, MINIO_PUBLIC_URL: 'http://minio-autotm-rewrite-pr-481.up.railway.app' }), /MINIO_PUBLIC_URL to be an HTTPS URL/);
+  for (const key of ['DATABASE_URL', 'MINIO_ENDPOINT', 'MINIO_PUBLIC_URL', 'MINIO_ACCESS_KEY', 'MINIO_SECRET_KEY']) {
+    assert.throws(() => assertNativePrSeedEnvironment({ ...valid, [key]: undefined }), new RegExp(`requires ${key}`));
+  }
+});
+
+test('the shared guard refuses a malformed URL without echoing it', () => {
+  for (const key of ['DATABASE_URL', 'MINIO_ENDPOINT', 'MINIO_PUBLIC_URL']) {
+    const raw = `not a url ${SECRET}`;
+    assert.throws(
+      () => assertNativePrSeedEnvironment({ ...valid, [key]: raw }),
+      error => error instanceof Error && error.message.includes(key) && !error.message.includes(SECRET) && !JSON.stringify(error).includes(SECRET),
+    );
+  }
+});
+
+test('the fixture target refuses production, staging, non-mock SMS and a foreign media host', () => {
+  const argv = ['--railway-pr'];
+  for (const name of badNames) {
+    assert.throws(() => assertFixtureTarget({ ...valid, RAILWAY_ENVIRONMENT_NAME: name }, argv), { message: NAME_REFUSAL });
+  }
+  assert.throws(() => assertFixtureTarget({ ...valid, SMS_DRIVER: 'http' }, argv), /SMS_DRIVER=mock/);
+  assert.throws(() => assertFixtureTarget({ ...valid, APP_ENV: 'production' }, argv), /APP_ENV/);
+  for (const url of foreignMediaHosts) {
+    assert.throws(() => assertFixtureTarget({ ...valid, MINIO_PUBLIC_URL: url }, argv), /this PR/);
+  }
+});
+
+test('the fixture target without --railway-pr accepts only a localhost stack and never echoes a URL', () => {
+  const local = { DATABASE_URL: 'postgresql://dev:dev@localhost:5432/dev', MINIO_ENDPOINT: 'http://127.0.0.1:9000' };
+  assert.doesNotThrow(() => assertFixtureTarget(local, []));
+  assert.throws(() => assertFixtureTarget({ ...local, DATABASE_URL: `postgresql://dev:${SECRET}@db.example.com/dev` }, []), error => /non-local DATABASE_URL/.test(error.message) && !error.message.includes(SECRET));
+  assert.throws(() => assertFixtureTarget({ ...local, MINIO_ENDPOINT: `https://minio-staging-5795.up.railway.app/${SECRET}` }, []), error => /non-local MINIO_ENDPOINT/.test(error.message) && !error.message.includes(SECRET));
+  assert.throws(() => assertFixtureTarget({ ...local, DATABASE_URL: `not a url ${SECRET}` }, []), error => /DATABASE_URL/.test(error.message) && !error.message.includes(SECRET));
+});
+
+test('a spawned remote seed with a production environment name exits 1 with the refusal and prints no step', () => {
+  const result = spawnClean([entryPath, '--remote'], { ...valid, RAILWAY_ENVIRONMENT_NAME: 'production' });
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr.trim(), NAME_REFUSAL);
+  assert.equal(result.stdout, '');
+  assertNoLeak(result.stdout + result.stderr);
+});
+
+test('a spawned remote seed with a malformed DATABASE_URL is refused without printing it', () => {
+  const result = spawnClean([entryPath, '--remote'], { ...valid, DATABASE_URL: `not a url ${SECRET}` });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /DATABASE_URL/);
+  assert.doesNotMatch(result.stderr, /Invalid URL/);
+  assert.doesNotMatch(result.stdout, /Native PR seed:/);
+  assertNoLeak(result.stdout + result.stderr);
+});
+
+test('local mode is gone: no arguments is refused with the remote command to run instead', () => {
+  assert.throws(() => parseNativePrSeedArguments([]), /Local native:seed mode was removed.*--remote/s);
+  assert.throws(() => parseNativePrSeedArguments(['--local']), /Usage: native-pr-seed\.mjs --remote/);
+  assert.throws(() => parseNativePrSeedArguments(['--remote', '--local']), /Usage: native-pr-seed\.mjs --remote/);
+  assert.doesNotThrow(() => parseNativePrSeedArguments(['--remote']));
+  // An empty environment can never reach a step, so this spawn cannot start a seed.
+  const result = spawnClean([entryPath], {});
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Local native:seed mode was removed/);
+  assert.doesNotMatch(result.stdout, /Native PR seed:/);
+  assert.equal(entry.nativePrSeedStepsFor, undefined);
+  assert.equal(entry.validateNativePrSeed, undefined);
+});
+
+test('the PR seed runs one ordered list of steps on Node and the shipped tsx loader, without pnpm', () => {
   assert.deepEqual(nativePrSeedSteps.map(step => step.name), ['buckets', 'catalog', 'native fixtures', 'brand logos']);
+  assert.ok(nativePrSeedSteps.every(step => step.command === process.execPath));
+  assert.equal(nativePrSeedSteps[0].args[0], 'packages/db/scripts/native-minio/bootstrap.mjs');
+  assert.deepEqual(nativePrSeedSteps[1].args, ['--import', 'tsx', 'packages/db/src/seed.ts']);
+  assert.ok(nativePrSeedSteps[2].args.includes('--railway-pr'));
 });
 
-test('rejects staging or another PR media origin even with a valid PR name', () => {
-  for (const url of ['https://minio-staging-5795.up.railway.app', 'https://minio-autotm-rewrite-pr-480.up.railway.app']) {
-    assert.throws(() => validateNativePrSeed({ ...valid, MINIO_PUBLIC_URL: url }), /this PR/);
+test('a spawned fixture with production, staging, non-mock SMS or a foreign media host is refused before any client', () => {
+  const cases = [
+    { RAILWAY_ENVIRONMENT_NAME: 'production' },
+    { RAILWAY_ENVIRONMENT_NAME: 'staging' },
+    { SMS_DRIVER: 'http' },
+    { MINIO_PUBLIC_URL: 'https://minio-staging-5795.up.railway.app' },
+    { MINIO_PUBLIC_URL: 'https://minio-autotm-rewrite-pr-480.up.railway.app' },
+  ];
+  for (const patch of cases) {
+    const result = spawnClean(['--import', 'tsx', fixtureScript, '--railway-pr'], { ...valid, ...patch });
+    assert.notEqual(result.status, 0, JSON.stringify(patch));
+    assert.match(result.stderr, /Native seed requires/, JSON.stringify(patch));
+    // The refusal must come from the guard, not from a missing generated client or a dependency.
+    assert.doesNotMatch(result.stderr, /Cannot find module/, JSON.stringify(patch));
+    assertNoLeak(result.stdout + result.stderr);
   }
 });
 
-test('remote mode uses only this environment private service connections', () => {
-  const remote = { ...valid, DATABASE_PUBLIC_URL: undefined, DATABASE_URL: 'postgresql://demo:demo@postgres.railway.internal/demo', MINIO_ENDPOINT: 'http://minio.railway.internal:9000' };
-  const result = validateNativePrSeed(remote, { remote: true });
-  assert.equal(result.DATABASE_URL, remote.DATABASE_URL);
-  assert.equal(result.MINIO_ENDPOINT, remote.MINIO_ENDPOINT);
-  assert.equal(result.NATIVE_PR_SEED_REMOTE, 'true');
-  for (const patch of [{ DATABASE_URL: 'postgresql://demo:demo@example.com/demo' }, { MINIO_ENDPOINT: valid.MINIO_PUBLIC_URL }, { RAILWAY_ENVIRONMENT_NAME: 'production' }]) {
-    assert.throws(() => validateNativePrSeed({ ...remote, ...patch }, { remote: true }));
+test('a spawned fixture with a malformed DATABASE_URL is refused without printing it', () => {
+  // NATIVE_PR_SEED_REMOTE is the flag the retired local/remote split used to pass to the child. It is
+  // ignored now, and kept here so the path that once threw a raw `Invalid URL` stays covered.
+  const env = { ...valid, NATIVE_PR_SEED_REMOTE: 'true', DATABASE_URL: `not a url ${SECRET}` };
+  for (const argv of [['--railway-pr'], []]) {
+    const result = spawnClean(['--import', 'tsx', fixtureScript, ...argv], env);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /DATABASE_URL/);
+    assert.doesNotMatch(result.stderr, /Cannot find module/);
+    assertNoLeak(result.stdout + result.stderr);
   }
 });
 
-test('remote bucket bootstrap resolves dependencies from the shipped db workspace', () => {
-  assert.equal(nativePrSeedStepsFor({ remote: true })[0].args[0], 'packages/db/scripts/native-minio/bootstrap.mjs');
-  assert.equal(nativePrSeedStepsFor({ remote: false })[0].args[0], 'infra/minio/bootstrap.mjs');
+test('a spawned localhost-only fixture refuses a literal staging connection without printing it', () => {
+  const result = spawnClean(['--import', 'tsx', fixtureScript], {
+    DATABASE_URL: `postgresql://demo:${SECRET}@db.staging.example.com:5432/demo`,
+    MINIO_ENDPOINT: 'http://localhost:9000',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /non-local DATABASE_URL/);
+  assert.doesNotMatch(result.stderr, /Cannot find module/);
+  assertNoLeak(result.stdout + result.stderr);
 });
 
-test('remote steps execute with Node and the shipped tsx loader, without pnpm', () => {
-  const steps = nativePrSeedStepsFor({ remote: true });
-  assert.ok(steps.every(step => step.command === process.execPath));
-  assert.deepEqual(steps[1].args, ['--import', 'tsx', 'packages/db/src/seed.ts']);
-  assert.ok(steps[2].args.includes('--railway-pr'));
-});
-
-test('every bare import the remote seed steps load is declared by the db workspace', async () => {
-  const { readFileSync, readdirSync } = await import('node:fs');
-  const { builtinModules } = await import('node:module');
-  const db = JSON.parse(readFileSync('packages/db/package.json', 'utf8'));
+test('every bare import the seed steps load is declared by the db workspace', () => {
+  const db = JSON.parse(readFileSync(path.join(root, 'packages/db/package.json'), 'utf8'));
   const declared = new Set([...Object.keys(db.dependencies ?? {}), ...Object.keys(db.devDependencies ?? {})]);
-  const brandLogos = readdirSync('packages/db/scripts/brand-logos').map(name => `packages/db/scripts/brand-logos/${name}`);
-  const files = ['packages/db/src/seed.ts', 'packages/db/src/listing-prices.ts', 'packages/db/scripts/ui-fixture.ts', 'packages/db/scripts/fixture-photos.ts', 'packages/db/scripts/import-brand-logos.ts', 'infra/minio/bootstrap.mjs', 'infra/minio/contract.mjs', ...brandLogos];
+  const brandLogos = readdirSync(path.join(root, 'packages/db/scripts/brand-logos')).map(name => `packages/db/scripts/brand-logos/${name}`);
+  const files = ['packages/db/src/seed.ts', 'packages/db/src/listing-prices.ts', 'packages/db/scripts/ui-fixture.ts', 'packages/db/scripts/fixture-photos.ts', 'packages/db/scripts/import-brand-logos.ts', 'packages/db/scripts/native-pr-seed-guard.mjs', 'infra/minio/bootstrap.mjs', 'infra/minio/contract.mjs', ...brandLogos];
   const bare = /(?:from\s+|import\s+|import\(|require\()\s*["']([^./"'][^"']*)["']/g;
   const missing = new Set();
   for (const file of files) {
-    for (const [, specifier] of readFileSync(file, 'utf8').matchAll(bare)) {
+    for (const [, specifier] of readFileSync(path.join(root, file), 'utf8').matchAll(bare)) {
       if (specifier.startsWith('node:') || builtinModules.includes(specifier)) continue;
       const name = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0];
       if (!declared.has(name)) missing.add(name);

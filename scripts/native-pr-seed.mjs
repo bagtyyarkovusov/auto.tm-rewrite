@@ -55,6 +55,9 @@ export function nativePrSeedStepsFor({ remote = false } = {}) {
   ];
 }
 
+// Red-checkpoint skeleton (issue 481): argument parsing is not implemented yet.
+export function parseNativePrSeedArguments() {}
+
 export function runNativePrSeed(env = process.env, options = {}) {
   const guarded = validateNativePrSeed(env, options);
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
