@@ -30,14 +30,14 @@ function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean))).sort();
 }
 
-export function useFeedCatalogMaps(listings: ListingSummary[]) {
+export function useFeedCatalogMaps(listings: ListingSummary[], selectedBrandIds: string[] = []) {
   const locale = useCatalogLocale();
   const brands = useBrands(locale);
   const regions = useRegions(locale);
 
   const brandIds = useMemo(
-    () => unique(listings.map((listing) => listing.brandId)),
-    [listings],
+    () => unique([...listings.map((listing) => listing.brandId), ...selectedBrandIds]),
+    [listings, selectedBrandIds],
   );
 
   const modelQueries = useQueries({
@@ -75,6 +75,9 @@ export function useFeedCatalogMaps(listings: ListingSummary[]) {
     const brandNames = new Map(
       brands.data?.items.map((brand) => [brand.id, brand.name]) ?? [],
     );
+    const brandLogoUrls = new Map(
+      brands.data?.items.flatMap((brand) => (brand.logoUrl ? [[brand.id, brand.logoUrl] as const] : [])) ?? [],
+    );
     const modelNames = new Map(
       modelQueries.flatMap(
         (query) => query.data?.items.map((model) => [model.id, model.name] as const) ?? [],
@@ -88,6 +91,7 @@ export function useFeedCatalogMaps(listings: ListingSummary[]) {
 
     return {
       brandName: (id: string) => brandNames.get(id),
+      brandLogoUrl: (id: string) => brandLogoUrls.get(id),
       modelName: (id: string) => modelNames.get(id),
       cityName: (id: string) => cityNames.get(id),
       // True only while brand or model names have not arrived yet. A failed

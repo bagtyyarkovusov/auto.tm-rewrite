@@ -1,7 +1,7 @@
 # Railway MinIO Contract
 
-Sprint 11 issue #272 defines the repository-owned MinIO contract. Provisioning
-the Railway service and volume remains a later human-in-the-loop task.
+Sprint 11 issue #272 defines the repository-owned MinIO contract. The image and volume contract is updated by
+[ADR-0074](../docs/adr/0074-digest-pinned-chainguard-minio-images.md).
 
 ## Runtime Shape
 
@@ -18,6 +18,34 @@ the Railway service and volume remains a later human-in-the-loop task.
 `APP_ENV=staging|production` rejects unsafe API configs where
 `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` resolve to the same host, where the
 public URL is internal/private, or where production media is not HTTPS.
+
+## Image and rollout
+
+Use the minimal image, with no shell health probe:
+
+```text
+cgr.dev/chainguard/minio@sha256:4692462f35d97d7e82c30371d82f057703c5d9489bcae726010594c812f2d285
+```
+
+Set the service start command to `/usr/bin/minio server /data --console-address
+:9001` and `RAILWAY_RUN_UID=0`. The image defaults to UID 65532; Railway volumes
+are root-owned, so this documented override preserves existing volume writes.
+Keep the existing volume ID and `/data` mount, root credentials, domains, and
+private endpoint. The console stays private. Railway's external health check
+uses `/minio/health/live` on port 9000 and needs no dev image.
+
+After repository checks and review pass, change staging first. Record its
+service, volume, image, command, and deployment ID before and after. Verify
+existing object reads and a write/read/delete of a disposable verification object,
+then rerun the bucket bootstrap to verify all four buckets and policies.
+Do not delete or replace the volume, recursively change ownership, or edit
+production during the staging rollout. The production service can retain its
+previous image until an operator schedules that separate rollout; its target
+image and runtime configuration are the contract above.
+
+MinIO is AGPL-3.0-or-later; inspect the image SBOM for dependency licenses.
+Pinned builds require a reviewed refresh and the runtime checks listed in
+ADR-0074. See [Railway volume permissions](https://docs.railway.com/volumes#permissions).
 
 ## Buckets
 

@@ -32,7 +32,10 @@ services:
       retries: 12
 
   minio:
-    image: quay.io/minio/minio:latest
+    # The dev variant supplies the shell and wget used by this health check.
+    image: cgr.dev/chainguard/minio@sha256:8d5a0265f0e18fb3b29f95598147f1cc2a86b782181668bad176b0e90cce9569
+    # Preserve writable /data volumes created by the previous root-running image.
+    user: "0:0"
     command: server /data
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -44,7 +47,7 @@ services:
     volumes:
       - minio-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live >/dev/null"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:9000/minio/health/live"]
       interval: 5s
       timeout: 5s
       retries: 12

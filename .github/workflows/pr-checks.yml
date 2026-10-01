@@ -20,11 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # CI only: quay.io/minio/minio cannot be pulled anonymously and a hosted
-      # runner has no cached copy, so this Compose override swaps in a
-      # pullable MinIO image. Remove it with the alias step below when #475
-      # replaces the image everywhere.
-      CI_COMPOSE_OVERRIDE: infra/compose/docker-compose.ci.hosted.yml
       # Safe unreachable defaults, replaced by the service step with this
       # run's mapped ports.
       DATABASE_URL: postgresql://auto_tm_ci:auto_tm_ci_pass@127.0.0.1:1/auto_tm_ci
@@ -61,15 +56,6 @@ jobs:
         if: steps.lane.outputs.lane != 'docs'
         shell: bash
         run: bash scripts/ci-services.sh up
-
-      # CI only, see #475. packages/db/tests/brand-logos.import.test.ts starts
-      # MinIO through Testcontainers under the quay.io name, which cannot be
-      # pulled. The service step already pulled the replacement, so alias it
-      # locally; Testcontainers then finds an image that is already present.
-      - name: Alias the MinIO image for Testcontainers
-        if: steps.lane.outputs.lane != 'docs'
-        shell: bash
-        run: docker tag cgr.dev/chainguard/minio:latest-dev quay.io/minio/minio:latest
 
       - run: pnpm install --frozen-lockfile
 

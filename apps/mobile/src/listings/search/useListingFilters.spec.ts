@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
 import { useListingFilters } from "./useListingFilters";
@@ -193,5 +193,99 @@ describe("useListingFilters", () => {
     });
 
     expect(result.current.isValid).toBe(false);
+  });
+});
+
+describe("useListingFilters route write-back", () => {
+  it("reports the applied draft, without empty values, to onApply", () => {
+    const onApply = vi.fn();
+    const { result } = renderHook(() => useListingFilters({ sort: "newest" }, onApply));
+
+    act(() => {
+      result.current.setField("cityId", "ashgabat");
+      result.current.setField("condition", undefined);
+      result.current.setField("modelIds", []);
+    });
+    expect(onApply).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.apply();
+    });
+
+    expect(onApply).toHaveBeenCalledOnce();
+    expect(onApply).toHaveBeenCalledWith({ sort: "newest", cityId: "ashgabat" });
+    expect(result.current.active).toEqual({ sort: "newest", cityId: "ashgabat" });
+  });
+
+  it("clears the filters but keeps the current sort on reset", () => {
+    const onApply = vi.fn();
+    const { result } = renderHook(() => useListingFilters({ sort: "price_asc", cityId: "ashgabat" }, onApply));
+
+    act(() => {
+      result.current.reset();
+    });
+
+    expect(onApply).toHaveBeenCalledOnce();
+    expect(onApply).toHaveBeenCalledWith({ sort: "price_asc" });
+    expect(result.current.active).toEqual({ sort: "price_asc" });
+    expect(result.current.draft).toEqual({ sort: "price_asc" });
+    expect(result.current.count).toBe(0);
+  });
+
+  it("calls the latest onApply after a rerender", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { result, rerender } = renderHook(({ onApply }) => useListingFilters({}, onApply), { initialProps: { onApply: first } });
+
+    rerender({ onApply: second });
+    act(() => {
+      result.current.setField("yearMin", 2018);
+      result.current.apply();
+    });
+
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith({ yearMin: 2018 });
+  });
+
+  it("replace swaps draft and active to route state without calling onApply", () => {
+    const onApply = vi.fn();
+    const { result } = renderHook(() => useListingFilters({ cityId: "ashgabat" }, onApply));
+
+    act(() => {
+      result.current.replace({ sort: "year_asc", yearMin: 2018 });
+    });
+
+    expect(result.current.active).toEqual({ sort: "year_asc", yearMin: 2018 });
+    expect(result.current.draft).toEqual({ sort: "year_asc", yearMin: 2018 });
+    expect(result.current.count).toBe(1);
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("commit patches the committed filters, drops cleared values and reports the result", () => {
+    const onApply = vi.fn();
+    const { result } = renderHook(() => useListingFilters({ sort: "newest", cityId: "ashgabat", condition: "used" }, onApply));
+
+    act(() => {
+      result.current.commit({ condition: undefined, priceMin: 70000 });
+    });
+
+    const next = { sort: "newest", cityId: "ashgabat", priceMin: 70000 };
+    expect(result.current.active).toEqual(next);
+    expect(result.current.draft).toEqual(next);
+    expect(onApply).toHaveBeenCalledOnce();
+    expect(onApply).toHaveBeenCalledWith(next);
+  });
+
+  it("commit builds on the previous commit within one batch of updates", () => {
+    const onApply = vi.fn();
+    const { result } = renderHook(() => useListingFilters({}, onApply));
+
+    act(() => {
+      result.current.commit({ cityId: "ashgabat" });
+      result.current.commit({ yearMin: 2018 });
+    });
+
+    expect(result.current.active).toEqual({ cityId: "ashgabat", yearMin: 2018 });
+    expect(onApply).toHaveBeenLastCalledWith({ cityId: "ashgabat", yearMin: 2018 });
   });
 });

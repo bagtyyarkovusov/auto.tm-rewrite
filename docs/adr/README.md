@@ -84,6 +84,8 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0072](0072-imported-logo-cleanup-coordination.md) | Give logo activations unique object directories | Accepted | 2026-10-01 |
 | [0073](0073-ci-gates-and-release-bundles-run-on-github-hosted-runners.md) | CI gates and release bundles run on GitHub-hosted runners (amends ADR-0039's CI/CD split and ADR-0005's self-hosted runner rows) | Accepted | 2026-10-01 |
 
+| [0074](0074-digest-pinned-chainguard-minio-images.md) | Digest-pinned Chainguard MinIO images, preserving the existing S3 and volume contract | Accepted | 2026-10-01 |
+
 ## Per-app ADRs
 
 | Location | Scope |

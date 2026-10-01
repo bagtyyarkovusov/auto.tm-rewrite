@@ -2,6 +2,7 @@ import type { CatalogSchemas, ListingsSchemas } from "@auto-tm/contracts";
 
 import { withoutBrandAndModels } from "./brandPickerLogic";
 import type { BrandModelChoice } from "./recentSearches";
+import type { ListingFilter } from "./useListingFilters";
 
 /**
  * Pure rules behind the Model picker (33 — Search & discovery): any number of
@@ -61,7 +62,8 @@ export function buildModelRows(
   return { popular, others };
 }
 
-type AnyFilter = ListingsSchemas.ListingFilter;
+/** Includes the Results-only sort, which the counts helpers strip. */
+type AnyFilter = ListingFilter;
 
 /**
  * The filters "Show N listings" counts: the buyer's other filters with this

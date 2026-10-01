@@ -122,7 +122,7 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
         .withPassword("auto_tm_pass")
         .withDatabase("auto_tm_test")
         .start(),
-      new GenericContainer("quay.io/minio/minio:latest")
+      new GenericContainer("cgr.dev/chainguard/minio@sha256:4692462f35d97d7e82c30371d82f057703c5d9489bcae726010594c812f2d285")
         .withEnvironment({ MINIO_ROOT_USER: "minioadmin", MINIO_ROOT_PASSWORD: "minioadmin" })
         .withCommand(["server", "/data"])
         .withExposedPorts(9000)
