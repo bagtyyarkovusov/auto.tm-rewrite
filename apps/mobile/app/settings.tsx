@@ -5,6 +5,7 @@ import * as Linking from "expo-linking";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
+import { legalPageUrl } from "../src/config/publicWebUrl";
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { LocaleSwitcher } from "../src/auth/LocaleSwitcher";
 import { useAuth } from "../src/auth/useAuth";
@@ -28,7 +29,7 @@ import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 
 function openLegalPage(locale: string, kind: "terms" | "privacy") {
-  void Linking.openURL(`https://auto.tm/${locale}/legal/${kind}`);
+  void Linking.openURL(legalPageUrl(locale, kind));
 }
 
 function LegalRow({

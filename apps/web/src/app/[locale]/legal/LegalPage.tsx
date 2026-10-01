@@ -1,6 +1,7 @@
 import type { LegalDocument } from "./content";
 import { inlineMarkupToHtml } from "./inline";
 
+import { publicWebUrl } from "@/lib/public-web-url";
 import type { Locale } from "@/i18n/locales";
 
 interface LegalPageProps {
@@ -10,6 +11,7 @@ interface LegalPageProps {
 }
 
 export function LegalPage({ locale, document, canonicalPath }: LegalPageProps) {
+  const canonicalUrl = publicWebUrl(`/${locale}${canonicalPath}`);
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 md:py-16 print:py-6">
       {/* Header */}
@@ -109,10 +111,10 @@ export function LegalPage({ locale, document, canonicalPath }: LegalPageProps) {
               ? "Текущая версия: "
               : "Current version: "}
           <a
-            href={`https://auto.tm/${locale}${canonicalPath}`}
+            href={canonicalUrl}
             className="underline print:no-underline"
           >
-            {`https://auto.tm/${locale}${canonicalPath}`}
+            {canonicalUrl}
           </a>
         </p>
       </footer>

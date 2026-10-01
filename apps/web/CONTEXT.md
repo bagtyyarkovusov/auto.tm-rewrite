@@ -6,6 +6,8 @@ The public site provides a localized landing page, legal pages, trust informatio
 
 The account deletion page, `/[locale]/account/delete`, is Google Play's deletion link; the bare `/account/delete` redirects to a locale. The API has no CORS, so the browser never calls it directly: the form calls Server Functions, which call the public `account-deletion` endpoints through `src/lib/account-deletion.ts` with the shared contract schemas. Every message after a request must stay true whether or not a User holds the value, so the page reveals no more than the API. Server-side API calls use `API_BASE_URL`, then `NEXT_PUBLIC_API_URL`, the same order as admin. The API's per-IP Sign-in Code budget sees the visitor IP that web forwards: `X-Real-IP` first, which Railway's edge sets, then `X-Forwarded-For`. Any other ingress must set or overwrite `X-Real-IP`, or visitors can choose their own budget.
 
+Legal canonical links read runtime `WEB_BASE_URL`, matching mobile's `EXPO_PUBLIC_WEB_URL` for the deployment. Privacy and terms render on demand so promoting an image does not preserve the prior environment's canonical host. Set `WEB_BASE_URL` to the custom public web origin; when absent it falls back to `RAILWAY_PUBLIC_DOMAIN`, then local development at port 3002.
+
 Web shares browser components and theme tokens with `packages/ui`; mobile has separate native components. User-facing text must remain available in the supported locales.
 
 ## Start here

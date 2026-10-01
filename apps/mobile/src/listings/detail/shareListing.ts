@@ -1,7 +1,9 @@
 import { Platform, Share } from "react-native";
 
+import { publicWebUrl } from "../../config/publicWebUrl";
+
 export const listingPublicUrl = (listingId: string) =>
-  `https://auto.tm/listings/${listingId}`;
+  publicWebUrl(`/listings/${listingId}`);
 
 export async function shareListing(listingId: string, message: string) {
   const url = listingPublicUrl(listingId);

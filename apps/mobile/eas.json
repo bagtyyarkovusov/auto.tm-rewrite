@@ -19,7 +19,8 @@
       "environment": "preview",
       "env": {
         "EXPO_PUBLIC_ENV": "staging",
-        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"
+        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm",
+        "EXPO_PUBLIC_WEB_URL": "https://staging.autotm.bagtyyar.dev"
       },
       "android": {
         "buildType": "apk"
@@ -31,7 +32,8 @@
       "environment": "preview",
       "env": {
         "EXPO_PUBLIC_ENV": "production",
-        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"
+        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm",
+        "EXPO_PUBLIC_WEB_URL": "https://autotm.bagtyyar.dev"
       },
       "android": {
         "buildType": "apk"
@@ -43,7 +45,8 @@
       "environment": "production",
       "env": {
         "EXPO_PUBLIC_ENV": "production",
-        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm"
+        "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm",
+        "EXPO_PUBLIC_WEB_URL": "https://autotm.bagtyyar.dev"
       },
       "android": {
         "buildType": "app-bundle"
