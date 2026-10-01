@@ -1,6 +1,5 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
-import * as Clipboard from "expo-clipboard";
 import { ArrowLeft, Heart, MoreHorizontal } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -11,7 +10,6 @@ import { formatPrice } from "../formatPrice";
 
 import { isClosedForContact } from "./closedListing";
 import { listingTitle } from "./presentation";
-import { listingPublicUrl } from "./shareListing";
 import type { CatalogMaps } from "./useCatalogMaps";
 
 import { Button } from "@/components/ui/button";
@@ -45,8 +43,6 @@ export function CollapsingHeader({
 }: Props) {
   const { t, i18n } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const [copyError, setCopyError] = useState(false);
-  const [copied, setCopied] = useState(false);
   const favorite = useListingFavorite({
     listingId: listing.id,
     isFavorited: listing.isFavorited ?? false,
@@ -55,15 +51,6 @@ export function CollapsingHeader({
     replayAfterSignIn: true,
   });
   const closed = isClosedForContact(listing.status);
-  const copyLink = async () => {
-    try {
-      await Clipboard.setStringAsync(listingPublicUrl(listing.id));
-      setCopyError(false);
-      setCopied(true);
-    } catch {
-      setCopyError(true);
-    }
-  };
   return (
     <View
       className={cn(
@@ -149,25 +136,11 @@ export function CollapsingHeader({
                     <Text>{t("report")}</Text>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  accessibilityRole="button"
-                  onPress={() => void copyLink()}
-                >
-                  <Text>{t("copyLink")}</Text>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         )}
       </View>
-      {(copied || copyError) && (
-        <Text
-          accessibilityLiveRegion="polite"
-          className="bg-background px-4 py-1 text-xs text-muted-foreground"
-        >
-          {t(copyError ? "actionFailed" : "linkCopied")}
-        </Text>
-      )}
     </View>
   );
 }

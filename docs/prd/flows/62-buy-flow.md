@@ -27,7 +27,7 @@ S8a adds saved-listing Favorites to this loop. Saved-search notifications, rich 
 
 - She opens a listing detail page
 - Checks photos, price, mileage, city, seller block, and description
-- She cannot share the listing URL from the app yet: Share is hidden until a public web Listing page and App Links exist (#495)
+- She cannot share the listing URL from the app yet: Share and Copy link are both hidden until a public web Listing page and App Links exist (#495, #322)
 - She cannot compare side-by-side in the MLP beta
 
 ### Step 3 — Contact the seller

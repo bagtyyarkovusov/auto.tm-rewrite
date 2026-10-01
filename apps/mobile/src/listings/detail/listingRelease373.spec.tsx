@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ScrollView, Text } from "react-native";
 import * as Linking from "expo-linking";
-import * as Clipboard from "expo-clipboard";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
 import type * as ClientModule from "../../api/client";
@@ -50,7 +49,6 @@ vi.mock("expo-linking", () => ({
   canOpenURL: vi.fn(async () => true),
   openURL: vi.fn(async () => {}),
 }));
-vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
 vi.mock("@/components/ui/skeleton", async () => ({
   Skeleton: (await import("react-native")).View,
 }));
@@ -318,7 +316,6 @@ describe("issue 373 screen controls", () => {
     expect(
       screen.getAllByRole("button", { name: "Report" }).length,
     ).toBeGreaterThan(0);
-    expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
   });
 
   it("shows sticky owner Edit and Mark sold, with Archive and Delete in overflow", () => {
