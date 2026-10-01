@@ -2,14 +2,13 @@ import type * as Native from "react-native";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { renderMobile, act, fireEvent, routerMock } from "../../../test/render";
+import { renderMobile, act, fireEvent, routerMock, within } from "../../../test/render";
 
 import { SearchParametersForm } from "./SearchParametersForm";
 import type { ListingFilter } from "./useListingFilters";
 
 const state = vi.hoisted(() => ({ count: vi.fn(), record: vi.fn(), mode: "ok" as "ok" | "loading" | "error" }));
 
-vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
@@ -20,7 +19,6 @@ vi.mock("react-native", async (original) => {
   type SectionProps = { sections: { data: unknown[] }[]; renderItem: (arg: { item: unknown }) => ReactNode; ListHeaderComponent?: ReactNode };
   return { ...native, SectionList: ({ sections, renderItem, ListHeaderComponent }: SectionProps) => React.createElement(native.ScrollView, null, ListHeaderComponent, sections.flatMap((section) => section.data.map((item, index) => React.createElement(React.Fragment, { key: index }, renderItem({ item }))))) };
 });
-vi.mock("@/components/ui/checkbox", async () => ({ Checkbox: (await import("react-native")).Pressable }));
 vi.mock("../../api/client", () => ({ apiClient: { get: vi.fn() }, ApiError: class ApiError extends Error {} }));
 vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined), removeItem: vi.fn(async () => undefined) } }));
 vi.mock("./recentSearches", () => ({ useRecentChoicesStore: (select: (s: unknown) => unknown) => select({ items: [], hydrate: vi.fn(), clear: vi.fn(), record: state.record }) }));
@@ -205,6 +203,30 @@ describe("Search parameters: brand and model in Done mode", () => {
     expect(view.getByText("Toyota models")).toBeTruthy();
     expect(view.getByRole("checkbox", { name: "Camry", checked: true })).toBeTruthy();
     expect(view.getByRole("checkbox", { name: "Corolla", checked: false })).toBeTruthy();
+  });
+
+  it("changes the model selection when a model checkbox is pressed, box and all", () => {
+    const view = open(filled);
+    fireEvent.press(view.getByLabelText("Model: Camry"));
+    const row = (name: string) => view.getByRole("checkbox", { name });
+    // `within` includes the row itself, so two matches are the row plus the
+    // Checkbox box inside it; the box must mirror the row's selected state.
+    const boxesIn = (name: string, checked: boolean) => within(row(name)).getAllByRole("checkbox", { checked });
+    expect(boxesIn("Corolla", false)).toHaveLength(2);
+    expect(boxesIn("Camry", true)).toHaveLength(2);
+
+    fireEvent.press(row("Corolla"));
+
+    expect(boxesIn("Corolla", true)).toHaveLength(2);
+    fireEvent.press(view.getByRole("button", { name: /^Done/ }));
+    expect(lastFilters().modelIds).toEqual(["camry", "corolla"]);
+    expect(view.getByLabelText("Model: 2 selected")).toBeTruthy();
+
+    fireEvent.press(view.getByLabelText("Model: 2 selected"));
+    fireEvent.press(row("Camry"));
+    expect(boxesIn("Camry", false)).toHaveLength(2);
+    fireEvent.press(view.getByRole("button", { name: /^Done/ }));
+    expect(lastFilters().modelIds).toEqual(["corolla"]);
   });
 });
 
