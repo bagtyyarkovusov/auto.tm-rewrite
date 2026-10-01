@@ -8,11 +8,17 @@
   PROTOTYPE — throwaway. Answers issue #353 "Prototype Cabinet, Profile, Settings, and sign-in method screens"
   (map #320 "Google Play reviewer-only Android release readiness").
   Question: what do Cabinet, Profile, Settings, Delete account and the phone-or-email sign-in screens look like in every state?
-  Respects: #344 (five tabs, sign in by phone or email code, selling needs a verified phone), #348 / ADR-0054
-  (Sign-in Methods optional, unique, always verified; add/change by code; can change but not remove; a taken value
-  is refused after the code is confirmed, never merged), ADR-0055 (email codes, 10-minute expiry), ADR-0032 (30-day
-  grace deletion, recoverable by signing in), #496 (legal/deletion links on autotm.bagtyyar.dev).
-  No share affordances (#495). No real phone numbers, emails, codes or secrets: every value here is made up.
+  Respects: #344 (five tabs; Cabinet → Profile, My listings, Settings; Settings holds language, theme, legal, Log out,
+  Delete account), #348 / ADR-0054 (Sign-in Methods optional, unique, always verified; add/change by code; can change
+  but not remove; a taken value is refused after the code is confirmed, never merged; DELETE /me unchanged; neutral
+  web deletion copy), ADR-0056 (supersedes ADR-0054's "Add a phone" sell step and PHONE_REQUIRED: every Listing's
+  contact phone is verified in the Sell wizard, email-only Users sell without an account phone), ADR-0055 (email
+  codes, 10-minute expiry), ADR-0032 (30-day grace deletion, recoverable by signing in), #322/#496 (legal and
+  deletion pages on autotm.bagtyyar.dev), #352 D10 + #500 (Contact support screen: phone and email, chat after
+  release), #326 (no dead actions).
+  RECONCILED 2026-10-02: founder approved D2 = A (Phone | Email tabs). Options that conflicted with approved
+  decisions were removed; see the "Conflicts resolved" panel.
+  No share affordances (#495). Account values and demo codes are made up. Support contacts are the founder-approved public contacts.
   Colours are AutoTM tokens from apps/mobile/global.css (light and dark). Not Auto.ru's look; Auto.ru/Kolesa are structure references only.
   RU/TK strings marked "draft" in the state list are new and need a native-speaker review.
 -->
@@ -30,6 +36,8 @@
   .status{height:24px;font-size:11px;color:var(--mfg);padding:4px 16px;display:flex;justify-content:space-between}
   .scr{position:absolute;top:24px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden}
   .scr::-webkit-scrollbar{display:none}
+  .phone a.row{color:var(--fg);text-decoration:none}
+  .phone a.row .b{color:var(--info)}
   .panel{flex:1;min-width:440px;max-width:820px}
   .panel h1{font-size:19px;margin:0 0 4px}
   .panel h2{font-size:13px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:#666}
@@ -127,29 +135,29 @@ const TX={
  listCar:["List a car","Разместить объявление","Bildiriş goý"],
  active:["Active","Активные","Işjeň"], drafts:["Drafts","Черновики","Garalamalar"], sold:["Sold","Проданные","Satylan"], archived:["Archived","В архиве","Arhiwde"],
  loading:["Please wait...","Подождите...","Garaşyň..."], wrong:["Something went wrong","Что-то пошло не так","Bir zat ýalňyş boldy"], retry:["Retry","Повторить","Täzeden synanyş"],
- cabAddPhoneT:["Add a phone to sell cars","Добавьте телефон, чтобы продавать","Satmak üçin telefon goşuň"], /* new, draft */
- cabAddPhoneD:["Publishing a listing needs a verified phone.","Для публикации объявления нужен подтверждённый телефон.","Bildiriş goýmak üçin tassyklanan telefon gerek."], /* new, draft */
  add:["Add","Добавить","Goş"], change:["Change","Изменить","Üýtget"], notAdded:["Not added","Не добавлено","Goşulmadyk"], verified:["Verified","Подтверждено","Tassyklandy"],
+ phoneVer:["Verified phone","Телефон подтверждён","Telefon tassyklandy"], notifs:["Notifications","Уведомления","Habarnamalar"],
+ signOutUse:["Sign out and use the other account","Выйти и войти в другой аккаунт","Çykyp başga hasaba gir"],
+ switchAccountHint:["This signs you out of the current account. Neither account is changed or merged.","Вы выйдете из текущего аккаунта. Ни один аккаунт не изменяется и не объединяется.","Häzirki hasapdan çykarsyňyz. Hasaplar üýtgemeýär we birleşdirilmeýär."],
+ notifScope:["Message alerts use the device notification permission. Mute a Conversation in its menu. Category preferences and Listing activity notifications are outside the reviewer release.","Уведомления о сообщениях зависят от разрешения устройства. Отключить звук переписки можно в её меню. Настройки категорий и уведомления об активности объявлений не входят в релиз для проверки.","Habar habarnamalary enjamyň rugsadyna bagly. Ýazyşmanyň menýusynda sesini öçürip bolýar. Bölüm sazlamalary we bildiriş işjeňligi habarnamalary bu goýberilişe girmeýär."],
  phone:["Phone","Телефон","Telefon"], email:["Email","Эл. почта","E-poçta"],
- notifs:["Notifications","Уведомления","Habarnamalar"], /* new, draft */
+ help:["Help","Помощь","Kömek"], contactSupport:["Contact support","Связаться с поддержкой","Goldaw bilen habarlaş"], supRowSub:["Email and phone","Почта и телефон","E-poçta we telefon"], /* from #352 D10, draft */
+ supTitle:["AutoTM Support","Поддержка AutoTM","AutoTM goldawy"], official:["Official","Официальный","Resmi"], emailUs:["Email us","Написать на почту","E-poçta ýaz"], callUs:["Call us","Позвонить нам","Bize jaň et"],
+ includeT:["What to include","Что указать в обращении","Habarda nämeleri ýazmaly"], includeV:["The Listing number (for example, No. 123456) and what happened.","Номер объявления (например, № 123456) и что произошло.","Bildiriş belgisi (mysal üçin, № 123456) we näme bolandygy."],
+ appVersion:["Version","Версия","Wersiýa"],
  language:["Language","Язык","Dil"], theme:["Theme","Тема","Tema"], light:["Light","Светлая","Ýagty"], dark:["Dark","Тёмная","Garaňky"], system:["System","Системная","Ulgam"],
  about:["About","О приложении","Programma hakda"], privacy:["Privacy Policy","Политика конфиденциальности","Gizlinlik syýasaty"], terms:["Terms of Service","Условия использования","Ulanyş şertleri"], posting:["Posting rules","Правила размещения","Ýerleşdirme düzgünleri"],
  deleteAcc:["Delete account","Удалить аккаунт","Hasaby poz"], logout:["Log out","Выйти","Çyk"],
  logoutT:["Log out?","Выйти из аккаунта?","Hasabyndan çyk?"], logoutD:["You can sign back in at any time.","Вы сможете войти снова в любой момент.","Islän wagtyňyz gaýtadan girip bilersiňiz."], cancel:["Cancel","Отмена","Ýatyr"],
  /* sign-in */
- welcomeT:["Sign in to AutoTM","Вход в AutoTM","AutoTM-e giriş"], /* new, draft */
- contPhone:["Continue with phone","Продолжить с телефоном","Telefon bilen dowam et"], contEmail:["Continue with email","Продолжить с почтой","E-poçta bilen dowam et"], /* new, draft */
- noPassword:["No password. We send a code.","Без пароля. Мы отправим код.","Parol ýok. Kody ibereris."], /* new, draft */
  phoneTitle:["Enter your phone number","Введите номер телефона","Telefon belgiňizi giriziň"], phoneHelper:["We'll send a code by SMS.","Мы отправим код по SMS.","Kody SMS bilen ibereris."],
  phoneLabel:["Phone number","Номер телефона","Telefon belgisi"], phoneFmt:["Enter a number in the format +993 6X XX-XX-XX.","Введите номер в формате +993 6X XX-XX-XX.","Belgini +993 6X XX-XX-XX görnüşinde giriziň."],
  emailTitle:["Enter your email","Введите электронную почту","E-poçtaňyzy giriziň"], emailHelper:["We'll email you a code. No password needed.","Мы отправим код на электронную почту. Пароль не нужен.","Kody e-poçta ibereris. Parol gerek däl."],
  emailLabel:["Email","Электронная почта","E-poçta"], emailFmt:["Enter a valid email address.","Введите корректный адрес электронной почты.","Dogry e-poçta salgysyny giriziň."],
- anyTitle:["Phone or email","Телефон или почта","Telefon ýa-da e-poçta"], anyHelper:["We'll send a code. No password.","Мы отправим код. Пароль не нужен.","Kody ibereris. Parol ýok."], /* new, draft */
- anyFmt:["Enter a +993 phone number or an email address.","Введите номер +993 или адрес эл. почты.","+993 belgisini ýa-da e-poçta salgysyny giriziň."], /* new, draft */
  getCode:["Get code","Получить код","Kody almak"], legalPre:["By continuing, you agree to the","Продолжая, вы соглашаетесь с","Dowam etmek bilen siz"], and:["and","и","we"],
  offline:["No internet connection. Try again when you are online.","Нет подключения к интернету. Попробуйте позже.","Internet baglanyşygy ýok. Soňrak synanyşyň."],
  rate:["Too many requests. Please wait a moment.","Слишком много запросов. Подождите немного.","Sorag köp. Biraz garaşyň."],
- rateDay:["Too many codes requested for this number today. Try again tomorrow.","Сегодня запрошено слишком много кодов. Попробуйте завтра.","Şu gün gaty köp kod soraldy. Ertir synanyşyň."], /* new, draft; ADR-0054: 5 per destination per 24 h */
+ rateDay:["Too many codes requested for this destination in 24 hours. Try again later.","За 24 часа запрошено слишком много кодов. Попробуйте позже.","24 sagatda gaty köp kod soraldy. Soňrak synanyşyň."], /* new, draft; ADR-0054: 5 per destination per 24 h */
  otpTitle:["Enter the code","Введите код","Kody giriziň"], otpSent:["Code sent to {d}","Код отправлен на {d}","Kod {d} salgysyna iberildi"],
  exp5:["The code expires in 5 minutes.","Код действителен 5 минут.","Kod 5 minut işleýär."], /* new, draft; ADR-0054 phone = 5 min */
  exp10:["The code expires in 10 minutes.","Код действителен 10 минут.","Kod 10 minut işleýär."],
@@ -162,13 +170,11 @@ const TX={
  phoneTaken:["This number is used by another account. Sign in with it instead, or use a different number.","Этот номер уже используется другим аккаунтом. Войдите с ним или укажите другой номер.","Bu belgi başga hasapda ulanylýar. Onuň bilen giriň ýa-da başga belgi giriziň."],
  emailTaken:["This email is used by another account. Sign in with it instead, or use a different email.","Эта почта уже используется другим аккаунтом. Войдите с ней или укажите другую почту.","Bu e-poçta başga hasapda ulanylýar. Onuň bilen giriň ýa-da başga e-poçta giriziň."],
  diffNum:["Use a different number","Указать другой номер","Başga belgi giriz"], diffMail:["Use a different email","Указать другую почту","Başga e-poçta giriz"], /* new, draft */
- signOutUse:["Sign out and use that account","Выйти и войти в тот аккаунт","Çyk we şol hasaba gir"], /* new, draft */
  noMerge:["Accounts are never merged.","Аккаунты не объединяются.","Hasaplar birleşdirilmeýär."], /* new, draft */
  signedIn:["Signed in","Вы вошли","Giriş edildi"],
  /* profile */
  methods:["Sign-in methods","Способы входа","Giriş usullary"], methodsHelp:["Both open this same account. A method can be changed, not removed.","Оба способа открывают этот же аккаунт. Способ можно изменить, но не удалить.","Iki usul hem şu bir hasaby açýar. Usuly üýtgedip bolýar, pozup bolmaýar."], /* helper extended */
- sellNeedsPhone:["Selling needs a verified phone.","Для продажи нужен подтверждённый телефон.","Satmak üçin tassyklanan telefon gerek."], /* new, draft */
- phoneVer:["Phone verified","Телефон подтверждён","Telefon tassyklandy"], memberSince:["Member since","Участник с","Agza şundan bäri"], memberDate:["12 September 2026","12 сентября 2026","12 sentýabr 2026"],
+ memberSince:["Member since","Участник с","Agza şundan bäri"], memberDate:["12 September 2026","12 сентября 2026","12 sentýabr 2026"],
  addPhoneT:["Add phone","Добавить телефон","Telefon goş"], chgPhoneT:["Change phone","Изменить телефон","Telefony üýtget"], addMailT:["Add email","Добавить почту","E-poçta goş"], chgMailT:["Change email","Изменить почту","E-poçtany üýtget"],
  addPhoneH:["We'll text a code to confirm the number.","Мы отправим код по SMS, чтобы подтвердить номер.","Belgini tassyklamak üçin SMS bilen kod ibereris."],
  chgPhoneH:["We'll text a code to the new number. Once it's confirmed, the old number no longer opens this account.","Мы отправим код по SMS на новый номер. После подтверждения прежний номер перестанет открывать этот аккаунт.","Täze belgä SMS bilen kod ibereris. Tassyklanandan soň öňki belgi bu hasaby açmaz."],
@@ -179,13 +185,17 @@ const TX={
  contin:["Continue","Продолжить","Dowam et"],
  added:["Added","Добавлено","Goşuldy"], changed:["Changed","Изменено","Üýtgedildi"],
  sendCode:["Send code","Отправить код","Kody ibermek"],
- /* sell */
- sellGateT:["Add a phone to sell","Добавьте телефон, чтобы продавать","Satmak üçin telefon goşuň"], /* new, draft */
- sellGateD:["Buyers call sellers, so a Listing needs a verified phone. Your email stays as a sign-in method.","Покупатели звонят продавцам, поэтому для объявления нужен подтверждённый телефон. Почта остаётся способом входа.","Alyjylar satyjylara jaň edýär, şonuň üçin bildirişe tassyklanan telefon gerek. E-poçta giriş usuly bolup galýar."], /* new, draft */
- notNow:["Not now","Не сейчас","Häzir däl"],
- phoneReqT:["Add a phone to publish","Добавьте телефон, чтобы опубликовать","Çap etmek üçin telefon goşuň"], phoneReqD:["Your draft is saved. Confirm a phone and publish.","Черновик сохранён. Подтвердите телефон и опубликуйте.","Garalama ýatda saklandy. Telefony tassyklaň we çap ediň."], /* new, draft */
- publish:["Publish","Опубликовать","Çap et"], step:["Step 5 of 5: Review","Шаг 5 из 5: Проверка","5-nji ädim, 5-den: Barlag"], /* new, draft */
- published:["Published (prototype)","Опубликовано (прототип)","Çap edildi (prototip)"],
+ /* sell: ADR-0056, copy is draft */
+ sellOpen:["Sell entry is available", "Продажа доступна", "Satmak mümkin"],
+ sellContact:["No account phone is needed. Verify the Listing contact phone by SMS inside the Sell wizard before continuing.","Телефон аккаунта не нужен. Подтвердите контактный телефон объявления по SMS внутри мастера продажи.","Hasaba telefon gerek däl. Satmak ädimlerinde bildirişiň aragatnaşyk telefonyny SMS bilen tassyklaň."],
+ sellAccountContact:["The wizard can use your verified account phone without another code, or verify a different contact phone by SMS. The contact phone does not change your sign-in methods.","Мастер может использовать телефон аккаунта без нового кода или подтвердить другой контактный телефон по SMS. Способы входа не меняются.","Ädimlerde hasabyň tassyklanan telefonyny täze kodsyz ulanyp ýa-da başga telefony SMS bilen tassyklap bolýar. Giriş usullary üýtgemeýär."],
+ sellScope:["The Sell wizard, drafts and My listings design belongs to #354. This placeholder demonstrates entry and the approved verification requirement only.","Дизайн мастера, черновиков и Моих объявлений относится к #354. Здесь показаны только вход и требование подтверждения.","Satmak ädimleri, garalamalar we Bildirişlerim #354-de taýýarlanar. Bu ýerde giriş we tassyklama talaby görkezilýär."],
+
+
+
+
+
+
  /* notifications */
  nMsg:["Messages","Сообщения","Habarlar"], nMsgD:["New messages in your Conversations","Новые сообщения в ваших перепис­ках","Ýazyşmalaryňyzdaky täze habarlar"], nAct:["Listing activity","Активность по объявлениям","Bildiriş işjeňligi"], nActD:["Saves and changes on Listings you follow","Сохранения и изменения в объявлениях","Halanlaryňyzdaky üýtgeşmeler"], /* all new, draft */
  osOffT:["Notifications are off in system settings","Уведомления выключены в настройках системы","Ulgam sazlamalarynda habarnamalar öçük"], osOffB:["Open system settings","Открыть настройки системы","Ulgam sazlamalaryny aç"], /* new, draft */
@@ -198,7 +208,7 @@ const TX={
  delDate:["1 November 2026","1 ноября 2026","1 noýabr 2026"],
  delConfT:["Delete account?","Удалить аккаунт?","Hasaby poz?"], delConfD:["Your account will be scheduled for deletion on {d}. All sessions will be ended. You can restore your account by signing in again.","Ваш аккаунт будет запланирован к удалению {d}. Все сессии будут завершены. Вы можете восстановить аккаунт, войдя снова.","Hasabyňyz {d} pozmak üçin meýilnamalaşdyrylar. Ähli sessiýalar gutarlar. Gaýtadan girerek hasaby dikeldip bilersiňiz."],
  delDo:["Delete","Удалить","Poz"], delFail:["Could not delete account. Please try again.","Не удалось удалить аккаунт. Попробуйте ещё раз.","Hasaby pozmak başartmady. Täzeden synanyşyň."],
- delCodeT:["Confirm with a code","Подтвердите кодом","Kod bilen tassyklaň"], delCodeD:["We'll send a code to {d} to confirm it's you.","Мы отправим код на {d}, чтобы подтвердить, что это вы.","Siz bolandygyňyzy tassyklamak üçin {d} salgysyna kod ibereris."], /* new, draft */
+ delCodeT:["Confirm with a code","Подтвердите кодом","Kod bilen tassyklaň"],
  schedT:["Account scheduled for deletion","Аккаунт запланирован к удалению","Hasaby pozmak meýilnamalaşdyryldy"], schedD:["Your account will be deleted on {d}. You can restore it by signing in again.","Ваш аккаунт будет удалён {d}. Вы можете восстановить его, войдя снова.","Hasabyňyz {d} pozular. Gaýtadan girerek dikeldip bilersiňiz."],
  done:["Done","Готово","Taýýar"],
  restT:["Account restoration","Восстановление аккаунта","Hasaby dikeltmek"], restD:["Your account is scheduled for deletion on {d}. Sign in to restore it and reactivate your listings.","Ваш аккаунт запланирован к удалению {d}. Войдите, чтобы восстановить его и активировать объявления.","Hasabyňyz {d} pozmak üçin meýilnamalaşdyryldy. Dikeltmek we bildirişleri işjeň etmek üçin giriň."], restDo:["Restore","Восстановить","Dikelt"],
@@ -206,22 +216,22 @@ const TX={
  webDone:["Done. If an account uses this {x}, it is scheduled for deletion on {d}. Signing in before then restores it.","Готово. Если этот {x} привязан к аккаунту, он будет удалён {d}. Вход до этой даты восстановит аккаунт.","Taýýar. Eger bu {x} hasaba bagly bolsa, ol {d} pozular. Şu senä çenli girseňiz, dikelýär."], /* new, draft */
  webX:["phone or email","телефон или почта","telefon ýa-da e-poçta"],
 };
-const t=(k,v)=>{const a=TX[k];let s=a?a[LANGS.indexOf(S.lang)]:k;if(v)for(const x in v)s=s.split("{"+x+"}").join(v[x]);return s;};
+const t=(k,v)=>{const a=TX[k];if(!a)throw new Error("Missing translation: "+k);let s=a[LANGS.indexOf(S.lang)];if(v)for(const x in v)s=s.split("{"+x+"}").join(v[x]);return s;};
 
 /* ───────────── state ───────────── */
 const S={
-  acct:"out", phone:"+993 61 00-00-00", email:"name@example.com",   // all fake
+  webProfile:"production", acct:"out", phone:"+993 61 00-00-00", email:"name@example.com",   // all fake
   lang:"en", theme:"light", os:false,
   stack:[{id:"cabinet"}], tab:"cabinet",
-  v:{cab:"B",entry:"B",sell:"A",set:"A",chg:"B",taken:"A",del:"A"},
+  v:{cab:"B",entry:"A",sell:"A",set:"A",chg:"B",taken:"A",del:"A"},
   dec:"cab", data:"ok", outcome:"ok", req:"ok", delOut:"ok",
   flow:null, ret:null, toast:null, sheet:null, dlg:null, web:null, delChecked:false,
   notif:{msg:true,act:true,os:"granted"}, picker:null, name:null,
 };
 const hasPhone=()=>S.acct==="phone"||S.acct==="both", hasEmail=()=>S.acct==="email"||S.acct==="both", signed=()=>S.acct!=="out";
-const setAcct=()=>{S.acct=hasPhone()&&hasEmail()?"both":hasPhone()?"phone":hasEmail()?"email":"out";};
+
 const maskPhone=p=>p.replace(/^(\+993 \d)\d( )\d\d-\d\d-(\d\d)$/,"$1• ••-••-$3").replace(/^(\+993 6)(\d)/,"$1•");
-const maskPhoneDisp=p=>{const d=p.replace(/\D/g,"");return "+993 "+d[3]+"• ••-••-"+d.slice(-2);};
+const maskPhoneDisp=p=>{const raw=p.replace(/\D/g,"");const d=raw.startsWith("993")?raw.slice(3):raw;return "+993 "+d[0]+"• ••-••-"+d.slice(-2);};
 const maskEmail=e=>{const [a,b]=e.split("@");return a[0]+"•••@"+b;};
 const dest=(type,val)=>type==="phone"?maskPhoneDisp(val):maskEmail(val);
 const topScreen=()=>S.stack[S.stack.length-1];
@@ -236,36 +246,36 @@ function push(id,p={}){S.stack.push({id,...p});render();}
 function pop(){if(S.stack.length>1)S.stack.pop();render();}
 function reset(tab){S.tab=tab;S.stack=[{id:tab}];S.sheet=S.dlg=null;render();}
 function toast(m){S.toast=m;render();clearTimeout(window._t);window._t=setTimeout(()=>{S.toast=null;render();},2400);}
-function startSignIn(){S.ret=S.stack.slice();S.flow={kind:"signin",type:"phone",val:"",err:null,step:S.v.entry==="B"?"choose":"entry"};push("signin");}
+function startSignIn(){S.ret=S.stack.slice();S.flow={kind:"signin",type:"phone",val:"",err:null,step:"entry"};push("signin");}
 function closeSignIn(){S.stack=S.ret||[{id:"cabinet"}];S.flow=null;render();}
 function startMethod(kind,type){S.flow={kind,type,val:"",err:null,step:"entry",back:S.stack.slice()};push("methodEntry");}
+function switchTab(tab){if(S.tab===tab){reset(tab);return;}S.histories=S.histories||{};S.histories[S.tab]=S.stack.slice();S.tab=tab;S.stack=S.histories[tab]||[{id:tab}];S.sheet=S.dlg=S.web=S.picker=null;render();}
+const webBase=()=>S.webProfile==="staging"?"https://staging.autotm.bagtyyar.dev":"https://autotm.bagtyyar.dev";
 function openLegal(kind){S.web={kind};render();}
 
 /* ───────────── flows ───────────── */
 function detect(v){return /^[+\d\s()-]+$/.test(v)&&v.replace(/\D/g,"").length>0?"phone":"email";}
 function liveVal(el){
   const f=S.flow;let v=el.value;
-  if(f.type==="phone"&&!(S.v.entry==="C"&&f.kind==="signin")){v=fmtPhone(v.replace(/^\+?993/,""));el.value=v;}
+  if(f.type==="phone"){v=fmtPhone(v.replace(/^\+?993/,""));el.value=v;}
   f.val=v;f.err=null;
 }
 function demoFill(){const f=S.flow;f.val=f.type==="phone"?"60 00-00-00":"name@example.com";f.err=null;render();}
 function getCode(){
   const f=S.flow;let type=f.type;
-  if(S.v.entry==="C"&&f.kind==="signin"&&f.step==="entry"){type=detect(f.val);}
   let val=f.val.trim();
   const phoneish=type==="phone";
-  if(S.v.entry==="C"&&f.kind==="signin"&&phoneish)val=fmtPhone(val.replace(/^\+?993/,""));
   const ok=phoneish?validPhone(val):validEmail(val);
   if(!ok){f.err="invalid";f.type=type;render();return;}
   const r=S.req;S.req="ok";
   if(r==="offline"){f.err="offline";render();return;}
   if(r==="rate"){f.err="rate";render();return;}
   if(r==="rateDay"){f.err="rateDay";render();return;}
-  f.type=type;f.val=val;f.err=null;f.code="";f.cerr=null;f.sec=15;f.resends=0;f.nomail=false;
+  f.type=type;f.val=phoneish?val:val.toLowerCase();f.err=null;f.code="";f.cerr=null;f.sec=15;f.resends=0;f.nomail=false;
   if(f.kind==="webdelete"){f.step="code";render();}else push("code");
 }
 function key(d){
-  const f=S.flow;if(!f||f.cerr==="locked"||f.busy)return;
+  const f=S.flow;if(!f||["locked","expired","rateDay"].includes(f.cerr)||f.busy)return;
   f.code=f.code||"";
   if(d==="<"){f.code=f.code.slice(0,-1);f.cerr=null;render();return;}
   if(f.code.length>=6)return;
@@ -284,15 +294,14 @@ function submitCode(){
 function success(grace){
   const f=S.flow;
   if(f.kind==="signin"){
-    S.acct=f.type==="phone"?"phone":"email";
+    const previous=S.savedAccount;const same=previous&&(f.type==="phone"?previous.phone.replace(/\D/g,"")===('993'+f.val.replace(/\D/g,"")):previous.email===f.val);
+    S.acct=same?previous.acct:f.type==="phone"?"phone":"email";
     if(f.type==="phone")S.phone=f.val.startsWith("+")?f.val:"+993 "+f.val;else S.email=f.val;
-    S.stack=S.ret;S.flow=null;
-    if(grace){S.dlg="restore";render();}else toast(t("signedIn"));
+    S.savedAccount={acct:S.acct,phone:S.phone,email:S.email};S.stack=S.ret;S.flow=null;
+    if(grace||S.deletionPending){S.restoreAcct=S.deletedAcct||S.acct;S.acct="out";S.dlg="restore";render();}else toast(t("signedIn"));
   }else if(f.kind==="add"||f.kind==="change"){
     if(f.type==="phone")S.phone="+993 "+f.val;else S.email=f.val;
-    setAcct();S.stack=f.back;S.flow=null;toast((f.kind==="add"?t("added"):t("changed"))+": "+dest(f.type,f.type==="phone"?S.phone:S.email));
-  }else if(f.kind==="delete"){
-    S.acct="out";S.stack=[{id:"cabinet"}];S.tab="cabinet";S.flow=null;push("scheduled");
+    S.acct=f.type==="phone"?(hasEmail()?"both":"phone"):(hasPhone()?"both":"email");S.savedAccount={acct:S.acct,phone:S.phone,email:S.email};S.stack=f.back;S.flow=null;toast((f.kind==="add"?t("added"):t("changed"))+": "+dest(f.type,f.type==="phone"?S.phone:S.email));
   }else if(f.kind==="webdelete"){f.step="done";render();}
 }
 function resend(){
@@ -310,13 +319,10 @@ function doDelete(){
   S.dlg=null;const o=S.delOut;S.delOut="ok";
   if(o==="fail"){S.delFailed=true;render();return;}
   S.delFailed=false;
-  if(S.v.del==="B"){
-    const type=hasPhone()?"phone":"email";
-    S.flow={kind:"delete",type,val:S[type],err:null,code:"",cerr:null,sec:15,resends:0,step:"code"};push("code");
-  }else{S.acct="out";S.stack=[{id:"cabinet"}];S.tab="cabinet";push("scheduled");}
+  S.histories={};S.savedAccount={acct:S.acct,phone:S.phone,email:S.email};S.deletedAcct=S.acct;S.deletionPending=true;S.acct="out";S.stack=[{id:"cabinet"}];S.tab="cabinet";S.flow=null;push("scheduled");
 }
-function doLogout(){S.dlg=null;S.acct="out";reset("cabinet");toast({en:"Signed out",ru:"Вы вышли",tk:"Çykyldy"}[S.lang]);}
-function restore(){S.dlg=null;toast({en:"Account restored. Your Listings are back.",ru:"Аккаунт восстановлен. Объявления снова активны.",tk:"Hasap dikeldildi. Bildirişler gaýdyp geldi."}[S.lang]);}
+function doLogout(){S.histories={};S.savedAccount={acct:S.acct,phone:S.phone,email:S.email};S.dlg=null;S.acct="out";reset("cabinet");toast({en:"Signed out",ru:"Вы вышли",tk:"Çykyldy"}[S.lang]);}
+function restore(){S.acct=S.restoreAcct||S.acct;S.deletionPending=false;S.dlg=null;toast({en:"Account restored. Your Listings are back.",ru:"Аккаунт восстановлен. Объявления снова активны.",tk:"Hasap dikeldildi. Bildirişler gaýdyp geldi."}[S.lang]);}
 function restoreCancel(){S.dlg=null;S.acct="out";render();}
 
 /* ───────────── building blocks ───────────── */
@@ -341,60 +347,49 @@ function langSwitch(){return `<div style="display:flex;gap:4px">${LANGS.map(l=>`
 function listingsBlock(){return {a:2,d:1,s:0,r:1};}
 function cabinetScreen(){
   const v=S.v.cab;const gear=`<button class="ib" aria-label="${t("settings")}" onclick="push('settings')">${ic.gear}</button>`;
-  let h=`<div class="appbar"><div class="t">${t("cabinet")}</div>${v==="C"?"":gear}</div>`;
+  let h=`<div class="appbar"><div class="t">${t("cabinet")}</div>${gear}</div>`;
   if(S.data==="loading"&&signed())return h+skeletonLines();
   if(S.data==="error"&&signed())return h+errState();
   const out=!signed();
   const signCard=`<div class="card"><div style="text-align:center;padding:26px 16px">${avatar(72)}<div class="b" style="font-size:18px;margin:12px 0 4px">${t("signInManageT")}</div><div class="mute sm" style="margin-bottom:14px">${t("signInManageD")}</div><div style="max-width:200px;margin:auto">${btn(t("signIn"),"startSignIn()")}</div></div></div>`;
-  const nudge=signed()&&!hasPhone()?`<div class="note warn" onclick="startMethod('add','phone')" style="cursor:pointer"><div class="b">☎ ${t("cabAddPhoneT")}</div><div class="sm mute">${t("cabAddPhoneD")}</div><div class="b sm" style="margin-top:4px;color:var(--info)">${t("add")} ${ic.chev}</div></div>`:"";
+
   const L=listingsBlock();
   if(v==="A"){
-    h+=out?signCard:`<div class="card row" onclick="push('profile')">${avatar(56,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||idLabel()}</div>${S.name?`<div class="mute sm">${idLabel()}</div>`:""}</div><span class="chev">${ic.chev}</span></div>${nudge}`;
+    h+=out?signCard:`<div class="card row" onclick="push('profile')">${avatar(56,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||idLabel()}</div>${S.name?`<div class="mute sm">${idLabel()}</div>`:""}</div><span class="chev">${ic.chev}</span></div>`;
     h+=`<div class="card row" onclick="push('listingsStub')"><div style="font-size:22px">☰</div><div class="l"><div class="b">${t("myListings")}</div></div><span class="chev">${ic.chev}</span></div><div class="pad" style="margin-top:6px">${btn("＋ "+t("listCar"),"reset('sell')")}</div>`;
   }else if(v==="B"){
     if(out)h+=signCard;
     else{
       h+=`<div class="card"><div class="row" onclick="push('profile')" style="min-height:64px">${avatar(48,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||t("profile")}</div><div class="mute sm">${t("profile")} · ${t("methods")}</div></div><span class="chev">${ic.chev}</span></div>
       <div class="row" onclick="${hasPhone()?"push('profile')":"startMethod('add','phone')"}"><span>☎</span><div class="l">${hasPhone()?`<div class="b">${maskPhoneDisp(S.phone)}</div><div class="badge ver">✓ ${t("phoneVer")}</div>`:`<div class="mute">${t("phone")}: ${t("notAdded")}</div>`}</div>${hasPhone()?"":`<span class="b sm" style="color:var(--info)">${t("add")}</span>`}<span class="chev">${ic.chev}</span></div>
-      <div class="row" onclick="${hasEmail()?"push('profile')":"startMethod('add','email')"}"><span>✉</span><div class="l">${hasEmail()?`<div class="b">${maskEmail(S.email)}</div><div class="badge ver">✓ ${t("verified")}</div>`:`<div class="mute">${t("email")}: ${t("notAdded")}</div>`}</div>${hasEmail()?"":`<span class="b sm" style="color:var(--info)">${t("add")}</span>`}<span class="chev">${ic.chev}</span></div></div>${nudge}`;
+      <div class="row" onclick="${hasEmail()?"push('profile')":"startMethod('add','email')"}"><span>✉</span><div class="l">${hasEmail()?`<div class="b">${maskEmail(S.email)}</div><div class="badge ver">✓ ${t("verified")}</div>`:`<div class="mute">${t("email")}: ${t("notAdded")}</div>`}</div>${hasEmail()?"":`<span class="b sm" style="color:var(--info)">${t("add")}</span>`}<span class="chev">${ic.chev}</span></div></div>`;
     }
     h+=`<div class="hd">${t("myListings")}</div><div class="card">${[["active",L.a],["drafts",L.d],["sold",L.s],["archived",L.r]].map(([k,n])=>`<div class="row" onclick="push('listingsStub')"><div class="l">${t(k)}</div><span class="mute">${out?"–":n}</span><span class="chev">${ic.chev}</span></div>`).join("")}</div><div class="pad">${btn("＋ "+t("listCar"),"reset('sell')")}</div>`;
-  }else{ /* C: Auto.ru-style menu list, Settings merged in */
-    if(out)h+=signCard;
-    else h+=`<div class="card row" onclick="push('profile')">${avatar(56,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||idLabel()}</div><div class="mute sm">${t("profile")}</div></div><span class="chev">${ic.chev}</span></div>${nudge}`;
-    const mr=(i,l,fn,x="")=>`<div class="row" onclick="${fn}"><span style="width:24px;text-align:center;color:var(--mfg)">${i}</span><div class="l">${l}</div>${x}<span class="chev">${ic.chev}</span></div>`;
-    h+=`<div class="card">${signed()?mr("☰",t("myListings"),"push('listingsStub')")+mr("🔔",t("notifs"),"push('notifs')"):""}${mr("🌐",t("language"),"S.picker='lang';render()",`<span class="mute sm">${S.lang.toUpperCase()}</span>`)}${mr("◐",t("theme"),"S.picker='theme';render()",`<span class="mute sm">${t(S.theme)}</span>`)}</div>
-    <div class="card">${mr("🛡",t("privacy"),"openLegal('privacy')")}${mr("📄",t("terms"),"openLegal('terms')")}${mr("📋",t("posting"),"openLegal('terms')")}</div>
-    ${signed()?`<div class="card">${mr("🗑",t("deleteAcc"),"push('delete')")}</div><div class="pad">${btn(t("logout"),"S.dlg='logout';render()","out")}</div>`:""}`;
   }
+  h+=supportRow();
   return h;
 }
+function supportRow(){return `<div class="card row" role="button" onclick="push('support')"><span>ⓘ</span><div class="l"><div class="b">${t("contactSupport")}</div><div class="sm mute">${t("supRowSub")}</div></div><span class="chev">›</span></div>`;}
+function supportScreen(){return appbar(t("contactSupport"))+`<div class="pad" style="padding-top:16px"><div class="b" style="font-size:22px">${t("supTitle")} ✓</div><div class="mute sm">${t("official")}</div><div class="card" style="margin:16px 0"><a class="row" href="mailto:bagtyyarkowusow.dev@gmail.com"><span>✉</span><div class="l"><div class="b">${t("emailUs")}</div><div class="sm">bagtyyarkowusow.dev@gmail.com</div></div></a><a class="row" href="tel:+99363989404"><span>☎</span><div class="l"><div class="b">${t("callUs")}</div><div>+993 63 98 94 04</div></div></a></div><div class="note"><div class="b">${t("includeT")}</div><div class="sm">${t("includeV")}</div></div></div>`;}
 function stubScreen(name,note){return `<div class="appbar"><div class="t">${name}</div></div><div class="pad mute" style="padding-top:40px;text-align:center">${note}</div>`;}
 function listingsStubScreen(){return appbar(t("myListings"))+`<div class="pad mute" style="padding-top:40px;text-align:center">My listings is #354 (Sell wizard, drafts and My listings states).</div>`;}
 
 function signinScreen(){
   const f=S.flow;const close=`<button class="ib" aria-label="Close" onclick="closeSignIn()">${ic.x}</button>`;
   let h=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px 6px 8px">${close}${langSwitch()}</div><div class="pad" style="margin-top:18px"><div class="logo">Auto<b>TM</b></div></div>`;
-  const v=S.v.entry;
-  if(v==="B"&&f.step==="choose"){
-    h+=`<div class="pad" style="margin-top:30px"><div class="b" style="font-size:24px;line-height:1.25">${t("welcomeT")}</div><div class="mute" style="margin:6px 0 24px">${t("noPassword")}</div><div style="display:grid;gap:10px">${btn("☎ "+t("contPhone"),"S.flow.type='phone';S.flow.step='entry';render()")}${btn("✉ "+t("contEmail"),"S.flow.type='email';S.flow.step='entry';render()","out")}</div></div><div style="position:absolute;bottom:0;left:0;right:0">${legalLinks()}</div>`;
-    return h;
-  }
-  const isC=v==="C";const type=isC?detect(f.val):f.type;
-  const tabs=v==="A"?`<div class="pad" style="margin-top:20px"><div class="pseg"><button class="${f.type==="phone"?"on":""}" onclick="S.flow.type='phone';S.flow.val='';S.flow.err=null;render()">${t("phone")}</button><button class="${f.type==="email"?"on":""}" onclick="S.flow.type='email';S.flow.val='';S.flow.err=null;render()">${t("email")}</button></div></div>`:"";
-  const back=v==="B"?`<button class="btn link" style="margin:0 12px" onclick="S.flow.step='choose';S.flow.err=null;render()">${ic.back} ${t("signIn")}</button>`:"";
-  const ttl=isC?t("anyTitle"):t(type==="phone"?"phoneTitle":"emailTitle"), hlp=isC?t("anyHelper"):t(type==="phone"?"phoneHelper":"emailHelper");
-  h+=back+tabs+`<div class="pad" style="margin-top:20px"><div class="b" style="font-size:22px;line-height:1.25">${ttl}</div><div class="mute" style="margin:4px 0 16px">${hlp}</div>${entryField(isC?"any":f.type)}${entryErr(isC?"any":f.type)}<div style="margin-top:16px">${btn(t("getCode"),"getCode()")}</div></div><div style="position:absolute;bottom:0;left:0;right:0">${legalLinks()}</div>`;
+  const type=f.type;
+  const tabs=`<div class="pad" style="margin-top:20px"><div class="pseg">${["phone","email"].map(x=>`<button class="${f.type===x?"on":""}" onclick="S.flow.type='${x}';S.flow.val='';S.flow.err=null;render()">${t(x)}</button>`).join("")}</div></div>`;
+  h+=tabs+`<div class="pad" style="margin-top:20px"><div class="b" style="font-size:22px;line-height:1.25">${t(type==="phone"?"phoneTitle":"emailTitle")}</div><div class="mute" style="margin:4px 0 16px">${t(type==="phone"?"phoneHelper":"emailHelper")}</div>${entryField(type)}${entryErr(type)}<div style="margin-top:16px">${btn(t("getCode"),"getCode()")}</div></div><div style="position:absolute;bottom:0;left:0;right:0">${legalLinks()}</div>`;
   return h;
 }
 function entryField(type){
   const f=S.flow;const e=f.err==="invalid"?"err":"";
   const pre=type==="phone"?`<span class="b">+993</span>`:"";
-  return `<div class="field ${e}">${pre}<input id="inp" aria-label="${type==="phone"?t("phoneLabel"):type==="email"?t("emailLabel"):t("anyTitle")}" value="${f.val||""}" inputmode="${type==="phone"?"tel":"email"}" placeholder="${type==="phone"?"6X XX-XX-XX":type==="email"?"name@example.com":"6X XX-XX-XX / name@example.com"}" oninput="liveVal(this)" onkeydown="if(event.key==='Enter')getCode()"></div><div style="margin-top:6px"><a class="xs mute" style="text-decoration:underline;cursor:pointer" onclick="demoFill()">prototype: fill a made-up ${type==="phone"?"number":"address"}</a></div>`;
+  return `<div class="field ${e}">${pre}<input id="inp" aria-label="${type==="phone"?t("phoneLabel"):type==="email"?t("emailLabel"):t("emailLabel")}" value="${f.val||""}" inputmode="${type==="phone"?"tel":"email"}" placeholder="${type==="phone"?"6X XX-XX-XX":type==="email"?"name@example.com":"6X XX-XX-XX / name@example.com"}" oninput="liveVal(this)" onkeydown="if(event.key==='Enter')getCode()"></div><div style="margin-top:6px"><a class="xs mute" style="text-decoration:underline;cursor:pointer" onclick="demoFill()">prototype: fill a made-up ${type==="phone"?"number":"address"}</a></div>`;
 }
 function entryErr(type){
   const f=S.flow;if(!f.err)return "";
-  const m={invalid:type==="phone"?t("phoneFmt"):type==="email"?t("emailFmt"):t("anyFmt"),offline:t("offline"),rate:t("rate"),rateDay:t("rateDay")}[f.err];
+  const m={invalid:type==="phone"?t("phoneFmt"):type==="email"?t("emailFmt"):t("emailFmt"),offline:t("offline"),rate:t("rate"),rateDay:t("rateDay")}[f.err];
   return `<div class="errtx" role="alert">${m}</div>`;
 }
 function codeBody(){
@@ -423,7 +418,7 @@ function methodEntryScreen(){
 }
 function takenScreen(){
   const f=S.flow;const ty=f.type;const B=S.v.taken==="B";
-  return appbar("",{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:10px"><div style="font-size:40px">⛔</div><div class="b" style="font-size:20px;margin:8px 0">${t(ty==="phone"?"phoneTaken":"emailTaken")}</div><div class="mute sm" style="margin-bottom:18px">${t("noMerge")}</div><div style="display:grid;gap:10px">${btn(t(ty==="phone"?"diffNum":"diffMail"),"S.stack.pop();S.flow.val='';S.flow.err=null;S.flow.step='entry';render()")}${B?btn(t("signOutUse"),"S.flow=null;S.acct='out';reset('cabinet');startSignIn()","out"):""}</div></div>`;
+  return appbar("",{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:10px"><div style="font-size:40px">⛔</div><div class="b" style="font-size:20px;margin:8px 0">${t(ty==="phone"?"phoneTaken":"emailTaken")}</div><div class="mute sm" style="margin-bottom:18px">${t("noMerge")}</div><div style="display:grid;gap:10px">${btn(t(ty==="phone"?"diffNum":"diffMail"),"S.stack.pop();S.flow.val='';S.flow.err=null;S.flow.step='entry';render()")}${B?`<div class="note sm">${t("switchAccountHint")}</div>`+btn(t("signOutUse"),"S.flow=null;S.acct='out';reset('cabinet');startSignIn()","out"):""}</div></div>`;
 }
 function profileScreen(){
   let h=appbar(t("profile"));
@@ -432,17 +427,14 @@ function profileScreen(){
   return h+`<div style="text-align:center;padding:10px 0 16px">${avatar(88,S.name)}<div class="b" style="font-size:20px;margin-top:10px;font-family:Georgia,serif">${S.name||idLabel()}</div><div style="margin-top:6px"><span class="badge">${S.acct==="out"?"":{en:"Buyer",ru:"Покупатель",tk:"Alyjy"}[S.lang]}</span></div></div>
   <div class="hd" style="padding-bottom:2px"><span class="b" style="font-size:16px;color:var(--fg)">${t("methods")}</span></div><div class="pad mute sm" style="margin-bottom:8px">${t("methodsHelp")}</div>
   <div class="card">${methodRow("phone")}${methodRow("email")}</div>
-  ${!hasPhone()?`<div class="note warn">${t("sellNeedsPhone")}</div>`:""}
   <div class="card"><div class="row" style="cursor:default"><div class="l mute sm">${t("memberSince")}</div><div class="b">${t("memberDate")}</div></div></div>`;
 }
 function sellScreen(){
   let h=`<div class="appbar"><div class="t">${t("tabSell")}</div></div>`;
   if(!signed())return h+`<div class="pad" style="text-align:center;padding-top:70px">${avatar(72)}<div class="b" style="font-size:18px;margin:12px 0 4px">${{en:"Sign in to sell",ru:"Войдите, чтобы продать",tk:"Satmak üçin giriň"}[S.lang]}</div><div class="mute sm" style="margin-bottom:14px">${{en:"Sign in to list your vehicle on AutoTM.",ru:"Войдите, чтобы разместить объявление на AutoTM.",tk:"AutoTM-de bildiriş goýmak üçin giriň."}[S.lang]}</div><div style="max-width:200px;margin:auto">${btn(t("signIn"),"startSignIn()")}</div></div>`;
-  if(!hasPhone()&&S.v.sell==="A")return h+`<div class="pad" style="text-align:center;padding-top:50px"><div style="font-size:48px">☎</div><div class="b" style="font-size:21px;margin:10px 0">${t("sellGateT")}</div><div class="mute" style="margin-bottom:20px">${t("sellGateD")}</div><div style="display:grid;gap:8px">${btn(t("addPhoneT"),"startMethod('add','phone')")}${btn(t("notNow"),"reset('cabinet')","out")}</div></div>`;
-  return h+`<div class="pad" style="padding-top:6px"><div class="mute sm">${t("step")}</div><div class="card" style="margin:10px 0"><div class="row" style="cursor:default"><div class="l"><div class="b">Toyota Camry, 2018</div><div class="mute sm">285 000 TMT · Aşgabat</div></div></div></div>
-  <div class="mute xs" style="margin-bottom:12px">Sell wizard steps are #354. This screen exists only to show the phone check.</div>${btn(t("publish"),"publishTap()")}</div>`;
+  return h+`<div class="pad" style="padding-top:18px"><div class="b" style="font-size:21px">${t("sellOpen")}</div><div class="note">${t(hasPhone()?"sellAccountContact":"sellContact")}</div><div class="mute sm">${t("sellScope")}</div><a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354" target="_blank" rel="noopener">#354</a></div>`;
 }
-function publishTap(){if(!hasPhone()){S.sheet={t:"phoneReq"};render();}else toast(t("published"));}
+
 function settingsScreen(){
   const A=S.v.set==="A";
   let h=appbar(t("settings"));
@@ -455,22 +447,21 @@ function settingsScreen(){
   }else{
     h+=`<div class="card" style="margin-top:8px">${lrow(t("language"),"S.picker='lang';render()",`<span class="mute">${{en:"English",ru:"Русский",tk:"Türkmen"}[S.lang]}</span>`)}${lrow(t("theme"),"S.picker='theme';render()",`<span class="mute">${t(S.theme)}</span>`)}${signed()?lrow(t("notifs"),"push('notifs')"):""}</div>`;
   }
+  h+=supportRow();
   h+=`<div class="hd">${t("about")}</div><div class="card">${lrow(t("privacy"),"openLegal('privacy')")}${lrow(t("terms"),"openLegal('terms')")}${lrow(t("posting"),"openLegal('terms')")}</div>`;
   if(signed())h+=`<div class="card">${lrow(t("deleteAcc"),"push('delete')")}</div><div class="pad" style="padding-bottom:20px">${btn(t("logout"),"S.dlg='logout';render()","dest")}</div>`;
   return h;
 }
 window.setLang=l=>{S.lang=l;render();};window.setTheme=m=>{S.theme=m;render();};
 function notifsScreen(){
-  const sw=k=>`<button class="sw ${S.notif[k]?"on":""}" role="switch" aria-checked="${S.notif[k]}" onclick="S.notif['${k}']=!S.notif['${k}'];render()"></button>`;
   const off=S.notif.os==="denied";
-  return appbar(t("notifs"))+(off?`<div class="note warn" style="margin-top:6px"><div class="b">${t("osOffT")}</div><button class="btn link" style="padding:0" onclick="toast('Opens Android system settings')">${t("osOffB")}</button></div>`:"")+`<div class="card" style="margin-top:8px"><div class="row" style="cursor:default"><div class="l"><div class="b">${t("nMsg")}</div><div class="mute sm">${t("nMsgD")}</div></div>${sw("msg")}</div><div class="row" style="cursor:default"><div class="l"><div class="b">${t("nAct")}</div><div class="mute sm">${t("nActD")}</div></div>${sw("act")}</div></div>`;
+  return appbar(t("notifs"))+`<div class="note">${t("notifScope")}</div>`+(off?`<div class="note warn"><div class="b">${t("osOffT")}</div><button class="btn link" onclick="toast('Prototype: Android notification settings would open')">${t("osOffB")}</button></div>`:"");
 }
 function deleteScreen(){
   const d=t("delDate");
   let h=appbar(t("deleteAcc"));
   h+=`<div class="note err" style="margin-top:6px">${t("delD")}</div><div class="pad"><div class="b" style="margin:6px 0">${t("delWhat")}</div><ul style="margin:0 0 12px 18px;padding:0;line-height:1.6;font-size:13.5px"><li>${t("delL1")}</li><li>${t("delL2")}</li><li>${t("delL3")}</li><li>${t("delL4",{d:d})}</li><li><b>${t("delL5")}</b></li></ul>
   <label style="display:flex;gap:10px;align-items:center;min-height:44px;cursor:pointer"><input type="checkbox" style="width:22px;height:22px" ${S.delChecked?"checked":""} onchange="S.delChecked=this.checked;render()"> <span>${t("delUnd")}</span></label>
-  ${S.v.del==="B"?`<div class="mute sm" style="margin:6px 0 10px">${t("delCodeD",{d:hasPhone()?maskPhoneDisp(S.phone):maskEmail(S.email)})}</div>`:""}
   <div style="margin-top:10px">${btn("🗑 "+t("deleteAcc"),"S.dlg='delete';render()","dest",!S.delChecked)}</div>${S.delFailed?`<div class="errtx" style="text-align:center" role="alert">${t("delFail")}</div>`:""}</div>`;
   return h;
 }
@@ -486,7 +477,7 @@ function webDeleteScreen(){
   }else if(f.step==="code"){
     body=`<div style="--bg:#fff;--fg:#222;--border:#bbb;--primary:#d40000;--mfg:#666;--destructive:#c0392b;--info:#2563eb;--secondary:#eee;--muted:#ddd" class="phonelike">${codeBody()}</div>`;
   }else body=`<div style="padding:20px;text-align:center"><div style="font-size:40px">✓</div><div style="font-size:16px;margin:10px 0">${t("webDone",{x:t(f.type).toLowerCase(),d:t("delDate")})}</div></div>`;
-  return `<div class="br" style="top:24px"><div class="bar"><button class="ib" style="color:#222" onclick="${f.step==="code"?"backFromCode()":"S.flow=null;S.stack=[{id:'cabinet'}];S.tab='cabinet';render()"}">${ic.back}</button><div class="url">🔒 autotm.bagtyyar.dev/${S.lang}/account-deletion</div></div>${body}</div>`;
+  return `<div class="br" style="top:24px"><div class="bar"><button class="ib" style="color:#222" onclick="${f.step==="code"?"backFromCode()":"S.flow=null;S.stack=[{id:'cabinet'}];S.tab='cabinet';render()"}">${ic.back}</button><div class="url">🔒 ${webBase()}/${S.lang}/account/delete</div></div>${body}</div>`;
 }
 function tabStub(id){
   const m={search:["Search / Home","Home, Brand picker, Results: #351 and the approved screen map."],favorites:[t("tabFav"),"Favorites: #352."],messages:[t("tabMsg"),"Conversations: #352."]}[id];
@@ -497,13 +488,12 @@ function tabStub(id){
 function overlays(){
   let o="";
   if(S.web){
-    const url=`https://autotm.bagtyyar.dev/${S.lang}/legal/${S.web.kind}`;
-    o+=`<div class="br"><div class="bar"><button class="ib" style="color:#222" onclick="S.web=null;render()">${ic.x}</button><div class="url">🔒 ${url}</div></div><div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:8px">${S.web.kind==="privacy"?t("privacy"):t("terms")}</div><div class="skel" style="height:12px;background:#ddd;margin:8px 0"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:90%"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:80%"></div><div style="color:#666;font-size:12px;margin-top:14px">Opens in the system browser (Linking). Host is the public web base URL from config, not a literal (#496). Text mentions “phone or email” (#390) and the web deletion page.</div><a style="display:block;margin-top:14px;color:#2563eb;text-decoration:underline;cursor:pointer" onclick="S.web=null;S.flow={kind:'webdelete',type:'phone',val:'',err:null,step:'entry'};S.stack.push({id:'webDelete'});render()">${t("deleteAcc")}: autotm.bagtyyar.dev/${S.lang}/account-deletion</a></div></div>`;
+    const url=`${webBase()}/${S.lang}/legal/${S.web.kind}`;
+    o+=`<div class="br"><div class="bar"><button class="ib" style="color:#222" onclick="S.web=null;render()">${ic.x}</button><div class="url">🔒 ${url}</div></div><div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:8px">${S.web.kind==="privacy"?t("privacy"):t("terms")}</div><div class="skel" style="height:12px;background:#ddd;margin:8px 0"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:90%"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:80%"></div><div style="color:#666;font-size:12px;margin-top:14px">Opens in the system browser (Linking). Prototype public-web setting: ${S.webProfile}. Production apps read environment configuration (#496). Text mentions “phone or email” (#390) and the web deletion page.</div><a style="display:block;margin-top:14px;color:#2563eb;text-decoration:underline;cursor:pointer" onclick="S.web=null;S.flow={kind:'webdelete',type:'phone',val:'',err:null,step:'entry'};S.stack.push({id:'webDelete'});render()">${t("deleteAcc")}: ${webBase()}/${S.lang}/account/delete</a></div></div>`;
   }
   if(S.sheet){
     const s=S.sheet;let c="";
     if(s.t==="chg")c=`<div class="b" style="font-size:18px;margin-bottom:6px">${t("chgWarnT",{x:t(s.type==="phone"?"chgWarnX":"chgWarnY")})}</div><div class="mute" style="margin-bottom:14px">${t("chgWarnD")}</div><div style="display:grid;gap:8px">${btn(t("contin"),`S.sheet=null;startMethod('change','${s.type}')`)}${btn(t("cancel"),"S.sheet=null;render()","out")}</div>`;
-    if(s.t==="phoneReq")c=`<div class="b" style="font-size:18px;margin-bottom:6px">${t("phoneReqT")}</div><div class="mute" style="margin-bottom:14px">${t("phoneReqD")}</div><div style="display:grid;gap:8px">${btn(t("addPhoneT"),"S.sheet=null;startMethod('add','phone')")}${btn(t("cancel"),"S.sheet=null;render()","out")}</div>`;
     o+=`<div class="dim" onclick="S.sheet=null;render()"></div><div class="sheet">${c}</div>`;
   }
   if(S.picker){
@@ -523,13 +513,13 @@ function overlays(){
 }
 function tabbar(){
   const items=[["search","🔍","tabSearch"],["favorites","♡","tabFav"],["sell","＋","tabSell"],["messages","💬","tabMsg"],["cabinet","👤","tabCab"]];
-  return `<div class="tabbar">${items.map(([k,i,l])=>`<button class="${S.tab===k?"on":""}" onclick="reset('${k}')"><i>${i}</i>${t(l)}</button>`).join("")}</div>`;
+  return `<div class="tabbar">${items.map(([k,i,l])=>`<button class="${S.tab===k?"on":""}" onclick="switchTab('${k}')"><i>${i}</i>${t(l)}</button>`).join("")}</div>`;
 }
 
 /* ───────────── render ───────────── */
 function currentScreen(){
   const id=topScreen().id;
-  return ({cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listingsStub:listingsStubScreen}[id]||(()=>tabStub(id)))();
+  return ({cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listingsStub:listingsStubScreen,support:supportScreen}[id]||(()=>tabStub(id)))();
 }
 function renderPhone(){
   const id=topScreen().id;const tabs=isTab(id);
@@ -546,16 +536,13 @@ function render(){renderPhone();panel();switcher();}
 /* ───────────── decisions (variants) ───────────── */
 const DEC={
  cab:{name:"Cabinet layout",ref:"KZ-27-003, KZ-35-001 (Kolesa cabinet); AR-41-004 (Auto.ru menu); AR-44-001",rec:"B",screen:()=>{S.acct=signed()?S.acct:"both";reset("cabinet");},
-  opts:{A:["Identity card + My listings","Today, refined: one identity card (taps into Profile), a My listings row, a List a car button. Email-only Users get an “Add a phone to sell” card. Least API change."],
-        B:["Kolesa-style cabinet","Profile row, then the phone and email rows right on Cabinet (verified ticks, “Add” when missing), then My listings split into Active / Drafts / Sold / Archived with counts, then List a car. Shows both Sign-in Methods without opening Profile. Needs per-status counts (the My listings screen already groups by status)."],
-        C:["Auto.ru-style menu list","Cabinet becomes the whole menu: identity row, My listings, Notifications, Language, Theme, legal rows, Delete account, Log out. No separate Settings screen (the gear disappears). Fewest taps to a setting, but Cabinet gets long and Delete account sits one tap from the top level."]}},
- entry:{name:"Sign-in entry (phone or email)",ref:"AR-43-001/002 (Auto.ru chooses a method first); KZ-29-001; #387; approved map “equal entry points”",rec:"B",screen:()=>{S.acct="out";reset("cabinet");startSignIn();},
-  opts:{A:["Phone | Email tabs (today)","Both fields one tap apart under a segmented control. This is what apps/mobile ships today (SignInMethodTabs). Defaults to Phone, so email feels secondary."],
-        B:["Two equal buttons first","“Continue with phone” and “Continue with email” as equals, then the matching field. One extra tap but nothing is the default; matches the approved map wording and Auto.ru's method-first entry."],
-        C:["One field, auto-detect","A single “Phone or email” field; digits mean phone, an @ means email. Fewest taps, but +993 is the only valid phone, so a foreign number or a typo gives a confusing error, and the field cannot show the +993 prefix."]}},
- sell:{name:"Selling blocked without a verified phone",ref:"ADR-0054 (Sell entry shows an “Add a phone” step); #344; #388",rec:"A",screen:()=>{S.acct="email";reset("sell");},
-  opts:{A:["Gate before the wizard","An email-only User opening Sell sees “Add a phone to sell” and nothing else until a phone is confirmed, then lands back in Sell. No wasted effort, but the User learns about the rule before they see the wizard."],
-        B:["Gate at Publish","The wizard is open to everyone; Publish on the last step shows “Add a phone to publish” (the PHONE_REQUIRED path). The draft is kept. More effort lost if they refuse, but the server rule is still needed as backup."]}},
+  opts:{A:["Identity card + My listings","Today, refined: one identity card (taps into Profile), a My listings row, a List a car button. The separate Settings screen stays. Layout is pending founder review."],
+        B:["Kolesa-style cabinet","Profile row, then the phone and email rows right on Cabinet (verified ticks, “Add” when missing), then My listings split into Active / Drafts / Sold / Archived with counts, then List a car. Shows both Sign-in Methods without opening Profile. Needs per-status counts (the My listings screen already groups by status)."]
+        }},
+ entry:{name:"Sign-in entry (approved)",ref:"#353 founder feedback 2026-10-02: D2=A Phone | Email tabs",locked:true,rec:"A",screen:()=>{openAs("out");startSignIn();},
+  opts:{A:["Phone | Email tabs", "Founder approved. Both methods use a code and open the same User; no password or social sign-in."]}},
+ sell:{name:"Sell entry (approved rule)",ref:"ADR-0056 Choosing the contact phone and Enforcement: email-only Users sell inside the wizard without an account phone",locked:true,rec:"A",screen:()=>{openAs("email");reset("sell");},
+  opts:{A:["Enter Sell without an account-phone gate", "Every Listing needs a verified contact phone inside the wizard. The #354 prototype owns the wizard design."]}},
  set:{name:"Settings structure",ref:"AR-41-004, AR-42-001 (drill-down menu rows); KZ-35-001, KZ-38-001 (Kolesa settings with values); today settings.tsx",rec:"A",screen:()=>{S.acct=signed()?S.acct:"both";reset("cabinet");push("settings");},
   opts:{A:["Inline controls (today)","Language and theme are three-way segmented controls shown on the page: one tap to change, no sub-screens. Three options each, so it fits."],
         B:["Drill-down rows","Rows show the current value (“Language  English ›”) and open a bottom sheet to pick. Matches Auto.ru/Kolesa, but every change is two taps."]}},
@@ -565,23 +552,22 @@ const DEC={
  taken:{name:"Value already used by another User",ref:"ADR-0054 (refused after the code is confirmed, SIGN_IN_METHOD_TAKEN, never merged); #388",rec:"A",screen:()=>{openAs("phone","profile");S.outcome="taken";startMethod("add","email");},
   opts:{A:["Refuse and offer another value","Plain explanation plus “Use a different email/number”. States that accounts are never merged. Nothing that looks like a merge offer (#388)."],
         B:["Also: sign out and use that account","Adds a second button that signs the User out and opens sign-in, so they can switch to the other account. Helpful, but it can read as a merge path and loses the current session."]}},
- del:{name:"Delete account confirmation (in app)",ref:"ADR-0032, ADR-0054 (DELETE /me unchanged; web page uses a code); KZ-48-002 (understand checkbox); AR-40/41 none",rec:"A",screen:()=>{S.acct="both";reset("cabinet");push("settings");push("delete");},
-  opts:{A:["Checkbox + dialog (ADR as written)","List of what happens, an “I understand” checkbox, then the destructive button and a confirm dialog. The session already proves identity, so no code. Spends no SMS/email budget."],
-        B:["Checkbox + dialog + code","After the dialog a Sign-in Code goes to the phone or email on file and must be entered. Stronger against a stolen unlocked phone, but changes ADR-0054's “DELETE /me unchanged”, costs a code from the shared 5-per-day budget, and fails if email delivery fails."]}},
+ del:{name:"Delete account confirmation",ref:"ADR-0032 Decision 1 and ADR-0054 Deletion: in-app DELETE /me unchanged; web deletion confirms a code",rec:"A",screen:()=>{openAs("both","settings");push("delete");},
+  opts:{A:["Checkbox + dialog", "Proposed copy and checkbox are pending founder review. In-app deletion uses the authenticated session, with no additional OTP."]}},
 };
 const DKEYS=Object.keys(DEC);
-function setV(k,o){S.v[k]=o;S.dec=k;DEC[k].screen();}
+function setV(k,o){if(!DEC[k].opts[o])return;S.v[k]=o;S.dec=k;DEC[k].screen();}
 function cycle(d){const k=S.dec,ks=Object.keys(DEC[k].opts),i=(ks.indexOf(S.v[k])+d+ks.length)%ks.length;setV(k,ks[i]);}
 function nextDec(){const i=(DKEYS.indexOf(S.dec)+1)%DKEYS.length;S.dec=DKEYS[i];DEC[S.dec].screen();}
 document.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;if(e.key==="ArrowLeft")cycle(-1);if(e.key==="ArrowRight")cycle(1);});
 function switcher(){
   const d=DEC[S.dec],o=d.opts[S.v[S.dec]];
-  document.getElementById("switcher").innerHTML=`<button onclick="cycle(-1)">←</button><span class="lbl">D${DKEYS.indexOf(S.dec)+1} ${d.name}: ${S.v[S.dec]} — ${o[0]}${d.rec===S.v[S.dec]?" ★":""}</span><button onclick="cycle(1)">→</button><button onclick="nextDec()">next decision ▸</button>`;
+  document.getElementById("switcher").innerHTML=`<button onclick="cycle(-1)">←</button><span class="lbl">D${DKEYS.indexOf(S.dec)+1} ${d.name}: ${S.v[S.dec]} — ${o[0]}${d.locked?" (approved)":d.rec===S.v[S.dec]?" ★ pending review":" pending review"}</span><button onclick="cycle(1)">→</button><button onclick="nextDec()">next decision ▸</button>`;
 }
 
 /* ───────────── jumps (every state is one click) ───────────── */
 const J=[];const grp=n=>J.push({g:n});const jp=(l,f)=>J.push({l,f});
-const openAs=(acct,id)=>{S.acct=acct;S.data="ok";S.flow=null;S.sheet=S.dlg=S.web=S.picker=null;reset("cabinet");if(id&&id!=="cabinet")push(id);};
+const openAs=(acct,id)=>{S.toast=null;S.acct=acct;S.savedAccount=acct==="out"?null:{acct,phone:S.phone,email:S.email};S.data="ok";S.flow=null;S.outcome=S.req=S.delOut="ok";S.delChecked=S.delFailed=S.deletionPending=false;S.sheet=S.dlg=S.web=S.picker=null;reset("cabinet");if(id&&id!=="cabinet")push(id);};
 const codeFlow=(kind,type,extra={})=>{S.flow=Object.assign({kind,type,val:type==="phone"?"60 00-00-00":"name@example.com",err:null,code:"",cerr:null,sec:15,resends:0,step:"code",back:[{id:"cabinet"},{id:"profile"}]},extra);};
 grp("Cabinet");
 jp("Signed out",()=>openAs("out"));jp("Phone only",()=>openAs("phone"));jp("Email only",()=>openAs("email"));jp("Phone + email",()=>openAs("both"));
@@ -590,7 +576,7 @@ grp("Sign in");
 jp("Entry",()=>{openAs("out");startSignIn();});
 jp("Code sent: phone",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","phone");S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();});
 jp("Code sent: email",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","email");S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();});
-jp("Invalid value",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val=S.v.entry==="C"?"61 0":"";S.flow.err="invalid";render();});
+jp("Invalid value",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val="";S.flow.err="invalid";render();});
 jp("Rate limited (request)",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val="60 00-00-00";S.flow.err="rate";render();});
 jp("Offline (request)",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val="60 00-00-00";S.flow.err="offline";render();});
 const codeErr=(e,type)=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin",type);S.flow.cerr=e;if(e==="expired")S.flow.sec=0;S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();};
@@ -612,19 +598,19 @@ jp("Change phone: sheet/entry",()=>{openAs("both","profile");S.v.chg==="B"?(S.sh
 grp("Selling");
 jp("Email-only opens Sell",()=>{openAs("email");reset("sell");});
 jp("Phone User opens Sell",()=>{openAs("phone");reset("sell");});
-jp("Publish blocked (variant B)",()=>{S.v.sell="B";openAs("email");reset("sell");S.sheet={t:"phoneReq"};render();});
 jp("Signed out opens Sell",()=>{openAs("out");reset("sell");});
 grp("Settings");
 jp("Settings: signed out",()=>openAs("out","settings"));jp("Settings: signed in",()=>openAs("both","settings"));
 jp("Language sheet",()=>{openAs("both","settings");S.picker="lang";render();});
 jp("Notifications",()=>{openAs("both","settings");S.notif.os="granted";push("notifs");});jp("Notifications: OS off",()=>{openAs("both","settings");S.notif.os="denied";push("notifs");});
 jp("Legal page (web)",()=>{openAs("both","settings");openLegal("privacy");});
+grp("Help");
+jp("Contact support: signed out",()=>openAs("out","support"));jp("Contact support: signed in",()=>openAs("both","support"));
 grp("Account");
 jp("Log out dialog",()=>{openAs("both","settings");S.dlg="logout";render();});
 jp("Delete: intro",()=>{openAs("both","settings");push("delete");});
 jp("Delete: confirm dialog",()=>{openAs("both","settings");push("delete");S.delChecked=true;S.dlg="delete";render();});
 jp("Delete: failed",()=>{openAs("both","settings");push("delete");S.delChecked=true;S.delFailed=true;render();});
-jp("Delete: code (variant B)",()=>{S.v.del="B";openAs("both","settings");push("delete");codeFlow("delete","phone");S.stack.push({id:"code"});render();});
 jp("Delete: scheduled",()=>{openAs("out");push("scheduled");});
 jp("Web deletion page",()=>{openAs("out");S.flow={kind:"webdelete",type:"phone",val:"",err:null,step:"entry"};push("webDelete");});
 jp("Web: code sent",()=>{openAs("out");codeFlow("webdelete","email");S.stack.push({id:"webDelete"});render();});
@@ -632,14 +618,15 @@ jp("Web: done",()=>{openAs("out");S.flow={kind:"webdelete",type:"email",val:"nam
 
 /* ───────────── panel ───────────── */
 function seg(items,cur,fn){return `<div class="seg">${items.map(([k,n])=>`<button class="${cur===k?"on":""}" onclick="${fn}('${k}')">${n}</button>`).join("")}</div>`;}
+window.pWeb=k=>{S.webProfile=k;render();};
 window.pAcct=k=>{S.acct=k;S.data="ok";setAcctReset();};function setAcctReset(){render();}
 window.pLang=k=>{S.lang=k;render();};window.pTheme=k=>{S.theme=k;render();};window.pOs=k=>{S.os=k==="dark";render();};
 window.pOut=k=>{S.outcome=k;render();};window.pReq=k=>{S.req=k;render();};window.pDel=k=>{S.delOut=k;render();};window.pData=k=>{S.data=k;render();};
 window.pDec=(k,o)=>setV(k,o);
 const STATES=[
- ["Cabinet: signed out / phone only / email only / both","Cabinet jumps","apps/mobile/app/(tabs)/services.tsx","exists (A-like); B and C layouts, status counts, “Add a phone” card are new"],
+ ["Cabinet: signed out / phone only / email only / both","Cabinet jumps","apps/mobile/app/(tabs)/services.tsx","exists (A-like); B layout and status counts are proposed"],
  ["Cabinet loading / error","Cabinet jumps","services.tsx (spinner and text only)","exists; skeleton + Retry button new"],
- ["Sign-in entry: phone / email","Sign in → Entry","app/(auth)/phone.tsx, email.tsx, components/auth/AuthEntryScreen.tsx, SignInMethodTabs.tsx","exists (tabs). Method-first chooser and single field are new"],
+ ["Sign-in entry: phone / email","Sign in → Entry","app/(auth)/phone.tsx, email.tsx, components/auth/AuthEntryScreen.tsx, SignInMethodTabs.tsx","approved Phone | Email tabs only"],
  ["Code entry (sent, countdown, resend)","Sign in → Code sent","components/auth/CodeEntryForm.tsx, app/(auth)/otp.tsx","exists. Phone “expires in 5 minutes” line is new (email 10 min exists)"],
  ["Invalid value","Sign in → Invalid value","phoneFormatError / emailFormatError in resources.ts","exists"],
  ["Rate limited on request / on resend","Sign in → Rate limited","rateLimitedCode in resources.ts","exists; daily 5-code limit copy is new"],
@@ -647,29 +634,28 @@ const STATES=[
  ["Wrong / expired / locked code","Sign in → Wrong, Expired, Locked","src/auth/verifyCodeError.ts","exists (all three)"],
  ["Email not delivered hint","Sign in → Email not delivered","none","new (ADR-0055: bounces fail silently)"],
  ["Restore prompt on sign-in in grace","Sign in → Restore prompt","restoreAccount* strings in resources.ts","strings exist; verify the dialog is wired in app code"],
- ["Profile: phone only / email only / both","Profile jumps","apps/mobile/app/profile.tsx","exists. “Selling needs a verified phone” note is new"],
+ ["Profile: phone only / email only / both","Profile jumps","apps/mobile/app/profile.tsx","exists. Listing contact verification belongs inside #354"],
  ["Profile loading / error","Profile loading, error","profile.tsx (LoadingState, ErrorState)","exists"],
  ["Add phone / Add email entry","Profile → Add jumps","app/account/add-phone.tsx, add-email.tsx","exists"],
  ["Add/change: code sent, wrong, expired","Profile → Add: code sent, wrong, expired","app/account/verify-sign-in-method.tsx + CodeEntryForm","exists"],
  ["Value taken by another User","Profile → Add: value taken","SIGN_IN_METHOD_TAKEN → phoneTaken/emailTaken in verifyCodeError.ts","exists (variant A). Variant B button is new"],
- ["Change phone/email (+ warning sheet)","Profile → Change phone","add-phone.tsx (change mode)","exists; warning sheet is new (decision D5)"],
- ["Selling blocked without a phone","Selling jumps","app/(tabs)/sell.tsx (no phone check today; ADR-0054 / #388 pending)","new"],
- ["Publish blocked (PHONE_REQUIRED)","Selling → Publish blocked","none","new"],
+ ["Change phone/email (+ warning sheet)","Profile → Change phone","add-phone.tsx (change mode)","exists; warning sheet is proposed (decision D5)"],
+ ["Sell entry: email-only and phone Users","Selling jumps","ADR-0056; wizard prototype #354","approved rule; wizard design deferred"],
  ["Settings: language, theme, legal links","Settings jumps","apps/mobile/app/settings.tsx","exists (A). Links must move to autotm.bagtyyar.dev (#496; today hardcodes auto.tm)"],
  ["Language RU/TK/EN, theme light/dark/system","Settings, floating bar, panel","LocaleSwitcher, ThemeSwitcher in apps/mobile/src","exists"],
- ["Notifications settings screen","Settings → Notifications","none in mobile (PRD docs/prd/features/36-notifications.md “Profile → Notifications”)","new. Categories trimmed to Messages + Listing activity"],
+ ["Notifications settings screen","Settings → Notifications","none in mobile (PRD docs/prd/features/36-notifications.md “Profile → Notifications”)","new. informational OS-permission / per-conversation mute view; no category switches"],
  ["Notifications OS-permission off","Settings → Notifications: OS off","none","new"],
  ["Log out + confirm","Account → Log out dialog","settings.tsx","exists"],
  ["Delete account intro + confirm + scheduled","Account → Delete jumps","apps/mobile/app/account/delete.tsx","exists. “What happens” list and understand checkbox are new"],
  ["Delete failed","Account → Delete: failed","delete.tsx (deleteAccountFailed)","exists"],
- ["Delete confirmed by code (variant B)","Account → Delete: code","none","new (would change ADR-0054)"],
  ["Web deletion page (phone or email code)","Account → Web deletion","none; #386 API, #389 page open","new"],
 ];
 function panel(){
   const d=DEC[S.dec];const cur=S.v[S.dec];
-  let h=`<h1>PROTOTYPE — Cabinet, Profile, Settings and sign-in methods</h1><div class="sm" style="color:#555">Throwaway (issue #353). Everything in the phone is clickable; the jump buttons set up any state in one click. ← → flip the variant of the current decision. All phone numbers, emails and codes are made up; type any six digits as a code. Resend countdown is 15 s here (60 s backoff in the product).</div>
+  let h=`<h1>PROTOTYPE — Cabinet, Profile, Settings and sign-in methods</h1><div class="sm" style="color:#555">Throwaway (issue #353). Everything in the phone is clickable; the jump buttons set up any state in one click. ← → flip the variant of the current decision. Account values and demo codes are made up; the support contacts are founder-approved; type any six digits as a code. Resend countdown is 15 s here (60 s backoff in the product).</div>
   <h2>Account state</h2>${seg([["out","Signed out"],["phone","Phone only"],["email","Email only"],["both","Phone + email"]],S.acct,"pAcct")}
   <h2>Language / theme</h2>${seg([["en","EN"],["ru","RU"],["tk","TK"]],S.lang,"pLang")} ${seg([["light","Light"],["dark","Dark"],["system","System"]],S.theme,"pTheme")} <span class="sm">device is</span> ${seg([["light","light"],["dark","dark"]],S.os?"dark":"light","pOs")}
+  <h2>Mock public-web configuration</h2>${seg([["production","Production"],["staging","Staging"]],S.webProfile,"pWeb")}<div class="sm">Prototype setting only; legal and deletion routes use this base. External-network reachability is #496 evidence.</div>
   <h2>Next result (one-shot, then back to OK)</h2>
   <div class="q">Code check ${seg([["ok","Accept"],["wrong","Wrong"],["expired","Expired"],["locked","Locked"],["offline","Offline"],["taken","Value taken (add/change)"],["grace","Grace period (sign-in)"]],S.outcome,"pOut")}</div>
   <div class="q">Get code / resend ${seg([["ok","Sent"],["rate","Rate limited"],["rateDay","Daily limit"],["offline","Offline"]],S.req,"pReq")}</div>
@@ -677,14 +663,15 @@ function panel(){
   <h2>Jump to a state</h2>`;
   J.forEach((j,i)=>{h+=j.g?`<div class="grp">${j.g}</div>`:`<span class="jump" onclick="J[${i}].f()">${j.l}</span>`;});
   h+=`<h2>Decision D${DKEYS.indexOf(S.dec)+1}: ${d.name}</h2><div class="q sm">Reference: ${d.ref}</div>`;
-  h+=Object.entries(d.opts).map(([k,o])=>`<div class="vdesc" style="${cur===k?"":"opacity:.55"}"><b>${k}. ${o[0]}</b>${d.rec===k?'<span class="rec">recommended</span>':""}<br>${o[1]}</div>`).join("");
+  h+=Object.entries(d.opts).map(([k,o])=>`<div class="vdesc" style="${cur===k?"":"opacity:.55"}"><b>${k}. ${o[0]}</b>${d.locked?'<span class="rec">founder approved</span>':d.rec===k?'<span class="rec">recommended, pending review</span>':'<span class="rec">pending review</span>'}<br>${o[1]}</div>`).join("");
   h+=seg(Object.entries(d.opts).map(([k,o])=>[k,k+" "+o[0]]),cur,`(k=>pDec('${S.dec}',k))`);
   h+=`<div style="margin-top:8px">${DKEYS.map((k,i)=>`<span class="jump" style="${k===S.dec?"background:#171717;color:#fff":""}" onclick="S.dec='${k}';DEC['${k}'].screen()">D${i+1} ${DEC[k].name}</span>`).join("")}</div>`;
-  h+=`<h2>Open points with no variant</h2><div class="q sm">• Web deletion confirmation copy is neutral (“If an account uses this phone…”) because ADR-0054 says a code request never reveals whether a value is registered. Say if you want it explicit.<br>• Phone codes expire in 5 min, email in 10 (ADR-0054); the phone line is new in the UI.<br>• Display name: not editable in the app today (Kolesa KZ-31 has Edit name). Left out; no ticket asks for it.<br>• Notification categories trimmed to Messages and Listing activity. Saved-search, blog and marketing categories in PRD 36 are out of the release.<br>• Language switcher stays on the sign-in screen (as today).</div>`;
+  h+=`<h2>Conflicts resolved</h2><div class="q sm"><p>D2 B/C removed. <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5937369580">#353 founder feedback</a> approves A, Phone | Email tabs.</p><p>Cabinet C removed. <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5759595278">#344 resolution</a> keeps Cabinet, Profile and separate Settings in the screen catalogue.</p><p>Both account-phone selling gates removed. <a href="../../../adr/0056-listing-contact-phones-are-verified.md">ADR-0056, Enforcement</a> says email-only Users verify a Listing contact phone inside the wizard; no account phone is required. It supersedes PHONE_REQUIRED and ADR-0054's Add a phone Sell step. The contact number can differ from the account phone and never becomes a Sign-in Method. #354 owns wizard design.</p><p>In-app deletion OTP removed. <a href="../../../adr/0054-phone-or-email-sign-in-share-one-user.md">ADR-0054, Deletion</a> keeps DELETE /me unchanged. Codes belong to web deletion. <a href="../../../adr/0032-account-deletion-grace-period.md">ADR-0032, Decision 1–3</a> supplies the 30-day grace, session revocation, archive, explicit recovery prompt and retained counterparty content.</p><p>Legal hosts use autotm.bagtyyar.dev, per <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/322#issuecomment-5936499997">#322 decision and #496</a>. No Share action is present.</p><p>Help is available signed out and signed in. <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/352#issuecomment-5937367553">#352 contact details</a> and <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/500#issuecomment-5937368548">#500 decision</a> provide email and phone using the contact-sheet design. No hours or response promise was supplied. Live support chat is after reviewer release.</p><p>ADR-0054 add/change stays code-confirmed; taken values are refused after confirmation, without account merging or a state mutation. ADR-0055 keeps email code delivery and its 10-minute expiry.</p><p>All surviving layout, Settings controls, Change warning, taken-value recovery buttons, deletion checkbox/copy and notification information view remain proposals pending founder review. Recommendations are not approvals. New RU/TK copy needs native-speaker review.</p></div>`;
+  h+=`<h2>Pending founder review</h2><div class="q sm">• Web deletion confirmation copy is neutral (“If an account uses this phone…”) because ADR-0054 says a code request never reveals whether a value is registered. Wording is proposed; code requests must stay neutral.<br>• Phone codes expire in 5 min, email in 10 (ADR-0054); the phone line is new in the UI.<br>• Display name: not editable in the app today (Kolesa KZ-31 has Edit name). Left out; no ticket asks for it.<br>• Notification category toggles removed: PRD 30 defers preferences and PRD 36 defers the full platform. Message push uses OS permission and per-conversation mute. No reviewer-release Listing activity preference is asserted.<br>• Language switcher stays on the sign-in screen (as today).</div>`;
   h+=`<details ${S.o1?"open":""} ontoggle="S.o1=this.open"><summary>State inventory: where in the prototype, exists today or new</summary><table><tr><th>State</th><th>Where here</th><th>Today (file)</th><th>Status</th></tr>${STATES.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="${r[3].startsWith("new")?"new":/new|pending|verify/.test(r[3])?"chg":"have"}">${r[3]}</td></tr>`).join("")}</table></details>`;
   h+=`<details ${S.o2?"open":""} ontoggle="S.o2=this.open"><summary>Reference notes (batches 3 and 4, viewed locally, not copied)</summary><div class="q sm">
-  • AR-41-002/004: Auto.ru “Menu” is a sheet of service tiles (wallet, reports, garage, insurance, credit) above a plain list: notifications, theme, help, licence agreement, privacy, about. Tiles are out of scope (rejected: credit, history reports, garage). The plain list is the part to copy (variant C).<br>
-  • AR-43-002: sign-in is a sheet that chooses an account provider; AutoTM has no social sign-in, so the useful part is only “choose a method first” (variant B).<br>
+  • AR-41-002/004: Auto.ru “Menu” is a sheet of service tiles (wallet, reports, garage, insurance, credit) above a plain list: notifications, theme, help, licence agreement, privacy, about. Tiles are out of scope (rejected: credit, history reports, garage). The menu reference must keep the separately approved Settings screen; Cabinet C was removed.<br>
+  • AR-43-002: sign-in is a sheet that chooses an account provider; AutoTM has no social sign-in, so the method-first alternative was removed because D2=A is approved.<br>
   • AR-44-001: profile header is a banner with name and a settings gear; social counters and Garage are out of scope.<br>
   • AR-40-002: notification settings group by topic with a channel summary under each row; we use switches because there is one channel (push).<br>
   • KZ-27-003 / KZ-35-001: cabinet shows name, the login phone as a row with a chevron, then My listings by status with counts, then the primary post button; settings are grouped Personal data, App settings, Push (variants B and A). Balance, PLUS and car history are out of scope.<br>
