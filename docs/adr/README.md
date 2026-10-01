@@ -85,6 +85,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0073](0073-ci-gates-and-release-bundles-run-on-github-hosted-runners.md) | CI gates and release bundles run on GitHub-hosted runners (amends ADR-0039's CI/CD split and ADR-0005's self-hosted runner rows) | Accepted | 2026-10-01 |
 
 | [0074](0074-digest-pinned-chainguard-minio-images.md) | Digest-pinned Chainguard MinIO images, preserving the existing S3 and volume contract | Accepted | 2026-10-01 |
+| [0075](0075-railway-pr-backends-for-agent-native-sessions.md) | Railway PR backends for agent native sessions | Accepted | 2026-10-01 |
 
 ## Per-app ADRs
 
@@ -139,4 +140,3 @@ Every ADR follows this skeleton:
 4. **One decision per ADR.** Don't bundle five decisions into one document.
 5. **Concrete, not aspirational.** "We will use NestJS" — not "we should consider NestJS."
 
-| [0075](0075-railway-pr-backends-for-agent-native-sessions.md) | Railway PR backends for agent native sessions | Accepted | 2026-10-01 |
