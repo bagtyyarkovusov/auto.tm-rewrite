@@ -82,6 +82,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0070](0070-test-first-behaviour-and-ui-evidence.md) | Test-first behaviour and UI evidence | Accepted | 2026-09-30 |
 | [0071](0071-codex-queue-models-and-owned-worktrees.md) | Codex queue models and owned worktrees (amends ADR-0069 for Codex only) | Accepted | 2026-09-30 |
 | [0072](0072-imported-logo-cleanup-coordination.md) | Give logo activations unique object directories | Accepted | 2026-10-01 |
+| [0073](0073-ci-gates-and-release-bundles-run-on-github-hosted-runners.md) | CI gates and release bundles run on GitHub-hosted runners (amends ADR-0039's CI/CD split and ADR-0005's self-hosted runner rows) | Accepted | 2026-10-01 |
 
 ## Per-app ADRs
 
