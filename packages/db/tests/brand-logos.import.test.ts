@@ -576,10 +576,29 @@ describe("brand logo import — Testcontainers Postgres and MinIO", () => {
       manifest: manifestOf(simpleIconsEntry("toyota", "A", siToyota.svg)),
       masters,
     };
-    await Promise.all([
-      importBrandLogos(deps, { dryRun: false, force: false }),
-      importBrandLogos(deps, { dryRun: false, force: false }),
-    ]);
+    // Both imports must pass the fresh read before either upload can finish.
+    // A barrier only at master loading lets the faster render activate first,
+    // so the second import legitimately refuses before uploading anything.
+    const directories = new Set<string>();
+    let releaseUploads!: () => void;
+    const uploadsReady = new Promise<void>((resolve) => { releaseUploads = resolve; });
+    s3.middlewareStack.add((next, context) => async (args) => {
+      if (context.commandName === "PutObjectCommand") {
+        const key = (args.input as { Key?: string }).Key ?? "";
+        directories.add(key.slice(0, key.lastIndexOf("/")));
+        if (directories.size === 2) releaseUploads();
+        await uploadsReady;
+      }
+      return next(args);
+    }, { step: "initialize", name: "bothImportsPastFreshRead" });
+    try {
+      await Promise.all([
+        importBrandLogos(deps, { dryRun: false, force: false }),
+        importBrandLogos(deps, { dryRun: false, force: false }),
+      ]);
+    } finally {
+      s3.middlewareStack.remove("bothImportsPastFreshRead");
+    }
     const winner = (await db.brand.findUniqueOrThrow({ where: { slug: "toyota" } })).logoKey as string;
     const beforeRerun = await listKeys("brands/toyota/");
     expect(beforeRerun).toHaveLength(8);

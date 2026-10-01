@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { validateNativePrSeed, nativePrSeedSteps, nativePrSeedStepsFor } from './native-pr-seed.mjs';
+const valid = { RAILWAY_ENVIRONMENT_NAME: 'auto.tm-rewrite-pr-481', RAILWAY_ENVIRONMENT_ID: 'pr-id', RAILWAY_PROJECT_ID: '176ddec0-dd65-4087-b82c-798599fc2ebe', SMS_DRIVER: 'mock', APP_ENV: 'staging', DATABASE_PUBLIC_URL: 'postgresql://demo:demo@example.com/demo', MINIO_PUBLIC_URL: 'https://minio-autotm-rewrite-pr-481.up.railway.app', MINIO_ACCESS_KEY: 'demo', MINIO_SECRET_KEY: 'demo' };
+test('refuses production, staging, missing and misleading names before any seed operation', () => {
+  for (const name of ['production', 'staging', undefined, 'production-pr-481', 'auto.tm-rewrite-pr-481-production', 'auto.tm-rewrite-pr-0']) {
+    assert.throws(() => validateNativePrSeed({ ...valid, RAILWAY_ENVIRONMENT_NAME: name }), /PR environment/);
+  }
+});
+test('requires mock SMS, nonproduction APP_ENV and Railway project identity', () => {
+  for (const patch of [{ SMS_DRIVER: 'http' }, { APP_ENV: 'production' }, { RAILWAY_PROJECT_ID: 'other' }, { RAILWAY_ENVIRONMENT_ID: undefined }]) {
+    assert.throws(() => validateNativePrSeed({ ...valid, ...patch }));
+  }
+});
+test('uses explicit public connections without logging credentials', () => {
+  const env = validateNativePrSeed({ ...valid, DATABASE_URL: 'private', MINIO_ENDPOINT: 'private' });
+  assert.equal(env.DATABASE_URL, valid.DATABASE_PUBLIC_URL);
+  assert.equal(env.MINIO_ENDPOINT, valid.MINIO_PUBLIC_URL);
+});
+test('one command orders storage and reference seed before fixtures and logos', () => {
+  assert.deepEqual(nativePrSeedSteps.map(step => step.name), ['buckets', 'catalog', 'native fixtures', 'brand logos']);
+});
+
+test('rejects staging or another PR media origin even with a valid PR name', () => {
+  for (const url of ['https://minio-staging-5795.up.railway.app', 'https://minio-autotm-rewrite-pr-480.up.railway.app']) {
+    assert.throws(() => validateNativePrSeed({ ...valid, MINIO_PUBLIC_URL: url }), /this PR/);
+  }
+});
+
+test('remote mode uses only this environment private service connections', () => {
+  const remote = { ...valid, DATABASE_PUBLIC_URL: undefined, DATABASE_URL: 'postgresql://demo:demo@postgres.railway.internal/demo', MINIO_ENDPOINT: 'http://minio.railway.internal:9000' };
+  const result = validateNativePrSeed(remote, { remote: true });
+  assert.equal(result.DATABASE_URL, remote.DATABASE_URL);
+  assert.equal(result.MINIO_ENDPOINT, remote.MINIO_ENDPOINT);
+  assert.equal(result.NATIVE_PR_SEED_REMOTE, 'true');
+  for (const patch of [{ DATABASE_URL: 'postgresql://demo:demo@example.com/demo' }, { MINIO_ENDPOINT: valid.MINIO_PUBLIC_URL }, { RAILWAY_ENVIRONMENT_NAME: 'production' }]) {
+    assert.throws(() => validateNativePrSeed({ ...remote, ...patch }, { remote: true }));
+  }
+});
+
+test('remote bucket bootstrap resolves dependencies from the shipped db workspace', () => {
+  assert.equal(nativePrSeedStepsFor({ remote: true })[0].args[0], 'packages/db/scripts/native-minio/bootstrap.mjs');
+  assert.equal(nativePrSeedStepsFor({ remote: false })[0].args[0], 'infra/minio/bootstrap.mjs');
+});
+
+test('remote steps execute with Node and the shipped tsx loader, without pnpm', () => {
+  const steps = nativePrSeedStepsFor({ remote: true });
+  assert.ok(steps.every(step => step.command === process.execPath));
+  assert.deepEqual(steps[1].args, ['--import', 'tsx', 'packages/db/src/seed.ts']);
+  assert.ok(steps[2].args.includes('--railway-pr'));
+});
+
+test('every bare import the remote seed steps load is declared by the db workspace', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const { builtinModules } = await import('node:module');
+  const db = JSON.parse(readFileSync('packages/db/package.json', 'utf8'));
+  const declared = new Set([...Object.keys(db.dependencies ?? {}), ...Object.keys(db.devDependencies ?? {})]);
+  const brandLogos = readdirSync('packages/db/scripts/brand-logos').map(name => `packages/db/scripts/brand-logos/${name}`);
+  const files = ['packages/db/src/seed.ts', 'packages/db/src/listing-prices.ts', 'packages/db/scripts/ui-fixture.ts', 'packages/db/scripts/fixture-photos.ts', 'packages/db/scripts/import-brand-logos.ts', 'infra/minio/bootstrap.mjs', 'infra/minio/contract.mjs', ...brandLogos];
+  const bare = /(?:from\s+|import\s+|import\(|require\()\s*["']([^./"'][^"']*)["']/g;
+  const missing = new Set();
+  for (const file of files) {
+    for (const [, specifier] of readFileSync(file, 'utf8').matchAll(bare)) {
+      if (specifier.startsWith('node:') || builtinModules.includes(specifier)) continue;
+      const name = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0];
+      if (!declared.has(name)) missing.add(name);
+    }
+  }
+  // The packaged image does not hoist undeclared packages, so each must be declared where the steps run.
+  assert.deepEqual([...missing], []);
+});
