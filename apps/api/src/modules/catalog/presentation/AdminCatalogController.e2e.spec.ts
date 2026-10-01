@@ -456,7 +456,9 @@ describe("AdminCatalogController e2e", () => {
       const first = await confirm(brand.id, token, firstPending);
       expect(first.status).toBe(200);
       const firstKey = (await prisma.brand.findUniqueOrThrow({ where: { id: brand.id } })).logoKey;
-      expect(firstKey).toMatch(new RegExp(`^brands/${brand.slug}/v\\d+/logo\\.png$`));
+      expect(firstKey).toMatch(
+        new RegExp(`^brands/${brand.slug}/v\\d+-[0-9a-f-]{36}/logo\\.png$`),
+      );
       expect(first.body.logoUrl).toMatch(new RegExp(`/catalog-assets/${firstKey}$`));
       expect((await head(firstKey as string))?.ContentType).toBe("image/png");
       expect(await head(firstPending)).toBeNull();
@@ -568,6 +570,102 @@ describe("AdminCatalogController e2e", () => {
         .expect(200);
 
       expect(await head(key)).toBeNull();
+    });
+
+    describe("an imported logo", () => {
+      const files = ["logo.png", "mono@1x.png", "mono@2x.png", "mono@3x.png"];
+
+      async function importedLogo(slug: string, version: string): Promise<string> {
+        const body = await png(30, 30);
+        for (const file of files) {
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: "catalog-assets",
+              Key: `brands/${slug}/${version}/${file}`,
+              Body: body,
+              ContentType: "image/png",
+            }),
+          );
+        }
+        return `brands/${slug}/${version}/logo.png`;
+      }
+
+      async function expectDirectory(slug: string, version: string, present: boolean) {
+        for (const file of files) {
+          const found = (await head(`brands/${slug}/${version}/${file}`)) !== null;
+          expect(found, `${version}/${file}`).toBe(present);
+        }
+      }
+
+      it("is removed with all four files when an admin removes it, leaving other versions", async () => {
+        const brand = await createBrand();
+        const { token } = await createAdminUser();
+        const active = `imp-0123456789ab-${randomUUID()}`;
+        const other = `imp-ffffffffffff-${randomUUID()}`;
+        const key = await importedLogo(brand.slug, active);
+        await importedLogo(brand.slug, other);
+        await prisma.brand.update({ where: { id: brand.id }, data: { logoKey: key } });
+
+        await request
+          .delete(`/api/v1/admin/catalog/brands/${brand.id}/logo`)
+          .set("Authorization", `Bearer ${token}`)
+          .expect(200);
+
+        await expectDirectory(brand.slug, active, false);
+        await expectDirectory(brand.slug, other, true);
+      });
+
+      it("is replaced with all four files deleted when an admin uploads a new logo", async () => {
+        const brand = await createBrand();
+        const { token } = await createAdminUser();
+        const active = `imp-0123456789ab-${randomUUID()}`;
+        const key = await importedLogo(brand.slug, active);
+        await prisma.brand.update({ where: { id: brand.id }, data: { logoKey: key } });
+
+        const confirmed = await confirm(
+          brand.id,
+          token,
+          await uploadPending(brand.id, token, "image/png", await png(90, 90)),
+        );
+
+        expect(confirmed.status).toBe(200);
+        await expectDirectory(brand.slug, active, false);
+      });
+
+      it("is deleted with all four files when the brand is deleted", async () => {
+        const brand = await createBrand();
+        const { token } = await createAdminUser();
+        const active = `imp-0123456789ab-${randomUUID()}`;
+        const key = await importedLogo(brand.slug, active);
+        await prisma.brand.update({ where: { id: brand.id }, data: { logoKey: key } });
+
+        await request
+          .delete(`/api/v1/admin/catalog/brands/${brand.id}`)
+          .set("Authorization", `Bearer ${token}`)
+          .expect(200);
+
+        await expectDirectory(brand.slug, active, false);
+      });
+
+      it("is cleaned from the stored slug when the brand was renamed", async () => {
+        const brand = await createBrand();
+        const { token } = await createAdminUser();
+        const active = `imp-0123456789ab-${randomUUID()}`;
+        const key = await importedLogo(brand.slug, active);
+        await prisma.brand.update({ where: { id: brand.id }, data: { logoKey: key } });
+        await request
+          .patch(`/api/v1/admin/catalog/brands/${brand.id}`)
+          .set("Authorization", `Bearer ${token}`)
+          .send({ slug: `${brand.slug}-renamed` })
+          .expect(200);
+
+        await request
+          .delete(`/api/v1/admin/catalog/brands/${brand.id}/logo`)
+          .set("Authorization", `Bearer ${token}`)
+          .expect(200);
+
+        await expectDirectory(brand.slug, active, false);
+      });
     });
 
     it("returns 404 for an unknown brand", async () => {
