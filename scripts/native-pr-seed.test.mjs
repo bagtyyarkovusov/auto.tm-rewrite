@@ -26,3 +26,14 @@ test('rejects staging or another PR media origin even with a valid PR name', () 
     assert.throws(() => validateNativePrSeed({ ...valid, MINIO_PUBLIC_URL: url }), /this PR/);
   }
 });
+
+test('remote mode uses only this environment private service connections', () => {
+  const remote = { ...valid, DATABASE_PUBLIC_URL: undefined, DATABASE_URL: 'postgresql://demo:demo@postgres.railway.internal/demo', MINIO_ENDPOINT: 'http://minio.railway.internal:9000' };
+  const result = validateNativePrSeed(remote, { remote: true });
+  assert.equal(result.DATABASE_URL, remote.DATABASE_URL);
+  assert.equal(result.MINIO_ENDPOINT, remote.MINIO_ENDPOINT);
+  assert.equal(result.NATIVE_PR_SEED_REMOTE, 'true');
+  for (const patch of [{ DATABASE_URL: 'postgresql://demo:demo@example.com/demo' }, { MINIO_ENDPOINT: valid.MINIO_PUBLIC_URL }, { RAILWAY_ENVIRONMENT_NAME: 'production' }]) {
+    assert.throws(() => validateNativePrSeed({ ...remote, ...patch }, { remote: true }));
+  }
+});
