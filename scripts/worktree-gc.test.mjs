@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,9 +11,13 @@ import {
   findStaleBranches,
   findStaleRailwayEnvironments,
   formatReport,
+  loadPrs,
+  main,
   parseClaudeSessions,
+  scanClaudeSessions,
   parseWorktreePorcelain,
   planApply,
+  realpathOrSelf,
   runApply,
 } from "./worktree-gc.mjs";
 
@@ -92,6 +96,7 @@ const pr = (overrides = {}) => ({
   state: "MERGED",
   headRefName: "agent/issue-1",
   headRefOid: SHA(10),
+  baseRefName: "main",
   url: "https://github.com/o/r/pull/12",
   ...overrides,
 });
@@ -99,7 +104,6 @@ const pr = (overrides = {}) => ({
 const context = (overrides = {}) => ({
   mainPath: MAIN,
   currentPath: `${MAIN}/.claude/worktrees/self`,
-  homeDir: HOME,
   dirtyCount: 0,
   activeProcesses: [],
   onMain: false,
@@ -243,8 +247,8 @@ test("a live Claude session working in the worktree keeps it as a running agent"
       { pid: 42, cwd: MAIN, kind: "interactive", name: "orchestrator", status: "idle" },
     ]),
   );
-  assert.equal(sessions.length, 2);
-  const verdict = classifyWorktree(entry(), context({ activeProcesses: sessions }));
+  assert.equal(sessions.sessions.length, 2);
+  const verdict = classifyWorktree(entry(), context({ activeProcesses: sessions.sessions }));
   assert.equal(verdict.verdict, "keep");
   assert.match(verdict.reason, /running agent: pid 41 \(claude session "AutoTM issue-1"\)/);
 });
@@ -253,14 +257,15 @@ test("a Claude session in a sibling directory with the same prefix does not coun
   const sessions = parseClaudeSessions(
     JSON.stringify([{ pid: 41, cwd: `${MAIN}/.claude/worktrees/issue-10`, kind: "background", name: "other" }]),
   );
-  assert.equal(classifyWorktree(entry(), context({ activeProcesses: sessions })).verdict, "remove");
+  assert.equal(classifyWorktree(entry(), context({ activeProcesses: sessions.sessions })).verdict, "remove");
 });
 
 test("Claude session data that cannot be read is unknown, never an empty list", () => {
   assert.equal(parseClaudeSessions("not json"), null);
   assert.equal(parseClaudeSessions(JSON.stringify({ sessions: [] })), null);
-  assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 1, name: "no cwd" }])), null);
-  assert.deepEqual(parseClaudeSessions("[]"), []);
+  assert.equal(parseClaudeSessions(JSON.stringify(["not an object"])), null);
+  assert.equal(parseClaudeSessions(JSON.stringify([null])), null);
+  assert.deepEqual(parseClaudeSessions("[]"), { sessions: [], withoutCwd: 0 });
 });
 
 test("no PR match keeps the worktree", () => {
@@ -316,6 +321,20 @@ test("a directory named for evidence keeps a detached worktree", () => {
   );
   assert.equal(verdict.verdict, "keep");
   assert.match(verdict.reason, /evidence, prototype or research/);
+});
+
+test("a directory named for evidence keeps the worktree whether it is the listed path or the real path", () => {
+  const detached = { branch: null, detached: true };
+  // git lists a final-component symlink under its own name; the real path is the target.
+  const viaLink = entry({ ...detached, path: `${MAIN}/.claude/worktrees/issue-1`, listedPath: `${MAIN}/.claude/worktrees/prototype-link` });
+  const viaTarget = entry({ ...detached, path: `${MAIN}/.claude/worktrees/research-target`, listedPath: `${MAIN}/.claude/worktrees/plain-link` });
+  for (const candidate of [viaLink, viaTarget]) {
+    const verdict = classifyWorktree(candidate, context());
+    assert.equal(verdict.verdict, "keep", candidate.listedPath);
+    assert.match(verdict.reason, /evidence, prototype or research/, candidate.listedPath);
+  }
+  const plain = entry({ ...detached, listedPath: `${MAIN}/.claude/worktrees/plain-link` });
+  assert.equal(classifyWorktree(plain, context()).verdict, "remove");
 });
 
 test("a branch like research-free names is not caught by substring accident", () => {
@@ -546,12 +565,12 @@ function fixtureRepo(t) {
   const behindPrHead = git(behind.path, "rev-parse", "HEAD");
   git(behind.path, "reset", "-q", "--hard", behind.head);
   const prs = [
-    { number: 1, state: "MERGED", headRefName: "agent/issue-1", headRefOid: merged.head, url: "u/1" },
-    { number: 2, state: "MERGED", headRefName: "agent/issue-2", headRefOid: dirty.head, url: "u/2" },
-    { number: 3, state: "OPEN", headRefName: "agent/issue-3", headRefOid: open.head, url: "u/3" },
-    { number: 4, state: "MERGED", headRefName: "agent/issue-4", headRefOid: locked.head, url: "u/4" },
-    { number: 5, state: "MERGED", headRefName: "agent/issue-5", headRefOid: ahead.head, url: "u/5" },
-    { number: 6, state: "MERGED", headRefName: "agent/issue-6", headRefOid: behindPrHead, url: "u/6" },
+    { number: 1, state: "MERGED", headRefName: "agent/issue-1", headRefOid: merged.head, baseRefName: "main", url: "u/1" },
+    { number: 2, state: "MERGED", headRefName: "agent/issue-2", headRefOid: dirty.head, baseRefName: "main", url: "u/2" },
+    { number: 3, state: "OPEN", headRefName: "agent/issue-3", headRefOid: open.head, baseRefName: "main", url: "u/3" },
+    { number: 4, state: "MERGED", headRefName: "agent/issue-4", headRefOid: locked.head, baseRefName: "main", url: "u/4" },
+    { number: 5, state: "MERGED", headRefName: "agent/issue-5", headRefOid: ahead.head, baseRefName: "main", url: "u/5" },
+    { number: 6, state: "MERGED", headRefName: "agent/issue-6", headRefOid: behindPrHead, baseRefName: "main", url: "u/6" },
   ];
   const prsFile = join(root, "prs.json");
   writeFileSync(prsFile, JSON.stringify(prs));
@@ -569,7 +588,25 @@ function fixtureRepo(t) {
       env: { ...process.env, HOME: main, PATH: `${bin}:${process.env.PATH}`, ...env },
     });
   };
-  return { root, main, git, merged, dirty, open, locked, ahead, behind, prsFile, snapshot, gc };
+  // A worktree at any path under the fixture root, with a merged PR at its head, so the gate would remove it.
+  let nextPr = 100;
+  const addMergedWorktree = (relPath, branch, base = "main") => {
+    const path = join(root, relPath);
+    git(main, "worktree", "add", "-q", "-b", branch, path);
+    writeFileSync(join(path, "work.txt"), `${branch}\n`);
+    git(path, "add", "work.txt");
+    git(path, "commit", "-q", "-m", branch);
+    const head = git(path, "rev-parse", "HEAD");
+    nextPr += 1;
+    const all = JSON.parse(readFileSync(prsFile, "utf8"));
+    all.push({ number: nextPr, state: "MERGED", headRefName: branch, headRefOid: head, baseRefName: base, url: `u/${nextPr}` });
+    writeFileSync(prsFile, JSON.stringify(all));
+    return { path, head };
+  };
+  // A symlink to the fixture root, for paths that reach a worktree through an alias.
+  const alias = join(root, "alias");
+  symlinkSync(root, alias);
+  return { root, main, git, merged, dirty, open, locked, ahead, behind, prsFile, snapshot, gc, addMergedWorktree, alias };
 }
 
 // The tests below feed hand-written PR data to --apply, which the script refuses unless told it is a test.
@@ -667,4 +704,519 @@ test("--prs-file together with --apply is refused, so hand-written PR data canno
   assert.equal(result.status, 2);
   assert.match(result.stderr, /--prs-file cannot be combined with --apply/);
   assert.equal(repo.snapshot(), before, "nothing was removed");
+});
+
+// --- the command line, in this process, with injected scans ------------------
+
+// Runs main() against a fixture with the scans and the environment injected. By default the process scan
+// is complete (it holds this process) and no Claude session is live, so only the overridden scan matters.
+function runMain(repo, args, io = {}) {
+  const out = [];
+  const err = [];
+  const status = main([...args, "--no-railway", "--no-size"], repo.main, {
+    env: { ...process.env, HOME: repo.main, ...ALLOW_PRS_FILE },
+    scanProcesses: () => [{ pid: process.pid, command: "node", cwd: repo.main }],
+    scanClaudeSessions: () => ({ status: "ok", sessions: [], withoutCwd: 0 }),
+    stdout: (text) => out.push(text),
+    stderr: (text) => err.push(text),
+    ...io,
+  });
+  return { status, stdout: out.join(""), stderr: err.join("\n") };
+}
+
+const hasWorktree = (repo, path) => repo.git(repo.main, "worktree", "list", "--porcelain").includes(path);
+
+// Finding 1: path matching is literal and depends on $HOME.
+
+test("Codex app-managed protection does not depend on HOME", () => {
+  const verdict = classifyWorktree(
+    entry({ path: "/Users/dev/.codex/worktrees/1b73/auto.tm-rewrite", branch: null, detached: true }),
+    context(),
+  );
+  assert.equal(verdict.verdict, "keep");
+  assert.match(verdict.reason, /Codex app-managed worktree/);
+});
+
+test("a Codex app-managed worktree is kept when HOME points somewhere else", (t) => {
+  const repo = fixtureRepo(t);
+  const codex = repo.addMergedWorktree("other-home/.codex/worktrees/1b73/auto.tm-rewrite", "agent/issue-20");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stdout, new RegExp(`${codex.path}\\n  verdict: keep: Codex app-managed worktree`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(hasWorktree(repo, codex.path), "the Codex worktree survived --apply");
+});
+
+test("realpathOrSelf resolves symlinks, the existing part of a missing path, and leaves the rest alone", (t) => {
+  const repo = fixtureRepo(t);
+  assert.equal(realpathOrSelf(join(repo.alias, "merged")), join(repo.root, "merged"));
+  assert.equal(realpathOrSelf(join(repo.alias, "merged", "gone", "deeper")), join(repo.root, "merged", "gone", "deeper"));
+  assert.equal(realpathOrSelf("/no-such-root-for-worktree-gc/x"), "/no-such-root-for-worktree-gc/x");
+});
+
+test("a Claude session that reaches the worktree through a symlink keeps it", (t) => {
+  const repo = fixtureRepo(t);
+  const sessions = [{ pid: 4242, cwd: join(repo.alias, "merged"), command: "claude session \"subagent\"" }];
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "ok", sessions, withoutCwd: 0 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /keep: running agent: pid 4242/);
+  assert.ok(hasWorktree(repo, repo.merged.path), "the worktree a session works in survived --apply");
+});
+
+test("a process that reaches the worktree through a symlink keeps it", (t) => {
+  const repo = fixtureRepo(t);
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    scanProcesses: () => [
+      { pid: process.pid, command: "node", cwd: repo.main },
+      { pid: 5151, command: "node", cwd: join(repo.alias, "merged") },
+    ],
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /keep: running agent: pid 5151 \(node\)/);
+  assert.ok(hasWorktree(repo, repo.merged.path), "the worktree a process works in survived --apply");
+});
+
+test("a worktree that git lists through a final-component symlink named for prototype work is kept", (t) => {
+  const repo = fixtureRepo(t);
+  const plain = repo.addMergedWorktree("plain-dir", "agent/issue-30");
+  // Point git's record of the worktree at a symlink named prototype-link; its real path stays plain-dir.
+  const link = join(repo.root, "prototype-link");
+  symlinkSync(plain.path, link);
+  const gitdirFile = join(repo.git(plain.path, "rev-parse", "--absolute-git-dir"), "gitdir");
+  writeFileSync(gitdirFile, `${join(link, ".git")}\n`);
+  assert.ok(repo.git(repo.main, "worktree", "list", "--porcelain").includes(`worktree ${link}\n`), "git lists the symlink path");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  // The report prints the real path; the verdict comes from the listed name.
+  assert.match(readOnly.stdout, new RegExp(`${plain.path}\\n  verdict: keep: evidence, prototype or research worktree`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(hasWorktree(repo, link), "the symlinked prototype worktree survived --apply");
+});
+
+// Finding 2: a partial process scan is treated as complete.
+
+test("--apply refuses when the process scan does not include this process", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const partial = () => [{ pid: 1, command: "launchd", cwd: "/" }];
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile], { scanProcesses: partial });
+  assert.equal(applied.status, 1);
+  assert.match(applied.stderr, /did not include this process/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+});
+
+test("a read-only run warns when the process scan does not include this process", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: () => [{ pid: 1, command: "launchd", cwd: "/" }] });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /did not include this process/);
+  assert.equal(repo.snapshot(), before);
+});
+
+test("--apply proceeds when the process scan includes this process", (t) => {
+  const repo = fixtureRepo(t);
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the passing worktree was removed");
+});
+
+// Finding 3: Claude session scan edge cases.
+
+test("a Claude session without a working directory is skipped and counted, not a reason to distrust the whole list", () => {
+  const parsed = parseClaudeSessions(
+    JSON.stringify([
+      { pid: 41, cwd: `${MAIN}/.claude/worktrees/issue-1`, name: "local" },
+      { pid: 42, kind: "remote", name: "cloud" },
+      { pid: 43, cwd: "", name: "blank" },
+      { pid: 44, cwd: 7, name: "wrong type" },
+    ]),
+  );
+  assert.deepEqual(parsed, {
+    sessions: [{ pid: 41, command: 'claude session "local"', cwd: `${MAIN}/.claude/worktrees/issue-1` }],
+    withoutCwd: 3,
+  });
+});
+
+test("a non-empty Claude session list in which no entry has a working directory is unreadable", () => {
+  const entries = [{ pid: 42, kind: "remote", name: "cloud" }, { pid: 43, cwd: "", name: "blank" }, { pid: 44, cwd: 7, name: "wrong type" }];
+  assert.equal(parseClaudeSessions(JSON.stringify(entries)), null);
+  // The format changed: the directory moved under another key, so every live session lacks `cwd`.
+  assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 41, workdir: "/a" }, { pid: 42, workdir: "/b" }])), null);
+});
+
+test("an entry that is not a plain object makes the whole Claude session list unreadable", () => {
+  assert.equal(parseClaudeSessions("[[]]"), null);
+  assert.equal(parseClaudeSessions(JSON.stringify([[{ pid: 1, cwd: "/a" }]])), null);
+  assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 41, cwd: "/a" }, []])), null);
+});
+
+test("a mixed Claude session list still skips and counts the entries without a directory, and an empty one has no sessions", () => {
+  const mixed = parseClaudeSessions(JSON.stringify([{ pid: 41, cwd: "/a", name: "local" }, { pid: 42, kind: "remote" }]));
+  assert.deepEqual(mixed, { sessions: [{ pid: 41, command: 'claude session "local"', cwd: "/a" }], withoutCwd: 1 });
+  assert.deepEqual(parseClaudeSessions("[]"), { sessions: [], withoutCwd: 0 });
+});
+
+test("--apply refuses when no Claude session entry has a working directory, and a read-only run only warns", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const sessions = [{ pid: 7, kind: "remote", name: "cloud" }, { pid: 8, workdir: repo.merged.path, name: "renamed field" }];
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions });
+  assert.equal(applied.status, 1, applied.stderr);
+  assert.match(applied.stderr, /Cannot read Claude sessions/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const readOnly = repo.gc(["--prs-file", repo.prsFile], { sessions });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /could not read Claude sessions/);
+  assert.match(readOnly.stdout, /Claude sessions: not checked/);
+});
+
+test("--apply refuses when a Claude session entry is a nested array", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions: [[]] });
+  assert.equal(applied.status, 1, applied.stderr);
+  assert.match(applied.stderr, /Cannot read Claude sessions/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+});
+
+test("--apply with a mixed Claude session list warns about the entry without a directory and still removes", (t) => {
+  const repo = fixtureRepo(t);
+  const sessions = [{ pid: 9, cwd: repo.main, name: "orchestrator" }, { pid: 10, kind: "remote", name: "cloud" }];
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.match(applied.stderr, /1 Claude session has no working directory/);
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the passing worktree was removed");
+});
+
+test("--apply with an empty Claude session list is a valid no-sessions scan", (t) => {
+  const repo = fixtureRepo(t);
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions: [] });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.equal(applied.stderr, "");
+  assert.match(applied.stdout, /Claude sessions: checked \(0 with a directory\)/);
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the passing worktree was removed");
+});
+
+test("a missing claude binary is reported as not checked, never as an empty session list", () => {
+  const missing = scanClaudeSessions(() => ({ error: Object.assign(new Error("spawn claude ENOENT"), { code: "ENOENT" }) }));
+  assert.deepEqual(missing, { status: "missing", sessions: [], withoutCwd: 0 });
+});
+
+test("a missing claude binary warns, and the report says Claude sessions were not checked", (t) => {
+  const repo = fixtureRepo(t);
+  const missing = () => ({ status: "missing", sessions: [], withoutCwd: 0 });
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile], { scanClaudeSessions: missing });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /`claude` was not found/);
+  assert.match(readOnly.stdout, /Claude sessions: not checked/);
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile], { scanClaudeSessions: missing });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.match(applied.stderr, /`claude` was not found/);
+  assert.match(applied.stdout, /Completion report[\s\S]*Claude sessions: not checked/);
+});
+
+test("Claude sessions without a working directory are named in the report and as a warning", (t) => {
+  const repo = fixtureRepo(t);
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "ok", sessions: [], withoutCwd: 2 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /2 Claude sessions have no working directory/);
+  assert.match(result.stdout, /Claude sessions: checked \(0 with a directory, 2 without one are not matched to any worktree\)/);
+});
+
+test("a clean Claude session scan is stated in the report with no warning", (t) => {
+  const repo = fixtureRepo(t);
+  const sessions = [{ pid: 9, command: 'claude session "orchestrator"', cwd: repo.main }];
+  const result = runMain(repo, ["--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "ok", sessions, withoutCwd: 0 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /Claude sessions: checked \(1 with a directory\)/);
+  assert.match(result.stdout, /Process scan: includes this process \(1 processes\)/);
+  assert.doesNotMatch(result.stdout, /Process scan: complete/);
+});
+
+test("the JSON report records what each scan covered", (t) => {
+  const repo = fixtureRepo(t);
+  const result = runMain(repo, ["--json", "--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "missing", sessions: [], withoutCwd: 0 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.scans?.claude?.status, "missing");
+  assert.equal(report.scans?.processes?.includesCurrentProcess, true);
+  assert.equal(report.scans?.processes?.status, "includes-current-process");
+  assert.equal(report.scans?.processes?.count, 1);
+});
+
+test("the report and the JSON say when the process scan does not include this process", (t) => {
+  const repo = fixtureRepo(t);
+  const partial = () => [{ pid: 1, command: "launchd", cwd: "/" }];
+  const text = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: partial });
+  assert.equal(text.status, 0, text.stderr);
+  assert.match(text.stdout, /Process scan: does not include this process \(1 processes\), so running agents may be missed/);
+  const json = JSON.parse(runMain(repo, ["--json", "--prs-file", repo.prsFile], { scanProcesses: partial }).stdout);
+  assert.equal(json.scans.processes.status, "excludes-current-process");
+  assert.equal(json.scans.processes.includesCurrentProcess, false);
+  const unavailable = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: () => null });
+  assert.match(unavailable.stdout, /Process scan: not checked \(the process list could not be read\)/);
+  assert.equal(JSON.parse(runMain(repo, ["--json", "--prs-file", repo.prsFile], { scanProcesses: () => null }).stdout).scans.processes.status, "unavailable");
+});
+
+// Finding 4: the --apply path, with the repository changing between the scan and the removal.
+
+// An exec that runs the real command, after calling `before(argv)` once for each command it sees.
+function realExec(before) {
+  return (argv, cwd) => {
+    before(argv);
+    return execFileSync(argv[0], argv.slice(1), { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  };
+}
+
+// Runs --apply, letting `mutate(other)` change the second worktree it is about to remove once the first
+// removal starts. The scan has already passed both, so only the pre-removal recheck can stop the second.
+function applyWhileMutatingSecondRemoval(repo, mutate) {
+  let started = false;
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    exec: realExec((argv) => {
+      if (started || argv[1] !== "worktree" || argv[2] !== "remove") return;
+      started = true;
+      mutate(argv[3] === repo.merged.path ? repo.behind : repo.merged, argv[3] === repo.merged.path ? "behind" : "merged");
+    }),
+  });
+  assert.ok(started, "a worktree removal ran");
+  return result;
+}
+
+test("--apply stops before removing a worktree whose HEAD moved after the scan", (t) => {
+  const repo = fixtureRepo(t);
+  const moved = [];
+  const result = applyWhileMutatingSecondRemoval(repo, (other, name) => {
+    repo.git(other.path, "commit", "-q", "--allow-empty", "-m", "moved after the scan");
+    moved.push([other, name]);
+  });
+  const [[other, name]] = moved;
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, new RegExp(`FAILED at: remove worktree ${other.path}`));
+  assert.match(result.stdout, /HEAD moved from/);
+  assert.ok(hasWorktree(repo, other.path), `${name} was not removed`);
+  assert.equal(repo.git(other.path, "log", "-1", "--format=%s"), "moved after the scan", "the new commit is intact");
+  const branches = repo.git(repo.main, "branch", "--format=%(refname:short)").split("\n");
+  assert.ok(branches.includes(name === "merged" ? "agent/issue-1" : "agent/issue-6"), "its branch was not deleted either");
+  assert.match(result.stdout, /not attempted: [1-9]/);
+});
+
+test("--apply stops before removing a worktree that was dirtied after the scan", (t) => {
+  const repo = fixtureRepo(t);
+  const dirtied = [];
+  const result = applyWhileMutatingSecondRemoval(repo, (other) => {
+    writeFileSync(join(other.path, "late.txt"), "written after the scan\n");
+    dirtied.push(other);
+  });
+  const [other] = dirtied;
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, new RegExp(`FAILED at: remove worktree ${other.path}`));
+  assert.match(result.stdout, /worktree is no longer clean/);
+  assert.ok(hasWorktree(repo, other.path));
+  assert.equal(readFileSync(join(other.path, "late.txt"), "utf8"), "written after the scan\n");
+});
+
+test("--apply refuses to run when the process scan returns nothing usable, and a read-only run warns", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile], { scanProcesses: () => null });
+  assert.equal(applied.status, 1);
+  assert.match(applied.stderr, /Cannot scan running processes, so --apply refuses to remove anything/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: () => null });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /could not scan running processes/);
+  assert.equal(repo.snapshot(), before);
+});
+
+test("a stale branch that moved after the scan fails the conditional delete, and the branch is kept", (t) => {
+  const repo = fixtureRepo(t);
+  repo.git(repo.main, "branch", "agent/issue-7", repo.merged.head);
+  const base = repo.git(repo.main, "rev-parse", "main");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.match(readOnly.stdout, /agent\/issue-7 at /, "the scan lists it as stale");
+  let moved = false;
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    exec: realExec(() => {
+      if (moved) return;
+      moved = true;
+      repo.git(repo.main, "update-ref", "refs/heads/agent/issue-7", base);
+    }),
+  });
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, /FAILED at: delete branch agent\/issue-7 at/);
+  assert.match(result.stdout, /expected/, "git's own mismatch message is reported");
+  assert.equal(repo.git(repo.main, "rev-parse", "refs/heads/agent/issue-7"), base, "the moved branch was not deleted");
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the earlier removal had already happened");
+});
+
+// Finding 5: command-line nits.
+
+test("--prs-file without a path is a usage error, not a silent fall back to gh", () => {
+  for (const argv of [["--prs-file"], ["--prs-file", "--apply"]]) {
+    const err = [];
+    const status = main(argv, "/", { stdout: () => {}, stderr: (text) => err.push(text) });
+    assert.equal(status, 2, argv.join(" "));
+    assert.match(err.join("\n"), /--prs-file needs a path/, argv.join(" "));
+  }
+});
+
+// A gh stand-in that returns up to `--limit` PRs from a repository of `total`.
+function fakeGh(total) {
+  const limits = [];
+  const fields = [];
+  const runCommand = (argv) => {
+    const limit = Number(argv[argv.indexOf("--limit") + 1]);
+    limits.push(limit);
+    fields.push(argv[argv.indexOf("--json") + 1]);
+    return JSON.stringify(Array.from({ length: Math.min(limit, total) }, (_, i) => ({ number: i + 1 })));
+  };
+  return { runCommand, limits, fields };
+}
+
+test("loadPrs makes one call for a short list and asks for baseRefName", () => {
+  const gh = fakeGh(3);
+  const loaded = loadPrs(null, "/", gh.runCommand);
+  assert.equal(loaded.prs.length, 3);
+  assert.equal(loaded.truncated, false);
+  assert.deepEqual(gh.limits, [1000]);
+  assert.match(gh.fields[0], /(^|,)baseRefName(,|$)/);
+});
+
+test("loadPrs asks for a larger list when the result fills the limit", () => {
+  const gh = fakeGh(1500);
+  const loaded = loadPrs(null, "/", gh.runCommand);
+  assert.equal(loaded.prs.length, 1500);
+  assert.equal(loaded.truncated, false);
+  assert.deepEqual(gh.limits, [1000, 5000]);
+});
+
+test("loadPrs reports truncation when even the largest limit is full", () => {
+  const gh = fakeGh(Number.MAX_SAFE_INTEGER);
+  const loaded = loadPrs(null, "/", gh.runCommand);
+  assert.equal(loaded.truncated, true);
+  assert.deepEqual(gh.limits, [1000, 5000, 20000]);
+  assert.equal(loaded.prs.length, 20000);
+});
+
+test("a possibly truncated PR list warns on a read-only run and stops --apply", (t) => {
+  const repo = fixtureRepo(t);
+  const prs = JSON.parse(readFileSync(repo.prsFile, "utf8"));
+  const io = { loadPrs: () => ({ prs, truncated: true }) };
+  const before = repo.snapshot();
+  const applied = runMain(repo, ["--apply"], io);
+  assert.equal(applied.status, 1);
+  assert.match(applied.stderr, /PR list may be truncated/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const readOnly = runMain(repo, [], io);
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /PR list may be truncated/);
+});
+
+// Finding 6: stacked PRs merged into a base other than main.
+
+test("a PR merged into a branch other than main keeps the worktree, since the work is not on main yet", () => {
+  const verdict = classifyWorktree(entry(), context({ prs: [pr({ baseRefName: "agent/issue-0" })] }));
+  assert.equal(verdict.verdict, "keep");
+  assert.match(verdict.reason, /^PR #12 merged into agent\/issue-0, not main/);
+});
+
+test("a merged PR with no recorded base is not assumed to be on main", () => {
+  const verdict = classifyWorktree(entry(), context({ prs: [pr({ baseRefName: undefined })] }));
+  assert.equal(verdict.verdict, "keep");
+  assert.match(verdict.reason, /^PR #12 merged into an unknown base, not main/);
+});
+
+test("a PR merged into main still removes the worktree when another matching PR merged into a stacked base", () => {
+  const verdict = classifyWorktree(
+    entry(),
+    context({ prs: [pr({ number: 3, baseRefName: "agent/issue-0" }), pr({ number: 4, baseRefName: "main" })] }),
+  );
+  assert.equal(verdict.verdict, "remove");
+  assert.match(verdict.reason, /PR #4 merged/);
+});
+
+test("a branch inside a PR merged into a stacked base is not a stale branch", () => {
+  const stale = findStaleBranches({
+    branches: [{ name: "agent/issue-2", sha: SHA(20) }],
+    worktrees: [],
+    prs: [pr({ number: 20, headRefName: "agent/issue-2", headRefOid: SHA(20), baseRefName: "agent/issue-1" })],
+    isAncestor: () => false,
+  });
+  assert.deepEqual(stale, []);
+});
+
+test("a worktree whose PR merged into a stacked base is kept by --apply, branch and all", (t) => {
+  const repo = fixtureRepo(t);
+  const stacked = repo.addMergedWorktree("stacked", "agent/issue-30", "agent/issue-29");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.match(readOnly.stdout, new RegExp(`${stacked.path}\\n  verdict: keep: PR #101 merged into agent/issue-29, not main`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(hasWorktree(repo, stacked.path), "the stacked worktree survived");
+  assert.ok(repo.git(repo.main, "branch", "--format=%(refname:short)").split("\n").includes("agent/issue-30"));
+});
+
+// Finding 7: a stale branch whose tip is on main is labelled "on main", not "PR #N merged".
+
+test("a stale branch is flagged when its tip is on main", () => {
+  const stale = findStaleBranches({
+    branches: [
+      { name: "worktree-agent-abc", sha: SHA(40) },
+      { name: "agent/issue-2", sha: SHA(20) },
+    ],
+    worktrees: [],
+    prs: [
+      pr({ number: 20, headRefName: "agent/issue-2", headRefOid: SHA(20) }),
+      pr({ number: 41, headRefName: "x", headRefOid: SHA(41) }),
+    ],
+    mainSha: SHA(99),
+    isAncestor: (a, b) => a === SHA(40) && (b === SHA(41) || b === SHA(99)),
+  });
+  assert.deepEqual(stale.map((item) => [item.name, item.onMain]), [
+    ["worktree-agent-abc", true],
+    ["agent/issue-2", false],
+  ]);
+});
+
+test("the report labels a stale branch on main as such and keeps the PR label for the rest", () => {
+  const text = formatReport({
+    rows: [],
+    staleBranches: [
+      { name: "worktree-agent-abc", sha: SHA(40), pr: pr({ number: 41 }), onMain: true },
+      { name: "agent/issue-2", sha: SHA(20), pr: pr({ number: 20 }), onMain: false },
+    ],
+    railway: null,
+    applied: null,
+  });
+  assert.match(text, /worktree-agent-abc at a{9} \(on main\)/);
+  assert.match(text, /agent\/issue-2 at a{9} \(PR #20 merged\)/);
+  assert.doesNotMatch(text, /worktree-agent-abc[^\n]*PR #41/);
+});
+
+test("--apply still deletes stale branches, and the report says which tips are on main", (t) => {
+  const repo = fixtureRepo(t);
+  const base = repo.git(repo.main, "rev-parse", "main");
+  repo.git(repo.main, "branch", "worktree-agent-scaffold", base);
+  repo.git(repo.main, "branch", "agent/issue-8", repo.merged.head);
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.match(readOnly.stdout, new RegExp(`worktree-agent-scaffold at ${base.slice(0, 9)} \\(on main\\)`));
+  assert.match(readOnly.stdout, new RegExp(`agent/issue-8 at ${repo.merged.head.slice(0, 9)} \\(PR #1 merged\\)`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  const branches = repo.git(repo.main, "branch", "--format=%(refname:short)").split("\n");
+  assert.ok(!branches.includes("worktree-agent-scaffold"));
+  assert.ok(!branches.includes("agent/issue-8"));
 });

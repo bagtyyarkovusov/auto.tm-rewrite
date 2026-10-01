@@ -12,13 +12,13 @@
 //          [--no-railway] [--prs-file <json>]
 // `--prs-file` is for read-only experiments; `--apply` refuses it.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
-import { homedir } from "node:os";
-import { basename } from "node:path";
+import { existsSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ZERO_SHA = /^0+$/;
 const EVIDENCE = /(^|[/_-])(evidence|prototype|research)([/_-]|$)/i;
+const MAIN_BRANCH = "main";
 const TASK_BRANCH = "agent/issue-";
 const SCAFFOLD_BRANCH = "worktree-agent-";
 
@@ -64,15 +64,62 @@ export function parseClaudeSessions(text) {
   }
   if (!Array.isArray(sessions)) return null;
   const found = [];
+  let withoutCwd = 0;
   for (const session of sessions) {
-    if (typeof session?.cwd !== "string" || !session.cwd) return null;
+    // An entry that is not a plain object means the format is not what we expect.
+    if (!session || typeof session !== "object" || Array.isArray(session)) return null;
+    // A session with no directory (a remote one, say) cannot sit in any
+    // worktree, so it cannot be matched. Among sessions that do have one it is
+    // counted and reported, not silently dropped.
+    if (typeof session.cwd !== "string" || !session.cwd) {
+      withoutCwd += 1;
+      continue;
+    }
     found.push({ pid: session.pid ?? "?", command: `claude session "${session.name ?? session.sessionId ?? "unnamed"}"`, cwd: session.cwd });
   }
-  return found;
+  // A non-empty list in which no entry has a directory is the signature of a
+  // changed format (the field renamed or nested), not of "no local sessions":
+  // it is unreadable, so --apply refuses.
+  if (!found.length && withoutCwd > 0) return null;
+  return { sessions: found, withoutCwd };
+}
+
+// Resolves symlinks so a path from `lsof`, a Claude session or $HOME compares
+// equal to the path git lists. A path that does not exist (a deleted worktree)
+// keeps its missing tail and resolves only the part that does exist; a path
+// with no existing ancestor comes back unchanged.
+export function realpathOrSelf(path) {
+  let existing = path;
+  const tail = [];
+  for (;;) {
+    try {
+      return join(realpathSync(existing), ...tail.reverse());
+    } catch {
+      const parent = dirname(existing);
+      if (parent === existing) return path;
+      tail.push(basename(existing));
+      existing = parent;
+    }
+  }
 }
 
 function inside(cwd, path) {
   return cwd === path || cwd.startsWith(`${path}/`);
+}
+
+// Codex keeps its app-managed worktrees under `<home>/.codex/worktrees/`. Match
+// the directory wherever it sits, so a different HOME (a sandbox, sudo, a
+// wrapper) does not strip the protection.
+const CODEX_MANAGED = "/.codex/worktrees/";
+
+function isCodexManaged(entry) {
+  return [entry.path, entry.listedPath].some((path) => path && `${path}/`.includes(CODEX_MANAGED));
+}
+
+// The branch, or the directory's name as git lists it or as it resolves (a
+// final-component symlink can carry the evidence name on either side).
+function isEvidenceWorktree(entry) {
+  return EVIDENCE.test(entry.branch ?? "") || [entry.path, entry.listedPath].some((path) => path && EVIDENCE.test(basename(path)));
 }
 
 function matchingPrs(entry, context) {
@@ -96,7 +143,7 @@ function matchingPrs(entry, context) {
 export function classifyWorktree(entry, context) {
   const keep = (reason) => ({ verdict: "keep", reason, pr: null });
   if (entry.path === context.mainPath) return keep("the main checkout");
-  if (inside(entry.path, `${context.homeDir}/.codex/worktrees`)) {
+  if (isCodexManaged(entry)) {
     return keep("Codex app-managed worktree (~/.codex/worktrees)");
   }
   if (entry.path === context.currentPath) return keep("the current session's own worktree");
@@ -110,7 +157,7 @@ export function classifyWorktree(entry, context) {
   if (running) return keep(`running agent: pid ${running.pid} (${running.command}) works in it`);
   if (entry.prunable) return keep("directory is missing (prunable); git worktree prune clears the entry");
   if (!entry.head || ZERO_SHA.test(entry.head)) return keep("unborn branch");
-  if (EVIDENCE.test(entry.branch ?? "") || EVIDENCE.test(basename(entry.path))) {
+  if (isEvidenceWorktree(entry)) {
     return keep("evidence, prototype or research worktree");
   }
   if (context.dirtyCount === null) return keep("status could not be read");
@@ -128,8 +175,15 @@ export function classifyWorktree(entry, context) {
   }
   const open = prs.find((pr) => pr.state === "OPEN");
   if (open) return { verdict: "keep", reason: `PR #${open.number} is open`, pr: open };
-  const merged = prs.find((pr) => pr.state === "MERGED");
-  if (merged) {
+  const mergedPrs = prs.filter((pr) => pr.state === "MERGED");
+  if (mergedPrs.length) {
+    // A PR merged into a stacked parent branch has not reached main, so its
+    // work is not on main yet. Only a merge into main lets the worktree go.
+    const merged = mergedPrs.find((pr) => pr.baseRefName === MAIN_BRANCH);
+    if (!merged) {
+      const first = mergedPrs[0];
+      return { verdict: "keep", reason: `PR #${first.number} merged into ${first.baseRefName ?? "an unknown base"}, not ${MAIN_BRANCH}; the work is not on ${MAIN_BRANCH} yet`, pr: first };
+    }
     const relation = how === "head" ? "HEAD is the PR head" : `HEAD is an ancestor of PR #${merged.number} head`;
     return { verdict: "remove", reason: `PR #${merged.number} merged; ${relation}`, pr: merged };
   }
@@ -142,16 +196,18 @@ function isManagedBranch(name) {
 
 // Local task and scaffold branches that no worktree holds and whose tip is
 // already inside a merged PR head.
-export function findStaleBranches({ branches, worktrees, prs, isAncestor }) {
+export function findStaleBranches({ branches, worktrees, prs, isAncestor, mainSha = null }) {
   const held = new Set(worktrees.map((entry) => entry.branch).filter(Boolean));
-  const mergedPrs = prs.filter((pr) => pr.state === "MERGED");
+  const mergedPrs = prs.filter((pr) => pr.state === "MERGED" && pr.baseRefName === MAIN_BRANCH);
   const stale = [];
   for (const branch of branches) {
     if (!isManagedBranch(branch.name) || held.has(branch.name)) continue;
     const contains = (pr) => pr.headRefOid === branch.sha || isAncestor(branch.sha, pr.headRefOid) === true;
     const sameName = mergedPrs.filter((pr) => pr.headRefName === branch.name);
     const pr = sameName.find(contains) ?? mergedPrs.find((candidate) => !sameName.includes(candidate) && contains(candidate));
-    if (pr) stale.push({ name: branch.name, sha: branch.sha, pr });
+    // A tip already on main is reported as such, whichever PR also contains it.
+    const onMain = Boolean(mainSha) && isAncestor(branch.sha, mainSha) === true;
+    if (pr) stale.push({ name: branch.name, sha: branch.sha, pr, onMain });
   }
   return stale;
 }
@@ -216,7 +272,26 @@ function humanSize(kb) {
   return `${kb} KB`;
 }
 
-export function formatReport({ rows, staleBranches, railway, applied }) {
+// One line saying what the Claude session scan covered. The report never
+// implies the scan ran when it did not.
+function describeClaudeScan(claude) {
+  if (!claude) return "not recorded";
+  if (claude.status === "missing") return "not checked (`claude` was not found on PATH)";
+  if (claude.status !== "ok") return "not checked (the session list could not be read)";
+  const unmatched = claude.withoutCwd ? `, ${claude.withoutCwd} without one ${claude.withoutCwd === 1 ? "is" : "are"} not matched to any worktree` : "";
+  return `checked (${claude.sessions} with a directory${unmatched})`;
+}
+
+function describeProcessScan(processes) {
+  if (!processes) return "not recorded";
+  if (processes.status === "unavailable") return "not checked (the process list could not be read)";
+  if (processes.status === "excludes-current-process") {
+    return `does not include this process (${processes.count} processes), so running agents may be missed`;
+  }
+  return `includes this process (${processes.count} processes)`;
+}
+
+export function formatReport({ rows, staleBranches, railway, applied, scans }) {
   const out = [];
   out.push(
     applied
@@ -238,10 +313,17 @@ export function formatReport({ rows, staleBranches, railway, applied }) {
   const remove = rows.filter((row) => row.verdict.verdict === "remove").length;
   out.push("");
   out.push(`Summary: ${remove} remove, ${rows.length - remove} keep`);
+  if (scans) {
+    out.push("");
+    out.push(`Process scan: ${describeProcessScan(scans.processes)}`);
+    out.push(`Claude sessions: ${describeClaudeScan(scans.claude)}`);
+  }
 
   out.push("");
   out.push(`Stale local branches (no worktree, tip inside a merged PR head): ${staleBranches.length}`);
-  for (const stale of staleBranches) out.push(`  ${stale.name} at ${stale.sha.slice(0, 9)} (PR #${stale.pr.number} merged)`);
+  for (const stale of staleBranches) {
+    out.push(`  ${stale.name} at ${stale.sha.slice(0, 9)} (${stale.onMain ? `on ${MAIN_BRANCH}` : `PR #${stale.pr.number} merged`})`);
+  }
 
   out.push("");
   if (!railway) out.push("Railway PR environments: not checked");
@@ -262,6 +344,10 @@ export function formatReport({ rows, staleBranches, railway, applied }) {
     out.push(`  branches deleted: ${refs.length}`);
     for (const step of refs) out.push(`    ${step.label.replace(/^delete branch /, "")}`);
     out.push(`  worktrees kept: ${rows.length - removed.length}`);
+    if (scans) {
+      out.push(`  Process scan: ${describeProcessScan(scans.processes)}`);
+      out.push(`  Claude sessions: ${describeClaudeScan(scans.claude)}`);
+    }
     if (applied.failed) {
       out.push(`  FAILED at: ${applied.failed.step.label}`);
       out.push(`    ${applied.failed.error}`);
@@ -302,13 +388,15 @@ function scanProcesses() {
 }
 
 // Live Claude sessions, interactive and background, with the directory each one
-// works in. No `claude` binary means no Claude sessions to protect. A binary
-// that fails or prints something unreadable is unknown (null).
-function scanClaudeSessions() {
-  const result = spawnSync("claude", ["agents", "--json"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 60_000 });
-  if (result.error?.code === "ENOENT") return [];
+// works in. A missing `claude` binary is reported as "missing", never as an
+// empty list, so the report cannot claim the scan ran. A binary that fails or
+// prints something unreadable is unknown (null).
+export function scanClaudeSessions(spawn = spawnSync) {
+  const result = spawn("claude", ["agents", "--json"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 60_000 });
+  if (result.error?.code === "ENOENT") return { status: "missing", sessions: [], withoutCwd: 0 };
   if (result.error || result.status !== 0 || !result.stdout) return null;
-  return parseClaudeSessions(result.stdout);
+  const parsed = parseClaudeSessions(result.stdout);
+  return parsed && { status: "ok", ...parsed };
 }
 
 // Untracked files count whatever the user's status.showUntrackedFiles says.
@@ -349,13 +437,23 @@ function makeAncestry(mainPath, oids) {
   };
 }
 
-function loadPrs(prsFile, cwd) {
-  if (prsFile) return JSON.parse(readFileSync(prsFile, "utf8"));
-  const out = run(
-    ["gh", "pr", "list", "--state", "all", "--limit", "1000", "--json", "number,state,headRefName,headRefOid,url"],
-    cwd,
-  );
-  return JSON.parse(out);
+// `gh pr list` stops silently at --limit. When a result fills the limit, ask
+// again with a larger one; a result that fills the largest limit is reported as
+// possibly truncated.
+const PR_LIMITS = [1000, 5000, 20000];
+
+export function loadPrs(prsFile, cwd, runCommand = run) {
+  if (prsFile) return { prs: JSON.parse(readFileSync(prsFile, "utf8")), truncated: false };
+  let prs = [];
+  for (const limit of PR_LIMITS) {
+    const out = runCommand(
+      ["gh", "pr", "list", "--state", "all", "--limit", String(limit), "--json", "number,state,headRefName,headRefOid,baseRefName,url"],
+      cwd,
+    );
+    prs = JSON.parse(out);
+    if (prs.length < limit) return { prs, truncated: false };
+  }
+  return { prs, truncated: true };
 }
 
 function loadRailway(mainPath, prs) {
@@ -376,55 +474,109 @@ function parseArgs(argv) {
     else if (arg === "--json") options.json = true;
     else if (arg === "--no-size") options.size = false;
     else if (arg === "--no-railway") options.railway = false;
-    else if (arg === "--prs-file") options.prsFile = argv[(i += 1)];
+    else if (arg === "--prs-file") {
+      const value = argv[i + 1];
+      if (!value || value.startsWith("--")) throw new Error("--prs-file needs a path to a JSON file");
+      options.prsFile = value;
+      i += 1;
+    }
     else throw new Error(`unknown argument: ${arg}`);
   }
   return options;
 }
 
-export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
+// `io` lets tests inject the environment, the process and Claude scans, the
+// command runner used by --apply, and the output streams.
+export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {}) {
+  const env = io.env ?? process.env;
+  const out = io.stdout ?? ((text) => process.stdout.write(text));
+  const err = io.stderr ?? ((text) => process.stderr.write(`${text}\n`));
+  const exec = io.exec ?? run;
   let options;
   try {
     options = parseArgs(argv);
   } catch (error) {
-    console.error(`${error.message}\nUsage: worktree-gc [--apply] [--json] [--no-size] [--no-railway] [--prs-file <json>]`);
+    err(`${error.message}\nUsage: worktree-gc [--apply] [--json] [--no-size] [--no-railway] [--prs-file <json>]`);
     return 2;
   }
 
   // Hand-written PR data must never drive removals. The test suite sets the
   // variable; nothing else should.
-  if (options.apply && options.prsFile && process.env.WORKTREE_GC_ALLOW_PRS_FILE_APPLY !== "1") {
-    console.error("--prs-file cannot be combined with --apply: removals must follow live PR data from gh.");
+  if (options.apply && options.prsFile && env.WORKTREE_GC_ALLOW_PRS_FILE_APPLY !== "1") {
+    err("--prs-file cannot be combined with --apply: removals must follow live PR data from gh.");
     return 2;
   }
 
-  const entries = parseWorktreePorcelain(run(["git", "worktree", "list", "--porcelain"], cwd));
+  // Compare real paths on both sides: `lsof`, Claude sessions, $HOME and
+  // git's own listing can each spell the same directory differently.
+  const entries = parseWorktreePorcelain(run(["git", "worktree", "list", "--porcelain"], cwd)).map((entry) => ({
+    ...entry,
+    listedPath: entry.path,
+    path: realpathOrSelf(entry.path),
+  }));
   const mainPath = entries[0].path;
-  const currentPath = run(["git", "rev-parse", "--show-toplevel"], cwd).trim();
-  const homeDir = process.env.HOME || homedir();
+  const currentPath = realpathOrSelf(run(["git", "rev-parse", "--show-toplevel"], cwd).trim());
   let prs;
+  let prsTruncated;
   try {
-    prs = loadPrs(options.prsFile, mainPath);
+    ({ prs, truncated: prsTruncated } = (io.loadPrs ?? loadPrs)(options.prsFile, mainPath));
   } catch (error) {
-    console.error(`Cannot evaluate the gate without PR data: ${String(error.stderr || error.message).trim()}`);
+    err(`Cannot evaluate the gate without PR data: ${String(error.stderr || error.message).trim()}`);
     return 1;
   }
-  const activeProcesses = scanProcesses();
-  if (activeProcesses === null) {
+  if (prsTruncated) {
     if (options.apply) {
-      console.error("Cannot scan running processes, so --apply refuses to remove anything.");
+      err("The PR list may be truncated (gh returned its full limit), so --apply refuses to remove anything.");
       return 1;
     }
-    console.error("Warning: could not scan running processes; running agents are not detected.");
+    err("Warning: the PR list may be truncated (gh returned its full limit); a worktree's PR may be missing from this report.");
   }
-  const claudeSessions = scanClaudeSessions();
-  if (claudeSessions === null) {
+  const pid = io.pid ?? process.pid;
+  const scannedProcesses = (io.scanProcesses ?? scanProcesses)();
+  if (scannedProcesses === null) {
     if (options.apply) {
-      console.error("Cannot read Claude sessions (`claude agents --json`), so --apply refuses to remove anything.");
+      err("Cannot scan running processes, so --apply refuses to remove anything.");
       return 1;
     }
-    console.error("Warning: could not read Claude sessions; agents running in unlocked worktrees are not detected.");
+    err("Warning: could not scan running processes; running agents are not detected.");
   }
+  // A scan that cannot see this very process is partial (a sandbox can hide
+  // processes from `lsof`), so what it did not list proves nothing.
+  const includesCurrentProcess = Boolean(scannedProcesses?.some((proc) => proc.pid === pid));
+  if (scannedProcesses && !includesCurrentProcess) {
+    if (options.apply) {
+      err(`The process scan did not include this process (pid ${pid}), so it may be partial; --apply refuses to remove anything.`);
+      return 1;
+    }
+    err(`Warning: the process scan did not include this process (pid ${pid}), so it may be partial; running agents may not be detected.`);
+  }
+  const activeProcesses = scannedProcesses && scannedProcesses.map((proc) => ({ ...proc, cwd: realpathOrSelf(proc.cwd) }));
+  const claudeScan = (io.scanClaudeSessions ?? scanClaudeSessions)();
+  if (claudeScan === null) {
+    if (options.apply) {
+      err("Cannot read Claude sessions (`claude agents --json`), so --apply refuses to remove anything.");
+      return 1;
+    }
+    err("Warning: could not read Claude sessions; agents running in unlocked worktrees are not detected.");
+  } else if (claudeScan.status === "missing") {
+    err("Warning: `claude` was not found on PATH, so Claude sessions were not checked; agents running in unlocked worktrees are not detected.");
+  } else if (claudeScan.withoutCwd > 0) {
+    const n = claudeScan.withoutCwd;
+    err(`Warning: ${n} Claude ${n === 1 ? "session has" : "sessions have"} no working directory, so ${n === 1 ? "it" : "they"} cannot be matched to a worktree.`);
+  }
+  const claudeSessions = claudeScan && claudeScan.sessions.map((session) => ({ ...session, cwd: realpathOrSelf(session.cwd) }));
+  const scans = {
+    processes: {
+      status: scannedProcesses === null ? "unavailable" : includesCurrentProcess ? "includes-current-process" : "excludes-current-process",
+      count: scannedProcesses?.length ?? 0,
+      includesCurrentProcess,
+    },
+    claude: {
+      status: claudeScan === null ? "unreadable" : claudeScan.status,
+      sessions: claudeScan?.sessions.length ?? 0,
+      withoutCwd: claudeScan?.withoutCwd ?? 0,
+    },
+  };
 
   let mainSha = null;
   for (const ref of ["origin/main", "main"]) {
@@ -463,7 +615,6 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
     const verdict = classifyWorktree(entry, {
       mainPath,
       currentPath,
-      homeDir,
       dirtyCount,
       activeProcesses: [...(activeProcesses ?? []), ...(claudeSessions ?? [])],
       onMain,
@@ -481,7 +632,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
     return { entry, size, dirtyCount, verdict };
   });
 
-  const staleBranches = findStaleBranches({ branches, worktrees: entries, prs, isAncestor });
+  const staleBranches = findStaleBranches({ branches, worktrees: entries, prs, isAncestor, mainSha });
   const railway = options.railway ? loadRailway(mainPath, prs) : null;
 
   let applied = null;
@@ -489,14 +640,16 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
     const steps = planApply({ rows, staleBranches });
     for (const step of steps) {
       if (step.kind !== "worktree") continue;
-      // Recheck just before removal; git itself still refuses dirty or locked trees.
+      // Recheck just before removal. Git refuses a locked tree and, by default,
+      // a dirty one, but not untracked files under status.showUntrackedFiles=no,
+      // so this recheck (HEAD unchanged, nothing changed or untracked) is the guard.
       step.verify = () => {
         const head = run(["git", "rev-parse", "HEAD"], step.entry.path).trim();
         if (head !== step.entry.head) throw new Error(`HEAD moved from ${step.entry.head} to ${head}`);
         if (changedPaths(step.entry.path).length) throw new Error("worktree is no longer clean");
       };
     }
-    applied = runApply(steps, (argv) => run(argv, mainPath));
+    applied = runApply(steps, (argv) => exec(argv, mainPath));
   }
 
   if (options.json) {
@@ -513,9 +666,9 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
       reason: verdict.reason,
     }));
     const doneSteps = applied && { done: applied.done.map((s) => s.label), failed: applied.failed && { step: applied.failed.step.label, error: applied.failed.error }, skipped: applied.skipped.map((s) => s.label) };
-    console.log(JSON.stringify({ mode: options.apply ? "apply" : "read-only", worktrees: view, staleBranches, railway, applied: doneSteps }, null, 2));
+    out(`${JSON.stringify({ mode: options.apply ? "apply" : "read-only", worktrees: view, staleBranches, railway, scans, applied: doneSteps }, null, 2)}\n`);
   } else {
-    process.stdout.write(formatReport({ rows, staleBranches, railway, applied }));
+    out(formatReport({ rows, staleBranches, railway, applied, scans }));
   }
   return applied?.failed ? 1 : 0;
 }
