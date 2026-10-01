@@ -107,7 +107,7 @@ AssertionError: expected "spy" to be called at least once
     182|     expect(Keyboard.dismiss).toHaveBeenCalled();
        |                              ^
     183|   });
-    184| 
+    184|
 
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
 

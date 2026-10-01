@@ -165,7 +165,8 @@ rendered SearchScreen test. Its `Keyboard.dismiss` mock is cleared before each
 test, and with the call removed from the All filters handler the spec fails
 (`all-filters-keyboard-mutation-red.txt`, 1 failed and 17 passed); with the call
 restored all 18 pass (`all-filters-keyboard-green.txt`). The mutation was not
-committed. Earlier #369 capture `02-search-empty-keyboard.jpg` shows the
+committed. Log trailing whitespace was trimmed without changing output
+meaning. Earlier #369 capture `02-search-empty-keyboard.jpg` shows the
 keyboard in a different simulator session.
 
 No contradiction with the issue or the approved UI specification was found in
