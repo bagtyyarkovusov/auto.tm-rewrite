@@ -62,7 +62,7 @@ describe("EAS build configuration", () => {
     expect(rootPackageJson.packageManager).toBe(`pnpm@${easJson.build.base.pnpm}`);
   });
 
-  it("keeps environment URLs out of committed EAS profile env blocks", () => {
+  it("keeps API, socket and media URLs out of committed EAS profile env blocks", () => {
     const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
     const profileEnv = Object.values(easJson.build).flatMap((profile) => Object.keys((profile as { env?: object }).env ?? {}));
 

@@ -11,6 +11,7 @@ import {
 import { useColorScheme } from "nativewind";
 import { useTranslation } from "react-i18next";
 
+import { legalPageUrl } from "../../src/config/publicWebUrl";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { closeAuth } from "../../src/auth/closeAuth";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
@@ -47,7 +48,7 @@ export function AuthEntryScreen({
   const { t, i18n } = useTranslation("auth");
 
   function openLegalPage(kind: "terms" | "privacy") {
-    void Linking.openURL(`https://auto.tm/${i18n.language}/legal/${kind}`);
+    void Linking.openURL(legalPageUrl(i18n.language, kind));
   }
 
   return (

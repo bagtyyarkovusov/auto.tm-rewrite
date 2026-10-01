@@ -315,7 +315,7 @@ describe("issue 373 screen controls", () => {
     });
     expect(share).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `https://auto.tm/listings/${fixture().id}`,
+        url: `http://localhost:3002/listings/${fixture().id}`,
       }),
     );
     fireEvent.press(screen.getByRole("button", { name: "More options" }));
@@ -327,7 +327,7 @@ describe("issue 373 screen controls", () => {
       fireEvent.press(screen.getByRole("button", { name: "Copy link" }));
     });
     expect(Clipboard.setStringAsync).toHaveBeenCalledWith(
-      `https://auto.tm/listings/${fixture().id}`,
+      `http://localhost:3002/listings/${fixture().id}`,
     );
   });
 

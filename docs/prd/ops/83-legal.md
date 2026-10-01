@@ -11,7 +11,10 @@ Plus EU GDPR (if we ever serve EU users — relevant for TM diaspora) and TM dat
 
 ## Where they live
 
-- Public URLs: `https://auto.tm/<lang>/legal/privacy` and `https://auto.tm/<lang>/legal/terms`
+- Reviewer-production URLs: `https://autotm.bagtyyar.dev/<lang>/legal/privacy` and `https://autotm.bagtyyar.dev/<lang>/legal/terms`
+- Staging uses `https://staging.autotm.bagtyyar.dev` with the same localized paths.
+- Mobile selects `EXPO_PUBLIC_WEB_URL` per EAS build profile. Web uses runtime `WEB_BASE_URL` for canonical links, set to the same public origin.
+- The founder must confirm Railway custom domains and external-network TLS/page loads before Play submission. #496 tracks this hosting evidence; recording these URLs does not establish availability.
 - Served by `apps/web` as static markdown rendered server-side
 - Linked from mobile app (Settings → About → Privacy / Terms)
 - Linked from admin app (footer)
@@ -79,7 +82,8 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 
 ## App Store / Play Store submission checklist
 
-- [ ] Privacy Policy URL: `https://auto.tm/en/legal/privacy`
+- [ ] Privacy Policy URL: `https://autotm.bagtyyar.dev/en/legal/privacy`
+- [ ] Google Play account-deletion URL: `https://autotm.bagtyyar.dev/en/account/delete`
 - [ ] Privacy nutrition label (Apple) filled in to match what the Privacy Policy says
 - [ ] Data Safety section (Google Play) filled in to match
 - [ ] "Account Deletion" feature: shows the in-app `/me/delete` flow and the public web deletion page Google Play requires (see [Feature 30](../features/30-identity.md))
