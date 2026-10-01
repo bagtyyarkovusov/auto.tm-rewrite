@@ -106,3 +106,28 @@ was trimmed without changing output meaning.
 The duplicate City heading, singular Show 1 listings copy and inherited
 invalid-to-valid count request remain follow-ups owned by the integration owner.
 Physical Android remains outside this simulator proof, owned by #345.
+
+## Search integration after #369
+
+Main `5264344b2395eee701996b458efc03e8b8b1fe49` introduces the real Search
+screen. Its All filters handler still targeted Results with `openFilters=1`,
+but #371 removes that sheet entry. The integration changes that handler to
+replace Search with Search parameters, dismissing the keyboard and keeping
+Home underneath. All filters has no selected catalog choice; picking a match
+still sends its brand/model and parsed years to Results unchanged.
+
+Rendered red checkpoint `ba837a0` runs SearchRoute and taps All filters.
+`all-filters-red.txt` records one failure and 17 passes: actual Results with
+openFilters versus expected parameters. The green focused run uses the same
+Search spec plus SearchParametersForm and search-stack specs, all 39 pass.
+`all-filters-green.txt` records the output. No new simulator session ran.
+Earlier form visual and Reset captures remain evidence for unchanged form
+source; they do not prove this new Search entry on a native stack.
+
+Mechanical conflicts preserve SearchScreen, the parameters route, current
+Search documentation and #371 form documentation. Main Listing detail
+documentation remains intact. The i18n merge adds five Search keys per locale
+without restoring obsolete sheet keys. Dependency/configuration/native inputs
+are unchanged, so prior dependency alignment evidence carries. Final-head
+repository unit/typecheck, lint, docs/glossary, export and hosted CI remain
+unverified at handoff until explicitly rerun or carried by independent review.
