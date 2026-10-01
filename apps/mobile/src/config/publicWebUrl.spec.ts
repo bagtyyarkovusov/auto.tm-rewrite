@@ -3,8 +3,9 @@ import { resolve } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { legalPageUrl } from "./publicWebUrl";
 import { listingPublicUrl } from "../listings/detail/shareListing";
+
+import { legalPageUrl } from "./publicWebUrl";
 
 const eas = JSON.parse(readFileSync(resolve(__dirname, "../../eas.json"), "utf8"));
 const profiles = [
