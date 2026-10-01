@@ -70,6 +70,15 @@ vi.mock("@/components/ui/alert-dialog", async () => {
 });
 vi.mock("@rn-primitives/separator", async () => ({ Root: (await import("react-native")).View }));
 
+// Expo modules that load `expo-modules-core`, which needs the native runtime.
+// A spec that exercises one of them mocks it itself and wins over these stubs.
+vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => false), openURL: vi.fn(async () => {}) }));
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => {}),
+  deleteItemAsync: vi.fn(async () => {}),
+}));
+
 // Gesture Handler, Reanimated and Worklets need a native runtime. These
 // adapters keep the component tree, so a spec can render a screen that holds a
 // zoomable image; they do not run gestures, shared values or animations.
