@@ -67,17 +67,21 @@ export function parseClaudeSessions(text) {
   const found = [];
   let withoutCwd = 0;
   for (const session of sessions) {
-    // An entry that is not an object means the format is not what we expect.
-    if (!session || typeof session !== "object") return null;
+    // An entry that is not a plain object means the format is not what we expect.
+    if (!session || typeof session !== "object" || Array.isArray(session)) return null;
     // A session with no directory (a remote one, say) cannot sit in any
-    // worktree, so it cannot be matched. It is counted and reported, not
-    // silently dropped and not a reason to distrust the whole list.
+    // worktree, so it cannot be matched. Among sessions that do have one it is
+    // counted and reported, not silently dropped.
     if (typeof session.cwd !== "string" || !session.cwd) {
       withoutCwd += 1;
       continue;
     }
     found.push({ pid: session.pid ?? "?", command: `claude session "${session.name ?? session.sessionId ?? "unnamed"}"`, cwd: session.cwd });
   }
+  // A non-empty list in which no entry has a directory is the signature of a
+  // changed format (the field renamed or nested), not of "no local sessions":
+  // it is unreadable, so --apply refuses.
+  if (!found.length && withoutCwd > 0) return null;
   return { sessions: found, withoutCwd };
 }
 
