@@ -110,6 +110,29 @@ test('the fixture target without --railway-pr accepts only a localhost stack and
   assert.throws(() => assertFixtureTarget({ ...local, DATABASE_URL: `not a url ${SECRET}` }, []), error => /DATABASE_URL/.test(error.message) && !error.message.includes(SECRET));
 });
 
+// An unencoded "/" in a password ends the authority early, so the parsed hostname is the secret
+// fragment. The refusal must name the variable and nothing the input contained.
+const secretAsHost = `postgresql://${SECRET}/rest@db.example.com/demo`;
+
+test('the fixture target refuses a connection whose parsed host holds a secret fragment without printing it', () => {
+  assert.ok(new URL(secretAsHost).hostname.includes(SECRET), 'the fixture input must put the fake secret in the parsed hostname');
+  const local = { DATABASE_URL: 'postgresql://dev:dev@localhost:5432/dev', MINIO_ENDPOINT: 'http://127.0.0.1:9000' };
+  for (const key of ['DATABASE_URL', 'MINIO_ENDPOINT']) {
+    assert.throws(
+      () => assertFixtureTarget({ ...local, [key]: secretAsHost }, []),
+      error => error instanceof Error && error.message.includes(`non-local ${key}`) && !error.message.includes(SECRET) && !JSON.stringify(error).includes(SECRET),
+    );
+  }
+});
+
+test('a spawned localhost-only fixture whose parsed host holds a secret fragment prints it nowhere', () => {
+  const result = spawnClean(['--import', 'tsx', fixtureScript], { DATABASE_URL: secretAsHost, MINIO_ENDPOINT: 'http://localhost:9000' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /non-local DATABASE_URL/);
+  assert.doesNotMatch(result.stderr, /Cannot find module/);
+  assertNoLeak(result.stdout + result.stderr);
+});
+
 test('a spawned remote seed with a production environment name exits 1 with the refusal and prints no step', () => {
   const result = spawnClean([entryPath, '--remote'], { ...valid, RAILWAY_ENVIRONMENT_NAME: 'production' });
   assert.equal(result.status, 1);
