@@ -45,12 +45,16 @@ export const nativePrSeedSteps = [
   { name: 'brand logos', command: 'pnpm', args: ['--filter', '@auto-tm/db', 'logos:import'] },
 ];
 
-export function nativePrSeedStepsFor() { return nativePrSeedSteps; }
+export function nativePrSeedStepsFor({ remote = false } = {}) {
+  return nativePrSeedSteps.map(step => remote && step.name === 'buckets'
+    ? { ...step, args: ['packages/db/scripts/native-minio/bootstrap.mjs'] }
+    : step);
+}
 
 export function runNativePrSeed(env = process.env, options = {}) {
   const guarded = validateNativePrSeed(env, options);
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  for (const step of nativePrSeedSteps) {
+  for (const step of nativePrSeedStepsFor(options)) {
     console.log(`Native PR seed: ${step.name}`);
     const result = spawnSync(step.command, step.args, { cwd: root, env: guarded, stdio: 'inherit' });
     if (result.error || result.status !== 0) throw new Error(`Native PR seed failed at ${step.name}`);

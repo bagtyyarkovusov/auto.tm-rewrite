@@ -65,7 +65,7 @@ COPY --from=build /app/apps/api/package.json /app/apps/api/package.json
 COPY --from=build /app/packages /app/packages
 # Guarded remote native fixtures reuse packaged db scripts and dependencies.
 COPY --from=build /app/scripts/native-pr-seed.mjs /app/scripts/native-pr-seed.mjs
-COPY --from=build /app/infra/minio/bootstrap.mjs /app/infra/minio/contract.mjs /app/infra/minio/
+COPY --from=build /app/infra/minio/bootstrap.mjs /app/infra/minio/contract.mjs /app/packages/db/scripts/native-minio/
 RUN groupadd -r auto-tm && useradd -r -g auto-tm -s /bin/false auto-tm && chown -R auto-tm:auto-tm /app
 USER auto-tm
 WORKDIR /app/apps/api
