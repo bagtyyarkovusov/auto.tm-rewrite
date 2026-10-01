@@ -17,14 +17,13 @@ import { ContactCtaBar } from "../components/ContactCtaBar";
 import { PhotoGallery } from "../components/PhotoGallery";
 import { fixture, maps } from "../../../test/fixtures/listing";
 
-import { CollapsingHeader } from "./CollapsingHeader";
-
 const state = vi.hoisted(() => ({
   data: undefined as ListingsSchemas.ListingDetail | undefined,
   error: null as unknown,
   isPending: false,
   viewer: null as { userId: string } | null,
   authenticated: true as boolean | null,
+  config: {} as { reportEntryEnabled?: boolean },
   post: vi.fn(),
   refetch: vi.fn(),
 }));
@@ -36,7 +35,7 @@ vi.mock("../../auth/useAuth", () => ({
   useAuth: () => ({ isAuthenticated: state.authenticated }),
 }));
 vi.mock("../../api/admin/useConfig", () => ({
-  useConfig: () => ({ data: {} }),
+  useConfig: () => ({ data: state.config }),
 }));
 vi.mock("../../api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
@@ -65,6 +64,7 @@ beforeEach(() => {
   state.isPending = false;
   state.viewer = null;
   state.authenticated = true;
+  state.config = {};
   state.post.mockReset();
   state.refetch.mockClear();
   routeParams.id = state.data.id;
@@ -312,12 +312,15 @@ describe("issue 373 screen controls", () => {
     const screen = renderMobile(<ListingDetailScreen />);
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+    const reportBefore = screen.getAllByRole("button", {
+      name: "Report",
+    }).length;
     fireEvent.press(screen.getByRole("button", { name: "More options" }));
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
     expect(
       screen.getAllByRole("button", { name: "Report" }).length,
-    ).toBeGreaterThan(0);
+    ).toBeGreaterThan(reportBefore);
   });
 
   it.each(["sold", "archived"] as const)(
@@ -330,24 +333,18 @@ describe("issue 373 screen controls", () => {
     },
   );
 
-  it("hides the buyer More options trigger when Report is unavailable, and keeps the owner menu on closed Listings (#495)", () => {
-    const withoutReport = renderMobile(
-      <CollapsingHeader
-        listing={fixture()}
-        maps={maps}
-        collapsed={false}
-        topInset={0}
-        onBack={vi.fn()}
-      />,
-    );
-    expect(
-      withoutReport.queryByRole("button", { name: "More options" }),
-    ).toBeNull();
-    withoutReport.unmount();
+  it("hides the buyer More options trigger when report entry is disabled (#495)", () => {
+    state.config = { reportEntryEnabled: false };
+    const screen = renderMobile(<ListingDetailScreen />);
+    expect(screen.getByRole("button", { name: "Back" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "More options" })).toBeNull();
+  });
+
+  it("keeps the owner More options menu on an archived Listing (#495)", () => {
     state.data = fixture({ status: "archived" });
     state.viewer = { userId: fixture().sellerId };
-    const owner = renderMobile(<ListingDetailScreen />);
-    expect(owner.getByRole("button", { name: "More options" })).toBeTruthy();
+    const screen = renderMobile(<ListingDetailScreen />);
+    expect(screen.getByRole("button", { name: "More options" })).toBeTruthy();
   });
 
   it("shows sticky owner Edit and Mark sold, with Archive and Delete in overflow", () => {
