@@ -18,6 +18,14 @@ Local and TM-era Compose files mount MinIO's single data path at `/data`
 production). Do not add a second object-data mount; backup/restore tooling
 assumes the full object store lives under that one persistent path.
 
+All three MinIO services use digest-pinned Chainguard images under
+[ADR-0074](../../docs/adr/0074-digest-pinned-chainguard-minio-images.md).
+Development and TM production use the minimal image. CI uses the dev image
+because its health probe runs `wget` through a shell. The entrypoint remains
+`/usr/bin/minio`, with `server /data` as its command. Mounted-volume services
+explicitly run as `0:0` so fresh and previously root-owned data stays writable.
+Preserve the volume and ownership when replacing the image.
+
 Bucket creation and anonymous-read policy setup are explicit, not an API boot
 side effect:
 

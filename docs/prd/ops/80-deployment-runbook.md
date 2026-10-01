@@ -246,7 +246,9 @@ Railway production is torn down only after all ADR-0039 cutover conditions pass:
 # 5. Upload as a workflow artifact (90-day retention); nothing else is published
 ```
 
-Output: `images/auto-tm-<tag>.tar.gz` (~400-700 MB)
+Output: `images/auto-tm-<tag>.tar.gz`. The 2026-10-01 hosted dry run produced
+2,409,107,124 bytes, about 2.4 GB. Allow room for the compressed archive and the
+loaded images; measure each release rather than relying on the old 400-700 MB estimate.
 
 If the build is the first one OR base images changed:
 ```
