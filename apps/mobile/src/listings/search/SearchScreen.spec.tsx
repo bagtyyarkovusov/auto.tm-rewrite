@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onlineManager } from "@tanstack/react-query";
+import { Keyboard } from "react-native";
 import type * as Native from "react-native";
 import { waitFor } from "@testing-library/react-native";
 
@@ -198,11 +199,28 @@ describe("Search route", () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it("requests keyboard focus on entry and Back returns to Home", async () => {
+  it("requests keyboard focus on entry", async () => {
     const screen = setup();
     await screen.findByText("Toyota");
     expect(screen.getByLabelText("Search brand or model").props.autoFocus).toBe(true);
+  });
+
+  it("Back dismisses the keyboard and returns to the Home underneath instead of adding another Home", async () => {
+    const screen = setup();
+    await screen.findByText("Toyota");
     fireEvent.press(screen.getByLabelText("Back"));
+    expect(Keyboard.dismiss).toHaveBeenCalled();
+    expect(routerMock.back).toHaveBeenCalledTimes(1);
+    expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
+  it("Back opens Home when Search was entered without history", async () => {
+    routerMock.canGoBack.mockReturnValueOnce(false);
+    const screen = setup();
+    await screen.findByText("Toyota");
+    fireEvent.press(screen.getByLabelText("Back"));
+    expect(Keyboard.dismiss).toHaveBeenCalled();
+    expect(routerMock.back).not.toHaveBeenCalled();
     expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/(search)");
   });
 });
