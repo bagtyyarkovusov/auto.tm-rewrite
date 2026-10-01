@@ -71,6 +71,11 @@ export function parseClaudeSessions(text) {
   return { sessions: found, withoutCwd: 0 };
 }
 
+// Stub: the real resolution lands with the green checkpoint for finding 1.
+export function realpathOrSelf(path) {
+  return path;
+}
+
 function inside(cwd, path) {
   return cwd === path || cwd.startsWith(`${path}/`);
 }

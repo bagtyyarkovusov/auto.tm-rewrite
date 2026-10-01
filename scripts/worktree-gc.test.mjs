@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,9 +11,12 @@ import {
   findStaleBranches,
   findStaleRailwayEnvironments,
   formatReport,
+  main,
   parseClaudeSessions,
+  scanClaudeSessions,
   parseWorktreePorcelain,
   planApply,
+  realpathOrSelf,
   runApply,
 } from "./worktree-gc.mjs";
 
@@ -259,7 +262,8 @@ test("a Claude session in a sibling directory with the same prefix does not coun
 test("Claude session data that cannot be read is unknown, never an empty list", () => {
   assert.equal(parseClaudeSessions("not json"), null);
   assert.equal(parseClaudeSessions(JSON.stringify({ sessions: [] })), null);
-  assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 1, name: "no cwd" }])), null);
+  assert.equal(parseClaudeSessions(JSON.stringify(["not an object"])), null);
+  assert.equal(parseClaudeSessions(JSON.stringify([null])), null);
   assert.deepEqual(parseClaudeSessions("[]"), { sessions: [], withoutCwd: 0 });
 });
 
@@ -569,7 +573,25 @@ function fixtureRepo(t) {
       env: { ...process.env, HOME: main, PATH: `${bin}:${process.env.PATH}`, ...env },
     });
   };
-  return { root, main, git, merged, dirty, open, locked, ahead, behind, prsFile, snapshot, gc };
+  // A worktree at any path under the fixture root, with a merged PR at its head, so the gate would remove it.
+  let nextPr = 100;
+  const addMergedWorktree = (relPath, branch) => {
+    const path = join(root, relPath);
+    git(main, "worktree", "add", "-q", "-b", branch, path);
+    writeFileSync(join(path, "work.txt"), `${branch}\n`);
+    git(path, "add", "work.txt");
+    git(path, "commit", "-q", "-m", branch);
+    const head = git(path, "rev-parse", "HEAD");
+    nextPr += 1;
+    const all = JSON.parse(readFileSync(prsFile, "utf8"));
+    all.push({ number: nextPr, state: "MERGED", headRefName: branch, headRefOid: head, url: `u/${nextPr}` });
+    writeFileSync(prsFile, JSON.stringify(all));
+    return { path, head };
+  };
+  // A symlink to the fixture root, for paths that reach a worktree through an alias.
+  const alias = join(root, "alias");
+  symlinkSync(root, alias);
+  return { root, main, git, merged, dirty, open, locked, ahead, behind, prsFile, snapshot, gc, addMergedWorktree, alias };
 }
 
 // The tests below feed hand-written PR data to --apply, which the script refuses unless told it is a test.
@@ -667,4 +689,172 @@ test("--prs-file together with --apply is refused, so hand-written PR data canno
   assert.equal(result.status, 2);
   assert.match(result.stderr, /--prs-file cannot be combined with --apply/);
   assert.equal(repo.snapshot(), before, "nothing was removed");
+});
+
+// --- the command line, in this process, with injected scans ------------------
+
+// Runs main() against a fixture with the scans and the environment injected. By default the process scan
+// is complete (it holds this process) and no Claude session is live, so only the overridden scan matters.
+function runMain(repo, args, io = {}) {
+  const out = [];
+  const err = [];
+  const status = main([...args, "--no-railway", "--no-size"], repo.main, {
+    env: { ...process.env, HOME: repo.main, ...ALLOW_PRS_FILE },
+    scanProcesses: () => [{ pid: process.pid, command: "node", cwd: repo.main }],
+    scanClaudeSessions: () => ({ status: "ok", sessions: [], withoutCwd: 0 }),
+    stdout: (text) => out.push(text),
+    stderr: (text) => err.push(text),
+    ...io,
+  });
+  return { status, stdout: out.join(""), stderr: err.join("\n") };
+}
+
+const hasWorktree = (repo, path) => repo.git(repo.main, "worktree", "list", "--porcelain").includes(path);
+
+// Finding 1: path matching is literal and depends on $HOME.
+
+test("Codex app-managed protection does not depend on HOME", () => {
+  const verdict = classifyWorktree(
+    entry({ path: "/Users/dev/.codex/worktrees/1b73/auto.tm-rewrite", branch: null, detached: true }),
+    context({ homeDir: "/root" }),
+  );
+  assert.equal(verdict.verdict, "keep");
+  assert.match(verdict.reason, /Codex app-managed worktree/);
+});
+
+test("a Codex app-managed worktree is kept when HOME points somewhere else", (t) => {
+  const repo = fixtureRepo(t);
+  const codex = repo.addMergedWorktree("other-home/.codex/worktrees/1b73/auto.tm-rewrite", "agent/issue-20");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stdout, new RegExp(`${codex.path}\\n  verdict: keep: Codex app-managed worktree`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(hasWorktree(repo, codex.path), "the Codex worktree survived --apply");
+});
+
+test("realpathOrSelf resolves symlinks, the existing part of a missing path, and leaves the rest alone", (t) => {
+  const repo = fixtureRepo(t);
+  assert.equal(realpathOrSelf(join(repo.alias, "merged")), join(repo.root, "merged"));
+  assert.equal(realpathOrSelf(join(repo.alias, "merged", "gone", "deeper")), join(repo.root, "merged", "gone", "deeper"));
+  assert.equal(realpathOrSelf("/no-such-root-for-worktree-gc/x"), "/no-such-root-for-worktree-gc/x");
+});
+
+test("a Claude session that reaches the worktree through a symlink keeps it", (t) => {
+  const repo = fixtureRepo(t);
+  const sessions = [{ pid: 4242, cwd: join(repo.alias, "merged"), command: "claude session \"subagent\"" }];
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "ok", sessions, withoutCwd: 0 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /keep: running agent: pid 4242/);
+  assert.ok(hasWorktree(repo, repo.merged.path), "the worktree a session works in survived --apply");
+});
+
+test("a process that reaches the worktree through a symlink keeps it", (t) => {
+  const repo = fixtureRepo(t);
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    scanProcesses: () => [
+      { pid: process.pid, command: "node", cwd: repo.main },
+      { pid: 5151, command: "node", cwd: join(repo.alias, "merged") },
+    ],
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /keep: running agent: pid 5151 \(node\)/);
+  assert.ok(hasWorktree(repo, repo.merged.path), "the worktree a process works in survived --apply");
+});
+
+// Finding 2: a partial process scan is treated as complete.
+
+test("--apply refuses when the process scan does not include this process", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const partial = () => [{ pid: 1, command: "launchd", cwd: "/" }];
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile], { scanProcesses: partial });
+  assert.equal(applied.status, 1);
+  assert.match(applied.stderr, /did not include this process/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+});
+
+test("a read-only run warns when the process scan does not include this process", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: () => [{ pid: 1, command: "launchd", cwd: "/" }] });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /did not include this process/);
+  assert.equal(repo.snapshot(), before);
+});
+
+test("--apply proceeds when the process scan includes this process", (t) => {
+  const repo = fixtureRepo(t);
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the passing worktree was removed");
+});
+
+// Finding 3: Claude session scan edge cases.
+
+test("a Claude session without a working directory is skipped and counted, not a reason to distrust the whole list", () => {
+  const parsed = parseClaudeSessions(
+    JSON.stringify([
+      { pid: 41, cwd: `${MAIN}/.claude/worktrees/issue-1`, name: "local" },
+      { pid: 42, kind: "remote", name: "cloud" },
+      { pid: 43, cwd: "", name: "blank" },
+      { pid: 44, cwd: 7, name: "wrong type" },
+    ]),
+  );
+  assert.deepEqual(parsed, {
+    sessions: [{ pid: 41, command: 'claude session "local"', cwd: `${MAIN}/.claude/worktrees/issue-1` }],
+    withoutCwd: 3,
+  });
+});
+
+test("a missing claude binary is reported as not checked, never as an empty session list", () => {
+  const missing = scanClaudeSessions(() => ({ error: Object.assign(new Error("spawn claude ENOENT"), { code: "ENOENT" }) }));
+  assert.deepEqual(missing, { status: "missing", sessions: [], withoutCwd: 0 });
+});
+
+test("a missing claude binary warns, and the report says Claude sessions were not checked", (t) => {
+  const repo = fixtureRepo(t);
+  const missing = () => ({ status: "missing", sessions: [], withoutCwd: 0 });
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile], { scanClaudeSessions: missing });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /`claude` was not found/);
+  assert.match(readOnly.stdout, /Claude sessions: not checked/);
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile], { scanClaudeSessions: missing });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.match(applied.stderr, /`claude` was not found/);
+  assert.match(applied.stdout, /Completion report[\s\S]*Claude sessions: not checked/);
+});
+
+test("Claude sessions without a working directory are named in the report and as a warning", (t) => {
+  const repo = fixtureRepo(t);
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "ok", sessions: [], withoutCwd: 2 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /2 Claude sessions have no working directory/);
+  assert.match(result.stdout, /Claude sessions: checked \(0 with a directory, 2 without one are not matched to any worktree\)/);
+});
+
+test("a clean Claude session scan is stated in the report with no warning", (t) => {
+  const repo = fixtureRepo(t);
+  const sessions = [{ pid: 9, command: 'claude session "orchestrator"', cwd: repo.main }];
+  const result = runMain(repo, ["--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "ok", sessions, withoutCwd: 0 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /Claude sessions: checked \(1 with a directory\)/);
+});
+
+test("the JSON report records what each scan covered", (t) => {
+  const repo = fixtureRepo(t);
+  const result = runMain(repo, ["--json", "--prs-file", repo.prsFile], {
+    scanClaudeSessions: () => ({ status: "missing", sessions: [], withoutCwd: 0 }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.scans?.claude?.status, "missing");
+  assert.equal(report.scans?.processes?.includesCurrentProcess, true);
 });
