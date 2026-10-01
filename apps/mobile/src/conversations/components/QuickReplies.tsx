@@ -1,20 +1,10 @@
 import { ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { QUICK_REPLIES } from "../quickReplyIntents";
+
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-
-export interface QuickReply {
-  key: string;
-  translationKey: string;
-}
-
-export const QUICK_REPLIES: QuickReply[] = [
-  { key: "available", translationKey: "quickReplyAvailable" },
-  { key: "seeIt", translationKey: "quickReplySeeIt" },
-  { key: "finalPrice", translationKey: "quickReplyFinalPrice" },
-  { key: "condition", translationKey: "quickReplyCondition" },
-];
 
 interface QuickRepliesProps {
   onSelect: (text: string) => void;

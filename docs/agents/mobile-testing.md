@@ -69,6 +69,15 @@ Modal renders children only when visible. This is an intentionally small
 project adapter, not the upstream Jest React Native preset. Add an explicit
 adapter or spec-local mock when a component uses an unsupported native API.
 
+`test/native-setup.ts` also stubs, for every spec, `expo-linking`,
+`expo-secure-store`, Gesture Handler, Reanimated and Worklets; a spec-local
+`vi.mock` of the same module wins. The Reanimated stub provides only
+`default.View`, `useSharedValue`, `useAnimatedStyle`, `withTiming` and
+`withSpring`, and no gesture, shared-value update or animation runs, so a
+component that uses `FadeIn` or `Animated.Text` needs the stub extended. A
+`FlatList` ref records `scrollToIndex` and `scrollToOffset` calls into the
+`scrollRequests` export of `react-native`, which resets before each test.
+
 Real app Button, Text, Input, Icon and feature components execute. NativeWind
 `className` passes through and `cssInterop`/`remapProps` are no-ops. Lucide icons,
 Expo Image and safe-area values use native test substitutes. Slot clones its

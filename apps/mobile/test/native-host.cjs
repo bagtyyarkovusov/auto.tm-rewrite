@@ -19,24 +19,38 @@ const Pressable = React.forwardRef(({ children, disabled, accessibilityState, ..
     accessibilityState: { ...accessibilityState, disabled: disabled ?? accessibilityState?.disabled },
   }, typeof children === "function" ? children({ pressed: false }) : children));
 Pressable.displayName = "Pressable";
+const scrollRequests = [];
 const slot = (component) => component == null || React.isValidElement(component)
   ? component ?? null : React.createElement(component);
+// Header renders first and the empty component only when there is no data, like
+// the native list. A component or an element is accepted for both.
+const FlatList = React.forwardRef(({
+  data = [], renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ...props
+}, ref) => {
+  React.useImperativeHandle(ref, () => ({
+    scrollToIndex: (args) => scrollRequests.push({ method: "scrollToIndex", ...args }),
+    scrollToOffset: (args) => scrollRequests.push({ method: "scrollToOffset", ...args }),
+  }));
+  return React.createElement("RCTScrollView", props, slot(ListHeaderComponent),
+    data.map((item, index) => React.createElement(React.Fragment,
+      { key: keyExtractor?.(item, index) ?? index }, renderItem({ item, index }))),
+    data.length ? null : slot(ListEmptyComponent));
+});
+FlatList.displayName = "FlatList";
 const flatten = (style) => Array.isArray(style)
   ? Object.assign({}, ...style.map(flatten)) : style || {};
 module.exports = {
   View, Text, Pressable, TextInput: host("TextInput"), Image: host("Image"),
   ScrollView: host("RCTScrollView"), ActivityIndicator: host("ActivityIndicator"),
   Switch: host("RCTSwitch", { accessible: true }),
+  KeyboardAvoidingView: host("KeyboardAvoidingView"),
   Modal: ({ visible = true, children, ...props }) => visible
     ? React.createElement("Modal", props, children) : null,
-  RefreshControl: host("RefreshControl"), KeyboardAvoidingView: View,
-  // Header renders first and the empty component only when there is no data,
-  // like the native list. A component or an element is accepted for both.
-  FlatList: ({ data = [], renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ...props }) =>
-    React.createElement("RCTScrollView", props, slot(ListHeaderComponent),
-      data.map((item, index) => React.createElement(React.Fragment,
-        { key: keyExtractor?.(item, index) ?? index }, renderItem({ item, index }))),
-      data.length ? null : slot(ListEmptyComponent)),
+  RefreshControl: host("RefreshControl"),
+  FlatList,
+  // Scroll requests the list received, newest last. Specs read this to prove a
+  // component moved a list; the adapter never scrolls anything itself.
+  scrollRequests,
   Platform: { OS: "ios", select: (options) => options.ios ?? options.native ?? options.default },
   StyleSheet: { create: (styles) => styles, flatten, hairlineWidth: 1,
     absoluteFillObject: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },

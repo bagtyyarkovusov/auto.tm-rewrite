@@ -963,6 +963,7 @@ export default function ConversationDetailScreen() {
           onTyping={signalTyping}
           onStopTyping={stopTyping}
           conversationId={conversationId}
+          initialText={typeof params.draft === "string" ? params.draft : undefined}
         />
       )}
 

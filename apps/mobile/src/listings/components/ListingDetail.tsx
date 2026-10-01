@@ -9,8 +9,11 @@ import {
   closedListingBannerKey,
   isClosedForContact,
 } from "../detail/closedListing";
+import { AskSellerChips } from "../detail/AskSellerChips";
 import { listingTitle, detailDate } from "../detail/presentation";
+import { ViewerFavorite } from "../detail/ViewerFavorite";
 
+import { ContactCtaBar } from "./ContactCtaBar";
 import { PhotoGallery } from "./PhotoGallery";
 import { PriceDisplay } from "./PriceDisplay";
 import { SellerBlock } from "./SellerBlock";
@@ -67,6 +70,9 @@ export function ListingDetailView({
   const [expanded, setExpanded] = useState(false);
   const closed = !isOwner && isClosedForContact(listing.status);
   const banner = closed ? closedListingBannerKey(listing.status) : null;
+  // The viewer's ♡ and Call + Message follow the screen's own rules: not for
+  // the owner, and not on a Listing closed for contact.
+  const showViewerActions = !isOwner && !closed;
   const brandName = maps.brandName(listing.brandId);
   const modelName = maps.modelName(listing.modelId);
   const specs: SpecItemProps[] = [
@@ -134,6 +140,33 @@ export function ListingDetailView({
         <PhotoGallery
           media={listing.media}
           banner={banner ? t(banner) : undefined}
+          viewerHeaderAction={
+            showViewerActions
+              ? (close) => (
+                  <ViewerFavorite
+                    listingId={listing.id}
+                    isFavorited={listing.isFavorited ?? false}
+                    onBeforeSignIn={close}
+                  />
+                )
+              : undefined
+          }
+          viewerFooter={
+            showViewerActions
+              ? (close) => (
+                  <ContactCtaBar
+                    variant="viewer"
+                    replayAuth={false}
+                    onBeforeMessage={close}
+                    listingId={listing.id}
+                    contactPhone={listing.contactPhone}
+                    allowCalls={listing.allowCalls}
+                    allowChat={listing.allowChat}
+                    status={listing.status}
+                  />
+                )
+              : undefined
+          }
         />
       </View>
       <View className="gap-4 px-5 py-5">
@@ -218,6 +251,17 @@ export function ListingDetailView({
                 <Text>{t("detailMore")}</Text>
               </Button>
             )}
+          </View>
+        )}
+        {!isOwner && !closed && listing.allowChat && (
+          <View className="gap-3">
+            <Separator />
+            <AskSellerChips
+              listingId={listing.id}
+              isOwner={isOwner}
+              status={listing.status}
+              allowChat={listing.allowChat}
+            />
           </View>
         )}
         {listing.conditionDisclosure && (

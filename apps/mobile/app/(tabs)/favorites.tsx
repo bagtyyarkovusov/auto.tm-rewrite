@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
+import { useEngineTypes } from "../../src/api/catalog/useEngineTypes";
+import { useTransmissions } from "../../src/api/catalog/useTransmissions";
 import { useMyFavorites } from "../../src/api/listings/useMyFavorites";
 import { ListingCard } from "../../src/listings/feed/ListingCard";
 import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
@@ -80,6 +82,10 @@ function FavoritesContent() {
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? [];
   const catalogMaps = useFeedCatalogMaps(allItems);
+  // A tapped card opens Listing detail with its own spec line (km · gearbox ·
+  // fuel); the names come from these catalogs, so warm them here.
+  useTransmissions();
+  useEngineTypes();
 
   if (isPending) {
     return <FeedSkeleton />;

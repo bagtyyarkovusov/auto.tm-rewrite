@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
+import { useEngineTypes } from "../../../src/api/catalog/useEngineTypes";
+import { useTransmissions } from "../../../src/api/catalog/useTransmissions";
 import { useListings } from "../../../src/api/listings/useListings";
 import { useViewer } from "../../../src/auth/useViewer";
 import { FeedEmpty } from "../../../src/listings/feed/FeedEmpty";
@@ -62,6 +64,10 @@ export default function HomeScreen() {
     [data],
   );
   const catalogMaps = useFeedCatalogMaps(items);
+  // A tapped card opens Listing detail with its own spec line (km · gearbox ·
+  // fuel); the names come from these catalogs, so warm them here.
+  useTransmissions();
+  useEngineTypes();
   const cells = useMemo<GridCell[]>(
     () => (items.length % 2 === 1 ? [...items, GRID_SPACER] : items),
     [items],
