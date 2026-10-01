@@ -1,10 +1,14 @@
-# Override for the GitHub-hosted runner trial (pr-checks-hosted-trial.yml),
-# applied through CI_COMPOSE_OVERRIDE in scripts/ci-services.sh.
+# CI-only override for the GitHub-hosted runners that run pr-checks.yml and
+# ci.yml, applied through CI_COMPOSE_OVERRIDE in scripts/ci-services.sh.
 #
 # quay.io/minio/minio can no longer be pulled anonymously, so a runner without
 # the image already cached (every hosted runner) fails at "minio Pulling" with
 # "unauthorized". Chainguard publishes a pullable MinIO build. Its -dev variant
 # has busybox, but no curl, so the health check uses wget.
+#
+# Temporary: issue #475 chooses the durable MinIO image for every compose file,
+# Testcontainers and Railway. Delete this file, the CI_COMPOSE_OVERRIDE env and
+# the "Alias the MinIO image" workflow steps when that lands.
 services:
   minio:
     image: cgr.dev/chainguard/minio:latest-dev

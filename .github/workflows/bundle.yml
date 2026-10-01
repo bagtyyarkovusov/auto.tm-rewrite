@@ -3,66 +3,54 @@ name: Bundle
 on:
   push:
     tags: ["v*"]
+  # Dry run without a tag. It builds the images and uploads the tarball as a
+  # workflow artifact only; it publishes nothing else.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag for the dry-run bundle, for example dev-abc1234
+        required: false
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   bundle:
-    runs-on: [self-hosted, tm-proxy]
+    # x86 Linux, the architecture of the TM-era servers the bundle is loaded on.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # A tag push uses the pushed tag. A manual run uses the input, or a
+      # dev tag from the commit. A branch name is never used: it can contain
+      # "/", which is not valid in an image tag or the artifact file name.
+      BUNDLE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || format('dev-{0}', github.sha) }}
 
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm must be installed before setup-node so `cache: pnpm` can find it.
       - uses: pnpm/action-setup@v4
         with:
           version: 9.12.0
 
+      # Standard GitHub cache of the pnpm store, keyed on pnpm-lock.yaml.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      # Actions does not expand $HOME in `env:`, so the shell sets the store.
-      # pnpm 9 and 10 read npm_config_*; later pnpm reads only pnpm_config_*.
-      - name: Use the persistent pnpm store
-        shell: bash
-        run: |
-          store_dir="$HOME/Library/pnpm/store"
-          echo "npm_config_store_dir=$store_dir" >> "$GITHUB_ENV"
-          echo "pnpm_config_store_dir=$store_dir" >> "$GITHUB_ENV"
-
-      # Diagnostic only; kept on purpose (see .github/workflows/README.md).
-      - name: Report dependency cache state
-        shell: bash
-        continue-on-error: true
-        run: |
-          echo "Node: $(node --version)"
-          echo "pnpm: $(pnpm --version)"
-          store_path="$(pnpm store path --silent)" || store_path="(unavailable)"
-          echo "pnpm store: $store_path"
-          case "$store_path" in
-            "$HOME/Library/pnpm/store"*) ;;
-            *) echo "::warning::pnpm store is $store_path, not $HOME/Library/pnpm/store; installs may be cold" ;;
-          esac
-          avail_kib="$(df -Pk "$HOME" | awk 'NR==2 {print $4}')"
-          if [ "${avail_kib:-0}" -lt 10485760 ]; then
-            echo "::warning::Less than 10 GiB free on the runner volume; see the pnpm store section of .github/workflows/README.md"
-          fi
-          if [ -d "$store_path" ]; then
-            ls -ld "$store_path"
-            df -h "$store_path"
-          elif [ "$store_path" = "(unavailable)" ]; then
-            df -h .
-          else
-            echo "pnpm store does not exist yet"
-            df -h .
-          fi
+          cache: pnpm
 
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm --filter @auto-tm/db generate
 
-      - run: make bundle TAG=${{ github.ref_name }}
+      # Builds the images with the runner's Docker and saves them with
+      # `docker save` into images/auto-tm-<tag>.tar.gz.
+      - run: make bundle TAG="$BUNDLE_TAG"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: auto-tm-${{ github.ref_name }}
-          path: images/auto-tm-${{ github.ref_name }}.tar.gz
+          name: auto-tm-${{ env.BUNDLE_TAG }}
+          path: images/auto-tm-${{ env.BUNDLE_TAG }}.tar.gz
           retention-days: 90
+          if-no-files-found: error

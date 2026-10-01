@@ -4,18 +4,29 @@ on:
   pull_request:
     branches: [main]
 
-# A new push to a pull request cancels that pull request's older run, so the
-# single runner never tests a commit that has already been replaced.
+permissions:
+  contents: read
+
+# A new push to a pull request cancels that pull request's older run, so CI
+# never keeps testing a commit that has already been replaced.
 concurrency:
   group: pr-checks-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
+  # The job id `pr` is the required status check in branch protection. Do not
+  # rename it.
   pr:
-    runs-on: [self-hosted, tm-proxy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
-      # Safe unreachable defaults override any endpoints inherited from the
-      # runner. The service step replaces them with this run's mapped ports.
+      # CI only: quay.io/minio/minio cannot be pulled anonymously and a hosted
+      # runner has no cached copy, so this Compose override swaps in a
+      # pullable MinIO image. Remove it with the alias step below when #475
+      # replaces the image everywhere.
+      CI_COMPOSE_OVERRIDE: infra/compose/docker-compose.ci.hosted.yml
+      # Safe unreachable defaults, replaced by the service step with this
+      # run's mapped ports.
       DATABASE_URL: postgresql://auto_tm_ci:auto_tm_ci_pass@127.0.0.1:1/auto_tm_ci
       REDIS_URL: redis://127.0.0.1:1
       MINIO_ENDPOINT: http://127.0.0.1:1
@@ -28,13 +39,16 @@ jobs:
         with:
           fetch-depth: 2
 
+      # pnpm must be installed before setup-node so `cache: pnpm` can find it.
       - uses: pnpm/action-setup@v4
         with:
           version: 9.12.0
 
+      # Standard GitHub cache of the pnpm store, keyed on pnpm-lock.yaml.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
       # "docs" only when every changed file is Markdown or under docs/.
       # An empty change or unreadable base takes the full lane; a failed
@@ -48,41 +62,14 @@ jobs:
         shell: bash
         run: bash scripts/ci-services.sh up
 
-      # Actions does not expand $HOME in `env:`, so the shell sets the store.
-      # pnpm 9 and 10 read npm_config_*; later pnpm reads only pnpm_config_*.
-      - name: Use the persistent pnpm store
+      # CI only, see #475. packages/db/tests/brand-logos.import.test.ts starts
+      # MinIO through Testcontainers under the quay.io name, which cannot be
+      # pulled. The service step already pulled the replacement, so alias it
+      # locally; Testcontainers then finds an image that is already present.
+      - name: Alias the MinIO image for Testcontainers
+        if: steps.lane.outputs.lane != 'docs'
         shell: bash
-        run: |
-          store_dir="$HOME/Library/pnpm/store"
-          echo "npm_config_store_dir=$store_dir" >> "$GITHUB_ENV"
-          echo "pnpm_config_store_dir=$store_dir" >> "$GITHUB_ENV"
-
-      # Diagnostic only; kept on purpose (see .github/workflows/README.md).
-      - name: Report dependency cache state
-        shell: bash
-        continue-on-error: true
-        run: |
-          echo "Node: $(node --version)"
-          echo "pnpm: $(pnpm --version)"
-          store_path="$(pnpm store path --silent)" || store_path="(unavailable)"
-          echo "pnpm store: $store_path"
-          case "$store_path" in
-            "$HOME/Library/pnpm/store"*) ;;
-            *) echo "::warning::pnpm store is $store_path, not $HOME/Library/pnpm/store; installs may be cold" ;;
-          esac
-          avail_kib="$(df -Pk "$HOME" | awk 'NR==2 {print $4}')"
-          if [ "${avail_kib:-0}" -lt 10485760 ]; then
-            echo "::warning::Less than 10 GiB free on the runner volume; see the pnpm store section of .github/workflows/README.md"
-          fi
-          if [ -d "$store_path" ]; then
-            ls -ld "$store_path"
-            df -h "$store_path"
-          elif [ "$store_path" = "(unavailable)" ]; then
-            df -h .
-          else
-            echo "pnpm store does not exist yet"
-            df -h .
-          fi
+        run: docker tag cgr.dev/chainguard/minio:latest-dev quay.io/minio/minio:latest
 
       - run: pnpm install --frozen-lockfile
 
