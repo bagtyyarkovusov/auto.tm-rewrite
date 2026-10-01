@@ -324,6 +324,20 @@ test("a directory named for evidence keeps a detached worktree", () => {
   assert.match(verdict.reason, /evidence, prototype or research/);
 });
 
+test("a directory named for evidence keeps the worktree whether it is the listed path or the real path", () => {
+  const detached = { branch: null, detached: true };
+  // git lists a final-component symlink under its own name; the real path is the target.
+  const viaLink = entry({ ...detached, path: `${MAIN}/.claude/worktrees/issue-1`, listedPath: `${MAIN}/.claude/worktrees/prototype-link` });
+  const viaTarget = entry({ ...detached, path: `${MAIN}/.claude/worktrees/research-target`, listedPath: `${MAIN}/.claude/worktrees/plain-link` });
+  for (const candidate of [viaLink, viaTarget]) {
+    const verdict = classifyWorktree(candidate, context());
+    assert.equal(verdict.verdict, "keep", candidate.listedPath);
+    assert.match(verdict.reason, /evidence, prototype or research/, candidate.listedPath);
+  }
+  const plain = entry({ ...detached, listedPath: `${MAIN}/.claude/worktrees/plain-link` });
+  assert.equal(classifyWorktree(plain, context()).verdict, "remove");
+});
+
 test("a branch like research-free names is not caught by substring accident", () => {
   const verdict = classifyWorktree(entry({ branch: "agent/issue-1-evidenceless" }), context());
   assert.equal(verdict.verdict, "remove");
@@ -764,6 +778,24 @@ test("a process that reaches the worktree through a symlink keeps it", (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /keep: running agent: pid 5151 \(node\)/);
   assert.ok(hasWorktree(repo, repo.merged.path), "the worktree a process works in survived --apply");
+});
+
+test("a worktree that git lists through a final-component symlink named for prototype work is kept", (t) => {
+  const repo = fixtureRepo(t);
+  const plain = repo.addMergedWorktree("plain-dir", "agent/issue-30");
+  // Point git's record of the worktree at a symlink named prototype-link; its real path stays plain-dir.
+  const link = join(repo.root, "prototype-link");
+  symlinkSync(plain.path, link);
+  const gitdirFile = join(repo.git(plain.path, "rev-parse", "--absolute-git-dir"), "gitdir");
+  writeFileSync(gitdirFile, `${join(link, ".git")}\n`);
+  assert.ok(repo.git(repo.main, "worktree", "list", "--porcelain").includes(`worktree ${link}\n`), "git lists the symlink path");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  // The report prints the real path; the verdict comes from the listed name.
+  assert.match(readOnly.stdout, new RegExp(`${plain.path}\\n  verdict: keep: evidence, prototype or research worktree`));
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile]);
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(hasWorktree(repo, link), "the symlinked prototype worktree survived --apply");
 });
 
 // Finding 2: a partial process scan is treated as complete.
