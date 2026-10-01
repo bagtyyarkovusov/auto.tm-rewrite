@@ -143,4 +143,8 @@ describe("brandCountFilters", () => {
       }),
     ).toEqual({ cityId: "c1", yearMin: 2015, condition: "used" });
   });
+
+  it("drops the Results sort order, which the counts endpoint rejects with a 400", () => {
+    expect(brandCountFilters({ cityId: "c1", sort: "price_asc" })).toEqual({ cityId: "c1" });
+  });
 });

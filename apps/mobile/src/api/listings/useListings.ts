@@ -5,7 +5,7 @@ import { apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
 interface UseListingsOptions {
-  filters?: ListingsSchemas.ListingFilter;
+  filters?: ListingsSchemas.ListingCountQuery;
   limit?: number;
   /**
    * The signed-in viewer's id. When set, the request carries the session so
@@ -16,7 +16,7 @@ interface UseListingsOptions {
 }
 
 function buildFeedParams(
-  filters: ListingsSchemas.ListingFilter | undefined,
+  filters: ListingsSchemas.ListingCountQuery | undefined,
   limit: number,
   cursor: string | null,
 ): URLSearchParams {

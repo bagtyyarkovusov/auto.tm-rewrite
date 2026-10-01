@@ -14,6 +14,7 @@ export function useRepublishListing() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: queryKeys.listings.lifecycleMutation(),
     mutationFn: (listingId: string) =>
       apiClient.post(
         `/listings/${listingId}/republish`,

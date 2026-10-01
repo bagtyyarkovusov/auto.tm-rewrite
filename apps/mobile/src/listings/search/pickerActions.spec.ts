@@ -192,3 +192,14 @@ describe("Done writes the choice back to the form", () => {
     expect("modelIds" in form && form["modelIds"] === undefined).toBe(true);
   });
 });
+
+describe("returning from the Results model picker", () => {
+  it("updates the existing Results search while retaining sort and non-model filters", () => {
+    const router = { push: vi.fn(), dismissAll: vi.fn(), dismissTo: vi.fn(), canDismiss: () => true };
+    const actions = createRoutePickerActions({ router, record: vi.fn(), resultsState: { cityId: "city-1", yearMin: "2018", sort: "price_desc", brandId: "old-brand", modelIds: "old-model" } });
+    actions.confirm({ brandId: "brand-1", brandName: "Toyota", modelIds: ["model-1", "model-2"], modelNames: ["Camry", "Corolla"] });
+    expect(router.dismissTo).toHaveBeenCalledWith({ pathname: RESULTS_PATH, params: { cityId: "city-1", yearMin: "2018", sort: "price_desc", brandId: "brand-1", modelIds: "model-1,model-2", modelId: undefined } });
+    expect(router.dismissAll).not.toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
+  });
+});

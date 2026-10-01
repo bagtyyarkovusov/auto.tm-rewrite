@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import {
   PostgreSqlContainer,
   type StartedPostgreSqlContainer,
@@ -14,6 +14,9 @@ describe("PrismaBrandRepository — Testcontainers", () => {
   let container: StartedPostgreSqlContainer;
   let prisma: PrismaService;
   let repo: PrismaBrandRepository;
+  // A second PrismaService owns its own pool, so it is a second PostgreSQL client.
+  let otherPrisma: PrismaService;
+  let otherRepo: PrismaBrandRepository;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer("postgres:16-alpine")
@@ -34,14 +37,18 @@ describe("PrismaBrandRepository — Testcontainers", () => {
     process.env["DATABASE_URL"] = dbUrl;
     prisma = new PrismaService();
     repo = new PrismaBrandRepository(prisma);
+    otherPrisma = new PrismaService();
+    otherRepo = new PrismaBrandRepository(otherPrisma);
   }, 120_000);
 
   afterAll(async () => {
+    await otherPrisma.onModuleDestroy();
     await prisma.onModuleDestroy();
     await container.stop();
   });
 
   beforeEach(async () => {
+    await prisma.model.deleteMany();
     await prisma.brand.deleteMany();
   });
 
@@ -165,5 +172,186 @@ describe("PrismaBrandRepository — Testcontainers", () => {
   it("returns null for non-existent brand id", async () => {
     const brand = await repo.getBrandById("non-existent");
     expect(brand).toBeNull();
+  });
+
+  describe("atomic logo mutations (ADR-0072)", () => {
+    const brandData = (logoKey: string | null = null) => ({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      logoKey,
+    });
+
+    /** Resolves once some query is waiting on a row lock held by another client. */
+    async function untilLockWaiter(): Promise<void> {
+      for (let attempt = 0; attempt < 200; attempt += 1) {
+        const rows = await prisma.$queryRaw<{ n: bigint }[]>`
+          SELECT count(*) AS n FROM pg_stat_activity
+          WHERE wait_event_type = 'Lock' AND datname = current_database()`;
+        if (Number(rows[0]?.n ?? 0) > 0) return;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error("no query ever waited for the row lock");
+    }
+
+    // A failed test must not leave a lock held, or the next cleanup would wait for it.
+    const holders: Array<{ release: () => void; done: Promise<unknown> }> = [];
+    afterEach(async () => {
+      for (const holder of holders.splice(0)) {
+        holder.release();
+        await holder.done.catch(() => undefined);
+      }
+    });
+
+    /** Holds the brand row lock on the other client until `release` is called. */
+    function holdRowLock(
+      mutate: (tx: Parameters<Parameters<PrismaService["$transaction"]>[0]>[0]) => Promise<void>,
+    ) {
+      let release!: () => void;
+      const released = new Promise<void>((resolve) => { release = resolve; });
+      let locked!: () => void;
+      const lockTaken = new Promise<void>((resolve) => { locked = resolve; });
+      const done = otherPrisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT "logoKey" FROM "brands" WHERE "id" = 'b1' FOR UPDATE`;
+          locked();
+          await released;
+          await mutate(tx);
+        },
+        { timeout: 60_000, maxWait: 5_000 },
+      );
+      holders.push({ release, done });
+      return { lockTaken, release, done };
+    }
+
+    it("replaces the key and returns the key it actually replaced", async () => {
+      await prisma.brand.create({ data: brandData("brands/toyota/v1/logo.png") });
+
+      const replaced = await repo.replaceLogoKey("b1", "brands/toyota/v2-x/logo.png");
+      const cleared = await repo.replaceLogoKey("b1", null);
+
+      expect(replaced).toEqual({ replaced: true, previousKey: "brands/toyota/v1/logo.png" });
+      expect(cleared).toEqual({ replaced: true, previousKey: "brands/toyota/v2-x/logo.png" });
+      expect((await prisma.brand.findUniqueOrThrow({ where: { id: "b1" } })).logoKey).toBeNull();
+    });
+
+    it("positively reports a brand that does not exist", async () => {
+      expect(await repo.replaceLogoKey("missing", "brands/x/v1/logo.png")).toEqual({
+        replaced: false,
+        reason: "not-found",
+      });
+      expect(await repo.delete("missing")).toBeNull();
+    });
+
+    it("returns the key committed by another client while it waited for the row lock", async () => {
+      await prisma.brand.create({ data: brandData("brands/toyota/v1/logo.png") });
+      const other = holdRowLock(async (tx) => {
+        await tx.brand.update({ where: { id: "b1" }, data: { logoKey: "brands/toyota/imp-0123456789ab-uuid/logo.png" } });
+      });
+      await other.lockTaken;
+
+      const waiting = repo.replaceLogoKey("b1", "brands/toyota/v3-y/logo.png");
+      await untilLockWaiter();
+      other.release();
+      await other.done;
+
+      // The stale read said v1; the lock made the swap see what the other client committed.
+      expect(await waiting).toEqual({
+        replaced: true,
+        previousKey: "brands/toyota/imp-0123456789ab-uuid/logo.png",
+      });
+      expect((await prisma.brand.findUniqueOrThrow({ where: { id: "b1" } })).logoKey).toBe(
+        "brands/toyota/v3-y/logo.png",
+      );
+    });
+
+    it("chains the previous keys of two simultaneous swaps from two clients", async () => {
+      await prisma.brand.create({ data: brandData("brands/toyota/v0/logo.png") });
+
+      const [first, second] = await Promise.all([
+        repo.replaceLogoKey("b1", "brands/toyota/vA-a/logo.png"),
+        otherRepo.replaceLogoKey("b1", "brands/toyota/vB-b/logo.png"),
+      ]);
+
+      const previous = [first, second].map((r) => (r.replaced ? r.previousKey : "none"));
+      expect(previous.filter((key) => key === "brands/toyota/v0/logo.png")).toHaveLength(1);
+      const finalKey = (await prisma.brand.findUniqueOrThrow({ where: { id: "b1" } })).logoKey;
+      const keyOf = (r: typeof first, name: string) => (r.replaced ? name : "");
+      // The swap that ran second must have returned the key the first one wrote.
+      const names = [keyOf(first, "brands/toyota/vA-a/logo.png"), keyOf(second, "brands/toyota/vB-b/logo.png")];
+      const winnerIndex = previous.indexOf("brands/toyota/v0/logo.png");
+      expect(previous[1 - winnerIndex]).toBe(names[winnerIndex]);
+      expect(finalKey).toBe(names[1 - winnerIndex]);
+    });
+
+    it("returns the logo key of the row it deleted, even after another client replaced it", async () => {
+      await prisma.brand.create({ data: brandData("brands/toyota/v1/logo.png") });
+      const other = holdRowLock(async (tx) => {
+        await tx.brand.update({ where: { id: "b1" }, data: { logoKey: "brands/toyota/vNew-uuid/logo.png" } });
+      });
+      await other.lockTaken;
+
+      const deleting = repo.delete("b1");
+      await untilLockWaiter();
+      other.release();
+      await other.done;
+
+      expect(await deleting).toEqual({ logoKey: "brands/toyota/vNew-uuid/logo.png" });
+      expect(await prisma.brand.findUnique({ where: { id: "b1" } })).toBeNull();
+    });
+
+    it("lets a swap that waited behind a delete report the brand as gone", async () => {
+      await prisma.brand.create({ data: brandData("brands/toyota/v1/logo.png") });
+      const other = holdRowLock(async (tx) => {
+        await tx.brand.delete({ where: { id: "b1" } });
+      });
+      await other.lockTaken;
+
+      const waiting = repo.replaceLogoKey("b1", "brands/toyota/v2-z/logo.png");
+      await untilLockWaiter();
+      other.release();
+      await other.done;
+
+      expect(await waiting).toEqual({ replaced: false, reason: "not-found" });
+    });
+
+    it("rolls back and returns no cleanup work when a foreign key blocks the delete", async () => {
+      await prisma.brand.create({ data: brandData("brands/toyota/v1/logo.png") });
+      await prisma.model.create({
+        data: { id: "m1", brandId: "b1", slug: "camry", nameRu: "Камри", nameTk: "Camry", nameEn: "Camry" },
+      });
+
+      await expect(repo.delete("b1")).rejects.toThrow(/foreign key/i);
+
+      const row = await prisma.brand.findUniqueOrThrow({ where: { id: "b1" } });
+      expect(row.logoKey).toBe("brands/toyota/v1/logo.png");
+    });
+
+    it.each(["replace", "delete"] as const)("rejects %s without committing when the row lock stays held", async (operation) => {
+      await prisma.brand.create({ data: brandData("brands/toyota/v1/logo.png") });
+      const other = holdRowLock(async () => {});
+      await other.lockTaken;
+
+      const startedAt = Date.now();
+      let outcome: unknown;
+      try {
+        outcome = await (operation === "replace"
+          ? repo.replaceLogoKey("b1", "brands/toyota/v2-late/logo.png")
+          : repo.delete("b1"))
+          .then((value) => ({ value }), (error: unknown) => ({ error }));
+        expect(Date.now() - startedAt).toBeLessThan(10_000);
+      } finally {
+        other.release();
+        await other.done;
+      }
+
+      expect(outcome).toHaveProperty("error");
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect((await prisma.brand.findUniqueOrThrow({ where: { id: "b1" } })).logoKey).toBe(
+        "brands/toyota/v1/logo.png",
+      );
+    }, 15_000);
   });
 });

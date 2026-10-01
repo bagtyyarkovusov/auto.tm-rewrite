@@ -1,23 +1,20 @@
 import { useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  Pencil,
-  CheckCircle,
-  Archive,
-  RotateCcw,
-  Trash2,
-} from "lucide-react-native";
+import { Pencil, CheckCircle, MoreHorizontal } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 type ListingStatus = ListingsSchemas.ListingDetail["status"];
 
+import { queryKeys } from "../../api/queryKeys";
 import { useArchiveListing } from "../../api/listings/useArchiveListing";
 import { useDeleteListing } from "../../api/listings/useDeleteListing";
 import { useMarkSold } from "../../api/listings/useMarkSold";
 import { useRepublishListing } from "../../api/listings/useRepublishListing";
+import { shareListing } from "../detail/shareListing";
 
 import {
   AlertDialog,
@@ -32,6 +29,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 type ConfirmAction =
   | { kind: "markSold"; titleKey: string; descriptionKey: string }
@@ -42,12 +45,15 @@ type ConfirmAction =
 interface OwnerActionsProps {
   listingId: string;
   status: ListingStatus;
+  mode: "bar" | "menu";
 }
 
-export function OwnerActions({ listingId, status }: OwnerActionsProps) {
+export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(
+    null,
+  );
 
   const markSold = useMarkSold();
   const archive = useArchiveListing();
@@ -58,11 +64,10 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
   const isSold = status === Enums.ListingStatus.Sold;
   const isArchived = status === Enums.ListingStatus.Archived;
 
+  // Bar and overflow are separate instances; any in-flight lifecycle request
+  // disables both.
   const isPending =
-    markSold.isPending ||
-    archive.isPending ||
-    republish.isPending ||
-    deleteListing.isPending;
+    useIsMutating({ mutationKey: queryKeys.listings.lifecycleMutation() }) > 0;
 
   const handleConfirm = () => {
     if (!confirmAction) return;
@@ -105,103 +110,113 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
 
   return (
     <View className="gap-2">
-      {/* Primary owner actions row */}
-      <View className="flex-row flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          className="flex-1 min-w-[45%]"
-          onPress={() => router.push(`/listings/${listingId}/edit`)}
-          disabled={isPending}
-        >
-          <Icon as={Pencil} className="size-4 text-foreground" />
-          <Text>{t("edit")}</Text>
-        </Button>
-
-        {isActive && (
+      {mode === "bar" && (
+        <View className="flex-row gap-2 px-4 py-3">
           <Button
             variant="secondary"
             size="sm"
             className="flex-1 min-w-[45%]"
-            onPress={() =>
-              setConfirmAction({
-                kind: "markSold",
-                titleKey: "markAsSold",
-                descriptionKey: "markAsSoldDescription",
-              })
-            }
-            disabled={isPending}
+            onPress={() => router.push(`/listings/${listingId}/edit`)}
+            disabled={isPending || !(isActive || isSold || isArchived)}
           >
-            <Icon as={CheckCircle} className="size-4 text-foreground" />
-            <Text>{t("markAsSold")}</Text>
+            <Icon as={Pencil} className="size-4 text-foreground" />
+            <Text>{t("edit")}</Text>
           </Button>
-        )}
 
-        {(isActive || isSold) && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex-1 min-w-[45%]"
-            onPress={() =>
-              setConfirmAction({
-                kind: "archive",
-                titleKey: "archiveListing",
-                descriptionKey: "archiveListingDescription",
-              })
-            }
-            disabled={isPending}
-          >
-            <Icon as={Archive} className="size-4 text-foreground" />
-            <Text>{t("archiveListing")}</Text>
-          </Button>
-        )}
-
-        {isArchived && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex-1 min-w-[45%]"
-            onPress={() =>
-              setConfirmAction({
-                kind: "republish",
-                titleKey: "republishListing",
-                descriptionKey: "republishListingDescription",
-              })
-            }
-            disabled={isPending}
-          >
-            <Icon as={RotateCcw} className="size-4 text-foreground" />
-            <Text>{t("republishListing")}</Text>
-          </Button>
-        )}
-      </View>
-
-      {/* Destructive action separated */}
-      <View className="pt-1">
-        <Button
-          variant="destructive"
-          size="sm"
-          className="w-full"
-          onPress={() =>
-            setConfirmAction({
-              kind: "delete",
-              titleKey: "deleteListing",
-              descriptionKey: "deleteListingDescription",
-            })
-          }
-          disabled={isPending}
-        >
-          <Icon as={Trash2} className="size-4 text-destructive-foreground" />
-          <Text>{t("delete")}</Text>
-        </Button>
-      </View>
+          {isActive && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1 min-w-[45%]"
+              onPress={() =>
+                setConfirmAction({
+                  kind: "markSold",
+                  titleKey: "markAsSold",
+                  descriptionKey: "markAsSoldDescription",
+                })
+              }
+              disabled={isPending}
+            >
+              <Icon as={CheckCircle} className="size-4 text-foreground" />
+              <Text>{t("markAsSold")}</Text>
+            </Button>
+          )}
+        </View>
+      )}
+      {mode === "menu" && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="rounded-full bg-background/90"
+              accessibilityLabel={t("detailOptions")}
+            >
+              <Icon as={MoreHorizontal} className="size-5 text-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {(isActive || isSold) && (
+              <DropdownMenuItem
+                accessibilityRole="button"
+                disabled={isPending}
+                onPress={() =>
+                  setConfirmAction({
+                    kind: "archive",
+                    titleKey: "archiveListing",
+                    descriptionKey: "archiveListingDescription",
+                  })
+                }
+              >
+                <Text>{t("archiveListing")}</Text>
+              </DropdownMenuItem>
+            )}
+            {isArchived && (
+              <DropdownMenuItem
+                accessibilityRole="button"
+                disabled={isPending}
+                onPress={() =>
+                  setConfirmAction({
+                    kind: "republish",
+                    titleKey: "republishListing",
+                    descriptionKey: "republishListingDescription",
+                  })
+                }
+              >
+                <Text>{t("republishListing")}</Text>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              accessibilityRole="button"
+              onPress={() => void shareListing(listingId, t("shareMessage"))}
+            >
+              <Text>{t("share")}</Text>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              accessibilityRole="button"
+              variant="destructive"
+              disabled={isPending}
+              onPress={() =>
+                setConfirmAction({
+                  kind: "delete",
+                  titleKey: "deleteListing",
+                  descriptionKey: "deleteListingDescription",
+                })
+              }
+            >
+              <Text>{t("delete")}</Text>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Mutation error banner */}
-      {(markSold.isError || archive.isError || republish.isError || deleteListing.isError) && (
+      {(markSold.isError ||
+        archive.isError ||
+        republish.isError ||
+        deleteListing.isError) && (
         <View className="rounded-md bg-destructive/10 px-3 py-2">
-          <Text className="text-sm text-destructive">
-            {t("actionFailed")}
-          </Text>
+          <Text className="text-sm text-destructive">{t("actionFailed")}</Text>
         </View>
       )}
 
@@ -224,9 +239,7 @@ export function OwnerActions({ listingId, status }: OwnerActionsProps) {
               disabled={isPending}
               onPress={handleConfirm}
               className={
-                confirmAction?.kind === "delete"
-                  ? "bg-destructive"
-                  : undefined
+                confirmAction?.kind === "delete" ? "bg-destructive" : undefined
               }
             >
               <Text

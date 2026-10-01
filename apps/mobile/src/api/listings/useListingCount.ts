@@ -6,14 +6,14 @@ import { apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
 interface UseListingCountOptions {
-  filters?: ListingsSchemas.ListingFilter;
+  filters?: ListingsSchemas.ListingCountQuery;
   enabled?: boolean;
 }
 
 const DEBOUNCE_MS = 300;
 
 function buildCountParams(
-  filters: ListingsSchemas.ListingFilter | undefined,
+  filters: ListingsSchemas.ListingCountQuery | undefined,
 ): URLSearchParams {
   const params = new URLSearchParams();
 
@@ -40,7 +40,7 @@ function buildCountParams(
 
 export function useListingCount({ filters, enabled = true }: UseListingCountOptions) {
   const [debouncedFilters, setDebouncedFilters] =
-    useState<ListingsSchemas.ListingFilter | undefined>(filters);
+    useState<ListingsSchemas.ListingCountQuery | undefined>(filters);
 
   useEffect(() => {
     if (!enabled) {

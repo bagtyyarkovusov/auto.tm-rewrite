@@ -7,6 +7,7 @@ export function useDeleteListing() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: queryKeys.listings.lifecycleMutation(),
     mutationFn: (listingId: string) =>
       apiClient.delete(`/listings/${listingId}`),
     onSuccess: (_data, listingId) => {

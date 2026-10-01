@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
@@ -9,12 +11,14 @@ import {
   checkBrandLogoImage,
   checkBrandLogoSvgSafety,
   isPendingBrandLogoKey,
+  newAdminLogoVersion,
   storedBrandLogoType,
   type BrandLogoContentType,
 } from "../domain/BrandLogo";
 import {
   BRAND_LOGO_REPOSITORY,
   type BrandLogoRepository,
+  type LogoKeyReplacement,
 } from "../domain/ports/BrandLogoRepository";
 import { BRAND_LOGO_STORAGE, type BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 import {
@@ -36,10 +40,13 @@ export interface SetBrandLogoResult {
 
 /**
  * Step 2 of a logo upload. Reads the pending upload back from storage,
- * validates it, and stores it under a versioned key: an SVG is rendered to
- * PNG so no SVG is ever served. The Brand then points at the new object and
- * the previous object is deleted, so a replaced logo leaves no orphan. The
- * pending upload is deleted whether or not it is accepted.
+ * validates it, and stores it under a key in a directory that has never been
+ * active (`v<epoch-ms>-<uuid>`): an SVG is rendered to PNG so no SVG is ever
+ * served. The Brand is then pointed at it in one short database-only swap that
+ * returns the key it actually replaced, and that previous version directory is
+ * deleted best-effort. The pending upload is deleted whether or not it is
+ * accepted. The new object is deleted only when the repository positively
+ * reports that the brand was not updated; any other failure may have committed.
  */
 @Injectable()
 export class SetBrandLogo {
@@ -68,19 +75,29 @@ export class SetBrandLogo {
       await this.deleteQuietly(input.key);
     }
 
-    const previousKey = brand.logoKey ?? null;
-    const key = brandLogoKey(brand.slug, `v${Date.now()}`, stored.contentType);
+    const key = brandLogoKey(
+      brand.slug,
+      newAdminLogoVersion(Date.now(), randomUUID()),
+      stored.contentType,
+    );
 
     await this.storage.put(key, stored.bytes, stored.contentType);
+    let replacement: LogoKeyReplacement;
     try {
-      await this.brands.setLogoKey(brand.id, key);
+      replacement = await this.brands.replaceLogoKey(brand.id, key);
     } catch (err) {
-      await this.deleteQuietly(key);
+      // The commit may have happened, so the new object may already be active.
+      this.logger.warn({ key, err }, "Brand logo swap outcome unknown; keeping the uploaded object");
       throw err;
     }
+    if (!replacement.replaced) {
+      await this.deleteQuietly(key);
+      throw new NotFoundException("Brand not found");
+    }
 
+    const previousKey = replacement.previousKey;
     if (previousKey && previousKey !== key) {
-      await this.deleteQuietly(previousKey);
+      await this.deleteVersionQuietly(previousKey);
     }
 
     await this.prisma.auditLog.create({
@@ -130,6 +147,14 @@ export class SetBrandLogo {
       await this.storage.delete(key);
     } catch (err) {
       this.logger.warn({ key, err }, "Failed to delete brand logo object");
+    }
+  }
+
+  private async deleteVersionQuietly(key: string): Promise<void> {
+    try {
+      await this.storage.deleteLogoVersion(key);
+    } catch (err) {
+      this.logger.warn({ key, err }, "Failed to delete previous brand logo version");
     }
   }
 }

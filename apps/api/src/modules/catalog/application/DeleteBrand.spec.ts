@@ -18,6 +18,9 @@ class FakeSearchIndex {
 class FakeBrandRepository implements BrandRepository {
   brands: Brand[] = [];
   shouldThrowFkOnDelete = false;
+  /** Models a concurrent logo swap: the key of the row the delete really removed. */
+  deletedLogoKey: string | null | undefined;
+  vanishOnDelete = false;
 
   async listBrands(): Promise<{ items: Brand[]; nextCursor?: { name: string; id: string } }> {
     return { items: this.brands };
@@ -43,11 +46,15 @@ class FakeBrandRepository implements BrandRepository {
     throw new Error("not implemented");
   }
 
-  async delete(): Promise<void> {
+  async delete(id: string): Promise<{ logoKey: string | null } | null> {
     if (this.shouldThrowFkOnDelete) {
       throw new Error("foreign key constraint violated");
     }
-    // no-op for fake
+    const brand = this.brands.find((b) => b.id === id);
+    if (!brand || this.vanishOnDelete) return null;
+    return {
+      logoKey: this.deletedLogoKey === undefined ? (brand.logoKey ?? null) : this.deletedLogoKey,
+    };
   }
 }
 
@@ -69,6 +76,8 @@ class FakePrisma {
 
 class FakeLogoStorage implements BrandLogoStorage {
   deleted: string[] = [];
+  deletedVersions: string[] = [];
+  failDeleteVersion = false;
   async presignUpload(): Promise<{ url: string; headers: Record<string, string> }> {
     throw new Error("not used");
   }
@@ -78,6 +87,10 @@ class FakeLogoStorage implements BrandLogoStorage {
   async put(): Promise<void> {}
   async delete(key: string): Promise<void> {
     this.deleted.push(key);
+  }
+  async deleteLogoVersion(key: string): Promise<void> {
+    this.deletedVersions.push(key);
+    if (this.failDeleteVersion) throw new Error("storage down");
   }
   publicUrl(key: string): string {
     return key;
@@ -130,7 +143,7 @@ describe("DeleteBrand", () => {
     });
   });
 
-  it("deletes the brand's logo object", async () => {
+  it("deletes the brand's logo version directory", async () => {
     brandRepo.brands.push({
       id: "b1",
       slug: "toyota",
@@ -145,7 +158,107 @@ describe("DeleteBrand", () => {
 
     await makeUseCase(brandRepo, prisma, undefined, logoStorage).execute({ id: "b1" }, "admin-1");
 
-    expect(logoStorage.deleted).toEqual(["brands/toyota/v1/logo.png"]);
+    expect(logoStorage.deletedVersions).toEqual(["brands/toyota/v1/logo.png"]);
+    expect(logoStorage.deleted).toEqual([]);
+  });
+
+  it("cleans the logo of the row the delete actually removed, not the earlier read", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      logoKey: "brands/toyota/v1/logo.png",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const concurrent = "brands/toyota/imp-0123456789ab-0f8fad5b-d9cb-469f-a165-70867728950e/logo.png";
+    brandRepo.deletedLogoKey = concurrent;
+    const logoStorage = new FakeLogoStorage();
+
+    await makeUseCase(brandRepo, prisma, undefined, logoStorage).execute({ id: "b1" }, "admin-1");
+
+    expect(logoStorage.deletedVersions).toEqual([concurrent]);
+  });
+
+  it("cleans nothing when the deleted row had no logo", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      logoKey: "brands/toyota/v1/logo.png",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    brandRepo.deletedLogoKey = null;
+    const logoStorage = new FakeLogoStorage();
+
+    await makeUseCase(brandRepo, prisma, undefined, logoStorage).execute({ id: "b1" }, "admin-1");
+
+    expect(logoStorage.deletedVersions).toEqual([]);
+  });
+
+  it("keeps the deletion and its audit entry when storage cleanup fails", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      logoKey: "brands/toyota/v1/logo.png",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const logoStorage = new FakeLogoStorage();
+    logoStorage.failDeleteVersion = true;
+
+    await makeUseCase(brandRepo, prisma, undefined, logoStorage).execute({ id: "b1" }, "admin-1");
+
+    expect(prisma.auditLogs).toHaveLength(1);
+  });
+
+  it("throws NotFoundException and cleans nothing when the brand vanishes before the delete", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      logoKey: "brands/toyota/v1/logo.png",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    brandRepo.vanishOnDelete = true;
+    const logoStorage = new FakeLogoStorage();
+
+    await expect(
+      makeUseCase(brandRepo, prisma, undefined, logoStorage).execute({ id: "b1" }, "admin-1"),
+    ).rejects.toThrow(NotFoundException);
+    expect(logoStorage.deletedVersions).toEqual([]);
+  });
+
+  it("cleans nothing when a foreign key blocks the delete", async () => {
+    brandRepo.brands.push({
+      id: "b1",
+      slug: "toyota",
+      nameRu: "Тойота",
+      nameTk: "Toýota",
+      nameEn: "Toyota",
+      logoKey: "brands/toyota/v1/logo.png",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    brandRepo.shouldThrowFkOnDelete = true;
+    const logoStorage = new FakeLogoStorage();
+
+    await expect(
+      makeUseCase(brandRepo, prisma, undefined, logoStorage).execute({ id: "b1" }, "admin-1"),
+    ).rejects.toThrow(ConflictException);
+    expect(logoStorage.deletedVersions).toEqual([]);
+    expect(logoStorage.deleted).toEqual([]);
   });
 
   it("throws NotFoundException when brand does not exist", async () => {
