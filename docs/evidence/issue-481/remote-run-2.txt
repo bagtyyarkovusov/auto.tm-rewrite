@@ -1,0 +1,3 @@
+Using SSH key from file /Users/bagtyyar/.ssh/railway_debug.pub: railway-debug
+exit=1
+Native seed requires the MinIO public endpoint of this PR

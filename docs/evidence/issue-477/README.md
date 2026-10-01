@@ -47,7 +47,7 @@ Simulator `38747B85-BB39-48A2-BF0D-4DD6A5ED1D13` (iPhone 17), `tm.auto.app` dev 
 
 [API HTTP log](api-http-native-session.txt) shows `POST /auth/otp/request` and `/auth/otp/verify` returning 201, then `/me`, `/me/listings`, listing list/detail and catalog reads returning 200 from this environment.
 
-Artefact limits: the [refusal log](production-override-refusal.txt) has no captured exit code (the exit status 1 above is from the session's terminal, not an artefact), and the Docker, Metro and API logs carry no environment ID or timestamps. They were not regenerated. Environment identity rests on the explicit IDs used in the commands and the deployment readback recorded above.
+Artefact limits: the [refusal log](production-override-refusal.txt) has no captured exit code (the exit status 1 above is from the session's terminal, not an artefact), and the Docker, Metro and API logs carry no environment ID or timestamps. They were not regenerated. Environment identity rests on the explicit IDs used in the commands and the deployment readback recorded above. The statement under "Scope, access and cleanup" that PR479's environment was observed absent has no artefact in this directory: no query output, environment listing or timestamp was captured, so it is the session's report only and cannot be checked from the repository. PR480's own deletion is likewise not recorded here.
 
 Not proven here: simultaneous operation of two simulators (only one device was booted; the second assigned device was not touched). Teardown: app terminated, only this session's Metro (pid 63719) stopped, simulator `38747B85-...` shut down by UUID. iPhone 16e and the second assigned simulator were never touched.
 
