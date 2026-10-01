@@ -51,6 +51,7 @@ export function CollapsingHeader({
     replayAfterSignIn: true,
   });
   const closed = isClosedForContact(listing.status);
+  const canReport = !closed && onReport !== undefined;
   return (
     <View
       className={cn(
@@ -113,31 +114,31 @@ export function CollapsingHeader({
                 )}
               </Button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="rounded-full bg-background/90"
-                  accessibilityLabel={t("detailOptions")}
-                >
-                  <Icon
-                    as={MoreHorizontal}
-                    className="size-5 text-foreground"
-                  />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                {!closed && onReport && (
+            {canReport && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="rounded-full bg-background/90"
+                    accessibilityLabel={t("detailOptions")}
+                  >
+                    <Icon
+                      as={MoreHorizontal}
+                      className="size-5 text-foreground"
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem
                     accessibilityRole="button"
                     onPress={onReport}
                   >
                     <Text>{t("report")}</Text>
                   </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </>
         )}
       </View>
