@@ -67,7 +67,7 @@ class FakeBrandRepository implements BrandRepository {
     throw new Error("not implemented");
   }
 
-  async delete(): Promise<void> {
+  async delete(): Promise<{ logoKey: string | null } | null> {
     throw new Error("not implemented");
   }
 }
@@ -77,6 +77,7 @@ const fakeLogoStorage: BrandLogoStorage = {
   get: async () => null,
   put: async () => undefined,
   delete: async () => undefined,
+  deleteLogoVersion: async () => undefined,
   publicUrl: (key) => `https://media.example/catalog-assets/${key}`,
 };
 

@@ -33,7 +33,7 @@ Missing render infrastructure or simulator/emulator access is missing evidence. 
 - For mobile UI, also read `docs/agents/nativewind-v4.md` and the current UI sources named by the design spec.
 - For external libraries, record the Context7 library ID and what was verified.
 
-Run all relevant host-capable tests. If Testcontainers, CI, credentials, hardware, or a simulator is genuinely unavailable, name the skipped gate, why it is unavailable, and where it must run; never report it as passed.
+Under [ADR-0075](../../../docs/adr/0075-railway-pr-backends-for-agent-native-sessions.md), hosted required CI supplies the full repository container-backed test gate. Run `pnpm test:unit`, focused non-container checks and repository typecheck locally; native sessions use the Railway PR backend. Do not start local Docker to repeat hosted container gates. Run all other relevant host-capable tests. If Testcontainers, CI, credentials, hardware, or a simulator is genuinely unavailable, name the skipped gate, why it is unavailable, and where it must run; never report it as passed.
 
 ## Documentation gate
 

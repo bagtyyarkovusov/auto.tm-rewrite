@@ -31,7 +31,13 @@ export interface BrandRepository {
     },
   ): Promise<Brand>;
 
-  delete(id: string): Promise<void>;
+  /**
+   * Deletes the brand in one short database-only transaction and returns the
+   * logo key of the row actually deleted (null for a brand without a logo), or
+   * null when the brand no longer exists. A foreign-key failure throws and
+   * returns no cleanup work.
+   */
+  delete(id: string): Promise<{ logoKey: string | null } | null>;
 }
 
 export const BRAND_REPOSITORY = Symbol("BrandRepository");

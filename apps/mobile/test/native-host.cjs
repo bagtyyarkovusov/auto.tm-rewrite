@@ -20,14 +20,21 @@ const Pressable = React.forwardRef(({ children, disabled, accessibilityState, ..
   }, typeof children === "function" ? children({ pressed: false }) : children));
 Pressable.displayName = "Pressable";
 const scrollRequests = [];
-const FlatList = React.forwardRef(({ data = [], renderItem, keyExtractor, ...props }, ref) => {
+const slot = (component) => component == null || React.isValidElement(component)
+  ? component ?? null : React.createElement(component);
+// Header renders first and the empty component only when there is no data, like
+// the native list. A component or an element is accepted for both.
+const FlatList = React.forwardRef(({
+  data = [], renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ...props
+}, ref) => {
   React.useImperativeHandle(ref, () => ({
     scrollToIndex: (args) => scrollRequests.push({ method: "scrollToIndex", ...args }),
     scrollToOffset: (args) => scrollRequests.push({ method: "scrollToOffset", ...args }),
   }));
-  return React.createElement("RCTScrollView", props,
+  return React.createElement("RCTScrollView", props, slot(ListHeaderComponent),
     data.map((item, index) => React.createElement(React.Fragment,
-      { key: keyExtractor?.(item, index) ?? index }, renderItem({ item, index }))));
+      { key: keyExtractor?.(item, index) ?? index }, renderItem({ item, index }))),
+    data.length ? null : slot(ListEmptyComponent));
 });
 FlatList.displayName = "FlatList";
 const flatten = (style) => Array.isArray(style)
@@ -39,6 +46,7 @@ module.exports = {
   KeyboardAvoidingView: host("KeyboardAvoidingView"),
   Modal: ({ visible = true, children, ...props }) => visible
     ? React.createElement("Modal", props, children) : null,
+  RefreshControl: host("RefreshControl"),
   FlatList,
   // Scroll requests the list received, newest last. Specs read this to prove a
   // component moved a list; the adapter never scrolls anything itself.

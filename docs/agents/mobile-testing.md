@@ -64,7 +64,7 @@ Nothing changes in node_modules, Metro, Babel or the application runtime.
 
 The adapter renders native-named host nodes. It keeps children, event handlers,
 accessibility props, disabled input behavior and Pressable's disabled responder
-decision. It uses a fixed 390 by 844 window. FlatList renders all supplied items;
+decision. It uses a fixed 390 by 844 window. FlatList renders all supplied items with its header and empty components;
 Modal renders children only when visible. This is an intentionally small
 project adapter, not the upstream Jest React Native preset. Add an explicit
 adapter or spec-local mock when a component uses an unsupported native API.

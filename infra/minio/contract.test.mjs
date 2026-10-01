@@ -17,6 +17,7 @@ class FakeS3Client {
   constructor() {
     this.buckets = new Map();
     this.policies = new Map();
+    this.lifecycles = new Map();
     this.sent = [];
   }
 
@@ -31,6 +32,10 @@ class FakeS3Client {
     }
     if (name === "CreateBucketCommand") {
       this.buckets.set(input.Bucket, new Map());
+      return {};
+    }
+    if (name === "PutBucketLifecycleConfigurationCommand") {
+      this.lifecycles.set(input.Bucket, input.LifecycleConfiguration);
       return {};
     }
     if (name === "PutBucketPolicyCommand") {
@@ -138,4 +143,53 @@ test("restore fails before writing when a backup object checksum does not match"
 
   await assert.rejects(() => restoreBuckets(target, dir), /Checksum mismatch before restore/);
   assert.equal(target.buckets.get("listing-photos")?.size ?? 0, 0);
+});
+
+
+test("catalog anonymous reads cover published brands only", () => {
+  const policy = publicReadPolicy("catalog-assets");
+  assert.deepEqual(policy.Statement[0].Resource, ["arn:aws:s3:::catalog-assets/brands/*"]);
+  assert.doesNotThrow(() => assertPublicReadOnlyPolicy(policy, "catalog-assets"));
+  for (const resource of ["arn:aws:s3:::catalog-assets/*", "arn:aws:s3:::catalog-assets/pending/*", "*"]) {
+    assert.throws(() => assertPublicReadOnlyPolicy({ ...policy, Statement: [
+      ...policy.Statement,
+      { Effect: "Allow", Principal: "*", Action: "s3:GetObject", Resource: resource },
+    ] }, "catalog-assets"), /policy/);
+  }
+});
+
+test("policy validation rejects anonymous writes even on a narrower prefix", () => {
+  const policy = publicReadPolicy("listing-photos");
+  assert.throws(() => assertPublicReadOnlyPolicy({ ...policy, Statement: [
+    ...policy.Statement,
+    { Effect: "Allow", Principal: "*", Action: "s3:PutObject", Resource: "arn:aws:s3:::listing-photos/pending/*" },
+  ] }, "listing-photos"), /policy/);
+});
+
+test("catalog bootstrap expires pending uploads after one day without expiring published logos", async () => {
+  const client = new FakeS3Client();
+  await bootstrapBuckets(client, ["catalog-assets", "listing-photos"]);
+  const lifecycle = { Rules: [{ ID: "ExpirePendingBrandLogos", Status: "Enabled", Filter: { Prefix: "pending/" }, Expiration: { Days: 1 } }] };
+  assert.deepEqual(client.lifecycles.get("catalog-assets"), lifecycle);
+  assert.equal(client.lifecycles.has("listing-photos"), false);
+  client.lifecycles.delete("catalog-assets");
+  await bootstrapBuckets(client, ["catalog-assets"]);
+  assert.deepEqual(client.lifecycles.get("catalog-assets"), lifecycle);
+});
+
+test("backup and restore accept the scoped catalog policy and restore pending expiry", async () => {
+  const source = new FakeS3Client();
+  await bootstrapBuckets(source, ["catalog-assets"]);
+  source.policies.set("catalog-assets", JSON.stringify({ Version: "2012-10-17", Statement: [{
+    Effect: "Allow", Principal: "*", Action: "s3:GetObject", Resource: "arn:aws:s3:::catalog-assets/brands/*",
+  }] }));
+  source.buckets.get("catalog-assets").set("brands/toyota/imp-0123456789ab/logo.png", Buffer.from("logo"));
+  const dir = await mkdtemp(join(tmpdir(), "autotm-454-backup-"));
+  const manifest = await backupBuckets(source, dir, ["catalog-assets"]);
+  assert.equal(manifest.buckets[0].objects.length, 1);
+  const target = new FakeS3Client();
+  await restoreBuckets(target, dir);
+  assert.equal(target.buckets.get("catalog-assets").get("brands/toyota/imp-0123456789ab/logo.png").toString(), "logo");
+  assertPublicReadOnlyPolicy(target.policies.get("catalog-assets"), "catalog-assets");
+  assert.equal(target.lifecycles.get("catalog-assets").Rules[0].Expiration.Days, 1);
 });

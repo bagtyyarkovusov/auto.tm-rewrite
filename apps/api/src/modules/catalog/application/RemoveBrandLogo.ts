@@ -7,7 +7,12 @@ import {
 } from "../domain/ports/BrandLogoRepository";
 import { BRAND_LOGO_STORAGE, type BrandLogoStorage } from "../domain/ports/BrandLogoStorage";
 
-/** Clears a brand logo and deletes its object. Removing a missing logo is a no-op. */
+/**
+ * Clears a brand logo in one short database-only swap, then deletes the
+ * version directory the swap actually removed (all imported siblings
+ * included). Removing a missing logo is a no-op. A failed or uncertain
+ * database swap deletes nothing.
+ */
 @Injectable()
 export class RemoveBrandLogo {
   private readonly logger = new Logger(RemoveBrandLogo.name);
@@ -24,14 +29,18 @@ export class RemoveBrandLogo {
       throw new NotFoundException("Brand not found");
     }
 
-    const previousKey = brand.logoKey ?? null;
+    const replacement = await this.brands.replaceLogoKey(brand.id, null);
+    if (!replacement.replaced) {
+      throw new NotFoundException("Brand not found");
+    }
+
+    const previousKey = replacement.previousKey;
     if (!previousKey) return;
 
-    await this.brands.setLogoKey(brand.id, null);
     try {
-      await this.storage.delete(previousKey);
+      await this.storage.deleteLogoVersion(previousKey);
     } catch (err) {
-      this.logger.warn({ key: previousKey, err }, "Failed to delete brand logo object");
+      this.logger.warn({ key: previousKey, err }, "Failed to delete brand logo version");
     }
 
     await this.prisma.auditLog.create({

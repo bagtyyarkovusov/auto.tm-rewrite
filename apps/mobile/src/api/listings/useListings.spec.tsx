@@ -2,7 +2,7 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
@@ -255,5 +255,26 @@ describe("useListings", () => {
     const secondUrl = String(mockGet.mock.calls[1]?.[0]);
     expect(firstUrl).toContain("brandId=brand-a");
     expect(secondUrl).toContain("brandId=brand-b");
+  });
+});
+
+describe("Results sort pagination isolation", () => {
+  it("serializes multiple models and starts each sort on its own first page", async () => {
+    mockGet.mockReset();
+    mockGet.mockImplementation(async (url: string) => ({ items: [makeFeedItem(url)], nextCursor: url.includes("cursor=") ? null : "older-cursor" }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const stableWrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const { result, rerender } = renderHook(({ sort }: { sort: ListingsSchemas.FeedSort }) => useListings({ filters: { brandId: "toyota", modelIds: ["camry", "corolla"], sort }, viewerId: "buyer" }), { wrapper: stableWrapper, initialProps: { sort: "newest" as ListingsSchemas.FeedSort } });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.hasNextPage).toBe(true);
+    await act(async () => { await result.current.fetchNextPage(); });
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(2));
+    rerender({ sort: "price_asc" });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.pages).toHaveLength(1);
+    const url = new URL(String(mockGet.mock.lastCall?.[0]), "http://example.test");
+    expect(url.searchParams.get("sort")).toBe("price_asc"); expect(url.searchParams.getAll("modelIds")).toEqual(["camry", "corolla"]); expect(url.searchParams.has("cursor")).toBe(false);
+    expect(client.getQueryCache().getAll()).toHaveLength(2);
+    client.clear();
   });
 });

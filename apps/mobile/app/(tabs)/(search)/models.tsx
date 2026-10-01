@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { readPickerResultsFilters } from "../../../src/listings/search/resultsRouteState";
 import { ModelPicker } from "../../../src/listings/search/ModelPicker";
 import { BRANDS_PATH } from "../../../src/listings/search/pickerActions";
 import { useRoutePickerActions } from "../../../src/listings/search/useRoutePickerActions";
@@ -21,7 +22,7 @@ export default function ModelPickerScreen() {
   const { t } = useTranslation();
   const goBack = useSafeBack(BRANDS_PATH);
   const actions = useRoutePickerActions();
-  const params = useLocalSearchParams<{ brandId?: string; modelIds?: string }>();
+  const params = useLocalSearchParams<{ brandId?: string; modelIds?: string; returnToResults?: string; resultsState?: string }>();
   const brandId = params.brandId ?? "";
   const modelIdsParam = params.modelIds ?? "";
   const initialModelIds = useMemo(
@@ -39,6 +40,7 @@ export default function ModelPickerScreen() {
         actions={actions}
         brandId={brandId}
         initialModelIds={initialModelIds}
+        filters={readPickerResultsFilters(params)}
         leading={
           <Button
             variant="ghost"
