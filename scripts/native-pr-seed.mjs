@@ -45,6 +45,8 @@ export const nativePrSeedSteps = [
   { name: 'brand logos', command: 'pnpm', args: ['--filter', '@auto-tm/db', 'logos:import'] },
 ];
 
+export function nativePrSeedStepsFor() { return nativePrSeedSteps; }
+
 export function runNativePrSeed(env = process.env, options = {}) {
   const guarded = validateNativePrSeed(env, options);
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
