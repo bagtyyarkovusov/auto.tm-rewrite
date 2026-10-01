@@ -13,7 +13,6 @@
 // `--prs-file` is for read-only experiments; `--apply` refuses it.
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -113,10 +112,14 @@ function inside(cwd, path) {
 // wrapper) does not strip the protection.
 const CODEX_MANAGED = "/.codex/worktrees/";
 
-function isCodexManaged(entry, homeDir) {
-  return [entry.path, entry.listedPath].some(
-    (path) => path && (`${path}/`.includes(CODEX_MANAGED) || (homeDir && inside(path, `${homeDir}/.codex/worktrees`))),
-  );
+function isCodexManaged(entry) {
+  return [entry.path, entry.listedPath].some((path) => path && `${path}/`.includes(CODEX_MANAGED));
+}
+
+// The branch, or the directory's name as git lists it or as it resolves (a
+// final-component symlink can carry the evidence name on either side).
+function isEvidenceWorktree(entry) {
+  return EVIDENCE.test(entry.branch ?? "") || [entry.path, entry.listedPath].some((path) => path && EVIDENCE.test(basename(path)));
 }
 
 function matchingPrs(entry, context) {
@@ -140,7 +143,7 @@ function matchingPrs(entry, context) {
 export function classifyWorktree(entry, context) {
   const keep = (reason) => ({ verdict: "keep", reason, pr: null });
   if (entry.path === context.mainPath) return keep("the main checkout");
-  if (isCodexManaged(entry, context.homeDir)) {
+  if (isCodexManaged(entry)) {
     return keep("Codex app-managed worktree (~/.codex/worktrees)");
   }
   if (entry.path === context.currentPath) return keep("the current session's own worktree");
@@ -154,7 +157,7 @@ export function classifyWorktree(entry, context) {
   if (running) return keep(`running agent: pid ${running.pid} (${running.command}) works in it`);
   if (entry.prunable) return keep("directory is missing (prunable); git worktree prune clears the entry");
   if (!entry.head || ZERO_SHA.test(entry.head)) return keep("unborn branch");
-  if (EVIDENCE.test(entry.branch ?? "") || EVIDENCE.test(basename(entry.path))) {
+  if (isEvidenceWorktree(entry)) {
     return keep("evidence, prototype or research worktree");
   }
   if (context.dirtyCount === null) return keep("status could not be read");
@@ -271,7 +274,7 @@ function humanSize(kb) {
 
 // One line saying what the Claude session scan covered. The report never
 // implies the scan ran when it did not.
-export function describeClaudeScan(claude) {
+function describeClaudeScan(claude) {
   if (!claude) return "not recorded";
   if (claude.status === "missing") return "not checked (`claude` was not found on PATH)";
   if (claude.status !== "ok") return "not checked (the session list could not be read)";
@@ -282,8 +285,10 @@ export function describeClaudeScan(claude) {
 function describeProcessScan(processes) {
   if (!processes) return "not recorded";
   if (processes.status === "unavailable") return "not checked (the process list could not be read)";
-  if (processes.status === "partial") return `partial (${processes.count} processes, none is this one, so running agents may be missed)`;
-  return `complete (${processes.count} processes, including this one)`;
+  if (processes.status === "excludes-current-process") {
+    return `does not include this process (${processes.count} processes), so running agents may be missed`;
+  }
+  return `includes this process (${processes.count} processes)`;
 }
 
 export function formatReport({ rows, staleBranches, railway, applied, scans }) {
@@ -354,11 +359,11 @@ export function formatReport({ rows, staleBranches, railway, applied, scans }) {
 
 // --- IO ---------------------------------------------------------------------
 
-export function run(argv, cwd) {
+function run(argv, cwd) {
   return execFileSync(argv[0], argv.slice(1), { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
-export function scanProcesses() {
+function scanProcesses() {
   if (existsSync("/proc/self/cwd")) {
     const found = [];
     for (const pid of readdirSync("/proc").filter((name) => /^\d+$/.test(name))) {
@@ -511,7 +516,6 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
   }));
   const mainPath = entries[0].path;
   const currentPath = realpathOrSelf(run(["git", "rev-parse", "--show-toplevel"], cwd).trim());
-  const homeDir = realpathOrSelf(env.HOME || homedir());
   let prs;
   let prsTruncated;
   try {
@@ -563,7 +567,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
   const claudeSessions = claudeScan && claudeScan.sessions.map((session) => ({ ...session, cwd: realpathOrSelf(session.cwd) }));
   const scans = {
     processes: {
-      status: scannedProcesses === null ? "unavailable" : includesCurrentProcess ? "complete" : "partial",
+      status: scannedProcesses === null ? "unavailable" : includesCurrentProcess ? "includes-current-process" : "excludes-current-process",
       count: scannedProcesses?.length ?? 0,
       includesCurrentProcess,
     },
@@ -611,7 +615,6 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
     const verdict = classifyWorktree(entry, {
       mainPath,
       currentPath,
-      homeDir,
       dirtyCount,
       activeProcesses: [...(activeProcesses ?? []), ...(claudeSessions ?? [])],
       onMain,
@@ -637,7 +640,9 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
     const steps = planApply({ rows, staleBranches });
     for (const step of steps) {
       if (step.kind !== "worktree") continue;
-      // Recheck just before removal; git itself still refuses dirty or locked trees.
+      // Recheck just before removal. Git refuses a locked tree and, by default,
+      // a dirty one, but not untracked files under status.showUntrackedFiles=no,
+      // so this recheck (HEAD unchanged, nothing changed or untracked) is the guard.
       step.verify = () => {
         const head = run(["git", "rev-parse", "HEAD"], step.entry.path).trim();
         if (head !== step.entry.head) throw new Error(`HEAD moved from ${step.entry.head} to ${head}`);

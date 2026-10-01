@@ -104,7 +104,6 @@ const pr = (overrides = {}) => ({
 const context = (overrides = {}) => ({
   mainPath: MAIN,
   currentPath: `${MAIN}/.claude/worktrees/self`,
-  homeDir: HOME,
   dirtyCount: 0,
   activeProcesses: [],
   onMain: false,
@@ -732,7 +731,7 @@ const hasWorktree = (repo, path) => repo.git(repo.main, "worktree", "list", "--p
 test("Codex app-managed protection does not depend on HOME", () => {
   const verdict = classifyWorktree(
     entry({ path: "/Users/dev/.codex/worktrees/1b73/auto.tm-rewrite", branch: null, detached: true }),
-    context({ homeDir: "/root" }),
+    context(),
   );
   assert.equal(verdict.verdict, "keep");
   assert.match(verdict.reason, /Codex app-managed worktree/);
@@ -940,6 +939,8 @@ test("a clean Claude session scan is stated in the report with no warning", (t) 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stderr, "");
   assert.match(result.stdout, /Claude sessions: checked \(1 with a directory\)/);
+  assert.match(result.stdout, /Process scan: includes this process \(1 processes\)/);
+  assert.doesNotMatch(result.stdout, /Process scan: complete/);
 });
 
 test("the JSON report records what each scan covered", (t) => {
@@ -951,6 +952,22 @@ test("the JSON report records what each scan covered", (t) => {
   const report = JSON.parse(result.stdout);
   assert.equal(report.scans?.claude?.status, "missing");
   assert.equal(report.scans?.processes?.includesCurrentProcess, true);
+  assert.equal(report.scans?.processes?.status, "includes-current-process");
+  assert.equal(report.scans?.processes?.count, 1);
+});
+
+test("the report and the JSON say when the process scan does not include this process", (t) => {
+  const repo = fixtureRepo(t);
+  const partial = () => [{ pid: 1, command: "launchd", cwd: "/" }];
+  const text = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: partial });
+  assert.equal(text.status, 0, text.stderr);
+  assert.match(text.stdout, /Process scan: does not include this process \(1 processes\), so running agents may be missed/);
+  const json = JSON.parse(runMain(repo, ["--json", "--prs-file", repo.prsFile], { scanProcesses: partial }).stdout);
+  assert.equal(json.scans.processes.status, "excludes-current-process");
+  assert.equal(json.scans.processes.includesCurrentProcess, false);
+  const unavailable = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: () => null });
+  assert.match(unavailable.stdout, /Process scan: not checked \(the process list could not be read\)/);
+  assert.equal(JSON.parse(runMain(repo, ["--json", "--prs-file", repo.prsFile], { scanProcesses: () => null }).stdout).scans.processes.status, "unavailable");
 });
 
 // Finding 4: the --apply path, with the repository changing between the scan and the removal.
