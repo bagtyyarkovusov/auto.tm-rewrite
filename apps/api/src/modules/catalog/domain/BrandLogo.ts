@@ -157,6 +157,9 @@ export function parseStoredBrandLogoKey(key: string): StoredBrandLogo | null {
   const match = STORED_LOGO_KEY.exec(key);
   if (!match) return null;
   const slug = match[1] as string;
+  // Dot segments and backslashes can be normalized by storage HTTP paths.
+  // Keep unknown layouts on the single-object fallback instead of widening cleanup.
+  if (slug === "." || slug === ".." || slug.includes("\\")) return null;
   const version = match[2] as string;
   const hash = match[4];
   const owner = hash === undefined ? "admin" : "imported";

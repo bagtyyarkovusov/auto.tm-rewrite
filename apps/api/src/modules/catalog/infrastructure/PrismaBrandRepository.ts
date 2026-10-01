@@ -92,6 +92,9 @@ export class PrismaBrandRepository implements BrandRepository, BrandLogoReposito
 
   async replaceLogoKey(id: string, logoKey: string | null): Promise<LogoKeyReplacement> {
     return this.prisma.$transaction(async (tx) => {
+      // Prisma cannot finish rollback while adapter-pg has an in-flight lock wait.
+      // PostgreSQL cancels the statement before the five-second transaction deadline.
+      await tx.$executeRaw`SET LOCAL statement_timeout = '4s'`;
       const rows = await tx.$queryRaw<{ logoKey: string | null }[]>`
         SELECT "logoKey" FROM "brands" WHERE "id" = ${id} FOR UPDATE`;
       const locked = rows[0];
@@ -103,6 +106,9 @@ export class PrismaBrandRepository implements BrandRepository, BrandLogoReposito
 
   async delete(id: string): Promise<{ logoKey: string | null } | null> {
     return this.prisma.$transaction(async (tx) => {
+      // Prisma cannot finish rollback while adapter-pg has an in-flight lock wait.
+      // PostgreSQL cancels the statement before the five-second transaction deadline.
+      await tx.$executeRaw`SET LOCAL statement_timeout = '4s'`;
       const rows = await tx.$queryRaw<{ logoKey: string | null }[]>`
         SELECT "logoKey" FROM "brands" WHERE "id" = ${id} FOR UPDATE`;
       const locked = rows[0];
