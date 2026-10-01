@@ -1,6 +1,11 @@
 # Issue 472 evidence
 
-Question: does the Search parameters price field drop digits when `7000000` is typed in one burst, as the old FilterSheet field did during the #370 native session ([issue-370 README](../issue-370/README.md), point 5, kept as historical context)? PR 489, stacked on PR 483 (issue 371) at `5175de8c3a6531c9492239ae804e9aa7b38eb158`.
+Question: does the Search parameters price field drop digits when `7000000` is typed in one burst, as the old FilterSheet field did during the #370 native session ([issue-370 README](../issue-370/README.md), point 5, kept as historical context)? PR 489. It was first built on PR 483 (issue 371), which merged to main as `bc31bc7`; this PR was then rebased onto main.
+
+## Commits these runs refer to
+
+- The native session and the original green run were made at the pre-rebase commit `784f783`. Its tests under `apps/mobile/src/listings/search` are identical to `4b83bce` in this PR's history (`git diff 784f783 4b83bce -- apps/mobile/src/listings/search` is empty), so the native captures still apply to the rendered code.
+- After review findings, the spec was changed at `d52d8eeb87003391fb394f297f970ea14d6250f1` (the delete-and-retype test now ends on a value different from its opening value, and the burst tests fire through `fireEvent.changeText` inside one `act`, which removed the props reach-in and two duplicate tests, 38 to 36). The three mutation runs and the green run below were rerun at that commit. Each log starts with its command, that SHA and the mutation diff.
 
 ## Result
 
@@ -17,23 +22,31 @@ There is no formatter (the value is a plain digit string), no debounce, and the 
 
 ## Rendered tests
 
-`apps/mobile/src/listings/search/SearchParametersForm.spec.tsx`, describe "price inputs keep every digit typed or pasted". It renders the real `SearchParametersForm` and `PriceRangeFilterControl` and mocks only the network hooks, as the rest of that spec does. For Min and Max it covers: one digit at a time with a render between each; every prefix delivered in one `act` from a handler captured once (no render between events); the same through `fireEvent.changeText`; whole-value paste of `7000000`, `7,000,000`, `7 000 000` and `7 000 000 TMT`; a paste over an existing value; a delete-and-retype burst. Also both fields in alternating bursts, the values reaching Results params after Show, and a Max typed digit by digit while Min is larger (the inline error appears and clears).
+`apps/mobile/src/listings/search/SearchParametersForm.spec.tsx`, describe "price inputs keep every digit typed or pasted". It renders the real `SearchParametersForm` and `PriceRangeFilterControl` and mocks only the network hooks, as the rest of that spec does. For Min and Max it covers: one digit at a time with a render between each; every prefix fired through `fireEvent.changeText` inside one `act` (React does not render between events); whole-value paste of `7000000`, `7,000,000`, `7 000 000` and `7 000 000 TMT`; a paste over an existing value; a delete-and-retype burst inside one `act` that opens at `7000000`, deletes to `7000` and retypes to `7000555`, so it fails if the handler drops every event. Also both fields in alternating bursts, the values reaching Results params after Show, and a Max typed digit by digit while Min is larger (the inline error appears and clears).
 
 What a rendered test cannot model: each `changeText` carries full text, so these tests prove the handler and state are correct for any delivery order. They do not reproduce native ordering between the text view and a controlled `value`.
 
-Would they fail if the behaviour broke? Three temporary mutations of `PriceRangeFilterControl` (reverted, not committed) were run against the new tests:
+Would they fail if the behaviour broke? Three temporary mutations of `PriceRangeFilterControl` (each reverted, never committed) were rerun at spec commit `d52d8eeb87003391fb394f297f970ea14d6250f1`. Each log records the command, the SHA and the diff, then the failing tests and totals.
 
-| Mutation | File | Result |
-|---|---|---|
-| Min handler appends only the last character to the stored value (stale closure) | [mutation-stale-closure.txt](mutation-stale-closure.txt) | 10 failed, 28 passed. One-at-a-time Min still passes, burst and paste fail |
-| Max handler commits through a 300 ms `setTimeout` (debounce) | [mutation-debounce.txt](mutation-debounce.txt) | 12 failed, 26 passed |
-| Min `value` rewritten as `toLocaleString("en-US")` (formatter) | [mutation-formatter.txt](mutation-formatter.txt) | 11 failed, 27 passed |
+| Mutation | Log | Result | Delete-and-retype |
+|---|---|---|---|
+| Min handler appends only the last character to the stored value (stale closure) | [mutation-stale-closure.txt](mutation-stale-closure.txt) | 9 failed, 27 passed | Min fails |
+| Max handler commits through a 300 ms `setTimeout` (debounce) | [mutation-debounce.txt](mutation-debounce.txt) | 12 failed, 24 passed | Max fails |
+| Min `value` rewritten as `toLocaleString("en-US")` (formatter) | [mutation-formatter.txt](mutation-formatter.txt) | 10 failed, 26 passed | Min fails |
 
-Unmutated: [rendered-green.txt](rendered-green.txt), 38 passed, at `784f783`.
+Unmutated: [rendered-green.txt](rendered-green.txt), 36 passed.
+
+Tests that pass under a mutation, named so the table is not read as full coverage:
+
+- Stale closure (Min only): the one-digit-at-a-time Min test passes, because a render happens between events; every Max test passes; so does the maximum-below-minimum test. The Show-count test also passes.
+- Debounce (Max only): every Min test passes. The maximum-below-minimum test fails here, along with the existing Show-count test.
+- Formatter (Min only): every Max test passes, and so do the Show test (it reads the router params, not the displayed text) and the maximum-below-minimum test (its Min of `500000` is never queried by display value). The existing pre-filled test fails because `70000` renders as `70,000`.
+
+The earlier run of the debounce mutation left the Max delete-and-retype test passing, because it ended on its opening value. That is fixed: it now fails under the debounce mutation.
 
 ## Native check
 
-Environment: iPhone 17 simulator `3A8BB230-13C9-4624-8239-395A6E887D4C` (iOS 26.2), `tm.auto.app` development build already installed, Metro on port 8469 from this worktree at `784f783` (`--clear`), Maestro 2.6.0 pinned to that UUID. Backend: the PR 483 Railway environment through its public URLs. `/readyz` before the session returned `status: ready` and `commitSha: 5175de8c3a6531c9492239ae804e9aa7b38eb158`. App language was Russian. The form was reached from Results with Filters; no sign-in was needed. No OTP, token or variable value was used or recorded. The flows are in [flows](flows).
+Environment: iPhone 17 simulator `3A8BB230-13C9-4624-8239-395A6E887D4C` (iOS 26.2), `tm.auto.app` development build already installed, Metro on port 8469 from this worktree at the pre-rebase commit `784f783` (`--clear`; the search tests there match `4b83bce`, see above), Maestro 2.6.0 pinned to that UUID. Backend: the PR 483 Railway environment through its public URLs. `/readyz` before the session returned `status: ready` and `commitSha: 5175de8c3a6531c9492239ae804e9aa7b38eb158`. App language was Russian. The form was reached from Results with Filters; no sign-in was needed. No OTP, token or variable value was used or recorded. The flows are in [flows](flows).
 
 Files are in [screenshots](screenshots), JPEGs at 600 px width, light appearance.
 
