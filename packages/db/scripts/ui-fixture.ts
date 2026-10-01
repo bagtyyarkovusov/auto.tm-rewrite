@@ -1,5 +1,5 @@
 /**
- * Local-only UI evaluation fixture.
+ * UI evaluation fixture for localhost or the guarded native PR seed.
  *
  * Creates the content the mobile UI needs in order to be reviewable on an
  * emulator: a populated feed of active listings with real car photographs,
@@ -14,7 +14,8 @@
  * its photograph actually shows, so the feed reads as real inventory rather
  * than lorem-ipsum rows.
  *
- * Refuses to run unless both DATABASE_URL and MINIO_ENDPOINT point at localhost.
+ * Default mode requires localhost. --railway-pr requires the guarded PR identity,
+ * mock SMS and explicit public connections supplied by native:seed.
  * This is the only script in the repo that reaches an outside host
  * (upload.wikimedia.org / thumb.wikimedia.org) — a local developer tool, not
  * deployment egress.
@@ -67,6 +68,18 @@ function assertLocalUrl(name: string, value: string): void {
 }
 
 function assertLocalhost(): void {
+  if (process.argv.includes("--railway-pr")) {
+    if (
+      !/^auto\.tm-rewrite-pr-[1-9]\d*$/.test(process.env["RAILWAY_ENVIRONMENT_NAME"] ?? "") ||
+      process.env["RAILWAY_PROJECT_ID"] !== "176ddec0-dd65-4087-b82c-798599fc2ebe" ||
+      !process.env["RAILWAY_ENVIRONMENT_ID"] ||
+      process.env["APP_ENV"] === "production" ||
+      process.env["SMS_DRIVER"] !== "mock" ||
+      DATABASE_URL !== process.env["DATABASE_PUBLIC_URL"] ||
+      MINIO_ENDPOINT !== process.env["MINIO_PUBLIC_URL"]
+    ) throw new Error("ui-fixture requires guarded AutoTM Railway PR variables");
+    return;
+  }
   assertLocalUrl("DATABASE_URL", DATABASE_URL);
   assertLocalUrl("MINIO_ENDPOINT", MINIO_ENDPOINT);
 }

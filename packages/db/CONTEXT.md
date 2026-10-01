@@ -29,3 +29,5 @@ Deletion intentionally preserves some history while erasing or nulling personal 
 - [Migration deployment](../../docs/adr/0039-phased-cloud-first-hosting.md)
 
 The seed `_legacy/cars.brands.json` is retained as the source snapshot for the S3 brand/model import recorded in the locked [catalog sprint](../../docs/prd/sprints/sprint-03-catalog.md). It is provenance, not a runtime seed input; read it only when investigating that import.
+
+The guarded root `pnpm native:seed` command prepares demo data for Railway native sessions. It bootstraps buckets, reference data, UI fixtures and licensed logos. It accepts only AutoTM PR environment names and mock SMS, uses explicit public connections for the local process, and rejects production. See [the agent procedure](../../docs/agents/mobile-expo.md#railway-pr-backend-sessions). The ordinary `ui:fixture` command remains localhost-only.

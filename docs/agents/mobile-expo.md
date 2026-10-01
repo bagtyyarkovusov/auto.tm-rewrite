@@ -100,3 +100,27 @@ cd apps/mobile/android
 ## Documentation duty
 
 Update this guide when the operating procedure changes. Update `apps/mobile/CONTEXT.md` only when its documented boundary, constraint, or important limitation changes. Keep individual diagnoses in task evidence. Supersede changed architecture decisions with a new ADR; preserve merged ADR text.
+
+## Railway PR backend sessions
+
+[ADR-0075](../adr/0075-railway-pr-backends-for-agent-native-sessions.md) uses staging-based Railway PR environments with demo data and mock SMS. Hosted CI runs container-backed tests. Locally run `pnpm test:unit`, typecheck, affected lint and applicable exports. Keep Docker stopped for native proof. The coordinator assigns explicit simulator UUIDs and distinct Metro ports, with up to two sessions when capacity permits, and one heavy local phase at a time.
+
+1. Open the issue's draft PR and wait for Railway's `auto.tm-rewrite-pr-<PR>` environment. PR environments are enabled from staging with Bot and Focused modes off. Read the environment ID and API service domain through the Railway dashboard or CLI. Use explicit environment and service IDs on every command. Existing PR clones can retain an old MinIO image; verify the ADR-0074 pinned image and a successful deployment.
+2. Provision a project token for that environment through project Settings > Tokens, or the coordinator's `projectTokenCreate` API operation with `environmentId`. Railway supports environment-scoped tokens. Save it outside the repo in an owner-only file, load it as `RAILWAY_TOKEN`, and unset account/workspace `RAILWAY_API_TOKEN` for agent operations. Verify `query { projectToken { projectId environmentId } }` using `railway api`. The returned environment must equal this PR's ID. Never use a staging or production token for the seed.
+3. Check the API's `/readyz` response for this environment and the PR backend commit. After backend commits, wait for the corresponding deployment's `SUCCESS` and read the new `commitSha`; a successful prior deployment is insufficient. Confirm worker boot and MinIO readiness. Migrations belong to the API pre-deploy command.
+4. In the PR API service only, set `DATABASE_PUBLIC_URL` to the Railway reference `${{Postgres.DATABASE_PUBLIC_URL}}`. The API's existing `MINIO_PUBLIC_URL` must address this PR's HTTPS MinIO domain. Keep `DATABASE_URL` and `MINIO_ENDPOINT` private for deployed services. Confirm `SMS_DRIVER=mock` and `APP_ENV=staging` before seeding. Run from the repository root:
+
+   ```bash
+   railway run --environment "$PR_ENVIRONMENT_ID" --service "$PR_API_SERVICE_ID" pnpm native:seed
+   ```
+
+   This one command bootstraps all four MinIO buckets, reference catalog, fixture users and listings with 0, 1 and 2 photos, then licensed brand logos. It is rerunnable and touches only demo fixture rows/media. It hard-rejects production, staging, missing or malformed names before running seed steps. `railway run` runs on the Mac, so the guarded command substitutes the public Postgres and MinIO connections. Do not print variable values or token files in evidence. Fixture phones include buyer `+99361000009` and seller `+99361000001`.
+5. Point Metro at the PR API URL including `/api/v1`:
+
+   ```bash
+   EXPO_PUBLIC_API_URL="$PR_API_URL/api/v1" pnpm --filter @auto-tm/mobile exec expo start --dev-client --port "$METRO_PORT"
+   ```
+
+   For an installed iOS development client, its `RCT_jsLocation` preference must point at this session's Metro bundle URL, for example `http://localhost:8081/index.bundle?platform=ios&dev=true&minify=false`. Use the assigned simulator's application preference file or dev-client launcher, and launch that explicit UUID. `RCT_jsLocation` chooses Metro; `EXPO_PUBLIC_API_URL` chooses the backend. Restart Metro with `--clear` if an old API origin remains in the bundle. Expo Go cannot run this app.
+6. Log in with a fixture phone. Read the mock OTP from this PR API service's Railway logs, filtered to the request's phone/time. Do not put OTPs or access tokens in PR evidence. Capture the loaded feed and a fixture detail/gallery to prove media and API traffic. Record environment ID, successful deployment ID/backend SHA, screenshot paths and the process check showing Docker absent.
+7. Stop only this session's Metro process. Revoke its token when finished. Railway automatically deletes the environment on PR merge/close; verify that its exact environment ID disappears. Close disposable proof PRs promptly and record deletion evidence. Do not close an active implementation PR just to collect cleanup evidence.

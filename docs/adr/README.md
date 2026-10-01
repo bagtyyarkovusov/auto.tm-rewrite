@@ -137,3 +137,5 @@ Every ADR follows this skeleton:
 3. **Immutable after merge.** To change a decision, write a new ADR that supersedes the old one and updates this index.
 4. **One decision per ADR.** Don't bundle five decisions into one document.
 5. **Concrete, not aspirational.** "We will use NestJS" — not "we should consider NestJS."
+
+| [0075](0075-railway-pr-backends-for-agent-native-sessions.md) | Railway PR backends for agent native sessions | Accepted | 2026-10-01 |
