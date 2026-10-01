@@ -50,10 +50,9 @@ function GalleryImage({
 }) {
   const [useOriginalImage, setUseOriginalImage] = useState(false);
   const generatedUri = buildVariantUrl(item.key, variant);
-  const sourceUri =
-    useOriginalImage
-      ? buildOriginalUrl(item.key)
-      : item.variants[variant] || generatedUri;
+  const sourceUri = useOriginalImage
+    ? buildOriginalUrl(item.key)
+    : item.variants[variant] || generatedUri;
 
   return (
     <Image
@@ -94,15 +93,6 @@ export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
-  if (media.length === 0) {
-    return (
-      <View className="h-[240px] w-full items-center justify-center bg-muted">
-        <Text className="text-sm text-muted-foreground">{t("noPhotos")}</Text>
-        {banner && <GalleryBanner label={banner} />}
-      </View>
-    );
-  }
-
   const renderItem = useCallback(
     ({ item, index }: { item: ListingMedia; index: number }) => {
       return (
@@ -124,6 +114,15 @@ export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
     [screenWidth],
   );
 
+  if (media.length === 0) {
+    return (
+      <View className="h-[240px] w-full items-center justify-center bg-muted">
+        <Text className="text-sm text-muted-foreground">{t("noPhotos")}</Text>
+        {banner && <GalleryBanner label={banner} />}
+      </View>
+    );
+  }
+
   return (
     <View>
       <FlatList
@@ -137,25 +136,15 @@ export function PhotoGallery({ media, banner }: PhotoGalleryProps) {
         viewabilityConfig={viewabilityConfig}
       />
 
-      {/* Page indicator */}
-      {media.length > 1 && (
-        <View
-          className={`absolute left-0 right-0 flex-row items-center justify-center gap-1.5 ${
-            banner ? "bottom-12" : "bottom-2"
-          }`}
-        >
-          {media.map((_, i) => (
-            <View
-              key={i}
-              className={`h-1.5 rounded-full ${
-                i === activeIndex
-                  ? "w-3 bg-primary"
-                  : "w-1.5 bg-foreground/40"
-              }`}
-            />
-          ))}
-        </View>
-      )}
+      <View
+        className={
+          banner
+            ? "absolute right-4 bottom-12 rounded-full bg-black/60 px-3 py-1"
+            : "absolute right-4 bottom-3 rounded-full bg-black/60 px-3 py-1"
+        }
+      >
+        <Text className="text-sm text-white">{`${activeIndex + 1} / ${media.length}`}</Text>
+      </View>
 
       {banner && <GalleryBanner label={banner} />}
 

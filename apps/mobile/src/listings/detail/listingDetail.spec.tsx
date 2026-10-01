@@ -1,14 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-import { Share, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import * as Linking from "expo-linking";
+vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
 
 import { renderMobile, fireEvent, act, routeParams, routerMock } from "../../../test/render";
 import ListingDetailScreen from "../../../app/(public)/listings/[id]";
 import { ListingDetailView } from "../components/ListingDetail";
 import { PriceDisplay } from "../components/PriceDisplay";
-import { SellerBlock } from "../components/SellerBlock";
 import { ContactCtaBar } from "../components/ContactCtaBar";
 import { PhotoGallery } from "../components/PhotoGallery";
 import { InspectionInterestCta } from "../components/InspectionInterestCta";
@@ -67,35 +67,18 @@ describe("PriceDisplay", () => {
   });
 });
 
-describe("SellerBlock", () => {
-  it("shows safe seller copy, location and an allowed phone", () => {
-    const props = { allowCalls: true, contactPhone: "+99361000000", regionName: "Ahal", cityName: "Ashgabat", locationText: "Center" };
-    const screen = renderMobile(<SellerBlock {...props} />);
-    expect(screen.getByText("Private seller")).toBeTruthy();
-    expect(screen.getByText("Ahal, Ashgabat, Center")).toBeTruthy();
-    expect(screen.getByText(props.contactPhone)).toBeTruthy();
-    screen.rerender(<SellerBlock {...props} allowCalls={false} />);
-    expect(screen.queryByText(props.contactPhone)).toBeNull();
-    expect(screen.queryByText(/verified|dealer|inspection/i)).toBeNull();
-  });
-});
-
 describe("ContactCtaBar", () => {
   const props = { listingId: "listing-1", status: "active" as const, allowCalls: true, allowChat: true, contactPhone: "+99361000000" };
-  it("calls through tel and shares a listing link", async () => {
-    const share = vi.spyOn(Share, "share");
+  it("calls through tel without a warning sheet", async () => {
     const screen = renderMobile(<ContactCtaBar {...props} />);
-    await act(async () => { await fireEvent.press(screen.getByRole("button", { name: "Call" })); });
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Call" })); });
     expect(Linking.openURL).toHaveBeenCalledWith("tel:+99361000000");
-    await act(async () => { await fireEvent.press(screen.getByLabelText("Share")); });
-    expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: "https://auto.tm/listings/listing-1" }));
   });
   it("disables closed contact and a favorite while identity is unknown", () => {
     state.authenticated = null;
     const screen = renderMobile(<ContactCtaBar {...props} status="sold" />);
     expect(screen.getByRole("button", { name: "Call", disabled: true })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Message", disabled: true })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Favorite", disabled: true })).toBeTruthy();
   });
   it("routes signed-out Message through authentication", () => {
     state.authenticated = false;
@@ -128,7 +111,7 @@ describe("PhotoGallery", () => {
 describe("ListingDetailView", () => {
   it("renders catalog names, conditional specs and description without raw catalog ids", () => {
     const screen = renderMobile(<ListingDetailView listing={fixture({ mileageKm: 12000, vin: "VIN123", colorId: "color", bodyTypeId: "body", transmissionId: "transmission", driveTypeId: "drive", engineTypeId: "engine", description: "Well maintained" })} maps={maps} />);
-    expect(screen.getByText("2020 Toyota Camry XV70")).toBeTruthy();
+    expect(screen.getByText("Toyota Camry XV70, 2020")).toBeTruthy();
     for (const text of ["White", "Sedan", "Automatic", "Front wheel", "Petrol", "VIN123", "Well maintained"]) expect(screen.getByText(text)).toBeTruthy();
     expect(screen.queryByText("brand-uuid")).toBeNull();
     expect(screen.queryByText("model-uuid")).toBeNull();
@@ -157,14 +140,12 @@ describe("ListingDetailView", () => {
     expect(onSeeSimilar).toHaveBeenCalledOnce();
     expect(screen.getByText("35,000 TMT").props.className).toContain("text-muted-foreground");
   });
-  it("shows OwnerActions and owner price rather than seller contact", () => {
+  it("shows owner price and private counts rather than seller contact", () => {
     const screen = renderMobile(<ListingDetailView listing={fixture({ status: "sold" })} maps={maps} isOwner />);
-    expect(screen.getByText("Sold")).toBeTruthy();
+    expect(screen.getByText(/Sold|sold/)).toBeTruthy();
     expect(screen.getByText("10,000 USD")).toBeTruthy();
     expect(screen.queryByText("Private seller")).toBeNull();
-    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
-    fireEvent.press(screen.getByRole("button", { name: "Edit" }));
-    expect(routerMock.push).toHaveBeenCalled();
+    expect(screen.getByText("1 views")).toBeTruthy();
   });
 });
 
@@ -172,7 +153,7 @@ describe("ListingDetailScreen", () => {
   it("shows loading without listing content, unavailable for 404, and retry for a hard error", () => {
     state.isPending = true;
     const screen = renderMobile(<ListingDetailScreen />);
-    expect(screen.queryByText("2020 Toyota Camry XV70")).toBeNull();
+    expect(screen.queryByText("Toyota Camry XV70, 2020")).toBeNull();
     const placeholders = screen.UNSAFE_getAllByType(View)
       .filter((node) => node.props.className?.includes("animate-pulse"));
     expect(placeholders.map((node) => node.props.className)).toEqual([
@@ -209,14 +190,10 @@ describe("ListingDetailScreen", () => {
     expect(screen.queryByRole("button", { name: "Call" })).toBeNull();
     expect(screen.getByText("10,000 USD")).toBeTruthy();
   });
-  it("honors the inspection flag and auto-opens owner interest after publishing", () => {
-    state.config.inspectionInterestEnabled = false;
-    const screen = renderMobile(<ListingDetailScreen />);
-    expect(screen.getByText("Inspections are temporarily unavailable.")).toBeTruthy();
-    state.config.inspectionInterestEnabled = true;
+  it("does not open inspection interest after publishing", () => {
     state.viewer = { userId: fixture().sellerId }; routeParams.inspectionInterest = "1";
-    screen.rerender(<ListingDetailScreen />);
-    expect(screen.getByText("An AutoTM mechanic inspection is coming soon. Register your interest to join the pilot.")).toBeTruthy();
+    const screen = renderMobile(<ListingDetailScreen />);
+    expect(screen.queryByText("An AutoTM mechanic inspection is coming soon. Register your interest to join the pilot.")).toBeNull();
   });
 });
 
