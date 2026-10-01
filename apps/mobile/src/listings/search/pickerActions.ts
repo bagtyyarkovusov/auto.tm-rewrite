@@ -37,7 +37,8 @@ export interface PickerRouter {
  *
  * - `show` (from Home or Results): pushed routes. The Model picker ends with
  *   "Show N listings" and offers "More filters", which opens the full-screen
- *   Search parameters form; the Brand picker offers Recent.
+ *   Search parameters form; the Brand picker offers Recent. Search's All
+ *   filters also opens that form, directly and without these actions.
  * - `done` (from Search parameters): steps inside the form. The Model picker
  *   ends with "Done" and hands the choice back to the form.
  */

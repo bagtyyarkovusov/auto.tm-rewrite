@@ -5,7 +5,7 @@ import { readResultsRouteState, type ResultsRouteState } from "../../../src/list
 import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
 
-/** Search parameters: the full-screen filter form, opened with the filters Results is showing. */
+/** Search parameters: the full-screen filter form. Results and the Model picker open it with their filters; Search's All filters opens it empty. */
 export default function SearchParametersScreen() {
   const goBack = useSafeBack(HOME_HREF);
   const params = useLocalSearchParams<ResultsRouteState & { returnToResults?: string }>();

@@ -32,7 +32,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
 
 interface SearchParametersFormProps {
-  /** The filters the form opens with: what Results is showing, or the Model picker's choice. */
+  /** The filters the form opens with: what Results is showing, the Model picker's choice, or none from Search's All filters. */
   initial: ListingFilter;
   /** True when a Results screen sits below this form, so Show N updates it in place. */
   returnToResults: boolean;
