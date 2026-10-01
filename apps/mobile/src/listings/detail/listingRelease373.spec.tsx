@@ -308,21 +308,17 @@ describe("issue 373 screen controls", () => {
     expect(screen.getAllByText("35,000 TMT")).toHaveLength(2);
   });
 
-  it("offers no Share in the header or overflow, but Report and Copy link in overflow (#495)", async () => {
+  it("offers no Share or Copy link anywhere, only Report in overflow (#495, #322)", () => {
     const screen = renderMobile(<ListingDetailScreen />);
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
     fireEvent.press(screen.getByRole("button", { name: "More options" }));
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
     expect(
       screen.getAllByRole("button", { name: "Report" }).length,
     ).toBeGreaterThan(0);
-    await act(async () => {
-      fireEvent.press(screen.getByRole("button", { name: "Copy link" }));
-    });
-    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(
-      `https://auto.tm/listings/${fixture().id}`,
-    );
+    expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
   });
 
   it("shows sticky owner Edit and Mark sold, with Archive and Delete in overflow", () => {
