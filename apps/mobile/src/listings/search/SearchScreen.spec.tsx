@@ -49,6 +49,8 @@ describe("Search route", () => {
     searchResponse = { results: [camry] };
     searchError = false;
     waitSearch = false;
+    // The module mock is shared by every test; without this a call from an earlier test satisfies the keyboard assertions.
+    vi.mocked(Keyboard.dismiss).mockClear();
     get.mockReset();
     get.mockImplementation((url: string) => {
       if (url.startsWith("/catalog/brands")) return Promise.resolve({ items: [
