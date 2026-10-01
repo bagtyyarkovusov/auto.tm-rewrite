@@ -224,7 +224,7 @@ const maskPhone=p=>p.replace(/^(\+993 \d)\d( )\d\d-\d\d-(\d\d)$/,"$1• ••-�
 const maskPhoneDisp=p=>{const d=p.replace(/\D/g,"");return "+993 "+d[3]+"• ••-••-"+d.slice(-2);};
 const maskEmail=e=>{const [a,b]=e.split("@");return a[0]+"•••@"+b;};
 const dest=(type,val)=>type==="phone"?maskPhoneDisp(val):maskEmail(val);
-const top=()=>S.stack[S.stack.length-1];
+const topScreen=()=>S.stack[S.stack.length-1];
 const TABS=["search","favorites","sell","messages","cabinet"];
 const isTab=id=>TABS.includes(id);
 const fmtPhone=d=>(d=d.replace(/\D/g,"").slice(0,8),d.length>6?d.slice(0,2)+" "+d.slice(2,4)+"-"+d.slice(4,6)+"-"+d.slice(6):d.length>4?d.slice(0,2)+" "+d.slice(2,4)+"-"+d.slice(4):d.length>2?d.slice(0,2)+" "+d.slice(2):d);
@@ -304,7 +304,7 @@ function resend(){
   f.resends++;f.sec=15;f.code="";f.cerr=null;toast(t("otpSent",{d:dest(f.type,f.val)}));
 }
 function backFromCode(){const f=S.flow;f.code="";f.cerr=null;if(f.kind==="webdelete"){f.step="entry";render();}else if(f.kind==="delete"){S.flow=null;pop();}else pop();}
-setInterval(()=>{const f=S.flow;if(f&&f.sec>0&&(top().id==="code"||(top().id==="webDelete"&&f.step==="code"))){f.sec--;renderPhone();}},1000);
+setInterval(()=>{const f=S.flow;if(f&&f.sec>0&&(topScreen().id==="code"||(topScreen().id==="webDelete"&&f.step==="code"))){f.sec--;renderPhone();}},1000);
 
 function doDelete(){
   S.dlg=null;const o=S.delOut;S.delOut="ok";
@@ -528,11 +528,11 @@ function tabbar(){
 
 /* ───────────── render ───────────── */
 function currentScreen(){
-  const id=top().id;
+  const id=topScreen().id;
   return ({cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listingsStub:listingsStubScreen}[id]||(()=>tabStub(id)))();
 }
 function renderPhone(){
-  const id=top().id;const tabs=isTab(id);
+  const id=topScreen().id;const tabs=isTab(id);
   const dark=S.theme==="dark"||(S.theme==="system"&&S.os);
   const ph=document.getElementById("phone");ph.classList.toggle("dark",dark);
   const sc=document.getElementById("scr");const st=sc.scrollTop;
