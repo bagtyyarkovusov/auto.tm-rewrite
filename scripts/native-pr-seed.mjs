@@ -25,6 +25,10 @@ export function validateNativePrSeed(env) {
   if (!['postgres:', 'postgresql:'].includes(database.protocol) || minio.protocol !== 'https:') {
     throw new Error('Native seed requires public PostgreSQL and HTTPS MinIO connections');
   }
+  const prNumber = env.RAILWAY_ENVIRONMENT_NAME.split('-').at(-1);
+  if (minio.hostname !== `minio-autotm-rewrite-pr-${prNumber}.up.railway.app`) {
+    throw new Error('Native seed requires the MinIO public endpoint of this PR');
+  }
   return { ...env, DATABASE_URL: env.DATABASE_PUBLIC_URL, MINIO_ENDPOINT: env.MINIO_PUBLIC_URL };
 }
 

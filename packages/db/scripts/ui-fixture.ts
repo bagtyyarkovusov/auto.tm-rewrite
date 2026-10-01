@@ -76,7 +76,8 @@ function assertLocalhost(): void {
       process.env["APP_ENV"] === "production" ||
       process.env["SMS_DRIVER"] !== "mock" ||
       DATABASE_URL !== process.env["DATABASE_PUBLIC_URL"] ||
-      MINIO_ENDPOINT !== process.env["MINIO_PUBLIC_URL"]
+      MINIO_ENDPOINT !== process.env["MINIO_PUBLIC_URL"] ||
+      new URL(MINIO_ENDPOINT).hostname !== `minio-autotm-rewrite-pr-${process.env["RAILWAY_ENVIRONMENT_NAME"]?.split("-").at(-1)}.up.railway.app`
     ) throw new Error("ui-fixture requires guarded AutoTM Railway PR variables");
     return;
   }
