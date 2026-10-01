@@ -171,11 +171,13 @@ describe("Search route", () => {
     expect(routerMock.replace).not.toHaveBeenCalled();
   });
 
-  it("opens all filters through Results until Search parameters lands", async () => {
+  it("replaces Search with Search parameters and dismisses the keyboard for All filters", async () => {
     const screen = setup();
     await screen.findByText("Toyota");
     fireEvent.press(screen.getByText("All filters"));
-    expect(routerMock.replace).toHaveBeenCalledWith({ pathname: "/(tabs)/(search)/results", params: { openFilters: "1" } });
+    expect(routerMock.replace).toHaveBeenCalledWith({ pathname: "/(tabs)/(search)/parameters" });
+    expect(routerMock.push).not.toHaveBeenCalled();
+    expect(Keyboard.dismiss).toHaveBeenCalled();
   });
 
   it("keeps an unknown name plus a parsed year as no match rather than broadening to all cars", async () => {
