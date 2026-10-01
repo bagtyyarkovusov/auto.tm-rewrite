@@ -1,6 +1,6 @@
 import { ConfigService } from "@nestjs/config";
 import { describe, expect, it } from "vitest";
-import { CreateBucketCommand, DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CreateBucketCommand, DeleteObjectCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import type { Env } from "../../../env.schema";
 import { MinioMediaStorageAdapter } from "../../listings/infrastructure/MinioMediaStorageAdapter";
@@ -29,8 +29,12 @@ describe("presigned PUT length enforcement", () => {
 });
 
 
-it.skipIf(!process.env["AUTOTM_454_MINIO_ENDPOINT"])("isolated MinIO accepts exact lengths and rejects changed lengths for both adapters", async () => {
-  const endpoint = process.env["AUTOTM_454_MINIO_ENDPOINT"]!;
+// Hosted CI provisions disposable MinIO; local live proof stays explicitly opt-in.
+const liveEndpoint = process.env["AUTOTM_454_MINIO_ENDPOINT"]
+  ?? (process.env["GITHUB_ACTIONS"] === "true" ? process.env["MINIO_ENDPOINT"] : undefined);
+
+it.skipIf(!liveEndpoint)("isolated MinIO accepts exact lengths and rejects changed lengths for both adapters", async () => {
+  const endpoint = liveEndpoint!;
   const config = new ConfigService({ MINIO_ENDPOINT: endpoint, MINIO_PUBLIC_URL: endpoint,
     MINIO_REGION: "us-east-1", MINIO_ACCESS_KEY: "minioadmin", MINIO_SECRET_KEY: "minioadmin" }) as ConfigService<Env, true>;
   const s3 = new S3Client({ endpoint, region: "us-east-1", forcePathStyle: true,
@@ -53,7 +57,11 @@ it.skipIf(!process.env["AUTOTM_454_MINIO_ENDPOINT"])("isolated MinIO accepts exa
       const rejected = await fetch(result.url, { method: "PUT", headers, body: new Uint8Array(5) });
       expect(rejected.status).toBe(403);
       expect(await rejected.text()).toContain("SignatureDoesNotMatch");
-      await s3.send(new DeleteObjectCommand({ Bucket: kind === "logo" ? "catalog-assets" : "listing-photos", Key: key }));
+      const bucket = kind === "logo" ? "catalog-assets" : "listing-photos";
+      const stored = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      expect(stored.ContentLength).toBe(4);
+      expect(await stored.Body!.transformToByteArray()).toEqual(new Uint8Array(4));
+      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     }
   } finally { s3.destroy(); }
 });
