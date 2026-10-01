@@ -13,10 +13,11 @@ import {
 } from "../../../test/render";
 import ListingDetailScreen from "../../../app/(public)/listings/[id]";
 import { ListingDetailView } from "../components/ListingDetail";
-import { CollapsingHeader } from "./CollapsingHeader";
 import { ContactCtaBar } from "../components/ContactCtaBar";
 import { PhotoGallery } from "../components/PhotoGallery";
 import { fixture, maps } from "../../../test/fixtures/listing";
+
+import { CollapsingHeader } from "./CollapsingHeader";
 
 const state = vi.hoisted(() => ({
   data: undefined as ListingsSchemas.ListingDetail | undefined,
