@@ -1,8 +1,8 @@
 # ADR-0072: Give logo activations unique object directories
 
-- **Status**: Proposed, not approved for implementation
-- **Date**: 2026-09-30
-- **Deciders**: AutoTM founder, decision pending
+- **Status**: Accepted
+- **Date**: 2026-10-01
+- **Deciders**: AutoTM founder, who [accepted this record on 2026-10-01](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/467#issuecomment-5924220843) at `d03ca709b4600729c2b4cf02a74bb1bb9fe24711`
 - **Scope**: Issue #454's whole imported-version cleanup on admin replacement or removal
 
 ## Context
@@ -11,7 +11,7 @@ PR #461 retains old imported versions and losing uploads because deterministic `
 
 A 60-second transaction lock across S3 calls is insufficient. Parallel uploads, retries, repair HEADs, and paginated deletion have no proven worst-case duration below 60 seconds. Transaction timeout can release the lock while storage is still running. An AbortSignal or rejected request does not prove the remote server stopped deletion. A session lock has the same uncertain-response and connection-loss problem. Do not implement either as the safety mechanism.
 
-## Decision proposed for founder approval
+## Decision
 
 Every new logo activation gets a directory that has never been active before. No inactive directory is reactivated. Cleanup can then remove the actual previous directory after the database swap without threatening a later active logo, including when deletion completes late.
 
@@ -47,24 +47,26 @@ Use short DB transaction acquisition and execution limits, for example maxWait 5
 
 ### Rollout barrier
 
-Stop all old API logo writers and deterministic importer processes before enabling whole-prefix deletion. A mixed rollout is unsafe: an old importer could reactivate a deterministic legacy directory while a new API deletes it. After all writers use the new protocol, legacy active keys may remain until replaced or removed. Do not present code deployment alone as proof that old CLI writers stopped; the environment operator owns this barrier. Local integration tests use only isolated services. No live rollout is authorized by this proposal.
+Stop all old API logo writers and deterministic importer processes before enabling whole-prefix deletion. A mixed rollout is unsafe: an old importer could reactivate a deterministic legacy directory while a new API deletes it. After all writers use the new protocol, legacy active keys may remain until replaced or removed. Do not present code deployment alone as proof that old CLI writers stopped; the environment operator owns this barrier. Local integration tests use only isolated services. No live rollout is authorized by this decision.
 
-## Explicit limitation requiring founder acceptance
+## Accepted limitation
 
-Concurrent missing-object repair can recreate inactive siblings after admin cleanup. Crashes, lost CAS, and uncertain storage requests can also leave inactive files. Therefore this delivers whole-prefix best-effort cleanup and active-object safety, not a permanent guarantee of zero orphan files. The founder must explicitly accept that limitation for #454.
+Concurrent missing-object repair can recreate inactive siblings after admin cleanup. Crashes, lost CAS, and uncertain storage requests can also leave inactive files. Therefore this delivers whole-prefix best-effort cleanup and active-object safety, not a permanent guarantee of zero orphan files. The founder accepted that limitation for #454 on 2026-10-01.
 
 A stronger zero-recreation protocol is unshaped. A durable retirement check before PUT alone does not cancel an already-issued delayed PUT, so it is insufficient. Any stronger design must handle in-flight remote writes, same-master reimport, uncertain requests and recovery rather than promising zero recreation from a preflight fence. That requires more state and likely a migration. Keeping retired deterministic prefixes permanently forbidden or generating fresh incarnations for reuse is a product/key-policy decision, not a silent cleanup adjustment.
 
 ## Verification before production changes
+
+These steps bind the implementation. The accepted decision does not change them.
 
 1. Push red tests for all four imported files removed by set/remove/delete, pagination and partial errors, with other versions untouched.
 2. Push red tests for unique new import activations of the same content and same-millisecond admin uploads. Prove current legacy/new imports remain idempotent and repair uses the active directory without updating the database.
 3. Use isolated MinIO and two real PostgreSQL clients to delay prior-prefix deletion while a new import activates identical content. The active directory and all siblings must survive. Repeat with overlapping set/remove/full brand deletion and null ABA; assert safety without treating updatedAt as a revision.
 4. Rename a brand before and during import upload; verify stale-slug activation is rejected and cleanup still uses the actual returned previous key. Force late repair of a removed directory. Verify it cannot reactivate that directory and document any recreated inactive files as the accepted limitation.
 5. Exercise failed CAS, DB rollback/timeout, uncertain storage response, and restart. Retain #377's importer failure/no-GC behavior.
-6. After founder acceptance, implement and rerun the same cases green, then repository test/typecheck, affected lint/build/runtime gates and documentation checks.
+6. Implement and rerun the same cases green, then repository test/typecheck, affected lint/build/runtime gates and documentation checks.
 
-No key-policy or automatic prefix-cleanup production code is implemented by this proposal.
+This decision authorizes no live rollout. Production code follows steps 1 to 6 on PR #467; local runtime verification uses isolated services only.
 
 
 ## Consequences
@@ -75,7 +77,7 @@ No key-policy or automatic prefix-cleanup production code is implemented by this
 - Admin cleanup includes all imported siblings without holding a DB transaction during storage calls.
 - Current imports keep idempotence and missing-object repair, including legacy active keys.
 
-### Negative / proposed accepted costs
+### Negative / accepted costs
 
 - Late repair and failed storage operations can leave inactive orphan files.
 - Key parsing and API tests must support new unique version segments.
@@ -84,7 +86,7 @@ No key-policy or automatic prefix-cleanup production code is implemented by this
 ### Neutral
 
 - No database migration is required for active-object safety. A stronger mutation-revision guarantee remains a separate decision.
-- Pending lifecycle and upload-length signing are independent of this proposal.
+- Pending lifecycle and upload-length signing are independent of this decision.
 
 ## Alternatives considered
 
