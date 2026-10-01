@@ -230,6 +230,11 @@ export function bestNameScore(rawQuery: string, rawNames: string[]): number {
   for (const rawName of rawNames) {
     const name = normalizeSearchText(rawName);
     if (name.length === 0) continue;
+    // Compare the typed query with the phonetic Cyrillic candidate. Do not
+    // compare two synthesized Cyrillic forms: that would turn Latin short-name
+    // typos such as BMV/BMW into exact matches through the v/w mapping.
+    best = Math.max(best, scoreMatch(query, latinToCyrillic(name)));
+    if (best === SCORE_EXACT) return best;
     const nameVariants = new Set<string>([name, cyrillicToLatin(name)]);
     for (const q of queryVariants) {
       if (q.length === 0) continue;

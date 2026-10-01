@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import seededModels from "../../../../../../packages/db/prisma/seed/models.json";
 
 import type { Brand } from "../domain/Brand";
 import type { Model } from "../domain/Model";
@@ -168,6 +169,29 @@ describe("SearchCatalog", () => {
         label: "Camry",
         brandLabel: "Toyota",
       });
+    }
+  });
+
+  it("finds Cyrillic Camry against the production catalog's Latin-only model names", async () => {
+    const productionCamry = seededModels.find(
+      (model) => model.brandSlug === "toyota" && model.slug === "camry",
+    );
+    expect(productionCamry).toMatchObject({
+      nameRu: "Camry", nameTk: "Camry", nameEn: "Camry",
+    });
+    modelRepo.models = [makeModel(productionCamry)];
+    index.invalidate();
+
+    for (const query of ["камри", "камри 2018", "тойота камри"]) {
+      const result = await uc.execute({ query, locale: "ru" });
+      expect(result.results[0]).toMatchObject({
+        kind: "model", modelId: "model-1", brandId: "brand-1",
+        label: "Camry", brandLabel: "Тойота",
+      });
+      if (query.endsWith("2018")) {
+        expect(result.yearFrom).toBe(2018);
+        expect(result.yearTo).toBe(2018);
+      }
     }
   });
 

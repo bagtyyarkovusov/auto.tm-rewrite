@@ -98,6 +98,16 @@ describe("bestNameScore", () => {
     expect(bestNameScore("land cruser", ["Land Cruiser"])).toBe(50);
   });
 
+  it("matches Cyrillic spelling against Latin-only catalog names without widening typo distance", () => {
+    expect(bestNameScore("камри", ["Camry", "Camry", "Camry"])).toBe(100);
+    expect(bestNameScore("камр", ["Camry"])).toBe(75);
+    expect(bestNameScore("камрии", ["Camry"])).toBe(50);
+    expect(bestNameScore("комрии", ["Camry"])).toBe(0);
+    expect(bestNameScore("камри", ["Corolla", "Crown"])).toBe(0);
+    // Carry is one edit away in Cyrillic, but stays below exact Camry.
+    expect(bestNameScore("камри", ["Carry"])).toBe(50);
+  });
+
   it("returns 0 for unrelated names", () => {
     expect(bestNameScore("mersedes", toyota)).toBe(0);
   });
