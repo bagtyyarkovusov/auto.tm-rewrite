@@ -5,12 +5,12 @@ Assert that "New listings" is visible... COMPLETED
 Take screenshot /tmp/371-ev/28-home-before-search... COMPLETED
 Tap on point (93%,10%)... COMPLETED
 Assert that "All filters" is visible... COMPLETED
-Take screenshot /tmp/371-ev/29-search-with-keyboard-all-filters... COMPLETED
+Take screenshot /tmp/371-ev/29-search-all-filters-entry... COMPLETED
 Tap on "All filters"... COMPLETED
 Assert that "Search parameters" is visible... COMPLETED
 Assert that "All filters" is not visible... COMPLETED
 Assert that "Show 12 listings" is visible... COMPLETED
-Take screenshot /tmp/371-ev/30-search-parameters-keyboard-dismissed... COMPLETED
+Take screenshot /tmp/371-ev/30-form-from-all-filters-no-focused-field... COMPLETED
 Tap on "Back"... COMPLETED
 Assert that "Brand, model" is visible... COMPLETED
 Assert that "New listings" is visible... COMPLETED

@@ -11,7 +11,7 @@ appId: tm.auto.app
 - extendedWaitUntil:
     visible: "All filters"
     timeout: 30000
-- takeScreenshot: /tmp/371-ev/29-search-with-keyboard-all-filters
+- takeScreenshot: /tmp/371-ev/29-search-all-filters-entry
 - tapOn: "All filters"
 - extendedWaitUntil:
     visible: "Search parameters"
@@ -20,7 +20,7 @@ appId: tm.auto.app
 - extendedWaitUntil:
     visible: "Show 12 listings"
     timeout: 30000
-- takeScreenshot: /tmp/371-ev/30-search-parameters-keyboard-dismissed
+- takeScreenshot: /tmp/371-ev/30-form-from-all-filters-no-focused-field
 - tapOn: "Back"
 - extendedWaitUntil:
     visible: "Brand, model"
