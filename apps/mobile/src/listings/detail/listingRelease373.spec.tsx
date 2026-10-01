@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ScrollView, Share, Text } from "react-native";
+import { ScrollView, Text } from "react-native";
 import * as Linking from "expo-linking";
 import * as Clipboard from "expo-clipboard";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -295,10 +295,11 @@ describe("issue 373 screen controls", () => {
     ).toBeNull();
   });
 
-  it("keeps Back, Share, Favorite and More options visible, then reveals the price/title after the photos scroll away", () => {
+  it("keeps Back, Favorite and More options visible without Share, then reveals the price/title after the photos scroll away", () => {
     const screen = renderMobile(<ListingDetailScreen />);
-    for (const name of ["Back", "Share", "Favorite", "More options"])
+    for (const name of ["Back", "Favorite", "More options"])
       expect(screen.getByRole("button", { name })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     expect(screen.queryByText("Toyota Camry, 2020")).toBeNull();
     fireEvent.scroll(screen.UNSAFE_getByType(ScrollView), {
       nativeEvent: { contentOffset: { y: 500, x: 0 } },
@@ -307,18 +308,11 @@ describe("issue 373 screen controls", () => {
     expect(screen.getAllByText("35,000 TMT")).toHaveLength(2);
   });
 
-  it("shares from the header and offers Report and Copy link in overflow", async () => {
-    const share = vi.spyOn(Share, "share");
+  it("offers no Share in the header or overflow, but Report and Copy link in overflow (#495)", async () => {
     const screen = renderMobile(<ListingDetailScreen />);
-    await act(async () => {
-      fireEvent.press(screen.getByRole("button", { name: "Share" }));
-    });
-    expect(share).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: `https://auto.tm/listings/${fixture().id}`,
-      }),
-    );
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     fireEvent.press(screen.getByRole("button", { name: "More options" }));
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: "Report" }).length,
