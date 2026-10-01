@@ -14,6 +14,7 @@ import { useBrands } from "../../api/catalog/useBrands";
 import { CATALOG_SEARCH_MIN_LENGTH, useCatalogSearch } from "../../api/catalog/useCatalogSearch";
 import { useListingBrandCounts } from "../../api/listings/useListingBrandCounts";
 import { HOME_HREF } from "../../navigation/homeHref";
+import { useSafeBack } from "../../navigation/useSafeBack";
 
 import { buildBrandSections } from "./brandPickerLogic";
 import { CarBrandLogo } from "./CarBrandLogo";
@@ -28,6 +29,7 @@ import { Text } from "@/components/ui/text";
 /** Search consumes catalog matches and parsed years; the API owns spelling and parsing. */
 export function SearchScreen() {
   const { t } = useTranslation();
+  const goBack = useSafeBack(HOME_HREF);
   const [query, setQuery] = useState("");
   const input = useRef<TextInput>(null);
   const brands = useBrands();
@@ -87,7 +89,7 @@ export function SearchScreen() {
     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
         <Button variant="ghost" size="icon" className="h-11 w-11" accessibilityLabel={t("back")}
-          onPress={() => { Keyboard.dismiss(); router.replace(HOME_HREF); }}>
+          onPress={() => { Keyboard.dismiss(); goBack(); }}>
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
         <View className="min-w-0 flex-1">

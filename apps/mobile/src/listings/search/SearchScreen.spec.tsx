@@ -8,6 +8,7 @@ import SearchRoute from "../../../app/(tabs)/(search)/search";
 import { act, fireEvent, renderMobile, routerMock } from "../../../test/render";
 
 import { useRecentChoicesStore } from "./recentSearches";
+import { readResultsRouteState } from "./resultsRouteState";
 
 const get = vi.fn();
 vi.mock("../../api/client", () => ({ apiClient: { get: (...args: unknown[]) => get(...args) }, ApiError: class extends Error { constructor(public code: string, public status: number) { super(code); } } }));
@@ -104,6 +105,13 @@ describe("Search route", () => {
     fireEvent.press(await screen.findByText(label));
     expect(routerMock.replace).toHaveBeenCalledWith({ pathname: "/(tabs)/(search)/results", params });
     if (text === "2018") expect(useRecentChoicesStore.getState().items).toEqual([]);
+    // Results (#370) reads exactly these params as its applied filters.
+    const route: Record<string, string | undefined> = params;
+    const { yearMin, yearMax, brandId, modelIds } = readResultsRouteState(route);
+    expect({ yearMin, yearMax, brandId, modelIds }).toEqual({
+      yearMin: Number(route.yearMin), yearMax: Number(route.yearMax),
+      brandId: route.brandId, modelIds: route.modelIds ? [route.modelIds] : undefined,
+    });
   });
 
   it("opens the whole brand and records brand-only Recent", async () => {
