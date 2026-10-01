@@ -1,14 +1,11 @@
 import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 import { describe, it, expect } from "vitest";
 
 import { Enums } from "@auto-tm/contracts";
 
 import { canTransition, type ListingStatus } from "./ListingStatus";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe("canTransition", () => {
   it("allows active → sold", () => {
@@ -72,8 +69,11 @@ describe("Listing status parity", () => {
     const block = /enum ListingStatus \{([^}]*)\}/.exec(
       readFileSync(schemaPath, "utf-8"),
     );
-    if (!block) throw new Error("enum ListingStatus not found in schema.prisma");
-    return block[1]
+    const body = block?.[1];
+    if (body === undefined) {
+      throw new Error("enum ListingStatus not found in schema.prisma");
+    }
+    return body
       .split("\n")
       .map((line) => line.replace(/\/\/.*$/, "").trim())
       .filter((line) => line.length > 0);

@@ -355,7 +355,6 @@ enum ListingStatus {
   sold
   archived
   rejected
-  reported
   banned
 }
 
