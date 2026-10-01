@@ -329,22 +329,29 @@ describe("PrismaBrandRepository — Testcontainers", () => {
       expect(row.logoKey).toBe("brands/toyota/v1/logo.png");
     });
 
-    it("rejects without committing when the lock wait outlasts the transaction timeout", async () => {
+    it.each(["replace", "delete"] as const)("rejects %s without committing when the row lock stays held", async (operation) => {
       await prisma.brand.create({ data: brandData("brands/toyota/v1/logo.png") });
       const other = holdRowLock(async () => {});
       await other.lockTaken;
 
-      const outcome = await repo
-        .replaceLogoKey("b1", "brands/toyota/v2-late/logo.png")
-        .then((value) => ({ value }), (error: unknown) => ({ error }));
-      other.release();
-      await other.done;
+      const startedAt = Date.now();
+      let outcome: unknown;
+      try {
+        outcome = await (operation === "replace"
+          ? repo.replaceLogoKey("b1", "brands/toyota/v2-late/logo.png")
+          : repo.delete("b1"))
+          .then((value) => ({ value }), (error: unknown) => ({ error }));
+        expect(Date.now() - startedAt).toBeLessThan(10_000);
+      } finally {
+        other.release();
+        await other.done;
+      }
 
       expect(outcome).toHaveProperty("error");
       await new Promise((resolve) => setTimeout(resolve, 250));
       expect((await prisma.brand.findUniqueOrThrow({ where: { id: "b1" } })).logoKey).toBe(
         "brands/toyota/v1/logo.png",
       );
-    }, 60_000);
+    }, 15_000);
   });
 });

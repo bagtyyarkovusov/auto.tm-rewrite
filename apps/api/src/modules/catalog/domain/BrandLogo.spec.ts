@@ -135,6 +135,7 @@ describe("parseStoredBrandLogoKey", () => {
       version,
       owner,
       directory: `brands/${slug}/${version}/`,
+      ...(owner === "imported" ? { contentIdentity: "imp-0123456789ab" } : {}),
     });
   });
 
@@ -155,6 +156,8 @@ describe("parseStoredBrandLogoKey", () => {
     "brands/toyota/v1/mono@1x.png",
     "brands/toyota/v1/nested/logo.png",
     "brands/../v1/logo.png",
+    "brands/./v1/logo.png",
+    "brands/toyota\\other/v1/logo.png",
     `pending/brands/toyota/${UUID_A}`,
     `brands/toyota/v1-${UUID_A.toUpperCase()}/logo.png`,
     "",
