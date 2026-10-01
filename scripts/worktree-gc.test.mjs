@@ -811,6 +811,66 @@ test("a Claude session without a working directory is skipped and counted, not a
   });
 });
 
+test("a non-empty Claude session list in which no entry has a working directory is unreadable", () => {
+  const entries = [{ pid: 42, kind: "remote", name: "cloud" }, { pid: 43, cwd: "", name: "blank" }, { pid: 44, cwd: 7, name: "wrong type" }];
+  assert.equal(parseClaudeSessions(JSON.stringify(entries)), null);
+  // The format changed: the directory moved under another key, so every live session lacks `cwd`.
+  assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 41, workdir: "/a" }, { pid: 42, workdir: "/b" }])), null);
+});
+
+test("an entry that is not a plain object makes the whole Claude session list unreadable", () => {
+  assert.equal(parseClaudeSessions("[[]]"), null);
+  assert.equal(parseClaudeSessions(JSON.stringify([[{ pid: 1, cwd: "/a" }]])), null);
+  assert.equal(parseClaudeSessions(JSON.stringify([{ pid: 41, cwd: "/a" }, []])), null);
+});
+
+test("a mixed Claude session list still skips and counts the entries without a directory, and an empty one has no sessions", () => {
+  const mixed = parseClaudeSessions(JSON.stringify([{ pid: 41, cwd: "/a", name: "local" }, { pid: 42, kind: "remote" }]));
+  assert.deepEqual(mixed, { sessions: [{ pid: 41, command: 'claude session "local"', cwd: "/a" }], withoutCwd: 1 });
+  assert.deepEqual(parseClaudeSessions("[]"), { sessions: [], withoutCwd: 0 });
+});
+
+test("--apply refuses when no Claude session entry has a working directory, and a read-only run only warns", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const sessions = [{ pid: 7, kind: "remote", name: "cloud" }, { pid: 8, workdir: repo.merged.path, name: "renamed field" }];
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions });
+  assert.equal(applied.status, 1, applied.stderr);
+  assert.match(applied.stderr, /Cannot read Claude sessions/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const readOnly = repo.gc(["--prs-file", repo.prsFile], { sessions });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /could not read Claude sessions/);
+  assert.match(readOnly.stdout, /Claude sessions: not checked/);
+});
+
+test("--apply refuses when a Claude session entry is a nested array", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions: [[]] });
+  assert.equal(applied.status, 1, applied.stderr);
+  assert.match(applied.stderr, /Cannot read Claude sessions/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+});
+
+test("--apply with a mixed Claude session list warns about the entry without a directory and still removes", (t) => {
+  const repo = fixtureRepo(t);
+  const sessions = [{ pid: 9, cwd: repo.main, name: "orchestrator" }, { pid: 10, kind: "remote", name: "cloud" }];
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.match(applied.stderr, /1 Claude session has no working directory/);
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the passing worktree was removed");
+});
+
+test("--apply with an empty Claude session list is a valid no-sessions scan", (t) => {
+  const repo = fixtureRepo(t);
+  const applied = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions: [] });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.equal(applied.stderr, "");
+  assert.match(applied.stdout, /Claude sessions: checked \(0 with a directory\)/);
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the passing worktree was removed");
+});
+
 test("a missing claude binary is reported as not checked, never as an empty session list", () => {
   const missing = scanClaudeSessions(() => ({ error: Object.assign(new Error("spawn claude ENOENT"), { code: "ENOENT" }) }));
   assert.deepEqual(missing, { status: "missing", sessions: [], withoutCwd: 0 });
