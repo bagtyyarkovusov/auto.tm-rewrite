@@ -11,7 +11,7 @@ PR: [488](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/488). This fol
 | PR environment | `auto.tm-rewrite-pr-488` = `6b6b8a0c-74ac-4e01-ae77-47ba71850b1a` |
 | API service | `6db6f1b1-5c7a-4033-88d0-53f5f315bfc0` |
 
-`/readyz` reported that SHA and `environment: auto.tm-rewrite-pr-488` with postgres, redis and minio `ok` before the proof ([before](readyz-before.json)), again before the successful runs ([before seed](readyz-before-seed.json)), and after them ([after](readyz-after.json)). The captures carry no timestamps. The worker was not changed and not used.
+`/readyz` reported that SHA and `environment: auto.tm-rewrite-pr-488` with postgres, redis and minio `ok` in three captures: before any variable change ([before](readyz-before.json)), after the variable change and API redeploy described under Environment change, before the successful runs ([before seed](readyz-before-seed.json)), and after them ([after](readyz-after.json)). The captures carry no timestamps. The worker was not changed and not used.
 
 ## Command
 
@@ -31,13 +31,16 @@ The refusal runs below used the same form with the arguments and environment nam
 
 ## Environment change
 
-Made by the orchestrator, in this PR environment only, following [`docs/agents/mobile-expo.md`](../../agents/mobile-expo.md) step 4:
+Sequence, as the files support it:
 
-- API service variable `MINIO_PUBLIC_URL` set to the reference `https://${{MinIO.RAILWAY_PUBLIC_DOMAIN}}`.
-- API redeployed with `railway redeploy --from-source`, because Railway had skipped the deploy: the API watched paths exclude `scripts/native-pr-seed.mjs` and `packages/db/scripts/**`.
-- The host it resolved to is in [media-host.txt](media-host.txt) and carries this PR's number.
+1. `readyz-before.json`, captured before any variable change, already reported `bdf13fa`. The local-mode and production-name refusals ran against that deployment.
+2. The two plain `--remote` runs were refused for the MinIO public endpoint (Refusals, item 3).
+3. The orchestrator then set `MINIO_PUBLIC_URL` on the API service in this PR environment and redeployed the API with `railway redeploy --from-source` to apply it. This applied the API half of [`docs/agents/mobile-expo.md`](../../agents/mobile-expo.md) step 4 only; the worker was not changed because the seed does not use it.
+4. `readyz-before-seed.json` and `readyz-after.json` report `bdf13fa`.
 
-The worker service and every other environment were not changed. Resolved variable values appear only in the files in this folder.
+The variable is the reference `https://${{MinIO.RAILWAY_PUBLIC_DOMAIN}}`. The host it resolved to is in [media-host.txt](media-host.txt) and carries this PR's number.
+
+The worker service and every other environment were not changed. The only resolved value recorded is the public media host in `media-host.txt`; no credentials appear.
 
 ## Successful runs
 
