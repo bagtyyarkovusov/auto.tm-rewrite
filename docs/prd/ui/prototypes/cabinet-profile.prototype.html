@@ -2,123 +2,138 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>PROTOTYPE — Cabinet, Profile, Settings and sign-in method screens (throwaway)</title>
+<title>PROTOTYPE — Cabinet, Profile and Settings, Auto.ru-style minimal (throwaway)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  PROTOTYPE — throwaway. Answers issue #353 "Prototype Cabinet, Profile, Settings, and sign-in method screens"
-  (map #320 "Google Play reviewer-only Android release readiness").
-  Question: what do Cabinet, Profile, Settings, Delete account and the phone-or-email sign-in screens look like in every state?
-  Respects: #344 (five tabs; Cabinet → Profile, My listings, Settings; Settings holds language, theme, legal, Log out,
-  Delete account), #348 / ADR-0054 (Sign-in Methods optional, unique, always verified; add/change by code; can change
-  but not remove; a taken value is refused after the code is confirmed, never merged; DELETE /me unchanged; neutral
-  web deletion copy), ADR-0056 (supersedes ADR-0054's "Add a phone" sell step and PHONE_REQUIRED: every Listing's
-  contact phone is verified in the Sell wizard, email-only Users sell without an account phone), ADR-0055 (email
-  codes, 10-minute expiry), ADR-0032 (30-day grace deletion, recoverable by signing in), #322/#496 (legal and
-  deletion pages on autotm.bagtyyar.dev), #352 D10 + #500 (Contact support screen: phone and email, chat after
-  release), #326 (no dead actions).
-  RECONCILED 2026-10-02: founder approved D2 = A (Phone | Email tabs). Options that conflicted with approved
-  decisions were removed; see the "Conflicts resolved" panel.
-  No share affordances (#495). Account values and demo codes are made up. Support contacts are the founder-approved public contacts.
-  Colours are AutoTM tokens from apps/mobile/global.css (light and dark). Not Auto.ru's look; Auto.ru/Kolesa are structure references only.
-  RU/TK strings marked "draft" in the state list are new and need a native-speaker review.
+  PROTOTYPE — throwaway. Issue #353 "Prototype Cabinet, Profile, Settings, and sign-in method screens", third version.
+  The founder rejected the version at a051faf (2026-10-02, second round): Profile and Settings should follow Auto.ru and be
+  minimal, Contact support was overused, and the selling functions the Cabinet references must be thought through first.
+  This version: one plain menu list in Auto.ru's manner (AR-41-004), Help exactly once in that list, and a seller-function
+  inventory read from origin/main that drives the My listings entry. The My listings screen here is a stub; #354 owns it.
+  Locked and unchanged: Phone | Email sign-in tabs by code, one User, no password/social/merge; add/change after a code;
+  no account-phone gate to sell (ADR-0056); in-app deletion by session, web deletion by code, 30-day grace with explicit
+  restore (ADR-0032, ADR-0054); host autotm.bagtyyar.dev, route /:locale/account/delete; no Share; no notification
+  category switches; five tabs. Everything else here is a proposal for the founder. Recommendations are not approvals.
+  Account values and codes are made up. Support contacts are the founder-approved public contacts (#352 D10).
+  Colours are AutoTM tokens from apps/mobile/global.css. Auto.ru is a structure reference, not a visual template (ADR-0051).
+  New RU/TK wording needs founder review.
 -->
 <style>
-  :root{ --r:8px; }
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#171717;background:#f4f4f2}
   .wrap{display:flex;gap:24px;padding:20px 20px 90px;align-items:flex-start}
   .phone{
-    --bg:hsl(0 0% 100%);--fg:hsl(0 0% 9%);--primary:hsl(0 90% 48%);--secondary:hsl(45 5% 96%);--card:hsl(0 0% 100%);
-    --muted:hsl(45 5% 92%);--mfg:hsl(0 0% 45%);--border:hsl(45 8% 88%);--destructive:hsl(15 85% 55%);--dfg:hsl(0 0% 9%);
-    --ok:#1a7f37;--warn:#9a6700;--info:#2563eb;
-    width:372px;height:780px;flex:none;border:10px solid #111;border-radius:36px;background:var(--bg);color:var(--fg);position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
-  .phone.dark{--bg:hsl(0 0% 4%);--fg:hsl(60 10% 98%);--primary:hsl(0 90% 52%);--secondary:hsl(0 0% 14%);--card:hsl(0 0% 9%);--muted:hsl(240 4% 20%);--mfg:hsl(45 4% 64%);--border:hsl(0 0% 23%);--destructive:hsl(15 80% 58%);--ok:#3fb950;--warn:#d29922;--info:#60a5fa}
-  .status{height:24px;font-size:11px;color:var(--mfg);padding:4px 16px;display:flex;justify-content:space-between}
+    --bg:hsl(0 0% 100%);--fg:hsl(0 0% 9%);--primary:hsl(0 90% 48%);--secondary:hsl(45 5% 96%);
+    --muted:hsl(45 5% 92%);--mfg:hsl(0 0% 45%);--border:hsl(45 8% 90%);--destructive:hsl(8 78% 46%);--info:#2563eb;
+    width:372px;height:780px;flex:none;border:10px solid #111;border-radius:36px;background:var(--bg);color:var(--fg);position:sticky;top:20px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .phone.dark{--bg:hsl(0 0% 5%);--fg:hsl(60 10% 96%);--primary:hsl(0 90% 54%);--secondary:hsl(0 0% 11%);--muted:hsl(240 4% 20%);--mfg:hsl(45 4% 62%);--border:hsl(0 0% 18%);--destructive:hsl(8 85% 64%);--info:#7aa7ff}
+  .sbar{height:24px;font-size:11px;color:var(--mfg);padding:4px 18px;display:flex;justify-content:space-between}
   .scr{position:absolute;top:24px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden}
   .scr::-webkit-scrollbar{display:none}
-  .phone a.row{color:var(--fg);text-decoration:none}
-  .phone a.row .b{color:var(--info)}
-  .panel{flex:1;min-width:440px;max-width:820px}
+  /* side panel */
+  .panel{flex:1;min-width:460px;max-width:900px}
   .panel h1{font-size:19px;margin:0 0 4px}
-  .panel h2{font-size:13px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:#666}
-  .seg{display:inline-flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff;flex-wrap:wrap}
+  .panel h2{font-size:12.5px;margin:20px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:#666}
+  .seg{display:inline-flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff;flex-wrap:wrap;vertical-align:middle}
   .seg button{border:0;background:none;padding:6px 10px;font-size:12.5px;cursor:pointer;border-right:1px solid #ddd}
   .seg button:last-child{border-right:0}
   .seg button.on{background:#171717;color:#fff}
   .q{background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px}
-  .q .why{color:#666;font-size:12px;margin-top:4px}
+  .q p{margin:0 0 6px}.q p:last-child{margin:0}
   .jump{display:inline-block;margin:2px 3px 2px 0;padding:4px 9px;border:1px solid #ccc;border-radius:999px;background:#fff;font-size:12px;cursor:pointer}
   .jump:hover{background:#171717;color:#fff}
   .grp{margin:6px 0 2px;font-weight:700;font-size:12px;color:#444}
-  .rec{display:inline-block;font-size:11px;background:#1a7f37;color:#fff;border-radius:999px;padding:0 7px;margin-left:4px}
+  .tag{display:inline-block;font-size:11px;border-radius:999px;padding:0 7px;margin-left:4px;background:#e8e8e4;color:#333}
+  .tag.rec{background:#1a7f37;color:#fff}.tag.conf{background:#b42318;color:#fff}.tag.lock{background:#171717;color:#fff}
+  .dec{background:#fff;border:1px solid #ddd;border-radius:8px;padding:9px 10px;margin:8px 0;font-size:13px}
+  .dec.cur{border-color:#171717;box-shadow:0 0 0 1px #171717}
+  .dec .ttl{font-weight:700;margin-bottom:4px}
+  .dec .opt{margin:3px 0;padding-left:8px;border-left:3px solid #e2e2de}
+  .dec .opt.on{border-left-color:hsl(0 90% 48%)}
+  .dec .why{color:#555}
   table{border-collapse:collapse;width:100%;font-size:12px;background:#fff}
-  td,th{border:1px solid #ddd;padding:3px 6px;text-align:left;vertical-align:top}
+  td,th{border:1px solid #ddd;padding:4px 6px;text-align:left;vertical-align:top}
   th{background:#f4f4f2}
-  .have{color:#1a7f37}.new{color:#b42318;font-weight:600}.chg{color:#9a6700;font-weight:600}
-  .vdesc{background:#fff;border-left:3px solid hsl(0 90% 48%);padding:8px 10px;font-size:13px;margin:6px 0}
+  .keep{color:#1a7f37;font-weight:600}.hide{color:#9a6700;font-weight:600}.defer{color:#b42318;font-weight:600}
   details{margin:8px 0} summary{cursor:pointer;font-weight:700}
+  .switcher{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;border-radius:999px;padding:6px 8px;display:flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:100;font-size:13px;max-width:96vw}
+  .switcher button{background:#333;color:#fff;border:0;border-radius:999px;min-width:30px;height:30px;cursor:pointer;padding:0 8px}
+  .switcher .lbl{padding:0 8px;min-width:300px;text-align:center}
   /* app pieces */
-  .appbar{display:flex;align-items:center;gap:6px;padding:6px 8px;min-height:52px;background:var(--bg);position:sticky;top:0;z-index:5}
-  .appbar .t{font-weight:700;font-size:22px;flex:1;padding-left:4px;font-family:"Georgia","Times New Roman",serif}
-  .ib{width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--fg);font-size:20px;cursor:pointer;flex:none}
+  .appbar{display:flex;align-items:center;gap:4px;padding:4px 6px;min-height:52px;background:var(--bg);position:sticky;top:0;z-index:5}
+  .appbar .t{font-weight:700;font-size:26px;letter-spacing:-.3px;flex:1;padding:6px 10px}
+  .appbar .t.sm{font-size:17px;letter-spacing:0;padding:0 4px;text-align:center}
+  .appbar .sp{width:44px;flex:none}
+  .ib{width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--fg);cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center}
   .ib:active{background:var(--secondary)}
-  .mute{color:var(--mfg)}.xs{font-size:11.5px}.sm{font-size:12.5px}.b{font-weight:700}
-  .btn{border:0;border-radius:999px;min-height:48px;padding:0 16px;font-weight:700;font-size:15px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px}
+  .mute{color:var(--mfg)}.xs{font-size:11.5px}.s13{font-size:13px}.b{font-weight:600}
+  .btn{border:0;border-radius:12px;min-height:50px;padding:0 16px;font-weight:600;font-size:16px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit}
   .btn.brand{background:var(--primary);color:#fff}
   .btn.out{background:var(--secondary);color:var(--fg)}
-  .btn.dest{background:var(--destructive);color:var(--dfg)}
-  .btn.link{background:none;color:var(--info);min-height:44px;width:auto;font-weight:600;padding:0 4px}
+  .btn.dest{background:none;color:var(--destructive);border:1px solid var(--destructive)}
+  .btn.link{background:none;color:var(--info);min-height:44px;width:auto;font-weight:500;font-size:15px;padding:0}
   .btn[disabled]{opacity:.4;cursor:not-allowed}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin:0 14px 12px}
-  .row{display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 14px;cursor:pointer}
-  .row+.row{border-top:1px solid var(--border)}
-  .row .l{flex:1;min-width:0}.row .chev{color:var(--mfg)}
-  .hd{padding:14px 18px 6px;font-size:12.5px;font-weight:600;color:var(--mfg)}
+  .list{background:var(--bg)}
+  .row{display:flex;align-items:center;gap:14px;min-height:56px;padding:8px 16px;cursor:pointer;position:relative;color:var(--fg);text-decoration:none}
+  .row:active{background:var(--secondary)}
+  .list .row+.row::before{content:"";position:absolute;top:0;left:54px;right:0;height:1px;background:var(--border)}
+  .list.plain .row+.row::before{left:16px}
+  .row .ic{width:24px;height:24px;flex:none;color:var(--mfg);display:flex;align-items:center;justify-content:center}
+  .row .l{flex:1;min-width:0;display:flex;flex-direction:column}
+  .row .lb{font-size:16px;line-height:1.3}
+  .row .sb{font-size:13px;color:var(--mfg);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .val{color:var(--mfg);font-size:15px;white-space:nowrap}
+  .row .val.acc{color:var(--info)}
+  .row .chev{color:var(--mfg);opacity:.55;display:flex;flex:none}
+  .row.big{min-height:76px}
+  .row.big .lb{font-size:18px;font-weight:600}
+  .row.danger .lb{color:var(--destructive)}
+  .row.static{cursor:default}.row.static:active{background:none}
+  .gap{height:8px;background:var(--secondary)}
   .pad{padding:0 16px}
-  .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--secondary);border:1px solid var(--border);white-space:nowrap}
-  .badge.ver{color:var(--ok);border-color:currentColor;background:transparent}
-  .field{border:1px solid var(--border);border-radius:8px;padding:0 12px;height:52px;display:flex;align-items:center;gap:8px;background:var(--bg)}
+  .foot{padding:10px 16px;font-size:13px;color:var(--mfg)}
+  .av{border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--mfg);flex:none}
+  .radio{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--mfg);flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+  .radio.on{background:var(--primary);border-color:var(--primary)}
+  .field{border:1px solid var(--border);border-radius:12px;padding:0 14px;height:54px;display:flex;align-items:center;gap:8px;background:var(--bg)}
   .field.err{border-color:var(--destructive)}
-  .field input{border:0;outline:0;background:none;color:inherit;font:inherit;font-size:16px;flex:1;min-width:0}
+  .field input{border:0;outline:0;background:none;color:inherit;font:inherit;font-size:17px;flex:1;min-width:0}
   .errtx{color:var(--destructive);font-size:13px;margin-top:6px}
   .cells{display:flex;gap:8px}
-  .cell{flex:1;height:54px;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+  .cell{flex:1;height:54px;border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600}
   .cell.on{border-color:var(--fg)}.cell.err{border-color:var(--destructive)}.cell.dis{opacity:.45}
   .kp{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 12px 14px;background:var(--secondary);position:absolute;left:0;right:0;bottom:0}
   .kp button{height:42px;border:0;border-radius:8px;background:var(--bg);color:var(--fg);font-size:18px;cursor:pointer}
   .tabbar{position:absolute;left:0;right:0;bottom:0;height:58px;background:var(--bg);border-top:1px solid var(--border);display:flex;z-index:8}
-  .tabbar button{flex:1;border:0;background:none;color:var(--mfg);font-size:10.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
-  .tabbar button i{font-style:normal;font-size:19px;line-height:1}
-  .tabbar button.on{color:var(--fg);font-weight:700}
-  .tabbar button.on i{color:var(--primary)}
+  .tabbar button{flex:1;border:0;background:none;color:var(--mfg);font-size:10.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-family:inherit}
+  .tabbar button.on{color:var(--fg);font-weight:600}
   .skel{background:var(--muted);border-radius:6px;animation:p 1.2s infinite}
   @keyframes p{50%{opacity:.5}}
   .dim{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:24}
-  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);color:var(--fg);border-radius:16px 16px 0 0;padding:16px 16px 20px;z-index:25;box-shadow:0 -6px 20px rgba(0,0,0,.25)}
-  .dlg{position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);background:var(--bg);color:var(--fg);border-radius:14px;padding:18px;z-index:25;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-  .toast{position:absolute;left:12px;right:12px;bottom:72px;background:#222;color:#fff;padding:9px 12px;border-radius:8px;font-size:12.5px;z-index:40}
-  .pseg{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  .pseg button{flex:1;border:0;background:none;color:var(--fg);min-height:44px;font-size:14px;cursor:pointer;border-right:1px solid var(--border)}
-  .pseg button:last-child{border-right:0}
-  .pseg button.on{background:var(--fg);color:var(--bg);font-weight:700}
-  .sw{width:46px;height:28px;border-radius:999px;background:var(--muted);position:relative;border:0;flex:none;cursor:pointer}
-  .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
-  .sw.on{background:var(--primary)}.sw.on::after{left:21px}
-  .note{background:var(--secondary);border-radius:10px;padding:10px 12px;font-size:13px;margin:0 14px 12px}
-  .note.warn{border-left:3px solid var(--warn)}.note.err{border-left:3px solid var(--destructive)}
-  .av{border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--mfg);flex:none}
-  .logo{font-family:Georgia,serif;font-weight:800;font-size:28px;letter-spacing:-.5px}.logo b{color:var(--primary)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);color:var(--fg);border-radius:18px 18px 0 0;padding:8px 0 16px;z-index:25;box-shadow:0 -6px 20px rgba(0,0,0,.25)}
+  .sheet .hd{display:flex;align-items:center;padding:6px 6px 2px 16px}
+  .sheet .hd .tt{flex:1;font-size:20px;font-weight:700}
+  .dlg{position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);background:var(--bg);color:var(--fg);border-radius:16px;padding:20px;z-index:25;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .toast{position:absolute;left:12px;right:12px;bottom:72px;background:#222;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;z-index:40}
+  .pseg{display:flex;background:var(--secondary);border-radius:12px;padding:3px}
+  .pseg button{flex:1;border:0;background:none;color:var(--mfg);min-height:40px;font-size:15px;cursor:pointer;border-radius:9px;font-family:inherit}
+  .pseg button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  .ltabs{display:flex;gap:18px;padding:0 16px;border-bottom:1px solid var(--border)}
+  .ltabs button{border:0;background:none;color:var(--mfg);font-size:15px;padding:10px 0 9px;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+  .ltabs button.on{color:var(--fg);font-weight:600;border-bottom-color:var(--fg)}
+  .lcard{display:flex;gap:12px;padding:14px 16px;position:relative}
+  .lcard+.lcard::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--border)}
+  .lcard .th{width:92px;height:68px;border-radius:10px;background:var(--muted);flex:none}
+  .stub{margin:8px 16px;padding:7px 10px;border:1px dashed var(--mfg);border-radius:8px;font-size:12px;color:var(--mfg)}
+  .logo{font-weight:800;font-size:28px;letter-spacing:-.5px}.logo b{color:var(--primary)}
   .br{position:absolute;top:24px;left:0;right:0;bottom:0;background:#fff;color:#222;z-index:30;overflow-y:auto}
   .br .bar{display:flex;align-items:center;gap:8px;padding:8px;background:#eee;border-bottom:1px solid #ccc;position:sticky;top:0}
   .br .url{flex:1;background:#fff;border-radius:999px;padding:6px 12px;font-size:11.5px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .switcher{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;border-radius:999px;padding:6px 8px;display:flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:100;font-size:13px;max-width:96vw}
-  .switcher button{background:#333;color:#fff;border:0;border-radius:999px;min-width:30px;height:30px;cursor:pointer;padding:0 8px}
-  .switcher .lbl{padding:0 8px;min-width:300px;text-align:center}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="phone" id="phone"><div class="status"><span>09:41</span><span>AutoTM · Android</span></div><div class="scr" id="scr"></div><div id="ovl"></div></div>
+  <div class="phone" id="phone"><div class="sbar"><span>09:41</span><span>AutoTM · Android</span></div><div class="scr" id="scr"></div><div id="ovl"></div></div>
   <div class="panel" id="panel"></div>
 </div>
 <div class="switcher" id="switcher"></div>
@@ -129,26 +144,6 @@ const LANGS=["en","ru","tk"];
 const TX={
  tabSearch:["Search","Поиск","Gözleg"], tabFav:["Favorites","Избранное","Halanlarym"], tabSell:["Sell","Продать","Sat"], tabMsg:["Messages","Сообщения","Habarlar"], tabCab:["Cabinet","Кабинет","Kabinet"],
  cabinet:["Cabinet","Кабинет","Kabinet"], settings:["Settings","Настройки","Sazlamalar"], profile:["Profile","Профиль","Profil"],
- signIn:["Sign in","Войти","Giriş"], signInManageT:["Sign in to manage your listings","Войдите, чтобы управлять объявлениями","Dolandyrmak üçin giriň"],
- signInManageD:["Sign in to manage listings and drafts.","Войдите, чтобы управлять объявлениями и черновиками.","Bildirişleri we garalamalary dolandyrmak üçin giriň."],
- myListings:["My listings & drafts","Мои объявления и черновики","Bildirişlerim we garalamalar"],
- listCar:["List a car","Разместить объявление","Bildiriş goý"],
- active:["Active","Активные","Işjeň"], drafts:["Drafts","Черновики","Garalamalar"], sold:["Sold","Проданные","Satylan"], archived:["Archived","В архиве","Arhiwde"],
- loading:["Please wait...","Подождите...","Garaşyň..."], wrong:["Something went wrong","Что-то пошло не так","Bir zat ýalňyş boldy"], retry:["Retry","Повторить","Täzeden synanyş"],
- add:["Add","Добавить","Goş"], change:["Change","Изменить","Üýtget"], notAdded:["Not added","Не добавлено","Goşulmadyk"], verified:["Verified","Подтверждено","Tassyklandy"],
- phoneVer:["Verified phone","Телефон подтверждён","Telefon tassyklandy"], notifs:["Notifications","Уведомления","Habarnamalar"],
- signOutUse:["Sign out and use the other account","Выйти и войти в другой аккаунт","Çykyp başga hasaba gir"],
- switchAccountHint:["This signs you out of the current account. Neither account is changed or merged.","Вы выйдете из текущего аккаунта. Ни один аккаунт не изменяется и не объединяется.","Häzirki hasapdan çykarsyňyz. Hasaplar üýtgemeýär we birleşdirilmeýär."],
- notifScope:["Message alerts use the device notification permission. Mute a Conversation in its menu. Category preferences and Listing activity notifications are outside the reviewer release.","Уведомления о сообщениях зависят от разрешения устройства. Отключить звук переписки можно в её меню. Настройки категорий и уведомления об активности объявлений не входят в релиз для проверки.","Habar habarnamalary enjamyň rugsadyna bagly. Ýazyşmanyň menýusynda sesini öçürip bolýar. Bölüm sazlamalary we bildiriş işjeňligi habarnamalary bu goýberilişe girmeýär."],
- phone:["Phone","Телефон","Telefon"], email:["Email","Эл. почта","E-poçta"],
- help:["Help","Помощь","Kömek"], contactSupport:["Contact support","Связаться с поддержкой","Goldaw bilen habarlaş"], supRowSub:["Email and phone","Почта и телефон","E-poçta we telefon"], /* from #352 D10, draft */
- supTitle:["AutoTM Support","Поддержка AutoTM","AutoTM goldawy"], official:["Official","Официальный","Resmi"], emailUs:["Email us","Написать на почту","E-poçta ýaz"], callUs:["Call us","Позвонить нам","Bize jaň et"],
- includeT:["What to include","Что указать в обращении","Habarda nämeleri ýazmaly"], includeV:["The Listing number (for example, No. 123456) and what happened.","Номер объявления (например, № 123456) и что произошло.","Bildiriş belgisi (mysal üçin, № 123456) we näme bolandygy."],
- appVersion:["Version","Версия","Wersiýa"],
- language:["Language","Язык","Dil"], theme:["Theme","Тема","Tema"], light:["Light","Светлая","Ýagty"], dark:["Dark","Тёмная","Garaňky"], system:["System","Системная","Ulgam"],
- about:["About","О приложении","Programma hakda"], privacy:["Privacy Policy","Политика конфиденциальности","Gizlinlik syýasaty"], terms:["Terms of Service","Условия использования","Ulanyş şertleri"], posting:["Posting rules","Правила размещения","Ýerleşdirme düzgünleri"],
- deleteAcc:["Delete account","Удалить аккаунт","Hasaby poz"], logout:["Log out","Выйти","Çyk"],
- logoutT:["Log out?","Выйти из аккаунта?","Hasabyndan çyk?"], logoutD:["You can sign back in at any time.","Вы сможете войти снова в любой момент.","Islän wagtyňyz gaýtadan girip bilersiňiz."], cancel:["Cancel","Отмена","Ýatyr"],
  /* sign-in */
  phoneTitle:["Enter your phone number","Введите номер телефона","Telefon belgiňizi giriziň"], phoneHelper:["We'll send a code by SMS.","Мы отправим код по SMS.","Kody SMS bilen ibereris."],
  phoneLabel:["Phone number","Номер телефона","Telefon belgisi"], phoneFmt:["Enter a number in the format +993 6X XX-XX-XX.","Введите номер в формате +993 6X XX-XX-XX.","Belgini +993 6X XX-XX-XX görnüşinde giriziň."],
@@ -185,17 +180,6 @@ const TX={
  contin:["Continue","Продолжить","Dowam et"],
  added:["Added","Добавлено","Goşuldy"], changed:["Changed","Изменено","Üýtgedildi"],
  sendCode:["Send code","Отправить код","Kody ibermek"],
- /* sell: ADR-0056, copy is draft */
- sellOpen:["Sell entry is available", "Продажа доступна", "Satmak mümkin"],
- sellContact:["No account phone is needed. Verify the Listing contact phone by SMS inside the Sell wizard before continuing.","Телефон аккаунта не нужен. Подтвердите контактный телефон объявления по SMS внутри мастера продажи.","Hasaba telefon gerek däl. Satmak ädimlerinde bildirişiň aragatnaşyk telefonyny SMS bilen tassyklaň."],
- sellAccountContact:["The wizard can use your verified account phone without another code, or verify a different contact phone by SMS. The contact phone does not change your sign-in methods.","Мастер может использовать телефон аккаунта без нового кода или подтвердить другой контактный телефон по SMS. Способы входа не меняются.","Ädimlerde hasabyň tassyklanan telefonyny täze kodsyz ulanyp ýa-da başga telefony SMS bilen tassyklap bolýar. Giriş usullary üýtgemeýär."],
- sellScope:["The Sell wizard, drafts and My listings design belongs to #354. This placeholder demonstrates entry and the approved verification requirement only.","Дизайн мастера, черновиков и Моих объявлений относится к #354. Здесь показаны только вход и требование подтверждения.","Satmak ädimleri, garalamalar we Bildirişlerim #354-de taýýarlanar. Bu ýerde giriş we tassyklama talaby görkezilýär."],
-
-
-
-
-
-
  /* notifications */
  nMsg:["Messages","Сообщения","Habarlar"], nMsgD:["New messages in your Conversations","Новые сообщения в ваших перепис­ках","Ýazyşmalaryňyzdaky täze habarlar"], nAct:["Listing activity","Активность по объявлениям","Bildiriş işjeňligi"], nActD:["Saves and changes on Listings you follow","Сохранения и изменения в объявлениях","Halanlaryňyzdaky üýtgeşmeler"], /* all new, draft */
  osOffT:["Notifications are off in system settings","Уведомления выключены в настройках системы","Ulgam sazlamalarynda habarnamalar öçük"], osOffB:["Open system settings","Открыть настройки системы","Ulgam sazlamalaryny aç"], /* new, draft */
@@ -215,24 +199,60 @@ const TX={
  webT:["Delete your AutoTM account","Удаление аккаунта AutoTM","AutoTM hasabyny pozmak"], webD:["Enter the phone or email you sign in with. We'll send a code to confirm.","Введите телефон или почту, с которой вы входите. Мы отправим код для подтверждения.","Giriş edýän telefon ýa-da e-poçtaňyzy giriziň. Tassyklamak üçin kod ibereris."], /* new, draft; ADR-0054 web page */
  webDone:["Done. If an account uses this {x}, it is scheduled for deletion on {d}. Signing in before then restores it.","Готово. Если этот {x} привязан к аккаунту, он будет удалён {d}. Вход до этой даты восстановит аккаунт.","Taýýar. Eger bu {x} hasaba bagly bolsa, ol {d} pozular. Şu senä çenli girseňiz, dikelýär."], /* new, draft */
  webX:["phone or email","телефон или почта","telefon ýa-da e-poçta"],
+ signOutUse:["Sign out and use the other account","Выйти и войти в другой аккаунт","Çykyp başga hasaba gir"],
+ switchAccountHint:["This signs you out of the current account. Neither account is changed or merged.","Вы выйдете из текущего аккаунта. Ни один аккаунт не изменяется и не объединяется.","Häzirki hasapdan çykarsyňyz. Hasaplar üýtgemeýär we birleşdirilmeýär."],
+ /* ── version 3 (Auto.ru-style). Keys below marked "new" are drafts: RU/TK need founder review ── */
+ signIn:["Sign in","Войти","Giriş"], signInSub:["By phone or email","По телефону или почте","Telefon ýa-da e-poçta bilen"], /* new */
+ myListings:["My listings","Мои объявления","Bildirişlerim"],
+ listCar:["List a car","Разместить объявление","Bildiriş goý"],
+ active:["Active","Активные","Işjeň"], drafts:["Drafts","Черновики","Garalamalar"], sold:["Sold","Проданные","Satylan"], archived:["Archived","В архиве","Arhiwde"], archive:["Archive","Архив","Arhiw"], /* archive: new */
+ stDraft:["Draft","Черновик","Garalama"], stSold:["Sold","Продано","Satyldy"], stRemoved:["Removed from sale","Снято с продажи","Satuwdan aýryldy"], stBlocked:["Blocked","Заблокировано","Petiklenen"], /* stDraft, stBlocked: new */
+ actEdit:["Edit","Изменить","Üýtget"], actSold:["Mark as sold","Отметить проданным","Satyldy diýip belle"], actRemove:["Remove from sale","Снять с продажи","Satuwdan aýyr"], actRelist:["Relist","Вернуть в продажу","Täzeden satuwa çykar"], actDelete:["Delete","Удалить","Poz"], actContinue:["Continue","Продолжить","Dowam et"], actDiscard:["Discard","Удалить черновик","Garalamany poz"], actToArchive:["Move to archive","В архив","Arhiwe geçir"], /* new */
+ stubNote:["Stub. Issue #354 designs this screen; only the grouping is shown here.","Заглушка. Экран проектируется в задаче #354; здесь показана только группировка.","Wagtlaýyn görnüş. Bu ekran #354-de taýýarlanýar; bu ýerde diňe toparlara bölünişi görkezilýär."], /* new */
+ emptyTab:["Nothing here yet","Здесь пока пусто","Bu ýerde entek zat ýok"], /* new */
+ draftsFromSell:["Drafts continue from the Sell tab.","Черновики продолжаются на вкладке «Продать».","Garalamalar «Sat» bölüminde dowam edilýär."], /* new */
+ sellTitle:["Sell your car","Продайте автомобиль","Awtoulagyňyzy satyň"],
+ sellSignT:["Sign in to sell","Войдите, чтобы продать","Satmak üçin giriň"],
+ contDraft:["Continue draft","Продолжить черновик","Garalamany dowam et"], /* new */
+ sellNote:["The contact phone is confirmed by SMS inside the wizard. No account phone is needed.","Контактный телефон подтверждается по SMS в мастере. Телефон аккаунта не нужен.","Aragatnaşyk telefony ädimleriň içinde SMS bilen tassyklanýar. Hasap telefony gerek däl."], /* new; ADR-0056 */
+ wizardToast:["The Sell wizard is designed in #354","Мастер продажи проектируется в #354","Satmak ädimleri #354-de taýýarlanýar"], /* prototype only */
+ loading:["Please wait...","Подождите...","Garaşyň..."], wrong:["Something went wrong","Что-то пошло не так","Bir zat ýalňyş boldy"], retry:["Retry","Повторить","Täzeden synanyş"],
+ add:["Add","Добавить","Goş"],
+ phone:["Phone","Телефон","Telefon"], email:["Email","Эл. почта","E-poçta"],
+ notifs:["Notifications","Уведомления","Habarnamalar"],
+ notifMsg:["Message notifications","Уведомления о сообщениях","Habar habarnamalary"], notifOn:["On","Включены","Açyk"], notifOff:["Off","Выключены","Öçük"], /* new */
+ notifMute:["To mute one conversation, use its menu.","Отключить звук отдельной переписки можно в её меню.","Bir ýazyşmanyň sesini onuň menýusyndan öçürip bolýar."], /* new */
+ osToast:["Android notification settings would open","Откроются настройки уведомлений Android","Android habarnama sazlamalary açylar"], /* prototype only */
+ language:["Language","Язык","Dil"], theme:["Theme","Тема","Tema"], light:["Light","Светлая","Ýagty"], dark:["Dark","Тёмная","Garaňky"], system:["System","Системная","Ulgam"],
+ help:["Help","Помощь","Kömek"], contactSupport:["Contact support","Связаться с поддержкой","Goldaw bilen habarlaş"],
+ emailUs:["Email us","Написать на почту","E-poçta ýaz"], callUs:["Call us","Позвонить нам","Bize jaň et"],
+ includeV:["Tell us the Listing number, for example No. 123456, and what happened.","Укажите номер объявления, например № 123456, и что произошло.","Bildiriş belgisini, mysal üçin № 123456, we näme bolandygyny ýazyň."],
+ about:["About the app","О приложении","Programma hakda"], appVersion:["Version 1.0.0","Версия 1.0.0","Wersiýa 1.0.0"],
+ privacy:["Privacy Policy","Политика конфиденциальности","Gizlinlik syýasaty"], terms:["Terms of Service","Условия использования","Ulanyş şertleri"], posting:["Posting rules","Правила размещения","Ýerleşdirme düzgünleri"],
+ deleteAcc:["Delete account","Удалить аккаунт","Hasaby poz"], logout:["Log out","Выйти","Çyk"],
+ logoutT:["Log out?","Выйти из аккаунта?","Hasapdan çykmalymy?"], logoutD:["You can sign back in at any time.","Вы сможете войти снова в любой момент.","Islän wagtyňyz gaýtadan girip bilersiňiz."], cancel:["Cancel","Отмена","Ýatyr"],
+ signedOut:["Signed out","Вы вышли","Çykyldy"], restored:["Account restored. Your Listings are back.","Аккаунт восстановлен. Объявления снова активны.","Hasap dikeldildi. Bildirişler gaýdyp geldi."],
+ protoFillNum:["prototype: fill a made-up number","прототип: подставить выдуманный номер","prototip: toslama belgi goý"], protoFillMail:["prototype: fill a made-up address","прототип: подставить выдуманный адрес","prototip: toslama salgy goý"], /* prototype only */
+ webNote:["Opens in the system browser.","Открывается в браузере.","Brauzerde açylýar."], /* prototype only */
+ tabStubNote:["Not part of this prototype.","Не входит в этот прототип.","Bu prototipe girmeýär."], /* prototype only */
 };
-const t=(k,v)=>{const a=TX[k];if(!a)throw new Error("Missing translation: "+k);let s=a[LANGS.indexOf(S.lang)];if(v)for(const x in v)s=s.split("{"+x+"}").join(v[x]);return s;};
+const t=(k,v)=>{const a=TX[k];if(!a)throw new Error("Missing translation: "+k);let s=a[LANGS.indexOf(S.lang)];if(s==null)throw new Error("Missing translation: "+k+" ("+S.lang+")");if(v)for(const x in v)s=s.split("{"+x+"}").join(v[x]);return s;};
+const LANGNAME={en:"English",ru:"Русский",tk:"Türkmençe"};
 
 /* ───────────── state ───────────── */
 const S={
   webProfile:"production", acct:"out", phone:"+993 61 00-00-00", email:"name@example.com",   // all fake
   lang:"en", theme:"light", os:false,
   stack:[{id:"cabinet"}], tab:"cabinet",
-  v:{cab:"B",entry:"A",sell:"A",set:"A",chg:"B",taken:"A",del:"A"},
-  dec:"cab", data:"ok", outcome:"ok", req:"ok", delOut:"ok",
+  v:{set:"A",list:"A",groups:"A",sellbtn:"A",pick:"A",acct:"A",chg:"B",taken:"A"},
+  dec:"set", data:"ok", outcome:"ok", req:"ok", delOut:"ok",
   flow:null, ret:null, toast:null, sheet:null, dlg:null, web:null, delChecked:false,
-  notif:{msg:true,act:true,os:"granted"}, picker:null, name:null,
+  notif:{os:"granted"}, picker:null, name:null, inv:"some", blocked:false, ltab:null,
 };
 const hasPhone=()=>S.acct==="phone"||S.acct==="both", hasEmail=()=>S.acct==="email"||S.acct==="both", signed=()=>S.acct!=="out";
 
 const mockAccount=()=>({acct:S.acct,phone:hasPhone()?S.phone:null,email:hasEmail()?S.email:null});
 const matchesAccount=(a,f)=>a&&(a.acct===f.type||a.acct==="both")&&(f.type==="phone"?a.phone?.replace(/\D/g,"")===('993'+f.val.replace(/\D/g,"")):a.email===f.val);
-const maskPhone=p=>p.replace(/^(\+993 \d)\d( )\d\d-\d\d-(\d\d)$/,"$1• ••-••-$3").replace(/^(\+993 6)(\d)/,"$1•");
 const maskPhoneDisp=p=>{const raw=p.replace(/\D/g,"");const d=raw.startsWith("993")?raw.slice(3):raw;return "+993 "+d[0]+"• ••-••-"+d.slice(-2);};
 const maskEmail=e=>{const [a,b]=e.split("@");return a[0]+"•••@"+b;};
 const dest=(type,val)=>type==="phone"?maskPhoneDisp(val):maskEmail(val);
@@ -254,9 +274,11 @@ function startMethod(kind,type){S.flow={kind,type,val:"",err:null,step:"entry",b
 function switchTab(tab){if(S.tab===tab){reset(tab);return;}S.histories=S.histories||{};S.histories[S.tab]=S.stack.slice();S.tab=tab;S.stack=S.histories[tab]||[{id:tab}];S.sheet=S.dlg=S.web=S.picker=null;render();}
 const webBase=()=>S.webProfile==="staging"?"https://staging.autotm.bagtyyar.dev":"https://autotm.bagtyyar.dev";
 function openLegal(kind){S.web={kind};render();}
+function openPick(k){if(S.v.pick==="A"){S.picker=k;render();}else push("pick",{k});}
+function openListings(k){const gs=groups();if(k==="drafts"&&!gs.some(g=>g.k==="drafts")){switchTab("sell");return;}S.ltab=k&&gs.some(g=>g.k===k)?k:gs[0].k;push("listings");}
+window.setLang=l=>{S.lang=l;S.picker=null;render();};window.setTheme=m=>{S.theme=m;S.picker=null;render();};
 
-/* ───────────── flows ───────────── */
-function detect(v){return /^[+\d\s()-]+$/.test(v)&&v.replace(/\D/g,"").length>0?"phone":"email";}
+/* ───────────── flows (mock account logic unchanged from a051faf) ───────────── */
 function liveVal(el){
   const f=S.flow;let v=el.value;
   if(f.type==="phone"){v=fmtPhone(v.replace(/^\+?993/,""));el.value=v;}
@@ -322,78 +344,178 @@ setInterval(()=>{const f=S.flow;if(f&&f.sec>0&&(topScreen().id==="code"||(topScr
 function doDelete(){
   S.dlg=null;const o=S.delOut;S.delOut="ok";
   if(o==="fail"){S.delFailed=true;render();return;}
-  S.delFailed=false;
+  S.delFailed=false;S.delChecked=false;
   S.histories={};S.savedAccount=mockAccount();S.deletedAccount={...S.savedAccount};S.restoreAccount=null;S.deletionPending=true;S.acct="out";S.stack=[{id:"cabinet"}];S.tab="cabinet";S.flow=null;push("scheduled");
 }
-function doLogout(){S.histories={};S.savedAccount=mockAccount();S.dlg=null;S.acct="out";reset("cabinet");toast({en:"Signed out",ru:"Вы вышли",tk:"Çykyldy"}[S.lang]);}
-function restore(){if(!S.restoreAccount)return;Object.assign(S,S.restoreAccount);S.savedAccount=mockAccount();S.deletedAccount=S.restoreAccount=null;S.deletionPending=false;S.dlg=null;toast({en:"Account restored. Your Listings are back.",ru:"Аккаунт восстановлен. Объявления снова активны.",tk:"Hasap dikeldildi. Bildirişler gaýdyp geldi."}[S.lang]);}
+function doLogout(){S.histories={};S.savedAccount=mockAccount();S.dlg=null;S.acct="out";reset("cabinet");toast(t("signedOut"));}
+function restore(){if(!S.restoreAccount)return;Object.assign(S,S.restoreAccount);S.savedAccount=mockAccount();S.deletedAccount=S.restoreAccount=null;S.deletionPending=false;S.dlg=null;toast(t("restored"));}
 function restoreCancel(){S.restoreAccount=null;S.dlg=null;S.acct="out";render();}
 
 /* ───────────── building blocks ───────────── */
-const ic={back:"←",x:"✕",gear:"⚙",chev:"›"};
-function appbar(title,o={}){return `<div class="appbar">${o.noBack?"":`<button class="ib" aria-label="Back" onclick="${o.back||"pop()"}">${ic.back}</button>`}<div class="t" ${o.noBack?"":'style="font-size:18px;font-family:inherit"'}>${title||""}</div>${o.right||""}</div>`;}
-function btn(label,fn,cls="brand",dis=false){return `<button class="btn ${cls}" ${dis?"disabled":""} onclick="${fn}">${label}</button>`;}
-function skeletonLines(){return `<div class="pad" style="padding-top:14px"><div class="skel" style="height:64px;width:64px;border-radius:50%"></div><div class="skel" style="height:18px;width:50%;margin-top:12px"></div><div class="skel" style="height:90px;margin-top:14px;border-radius:12px"></div><div class="skel" style="height:90px;margin-top:12px;border-radius:12px"></div></div>`;}
-function errState(){return `<div class="pad" style="text-align:center;padding-top:80px"><div style="font-size:34px">⚠</div><div class="b" style="font-size:17px;margin:8px 0">${t("wrong")}</div><div class="mute sm" style="margin-bottom:16px">${t("offline")}</div><div style="max-width:180px;margin:auto">${btn(t("retry"),"S.data='ok';render()","out")}</div></div>`;}
-function avatar(sz,name){return `<div class="av" style="width:${sz}px;height:${sz}px;font-size:${sz/2.4}px">${name?name[0].toUpperCase():"👤"}</div>`;}
-function idLabel(){return hasPhone()?maskPhoneDisp(S.phone):maskEmail(S.email);}
-function methodRow(type){
-  const has=type==="phone"?hasPhone():hasEmail();
-  const val=has?(type==="phone"?maskPhoneDisp(S.phone):maskEmail(S.email)):null;
-  const act=has?t("change"):t("add");
-  const fn=has&&S.v.chg==="B"?`S.sheet={t:'chg',type:'${type}'};render()`:`startMethod('${has?"change":"add"}','${type}')`;
-  return `<div class="row" role="button" aria-label="${t(type)}, ${val||t("notAdded")}. ${act}" onclick="${fn}"><div class="l"><div class="mute sm">${t(type)}</div>${val?`<div class="b" style="font-size:16px">${val}</div><div class="badge ver" style="margin-top:2px">✓ ${type==="phone"?t("phoneVer"):t("verified")}</div>`:`<div class="mute" style="font-size:16px">${t("notAdded")}</div>`}</div><span class="b sm">${act}</span><span class="chev">${ic.chev}</span></div>`;
+const IC={
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+ list:'<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+ draft:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>',
+ doc:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ bell:'<path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/>',
+ theme:'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+ help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8M12 17h.01"/>',
+ shield:'<path d="M12 3l8 3v6c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+ logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+ trash:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+ phone:'<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/>',
+ mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+ gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+ chev:'<path d="M9 6l6 6-6 6"/>', back:'<path d="M15 5l-7 7 7 7"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>', check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+ heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+ warn:'<path d="M12 4l9 16H3z"/><path d="M12 10v5M12 17.5h.01"/>',
+ cal:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+};
+function icon(n,sz=22){if(!IC[n])throw new Error("Missing icon: "+n);return `<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;}
+function row(o){
+  const lead=o.icon==="none"?`<span class="ic"></span>`:o.icon?`<span class="ic">${icon(o.icon)}</span>`:"";
+  const body=`${o.lead||lead}<span class="l"><span class="lb">${o.label}</span>${o.sub?`<span class="sb">${o.sub}</span>`:""}</span>${o.value!=null&&o.value!==""?`<span class="val${o.accent?" acc":""}">${o.value}</span>`:""}${o.trail||""}${o.chev?`<span class="chev">${icon("chev",18)}</span>`:""}`;
+  const cls=`row${o.cls?" "+o.cls:""}`;
+  if(o.href)return `<a class="${cls}" data-k="${o.k}" href="${o.href}">${body}</a>`;
+  if(!o.fn)return `<div class="${cls} static" data-k="${o.k}">${body}</div>`;
+  return `<div class="${cls}" role="button" tabindex="0" data-k="${o.k}" onclick="${o.fn}">${body}</div>`;
 }
-function legalLinks(){return `<div class="xs mute" style="padding:0 16px 14px">${t("legalPre")} <a style="color:var(--info);text-decoration:underline" onclick="openLegal('terms')">${t("terms")}</a> ${t("and")} <a style="color:var(--info);text-decoration:underline" onclick="openLegal('privacy')">${t("privacy")}</a>.</div>`;}
-function langSwitch(){return `<div style="display:flex;gap:4px">${LANGS.map(l=>`<button class="badge" style="cursor:pointer;${S.lang===l?"background:var(--fg);color:var(--bg)":""}" onclick="S.lang='${l}';render()">${l.toUpperCase()}</button>`).join("")}</div>`;}
+const list=(h,cls="")=>`<div class="list ${cls}">${h}</div>`;
+const gap=()=>`<div class="gap"></div>`;
+function appbar(title,o={}){return `<div class="appbar"><button class="ib" aria-label="Back" data-k="back" onclick="${o.back||"pop()"}">${icon(o.x?"x":"back")}</button><div class="t sm">${title||""}</div>${o.right||`<span class="sp"></span>`}</div>`;}
+function btn(label,fn,cls="brand",dis=false,k=""){return `<button class="btn ${cls}" ${k?`data-k="${k}"`:""} ${dis?"disabled":""} onclick="${fn}">${label}</button>`;}
+function skeletonLines(){return `<div class="pad" style="padding-top:14px">${[0,1,2,3,4].map(i=>`<div style="display:flex;gap:14px;align-items:center;height:56px"><div class="skel" style="height:24px;width:24px;border-radius:50%"></div><div class="skel" style="height:14px;width:${[55,40,62,35,48][i]}%"></div></div>`).join("")}</div>`;}
+function errState(){return `<div class="pad" style="text-align:center;padding-top:90px"><div class="mute" style="display:flex;justify-content:center">${icon("warn",34)}</div><div class="b" style="font-size:17px;margin:10px 0 4px">${t("wrong")}</div><div class="mute s13" style="margin-bottom:18px">${t("offline")}</div><div style="max-width:180px;margin:auto">${btn(t("retry"),"S.data='ok';render()","out",false,"retry")}</div></div>`;}
+function avatar(sz,nm){return `<div class="av" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz/2.3)}px">${nm?nm[0].toUpperCase():icon("user",Math.round(sz*0.5))}</div>`;}
+function idLabel(){return hasPhone()?maskPhoneDisp(S.phone):maskEmail(S.email);}
+function legalLinks(){return `<div class="xs mute" style="padding:0 16px 14px">${t("legalPre")} <a style="color:var(--info);text-decoration:underline;cursor:pointer" onclick="openLegal('terms')">${t("terms")}</a> ${t("and")} <a style="color:var(--info);text-decoration:underline;cursor:pointer" onclick="openLegal('privacy')">${t("privacy")}</a>.</div>`;}
+function langSwitch(){return `<div style="display:flex;gap:2px;padding-right:8px">${LANGS.map(l=>`<button data-k="lang-${l}" style="border:0;background:none;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;cursor:pointer;color:${S.lang===l?"var(--fg)":"var(--mfg)"};font-weight:${S.lang===l?600:400}" onclick="S.lang='${l}';render()">${l.toUpperCase()}</button>`).join("")}</div>`;}
+
+/* ───────────── seller inventory (mock data for the stub) ───────────── */
+const INV_SOME={active:[{n:"Toyota Camry, 2018",p:"185 000 TMT",no:"100245"},{n:"Hyundai Elantra, 2020",p:"12 500 USD",no:"100312"}],drafts:[{n:"BMW X5, 2015",p:"",no:""}],sold:[{n:"Kia Rio, 2017",p:"98 000 TMT",no:"100101"}],archived:[{n:"Lexus RX, 2012",p:"240 000 TMT",no:"100077"}]};
+function inv(){
+  if(S.inv==="none"||!signed())return {active:[],drafts:[],sold:[],archived:[],banned:[]};
+  return {...INV_SOME,banned:S.blocked?[{n:"Nissan Altima, 2014",p:"76 000 TMT",no:"100190"}]:[]};
+}
+function groups(){
+  const I=inv(),tag=(a,st)=>a.map(x=>({...x,st}));
+  const A={k:"active",items:[...tag(I.active,"active"),...tag(I.banned,"banned")]},D={k:"drafts",items:tag(I.drafts,"draft")};
+  const So={k:"sold",items:tag(I.sold,"sold")},Ar={k:"archived",items:tag(I.archived,"archived")},Arch={k:"archive",items:[...So.items,...Ar.items]};
+  return S.v.groups==="A"?[A,D,Arch]:S.v.groups==="B"?[A,So,Ar,D]:[A,Arch];
+}
 
 /* ───────────── screens ───────────── */
-function listingsBlock(){return {a:2,d:1,s:0,r:1};}
-function cabinetScreen(){
-  const v=S.v.cab;const gear=`<button class="ib" aria-label="${t("settings")}" onclick="push('settings')">${ic.gear}</button>`;
-  let h=`<div class="appbar"><div class="t">${t("cabinet")}</div>${gear}</div>`;
-  if(S.data==="loading"&&signed())return h+skeletonLines();
-  if(S.data==="error"&&signed())return h+errState();
-  const out=!signed();
-  const signCard=`<div class="card"><div style="text-align:center;padding:26px 16px">${avatar(72)}<div class="b" style="font-size:18px;margin:12px 0 4px">${t("signInManageT")}</div><div class="mute sm" style="margin-bottom:14px">${t("signInManageD")}</div><div style="max-width:200px;margin:auto">${btn(t("signIn"),"startSignIn()")}</div></div></div>`;
-
-  const L=listingsBlock();
-  if(v==="A"){
-    h+=out?signCard:`<div class="card row" onclick="push('profile')">${avatar(56,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||idLabel()}</div>${S.name?`<div class="mute sm">${idLabel()}</div>`:""}</div><span class="chev">${ic.chev}</span></div>`;
-    h+=`<div class="card row" onclick="push('listingsStub')"><div style="font-size:22px">☰</div><div class="l"><div class="b">${t("myListings")}</div></div><span class="chev">${ic.chev}</span></div><div class="pad" style="margin-top:6px">${btn("＋ "+t("listCar"),"reset('sell')")}</div>`;
-  }else if(v==="B"){
-    if(out)h+=signCard;
-    else{
-      h+=`<div class="card"><div class="row" onclick="push('profile')" style="min-height:64px">${avatar(48,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||t("profile")}</div><div class="mute sm">${t("profile")} · ${t("methods")}</div></div><span class="chev">${ic.chev}</span></div>
-      <div class="row" onclick="${hasPhone()?"push('profile')":"startMethod('add','phone')"}"><span>☎</span><div class="l">${hasPhone()?`<div class="b">${maskPhoneDisp(S.phone)}</div><div class="badge ver">✓ ${t("phoneVer")}</div>`:`<div class="mute">${t("phone")}: ${t("notAdded")}</div>`}</div>${hasPhone()?"":`<span class="b sm" style="color:var(--info)">${t("add")}</span>`}<span class="chev">${ic.chev}</span></div>
-      <div class="row" onclick="${hasEmail()?"push('profile')":"startMethod('add','email')"}"><span>✉</span><div class="l">${hasEmail()?`<div class="b">${maskEmail(S.email)}</div><div class="badge ver">✓ ${t("verified")}</div>`:`<div class="mute">${t("email")}: ${t("notAdded")}</div>`}</div>${hasEmail()?"":`<span class="b sm" style="color:var(--info)">${t("add")}</span>`}<span class="chev">${ic.chev}</span></div></div>`;
-    }
-    h+=`<div class="hd">${t("myListings")}</div><div class="card">${[["active",L.a],["drafts",L.d],["sold",L.s],["archived",L.r]].map(([k,n])=>`<div class="row" onclick="push('listingsStub')"><div class="l">${t(k)}</div><span class="mute">${out?"–":n}</span><span class="chev">${ic.chev}</span></div>`).join("")}</div><div class="pad">${btn("＋ "+t("listCar"),"reset('sell')")}</div>`;
-  }
-  h+=supportRow();
+function profileRow(){
+  if(!signed())return row({k:"signin",cls:"big",lead:avatar(48),label:t("signIn"),sub:t("signInSub"),fn:"startSignIn()",chev:true});
+  return row({k:"profile",cls:"big",lead:avatar(48,S.name),label:S.name||idLabel(),sub:S.name?idLabel():"",fn:"push('profile')",chev:true});
+}
+function sellRows(){
+  if(!signed())return "";
+  const I=inv(),v=S.v.list,nL=I.active.length+I.sold.length+I.archived.length+I.banned.length,nD=I.drafts.length;let h="";
+  if(v==="A")h+=row({k:"listings",icon:"list",label:t("myListings"),value:(nL+nD)||"",fn:"openListings()",chev:true});
+  if(v==="B"){h+=row({k:"listings",icon:"list",label:t("myListings"),value:nL||"",fn:"openListings()",chev:true});if(nD)h+=row({k:"drafts",icon:"draft",label:t("drafts"),value:nD,fn:"openListings('drafts')",chev:true});}
+  if(v==="D")h+=groups().map((g,i)=>row({k:"g-"+g.k,icon:i?"none":"list",label:t(g.k),value:String(g.items.length),fn:`openListings('${g.k}')`,chev:true})).join("");
+  if(S.v.sellbtn==="B")h+=row({k:"listcar",icon:"plus",label:t("listCar"),fn:"switchTab('sell')"});
+  return h?gap()+list(h):"";
+}
+function menuRows(){
+  let h="";
+  if(signed())h+=row({k:"notifs",icon:"bell",label:t("notifs"),fn:"push('notifs')"});
+  h+=row({k:"language",icon:"globe",label:t("language"),value:LANGNAME[S.lang],fn:"openPick('lang')"});
+  h+=row({k:"theme",icon:"theme",label:t("theme"),value:t(S.theme),fn:"openPick('theme')"});
+  h+=row({k:"help",icon:"help",label:t("help"),fn:"push('support')"});
+  h+=row({k:"terms",icon:"shield",label:t("terms"),fn:"openLegal('terms')"});
+  h+=row({k:"privacy",icon:"doc",label:t("privacy"),fn:"openLegal('privacy')"});
+  h+=row({k:"posting",icon:"doc",label:t("posting"),fn:"openLegal('terms')"});
+  h+=row({k:"about",icon:"info",label:t("about"),fn:"push('about')"});
   return h;
 }
-function supportRow(){return `<div class="card row" role="button" onclick="push('support')"><span>ⓘ</span><div class="l"><div class="b">${t("contactSupport")}</div><div class="sm mute">${t("supRowSub")}</div></div><span class="chev">›</span></div>`;}
-function supportScreen(){return appbar(t("contactSupport"))+`<div class="pad" style="padding-top:16px"><div class="b" style="font-size:22px">${t("supTitle")} ✓</div><div class="mute sm">${t("official")}</div><div class="card" style="margin:16px 0"><a class="row" href="mailto:bagtyyarkowusow.dev@gmail.com"><span>✉</span><div class="l"><div class="b">${t("emailUs")}</div><div class="sm">bagtyyarkowusow.dev@gmail.com</div></div></a><a class="row" href="tel:+99363989404"><span>☎</span><div class="l"><div class="b">${t("callUs")}</div><div>+993 63 98 94 04</div></div></a></div><div class="note"><div class="b">${t("includeT")}</div><div class="sm">${t("includeV")}</div></div></div>`;}
-function stubScreen(name,note){return `<div class="appbar"><div class="t">${name}</div></div><div class="pad mute" style="padding-top:40px;text-align:center">${note}</div>`;}
-function listingsStubScreen(){return appbar(t("myListings"))+`<div class="pad mute" style="padding-top:40px;text-align:center">My listings is #354 (Sell wizard, drafts and My listings states).</div>`;}
+function acctRows(){return row({k:"logout",icon:"logout",label:t("logout"),fn:"S.dlg='logout';render()"})+row({k:"delete",icon:"trash",cls:"danger",label:t("deleteAcc"),fn:"push('delete')"});}
+function cabinetScreen(){
+  const B=S.v.set==="B";
+  let h=`<div class="appbar"><div class="t">${t("cabinet")}</div>${B?`<button class="ib" aria-label="Settings" data-k="gear" onclick="push('settings')">${icon("gear")}</button>`:""}</div>`;
+  if(S.data==="loading"&&signed())return h+skeletonLines();
+  if(S.data==="error"&&signed())return h+errState();
+  h+=list(profileRow())+sellRows();
+  if(!B){h+=gap()+list(menuRows());if(signed()&&S.v.acct==="B")h+=gap()+list(acctRows());}
+  return h+`<div style="height:20px"></div>`;
+}
+function settingsScreen(){
+  let h=appbar(t("settings"))+list(menuRows());
+  if(signed()&&S.v.acct==="B")h+=gap()+list(acctRows());
+  return h+`<div style="height:20px"></div>`;
+}
+function profileScreen(){
+  let h=appbar(t("profile"));
+  if(S.data==="loading")return h+skeletonLines();
+  if(S.data==="error")return h+errState();
+  const m=type=>{
+    const has=type==="phone"?hasPhone():hasEmail();
+    const fn=has&&S.v.chg==="B"?`S.sheet={t:'chg',type:'${type}'};render()`:`startMethod('${has?"change":"add"}','${type}')`;
+    return row({k:"m-"+type,icon:type==="phone"?"phone":"mail",label:t(type),value:has?(type==="phone"?maskPhoneDisp(S.phone):maskEmail(S.email)):t("add"),accent:!has,fn,chev:true});
+  };
+  h+=`<div style="display:flex;flex-direction:column;align-items:center;padding:8px 16px 18px">${avatar(72,S.name)}${S.name?`<div class="b" style="font-size:20px;margin-top:10px">${S.name}</div>`:""}</div>`;
+  h+=`<div class="foot" style="padding-bottom:2px">${t("methods")}</div>`+list(m("phone")+m("email"));
+  if(S.v.acct==="A")h+=gap()+list(acctRows());
+  return h;
+}
+function pickItems(k){return k==="lang"?LANGS.map(l=>[l,LANGNAME[l],`setLang('${l}')`,S.lang===l]):["light","dark","system"].map(m=>[m,t(m),`setTheme('${m}')`,S.theme===m]);}
+function pickRows(k){return pickItems(k).map(([v,l,fn,on])=>row({k:"pick-"+v,label:l,fn,trail:`<span class="radio${on?" on":""}">${on?icon("check",14):""}</span>`})).join("");}
+function pickScreen(){const k=topScreen().k;return appbar(t(k==="lang"?"language":"theme"))+list(pickRows(k),"plain");}
+function notifsScreen(){
+  const off=S.notif.os==="denied";
+  return appbar(t("notifs"))+list(row({k:"n-state",label:t("notifMsg"),value:t(off?"notifOff":"notifOn")})+row({k:"n-os",label:t("osOffB"),fn:"toast(t('osToast'))",chev:true}),"plain")+`<div class="foot">${t("notifMute")}</div>`;
+}
+function supportScreen(){
+  return appbar(t("help"))+list(row({k:"mailto",icon:"mail",label:t("emailUs"),sub:"bagtyyarkowusow.dev@gmail.com",href:"mailto:bagtyyarkowusow.dev@gmail.com"})+row({k:"tel",icon:"phone",label:t("callUs"),sub:"+993 63 98 94 04",href:"tel:+99363989404"}))+`<div class="foot">${t("includeV")}</div>`;
+}
+function aboutScreen(){return appbar(t("about"))+`<div style="text-align:center;padding:60px 16px"><div class="logo">Auto<b>TM</b></div><div class="mute" style="margin-top:8px">${t("appVersion")}</div></div>`;}
+function lcard(x,merged){
+  const lab={active:"",draft:t("stDraft"),sold:t("stSold"),archived:t("stRemoved"),banned:t("stBlocked")}[x.st];
+  const acts={active:["actEdit","actSold","actRemove"],draft:["actContinue","actDiscard"],sold:merged?["actDelete"]:["actToArchive","actDelete"],archived:["actRelist","actDelete"],banned:[]}[x.st];
+  return `<div class="lcard"><div class="th"></div><div style="flex:1;min-width:0"><div style="font-size:15px">${x.n}</div>${x.p?`<div class="b" style="font-size:16px;margin-top:2px">${x.p}</div>`:""}${lab||x.no?`<div class="mute s13" style="margin-top:2px">${[lab,x.no?"№ "+x.no:""].filter(Boolean).join(" · ")}</div>`:""}${acts.length?`<div class="mute s13" style="margin-top:6px">${acts.map(a=>t(a)).join(" · ")}</div>`:""}</div></div>`;
+}
+function listingsBody(){
+  const gs=groups();const cur=gs.find(g=>g.k===S.ltab)||gs[0];
+  let h=`<div class="ltabs">${gs.map(g=>`<button class="${g===cur?"on":""}" data-k="lt-${g.k}" onclick="S.ltab='${g.k}';render()">${t(g.k)}${g.items.length?` <span class="mute" style="font-weight:400">${g.items.length}</span>`:""}</button>`).join("")}</div><div class="stub">${t("stubNote")}</div>`;
+  h+=cur.items.length?cur.items.map(x=>lcard(x,cur.k==="archive")).join(""):`<div class="mute" style="text-align:center;padding:60px 16px">${t("emptyTab")}</div>`;
+  if(S.v.groups==="C")h+=`<div class="foot">${t("draftsFromSell")}</div>`;
+  return h;
+}
+function listingsScreen(){return appbar(t("myListings"))+listingsBody();}
+function sellScreen(){
+  let h=`<div class="appbar"><div class="t">${t(S.v.list==="C"&&signed()?"myListings":"tabSell")}</div></div>`;
+  if(!signed())return h+`<div class="pad" style="text-align:center;padding-top:90px"><div class="b" style="font-size:18px;margin-bottom:16px">${t("sellSignT")}</div><div style="max-width:220px;margin:auto">${btn(t("signIn"),"startSignIn()","brand",false,"signin")}</div></div>`;
+  const cta=`<div class="pad" style="padding-top:8px;padding-bottom:12px">${btn(icon("plus",18)+t("listCar"),"toast(t('wizardToast'))","brand",false,"startwizard")}</div>`;
+  if(S.v.list==="C")return h+cta+listingsBody();
+  const I=inv();
+  h+=`<div class="pad" style="padding-top:26px"><div class="b" style="font-size:20px">${t("sellTitle")}</div><div class="mute s13" style="margin:6px 0 12px">${t("sellNote")}</div></div>`+cta;
+  let rows="";
+  if(I.drafts.length)rows+=row({k:"contdraft",icon:"draft",label:t("contDraft"),sub:I.drafts[0].n,fn:"toast(t('wizardToast'))",chev:true});
+  rows+=row({k:"sell-listings",icon:"list",label:t("myListings"),fn:"openListings()",chev:true});
+  return h+list(rows);
+}
 
 function signinScreen(){
-  const f=S.flow;const close=`<button class="ib" aria-label="Close" onclick="closeSignIn()">${ic.x}</button>`;
-  let h=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px 6px 8px">${close}${langSwitch()}</div><div class="pad" style="margin-top:18px"><div class="logo">Auto<b>TM</b></div></div>`;
-  const type=f.type;
-  const tabs=`<div class="pad" style="margin-top:20px"><div class="pseg">${["phone","email"].map(x=>`<button class="${f.type===x?"on":""}" onclick="S.flow.type='${x}';S.flow.val='';S.flow.err=null;render()">${t(x)}</button>`).join("")}</div></div>`;
-  h+=tabs+`<div class="pad" style="margin-top:20px"><div class="b" style="font-size:22px;line-height:1.25">${t(type==="phone"?"phoneTitle":"emailTitle")}</div><div class="mute" style="margin:4px 0 16px">${t(type==="phone"?"phoneHelper":"emailHelper")}</div>${entryField(type)}${entryErr(type)}<div style="margin-top:16px">${btn(t("getCode"),"getCode()")}</div></div><div style="position:absolute;bottom:0;left:0;right:0">${legalLinks()}</div>`;
+  const f=S.flow;const type=f.type;
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 4px 6px"><button class="ib" aria-label="Close" data-k="close" onclick="closeSignIn()">${icon("x")}</button>${langSwitch()}</div><div class="pad" style="margin-top:14px"><div class="logo">Auto<b>TM</b></div></div>`;
+  h+=`<div class="pad" style="margin-top:20px"><div class="pseg">${["phone","email"].map(x=>`<button class="${f.type===x?"on":""}" data-k="tab-${x}" onclick="S.flow.type='${x}';S.flow.val='';S.flow.err=null;render()">${t(x)}</button>`).join("")}</div></div>`;
+  h+=`<div class="pad" style="margin-top:22px"><div class="b" style="font-size:22px;line-height:1.25">${t(type==="phone"?"phoneTitle":"emailTitle")}</div><div class="mute" style="margin:4px 0 16px">${t(type==="phone"?"phoneHelper":"emailHelper")}</div>${entryField(type)}${entryErr(type)}<div style="margin-top:16px">${btn(t("getCode"),"getCode()","brand",false,"getcode")}</div></div><div style="position:absolute;bottom:0;left:0;right:0">${legalLinks()}</div>`;
   return h;
 }
 function entryField(type){
   const f=S.flow;const e=f.err==="invalid"?"err":"";
   const pre=type==="phone"?`<span class="b">+993</span>`:"";
-  return `<div class="field ${e}">${pre}<input id="inp" aria-label="${type==="phone"?t("phoneLabel"):type==="email"?t("emailLabel"):t("emailLabel")}" value="${f.val||""}" inputmode="${type==="phone"?"tel":"email"}" placeholder="${type==="phone"?"6X XX-XX-XX":type==="email"?"name@example.com":"6X XX-XX-XX / name@example.com"}" oninput="liveVal(this)" onkeydown="if(event.key==='Enter')getCode()"></div><div style="margin-top:6px"><a class="xs mute" style="text-decoration:underline;cursor:pointer" onclick="demoFill()">prototype: fill a made-up ${type==="phone"?"number":"address"}</a></div>`;
+  return `<div class="field ${e}">${pre}<input id="inp" aria-label="${type==="phone"?t("phoneLabel"):t("emailLabel")}" value="${f.val||""}" inputmode="${type==="phone"?"tel":"email"}" placeholder="${type==="phone"?"6X XX-XX-XX":"name@example.com"}" oninput="liveVal(this)" onkeydown="if(event.key==='Enter')getCode()"></div><div style="margin-top:6px"><a class="xs mute" data-k="demofill" style="text-decoration:underline;cursor:pointer" onclick="demoFill()">${t(type==="phone"?"protoFillNum":"protoFillMail")}</a></div>`;
 }
 function entryErr(type){
   const f=S.flow;if(!f.err)return "";
-  const m={invalid:type==="phone"?t("phoneFmt"):type==="email"?t("emailFmt"):t("emailFmt"),offline:t("offline"),rate:t("rate"),rateDay:t("rateDay")}[f.err];
+  const m={invalid:type==="phone"?t("phoneFmt"):t("emailFmt"),offline:t("offline"),rate:t("rate"),rateDay:t("rateDay")}[f.err];
   return `<div class="errtx" role="alert">${m}</div>`;
 }
 function codeBody(){
@@ -404,88 +526,53 @@ function codeBody(){
   const d=dest(f.type,f.val);
   const canChange=f.kind!=="delete";
   const showNoMail=f.type==="email"&&(f.nomail||f.sec===0||f.resends>0)&&f.kind!=="delete";
+  /* the one "stuck" moment that links to Help: the daily code limit is reached, so nothing else can be tried today */
+  const stuck=e==="rateDay"&&f.kind!=="webdelete";
   return `<div class="pad" style="margin-top:6px"><div class="b" style="font-size:22px">${f.kind==="delete"||f.kind==="webdelete"?t("delCodeT"):t("otpTitle")}</div>
-  <div class="mute" style="margin:6px 0 0">${t("otpSent",{d:d})}</div><div class="mute sm" style="margin-top:2px">${t(f.type==="email"?"exp10":"exp5")}</div>
-  ${canChange?`<button class="btn link" style="padding:0" onclick="backFromCode()">${t(f.type==="phone"?"chgNum":"chgMail")}</button>`:""}
-  <div style="margin-top:14px">${cells}</div>${msg?`<div class="errtx" role="alert">${msg}</div>`:""}
-  <div style="margin-top:12px">${f.sec>0?`<span class="mute sm">${t("resendIn",{s:f.sec})}</span>`:`<button class="btn ${needNew?"brand":"link"}" style="${needNew?"":"padding:0"}" onclick="resend()">${t("resend")}</button>`}</div>
-  ${showNoMail?`<div class="note" style="margin:12px 0 0">${t("noMail")}${f.kind==="signin"?`<div><button class="btn link" style="padding:0" onclick="S.flow={kind:'signin',type:'phone',val:'',err:null,step:'entry'};S.stack.pop();render()">${t("noMailPhone")}</button></div>`:""}</div>`:""}
-  </div><div class="kp">${[1,2,3,4,5,6,7,8,9,"",0,"<"].map(k=>k===""?"<span></span>":`<button onclick="key('${k}')">${k==="<"?"⌫":k}</button>`).join("")}</div>`;
+  <div class="mute" style="margin:6px 0 0">${t("otpSent",{d:d})}</div><div class="mute s13" style="margin-top:2px">${t(f.type==="email"?"exp10":"exp5")}</div>
+  ${canChange?`<button class="btn link" data-k="changevalue" onclick="backFromCode()">${t(f.type==="phone"?"chgNum":"chgMail")}</button>`:""}
+  <div style="margin-top:12px">${cells}</div>${msg?`<div class="errtx" role="alert">${msg}</div>`:""}
+  <div style="margin-top:12px">${e==="rateDay"?"":f.sec>0?`<span class="mute s13">${t("resendIn",{s:f.sec})}</span>`:`<button class="btn ${needNew?"brand":"link"}" data-k="resend" onclick="resend()">${t("resend")}</button>`}</div>
+  ${stuck?`<div><button class="btn link" data-k="stuckhelp" onclick="push('support')">${t("contactSupport")}</button></div>`:""}
+  ${showNoMail?`<div class="mute s13" style="margin-top:10px">${t("noMail")}${f.kind==="signin"?`<div><button class="btn link" data-k="usephone" onclick="S.flow={kind:'signin',type:'phone',val:'',err:null,step:'entry'};S.stack.pop();render()">${t("noMailPhone")}</button></div>`:""}</div>`:""}
+  </div><div class="kp">${[1,2,3,4,5,6,7,8,9,"",0,"<"].map(k=>k===""?"<span></span>":`<button data-k="key-${k==="<"?"del":k}" onclick="key('${k}')">${k==="<"?"⌫":k}</button>`).join("")}</div>`;
 }
 function codeScreen(){return appbar("",{back:"backFromCode()"})+codeBody();}
-
 function methodEntryScreen(){
   const f=S.flow;const k=f.kind,ty=f.type;
   const title=t(k==="add"?(ty==="phone"?"addPhoneT":"addMailT"):(ty==="phone"?"chgPhoneT":"chgMailT"));
   const help=t(k==="add"?(ty==="phone"?"addPhoneH":"addMailH"):(ty==="phone"?"chgPhoneH":"chgMailH"));
-  return appbar(title,{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:10px"><div class="mute" style="margin-bottom:16px">${help}</div>${entryField(ty)}${entryErr(ty)}<div style="margin-top:16px">${btn(t("sendCode"),"getCode()")}</div></div>`;
+  return appbar(title,{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:10px"><div class="mute" style="margin-bottom:16px">${help}</div>${entryField(ty)}${entryErr(ty)}<div style="margin-top:16px">${btn(t("sendCode"),"getCode()","brand",false,"getcode")}</div></div>`;
 }
 function takenScreen(){
   const f=S.flow;const ty=f.type;const B=S.v.taken==="B";
-  return appbar("",{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:10px"><div style="font-size:40px">⛔</div><div class="b" style="font-size:20px;margin:8px 0">${t(ty==="phone"?"phoneTaken":"emailTaken")}</div><div class="mute sm" style="margin-bottom:18px">${t("noMerge")}</div><div style="display:grid;gap:10px">${btn(t(ty==="phone"?"diffNum":"diffMail"),"S.stack.pop();S.flow.val='';S.flow.err=null;S.flow.step='entry';render()")}${B?`<div class="note sm">${t("switchAccountHint")}</div>`+btn(t("signOutUse"),"S.flow=null;S.acct='out';reset('cabinet');startSignIn()","out"):""}</div></div>`;
-}
-function profileScreen(){
-  let h=appbar(t("profile"));
-  if(S.data==="loading")return h+skeletonLines();
-  if(S.data==="error")return h+errState();
-  return h+`<div style="text-align:center;padding:10px 0 16px">${avatar(88,S.name)}<div class="b" style="font-size:20px;margin-top:10px;font-family:Georgia,serif">${S.name||idLabel()}</div><div style="margin-top:6px"><span class="badge">${S.acct==="out"?"":{en:"Buyer",ru:"Покупатель",tk:"Alyjy"}[S.lang]}</span></div></div>
-  <div class="hd" style="padding-bottom:2px"><span class="b" style="font-size:16px;color:var(--fg)">${t("methods")}</span></div><div class="pad mute sm" style="margin-bottom:8px">${t("methodsHelp")}</div>
-  <div class="card">${methodRow("phone")}${methodRow("email")}</div>
-  <div class="card"><div class="row" style="cursor:default"><div class="l mute sm">${t("memberSince")}</div><div class="b">${t("memberDate")}</div></div></div>`;
-}
-function sellScreen(){
-  let h=`<div class="appbar"><div class="t">${t("tabSell")}</div></div>`;
-  if(!signed())return h+`<div class="pad" style="text-align:center;padding-top:70px">${avatar(72)}<div class="b" style="font-size:18px;margin:12px 0 4px">${{en:"Sign in to sell",ru:"Войдите, чтобы продать",tk:"Satmak üçin giriň"}[S.lang]}</div><div class="mute sm" style="margin-bottom:14px">${{en:"Sign in to list your vehicle on AutoTM.",ru:"Войдите, чтобы разместить объявление на AutoTM.",tk:"AutoTM-de bildiriş goýmak üçin giriň."}[S.lang]}</div><div style="max-width:200px;margin:auto">${btn(t("signIn"),"startSignIn()")}</div></div>`;
-  return h+`<div class="pad" style="padding-top:18px"><div class="b" style="font-size:21px">${t("sellOpen")}</div><div class="note">${t(hasPhone()?"sellAccountContact":"sellContact")}</div><div class="mute sm">${t("sellScope")}</div><a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354" target="_blank" rel="noopener">#354</a></div>`;
-}
-
-function settingsScreen(){
-  const A=S.v.set==="A";
-  let h=appbar(t("settings"));
-  const seg=(items,cur,fn)=>`<div class="pseg">${items.map(([k,l])=>`<button class="${cur===k?"on":""}" onclick="${fn}('${k}')">${l}</button>`).join("")}</div>`;
-  const lrow=(l,fn,x="")=>`<div class="row" role="button" onclick="${fn}"><div class="l">${l}</div>${x}<span class="chev">${ic.chev}</span></div>`;
-  if(A){
-    h+=`<div class="pad" style="margin-top:6px"><div class="mute sm b" style="margin:8px 0 6px">${t("language")}</div>${seg([["en","English"],["ru","Русский"],["tk","Türkmen"]],S.lang,"setLang")}
-    <div class="mute sm b" style="margin:18px 0 6px">${t("theme")}</div>${seg([["light",t("light")],["dark",t("dark")],["system",t("system")]],S.theme,"setTheme")}</div>`;
-    if(signed())h+=`<div class="card" style="margin-top:16px">${lrow(t("notifs"),"push('notifs')")}</div>`;
-  }else{
-    h+=`<div class="card" style="margin-top:8px">${lrow(t("language"),"S.picker='lang';render()",`<span class="mute">${{en:"English",ru:"Русский",tk:"Türkmen"}[S.lang]}</span>`)}${lrow(t("theme"),"S.picker='theme';render()",`<span class="mute">${t(S.theme)}</span>`)}${signed()?lrow(t("notifs"),"push('notifs')"):""}</div>`;
-  }
-  h+=supportRow();
-  h+=`<div class="hd">${t("about")}</div><div class="card">${lrow(t("privacy"),"openLegal('privacy')")}${lrow(t("terms"),"openLegal('terms')")}${lrow(t("posting"),"openLegal('terms')")}</div>`;
-  if(signed())h+=`<div class="card">${lrow(t("deleteAcc"),"push('delete')")}</div><div class="pad" style="padding-bottom:20px">${btn(t("logout"),"S.dlg='logout';render()","dest")}</div>`;
-  return h;
-}
-window.setLang=l=>{S.lang=l;render();};window.setTheme=m=>{S.theme=m;render();};
-function notifsScreen(){
-  const off=S.notif.os==="denied";
-  return appbar(t("notifs"))+`<div class="note">${t("notifScope")}</div>`+(off?`<div class="note warn"><div class="b">${t("osOffT")}</div><button class="btn link" onclick="toast('Prototype: Android notification settings would open')">${t("osOffB")}</button></div>`:"");
+  return appbar("",{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:14px"><div class="b" style="font-size:20px;line-height:1.3">${t(ty==="phone"?"phoneTaken":"emailTaken")}</div><div class="mute s13" style="margin:8px 0 20px">${t("noMerge")}</div><div style="display:grid;gap:10px">${btn(t(ty==="phone"?"diffNum":"diffMail"),"S.stack.pop();S.flow.val='';S.flow.err=null;S.flow.step='entry';render()","brand",false,"different")}${B?btn(t("signOutUse"),"S.flow=null;S.acct='out';reset('cabinet');startSignIn()","out",false,"switchaccount")+`<div class="mute s13">${t("switchAccountHint")}</div>`:""}</div></div>`;
 }
 function deleteScreen(){
   const d=t("delDate");
   let h=appbar(t("deleteAcc"));
-  h+=`<div class="note err" style="margin-top:6px">${t("delD")}</div><div class="pad"><div class="b" style="margin:6px 0">${t("delWhat")}</div><ul style="margin:0 0 12px 18px;padding:0;line-height:1.6;font-size:13.5px"><li>${t("delL1")}</li><li>${t("delL2")}</li><li>${t("delL3")}</li><li>${t("delL4",{d:d})}</li><li><b>${t("delL5")}</b></li></ul>
-  <label style="display:flex;gap:10px;align-items:center;min-height:44px;cursor:pointer"><input type="checkbox" style="width:22px;height:22px" ${S.delChecked?"checked":""} onchange="S.delChecked=this.checked;render()"> <span>${t("delUnd")}</span></label>
-  <div style="margin-top:10px">${btn("🗑 "+t("deleteAcc"),"S.dlg='delete';render()","dest",!S.delChecked)}</div>${S.delFailed?`<div class="errtx" style="text-align:center" role="alert">${t("delFail")}</div>`:""}</div>`;
+  h+=`<div class="pad" style="padding-top:8px"><div style="font-size:15px;margin-bottom:14px">${t("delD")}</div><div class="b" style="margin:6px 0">${t("delWhat")}</div><ul style="margin:0 0 14px 18px;padding:0;line-height:1.6;font-size:14px"><li>${t("delL1")}</li><li>${t("delL2")}</li><li>${t("delL3")}</li><li>${t("delL4",{d:d})}</li><li>${t("delL5")}</li></ul>
+  <label style="display:flex;gap:10px;align-items:center;min-height:44px;cursor:pointer"><input type="checkbox" data-k="understand" style="width:22px;height:22px" ${S.delChecked?"checked":""} onchange="S.delChecked=this.checked;render()"> <span>${t("delUnd")}</span></label>
+  <div style="margin-top:12px">${btn(t("deleteAcc"),"S.dlg='delete';render()","dest",!S.delChecked,"deletebtn")}</div>${S.delFailed?`<div class="errtx" style="text-align:center" role="alert">${t("delFail")}</div>`:""}</div>`;
   return h;
 }
-function scheduledScreen(){return `<div class="pad" style="text-align:center;padding-top:110px"><div style="font-size:44px">🗓</div><div class="b" style="font-size:21px;margin:10px 0">${t("schedT")}</div><div class="mute" style="margin-bottom:22px">${t("schedD",{d:t("delDate")})}</div><div style="max-width:200px;margin:auto">${btn(t("done"),"reset('cabinet')")}</div></div>`;}
+function scheduledScreen(){return `<div class="pad" style="text-align:center;padding-top:120px"><div class="mute" style="display:flex;justify-content:center">${icon("cal",40)}</div><div class="b" style="font-size:20px;margin:12px 0 6px">${t("schedT")}</div><div class="mute" style="margin-bottom:24px">${t("schedD",{d:t("delDate")})}</div><div style="max-width:200px;margin:auto">${btn(t("done"),"reset('cabinet')","brand",false,"done")}</div></div>`;}
 function webDeleteScreen(){
   const f=S.flow;
   let body;
   if(f.step==="entry"){
     body=`<div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:6px">${t("webT")}</div><div style="color:#555;margin-bottom:14px;font-size:14px">${t("webD")}</div>
-    <div style="display:flex;gap:6px;margin-bottom:12px">${["phone","email"].map(x=>`<button style="flex:1;padding:9px;border-radius:8px;border:1px solid #bbb;background:${f.type===x?"#222":"#fff"};color:${f.type===x?"#fff":"#222"};cursor:pointer" onclick="S.flow.type='${x}';S.flow.val='';S.flow.err=null;render()">${t(x)}</button>`).join("")}</div>
-    <div style="--border:#bbb;--bg:#fff;--fg:#222;--destructive:#c0392b;--muted:#aaa"><div class="phone-light">${entryField(f.type)}${entryErr(f.type)}</div></div>
-    <button style="margin-top:14px;width:100%;padding:12px;border:0;border-radius:8px;background:#d40000;color:#fff;font-weight:700;" onclick="getCode()">${t("getCode")}</button></div>`;
+    <div style="display:flex;gap:6px;margin-bottom:12px">${["phone","email"].map(x=>`<button data-k="tab-${x}" style="flex:1;padding:9px;border-radius:8px;border:1px solid #bbb;background:${f.type===x?"#222":"#fff"};color:${f.type===x?"#fff":"#222"};cursor:pointer" onclick="S.flow.type='${x}';S.flow.val='';S.flow.err=null;render()">${t(x)}</button>`).join("")}</div>
+    <div style="--border:#bbb;--bg:#fff;--fg:#222;--destructive:#c0392b;--mfg:#666">${entryField(f.type)}${entryErr(f.type)}</div>
+    <button data-k="getcode" style="margin-top:14px;width:100%;padding:12px;border:0;border-radius:8px;background:#d40000;color:#fff;font-weight:700;" onclick="getCode()">${t("getCode")}</button></div>`;
   }else if(f.step==="code"){
-    body=`<div style="--bg:#fff;--fg:#222;--border:#bbb;--primary:#d40000;--mfg:#666;--destructive:#c0392b;--info:#2563eb;--secondary:#eee;--muted:#ddd" class="phonelike">${codeBody()}</div>`;
-  }else body=`<div style="padding:20px;text-align:center"><div style="font-size:40px">✓</div><div style="font-size:16px;margin:10px 0">${t("webDone",{x:t(f.type).toLowerCase(),d:t("delDate")})}</div></div>`;
-  return `<div class="br" style="top:24px"><div class="bar"><button class="ib" style="color:#222" onclick="${f.step==="code"?"backFromCode()":"S.flow=null;S.stack=[{id:'cabinet'}];S.tab='cabinet';render()"}">${ic.back}</button><div class="url">🔒 ${webBase()}/${S.lang}/account/delete</div></div>${body}</div>`;
+    body=`<div style="--bg:#fff;--fg:#222;--border:#bbb;--primary:#d40000;--mfg:#666;--destructive:#c0392b;--info:#2563eb;--secondary:#eee;--muted:#ddd">${codeBody()}</div>`;
+  }else body=`<div style="padding:20px;text-align:center"><div style="display:flex;justify-content:center;color:#1a7f37">${icon("check",40)}</div><div style="font-size:16px;margin:10px 0">${t("webDone",{x:t(f.type).toLowerCase(),d:t("delDate")})}</div></div>`;
+  return `<div class="br" style="top:0"><div class="bar"><button class="ib" style="color:#222" data-k="back" onclick="${f.step==="code"?"backFromCode()":"S.flow=null;S.stack=[{id:'cabinet'}];S.tab='cabinet';render()"}">${icon("back")}</button><div class="url">${webBase()}/${S.lang}/account/delete</div></div>${body}</div>`;
 }
 function tabStub(id){
-  const m={search:["Search / Home","Home, Brand picker, Results: #351 and the approved screen map."],favorites:[t("tabFav"),"Favorites: #352."],messages:[t("tabMsg"),"Conversations: #352."]}[id];
-  return `<div class="appbar"><div class="t">${m[0]}</div></div><div class="pad mute" style="padding-top:60px;text-align:center">${m[1]}<br>Not part of this prototype.</div>`;
+  const m={search:["tabSearch","#344, #351"],favorites:["tabFav","#352"],messages:["tabMsg","#352"]}[id];
+  return `<div class="appbar"><div class="t">${t(m[0])}</div></div><div class="pad mute" style="padding-top:70px;text-align:center">${t("tabStubNote")}<br>${m[1]}</div>`;
 }
 
 /* ───────────── overlays ───────────── */
@@ -493,38 +580,35 @@ function overlays(){
   let o="";
   if(S.web){
     const url=`${webBase()}/${S.lang}/legal/${S.web.kind}`;
-    o+=`<div class="br"><div class="bar"><button class="ib" style="color:#222" onclick="S.web=null;render()">${ic.x}</button><div class="url">🔒 ${url}</div></div><div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:8px">${S.web.kind==="privacy"?t("privacy"):t("terms")}</div><div class="skel" style="height:12px;background:#ddd;margin:8px 0"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:90%"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:80%"></div><div style="color:#666;font-size:12px;margin-top:14px">Opens in the system browser (Linking). Prototype public-web setting: ${S.webProfile}. Production apps read environment configuration (#496). Text mentions “phone or email” (#390) and the web deletion page.</div><a style="display:block;margin-top:14px;color:#2563eb;text-decoration:underline;cursor:pointer" onclick="S.web=null;S.flow={kind:'webdelete',type:'phone',val:'',err:null,step:'entry'};S.stack.push({id:'webDelete'});render()">${t("deleteAcc")}: ${webBase()}/${S.lang}/account/delete</a></div></div>`;
+    o+=`<div class="br"><div class="bar"><button class="ib" style="color:#222" data-k="webclose" onclick="S.web=null;render()">${icon("x")}</button><div class="url">${url}</div></div><div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:8px">${S.web.kind==="privacy"?t("privacy"):t("terms")}</div><div class="skel" style="height:12px;background:#ddd;margin:8px 0"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:90%"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:80%"></div><div style="color:#666;font-size:12px;margin-top:14px">${t("webNote")}</div><a data-k="webdelete" style="display:block;margin-top:14px;color:#2563eb;text-decoration:underline;cursor:pointer" onclick="S.web=null;S.flow={kind:'webdelete',type:'phone',val:'',err:null,step:'entry'};S.stack.push({id:'webDelete'});render()">${t("deleteAcc")}: ${webBase()}/${S.lang}/account/delete</a></div></div>`;
   }
   if(S.sheet){
-    const s=S.sheet;let c="";
-    if(s.t==="chg")c=`<div class="b" style="font-size:18px;margin-bottom:6px">${t("chgWarnT",{x:t(s.type==="phone"?"chgWarnX":"chgWarnY")})}</div><div class="mute" style="margin-bottom:14px">${t("chgWarnD")}</div><div style="display:grid;gap:8px">${btn(t("contin"),`S.sheet=null;startMethod('change','${s.type}')`)}${btn(t("cancel"),"S.sheet=null;render()","out")}</div>`;
-    o+=`<div class="dim" onclick="S.sheet=null;render()"></div><div class="sheet">${c}</div>`;
+    const s=S.sheet;
+    o+=`<div class="dim" onclick="S.sheet=null;render()"></div><div class="sheet" style="padding:20px 16px"><div class="b" style="font-size:19px;margin-bottom:6px">${t("chgWarnT",{x:t(s.type==="phone"?"chgWarnX":"chgWarnY")})}</div><div class="mute" style="margin-bottom:16px">${t("chgWarnD")}</div><div style="display:grid;gap:8px">${btn(t("contin"),`S.sheet=null;startMethod('change','${s.type}')`,"brand",false,"sheetcontinue")}${btn(t("cancel"),"S.sheet=null;render()","out",false,"sheetcancel")}</div></div>`;
   }
   if(S.picker){
-    const k=S.picker;const items=k==="lang"?[["en","English"],["ru","Русский"],["tk","Türkmen"]]:[["light",t("light")],["dark",t("dark")],["system",t("system")]];
-    const cur=k==="lang"?S.lang:S.theme;
-    o+=`<div class="dim" onclick="S.picker=null;render()"></div><div class="sheet"><div class="b" style="font-size:18px;margin-bottom:6px">${t(k==="lang"?"language":"theme")}</div>${items.map(([v,l])=>`<div class="row" style="padding-left:0" onclick="${k==="lang"?"S.lang":"S.theme"}='${v}';S.picker=null;render()"><div class="l">${l}</div><span>${cur===v?"●":"○"}</span></div>`).join("")}</div>`;
+    const k=S.picker;
+    o+=`<div class="dim" onclick="S.picker=null;render()"></div><div class="sheet"><div class="hd"><div class="tt">${t(k==="lang"?"language":"theme")}</div><button class="ib" aria-label="Close" data-k="pickclose" onclick="S.picker=null;render()">${icon("x")}</button></div>${list(pickRows(k),"plain")}</div>`;
   }
   if(S.dlg){
     const d=S.dlg;let c="";
-    if(d==="logout")c=`<div class="b" style="font-size:18px">${t("logoutT")}</div><div class="mute" style="margin:6px 0 14px">${t("logoutD")}</div><div style="display:flex;gap:8px">${btn(t("cancel"),"S.dlg=null;render()","out")}${btn(t("logout"),"doLogout()")}</div>`;
-    if(d==="delete")c=`<div class="b" style="font-size:18px">${t("delConfT")}</div><div class="mute" style="margin:6px 0 14px">${t("delConfD",{d:t("delDate")})}</div><div style="display:flex;gap:8px">${btn(t("cancel"),"S.dlg=null;render()","out")}${btn(t("delDo"),"doDelete()","dest")}</div>`;
-    if(d==="restore")c=`<div class="b" style="font-size:18px">${t("restT")}</div><div class="mute" style="margin:6px 0 14px">${t("restD",{d:t("delDate")})}</div><div style="display:flex;gap:8px">${btn(t("cancel"),"restoreCancel()","out")}${btn(t("restDo"),"restore()")}</div>`;
-    o+=`<div class="dim"></div><div class="dlg">${c}</div>`;
+    const two=(a,b)=>`<div style="display:flex;gap:8px">${a}${b}</div>`;
+    if(d==="logout")c=`<div class="b" style="font-size:18px">${t("logoutT")}</div><div class="mute" style="margin:6px 0 16px">${t("logoutD")}</div>`+two(btn(t("cancel"),"S.dlg=null;render()","out",false,"dlgcancel"),btn(t("logout"),"doLogout()","brand",false,"dlgok"));
+    if(d==="delete")c=`<div class="b" style="font-size:18px">${t("delConfT")}</div><div class="mute" style="margin:6px 0 16px">${t("delConfD",{d:t("delDate")})}</div>`+two(btn(t("cancel"),"S.dlg=null;render()","out",false,"dlgcancel"),btn(t("delDo"),"doDelete()","dest",false,"dlgok"));
+    if(d==="restore")c=`<div class="b" style="font-size:18px">${t("restT")}</div><div class="mute" style="margin:6px 0 16px">${t("restD",{d:t("delDate")})}</div>`+two(btn(t("cancel"),"restoreCancel()","out",false,"dlgcancel"),btn(t("restDo"),"restore()","brand",false,"dlgok"));
+    o+=`<div class="dim"></div><div class="dlg" data-dlg="${d}">${c}</div>`;
   }
   if(S.toast)o+=`<div class="toast">${S.toast}</div>`;
   return o;
 }
 function tabbar(){
-  const items=[["search","🔍","tabSearch"],["favorites","♡","tabFav"],["sell","＋","tabSell"],["messages","💬","tabMsg"],["cabinet","👤","tabCab"]];
-  return `<div class="tabbar">${items.map(([k,i,l])=>`<button class="${S.tab===k?"on":""}" onclick="switchTab('${k}')"><i>${i}</i>${t(l)}</button>`).join("")}</div>`;
+  const items=[["search","search","tabSearch"],["favorites","heart","tabFav"],["sell","plus","tabSell"],["messages","chat","tabMsg"],["cabinet","user","tabCab"]];
+  return `<div class="tabbar">${items.map(([k,i,l])=>`<button class="${S.tab===k?"on":""}" data-k="tabbar-${k}" onclick="switchTab('${k}')">${icon(i,22)}${t(l)}</button>`).join("")}</div>`;
 }
 
 /* ───────────── render ───────────── */
-function currentScreen(){
-  const id=topScreen().id;
-  return ({cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listingsStub:listingsStubScreen,support:supportScreen}[id]||(()=>tabStub(id)))();
-}
+const SCREENS={cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,pick:pickScreen,about:aboutScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listings:listingsScreen,support:supportScreen};
+function currentScreen(){const id=topScreen().id;return (SCREENS[id]||(()=>tabStub(id)))();}
 function renderPhone(){
   const id=topScreen().id;const tabs=isTab(id);
   const dark=S.theme==="dark"||(S.theme==="system"&&S.os);
@@ -537,47 +621,80 @@ function renderPhone(){
 }
 function render(){renderPhone();panel();switcher();}
 
-/* ───────────── decisions (variants) ───────────── */
+/* ───────────── decisions. Every option is a proposal; "rec" is a recommendation, never an approval ───────────── */
+const menuHome=()=>S.v.set==="B"?"settings":"cabinet";
+const acctHome=()=>S.v.acct==="A"?"profile":menuHome();
 const DEC={
- cab:{name:"Cabinet layout",ref:"KZ-27-003, KZ-35-001 (Kolesa cabinet); AR-41-004 (Auto.ru menu); AR-44-001",rec:"B",screen:()=>{S.acct=signed()?S.acct:"both";reset("cabinet");},
-  opts:{A:["Identity card + My listings","Today, refined: one identity card (taps into Profile), a My listings row, a List a car button. The separate Settings screen stays. Layout is pending founder review."],
-        B:["Kolesa-style cabinet","Profile row, then the phone and email rows right on Cabinet (verified ticks, “Add” when missing), then My listings split into Active / Drafts / Sold / Archived with counts, then List a car. Shows both Sign-in Methods without opening Profile. Needs per-status counts (the My listings screen already groups by status)."]
-        }},
- entry:{name:"Sign-in entry (approved)",ref:"#353 founder feedback 2026-10-02: D2=A Phone | Email tabs",locked:true,rec:"A",screen:()=>{openAs("out");startSignIn();},
-  opts:{A:["Phone | Email tabs", "Founder approved. Both methods use a code and open the same User; no password or social sign-in."]}},
- sell:{name:"Sell entry (approved rule)",ref:"ADR-0056 Choosing the contact phone and Enforcement: email-only Users sell inside the wizard without an account phone",locked:true,rec:"A",screen:()=>{openAs("email");reset("sell");},
-  opts:{A:["Enter Sell without an account-phone gate", "Every Listing needs a verified contact phone inside the wizard. The #354 prototype owns the wizard design."]}},
- set:{name:"Settings structure",ref:"AR-41-004, AR-42-001 (drill-down menu rows); KZ-35-001, KZ-38-001 (Kolesa settings with values); today settings.tsx",rec:"A",screen:()=>{S.acct=signed()?S.acct:"both";reset("cabinet");push("settings");},
-  opts:{A:["Inline controls (today)","Language and theme are three-way segmented controls shown on the page: one tap to change, no sub-screens. Three options each, so it fits."],
-        B:["Drill-down rows","Rows show the current value (“Language  English ›”) and open a bottom sheet to pick. Matches Auto.ru/Kolesa, but every change is two taps."]}},
- chg:{name:"Warning before Change",ref:"KZ-32-003 (“After changing the phone you must use the new number”); ADR-0054 (old value freed immediately)",rec:"B",screen:()=>{openAs("both","profile");if(S.v.chg==="B"){S.sheet={t:"chg",type:"phone"};render();}else startMethod("change","phone");},
-  opts:{A:["Straight to the new value (today)","Tapping Change opens the new-value screen; the helper line already says the old value stops working."],
-        B:["Confirm sheet first","A short sheet says the old value stops opening the account and listings/chats stay. One extra tap on a rare action, and it prevents a lockout surprise."]}},
- taken:{name:"Value already used by another User",ref:"ADR-0054 (refused after the code is confirmed, SIGN_IN_METHOD_TAKEN, never merged); #388",rec:"A",screen:()=>{openAs("phone","profile");S.outcome="taken";startMethod("add","email");},
-  opts:{A:["Refuse and offer another value","Plain explanation plus “Use a different email/number”. States that accounts are never merged. Nothing that looks like a merge offer (#388)."],
-        B:["Also: sign out and use that account","Adds a second button that signs the User out and opens sign-in, so they can switch to the other account. Helpful, but it can read as a merge path and loses the current session."]}},
- del:{name:"Delete account confirmation",ref:"ADR-0032 Decision 1 and ADR-0054 Deletion: in-app DELETE /me unchanged; web deletion confirms a code",rec:"A",screen:()=>{openAs("both","settings");push("delete");},
-  opts:{A:["Checkbox + dialog", "Proposed copy and checkbox are pending founder review. In-app deletion uses the authenticated session, with no additional OTP."]}},
+ set:{name:"Settings structure",ref:"AR-41-004 (Auto.ru menu list); #344 screen catalogue (separate Settings)",rec:"A",conflict:"A",go:()=>{openAs(signed()?S.acct:"both",menuHome());},
+  why:"The founder asked for Auto.ru-style settings. Auto.ru has no Settings screen: the rows sit in the menu itself.",
+  opts:{A:["Cabinet is the menu","Profile row, My listings, then the plain rows (Notifications, Language, Theme, Help, Terms, Privacy, Posting rules, About) on Cabinet. One tap fewer, and identical signed out. CONFLICT: #344's approved catalogue lists Settings as its own screen; choosing A removes that screen."],
+        B:["Gear opens a Settings screen","As #344 approved. Cabinet shows only the Profile row and My listings; the same plain rows live one level down behind the gear. Signed-out Cabinet is then almost empty."]}},
+ list:{name:"My listings entry",ref:"AR-50-002, AR-50-056 (Auto.ru keeps own listings on the Sell tab); KZ-27-003, KZ-51-005 (Kolesa status rows); apps/mobile/app/(tabs)/services.tsx, sell.tsx",rec:"A",conflict:"C",go:()=>{openAs(signed()?S.acct:"both");if(S.v.list==="C")switchTab("sell");},
+  why:"One row keeps Cabinet minimal and matches the #344 map; statuses belong inside My listings (#354). Sell already links to My listings in today's app, which gives Auto.ru's path too.",
+  opts:{A:["One row with a total","“My listings  5 ›”. Statuses are tabs inside My listings. The number needs a small count endpoint (none exists today), or the row ships without a number."],
+        B:["One row plus Drafts when any","Adds a quiet “Drafts  1 ›” row only when a draft exists, so an unfinished Listing is one tap away."],
+        C:["Sell tab owns listings (Auto.ru literal)","No listings row on Cabinet. The Sell tab becomes My listings with “List a car” on top. CONFLICT: #344 places My listings under Cabinet, and this redesigns the Sell tab that #354 owns."],
+        D:["Status rows on Cabinet (rejected version)","Active / Drafts / Archive rows with counts on Cabinet. Kept only for comparison; the founder rejected this busier layout."]}},
+ groups:{name:"Status groups inside My listings",ref:"apps/api/src/modules/listings/domain/ListingStatus.ts; apps/mobile/app/listings/manage.tsx; KZ-27-003 (On site / In archive)",rec:"A",go:()=>{openAs(signed()?S.acct:"both");openListings();},
+  why:"Only active, sold, archived and banned exist in the API, plus server drafts. Sold and archived are both closed Listings, so one Archive group with a Sold label is enough.",
+  opts:{A:["Active · Drafts · Archive","Sold folds into Archive and keeps a “Sold” label. No Under review or Rejected tabs, because publishing goes straight to active. A blocked Listing stays visible with a “Blocked” label."],
+        B:["Active · Sold · Archived · Drafts","Today's four tabs (manage.tsx). Nothing to build, but two tabs hold closed Listings."],
+        C:["Active · Archive","Two groups as Kolesa. Drafts are not a tab; they continue from the Sell tab."]}},
+ sellbtn:{name:"“List a car” on Cabinet",ref:"AR-41-004 (no post action in the menu); KZ-27-003 (primary button in Cabinet); five tabs with Sell (#344)",rec:"A",go:()=>{openAs(signed()?S.acct:"both");},
+  why:"The Sell tab is always one tap away in the tab bar. A second entry on Cabinet repeats it.",
+  opts:{A:["None, the Sell tab is the entry","Cabinet has no selling action."],
+        B:["Plain row under My listings","A quiet “List a car” row that switches to the Sell tab."]}},
+ pick:{name:"Language and Theme picker",ref:"AR-42-002 (theme bottom sheet with three options); today settings.tsx (inline segmented controls)",rec:"A",go:()=>{openAs(signed()?S.acct:"both",menuHome());openPick("theme");},
+  why:"Auto.ru opens a sheet over the menu. Three options fit a sheet, and the menu stays in view.",
+  opts:{A:["Bottom sheet","The row shows the current value; tapping opens a sheet with three options and a radio mark."],
+        B:["Full screen","The row opens a plain pick screen with a back arrow."]}},
+ acct:{name:"Where Log out and Delete account live",ref:"#344 (Settings holds Log out and Delete account); AR-43-004 (Auto.ru profile, ⋯ not opened in the captures); KZ-48 (delete under profile settings)",rec:"A",conflict:"A",go:()=>{openAs("both",acctHome());},
+  why:"They are account actions, so they sit with the account. The menu then stays the same signed in and signed out, and Delete is not next to everyday rows. The Auto.ru captures do not show where it puts them.",
+  opts:{A:["Bottom of Profile","Two quiet rows under Sign-in Methods. CONFLICT: #344 lists Log out and Delete account under Settings."],
+        B:["End of the menu","Two rows after About, on Cabinet (or on Settings when the gear option is chosen). Matches #344."]}},
+ chg:{name:"Warning before Change",ref:"KZ-32-003; ADR-0054 (old value freed immediately)",rec:"B",go:()=>{openAs("both","profile");if(S.v.chg==="B"){S.sheet={t:"chg",type:"phone"};render();}else startMethod("change","phone");},
+  why:"Changing a Sign-in Method is rare and locks out the old value at once; one sheet prevents a surprise.",
+  opts:{A:["Straight to the new value","Tapping the row opens the new-value screen; its helper line says the old value stops working."],
+        B:["Confirm sheet first","A short sheet says the old value stops opening the account; Listings and chats stay."]}},
+ taken:{name:"Value already used by another User",ref:"ADR-0054 (refused after the code is confirmed, never merged); #388",rec:"A",go:()=>{openAs("phone","profile");codeFlow("add","email");S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"taken"}];render();},
+  why:"A second button can read as a merge path and drops the current session.",
+  opts:{A:["Refuse and offer another value","Plain explanation and one button. States that accounts are never merged."],
+        B:["Also: sign out and use that account","Adds a second button that signs out and opens sign-in."]}},
 };
 const DKEYS=Object.keys(DEC);
-function setV(k,o){if(!DEC[k].opts[o])return;S.v[k]=o;S.dec=k;DEC[k].screen();}
+function setV(k,o){if(!DEC[k].opts[o])return;S.v[k]=o;S.dec=k;DEC[k].go();}
 function cycle(d){const k=S.dec,ks=Object.keys(DEC[k].opts),i=(ks.indexOf(S.v[k])+d+ks.length)%ks.length;setV(k,ks[i]);}
-function nextDec(){const i=(DKEYS.indexOf(S.dec)+1)%DKEYS.length;S.dec=DKEYS[i];DEC[S.dec].screen();}
+function nextDec(){const i=(DKEYS.indexOf(S.dec)+1)%DKEYS.length;S.dec=DKEYS[i];DEC[S.dec].go();}
 document.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;if(e.key==="ArrowLeft")cycle(-1);if(e.key==="ArrowRight")cycle(1);});
 function switcher(){
   const d=DEC[S.dec],o=d.opts[S.v[S.dec]];
-  document.getElementById("switcher").innerHTML=`<button onclick="cycle(-1)">←</button><span class="lbl">D${DKEYS.indexOf(S.dec)+1} ${d.name}: ${S.v[S.dec]} — ${o[0]}${d.locked?" (approved)":d.rec===S.v[S.dec]?" ★ pending review":" pending review"}</span><button onclick="cycle(1)">→</button><button onclick="nextDec()">next decision ▸</button>`;
+  document.getElementById("switcher").innerHTML=`<button onclick="cycle(-1)">←</button><span class="lbl">D${DKEYS.indexOf(S.dec)+1} ${d.name}: ${S.v[S.dec]} — ${o[0]}${d.rec===S.v[S.dec]?" ★ recommended":""}</span><button onclick="cycle(1)">→</button><button onclick="nextDec()">next decision ▸</button>`;
 }
 
 /* ───────────── jumps (every state is one click) ───────────── */
 const J=[];const grp=n=>J.push({g:n});const jp=(l,f)=>J.push({l,f});
-const openAs=(acct,id)=>{S.toast=null;S.phone=S.phone||"+993 61 00-00-00";S.email=S.email||"name@example.com";S.acct=acct;S.savedAccount=acct==="out"?null:mockAccount();S.deletedAccount=S.restoreAccount=null;S.data="ok";S.flow=null;S.outcome=S.req=S.delOut="ok";S.delChecked=S.delFailed=S.deletionPending=false;S.sheet=S.dlg=S.web=S.picker=null;reset("cabinet");if(id&&id!=="cabinet")push(id);};
+const openAs=(acct,id)=>{S.toast=null;S.phone=S.phone||"+993 61 00-00-00";S.email=S.email||"name@example.com";S.acct=acct;S.savedAccount=acct==="out"?null:mockAccount();S.deletedAccount=S.restoreAccount=null;S.data="ok";S.flow=null;S.outcome=S.req=S.delOut="ok";S.delChecked=S.delFailed=S.deletionPending=false;S.sheet=S.dlg=S.web=S.picker=null;S.histories={};reset("cabinet");if(id&&id!=="cabinet")push(id);};
 const codeFlow=(kind,type,extra={})=>{S.flow=Object.assign({kind,type,val:type==="phone"?"60 00-00-00":"name@example.com",err:null,code:"",cerr:null,sec:15,resends:0,step:"code",back:[{id:"cabinet"},{id:"profile"}]},extra);};
 grp("Cabinet");
 jp("Signed out",()=>openAs("out"));jp("Phone only",()=>openAs("phone"));jp("Email only",()=>openAs("email"));jp("Phone + email",()=>openAs("both"));
 jp("Loading",()=>{openAs("both");S.data="loading";render();});jp("Error",()=>{openAs("both");S.data="error";render();});
+grp("Menu rows");
+jp("Menu: signed out",()=>openAs("out",menuHome()));jp("Menu: signed in",()=>openAs("both",menuHome()));
+jp("Language pick",()=>{openAs("both",menuHome());openPick("lang");});jp("Theme pick",()=>{openAs("both",menuHome());openPick("theme");});
+jp("Notifications",()=>{openAs("both",menuHome());S.notif.os="granted";push("notifs");});jp("Notifications: OS off",()=>{openAs("both",menuHome());S.notif.os="denied";push("notifs");});
+jp("Help: signed out",()=>openAs("out","support"));jp("Help: signed in",()=>openAs("both","support"));
+jp("About",()=>openAs("both","about"));jp("Legal page (web)",()=>{openAs("both",menuHome());openLegal("privacy");});
+grp("Selling entry points (stubs, #354 owns the screens)");
+jp("My listings",()=>{openAs("both");openListings();});
+jp("My listings: drafts",()=>{openAs("both");openListings("drafts");});
+jp("My listings: archive",()=>{openAs("both");openListings(S.v.groups==="B"?"archived":"archive");});
+jp("My listings: sold tab",()=>{openAs("both");openListings("sold");});
+jp("Sell tab: signed in",()=>{openAs("both");switchTab("sell");});
+jp("Sell tab: email-only User",()=>{openAs("email");switchTab("sell");});
+jp("Sell tab: signed out",()=>{openAs("out");switchTab("sell");});
 grp("Sign in");
 jp("Entry",()=>{openAs("out");startSignIn();});
+jp("Entry: email tab",()=>{openAs("out");startSignIn();S.flow.type="email";render();});
 jp("Code sent: phone",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","phone");S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();});
 jp("Code sent: email",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","email");S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();});
 jp("Invalid value",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val="";S.flow.err="invalid";render();});
@@ -585,7 +702,7 @@ jp("Rate limited (request)",()=>{openAs("out");startSignIn();S.flow.step="entry"
 jp("Offline (request)",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val="60 00-00-00";S.flow.err="offline";render();});
 const codeErr=(e,type)=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin",type);S.flow.cerr=e;if(e==="expired")S.flow.sec=0;S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();};
 jp("Wrong code",()=>codeErr("wrong","phone"));jp("Expired code",()=>codeErr("expired","email"));jp("Locked (5 wrong)",()=>codeErr("locked","phone"));
-jp("Daily limit (5 codes)",()=>codeErr("rateDay","phone"));
+jp("Daily limit (Help link)",()=>{codeErr("rateDay","phone");S.flow.sec=0;render();});
 jp("Email not delivered",()=>{codeErr(null,"email");S.flow.sec=0;S.flow.nomail=true;render();});
 jp("Restore prompt (grace)",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","phone");S.deletedAccount={acct:"phone",phone:"+993 60 00-00-00",email:null};S.deletionPending=true;S.flow.code="";S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();});
 grp("Profile and Sign-in Methods");
@@ -599,89 +716,103 @@ jp("Add: expired",()=>{openAs("phone","profile");codeFlow("add","email");S.flow.
 jp("Add: value taken (email)",()=>{openAs("phone","profile");codeFlow("add","email");S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"taken"}];render();});
 jp("Add: value taken (phone)",()=>{openAs("email","profile");codeFlow("add","phone");S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"taken"}];render();});
 jp("Change phone: sheet/entry",()=>{openAs("both","profile");S.v.chg==="B"?(S.sheet={t:"chg",type:"phone"},render()):startMethod("change","phone");});
-grp("Selling");
-jp("Email-only opens Sell",()=>{openAs("email");reset("sell");});
-jp("Phone User opens Sell",()=>{openAs("phone");reset("sell");});
-jp("Signed out opens Sell",()=>{openAs("out");reset("sell");});
-grp("Settings");
-jp("Settings: signed out",()=>openAs("out","settings"));jp("Settings: signed in",()=>openAs("both","settings"));
-jp("Language sheet",()=>{openAs("both","settings");S.picker="lang";render();});
-jp("Notifications",()=>{openAs("both","settings");S.notif.os="granted";push("notifs");});jp("Notifications: OS off",()=>{openAs("both","settings");S.notif.os="denied";push("notifs");});
-jp("Legal page (web)",()=>{openAs("both","settings");openLegal("privacy");});
-grp("Help");
-jp("Contact support: signed out",()=>openAs("out","support"));jp("Contact support: signed in",()=>openAs("both","support"));
+jp("Change email: sheet/entry",()=>{openAs("both","profile");S.v.chg==="B"?(S.sheet={t:"chg",type:"email"},render()):startMethod("change","email");});
 grp("Account");
-jp("Log out dialog",()=>{openAs("both","settings");S.dlg="logout";render();});
-jp("Delete: intro",()=>{openAs("both","settings");push("delete");});
-jp("Delete: confirm dialog",()=>{openAs("both","settings");push("delete");S.delChecked=true;S.dlg="delete";render();});
-jp("Delete: failed",()=>{openAs("both","settings");push("delete");S.delChecked=true;S.delFailed=true;render();});
+jp("Log out dialog",()=>{openAs("both",acctHome());S.dlg="logout";render();});
+jp("Delete: intro",()=>{openAs("both",acctHome());push("delete");});
+jp("Delete: confirm dialog",()=>{openAs("both",acctHome());push("delete");S.delChecked=true;S.dlg="delete";render();});
+jp("Delete: failed",()=>{openAs("both",acctHome());push("delete");S.delChecked=true;S.delFailed=true;render();});
 jp("Delete: scheduled",()=>{openAs("out");push("scheduled");});
 jp("Web deletion page",()=>{openAs("out");S.flow={kind:"webdelete",type:"phone",val:"",err:null,step:"entry"};push("webDelete");});
 jp("Web: code sent",()=>{openAs("out");codeFlow("webdelete","email");S.stack.push({id:"webDelete"});render();});
 jp("Web: done",()=>{openAs("out");S.flow={kind:"webdelete",type:"email",val:"name@example.com",step:"done"};push("webDelete");});
+grp("Other tabs");
+jp("Search stub",()=>{openAs("both");switchTab("search");});jp("Favorites stub",()=>{openAs("both");switchTab("favorites");});jp("Messages stub",()=>{openAs("both");switchTab("messages");});
+
+/* ───────────── panel data ───────────── */
+/* [status or function, API today, mobile today, who triggers, proposal for the release (never decided), where Cabinet references it] */
+const SELLER=[
+ ["Draft","Yes. Server-side <code>ListingDraft</code> table, not a Listing status: <code>POST/PATCH/DELETE /api/v1/listings/drafts</code>, <code>GET /api/v1/me/drafts</code> (DraftsController.ts). No cap on the number of drafts and no expiry found (CreateDraft.ts); drafts are removed on publish, on discard and at account purge (PurgeExpiredAccounts.ts:78). The enum value <code>draft</code> on <code>Listing.status</code> is unused.","Yes. Sell tab shows the latest draft with Continue and New listing (sell.tsx); My listings has a Drafts tab with resume and discard (manage.tsx); the wizard autosaves.","Seller","keep","Inside My listings as the Drafts tab. Option B of “My listings entry” adds a Drafts row on Cabinet only when one exists."],
+ ["Pending review / moderation","No. <code>pending_review</code> is only an enum value (schema.prisma, contracts enums.ts). <code>PublishListing.ts</code> creates the Listing as <code>active</code>. PRD 32: “MLP beta auto-publishes everything”.","No.","Nobody today","defer","None. No “Under review” group."],
+ ["Active","Yes. Created by <code>POST /listings/drafts/:id/publish</code>.","Yes. Active tab, owner bar on Listing detail.","Seller publishes","keep","My listings, first tab."],
+ ["Rejected (reason, edit, resubmit)","No. <code>rejected</code> is only an enum value; the Listing model has no rejection reason field.","No.","Nobody today","defer","None."],
+ ["Sold","Yes. <code>POST /listings/:id/sold</code>, active → sold (ListingStatus.ts, MarkSold.ts). Sold cannot go back to active; only sold → archived. PRD 32 says a sold Listing is auto-archived after 14 days; no such job exists (apps/worker has only PurgeExpiredAccounts). Source and PRD disagree.","Yes. Mark sold on the owner bar; Sold tab (manage.tsx).","Seller","keep","Inside My listings. Proposed to fold into the Archive group with a “Sold” label (decision “Status groups”)."],
+ ["Archived (removed from sale)","Yes. <code>POST /listings/:id/archive</code> from active or sold (ArchiveListing.ts). Also set by account deletion with <code>archivedByDeletion</code> (PrismaAccountDeletionListingsAdapter.ts). No expiry: PRD 32 puts automatic expiry out of scope and no job exists.","Yes. Archive in the owner ⋯ menu; Archived tab.","Seller; account deletion","keep","Inside My listings, Archive tab."],
+ ["Banned","Yes. Admin only, and only from active (admin/application/BanListing.ts); unban returns it to active. Owner edit, sold, archive, republish and delete are refused.","Partly. <code>getOwnerCards</code> returns banned Listings, but manage.tsx filters each tab by active/sold/archived, so a banned Listing appears in no tab. <code>listingStatusLabel</code> shows “unavailable”. PRD 32 says the owner sees a generic ban notice.","Admin","keep","Proposed: stays visible in My listings with a “Blocked” label and no actions. Toggle “Blocked Listing” above to see it. Belongs to #354."],
+ ["Restore / relist","Yes. <code>POST /listings/:id/republish</code>, archived → active only (RepublishListing.ts). ADR-0056 requires a contact-phone check on republish; not implemented.","Yes. Republish in the owner menu of an archived Listing.","Seller; account restore republishes <code>archivedByDeletion</code> Listings","keep","Inside My listings, on Archive cards. A sold Listing has no relist path today."],
+ ["Delete a Listing","Yes. <code>DELETE /listings/:id</code>, soft delete (<code>deletedAt</code>); refused when banned (DeleteListing.ts). Deleted Listings leave the owner list; there is no undo.","Yes. Delete in the owner ⋯ menu.","Seller","keep","None on Cabinet. No “Deleted” group."],
+ ["Edit a live Listing","Yes. <code>PATCH /listings/:id</code>; brand, model, generation, year and VIN are locked (domain/types.ts LOCKED_FIELDS); refused when banned.","Yes. <code>app/listings/[id]/edit.tsx</code>.","Seller","keep","None on Cabinet; reached from a My listings card."],
+ ["Listing contact phone verification (ADR-0056)","No. The schema has only <code>Listing.contactPhone</code>; there is no verified-contact-phone table and no purpose-bound code; publish stores the draft's value unchecked. ADR-0056 is accepted but not built.","No. Step 7 is a free-text field prefilled with the account phone (Step7DescContact.tsx).","Seller, inside the wizard","keep","None on Cabinet, and no account-phone gate. Sell tab stub shows one line. #354 owns the step."],
+ ["View and save counts","Yes. <code>Listing.viewCount</code>, <code>favoriteCount</code>.","Yes, only in the owner status card on Listing detail (ListingDetail.tsx:180). The My listings DTO does not carry them (ListMyListings.ts).","System","keep","None on Cabinet. Not shown on My listings cards."],
+ ["Listing total for the Cabinet row","No. <code>GET /me/listings</code> and <code>/me/drafts</code> are cursor-paginated with no total.","No.","System","keep","The number on the “My listings” row needs a small count endpoint; otherwise the row ships without it."],
+ ["Listing expiry / days left","No. Out of scope in PRD 32.","No.","Nobody","defer","None. Auto.ru shows “60 days until removal” (AR-50-056)."],
+ ["Favorites and Conversations counts","Own tabs; not checked for count endpoints.","Favorites and Messages tabs.","Buyer","hide","None on Cabinet. The tab bar already carries them."],
+];
+const HELP=[
+ ["Menu row “Help”","Cabinet (Settings structure A) or Settings (B), signed in and signed out","Opens the contact screen: Email us, Call us, one line on what to include."],
+ ["Link “Contact support”","Code screen, only when the daily code limit is reached","Sign-in and add/change flows. Not on the web deletion page."],
+];
+const STATES=[
+ ["Cabinet: signed out / phone only / email only / both","Cabinet jumps","apps/mobile/app/(tabs)/services.tsx","exists; layout is a proposal"],
+ ["Cabinet loading / error","Cabinet jumps","services.tsx","exists; skeleton and Retry are new"],
+ ["Menu rows (language, theme, help, legal, about)","Menu rows jumps","apps/mobile/app/settings.tsx (inline segmented controls, no Help, no About)","layout proposal; Help and About rows are new"],
+ ["Language and Theme pick","Menu rows jumps","LocaleSwitcher, ThemeSwitcher","exists as inline controls; sheet or screen is a proposal"],
+ ["Notifications, and OS permission off","Menu rows jumps","none in mobile","new; no category switches"],
+ ["Help / contact screen","Menu rows jumps","none in mobile (#352 D10, #500)","new"],
+ ["My listings (stub)","Selling jumps","apps/mobile/app/listings/manage.tsx","exists with four tabs; grouping is a proposal; #354 owns it"],
+ ["Sell tab (stub)","Selling jumps","apps/mobile/app/(tabs)/sell.tsx","exists; #354 owns it"],
+ ["Sign-in entry, code, errors","Sign in jumps","app/(auth)/phone.tsx, email.tsx, otp.tsx, components/auth/*","exists; locked to Phone | Email tabs"],
+ ["Restore prompt during the 30-day grace","Sign in → Restore prompt","restoreAccount* strings in resources.ts","strings exist; confirm the dialog is wired"],
+ ["Profile: Sign-in Methods","Profile jumps","apps/mobile/app/profile.tsx","exists; role badge, Member since and helper text removed here as a proposal"],
+ ["Add / change a method, value taken","Profile jumps","app/account/add-phone.tsx, add-email.tsx, verify-sign-in-method.tsx","exists; warning sheet is a proposal"],
+ ["Log out, Delete account, scheduled","Account jumps","settings.tsx, app/account/delete.tsx","exists; placement is a proposal; “what happens” list and checkbox are proposals"],
+ ["Web deletion page","Account jumps","apps/web/src/app/[locale]/account/delete/page.tsx","exists locally; deployment is #496"],
+];
 
 /* ───────────── panel ───────────── */
 function seg(items,cur,fn){return `<div class="seg">${items.map(([k,n])=>`<button class="${cur===k?"on":""}" onclick="${fn}('${k}')">${n}</button>`).join("")}</div>`;}
 window.pWeb=k=>{S.webProfile=k;render();};
-window.pAcct=k=>openAs(k);function setAcctReset(){render();}
+window.pAcct=k=>openAs(k);
+window.pName=k=>{S.name=k==="yes"?"Aman":null;render();};
+window.pInv=k=>{S.inv=k;render();};window.pBlocked=k=>{S.blocked=k==="yes";render();};
 window.pLang=k=>{S.lang=k;render();};window.pTheme=k=>{S.theme=k;render();};window.pOs=k=>{S.os=k==="dark";render();};
 window.pOut=k=>{S.outcome=k;render();};window.pReq=k=>{S.req=k;render();};window.pDel=k=>{S.delOut=k;render();};window.pData=k=>{S.data=k;render();};
 window.pDec=(k,o)=>setV(k,o);
-const STATES=[
- ["Cabinet: signed out / phone only / email only / both","Cabinet jumps","apps/mobile/app/(tabs)/services.tsx","exists (A-like); B layout and status counts are proposed"],
- ["Cabinet loading / error","Cabinet jumps","services.tsx (spinner and text only)","exists; skeleton + Retry button new"],
- ["Sign-in entry: phone / email","Sign in → Entry","app/(auth)/phone.tsx, email.tsx, components/auth/AuthEntryScreen.tsx, SignInMethodTabs.tsx","approved Phone | Email tabs only"],
- ["Code entry (sent, countdown, resend)","Sign in → Code sent","components/auth/CodeEntryForm.tsx, app/(auth)/otp.tsx","exists. Phone “expires in 5 minutes” line is new (email 10 min exists)"],
- ["Invalid value","Sign in → Invalid value","phoneFormatError / emailFormatError in resources.ts","exists"],
- ["Rate limited on request / on resend","Sign in → Rate limited","rateLimitedCode in resources.ts","exists; daily 5-code limit copy is new"],
- ["Offline on request / verify","Sign in → Offline","offline in resources.ts","exists"],
- ["Wrong / expired / locked code","Sign in → Wrong, Expired, Locked","src/auth/verifyCodeError.ts","exists (all three)"],
- ["Email not delivered hint","Sign in → Email not delivered","none","new (ADR-0055: bounces fail silently)"],
- ["Restore prompt on sign-in in grace","Sign in → Restore prompt","restoreAccount* strings in resources.ts","strings exist; verify the dialog is wired in app code"],
- ["Profile: phone only / email only / both","Profile jumps","apps/mobile/app/profile.tsx","exists. Listing contact verification belongs inside #354"],
- ["Profile loading / error","Profile loading, error","profile.tsx (LoadingState, ErrorState)","exists"],
- ["Add phone / Add email entry","Profile → Add jumps","app/account/add-phone.tsx, add-email.tsx","exists"],
- ["Add/change: code sent, wrong, expired","Profile → Add: code sent, wrong, expired","app/account/verify-sign-in-method.tsx + CodeEntryForm","exists"],
- ["Value taken by another User","Profile → Add: value taken","SIGN_IN_METHOD_TAKEN → phoneTaken/emailTaken in verifyCodeError.ts","exists (variant A). Variant B button is new"],
- ["Change phone/email (+ warning sheet)","Profile → Change phone","add-phone.tsx (change mode)","exists; warning sheet is proposed (decision D5)"],
- ["Sell entry: email-only and phone Users","Selling jumps","ADR-0056; wizard prototype #354","approved rule; wizard design deferred"],
- ["Settings: language, theme, legal links","Settings jumps","apps/mobile/app/settings.tsx","exists (A). Links must move to autotm.bagtyyar.dev (#496; today hardcodes auto.tm)"],
- ["Language RU/TK/EN, theme light/dark/system","Settings, floating bar, panel","LocaleSwitcher, ThemeSwitcher in apps/mobile/src","exists"],
- ["Notifications settings screen","Settings → Notifications","none in mobile (PRD docs/prd/features/36-notifications.md “Profile → Notifications”)","new. informational OS-permission / per-conversation mute view; no category switches"],
- ["Notifications OS-permission off","Settings → Notifications: OS off","none","new"],
- ["Log out + confirm","Account → Log out dialog","settings.tsx","exists"],
- ["Delete account intro + confirm + scheduled","Account → Delete jumps","apps/mobile/app/account/delete.tsx","exists. “What happens” list and understand checkbox are new"],
- ["Delete failed","Account → Delete: failed","delete.tsx (deleteAccountFailed)","exists"],
- ["Web deletion page (phone or email code)","Account → Web deletion","apps/web/src/app/[locale]/account/delete/page.tsx; local implementation exists, external deployment remains #496","new"],
-];
 function panel(){
-  const d=DEC[S.dec];const cur=S.v[S.dec];
-  let h=`<h1>PROTOTYPE — Cabinet, Profile, Settings and sign-in methods</h1><div class="sm" style="color:#555">Throwaway (issue #353). Everything in the phone is clickable; the jump buttons set up any state in one click. ← → flip the variant of the current decision. Account values and demo codes are made up; the support contacts are founder-approved; type any six digits as a code. Resend countdown is 15 s here (60 s backoff in the product).</div>
-  <h2>Account state</h2>${seg([["out","Signed out"],["phone","Phone only"],["email","Email only"],["both","Phone + email"]],S.acct,"pAcct")}
-  <h2>Language / theme</h2>${seg([["en","EN"],["ru","RU"],["tk","TK"]],S.lang,"pLang")} ${seg([["light","Light"],["dark","Dark"],["system","System"]],S.theme,"pTheme")} <span class="sm">device is</span> ${seg([["light","light"],["dark","dark"]],S.os?"dark":"light","pOs")}
-  <h2>Mock public-web configuration</h2>${seg([["production","Production"],["staging","Staging"]],S.webProfile,"pWeb")}<div class="sm">Prototype setting only; legal and deletion routes use this base. External-network reachability is #496 evidence.</div>
+  let h=`<h1>PROTOTYPE — Cabinet, Profile and Settings, Auto.ru-style</h1><div class="s13" style="color:#555">Throwaway (issue #353, third version). Everything in the phone is clickable; jump buttons set up any state in one click; ← → flip the option of the highlighted decision. Account values are made up; type any six digits as a code. Resend countdown is 15 s here (60 s in the product). Nothing below is approved except the “Locked” list. New RU and TK wording needs founder review.</div>
+  <h2>Account state</h2>${seg([["out","Signed out"],["phone","Phone only"],["email","Email only"],["both","Phone + email"]],S.acct,"pAcct")} &nbsp; Display name ${seg([["no","none"],["yes","“Aman”"]],S.name?"yes":"no","pName")}
+  <div class="s13" style="color:#555;margin-top:4px"><code>User.displayName</code> exists in the schema but nothing sets it (there is no <code>PATCH /me</code>), so most Users have none. The prototype adds no name editor.</div>
+  <h2>Seller inventory (mock)</h2>${seg([["some","2 active, 1 draft, 1 sold, 1 archived"],["none","No listings"]],S.inv,"pInv")} &nbsp; Blocked Listing ${seg([["no","no"],["yes","yes"]],S.blocked?"yes":"no","pBlocked")}
+  <h2>Language / theme</h2>${seg([["en","EN"],["ru","RU"],["tk","TK"]],S.lang,"pLang")} ${seg([["light","Light"],["dark","Dark"],["system","System"]],S.theme,"pTheme")} <span class="s13">device is</span> ${seg([["light","light"],["dark","dark"]],S.os?"dark":"light","pOs")}
   <h2>Next result (one-shot, then back to OK)</h2>
   <div class="q">Code check ${seg([["ok","Accept"],["wrong","Wrong"],["expired","Expired"],["locked","Locked"],["offline","Offline"],["taken","Value taken (add/change)"],["grace","Grace period (sign-in)"]],S.outcome,"pOut")}</div>
   <div class="q">Get code / resend ${seg([["ok","Sent"],["rate","Rate limited"],["rateDay","Daily limit"],["offline","Offline"]],S.req,"pReq")}</div>
-  <div class="q">Delete account ${seg([["ok","Succeeds"],["fail","Fails"]],S.delOut,"pDel")} &nbsp; Data load ${seg([["ok","OK"],["loading","Loading"],["error","Error"]],S.data,"pData")}</div>
+  <div class="q">Delete account ${seg([["ok","Succeeds"],["fail","Fails"]],S.delOut,"pDel")} &nbsp; Data load ${seg([["ok","OK"],["loading","Loading"],["error","Error"]],S.data,"pData")} &nbsp; Web ${seg([["production","Production"],["staging","Staging"]],S.webProfile,"pWeb")}</div>
   <h2>Jump to a state</h2>`;
   J.forEach((j,i)=>{h+=j.g?`<div class="grp">${j.g}</div>`:`<span class="jump" onclick="J[${i}].f()">${j.l}</span>`;});
-  h+=`<h2>Decision D${DKEYS.indexOf(S.dec)+1}: ${d.name}</h2><div class="q sm">Reference: ${d.ref}</div>`;
-  h+=Object.entries(d.opts).map(([k,o])=>`<div class="vdesc" style="${cur===k?"":"opacity:.55"}"><b>${k}. ${o[0]}</b>${d.locked?'<span class="rec">founder approved</span>':d.rec===k?'<span class="rec">recommended, pending review</span>':'<span class="rec">pending review</span>'}<br>${o[1]}</div>`).join("");
-  h+=seg(Object.entries(d.opts).map(([k,o])=>[k,k+" "+o[0]]),cur,`(k=>pDec('${S.dec}',k))`);
-  h+=`<div style="margin-top:8px">${DKEYS.map((k,i)=>`<span class="jump" style="${k===S.dec?"background:#171717;color:#fff":""}" onclick="S.dec='${k}';DEC['${k}'].screen()">D${i+1} ${DEC[k].name}</span>`).join("")}</div>`;
-  h+=`<h2>Conflicts resolved</h2><div class="q sm"><p>D2 B/C removed. <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5937369580">#353 founder feedback</a> approves A, Phone | Email tabs.</p><p>Cabinet C removed. <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5759595278">#344 resolution</a> keeps Cabinet, Profile and separate Settings in the screen catalogue.</p><p>Both account-phone selling gates removed. <a href="../../../adr/0056-listing-contact-phones-are-verified.md">ADR-0056, Enforcement</a> says email-only Users verify a Listing contact phone inside the wizard; no account phone is required. It supersedes PHONE_REQUIRED and ADR-0054's Add a phone Sell step. The contact number can differ from the account phone and never becomes a Sign-in Method. #354 owns wizard design.</p><p>In-app deletion OTP removed. <a href="../../../adr/0054-phone-or-email-sign-in-share-one-user.md">ADR-0054, Deletion</a> keeps DELETE /me unchanged. Codes belong to web deletion. <a href="../../../adr/0032-account-deletion-grace-period.md">ADR-0032, Decision 1–3</a> supplies the 30-day grace, session revocation, archive, explicit recovery prompt and retained counterparty content.</p><p>Legal hosts use autotm.bagtyyar.dev, per <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/322#issuecomment-5936499997">#322 decision and #496</a>. No Share action is present.</p><p>Help is available signed out and signed in. <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/352#issuecomment-5937367553">#352 contact details</a> and <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/500#issuecomment-5937368548">#500 decision</a> provide email and phone using the contact-sheet design. No hours or response promise was supplied. Live support chat is after reviewer release.</p><p>ADR-0054 add/change stays code-confirmed; taken values are refused after confirmation, without account merging or a state mutation. ADR-0055 keeps email code delivery and its 10-minute expiry.</p><p>All surviving layout, Settings controls, Change warning, taken-value recovery buttons, deletion checkbox/copy and notification information view remain proposals pending founder review. Recommendations are not approvals. New RU/TK copy needs native-speaker review.</p></div>`;
-  h+=`<h2>Pending founder review</h2><div class="q sm">• Web deletion confirmation copy is neutral (“If an account uses this phone…”) because ADR-0054 says a code request never reveals whether a value is registered. Wording is proposed; code requests must stay neutral.<br>• Phone codes expire in 5 min, email in 10 (ADR-0054); the phone line is new in the UI.<br>• Display name: not editable in the app today (Kolesa KZ-31 has Edit name). Left out; no ticket asks for it.<br>• Notification category toggles removed: PRD 30 defers preferences and PRD 36 defers the full platform. Message push uses OS permission and per-conversation mute. No reviewer-release Listing activity preference is asserted.<br>• Language switcher stays on the sign-in screen (as today).</div>`;
-  h+=`<details ${S.o1?"open":""} ontoggle="S.o1=this.open"><summary>State inventory: where in the prototype, exists today or new</summary><table><tr><th>State</th><th>Where here</th><th>Today (file)</th><th>Status</th></tr>${STATES.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="${r[3].startsWith("new")?"new":/new|pending|verify/.test(r[3])?"chg":"have"}">${r[3]}</td></tr>`).join("")}</table></details>`;
-  h+=`<details ${S.o2?"open":""} ontoggle="S.o2=this.open"><summary>Reference notes (batches 3 and 4, viewed locally, not copied)</summary><div class="q sm">
-  • AR-41-002/004: Auto.ru “Menu” is a sheet of service tiles (wallet, reports, garage, insurance, credit) above a plain list: notifications, theme, help, licence agreement, privacy, about. Tiles are out of scope (rejected: credit, history reports, garage). The menu reference must keep the separately approved Settings screen; Cabinet C was removed.<br>
-  • AR-43-002: sign-in is a sheet that chooses an account provider; AutoTM has no social sign-in, so the method-first alternative was removed because D2=A is approved.<br>
-  • AR-44-001: profile header is a banner with name and a settings gear; social counters and Garage are out of scope.<br>
-  • AR-40-002: notification settings group by topic with a channel summary under each row; the proposal now explains device permission and per-conversation mute; category switches are deferred.<br>
-  • KZ-27-003 / KZ-35-001: cabinet shows name, the login phone as a row with a chevron, then My listings by status with counts, then the primary post button; settings are grouped Personal data, App settings, Push (variants B and A). Balance, PLUS and car history are out of scope.<br>
-  • KZ-32-003: changing the phone shows a sheet saying the new number must be used to sign in (decision D5).<br>
-  • KZ-48-002: delete screen lists what will be lost and requires an “I understand” checkbox before the red button (decision D7). Kolesa deletes immediately; AutoTM has a 30-day grace (ADR-0032), so the copy says so.<br>
-  • Not opened: AR-42-002..4, AR-43-001/3/5, AR-44-002/3, AR-40-003..8, KZ-28/29 detail, KZ-31, KZ-37, KZ-38, KZ-41..44, KZ-52 (register/login/password flows, edit name, contacts, language, legal pages, onboarding video). KZ-28/29/30/36 are password flows and are rejected for AutoTM.</div></details>`;
+  h+=`<h2>Decisions for the founder (all proposals)</h2>`;
+  DKEYS.forEach((k,i)=>{const d=DEC[k],cur=S.v[k];
+    h+=`<div class="dec ${S.dec===k?"cur":""}"><div class="ttl">D${i+1}. ${d.name}</div>${Object.entries(d.opts).map(([o,x])=>`<div class="opt ${cur===o?"on":""}"><b>${o}. ${x[0]}</b>${d.rec===o?'<span class="tag rec">recommended</span>':""}${d.conflict===o?'<span class="tag conf">conflicts with an approved decision</span>':""}<br>${x[1]}</div>`).join("")}<div class="why" style="margin:6px 0"><b>Why ${d.rec}:</b> ${d.why}</div>${seg(Object.entries(d.opts).map(([o,x])=>[o,o+" "+x[0]]),cur,`(o=>pDec('${k}',o))`)}<div class="xs" style="color:#777;margin-top:5px">Reference: ${d.ref}</div></div>`;});
+  h+=`<h2>Conflicts with approved decisions (founder must resolve)</h2><div class="q">
+  <p><b>D1 option A against #344.</b> The <a href="https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5759595278">#344 resolution</a> lists Cabinet, Profile and Settings as three screens. Auto.ru has no Settings screen, so following it removes one. Option B keeps #344 unchanged.</p>
+  <p><b>D6 option A against #344.</b> The earlier map puts Log out and Delete account under Settings. Option A moves them to Profile. Option B keeps them at the end of the menu.</p>
+  <p><b>D2 option C against #344 and #354.</b> Putting My listings on the Sell tab, as Auto.ru does, moves a screen #344 placed under Cabinet and redesigns the tab #354 owns. Not recommended; shown because it is what the Auto.ru captures actually do.</p>
+  <p><b>#352 D10 is outside this file.</b> It still plans a Support row pinned in Messages and “Need help?” links in Favorites and Messages empty and error states. If Contact support should appear once, that decision needs revisiting in #352.</p>
+  <p><b>#344 wording superseded.</b> #344 says “Selling needs a verified phone”. ADR-0056 replaced that with per-Listing contact-phone verification inside the wizard; this prototype has no account-phone gate.</p></div>`;
+  h+=`<h2>Locked (not reopened here)</h2><div class="q">Phone | Email sign-in tabs, both by code, one User; no password, no social sign-in, no merging or removing methods; add/change only after a code; email trimmed and lowercased. No account-phone gate to sell (ADR-0056). In-app deletion uses the session; web deletion confirms a code; 30-day grace with explicit restore; <code>autotm.bagtyyar.dev/:locale/account/delete</code>. No Share. No notification category switches. Five tabs. Contact details: <code>mailto:bagtyyarkowusow.dev@gmail.com</code>, <code>tel:+99363989404</code>, no hours, no response time, no chat.</div>`;
+  h+=`<h2>Seller functions: what exists and what the release keeps</h2><div class="s13" style="color:#555;margin-bottom:6px">Read from <code>origin/main</code> at 8ed5dcb. “Proposed” is a proposal for the founder, not a decision. Source is current behaviour; the PRD is intent.</div><table><tr><th>Status or function</th><th>API today</th><th>Mobile today</th><th>Who triggers</th><th>Proposed</th><th>Where Cabinet references it</th></tr>${SELLER.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="${r[4]}">${r[4]}</td><td>${r[5]}</td></tr>`).join("")}</table>`;
+  h+=`<h2>Every place Help or Contact support appears (${HELP.length})</h2><table><tr><th>What</th><th>Where</th><th>Notes</th></tr>${HELP.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table><div class="s13" style="color:#555;margin-top:4px">Removed since a051faf: the Contact support card on signed-out and signed-in Cabinet, the card on Settings, and the “AutoTM Support ✓ Official” header.</div>`;
+  h+=`<details ${S.o1?"open":""} ontoggle="S.o1=this.open"><summary>State inventory: where in the prototype, exists today or new</summary><table><tr><th>State</th><th>Where here</th><th>Today (file)</th><th>Status</th></tr>${STATES.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join("")}</table></details>`;
+  h+=`<details ${S.o2?"open":""} ontoggle="S.o2=this.open"><summary>Reference captures viewed for this version (viewed locally, not copied)</summary><div class="q s13">
+  <p><b>AR-41-001..004 (menu).</b> Hamburger on Home opens a “Меню” sheet: first tile “Войти / Авторизация”, service tiles, then seven plain rows with a small grey icon and a hairline divider, no chevrons and no values: notification settings, theme settings, help, licence agreement, privacy policy, recommendation rules, about. Taken: the plain list, the single Help row, sign-in as the first entry. Service tiles are out of scope.</p>
+  <p><b>AR-42-002 (theme).</b> A bottom sheet over the menu with Light, Dark, System and a red radio mark. Taken for D5.</p>
+  <p><b>AR-40-002 (notification settings).</b> A plain screen of rows grouped by topic. Categories are deferred in AutoTM, so only the device state and the system-settings row are shown.</p>
+  <p><b>AR-45-001, AR-46-002 (help).</b> Help is one menu row that opens a support chat. AutoTM has no chat for the release, so the row opens the email and phone screen.</p>
+  <p><b>AR-43-002, AR-43-004, AR-43-005 (auth, signed-in profile).</b> Sign-in is a Yandex ID account sheet (not applicable). The signed-in profile is a banner with avatar, name, a gear and a ⋯ button over social counters and Garage tiles. Taken: avatar and name only. The captures do not show what the gear or ⋯ open, nor where Log out is.</p>
+  <p><b>AR-44-001..003 (first login).</b> Splash, the system notification permission prompt, then Home. Nothing taken.</p>
+  <p><b>AR-50-002, -003, -004, -053..056 (selling).</b> The Sell tab is titled “Объявления” and holds the seller's own listings: a profile icon top right, “+ Добавить”, and per Listing the views, calls, saves, “60 дней до снятия”, Edit and Remove from sale, then paid promotion blocks. No drafts list, status tabs or archive are visible in the captures viewed. AR-50-005..052 (the wizard steps) were not opened.</p>
+  <p><b>KZ-27-003, KZ-51-002, KZ-51-005 (Kolesa, for contrast).</b> Cabinet shows “Мои объявления” with “На сайте” and, once non-empty, “В архиве”, each with a count. Remove from sale asks a reason and moves the Listing to the archive, so sold folds into archive. Taken for D3 option C and the fold in option A.</p>
+  <p><b>Not in the archive:</b> an Auto.ru screen for drafts, an archive or status tabs for own listings, the settings behind the profile gear, Log out, or account deletion.</p></div></details>`;
   document.getElementById("panel").innerHTML=h;
 }
 render();
