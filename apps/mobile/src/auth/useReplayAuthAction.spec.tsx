@@ -77,4 +77,23 @@ describe("useReplayAuthAction", () => {
     expect(stale).not.toHaveBeenCalled();
     expect(fresh).toHaveBeenCalledTimes(1);
   });
+
+  // Ask the seller parks which question was chosen, so the replay needs it.
+  it("hands the replayed action to the callback", () => {
+    const perform = vi.fn();
+    renderHook(() => useReplayAuthAction("ask", LISTING_ID, perform));
+
+    act(() => {
+      useAuthIntentStore.setState({
+        replayAction: { kind: "ask", listingId: LISTING_ID, intent: "seeIt" },
+      });
+    });
+
+    expect(perform).toHaveBeenCalledTimes(1);
+    expect(perform).toHaveBeenCalledWith({
+      kind: "ask",
+      listingId: LISTING_ID,
+      intent: "seeIt",
+    });
+  });
 });

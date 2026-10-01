@@ -69,3 +69,31 @@ vi.mock("@/components/ui/alert-dialog", async () => {
     AlertDialogDescription: shell.TextContainer, AlertDialogFooter: shell.Container };
 });
 vi.mock("@rn-primitives/separator", async () => ({ Root: (await import("react-native")).View }));
+
+// Gesture Handler, Reanimated and Worklets need a native runtime. These
+// adapters keep the component tree, so a spec can render a screen that holds a
+// zoomable image; they do not run gestures, shared values or animations.
+// Pinch, pan and double-tap are proven on a device.
+vi.mock("react-native-gesture-handler", async () => {
+  const { View } = await import("react-native");
+  const builder = (): unknown =>
+    new Proxy(() => undefined, { get: () => builder, apply: () => builder() });
+  return {
+    GestureHandlerRootView: View,
+    GestureDetector: ({ children }: { children: unknown }) => children,
+    Gesture: new Proxy({}, { get: () => builder }),
+  };
+});
+vi.mock("react-native-reanimated", async () => {
+  const { View } = await import("react-native");
+  return {
+    default: { View },
+    useSharedValue: <T,>(value: T) => ({ value }),
+    useAnimatedStyle: () => ({}),
+    withTiming: <T,>(value: T) => value,
+    withSpring: <T,>(value: T) => value,
+  };
+});
+vi.mock("react-native-worklets", () => ({
+  scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
+}));

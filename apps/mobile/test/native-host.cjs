@@ -19,17 +19,30 @@ const Pressable = React.forwardRef(({ children, disabled, accessibilityState, ..
     accessibilityState: { ...accessibilityState, disabled: disabled ?? accessibilityState?.disabled },
   }, typeof children === "function" ? children({ pressed: false }) : children));
 Pressable.displayName = "Pressable";
+const scrollRequests = [];
+const FlatList = React.forwardRef(({ data = [], renderItem, keyExtractor, ...props }, ref) => {
+  React.useImperativeHandle(ref, () => ({
+    scrollToIndex: (args) => scrollRequests.push({ method: "scrollToIndex", ...args }),
+    scrollToOffset: (args) => scrollRequests.push({ method: "scrollToOffset", ...args }),
+  }));
+  return React.createElement("RCTScrollView", props,
+    data.map((item, index) => React.createElement(React.Fragment,
+      { key: keyExtractor?.(item, index) ?? index }, renderItem({ item, index }))));
+});
+FlatList.displayName = "FlatList";
 const flatten = (style) => Array.isArray(style)
   ? Object.assign({}, ...style.map(flatten)) : style || {};
 module.exports = {
   View, Text, Pressable, TextInput: host("TextInput"), Image: host("Image"),
   ScrollView: host("RCTScrollView"), ActivityIndicator: host("ActivityIndicator"),
   Switch: host("RCTSwitch", { accessible: true }),
+  KeyboardAvoidingView: host("KeyboardAvoidingView"),
   Modal: ({ visible = true, children, ...props }) => visible
     ? React.createElement("Modal", props, children) : null,
-  FlatList: ({ data = [], renderItem, keyExtractor, ...props }) => React.createElement("RCTScrollView", props,
-    data.map((item, index) => React.createElement(React.Fragment,
-      { key: keyExtractor?.(item, index) ?? index }, renderItem({ item, index })))),
+  FlatList,
+  // Scroll requests the list received, newest last. Specs read this to prove a
+  // component moved a list; the adapter never scrolls anything itself.
+  scrollRequests,
   Platform: { OS: "ios", select: (options) => options.ios ?? options.native ?? options.default },
   StyleSheet: { create: (styles) => styles, flatten, hairlineWidth: 1,
     absoluteFillObject: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },
