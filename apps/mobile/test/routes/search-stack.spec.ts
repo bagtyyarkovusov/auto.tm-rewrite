@@ -37,7 +37,7 @@ describe("Search tab stack", () => {
   });
 
   it("registers the routes Home opens and the pickers push, Search stubbed until its slice lands", () => {
-    for (const route of ["results", "brands", "models", "search"]) {
+    for (const route of ["results", "brands", "models", "parameters", "search"]) {
       expect(existsSync(resolve(appDir, `(tabs)/(search)/${route}.tsx`))).toBe(true);
     }
     expect(read("(tabs)/(search)/search.tsx")).toContain("<InterimDiscoveryScreen");
