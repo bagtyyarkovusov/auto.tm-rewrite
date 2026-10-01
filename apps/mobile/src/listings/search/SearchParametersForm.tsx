@@ -52,6 +52,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   const { height: screenHeight } = useWindowDimensions();
   const { draft, setField, reset, isValid } = useListingFilters(initial);
   const [priceRangeValid, setPriceRangeValid] = useState(true);
+  const [cityResetVersion, setCityResetVersion] = useState(0);
   const [step, setStep] = useState<DonePickerStep | null>(null);
   const record = useRecentChoicesStore((s) => s.record);
 
@@ -119,7 +120,10 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
           <Text className="min-w-0 flex-1 font-heading text-2xl text-foreground" numberOfLines={1}>
             {t("searchParameters")}
           </Text>
-          <Button variant="ghost" className="h-11 px-3 py-0" onPress={reset} accessibilityLabel={t("reset")}>
+          <Button variant="ghost" className="h-11 px-3 py-0" onPress={() => {
+            reset();
+            setCityResetVersion((version) => version + 1);
+          }} accessibilityLabel={t("reset")}>
             <Text className="text-base font-medium text-primary">{t("reset")}</Text>
           </Button>
         </View>
@@ -130,7 +134,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
           keyboardShouldPersistTaps="handled"
         >
           <ConditionFilterControl value={draft.condition} onChange={(value) => setField("condition", value)} />
-          <CityFilterControl draft={draft} setField={setField} />
+          <CityFilterControl key={cityResetVersion} draft={draft} setField={setField} />
           <PickerRow
             label={t("brand")}
             value={selectedBrand?.name}
