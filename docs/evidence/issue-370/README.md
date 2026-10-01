@@ -48,6 +48,26 @@ Spec states come from the approved release screen map (issue 344 resolution, "Re
 | `44-results-first-load-error-api-down-light.jpg` | Results first load with the API down | Failure state on first load |
 | `45-retry-recovers-count-and-names-after-fix-light.jpg` | After the API is back and Retry is pressed: "12 listings", price range, "Nissan Almera, 2014", "Tejen · Today" all return | The fix below |
 
+## Spec-fix native recheck
+
+Captures `46` through `54` come from the resumed worktree at `109c226`, which includes the preserved red checkpoint `3910760`, production fix `9968e7f` and PRD alignment `6367974`. The same iPhone 17 development build loaded a fresh Metro bundle with `--clear`. This run used disposable Compose project `autotm-370-resume-20261001` on the same isolated ports. API, Metro and that project's containers were stopped after capture.
+
+| File | Fresh native proof |
+|---|---|
+| `46-zero-photo-wide-light.jpg` | Zero photos gives one wide "No photos" frame with no photo count. |
+| `47-one-photo-wide-logo-light.jpg` | One photo gives one wide image with no count; Toyota's chosen-brand logo appears. |
+| `48-two-photo-grid-city-chip-light.jpg` | Two photos give the approved 62%/38% grid and count 2; Turkmenbashi chip and Filters badge 1 appear. |
+| `49-two-photo-grid-logo-city-dark.jpg` | Grid, photo count, chosen-brand logo and city chip in dark appearance. |
+| `50-wide-loading-skeleton-light.jpg` | First-load skeleton has one wide photo block; city/price chips stay visible. |
+| `51-no-match-city-cheapest-before-reset-light.jpg` | No match with city/price chips and Cheapest first before reset. |
+| `52-no-match-reset-keeps-cheapest-light.jpg` | Native Reset filters tap clears both chips and returns 12 Listings while keeping Cheapest first. |
+| `53-sheet-reset-keeps-cheapest-light.jpg` | Native Filters → Reset all → Close clears the city filter and keeps Cheapest first. |
+| `54-zero-photo-wide-dark.jpg` | Zero-photo wide placeholder and restored full feed in dark appearance. |
+
+Fixture disclosure: the uploaded Toyota emblem is a generated ring-and-bar test image, not Toyota artwork. It proves the selected brand's `logoUrl` reaches the existing `CarBrandLogo` and follows theme tint. The two-photo case uses a second media row pointing at the same fixture Hilux image. Only the disposable database and object store changed. The screenshot proves layout and count, not two distinct photographs. Initial routes for filtered states were opened with the app's `autotm://results` deep link; both reset actions used the actual native controls.
+
+The preserved five-file red run at `3910760` failed 11 assertions and passed 55. The same run at `9968e7f` passed all 66. Logs are [red](spec-fix-red.log) and [green](spec-fix-green.log). The [mutation log](spec-fix-mut.log) shows the paused-query predicate and active-only scope each cause one meaningful failure when removed. Native look is exempt from red tests; these captures provide its alternative proof. True offline remains explicitly handed to #345, with no native pass claimed here.
+
 ## Mismatches and defects, stated plainly
 
 1. **True offline state was not captured.** The approved offline state is the paused query shown when the device reports no connection (`fetchStatus === "paused"` with `items.length === 0`, rendered by the rendered test "shows an offline recovery ..."). The simulator has no way to drop connectivity without changing the host network, which was out of bounds. `36` and `44` show the generic failure view (`feed.isError`, "Something went wrong / Retry") produced by killing the API process. The offline copy ("No internet connection. Try again when you are online.") has rendered-test proof only, no simulator screenshot. The true offline capture is explicitly handed to physical Android release-proof issue #345; it remains missing native evidence here.
