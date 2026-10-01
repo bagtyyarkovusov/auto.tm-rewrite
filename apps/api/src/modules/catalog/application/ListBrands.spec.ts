@@ -77,6 +77,7 @@ const fakeLogoStorage: BrandLogoStorage = {
   get: async () => null,
   put: async () => undefined,
   delete: async () => undefined,
+  deleteLogoVersion: async () => undefined,
   publicUrl: (key) => `https://media.example/catalog-assets/${key}`,
 };
 

@@ -19,7 +19,7 @@ const toyota: Brand = {
 
 const brands: BrandLogoRepository = {
   getBrandById: async (id) => (id === "b1" ? toyota : null),
-  setLogoKey: async () => toyota,
+  replaceLogoKey: async () => ({ replaced: true, previousKey: null }),
 };
 
 class FakeStorage implements BrandLogoStorage {
