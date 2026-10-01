@@ -71,16 +71,22 @@ describe(`${MIGRATION} — Testcontainers`, () => {
   it("fails and changes nothing while a Listing still holds reported", async () => {
     await insertListing(db, "reported-1", "reported");
 
-    await expect(db.query(migrationSql)).rejects.toThrow(/invalid input value for enum/);
-    await db.query("ROLLBACK");
+    try {
+      await expect(db.query(migrationSql)).rejects.toThrow(/invalid input value for enum/);
+      await db.query("ROLLBACK");
 
-    expect(await enumLabels(db)).toContain("reported");
-    const row = await db.query<{ status: string }>(
-      `SELECT status::text AS status FROM listings WHERE id = 'reported-1'`,
-    );
-    expect(row.rows[0]?.status).toBe("reported");
-
-    await db.query(`DELETE FROM listings WHERE id = 'reported-1'`);
+      expect(await enumLabels(db)).toContain("reported");
+      const row = await db.query<{ status: string }>(
+        `SELECT status::text AS status FROM listings WHERE id = 'reported-1'`,
+      );
+      expect(row.rows[0]?.status).toBe("reported");
+    } finally {
+      // Runs even when an assertion above fails, so the second case does not
+      // trip over this row and hide the original failure behind an enum-cast error.
+      // ROLLBACK is a no-op outside a transaction and clears an aborted one.
+      await db.query("ROLLBACK");
+      await db.query(`DELETE FROM listings WHERE id = 'reported-1'`);
+    }
   });
 
   it("removes reported, keeps stored statuses and the draft default", async () => {

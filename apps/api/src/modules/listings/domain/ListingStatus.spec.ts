@@ -86,8 +86,22 @@ describe("Listing status parity", () => {
   });
 
   it("drives only statuses that the contract and the database both define", () => {
-    const apiStatuses: ListingStatus[] = ["active", "sold", "archived", "banned"];
-    for (const status of apiStatuses) {
+    // Exhaustive over the domain union: `satisfies Record<ListingStatus, true>`
+    // rejects a missing key and an unknown key, so growing the union fails
+    // typecheck here until this record, and then the contract, follow.
+    const apiStatuses = {
+      active: true,
+      sold: true,
+      archived: true,
+      banned: true,
+    } satisfies Record<ListingStatus, true>;
+
+    // Type-level guard: every domain status must be assignable to the contract enum.
+    const assignableToContract: (status: ListingStatus) => Enums.ListingStatus = (status) =>
+      status;
+    expect(assignableToContract("active")).toBe("active");
+
+    for (const status of Object.keys(apiStatuses)) {
       expect(Object.values(Enums.ListingStatus)).toContain(status);
       expect(prismaListingStatuses()).toContain(status);
     }
