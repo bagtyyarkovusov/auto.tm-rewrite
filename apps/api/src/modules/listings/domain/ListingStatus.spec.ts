@@ -1,5 +1,11 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, it, expect } from "vitest";
-import { canTransition } from "./ListingStatus";
+
+import { Enums } from "@auto-tm/contracts";
+
+import { canTransition, type ListingStatus } from "./ListingStatus";
 
 describe("canTransition", () => {
   it("allows active → sold", () => {
@@ -48,5 +54,56 @@ describe("canTransition", () => {
 
   it("disallows active → banned via canTransition (admin only)", () => {
     expect(canTransition("active", "banned")).toBe(false);
+  });
+});
+
+describe("Listing status parity", () => {
+  // The database enum is the source of truth for stored values. Reading the
+  // schema text needs no generated client, so this runs in the unit lane.
+  const schemaPath = resolve(
+    __dirname,
+    "../../../../../../packages/db/prisma/schema.prisma",
+  );
+
+  function prismaListingStatuses(): string[] {
+    const block = /enum ListingStatus \{([^}]*)\}/.exec(
+      readFileSync(schemaPath, "utf-8"),
+    );
+    const body = block?.[1];
+    if (body === undefined) {
+      throw new Error("enum ListingStatus not found in schema.prisma");
+    }
+    return body
+      .split("\n")
+      .map((line) => line.replace(/\/\/.*$/, "").trim())
+      .filter((line) => line.length > 0);
+  }
+
+  it("lists the same statuses in the Prisma enum and @auto-tm/contracts", () => {
+    expect([...prismaListingStatuses()].sort()).toEqual(
+      Object.values(Enums.ListingStatus).sort(),
+    );
+  });
+
+  it("drives only statuses that the contract and the database both define", () => {
+    // Exhaustive over the domain union: `satisfies Record<ListingStatus, true>`
+    // rejects a missing key and an unknown key, so growing the union fails
+    // typecheck here until this record, and then the contract, follow.
+    const apiStatuses = {
+      active: true,
+      sold: true,
+      archived: true,
+      banned: true,
+    } satisfies Record<ListingStatus, true>;
+
+    // Type-level guard: every domain status must be assignable to the contract enum.
+    const assignableToContract: (status: ListingStatus) => Enums.ListingStatus = (status) =>
+      status;
+    expect(assignableToContract("active")).toBe("active");
+
+    for (const status of Object.keys(apiStatuses)) {
+      expect(Object.values(Enums.ListingStatus)).toContain(status);
+      expect(prismaListingStatuses()).toContain(status);
+    }
   });
 });
