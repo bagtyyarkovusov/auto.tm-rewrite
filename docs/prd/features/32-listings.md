@@ -150,7 +150,6 @@ That is the whole screen. Video is added below the photos only when the video me
 | `active` | Public | Favorite, Message, owner-edit |
 | `sold` | Detail and Favorites only, labelled Sold; never in Home or Results | Closed for contact: no Call, Message, Ask the seller, ♡ or Report; existing Conversations stay readable |
 | `archived` | Owner + admin; a buyer reaching it from Favorites or a link sees it closed, labelled Removed from sale; never in Home or Results | Closed for contact, as `sold`; owner can republish |
-| `reported` | Admin only | Reserved review-hold status; S7 report submission does not auto-transition active listings here |
 | `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact and Messages disabled; existing Conversations stay readable; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
 
 ## Screens / states
@@ -170,7 +169,7 @@ That is the whole screen. Video is added below the photos only when the video me
 | Listing detail | Sold / Removed from sale | Banner on the photo, greyed price; contact, ♡, Ask and Report hidden; "See other Brand Model" link |
 | Listing detail | Deleted, or banned for a buyer | "This listing is no longer available", with Go to Home and Back |
 | Listing detail | Banned, owner | Generic ban notice; admin reasons stay internal |
-| Listing detail | Reported (admin view) | All actions + moderation toolbar |
+| Listing detail | Opened from a report (admin view) | All actions + moderation toolbar |
 | My listings | Empty | "List your first car" CTA |
 | My listings | Has drafts | "Continue draft" pinned at top |
 

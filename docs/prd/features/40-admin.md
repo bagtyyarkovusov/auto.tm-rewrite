@@ -52,8 +52,8 @@ A mobile admin UI would be cramped. Desktop web with shadcn/ui gives the room an
 
 ### Listings moderation
 
-- Full dashboard list page with filters: status (active/sold/reported/banned), region, brand, posted date range
-- S7 report queue is driven by `ContentReport`, not by auto-transitioning listings to `reported`; the `reported` listing-status filter is post-MLP unless a separate review-hold status is shaped
+- Full dashboard list page with filters: status (active/sold/banned), region, brand, posted date range
+- S7 report queue is driven by `ContentReport`, not by a Listing status. The `reported` Listing status was removed from the database (#328, #497); a review-hold status would need a new decision and migration
 - S7 report list rows stay lean but include enough target context for triage: exactly `id`, `status`, `createdAt`, `reason`, `targetType`, `targetId`, and `targetSummary`. `targetSummary` is live-resolved: listing targets use a display title such as year/make/model or listing title when available; user targets use a public display label when available; missing targets use an unavailable/deleted marker while preserving `targetType` + `targetId`. List rows do not include report `details` preview text, reporter identity fields, full target state, counts, actionability flags, or user target role; full details, reporter summary, target state, counts, actionability, and `target.role` are fetched only on report detail where review/action controls need them.
 - S7 report list filters stay limited to `status` + `targetType`; invalid filters or invalid `page`/`pageSize` return `VALIDATION_FAILED`, and the admin UI resets to the default pending queue. The pending queue uses a simple empty state, not dashboard cards or analytics.
 - S7 does not ship a `/listings` admin index or listing search. It only exposes `/listings/:id` as a narrow action page reachable from report detail or by known id.

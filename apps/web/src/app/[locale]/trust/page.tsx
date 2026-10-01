@@ -99,10 +99,10 @@ export default async function TrustPage({
         <p>
           {trustFooterEmailPrefix[pageLocale]}
           <a
-            href="mailto:trust@auto.tm"
+            href="mailto:bagtyyarkowusow.dev@gmail.com"
             className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand-600 hover:decoration-brand-600"
           >
-            trust@auto.tm
+            bagtyyarkowusow.dev@gmail.com
           </a>
           .
         </p>
