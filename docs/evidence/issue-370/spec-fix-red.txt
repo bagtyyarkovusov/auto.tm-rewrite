@@ -42,7 +42,7 @@ react-test-renderer is deprecated. See https://react.dev/warnings/react-test-ren
    × useListingFilters route write-back > clears the filters but keeps the current sort on reset 3ms
      → expected "spy" to be called with arguments: [ { sort: 'price_asc' } ]
 
-Received: 
+Received:
 
   1st spy call:
 
@@ -445,7 +445,7 @@ Error: No instances found with props: {"source":{"uri":"https://files.test/toyot
  FAIL  src/listings/search/useListingFilters.spec.ts > useListingFilters route write-back > clears the filters but keeps the current sort on reset
 AssertionError: expected "spy" to be called with arguments: [ { sort: 'price_asc' } ]
 
-Received: 
+Received:
 
   1st spy call:
 
@@ -460,7 +460,7 @@ Received:
 Number of calls: 1
 
  ❯ src/listings/search/useListingFilters.spec.ts:229:21
-    227| 
+    227|
     228|     expect(onApply).toHaveBeenCalledOnce();
     229|     expect(onApply).toHaveBeenCalledWith({ sort: "price_asc" });
        |                     ^
