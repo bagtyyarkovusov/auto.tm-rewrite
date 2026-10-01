@@ -626,7 +626,7 @@
       "slug": "iž",
       "tier": "C",
       "source": null,
-      "reason": "Non-ASCII slug: the object key would put unencoded characters in logoUrl; revisit once the API encodes logo URLs. No Commons file found."
+      "reason": "No eligible Simple Icons icon or Commons SVG/PNG tagged PD-textlogo/PD-shape selected. File:ИЖ логотип.jpg at revision 1275195737 is CC0, which is outside the Commons licensing rule; File:ИЖ!.JPG at revision 1265979675 is CC BY-SA/GFDL and depicts a tape-recorder mark."
     },
     {
       "slug": "saab",
@@ -679,8 +679,17 @@
     {
       "slug": "москвич",
       "tier": "C",
-      "source": null,
-      "reason": "Non-ASCII slug: the object key would put unencoded characters in logoUrl; revisit once the API encodes logo URLs. A script wordmark tagged PD-textlogo exists (File:Logo of Moskvich.svg)."
+      "source": "commons",
+      "commonsFile": "File:Logo of Moskvich.svg",
+      "pageRevisionId": 1142159688,
+      "sourceUrl": "https://commons.wikimedia.org/w/index.php?title=File%3ALogo%20of%20Moskvich.svg&oldid=1142159688",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Logo_of_Moskvich.svg",
+      "licence": "PD-textlogo",
+      "licenceUrl": "https://commons.wikimedia.org/wiki/Template:PD-textlogo",
+      "trademark": "Moscow Automobile Plant Moskvich; used to identify the vehicle make only",
+      "retrievedAt": "2026-09-30",
+      "sha256Master": "55496e47dbd7d03f0a1b01736dc4bdd3f674ffe005f3886666fe814bf1d73048",
+      "transform": "luminance"
     },
     {
       "slug": "cmc",
@@ -712,8 +721,17 @@
     {
       "slug": "tofaş",
       "tier": "A",
-      "source": null,
-      "reason": "Non-ASCII slug: the object key would put unencoded characters in logoUrl; revisit once the API encodes logo URLs. A wordmark tagged PD-textlogo exists (File:TOFAŞ logo (2019-).svg)."
+      "source": "commons",
+      "commonsFile": "File:TOFAŞ logo (2019-).svg",
+      "pageRevisionId": 800293545,
+      "sourceUrl": "https://commons.wikimedia.org/w/index.php?title=File%3ATOFA%C5%9E%20logo%20%282019-%29.svg&oldid=800293545",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/3/32/TOFA%C5%9E_logo_%282019-%29.svg",
+      "licence": "PD-textlogo",
+      "licenceUrl": "https://commons.wikimedia.org/wiki/Template:PD-textlogo",
+      "trademark": "Tofaş Türk Otomobil Fabrikası A.Ş.; used to identify the vehicle make only",
+      "retrievedAt": "2026-09-30",
+      "sha256Master": "e638737f7d8e33da0c13d4c41d7838c772e0f2aea1db6dc01f90f333d588762e",
+      "transform": "luminance"
     },
     {
       "slug": "liugong",
@@ -1061,7 +1079,7 @@
       "slug": "паз",
       "tier": "C",
       "source": null,
-      "reason": "Non-ASCII slug: the object key would put unencoded characters in logoUrl; revisit once the API encodes logo URLs. No Commons file found."
+      "reason": "No eligible SVG/PNG master selected. Commons File:Павловский автозавод - логотип.jpg at revision 1063728838 is tagged PD-textlogo, but its JPEG master is outside the importer SVG/PNG format rule."
     },
     {
       "slug": "balkancar",

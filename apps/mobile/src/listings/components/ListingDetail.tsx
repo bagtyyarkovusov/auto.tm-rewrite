@@ -1,8 +1,7 @@
-import { ScrollView, View, Pressable } from "react-native";
-import * as Linking from "expo-linking";
-import { Enums } from "@auto-tm/contracts";
+import { useState } from "react";
+import { ScrollView, View, type ScrollViewProps } from "react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-import { ChevronRight, Flag, ShieldCheck } from "lucide-react-native";
+import { ChevronRight, Flag } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { CatalogMaps } from "../detail/useCatalogMaps";
@@ -10,89 +9,70 @@ import {
   closedListingBannerKey,
   isClosedForContact,
 } from "../detail/closedListing";
+import { listingTitle, detailDate } from "../detail/presentation";
 
 import { PhotoGallery } from "./PhotoGallery";
 import { PriceDisplay } from "./PriceDisplay";
 import { SellerBlock } from "./SellerBlock";
-import { OwnerActions } from "./OwnerActions";
-import { InspectionInterestCta } from "./InspectionInterestCta";
 
-import { localeTag, resolveLocale } from "@/src/i18n/resources";
+import { localeTag } from "@/src/i18n/resources";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 
 type ListingDetail = ListingsSchemas.ListingDetail;
-
 interface ListingDetailProps {
   listing: ListingDetail;
   maps: CatalogMaps;
   isOwner?: boolean;
   onReport?: () => void;
-  inspectionInterestEnabled?: boolean;
-  inspectionInterestOpen?: boolean;
-  onInspectionInterestOpenChange?: (open: boolean) => void;
-  /** "See other Brand Model" on a closed Listing. */
   onSeeSimilar?: () => void;
+  onScroll?: ScrollViewProps["onScroll"];
+  onPhotoHeight?: (height: number) => void;
 }
-
-function buildTitle(listing: ListingDetail, maps: CatalogMaps): string {
-  const parts = [
-    listing.year ? String(listing.year) : null,
-    maps.brandName(listing.brandId) ?? listing.brandId,
-    maps.modelName(listing.modelId) ?? listing.modelId,
-    listing.generationId
-      ? maps.generationName(listing.generationId) ?? listing.generationId
-      : null,
-  ].filter(Boolean);
-  return parts.join(" ") || "";
-}
-
 interface SpecItemProps {
   label: string;
   value: string | undefined;
 }
-
 function SpecItem({ label, value }: SpecItemProps) {
   if (!value) return null;
   return (
-    <View className="flex-1 min-w-[45%] gap-1 py-2">
+    <View className="w-1/3 gap-1 py-3 pr-2">
       <Text className="text-xs text-muted-foreground">{label}</Text>
-      <Text className="text-sm font-medium text-foreground">{value}</Text>
+      <Text className="text-sm font-semibold text-foreground">{value}</Text>
     </View>
   );
 }
-
+function SpecRow({ label, value }: SpecItemProps) {
+  if (!value) return null;
+  return (
+    <View className="flex-row gap-3 py-1.5">
+      <Text className="w-2/5 text-sm text-muted-foreground">{label}</Text>
+      <Text className="flex-1 text-sm text-foreground">{value}</Text>
+    </View>
+  );
+}
 export function ListingDetailView({
   listing,
   maps,
   isOwner = false,
   onReport,
-  inspectionInterestEnabled = true,
-  inspectionInterestOpen = false,
-  onInspectionInterestOpenChange,
   onSeeSimilar,
+  onScroll,
+  onPhotoHeight,
 }: ListingDetailProps) {
   const { t, i18n } = useTranslation();
-  const isSold = listing.status === Enums.ListingStatus.Sold;
-  // Buyers see sold/archived Listings as closed for contact; the owner view is unchanged.
-  const isClosedForBuyer = !isOwner && isClosedForContact(listing.status);
-  const closedBannerKey = isClosedForBuyer
-    ? closedListingBannerKey(listing.status)
-    : null;
+  const [expanded, setExpanded] = useState(false);
+  const closed = !isOwner && isClosedForContact(listing.status);
+  const banner = closed ? closedListingBannerKey(listing.status) : null;
   const brandName = maps.brandName(listing.brandId);
   const modelName = maps.modelName(listing.modelId);
-
   const specs: SpecItemProps[] = [
-    { label: t("year"), value: listing.year ? String(listing.year) : undefined },
     {
-      label: t("condition"),
-      value: listing.condition
-        ? t(listing.condition === "new" ? "new" : "used")
-        : undefined,
+      label: t("year"),
+      value: listing.year ? String(listing.year) : undefined,
     },
     {
       label: t("mileage"),
@@ -105,12 +85,6 @@ export function ListingDetailView({
       label: t("transmission"),
       value: listing.transmissionId
         ? maps.transmissionName(listing.transmissionId)
-        : undefined,
-    },
-    {
-      label: t("driveType"),
-      value: listing.driveTypeId
-        ? maps.driveTypeName(listing.driveTypeId)
         : undefined,
     },
     {
@@ -127,8 +101,18 @@ export function ListingDetailView({
           : undefined,
     },
     {
-      label: t("color"),
-      value: listing.colorId ? maps.colorName(listing.colorId) : undefined,
+      label: t("driveType"),
+      value: listing.driveTypeId
+        ? maps.driveTypeName(listing.driveTypeId)
+        : undefined,
+    },
+  ];
+  const rows: SpecItemProps[] = [
+    {
+      label: t("condition"),
+      value: listing.condition
+        ? t(listing.condition === "new" ? "new" : "used")
+        : undefined,
     },
     {
       label: t("bodyType"),
@@ -136,34 +120,44 @@ export function ListingDetailView({
         ? maps.bodyTypeName(listing.bodyTypeId)
         : undefined,
     },
+    {
+      label: t("color"),
+      value: listing.colorId ? maps.colorName(listing.colorId) : undefined,
+    },
     { label: t("vin"), value: listing.vin || undefined },
   ];
-
-  const visibleSpecs = specs.filter((s) => s.value);
-
   return (
-    <ScrollView className="flex-1">
-      <PhotoGallery
-        media={listing.media}
-        banner={closedBannerKey ? t(closedBannerKey) : undefined}
-      />
-
-      <View className="px-5 py-4 gap-3">
-        {/* Title + status */}
-        <View className="gap-2">
-          <View className="flex-row flex-wrap items-start gap-2">
-            <Text className="min-w-0 flex-1 text-2xl font-heading text-foreground" numberOfLines={2}>
-              {buildTitle(listing, maps) || t("listing")}
+    <ScrollView className="flex-1" onScroll={onScroll} scrollEventThrottle={16}>
+      <View
+        onLayout={(event) => onPhotoHeight?.(event.nativeEvent.layout.height)}
+      >
+        <PhotoGallery
+          media={listing.media}
+          banner={banner ? t(banner) : undefined}
+        />
+      </View>
+      <View className="gap-4 px-5 py-5">
+        {isOwner && (
+          <View className="gap-2 rounded-xl bg-muted p-4">
+            <Text className="text-base font-semibold">
+              {t("yourListing")} · {t(listing.status)}
             </Text>
-            {isSold && !isClosedForBuyer && (
-              <Badge variant="secondary" className="shrink-0 px-2 py-0.5">
-                <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
-              </Badge>
-            )}
+            <View className="flex-row gap-4">
+              <Text className="text-sm text-muted-foreground">
+                {t("listingViews", { count: listing.viewCount })}
+              </Text>
+              <Text className="text-sm text-muted-foreground">
+                {t("listingSaves", { count: listing.favoriteCount })}
+              </Text>
+            </View>
           </View>
-        </View>
-
-        {/* Price */}
+        )}
+        <Text
+          className="text-2xl font-heading text-foreground"
+          numberOfLines={2}
+        >
+          {listingTitle(listing, maps) || t("listing")}
+        </Text>
         <PriceDisplay
           displayPriceTmt={listing.displayPriceTmt}
           priceAmount={listing.priceAmount}
@@ -171,161 +165,146 @@ export function ListingDetailView({
           acceptsExchange={listing.acceptsExchange}
           installmentAvailable={listing.installmentAvailable}
           isOwner={isOwner}
-          muted={isClosedForBuyer}
+          muted={closed}
         />
-
-        {isClosedForBuyer && onSeeSimilar && brandName && modelName && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="self-start"
-            onPress={onSeeSimilar}
-          >
-            <Text className="text-sm text-secondary-foreground" numberOfLines={1}>
+        <Text className="text-sm text-muted-foreground">
+          {[
+            detailDate(listing.publishedAt, i18n.language),
+            maps.cityName(listing.cityId),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+        {closed && onSeeSimilar && brandName && modelName && (
+          <Button variant="secondary" size="sm" onPress={onSeeSimilar}>
+            <Text numberOfLines={1}>
               {t("seeOtherBrandModel", { brand: brandName, model: modelName })}
             </Text>
-            <Icon as={ChevronRight} className="size-4 text-secondary-foreground" />
+            <Icon as={ChevronRight} className="size-4" />
           </Button>
         )}
-
-        {visibleSpecs.length > 0 && (
-          <>
-            <Separator className="my-1" />
-            <View className="gap-1">
-              <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("specifications")}
-              </Text>
-              <View className="flex-row flex-wrap">
-                {visibleSpecs.map((spec) => (
-                  <SpecItem key={spec.label} label={spec.label} value={spec.value} />
-                ))}
-              </View>
+        {(specs.some((spec) => spec.value) ||
+          rows.some((row) => row.value)) && (
+          <View className="gap-1">
+            <Separator className="mb-3" />
+            <Text className="text-lg font-semibold">{t("specifications")}</Text>
+            <View className="flex-row flex-wrap">
+              {specs.map((spec) => (
+                <SpecItem key={spec.label} {...spec} />
+              ))}
             </View>
-          </>
+            {rows.map((row) => (
+              <SpecRow key={row.label} {...row} />
+            ))}
+          </View>
         )}
-
         {listing.description && (
-          <>
-            <Separator className="my-1" />
-            <View className="gap-1">
-              <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("description")}
-              </Text>
-              <Text className="text-base text-foreground leading-5">
-                {listing.description}
-              </Text>
-            </View>
-          </>
-        )}
-
-        <Separator className="my-1" />
-
-        {listing.conditionDisclosure && (
-          <>
-            <ConditionDisclosureSection disclosure={listing.conditionDisclosure} />
-            <Separator className="my-1" />
-          </>
-        )}
-
-        <VinHistorySection vin={listing.vin} vinHistory={listing.vinHistory} />
-
-        <Separator className="my-1" />
-
-        {/* Owner actions or seller block */}
-        {isOwner ? (
-          <OwnerActions listingId={listing.id} status={listing.status} />
-        ) : (
-          <SellerBlock
-            cityName={maps.cityName(listing.cityId)}
-            regionName={maps.regionName(listing.regionId)}
-            locationText={listing.locationText}
-            contactPhone={isClosedForBuyer ? undefined : listing.contactPhone}
-            allowCalls={listing.allowCalls && !isClosedForBuyer}
-          />
-        )}
-
-        {/* Report button for non-owner active listings */}
-        {!isOwner && listing.status === Enums.ListingStatus.Active && onReport && (
-          <>
-            <Separator className="my-1" />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start"
-              onPress={onReport}
+          <View className="gap-2">
+            <Separator className="mb-3" />
+            <Text className="text-lg font-semibold">{t("description")}</Text>
+            <Text
+              className="text-base leading-6"
+              numberOfLines={expanded ? undefined : 3}
             >
-              <Icon as={Flag} className="size-4 text-muted-foreground" />
-              <Text className="text-sm text-muted-foreground">{t("report")}</Text>
-            </Button>
-          </>
+              {listing.description}
+            </Text>
+            {!expanded && (
+              <Button
+                variant="link"
+                size="sm"
+                className="self-start px-0"
+                onPress={() => setExpanded(true)}
+              >
+                <Text>{t("detailMore")}</Text>
+              </Button>
+            )}
+          </View>
         )}
-
-        {/* Inspection interest fake-door for active listings */}
-        {listing.status === Enums.ListingStatus.Active && (
-          <>
-            <Separator className="my-1" />
-            <InspectionInterestCta
-              listingId={listing.id}
-              open={inspectionInterestOpen}
-              onOpenChange={onInspectionInterestOpenChange ?? (() => {})}
-              disabled={!inspectionInterestEnabled}
+        {listing.conditionDisclosure && (
+          <View className="gap-3">
+            <Separator />
+            <ConditionDisclosureSection
+              disclosure={listing.conditionDisclosure}
             />
-          </>
+          </View>
         )}
+        {listing.vinHistory?.decoded === true && (
+          <View className="gap-3">
+            <Separator />
+            <VinHistorySection vinHistory={listing.vinHistory} />
+          </View>
+        )}
+        {!isOwner && (
+          <View className="gap-3">
+            <Separator />
+            <SellerBlock
+              seller={listing.seller}
+              cityName={maps.cityName(listing.cityId)}
+              locationText={listing.locationText}
+            />
+          </View>
+        )}
+        {!isOwner && listing.status === "active" && onReport && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onPress={onReport}
+          >
+            <Icon as={Flag} className="size-4 text-muted-foreground" />
+            <Text className="text-muted-foreground">{t("report")}</Text>
+          </Button>
+        )}
+        <Separator />
+        <View className="gap-1 pb-5">
+          <Text className="text-xs text-muted-foreground">
+            {t("publicListingId", { id: listing.publicNumber })}
+          </Text>
+          <View className="flex-row gap-2">
+            <Text className="text-xs text-muted-foreground">
+              {t("detailPublished")}
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              {detailDate(listing.publishedAt, i18n.language)}
+            </Text>
+          </View>
+          <View className="flex-row gap-2">
+            <Text className="text-xs text-muted-foreground">
+              {t("updated")}
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              {detailDate(listing.updatedAt, i18n.language)}
+            </Text>
+          </View>
+        </View>
       </View>
-
-      <TrustInfoLink locale={resolveLocale(i18n.language)} />
-
-      {/* Bottom padding for CTA or scroll breathing room */}
-      <View className="h-4" />
     </ScrollView>
   );
 }
-
 function VinHistorySection({
-  vin,
   vinHistory,
 }: {
-  vin: string | undefined;
-  vinHistory: ListingsSchemas.ListingDetail["vinHistory"];
+  vinHistory: Extract<
+    NonNullable<ListingDetail["vinHistory"]>,
+    { decoded: true }
+  >;
 }) {
   const { t } = useTranslation();
-
   return (
     <View className="gap-1">
-      <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {t("vinHistory")}
-      </Text>
-      <VinHistoryBody vin={vin} vinHistory={vinHistory} />
-    </View>
-  );
-}
-
-function VinHistoryBody({
-  vin,
-  vinHistory,
-}: {
-  vin: string | undefined;
-  vinHistory: ListingsSchemas.ListingDetail["vinHistory"];
-}) {
-  const { t } = useTranslation();
-
-  if (!vin) {
-    return <Text className="text-base text-muted-foreground">{t("vinNotProvided")}</Text>;
-  }
-
-  if (!vinHistory || vinHistory.decoded === false) {
-    return <Text className="text-base text-muted-foreground">{t("vinNotDecoded")}</Text>;
-  }
-
-  return (
-    <View className="gap-1">
-      {vinHistory.brand && <VinHistoryRow label={t("brand")} value={vinHistory.brand} />}
-      {vinHistory.model && <VinHistoryRow label={t("model")} value={vinHistory.model} />}
+      <Text className="text-lg font-semibold">{t("vinHistory")}</Text>
+      {vinHistory.brand && (
+        <VinHistoryRow label={t("brand")} value={vinHistory.brand} />
+      )}
+      {vinHistory.model && (
+        <VinHistoryRow label={t("model")} value={vinHistory.model} />
+      )}
       {vinHistory.year !== undefined && (
         <VinHistoryRow label={t("year")} value={String(vinHistory.year)} />
       )}
-      {vinHistory.bodyType && <VinHistoryRow label={t("bodyType")} value={vinHistory.bodyType} />}
+      {vinHistory.bodyType && (
+        <VinHistoryRow label={t("bodyType")} value={vinHistory.bodyType} />
+      )}
       {vinHistory.engineType && (
         <VinHistoryRow label={t("engineType")} value={vinHistory.engineType} />
       )}
@@ -335,12 +314,14 @@ function VinHistoryBody({
     </View>
   );
 }
-
 function VinHistoryRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row items-start gap-2">
       <Text className="text-base text-foreground">{label}:</Text>
-      <Text className="min-w-0 flex-1 text-base font-medium text-foreground" numberOfLines={1}>
+      <Text
+        className="min-w-0 flex-1 text-base font-medium text-foreground"
+        numberOfLines={1}
+      >
         {value}
       </Text>
     </View>
@@ -374,31 +355,14 @@ function ConditionDisclosureSection({
       </View>
       {disclosure.knownIssuesText && (
         <View className="gap-0.5">
-          <Text className="text-sm text-muted-foreground">{t("knownIssuesText")}</Text>
-          <Text className="text-base text-foreground">{disclosure.knownIssuesText}</Text>
+          <Text className="text-sm text-muted-foreground">
+            {t("knownIssuesText")}
+          </Text>
+          <Text className="text-base text-foreground">
+            {disclosure.knownIssuesText}
+          </Text>
         </View>
       )}
     </View>
-  );
-}
-
-function TrustInfoLink({ locale }: { locale: string }) {
-  const { t } = useTranslation();
-
-  return (
-    <Pressable
-      onPress={() => void Linking.openURL(`https://auto.tm/${locale}/trust`)}
-      className="mx-5 flex-row items-center gap-3 rounded-2xl bg-muted p-3 active:opacity-70"
-      accessibilityRole="button"
-      accessibilityLabel={t("trustInfoTitle")}
-    >
-      <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-        <Icon as={ShieldCheck} className="size-5 text-primary" />
-      </View>
-      <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground" numberOfLines={2}>
-        {t("trustInfoTitle")}
-      </Text>
-      <Icon as={ChevronRight} className="size-5 shrink-0 text-muted-foreground" />
-    </Pressable>
   );
 }

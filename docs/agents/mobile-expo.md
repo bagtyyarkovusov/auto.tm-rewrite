@@ -2,6 +2,8 @@
 
 Use this checklist for any `mobile` issue, Expo SDK package change, Metro failure, Codegen failure, navigation/router change, or Expo Go runtime crash.
 
+For component behavior tests, use the [mobile testing guide](mobile-testing.md).
+
 ## First rule
 
 Do not patch `node_modules`, Codegen, Metro resolution, or native-package entrypoints until Expo's dependency check has run. Expo Go ships native modules at SDK-specific versions; mismatched JavaScript packages can compile and still crash at runtime.

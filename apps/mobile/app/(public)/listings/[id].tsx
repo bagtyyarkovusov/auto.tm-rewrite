@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
@@ -15,19 +14,32 @@ import {
 } from "../../../src/listings/detail/closedListing";
 import { ContactCtaBar } from "../../../src/listings/components/ContactCtaBar";
 import { useViewer } from "../../../src/auth/useViewer";
-import { useReplayAuthAction } from "../../../src/auth/intentStore";
+import {
+  useReplayAuthAction,
+  useAuthIntentStore,
+} from "../../../src/auth/intentStore";
+import { useAuth } from "../../../src/auth/useAuth";
+import { CollapsingHeader } from "../../../src/listings/detail/CollapsingHeader";
+import { OwnerActions } from "../../../src/listings/components/OwnerActions";
+import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { useConfig } from "../../../src/api/admin/useConfig";
 import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
-function DetailSkeleton({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
+function DetailSkeleton({
+  insets,
+}: {
+  insets: ReturnType<typeof useSafeAreaInsets>;
+}) {
   return (
-    <View className="flex-1 bg-background" style={{ paddingBottom: insets.bottom }}>
+    <View
+      className="flex-1 bg-background"
+      style={{ paddingBottom: insets.bottom }}
+    >
       {/* Photo skeleton — full-bleed to top edge */}
       <Skeleton className="h-[260px] w-full rounded-none" />
 
@@ -66,43 +78,44 @@ function DetailSkeleton({ insets }: { insets: ReturnType<typeof useSafeAreaInset
   );
 }
 
-function UnavailableState({ insets }: { insets: ReturnType<typeof useSafeAreaInsets> }) {
+function UnavailableState({
+  insets,
+}: {
+  insets: ReturnType<typeof useSafeAreaInsets>;
+}) {
   const { t } = useTranslation();
   const goBack = useSafeBack();
   return (
-    <View className="flex-1 bg-background items-center justify-center px-6 gap-4" style={{ paddingBottom: insets.bottom }}>
+    <View
+      className="flex-1 bg-background items-center justify-center px-6 gap-4"
+      style={{ paddingBottom: insets.bottom }}
+    >
       <Text className="text-lg font-semibold text-foreground">
         {t("notAvailable")}
       </Text>
-      <Text className="text-center text-sm text-muted-foreground">
-        {t("removedSoldOrArchived")}
-      </Text>
+      <Button size="pill" onPress={() => router.navigate(HOME_HREF)}>
+        <Text>{t("goHome")}</Text>
+      </Button>
       <Button variant="outline" size="pill" onPress={goBack}>
-        <Text>{t("goBack")}</Text>
+        <Text>{t("back")}</Text>
       </Button>
     </View>
   );
 }
 
 export default function ListingDetailScreen() {
-  const { id, inspectionInterest } = useLocalSearchParams<{
-    id: string;
-    inspectionInterest?: string;
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const goBack = useSafeBack();
   const insets = useSafeAreaInsets();
   const { data, isPending, error, refetch } = useListingDetail(id ?? "");
   const viewer = useViewer();
   const { data: config } = useConfig();
   const [reportOpen, setReportOpen] = useState(false);
-  const [interestOpen, setInterestOpen] = useState(false);
-  const interestAutoOpened = useRef(false);
+  const { isAuthenticated } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
+  const [photoHeight, setPhotoHeight] = useState(260);
 
-  const { maps } = useCatalogMaps(
-    data?.brandId,
-    data?.modelId,
-    data?.regionId,
-  );
+  const { maps } = useCatalogMaps(data?.brandId, data?.modelId, data?.regionId);
 
   const isOwner =
     viewer != null && data != null && viewer.userId === data.sellerId;
@@ -111,17 +124,18 @@ export default function ListingDetailScreen() {
   // authentication reopens the report sheet on this same screen.
   useReplayAuthAction("report", id, () => setReportOpen(true));
 
-  useEffect(() => {
-    if (
-      !interestAutoOpened.current &&
-      inspectionInterest &&
-      isOwner &&
-      data?.id
-    ) {
-      interestAutoOpened.current = true;
-      setInterestOpen(true);
+  const handleReport = () => {
+    if (isAuthenticated === false) {
+      useAuthIntentStore
+        .getState()
+        .requireSignIn(router, {
+          returnTo: `/(public)/listings/${id}`,
+          action: { kind: "report", listingId: id },
+        });
+    } else if (isAuthenticated === true) {
+      setReportOpen(true);
     }
-  }, [inspectionInterest, isOwner, data?.id]);
+  };
 
   if (isPending) {
     return <DetailSkeleton insets={insets} />;
@@ -139,7 +153,10 @@ export default function ListingDetailScreen() {
     }
 
     return (
-      <View className="flex-1 bg-background" style={{ paddingBottom: insets.bottom }}>
+      <View
+        className="flex-1 bg-background"
+        style={{ paddingBottom: insets.bottom }}
+      >
         <ErrorState error={error} onRetry={() => refetch()} />
       </View>
     );
@@ -147,20 +164,25 @@ export default function ListingDetailScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Back button — positioned at safe-area top + 8px gap (HIG 44pt touch target) */}
-      <View
-        className="absolute left-4 z-10"
-        style={{ top: insets.top + 8 }}
-      >
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full bg-background/80 h-11 w-11"
-          onPress={goBack}
-        >
-          <Icon as={ArrowLeft} className="size-5 text-foreground" />
-        </Button>
-      </View>
+      <CollapsingHeader
+        listing={data}
+        maps={maps}
+        collapsed={collapsed}
+        topInset={insets.top}
+        onBack={goBack}
+        onReport={
+          config?.reportEntryEnabled !== false ? handleReport : undefined
+        }
+        ownerMenu={
+          isOwner ? (
+            <OwnerActions
+              listingId={data.id}
+              status={data.status}
+              mode="menu"
+            />
+          ) : undefined
+        }
+      />
 
       {/* Main content — bottom safe area only; photo goes full-bleed to top */}
       <View className="flex-1" style={{ paddingBottom: insets.bottom }}>
@@ -169,28 +191,38 @@ export default function ListingDetailScreen() {
           maps={maps}
           isOwner={isOwner}
           onReport={
-            config?.reportEntryEnabled !== false
-              ? () => setReportOpen(true)
-              : undefined
+            config?.reportEntryEnabled !== false ? handleReport : undefined
           }
-          inspectionInterestEnabled={config?.inspectionInterestEnabled !== false}
-          inspectionInterestOpen={interestOpen}
-          onInspectionInterestOpenChange={setInterestOpen}
+          onPhotoHeight={setPhotoHeight}
+          onScroll={(event) =>
+            setCollapsed(event.nativeEvent.contentOffset.y >= photoHeight)
+          }
           onSeeSimilar={() => router.navigate(similarListingsHref(data))}
         />
       </View>
 
       {/* Buyer CTAs only for non-owners on Listings still open for contact */}
       {!isOwner && !isClosedForContact(data.status) && (
-        <View className="border-t border-border" style={{ paddingBottom: insets.bottom }}>
+        <View
+          className="border-t border-border"
+          style={{ paddingBottom: insets.bottom }}
+        >
           <ContactCtaBar
             listingId={data.id}
             contactPhone={data.contactPhone}
             allowCalls={data.allowCalls}
             allowChat={data.allowChat}
             status={data.status}
-            isFavorited={data.isFavorited ?? false}
           />
+        </View>
+      )}
+
+      {isOwner && (
+        <View
+          className="border-t border-border"
+          style={{ paddingBottom: insets.bottom }}
+        >
+          <OwnerActions listingId={data.id} status={data.status} mode="bar" />
         </View>
       )}
 

@@ -134,6 +134,15 @@ describe("computeOps", () => {
 });
 
 describe("buildFieldsPatch", () => {
+  it("rejects an unanswered draft disclosure before it becomes an edit request", () => {
+    expect(() => buildFieldsPatch({ conditionDisclosure: { knownIssuesText: "Rust" } })).toThrow();
+  });
+
+  it.each([true, false])("keeps the explicit Damaged answer %s and clears empty Known issues", (damaged) => {
+    expect(buildFieldsPatch({ conditionDisclosure: { damaged, knownIssuesText: undefined } }))
+      .toEqual({ conditionDisclosure: { damaged } });
+  });
+
   it("omits locked fields", () => {
     const patch = buildFieldsPatch({
       ...basePayload,

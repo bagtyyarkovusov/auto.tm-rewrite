@@ -1,111 +1,82 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
+import { beforeEach, expect, it, vi } from "vitest";
 
-import { describe, it, expect } from "vitest";
+import type * as ClientModule from "../../api/client";
+import { renderMobile, fireEvent, act, routerMock } from "../../../test/render";
 
-const source = readFileSync(
-  resolve(__dirname, "./OwnerActions.tsx"),
-  "utf-8",
+import { OwnerActions } from "./OwnerActions";
+
+const api = vi.hoisted(() => ({ post: vi.fn(), delete: vi.fn() }));
+vi.mock("../../api/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof ClientModule>()),
+  apiClient: api,
+}));
+beforeEach(() => {
+  api.post.mockReset();
+  api.delete.mockReset();
+});
+
+it("keeps Edit and Mark sold in the sticky bar and navigates Edit", () => {
+  const screen = renderMobile(
+    <OwnerActions listingId="listing-373" status="active" mode="bar" />,
+  );
+  fireEvent.press(screen.getByRole("button", { name: "Edit" }));
+  expect(routerMock.push).toHaveBeenCalledWith("/listings/listing-373/edit");
+  expect(screen.getByRole("button", { name: "Mark as sold" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Archive listing" })).toBeNull();
+  screen.rerender(
+    <OwnerActions listingId="listing-373" status="sold" mode="bar" />,
+  );
+  expect(screen.queryByRole("button", { name: "Mark as sold" })).toBeNull();
+});
+it.each(["active", "sold", "archived"] as const)(
+  "puts status-aware lifecycle actions and Share in overflow for %s",
+  (status) => {
+    const screen = renderMobile(
+      <OwnerActions listingId="listing-373" status={status} mode="menu" />,
+    );
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "More options" }));
+    expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Share" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: status === "archived" ? "Republish listing" : "Archive listing",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", {
+        name: status === "archived" ? "Archive listing" : "Republish listing",
+      }),
+    ).toBeNull();
+  },
 );
-
-describe("OwnerActions status-aware rendering", () => {
-  it("shows Mark sold only for active listings", () => {
-    expect(source).toContain('isActive = status === Enums.ListingStatus.Active');
-    expect(source).toContain('t("markAsSold")');
+it("requires confirmation before Mark sold, supports cancel and exposes failure", async () => {
+  api.post.mockRejectedValue(new Error("offline"));
+  const screen = renderMobile(
+    <OwnerActions listingId="listing-373" status="active" mode="bar" />,
+  );
+  fireEvent.press(screen.getByRole("button", { name: "Mark as sold" }));
+  expect(api.post).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText("Cancel"));
+  expect(screen.queryByText("Confirm")).toBeNull();
+  fireEvent.press(screen.getByRole("button", { name: "Mark as sold" }));
+  await act(async () => {
+    fireEvent.press(screen.getByText("Confirm"));
   });
-
-  it("shows Archive for active or sold listings", () => {
-    expect(source).toContain('{(isActive || isSold) && (');
-    expect(source).toContain('t("archiveListing")');
-  });
-
-  it("shows Republish only for archived listings", () => {
-    expect(source).toContain('isArchived = status === Enums.ListingStatus.Archived');
-    expect(source).toContain('t("republishListing")');
-  });
-
-  it("shows Edit for all actionable statuses", () => {
-    expect(source).toContain('t("edit")');
-    expect(source).toContain('router.push(`/listings/${listingId}/edit`)');
-  });
-
-  it("shows Delete for all statuses", () => {
-    expect(source).toContain('t("delete")');
-    expect(source).toContain('variant="destructive"');
-  });
+  expect(api.post).toHaveBeenCalledWith(
+    "/listings/listing-373/sold",
+    {},
+    expect.anything(),
+  );
+  expect(
+    await screen.findByText(
+      "Action failed. Pull down to refresh or try again.",
+    ),
+  ).toBeTruthy();
 });
 
-describe("OwnerActions confirmation flow", () => {
-  it("uses AlertDialog for confirmations", () => {
-    expect(source).toContain("AlertDialog");
-    expect(source).toContain("AlertDialogContent");
-    expect(source).toContain("AlertDialogTitle");
-    expect(source).toContain("AlertDialogDescription");
-    expect(source).toContain("AlertDialogAction");
-    expect(source).toContain("AlertDialogCancel");
-  });
-
-  it("has distinct confirmation copy for each action", () => {
-    expect(source).toContain('t("markAsSold")');
-    expect(source).toContain('t("archiveListing")');
-    expect(source).toContain('t("republishListing")');
-    expect(source).toContain('t("delete")');
-  });
-
-  it("delete confirmation is visually destructive", () => {
-    expect(source).toContain('kind: "delete"');
-    expect(source).toContain('className={\n                confirmAction?.kind === "delete"\n                  ? "bg-destructive"\n                  : undefined\n              }');
-  });
-});
-
-describe("OwnerActions mutation integration", () => {
-  it("calls useMarkSold for mark sold", () => {
-    expect(source).toContain('import { useMarkSold }');
-    expect(source).toContain('markSold.mutate(listingId');
-  });
-
-  it("calls useArchiveListing for archive", () => {
-    expect(source).toContain('import { useArchiveListing }');
-    expect(source).toContain('archive.mutate(listingId');
-  });
-
-  it("calls useRepublishListing for republish", () => {
-    expect(source).toContain('import { useRepublishListing }');
-    expect(source).toContain('republish.mutate(listingId');
-  });
-
-  it("calls useDeleteListing for delete", () => {
-    expect(source).toContain('import { useDeleteListing }');
-    expect(source).toContain('deleteListing.mutate(listingId');
-  });
-
-  it("disables buttons while any mutation is pending", () => {
-    expect(source).toContain("isPending");
-    expect(source).toContain("disabled={isPending}");
-  });
-
-  it("shows error banner on mutation failure", () => {
-    expect(source).toContain("markSold.isError");
-    expect(source).toContain("archive.isError");
-    expect(source).toContain("republish.isError");
-    expect(source).toContain("deleteListing.isError");
-    expect(source).toContain('t("actionFailed")');
-  });
-
-  it("navigates back on successful delete", () => {
-    expect(source).toContain("router.back()");
-    expect(source).toContain("onSuccess: () => {\n            setConfirmAction(null);\n            router.back();\n          }");
-  });
-});
-
-describe("OwnerActions layout", () => {
-  it("uses flex-row flex-wrap for action buttons", () => {
-    expect(source).toContain("flex-row flex-wrap gap-2");
-  });
-
-  it("separates destructive delete action", () => {
-    expect(source).toContain("pt-1");
-    expect(source).toContain('variant="destructive"');
-    expect(source).toContain('className="w-full"');
-  });
-});
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(),
+  deleteItemAsync: vi.fn(),
+}));

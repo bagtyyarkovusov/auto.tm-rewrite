@@ -594,3 +594,23 @@ describe("buildMachineContext", () => {
     expect(ctx.editDetourActive).toBe(true);
   });
 });
+
+describe("legacy Listing edit disclosure", () => {
+  it.each([true, false])("asks for Damaged before save, then accepts answer %s and returns to review", (damaged) => {
+    let state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: null, listingId: "listing-1", mode: "edit", entryStep: "review",
+      payload: { ...completePayload, conditionDisclosure: undefined },
+    });
+    expect(state.currentStep).toBe("specs");
+    expect(buildMachineContext(state)).toMatchObject({
+      canPublish: false, canContinue: false,
+      fieldErrors: { conditionDisclosure: "wizardErrors.damagedRequired" },
+    });
+    state = wizardMachineReducer(state, {
+      type: "UPDATE_FIELDS", updates: { conditionDisclosure: { damaged } },
+    });
+    expect(buildMachineContext(state).canContinue).toBe(true);
+    state = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "review" });
+    expect(buildMachineContext(state).canPublish).toBe(true);
+  });
+});

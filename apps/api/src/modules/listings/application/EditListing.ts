@@ -225,7 +225,8 @@ function mergeConditionDisclosure(
   if (!patch) return existing;
 
   const damaged = patch.damaged ?? existing?.damaged;
-  const knownIssuesText = patch.knownIssuesText ?? existing?.knownIssuesText;
+  // A disclosure patch replaces its optional text; omission clears Known issues.
+  const knownIssuesText = patch.knownIssuesText;
   return {
     ...(damaged !== undefined && { damaged }),
     ...(knownIssuesText !== undefined && { knownIssuesText }),

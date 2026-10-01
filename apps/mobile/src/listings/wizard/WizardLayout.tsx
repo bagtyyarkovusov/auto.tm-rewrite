@@ -238,7 +238,7 @@ function WizardFooter({
         <Button
           variant="default"
           size="pill"
-          className="flex-1"
+          className="w-full"
           onPress={onReturnToReview}
           disabled={primaryDisabled || !onReturnToReview}
         >
@@ -259,7 +259,7 @@ function WizardFooter({
         <Button
           variant="brand"
           size="pill"
-          className="flex-1"
+          className="w-full"
           onPress={onPublish}
           disabled={!canPublish}
         >

@@ -8,7 +8,7 @@ Seed inputs and migrations are operational data. An old data snapshot is not per
 
 ## Brand logos
 
-A Brand may have a logo. `Brand.logoKey` is an object key in the `catalog-assets` MinIO bucket, whose anonymous read policy covers only `brands/*`, laid out as `brands/<slug>/v<epoch-ms>/logo.<png|webp>`. Keys are versioned and immutable, so a replaced logo gets a new URL. `GET /api/v1/catalog/brands` returns `logoUrl` (built from `MINIO_PUBLIC_URL`) only for brands with a key; clients show a letter fallback otherwise.
+A Brand may have a logo. `Brand.logoKey` is an object key in the `catalog-assets` MinIO bucket, whose anonymous read policy covers only `brands/*`, laid out as `brands/<slug>/v<epoch-ms>/logo.<png|webp>`. Keys are versioned and immutable, so a replaced logo gets a new URL. `GET /api/v1/catalog/brands` returns `logoUrl` (built from `MINIO_PUBLIC_URL`, with each object-key path segment URL-encoded) only for brands with a key; clients show a letter fallback otherwise.
 
 Admins (AdminGuard) upload through the ADR-0008 presigned path. `POST /api/v1/admin/catalog/brands/:id/logo/presign` (`{ contentType, sizeBytes }`) returns a PUT URL for private `pending/brands/<slug>/<uuid>` objects and the headers to send, including `Content-Disposition: attachment` as defense in depth. The PUT signature binds the declared byte length; the HTTP transport supplies Content-Length from the exact binary body. `PUT /api/v1/admin/catalog/brands/:id/logo` (`{ key }`) then reads that object back, validates it, stores the logo, and deletes the pending object whether or not it was accepted. `DELETE` on the same path clears the logo.
 
@@ -24,7 +24,7 @@ The provenance rule is part of the catalog contract: a brand logo may come only 
 
 The import refuses a mark whose shorter side is under 10% of the tile, so a broken file or a very thin wordmark cannot be stored. Some accepted marks are still wide wordmarks that read small at 30 px (Simple Icons' Kia, DAF and JCB). Chrysler and IVECO are excluded with `source: null`. To restore the letter fallback for an already-imported logo, use the admin removal action; changing the manifest to `source: null` alone leaves its key unchanged.
 
-Two limits to know. An admin who replaces or removes an imported logo deletes only `logo.png`, so the three `mono@Nx.png` objects stay behind as small orphans. A brand whose slug is not plain ASCII (`iž`, `москвич`, `паз`, `tofaş`) is not imported, because `logoUrl` is built without URL-encoding.
+An admin who replaces or removes an imported logo deletes only `logo.png`, so the three `mono@Nx.png` objects stay behind as small orphans. Safe lowercase Unicode slugs can be imported when a lawful SVG or PNG is selected. Moskvich and Tofaş have pinned Commons PD-textlogo masters; Iž and PAZ keep no selected source because the available candidates fail the existing licence or master-format rule.
 
 ## Search
 
