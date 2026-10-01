@@ -8,6 +8,7 @@ GitHub Actions workflows.
 |---|---|---|---|
 | `ci.yml` | Push to `main` | self-hosted (`tm-proxy`) | lane choice → disposable test services → install → glossary check → lane tests → db generate and migrate → MinIO buckets → lint → typecheck → `pnpm test` → `pnpm build` → service cleanup. Docs-only pushes stop after the docs checks |
 | `pr-checks.yml` | Pull request to `main` | self-hosted (`tm-proxy`) | lane choice → disposable test services → install → glossary check → lane tests → db generate and migrate → MinIO buckets → lint → typecheck → `pnpm test` → service cleanup. Docs-only pull requests stop after the docs checks; a new push cancels the older run |
+| `pr-checks-hosted-trial.yml` | Pull request to `main`, manual dispatch | GitHub-hosted (`ubuntu-latest`) | Non-required trial copy of `pr-checks.yml` (job `pr-hosted-trial`) with the same steps, using `actions/setup-node` pnpm caching instead of the local store. Measures hosted-runner timings only |
 | `bundle.yml` | Tag push `v*` | self-hosted (`tm-proxy`) | `make bundle TAG=<tag>`, uploads `images/auto-tm-<tag>.tar.gz` as a workflow artifact (90-day retention) |
 
 ### Lanes and cancellation
@@ -19,6 +20,23 @@ One runner serves every job, so both workflows avoid work that cannot change the
 - **Fail-safe.** Every skipped step is guarded by `lane != 'docs'`, so an empty change or an unreadable base commit runs the full pipeline, and a failed lane step fails the job. The lane rule is tested by `pnpm test:ci-lane`, which both lanes run.
 - **Required check.** Branch protection requires the `pr` job. Do not add a workflow-level `paths` or `paths-ignore` filter to PR Checks: a pull request whose workflow never starts leaves `pr` pending forever, and auto-merge never fires. Skip steps inside the job instead.
 - **Cleanup on cancel.** The service cleanup step uses `always()`, which also runs when a newer push cancels the run.
+
+### Hosted-runner trial
+
+`pr-checks-hosted-trial.yml` runs the same steps as `pr-checks.yml` on a GitHub-hosted `ubuntu-latest` runner (free for this public repository), so the cost of moving CI gates off the shared Mac can be measured before anyone decides. It differs only where Linux requires it: pnpm and Node come from `pnpm/action-setup` and `actions/setup-node` with `cache: pnpm` (the standard cache keyed on `pnpm-lock.yaml`) instead of the macOS store directory, and Docker and Compose are the runner's built-ins, which `scripts/ci-services.sh` uses unchanged. It has its own concurrency group and a 30-minute timeout.
+
+It is **not a required check**: its job id is `pr-hosted-trial`, not `pr`, branch protection ignores it, and a failure never blocks a merge. The existing `pr` check is untouched. Moving the required gate would need a new ADR amending [ADR-0039](../../docs/adr/0039-phased-cloud-first-hosting.md)'s CI/CD split.
+
+Compare timings for the same pull request with:
+
+```bash
+gh run list --workflow pr-checks-hosted-trial.yml --branch <branch>
+gh run list --workflow pr-checks.yml --branch <branch>
+gh api repos/bagtyyarkovusov/auto.tm-rewrite/actions/runs/<run-id>/jobs \
+  --jq '.jobs[] | {name, runner_name, steps: [.steps[] | {name, conclusion, started_at, completed_at}]}'
+```
+
+Subtract `started_at` from `completed_at` per step. The first hosted run fills the GitHub cache, so compare later runs of the same lockfile. Background and the self-hosted baseline are in [the runner performance research](../../docs/research/github-actions-self-hosted-performance.md).
 
 ### pnpm store
 

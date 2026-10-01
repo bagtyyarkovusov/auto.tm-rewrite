@@ -1,0 +1,112 @@
+name: PR Checks (hosted trial)
+
+# Trial copy of pr-checks.yml on a GitHub-hosted runner, to compare timings
+# with the self-hosted tm-build-mac runner. It is NOT a required check and
+# changes nothing about pr-checks.yml; see .github/workflows/README.md.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Own group, so this trial never cancels or queues behind the real check.
+concurrency:
+  group: pr-checks-hosted-trial-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-hosted-trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Safe unreachable defaults, replaced by the service step with this
+      # run's mapped ports (same as pr-checks.yml).
+      DATABASE_URL: postgresql://auto_tm_ci:auto_tm_ci_pass@127.0.0.1:1/auto_tm_ci
+      REDIS_URL: redis://127.0.0.1:1
+      MINIO_ENDPOINT: http://127.0.0.1:1
+      MINIO_PUBLIC_URL: http://127.0.0.1:1
+
+    steps:
+      # Depth 2 fetches the pull request merge commit and its base parent for
+      # the lane step. A workflow_dispatch run has no merge commit, so the
+      # lane step falls back to the full lane when the parent is unreadable.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # pnpm must be installed before setup-node so `cache: pnpm` can find it.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      # Standard GitHub cache of the pnpm store, keyed on pnpm-lock.yaml.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Choose the CI lane
+        id: lane
+        run: node scripts/ci-lane.mjs HEAD^1
+
+      - name: Start disposable test services
+        if: steps.lane.outputs.lane != 'docs'
+        shell: bash
+        run: bash scripts/ci-services.sh up
+
+      # Diagnostic only, mirrors pr-checks.yml.
+      - name: Report dependency cache state
+        shell: bash
+        continue-on-error: true
+        run: |
+          echo "Node: $(node --version)"
+          echo "pnpm: $(pnpm --version)"
+          echo "docker: $(docker --version)"
+          echo "compose: $(docker compose version --short)"
+          echo "pnpm store: $(pnpm store path --silent)"
+          df -h .
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm check:glossary
+
+      - run: pnpm test:ci-lane
+
+      - name: Docs checks
+        if: steps.lane.outputs.lane == 'docs'
+        run: pnpm test:agent-docs && pnpm test:glossary
+
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm --filter @auto-tm/db generate
+
+      - name: Deploy migrations to the disposable database
+        if: steps.lane.outputs.lane != 'docs'
+        run: pnpm db:migrate:deploy
+
+      - name: Create disposable media buckets
+        if: steps.lane.outputs.lane != 'docs'
+        run: pnpm minio:bootstrap
+
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm lint
+
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm typecheck
+
+      - if: steps.lane.outputs.lane != 'docs'
+        run: pnpm test
+        env:
+          NODE_ENV: test
+          APP_ENV: test
+
+      - name: Show test service logs on failure
+        if: ${{ failure() && steps.lane.outputs.lane != 'docs' }}
+        shell: bash
+        run: bash scripts/ci-services.sh logs
+
+      - name: Remove disposable test services
+        if: ${{ always() && steps.lane.outputs.lane != 'docs' }}
+        shell: bash
+        run: bash scripts/ci-services.sh down
