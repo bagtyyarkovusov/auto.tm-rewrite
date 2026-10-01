@@ -30,13 +30,6 @@ class FakeBrands implements BrandLogoRepository {
     brand.logoKey = logoKey;
     return { replaced: true, previousKey };
   }
-
-  /** Legacy non-atomic write, removed from the port by ADR-0072. */
-  async setLogoKey(id: string, logoKey: string | null): Promise<Brand> {
-    const brand = this.brands.get(id)!;
-    brand.logoKey = logoKey;
-    return brand;
-  }
 }
 
 class FakeStorage implements BrandLogoStorage {

@@ -3,7 +3,18 @@ import { PrismaService } from "@auto-tm/db";
 
 import type { Brand } from "../domain/Brand";
 import type { BrandRepository } from "../domain/ports/BrandRepository";
-import type { BrandLogoRepository } from "../domain/ports/BrandLogoRepository";
+import type {
+  BrandLogoRepository,
+  LogoKeyReplacement,
+} from "../domain/ports/BrandLogoRepository";
+
+/**
+ * Logo mutations hold a brand row lock for the length of one short,
+ * database-only transaction: no storage call ever runs inside it. A timeout
+ * before commit rolls back and surfaces as an exception, which callers treat
+ * as an unknown outcome.
+ */
+const LOGO_TRANSACTION = { maxWait: 5_000, timeout: 5_000 } as const;
 
 @Injectable()
 export class PrismaBrandRepository implements BrandRepository, BrandLogoRepository {
@@ -79,13 +90,26 @@ export class PrismaBrandRepository implements BrandRepository, BrandLogoReposito
     return this.toDomain(row);
   }
 
-  async setLogoKey(id: string, logoKey: string | null): Promise<Brand> {
-    const row = await this.prisma.brand.update({ where: { id }, data: { logoKey } });
-    return this.toDomain(row);
+  async replaceLogoKey(id: string, logoKey: string | null): Promise<LogoKeyReplacement> {
+    return this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ logoKey: string | null }[]>`
+        SELECT "logoKey" FROM "brands" WHERE "id" = ${id} FOR UPDATE`;
+      const locked = rows[0];
+      if (!locked) return { replaced: false, reason: "not-found" } as const;
+      await tx.brand.update({ where: { id }, data: { logoKey } });
+      return { replaced: true, previousKey: locked.logoKey } as const;
+    }, LOGO_TRANSACTION);
   }
 
-  async delete(id: string): Promise<void> {
-    await this.prisma.brand.delete({ where: { id } });
+  async delete(id: string): Promise<{ logoKey: string | null } | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ logoKey: string | null }[]>`
+        SELECT "logoKey" FROM "brands" WHERE "id" = ${id} FOR UPDATE`;
+      const locked = rows[0];
+      if (!locked) return null;
+      await tx.brand.delete({ where: { id } });
+      return { logoKey: locked.logoKey };
+    }, LOGO_TRANSACTION);
   }
 
   private toDomain(

@@ -36,7 +36,7 @@ Buckets:
 - `listing-photos`
 - `listing-videos`
 - `chat-attachments`
-- `catalog-assets`: anonymous reads cover only `brands/*`, including imported `imp-<hash>` and admin `v<n>` versions. Admin uploads under `pending/` are private. Confirmation deletes them; abandoned uploads are eligible for lifecycle expiration after one day. MinIO scanning is asynchronous, so deletion can occur later than that threshold.
+- `catalog-assets`: anonymous reads cover only `brands/*`, including imported `imp-<hash>-<uuid>` and admin `v<epoch-ms>-<uuid>` activation directories (legacy `imp-<hash>` and `v<n>` directories stay readable while active). Replacing, removing or deleting a logo deletes its whole activation directory, best effort ([ADR-0072](../docs/adr/0072-imported-logo-cleanup-coordination.md)); whole-prefix deletion must not be enabled until every old API logo writer and deterministic importer process has stopped. Admin uploads under `pending/` are private. Confirmation deletes them; abandoned uploads are eligible for lifecycle expiration after one day. MinIO scanning is asynchronous, so deletion can occur later than that threshold.
 
 When a bucket is added to this list, re-run `pnpm minio:bootstrap` against each
 environment's MinIO before deploying the API that uses it. Until then, requests

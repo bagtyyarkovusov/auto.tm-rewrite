@@ -119,6 +119,70 @@ export function brandLogoKey(slug: string, version: string, type: StoredBrandLog
   return `brands/${slug}/${version}/logo.${type === "image/webp" ? "webp" : "png"}`;
 }
 
+const UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+/**
+ * Admin activations use `v<epoch-ms>-<randomUUID>`. Time stays descriptive: the
+ * UUID is what makes a directory that has never been active before, even for
+ * two uploads in the same millisecond (ADR-0072).
+ */
+export function newAdminLogoVersion(nowMs: number, uniqueId: string): string {
+  return `v${nowMs}-${uniqueId}`;
+}
+
+// Legacy deterministic `imp-<hash12>` and `v<epoch-ms>` directories stay valid
+// while they are active; new activations carry a `-<uuid>` suffix.
+const STORED_LOGO_KEY = new RegExp(
+  `^brands/([^/]+)/((imp-([0-9a-f]{12})|v\\d+)(?:-${UUID_PATTERN})?)/logo\\.(?:png|webp)$`,
+);
+
+export interface StoredBrandLogo {
+  /** The slug in the stored key, which may differ from the brand's current slug. */
+  slug: string;
+  /** The whole version segment, for example `imp-0123456789ab-<uuid>` or `v1790000000000`. */
+  version: string;
+  owner: "imported" | "admin";
+  /** `brands/<stored-slug>/<version>/`, ready to use as a storage prefix. */
+  directory: string;
+  /** For an imported key, the content/render identity `imp-<hash12>` without any activation id. */
+  contentIdentity?: string;
+}
+
+/**
+ * Reads ownership and directory from the key actually stored on a Brand,
+ * independently of the brand's current slug. Returns null for a key outside the
+ * known layouts.
+ */
+export function parseStoredBrandLogoKey(key: string): StoredBrandLogo | null {
+  const match = STORED_LOGO_KEY.exec(key);
+  if (!match) return null;
+  const slug = match[1] as string;
+  const version = match[2] as string;
+  const hash = match[4];
+  const owner = hash === undefined ? "admin" : "imported";
+  return {
+    slug,
+    version,
+    owner,
+    directory: `brands/${slug}/${version}/`,
+    ...(hash === undefined ? {} : { contentIdentity: `imp-${hash}` }),
+  };
+}
+
+export type BrandLogoCleanupTarget =
+  | { kind: "directory"; prefix: string }
+  | { kind: "object"; key: string };
+
+/**
+ * What to delete once a logo key is no longer active: the whole stored version
+ * directory (an imported logo has `mono@Nx.png` siblings), or just the object
+ * for a key outside the recognized layouts.
+ */
+export function brandLogoCleanupTarget(key: string): BrandLogoCleanupTarget {
+  const stored = parseStoredBrandLogoKey(key);
+  return stored ? { kind: "directory", prefix: stored.directory } : { kind: "object", key };
+}
+
 /** Where an admin's upload waits until the API validates it. */
 export function pendingBrandLogoKey(slug: string, uploadId: string): string {
   return `pending/brands/${slug}/${uploadId}`;

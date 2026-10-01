@@ -33,6 +33,7 @@ class FakeStorage implements BrandLogoStorage {
   }
   async put(): Promise<void> {}
   async delete(): Promise<void> {}
+  async deleteLogoVersion(): Promise<void> {}
   publicUrl(key: string): string {
     return key;
   }

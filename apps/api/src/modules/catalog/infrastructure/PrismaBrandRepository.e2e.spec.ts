@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import {
   PostgreSqlContainer,
   type StartedPostgreSqlContainer,
@@ -196,6 +196,15 @@ describe("PrismaBrandRepository — Testcontainers", () => {
       throw new Error("no query ever waited for the row lock");
     }
 
+    // A failed test must not leave a lock held, or the next cleanup would wait for it.
+    const holders: Array<{ release: () => void; done: Promise<unknown> }> = [];
+    afterEach(async () => {
+      for (const holder of holders.splice(0)) {
+        holder.release();
+        await holder.done.catch(() => undefined);
+      }
+    });
+
     /** Holds the brand row lock on the other client until `release` is called. */
     function holdRowLock(
       mutate: (tx: Parameters<Parameters<PrismaService["$transaction"]>[0]>[0]) => Promise<void>,
@@ -213,6 +222,7 @@ describe("PrismaBrandRepository — Testcontainers", () => {
         },
         { timeout: 60_000, maxWait: 5_000 },
       );
+      holders.push({ release, done });
       return { lockTaken, release, done };
     }
 

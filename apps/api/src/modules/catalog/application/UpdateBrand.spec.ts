@@ -47,7 +47,7 @@ class FakeBrandRepository implements BrandRepository {
     return brand;
   }
 
-  async delete(): Promise<void> {
+  async delete(): Promise<{ logoKey: string | null } | null> {
     throw new Error("not implemented");
   }
 }
