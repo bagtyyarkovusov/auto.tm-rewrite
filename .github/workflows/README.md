@@ -43,9 +43,14 @@ PR Checks and CI each start `infra/compose/docker-compose.ci.yml` through `scrip
 
 All test credentials and flags are public, nonproduction placeholders written by `scripts/ci-services.sh`: the MinIO keys and region, JWT secrets, TOTP key, and report/moderation flags. The `pnpm test` step sets `NODE_ENV` and `APP_ENV` to `test` and includes the reviewer-flow smoke's pure helper tests; the deployed smoke remains an operator command. The CI build keeps its normal production mode. Production values never belong in CI (ADR-0005).
 
-### MinIO image workaround (temporary)
+### MinIO image
 
-`quay.io/minio/minio` can no longer be pulled anonymously, and a hosted runner has no cached copy. In CI only, both gate workflows set `CI_COMPOSE_OVERRIDE=infra/compose/docker-compose.ci.hosted.yml`, an optional extra Compose file that `scripts/ci-services.sh` layers on top. It swaps in `cgr.dev/chainguard/minio:latest-dev` with a `wget` health check. A following step aliases that image locally as `quay.io/minio/minio:latest`, the name the Testcontainers MinIO test in `packages/db` starts. Local development, production, and Railway are unchanged. Issue [#475](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/475) chooses the durable image; remove the override file, the env var, and the alias steps when it lands.
+Compose and Testcontainers pull digest-pinned Chainguard MinIO images directly,
+with no local alias. CI uses the dev variant because its container health check
+needs a shell and `wget`; Testcontainers probes HTTP from the test process and
+uses the minimal variant. A fresh hosted runner exercises anonymous pulls,
+service readiness, bucket bootstrap, and brand-logo S3 imports. The image and
+volume contract is recorded in [ADR-0074](../../docs/adr/0074-digest-pinned-chainguard-minio-images.md).
 
 ### Turbo strict env mode (load-bearing)
 
