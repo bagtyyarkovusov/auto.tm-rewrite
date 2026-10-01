@@ -1,5 +1,7 @@
 # Cabinet and account prototype reconciliation, 2026-10-02
 
+> Historical. This note describes the version at `a051fafb`, which the founder rejected on 2026-10-02. The current prototype is described in [cabinet-profile.autoru.md](cabinet-profile.autoru.md).
+
 This is throwaway evidence for #353 on `prototype/cabinet-profile`. It is not an application implementation, a production PR, or founder approval of the surviving proposals. Preserve the branch and worktree.
 
 Base: `93ee62bb7f7c9ecd52431dfc08e2338d57374ade`.
