@@ -8,8 +8,10 @@
   PROTOTYPE — throwaway. Answers issue #500 "Prototype in-app support Conversations with an AutoTM admin account".
   Builds on #352 (prototype/favorites-conversations): same phone frame, AutoTM colour tokens, Messages list and thread visuals.
   Two surfaces, switched in the side panel: Mobile (phone frame) and Admin (desktop frame, shared live state with the phone).
-  Star = recommended option. Email is the founder's release support email. Phone, hours and response time are PLACEHOLDERS (yellow).
-  All people, phone numbers and emails below are made up. No third-party screenshots are embedded.
+  D1–D7 are founder-approved. Chat and images are AFTER reviewer release. Release #352 D10 keeps email and phone.
+  One compressed image per message, final size <= 5 MB. All image/compression/upload/send behavior is simulated in memory.
+  No real files, upload grants, network requests or persisted media. Support authorization/storage/retention need separate design.
+  People in example threads are fictional; support contact is the founder-approved real email and phone. No third-party screenshots are embedded.
   Copy: RU primary, EN, TK draft (TK strings are drafts). Admin copy is RU only, like apps/admin.
   Not production code. Nothing here is wired to a backend.
 -->
@@ -106,6 +108,8 @@ body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
 .modal label{display:block;font-size:12px;color:#737373;margin-top:8px}.modal select,.modal input[type=text],.modal textarea{width:100%;border:1px solid #d4d4d4;border-radius:8px;padding:6px 8px;font:inherit}
 .roles{background:#f8fafc;border-bottom:1px solid #e5e5e5;padding:8px 24px;font-size:12px;flex:none}
 .roles .stbl td,.roles .stbl th{border-color:#e5e5e5}
+.image-composer{border-top:1px solid var(--border);background:var(--bg);flex:none}.image-composer .composer{border:0;padding-bottom:4px}.image-rule{font-size:10px;color:var(--mfg);padding:0 12px 8px}.image-preview{display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--secondary)}.image-thumb{border:0;padding:0;background:transparent;cursor:pointer;display:block;border-radius:9px;overflow:hidden}.image-thumb img{display:block;width:58px;height:78px;object-fit:cover;object-position:top}.image-error{margin:6px 12px;padding:8px;border:1px solid var(--border);border-radius:8px;color:var(--destructive);font-size:12px}.sample-card{display:flex;gap:12px;align-items:center;margin:12px 0}.sample-card img{width:75px;height:118px;object-fit:cover;object-position:top;border-radius:8px}.sent-image{margin-bottom:6px}.sent-image img{width:180px;height:195px;object-fit:cover;object-position:top}.image-preview progress{width:100%;height:6px}.image-viewer{position:absolute;inset:0;z-index:100;background:#111;color:#fff;display:flex;flex-direction:column;gap:10px;align-items:center;padding:12px}.image-viewer button{align-self:flex-end}.image-viewer>img{flex:1;min-height:0;max-width:100%;width:auto;object-fit:contain}.image-viewer>div{text-align:center;font-size:12px}.ib[disabled]{opacity:.35;cursor:not-allowed}.desk{position:relative}.lbl select{max-width:100%;padding:4px;border:1px solid #ddd;border-radius:6px;background:#fff}button:focus-visible{outline:2px solid #2a7de1;outline-offset:2px}
+
 </style>
 </head>
 <body>
@@ -114,25 +118,24 @@ body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
   <div class="stage" id="stage"></div>
 </div>
 <script>
+(() => {
+"use strict";
 /* ================= i18n (mobile). tk is a draft ================= */
 const I={
  messages:{ru:"Сообщения",en:"Messages",tk:"Habarlar"},search:{ru:"Поиск",en:"Search",tk:"Gözleg"},favorites:{ru:"Избранное",en:"Favorites",tk:"Halanlarym"},sell:{ru:"Продать",en:"Sell",tk:"Sat"},cabinet:{ru:"Кабинет",en:"Cabinet",tk:"Kabinet"},
  supTitle:{ru:"Поддержка AutoTM",en:"AutoTM Support",tk:"AutoTM goldawy"},official:{ru:"Официальный",en:"Official",tk:"Resmi"},
- supSub:{ru:"Ответим в рабочее время",en:"We reply during working hours",tk:"Iş wagtynda jogap bereris"},
- hdrSub:{ru:"Поддержка · ответ за 1 раб. день",en:"Support · reply in 1 business day",tk:"Goldaw · 1 iş gününde"},
- welcome:{ru:"Здравствуйте! Это официальная поддержка AutoTM. Опишите вопрос, и мы ответим в рабочее время. AutoTM никогда не просит код входа и пароли.",en:"Hello! This is official AutoTM support. Describe your question and we will reply during working hours. AutoTM never asks for your sign-in code or passwords.",tk:"Salam! Bu AutoTM-iň resmi goldawy. Soragyňyzy ýazyň, iş wagtynda jogap bereris. AutoTM hiç haçan giriş kodyny sorap durmaýar."},
+ supSub:{ru:"Напишите команде AutoTM",en:"Message the AutoTM team",tk:"AutoTM toparyna ýazyň"},
+ hdrSub:{ru:"Поддержка · команда AutoTM",en:"Support · AutoTM team",tk:"Goldaw · AutoTM topary"},
+ welcome:{ru:"Здравствуйте! Это официальная поддержка AutoTM. Опишите вопрос. Можно приложить одно изображение. AutoTM никогда не просит код входа и пароли.",en:"Hello! This is official AutoTM support. Describe your question. You can attach one image. AutoTM never asks for your sign-in code or passwords.",tk:"Salam! Bu AutoTM-iň resmi goldawy. Soragyňyzy ýazyň. Bir surat goşup bilersiňiz. AutoTM hiç haçan giriş kodyny sorap durmaýar."},
  q1:{ru:"Проблема с объявлением",en:"Problem with a Listing",tk:"Bildiriş meselesi"},q2:{ru:"Не могу войти",en:"I cannot sign in",tk:"Girip bilemok"},q3:{ru:"Жалоба на пользователя",en:"Report a User",tk:"Ulanyja şikaýat"},q4:{ru:"Другое",en:"Something else",tk:"Başga"},
  msgPh:{ru:"Сообщение",en:"Message",tk:"Habar"},sending:{ru:"Отправка...",en:"Sending...",tk:"Iberilýär..."},failed:{ru:"Не удалось отправить",en:"Failed to send",tk:"Ibermek başartmady"},retry:{ru:"Повторить",en:"Retry",tk:"Täzeden"},
- offline:{ru:"Нет соединения. Сообщения отправятся, когда сеть появится.",en:"No connection. Messages will send when you are back online.",tk:"Birikme ýok."},
+ offline:{ru:"Нет соединения. После подключения повторите отправку.",en:"No connection. Reconnect, then retry sending.",tk:"Birikme ýok."},
  newMsgs:{ru:"Новые сообщения",en:"New messages",tk:"Täze habarlar"},today:{ru:"Сегодня",en:"Today",tk:"Şu gün"},
- afterHrs:{ru:"Сейчас нерабочее время. Мы ответим в ближайший рабочий день с 09:00.",en:"We are outside working hours. We will reply from 09:00 next business day.",tk:"Häzir iş wagty däl. Indiki iş gününde 09:00-dan jogap bereris."},
  closedEv:{ru:"Обращение закрыто",en:"Request closed",tk:"Ýüz tutma ýapyldy"},closedBn:{ru:"Обращение закрыто. Напишите, чтобы открыть его снова.",en:"This request is closed. Write to open it again.",tk:"Ýüz tutma ýapyk. Täzeden açmak üçin ýazyň."},
  noticeT:{ru:"Уведомление AutoTM",en:"AutoTM notice",tk:"AutoTM habarnamasy"},newsT:{ru:"Новости AutoTM",en:"AutoTM news",tk:"AutoTM täzelikleri"},openListing:{ru:"Открыть объявление",en:"Open Listing",tk:"Bildirişi aç"},readOnly:{ru:"Только для чтения",en:"Read only",tk:"Diňe okamak"},
  info:{ru:"Контакты поддержки",en:"Support contacts",tk:"Goldaw aragatnaşygy"},mute:{ru:"Отключить уведомления",en:"Mute notifications",tk:"Bildirişleri öçür"},unmute:{ru:"Включить уведомления",en:"Unmute notifications",tk:"Bildirişleri aç"},
  emailUs:{ru:"Написать на email",en:"Email us",tk:"Email ýaz"},callUs:{ru:"Позвонить",en:"Call us",tk:"Jaň et"},
- hours:{ru:"Часы работы",en:"Working hours",tk:"Iş wagty"},hoursV:{ru:"Пн–Сб, 09:00–18:00 (Ашхабад)",en:"Mon–Sat, 09:00–18:00 (Ashgabat)",tk:"Duş–Şen, 09:00–18:00"},
- resp:{ru:"Время ответа",en:"Response time",tk:"Jogap wagty"},respV:{ru:"В течение 1 рабочего дня",en:"Within 1 business day",tk:"1 iş gününde"},
- phoneV:{ru:"+993 __ ______",en:"+993 __ ______",tk:"+993 __ ______"},
+ phoneV:{ru:"+993 63 98 94 04",en:"+993 63 98 94 04",tk:"+993 63 98 94 04"},
  incl:{ru:"Что указать в обращении",en:"What to include",tk:"Nämäni görkezmeli"},inclV:{ru:"Номер объявления, что произошло, скриншот ошибки.",en:"Listing number, what happened, a screenshot of the error.",tk:"Bildiriş belgisi, näme bolandygy."},
  privacy:{ru:"Сообщения в этом чате видят сотрудники AutoTM. Не отправляйте пароли и коды.",en:"AutoTM staff can read this chat. Do not send passwords or codes.",tk:"Bu çaty AutoTM işgärleri görýär. Parol we kod ibermäň."},
  soT:{ru:"Войдите, чтобы увидеть сообщения",en:"Sign in to see your Messages",tk:"Habarlary görmek üçin giriň"},signIn:{ru:"Войти",en:"Sign in",tk:"Giriş"},
@@ -148,12 +151,14 @@ const I={
 };
 const t=k=>{const x=I[k];return x?(x[S.lang]||x.en):k};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const SUPPORT_PHONE="+993 63 98 94 04";
 const SUPPORT_EMAIL="bagtyyarkowusow.dev@gmail.com";
 const txtOf=m=>m.key?t(m.key):m.txt;
 
 /* ================= shared state ================= */
 const STAFF_ME="Айна";
-const S={side:"mobile",stab:"controls",theme:"light",lang:"ru",screen:"msgs",sheet:null,net:"on",hours:"in",acct:"ok",msgsMode:"list",otherUnread:1,muted:false,toast:null,draft:"",
+const S={side:"mobile",stab:"controls",theme:"light",lang:"ru",screen:"msgs",sheet:null,net:"on",acct:"ok",msgsMode:"list",otherUnread:1,muted:false,toast:null,draft:"",
+ imageDraft:null,imageError:"",picker:false,pickMode:"sample",uploadMode:"ok",sendMode:"ok",viewer:null,imageRun:0,
  adminSel:"t1",afilter:"open",atab:"reply",atab2:"reply",adraft:"",modal:null,cmp:{to:"t1",tpl:"listing",body:"",reason:"",push:true,bcast:false},unreadFrom:-1,note:"",from:null,rolesOpen:false,atoast:null};
 const V={model:"B",staff:"A",dir:"B",contact:"A",susp:"A",roles:"A",so:"A"};
 const thr=o=>Object.assign({status:"open",assignee:null,unreadStaff:0,unreadUser:0,msgs:[],listings:[],reports:0,prev:0,deleted:false},o);
@@ -162,7 +167,7 @@ const TH={
  t2:thr({id:"t2",name:"Айгуль Аннаева",phone:null,email:"a******@mail.ru",reg:"02.10.2026",role:"buyer",subject:"Не приходит код на почту",unreadStaff:2,msgs:[{k:"user",txt:"Не приходит код входа на почту уже 20 минут",tm:"10:12"},{k:"user",txt:"Проверила спам, там пусто",tm:"10:14"}]}),
  t3:thr({id:"t3",name:"Батыр Реджепов",phone:"+993 65 ** **-18",email:null,reg:"20.07.2026",role:"seller",subject:"Объявление отклонено",assignee:"Айна",reports:1,listings:[["Lexus RX 350 2016","на модерации"],["Kia Rio 2019","активно"],["Toyota Corolla 2011","продано"]],msgs:[{k:"user",txt:"Почему отклонили объявление Lexus?",tm:"вчера 16:40"},{k:"staff",by:"Айна",txt:"Здравствуйте! В фото виден чужой номер телефона. Загрузите фото без него.",tm:"вчера 17:05"},{k:"note",by:"Айна",txt:"Жалобы по Lexus нет, чисто техническая причина.",tm:"вчера 17:06"}]}),
  t4:thr({id:"t4",name:"Селби Дурдыев",phone:"+993 64 ** **-92",email:"s*****@gmail.com",reg:"05.09.2026",role:"buyer",subject:"Вопрос про избранное",status:"closed",assignee:"Максат",msgs:[{k:"user",txt:"Избранное пропало после входа",tm:"30.09 12:01"},{k:"staff",by:"Максат",txt:"Выйдите и войдите снова тем же способом входа. Если не поможет, напишите.",tm:"30.09 12:30"},{k:"user",txt:"Помогло, спасибо",tm:"30.09 12:41"},{k:"sysm",txt:"Максат закрыл обращение",tm:"30.09 12:42"}]}),
- t5:thr({id:"t5",name:"Удалённый пользователь",phone:null,email:null,reg:"—",role:"—",subject:"Аккаунт удалён (день 30)",status:"closed",deleted:true,listings:[["3 объявления","в архиве"]],msgs:[{k:"user",txt:"Хочу удалить аккаунт, что будет с объявлениями?",tm:"28.08 09:10"},{k:"staff",by:"Максат",txt:"Объявления будут в архиве. Аккаунт можно удалить в Кабинете.",tm:"28.08 09:40"},{k:"sysm",txt:"Пользователь удалил аккаунт. Личные данные очищены, переписка хранится для аудита.",tm:"29.09"}]}),
+ t5:thr({id:"t5",name:"Удалённый пользователь",phone:null,email:null,reg:"—",role:"—",subject:"Аккаунт удалён (день 30)",status:"closed",deleted:true,listings:[["3 объявления","в архиве"]],msgs:[{k:"user",txt:"Хочу удалить аккаунт, что будет с объявлениями?",tm:"28.08 09:10"},{k:"staff",by:"Максат",txt:"Объявления будут в архиве. Аккаунт можно удалить в Кабинете.",tm:"28.08 09:40"},{k:"sysm",txt:"Пользователь удалил аккаунт. Личные данные очищены. Хранение текста и медиа поддержки ещё требует решения.",tm:"29.09"}]}),
  t6:thr({id:"t6",name:"Огулджемал Байрамова",phone:"+993 62 ** **-05",email:"o*****@gmail.com",reg:"11.09.2026",role:"seller",subject:"Смена номера телефона",assignee:"Айна",unreadStaff:1,listings:[["Nissan Qashqai 2020","активно"]],msgs:[{k:"user",txt:"Хочу сменить номер, старый потеряла",tm:"09:02"}]})
 };
 const ORDER=["t1","t2","t6","t3","t4","t5"];
@@ -183,7 +188,6 @@ const SC={
  offline:{label:"Нет сети: сообщение не отправлено",screen:"thread",note:"Как D5 (#352): пузырь остаётся с «Не удалось отправить» и Повтором. Напишите сообщение, затем включите сеть в панели «Сцены» и нажмите «Повторить».",set(){SC.active.set();S.net="off"}},
  closed:{label:"Обращение закрыто",screen:"thread",note:"Закрытие это статус треда на стороне поддержки. Пользователь видит событие и может написать снова: тред откроется заново, новый не создаётся.",set(){SC.active.set();const x=T1();x.msgs.push({k:"sysm",key:"closedEv",tm:"10:30"});x.status="closed"}},
  notice:{label:"Уведомление от AutoTM (исходящее)",screen:"thread",note:"Исходящее Сообщение из админки. Карточка уведомления вместо пузыря собеседника, только для чтения. Видно в D3-B и D3-C (в D3-A скрыто). Свои можно отправить из Admin → Новое сообщение.",set(){SC.first.set();const x=T1();x.msgs.push({k:"notice",key:"noticeTxt",cta:true,tm:"11:15",unread:true},{k:"broadcast",key:"newsTxt",tm:"11:30",unread:true});x.unreadUser=1}},
- afterhrs:{label:"Нерабочее время",screen:"thread",note:"Напишите сообщение: придёт системное сообщение про часы работы. Часы и время ответа это ЗАПОЛНИТЕЛИ, их должен задать основатель.",set(){SC.first.set();S.hours="out"}},
  signedout:{label:"Не вошёл: Messages",screen:"msgs",note:"Без входа чата нет: тред привязан к User. Остаются email и телефон (как D10), в том числе для «не могу войти» (D7).",set(){S.msgsMode="signedout"}},
  push:{label:"Вход из push",screen:"push",note:"Push по ADR-0047 (FCM, Android). Нажатие открывает тред, «Назад» ведёт в Messages (D9 из #352). Второй push это исходящее уведомление (D3-B/C).",set(){SC.active.set();const x=T1();x.msgs.push({k:"staff",by:"Айна",txt:"Подтвердите номер в Кабинете → Профиль, затем повторите публикацию.",tm:"10:20",unread:true});x.unreadUser=1}},
  susp:{label:"Аккаунт ограничен модерацией",screen:"thread",note:"AutoTM ограничил аккаунт. В User-to-User Conversation это запрещает отправку. В треде поддержки решает D5: ★ A оставляет чат открытым как канал обжалования, B делает только чтение и email.",set(){SC.active.set();S.acct="susp"}},
@@ -191,7 +195,69 @@ const SC={
  grace:{label:"Удаление: период 30 дней",screen:"grace",note:"ADR-0032: удаление запускает 30 дней, сессии отозваны. При входе предложение восстановить. Тред и история сохраняются и возвращаются после восстановления.",set(){SC.active.set()}},
  purged:{label:"Удалён (день 30), новый аккаунт",screen:"thread",note:"День 30: персональные данные очищены, тред остаётся у AutoTM для аудита как «Удалённый пользователь» (Admin, закрытые). Если человек зарегистрируется заново, он получает НОВЫЙ пустой тред с приветствием.",set(){SC.first.set()}}
 };
-function loadSc(k){S.hours="in";S.net="on";S.acct="ok";S.msgsMode="list";S.sheet=null;S.toast=null;S.from=null;SC[k].set();S.screen=SC[k].screen;S.note=SC[k].note;S.side="mobile";S.unreadFrom=-1;if(S.screen==="thread")openThreadFx();render()}
+function loadSc(k){S.net="on";S.acct="ok";S.msgsMode="list";S.sheet=null;S.toast=null;S.from=null;SC[k].set();S.screen=SC[k].screen;S.note=SC[k].note;S.side="mobile";S.unreadFrom=-1;S.imageDraft=null;S.imageError="";S.picker=false;S.viewer=null;S.draft="";S.adraft="";if(S.screen==="thread")openThreadFx();render()}
+
+/* Images are an illustrative fixture. No real permission, compression, upload or send. */
+Object.assign(I,{
+ attachImage:{ru:"Добавить изображение",en:"Attach image",tk:"Surat goş"},
+ imageLabel:{ru:"Изображение",en:"Image",tk:"Surat"},
+ imageRule:{ru:"1 изображение · до 5 MB после сжатия",en:"1 image · up to 5 MB after compression",tk:"1 surat · gysyşdan soň 5 MB çenli"},
+ sendLabel:{ru:"Отправить сообщение",en:"Send message",tk:"Habar iber"},
+ preview:{ru:"Предпросмотр",en:"Preview",tk:"Öňünden görmek"},
+ removeImage:{ru:"Убрать изображение",en:"Remove image",tk:"Suraty aýyr"},
+ compressing:{ru:"Сжимаем пример…",en:"Compressing sample…",tk:"Mysal gysylýar…"},
+ uploading:{ru:"Загрузка изображения…",en:"Uploading image…",tk:"Surat ýüklenýär…"},
+ uploadFailed:{ru:"Изображение не загрузилось. Сообщение ещё не отправлено.",en:"Image upload failed. The message has not been sent.",tk:"Surat ýüklenmedi. Habar iberilmedi."},
+ retryUpload:{ru:"Повторить загрузку",en:"Retry upload",tk:"Ýüklemäni gaýtala"},
+ retrySend:{ru:"Повторить отправку",en:"Retry send",tk:"Ibermäni gaýtala"},
+ sendImageFailed:{ru:"Изображение загружено, но сообщение не отправлено.",en:"Image uploaded, but the message was not sent.",tk:"Surat ýüklendi, ýöne habar iberilmedi."},
+ sentLabel:{ru:"Отправлено",en:"Sent",tk:"Iberildi"},
+ simulated:{ru:"Пример скриншота. Все операции симулируются.",en:"Illustrative screenshot. All operations are simulated.",tk:"Mysal ekran suraty. Ähli amallar simulýasiýa."},
+ permissionError:{ru:"Нет доступа к выбранному изображению. Разрешите доступ или отправьте только текст.",en:"No access to the selected image. Allow access or send text only.",tk:"Saýlanan surata rugsat ýok. Rugsat beriň ýa-da diňe tekst iberiň."},
+ typeError:{ru:"Можно отправить только изображение. Видео, PDF и файлы не поддерживаются.",en:"Choose an image. Videos, PDFs and files are not supported.",tk:"Diňe surat saýlaň. Wideo, PDF we faýllar goldanylmaýar."},
+ sizeError:{ru:"После сжатия 5.6 MB: лимит 5 MB. Выберите другое изображение.",en:"5.6 MB after compression exceeds the 5 MB limit. Choose another image.",tk:"Gysyşdan soň 5.6 MB, çäk 5 MB. Başga surat saýlaň."},
+ closeImage:{ru:"Закрыть изображение",en:"Close image",tk:"Suraty ýap"},
+ pickerTitle:{ru:"Добавить изображение · пример",en:"Attach image · sample",tk:"Surat goş · mysal"},
+ sampleLabel:{ru:"Скриншот ошибки · 8.2 MB → 0.84 MB",en:"Error screenshot · 8.2 MB → 0.84 MB",tk:"Ýalňyş ekran suraty · 8.2 MB → 0.84 MB"},
+ selectSample:{ru:"Выбрать пример",en:"Select sample",tk:"Mysaly saýla"},
+ cancel:{ru:"Отмена",en:"Cancel",tk:"Ýatyr"},
+ uploadReady:{ru:"Загружено · готово к отправке",en:"Uploaded · ready to send",tk:"Ýüklendi · ibermäge taýýar"}
+});
+const SAMPLE_SRC='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="390" height="650" viewBox="0 0 390 650"><rect width="390" height="650" fill="#f7f7f7"/><rect width="390" height="85" fill="#fff"/><text x="22" y="35" font-family="Arial" font-size="22" fill="#e60000" font-weight="bold">AutoTM</text><text x="22" y="64" font-family="Arial" font-size="14" fill="#555">Illustrative screenshot · not real data</text><rect x="18" y="110" width="354" height="160" rx="14" fill="#fff" stroke="#ddd"/><text x="36" y="145" font-family="Arial" font-size="18" fill="#222">Publish Listing</text><rect x="36" y="166" width="300" height="55" rx="9" fill="#fbe9e9"/><text x="50" y="188" font-family="Arial" font-size="14" fill="#a20000">Unable to publish</text><text x="50" y="207" font-family="Arial" font-size="13" fill="#555">Please confirm your contact phone.</text><rect x="18" y="296" width="354" height="110" rx="14" fill="#eee"/><text x="36" y="330" font-family="Arial" font-size="15" fill="#555">Toyota Camry · sample Listing</text><text x="36" y="360" font-family="Arial" font-size="13" fill="#777">No private phone or sign-in code shown</text><rect x="35" y="485" width="320" height="52" rx="26" fill="#e60000"/><text x="143" y="518" font-family="Arial" font-size="17" fill="#fff">Try again</text><text x="42" y="602" font-family="Arial" font-size="14" fill="#777">Fixture for Support prototype #500</text></svg>`);
+const imageFixture=()=>({name:"publish-error.jpg",src:SAMPLE_SRC,bytes:840000,type:"image/jpeg",phase:"ready",uploads:0,token:++S.imageRun});
+function canSend(){return S.acct!=="ro"&&S.msgsMode!=="signedout"&&(!S.imageDraft||["ready","uploaded"].includes(S.imageDraft.phase))&&!!(S.draft.trim()||S.imageDraft)}
+function updateSendButton(){const b=document.querySelector('[data-testid="send-message"]');if(b)b.disabled=!canSend()}
+function imageControls(){return `<h2>Изображения · симуляция</h2><div class="note">Один пример скриншота, 8.2 MB → 0.84 MB. Реальных файлов, разрешений и сети нет. Загрузка и отправка независимы: при повторе отправки изображение не загружается заново.</div>
+ <label class="lbl">Выбор изображения <select data-testid="pick-mode" onchange="S.pickMode=this.value;render()"><option value="sample" ${S.pickMode==="sample"?"selected":""}>Пример подходит</option><option value="permission" ${S.pickMode==="permission"?"selected":""}>Нет разрешения</option><option value="type" ${S.pickMode==="type"?"selected":""}>PDF / видео / файл</option><option value="size" ${S.pickMode==="size"?"selected":""}>После сжатия 5.6 MB</option></select></label>
+ <label class="lbl">Загрузка <select data-testid="upload-mode" onchange="S.uploadMode=this.value;render()"><option value="ok" ${S.uploadMode==="ok"?"selected":""}>Успех</option><option value="fail" ${S.uploadMode==="fail"?"selected":""}>Ошибка загрузки</option></select></label>
+ <label class="lbl">Отправка сообщения <select data-testid="send-mode" onchange="S.sendMode=this.value;render()"><option value="ok" ${S.sendMode==="ok"?"selected":""}>Успех</option><option value="fail" ${S.sendMode==="fail"?"selected":""}>Ошибка после загрузки</option></select></label>
+ <div class="note" data-testid="image-state"><b>Состояние:</b> ${S.imageDraft?esc(S.imageDraft.phase)+" · upload attempts "+S.imageDraft.uploads:"нет выбранного изображения"}${S.imageError?" · "+esc(S.imageError):""}. Последнее изображение: ${T1().msgs.filter(m=>m.image).map(m=>esc(m.st)+" · uploads "+m.image.uploads).join(", ")||"нет"}.</div>`}
+function pickerSheet(){if(!S.picker)return "";return `<div class="dim" onclick="S.picker=false;render()"></div><div class="sheet" role="dialog" aria-label="${t("pickerTitle")}"><b>${t("pickerTitle")}</b><p class="sm mute">${t("imageRule")}</p><div class="sample-card"><img src="${SAMPLE_SRC}" alt="${t("simulated")}"><div>${t("sampleLabel")}<p class="xs mute">${t("simulated")}</p></div></div><button class="btn brand" data-testid="select-image" onclick="pickImage()">${t("selectSample")}</button> <button class="btn out" onclick="S.picker=false;render()">${t("cancel")}</button></div>`}
+function pickImage(){if(S.imageDraft)return;S.picker=false;S.imageError="";
+ if(S.pickMode==="permission"||S.pickMode==="type"){S.imageError=t(S.pickMode==="permission"?"permissionError":"typeError");render();return}
+ const oversize=S.pickMode==="size";const image=imageFixture();image.phase="compressing";S.imageDraft=image;render();
+ setTimeout(()=>{if(S.imageDraft!==image)return;if(oversize){S.imageDraft=null;S.imageError=t("sizeError")}else image.phase="ready";render()},450);
+}
+function removeImage(){S.imageDraft=null;S.imageError="";render()}
+function imagePreview(){const image=S.imageDraft;
+ if(!image)return S.imageError?`<div class="image-error" role="alert">${esc(S.imageError)} <button class="btn out sm" onclick="S.imageError='';S.picker=true;render()">${t("attachImage")}</button></div>`:"";
+ const busy=["compressing","uploading"].includes(image.phase);
+ const status=image.phase==="compressing"?t("compressing"):image.phase==="uploading"?t("uploading"):image.phase==="uploadFailed"?t("uploadFailed"):image.phase==="uploaded"?t("uploadReady"):"0.84 MB · JPEG · "+t("preview");
+ return `<div class="image-preview" data-testid="image-preview"><button class="image-thumb" aria-label="${t("preview")}" onclick="S.viewer=S.imageDraft;render()"><img src="${image.src}" alt="${t("simulated")}"></button><div style="flex:1;min-width:0"><b class="xs">${image.name}</b><div class="xs" role="status" data-testid="upload-status">${status}</div>${image.phase==="uploading"?`<progress max="100" value="45" aria-label="${t("uploading")}"></progress>`:""}${image.phase==="uploadFailed"?`<button class="btn out sm" data-testid="retry-upload" onclick="uploadImage()">${t("retryUpload")}</button>`:""}</div><button class="ib" data-testid="remove-image" aria-label="${t("removeImage")}" ${busy?"disabled":""} onclick="removeImage()">×</button></div>`}
+function sendImage(txt){if(!canSend())return;S.draft=(txt||"").trim();if(S.imageDraft.phase==="uploaded")commitImageMessage();else uploadImage()}
+function uploadImage(){const image=S.imageDraft;if(!image||!["ready","uploadFailed"].includes(image.phase))return;image.phase="uploading";image.uploads++;const fail=S.uploadMode==="fail"||S.net==="off";render();
+ setTimeout(()=>{if(S.imageDraft!==image)return;if(fail||S.net==="off"){image.phase="uploadFailed";render();return}image.phase="uploaded";render();setTimeout(()=>{if(S.imageDraft===image)commitImageMessage()},300)},850);
+}
+function commitImageMessage(){const image=S.imageDraft;if(!image||image.phase!=="uploaded"||S.acct==="ro"||S.msgsMode==="signedout")return;
+ const x=T1(),m={id:"m"+(++mid),k:"user",txt:S.draft.trim(),image:{...image},st:"pending",tm:"сейчас"};x.msgs.push(m);S.imageDraft=null;S.draft="";S.unreadFrom=-1;
+ if(x.status==="closed"){x.status="open";x.msgs.push({k:"sysm",txt:"Обращение открыто заново",tm:"сейчас"})}finishImageSend(m,x);
+}
+function finishImageSend(m,x){m.st="pending";const fail=S.sendMode==="fail"||S.net==="off";render();setTimeout(()=>{if(!x.msgs.includes(m))return;m.st=(fail||S.net==="off")?"failed":"sent";if(m.st==="sent")x.unreadStaff++;render()},650)}
+function retryImageMessage(m){if(m.st!=="failed")return;finishImageSend(m,T1())}
+function imageMarkup(m,surface){return `<button class="image-thumb sent-image" data-testid="${surface}-image" aria-label="${t("preview")} ${esc(m.image.name)}" onclick="openImage('${m.id}','${surface}')"><img src="${m.image.src}" alt="${t("simulated")}"></button>`}
+function openImage(id,surface){const x=surface==="admin"?TH[S.adminSel]:T1();const m=x.msgs.find(m=>m.id===id);if(!m?.image)return;S.viewer=m.image;if(surface==="admin")addAud("support.image.view",x.id,"Просмотр иллюстративного изображения; симуляция");render()}
+function imageBubble(m){const status=m.st==="pending"?t("sending"):m.st==="failed"?t("sendImageFailed"):t("sentLabel");return `<div style="display:flex;padding:4px 14px;justify-content:flex-end"><div class="bub me" data-testid="image-message">${imageMarkup(m,"mobile")}${m.txt?`<div>${esc(m.txt)}</div>`:""}<div class="xs">${status}</div>${m.st==="failed"?`<button class="btn out sm" data-testid="retry-send" onclick="retryMsg('${m.id}')">${t("retrySend")}</button>`:`<div class="meta">${m.tm} ${tick(m.st)}</div>`}</div></div>`}
+function imageViewer(){return `<div class="image-viewer" role="dialog" aria-modal="true" aria-label="${t("imageLabel")}" data-testid="image-viewer"><button class="btn out" data-testid="close-image" aria-label="${t("closeImage")}" onclick="S.viewer=null;render()">× ${t("closeImage")}</button><img src="${S.viewer.src}" alt="${t("simulated")}"><div>${esc(S.viewer.name)} · 0.84 MB<br>${t("simulated")}</div></div>`}
 
 /* ================= mobile ================= */
 const tick=s=>s==="sent"?"✓":s==="delivered"||s==="read"?"✓✓":"";
@@ -199,7 +265,7 @@ function mark(sz,vc){return `<div class="mark" style="width:${sz}px;height:${sz}
 function k2(m){if(m.k==="note"||m.staffOnly)return "hidden";if(m.k==="notice")return V.dir==="A"?"hidden":"notice";if(m.k==="broadcast")return V.dir==="C"?"broadcast":"hidden";return m.k}
 const visMsgs=()=>T1().msgs.filter(m=>k2(m)!=="hidden");
 function lastPreview(){const m=[...visMsgs()].reverse().find(m=>m.k!=="sysm");if(!m)return t("supSub");const kk=k2(m);
- const pre=kk==="user"?(S.lang==="ru"?"Вы: ":"You: "):(kk==="staff"&&V.staff==="B"?m.by+": ":"");return pre+txtOf(m)}
+ const pre=kk==="user"?(S.lang==="ru"?"Вы: ":"You: "):(kk==="staff"&&V.staff==="B"?m.by+": ":"");return pre+(m.image?t("imageLabel")+(m.txt?": "+m.txt:""):txtOf(m))}
 const totalUnread=()=>(T1().unreadUser||0)+S.otherUnread;
 function tabbar(){const T=[["search","🔍","search"],["fav","♡","favorites"],["sell","＋","sell"],["msgs","💬","messages"],["cab","👤","cabinet"]];
  const n=S.msgsMode==="signedout"?0:totalUnread();
@@ -207,7 +273,7 @@ function tabbar(){const T=[["search","🔍","search"],["fav","♡","favorites"],
 function supRow(){const x=T1();const vm=visMsgs();return `<div class="row suprow" onclick="go('thread')">${mark(52,true)}<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:6px"><b>${t("supTitle")}</b><span class="xs mute">${vm.length?vm[vm.length-1].tm:""}</span></div><div style="margin:1px 0"><span class="badge off">✓ ${t("official")}</span></div><div style="display:flex;gap:6px;align-items:center"><span class="sm mute" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${x.unreadUser?'color:var(--fg);font-weight:600':''}">${esc(lastPreview())}</span>${x.unreadUser?`<span class="unread">${x.unreadUser}</span>`:''}</div></div></div>`}
 function userRow(nm,lst,p,pre,tm,un,ph){return `<div class="row" onclick="toast('Opens a User-to-User Conversation (#352)')"><div class="ph ${ph}" style="width:52px;height:52px;border-radius:12px;flex:none">photo</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><b>${nm}</b><span class="xs mute">${tm}</span></div><div class="sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lst} · ${p}</div><div style="display:flex;gap:6px;align-items:center"><span class="sm mute" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${un?'color:var(--fg);font-weight:600':''}">${pre}</span>${un?`<span class="unread">${un}</span>`:''}</div></div></div>`}
 function msgsScreen(){let b;
- if(S.msgsMode==="signedout")b=`<div class="center" style="min-height:300px"><div class="circle">💬</div><b>${t("soT")}</b><button class="btn brand" onclick="toast('Sign in, then you return to Messages')">${t("signIn")}</button></div>`+(V.so==="A"?`<div style="padding:0 16px"><div class="crow" style="flex-direction:column;align-items:stretch"><div class="sm">${t("soHelp")}</div><div style="display:flex;gap:8px"><button class="btn out sm" style="flex:1" onclick="toast('mailto:${SUPPORT_EMAIL}')">✉ ${t("emailUs")}</button><button class="btn out sm" style="flex:1" onclick="toast('tel: placeholder')">☎ ${t("callUs")}</button></div></div></div>`:"");
+ if(S.msgsMode==="signedout")b=`<div class="center" style="min-height:300px"><div class="circle">💬</div><b>${t("soT")}</b><button class="btn brand" onclick="toast('Sign in, then you return to Messages')">${t("signIn")}</button></div>`+(V.so==="A"?`<div style="padding:0 16px"><div class="crow" style="flex-direction:column;align-items:stretch"><div class="sm">${t("soHelp")}</div><div style="display:flex;gap:8px"><button class="btn out sm" style="flex:1" onclick="toast('mailto:${SUPPORT_EMAIL}')">✉ ${t("emailUs")}</button><button class="btn out sm" style="flex:1" onclick="toast('tel:+99363989404 (simulated)')">☎ ${t("callUs")}</button></div></div></div>`:"");
  else b=supRow()+(S.msgsMode==="empty"?`<div class="center" style="min-height:300px"><div class="circle">💬</div><b>${t("noConv")}</b><div class="sm mute">${t("noConvSub")}</div></div>`:userRow("Мердан","Toyota Camry 2018","285 000 TMT",S.lang==="ru"?"Да, в продаже. Приезжайте после 18:00.":"Yes, still for sale. Come after 18:00.","16:59",S.otherUnread,"b")+userRow("Батыр","Toyota Prado 2012","520 000 TMT",S.lang==="ru"?"Хорошо, буду в 18:30":"OK, I will be there at 18:30","вчера",0,""));
  return `<div class="appbar"><div class="t">${t("messages")}</div></div><div class="body">${b}</div>${tabbar()}`}
 function openThreadFx(){const x=T1();S.unreadFrom=x.msgs.findIndex(m=>m.unread&&k2(m)!=="hidden");x.msgs.forEach(m=>delete m.unread);x.unreadUser=0}
@@ -215,19 +281,18 @@ function bubble(m){const k=k2(m);if(k==="hidden")return "";
  if(k==="system")return `<div class="sys"><div style="display:flex;gap:8px"><div style="flex:none">${mark(28)}</div><div>${esc(txtOf(m))}</div></div></div>`;
  if(k==="sysm")return `<div class="dsep">${esc(txtOf(m))} · ${m.tm}</div>`;
  if(k==="notice"||k==="broadcast")return `<div class="notice"><div class="hd">${k==="notice"?"🔔 "+t("noticeT"):"📣 "+t("newsT")}</div>${esc(txtOf(m))}${m.cta?`<div style="margin-top:8px"><button class="btn out sm" onclick="toast('Opens the Listing')">${t("openListing")}</button></div>`:""}<div class="xs mute" style="margin-top:5px">${m.tm} · ${t("readOnly")}</div></div>`;
+ if(m.image)return imageBubble(m);
  if(k==="staff")return `<div style="display:flex;padding:2px 14px;gap:8px;align-items:flex-end"><div style="flex:none">${mark(26)}</div><div style="max-width:78%">${V.staff==="B"?`<div class="xs mute" style="margin:0 6px 1px">${m.by} · AutoTM ✓</div>`:""}<div class="bub peer" style="max-width:100%">${esc(m.txt)}<div class="meta" style="justify-content:flex-start;color:var(--mfg)">${m.tm}</div></div></div></div>`;
  const foot=m.st==="pending"?`<div class="meta">${t("sending")}</div>`:m.st==="failed"?`<div class="meta" style="opacity:1">⚠ ${t("failed")} · <span style="text-decoration:underline;cursor:pointer;font-weight:700" onclick="retryMsg('${m.id}')">↻ ${t("retry")}</span></div>`:`<div class="meta">${m.tm} ${tick(m.st)}</div>`;
  return `<div style="display:flex;padding:2px 14px;justify-content:flex-end"><div class="bub me" style="${m.st==="pending"?"opacity:.7":""}">${esc(m.txt)}${foot}</div></div>`}
 function infoBlock(){return `<div style="display:flex;gap:12px;align-items:center">${mark(56,true)}<div><b style="font-size:17px">${t("supTitle")}</b><div class="sm mute">✓ ${t("official")}</div></div></div>
  <div class="crow"><div class="ic">✉</div><div style="flex:1;min-width:0"><div class="xs mute">Email</div><div class="sm" style="word-break:break-all"><b>${SUPPORT_EMAIL}</b></div></div><button class="btn out sm" onclick="toast('mailto: opens the mail app')">${t("emailUs")}</button></div>
- <div class="crow"><div class="ic">☎</div><div style="flex:1"><div class="xs mute">${S.lang==="ru"?"Телефон":"Phone"}</div><div class="sm"><b class="ph-x">${t("phoneV")}</b></div></div><button class="btn out sm" onclick="toast('tel: placeholder, founder has not decided on a phone')">${t("callUs")}</button></div>
- <div class="crow"><div class="ic">🕘</div><div style="flex:1"><div class="xs mute">${t("hours")}</div><div class="sm"><b class="ph-x">${t("hoursV")}</b></div></div></div>
- <div class="crow"><div class="ic">⏱</div><div style="flex:1"><div class="xs mute">${t("resp")}</div><div class="sm"><b class="ph-x">${t("respV")}</b></div></div></div>
+ <div class="crow"><div class="ic">☎</div><div style="flex:1"><div class="xs mute">${S.lang==="ru"?"Телефон":"Phone"}</div><div class="sm"><b>${SUPPORT_PHONE}</b></div></div><button class="btn out sm" onclick="toast('tel:+99363989404 (simulated)')">${t("callUs")}</button></div>
  <div class="xs mute" style="margin-top:10px"><b>${t("incl")}:</b> ${t("inclV")}</div><div class="xs mute" style="margin-top:6px">${t("privacy")}</div>`}
 function threadScreen(){const x=T1();const msgs=visMsgs();
  const back=S.from==="push"?"set({screen:'msgs',from:null})":"go('msgs')";
- const hdr=`<div class="appbar"><button class="ib" onclick="${back}">‹</button>${mark(36,true)}<div style="flex:1;min-width:0;cursor:pointer" onclick="set({sheet:'info'})"><b>${t("supTitle")}</b><div class="xs mute" style="line-height:1.25"><span style="color:var(--ver);font-weight:700">✓ ${t("official")}</span> · ${S.hours==="out"?t("afterHrs").split(".")[0]:t("hdrSub").split(" · ")[1]}</div></div><button class="ib" title="${t("info")}" onclick="set({sheet:'info'})">ⓘ</button><button class="ib" onclick="set({sheet:'menu'})">⋯</button></div>`;
- const strip=V.contact==="B"?`<div class="banner" style="flex-wrap:wrap;gap:6px 14px"><span class="sm"><b>✉</b> ${SUPPORT_EMAIL}</span><span class="sm"><b>☎</b> <span class="ph-x">${t("phoneV")}</span></span><span class="sm mute">🕘 <span class="ph-x">09:00–18:00</span></span></div>`:"";
+ const hdr=`<div class="appbar"><button class="ib" onclick="${back}">‹</button>${mark(36,true)}<div style="flex:1;min-width:0;cursor:pointer" onclick="set({sheet:'info'})"><b>${t("supTitle")}</b><div class="xs mute" style="line-height:1.25"><span style="color:var(--ver);font-weight:700">✓ ${t("official")}</span> · ${t("hdrSub").split(" · ")[1]}</div></div><button class="ib" title="${t("info")}" onclick="set({sheet:'info'})">ⓘ</button><button class="ib" onclick="set({sheet:'menu'})">⋯</button></div>`;
+ const strip=V.contact==="B"?`<div class="banner" style="flex-wrap:wrap;gap:6px 14px"><span class="sm"><b>✉</b> ${SUPPORT_EMAIL}</span><span class="sm"><b>☎</b> ${SUPPORT_PHONE}</span></div>`:"";
  let bn="";if(S.net==="off")bn+=`<div class="banner warn">📡 ${t("offline")}</div>`;
  if(x.status==="closed"&&!(msgs.length&&msgs[msgs.length-1].key==="closedEv"))bn+=`<div class="banner">${t("closedBn")}</div>`;
  const hasUser=x.msgs.some(m=>m.k==="user");
@@ -236,7 +301,7 @@ function threadScreen(){const x=T1();const msgs=visMsgs();
  let comp;
  if(S.acct==="ro")comp=`<div class="banner warn" style="flex-direction:column;align-items:stretch;border-top:1px solid var(--border)"><b>${t("roT")}</b><span>${t("roD")}</span><button class="btn brand sm" onclick="toast('mailto:${SUPPORT_EMAIL}')">✉ ${t("emailUs")}</button></div>`;
  else if(S.acct==="susp"&&V.susp==="B")comp=`<div class="banner warn" style="flex-direction:column;align-items:stretch;border-top:1px solid var(--border)"><b>${t("suspT")}</b><span>${t("suspD").split(".")[0]}.</span><button class="btn brand sm" onclick="toast('mailto:${SUPPORT_EMAIL}')">✉ ${t("emailUs")}</button></div>`;
- else comp=(S.acct==="susp"?`<div class="banner warn"><span><b>${t("suspT")}.</b> ${t("suspD")}</span></div>`:"")+`<div class="composer"><input id="mdraft" placeholder="${t("msgPh")}" value="${esc(S.draft)}" oninput="S.draft=this.value" onkeydown="if(event.key==='Enter')send(S.draft)"><button class="btn brand sm" onclick="send(S.draft)">➤</button></div>`;
+ else comp=(S.acct==="susp"?`<div class="banner warn"><span><b>${t("suspT")}.</b> ${t("suspD")}</span></div>`:"")+`<div class="image-composer">${imagePreview()}<div class="composer"><button data-testid="attach-image" class="ib" aria-label="${t("attachImage")}" ${S.imageDraft?"disabled":""} onclick="S.picker=true;render()">＋</button><input id="mdraft" aria-label="${t("msgPh")}" placeholder="${t("msgPh")}" value="${esc(S.draft)}" oninput="S.draft=this.value;updateSendButton()" onkeydown="if(event.key==='Enter')send(S.draft)"><button data-testid="send-message" class="btn brand sm" aria-label="${t("sendLabel")}" ${canSend()?"":"disabled"} onclick="send(S.draft)">➤</button></div><div class="image-rule">${t("imageRule")}</div></div>`;
  return hdr+strip+bn+`<div class="body" id="mbody"><div style="padding:6px 0 10px">${list}${chips}</div></div>`+comp}
 function pushScreen(){const x=T1();const last=[...x.msgs].reverse().find(m=>m.k==="staff");const nm=V.staff==="B"&&last?" · "+last.by:"";
  return `<div class="lock"><div style="text-align:center;font-size:44px;font-weight:200">09:41</div><div style="text-align:center;opacity:.7;margin-bottom:22px">чт, 2 октября</div>
@@ -249,30 +314,30 @@ function sheetEl(){if(!S.sheet)return "";
  return `<div class="dim" onclick="set({sheet:null})"></div><div class="sheet"><div class="it" onclick="set({sheet:'info'})">ⓘ ${t("info")}</div><div class="it" onclick="S.muted=!S.muted;set({sheet:null});toast(S.muted?'Muted (notices stay in the thread)':'Unmuted')">🔕 ${S.muted?t("unmute"):t("mute")}</div><div class="it" onclick="toast('mailto:${SUPPORT_EMAIL}')">✉ ${t("emailUs")}</div><div class="xs mute" style="padding:8px 4px">${S.lang==="ru"?"Нет «Заблокировать», «Пожаловаться» и «Удалить диалог»: это официальный аккаунт, не User.":"No Block, Report or Delete here: this is an official account, not a User."}</div></div>`}
 function mobile(){let s;
  if(S.screen==="push")s=pushScreen();else if(S.screen==="grace")s=graceScreen();else if(S.screen==="thread")s=threadScreen();else s=msgsScreen();
- return `<div class="phone ${S.theme==="dark"?"dark":""}"><div class="status"><span>09:41</span><span>AutoTM · Android</span></div><div class="screen">${s}${sheetEl()}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:""}</div></div>`}
+ return `<div class="phone ${S.theme==="dark"?"dark":""}"><div class="status"><span>09:41</span><span>AutoTM · Android</span></div><div class="screen">${s}${sheetEl()}${pickerSheet()}${S.viewer?imageViewer():""}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:""}</div></div>`}
 function go(sc){S.sheet=null;S.screen=sc;if(sc==="thread")openThreadFx();else S.from=null;render()}
 function toast(m){S.toast=m;render();clearTimeout(toast.h);toast.h=setTimeout(()=>{S.toast=null;render()},2200)}
 function set(o){Object.assign(S,o);render()}
-function send(txt){if(!txt||!txt.trim()||S.acct==="ro"||(S.acct==="susp"&&V.susp==="B"))return;const x=T1();
+function send(txt){if(S.imageDraft){sendImage(txt);return}if(!txt||!txt.trim()||S.acct==="ro"||(S.acct==="susp"&&V.susp==="B"))return;const x=T1();
  const m={k:"user",txt:txt.trim(),st:"pending",tm:"10:41",id:"m"+(++mid)};x.msgs.push(m);S.draft="";S.unreadFrom=-1;
  if(x.status==="closed"){x.status="open";x.msgs.push({k:"sysm",txt:S.lang==="ru"?"Обращение открыто заново":"Request reopened",tm:"10:41"})}
  render();setTimeout(()=>{if(S.net==="off"){m.st="failed"}else{m.st="sent";x.unreadStaff++;
-  if(S.hours==="out"&&!x.msgs.some(q=>q.key==="afterHrs"))x.msgs.push({k:"system",key:"afterHrs",tm:"10:41"})}render()},800)}
-function retryMsg(id){const x=T1();const m=x.msgs.find(q=>q.id===id);if(!m)return;m.st="pending";render();setTimeout(()=>{if(S.net==="off")m.st="failed";else{m.st="sent";x.unreadStaff++}render()},800)}
-function simReply(){const x=T1();x.msgs.push({k:"staff",by:"Айна",txt:"Спасибо за обращение! Уже смотрим, вернёмся с ответом сегодня.",tm:"10:50",unread:true});S.side="mobile";if(S.screen==="thread"){S.unreadFrom=x.msgs.length-1;render()}else{x.unreadUser++;render()}}
+}render()},800)}
+function retryMsg(id){const x=T1();const m=x.msgs.find(q=>q.id===id);if(!m)return;if(m.image){retryImageMessage(m);return;}m.st="pending";render();setTimeout(()=>{if(S.net==="off")m.st="failed";else{m.st="sent";x.unreadStaff++}render()},800)}
+function simReply(){const x=T1();x.msgs.push({k:"staff",by:"Айна",txt:"Спасибо за обращение! Посмотрим прикреплённое изображение.",tm:"10:50",unread:true});S.side="mobile";if(S.screen==="thread"){S.unreadFrom=x.msgs.length-1;render()}else{x.unreadUser++;render()}}
 
 /* ================= admin ================= */
 function filt(){const L=ORDER.map(i=>TH[i]);const f=S.afilter;
  return L.filter(x=>f==="open"?x.status==="open":f==="unread"?x.unreadStaff>0&&x.status==="open":f==="mine"?x.assignee===STAFF_ME&&x.status==="open":f==="unassigned"?!x.assignee&&x.status==="open":x.status==="closed")}
 const cnt=f=>{const sv=S.afilter;S.afilter=f;const n=filt().length;S.afilter=sv;return n};
-function lastTxt(x){const m=[...x.msgs].reverse().find(m=>m.k!=="sysm");return m?txtOf(m):"—"}
+function lastTxt(x){const m=[...x.msgs].reverse().find(m=>m.k!=="sysm");return m?(m.image?"Изображение"+(m.txt?": "+m.txt:""):txtOf(m)):"—"}
 function admList(){const F=[["open","Открытые"],["unread","Непрочитанные"],["mine","Мои"],["unassigned","Не назначены"],["closed","Закрытые"]];
  return `<div class="list"><div class="fl">${F.map(([k,n])=>`<button class="${S.afilter===k?"on":""}" onclick="set({afilter:'${k}'})">${n} ${cnt(k)}</button>`).join("")}</div><div style="overflow:auto;flex:1">${filt().map(x=>`<a class="li ${S.adminSel===x.id?"sel":""}" onclick="admOpen('${x.id}')"><div class="n"><b>${x.name}</b><span style="font-size:11.5px;color:#737373">${x.msgs.length?x.msgs[x.msgs.length-1].tm:""}</span></div><div class="p">${esc(lastTxt(x))}</div><div style="margin-top:3px">${x.unreadStaff?`<span class="tag red">${x.unreadStaff} нов.</span> `:""}${x.assignee?`<span class="tag blu">${x.assignee}</span>`:`<span class="tag amb">не назначен</span>`} ${x.status==="closed"?`<span class="tag">закрыт</span>`:""}</div></a>`).join("")||`<div style="padding:20px;color:#737373">Пусто</div>`}</div></div>`}
 function admOpen(id){S.adminSel=id;S.atab="reply";const x=TH[id];if(x.unreadStaff){x.unreadStaff=0;x.msgs.forEach(m=>{if(m.k==="user"&&m.st==="sent")m.st="read"})}render()}
-function admMsg(m){if(m.k==="sysm")return `<div class="am sysm">${esc(txtOf(m))} · ${m.tm}</div>`;
+function admMsg(m){if(m.image&&m.st!=="sent"&&m.st!=="read")return "";if(m.k==="sysm")return `<div class="am sysm">${esc(txtOf(m))} · ${m.tm}</div>`;
  const cls=(m.k==="user"||m.k==="system")?"":m.k==="note"?"note":"staff";
  const who=m.k==="user"?"":m.k==="note"?`🔒 Внутренняя заметка · ${m.by}`:m.k==="system"?"Система AutoTM":m.k==="notice"?`Исходящее уведомление · ${m.by||STAFF_ME}`:m.k==="broadcast"?"Рассылка":`${m.by} · пользователь видит: ${V.staff==="A"?"«AutoTM»":m.by+" · AutoTM"}`;
- return `<div class="am ${cls}">${esc(txtOf(m))}<div class="w">${who}${who?" · ":""}${m.tm}${m.st==="failed"?" · не доставлено":""}</div></div>`}
+ return `<div class="am ${cls}">${m.image?imageMarkup(m,"admin"):""}${esc(txtOf(m))}<div class="w">${who}${who?" · ":""}${m.tm}${m.st==="failed"?" · не доставлено":""}</div></div>`}
 function admThread(){const x=TH[S.adminSel];const tab=S.atab;
  const head=`<div class="thh"><div style="flex:1;min-width:0"><b style="font-size:15px">${x.name}</b> <span class="tag ${x.status==="open"?"grn":""}">${x.status==="open"?"открыт":"закрыт"}</span><div style="font-size:12px;color:#737373">${x.subject}</div></div>
   <label style="font-size:12px;color:#737373">Назначен: <select onchange="assign('${x.id}',this.value)" ${x.deleted?"disabled":""}><option value="">— не назначен —</option>${["Айна","Максат"].map(n=>`<option ${x.assignee===n?"selected":""}>${n}</option>`).join("")}</select></label>
@@ -280,9 +345,9 @@ function admThread(){const x=TH[S.adminSel];const tab=S.atab;
   <div class="fl" style="padding:6px 16px"><button class="${tab==="reply"?"on":""}" onclick="set({atab:'reply'})">Переписка</button><button class="${tab==="audit"?"on":""}" onclick="set({atab:'audit'})">Журнал действий (${AUD.filter(a=>a.tgt===x.id).length})</button></div>`;
  if(tab==="audit"){const A=AUD.filter(a=>a.tgt===x.id);return `<div class="thr">${head}<div class="thb"><table class="atbl"><tr><th>Время</th><th>Кто</th><th>Действие</th><th>Детали</th></tr>${A.map(a=>`<tr><td>${a.tm}</td><td>${a.who}</td><td class="mono">${a.act}</td><td>${a.d}</td></tr>`).join("")||"<tr><td colspan=4>Нет записей</td></tr>"}</table><div style="font-size:12px;color:#737373;margin-top:10px">Запись в audit_logs (targetType «support_thread»). Пользователь видит «${V.staff==="A"?"AutoTM":"имя · AutoTM"}», настоящий автор виден только здесь. Журнал читается и на общей странице «Аудит».</div></div></div>`}
  const canReply=!x.deleted;const note=S.atab2==="note";
- return `<div class="thr">${head}<div class="thb" id="abody">${x.msgs.map(admMsg).join("")}${x.deleted?`<div class="am sysm">Тред хранится для аудита. Отправка недоступна.</div>`:""}</div>
+ return `<div class="thr">${head}<div class="thb" id="abody">${x.msgs.map(admMsg).join("")}${x.deleted?`<div class="am sysm">Иллюстрация удалённого аккаунта. Хранение текста и изображений ещё не решено. Отправка недоступна.</div>`:""}</div>
  <div class="rep"><div style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><button class="ab ${!note?"pri":""}" onclick="set({atab2:'reply'})">Ответ</button><button class="ab ${note?"pri":""}" onclick="set({atab2:'note'})">🔒 Заметка</button>
- <select onchange="S.adraft=this.value;render()" style="margin-left:auto;max-width:260px"><option value="">Шаблон ответа…</option><option>Здравствуйте! Подтвердите номер в Кабинете → Профиль и повторите.</option><option>Спасибо, мы передали вопрос команде. Вернёмся с ответом в течение 1 рабочего дня.</option><option>Объявление снято из-за нарушения правил. Исправьте описание и опубликуйте снова.</option></select></div>
+ <select onchange="S.adraft=this.value;render()" style="margin-left:auto;max-width:260px"><option value="">Шаблон ответа…</option><option>Здравствуйте! Подтвердите номер в Кабинете → Профиль и повторите.</option><option>Спасибо, мы передали вопрос команде.</option><option>Объявление снято из-за нарушения правил. Исправьте описание и опубликуйте снова.</option></select></div>
  <textarea id="areply" ${canReply?"":"disabled"} placeholder="${note?"Внутренняя заметка (пользователь не увидит)":"Ответ пользователю"}" oninput="S.adraft=this.value">${esc(S.adraft)}</textarea>
  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px"><span style="font-size:12px;color:#737373">${note?"Видят только сотрудники":`Пользователь увидит отправителя: <b>${V.staff==="A"?"AutoTM":STAFF_ME+" · AutoTM"}</b>. Push придёт, если не отключён.`}</span><button class="ab pri" ${canReply?"":"disabled"} onclick="admSend()">${note?"Сохранить заметку":"Отправить"}</button></div></div></div>`}
 function admCtx(){const x=TH[S.adminSel];
@@ -314,6 +379,7 @@ function admSend(){const x=TH[S.adminSel];const tx=S.adraft.trim();if(!tx)return
 const TPL={listing:"Объявление Toyota Camry 2018 снято с публикации: в описании указан сторонний телефон. Исправьте и опубликуйте снова.",warn:"Мы получили жалобу на ваши сообщения. Пожалуйста, соблюдайте правила AutoTM.",custom:""};
 function openCompose(to){S.cmp={to:to||"t1",tpl:"listing",body:TPL.listing,reason:"",push:true,bcast:false};S.modal="compose";render()}
 function composeSend(){const c=S.cmp;if(!c.body.trim()||!c.reason.trim())return;
+ if(c.bcast)return;
  if(c.bcast){addAud("support.broadcast","t1","Рассылка всем: "+c.body.slice(0,40));S.modal=null;toast2("Рассылка поставлена в очередь (прототип, никому не отправлена)");return}
  const x=TH[c.to];x.msgs.push({k:"notice",by:STAFF_ME,txt:c.body,cta:c.tpl==="listing",tm:"10:55",unread:true});x.unreadUser++;
  addAud("support.outbound",c.to,"Исходящее; причина: "+c.reason+(c.push?"; push":""));S.modal=null;S.adminSel=c.to;toast2("Отправлено"+(c.to==="t1"?". Переключитесь на Mobile: уведомление в треде.":"."))}
@@ -332,19 +398,19 @@ function composeModal(){if(S.modal!=="compose")return "";const c=S.cmp;
 function admin(){const un=ORDER.reduce((a,i)=>a+(TH[i].status==="open"&&TH[i].unreadStaff?1:0),0);
  return `<div class="desk"><div class="chrome"><i></i><i></i><i></i><span>https://admin.auto.tm/support</span></div>
  <div class="anav"><b>AutoTM Admin</b><a>Жалобы</a><a>Интерес к проверкам</a><a>Бренды</a><a>Аудит</a><a class="on">Поддержка${un?` <span class="tag red">${un}</span>`:""}</a><span style="flex:1"></span><button class="ab pri" ${V.dir==="A"?"disabled title='В варианте D3-A исходящих нет'":""} onclick="openCompose()">✎ Новое сообщение пользователю</button><span style="color:#737373;font-size:12.5px">${STAFF_ME} · moderator</span></div>
- ${roleNote()}<div class="cols" style="position:relative">${admList()}${admThread()}${admCtx()}${S.atoast?`<div style="position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#111;color:#fff;padding:7px 12px;border-radius:8px;font-size:12.5px;z-index:30">${esc(S.atoast)}</div>`:""}${composeModal()}</div></div>`}
+ ${roleNote()}<div class="cols" style="position:relative">${admList()}${admThread()}${admCtx()}${S.atoast?`<div style="position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:#111;color:#fff;padding:7px 12px;border-radius:8px;font-size:12.5px;z-index:30">${esc(S.atoast)}</div>`:""}${composeModal()}${S.viewer?imageViewer():""}</div></div>`}
 
 /* ================= side panel ================= */
 const DEC=[
  ["model","D1 Поддержка: Conversation или отдельный тред?",[["A","Особый Conversation","Conversation без Listing, участник «AutoTM». Тот же сокет, send-путь и push. Но listingId сейчас обязателен и уникален (listingId, buyerId); блок, жалобу и доступность листинга придётся исключать."],["B","★ Отдельный контекст Support","Свои таблицы (тред: User, статус, assignee; сообщения) и своя политика. Инварианты Conversation не трогаем, статус, назначение и закрытие естественны. В списке Messages выглядит так же: UI одинаков."]]],
  ["staff","D2 Как показывать сотрудника",[["A","★ Только «AutoTM» ✓","Один голос, нет утечки имён, нет проблем при смене людей. Автор есть в аудите."],["B","Имя · AutoTM","Теплее, но привязывает людей: нужно имя в профиле и есть проблема при уходе сотрудника."]]],
  ["dir","D3 Направление",[["A","Только входящие + ответы","Сотрудник не пишет первым. Самое безопасное и дешёвое. Карточки уведомлений скрыты."],["B","★ + исходящее одному User","Уведомление об объявлении или аккаунте, ответ на жалобу. Тот же тред, push."],["C","+ рассылки всем","Новости и объявления. Нужны сегменты, очередь, согласие, лимиты, отписка: это отдельный проект."]]],
- ["contact","D4 Где контакты",[["A","★ Шапка + лист ⓘ","Всегда под рукой, чат не засорён. Лист: email, телефон, часы, время ответа."],["B","Закреплённая карточка в треде","Всегда видно, но занимает место."]]],
+ ["contact","D4 Где контакты",[["A","★ Шапка + лист ⓘ","Всегда под рукой, чат не засорён. Лист: утверждённые email и телефон, без обещаний часов и сроков ответа."],["B","Закреплённая карточка в треде","Всегда видно, но занимает место."]]],
  ["susp","D5 Ограниченный User (бан)",[["A","★ Чат остаётся открытым","Канал обжалования. Риск спама снимается ограничением треда (сценарий «злоупотребление»)."],["B","Только чтение + email","Проще, но человек, который хочет оспорить, должен писать на почту."]]],
  ["roles","D6 Кто отвечает",[["A","★ moderator + admin","Роли и TOTP уже есть. Реальный автор в аудите."],["B","Новая роль support","Чище права, но миграция enum и проверки в API."],["C","Только admin (основатель)","Ноль настройки, но нет замены на выходные и отпуск."]]],
  ["so","D7 Вход не выполнен",[["A","★ Вход + email/телефон","Чата без аккаунта нет, но «не могу войти» остаётся решаемым через email."],["B","Только «Войти»","Проще, но людям с проблемой входа некуда идти."]]]
 ];
-const decPanel=()=>DEC.map(([k,q,os])=>`<div class="dec"><b class="q">${q}</b>${os.map(([v,n,d])=>`<button class="opt ${V[k]===v?"on":""}" onclick="V.${k}='${v}';render()">${n.replace("★",'<span class="star">★</span>')}<small>${d}</small></button>`).join("")}</div>`).join("");
+const decPanel=()=>DEC.map(([k,q,os])=>`<div class="dec"><b class="q">${q}</b>${os.filter(([v])=>v===V[k]).map(([v,n,d])=>`<button class="opt ${V[k]===v?"on":""}" disabled aria-label="Approved decision ${k}">${n.replace("★",'<span class="star">★</span>')}<small>${d}</small></button>`).join("")}</div>`).join("");
 function est(){const m=V.model,d=V.dir;
  const rows=[
   ["Бэкенд (API, БД)",m==="A"?"L":"M",m==="A"?"миграция Conversation (listingId nullable, kind), исключения в политиках: блок, жалоба, листинг, участники, tombstone":"новый модуль: тред + сообщения, send с идемпотентностью, водяные знаки, статус и assignee"],
@@ -357,28 +423,28 @@ function est(){const m=V.model,d=V.dir;
  return {rows,w:(m==="A"?4:3.5)+(d==="B"?.5:d==="C"?2:0)}}
 function viab(){const e=est();
  return `<h2>Ваша конфигурация (выбранные D1–D7)</h2><table class="stbl"><tr><th>Часть</th><th>Размер</th><th>Что входит</th></tr>${e.rows.map(r=>`<tr><td>${r[0]}</td><td><span class="sz ${r[1]}">${r[1]}</span></td><td>${r[2]}</td></tr>`).join("")}</table>
- <div class="note"><b>Грубо: ~${e.w.toFixed(1)} нед. для одного разработчика</b> (S ≈ 1–2 дня, M ≈ 3–5, L ≈ 1–2 нед.). Оценка по размеру прототипа, <b>не проверена</b> по коду. Для сравнения: весь релиз #320 оценён в 4–6 недель.</div>
+ <div class="note"><b>Прежняя оценка только текста: ~${e.w.toFixed(1)} нед. для одного разработчика</b> (S ≈ 1–2 дня, M ≈ 3–5, L ≈ 1–2 нед.). Оценка по размеру прототипа, <b>не проверена</b> по коду. Дополнительная работа по изображениям в эти недели <b>не включена и ещё не оценена</b>: сжатие/preview, загрузка, авторизация Support, хранение/очистка, просмотр в админке, ретраи и проверка приватности. Концепцию сжатия можно переиспользовать; buyer/seller grants для Support не подходят без отдельного дизайна. Для сравнения: весь релиз #320 оценён в 4–6 недель.</div>
  <h2>Сравнение с вариантом без бэкенда (D10)</h2><table class="stbl"><tr><th></th><th>D10 (план релиза)</th><th>D1-B ★</th><th>D1-A</th></tr><tr><td>Бэкенд</td><td><span class="sz N">0</span></td><td><span class="sz M">M</span></td><td><span class="sz L">L</span></td></tr><tr><td>Админка</td><td><span class="sz N">0</span></td><td><span class="sz L">L</span></td><td><span class="sz L">L</span></td></tr><tr><td>Мобильное</td><td><span class="sz S">S</span></td><td><span class="sz M">M</span></td><td><span class="sz M">M</span></td></tr><tr><td>Риск регрессий чата</td><td>нет</td><td>низкий</td><td>высокий</td></tr><tr><td>Кто отвечает</td><td>почта основателя</td><td>штат в админке</td><td>штат в админке</td></tr></table>
  <h2>Риски</h2><table class="stbl">
  <tr><th>Play UGC</th><td>Тред с сотрудниками не виден другим User, так что Report/Block для него не нужны; они остаются в User-to-User чатах. Нужно отразить сообщения в Data Safety и политике приватности. Позиция Google не проверена.</td></tr>
- <tr><th>Модерация</th><td>Злоупотребление в поддержку: лимит сообщений в сутки, режим «только чтение» с причиной в аудит. Вложений в первой версии нет (хранение, сканирование).</td></tr>
- <tr><th>Штат</th><td>Самый большой риск. Чат без ответа хуже, чем email с честными часами. Нужны 2 человека, шаблоны, обещание времени ответа.</td></tr>
+ <tr><th>Модерация</th><td>Злоупотребление в поддержку: лимит сообщений в сутки, режим «только чтение» с причиной в аудит. Одно изображение до 5 MB утверждено после reviewer-релиза. Доступ, проверка содержимого, хранение, удаление и журнал чтения требуют отдельного проектирования в Support.</td></tr>
+ <tr><th>Штат</th><td>Самый большой риск. Чат без ответа хуже, чем доступные email и телефон. Нужны решение о штате и шаблоны. Часы и время ответа ещё не утверждены, обещаний нет.</td></tr>
  <tr><th>Push</th><td>FCM только Android (ADR-0047). Push ответа ценен, но расширяет физические проверки #326. Рассылки требуют согласия и лимитов.</td></tr>
- <tr><th>Приватность</th><td>Сотрудники читают переписку: маска PII, чтение в аудит, срок хранения. Удаление (ADR-0032): тред остаётся у AutoTM как «Удалённый пользователь», новый аккаунт получает пустой тред.</td></tr>
+ <tr><th>Приватность</th><td>Сотрудники читают текст и изображения. Нужны правила доступа, журнал чтения, Data Safety, политика приватности, сроки хранения и очистки медиа. Хранение после удаления аккаунта ещё не утверждено; сценарий «Удалённый» иллюстративный, а не обещание политики.</td></tr>
  <tr><th>Вход</th><td>Частые обращения «не могу войти» приходят от тех, кто не может войти. Email нужен всегда.</td></tr></table>
- <h2>Рекомендация</h2><div class="note"><b>★ После релиза для проверки Google Play, не до.</b><br>1. Гейт #326 уже требует физический Android FCM, deep link, ревьюерские аккаунты, прод smoke, откат и исправление HTTP-доставки чата. Поддержка добавляет новый канал, админку и штат, которые ревьюер не проверяет.<br>2. D10 (email, телефон при желании) закрывает контакты для Play и #327.<br>3. Пустой или неотвечаемый чат в сборке для ревьюера выглядит хуже честного email.<br>4. Подготовка сейчас почти бесплатна: оставить закреплённую строку Support, использовать лист ⓘ как экран Contact support, выбрать D1-B, чтобы не трогать модель Conversation до релиза.<br>5. Начинать после стабильного чата, исправления HTTP-доставки и когда есть люди для ответов.<br><b>Если основатель хочет до релиза:</b> D1-B, D2-A, D3-A (входящие и ответы), без рассылок и вложений. Примерно 3 нед., релиз сдвигается.</div>
+ <h2>Рекомендация</h2><div class="note"><b>★ После релиза для проверки Google Play, не до.</b><br>1. Гейт #326 уже требует физический Android FCM, deep link, ревьюерские аккаунты, прод smoke, откат и исправление HTTP-доставки чата. Поддержка добавляет новый канал, админку и штат, которые ревьюер не проверяет.<br>2. D10 (утверждённые email и телефон) закрывает контакты для Play и #327.<br>3. Пустой или неотвечаемый чат в сборке для ревьюера выглядит хуже честного email.<br>4. Подготовка сейчас почти бесплатна: оставить закреплённую строку Support, использовать лист ⓘ как экран Contact support, выбрать D1-B, чтобы не трогать модель Conversation до релиза.<br>5. Начинать после стабильного чата, исправления HTTP-доставки и когда есть люди для ответов.<br><b>Решение основателя:</b> весь чат и изображения только после reviewer-релиза. До него остаётся #352 D10 с email и телефоном.</div>
  <div class="note" style="border-color:#aaa"><b>Не проверено:</b> оценки в неделях, позиция Google Play по UGC для чата с сотрудниками, поведение роутера при входе из push, будут ли люди для ответов.</div>`}
 function ctlPanel(){return `<h2>Поверхность</h2><div class="seg"><button class="${S.side==="mobile"?"on":""}" onclick="set({side:'mobile'})">Mobile</button><button class="${S.side==="admin"?"on":""}" onclick="set({side:'admin'})">Admin</button></div>
  <div class="note">Состояние общее: сообщение с телефона появляется в админке, ответ из админки приходит на телефон как непрочитанный.</div>
  <h2>Мобильное</h2><span class="lbl">Тема / язык</span><div class="seg"><button class="${S.theme==="light"?"on":""}" onclick="set({theme:'light'})">Light</button><button class="${S.theme==="dark"?"on":""}" onclick="set({theme:'dark'})">Dark</button></div><div class="seg">${["ru","en","tk"].map(l=>`<button class="${S.lang===l?"on":""}" onclick="set({lang:'${l}'})">${l.toUpperCase()}${l==="tk"?" (draft)":""}</button>`).join("")}</div>
- <span class="lbl">Сеть / часы</span><div class="seg"><button class="${S.net==="on"?"on":""}" onclick="set({net:'on'})">Online</button><button class="${S.net==="off"?"on":""}" onclick="set({net:'off'})">Offline</button></div><div class="seg"><button class="${S.hours==="in"?"on":""}" onclick="set({hours:'in'})">Рабочее время</button><button class="${S.hours==="out"?"on":""}" onclick="set({hours:'out'})">Нерабочее</button></div>
- <h2>Сценарии (прыжок)</h2>${Object.entries(SC).map(([k,v])=>`<div><button class="ab" style="width:100%;text-align:left;margin:2px 0" onclick="loadSc('${k}')">${v.label}</button></div>`).join("")}
+ <span class="lbl">Сеть</span><div class="seg"><button class="${S.net==="on"?"on":""}" onclick="set({net:'on'})">Online</button><button class="${S.net==="off"?"on":""}" onclick="set({net:'off'})">Offline</button></div>
+ ${imageControls()}<h2>Сценарии (прыжок)</h2>${Object.entries(SC).map(([k,v])=>`<div><button class="ab" style="width:100%;text-align:left;margin:2px 0" onclick="loadSc('${k}')">${v.label}</button></div>`).join("")}
  <div class="note"><b>Что видно:</b> ${S.note||"Выберите сценарий."}</div>
  <button class="ab" onclick="simReply()">Ответить от поддержки (как из админки)</button>
  <h2>Отличие от User-to-User</h2><table class="stbl"><tr><th></th><th>Поддержка</th><th>Чат с продавцом</th></tr><tr><td>Аватар</td><td>знак ATM + ✓</td><td>фото объявления</td></tr><tr><td>Положение</td><td>закреплён сверху</td><td>по времени</td></tr><tr><td>Плашка</td><td>«Официальный»</td><td>роль, «Продано»</td></tr><tr><td>Меню</td><td>Контакты, Mute</td><td>Mute, Report, Block</td></tr><tr><td>Листинг</td><td>нет</td><td>всегда</td></tr></table>`}
 function sidePanel(){const tabs=[["controls","Сцены"],["decisions","Решения ★"],["viab","Viability"],["about","О прототипе"]];
- const body=S.stab==="controls"?ctlPanel():S.stab==="decisions"?`<div class="note">★ = рекомендация. Выбор сразу меняет оба экрана.</div>`+decPanel():S.stab==="viab"?viab():`<div class="note">Прототип для #500. Основан на утверждённых D1–D10 из #352 (D10: строка Support и экран Contact support). Email: <b>${SUPPORT_EMAIL}</b>. Телефон, часы, время ответа и срок хранения это <span class="ph-x">заполнители</span>.</div><div class="note">Не включено: вложения, оценка ответа, бот, поиск по inbox, таймеры SLA. Домен: глоссарий определяет Conversation как разговор покупателя и продавца про Listing, поэтому поддержка потребует правки глоссария (Message уже допускает автора «AutoTM»).</div>`;
- return `<h1>Поддержка в приложении <small style="font-weight:400;color:#737373">#500 · прототип</small></h1><div class="tabs">${tabs.map(([k,n])=>`<button class="${S.stab===k?"on":""}" onclick="set({stab:'${k}'})">${n}</button>`).join("")}</div>${body}`}
+ const body=S.stab==="controls"?ctlPanel():S.stab==="decisions"?`<div class="note">D1–D7 утверждены основателем. Здесь показаны только принятые варианты; рассылки исключены.</div>`+decPanel():S.stab==="viab"?viab():`<div class="note">Прототип для #500. Основан на утверждённых D1–D10 из #352 (D10: строка Support и экран Contact support). Email: <b>${SUPPORT_EMAIL}</b>. Телефон: <b>${SUPPORT_PHONE}</b>. Часы, сроки ответа, штат, хранение текста и изображений и обновление приватности ещё не определены. Обещаний по часам и срокам нет.</div><div class="note">Включено после reviewer-релиза: одно клиентски сжатое изображение до 5 MB в сообщении, предпросмотр, удаление, загрузка, повтор и просмотр в админке. Всё симулируется, реальных файлов и сети нет. Не включено: видео, PDF, файлы, несколько изображений, вложения в исходящие уведомления или рассылки, оценка ответа, бот, поиск и SLA. Домен: глоссарий определяет Conversation как разговор покупателя и продавца про Listing, поэтому поддержка потребует правки глоссария (Message уже допускает автора «AutoTM»).</div>`;
+ return `<div class="note"><b>После reviewer-релиза.</b> Чат и одно изображение до 5 MB утверждены. Это симуляция: пример скриншота, сжатие и доставка только в памяти. Сейчас #352 D10 оставляет email и телефон.</div><h1>Поддержка в приложении <small style="font-weight:400;color:#737373">#500 · прототип</small></h1><div class="tabs">${tabs.map(([k,n])=>`<button class="${S.stab===k?"on":""}" onclick="set({stab:'${k}'})">${n}</button>`).join("")}</div>${body}`}
 
 /* ================= render ================= */
 function render(){const ae=document.activeElement;const aid=ae&&ae.id;
@@ -386,14 +452,26 @@ function render(){const ae=document.activeElement;const aid=ae&&ae.id;
  const st=document.getElementById("stage");
  st.innerHTML=S.side==="mobile"?mobile():`<div id="zoomer">${admin()}</div>`;
  if(S.side==="admin")st.firstChild.style.zoom=Math.min(1,(window.innerWidth-380-60)/1180);
+ bindPrototypeEvents();
  const mb=document.getElementById("mbody");if(mb)mb.scrollTop=mb.scrollHeight;
  const ab=document.getElementById("abody");if(ab)ab.scrollTop=ab.scrollHeight;
  if(aid){const el=document.getElementById(aid);if(el){el.focus();if(el.setSelectionRange&&el.value)try{el.setSelectionRange(el.value.length,el.value.length)}catch(e){}}}}
+function bindPrototypeEvents(){
+ for(const type of ["click","input","change","keydown","toggle"]){
+  document.querySelectorAll(`[on${type}]`).forEach(el=>{
+   const handler=el.getAttribute(`on${type}`);el.removeAttribute(`on${type}`);
+   // Only the prototype's own generated callbacks. No global state or handlers.
+   el.addEventListener(type,function(event){eval(handler)});
+  });
+ }
+}
 window.addEventListener("resize",render);
+window.addEventListener("keydown",event=>{if(event.key==="Escape"){S.viewer=null;S.picker=false;S.sheet=null;render()}});
 loadSc("active");
 const q=new URLSearchParams(location.search);
-if(q.get("v"))q.get("v").split(",").forEach(p=>{const[a,b]=p.split(":");V[a]=b});
+// D1–D7 are approved; URL parameters cannot enable rejected variants or broadcasts.
 if(q.get("s"))loadSc(q.get("s"));if(q.get("side"))S.side=q.get("side");if(q.get("stab"))S.stab=q.get("stab");if(q.get("theme"))S.theme=q.get("theme");if(q.get("lang"))S.lang=q.get("lang");if(q.get("sel"))S.adminSel=q.get("sel");if(q.get("sheet"))S.sheet=q.get("sheet");if(q.get("compose"))openCompose("t1");render();
+})();
 </script>
 </body>
 </html>
