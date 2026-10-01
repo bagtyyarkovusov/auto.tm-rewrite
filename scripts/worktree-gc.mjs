@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const ZERO_SHA = /^0+$/;
 const EVIDENCE = /(^|[/_-])(evidence|prototype|research)([/_-]|$)/i;
+const MAIN_BRANCH = "main";
 const TASK_BRANCH = "agent/issue-";
 const SCAFFOLD_BRANCH = "worktree-agent-";
 
@@ -167,8 +168,15 @@ export function classifyWorktree(entry, context) {
   }
   const open = prs.find((pr) => pr.state === "OPEN");
   if (open) return { verdict: "keep", reason: `PR #${open.number} is open`, pr: open };
-  const merged = prs.find((pr) => pr.state === "MERGED");
-  if (merged) {
+  const mergedPrs = prs.filter((pr) => pr.state === "MERGED");
+  if (mergedPrs.length) {
+    // A PR merged into a stacked parent branch has not reached main, so its
+    // work is not on main yet. Only a merge into main lets the worktree go.
+    const merged = mergedPrs.find((pr) => pr.baseRefName === MAIN_BRANCH);
+    if (!merged) {
+      const first = mergedPrs[0];
+      return { verdict: "keep", reason: `PR #${first.number} merged into ${first.baseRefName ?? "an unknown base"}, not ${MAIN_BRANCH}; the work is not on ${MAIN_BRANCH} yet`, pr: first };
+    }
     const relation = how === "head" ? "HEAD is the PR head" : `HEAD is an ancestor of PR #${merged.number} head`;
     return { verdict: "remove", reason: `PR #${merged.number} merged; ${relation}`, pr: merged };
   }
@@ -181,16 +189,18 @@ function isManagedBranch(name) {
 
 // Local task and scaffold branches that no worktree holds and whose tip is
 // already inside a merged PR head.
-export function findStaleBranches({ branches, worktrees, prs, isAncestor }) {
+export function findStaleBranches({ branches, worktrees, prs, isAncestor, mainSha = null }) {
   const held = new Set(worktrees.map((entry) => entry.branch).filter(Boolean));
-  const mergedPrs = prs.filter((pr) => pr.state === "MERGED");
+  const mergedPrs = prs.filter((pr) => pr.state === "MERGED" && pr.baseRefName === MAIN_BRANCH);
   const stale = [];
   for (const branch of branches) {
     if (!isManagedBranch(branch.name) || held.has(branch.name)) continue;
     const contains = (pr) => pr.headRefOid === branch.sha || isAncestor(branch.sha, pr.headRefOid) === true;
     const sameName = mergedPrs.filter((pr) => pr.headRefName === branch.name);
     const pr = sameName.find(contains) ?? mergedPrs.find((candidate) => !sameName.includes(candidate) && contains(candidate));
-    if (pr) stale.push({ name: branch.name, sha: branch.sha, pr });
+    // A tip already on main is reported as such, whichever PR also contains it.
+    const onMain = Boolean(mainSha) && isAncestor(branch.sha, mainSha) === true;
+    if (pr) stale.push({ name: branch.name, sha: branch.sha, pr, onMain });
   }
   return stale;
 }
@@ -302,7 +312,9 @@ export function formatReport({ rows, staleBranches, railway, applied, scans }) {
 
   out.push("");
   out.push(`Stale local branches (no worktree, tip inside a merged PR head): ${staleBranches.length}`);
-  for (const stale of staleBranches) out.push(`  ${stale.name} at ${stale.sha.slice(0, 9)} (PR #${stale.pr.number} merged)`);
+  for (const stale of staleBranches) {
+    out.push(`  ${stale.name} at ${stale.sha.slice(0, 9)} (${stale.onMain ? `on ${MAIN_BRANCH}` : `PR #${stale.pr.number} merged`})`);
+  }
 
   out.push("");
   if (!railway) out.push("Railway PR environments: not checked");
@@ -415,13 +427,23 @@ function makeAncestry(mainPath, oids) {
   };
 }
 
+// `gh pr list` stops silently at --limit. When a result fills the limit, ask
+// again with a larger one; a result that fills the largest limit is reported as
+// possibly truncated.
+const PR_LIMITS = [1000, 5000, 20000];
+
 export function loadPrs(prsFile, cwd, runCommand = run) {
   if (prsFile) return { prs: JSON.parse(readFileSync(prsFile, "utf8")), truncated: false };
-  const out = runCommand(
-    ["gh", "pr", "list", "--state", "all", "--limit", "1000", "--json", "number,state,headRefName,headRefOid,url"],
-    cwd,
-  );
-  return { prs: JSON.parse(out), truncated: false };
+  let prs = [];
+  for (const limit of PR_LIMITS) {
+    const out = runCommand(
+      ["gh", "pr", "list", "--state", "all", "--limit", String(limit), "--json", "number,state,headRefName,headRefOid,baseRefName,url"],
+      cwd,
+    );
+    prs = JSON.parse(out);
+    if (prs.length < limit) return { prs, truncated: false };
+  }
+  return { prs, truncated: true };
 }
 
 function loadRailway(mainPath, prs) {
@@ -442,7 +464,12 @@ function parseArgs(argv) {
     else if (arg === "--json") options.json = true;
     else if (arg === "--no-size") options.size = false;
     else if (arg === "--no-railway") options.railway = false;
-    else if (arg === "--prs-file") options.prsFile = argv[(i += 1)];
+    else if (arg === "--prs-file") {
+      const value = argv[i + 1];
+      if (!value || value.startsWith("--")) throw new Error("--prs-file needs a path to a JSON file");
+      options.prsFile = value;
+      i += 1;
+    }
     else throw new Error(`unknown argument: ${arg}`);
   }
   return options;
@@ -487,6 +514,13 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
   } catch (error) {
     err(`Cannot evaluate the gate without PR data: ${String(error.stderr || error.message).trim()}`);
     return 1;
+  }
+  if (prsTruncated) {
+    if (options.apply) {
+      err("The PR list may be truncated (gh returned its full limit), so --apply refuses to remove anything.");
+      return 1;
+    }
+    err("Warning: the PR list may be truncated (gh returned its full limit); a worktree's PR may be missing from this report.");
   }
   const pid = io.pid ?? process.pid;
   const scannedProcesses = (io.scanProcesses ?? scanProcesses)();
@@ -590,7 +624,7 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
     return { entry, size, dirtyCount, verdict };
   });
 
-  const staleBranches = findStaleBranches({ branches, worktrees: entries, prs, isAncestor });
+  const staleBranches = findStaleBranches({ branches, worktrees: entries, prs, isAncestor, mainSha });
   const railway = options.railway ? loadRailway(mainPath, prs) : null;
 
   let applied = null;
