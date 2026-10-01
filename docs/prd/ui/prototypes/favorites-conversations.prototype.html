@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE — Favorites and Conversations (throwaway)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  PROTOTYPE — throwaway. Answers issue #352 "Prototype Favorites and Conversations screens and states".
+  Surfaces: Favorites, Messages (Conversations list), Conversation, Push-notification entry.
+  The Favorites card and Hide sold behaviour are SETTLED input from #351 (AR-36-001/002), not variants.
+  Founder choices are switchable DECISIONS in the floating bar (star = recommended).
+  Colours are AutoTM tokens from apps/mobile/global.css (light and dark).
+  Copy: RU primary, EN, TK. TK keys copied from apps/mobile/src/i18n/resources.ts where they exist;
+  new TK strings are drafts. No third-party screenshots are embedded. No prepayment warnings.
+-->
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#171717;background:#f4f4f2}
+  .wrap{display:flex;gap:24px;padding:20px 20px 150px;align-items:flex-start}
+  .phone{--bg:hsl(0 0% 100%);--fg:hsl(0 0% 9%);--card:hsl(0 0% 100%);--primary:hsl(0 90% 48%);--pfg:#fff;--secondary:hsl(45 5% 96%);--muted:hsl(45 5% 92%);--mfg:hsl(0 0% 45%);--border:hsl(45 8% 88%);--destructive:hsl(15 85% 55%);
+    width:372px;height:780px;flex:none;border:10px solid #111;border-radius:36px;background:var(--bg);color:var(--fg);position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .phone.dark{--bg:hsl(0 0% 4%);--fg:hsl(60 10% 98%);--card:hsl(0 0% 9%);--primary:hsl(0 90% 52%);--secondary:hsl(0 0% 23%);--muted:hsl(240 4% 20%);--mfg:hsl(45 4% 64%);--border:hsl(0 0% 23%);--destructive:hsl(15 80% 58%)}
+  .status{height:24px;font-size:11px;color:var(--mfg);padding:4px 16px;display:flex;justify-content:space-between;position:relative;z-index:50;background:var(--bg)}
+  .screen{position:absolute;top:24px;bottom:0;left:0;right:0;display:flex;flex-direction:column;background:var(--bg)}
+  .body{flex:1;overflow-y:auto;position:relative;min-height:0}.body::-webkit-scrollbar{display:none}
+  .panel{flex:1;min-width:420px;max-width:760px}
+  .panel h1{font-size:19px;margin:0 0 4px}
+  .panel h2{font-size:13px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:#737170}
+  .seg{display:inline-flex;border:1px solid #e7e6e3;border-radius:8px;overflow:hidden;background:#fff;flex-wrap:wrap;margin:2px 4px 2px 0}
+  .seg button{border:0;background:none;padding:6px 10px;font-size:12.5px;cursor:pointer;border-right:1px solid #e7e6e3}
+  .seg button:last-child{border-right:0}.seg button.on{background:#171717;color:#fff}
+  .note{background:#fff;border-left:3px solid #E60000;padding:8px 10px;font-size:13px;margin:6px 0}
+  .lbl{display:inline-block;min-width:80px;font-size:12px;color:#737170}
+  table{border-collapse:collapse;width:100%;font-size:12px;background:#fff}td,th{border:1px solid #e7e6e3;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f4f4f2}
+  .mute{color:var(--mfg)}.xs{font-size:11.5px}.sm{font-size:12.5px}.price{font-weight:800}
+  .appbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg);flex:none}
+  .appbar .t{font-weight:700;font-size:17px;flex:1;min-width:0}
+  .ib{border:0;background:none;font-size:18px;cursor:pointer;color:var(--fg);padding:4px 6px;line-height:1}
+  .ph{background:linear-gradient(135deg,#c9ccd1,#9aa0a8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;position:relative}
+  .ph.b{background:linear-gradient(135deg,#b7c3b9,#7f8f85)}.ph.c{background:linear-gradient(135deg,#c8bfb2,#958877)}
+  .heart{border:0;background:none;font-size:20px;cursor:pointer;line-height:1;color:var(--primary)}
+  .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--secondary);border:1px solid var(--border);white-space:nowrap;color:var(--fg)}
+  .badge.sold{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  .chip{display:inline-flex;border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:12.5px;background:var(--card);white-space:nowrap;cursor:pointer;color:var(--fg)}
+  .btn{border:0;border-radius:999px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+  .btn.brand{background:var(--primary);color:var(--pfg)}.btn.out{background:var(--secondary);color:var(--fg)}.btn.sm{padding:6px 12px;font-size:12.5px}.btn[disabled]{opacity:.4;cursor:not-allowed}
+  .sep{height:6px;background:var(--secondary)}
+  .skel{background:var(--muted);border-radius:6px;animation:p 1.2s infinite}@keyframes p{50%{opacity:.5}}
+  .tabbar{height:56px;border-top:1px solid var(--border);background:var(--bg);display:flex;flex:none}
+  .tabbar div{flex:1;text-align:center;font-size:10px;padding-top:6px;color:var(--mfg);cursor:pointer;position:relative}
+  .tabbar div.on{color:var(--primary)}.tabbar i{font-style:normal;display:block;font-size:17px}
+  .tabbar i.dot{position:absolute;top:2px;left:56%;background:var(--primary);color:#fff;border-radius:999px;font-size:9px;min-width:15px;height:15px;line-height:15px}
+  .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 28px;gap:10px;height:100%;min-height:260px}
+  .circle{width:64px;height:64px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--mfg)}
+  .sw{width:44px;height:26px;border-radius:999px;position:relative;cursor:pointer;flex:none}.sw i{position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+  .row{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;align-items:center}
+  .unread{background:var(--primary);color:#fff;border-radius:999px;font-size:11px;min-width:20px;height:20px;line-height:20px;text-align:center;padding:0 5px;font-weight:700}
+  .bub{max-width:78%;padding:7px 11px;border-radius:16px;font-size:14px;word-break:break-word;cursor:default}
+  .bub.me{background:var(--primary);color:var(--pfg);border-bottom-right-radius:4px}
+  .bub.peer{background:var(--muted);color:var(--fg);border-bottom-left-radius:4px;cursor:pointer}
+  .meta{font-size:10.5px;opacity:.85;display:flex;gap:4px;justify-content:flex-end;align-items:center;margin-top:2px}
+  .dsep{text-align:center;font-size:11px;color:var(--mfg);margin:8px 0}
+  .composer{display:flex;gap:8px;align-items:center;padding:8px 12px 12px;border-top:1px solid var(--border);background:var(--bg);flex:none}
+  .composer input{flex:1;border:0;background:var(--muted);color:var(--fg);border-radius:999px;padding:10px 14px;font-size:14px;outline:none;font-family:inherit;min-width:0}
+  .composer input:disabled{opacity:.45}
+  .dim{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:40}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:16px 16px 0 0;padding:14px 16px 20px;z-index:45;box-shadow:0 -6px 20px rgba(0,0,0,.25)}
+  .sheet .it{padding:13px 4px;display:flex;gap:12px;align-items:center;cursor:pointer;border-bottom:1px solid var(--border)}.sheet .it:last-child{border:0}
+  .dlg{position:absolute;left:24px;right:24px;top:230px;background:var(--bg);border-radius:14px;padding:18px;z-index:45;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .toast{position:absolute;left:12px;right:12px;bottom:76px;background:#222;color:#fff;padding:9px 12px;border-radius:8px;font-size:12.5px;z-index:60;display:flex;justify-content:space-between;gap:8px}
+  .toast b{color:#ff9d9d;cursor:pointer}
+  .switcher{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;border-radius:18px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:100;font-size:13px;max-width:94vw}
+  .switcher .top{display:flex;align-items:center;gap:8px}.switcher .top button{background:#333;color:#fff;border:0;border-radius:999px;min-width:30px;height:30px;cursor:pointer}
+  .switcher .opts{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+  .switcher .opts button{background:#333;color:#fff;border:0;border-radius:999px;padding:5px 11px;cursor:pointer;font-size:12.5px}
+  .switcher .opts button.on{background:#E60000}
+  .lock{background:linear-gradient(160deg,#1f2937,#0b1020);color:#fff;height:100%;padding:60px 14px 0}
+  .notif{background:rgba(255,255,255,.16);border-radius:16px;padding:10px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phone" id="phone"><div class="status"><span>09:41</span><span>AutoTM · Android</span></div><div id="screen"></div></div>
+  <div class="panel" id="panel"></div>
+</div>
+<div class="switcher" id="switcher"></div>
+<script>
+/* ───────── copy: RU primary, EN, TK. n:1 = new string, TK is a draft ───────── */
+const I={
+ favorites:{ru:"Избранное",en:"Favorites",tk:"Halanlarym"},
+ messages:{ru:"Сообщения",en:"Messages",tk:"Habarlar"},
+ search:{ru:"Поиск",en:"Search",tk:"Gözleg"},sell:{ru:"Продать",en:"Sell",tk:"Sat"},cabinet:{ru:"Кабинет",en:"Cabinet",tk:"Kabinet"},
+ signIn:{ru:"Войти",en:"Sign in",tk:"Giriş"},
+ favSignedOut:{ru:"Войдите, чтобы увидеть избранное",en:"Sign in to see your Favorites",tk:"Halanlaryňyzy görmek üçin giriň",n:1},
+ favSignedOutSub:{ru:"Нажмите ♡ на объявлении, чтобы сохранить его здесь.",en:"Tap ♡ on a Listing to save it here.",tk:"Bildirişi ýatda saklamak üçin ♡ basyň.",n:1},
+ msgSignedOut:{ru:"Войдите, чтобы увидеть сообщения",en:"Sign in to see your Messages",tk:"Habarlary görmek üçin giriň",n:1},
+ noFav:{ru:"Нет избранного",en:"No favorites yet",tk:"Halanlarym ýok"},
+ noFavSub:{ru:"Сохраняйте объявления, чтобы найти их позже",en:"Save listings to find them later",tk:"Soňrak tapmak üçin bildirişleri ýatda saklaň"},
+ browse:{ru:"Смотреть объявления",en:"Browse listings",tk:"Bildirişlere seret",n:1},
+ hideSold:{ru:"Скрыть проданные",en:"Hide sold",tk:"Satylanlary gizle",n:1},
+ hiddenN:{ru:"Скрыто проданных и снятых с продажи: #",en:"# sold or removed from sale hidden",tk:"Satylan we aýrylan # gizlendi",n:1},
+ noActive:{ru:"Нет активных объявлений",en:"No active listings",tk:"Işjeň bildiriş ýok",n:1},
+ noActiveSub:{ru:"Проданные скрыты. Выключите «Скрыть проданные», чтобы увидеть их.",en:"Sold Listings are hidden. Turn off “Hide sold” to see them.",tk:"Satylanlar gizlendi. Görmek üçin «Satylanlary gizle» öçüriň.",n:1},
+ call:{ru:"Позвонить",en:"Call",tk:"Jaň et"},message:{ru:"Написать",en:"Message",tk:"Habar ýaz"},
+ sold:{ru:"Продано",en:"Sold",tk:"Satylan"},removed:{ru:"Снято с продажи",en:"Removed from sale",tk:"Satuwdan aýryldy"},
+ removedUndo:{ru:"Удалено из избранного",en:"Removed from Favorites",tk:"Halanlardan aýryldy",n:1},undo:{ru:"Отменить",en:"Undo",tk:"Yzyna",n:1},
+ loadErr:{ru:"Не удалось загрузить",en:"Could not load",tk:"Ýükläp bolmady",n:1},retry:{ru:"Повторить",en:"Retry",tk:"Täzeden synanyş"},
+ errSub:{ru:"Проверьте соединение и повторите.",en:"Check your connection and try again.",tk:"Birikmäni barlap, täzeden synanyşyň.",n:1},
+ noConv:{ru:"Пока нет переписок",en:"No conversations yet",tk:"Habarlaşma ýok"},
+ noConvSub:{ru:"Откройте объявление и напишите продавцу — переписка появится здесь.",en:"Open a Listing and message the seller. The Conversation appears here.",tk:"Bildirişi açyp satyjyny ýazyň — gepleşik şu ýerde peýda bolar.",n:1},
+ youBuyer:{ru:"Вы покупатель",en:"You are buyer",tk:"Siz satyn alyjy"},youSeller:{ru:"Вы продавец",en:"You are seller",tk:"Siz satyjy"},
+ blockedRow:{ru:"Пользователь заблокирован",en:"User blocked",tk:"Ulanyjy blokirlenen"},
+ newMsgHere:{ru:"Нет сообщений. Начните переписку.",en:"No messages yet. Start the conversation.",tk:"Habar ýok. Sohbat başlaň."},
+ seen:{ru:"был(а) сегодня в 16:59",en:"last seen today 16:59",tk:"şu gün 16:59 göründi",n:1},
+ mute:{ru:"Отключить уведомления",en:"Mute notifications",tk:"Bildirişleri öçür"},unmute:{ru:"Включить уведомления",en:"Unmute notifications",tk:"Bildirişleri aç"},
+ report:{ru:"Пожаловаться",en:"Report",tk:"Şikaýat et"},block:{ru:"Заблокировать",en:"Block user",tk:"Blokirle"},unblock:{ru:"Разблокировать",en:"Unblock",tk:"Blokdan aç"},
+ delConv:{ru:"Удалить диалог",en:"Delete conversation",tk:"Gepleşigi poz",n:1},cancel:{ru:"Отмена",en:"Cancel",tk:"Ýatyr",n:1},
+ copy:{ru:"Копировать",en:"Copy",tk:"Göçür",n:1},reportMsg:{ru:"Пожаловаться на сообщение",en:"Report message",tk:"Habara şikaýat et",n:1},
+ qAvail:{ru:"Автомобиль ещё в продаже?",en:"Is the car still available?",tk:"Awtomobil heniz satlykmy?"},
+ qSee:{ru:"Можно посмотреть машину?",en:"Can I see the car?",tk:"Maşyny görmek bolýarmy?"},
+ qPrice:{ru:"Конечная цена?",en:"What is the final price?",tk:"Soňky baha näçe?"},
+ qCond:{ru:"Какое состояние машины?",en:"What is the condition of the car?",tk:"Awtomobiliň ýagdaýy nähili?"},
+ msgPh:{ru:"Сообщение",en:"Message",tk:"Habar",n:1},
+ sending:{ru:"Отправка...",en:"Sending...",tk:"Iberilýär..."},failed:{ru:"Не удалось отправить",en:"Failed to send",tk:"Ibermek başartmady"},
+ readLbl:{ru:"Прочитано",en:"Read",tk:"Okaldy",n:1},today:{ru:"Сегодня",en:"Today",tk:"Şu gün",n:1},
+ retryDel:{ru:"Повторить отправку",en:"Retry sending",tk:"Täzeden ibermek",n:1},delMsg:{ru:"Удалить сообщение",en:"Delete message",tk:"Habary poz"},
+ blkTitle:{ru:"Пользователь заблокирован",en:"User blocked",tk:"Ulanyjy blokirlenen"},blkDesc:{ru:"Вы не можете отправлять сообщения этому пользователю.",en:"You cannot send messages to this user.",tk:"Bu ulanyja habar iberip bilmeýärsiňiz."},
+ blkConfT:{ru:"Заблокировать пользователя?",en:"Block this user?",tk:"Ulanyjy blokirlensinmi?"},
+ blkConfD:{ru:"Вы не будете получать сообщения и уведомления от этого пользователя. История переписки сохранится.",en:"You will stop receiving messages and notifications from this user. The history stays.",tk:"Bu ulanyjydan habar we bildiriş almazsyz. Gepleşik taryhi saklanar."},
+ unblkConfT:{ru:"Разблокировать пользователя?",en:"Unblock this user?",tk:"Ulanyjyny blokdan aç?"},
+ unblkConfD:{ru:"После разблокировки пользователь сможет снова писать вам.",en:"After unblocking, the user can message you again.",tk:"Blokdan açandan soň ulanyjy size täzeden ýaza biler."},
+ selReason:{ru:"Выберите причину",en:"Select a reason",tk:"Sebäp saýlaň"},
+ spam:{ru:"Спам",en:"Spam",tk:"Spam"},scam:{ru:"Мошенничество",en:"Scam or fraud",tk:"Dolandyryş"},mislead:{ru:"Вводящая в заблуждение информация",en:"Misleading information",tk:"Ýalňyş maglumat"},
+ harass:{ru:"Домогательство",en:"Harassment",tk:"Garsylyk"},other:{ru:"Другое",en:"Other",tk:"Başga"},
+ describe:{ru:"Опишите проблему",en:"Describe the issue",tk:"Meseläni suratlandyryň",n:1},submit:{ru:"Отправить жалобу",en:"Submit report",tk:"Şikaýat ugrat"},
+ thanks:{ru:"Спасибо, мы получили вашу жалобу.",en:"Thanks, we received your report.",tk:"Sag bolşyň, şikaýatyňyzy aldyk."},done:{ru:"Готово",en:"Done",tk:"Boldy",n:1},
+ reported:{ru:"Пожаловались",en:"Reported",tk:"Şikaýat edildi"},
+ soldBanner:{ru:"Автомобиль продан. Вы можете продолжить переписку, но объявление уже недоступно.",en:"This car is sold. You can keep talking, but the Listing is no longer available.",tk:"Awtomobil satyldy. Gepleşigi dowam edip bilersiňiz, ýöne bildiriş elýeterli däl.",n:1},
+ soldClosed:{ru:"Объявление продано. Писать в этот диалог нельзя.",en:"Listing sold. This Conversation is closed.",tk:"Bildiriş satyldy. Bu gepleşik ýapyk.",n:1},
+ seeOther:{ru:"Другие Toyota Prado",en:"See other Toyota Prado",tk:"Beýleki Toyota Prado",n:1},
+ pushTitle:{ru:"Мердан · Toyota Camry 2018",en:"Merdan · Toyota Camry 2018",tk:"Merdan · Toyota Camry 2018",n:1},
+ pushBody:{ru:"Да, в продаже. Приезжайте после 18:00.",en:"Yes, still for sale. Come after 18:00.",tk:"Hawa, satlyk. Sagat 18:00-dan soň geliň.",n:1},
+ m1:{ru:"Здравствуйте, ещё продаётся?",en:"Hello, is it still for sale?",tk:"Salam, heniz satlykmy?",n:1},
+ m2:{ru:"Да, в продаже. Приезжайте после 18:00.",en:"Yes, still for sale. Come after 18:00.",tk:"Hawa, satlyk. Sagat 18:00-dan soň geliň.",n:1},
+ m3:{ru:"Хорошо, буду в 18:30",en:"OK, I will be there at 18:30",tk:"Bolýar, 18:30-da bolaryn",n:1},
+ m4:{ru:"Можно скинуть цену до 270 000?",en:"Can you do 270 000?",tk:"270 000-e goýup bolarmy?",n:1},
+ m5:{ru:"Цена окончательная.",en:"The price is final.",tk:"Baha soňky.",n:1},
+ m6:{ru:"Спасибо, уже продал",en:"Thanks, already sold",tk:"Sag bol, eýýäm satdym",n:1},
+ m7:{ru:"Приеду в 18:30",en:"I will come at 18:30",tk:"18:30-da gelerin",n:1},
+ signInThread:{ru:"Войдите, чтобы просмотреть сообщения",en:"Sign in to view messages",tk:"Habarlary görmek üçin giriň"},
+ pushSigned:{ru:"Войдите, чтобы открыть сообщение. После входа вы окажетесь в этой переписке.",en:"Sign in to open the message. After sign-in you land in this Conversation.",tk:"Habary açmak üçin giriň. Girenden soň şu gepleşige gaýdarsyňyz.",n:1}
+};
+let LANG="ru";const t=k=>{const o=I[k];return o?(o[LANG]||o.en):k};
+
+/* ───────── data ───────── */
+const FAV=[
+ {id:1,t:"Lexus RX 350, 2016",p:"410 000 TMT",s:"132 000 km · Автомат · Бензин",c:"Mary",st:"active",ph:["c","b"],n:8,chat:true},
+ {id:2,t:"Toyota Camry, 2018",p:"285 000 TMT",s:"96 000 km · Автомат · Бензин",c:"Aşgabat",st:"active",ph:["","b"],n:12,chat:true},
+ {id:3,t:"Toyota Prado, 2012",p:"520 000 TMT",s:"210 000 km · Автомат · Дизель",c:"Balkanabat",st:"sold",ph:["",""],n:1,chat:true},
+ {id:4,t:"Lada Niva, 2008",p:"45 000 TMT",s:"Механика · Бензин",c:"Lebap",st:"active",ph:["",""],n:0,chat:false},
+ {id:5,t:"Hyundai Elantra, 2024",p:"318 000 TMT",s:"New · Автомат · Бензин",c:"Türkmenabat",st:"archived",ph:["b",""],n:5,chat:true}
+];
+let favs=FAV.map(x=>({...x}));
+const S={surface:"fav",tab:"fav",dark:false,fav:"list",hideSold:true,msgs:"list",thread:"active",
+ sheet:null,dialog:null,toast:null,reportReason:null,reported:{},blocked:false,muted:false,
+ net:"ok",from:"tab",pushSigned:true,pushStage:"lock",lastRemoved:null,draft:"",sel:null};
+const V={sold:"B",menu:"C",row:"A",qr:"B",fail:"A",rep:"B",blk:"B",read:"B",push:"A"};
+const D=[
+ {k:"sold",n:"D1 Conversation about a sold Listing",go:()=>({surface:"thread",tab:"msgs",thread:"sold"}),o:[["A","Badge on strip only (today)"],["B","Strip badge + inline banner, composer on",1],["C","Closed: composer replaced by notice"]]},
+ {k:"menu",n:"D2 Thread menu",go:()=>({surface:"thread",tab:"msgs",thread:"active",sheet:"menu"}),o:[["A","Mute + Block (today)"],["B","Auto.ru four: Mute, Report, Block, Delete"],["C","Mute, Report, Block (no Delete)",1]]},
+ {k:"blk",n:"D3 Blocked banner",go:()=>({surface:"thread",tab:"msgs",thread:"active",blocked:true}),o:[["A","Banner above greyed composer (today)"],["B","Banner replaces the composer",1]]},
+ {k:"rep",n:"D4 Report message entry (click a seller Message)",go:()=>({surface:"thread",tab:"msgs",thread:"active",sheet:"msg",sel:1}),o:[["A","Long-press opens reasons directly (today)"],["B","Long-press opens Copy / Report sheet",1]]},
+ {k:"fail",n:"D5 Failed Message",go:()=>({surface:"thread",tab:"msgs",thread:"active",net:"off",addFailed:true}),o:[["A","Inline Retry on the bubble (today)",1],["B","Tap bubble opens Retry / Delete sheet"]]},
+ {k:"read",n:"D6 Read state",go:()=>({surface:"thread",tab:"msgs",thread:"active"}),o:[["A","Ticks only; read = brighter ticks (today)"],["B","Ticks + “Read” label under last own Message",1]]},
+ {k:"qr",n:"D7 Quick replies",go:()=>({surface:"thread",tab:"msgs",thread:"new"}),o:[["A","Only while the thread is empty (today)"],["B","Stay until the seller replies",1]]},
+ {k:"row",n:"D8 Messages list row",go:()=>({surface:"msgs",tab:"msgs",msgs:"list"}),o:[["A","Auto.ru row: name, title · price, preview, time, tick",1],["B","Today: title, price, preview, role label"]]},
+ {k:"push",n:"D9 Back from a push-opened Conversation",go:()=>({surface:"push",pushStage:"lock"}),o:[["A","Back goes to the Messages list",1],["B","Back leaves to the lock screen (no list in stack)"]]}
+];
+let di=0;
+function set(p){Object.assign(S,p);render()}
+function setV(k,v){V[k]=v;di=D.findIndex(x=>x.k===k);render()}
+function toast(m,undo){S.toast={m,undo};render();clearTimeout(window._t);window._t=setTimeout(()=>{S.toast=null;render()},3000)}
+
+/* ───────── thread model ───────── */
+let thread=[];
+function initThread(){
+ const sc=S.thread;
+ if(sc==="active")thread=[{m:"me",txt:t("m1"),st:"read",tm:"18:20"},{m:"peer",txt:t("m2"),tm:"18:42"},{m:"me",txt:t("m3"),st:"delivered",tm:"18:44"},{m:"peer",txt:t("m4"),tm:"18:50"},{m:"me",txt:t("m5"),st:"read",tm:"18:52"}];
+ else if(sc==="sold")thread=[{m:"me",txt:t("m1"),st:"read",tm:"Вчера"},{m:"peer",txt:t("m6"),tm:"Вчера"}];
+ else thread=[];
+}
+function openThread(sc,from,blocked){S.thread=sc;S.from=from;S.blocked=!!blocked;S.sheet=null;S.dialog=null;S.surface="thread";S.tab="msgs";initThread();render()}
+function scen(sc){S.thread=sc;S.blocked=false;S.sheet=null;initThread();render()}
+
+/* ───────── shared pieces ───────── */
+const ph=(c,h,l)=>`<div class="ph ${c}" style="height:${h}px">${l||""}</div>`;
+function tabbar(){const T=[["search","🔍","search"],["fav","♡","favorites"],["sell","＋","sell"],["msgs","💬","messages"],["cab","👤","cabinet"]];
+ return `<div class="tabbar">${T.map(([k,i,n])=>`<div class="${S.tab===k?'on':''}" onclick="${k==='fav'?"set({surface:'fav',tab:'fav'})":k==='msgs'?"set({surface:'msgs',tab:'msgs'})":"toast('Out of scope for this prototype')"}"><i>${i}</i>${t(n)}${k==='msgs'&&S.msgs==='list'?'<i class="dot">2</i>':''}</div>`).join("")}</div>`}
+function errorState(retryJs){return `<div class="center"><div class="circle">⚠</div><b>${t("loadErr")}</b><div class="sm mute">${t("errSub")}</div><button class="btn brand sm" onclick="${retryJs}">${t("retry")}</button></div>`}
+function signedOut(kind){return `<div class="center"><div class="circle">${kind==='fav'?'♡':'💬'}</div><b>${t(kind==='fav'?'favSignedOut':'msgSignedOut')}</b>${kind==='fav'?`<div class="sm mute">${t('favSignedOutSub')}</div>`:''}<button class="btn brand" onclick="toast('Sign in, then you return here and the pending action finishes')">${t("signIn")}</button></div>`}
+function toastEl(){return S.toast?`<div class="toast"><span>${S.toast.m}</span>${S.toast.undo?`<b onclick="undoFav()">${t('undo')}</b>`:''}</div>`:""}
+
+/* ───────── Favorites ───────── */
+function favCard(x){
+  const off=x.st!=="active";
+  const lab=x.st==="sold"?`<span class="badge sold" style="position:absolute;left:8px;top:8px;z-index:2">${t("sold")}</span>`:x.st==="archived"?`<span class="badge" style="position:absolute;left:8px;top:8px;z-index:2;background:#fff;color:#171717">${t("removed")}</span>`:"";
+  const photo=x.n===0?`<div class="ph" style="height:170px;background:var(--muted);color:var(--mfg)">—</div>`:x.n===1?ph(x.ph[0],170):`<div style="display:grid;grid-template-columns:62% 38%;gap:2px">${ph(x.ph[0],170,1)}${ph(x.ph[1],170,2)}</div>`;
+  const cnt=x.n>1?`<span style="position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 7px;border-radius:999px">📷 ${x.n}</span>`:"";
+  return `<div style="padding-bottom:12px"><div style="position:relative"><div style="${off?'opacity:.5':''}">${photo}</div>${cnt}${lab}</div>
+   <div style="padding:10px 14px 0"><div class="price" style="font-size:20px;${off?'color:var(--mfg)':''}">${x.p}</div><div class="sm">${x.s}</div><div class="sm mute">${x.t}</div>
+   ${off?'':`<div style="display:flex;gap:8px;margin-top:10px"><button class="btn brand" style="flex:1" onclick="toast('${t('call')}: opens the dialer')">${t("call")}</button>${x.chat?`<button class="btn out" style="flex:1" onclick="openThread('new','fav')">💬 ${t("message")}</button>`:''}</div>`}
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span class="xs mute">${x.c}</span><button class="heart" onclick="unfav(${x.id})">♥</button></div></div></div><div class="sep"></div>`}
+function unfav(id){const i=favs.findIndex(f=>f.id===id);S.lastRemoved=[i,favs[i]];favs.splice(i,1);toast(t("removedUndo"),1)}
+function undoFav(){if(S.lastRemoved){favs.splice(S.lastRemoved[0],0,S.lastRemoved[1]);S.lastRemoved=null;S.toast=null;render()}}
+function favScreen(){
+  let body;const st=S.fav;
+  const head=`<div class="appbar"><span class="t" style="font-size:22px">${t("favorites")} ${st==='list'&&favs.length?`<span class="mute" style="font-weight:400;font-size:15px">${favs.length}</span>`:''}</span></div>`;
+  if(st==="signedout")body=signedOut("fav");
+  else if(st==="loading")body=Array(3).fill(`<div style="padding-bottom:12px"><div class="skel" style="height:170px;border-radius:0"></div><div style="padding:10px 14px"><div class="skel" style="height:20px;width:45%"></div><div class="skel" style="height:12px;width:80%;margin-top:8px"></div><div class="skel" style="height:38px;margin-top:10px;border-radius:999px"></div></div></div><div class="sep"></div>`).join("");
+  else if(st==="error")body=errorState("set({fav:'list'})");
+  else if(st==="empty"||favs.length===0)body=`<div class="center"><div class="circle">♡</div><b>${t("noFav")}</b><div class="sm mute">${t("noFavSub")}</div><button class="btn out" onclick="toast('Opens Home')">${t("browse")}</button></div>`;
+  else{
+    const shown=S.hideSold?favs.filter(x=>x.st==="active"):favs;const hid=favs.length-shown.length;
+    body=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)"><span>${t("hideSold")}</span><span class="sw" onclick="set({hideSold:!S.hideSold})" style="background:${S.hideSold?'var(--fg)':'var(--muted)'}"><i style="${S.hideSold?'right:3px;background:var(--bg)':'left:3px'}"></i></span></div>${S.hideSold&&hid?`<div class="xs mute" style="padding:8px 14px">${t("hiddenN").replace("#",hid)}</div>`:""}${shown.map(favCard).join("")}${shown.length===0?`<div class="center"><b>${t("noActive")}</b><div class="sm mute">${t("noActiveSub")}</div><button class="btn out" onclick="toast('Opens Home')">${t("browse")}</button></div>`:""}`;
+  }
+  return `${head}<div class="body">${body}</div>${tabbar()}`}
+
+/* ───────── Messages list ───────── */
+const ROWS=[
+ {nm:"Мердан",lst:"2018 Toyota Camry",p:"285 000 TMT",pre:"Да, в продаже. Приезжайте после 18:00.",tm:"18:42",un:2,role:"youBuyer",ph:"",st:"active",sc:"active"},
+ {nm:"Aman",lst:"2016 Lexus RX 350",p:"410 000 TMT",pre:"Хорошо, буду в 18:30",tm:"16:05",mine:"read",role:"youSeller",ph:"c",st:"active",sc:"active",muted:true},
+ {nm:"Batyr",lst:"2012 Toyota Prado",p:"520 000 TMT",pre:"Спасибо, уже продал",tm:"Вчера",role:"youBuyer",ph:"b",st:"sold",sc:"sold"},
+ {nm:"Serdar",lst:"2024 Hyundai Elantra",p:"318 000 TMT",pre:"Здравствуйте, ещё продаётся?",tm:"12 Sep",mine:"sent",role:"youBuyer",ph:"c",st:"active",sc:"active",blocked:true}
+];
+function msgRow(r){
+ const tk=r.mine?`<span>${r.mine==="sent"?"✓":"✓✓"}</span>`:"";
+ const stl=r.st==="sold"?`<span class="badge sold">${t("sold")}</span>`:"";
+ const go=`openThread('${r.sc}','tab',${!!r.blocked})`;
+ const sz=V.row==='A'?64:56;
+ const thumb=`<div style="width:${sz}px;height:${sz}px;border-radius:12px;overflow:hidden;flex:none;${r.st==='sold'?'opacity:.6':''}">${ph(r.ph,sz)}</div>`;
+ const pre=r.blocked?t('blockedRow'):r.pre;
+ if(V.row==="A")return `<div class="row" onclick="${go}">${thumb}<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:6px"><b>${r.nm}${r.muted?' 🔕':''}</b><span class="xs mute">${tk} ${r.tm}</span></div>
+  <div class="sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lst} · ${r.p}</div>
+  <div style="display:flex;gap:6px;align-items:center"><span class="sm mute" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${r.un?'color:var(--fg);font-weight:600':''}">${pre}</span>${r.un?`<span class="unread">${r.un}</span>`:''}${stl}</div></div></div>`;
+ return `<div class="row" onclick="${go}">${thumb}<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lst}</b><span class="xs mute">${r.tm}</span></div><div class="sm mute">${r.p}</div>
+  <div style="display:flex;gap:6px;align-items:center"><span class="sm mute" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pre}</span>${r.un?`<span class="unread">${r.un}</span>`:''}</div>
+  <div class="xs mute">${t(r.role)}${r.st==='sold'?' · '+t('sold'):''}${r.muted?' · 🔕':''}</div></div></div>`}
+function msgsScreen(){
+ const st=S.msgs;let body;
+ if(st==="signedout")body=signedOut("msgs");
+ else if(st==="loading")body=Array(6).fill(`<div class="row"><div class="skel" style="width:56px;height:56px"></div><div style="flex:1"><div class="skel" style="height:14px;width:70%"></div><div class="skel" style="height:11px;width:50%;margin-top:8px"></div></div></div>`).join("");
+ else if(st==="error")body=errorState("set({msgs:'list'})");
+ else if(st==="empty")body=`<div class="center"><div class="circle">💬</div><b>${t("noConv")}</b><div class="sm mute">${t("noConvSub")}</div><button class="btn out" onclick="toast('Opens Home')">${t("browse")}</button></div>`;
+ else body=ROWS.map(msgRow).join("");
+ return `<div class="appbar"><span class="t" style="font-size:22px">${t("messages")}</span></div><div class="body">${body}</div>${tabbar()}`}
+
+/* ───────── Conversation ───────── */
+function tick(st){return st==="sent"?"✓":V.read==="A"&&st==="read"?"<b>✓✓</b>":"✓✓"}
+function bubble(x,i){
+ const me=x.m==="me";const rep=S.reported[i];
+ const lp=me?"":`onclick="longPress(${i})"`;
+ let foot="";
+ if(me&&x.st==="pending")foot=`<div class="meta">${t("sending")}</div>`;
+ else if(me&&x.st==="failed")foot=V.fail==="A"?`<div class="meta" style="opacity:1">⚠ ${t("failed")} · <span style="text-decoration:underline;cursor:pointer;font-weight:700" onclick="event.stopPropagation();retryMsg(${i})">↻ ${t("retry")}</span></div>`:`<div class="meta" style="opacity:1">⚠ ${t("failed")}</div>`;
+ else if(me)foot=`<div class="meta">${x.tm} ${tick(x.st)}</div>`;
+ else foot=`<div class="meta" style="justify-content:flex-start;color:var(--mfg)">${x.tm}${rep?' · '+t('reported'):''}</div>`;
+ const tap=(me&&x.st==="failed"&&V.fail==="B")?`onclick="set({sheet:'failed',sel:${i}})" style="cursor:pointer"`:"";
+ const lastMe=thread.map((y,j)=>y.m==="me"?j:-1).reduce((a,b)=>Math.max(a,b),-1);
+ const showRead=V.read==="B"&&me&&x.st==="read"&&i===lastMe;
+ return `<div style="display:flex;padding:2px 14px;flex-direction:column;align-items:${me?'flex-end':'flex-start'}"><div class="bub ${me?'me':'peer'}" ${lp} ${tap} style="${rep?'opacity:.6;':''}${x.st==='pending'?'opacity:.7':''}">${x.txt}${foot}</div>${showRead?`<span class="xs mute" style="margin:2px 4px">${t("readLbl")}</span>`:''}</div>`}
+function longPress(i){if(S.reported[i])return;set({sheet:V.rep==="A"?"report":"msg",sel:i,reportReason:null})}
+function retryMsg(i){thread[i].st="pending";render();setTimeout(()=>{thread[i].st=S.net==="off"?"failed":"sent";render()},900)}
+function send(txt){
+ if(!txt||!txt.trim()||S.blocked)return;const m={m:"me",txt:txt,st:"pending",tm:"18:55"};thread.push(m);S.draft="";render();
+ setTimeout(()=>{m.st=S.net==="off"?"failed":"sent";render()},900);
+ if(S.net!=="off")setTimeout(()=>{m.st="delivered";render()},1800);
+ if(S.net!=="off")setTimeout(()=>{m.st="read";render()},3200);
+}
+function qrShow(){
+ if(S.blocked||S.thread==="sold"||["loading","error","signedout"].includes(S.thread))return false;
+ if(V.qr==="A")return thread.length===0;
+ return !thread.some(x=>x.m==="peer")}
+function strip(){
+ const sold=S.thread==="sold";
+ return `<div class="row" style="padding:10px 14px" onclick="toast('Opens the Listing')"><div style="width:56px;height:56px;border-radius:10px;overflow:hidden;flex:none;${sold?'opacity:.55':''}">${ph(sold?"b":"",56)}</div><div style="flex:1;min-width:0"><div class="sm" style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sold?'2012 Toyota Prado':'2018 Toyota Camry'}</div><div class="sm" style="${sold?'color:var(--mfg)':'color:var(--mfg)'}">${sold?'520 000 TMT':'285 000 TMT'} ${sold?` <span class="badge sold">${t("sold")}</span>`:''}</div></div><span class="mute">›</span></div>`}
+function threadScreen(){
+ const sc=S.thread;
+ const back=S.from==="push"?(V.push==="A"?"set({surface:'msgs',tab:'msgs',from:'tab'})":"set({surface:'push',pushStage:'lock'})"):S.from==="fav"?"set({surface:'fav',tab:'fav'})":"set({surface:'msgs',tab:'msgs'})";
+ const peer=sc==="sold"?"Batyr":"Мердан";
+ const head=`<div class="appbar"><button class="ib" onclick="${back}">←</button><div style="width:36px;height:36px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700;flex:none">${peer[0]}</div><div style="flex:1;min-width:0"><b>${peer}</b>${S.muted?' 🔕':''}<div class="xs mute">${t("seen")}</div></div><button class="ib" onclick="toast('Opens the dialer')">📞</button><button class="ib" onclick="set({sheet:'menu'})">⋯</button></div>`;
+ let mid;
+ if(sc==="loading")mid=`<div style="padding:16px;display:flex;flex-direction:column;gap:12px"><div class="skel" style="height:38px;width:60%;align-self:flex-end;border-radius:16px"></div><div class="skel" style="height:38px;width:45%;border-radius:16px"></div><div class="skel" style="height:38px;width:55%;align-self:flex-end;border-radius:16px"></div></div>`;
+ else if(sc==="error")mid=errorState("scen('active')");
+ else if(sc==="signedout")mid=`<div class="center"><div class="sm mute">${t("signInThread")}</div><button class="btn brand" onclick="toast('Sign in, then back to this Conversation')">${t("signIn")}</button></div>`;
+ else if(!thread.length)mid=`<div class="center mute sm">${t("newMsgHere")}</div>`;
+ else mid=`<div class="dsep">${t("today")}</div>`+thread.map(bubble).join("");
+ const soldBanner=(sc==="sold"&&V.sold==="B")?`<div style="margin:10px 14px;padding:10px 12px;border-radius:10px;background:var(--secondary);font-size:12.5px">ⓘ ${t("soldBanner")}<div style="margin-top:6px;color:var(--primary);cursor:pointer" onclick="toast('Opens Results filtered by brand and model')">${t("seeOther")} ›</div></div>`:"";
+ const blockedBanner=S.blocked?`<div style="padding:12px 14px;border-top:1px solid var(--border);background:var(--muted);display:flex;gap:10px;align-items:center;flex:none"><div style="flex:1"><div class="sm" style="font-weight:600">${t("blkTitle")}</div><div class="xs mute">${t("blkDesc")}</div></div><button class="btn out sm" style="border:1px solid var(--border)" onclick="set({dialog:'unblock'})">${t("unblock")}</button></div>`:"";
+ const qr=qrShow()?`<div style="display:flex;gap:6px;overflow-x:auto;padding:8px 12px 0;flex:none;scrollbar-width:none">${["qAvail","qSee","qPrice","qCond"].map(k=>`<span class="chip" onclick="send(t('${k}'))">${t(k)}</span>`).join("")}</div>`:"";
+ const closed=sc==="sold"&&V.sold==="C";
+ const comp=(S.blocked&&V.blk==="B")?"":closed?`<div style="padding:12px 14px;border-top:1px solid var(--border);text-align:center;font-size:12.5px;color:var(--mfg)">${t("soldClosed")}</div>`:`<div class="composer"><span class="mute">📎</span><input id="inp" placeholder="${t("msgPh")}" value="${S.draft.replace(/"/g,'&quot;')}" ${S.blocked?'disabled':''} oninput="S.draft=this.value" onkeydown="if(event.key==='Enter')send(S.draft)"><button class="ib" style="color:var(--primary)" ${S.blocked?'disabled':''} onclick="send(S.draft)">➤</button></div>`;
+ return `${head}${strip()}<div class="body" id="tb">${mid}${soldBanner}</div>${blockedBanner}${qr}${comp}`}
+
+/* ───────── push ───────── */
+function pushScreen(){
+ if(S.pushStage==="signin")return `<div class="center"><div class="circle">🔒</div><b>${t("pushSigned")}</b><button class="btn brand" onclick="S.pushSigned=true;openThread('active','push')">${t("signIn")}</button></div>`;
+ return `<div class="lock"><div style="text-align:center;font-size:56px;font-weight:300">09:41</div><div style="text-align:center;opacity:.7;margin-bottom:30px">Пятница, 2 октября</div>
+ <div class="notif" onclick="${S.pushSigned?"openThread('active','push')":"set({pushStage:'signin'})"}"><div class="xs" style="opacity:.8">AutoTM · сейчас</div><b>${t("pushTitle")}</b><div class="sm">${t("pushBody")}</div></div>
+ <div class="xs" style="opacity:.6;margin-top:14px;text-align:center">Tap the notification. Cold start, background and foreground all route to /conversations/{id}.</div></div>`}
+
+/* ───────── overlays ───────── */
+function overlays(){
+ let h="";
+ if(S.sheet==="menu"){
+  const it=(i,l,fn,col)=>`<div class="it" ${col?'style="color:var(--destructive)"':''} onclick="${fn}"><span>${i}</span>${l}</div>`;
+  const mu=it("🔕",S.muted?t("unmute"):t("mute"),"set({muted:!S.muted,sheet:null})");
+  const rp=it("⚠",t("report"),"set({sheet:'report',sel:null,reportReason:null})");
+  const bl=it("⛔",S.blocked?t("unblock"):t("block"),S.blocked?"set({sheet:null,dialog:'unblock'})":"set({sheet:null,dialog:'block'})",1);
+  const dl=it("🗑",t("delConv"),"set({sheet:null});toast('Conversation deleted for you')",1);
+  h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet">${V.menu==="A"?mu+bl:V.menu==="B"?mu+rp+bl+dl:mu+rp+bl}</div>`}
+ if(S.sheet==="msg")h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet"><div class="it" onclick="set({sheet:null});toast('Copied')"><span>⧉</span>${t("copy")}</div><div class="it" style="color:var(--destructive)" onclick="set({sheet:'report',reportReason:null})"><span>⚑</span>${t("reportMsg")}</div><div class="it" onclick="set({sheet:null})"><span>✕</span>${t("cancel")}</div></div>`;
+ if(S.sheet==="failed")h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet"><div class="it" onclick="set({sheet:null});retryMsg(S.sel)"><span>↻</span>${t("retryDel")}</div><div class="it" style="color:var(--destructive)" onclick="thread.splice(S.sel,1);set({sheet:null})"><span>🗑</span>${t("delMsg")}</div></div>`;
+ if(S.sheet==="report"){
+  const R=["spam","scam","mislead","harass","other"];
+  if(S.reportReason==="done")h+=`<div class="dim"></div><div class="sheet" style="text-align:center"><div style="font-size:30px">✓</div><b>${t("thanks")}</b><div style="margin-top:12px"><button class="btn brand" onclick="${S.sel!=null?`S.reported[S.sel]=1;`:''}set({sheet:null,reportReason:null})">${t("done")}</button></div></div>`;
+  else h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet"><b>${S.sel!=null?t('reportMsg'):t('report')}</b><div class="xs mute" style="margin-bottom:6px">${t("selReason")}</div>${R.map(r=>`<div class="it" onclick="set({reportReason:'${r}'})"><span style="width:18px;height:18px;border-radius:50%;border:2px solid ${S.reportReason===r?'var(--primary)':'var(--border)'};background:${S.reportReason===r?'var(--primary)':'none'};flex:none"></span>${t(r)}</div>`).join("")}${S.reportReason==="other"?`<input placeholder="${t("describe")}" style="width:100%;margin:6px 0;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--muted);color:var(--fg)">`:''}<button class="btn brand" style="width:100%;margin-top:8px" ${S.reportReason?'':'disabled'} onclick="set({reportReason:'done'})">${t("submit")}</button></div>`}
+ if(S.dialog){const b=S.dialog==="block";h+=`<div class="dim"></div><div class="dlg"><b>${t(b?'blkConfT':'unblkConfT')}</b><div class="sm mute" style="margin:8px 0 14px">${t(b?'blkConfD':'unblkConfD')}</div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn out sm" onclick="set({dialog:null})">${t("cancel")}</button><button class="btn brand sm" onclick="set({blocked:${b},dialog:null})">${t(b?'block':'unblock')}</button></div></div>`}
+ return h}
+
+/* ───────── panel ───────── */
+const seg=(label,items)=>`<div><span class="lbl">${label}</span><span class="seg">${items.map(([on,js,n])=>`<button class="${on?'on':''}" onclick="${js}">${n}</button>`).join("")}</span></div>`;
+function panel(){
+ const s=S.surface;
+ let h=`<h1>Favorites and Conversations · prototype (#352)</h1><div class="xs" style="color:#737170">Throwaway. Tokens from apps/mobile/global.css. The floating bar flips the founder DECISIONS (red = shown, ★ = recommended).</div>`;
+ h+=`<h2>Global</h2>`+seg("Surface",[["fav","fav"],["msgs","msgs"],["thread","thread"],["push","push"]].map(([v])=>[s===v,v==="thread"?"openThread(S.thread,'tab',S.blocked)":v==="push"?"set({surface:'push',pushStage:'lock',tab:'msgs'})":`set({surface:'${v}',tab:'${v}'})`,{fav:"Favorites",msgs:"Messages list",thread:"Conversation",push:"Push entry"}[v]]))+
+  seg("Theme",[[!S.dark,"set({dark:false})","Light"],[S.dark,"set({dark:true})","Dark"]])+
+  seg("Language",["ru","en","tk"].map(l=>[LANG===l,`LANG='${l}';initThread();render()`,l.toUpperCase()]));
+ if(s==="fav")h+=`<h2>Favorites state</h2>`+seg("State",[["list","List"],["loading","Loading"],["error","Error"],["empty","Empty"],["signedout","Signed out"]].map(([v,n])=>[S.fav===v,`set({fav:'${v}'})`,n]))+
+  `<div class="note">Settled in #351 (AR-36-001/002): large card with Call and Message, filled ♥ removes with Undo, <b>Hide sold</b> on by default with a hidden count. Switch Hide sold off on the phone to see Sold and Removed from sale dimmed, without contact buttons. Tap ♥ on both active cards that remain to reach “No active listings”. The Niva has no Message button (allowChat off). Deleted and banned Listings never appear. No recommendations block.</div>
+  <button class="btn out sm" onclick="favs=FAV.map(x=>({...x}));S.fav='list';S.hideSold=true;render()">Reset list</button>`;
+ if(s==="msgs")h+=`<h2>Messages list state</h2>`+seg("State",[["list","List"],["loading","Loading"],["error","Error"],["empty","Empty"],["signedout","Signed out"]].map(([v,n])=>[S.msgs===v,`set({msgs:'${v}'})`,n]))+`<div class="note">Rows show: unread badge with bold preview, muted bell, own last Message with tick, a Conversation about a sold Listing (badge), a blocked user (preview replaced). Tap a row to open it. The Auto.ru support-chat card (AR-37-005) and ads (KZ-49-002) are left out on purpose.</div>`;
+ if(s==="thread")h+=`<h2>Conversation state</h2>`+seg("Scenario",[["new","New (empty)"],["active","Active"],["sold","Sold Listing"],["loading","Loading"],["error","Error"],["signedout","Signed out"]].map(([v,n])=>[S.thread===v,`scen('${v}')`,n]))+
+  seg("Network",[[S.net==="ok","set({net:'ok'})","Online"],[S.net==="off","set({net:'off'})","Offline: sends fail"]])+
+  seg("Blocked",[[!S.blocked,"set({blocked:false})","No"],[S.blocked,"set({blocked:true})","Blocked banner"]])+
+  `<div class="note">Try it: type and Send (Sending, ✓, ✓✓, Read). Go Offline and send for a failed Message, then go Online and Retry. Click a seller Message to Report it. ⋯ opens the menu. Quick replies show in the New scenario. No prepayment warnings.</div>`;
+ if(s==="push")h+=`<h2>Push entry</h2>`+seg("Signed in",[[S.pushSigned,"set({pushSigned:true,pushStage:'lock'})","Yes"],[!S.pushSigned,"set({pushSigned:false,pushStage:'lock'})","No (session expired)"]])+`<div class="note">Tap the notification. Signed in: opens the Conversation. Signed out: sign-in, then the same Conversation. Back behaviour is decision D9.</div>`;
+ h+=`<h2>Exists today vs new</h2>`+status();
+ document.getElementById("panel").innerHTML=h}
+function status(){
+ const rows={fav:[["Large card, Call + Message, ♥ with Undo, Hide sold, Sold / Removed labels","New (today a plain ListingCard, no actions, no switch)"],["Signed-out, empty, skeleton, error","Exist in app/(tabs)/favorites.tsx; copy changes"]],
+ msgs:[["List, unread badge, role label, sold label, empty, skeleton, error, signed-out","Exist (ConversationList.tsx, ConversationListItem.tsx, app/(tabs)/chat.tsx)"],["Seller name, tick, muted and blocked marks on the row","New"]],
+ thread:[["Pinned Listing strip, quick replies, Sending/Failed/Retry, ticks, Report message, Block/Unblock, blocked banner, Mute","Exist (app/conversations/[id].tsx, MessageBubble.tsx, QuickReplies.tsx, ConversationListingCard.tsx, MessageReportSheet.tsx)"],["Sold banner, Report user, Delete conversation, Read label, Copy","New"]],
+ push:[["Tap routes to the Conversation (cold, background, foreground)","Exists (src/notifications/useDirectMessagePushRouting.ts)"],["Messages list under the Conversation, signed-out return","New, unverified"]]}[S.surface];
+ return `<table><tr><th>State</th><th>Today</th></tr>${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table><div class="xs" style="color:#737170;margin-top:6px">${Object.keys(I).filter(k=>I[k].n).length} strings are new; their TK text is a draft to be checked.</div>`}
+
+/* ───────── floating bar ───────── */
+function bar(){
+ const d=D[di];
+ document.getElementById("switcher").innerHTML=`<div class="top"><button onclick="cycle(-1)">←</button><span>${d.n}</span><button onclick="cycle(1)">→</button><button style="padding:0 12px" onclick="jump()">show</button></div><div class="opts">${d.o.map(([k,n,rec])=>`<button class="${V[d.k]===k?'on':''}" onclick="setV('${d.k}','${k}')">${k}${rec?' ★':''} · ${n}</button>`).join("")}</div>`}
+function cycle(n){di=(di+n+D.length)%D.length;jump()}
+function jump(){
+ const p=D[di].go();
+ if(p.thread){S.thread=p.thread;S.blocked=!!p.blocked;S.sheet=null;S.dialog=null;S.net=p.net||"ok";S.from="tab";S.reported={};initThread();
+   if(p.addFailed)thread.push({m:"me",txt:t("m7"),st:"failed",tm:"18:55"});}
+ delete p.thread;delete p.blocked;delete p.net;delete p.addFailed;
+ set(Object.assign({sheet:null},p))}
+function render(){
+ document.getElementById("phone").className="phone"+(S.dark?" dark":"");
+ const scr={fav:favScreen,msgs:msgsScreen,thread:threadScreen,push:pushScreen}[S.surface]();
+ document.getElementById("screen").innerHTML=`<div class="screen">${scr}${overlays()}${toastEl()}</div>`;
+ const tb=document.getElementById("tb");if(tb)tb.scrollTop=tb.scrollHeight;
+ const inp=document.getElementById("inp");if(inp&&document.activeElement===document.body&&S.draft){inp.focus();inp.setSelectionRange(S.draft.length,S.draft.length)}
+ panel();bar()}
+initThread();render();
+</script>
+</body>
+</html>
