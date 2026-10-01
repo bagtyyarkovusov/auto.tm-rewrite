@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Pressable } from "react-native";
 
-import { fireEvent, renderMobile } from "../../../test/render";
+import { fireEvent, renderMobile, first } from "../../../test/render";
 import { mediaFixture } from "../../../test/fixtures/listing";
 
 import { PhotoViewer } from "./PhotoViewer";
@@ -51,7 +51,7 @@ describe("Photo viewer while a photo is zoomed", () => {
     fireEvent.press(screen.getByRole("button", { name: "Zoom in active photo" }));
     expect(pager().props.scrollEnabled).toBe(false);
 
-    fireEvent.press(screen.getAllByRole("button", { name: "Zoom out" })[0]!);
+    fireEvent.press(first(screen.getAllByRole("button", { name: "Zoom out" })));
     expect(pager().props.scrollEnabled).toBe(true);
   });
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Modal } from "react-native";
 import * as RN from "react-native";
 
-import { fireEvent, renderMobile, within } from "../../../test/render";
+import { fireEvent, renderMobile, within, first } from "../../../test/render";
 import { mediaFixture } from "../../../test/fixtures/listing";
 
 import { PhotoGallery } from "./PhotoGallery";
@@ -20,7 +20,7 @@ describe("Photo gallery and viewer", () => {
     const screen = renderMobile(<PhotoGallery media={mediaFixture(3)} />);
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
 
-    fireEvent.press(screen.getAllByRole("button", { name: "Photo 2 of 3" })[0]!);
+    fireEvent.press(first(screen.getAllByRole("button", { name: "Photo 2 of 3" })));
 
     expect(viewer(screen).getByText("2 / 3")).toBeTruthy();
     expect(
@@ -30,7 +30,7 @@ describe("Photo gallery and viewer", () => {
 
   it("returns the gallery to the photo the viewer was closed on", () => {
     const screen = renderMobile(<PhotoGallery media={mediaFixture(3)} />);
-    fireEvent.press(screen.getAllByRole("button", { name: "Photo 1 of 3" })[0]!);
+    fireEvent.press(first(screen.getAllByRole("button", { name: "Photo 1 of 3" })));
 
     fireEvent.press(viewer(screen).getByRole("button", { name: "Photo 3 of 3" }));
     fireEvent.press(viewer(screen).getByRole("button", { name: "Close" }));
@@ -59,7 +59,7 @@ describe("Photo gallery and viewer", () => {
         )}
       />,
     );
-    fireEvent.press(screen.getAllByRole("button", { name: "Photo 1 of 2" })[0]!);
+    fireEvent.press(first(screen.getAllByRole("button", { name: "Photo 1 of 2" })));
 
     fireEvent.press(viewer(screen).getByRole("button", { name: "Message" }));
 

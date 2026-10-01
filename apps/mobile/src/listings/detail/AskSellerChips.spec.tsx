@@ -8,6 +8,7 @@ import {
   fireEvent,
   renderMobile,
   routerMock,
+  first,
 } from "../../../test/render";
 
 import { AskSellerChips } from "./AskSellerChips";
@@ -200,14 +201,14 @@ describe("Ask the seller", () => {
     const screen = chips({ isOwner: true });
 
     expect(screen.queryByText("Ask the seller")).toBeNull();
-    expect(screen.queryByRole("button", { name: QUESTIONS[0]! })).toBeNull();
+    expect(screen.queryByRole("button", { name: first(QUESTIONS) })).toBeNull();
   });
 
   it.each(["sold", "archived"] as const)("is hidden on a %s Listing", (status) => {
     const screen = chips({ status: status as Enums.ListingStatus });
 
     expect(screen.queryByText("Ask the seller")).toBeNull();
-    expect(screen.queryByRole("button", { name: QUESTIONS[0]! })).toBeNull();
+    expect(screen.queryByRole("button", { name: first(QUESTIONS) })).toBeNull();
   });
 
   it("is hidden when the seller turned chat off, as Message is", () => {

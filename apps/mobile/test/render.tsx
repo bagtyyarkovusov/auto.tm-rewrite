@@ -25,3 +25,6 @@ export function renderMobile(element: ReactElement, { locale = "en" } = {}) {
 
 export { fireEvent, act, within } from "@testing-library/react-native";
 export { routerMock, routeParams } from "./native-setup";
+
+/** The first of several matches; a query that returned none would already have thrown. */
+export const first = <T,>(items: T[]): T => items[0] as T;

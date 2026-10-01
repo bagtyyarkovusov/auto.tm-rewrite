@@ -10,6 +10,7 @@ import {
   routeParams,
   routerMock,
   within,
+  first,
 } from "../../../test/render";
 import ListingDetailScreen from "../../../app/(public)/listings/[id]";
 import {
@@ -165,7 +166,7 @@ describe("issue 374 photo viewer from Listing detail", () => {
   const viewer = (screen: ReturnType<typeof renderMobile>) =>
     within(screen.UNSAFE_getByType(Modal));
   const openViewer = (screen: ReturnType<typeof renderMobile>, photo = 2) =>
-    fireEvent.press(screen.getAllByRole("button", { name: `Photo ${photo} of 3` })[0]!);
+    fireEvent.press(first(screen.getAllByRole("button", { name: `Photo ${photo} of 3` })));
 
   it("opens at the tapped photo with the counter, thumbnails, ♡ and Call + Message", () => {
     const screen = renderMobile(<ListingDetailScreen />);
