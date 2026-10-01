@@ -150,4 +150,3 @@ react-test-renderer is deprecated. See https://react.dev/warnings/react-test-ren
       Tests  39 passed (39)
    Start at  21:30:21
    Duration  4.13s (transform 151ms, setup 124ms, collect 336ms, tests 3.89s, environment 0ms, prepare 108ms)
-
