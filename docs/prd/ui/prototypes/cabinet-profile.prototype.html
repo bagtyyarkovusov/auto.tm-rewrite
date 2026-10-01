@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PROTOTYPE — Cabinet, Profile, Settings and sign-in method screens (throwaway)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  PROTOTYPE — throwaway. Answers issue #353 "Prototype Cabinet, Profile, Settings, and sign-in method screens"
+  (map #320 "Google Play reviewer-only Android release readiness").
+  Question: what do Cabinet, Profile, Settings, Delete account and the phone-or-email sign-in screens look like in every state?
+  Respects: #344 (five tabs, sign in by phone or email code, selling needs a verified phone), #348 / ADR-0054
+  (Sign-in Methods optional, unique, always verified; add/change by code; can change but not remove; a taken value
+  is refused after the code is confirmed, never merged), ADR-0055 (email codes, 10-minute expiry), ADR-0032 (30-day
+  grace deletion, recoverable by signing in), #496 (legal/deletion links on autotm.bagtyyar.dev).
+  No share affordances (#495). No real phone numbers, emails, codes or secrets: every value here is made up.
+  Colours are AutoTM tokens from apps/mobile/global.css (light and dark). Not Auto.ru's look; Auto.ru/Kolesa are structure references only.
+  RU/TK strings marked "draft" in the state list are new and need a native-speaker review.
+-->
+<style>
+  :root{ --r:8px; }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#171717;background:#f4f4f2}
+  .wrap{display:flex;gap:24px;padding:20px 20px 90px;align-items:flex-start}
+  .phone{
+    --bg:hsl(0 0% 100%);--fg:hsl(0 0% 9%);--primary:hsl(0 90% 48%);--secondary:hsl(45 5% 96%);--card:hsl(0 0% 100%);
+    --muted:hsl(45 5% 92%);--mfg:hsl(0 0% 45%);--border:hsl(45 8% 88%);--destructive:hsl(15 85% 55%);--dfg:hsl(0 0% 9%);
+    --ok:#1a7f37;--warn:#9a6700;--info:#2563eb;
+    width:372px;height:780px;flex:none;border:10px solid #111;border-radius:36px;background:var(--bg);color:var(--fg);position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  .phone.dark{--bg:hsl(0 0% 4%);--fg:hsl(60 10% 98%);--primary:hsl(0 90% 52%);--secondary:hsl(0 0% 14%);--card:hsl(0 0% 9%);--muted:hsl(240 4% 20%);--mfg:hsl(45 4% 64%);--border:hsl(0 0% 23%);--destructive:hsl(15 80% 58%);--ok:#3fb950;--warn:#d29922;--info:#60a5fa}
+  .status{height:24px;font-size:11px;color:var(--mfg);padding:4px 16px;display:flex;justify-content:space-between}
+  .scr{position:absolute;top:24px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden}
+  .scr::-webkit-scrollbar{display:none}
+  .panel{flex:1;min-width:440px;max-width:820px}
+  .panel h1{font-size:19px;margin:0 0 4px}
+  .panel h2{font-size:13px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:#666}
+  .seg{display:inline-flex;border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff;flex-wrap:wrap}
+  .seg button{border:0;background:none;padding:6px 10px;font-size:12.5px;cursor:pointer;border-right:1px solid #ddd}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:#171717;color:#fff}
+  .q{background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px}
+  .q .why{color:#666;font-size:12px;margin-top:4px}
+  .jump{display:inline-block;margin:2px 3px 2px 0;padding:4px 9px;border:1px solid #ccc;border-radius:999px;background:#fff;font-size:12px;cursor:pointer}
+  .jump:hover{background:#171717;color:#fff}
+  .grp{margin:6px 0 2px;font-weight:700;font-size:12px;color:#444}
+  .rec{display:inline-block;font-size:11px;background:#1a7f37;color:#fff;border-radius:999px;padding:0 7px;margin-left:4px}
+  table{border-collapse:collapse;width:100%;font-size:12px;background:#fff}
+  td,th{border:1px solid #ddd;padding:3px 6px;text-align:left;vertical-align:top}
+  th{background:#f4f4f2}
+  .have{color:#1a7f37}.new{color:#b42318;font-weight:600}.chg{color:#9a6700;font-weight:600}
+  .vdesc{background:#fff;border-left:3px solid hsl(0 90% 48%);padding:8px 10px;font-size:13px;margin:6px 0}
+  details{margin:8px 0} summary{cursor:pointer;font-weight:700}
+  /* app pieces */
+  .appbar{display:flex;align-items:center;gap:6px;padding:6px 8px;min-height:52px;background:var(--bg);position:sticky;top:0;z-index:5}
+  .appbar .t{font-weight:700;font-size:22px;flex:1;padding-left:4px;font-family:"Georgia","Times New Roman",serif}
+  .ib{width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--fg);font-size:20px;cursor:pointer;flex:none}
+  .ib:active{background:var(--secondary)}
+  .mute{color:var(--mfg)}.xs{font-size:11.5px}.sm{font-size:12.5px}.b{font-weight:700}
+  .btn{border:0;border-radius:999px;min-height:48px;padding:0 16px;font-weight:700;font-size:15px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px}
+  .btn.brand{background:var(--primary);color:#fff}
+  .btn.out{background:var(--secondary);color:var(--fg)}
+  .btn.dest{background:var(--destructive);color:var(--dfg)}
+  .btn.link{background:none;color:var(--info);min-height:44px;width:auto;font-weight:600;padding:0 4px}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;margin:0 14px 12px}
+  .row{display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 14px;cursor:pointer}
+  .row+.row{border-top:1px solid var(--border)}
+  .row .l{flex:1;min-width:0}.row .chev{color:var(--mfg)}
+  .hd{padding:14px 18px 6px;font-size:12.5px;font-weight:600;color:var(--mfg)}
+  .pad{padding:0 16px}
+  .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--secondary);border:1px solid var(--border);white-space:nowrap}
+  .badge.ver{color:var(--ok);border-color:currentColor;background:transparent}
+  .field{border:1px solid var(--border);border-radius:8px;padding:0 12px;height:52px;display:flex;align-items:center;gap:8px;background:var(--bg)}
+  .field.err{border-color:var(--destructive)}
+  .field input{border:0;outline:0;background:none;color:inherit;font:inherit;font-size:16px;flex:1;min-width:0}
+  .errtx{color:var(--destructive);font-size:13px;margin-top:6px}
+  .cells{display:flex;gap:8px}
+  .cell{flex:1;height:54px;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+  .cell.on{border-color:var(--fg)}.cell.err{border-color:var(--destructive)}.cell.dis{opacity:.45}
+  .kp{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 12px 14px;background:var(--secondary);position:absolute;left:0;right:0;bottom:0}
+  .kp button{height:42px;border:0;border-radius:8px;background:var(--bg);color:var(--fg);font-size:18px;cursor:pointer}
+  .tabbar{position:absolute;left:0;right:0;bottom:0;height:58px;background:var(--bg);border-top:1px solid var(--border);display:flex;z-index:8}
+  .tabbar button{flex:1;border:0;background:none;color:var(--mfg);font-size:10.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .tabbar button i{font-style:normal;font-size:19px;line-height:1}
+  .tabbar button.on{color:var(--fg);font-weight:700}
+  .tabbar button.on i{color:var(--primary)}
+  .skel{background:var(--muted);border-radius:6px;animation:p 1.2s infinite}
+  @keyframes p{50%{opacity:.5}}
+  .dim{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:24}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);color:var(--fg);border-radius:16px 16px 0 0;padding:16px 16px 20px;z-index:25;box-shadow:0 -6px 20px rgba(0,0,0,.25)}
+  .dlg{position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);background:var(--bg);color:var(--fg);border-radius:14px;padding:18px;z-index:25;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .toast{position:absolute;left:12px;right:12px;bottom:72px;background:#222;color:#fff;padding:9px 12px;border-radius:8px;font-size:12.5px;z-index:40}
+  .pseg{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .pseg button{flex:1;border:0;background:none;color:var(--fg);min-height:44px;font-size:14px;cursor:pointer;border-right:1px solid var(--border)}
+  .pseg button:last-child{border-right:0}
+  .pseg button.on{background:var(--fg);color:var(--bg);font-weight:700}
+  .sw{width:46px;height:28px;border-radius:999px;background:var(--muted);position:relative;border:0;flex:none;cursor:pointer}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
+  .sw.on{background:var(--primary)}.sw.on::after{left:21px}
+  .note{background:var(--secondary);border-radius:10px;padding:10px 12px;font-size:13px;margin:0 14px 12px}
+  .note.warn{border-left:3px solid var(--warn)}.note.err{border-left:3px solid var(--destructive)}
+  .av{border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--mfg);flex:none}
+  .logo{font-family:Georgia,serif;font-weight:800;font-size:28px;letter-spacing:-.5px}.logo b{color:var(--primary)}
+  .br{position:absolute;top:24px;left:0;right:0;bottom:0;background:#fff;color:#222;z-index:30;overflow-y:auto}
+  .br .bar{display:flex;align-items:center;gap:8px;padding:8px;background:#eee;border-bottom:1px solid #ccc;position:sticky;top:0}
+  .br .url{flex:1;background:#fff;border-radius:999px;padding:6px 12px;font-size:11.5px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .switcher{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;border-radius:999px;padding:6px 8px;display:flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:100;font-size:13px;max-width:96vw}
+  .switcher button{background:#333;color:#fff;border:0;border-radius:999px;min-width:30px;height:30px;cursor:pointer;padding:0 8px}
+  .switcher .lbl{padding:0 8px;min-width:300px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="phone" id="phone"><div class="status"><span>09:41</span><span>AutoTM · Android</span></div><div class="scr" id="scr"></div><div id="ovl"></div></div>
+  <div class="panel" id="panel"></div>
+</div>
+<div class="switcher" id="switcher"></div>
+
+<script>
+/* ───────────── strings: [EN, RU, TK]. Existing keys reuse apps/mobile/src/i18n/resources.ts; keys marked (new) are drafts ───────────── */
+const LANGS=["en","ru","tk"];
+const TX={
+ tabSearch:["Search","Поиск","Gözleg"], tabFav:["Favorites","Избранное","Halanlarym"], tabSell:["Sell","Продать","Sat"], tabMsg:["Messages","Сообщения","Habarlar"], tabCab:["Cabinet","Кабинет","Kabinet"],
+ cabinet:["Cabinet","Кабинет","Kabinet"], settings:["Settings","Настройки","Sazlamalar"], profile:["Profile","Профиль","Profil"],
+ signIn:["Sign in","Войти","Giriş"], signInManageT:["Sign in to manage your listings","Войдите, чтобы управлять объявлениями","Dolandyrmak üçin giriň"],
+ signInManageD:["Sign in to manage listings and drafts.","Войдите, чтобы управлять объявлениями и черновиками.","Bildirişleri we garalamalary dolandyrmak üçin giriň."],
+ myListings:["My listings & drafts","Мои объявления и черновики","Bildirişlerim we garalamalar"],
+ listCar:["List a car","Разместить объявление","Bildiriş goý"],
+ active:["Active","Активные","Işjeň"], drafts:["Drafts","Черновики","Garalamalar"], sold:["Sold","Проданные","Satylan"], archived:["Archived","В архиве","Arhiwde"],
+ loading:["Please wait...","Подождите...","Garaşyň..."], wrong:["Something went wrong","Что-то пошло не так","Bir zat ýalňyş boldy"], retry:["Retry","Повторить","Täzeden synanyş"],
+ cabAddPhoneT:["Add a phone to sell cars","Добавьте телефон, чтобы продавать","Satmak üçin telefon goşuň"], /* new, draft */
+ cabAddPhoneD:["Publishing a listing needs a verified phone.","Для публикации объявления нужен подтверждённый телефон.","Bildiriş goýmak üçin tassyklanan telefon gerek."], /* new, draft */
+ add:["Add","Добавить","Goş"], change:["Change","Изменить","Üýtget"], notAdded:["Not added","Не добавлено","Goşulmadyk"], verified:["Verified","Подтверждено","Tassyklandy"],
+ phone:["Phone","Телефон","Telefon"], email:["Email","Эл. почта","E-poçta"],
+ notifs:["Notifications","Уведомления","Habarnamalar"], /* new, draft */
+ language:["Language","Язык","Dil"], theme:["Theme","Тема","Tema"], light:["Light","Светлая","Ýagty"], dark:["Dark","Тёмная","Garaňky"], system:["System","Системная","Ulgam"],
+ about:["About","О приложении","Programma hakda"], privacy:["Privacy Policy","Политика конфиденциальности","Gizlinlik syýasaty"], terms:["Terms of Service","Условия использования","Ulanyş şertleri"], posting:["Posting rules","Правила размещения","Ýerleşdirme düzgünleri"],
+ deleteAcc:["Delete account","Удалить аккаунт","Hasaby poz"], logout:["Log out","Выйти","Çyk"],
+ logoutT:["Log out?","Выйти из аккаунта?","Hasabyndan çyk?"], logoutD:["You can sign back in at any time.","Вы сможете войти снова в любой момент.","Islän wagtyňyz gaýtadan girip bilersiňiz."], cancel:["Cancel","Отмена","Ýatyr"],
+ /* sign-in */
+ welcomeT:["Sign in to AutoTM","Вход в AutoTM","AutoTM-e giriş"], /* new, draft */
+ contPhone:["Continue with phone","Продолжить с телефоном","Telefon bilen dowam et"], contEmail:["Continue with email","Продолжить с почтой","E-poçta bilen dowam et"], /* new, draft */
+ noPassword:["No password. We send a code.","Без пароля. Мы отправим код.","Parol ýok. Kody ibereris."], /* new, draft */
+ phoneTitle:["Enter your phone number","Введите номер телефона","Telefon belgiňizi giriziň"], phoneHelper:["We'll send a code by SMS.","Мы отправим код по SMS.","Kody SMS bilen ibereris."],
+ phoneLabel:["Phone number","Номер телефона","Telefon belgisi"], phoneFmt:["Enter a number in the format +993 6X XX-XX-XX.","Введите номер в формате +993 6X XX-XX-XX.","Belgini +993 6X XX-XX-XX görnüşinde giriziň."],
+ emailTitle:["Enter your email","Введите электронную почту","E-poçtaňyzy giriziň"], emailHelper:["We'll email you a code. No password needed.","Мы отправим код на электронную почту. Пароль не нужен.","Kody e-poçta ibereris. Parol gerek däl."],
+ emailLabel:["Email","Электронная почта","E-poçta"], emailFmt:["Enter a valid email address.","Введите корректный адрес электронной почты.","Dogry e-poçta salgysyny giriziň."],
+ anyTitle:["Phone or email","Телефон или почта","Telefon ýa-da e-poçta"], anyHelper:["We'll send a code. No password.","Мы отправим код. Пароль не нужен.","Kody ibereris. Parol ýok."], /* new, draft */
+ anyFmt:["Enter a +993 phone number or an email address.","Введите номер +993 или адрес эл. почты.","+993 belgisini ýa-da e-poçta salgysyny giriziň."], /* new, draft */
+ getCode:["Get code","Получить код","Kody almak"], legalPre:["By continuing, you agree to the","Продолжая, вы соглашаетесь с","Dowam etmek bilen siz"], and:["and","и","we"],
+ offline:["No internet connection. Try again when you are online.","Нет подключения к интернету. Попробуйте позже.","Internet baglanyşygy ýok. Soňrak synanyşyň."],
+ rate:["Too many requests. Please wait a moment.","Слишком много запросов. Подождите немного.","Sorag köp. Biraz garaşyň."],
+ rateDay:["Too many codes requested for this number today. Try again tomorrow.","Сегодня запрошено слишком много кодов. Попробуйте завтра.","Şu gün gaty köp kod soraldy. Ertir synanyşyň."], /* new, draft; ADR-0054: 5 per destination per 24 h */
+ otpTitle:["Enter the code","Введите код","Kody giriziň"], otpSent:["Code sent to {d}","Код отправлен на {d}","Kod {d} salgysyna iberildi"],
+ exp5:["The code expires in 5 minutes.","Код действителен 5 минут.","Kod 5 minut işleýär."], /* new, draft; ADR-0054 phone = 5 min */
+ exp10:["The code expires in 10 minutes.","Код действителен 10 минут.","Kod 10 minut işleýär."],
+ chgNum:["Change number","Изменить номер","Belgini üýtget"], chgMail:["Change email","Изменить электронную почту","E-poçtany üýtget"],
+ wrongCode:["Wrong code. Try again.","Неверный код. Попробуйте еще раз.","Kod nädogry. Täzeden synanyşyň."], expiredCode:["Code expired. Request a new one.","Код истек. Запросите новый.","Koduň wagty gutardy. Täze kod soraň."],
+ lockedCode:["Too many attempts. Request a new code.","Слишком много попыток. Запросите новый код.","Synanyşyk köpeldi. Täze kod soraň."],
+ resendIn:["Resend code in {s}s","Отправить код снова через {s} с","Kody {s} s soň täzeden iber"], resend:["Resend code","Отправить код снова","Kody täzeden iber"],
+ noMail:["Not arriving? Check Spam, wait a few minutes, or use a different email.","Не приходит? Проверьте «Спам», подождите пару минут или укажите другую почту.","Gelenok? «Spam» papkasyny barlaň, birnäçe minut garaşyň ýa-da başga e-poçta giriziň."], /* new, draft; ADR-0055 bounces fail silently */
+ noMailPhone:["Use phone instead","Войти по телефону","Telefon bilen gir"], /* new, draft */
+ phoneTaken:["This number is used by another account. Sign in with it instead, or use a different number.","Этот номер уже используется другим аккаунтом. Войдите с ним или укажите другой номер.","Bu belgi başga hasapda ulanylýar. Onuň bilen giriň ýa-da başga belgi giriziň."],
+ emailTaken:["This email is used by another account. Sign in with it instead, or use a different email.","Эта почта уже используется другим аккаунтом. Войдите с ней или укажите другую почту.","Bu e-poçta başga hasapda ulanylýar. Onuň bilen giriň ýa-da başga e-poçta giriziň."],
+ diffNum:["Use a different number","Указать другой номер","Başga belgi giriz"], diffMail:["Use a different email","Указать другую почту","Başga e-poçta giriz"], /* new, draft */
+ signOutUse:["Sign out and use that account","Выйти и войти в тот аккаунт","Çyk we şol hasaba gir"], /* new, draft */
+ noMerge:["Accounts are never merged.","Аккаунты не объединяются.","Hasaplar birleşdirilmeýär."], /* new, draft */
+ signedIn:["Signed in","Вы вошли","Giriş edildi"],
+ /* profile */
+ methods:["Sign-in methods","Способы входа","Giriş usullary"], methodsHelp:["Both open this same account. A method can be changed, not removed.","Оба способа открывают этот же аккаунт. Способ можно изменить, но не удалить.","Iki usul hem şu bir hasaby açýar. Usuly üýtgedip bolýar, pozup bolmaýar."], /* helper extended */
+ sellNeedsPhone:["Selling needs a verified phone.","Для продажи нужен подтверждённый телефон.","Satmak üçin tassyklanan telefon gerek."], /* new, draft */
+ phoneVer:["Phone verified","Телефон подтверждён","Telefon tassyklandy"], memberSince:["Member since","Участник с","Agza şundan bäri"], memberDate:["12 September 2026","12 сентября 2026","12 sentýabr 2026"],
+ addPhoneT:["Add phone","Добавить телефон","Telefon goş"], chgPhoneT:["Change phone","Изменить телефон","Telefony üýtget"], addMailT:["Add email","Добавить почту","E-poçta goş"], chgMailT:["Change email","Изменить почту","E-poçtany üýtget"],
+ addPhoneH:["We'll text a code to confirm the number.","Мы отправим код по SMS, чтобы подтвердить номер.","Belgini tassyklamak üçin SMS bilen kod ibereris."],
+ chgPhoneH:["We'll text a code to the new number. Once it's confirmed, the old number no longer opens this account.","Мы отправим код по SMS на новый номер. После подтверждения прежний номер перестанет открывать этот аккаунт.","Täze belgä SMS bilen kod ibereris. Tassyklanandan soň öňki belgi bu hasaby açmaz."],
+ addMailH:["We'll email a code to confirm the address. No password.","Мы отправим код на почту, чтобы подтвердить адрес. Пароль не нужен.","Salgyny tassyklamak üçin e-poçta kod ibereris. Parol gerek däl."],
+ chgMailH:["We'll email a code to the new address. Once it's confirmed, the old email no longer opens this account.","Мы отправим код на новую почту. После подтверждения прежняя почта перестанет открывать этот аккаунт.","Täze e-poçta kod ibereris. Tassyklanandan soň öňki e-poçta bu hasaby açmaz."],
+ chgWarnT:["Change {x}?","Изменить {x}?","{x} üýtgetmeli?"], chgWarnD:["After you confirm the new value with a code, the old one stops opening this account. Your listings and chats stay.","После подтверждения кодом прежнее значение перестанет открывать аккаунт. Объявления и переписки сохранятся.","Täze bahany kod bilen tassyklanyňyzdan soň öňki bahasy hasaby açmaz. Bildirişler we ýazyşmalar galýar."], /* new, draft; Kolesa KZ-32-003 pattern */
+ chgWarnX:["phone","телефон","telefony"], chgWarnY:["email","почту","e-poçtany"],
+ contin:["Continue","Продолжить","Dowam et"],
+ added:["Added","Добавлено","Goşuldy"], changed:["Changed","Изменено","Üýtgedildi"],
+ sendCode:["Send code","Отправить код","Kody ibermek"],
+ /* sell */
+ sellGateT:["Add a phone to sell","Добавьте телефон, чтобы продавать","Satmak üçin telefon goşuň"], /* new, draft */
+ sellGateD:["Buyers call sellers, so a Listing needs a verified phone. Your email stays as a sign-in method.","Покупатели звонят продавцам, поэтому для объявления нужен подтверждённый телефон. Почта остаётся способом входа.","Alyjylar satyjylara jaň edýär, şonuň üçin bildirişe tassyklanan telefon gerek. E-poçta giriş usuly bolup galýar."], /* new, draft */
+ notNow:["Not now","Не сейчас","Häzir däl"],
+ phoneReqT:["Add a phone to publish","Добавьте телефон, чтобы опубликовать","Çap etmek üçin telefon goşuň"], phoneReqD:["Your draft is saved. Confirm a phone and publish.","Черновик сохранён. Подтвердите телефон и опубликуйте.","Garalama ýatda saklandy. Telefony tassyklaň we çap ediň."], /* new, draft */
+ publish:["Publish","Опубликовать","Çap et"], step:["Step 5 of 5: Review","Шаг 5 из 5: Проверка","5-nji ädim, 5-den: Barlag"], /* new, draft */
+ published:["Published (prototype)","Опубликовано (прототип)","Çap edildi (prototip)"],
+ /* notifications */
+ nMsg:["Messages","Сообщения","Habarlar"], nMsgD:["New messages in your Conversations","Новые сообщения в ваших перепис­ках","Ýazyşmalaryňyzdaky täze habarlar"], nAct:["Listing activity","Активность по объявлениям","Bildiriş işjeňligi"], nActD:["Saves and changes on Listings you follow","Сохранения и изменения в объявлениях","Halanlaryňyzdaky üýtgeşmeler"], /* all new, draft */
+ osOffT:["Notifications are off in system settings","Уведомления выключены в настройках системы","Ulgam sazlamalarynda habarnamalar öçük"], osOffB:["Open system settings","Открыть настройки системы","Ulgam sazlamalaryny aç"], /* new, draft */
+ /* delete */
+ delD:["Your account will be deleted in 30 days. You can recover it by signing in again.","Ваш аккаунт будет удален через 30 дней. Вы сможете восстановить его, войдя снова.","Hasabyňyz 30 günden soň pozular. Gaýtadan girmek bilen dikeldip bilersiňiz."],
+ delWhat:["What happens","Что произойдёт","Näme bolar"],
+ delL1:["You are signed out on every device","Вы выйдете на всех устройствах","Ähli enjamlarda hasapdan çykarsyňyz"], delL2:["Your active Listings are archived","Ваши активные объявления будут архивированы","Işjeň bildirişleriňiz arhiwlenýär"], delL3:["Your chats stay for the other person, shown as “Deleted user”","Переписки останутся у собеседников как «Удалённый пользователь»","Ýazyşmalar beýleki tarapda «Pozulan ulanyjy» bolup galýar"], delL4:["On {d} your phone, email and profile are erased","{d} ваш телефон, почта и профиль будут стёрты","{d} telefonyňyz, e-poçtaňyz we profiliňiz pozular"], /* new, draft; ADR-0032 */
+ delL5:["Sign in with your phone or email before then to restore everything","Войдите по телефону или почте до этой даты, чтобы всё восстановить","Şu senä çenli telefon ýa-da e-poçta bilen girseňiz, hemmesi dikelýär"],
+ delUnd:["I understand","Я понимаю последствия","Netijelerine düşünýärin"], /* new, draft; Kolesa KZ-48-002 pattern */
+ delDate:["1 November 2026","1 ноября 2026","1 noýabr 2026"],
+ delConfT:["Delete account?","Удалить аккаунт?","Hasaby poz?"], delConfD:["Your account will be scheduled for deletion on {d}. All sessions will be ended. You can restore your account by signing in again.","Ваш аккаунт будет запланирован к удалению {d}. Все сессии будут завершены. Вы можете восстановить аккаунт, войдя снова.","Hasabyňyz {d} pozmak üçin meýilnamalaşdyrylar. Ähli sessiýalar gutarlar. Gaýtadan girerek hasaby dikeldip bilersiňiz."],
+ delDo:["Delete","Удалить","Poz"], delFail:["Could not delete account. Please try again.","Не удалось удалить аккаунт. Попробуйте ещё раз.","Hasaby pozmak başartmady. Täzeden synanyşyň."],
+ delCodeT:["Confirm with a code","Подтвердите кодом","Kod bilen tassyklaň"], delCodeD:["We'll send a code to {d} to confirm it's you.","Мы отправим код на {d}, чтобы подтвердить, что это вы.","Siz bolandygyňyzy tassyklamak üçin {d} salgysyna kod ibereris."], /* new, draft */
+ schedT:["Account scheduled for deletion","Аккаунт запланирован к удалению","Hasaby pozmak meýilnamalaşdyryldy"], schedD:["Your account will be deleted on {d}. You can restore it by signing in again.","Ваш аккаунт будет удалён {d}. Вы можете восстановить его, войдя снова.","Hasabyňyz {d} pozular. Gaýtadan girerek dikeldip bilersiňiz."],
+ done:["Done","Готово","Taýýar"],
+ restT:["Account restoration","Восстановление аккаунта","Hasaby dikeltmek"], restD:["Your account is scheduled for deletion on {d}. Sign in to restore it and reactivate your listings.","Ваш аккаунт запланирован к удалению {d}. Войдите, чтобы восстановить его и активировать объявления.","Hasabyňyz {d} pozmak üçin meýilnamalaşdyryldy. Dikeltmek we bildirişleri işjeň etmek üçin giriň."], restDo:["Restore","Восстановить","Dikelt"],
+ webT:["Delete your AutoTM account","Удаление аккаунта AutoTM","AutoTM hasabyny pozmak"], webD:["Enter the phone or email you sign in with. We'll send a code to confirm.","Введите телефон или почту, с которой вы входите. Мы отправим код для подтверждения.","Giriş edýän telefon ýa-da e-poçtaňyzy giriziň. Tassyklamak üçin kod ibereris."], /* new, draft; ADR-0054 web page */
+ webDone:["Done. If an account uses this {x}, it is scheduled for deletion on {d}. Signing in before then restores it.","Готово. Если этот {x} привязан к аккаунту, он будет удалён {d}. Вход до этой даты восстановит аккаунт.","Taýýar. Eger bu {x} hasaba bagly bolsa, ol {d} pozular. Şu senä çenli girseňiz, dikelýär."], /* new, draft */
+ webX:["phone or email","телефон или почта","telefon ýa-da e-poçta"],
+};
+const t=(k,v)=>{const a=TX[k];let s=a?a[LANGS.indexOf(S.lang)]:k;if(v)for(const x in v)s=s.split("{"+x+"}").join(v[x]);return s;};
+
+/* ───────────── state ───────────── */
+const S={
+  acct:"out", phone:"+993 61 00-00-00", email:"name@example.com",   // all fake
+  lang:"en", theme:"light", os:false,
+  stack:[{id:"cabinet"}], tab:"cabinet",
+  v:{cab:"B",entry:"B",sell:"A",set:"A",chg:"B",taken:"A",del:"A"},
+  dec:"cab", data:"ok", outcome:"ok", req:"ok", delOut:"ok",
+  flow:null, ret:null, toast:null, sheet:null, dlg:null, web:null, delChecked:false,
+  notif:{msg:true,act:true,os:"granted"}, picker:null, name:null,
+};
+const hasPhone=()=>S.acct==="phone"||S.acct==="both", hasEmail=()=>S.acct==="email"||S.acct==="both", signed=()=>S.acct!=="out";
+const setAcct=()=>{S.acct=hasPhone()&&hasEmail()?"both":hasPhone()?"phone":hasEmail()?"email":"out";};
+const maskPhone=p=>p.replace(/^(\+993 \d)\d( )\d\d-\d\d-(\d\d)$/,"$1• ••-••-$3").replace(/^(\+993 6)(\d)/,"$1•");
+const maskPhoneDisp=p=>{const d=p.replace(/\D/g,"");return "+993 "+d[3]+"• ••-••-"+d.slice(-2);};
+const maskEmail=e=>{const [a,b]=e.split("@");return a[0]+"•••@"+b;};
+const dest=(type,val)=>type==="phone"?maskPhoneDisp(val):maskEmail(val);
+const top=()=>S.stack[S.stack.length-1];
+const TABS=["search","favorites","sell","messages","cabinet"];
+const isTab=id=>TABS.includes(id);
+const fmtPhone=d=>(d=d.replace(/\D/g,"").slice(0,8),d.length>6?d.slice(0,2)+" "+d.slice(2,4)+"-"+d.slice(4,6)+"-"+d.slice(6):d.length>4?d.slice(0,2)+" "+d.slice(2,4)+"-"+d.slice(4):d.length>2?d.slice(0,2)+" "+d.slice(2):d);
+const validPhone=v=>{const d=v.replace(/\D/g,"");return d.length===8&&d[0]==="6";};
+const validEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+
+/* ───────────── navigation ───────────── */
+function push(id,p={}){S.stack.push({id,...p});render();}
+function pop(){if(S.stack.length>1)S.stack.pop();render();}
+function reset(tab){S.tab=tab;S.stack=[{id:tab}];S.sheet=S.dlg=null;render();}
+function toast(m){S.toast=m;render();clearTimeout(window._t);window._t=setTimeout(()=>{S.toast=null;render();},2400);}
+function startSignIn(){S.ret=S.stack.slice();S.flow={kind:"signin",type:"phone",val:"",err:null,step:S.v.entry==="B"?"choose":"entry"};push("signin");}
+function closeSignIn(){S.stack=S.ret||[{id:"cabinet"}];S.flow=null;render();}
+function startMethod(kind,type){S.flow={kind,type,val:"",err:null,step:"entry",back:S.stack.slice()};push("methodEntry");}
+function openLegal(kind){S.web={kind};render();}
+
+/* ───────────── flows ───────────── */
+function detect(v){return /^[+\d\s()-]+$/.test(v)&&v.replace(/\D/g,"").length>0?"phone":"email";}
+function liveVal(el){
+  const f=S.flow;let v=el.value;
+  if(f.type==="phone"&&!(S.v.entry==="C"&&f.kind==="signin")){v=fmtPhone(v.replace(/^\+?993/,""));el.value=v;}
+  f.val=v;f.err=null;
+}
+function demoFill(){const f=S.flow;f.val=f.type==="phone"?"60 00-00-00":"name@example.com";f.err=null;render();}
+function getCode(){
+  const f=S.flow;let type=f.type;
+  if(S.v.entry==="C"&&f.kind==="signin"&&f.step==="entry"){type=detect(f.val);}
+  let val=f.val.trim();
+  const phoneish=type==="phone";
+  if(S.v.entry==="C"&&f.kind==="signin"&&phoneish)val=fmtPhone(val.replace(/^\+?993/,""));
+  const ok=phoneish?validPhone(val):validEmail(val);
+  if(!ok){f.err="invalid";f.type=type;render();return;}
+  const r=S.req;S.req="ok";
+  if(r==="offline"){f.err="offline";render();return;}
+  if(r==="rate"){f.err="rate";render();return;}
+  if(r==="rateDay"){f.err="rateDay";render();return;}
+  f.type=type;f.val=val;f.err=null;f.code="";f.cerr=null;f.sec=15;f.resends=0;f.nomail=false;
+  if(f.kind==="webdelete"){f.step="code";render();}else push("code");
+}
+function key(d){
+  const f=S.flow;if(!f||f.cerr==="locked"||f.busy)return;
+  f.code=f.code||"";
+  if(d==="<"){f.code=f.code.slice(0,-1);f.cerr=null;render();return;}
+  if(f.code.length>=6)return;
+  f.code+=d;f.cerr=null;render();
+  if(f.code.length===6){f.busy=true;setTimeout(submitCode,350);}
+}
+function submitCode(){
+  const f=S.flow;if(!f)return;f.busy=false;
+  let o=S.outcome;S.outcome="ok";
+  if(o==="taken"&&!(f.kind==="add"||f.kind==="change"))o="ok";
+  if(o==="grace"&&f.kind!=="signin")o="ok";
+  if(o==="wrong"||o==="expired"||o==="locked"||o==="offline"){f.cerr=o;f.code="";render();return;}
+  if(o==="taken"){S.stack.pop();push("taken");return;}
+  success(o==="grace");
+}
+function success(grace){
+  const f=S.flow;
+  if(f.kind==="signin"){
+    S.acct=f.type==="phone"?"phone":"email";
+    if(f.type==="phone")S.phone=f.val.startsWith("+")?f.val:"+993 "+f.val;else S.email=f.val;
+    S.stack=S.ret;S.flow=null;
+    if(grace){S.dlg="restore";render();}else toast(t("signedIn"));
+  }else if(f.kind==="add"||f.kind==="change"){
+    if(f.type==="phone")S.phone="+993 "+f.val;else S.email=f.val;
+    setAcct();S.stack=f.back;S.flow=null;toast((f.kind==="add"?t("added"):t("changed"))+": "+dest(f.type,f.type==="phone"?S.phone:S.email));
+  }else if(f.kind==="delete"){
+    S.acct="out";S.stack=[{id:"cabinet"}];S.tab="cabinet";S.flow=null;push("scheduled");
+  }else if(f.kind==="webdelete"){f.step="done";render();}
+}
+function resend(){
+  const f=S.flow;if(f.sec>0)return;
+  const r=S.req;S.req="ok";
+  if(r==="rateDay"||f.resends>=4){f.cerr="rateDay";render();return;}
+  if(r==="rate"){f.cerr="rate";render();return;}
+  if(r==="offline"){f.cerr="offline";render();return;}
+  f.resends++;f.sec=15;f.code="";f.cerr=null;toast(t("otpSent",{d:dest(f.type,f.val)}));
+}
+function backFromCode(){const f=S.flow;f.code="";f.cerr=null;if(f.kind==="webdelete"){f.step="entry";render();}else if(f.kind==="delete"){S.flow=null;pop();}else pop();}
+setInterval(()=>{const f=S.flow;if(f&&f.sec>0&&(top().id==="code"||(top().id==="webDelete"&&f.step==="code"))){f.sec--;renderPhone();}},1000);
+
+function doDelete(){
+  S.dlg=null;const o=S.delOut;S.delOut="ok";
+  if(o==="fail"){S.delFailed=true;render();return;}
+  S.delFailed=false;
+  if(S.v.del==="B"){
+    const type=hasPhone()?"phone":"email";
+    S.flow={kind:"delete",type,val:S[type],err:null,code:"",cerr:null,sec:15,resends:0,step:"code"};push("code");
+  }else{S.acct="out";S.stack=[{id:"cabinet"}];S.tab="cabinet";push("scheduled");}
+}
+function doLogout(){S.dlg=null;S.acct="out";reset("cabinet");toast({en:"Signed out",ru:"Вы вышли",tk:"Çykyldy"}[S.lang]);}
+function restore(){S.dlg=null;toast({en:"Account restored. Your Listings are back.",ru:"Аккаунт восстановлен. Объявления снова активны.",tk:"Hasap dikeldildi. Bildirişler gaýdyp geldi."}[S.lang]);}
+function restoreCancel(){S.dlg=null;S.acct="out";render();}
+
+/* ───────────── building blocks ───────────── */
+const ic={back:"←",x:"✕",gear:"⚙",chev:"›"};
+function appbar(title,o={}){return `<div class="appbar">${o.noBack?"":`<button class="ib" aria-label="Back" onclick="${o.back||"pop()"}">${ic.back}</button>`}<div class="t" ${o.noBack?"":'style="font-size:18px;font-family:inherit"'}>${title||""}</div>${o.right||""}</div>`;}
+function btn(label,fn,cls="brand",dis=false){return `<button class="btn ${cls}" ${dis?"disabled":""} onclick="${fn}">${label}</button>`;}
+function skeletonLines(){return `<div class="pad" style="padding-top:14px"><div class="skel" style="height:64px;width:64px;border-radius:50%"></div><div class="skel" style="height:18px;width:50%;margin-top:12px"></div><div class="skel" style="height:90px;margin-top:14px;border-radius:12px"></div><div class="skel" style="height:90px;margin-top:12px;border-radius:12px"></div></div>`;}
+function errState(){return `<div class="pad" style="text-align:center;padding-top:80px"><div style="font-size:34px">⚠</div><div class="b" style="font-size:17px;margin:8px 0">${t("wrong")}</div><div class="mute sm" style="margin-bottom:16px">${t("offline")}</div><div style="max-width:180px;margin:auto">${btn(t("retry"),"S.data='ok';render()","out")}</div></div>`;}
+function avatar(sz,name){return `<div class="av" style="width:${sz}px;height:${sz}px;font-size:${sz/2.4}px">${name?name[0].toUpperCase():"👤"}</div>`;}
+function idLabel(){return hasPhone()?maskPhoneDisp(S.phone):maskEmail(S.email);}
+function methodRow(type){
+  const has=type==="phone"?hasPhone():hasEmail();
+  const val=has?(type==="phone"?maskPhoneDisp(S.phone):maskEmail(S.email)):null;
+  const act=has?t("change"):t("add");
+  const fn=has&&S.v.chg==="B"?`S.sheet={t:'chg',type:'${type}'};render()`:`startMethod('${has?"change":"add"}','${type}')`;
+  return `<div class="row" role="button" aria-label="${t(type)}, ${val||t("notAdded")}. ${act}" onclick="${fn}"><div class="l"><div class="mute sm">${t(type)}</div>${val?`<div class="b" style="font-size:16px">${val}</div><div class="badge ver" style="margin-top:2px">✓ ${type==="phone"?t("phoneVer"):t("verified")}</div>`:`<div class="mute" style="font-size:16px">${t("notAdded")}</div>`}</div><span class="b sm">${act}</span><span class="chev">${ic.chev}</span></div>`;
+}
+function legalLinks(){return `<div class="xs mute" style="padding:0 16px 14px">${t("legalPre")} <a style="color:var(--info);text-decoration:underline" onclick="openLegal('terms')">${t("terms")}</a> ${t("and")} <a style="color:var(--info);text-decoration:underline" onclick="openLegal('privacy')">${t("privacy")}</a>.</div>`;}
+function langSwitch(){return `<div style="display:flex;gap:4px">${LANGS.map(l=>`<button class="badge" style="cursor:pointer;${S.lang===l?"background:var(--fg);color:var(--bg)":""}" onclick="S.lang='${l}';render()">${l.toUpperCase()}</button>`).join("")}</div>`;}
+
+/* ───────────── screens ───────────── */
+function listingsBlock(){return {a:2,d:1,s:0,r:1};}
+function cabinetScreen(){
+  const v=S.v.cab;const gear=`<button class="ib" aria-label="${t("settings")}" onclick="push('settings')">${ic.gear}</button>`;
+  let h=`<div class="appbar"><div class="t">${t("cabinet")}</div>${v==="C"?"":gear}</div>`;
+  if(S.data==="loading"&&signed())return h+skeletonLines();
+  if(S.data==="error"&&signed())return h+errState();
+  const out=!signed();
+  const signCard=`<div class="card"><div style="text-align:center;padding:26px 16px">${avatar(72)}<div class="b" style="font-size:18px;margin:12px 0 4px">${t("signInManageT")}</div><div class="mute sm" style="margin-bottom:14px">${t("signInManageD")}</div><div style="max-width:200px;margin:auto">${btn(t("signIn"),"startSignIn()")}</div></div></div>`;
+  const nudge=signed()&&!hasPhone()?`<div class="note warn" onclick="startMethod('add','phone')" style="cursor:pointer"><div class="b">☎ ${t("cabAddPhoneT")}</div><div class="sm mute">${t("cabAddPhoneD")}</div><div class="b sm" style="margin-top:4px;color:var(--info)">${t("add")} ${ic.chev}</div></div>`:"";
+  const L=listingsBlock();
+  if(v==="A"){
+    h+=out?signCard:`<div class="card row" onclick="push('profile')">${avatar(56,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||idLabel()}</div>${S.name?`<div class="mute sm">${idLabel()}</div>`:""}</div><span class="chev">${ic.chev}</span></div>${nudge}`;
+    h+=`<div class="card row" onclick="push('listingsStub')"><div style="font-size:22px">☰</div><div class="l"><div class="b">${t("myListings")}</div></div><span class="chev">${ic.chev}</span></div><div class="pad" style="margin-top:6px">${btn("＋ "+t("listCar"),"reset('sell')")}</div>`;
+  }else if(v==="B"){
+    if(out)h+=signCard;
+    else{
+      h+=`<div class="card"><div class="row" onclick="push('profile')" style="min-height:64px">${avatar(48,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||t("profile")}</div><div class="mute sm">${t("profile")} · ${t("methods")}</div></div><span class="chev">${ic.chev}</span></div>
+      <div class="row" onclick="${hasPhone()?"push('profile')":"startMethod('add','phone')"}"><span>☎</span><div class="l">${hasPhone()?`<div class="b">${maskPhoneDisp(S.phone)}</div><div class="badge ver">✓ ${t("phoneVer")}</div>`:`<div class="mute">${t("phone")}: ${t("notAdded")}</div>`}</div>${hasPhone()?"":`<span class="b sm" style="color:var(--info)">${t("add")}</span>`}<span class="chev">${ic.chev}</span></div>
+      <div class="row" onclick="${hasEmail()?"push('profile')":"startMethod('add','email')"}"><span>✉</span><div class="l">${hasEmail()?`<div class="b">${maskEmail(S.email)}</div><div class="badge ver">✓ ${t("verified")}</div>`:`<div class="mute">${t("email")}: ${t("notAdded")}</div>`}</div>${hasEmail()?"":`<span class="b sm" style="color:var(--info)">${t("add")}</span>`}<span class="chev">${ic.chev}</span></div></div>${nudge}`;
+    }
+    h+=`<div class="hd">${t("myListings")}</div><div class="card">${[["active",L.a],["drafts",L.d],["sold",L.s],["archived",L.r]].map(([k,n])=>`<div class="row" onclick="push('listingsStub')"><div class="l">${t(k)}</div><span class="mute">${out?"–":n}</span><span class="chev">${ic.chev}</span></div>`).join("")}</div><div class="pad">${btn("＋ "+t("listCar"),"reset('sell')")}</div>`;
+  }else{ /* C: Auto.ru-style menu list, Settings merged in */
+    if(out)h+=signCard;
+    else h+=`<div class="card row" onclick="push('profile')">${avatar(56,S.name)}<div class="l"><div class="b" style="font-size:17px">${S.name||idLabel()}</div><div class="mute sm">${t("profile")}</div></div><span class="chev">${ic.chev}</span></div>${nudge}`;
+    const mr=(i,l,fn,x="")=>`<div class="row" onclick="${fn}"><span style="width:24px;text-align:center;color:var(--mfg)">${i}</span><div class="l">${l}</div>${x}<span class="chev">${ic.chev}</span></div>`;
+    h+=`<div class="card">${signed()?mr("☰",t("myListings"),"push('listingsStub')")+mr("🔔",t("notifs"),"push('notifs')"):""}${mr("🌐",t("language"),"S.picker='lang';render()",`<span class="mute sm">${S.lang.toUpperCase()}</span>`)}${mr("◐",t("theme"),"S.picker='theme';render()",`<span class="mute sm">${t(S.theme)}</span>`)}</div>
+    <div class="card">${mr("🛡",t("privacy"),"openLegal('privacy')")}${mr("📄",t("terms"),"openLegal('terms')")}${mr("📋",t("posting"),"openLegal('terms')")}</div>
+    ${signed()?`<div class="card">${mr("🗑",t("deleteAcc"),"push('delete')")}</div><div class="pad">${btn(t("logout"),"S.dlg='logout';render()","out")}</div>`:""}`;
+  }
+  return h;
+}
+function stubScreen(name,note){return `<div class="appbar"><div class="t">${name}</div></div><div class="pad mute" style="padding-top:40px;text-align:center">${note}</div>`;}
+function listingsStubScreen(){return appbar(t("myListings"))+`<div class="pad mute" style="padding-top:40px;text-align:center">My listings is #354 (Sell wizard, drafts and My listings states).</div>`;}
+
+function signinScreen(){
+  const f=S.flow;const close=`<button class="ib" aria-label="Close" onclick="closeSignIn()">${ic.x}</button>`;
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px 6px 8px">${close}${langSwitch()}</div><div class="pad" style="margin-top:18px"><div class="logo">Auto<b>TM</b></div></div>`;
+  const v=S.v.entry;
+  if(v==="B"&&f.step==="choose"){
+    h+=`<div class="pad" style="margin-top:30px"><div class="b" style="font-size:24px;line-height:1.25">${t("welcomeT")}</div><div class="mute" style="margin:6px 0 24px">${t("noPassword")}</div><div style="display:grid;gap:10px">${btn("☎ "+t("contPhone"),"S.flow.type='phone';S.flow.step='entry';render()")}${btn("✉ "+t("contEmail"),"S.flow.type='email';S.flow.step='entry';render()","out")}</div></div><div style="position:absolute;bottom:0;left:0;right:0">${legalLinks()}</div>`;
+    return h;
+  }
+  const isC=v==="C";const type=isC?detect(f.val):f.type;
+  const tabs=v==="A"?`<div class="pad" style="margin-top:20px"><div class="pseg"><button class="${f.type==="phone"?"on":""}" onclick="S.flow.type='phone';S.flow.val='';S.flow.err=null;render()">${t("phone")}</button><button class="${f.type==="email"?"on":""}" onclick="S.flow.type='email';S.flow.val='';S.flow.err=null;render()">${t("email")}</button></div></div>`:"";
+  const back=v==="B"?`<button class="btn link" style="margin:0 12px" onclick="S.flow.step='choose';S.flow.err=null;render()">${ic.back} ${t("signIn")}</button>`:"";
+  const ttl=isC?t("anyTitle"):t(type==="phone"?"phoneTitle":"emailTitle"), hlp=isC?t("anyHelper"):t(type==="phone"?"phoneHelper":"emailHelper");
+  h+=back+tabs+`<div class="pad" style="margin-top:20px"><div class="b" style="font-size:22px;line-height:1.25">${ttl}</div><div class="mute" style="margin:4px 0 16px">${hlp}</div>${entryField(isC?"any":f.type)}${entryErr(isC?"any":f.type)}<div style="margin-top:16px">${btn(t("getCode"),"getCode()")}</div></div><div style="position:absolute;bottom:0;left:0;right:0">${legalLinks()}</div>`;
+  return h;
+}
+function entryField(type){
+  const f=S.flow;const e=f.err==="invalid"?"err":"";
+  const pre=type==="phone"?`<span class="b">+993</span>`:"";
+  return `<div class="field ${e}">${pre}<input id="inp" aria-label="${type==="phone"?t("phoneLabel"):type==="email"?t("emailLabel"):t("anyTitle")}" value="${f.val||""}" inputmode="${type==="phone"?"tel":"email"}" placeholder="${type==="phone"?"6X XX-XX-XX":type==="email"?"name@example.com":"6X XX-XX-XX / name@example.com"}" oninput="liveVal(this)" onkeydown="if(event.key==='Enter')getCode()"></div><div style="margin-top:6px"><a class="xs mute" style="text-decoration:underline;cursor:pointer" onclick="demoFill()">prototype: fill a made-up ${type==="phone"?"number":"address"}</a></div>`;
+}
+function entryErr(type){
+  const f=S.flow;if(!f.err)return "";
+  const m={invalid:type==="phone"?t("phoneFmt"):type==="email"?t("emailFmt"):t("anyFmt"),offline:t("offline"),rate:t("rate"),rateDay:t("rateDay")}[f.err];
+  return `<div class="errtx" role="alert">${m}</div>`;
+}
+function codeBody(){
+  const f=S.flow;const c=f.code||"";const e=f.cerr;const locked=e==="locked";
+  const cells=`<div class="cells">${[0,1,2,3,4,5].map(i=>`<div class="cell ${e&&["wrong","expired","locked"].includes(e)?"err":""} ${i===c.length&&!locked?"on":""} ${locked?"dis":""}">${c[i]||""}</div>`).join("")}</div>`;
+  const msg={wrong:t("wrongCode"),expired:t("expiredCode"),locked:t("lockedCode"),offline:t("offline"),rate:t("rate"),rateDay:t("rateDay")}[e];
+  const needNew=e==="expired"||e==="locked";
+  const d=dest(f.type,f.val);
+  const canChange=f.kind!=="delete";
+  const showNoMail=f.type==="email"&&(f.nomail||f.sec===0||f.resends>0)&&f.kind!=="delete";
+  return `<div class="pad" style="margin-top:6px"><div class="b" style="font-size:22px">${f.kind==="delete"||f.kind==="webdelete"?t("delCodeT"):t("otpTitle")}</div>
+  <div class="mute" style="margin:6px 0 0">${t("otpSent",{d:d})}</div><div class="mute sm" style="margin-top:2px">${t(f.type==="email"?"exp10":"exp5")}</div>
+  ${canChange?`<button class="btn link" style="padding:0" onclick="backFromCode()">${t(f.type==="phone"?"chgNum":"chgMail")}</button>`:""}
+  <div style="margin-top:14px">${cells}</div>${msg?`<div class="errtx" role="alert">${msg}</div>`:""}
+  <div style="margin-top:12px">${f.sec>0?`<span class="mute sm">${t("resendIn",{s:f.sec})}</span>`:`<button class="btn ${needNew?"brand":"link"}" style="${needNew?"":"padding:0"}" onclick="resend()">${t("resend")}</button>`}</div>
+  ${showNoMail?`<div class="note" style="margin:12px 0 0">${t("noMail")}${f.kind==="signin"?`<div><button class="btn link" style="padding:0" onclick="S.flow={kind:'signin',type:'phone',val:'',err:null,step:'entry'};S.stack.pop();render()">${t("noMailPhone")}</button></div>`:""}</div>`:""}
+  </div><div class="kp">${[1,2,3,4,5,6,7,8,9,"",0,"<"].map(k=>k===""?"<span></span>":`<button onclick="key('${k}')">${k==="<"?"⌫":k}</button>`).join("")}</div>`;
+}
+function codeScreen(){return appbar("",{back:"backFromCode()"})+codeBody();}
+
+function methodEntryScreen(){
+  const f=S.flow;const k=f.kind,ty=f.type;
+  const title=t(k==="add"?(ty==="phone"?"addPhoneT":"addMailT"):(ty==="phone"?"chgPhoneT":"chgMailT"));
+  const help=t(k==="add"?(ty==="phone"?"addPhoneH":"addMailH"):(ty==="phone"?"chgPhoneH":"chgMailH"));
+  return appbar(title,{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:10px"><div class="mute" style="margin-bottom:16px">${help}</div>${entryField(ty)}${entryErr(ty)}<div style="margin-top:16px">${btn(t("sendCode"),"getCode()")}</div></div>`;
+}
+function takenScreen(){
+  const f=S.flow;const ty=f.type;const B=S.v.taken==="B";
+  return appbar("",{back:"S.stack=S.flow.back;S.flow=null;render()"})+`<div class="pad" style="margin-top:10px"><div style="font-size:40px">⛔</div><div class="b" style="font-size:20px;margin:8px 0">${t(ty==="phone"?"phoneTaken":"emailTaken")}</div><div class="mute sm" style="margin-bottom:18px">${t("noMerge")}</div><div style="display:grid;gap:10px">${btn(t(ty==="phone"?"diffNum":"diffMail"),"S.stack.pop();S.flow.val='';S.flow.err=null;S.flow.step='entry';render()")}${B?btn(t("signOutUse"),"S.flow=null;S.acct='out';reset('cabinet');startSignIn()","out"):""}</div></div>`;
+}
+function profileScreen(){
+  let h=appbar(t("profile"));
+  if(S.data==="loading")return h+skeletonLines();
+  if(S.data==="error")return h+errState();
+  return h+`<div style="text-align:center;padding:10px 0 16px">${avatar(88,S.name)}<div class="b" style="font-size:20px;margin-top:10px;font-family:Georgia,serif">${S.name||idLabel()}</div><div style="margin-top:6px"><span class="badge">${S.acct==="out"?"":{en:"Buyer",ru:"Покупатель",tk:"Alyjy"}[S.lang]}</span></div></div>
+  <div class="hd" style="padding-bottom:2px"><span class="b" style="font-size:16px;color:var(--fg)">${t("methods")}</span></div><div class="pad mute sm" style="margin-bottom:8px">${t("methodsHelp")}</div>
+  <div class="card">${methodRow("phone")}${methodRow("email")}</div>
+  ${!hasPhone()?`<div class="note warn">${t("sellNeedsPhone")}</div>`:""}
+  <div class="card"><div class="row" style="cursor:default"><div class="l mute sm">${t("memberSince")}</div><div class="b">${t("memberDate")}</div></div></div>`;
+}
+function sellScreen(){
+  let h=`<div class="appbar"><div class="t">${t("tabSell")}</div></div>`;
+  if(!signed())return h+`<div class="pad" style="text-align:center;padding-top:70px">${avatar(72)}<div class="b" style="font-size:18px;margin:12px 0 4px">${{en:"Sign in to sell",ru:"Войдите, чтобы продать",tk:"Satmak üçin giriň"}[S.lang]}</div><div class="mute sm" style="margin-bottom:14px">${{en:"Sign in to list your vehicle on AutoTM.",ru:"Войдите, чтобы разместить объявление на AutoTM.",tk:"AutoTM-de bildiriş goýmak üçin giriň."}[S.lang]}</div><div style="max-width:200px;margin:auto">${btn(t("signIn"),"startSignIn()")}</div></div>`;
+  if(!hasPhone()&&S.v.sell==="A")return h+`<div class="pad" style="text-align:center;padding-top:50px"><div style="font-size:48px">☎</div><div class="b" style="font-size:21px;margin:10px 0">${t("sellGateT")}</div><div class="mute" style="margin-bottom:20px">${t("sellGateD")}</div><div style="display:grid;gap:8px">${btn(t("addPhoneT"),"startMethod('add','phone')")}${btn(t("notNow"),"reset('cabinet')","out")}</div></div>`;
+  return h+`<div class="pad" style="padding-top:6px"><div class="mute sm">${t("step")}</div><div class="card" style="margin:10px 0"><div class="row" style="cursor:default"><div class="l"><div class="b">Toyota Camry, 2018</div><div class="mute sm">285 000 TMT · Aşgabat</div></div></div></div>
+  <div class="mute xs" style="margin-bottom:12px">Sell wizard steps are #354. This screen exists only to show the phone check.</div>${btn(t("publish"),"publishTap()")}</div>`;
+}
+function publishTap(){if(!hasPhone()){S.sheet={t:"phoneReq"};render();}else toast(t("published"));}
+function settingsScreen(){
+  const A=S.v.set==="A";
+  let h=appbar(t("settings"));
+  const seg=(items,cur,fn)=>`<div class="pseg">${items.map(([k,l])=>`<button class="${cur===k?"on":""}" onclick="${fn}('${k}')">${l}</button>`).join("")}</div>`;
+  const lrow=(l,fn,x="")=>`<div class="row" role="button" onclick="${fn}"><div class="l">${l}</div>${x}<span class="chev">${ic.chev}</span></div>`;
+  if(A){
+    h+=`<div class="pad" style="margin-top:6px"><div class="mute sm b" style="margin:8px 0 6px">${t("language")}</div>${seg([["en","English"],["ru","Русский"],["tk","Türkmen"]],S.lang,"setLang")}
+    <div class="mute sm b" style="margin:18px 0 6px">${t("theme")}</div>${seg([["light",t("light")],["dark",t("dark")],["system",t("system")]],S.theme,"setTheme")}</div>`;
+    if(signed())h+=`<div class="card" style="margin-top:16px">${lrow(t("notifs"),"push('notifs')")}</div>`;
+  }else{
+    h+=`<div class="card" style="margin-top:8px">${lrow(t("language"),"S.picker='lang';render()",`<span class="mute">${{en:"English",ru:"Русский",tk:"Türkmen"}[S.lang]}</span>`)}${lrow(t("theme"),"S.picker='theme';render()",`<span class="mute">${t(S.theme)}</span>`)}${signed()?lrow(t("notifs"),"push('notifs')"):""}</div>`;
+  }
+  h+=`<div class="hd">${t("about")}</div><div class="card">${lrow(t("privacy"),"openLegal('privacy')")}${lrow(t("terms"),"openLegal('terms')")}${lrow(t("posting"),"openLegal('terms')")}</div>`;
+  if(signed())h+=`<div class="card">${lrow(t("deleteAcc"),"push('delete')")}</div><div class="pad" style="padding-bottom:20px">${btn(t("logout"),"S.dlg='logout';render()","dest")}</div>`;
+  return h;
+}
+window.setLang=l=>{S.lang=l;render();};window.setTheme=m=>{S.theme=m;render();};
+function notifsScreen(){
+  const sw=k=>`<button class="sw ${S.notif[k]?"on":""}" role="switch" aria-checked="${S.notif[k]}" onclick="S.notif['${k}']=!S.notif['${k}'];render()"></button>`;
+  const off=S.notif.os==="denied";
+  return appbar(t("notifs"))+(off?`<div class="note warn" style="margin-top:6px"><div class="b">${t("osOffT")}</div><button class="btn link" style="padding:0" onclick="toast('Opens Android system settings')">${t("osOffB")}</button></div>`:"")+`<div class="card" style="margin-top:8px"><div class="row" style="cursor:default"><div class="l"><div class="b">${t("nMsg")}</div><div class="mute sm">${t("nMsgD")}</div></div>${sw("msg")}</div><div class="row" style="cursor:default"><div class="l"><div class="b">${t("nAct")}</div><div class="mute sm">${t("nActD")}</div></div>${sw("act")}</div></div>`;
+}
+function deleteScreen(){
+  const d=t("delDate");
+  let h=appbar(t("deleteAcc"));
+  h+=`<div class="note err" style="margin-top:6px">${t("delD")}</div><div class="pad"><div class="b" style="margin:6px 0">${t("delWhat")}</div><ul style="margin:0 0 12px 18px;padding:0;line-height:1.6;font-size:13.5px"><li>${t("delL1")}</li><li>${t("delL2")}</li><li>${t("delL3")}</li><li>${t("delL4",{d:d})}</li><li><b>${t("delL5")}</b></li></ul>
+  <label style="display:flex;gap:10px;align-items:center;min-height:44px;cursor:pointer"><input type="checkbox" style="width:22px;height:22px" ${S.delChecked?"checked":""} onchange="S.delChecked=this.checked;render()"> <span>${t("delUnd")}</span></label>
+  ${S.v.del==="B"?`<div class="mute sm" style="margin:6px 0 10px">${t("delCodeD",{d:hasPhone()?maskPhoneDisp(S.phone):maskEmail(S.email)})}</div>`:""}
+  <div style="margin-top:10px">${btn("🗑 "+t("deleteAcc"),"S.dlg='delete';render()","dest",!S.delChecked)}</div>${S.delFailed?`<div class="errtx" style="text-align:center" role="alert">${t("delFail")}</div>`:""}</div>`;
+  return h;
+}
+function scheduledScreen(){return `<div class="pad" style="text-align:center;padding-top:110px"><div style="font-size:44px">🗓</div><div class="b" style="font-size:21px;margin:10px 0">${t("schedT")}</div><div class="mute" style="margin-bottom:22px">${t("schedD",{d:t("delDate")})}</div><div style="max-width:200px;margin:auto">${btn(t("done"),"reset('cabinet')")}</div></div>`;}
+function webDeleteScreen(){
+  const f=S.flow;
+  let body;
+  if(f.step==="entry"){
+    body=`<div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:6px">${t("webT")}</div><div style="color:#555;margin-bottom:14px;font-size:14px">${t("webD")}</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">${["phone","email"].map(x=>`<button style="flex:1;padding:9px;border-radius:8px;border:1px solid #bbb;background:${f.type===x?"#222":"#fff"};color:${f.type===x?"#fff":"#222"};cursor:pointer" onclick="S.flow.type='${x}';S.flow.val='';S.flow.err=null;render()">${t(x)}</button>`).join("")}</div>
+    <div style="--border:#bbb;--bg:#fff;--fg:#222;--destructive:#c0392b;--muted:#aaa"><div class="phone-light">${entryField(f.type)}${entryErr(f.type)}</div></div>
+    <button style="margin-top:14px;width:100%;padding:12px;border:0;border-radius:8px;background:#d40000;color:#fff;font-weight:700;" onclick="getCode()">${t("getCode")}</button></div>`;
+  }else if(f.step==="code"){
+    body=`<div style="--bg:#fff;--fg:#222;--border:#bbb;--primary:#d40000;--mfg:#666;--destructive:#c0392b;--info:#2563eb;--secondary:#eee;--muted:#ddd" class="phonelike">${codeBody()}</div>`;
+  }else body=`<div style="padding:20px;text-align:center"><div style="font-size:40px">✓</div><div style="font-size:16px;margin:10px 0">${t("webDone",{x:t(f.type).toLowerCase(),d:t("delDate")})}</div></div>`;
+  return `<div class="br" style="top:24px"><div class="bar"><button class="ib" style="color:#222" onclick="${f.step==="code"?"backFromCode()":"S.flow=null;S.stack=[{id:'cabinet'}];S.tab='cabinet';render()"}">${ic.back}</button><div class="url">🔒 autotm.bagtyyar.dev/${S.lang}/account-deletion</div></div>${body}</div>`;
+}
+function tabStub(id){
+  const m={search:["Search / Home","Home, Brand picker, Results: #351 and the approved screen map."],favorites:[t("tabFav"),"Favorites: #352."],messages:[t("tabMsg"),"Conversations: #352."]}[id];
+  return `<div class="appbar"><div class="t">${m[0]}</div></div><div class="pad mute" style="padding-top:60px;text-align:center">${m[1]}<br>Not part of this prototype.</div>`;
+}
+
+/* ───────────── overlays ───────────── */
+function overlays(){
+  let o="";
+  if(S.web){
+    const url=`https://autotm.bagtyyar.dev/${S.lang}/legal/${S.web.kind}`;
+    o+=`<div class="br"><div class="bar"><button class="ib" style="color:#222" onclick="S.web=null;render()">${ic.x}</button><div class="url">🔒 ${url}</div></div><div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:8px">${S.web.kind==="privacy"?t("privacy"):t("terms")}</div><div class="skel" style="height:12px;background:#ddd;margin:8px 0"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:90%"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:80%"></div><div style="color:#666;font-size:12px;margin-top:14px">Opens in the system browser (Linking). Host is the public web base URL from config, not a literal (#496). Text mentions “phone or email” (#390) and the web deletion page.</div><a style="display:block;margin-top:14px;color:#2563eb;text-decoration:underline;cursor:pointer" onclick="S.web=null;S.flow={kind:'webdelete',type:'phone',val:'',err:null,step:'entry'};S.stack.push({id:'webDelete'});render()">${t("deleteAcc")}: autotm.bagtyyar.dev/${S.lang}/account-deletion</a></div></div>`;
+  }
+  if(S.sheet){
+    const s=S.sheet;let c="";
+    if(s.t==="chg")c=`<div class="b" style="font-size:18px;margin-bottom:6px">${t("chgWarnT",{x:t(s.type==="phone"?"chgWarnX":"chgWarnY")})}</div><div class="mute" style="margin-bottom:14px">${t("chgWarnD")}</div><div style="display:grid;gap:8px">${btn(t("contin"),`S.sheet=null;startMethod('change','${s.type}')`)}${btn(t("cancel"),"S.sheet=null;render()","out")}</div>`;
+    if(s.t==="phoneReq")c=`<div class="b" style="font-size:18px;margin-bottom:6px">${t("phoneReqT")}</div><div class="mute" style="margin-bottom:14px">${t("phoneReqD")}</div><div style="display:grid;gap:8px">${btn(t("addPhoneT"),"S.sheet=null;startMethod('add','phone')")}${btn(t("cancel"),"S.sheet=null;render()","out")}</div>`;
+    o+=`<div class="dim" onclick="S.sheet=null;render()"></div><div class="sheet">${c}</div>`;
+  }
+  if(S.picker){
+    const k=S.picker;const items=k==="lang"?[["en","English"],["ru","Русский"],["tk","Türkmen"]]:[["light",t("light")],["dark",t("dark")],["system",t("system")]];
+    const cur=k==="lang"?S.lang:S.theme;
+    o+=`<div class="dim" onclick="S.picker=null;render()"></div><div class="sheet"><div class="b" style="font-size:18px;margin-bottom:6px">${t(k==="lang"?"language":"theme")}</div>${items.map(([v,l])=>`<div class="row" style="padding-left:0" onclick="${k==="lang"?"S.lang":"S.theme"}='${v}';S.picker=null;render()"><div class="l">${l}</div><span>${cur===v?"●":"○"}</span></div>`).join("")}</div>`;
+  }
+  if(S.dlg){
+    const d=S.dlg;let c="";
+    if(d==="logout")c=`<div class="b" style="font-size:18px">${t("logoutT")}</div><div class="mute" style="margin:6px 0 14px">${t("logoutD")}</div><div style="display:flex;gap:8px">${btn(t("cancel"),"S.dlg=null;render()","out")}${btn(t("logout"),"doLogout()")}</div>`;
+    if(d==="delete")c=`<div class="b" style="font-size:18px">${t("delConfT")}</div><div class="mute" style="margin:6px 0 14px">${t("delConfD",{d:t("delDate")})}</div><div style="display:flex;gap:8px">${btn(t("cancel"),"S.dlg=null;render()","out")}${btn(t("delDo"),"doDelete()","dest")}</div>`;
+    if(d==="restore")c=`<div class="b" style="font-size:18px">${t("restT")}</div><div class="mute" style="margin:6px 0 14px">${t("restD",{d:t("delDate")})}</div><div style="display:flex;gap:8px">${btn(t("cancel"),"restoreCancel()","out")}${btn(t("restDo"),"restore()")}</div>`;
+    o+=`<div class="dim"></div><div class="dlg">${c}</div>`;
+  }
+  if(S.toast)o+=`<div class="toast">${S.toast}</div>`;
+  return o;
+}
+function tabbar(){
+  const items=[["search","🔍","tabSearch"],["favorites","♡","tabFav"],["sell","＋","tabSell"],["messages","💬","tabMsg"],["cabinet","👤","tabCab"]];
+  return `<div class="tabbar">${items.map(([k,i,l])=>`<button class="${S.tab===k?"on":""}" onclick="reset('${k}')"><i>${i}</i>${t(l)}</button>`).join("")}</div>`;
+}
+
+/* ───────────── render ───────────── */
+function currentScreen(){
+  const id=top().id;
+  return ({cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listingsStub:listingsStubScreen}[id]||(()=>tabStub(id)))();
+}
+function renderPhone(){
+  const id=top().id;const tabs=isTab(id);
+  const dark=S.theme==="dark"||(S.theme==="system"&&S.os);
+  const ph=document.getElementById("phone");ph.classList.toggle("dark",dark);
+  const sc=document.getElementById("scr");const st=sc.scrollTop;
+  sc.style.bottom=tabs?"58px":"0";
+  sc.innerHTML=currentScreen();
+  document.getElementById("ovl").innerHTML=(tabs?tabbar():"")+overlays();
+  sc.scrollTop=st;
+}
+function render(){renderPhone();panel();switcher();}
+
+/* ───────────── decisions (variants) ───────────── */
+const DEC={
+ cab:{name:"Cabinet layout",ref:"KZ-27-003, KZ-35-001 (Kolesa cabinet); AR-41-004 (Auto.ru menu); AR-44-001",rec:"B",screen:()=>{S.acct=signed()?S.acct:"both";reset("cabinet");},
+  opts:{A:["Identity card + My listings","Today, refined: one identity card (taps into Profile), a My listings row, a List a car button. Email-only Users get an “Add a phone to sell” card. Least API change."],
+        B:["Kolesa-style cabinet","Profile row, then the phone and email rows right on Cabinet (verified ticks, “Add” when missing), then My listings split into Active / Drafts / Sold / Archived with counts, then List a car. Shows both Sign-in Methods without opening Profile. Needs per-status counts (the My listings screen already groups by status)."],
+        C:["Auto.ru-style menu list","Cabinet becomes the whole menu: identity row, My listings, Notifications, Language, Theme, legal rows, Delete account, Log out. No separate Settings screen (the gear disappears). Fewest taps to a setting, but Cabinet gets long and Delete account sits one tap from the top level."]}},
+ entry:{name:"Sign-in entry (phone or email)",ref:"AR-43-001/002 (Auto.ru chooses a method first); KZ-29-001; #387; approved map “equal entry points”",rec:"B",screen:()=>{S.acct="out";reset("cabinet");startSignIn();},
+  opts:{A:["Phone | Email tabs (today)","Both fields one tap apart under a segmented control. This is what apps/mobile ships today (SignInMethodTabs). Defaults to Phone, so email feels secondary."],
+        B:["Two equal buttons first","“Continue with phone” and “Continue with email” as equals, then the matching field. One extra tap but nothing is the default; matches the approved map wording and Auto.ru's method-first entry."],
+        C:["One field, auto-detect","A single “Phone or email” field; digits mean phone, an @ means email. Fewest taps, but +993 is the only valid phone, so a foreign number or a typo gives a confusing error, and the field cannot show the +993 prefix."]}},
+ sell:{name:"Selling blocked without a verified phone",ref:"ADR-0054 (Sell entry shows an “Add a phone” step); #344; #388",rec:"A",screen:()=>{S.acct="email";reset("sell");},
+  opts:{A:["Gate before the wizard","An email-only User opening Sell sees “Add a phone to sell” and nothing else until a phone is confirmed, then lands back in Sell. No wasted effort, but the User learns about the rule before they see the wizard."],
+        B:["Gate at Publish","The wizard is open to everyone; Publish on the last step shows “Add a phone to publish” (the PHONE_REQUIRED path). The draft is kept. More effort lost if they refuse, but the server rule is still needed as backup."]}},
+ set:{name:"Settings structure",ref:"AR-41-004, AR-42-001 (drill-down menu rows); KZ-35-001, KZ-38-001 (Kolesa settings with values); today settings.tsx",rec:"A",screen:()=>{S.acct=signed()?S.acct:"both";reset("cabinet");push("settings");},
+  opts:{A:["Inline controls (today)","Language and theme are three-way segmented controls shown on the page: one tap to change, no sub-screens. Three options each, so it fits."],
+        B:["Drill-down rows","Rows show the current value (“Language  English ›”) and open a bottom sheet to pick. Matches Auto.ru/Kolesa, but every change is two taps."]}},
+ chg:{name:"Warning before Change",ref:"KZ-32-003 (“After changing the phone you must use the new number”); ADR-0054 (old value freed immediately)",rec:"B",screen:()=>{openAs("both","profile");if(S.v.chg==="B"){S.sheet={t:"chg",type:"phone"};render();}else startMethod("change","phone");},
+  opts:{A:["Straight to the new value (today)","Tapping Change opens the new-value screen; the helper line already says the old value stops working."],
+        B:["Confirm sheet first","A short sheet says the old value stops opening the account and listings/chats stay. One extra tap on a rare action, and it prevents a lockout surprise."]}},
+ taken:{name:"Value already used by another User",ref:"ADR-0054 (refused after the code is confirmed, SIGN_IN_METHOD_TAKEN, never merged); #388",rec:"A",screen:()=>{openAs("phone","profile");S.outcome="taken";startMethod("add","email");},
+  opts:{A:["Refuse and offer another value","Plain explanation plus “Use a different email/number”. States that accounts are never merged. Nothing that looks like a merge offer (#388)."],
+        B:["Also: sign out and use that account","Adds a second button that signs the User out and opens sign-in, so they can switch to the other account. Helpful, but it can read as a merge path and loses the current session."]}},
+ del:{name:"Delete account confirmation (in app)",ref:"ADR-0032, ADR-0054 (DELETE /me unchanged; web page uses a code); KZ-48-002 (understand checkbox); AR-40/41 none",rec:"A",screen:()=>{S.acct="both";reset("cabinet");push("settings");push("delete");},
+  opts:{A:["Checkbox + dialog (ADR as written)","List of what happens, an “I understand” checkbox, then the destructive button and a confirm dialog. The session already proves identity, so no code. Spends no SMS/email budget."],
+        B:["Checkbox + dialog + code","After the dialog a Sign-in Code goes to the phone or email on file and must be entered. Stronger against a stolen unlocked phone, but changes ADR-0054's “DELETE /me unchanged”, costs a code from the shared 5-per-day budget, and fails if email delivery fails."]}},
+};
+const DKEYS=Object.keys(DEC);
+function setV(k,o){S.v[k]=o;S.dec=k;DEC[k].screen();}
+function cycle(d){const k=S.dec,ks=Object.keys(DEC[k].opts),i=(ks.indexOf(S.v[k])+d+ks.length)%ks.length;setV(k,ks[i]);}
+function nextDec(){const i=(DKEYS.indexOf(S.dec)+1)%DKEYS.length;S.dec=DKEYS[i];DEC[S.dec].screen();}
+document.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,textarea"))return;if(e.key==="ArrowLeft")cycle(-1);if(e.key==="ArrowRight")cycle(1);});
+function switcher(){
+  const d=DEC[S.dec],o=d.opts[S.v[S.dec]];
+  document.getElementById("switcher").innerHTML=`<button onclick="cycle(-1)">←</button><span class="lbl">D${DKEYS.indexOf(S.dec)+1} ${d.name}: ${S.v[S.dec]} — ${o[0]}${d.rec===S.v[S.dec]?" ★":""}</span><button onclick="cycle(1)">→</button><button onclick="nextDec()">next decision ▸</button>`;
+}
+
+/* ───────────── jumps (every state is one click) ───────────── */
+const J=[];const grp=n=>J.push({g:n});const jp=(l,f)=>J.push({l,f});
+const openAs=(acct,id)=>{S.acct=acct;S.data="ok";S.flow=null;S.sheet=S.dlg=S.web=S.picker=null;reset("cabinet");if(id&&id!=="cabinet")push(id);};
+const codeFlow=(kind,type,extra={})=>{S.flow=Object.assign({kind,type,val:type==="phone"?"60 00-00-00":"name@example.com",err:null,code:"",cerr:null,sec:15,resends:0,step:"code",back:[{id:"cabinet"},{id:"profile"}]},extra);};
+grp("Cabinet");
+jp("Signed out",()=>openAs("out"));jp("Phone only",()=>openAs("phone"));jp("Email only",()=>openAs("email"));jp("Phone + email",()=>openAs("both"));
+jp("Loading",()=>{openAs("both");S.data="loading";render();});jp("Error",()=>{openAs("both");S.data="error";render();});
+grp("Sign in");
+jp("Entry",()=>{openAs("out");startSignIn();});
+jp("Code sent: phone",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","phone");S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();});
+jp("Code sent: email",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","email");S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();});
+jp("Invalid value",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val=S.v.entry==="C"?"61 0":"";S.flow.err="invalid";render();});
+jp("Rate limited (request)",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val="60 00-00-00";S.flow.err="rate";render();});
+jp("Offline (request)",()=>{openAs("out");startSignIn();S.flow.step="entry";S.flow.val="60 00-00-00";S.flow.err="offline";render();});
+const codeErr=(e,type)=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin",type);S.flow.cerr=e;if(e==="expired")S.flow.sec=0;S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];render();};
+jp("Wrong code",()=>codeErr("wrong","phone"));jp("Expired code",()=>codeErr("expired","email"));jp("Locked (5 wrong)",()=>codeErr("locked","phone"));
+jp("Daily limit (5 codes)",()=>codeErr("rateDay","phone"));
+jp("Email not delivered",()=>{codeErr(null,"email");S.flow.sec=0;S.flow.nomail=true;render();});
+jp("Restore prompt (grace)",()=>{openAs("out");S.ret=[{id:"cabinet"}];codeFlow("signin","phone");S.flow.code="";S.stack=[{id:"cabinet"},{id:"signin"},{id:"code"}];S.outcome="grace";render();});
+grp("Profile and Sign-in Methods");
+jp("Profile: phone only",()=>openAs("phone","profile"));jp("Profile: email only",()=>openAs("email","profile"));jp("Profile: both",()=>openAs("both","profile"));
+jp("Profile loading",()=>{openAs("both","profile");S.data="loading";render();});jp("Profile error",()=>{openAs("both","profile");S.data="error";render();});
+jp("Add email: entry",()=>{openAs("phone","profile");startMethod("add","email");});
+jp("Add phone: entry",()=>{openAs("email","profile");startMethod("add","phone");});
+jp("Add: code sent",()=>{openAs("phone","profile");codeFlow("add","email");S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"code"}];render();});
+jp("Add: wrong code",()=>{openAs("phone","profile");codeFlow("add","email");S.flow.cerr="wrong";S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"code"}];render();});
+jp("Add: expired",()=>{openAs("phone","profile");codeFlow("add","email");S.flow.cerr="expired";S.flow.sec=0;S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"code"}];render();});
+jp("Add: value taken (email)",()=>{openAs("phone","profile");codeFlow("add","email");S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"taken"}];render();});
+jp("Add: value taken (phone)",()=>{openAs("email","profile");codeFlow("add","phone");S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"taken"}];render();});
+jp("Change phone: sheet/entry",()=>{openAs("both","profile");S.v.chg==="B"?(S.sheet={t:"chg",type:"phone"},render()):startMethod("change","phone");});
+grp("Selling");
+jp("Email-only opens Sell",()=>{openAs("email");reset("sell");});
+jp("Phone User opens Sell",()=>{openAs("phone");reset("sell");});
+jp("Publish blocked (variant B)",()=>{S.v.sell="B";openAs("email");reset("sell");S.sheet={t:"phoneReq"};render();});
+jp("Signed out opens Sell",()=>{openAs("out");reset("sell");});
+grp("Settings");
+jp("Settings: signed out",()=>openAs("out","settings"));jp("Settings: signed in",()=>openAs("both","settings"));
+jp("Language sheet",()=>{openAs("both","settings");S.picker="lang";render();});
+jp("Notifications",()=>{openAs("both","settings");S.notif.os="granted";push("notifs");});jp("Notifications: OS off",()=>{openAs("both","settings");S.notif.os="denied";push("notifs");});
+jp("Legal page (web)",()=>{openAs("both","settings");openLegal("privacy");});
+grp("Account");
+jp("Log out dialog",()=>{openAs("both","settings");S.dlg="logout";render();});
+jp("Delete: intro",()=>{openAs("both","settings");push("delete");});
+jp("Delete: confirm dialog",()=>{openAs("both","settings");push("delete");S.delChecked=true;S.dlg="delete";render();});
+jp("Delete: failed",()=>{openAs("both","settings");push("delete");S.delChecked=true;S.delFailed=true;render();});
+jp("Delete: code (variant B)",()=>{S.v.del="B";openAs("both","settings");push("delete");codeFlow("delete","phone");S.stack.push({id:"code"});render();});
+jp("Delete: scheduled",()=>{openAs("out");push("scheduled");});
+jp("Web deletion page",()=>{openAs("out");S.flow={kind:"webdelete",type:"phone",val:"",err:null,step:"entry"};push("webDelete");});
+jp("Web: code sent",()=>{openAs("out");codeFlow("webdelete","email");S.stack.push({id:"webDelete"});render();});
+jp("Web: done",()=>{openAs("out");S.flow={kind:"webdelete",type:"email",val:"name@example.com",step:"done"};push("webDelete");});
+
+/* ───────────── panel ───────────── */
+function seg(items,cur,fn){return `<div class="seg">${items.map(([k,n])=>`<button class="${cur===k?"on":""}" onclick="${fn}('${k}')">${n}</button>`).join("")}</div>`;}
+window.pAcct=k=>{S.acct=k;S.data="ok";setAcctReset();};function setAcctReset(){render();}
+window.pLang=k=>{S.lang=k;render();};window.pTheme=k=>{S.theme=k;render();};window.pOs=k=>{S.os=k==="dark";render();};
+window.pOut=k=>{S.outcome=k;render();};window.pReq=k=>{S.req=k;render();};window.pDel=k=>{S.delOut=k;render();};window.pData=k=>{S.data=k;render();};
+window.pDec=(k,o)=>setV(k,o);
+const STATES=[
+ ["Cabinet: signed out / phone only / email only / both","Cabinet jumps","apps/mobile/app/(tabs)/services.tsx","exists (A-like); B and C layouts, status counts, “Add a phone” card are new"],
+ ["Cabinet loading / error","Cabinet jumps","services.tsx (spinner and text only)","exists; skeleton + Retry button new"],
+ ["Sign-in entry: phone / email","Sign in → Entry","app/(auth)/phone.tsx, email.tsx, components/auth/AuthEntryScreen.tsx, SignInMethodTabs.tsx","exists (tabs). Method-first chooser and single field are new"],
+ ["Code entry (sent, countdown, resend)","Sign in → Code sent","components/auth/CodeEntryForm.tsx, app/(auth)/otp.tsx","exists. Phone “expires in 5 minutes” line is new (email 10 min exists)"],
+ ["Invalid value","Sign in → Invalid value","phoneFormatError / emailFormatError in resources.ts","exists"],
+ ["Rate limited on request / on resend","Sign in → Rate limited","rateLimitedCode in resources.ts","exists; daily 5-code limit copy is new"],
+ ["Offline on request / verify","Sign in → Offline","offline in resources.ts","exists"],
+ ["Wrong / expired / locked code","Sign in → Wrong, Expired, Locked","src/auth/verifyCodeError.ts","exists (all three)"],
+ ["Email not delivered hint","Sign in → Email not delivered","none","new (ADR-0055: bounces fail silently)"],
+ ["Restore prompt on sign-in in grace","Sign in → Restore prompt","restoreAccount* strings in resources.ts","strings exist; verify the dialog is wired in app code"],
+ ["Profile: phone only / email only / both","Profile jumps","apps/mobile/app/profile.tsx","exists. “Selling needs a verified phone” note is new"],
+ ["Profile loading / error","Profile loading, error","profile.tsx (LoadingState, ErrorState)","exists"],
+ ["Add phone / Add email entry","Profile → Add jumps","app/account/add-phone.tsx, add-email.tsx","exists"],
+ ["Add/change: code sent, wrong, expired","Profile → Add: code sent, wrong, expired","app/account/verify-sign-in-method.tsx + CodeEntryForm","exists"],
+ ["Value taken by another User","Profile → Add: value taken","SIGN_IN_METHOD_TAKEN → phoneTaken/emailTaken in verifyCodeError.ts","exists (variant A). Variant B button is new"],
+ ["Change phone/email (+ warning sheet)","Profile → Change phone","add-phone.tsx (change mode)","exists; warning sheet is new (decision D5)"],
+ ["Selling blocked without a phone","Selling jumps","app/(tabs)/sell.tsx (no phone check today; ADR-0054 / #388 pending)","new"],
+ ["Publish blocked (PHONE_REQUIRED)","Selling → Publish blocked","none","new"],
+ ["Settings: language, theme, legal links","Settings jumps","apps/mobile/app/settings.tsx","exists (A). Links must move to autotm.bagtyyar.dev (#496; today hardcodes auto.tm)"],
+ ["Language RU/TK/EN, theme light/dark/system","Settings, floating bar, panel","LocaleSwitcher, ThemeSwitcher in apps/mobile/src","exists"],
+ ["Notifications settings screen","Settings → Notifications","none in mobile (PRD docs/prd/features/36-notifications.md “Profile → Notifications”)","new. Categories trimmed to Messages + Listing activity"],
+ ["Notifications OS-permission off","Settings → Notifications: OS off","none","new"],
+ ["Log out + confirm","Account → Log out dialog","settings.tsx","exists"],
+ ["Delete account intro + confirm + scheduled","Account → Delete jumps","apps/mobile/app/account/delete.tsx","exists. “What happens” list and understand checkbox are new"],
+ ["Delete failed","Account → Delete: failed","delete.tsx (deleteAccountFailed)","exists"],
+ ["Delete confirmed by code (variant B)","Account → Delete: code","none","new (would change ADR-0054)"],
+ ["Web deletion page (phone or email code)","Account → Web deletion","none; #386 API, #389 page open","new"],
+];
+function panel(){
+  const d=DEC[S.dec];const cur=S.v[S.dec];
+  let h=`<h1>PROTOTYPE — Cabinet, Profile, Settings and sign-in methods</h1><div class="sm" style="color:#555">Throwaway (issue #353). Everything in the phone is clickable; the jump buttons set up any state in one click. ← → flip the variant of the current decision. All phone numbers, emails and codes are made up; type any six digits as a code. Resend countdown is 15 s here (60 s backoff in the product).</div>
+  <h2>Account state</h2>${seg([["out","Signed out"],["phone","Phone only"],["email","Email only"],["both","Phone + email"]],S.acct,"pAcct")}
+  <h2>Language / theme</h2>${seg([["en","EN"],["ru","RU"],["tk","TK"]],S.lang,"pLang")} ${seg([["light","Light"],["dark","Dark"],["system","System"]],S.theme,"pTheme")} <span class="sm">device is</span> ${seg([["light","light"],["dark","dark"]],S.os?"dark":"light","pOs")}
+  <h2>Next result (one-shot, then back to OK)</h2>
+  <div class="q">Code check ${seg([["ok","Accept"],["wrong","Wrong"],["expired","Expired"],["locked","Locked"],["offline","Offline"],["taken","Value taken (add/change)"],["grace","Grace period (sign-in)"]],S.outcome,"pOut")}</div>
+  <div class="q">Get code / resend ${seg([["ok","Sent"],["rate","Rate limited"],["rateDay","Daily limit"],["offline","Offline"]],S.req,"pReq")}</div>
+  <div class="q">Delete account ${seg([["ok","Succeeds"],["fail","Fails"]],S.delOut,"pDel")} &nbsp; Data load ${seg([["ok","OK"],["loading","Loading"],["error","Error"]],S.data,"pData")}</div>
+  <h2>Jump to a state</h2>`;
+  J.forEach((j,i)=>{h+=j.g?`<div class="grp">${j.g}</div>`:`<span class="jump" onclick="J[${i}].f()">${j.l}</span>`;});
+  h+=`<h2>Decision D${DKEYS.indexOf(S.dec)+1}: ${d.name}</h2><div class="q sm">Reference: ${d.ref}</div>`;
+  h+=Object.entries(d.opts).map(([k,o])=>`<div class="vdesc" style="${cur===k?"":"opacity:.55"}"><b>${k}. ${o[0]}</b>${d.rec===k?'<span class="rec">recommended</span>':""}<br>${o[1]}</div>`).join("");
+  h+=seg(Object.entries(d.opts).map(([k,o])=>[k,k+" "+o[0]]),cur,`(k=>pDec('${S.dec}',k))`);
+  h+=`<div style="margin-top:8px">${DKEYS.map((k,i)=>`<span class="jump" style="${k===S.dec?"background:#171717;color:#fff":""}" onclick="S.dec='${k}';DEC['${k}'].screen()">D${i+1} ${DEC[k].name}</span>`).join("")}</div>`;
+  h+=`<h2>Open points with no variant</h2><div class="q sm">• Web deletion confirmation copy is neutral (“If an account uses this phone…”) because ADR-0054 says a code request never reveals whether a value is registered. Say if you want it explicit.<br>• Phone codes expire in 5 min, email in 10 (ADR-0054); the phone line is new in the UI.<br>• Display name: not editable in the app today (Kolesa KZ-31 has Edit name). Left out; no ticket asks for it.<br>• Notification categories trimmed to Messages and Listing activity. Saved-search, blog and marketing categories in PRD 36 are out of the release.<br>• Language switcher stays on the sign-in screen (as today).</div>`;
+  h+=`<details ${S.o1?"open":""} ontoggle="S.o1=this.open"><summary>State inventory: where in the prototype, exists today or new</summary><table><tr><th>State</th><th>Where here</th><th>Today (file)</th><th>Status</th></tr>${STATES.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="${r[3].startsWith("new")?"new":/new|pending|verify/.test(r[3])?"chg":"have"}">${r[3]}</td></tr>`).join("")}</table></details>`;
+  h+=`<details ${S.o2?"open":""} ontoggle="S.o2=this.open"><summary>Reference notes (batches 3 and 4, viewed locally, not copied)</summary><div class="q sm">
+  • AR-41-002/004: Auto.ru “Menu” is a sheet of service tiles (wallet, reports, garage, insurance, credit) above a plain list: notifications, theme, help, licence agreement, privacy, about. Tiles are out of scope (rejected: credit, history reports, garage). The plain list is the part to copy (variant C).<br>
+  • AR-43-002: sign-in is a sheet that chooses an account provider; AutoTM has no social sign-in, so the useful part is only “choose a method first” (variant B).<br>
+  • AR-44-001: profile header is a banner with name and a settings gear; social counters and Garage are out of scope.<br>
+  • AR-40-002: notification settings group by topic with a channel summary under each row; we use switches because there is one channel (push).<br>
+  • KZ-27-003 / KZ-35-001: cabinet shows name, the login phone as a row with a chevron, then My listings by status with counts, then the primary post button; settings are grouped Personal data, App settings, Push (variants B and A). Balance, PLUS and car history are out of scope.<br>
+  • KZ-32-003: changing the phone shows a sheet saying the new number must be used to sign in (decision D5).<br>
+  • KZ-48-002: delete screen lists what will be lost and requires an “I understand” checkbox before the red button (decision D7). Kolesa deletes immediately; AutoTM has a 30-day grace (ADR-0032), so the copy says so.<br>
+  • Not opened: AR-42-002..4, AR-43-001/3/5, AR-44-002/3, AR-40-003..8, KZ-28/29 detail, KZ-31, KZ-37, KZ-38, KZ-41..44, KZ-52 (register/login/password flows, edit name, contacts, language, legal pages, onboarding video). KZ-28/29/30/36 are password flows and are rejected for AutoTM.</div></details>`;
+  document.getElementById("panel").innerHTML=h;
+}
+render();
+</script>
+</body>
+</html>
