@@ -858,3 +858,95 @@ test("the JSON report records what each scan covered", (t) => {
   assert.equal(report.scans?.claude?.status, "missing");
   assert.equal(report.scans?.processes?.includesCurrentProcess, true);
 });
+
+// Finding 4: the --apply path, with the repository changing between the scan and the removal.
+
+// An exec that runs the real command, after calling `before(argv)` once for each command it sees.
+function realExec(before) {
+  return (argv, cwd) => {
+    before(argv);
+    return execFileSync(argv[0], argv.slice(1), { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  };
+}
+
+// Runs --apply, letting `mutate(other)` change the second worktree it is about to remove once the first
+// removal starts. The scan has already passed both, so only the pre-removal recheck can stop the second.
+function applyWhileMutatingSecondRemoval(repo, mutate) {
+  let started = false;
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    exec: realExec((argv) => {
+      if (started || argv[1] !== "worktree" || argv[2] !== "remove") return;
+      started = true;
+      mutate(argv[3] === repo.merged.path ? repo.behind : repo.merged, argv[3] === repo.merged.path ? "behind" : "merged");
+    }),
+  });
+  assert.ok(started, "a worktree removal ran");
+  return result;
+}
+
+test("--apply stops before removing a worktree whose HEAD moved after the scan", (t) => {
+  const repo = fixtureRepo(t);
+  const moved = [];
+  const result = applyWhileMutatingSecondRemoval(repo, (other, name) => {
+    repo.git(other.path, "commit", "-q", "--allow-empty", "-m", "moved after the scan");
+    moved.push([other, name]);
+  });
+  const [[other, name]] = moved;
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, new RegExp(`FAILED at: remove worktree ${other.path}`));
+  assert.match(result.stdout, /HEAD moved from/);
+  assert.ok(hasWorktree(repo, other.path), `${name} was not removed`);
+  assert.equal(repo.git(other.path, "log", "-1", "--format=%s"), "moved after the scan", "the new commit is intact");
+  const branches = repo.git(repo.main, "branch", "--format=%(refname:short)").split("\n");
+  assert.ok(branches.includes(name === "merged" ? "agent/issue-1" : "agent/issue-6"), "its branch was not deleted either");
+  assert.match(result.stdout, /not attempted: [1-9]/);
+});
+
+test("--apply stops before removing a worktree that was dirtied after the scan", (t) => {
+  const repo = fixtureRepo(t);
+  const dirtied = [];
+  const result = applyWhileMutatingSecondRemoval(repo, (other) => {
+    writeFileSync(join(other.path, "late.txt"), "written after the scan\n");
+    dirtied.push(other);
+  });
+  const [other] = dirtied;
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, new RegExp(`FAILED at: remove worktree ${other.path}`));
+  assert.match(result.stdout, /worktree is no longer clean/);
+  assert.ok(hasWorktree(repo, other.path));
+  assert.equal(readFileSync(join(other.path, "late.txt"), "utf8"), "written after the scan\n");
+});
+
+test("--apply refuses to run when the process scan returns nothing usable, and a read-only run warns", (t) => {
+  const repo = fixtureRepo(t);
+  const before = repo.snapshot();
+  const applied = runMain(repo, ["--apply", "--prs-file", repo.prsFile], { scanProcesses: () => null });
+  assert.equal(applied.status, 1);
+  assert.match(applied.stderr, /Cannot scan running processes, so --apply refuses to remove anything/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile], { scanProcesses: () => null });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.match(readOnly.stderr, /could not scan running processes/);
+  assert.equal(repo.snapshot(), before);
+});
+
+test("a stale branch that moved after the scan fails the conditional delete, and the branch is kept", (t) => {
+  const repo = fixtureRepo(t);
+  repo.git(repo.main, "branch", "agent/issue-7", repo.merged.head);
+  const base = repo.git(repo.main, "rev-parse", "main");
+  const readOnly = runMain(repo, ["--prs-file", repo.prsFile]);
+  assert.match(readOnly.stdout, /agent\/issue-7 at /, "the scan lists it as stale");
+  let moved = false;
+  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
+    exec: realExec(() => {
+      if (moved) return;
+      moved = true;
+      repo.git(repo.main, "update-ref", "refs/heads/agent/issue-7", base);
+    }),
+  });
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, /FAILED at: delete branch agent\/issue-7 at/);
+  assert.match(result.stdout, /expected/, "git's own mismatch message is reported");
+  assert.equal(repo.git(repo.main, "rev-parse", "refs/heads/agent/issue-7"), base, "the moved branch was not deleted");
+  assert.ok(!hasWorktree(repo, repo.merged.path), "the earlier removal had already happened");
+});
