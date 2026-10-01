@@ -23,8 +23,8 @@ Write only in your own worktree and in `/tmp`. Never create a worktree for anoth
 - **Who creates it on Codex.** Each writing subagent creates and owns a fresh separate linked worktree. Fetch the supplied base, then create an absolute unique path with `git worktree add --detach <absolute-path> <base>`, where the base is `origin/main`, the stacked parent head, or the pushed canonical issue branch for a resume. All subsequent commands and edits target that absolute directory. The coordinator supplies scope and base but never creates or writes in a writer's worktree. The parent chat's worktree stays in place. Reservation, checkpoint, refusal, and cleanup rules below still apply.
 - **How it reaches the issue branch.** The first implementer runs `git fetch origin`, then `git switch -c agent/issue-<N> origin/main`, or starts from the parent branch head when stacked, and pushes the reservation. A later implementer runs `git fetch origin`, then `git switch --detach origin/agent/issue-<N>` and pushes with `git push origin HEAD:agent/issue-<N>`, because the named branch may be checked out in an earlier worktree.
 - **Checkpoints.** Implementers commit and push small checkpoints often. Only pushed work survives an agent that stops.
-- **Who retires it.** Claude's host may remove an unchanged worktree or sweep an eligible one. A Codex writer-created worktree stays for the user to retire under the cleanup gate; automatic host cleanup is not assumed. The orchestrator never removes another agent's worktree. After the PR merges, it records the cleanup tuple and gives the user the commands below, or leaves the worktree to the sweep. A removed worktree can leave its unchanged `worktree-agent-<id>` branch behind; the user deletes it with the conditional `update-ref` below.
-- **A stopped implementer.** A fresh implementer continues from the pushed branch in its own new worktree. It may read the stopped worktree to salvage uncommitted drafts, but never writes there or runs git against it. The user or the host removes the stopped worktree.
+- **Who retires it.** Claude's host may remove an unchanged worktree or sweep an eligible one. Otherwise the orchestrator or integration session retires it by running the [cleanup script](#run-the-cleanup-gate) after the PR merges and at queue end ([ADR-0076](../adr/0076-orchestrator-runs-the-worktree-cleanup-gate-after-every-merge.md)); a worktree that passes the gate needs no separate user approval, and the user can still keep any worktree. The orchestrator never removes a worktree by hand and never removes one the script keeps. A removed worktree can leave its unchanged `worktree-agent-<id>` branch behind; the script's stale-branch report lists it and `--apply` deletes it conditionally.
+- **A stopped implementer.** A fresh implementer continues from the pushed branch in its own new worktree. It may read the stopped worktree to salvage uncommitted drafts, but never writes there or runs git against it. The stopped worktree is retired by the cleanup script once it passes the gate; while it holds uncommitted files the gate keeps it, and the user removes it.
 - **Hosts without either isolation route.** The orchestrator does not create or write to issue worktrees. The founder runs one `run-issue` session per issue in the queue order, and each session uses the worktree its host gave it or creates its own under this lifecycle.
 
 ## Treat merge and cleanup as separate results
@@ -38,21 +38,21 @@ After a successful merge, record this cleanup tuple:
 - task branch HEAD, which must equal the PR's final `headRefOid`. For a queue implementer's worktree on a detached HEAD, record the detached HEAD SHA instead of a task branch;
 - PR URL and merge commit.
 
-An agent whose live session uses that linked worktree reports the tuple instead of deleting its own working directory. The root or integration session removes it after the worker session finishes, unless the worktree belongs to a queue implementer; then only the user or the host removes it.
+An agent whose live session uses that linked worktree reports the tuple instead of deleting its own working directory. The root or integration session removes it after the worker session finishes by running the [cleanup script](#run-the-cleanup-gate), which finds the worktree by the same gate. The tuple remains the manual record when the script is unavailable.
 
 ## Safe cleanup gate
 
-The root or integration session, or the user for a queue implementer's worktree, may retire a completed worktree only when every condition holds:
+The root or integration session retires a completed worktree, with the [cleanup script](#run-the-cleanup-gate) as the normal route and the user or the host as the alternative, only when every condition holds:
 
 - the worker session has finished and the worktree is not locked or active;
 - `git status --porcelain` in the worktree is empty;
 - the PR is `MERGED` and the issue is closed when the PR should close it;
-- the worktree HEAD equals the PR's final `headRefOid`, so no post-PR commit would be lost. For a queue implementer's worktree, a clean HEAD that is an ancestor of the final `headRefOid` also passes (check with `git merge-base --is-ancestor <HEAD> <final headRefOid>`), because earlier fix rounds end on older commits. After a squash merge the deleted branch may leave that head unfetched, so the user or the host is the reliable path to retire these worktrees; and
+- the worktree HEAD equals the PR's final `headRefOid`, so no post-PR commit would be lost. For a queue implementer's worktree, a clean HEAD that is an ancestor of the final `headRefOid` also passes (check with `git merge-base --is-ancestor <HEAD> <final headRefOid>`), because earlier fix rounds end on older commits. The check needs the PR head object in the local object store, so run `git fetch origin` first; a worktree whose PR head is missing is kept as "no PR match"; and
 - the branch is not an evidence, prototype, research, active draft-PR, or app-managed Codex worktree.
 
 Age, a quiet terminal, or an absent agent session never satisfies the cleanup gate by itself.
 
-Remove without force, then delete refs conditionally:
+By hand, remove without force, then delete refs conditionally:
 
 ```bash
 git worktree remove <path>
@@ -63,6 +63,23 @@ git worktree prune
 
 Delete a remaining remote task branch only after verifying the PR merged and the remote ref still points at the recorded PR head. A failed gate preserves the worktree and reports the exact reason.
 
+## Run the cleanup gate
+
+[`scripts/worktree-gc.mjs`](../../scripts/worktree-gc.mjs) is the gate as code, recorded in [ADR-0076](../adr/0076-orchestrator-runs-the-worktree-cleanup-gate-after-every-merge.md). The orchestrator or integration session runs it after each merge, once the PR is verified merged and its issue closed and `git fetch origin` has run, and again at queue end.
+
+```bash
+pnpm worktree:gc          # read-only report
+pnpm worktree:gc:apply    # same report, then removes the `remove` rows
+```
+
+`pnpm worktree:gc -- --apply` is equivalent. Other flags are `--json`, `--no-size` and `--no-railway`.
+
+For each linked worktree the report shows its path, branch, HEAD, size, lock state, changed-path count, matching PR and a verdict: `remove`, or `keep: <exact reason>`. The reasons are the main checkout, the running session's own worktree, a Codex app-managed worktree under `~/.codex/worktrees`, a lock (another session's lock included), a running agent process or a live Claude session (`claude agents --json`) in the directory, a missing directory, an unborn branch, an evidence, prototype or research worktree, a dirty tree, an open PR (including this branch's own open PR when another branch's merged PR contains HEAD), a PR closed without merging, a HEAD already on `main` that belongs to no PR, and no PR match. Untracked files count as a dirty tree whatever `status.showUntrackedFiles` says. The first matching reason is printed; a worktree is removed only when none applies and a merged PR's head equals HEAD or descends from it.
+
+`--apply` removes only `remove` rows with `git worktree remove` and never `--force`, so git still refuses a dirty or locked tree. It then deletes the removed worktrees' `agent/issue-*` and `worktree-agent-*` branches, plus local branches of those forms that no worktree holds and whose tip is inside a merged PR head, each with `git update-ref -d refs/heads/<branch> <expected-sha>`, and runs `git worktree prune`. It stops at the first failure, and stops before removing anything when it cannot read the process list or the Claude session list. It refuses `--prs-file`, which exists only for read-only experiments. A Claude subagent's worktree has no session of its own, so it is protected only by a lock or a dirty tree; run `--apply` only when no implementer is mid-run. It does not touch other branches, remote refs, Codex app-managed worktrees or the shared pnpm store.
+
+Every run also reports Railway PR environments whose PR is closed, from `railway environment list --json`. That part is report only; Railway deletes the environment itself ([ADR-0075](../adr/0075-railway-pr-backends-for-agent-native-sessions.md)). Keep a worktree by locking it, leaving it dirty, or naming its branch or directory for evidence, prototype or research work.
+
 ## Completion report
 
-Report worktrees removed, local and remote refs removed, worktrees deliberately preserved, and any cleanup tuple still waiting for its worker session to end.
+`--apply` prints it. Report worktrees removed, local and remote refs removed, worktrees deliberately preserved with their reasons, stale Railway environments, and any cleanup tuple still waiting for its worker session to end.
