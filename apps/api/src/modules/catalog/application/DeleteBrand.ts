@@ -30,8 +30,9 @@ export class DeleteBrand {
       throw new NotFoundException("Brand not found");
     }
 
+    let deleted: { logoKey: string | null } | null;
     try {
-      await this.brands.delete(input.id);
+      deleted = await this.brands.delete(input.id);
     } catch (err: unknown) {
       if (
         err instanceof Error &&
@@ -43,13 +44,18 @@ export class DeleteBrand {
       }
       throw err;
     }
+    if (!deleted) {
+      throw new NotFoundException("Brand not found");
+    }
     this.searchIndex.invalidate();
 
-    if (brand.logoKey) {
+    // The key of the row the delete actually removed, not the earlier read:
+    // a logo swapped in between would otherwise be left behind.
+    if (deleted.logoKey) {
       try {
-        await this.logoStorage.delete(brand.logoKey);
+        await this.logoStorage.deleteLogoVersion(deleted.logoKey);
       } catch (err) {
-        this.logger.warn({ key: brand.logoKey, err }, "Failed to delete brand logo object");
+        this.logger.warn({ key: deleted.logoKey, err }, "Failed to delete brand logo version");
       }
     }
 
