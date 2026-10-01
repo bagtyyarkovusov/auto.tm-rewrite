@@ -6,7 +6,7 @@ import { readPickerResultsFilters, writeResultsRouteState } from "./resultsRoute
 import { useRecentChoicesStore } from "./recentSearches";
 
 /** expo-router's imperative router, narrowed to what the pickers use. */
-const pickerRouter: PickerRouter = {
+export const pickerRouter: PickerRouter = {
   push: (href) => router.push(href as Href),
   dismissAll: () => router.dismissAll(),
   dismissTo: (href) => router.dismissTo(href as Href),

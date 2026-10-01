@@ -47,24 +47,3 @@ describe("PriceRangeFilterControl validation", () => {
     expect(source).toContain('accessibilityLiveRegion="polite"');
   });
 });
-
-describe("PriceRangeFilterControl FilterSheet integration", () => {
-  const filterSheetSource = readFileSync(
-    resolve(__dirname, "./FilterSheet.tsx"),
-    "utf-8",
-  );
-
-  it("is wired into FilterSheet as PriceRangeFilterControl", () => {
-    expect(filterSheetSource).toContain("PriceRangeFilterControl");
-  });
-
-  it("disables Apply button when price range is invalid", () => {
-    expect(filterSheetSource).toContain("disabled={isApplyDisabled}");
-    expect(filterSheetSource).toContain("priceRangeValid");
-  });
-
-  it("reads draft priceMin and priceMax from filters", () => {
-    expect(filterSheetSource).toContain("draft.priceMin");
-    expect(filterSheetSource).toContain("draft.priceMax");
-  });
-});

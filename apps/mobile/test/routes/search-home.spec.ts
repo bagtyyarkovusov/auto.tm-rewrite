@@ -53,7 +53,7 @@ describe("Home (the Search tab's first screen)", () => {
 
   it("has no filters, filter chips, or safety banner", () => {
     for (const absent of [
-      "FilterSheet",
+      "SearchParametersForm",
       "useListingFilters",
       "SlidersHorizontal",
       "TrustBanner",

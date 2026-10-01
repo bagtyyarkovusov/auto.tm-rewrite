@@ -19,7 +19,7 @@ describe("More filters confirmation", () => {
     createRoutePickerActions({ router, record }).moreFilters({ brandId: "toyota", brandName: "Toyota", modelIds, modelNames: modelIds.map(() => "Camry") });
     expect(record).not.toHaveBeenCalled();
     const href = vi.mocked(router.push).mock.calls[0]?.[0];
-    if (!href || typeof href === "string" || href.pathname !== "/(tabs)/(search)/results") throw new Error("Expected Results");
+    if (!href || typeof href === "string" || href.pathname !== "/(tabs)/(search)/parameters") throw new Error("Expected Search parameters");
     const selection = parseResultsParams(href.params);
     if (!selection) throw new Error("Expected selection");
     const { result } = renderHook(() => {

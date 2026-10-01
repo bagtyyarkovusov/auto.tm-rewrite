@@ -13,7 +13,7 @@ export function SortSheet({ open, onOpenChange, value, onChange }: {
   value: ListingsSchemas.FeedSort; onChange: (sort: ListingsSchemas.FeedSort) => void;
 }) {
   const { t } = useTranslation();
-  // The iOS full-window overlay gives an auto-height sheet no room, so like FilterSheet this one sets a height.
+  // The iOS full-window overlay gives an auto-height sheet no room, so this one sets a height.
   const sheetHeight = Math.min(useWindowDimensions().height * 0.85, 480);
   return <Sheet open={open} onOpenChange={onOpenChange}>
     <SheetContent style={{ height: sheetHeight }}>

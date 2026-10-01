@@ -20,13 +20,13 @@ import { FeedError } from "../../../src/listings/feed/FeedError";
 import { FilteredEmpty } from "../../../src/listings/feed/FilteredEmpty";
 import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMaps";
 import { useFeedFavoriteReplay } from "../../../src/listings/feed/useFeedFavoriteReplay";
-import { FilterSheet } from "../../../src/listings/search/FilterSheet";
 import { ResultsHeader } from "../../../src/listings/search/ResultsHeader";
 import { SortSheet } from "../../../src/listings/search/SortSheet";
 import { ConditionSwitch } from "../../../src/listings/search/ConditionSwitch";
 import { BrandModelCard } from "../../../src/listings/search/BrandModelCard";
 import { FilterChipsRow, type ChipGroup } from "../../../src/listings/search/FilterChipsRow";
 import { useListingFilters } from "../../../src/listings/search/useListingFilters";
+import { PARAMETERS_PATH } from "../../../src/listings/search/pickerActions";
 import { readResultsRouteState, writeResultsRouteState, type ResultsRouteState } from "../../../src/listings/search/resultsRouteState";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
@@ -41,7 +41,6 @@ export default function ResultsScreen() {
   const routeState = readResultsRouteState(params);
   const routeKey = JSON.stringify(routeState);
   const previousRouteKey = useRef(routeKey);
-  const [sheetOpen, setSheetOpen] = useState(params.openFilters === "1");
   const [sortOpen, setSortOpen] = useState(false);
   const filters = useListingFilters(routeState, (next) => router.setParams(writeResultsRouteState(next)));
   const { replace, commit } = filters;
@@ -51,12 +50,6 @@ export default function ResultsScreen() {
       replace(JSON.parse(routeKey));
     }
   }, [routeKey, replace]);
-  useEffect(() => {
-    if (params.openFilters === "1") {
-      setSheetOpen(true);
-      router.setParams({ openFilters: undefined });
-    }
-  }, [params.openFilters]);
 
   const sort = filters.active.sort ?? "newest";
   const applied = useMemo(() => ({ ...filters.active, sort }), [filters.active, sort]);
@@ -85,7 +78,9 @@ export default function ResultsScreen() {
   }, [floated]);
   const reset = () => { filters.replace({ sort }); router.setParams(writeResultsRouteState({ sort })); };
   const remove = (group: ChipGroup) => commit(group === "city" ? { cityId: undefined } : group === "price" ? { priceMin: undefined, priceMax: undefined } : { yearMin: undefined, yearMax: undefined });
-  const chips = <FilterChipsRow filters={applied} cityName={filters.active.cityId ? catalog.cityName(filters.active.cityId) : undefined} onOpen={() => setSheetOpen(true)} onRemove={remove} />;
+  // The form is its own screen: it opens with what Results shows, and its Show N updates this screen in place.
+  const openParameters = () => router.push({ pathname: PARAMETERS_PATH, params: { ...writeResultsRouteState(applied), returnToResults: "1" } });
+  const chips = <FilterChipsRow filters={applied} cityName={filters.active.cityId ? catalog.cityName(filters.active.cityId) : undefined} onOpen={openParameters} onRemove={remove} />;
   const header = <View>
     <View className="gap-3 px-4 pt-1 pb-2">
       <ConditionSwitch value={applied.condition} onChange={(condition) => commit({ condition })} />
@@ -116,7 +111,6 @@ export default function ResultsScreen() {
       onEndReached={() => { if (feed.hasNextPage && !feed.isFetchingNextPage && !feed.isRefetching) void feed.fetchNextPage(); }} onEndReachedThreshold={0.5}
       ListFooterComponent={items.length && !feed.isPending && !feed.isError ? <View className="items-center py-4">{feed.isFetchingNextPage ? <ActivityIndicator /> : !feed.hasNextPage ? <Text className="text-xs text-muted-foreground">{t("noMore")}</Text> : null}</View> : null} />
     {floating ? <Animated.View style={floatingStyle} className="absolute bottom-0 left-0 right-0 border-t border-border bg-background">{chips}</Animated.View> : null}
-    <FilterSheet open={sheetOpen} onOpenChange={setSheetOpen} filters={filters} />
     <SortSheet open={sortOpen} onOpenChange={setSortOpen} value={sort} onChange={(value) => commit({ sort: value })} />
   </SafeAreaView>;
 }

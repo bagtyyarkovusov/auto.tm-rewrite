@@ -18,6 +18,7 @@ import { useSafeBack } from "../../navigation/useSafeBack";
 
 import { buildBrandSections } from "./brandPickerLogic";
 import { CarBrandLogo } from "./CarBrandLogo";
+import { PARAMETERS_PATH } from "./pickerActions";
 import { useRecentChoicesStore, type BrandModelChoice } from "./recentSearches";
 
 import { ErrorState } from "@/components/ErrorState";
@@ -134,7 +135,7 @@ export function SearchScreen() {
           <Text className="px-6 py-8 text-center text-base text-muted-foreground">{t("noCatalogMatch", { query: query.trim() })}</Text>}
       </ScrollView>
       <View className="border-t border-border px-4 py-3">
-        <Button variant="outline" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: "/(tabs)/(search)/results", params: { openFilters: "1" } }); }}>
+        <Button variant="outline" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
           <Icon as={SlidersHorizontal} className="size-5 text-foreground" /><Text>{t("allFilters")}</Text>
         </Button>
       </View>

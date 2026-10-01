@@ -18,7 +18,7 @@ vi.mock("react-native-reanimated", async () => {
     useAnimatedStyle: (fn: () => unknown) => fn(), withTiming: (value: number) => value };
 });
 vi.mock("../../src/api/client", () => ({ apiClient: { get: vi.fn() }, ApiError: class ApiError extends Error { constructor(public code: string, public status: number) { super(code); } } }));
-// The real FilterSheet renders. Only the catalog hooks and device storage behind it are replaced.
+// Catalog hooks and device storage behind the real screen are replaced.
 vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined), removeItem: vi.fn(async () => undefined) } }));
 vi.mock("@react-navigation/native", () => ({ DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 vi.mock("@/components/ui/checkbox", async () => ({ Checkbox: (await import("react-native")).Pressable }));
@@ -195,63 +195,42 @@ describe("Results floating filters row", () => {
     scrollTo(view, 0);
     expect(rows()).toHaveLength(1);
   });
-  it("keeps the floating row working: its chip removes the filter and its Filters button opens the sheet", () => {
+  it("keeps the floating row working: its chip removes the filter and its Filters button opens the form", () => {
     Object.assign(routeParams, { cityId: "ashgabat" });
     const view = renderMobile(<ResultsScreen />);
     scrollTo(view, 300);
     fireEvent.press(matchAt(view.getAllByLabelText("Filters: 1"), 1));
-    expect(view.getByText("Car filters")).toBeTruthy();
+    expect(routerMock.push).toHaveBeenCalledWith({ pathname: "/(tabs)/(search)/parameters", params: expect.objectContaining({ cityId: "ashgabat", returnToResults: "1" }) });
     fireEvent.press(matchAt(view.getAllByLabelText("Remove city filter"), 1));
     expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "newest" } }));
     expect(view.getAllByLabelText("Filters: 0")).toHaveLength(2);
   });
 });
 
-describe("Results filter sheet and route write-back", () => {
-  const sheetTitle = "Car filters";
-  it("opens the filter sheet from the Filters button", () => {
+describe("Results opens the full-screen Search parameters form", () => {
+  const parametersPath = "/(tabs)/(search)/parameters";
+  it("pushes the form pre-filled with the applied filters and sort from the Filters button", () => {
+    Object.assign(routeParams, { brandId: "toyota", modelIds: "camry,corolla", cityId: "ashgabat", condition: "used", priceMin: "70000", sort: "price_asc" });
     const view = renderMobile(<ResultsScreen />);
-    expect(view.queryByText(sheetTitle)).toBeNull();
-    fireEvent.press(view.getByLabelText("Filters: 0"));
-    expect(view.getByText(sheetTitle)).toBeTruthy();
-    fireEvent.press(view.getByLabelText("Close"));
-    expect(view.queryByText(sheetTitle)).toBeNull();
+    fireEvent.press(view.getByLabelText("Filters: 2"));
+    expect(routerMock.push).toHaveBeenCalledOnce();
+    expect(routerMock.push).toHaveBeenCalledWith({
+      pathname: parametersPath,
+      params: expect.objectContaining({ brandId: "toyota", modelIds: "camry,corolla", cityId: "ashgabat", condition: "used", priceMin: "70000", sort: "price_asc", returnToResults: "1" }),
+    });
   });
-  it("opens the sheet when Search exits with openFilters=1 and clears that parameter once", () => {
+  it("renders no filter sheet: the form is its own screen", () => {
+    const view = renderMobile(<ResultsScreen />);
+    fireEvent.press(view.getByLabelText("Filters: 0"));
+    expect(view.queryByText("Car filters")).toBeNull();
+    expect(view.queryByText("Reset all")).toBeNull();
+  });
+  it("ignores a stale openFilters parameter instead of opening a sheet", () => {
     Object.assign(routeParams, { openFilters: "1" });
     const view = renderMobile(<ResultsScreen />);
-    expect(view.getByText(sheetTitle)).toBeTruthy();
-    expect(routerMock.setParams.mock.calls.filter(([params]) => "openFilters" in params)).toEqual([[{ openFilters: undefined }]]);
-  });
-  it("opens the sheet when openFilters arrives while Results is already mounted", () => {
-    const view = renderMobile(<ResultsScreen />);
-    expect(view.queryByText(sheetTitle)).toBeNull();
-    routeParams.openFilters = "1";
-    view.rerender(<ResultsScreen />);
-    expect(view.getByText(sheetTitle)).toBeTruthy();
-    expect(routerMock.setParams).toHaveBeenLastCalledWith({ openFilters: undefined });
-  });
-  it("writes sheet edits to the route and reloads Results in place on Apply", () => {
-    const view = renderMobile(<ResultsScreen />);
-    fireEvent.press(view.getByLabelText("Filters: 0"));
-    // The sheet renders after the header switch, so its Used button is the last one.
-    const used = view.getAllByRole("button", { name: "Used Condition" });
-    fireEvent.press(matchAt(used, -1));
-    expect(routerMock.setParams).not.toHaveBeenCalled();
-    fireEvent.press(view.getByRole("button", { name: "Show 12 listings" }));
-    expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ condition: "used", sort: "newest" }));
-    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { condition: "used", sort: "newest" } }));
-    expect(view.queryByText(sheetTitle)).toBeNull();
+    expect(view.queryByText("Car filters")).toBeNull();
     expect(routerMock.push).not.toHaveBeenCalled();
-  });
-  it("clears the route filters and keeps the sheet open on Reset all", () => {
-    Object.assign(routeParams, { cityId: "ashgabat", condition: "used", sort: "price_asc" });
-    const view = renderMobile(<ResultsScreen />);
-    fireEvent.press(view.getByLabelText("Filters: 1"));
-    fireEvent.press(view.getByLabelText("Reset all"));
-    expect(routerMock.setParams).toHaveBeenLastCalledWith(expect.objectContaining({ cityId: undefined, condition: undefined, sort: "price_asc" }));
-    expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "price_asc" } }));
-    expect(view.getByText(sheetTitle)).toBeTruthy();
+    expect(routerMock.setParams.mock.calls.filter(([params]) => "openFilters" in params)).toEqual([]);
   });
   it("keeps the current sort when no-match Reset filters clears the filters", () => {
     state.empty = true;
