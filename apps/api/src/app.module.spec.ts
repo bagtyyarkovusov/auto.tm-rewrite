@@ -1,3 +1,4 @@
+import { MODULE_METADATA } from "@nestjs/common/constants";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { describe, expect, it, vi } from "vitest";
@@ -20,7 +21,7 @@ interface ProviderEntry {
 describe("AppModule global guards", () => {
   it("runs JwtAuthGuard, then ThrottlerGuard, then AccountDeletionPendingGuard", () => {
     const providers: ProviderEntry[] =
-      Reflect.getMetadata("providers", AppModule) ?? [];
+      Reflect.getMetadata(MODULE_METADATA.PROVIDERS, AppModule) ?? [];
 
     const guards = providers
       .filter((provider) => provider.provide === APP_GUARD)
