@@ -67,7 +67,7 @@ describe("Listing detail seeds from the card the buyer tapped", () => {
       allowChat: true,
       contactPhone: "+99361000000",
     };
-    client.setQueryData(queryKeys.favorites.list(), pages([favorite]));
+    client.setQueryData(queryKeys.favorites.list(true), pages([favorite]));
 
     expect(preview(ID)).toMatchObject({ id: ID, year: 2020 });
   });

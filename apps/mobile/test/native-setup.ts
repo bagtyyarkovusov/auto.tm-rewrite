@@ -119,8 +119,19 @@ vi.mock("react-native-reanimated", async () => {
     useAnimatedStyle: () => ({}),
     withTiming: <T,>(value: T) => value,
     withSpring: <T,>(value: T) => value,
+    // Entering and exiting layout animations, chainable like `FadeInUp.duration(200)`.
+    ...Object.fromEntries(["FadeIn", "FadeOut", "FadeInUp", "FadeOutUp", "FadeInDown", "FadeOutDown"].map((name) => {
+      const animation: { duration: () => unknown } = { duration: () => animation };
+      return [name, animation];
+    })),
   };
 });
+// The portal package ships JSX in its `.mjs`, which Node cannot load. Portal
+// content renders where it is declared, so a toast or sheet stays queryable.
+vi.mock("@rn-primitives/portal", () => ({
+  Portal: ({ children }: { children: unknown }) => children,
+  PortalHost: () => null,
+}));
 vi.mock("react-native-worklets", () => ({
   scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
 }));

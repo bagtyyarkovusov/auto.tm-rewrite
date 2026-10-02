@@ -14,7 +14,7 @@ type SummaryPages = InfiniteData<{ items: ListingSummary[] }>;
  */
 const CARD_LIST_KEYS: QueryKey[] = [
   queryKeys.listings.lists(),
-  queryKeys.favorites.list(),
+  queryKeys.favorites.lists(),
   queryKeys.listings.myListingsInfinite(),
 ];
 
