@@ -227,6 +227,22 @@ describe("apiClient", () => {
       expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
     });
 
+    it("keeps the session and sends the old bearer when the refresh answers a non-401 4xx", async () => {
+      // Characterization: the guard already clears only on 401 (ADR-0077).
+      mockedLoadAuthSession.mockResolvedValue(expired());
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "RATE_LIMITED" }, 429))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await expect(apiClient.get("/listings?limit=20")).resolves.toEqual({ items: [] });
+
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
+    });
+
     it("keeps the session when a 2xx refresh answer is not JSON", async () => {
       mockedLoadAuthSession.mockResolvedValue(expired());
 
@@ -475,6 +491,22 @@ describe("apiClient", () => {
       expect(mockedClearAuthSession).not.toHaveBeenCalled();
     });
 
+    it.each([400, 403, 404, 429])(
+      "reports a fixed 503 and keeps the session when the refresh answers %i",
+      async (refreshStatus) => {
+        mockedLoadAuthSession.mockResolvedValue(session());
+
+        vi.spyOn(globalThis, "fetch")
+          .mockResolvedValueOnce(jsonResponse({ code: "UNAUTHENTICATED" }, 401))
+          .mockResolvedValueOnce(jsonResponse({ code: "NOT_FOUND" }, refreshStatus));
+
+        const error = await apiClient.get("/test").catch((e: ApiError) => e);
+
+        expect(error).toMatchObject({ code: "REFRESH_UNAVAILABLE", status: 503 });
+        expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      },
+    );
+
     it("keeps the session when the refresh fails on the network", async () => {
       mockedLoadAuthSession.mockResolvedValue(session());
 
@@ -497,7 +529,7 @@ describe("apiClient", () => {
       const error = await apiClient.get("/test").catch((e: ApiError) => e);
 
       expect(error).toBeInstanceOf(ApiError);
-      expect(error).toMatchObject({ code: "REFRESH_UNAVAILABLE", status: 502 });
+      expect(error).toMatchObject({ code: "REFRESH_UNAVAILABLE", status: 503 });
       expect(mockedClearAuthSession).not.toHaveBeenCalled();
     });
   });
