@@ -121,7 +121,30 @@ describe("MessageBubble kinds keep their look and gain the time", () => {
       bubble({ kind: "image", text: "", localImageUri: "file:///photo.jpg", status: "delivered" }),
     );
 
-    expect(screen.getByLabelText("02:05 PM, Delivered")).toBeTruthy();
+    expect(screen.getByLabelText("02:05 PM, Delivered").props.accessible).toBe(true);
+  });
+
+  it("announces an image Message as a photo", () => {
+    const onImagePress = vi.fn();
+    const screen = renderMobile(
+      bubble({ kind: "image", text: "", localImageUri: "file:///photo.jpg", onImagePress }),
+    );
+
+    fireEvent.press(screen.getByRole("imagebutton", { name: "Photo" }));
+    expect(onImagePress).toHaveBeenCalledOnce();
+  });
+
+  it("announces the photo in the app language", () => {
+    const ru = renderMobile(bubble({ kind: "image", text: "", localImageUri: "file:///photo.jpg" }), {
+      locale: "ru",
+    });
+    expect(ru.getByRole("image", { name: "Фото" })).toBeTruthy();
+    ru.unmount();
+
+    const tk = renderMobile(bubble({ kind: "image", text: "", localImageUri: "file:///photo.jpg" }), {
+      locale: "tk",
+    });
+    expect(tk.getByRole("image", { name: "Surat" })).toBeTruthy();
   });
 
   it("shows the time on a Listing-reference Message", () => {
@@ -170,7 +193,7 @@ describe("MessageBubble kinds keep their look and gain the time", () => {
       }),
     );
 
-    expect(screen.getByLabelText("02:05 PM, Read")).toBeTruthy();
+    expect(screen.getByLabelText("02:05 PM, Read").props.accessible).toBe(true);
   });
 
   it("reads Reported on a reported text Message", () => {
