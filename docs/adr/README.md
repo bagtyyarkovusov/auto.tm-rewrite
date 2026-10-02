@@ -90,6 +90,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0078](0078-the-api-trusts-one-configured-header-for-the-client-ip.md) | The API trusts one configured header for the client IP (amends ADR-0054's per-IP budget; preserves ADR-0039's hosting constraint) | Accepted | 2026-10-02 |
 | [0079](0079-server-recorded-upload-provenance-for-listing-media.md) | Server-recorded upload provenance for Listing media (amends ADR-0008's upload path) | Accepted | 2026-10-02 |
 | [0080](0080-a-new-car-skips-the-damaged-question.md) | A New car skips the "Damaged / needs repair" question (amends ADR-0052's required-to-publish rule) | Accepted | 2026-10-02 |
+| [0081](0081-contact-phone-confirmation-api-for-listings.md) | Contact phone confirmation API for Listings (complements ADR-0056 under ADR-0054's code budgets; amends ADR-0056's editing rule) | Proposed | 2026-10-03 |
 
 ## Per-app ADRs
 
