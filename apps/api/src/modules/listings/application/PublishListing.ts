@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import { Inject, Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
@@ -24,6 +31,8 @@ import {
   IMAGE_VARIANT_GENERATOR,
   type ImageVariantGenerator,
 } from "../domain/ports/ImageVariantGenerator";
+
+import { UploadAdoptionGuard } from "./UploadAdoptionGuard";
 
 const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.required({
   brandId: true,
@@ -59,6 +68,22 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   { message: "DAMAGED_REQUIRED", path: ["conditionDisclosure", "damaged"] },
 );
 
+/** PrismaPg 7 reports constraint fields under its driver-adapter cause. */
+function isUploadUniqueViolation(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const error = err as {
+    code?: unknown;
+    meta?: { driverAdapterError?: { cause?: { constraint?: { fields?: unknown } } } };
+  };
+  const fields = error.meta?.driverAdapterError?.cause?.constraint?.fields;
+  return error.code === "P2002" && Array.isArray(fields) && fields.length === 1 &&
+    (fields[0] === "uploadId" || fields[0] === '"uploadId"');
+}
+
+function isForeignKeyViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: unknown }).code === "P2003";
+}
+
 export interface PublishListingInput {
   draftId: string;
   userId: string;
@@ -81,6 +106,8 @@ export class PublishListing {
     private readonly events: ListingEventPublisher,
     @Inject(IMAGE_VARIANT_GENERATOR)
     private readonly variantGenerator: ImageVariantGenerator,
+    @Inject(UploadAdoptionGuard)
+    private readonly uploadGuard: UploadAdoptionGuard,
   ) {}
 
   async execute(input: PublishListingInput): Promise<PublishListingResult> {
@@ -135,6 +162,28 @@ export class PublishListing {
     if (!photos) throw new BadRequestException({ code: "INVALID_DRAFT_PAYLOAD", message: "Photos are required" });
     const attachedPhotos = photos.filter((photo) => photo.key);
 
+    // A draft's photo keys are only strings. Each must be an upload this User
+    // presigned and has not adopted elsewhere (ADR-0079); the unique upload link
+    // on the media row below makes that single-use even under a race.
+    const photoKeys = attachedPhotos.map((photo) => photo.key as string);
+    if (new Set(photoKeys).size !== photoKeys.length) {
+      throw new BadRequestException({
+        code: "INVALID_DRAFT_PAYLOAD",
+        message: "A photo key can be used only once",
+      });
+    }
+    const uploads = await this.uploadGuard.authorize(
+      draft.userId,
+      photoKeys.map((key) => ({ key, kind: "image" as const })),
+    );
+    if (uploads.some((upload) => upload.adopted)) {
+      throw new ConflictException({
+        code: LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
+        message: "A photo upload is already attached to a Listing",
+      });
+    }
+    const uploadIdByKey = new Map(uploads.map((upload) => [upload.key, upload.id]));
+
     await Promise.all(
       attachedPhotos.map((photo) =>
         this.variantGenerator.generate(photo.key as string),
@@ -186,6 +235,7 @@ export class PublishListing {
               kind: "image",
               key: photo.key as string,
               sortOrder: photo.sortOrder,
+              uploadId: uploadIdByKey.get(photo.key as string) as string,
             },
           }),
         ),
@@ -257,6 +307,22 @@ export class PublishListing {
 
       return { listing };
     } catch (err) {
+      if (isUploadUniqueViolation(err) && (await this.uploadGuard.anyAdopted(photoKeys))) {
+        // A concurrent attach or publish adopted one of these uploads first. The
+        // whole transaction rolled back, so nothing was published.
+        throw new ConflictException({
+          code: LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
+          message: "A photo upload is already attached to a Listing",
+        });
+      }
+      if (isForeignKeyViolation(err) && (await this.uploadGuard.anyUnavailable(photoKeys))) {
+        // Adoption followed by removal can erase the upload after authorization.
+        // A different foreign-key failure retains its original error.
+        throw new BadRequestException({
+          code: LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE,
+          message: "A photo upload is no longer available",
+        });
+      }
       if (err instanceof DomainError) {
         throw new BadRequestException({
           code: err.code,
