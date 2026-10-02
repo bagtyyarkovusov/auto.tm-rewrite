@@ -204,18 +204,30 @@ export default function EditListingScreen() {
     dispatch({ type: "GO_TO_STEP", step: "review" });
   }, [ctx.canContinue, machineState.currentStep]);
 
+  const finishSave = useCallback(
+    async (run: () => Promise<boolean>) => {
+      try {
+        // false: nothing ran (a save was already running, or there was nothing to retry).
+        if (!(await run())) return;
+        show({ title: t("changesSaved"), variant: "success" });
+        // Navigate to public detail; may 404 until downstream route ships
+        router.replace(`/(public)/listings/${listingId}`);
+      } catch {
+        // Error state surfaced by saveEdit.error + per-op banner below
+      }
+    },
+    [show, listingId],
+  );
+
   const handleSave = useCallback(async () => {
     if (!ctx.canPublish) return;
+    await finishSave(saveEdit.save);
+  }, [ctx.canPublish, saveEdit.save, finishSave]);
 
-    try {
-      await saveEdit.save();
-      show({ title: t("changesSaved"), variant: "success" });
-      // Navigate to public detail; may 404 until downstream route ships
-      router.replace(`/(public)/listings/${listingId}`);
-    } catch {
-      // Error state surfaced by saveEdit.error + per-op banner below
-    }
-  }, [ctx.canPublish, saveEdit, show, listingId]);
+  const handleRetrySave = useCallback(
+    () => finishSave(saveEdit.retry),
+    [saveEdit.retry, finishSave],
+  );
 
   const handleDiscard = useCallback(() => {
     if (router.canGoBack()) {
@@ -282,7 +294,7 @@ export default function EditListingScreen() {
       isLastStep={ctx.isLastStep}
       saveStatus={saveStatus}
       saveError={saveEdit.error ? t("couldNotSaveAllChanges") : null}
-      onRetrySave={saveEdit.retry}
+      onRetrySave={handleRetrySave}
       progressPercent={ctx.progressPercent}
       disabledReason={disabledReason}
       uploadStatus={uploadStatus}
@@ -362,7 +374,7 @@ export default function EditListingScreen() {
             <View className="mt-4">
               <EditSaveErrorBanner
                 opStates={saveEdit.opStates}
-                onRetry={saveEdit.retry}
+                onRetry={handleRetrySave}
               />
             </View>
           )}
