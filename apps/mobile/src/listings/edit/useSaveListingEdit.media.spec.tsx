@@ -36,11 +36,17 @@ const PERSISTED_B = "550e8400-e29b-41d4-a716-446655440002";
 const LOCAL_NEW_1 = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const LOCAL_NEW_2 = "3b241101-e2bb-4255-8caf-4136c566a962";
 
+function persistedKey(id: string): string {
+  return `listings/${LISTING_ID}/${id}/original.jpg`;
+}
+const KEY_A = persistedKey(PERSISTED_A);
+const KEY_B = persistedKey(PERSISTED_B);
+
 function persisted(id: string, sortOrder: number): ListingsSchemas.ListingMedia {
   return {
     id,
     kind: "image",
-    key: `listings/${LISTING_ID}/${id}/original.jpg`,
+    key: persistedKey(id),
     variants: {
       thumbnail: "t.jpg",
       list: "l.jpg",
@@ -121,7 +127,8 @@ function createMediaApi(initial: ListingsSchemas.ListingMedia[]) {
         return HttpResponse.json({ message: "Media not found" }, { status: 404 });
       }
       for (const o of body.ordering) {
-        rows.get(o.mediaId)!.sortOrder = o.sortOrder;
+        const row = rows.get(o.mediaId);
+        if (row) row.sortOrder = o.sortOrder;
       }
       return HttpResponse.json({ success: true });
     }),
@@ -132,6 +139,11 @@ function createMediaApi(initial: ListingsSchemas.ListingMedia[]) {
     failures,
     /** Server media in cover-first order. */
     media: () => [...rows.values()].sort((a, b) => a.sortOrder - b.sortOrder),
+    byKey: (key: string): ListingsSchemas.ListingMedia => {
+      const row = [...rows.values()].find((m) => m.key === key);
+      if (!row) throw new Error(`No server media with key ${key}`);
+      return row;
+    },
     keys: () => [...rows.values()].sort((a, b) => a.sortOrder - b.sortOrder).map((m) => m.key),
   };
 }
@@ -174,23 +186,24 @@ describe("useSaveListingEdit server media IDs", () => {
     const api = createMediaApi(seed);
     const newKey = "pending/9f1c/original.jpg";
     const photos = [
-      staged(PERSISTED_A, seed[0]!.key, 1),
+      // The seller dragged the new photo ahead of the existing one: it is the cover.
       staged(LOCAL_NEW_1, newKey, 0),
+      staged(PERSISTED_A, KEY_A, 1),
     ];
 
     const { result } = renderSave({ photos, seed });
     await result.current.save();
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
 
-    const attached = api.media().find((m) => m.key === newKey)!;
+    const attached = api.byKey(newKey);
     expect(attached.id).not.toBe(LOCAL_NEW_1);
     expect(api.requests.reorder).toHaveLength(1);
-    expect(api.requests.reorder[0]!.ordering).toEqual([
+    expect(api.requests.reorder.at(0)?.ordering).toEqual([
       { mediaId: attached.id, sortOrder: 0 },
       { mediaId: PERSISTED_A, sortOrder: 1 },
     ]);
     expect(sentMediaIds(api)).not.toContain(LOCAL_NEW_1);
-    expect(api.keys()).toEqual([newKey, seed[0]!.key]);
+    expect(api.keys()).toEqual([newKey, KEY_A]);
   });
 
   it("applies add, remove and reorder together with the intended cover and order", async () => {
@@ -204,7 +217,7 @@ describe("useSaveListingEdit server media IDs", () => {
     // A removed; B and two new photos remain, with the second new photo as cover.
     const photos = [
       staged(LOCAL_NEW_2, key2, 0),
-      staged(PERSISTED_B, seed[1]!.key, 1),
+      staged(PERSISTED_B, KEY_B, 1),
       staged(LOCAL_NEW_1, key1, 2),
     ];
 
@@ -212,9 +225,9 @@ describe("useSaveListingEdit server media IDs", () => {
     await result.current.save();
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
 
-    expect(api.requests.attach.map((a) => a.key)).toEqual([key1, key2]);
+    expect(api.requests.attach.map((a) => a.key)).toEqual([key2, key1]);
     expect(api.requests.remove).toEqual([PERSISTED_A]);
-    expect(api.keys()).toEqual([key2, seed[1]!.key, key1]);
+    expect(api.keys()).toEqual([key2, KEY_B, key1]);
     const localIds = [LOCAL_NEW_1, LOCAL_NEW_2];
     expect(sentMediaIds(api).filter((id) => localIds.includes(id))).toEqual([]);
   });
@@ -225,7 +238,7 @@ describe("useSaveListingEdit server media IDs", () => {
     api.failures.reorder = 1;
     const newKey = "pending/9f1c/original.jpg";
     const photos = [
-      staged(PERSISTED_A, seed[0]!.key, 0),
+      staged(PERSISTED_A, KEY_A, 0),
       staged(LOCAL_NEW_1, newKey, 1),
     ];
 
@@ -242,12 +255,12 @@ describe("useSaveListingEdit server media IDs", () => {
 
     expect(api.requests.attach).toHaveLength(1);
     expect(api.media()).toHaveLength(2);
-    const attached = api.media().find((m) => m.key === newKey)!;
+    const attached = api.byKey(newKey);
     for (const request of api.requests.reorder) {
       expect(request.ordering.map((o) => o.mediaId)).not.toContain(LOCAL_NEW_1);
       expect(request.ordering.map((o) => o.mediaId)).toEqual([PERSISTED_A, attached.id]);
     }
-    expect(api.keys()).toEqual([seed[0]!.key, newKey]);
+    expect(api.keys()).toEqual([KEY_A, newKey]);
   });
 
   it("keeps earlier attachments when a later attach fails and does not duplicate them on retry", async () => {
@@ -257,7 +270,7 @@ describe("useSaveListingEdit server media IDs", () => {
     const key2 = "pending/bbb/original.jpg";
     api.failures.attachKeys.add(key2);
     const photos = [
-      staged(PERSISTED_A, seed[0]!.key, 0),
+      staged(PERSISTED_A, KEY_A, 0),
       staged(LOCAL_NEW_1, key1, 1),
       staged(LOCAL_NEW_2, key2, 2),
     ];
@@ -272,7 +285,7 @@ describe("useSaveListingEdit server media IDs", () => {
 
     expect(api.requests.attach.map((a) => a.key)).toEqual([key1, key2, key2]);
     expect(api.media()).toHaveLength(3);
-    expect(api.keys()).toEqual([seed[0]!.key, key1, key2]);
+    expect(api.keys()).toEqual([KEY_A, key1, key2]);
     expect(sentMediaIds(api)).not.toContain(LOCAL_NEW_1);
     expect(sentMediaIds(api)).not.toContain(LOCAL_NEW_2);
   });
@@ -283,7 +296,7 @@ describe("useSaveListingEdit server media IDs", () => {
     api.failures.reorder = 1;
     const newKey = "pending/9f1c/original.jpg";
     const photos = [
-      staged(PERSISTED_A, seed[0]!.key, 0),
+      staged(PERSISTED_A, KEY_A, 0),
       staged(LOCAL_NEW_1, newKey, 1),
     ];
 
@@ -300,7 +313,7 @@ describe("useSaveListingEdit server media IDs", () => {
 
     expect(api.requests.remove).toEqual([]);
     expect(api.requests.attach).toHaveLength(1);
-    expect(api.keys()).toEqual([seed[0]!.key, newKey]);
+    expect(api.keys()).toEqual([KEY_A, newKey]);
   });
 
   it("a fresh save after a partial failure reuses earlier attachments instead of duplicating them", async () => {
@@ -309,7 +322,7 @@ describe("useSaveListingEdit server media IDs", () => {
     api.failures.reorder = 1;
     const newKey = "pending/9f1c/original.jpg";
     const photos = [
-      staged(PERSISTED_A, seed[0]!.key, 0),
+      staged(PERSISTED_A, KEY_A, 0),
       staged(LOCAL_NEW_1, newKey, 1),
     ];
 
@@ -324,7 +337,7 @@ describe("useSaveListingEdit server media IDs", () => {
     expect(api.requests.attach).toHaveLength(1);
     expect(api.requests.remove).toEqual([]);
     expect(api.media()).toHaveLength(2);
-    expect(api.keys()).toEqual([seed[0]!.key, newKey]);
+    expect(api.keys()).toEqual([KEY_A, newKey]);
   });
 
   it("removes an already-attached photo by its server ID when the seller drops it before saving again", async () => {
@@ -333,27 +346,27 @@ describe("useSaveListingEdit server media IDs", () => {
     api.failures.reorder = 1;
     const newKey = "pending/9f1c/original.jpg";
     const photos = [
-      staged(PERSISTED_A, seed[0]!.key, 0),
+      staged(PERSISTED_A, KEY_A, 0),
       staged(LOCAL_NEW_1, newKey, 1),
     ];
 
     const { result, rerender } = renderSave({ photos, seed });
     await expect(result.current.save()).rejects.toBeInstanceOf(EditSessionError);
-    const attached = api.media().find((m) => m.key === newKey)!;
+    const attached = api.byKey(newKey);
 
-    rerender({ photos: [photos[0]!], seed: api.media() });
+    rerender({ photos: photos.slice(0, 1), seed: api.media() });
     await result.current.save();
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
 
     expect(api.requests.remove).toEqual([attached.id]);
-    expect(api.keys()).toEqual([seed[0]!.key]);
+    expect(api.keys()).toEqual([KEY_A]);
   });
 
   it("does not reintroduce a never-attached local UUID into reorder", async () => {
     const seed = [persisted(PERSISTED_A, 0)];
     const api = createMediaApi(seed);
     const photos = [
-      staged(PERSISTED_A, seed[0]!.key, 0),
+      staged(PERSISTED_A, KEY_A, 0),
       // Still has no object key: nothing to attach, and no server ID to order.
       { photoId: LOCAL_NEW_1, state: "uploading", sortOrder: 1, retryCount: 0 } as StagedPhoto,
     ];
@@ -363,7 +376,7 @@ describe("useSaveListingEdit server media IDs", () => {
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
 
     expect(api.requests.attach).toEqual([]);
-    expect(api.requests.reorder[0]!.ordering).toEqual([
+    expect(api.requests.reorder.at(0)?.ordering).toEqual([
       { mediaId: PERSISTED_A, sortOrder: 0 },
     ]);
   });
