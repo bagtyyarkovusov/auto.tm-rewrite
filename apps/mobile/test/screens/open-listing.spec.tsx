@@ -37,11 +37,10 @@ describe("OpenListingConversationScreen", () => {
     expect(source).toContain("/conversations/");
   });
 
-  it("passes listing card params to conversation detail", () => {
-    expect(source).toContain("listingId:");
-    expect(source).toContain("brandId:");
-    expect(source).toContain("modelId:");
-    expect(source).toContain("displayPriceTmt:");
+  it("passes only the ID and seeds the by-ID cache with the opened summary", () => {
+    expect(source).toContain("seedConversationDetail(queryClient, data)");
+    expect(source).toContain("params: { id: data.id }");
+    expect(source).not.toContain("brandId:");
   });
 
   it("shows loading state while opening", () => {
