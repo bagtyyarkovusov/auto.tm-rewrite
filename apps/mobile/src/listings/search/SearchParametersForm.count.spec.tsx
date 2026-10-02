@@ -44,6 +44,7 @@ describe("Search parameters: count requests while the year range is edited", () 
 
     fireEvent.changeText(view.getByLabelText("To"), "2021");
     await settle(300);
+    await settle(10);
 
     expect(requestedUrls().filter((url) => url.includes("yearMax=2018"))).toEqual([]);
     expect(requestedUrls()).toEqual(["/listings/count?yearMin=2020&yearMax=2021&sort=newest"]);
