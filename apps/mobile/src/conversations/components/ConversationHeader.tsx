@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import * as Linking from "expo-linking";
-import { ArrowLeft, BellOff, MoreVertical, Phone } from "lucide-react-native";
+import { ArrowLeft, BellOff, MoreHorizontal, Phone } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { ConversationDetail } from "../../api/conversations/useConversation";
@@ -36,7 +36,7 @@ interface ConversationHeaderProps {
 }
 
 /** The name shown for the other participant, with the role fallback when they have none. */
-export function usePeerName(conversation: ConversationDetail | undefined) {
+function usePeerName(conversation: ConversationDetail | undefined) {
   const { t } = useTranslation();
   const { t: tConv } = useTranslation("conversations");
   if (!conversation) return undefined;
@@ -145,7 +145,7 @@ export function ConversationHeader({
               size="icon"
               accessibilityLabel={tConv("conversationMenu")}
             >
-              <Icon as={MoreVertical} className="size-5 text-foreground" />
+              <Icon as={MoreHorizontal} className="size-5 text-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

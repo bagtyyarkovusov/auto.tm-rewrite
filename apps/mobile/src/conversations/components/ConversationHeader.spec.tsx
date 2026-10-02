@@ -111,7 +111,6 @@ describe("ConversationHeader", () => {
     fireEvent.press(screen.getByText("Block user"));
     expect(handlers.onToggleMute).toHaveBeenCalledOnce();
     expect(handlers.onBlock).toHaveBeenCalledOnce();
-
   });
 
   it("offers Unmute and Unblock when muted and blocked", () => {

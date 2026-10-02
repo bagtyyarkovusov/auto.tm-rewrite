@@ -186,6 +186,7 @@ describe("Conversation opened with only its ID", () => {
 
     const retry = await screen.findByRole("button", { name: /Retry|Try again/ });
     expect(screen.queryByTestId("conversation-header-skeleton")).toBeNull();
+    expect(screen.queryByText("Is the car still available?")).toBeNull();
     state.get.mockClear();
     await act(async () => {
       fireEvent.press(retry);
@@ -276,6 +277,13 @@ describe("Conversation header Call", () => {
     const screen = renderMobile(<ConversationDetailScreen />);
 
     expect(await screen.findByText("Merdan")).toBeTruthy();
+    // Let the Listing detail answer reach the screen before asserting Call stays hidden.
+    await vi.waitFor(() =>
+      expect(state.get).toHaveBeenCalledWith(`/listings/${LISTING_ID}`, expect.anything()),
+    );
+    await act(async () => {
+      await state.get.mock.results.at(-1)?.value;
+    });
     await act(async () => {});
     expect(screen.queryByRole("button", { name: "Call the seller" })).toBeNull();
   });

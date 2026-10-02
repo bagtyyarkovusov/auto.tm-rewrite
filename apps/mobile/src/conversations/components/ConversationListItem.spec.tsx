@@ -56,8 +56,6 @@ describe("ConversationListItem", () => {
     expect(source).toContain('t("listing")');
   });
 
-
-
   it("renders an unread badge when unreadCount is greater than zero", () => {
     expect(source).toContain("unreadCount");
     expect(source).toContain("bg-primary");
@@ -84,7 +82,6 @@ describe("ConversationListItem", () => {
     expect(source).toContain('pathname: "/conversations/[id]"');
     expect(source).toContain("id: conversation.id");
   });
-
 
   it("handles null listing gracefully", () => {
     expect(source).toContain('t("chat")');

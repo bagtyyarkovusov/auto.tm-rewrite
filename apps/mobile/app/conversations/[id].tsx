@@ -811,7 +811,11 @@ export default function ConversationDetailScreen() {
                 onSendImage: handleSendImage,
                 disabled: isBlocked || blockUser.isPending || unblockUser.isPending,
                 showQuickReplies:
-                  !isLoading && !isError && !isBlocked && allMessages.length === 0,
+                  !isLoading &&
+                  !isError &&
+                  !conversationFailed &&
+                  !isBlocked &&
+                  allMessages.length === 0,
                 onTyping: signalTyping,
                 onStopTyping: stopTyping,
                 conversationId,

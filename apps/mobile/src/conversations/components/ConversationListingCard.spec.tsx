@@ -23,6 +23,8 @@ describe("ConversationListingCard", () => {
 
     expect(screen.getByText("2018 Toyota Camry")).toBeTruthy();
     expect(screen.getByText("285,000 TMT")).toBeTruthy();
+    expect(screen.getByTestId("conversation-listing-thumbnail").props.className).toContain("h-14 w-14");
+    expect(screen.getByTestId("conversation-listing-chevron")).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "Open: 2018 Toyota Camry, 285,000 TMT" }));
     expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${listing.id}`);
   });

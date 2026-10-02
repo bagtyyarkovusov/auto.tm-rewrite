@@ -72,7 +72,10 @@ export function ConversationListingCard(props: ConversationListingCardProps) {
       accessibilityRole="button"
       accessibilityLabel={`${t("open")}: ${[title, priceText].filter(Boolean).join(", ")}`}
     >
-      <View className="h-14 w-14 rounded-lg bg-muted overflow-hidden">
+      <View
+        className="h-14 w-14 rounded-lg bg-muted overflow-hidden"
+        testID="conversation-listing-thumbnail"
+      >
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
@@ -98,7 +101,9 @@ export function ConversationListingCard(props: ConversationListingCardProps) {
         )}
       </View>
 
-      <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+      <View testID="conversation-listing-chevron">
+        <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+      </View>
     </Pressable>
   );
 }
