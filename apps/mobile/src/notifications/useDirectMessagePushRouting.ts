@@ -70,7 +70,13 @@ export function useDirectMessagePushRouting(): void {
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   const rootState = useRootNavigationState();
-  const rootRouteName = rootState?.routes[rootState.index]?.name;
+  // ExpoRoot adds a generated __root Stack around this app's Stack.
+  // Read the focused app route, without descending into its tab navigator.
+  const generatedRootRoute = rootState?.routes[rootState.index];
+  const appState = generatedRootRoute?.name === "__root"
+    ? generatedRootRoute.state
+    : rootState;
+  const rootRouteName = appState?.routes[appState.index ?? 0]?.name;
   const rootRouteNameRef = useRef(rootRouteName);
 
   useEffect(() => {
