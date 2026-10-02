@@ -61,6 +61,7 @@ describe("useMyFavorites", () => {
     mockGet.mockResolvedValue({
       items: [makeFavoriteItem("l1"), makeFavoriteItem("l2")],
       nextCursor: null,
+      counts: { total: 2, inactive: 0 },
     });
 
     const { result } = renderHook(() => useMyFavorites(), { wrapper });
@@ -79,10 +80,12 @@ describe("useMyFavorites", () => {
     mockGet.mockResolvedValueOnce({
       items: [makeFavoriteItem("l1")],
       nextCursor: "cursor-1",
+      counts: { total: 2, inactive: 0 },
     });
     mockGet.mockResolvedValueOnce({
       items: [makeFavoriteItem("l2")],
       nextCursor: null,
+      counts: { total: 2, inactive: 0 },
     });
 
     const { result } = renderHook(() => useMyFavorites(), { wrapper });
@@ -103,6 +106,7 @@ describe("useMyFavorites", () => {
     mockGet.mockResolvedValue({
       items: [],
       nextCursor: null,
+      counts: { total: 0, inactive: 0 },
     });
 
     const { result } = renderHook(() => useMyFavorites(), { wrapper });

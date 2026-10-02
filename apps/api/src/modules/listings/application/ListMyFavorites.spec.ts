@@ -85,36 +85,6 @@ class FakeFavoriteRepository implements FavoriteRepository {
   async favoritedListingIds(_userId: string, listingIds: string[]): Promise<Set<string>> {
     return new Set(listingIds);
   }
-
-  async listByUserId(
-    userId: string,
-    opts?: { cursor?: { timestamp: string; id: string }; limit?: number },
-  ): Promise<{ items: Favorite[]; nextCursor?: { timestamp: string; id: string } }> {
-    const filtered = this.favorites.filter((f) => f.userId === userId);
-    const sorted = [...filtered].sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id),
-    );
-
-    const take = (opts?.limit ?? 20) + 1;
-    let startIndex = 0;
-
-    if (opts?.cursor) {
-      const cursorIndex = sorted.findIndex((f) => f.id === opts.cursor!.id);
-      if (cursorIndex >= 0) startIndex = cursorIndex + 1;
-    }
-
-    const page = sorted.slice(startIndex, startIndex + take);
-    const hasMore = page.length === take;
-    const items = hasMore ? page.slice(0, -1) : page;
-    const last = items[items.length - 1];
-
-    return {
-      items,
-      ...(hasMore && last
-        ? { nextCursor: { timestamp: last.createdAt.toISOString(), id: last.id } }
-        : {}),
-    };
-  }
 }
 
 class FakeListingCardReadPort implements ListingCardReadPort {
@@ -177,7 +147,7 @@ describe("ListMyFavorites", () => {
   }
 
   /** Favorite `count` Listings of one status, oldest first, ids `${prefix}-1`..`${prefix}-N`. */
-  async favoriteListings(prefix: string, status: ListingCard["status"], count: number) {
+  async function favoriteListings(prefix: string, status: ListingCard["status"], count: number) {
     for (let i = 1; i <= count; i++) {
       seedSummary({ id: `${prefix}-${i}`, status });
       await favorites.add("user-1", `${prefix}-${i}`);

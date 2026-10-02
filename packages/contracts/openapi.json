@@ -3120,11 +3120,29 @@
           "nextCursor": {
             "type": "string",
             "nullable": true
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inactive": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total",
+              "inactive"
+            ]
           }
         },
         "required": [
           "items",
-          "nextCursor"
+          "nextCursor",
+          "counts"
         ]
       },
       "PresignRequest": {

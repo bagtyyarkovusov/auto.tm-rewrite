@@ -2,7 +2,23 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
 import { Favorite } from "../domain/Favorite";
-import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
+import {
+  INACTIVE_VISIBLE_LISTING_STATUSES,
+  VISIBLE_LISTING_STATUSES,
+  type ListingStatus,
+} from "../domain/ListingStatus";
+import type {
+  FavoriteRepository,
+  VisibleFavoriteCounts,
+  VisibleFavoriteOptions,
+} from "../domain/ports/FavoriteRepository";
+
+const ACTIVE_ONLY_STATUSES: readonly ListingStatus[] = ["active"];
+
+/** A Listing a User can see: not deleted and in one of `statuses`. */
+function visibleListing(statuses: readonly ListingStatus[]) {
+  return { deletedAt: null, status: { in: [...statuses] } };
+}
 
 @Injectable()
 export class PrismaFavoriteRepository implements FavoriteRepository {
@@ -64,14 +80,15 @@ export class PrismaFavoriteRepository implements FavoriteRepository {
     return new Set(rows.map((r) => r.listingId));
   }
 
-  async listByUserId(
+  async listVisibleByUserId(
     userId: string,
-    opts?: { cursor?: { timestamp: string; id: string }; limit?: number },
+    opts?: VisibleFavoriteOptions,
   ): Promise<{ items: Favorite[]; nextCursor?: { timestamp: string; id: string } }> {
     const take = (opts?.limit ?? 20) + 1;
+    const statuses = opts?.activeOnly ? ACTIVE_ONLY_STATUSES : VISIBLE_LISTING_STATUSES;
 
     const rows = await this.prisma.favorite.findMany({
-      where: { userId },
+      where: { userId, listing: visibleListing(statuses) },
       take,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       ...(opts?.cursor
@@ -98,6 +115,18 @@ export class PrismaFavoriteRepository implements FavoriteRepository {
     }
 
     return result;
+  }
+
+  async countVisibleByUserId(userId: string): Promise<VisibleFavoriteCounts> {
+    const [total, inactive] = await Promise.all([
+      this.prisma.favorite.count({
+        where: { userId, listing: visibleListing(VISIBLE_LISTING_STATUSES) },
+      }),
+      this.prisma.favorite.count({
+        where: { userId, listing: visibleListing(INACTIVE_VISIBLE_LISTING_STATUSES) },
+      }),
+    ]);
+    return { total, inactive };
   }
 
   private toDomain(row: {

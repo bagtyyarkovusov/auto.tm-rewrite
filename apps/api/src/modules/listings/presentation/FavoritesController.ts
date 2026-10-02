@@ -87,15 +87,16 @@ export class FavoritesController {
 
   @Get("api/v1/favorites")
   async listMyFavorites(
-    @Query() query: { cursor?: string; limit?: number },
+    @Query() query: unknown,
     @Req() req: FastifyRequest,
   ) {
     const userId = this.userId(req);
-    const pagination = this.parseOrThrow(ListingsSchemas.FeedQuerySchema, query);
+    const params = this.parseOrThrow(ListingsSchemas.MyFavoritesQuerySchema, query);
     return this.listMyFavoritesUC.execute({
       userId,
-      ...(pagination.cursor !== undefined ? { cursor: pagination.cursor } : {}),
-      limit: pagination.limit,
+      ...(params.cursor !== undefined ? { cursor: params.cursor } : {}),
+      limit: params.limit,
+      activeOnly: params.activeOnly,
     });
   }
 }
