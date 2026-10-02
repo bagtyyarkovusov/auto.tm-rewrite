@@ -114,8 +114,9 @@ describe("requestAccountDeletion", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ phone: "+99361234567" });
     expect(init?.headers).toMatchObject({
       "Accept-Language": "tk",
-      "X-Forwarded-For": "203.0.113.7",
+      "X-Real-IP": "203.0.113.7",
     });
+    expect(init?.headers).not.toHaveProperty("X-Forwarded-For");
   });
 
   it("posts a trimmed, lowercased email", async () => {
@@ -129,12 +130,12 @@ describe("requestAccountDeletion", () => {
     });
   });
 
-  it("omits X-Forwarded-For when the visitor's IP is unknown", async () => {
+  it("omits X-Real-IP when the visitor's IP is unknown", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(codeSent());
 
     await requestAccountDeletion("phone", "61234567", context(fetchMock, { clientIp: null }));
 
-    expect(firstCall(fetchMock)[1]?.headers).not.toHaveProperty("X-Forwarded-For");
+    expect(firstCall(fetchMock)[1]?.headers).not.toHaveProperty("X-Real-IP");
   });
 
   it("never exposes a test code from the response", async () => {

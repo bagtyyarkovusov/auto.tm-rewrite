@@ -74,13 +74,14 @@ describe("account deletion Server Functions", () => {
     expect(sentHeaders()["Accept-Language"]).toBe("tk");
   });
 
-  it("forwards the edge's X-Real-IP rather than a visitor-supplied X-Forwarded-For", async () => {
+  it("forwards the edge's X-Real-IP, which the API trusts, rather than a visitor-supplied X-Forwarded-For", async () => {
     incoming = new Headers({ "x-real-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1" });
     fetchMock.mockResolvedValue(codeSent());
 
     await requestDeletionCode("en", "email", "person@example.com");
 
-    expect(sentHeaders()["X-Forwarded-For"]).toBe("203.0.113.7");
+    expect(sentHeaders()["X-Real-IP"]).toBe("203.0.113.7");
+    expect(sentHeaders()["X-Forwarded-For"]).toBeUndefined();
   });
 
   it("sends no forwarded IP when the request carries none", async () => {
@@ -88,6 +89,6 @@ describe("account deletion Server Functions", () => {
 
     await requestDeletionCode("en", "email", "person@example.com");
 
-    expect(sentHeaders()["X-Forwarded-For"]).toBeUndefined();
+    expect(sentHeaders()["X-Real-IP"]).toBeUndefined();
   });
 });
