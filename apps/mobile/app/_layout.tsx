@@ -3,7 +3,7 @@ import "../global.css";
 // before any screen renders an <Image className="...">.
 import "../lib/expo-image-interop";
 
-import { Stack, router, usePathname } from "expo-router";
+import { Stack } from "expo-router";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
 import { StatusBar } from "expo-status-bar";
@@ -29,15 +29,13 @@ import type { NetInfoState } from "@react-native-community/netinfo";
 
 import { NAV_THEME } from "../lib/theme";
 import { ApiError } from "../src/api/client";
-import { clearAuthSession } from "../src/auth/session";
 import { useAuth } from "../src/auth/useAuth";
 import { useMyDrafts } from "../src/api/listings/useMyDrafts";
 import { useMyListings } from "../src/api/listings/useMyListings";
 import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanCleanup";
 import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
-import { useDirectMessagePushRouting } from "../src/notifications/useDirectMessagePushRouting";
-import { isConversationPath } from "../src/conversations/conversationRoutes";
+import { AppNavigationEffects } from "../src/navigation/AppNavigationEffects";
 import { themeStore } from "../src/theme/themeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
@@ -158,17 +156,6 @@ export default function RootLayout() {
   const scheme = resolvedScheme === "dark" ? "dark" : "light";
   const [i18nReady, setI18nReady] = useState(false);
 
-  // Direct-message push taps (foreground, background, cold start) route to
-  // the target conversation from the app shell. Registered before any early
-  // return so a cold-start response is never missed.
-  useDirectMessagePushRouting();
-
-  const pathname = usePathname();
-  const pathnameRef = useRef(pathname);
-  useEffect(() => {
-    pathnameRef.current = pathname;
-  }, [pathname]);
-
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     "UberMove-Bold": require("../assets/fonts/UberMoveBold.otf"),
@@ -228,35 +215,13 @@ export default function RootLayout() {
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    let redirecting = false;
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (event.type !== "updated" || event.action?.type !== "error") return;
-      const error = event.query.state.error;
-      if (
-        !redirecting &&
-        error instanceof ApiError &&
-        error.code === "UNAUTHENTICATED"
-      ) {
-        void clearAuthSession();
-        // The Conversation screen offers sign-in itself and returns to the
-        // same Conversation, so an expired session there is not redirected.
-        if (isConversationPath(pathnameRef.current)) return;
-        redirecting = true;
-        queueMicrotask(() => {
-          router.replace("/(auth)/phone");
-        });
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
   if (!appReady) {
     return null;
   }
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AppNavigationEffects />
       <ThemeProvider value={NAV_THEME[scheme]}>
         <ToastProvider>
           <OrphanCleanupOnBoot />

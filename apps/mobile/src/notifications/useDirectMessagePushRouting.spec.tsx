@@ -9,6 +9,7 @@ import {
   DEFAULT_ACTION_IDENTIFIER,
 } from "expo-notifications";
 import { router } from "expo-router";
+import { TabRouter } from "@react-navigation/routers";
 
 import { useDirectMessagePushRouting } from "./useDirectMessagePushRouting";
 
@@ -161,9 +162,9 @@ describe("useDirectMessagePushRouting", () => {
 
 /**
  * A model of the root Stack, enough to read the back stack a push tap leaves.
- * `dismissTo` follows React Navigation's POP_TO, which Expo Router dispatches
- * for it: pop to the nearest route with that name and set its params (here the
- * selected tab), or replace the top route when none is in the stack.
+ * Expo targets the tab navigator when the root tabs are focused. Use the real
+ * TabRouter reducer for NAVIGATE and the unsupported POP_TO there. Above the
+ * tabs, POP_TO unwinds the root Stack or replaces its top when tabs are absent.
  */
 type StackRoute =
   | { name: "(onboarding)" }
@@ -173,7 +174,21 @@ type StackRoute =
 
 function modelRootStack(initial: StackRoute[]) {
   const routes = [...initial];
-  nav.rootName = routes.at(-1)!.name;
+  const tabRouter = TabRouter({ initialRouteName: initial.find((r) => r.name === "(tabs)")?.tab ?? "favorites" });
+  const tabOptions = { routeNames: ["favorites", "chat", "(search)"], routeParamList: {}, routeGetIdList: {} };
+  let tabState = tabRouter.getInitialState(tabOptions);
+  const dispatchTab = (type: "NAVIGATE" | "POP_TO", href: unknown) => {
+    const target = toRoute(href);
+    if (target.name !== "(tabs)") throw new Error("Expected tabs destination");
+    const action = { type, target: tabState.key, payload: { name: target.tab } };
+    // @ts-expect-error POP_TO is intentionally unsupported by TabRouter.
+    const next = tabRouter.getStateForAction(tabState, action, tabOptions);
+    if (next) {
+      tabState = tabRouter.getRehydratedState(next, tabOptions);
+      routes.splice(routes.length - 1, 1, { name: "(tabs)", tab: tabState.routes[tabState.index]?.name ?? "favorites" });
+    }
+  };
+  nav.rootName = routes.at(-1)?.name ?? "(onboarding)";
   const toRoute = (href: unknown): StackRoute => {
     if (typeof href === "string" && href.startsWith("/(tabs)/")) {
       return { name: "(tabs)", tab: href.slice("/(tabs)/".length) };
@@ -188,12 +203,15 @@ function modelRootStack(initial: StackRoute[]) {
     routes.push(toRoute(href));
   });
   mockNavigate.mockImplementation((href) => {
-    routes.splice(routes.length - 1, 1, toRoute(href));
+    dispatchTab("NAVIGATE", href);
   });
   mockDismissTo.mockImplementation((href) => {
     // Expo targets the tab navigator when (tabs) is focused. A targeted
     // POP_TO is unhandled by TabRouter and becomes a silent no-op.
-    if (routes.at(-1)?.name === "(tabs)") return;
+    if (routes.at(-1)?.name === "(tabs)") {
+      dispatchTab("POP_TO", href);
+      return;
+    }
     const target = toRoute(href);
     const index = routes.map((route) => route.name).lastIndexOf(target.name);
     if (index === -1) {

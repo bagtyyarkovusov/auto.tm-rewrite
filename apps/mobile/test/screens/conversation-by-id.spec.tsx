@@ -19,7 +19,9 @@ const SELLER_PHONE = "+99361000000";
 
 const state = vi.hoisted(() => ({
   viewerId: "",
+  viewerLoading: false,
   get: vi.fn(),
+  readMessages: vi.fn(),
   messages: {
     data: { pages: [{ items: [] as unknown[] }] } as unknown,
     isPending: false,
@@ -31,14 +33,17 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/auth/useViewer", () => ({
-  useViewer: () => (state.viewerId ? { userId: state.viewerId } : null),
+  useViewer: () => state.viewerLoading ? undefined : (state.viewerId ? { userId: state.viewerId } : null),
 }));
 vi.mock("../../src/api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
   apiClient: { get: state.get, post: vi.fn(), delete: vi.fn() },
 }));
 vi.mock("../../src/api/conversations/useConversationMessages", () => ({
-  useConversationMessages: () => state.messages,
+  useConversationMessages: (options: { conversationId: string }) => {
+    state.readMessages(options);
+    return state.messages;
+  },
 }));
 vi.mock("../../src/api/conversations/useSendTextMessage", () => ({ useSendTextMessage: () => state.mutation }));
 vi.mock("../../src/api/conversations/useSendImageMessage", () => ({ useSendImageMessage: () => state.mutation }));
@@ -55,7 +60,6 @@ vi.mock("../../src/api/catalog/useBrands", () => ({
 vi.mock("../../src/api/catalog/useModels", () => ({
   useModels: () => ({ data: { items: [{ id: "00000000-0000-4000-8000-0000000000d2", name: "Camry" }] } }),
 }));
-vi.mock("../../src/navigation/useSafeBack", () => ({ useSafeBack: () => vi.fn() }));
 vi.mock("../../src/conversations/socket/useConversationSocket", () => ({
   useConversationSocket: () => ({
     peerTyping: false,
@@ -312,6 +316,7 @@ describe("Conversation while signed out", () => {
   const conversationHref = { pathname: "/conversations/[id]", params: { id: CONVERSATION_ID } };
 
   beforeEach(() => {
+    state.viewerLoading = false;
     state.viewerId = "";
     routeGet({
       [`/conversations/${CONVERSATION_ID}`]: () => conversation(),
@@ -327,8 +332,28 @@ describe("Conversation while signed out", () => {
     expect(screen.getByRole("button", { name: "Go back" })).toBeTruthy();
     await act(async () => {});
     expect(state.get).not.toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
+    expect(state.readMessages).toHaveBeenLastCalledWith({ conversationId: "" });
     expect(screen.queryByText("Merdan")).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("waits for auth hydration before painting a seeded Conversation", async () => {
+    state.viewerLoading = true;
+    const { sendRestriction, ...summary } = conversation();
+    expect(sendRestriction).toBeNull();
+    function Seeded({ children }: PropsWithChildren) {
+      const queryClient = useQueryClient();
+      useState(() => seedConversationDetail(queryClient, summary));
+      return children;
+    }
+    const screen = renderMobile(<Seeded><ConversationDetailScreen /></Seeded>);
+    expect(screen.queryByText("Merdan")).toBeNull();
+    expect(state.readMessages).toHaveBeenLastCalledWith({ conversationId: "" });
+    expect(state.get).not.toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
+    state.viewerLoading = false;
+    state.viewerId = BUYER_ID;
+    screen.rerender(<Seeded><ConversationDetailScreen /></Seeded>);
+    expect(await screen.findByText("Merdan")).toBeTruthy();
   });
 
   it("signs in and returns to the same Conversation, which then loads", async () => {
@@ -358,6 +383,8 @@ describe("Conversation while signed out", () => {
 
     expect(routerMock.dismissTo).toHaveBeenCalledWith(conversationHref);
     expect(screen.getByText("Sign in to view messages")).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Go back" }));
+    expect(routerMock.back).toHaveBeenCalledOnce();
   });
 });
 

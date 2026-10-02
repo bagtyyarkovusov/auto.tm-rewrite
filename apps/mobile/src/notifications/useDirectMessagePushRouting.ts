@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as Notifications from "expo-notifications";
-import { router, usePathname } from "expo-router";
+import { router, usePathname, useRootNavigationState } from "expo-router";
 
 import {
   MESSAGES_HREF,
@@ -14,6 +14,7 @@ function routeFromResponse(
   response: Notifications.NotificationResponse,
   lastHandledIdentifier: { current: string | null },
   pathname: { current: string },
+  rootRouteName: { current: string | undefined },
 ): void {
   if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
     return;
@@ -38,10 +39,13 @@ function routeFromResponse(
   }
 
   // Back from a push-opened Conversation goes to the Messages list (D9).
-  // `dismissTo` pops the root Stack to the tabs and selects Messages, or
-  // replaces the top screen with them when the tabs are not open yet (cold
-  // start); the Conversation is then pushed on top.
-  router.dismissTo(MESSAGES_HREF);
+  // A focused Tabs navigator handles NAVIGATE, but not dismissTo's POP_TO.
+  // Screens over the tabs still need POP_TO to remove the old root stack.
+  if (rootRouteName.current === "(tabs)") {
+    router.navigate(MESSAGES_HREF);
+  } else {
+    router.dismissTo(MESSAGES_HREF);
+  }
   router.push(conversationHref(conversationId));
 }
 
@@ -65,22 +69,26 @@ export function useDirectMessagePushRouting(): void {
   const lastHandledIdentifier = useRef<string | null>(null);
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
+  const rootState = useRootNavigationState();
+  const rootRouteName = rootState?.routes[rootState.index]?.name;
+  const rootRouteNameRef = useRef(rootRouteName);
 
   useEffect(() => {
     pathnameRef.current = pathname;
-  }, [pathname]);
+    rootRouteNameRef.current = rootRouteName;
+  }, [pathname, rootRouteName]);
 
   useEffect(() => {
     const initialResponse = Notifications.getLastNotificationResponse();
     if (initialResponse) {
-      routeFromResponse(initialResponse, lastHandledIdentifier, pathnameRef);
+      routeFromResponse(initialResponse, lastHandledIdentifier, pathnameRef, rootRouteNameRef);
       // Do not re-route the same cold-start response on the next launch.
       Notifications.clearLastNotificationResponse();
     }
 
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) =>
-        routeFromResponse(response, lastHandledIdentifier, pathnameRef),
+        routeFromResponse(response, lastHandledIdentifier, pathnameRef, rootRouteNameRef),
     );
 
     return () => subscription.remove();
