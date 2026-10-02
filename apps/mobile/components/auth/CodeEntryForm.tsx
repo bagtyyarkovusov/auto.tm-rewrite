@@ -170,7 +170,9 @@ export function CodeEntryForm({
   }
 
   const showEmailHint =
-    method === "email" && (hasResent || secondsRemaining === 0);
+    method === "email" &&
+    !dailyLimit &&
+    (hasResent || secondsRemaining === 0);
 
   return (
     <View className="gap-6">

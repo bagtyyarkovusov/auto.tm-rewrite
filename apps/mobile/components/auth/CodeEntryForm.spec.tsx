@@ -133,6 +133,24 @@ describe("CodeEntryForm daily code limit", () => {
     },
   );
 
+  it("leaves Contact support as the one way forward on an email sign-in", async () => {
+    const { screen } = renderForm({
+      method: "email",
+      onUsePhoneInstead: vi.fn(),
+      resend: vi.fn(async () => {
+        throw rateLimited({ reason: "destination_limit", retryInSeconds: 0 });
+      }),
+    });
+
+    expect(screen.getByText(NOT_ARRIVING)).toBeTruthy();
+    await pressResend(screen);
+
+    expect(screen.getByText(DAILY_LIMIT)).toBeTruthy();
+    expect(screen.queryByText(NOT_ARRIVING)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use phone instead" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Contact support" })).toBeTruthy();
+  });
+
   it.each([
     ["backoff", { reason: "backoff", retryInSeconds: 240 }],
     ["ip_limit", { reason: "ip_limit", retryInSeconds: 0 }],
