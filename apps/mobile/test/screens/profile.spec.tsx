@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfileScreen from "../../app/profile";
-import { fireEvent, renderMobile, routerMock } from "../render";
+import { fireEvent, first, renderMobile, routerMock } from "../render";
 
 const state = vi.hoisted(() => ({
   isAuthenticated: true as boolean | null,
@@ -51,7 +51,7 @@ describe("Profile account actions", () => {
     const view = renderMobile(<ProfileScreen />);
     fireEvent.press(view.getByRole("button", { name: "Log out" }));
     // The dialog's own Log out button follows its title.
-    fireEvent.press(view.getAllByText("Log out").at(-1)!);
+    fireEvent.press(first(view.getAllByText("Log out").reverse()));
     expect(state.logout).toHaveBeenCalledOnce();
   });
 

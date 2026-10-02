@@ -124,7 +124,7 @@ describe("Cabinet signed in", () => {
   it("shows a skeleton profile row while /me loads and keeps every menu row working", () => {
     signedIn("pending");
     const view = renderMobile(<CabinetScreen />);
-    expect(view.getByLabelText("Loading...")).toBeTruthy();
+    expect(view.getByLabelText(view.i18n.t("common:loading"))).toBeTruthy();
     expectMenuRows(view);
     expect(view.getByRole("button", { name: "My listings" })).toBeTruthy();
     fireEvent.press(view.getByRole("button", { name: "Language, English" }));
