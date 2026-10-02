@@ -374,14 +374,14 @@ describe("useUploadQueue — parallel batch compression", () => {
     const payload = { photos: [{ photoId: "server-1", key: "listings/l1/server-1/original.jpg", sortOrder: 0 }] };
 
     it("restores them by default", async () => {
-      mockListLocalPhotoIds.mockResolvedValue(["left-behind"]);
+      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
       const { result } = renderHook(() => useUploadQueue("draft-9", payload), { wrapper });
       await waitFor(() => expect(result.current.photos).toHaveLength(2));
       expect(mockDeleteDraftDir).not.toHaveBeenCalled();
     });
 
     it("deletes them instead when told not to restore", async () => {
-      mockListLocalPhotoIds.mockResolvedValue(["left-behind"]);
+      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
       const { result } = renderHook(
         () => useUploadQueue("edit-l1", payload, { restoreLocalPhotos: false }),
         { wrapper },
@@ -389,6 +389,15 @@ describe("useUploadQueue — parallel batch compression", () => {
       await waitFor(() => expect(mockDeleteDraftDir).toHaveBeenCalledWith("edit-l1"));
       await waitFor(() => expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]));
       expect(mockListLocalPhotoIds).not.toHaveBeenCalled();
+    });
+
+    it("still seeds from the payload when the cleanup fails", async () => {
+      mockDeleteDraftDir.mockRejectedValueOnce(new Error("disk unavailable"));
+      const { result } = renderHook(
+        () => useUploadQueue("edit-l1", payload, { restoreLocalPhotos: false }),
+        { wrapper },
+      );
+      await waitFor(() => expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]));
     });
 
     it("never deletes staging before the session has a key", async () => {

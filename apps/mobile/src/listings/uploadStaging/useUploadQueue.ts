@@ -116,7 +116,8 @@ export function useUploadQueue(
       if (restoreLocalPhotos) {
         localPhotoIds = await listLocalPhotoIds(stagingKey);
       } else if (stagingKey) {
-        await deleteDraftDir(stagingKey);
+        // Best effort: a failed cleanup must not keep the session from seeding.
+        await deleteDraftDir(stagingKey).catch(() => undefined);
       }
       if (activeStagingKey.current !== stagingKey) return;
       const reconstructed = reconstructQueueFromDraft(
