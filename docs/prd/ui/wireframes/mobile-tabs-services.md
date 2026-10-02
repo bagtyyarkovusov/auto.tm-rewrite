@@ -1,5 +1,7 @@
 # Wireframe — Mobile Services Tab
 
+> **Superseded for Cabinet, Profile and Settings (2026-10-02).** The founder's screen map amendment ([#344](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5947347989)) and the [Tab 5 — Cabinet menu](../../20-information-architecture.md#tab-5--cabinet-menu) section replace this Settings-style Services tab. This body is kept as history until [#533](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/533) updates it.
+
 > Issue: #124 — apply wizard design handoff to app shell, auth, and listing wizard  
 > Maps to: `apps/mobile/app/(tabs)/services.tsx`
 

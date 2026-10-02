@@ -65,6 +65,7 @@ Tab 5 opens the Cabinet, which is a plain menu rather than a Settings screen. Th
 | Signed out | Sign in, Language, Theme, Help, Terms of Service, Privacy Policy, Posting rules, About |
 | Signed in | Profile row, My listings (one row with the total of the User's Listings and drafts), Notifications, Language, Theme, Help, Terms of Service, Privacy Policy, Posting rules, About |
 
+- Cabinet also has these states: profile loading, profile failed with Retry, and My listings with a number or without one.
 - The Profile row opens Profile. Sign-in Methods, Log out and Delete account are on Profile, not on Cabinet ([30 — Identity](features/30-identity.md#profile-screens)).
 - Language and Theme open bottom-sheet pickers on Cabinet.
 - Notifications opens the release notification screen ([36 — Notifications](features/36-notifications.md#preferences-screen)).
