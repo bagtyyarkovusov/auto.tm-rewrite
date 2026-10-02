@@ -49,7 +49,6 @@ describe("OpenListingConversationScreen", () => {
     expect(source).toContain("/conversations/");
   });
 
-
   it("shows loading state while opening", () => {
     expect(source).toContain("ActivityIndicator");
     expect(source).toContain('t("openingConversation")');

@@ -282,7 +282,8 @@ describe("Conversation header Call", () => {
       expect(state.get).toHaveBeenCalledWith(`/listings/${LISTING_ID}`, expect.anything()),
     );
     await act(async () => {
-      await state.get.mock.results.at(-1)?.value;
+      const index = state.get.mock.calls.findIndex(([path]) => path === `/listings/${LISTING_ID}`);
+      await state.get.mock.results[index]?.value;
     });
     await act(async () => {});
     expect(screen.queryByRole("button", { name: "Call the seller" })).toBeNull();
