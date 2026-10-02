@@ -88,7 +88,8 @@ describe("Favorites large card", () => {
   it("shows an error when the Conversation cannot open and keeps the card as it was", () => {
     conversation.error = new Error("Network request failed");
     const { view } = renderCard();
-    expect(view.getByRole("alert")).toBeTruthy();
+    expect(view.getByText("Something went wrong")).toBeTruthy();
+    expect(view.getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(view.getByRole("button", { name: "Call" })).toBeTruthy();
     expect(view.getByRole("button", { name: "Message" })).toBeTruthy();
     expect(view.getByRole("button", { name: "Remove from Favorites" })).toBeTruthy();

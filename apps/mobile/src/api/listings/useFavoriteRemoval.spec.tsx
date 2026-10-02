@@ -51,11 +51,11 @@ describe("Favorites removal with Undo", () => {
   it("hides the card at once and sends nothing when Undo comes first", async () => {
     const { result } = renderHook(() => useFavoriteRemoval({ delayMs: DELAY }), { wrapper });
     act(() => result.current.remove(favorite("a")));
-    expect(result.current.hiddenIds.has("a")).toBe(true);
+    expect(result.current.hidden.has("a")).toBe(true);
     expect(result.current.pendingId).toBe("a");
 
     act(() => { expect(result.current.undo()).toBe(true); });
-    expect(result.current.hiddenIds.has("a")).toBe(false);
+    expect(result.current.hidden.has("a")).toBe(false);
     expect(result.current.pendingId).toBeNull();
     await act(async () => { await sleep(DELAY * 3); });
     expect(mockDelete).not.toHaveBeenCalled();
@@ -67,7 +67,7 @@ describe("Favorites removal with Undo", () => {
     expect(mockDelete).not.toHaveBeenCalled();
 
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object)));
-    await waitFor(() => expect(result.current.hiddenIds.has("a")).toBe(false));
+    await waitFor(() => expect(result.current.hidden.has("a")).toBe(false));
     for (const activeOnly of [false, true]) {
       const page = client.getQueryData<Pages>(queryKeys.favorites.list(activeOnly))?.pages[0];
       expect(page?.items.map((item) => item.id)).not.toContain("a");
@@ -88,13 +88,13 @@ describe("Favorites removal with Undo", () => {
     const { result } = renderHook(() => useFavoriteRemoval({ delayMs: 10_000 }), { wrapper });
     act(() => result.current.remove(favorite("a")));
     act(() => result.current.remove(favorite("b")));
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object)));
     expect(mockDelete).toHaveBeenCalledTimes(1);
-    expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object));
-    expect(result.current.hiddenIds.has("b")).toBe(true);
+    expect(result.current.hidden.has("b")).toBe(true);
     expect(result.current.pendingId).toBe("b");
 
     act(() => { result.current.undo(); });
-    expect(result.current.hiddenIds.has("b")).toBe(false);
+    expect(result.current.hidden.has("b")).toBe(false);
     expect(mockDelete).toHaveBeenCalledTimes(1);
   });
 
@@ -102,17 +102,17 @@ describe("Favorites removal with Undo", () => {
     const { result } = renderHook(() => useFavoriteRemoval({ delayMs: 10_000 }), { wrapper });
     act(() => result.current.remove(favorite("a")));
     act(() => result.current.flush());
-    expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object));
     expect(result.current.pendingId).toBeNull();
     act(() => { expect(result.current.undo()).toBe(false); });
-    expect(result.current.hiddenIds.has("a")).toBe(true);
+    expect(result.current.hidden.has("a")).toBe(true);
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object)));
   });
 
-  it("deletes a pending removal when the screen unmounts", () => {
+  it("deletes a pending removal when the screen unmounts", async () => {
     const { result, unmount } = renderHook(() => useFavoriteRemoval({ delayMs: 10_000 }), { wrapper });
     act(() => result.current.remove(favorite("a")));
     unmount();
-    expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object));
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object)));
   });
 
   it("brings the card back and reports the failure when the delete fails", async () => {
@@ -121,7 +121,7 @@ describe("Favorites removal with Undo", () => {
     const { result } = renderHook(() => useFavoriteRemoval({ delayMs: DELAY, onFailed }), { wrapper });
     act(() => result.current.remove(favorite("a")));
     await waitFor(() => expect(onFailed).toHaveBeenCalledWith(expect.objectContaining({ id: "a" })));
-    expect(result.current.hiddenIds.has("a")).toBe(false);
+    expect(result.current.hidden.has("a")).toBe(false);
     expect(client.getQueryData<Pages>(queryKeys.favorites.list(false))?.pages[0]?.items.map((item) => item.id)).toContain("a");
   });
 });

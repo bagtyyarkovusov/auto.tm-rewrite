@@ -1,23 +1,50 @@
-import { useCallback } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Heart } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../src/auth/useAuth";
+import { useViewer } from "../../src/auth/useViewer";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { useEngineTypes } from "../../src/api/catalog/useEngineTypes";
 import { useTransmissions } from "../../src/api/catalog/useTransmissions";
-import { useMyFavorites } from "../../src/api/listings/useMyFavorites";
-import { ListingCard } from "../../src/listings/feed/ListingCard";
+import { ListingLargeCard, ListingLargeCardSkeleton } from "../../src/listings/feed/ListingLargeCard";
 import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
-import { FeedSkeleton } from "../../src/listings/feed/FeedSkeleton";
+import { HideSoldToggle } from "../../src/listings/favorites/HideSoldToggle";
+import { useFavoritesView } from "../../src/listings/favorites/useFavoritesView";
+import { HOME_HREF } from "../../src/navigation/homeHref";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+
+function CenteredMessage({ title, hint, children, icon = true }: { title: string; hint: string; children?: ReactNode; icon?: boolean }) {
+  return (
+    <View className="flex-1 items-center justify-center gap-4 px-6 py-12">
+      {icon ? (
+        <View className="size-16 items-center justify-center rounded-full bg-muted">
+          <Icon as={Heart} className="size-8 text-muted-foreground" />
+        </View>
+      ) : null}
+      <Text className="text-center text-lg font-semibold text-foreground">{title}</Text>
+      <Text className="text-center text-sm text-muted-foreground">{hint}</Text>
+      {children}
+    </View>
+  );
+}
+
+function BrowseListingsButton() {
+  const router = useRouter();
+  const { t } = useTranslation();
+  return (
+    <Button variant="secondary" size="pill" onPress={() => router.navigate(HOME_HREF)}>
+      <Text>{t("browseListings")}</Text>
+    </Button>
+  );
+}
 
 function AnonymousFavoritesEntry() {
   const router = useRouter();
@@ -30,48 +57,19 @@ function AnonymousFavoritesEntry() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center px-6 gap-5">
-      <View className="size-16 items-center justify-center rounded-full bg-muted">
-        <Icon as={Heart} className="size-8 text-muted-foreground" />
-      </View>
-      <Text className="text-lg font-semibold text-foreground">{t("signInToSee")}</Text>
+    <CenteredMessage title={t("favoritesSignedOutTitle")} hint={t("favoritesSignedOutHint")}>
       <Button variant="brand" size="pill" onPress={handleSignIn}>
         <Text>{t("signIn")}</Text>
       </Button>
-    </View>
+    </CenteredMessage>
   );
 }
 
-function FavoritesEmpty() {
-  const { t } = useTranslation();
-  return (
-    <View className="flex-1 items-center justify-center px-6 gap-4">
-      <View className="size-16 items-center justify-center rounded-full bg-muted">
-        <Icon as={Heart} className="size-8 text-muted-foreground" />
-      </View>
-      <Text className="text-lg font-semibold text-foreground">{t("noFavoritesYet")}</Text>
-      <Text className="text-center text-sm text-muted-foreground">
-        {t("favoritesSaveLater")}
-      </Text>
-    </View>
-  );
-}
-
-function FavoritesContent() {
+function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> }) {
   const router = useRouter();
   const { t } = useTranslation();
-
-  const {
-    data,
-    isPending,
-    isError,
-    error,
-    refetch,
-    isRefetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useMyFavorites();
+  const viewer = useViewer();
+  const { state, hideSold, setHideSold, items, counts, remove, query } = view;
 
   const handlePress = useCallback(
     (id: string) => {
@@ -80,67 +78,110 @@ function FavoritesContent() {
     [router],
   );
 
-  const allItems = data?.pages.flatMap((page) => page.items) ?? [];
-  const catalogMaps = useFeedCatalogMaps(allItems);
-  // A tapped card opens Listing detail with its own spec line (km · gearbox ·
-  // fuel); the names come from these catalogs, so warm them here.
-  useTransmissions();
-  useEngineTypes();
+  const catalogMaps = useFeedCatalogMaps(items);
+  // The card's spec line and a tapped card's Listing detail preview both name
+  // the gearbox and fuel from these catalogs.
+  const transmissions = useTransmissions();
+  const engineTypes = useEngineTypes();
+  const transmissionName = (id?: string) => transmissions.data?.items.find((item) => item.id === id)?.name;
+  const engineTypeName = (id?: string) => engineTypes.data?.items.find((item) => item.id === id)?.name;
 
-  if (isPending) {
-    return <FeedSkeleton />;
+  if (state === "loading") {
+    return (
+      <View accessibilityLabel={t("loading")} className="gap-2">
+        {[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} withActions />)}
+      </View>
+    );
   }
 
-  if (isError) {
-    return <ErrorState error={error} onRetry={() => refetch()} />;
+  if (state === "error") {
+    return <ErrorState error={query.error} onRetry={() => query.refetch()} />;
   }
 
-  if (allItems.length === 0) {
-    return <FavoritesEmpty />;
+  if (state === "empty") {
+    return (
+      <CenteredMessage title={t("noFavoritesYet")} hint={t("favoritesSaveLater")}>
+        <BrowseListingsButton />
+      </CenteredMessage>
+    );
   }
 
   return (
     <FlatList
-      data={allItems}
+      testID="favorites-list"
+      data={items}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
-        <ListingCard
+        <ListingLargeCard
           listing={item}
           onPress={handlePress}
           brandName={catalogMaps.brandName(item.brandId)}
           modelName={catalogMaps.modelName(item.modelId)}
           cityName={catalogMaps.cityName(item.cityId)}
+          transmissionName={transmissionName(item.transmissionId)}
+          engineTypeName={engineTypeName(item.engineTypeId)}
+          favorites={{ isOwn: viewer != null && viewer.userId === item.sellerId, onRemove: remove }}
         />
       )}
-      ItemSeparatorComponent={() => (
-        <View className="h-px mx-4 bg-border" />
-      )}
+      ItemSeparatorComponent={() => <View className="h-2 bg-background" />}
+      ListHeaderComponent={
+        <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
+      }
+      ListEmptyComponent={
+        state === "noActive" ? (
+          <CenteredMessage icon={false} title={t("favoritesNoActiveTitle")} hint={t("favoritesNoActiveHint")}>
+            <BrowseListingsButton />
+          </CenteredMessage>
+        ) : null
+      }
       refreshControl={
         <RefreshControl
-          refreshing={isRefetching}
-          onRefresh={() => refetch()}
+          refreshing={query.isRefetching && !query.isFetchingNextPage}
+          onRefresh={() => query.refetch()}
         />
       }
       onEndReached={() => {
-        if (hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+        if (query.hasNextPage && !query.isFetchingNextPage) {
+          void query.fetchNextPage();
         }
       }}
       onEndReachedThreshold={0.5}
       ListFooterComponent={
-        isFetchingNextPage ? (
+        query.isFetchingNextPage ? (
           <View className="py-4 items-center">
             <ActivityIndicator />
-          </View>
-        ) : !hasNextPage ? (
-          <View className="py-4 items-center">
-            <Text className="text-xs text-muted-foreground">
-              {t("noMore")}
-            </Text>
           </View>
         ) : null
       }
     />
+  );
+}
+
+function SignedInFavorites() {
+  const view = useFavoritesView();
+  // A removal waiting for Undo is sent when the tab loses focus.
+  const flush = useRef(view.flush);
+  flush.current = view.flush;
+  useFocusEffect(useCallback(() => () => flush.current(), []));
+  return (
+    <>
+      <Title count={view.state === "list" || view.state === "noActive" ? view.counts.total : undefined} />
+      <FavoritesContent view={view} />
+    </>
+  );
+}
+
+function Title({ count }: { count?: number }) {
+  const { t } = useTranslation();
+  return (
+    <View className="flex-row items-baseline gap-2 px-4 pt-6 pb-3">
+      <Text className="text-2xl font-heading text-foreground">{t("favorites")}</Text>
+      {count ? (
+        <Text testID="favorites-count" className="text-base text-muted-foreground">
+          {count}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -150,21 +191,20 @@ export default function FavoritesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-      <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-heading text-foreground">
-          {t("favorites")}
-        </Text>
-      </View>
-
-      {isAuthenticated === false ? (
-        <AnonymousFavoritesEntry />
-      ) : isAuthenticated === true ? (
-        <FavoritesContent />
+      {isAuthenticated === true ? (
+        <SignedInFavorites />
       ) : (
-        <View className="flex-1 items-center justify-center gap-3">
-          <ActivityIndicator />
-          <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
-        </View>
+        <>
+          <Title />
+          {isAuthenticated === false ? (
+            <AnonymousFavoritesEntry />
+          ) : (
+            <View className="flex-1 items-center justify-center gap-3">
+              <ActivityIndicator />
+              <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
+            </View>
+          )}
+        </>
       )}
     </SafeAreaView>
   );
