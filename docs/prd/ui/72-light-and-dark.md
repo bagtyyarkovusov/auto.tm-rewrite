@@ -5,7 +5,7 @@
 **System-default with per-user override.** Both modes are first-class — neither is "added later."
 
 - App reads OS preference on first launch
-- User can override in Settings → Theme: System / Light / Dark
+- User can override in Cabinet → Theme: System / Light / Dark
 - Preference stored in `User.themePreference` (synced across devices) + AsyncStorage (offline cache)
 
 ## Implementation

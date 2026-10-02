@@ -12,7 +12,7 @@ Five tabs. Center button is the visual "do something" CTA.
 | 2 | Избранное | Saýlanan | Favorites | Favorites list (saved listings; S8a) |
 | 3 | + | + | + | Sell entry point |
 | 4 | Сообщения | Habarlar | Messages | Simple contact threads |
-| 5 | Кабинет | Kabinet | Cabinet | Cabinet/Profile + Settings + About |
+| 5 | Кабинет | Kabinet | Cabinet | Cabinet menu (see [Tab 5](#tab-5--cabinet-menu)) |
 
 ### Mobile route map
 
@@ -22,7 +22,7 @@ Five tabs. Center button is the visual "do something" CTA.
   favorites            Favorites list (saved listings; saved searches post-MLP)
   sell                 Sell entry — New listing
   chat                 Simple contact thread list
-  services             Cabinet/Profile surface
+  services             Cabinet menu
 
 /(auth)/
   phone                Phone entry
@@ -36,22 +36,43 @@ Five tabs. Center button is the visual "do something" CTA.
 
 /sell/wizard           Listing wizard (steps 1-7)
 /sell/wizard/[step]    Specific step deep link
-/me                    My profile
+/me                    Profile (Sign-in Methods, display name and photo, Log out, Delete account)
 /me/garage             Post-MLP My Garage
 /me/garage/[id]        Post-MLP Garage vehicle detail
 /me/listings           My listings
 /me/saved-searches     Post-MLP my saved searches
-/me/notifications      Post-MLP notification preferences
-/me/settings           App settings (theme, language)
+/me/notifications      Notifications (release: device state and a link to system settings; per-category toggles are post-release)
+/me/help               Help (email and phone)
+/me/about              About (app name and version)
 /me/edit               Edit profile
 /dealers/me            Post-MLP "My dealership" if user is a member
 
 /chat/[conversationId] Simple text contact thread
 ```
 
+Route names under `/me` are illustrative; the build tickets settle the file routes. There is no Settings route: language and theme live on the Cabinet menu, and Log out and Delete account live on Profile.
+
 ### Tab 1 — category browse surface (multi-vertical seam)
 
 Tab 1 follows the Auto.ru-inspired discovery journey of [ADR-0051](../adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md): **Home** (new listings and a "Brand, model" entry) → Brand picker → Model picker → a separate **Results** screen, with Search (🔍), Sort and a full-screen Search parameters form alongside. The screens, states and rejected patterns are specified in [33 — Search & discovery](features/33-search-discovery.md). ADR-0051 supersedes the "dedicated filter funnel" browse route that [ADR-0035](../adr/0035-multi-vertical-platform-direction.md) and [ADR-0036](../adr/0036-multi-vertical-seam-resolutions-mlp.md) prescribed; their cars-first, multi-vertical direction stays, so a category hub can still slot in front of Home when a second vertical is bet on.
+
+### Tab 5 — Cabinet menu
+
+Tab 5 opens the Cabinet, which is a plain menu rather than a Settings screen. This follows the founder's decisions on [#353](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5946561929) and [#353's slicing answers](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5947334041), recorded in the [screen map amendment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5947347989). Where it differs from the original [screen map resolution](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5759595278), the amendment wins.
+
+| State | Rows, top to bottom |
+|---|---|
+| Signed out | Sign in, Language, Theme, Help, Terms of Service, Privacy Policy, Posting rules, About |
+| Signed in | Profile row, My listings (one row with the total of the User's Listings and drafts), Notifications, Language, Theme, Help, Terms of Service, Privacy Policy, Posting rules, About |
+
+- The Profile row opens Profile. Sign-in Methods, Log out and Delete account are on Profile, not on Cabinet ([30 — Identity](features/30-identity.md#profile-screens)).
+- Language and Theme open bottom-sheet pickers on Cabinet.
+- Notifications opens the release notification screen ([36 — Notifications](features/36-notifications.md#preferences-screen)).
+- Help shows an email address and a phone number, signed in or out. There is no support chat in the release.
+- Terms of Service and Privacy Policy open the web legal pages. Posting rules opens its own web page ([#527](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/527)). About shows the app name and version.
+- There is no gear and no "List a car" row: the Sell tab is the only selling entry.
+- Log out and a finished account deletion both land on Cabinet, signed out.
+- The My listings tabs (Active, Drafts, Archive) belong to the Sell wizard, drafts and My listings design.
 
 ## Mobile navigation patterns
 
