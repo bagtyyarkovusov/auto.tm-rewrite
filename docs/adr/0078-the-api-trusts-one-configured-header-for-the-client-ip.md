@@ -1,8 +1,8 @@
 # ADR-0078: The API trusts one configured header for the client IP
 
-- **Status**: Proposed (recommended by the queue orchestrator on [issue #426](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/426); needs founder acceptance before merge)
+- **Status**: Accepted
 - **Date**: 2026-10-02
-- **Deciders**: AutoTM founder; drafted by the queue implementer for issue #426
+- **Deciders**: AutoTM founder (accepted 2026-10-02 after the [Railway PR-environment probes](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/552#issuecomment-5956215507)); drafted by the queue implementer for [issue #426](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/426)
 - **Amends**: [ADR-0054](0054-phone-or-email-sign-in-share-one-user.md)'s per-IP Sign-in Code budget by fixing which address it counts. [ADR-0039](0039-phased-cloud-first-hosting.md)'s hosting constraint stays: the rule is configuration, not a Railway-only assumption.
 
 ## Context
@@ -25,6 +25,8 @@ Fastify's `trustProxy` cannot express this. It reads only `X-Forwarded-*`, and i
 - **Other ingress.** Any ingress added in front of the API or web must set or overwrite the trusted header, or callers choose their own budget. The operator who adds one changes `CLIENT_IP_HEADER` and `CLIENT_IP_TRUSTED_HOPS` on the services behind it, and `API_CLIENT_IP_HEADER` on web to match the API. The API applies one rule to every path, so web's private calls must arrive in the shape that rule reads: with `x-forwarded-for`, web sends one entry, which the API reads only with `CLIENT_IP_TRUSTED_HOPS=1`.
 
 ### Verification on Railway
+
+Done on `auto.tm-rewrite-pr-552` on 2026-10-02: rotating client-supplied `X-Real-IP` and `X-Forwarded-For` values were all counted in one budget, and a request from a second network was accepted while the first was at its limit ([rotating probe](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/552#issuecomment-5952741859), [second network](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/552#issuecomment-5956215507)). The web → API private path was not exercised there and is checked on staging.
 
 Whether the edge overwrites a client-supplied `X-Real-IP` and `X-Forwarded-For` is a property of Railway, not of this code. It must be shown on an agent PR environment (ADR-0075), never staging or production, before this ADR is accepted: send requests from one client with rotating `X-Real-IP` and `X-Forwarded-For` values and confirm the per-IP budget still counts one client. Then, within the same hour, send one request from a second network and confirm it is accepted, which shows clients are counted under their own addresses rather than one shared peer. If a client can override the edge value, this rule does not hold on Railway and the decision returns to the founder.
 
