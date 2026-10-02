@@ -96,7 +96,12 @@ describe("MLP AFK e2e smoke", () => {
     await cleanSuiteFixtures(prisma, suite, {
       userAliases: [],
       extraUserIds: ["admin-afk-001"],
-      extraPhones: ["+99361234001", "+99361234002", "+99369990001"],
+      extraPhones: [
+        "+99361234001",
+        "+99361234002",
+        "+99361234003",
+        "+99369990001",
+      ],
     });
   });
 
@@ -253,6 +258,39 @@ describe("MLP AFK e2e smoke", () => {
       ]),
     );
 
+    const stranger = await login("+99361234003");
+    const oneRes = await request
+      .get(`/api/v1/conversations/${conversationId}`)
+      .set("Authorization", `Bearer ${buyer.accessToken}`)
+      .expect(200);
+
+    expect(oneRes.body).toMatchObject({
+      id: conversationId,
+      myRole: "buyer",
+      peer: { id: seller.userId },
+      blockedByMe: false,
+      sendRestriction: null,
+      listing: { id: listingId },
+    });
+    expect(oneRes.body.lastMessage.text).toBe("Yes, it is available.");
+
+    const strangerRes = await request
+      .get(`/api/v1/conversations/${conversationId}`)
+      .set("Authorization", `Bearer ${stranger.accessToken}`)
+      .expect(403);
+    expect(strangerRes.body.details).toMatchObject({
+      reason: "NOT_A_PARTICIPANT",
+    });
+    await request
+      .get(`/api/v1/conversations/${randomUUID()}`)
+      .set("Authorization", `Bearer ${buyer.accessToken}`)
+      .expect(404);
+    await request
+      .get("/api/v1/conversations/not-a-uuid")
+      .set("Authorization", `Bearer ${buyer.accessToken}`)
+      .expect(400);
+    await request.get("/api/v1/conversations/ping").expect(200);
+
     const reportRes = await request
       .post(`/api/v1/listings/${listingId}/report`)
       .set("Authorization", `Bearer ${buyer.accessToken}`)
@@ -285,6 +323,17 @@ describe("MLP AFK e2e smoke", () => {
     await request
       .get(`/api/v1/listings/${listingId}`)
       .expect(404);
+
+    const bannedRes = await request
+      .get(`/api/v1/conversations/${conversationId}`)
+      .set("Authorization", `Bearer ${buyer.accessToken}`)
+      .expect(200);
+    expect(bannedRes.body.listing).toBeNull();
+    expect(bannedRes.body.sendRestriction).toBe("listing_unavailable");
+    await request
+      .get(`/api/v1/conversations/${conversationId}/messages`)
+      .set("Authorization", `Bearer ${buyer.accessToken}`)
+      .expect(200);
 
     await request
       .delete("/api/v1/me")
