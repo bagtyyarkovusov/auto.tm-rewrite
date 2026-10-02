@@ -133,8 +133,6 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("city")}</Text>
-
       <View className="gap-2">
         <PickerRow
           label={t("region")}
