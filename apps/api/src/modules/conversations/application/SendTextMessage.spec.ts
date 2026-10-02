@@ -176,6 +176,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     return [];
   }
 
+  async findBlockedUserIds(): Promise<string[]> {
+    return [];
+  }
+
   async isUserBlockedBy(blockerId: string, blockedId: string): Promise<boolean> {
     return this.blockedPairs.has(`${blockerId}:${blockedId}`);
   }

@@ -327,4 +327,64 @@ describe("Conversation message broadcast e2e", () => {
     expect(sender.received).toHaveLength(1);
     expect(messageSentEvents).toHaveLength(1);
   });
+
+  describe("other participant and block state in summaries", () => {
+    it("lists the seller as the buyer's peer with the viewer's block state, and no contact data", async () => {
+      const { buyerToken, sellerToken } = await seedConversation();
+      await prisma.user.update({
+        where: { id: suite.id("seller-1") },
+        data: { displayName: "Seller One" },
+      });
+
+      const unblocked = await request
+        .get("/api/v1/conversations")
+        .set("Authorization", `Bearer ${buyerToken}`)
+        .expect(200);
+      expect(unblocked.body.items[0].peer).toEqual({
+        id: suite.id("seller-1"),
+        displayName: "Seller One",
+      });
+      expect(unblocked.body.items[0].blockedByMe).toBe(false);
+      expect(JSON.stringify(unblocked.body)).not.toContain(suite.phone("seller-1"));
+
+      await prisma.blockedUser.create({
+        data: { blockerId: suite.id("buyer-1"), blockedId: suite.id("seller-1") },
+      });
+      const blocked = await request
+        .get("/api/v1/conversations")
+        .set("Authorization", `Bearer ${buyerToken}`)
+        .expect(200);
+      expect(blocked.body.items[0].blockedByMe).toBe(true);
+
+      // The seller never learns that the buyer blocked them.
+      const sellerView = await request
+        .get("/api/v1/conversations")
+        .set("Authorization", `Bearer ${sellerToken}`)
+        .expect(200);
+      expect(sellerView.body.items[0].peer).toEqual({
+        id: suite.id("buyer-1"),
+        displayName: null,
+      });
+      expect(sellerView.body.items[0].blockedByMe).toBe(false);
+    });
+
+    it("returns the peer and block state when a Conversation is opened again", async () => {
+      const { buyerToken, listingId } = await seedConversation();
+      await prisma.blockedUser.create({
+        data: { blockerId: suite.id("buyer-1"), blockedId: suite.id("seller-1") },
+      });
+
+      const res = await request
+        .post("/api/v1/conversations")
+        .set("Authorization", `Bearer ${buyerToken}`)
+        .send({ listingId })
+        .expect(201);
+
+      expect(res.body.peer).toEqual({
+        id: suite.id("seller-1"),
+        displayName: null,
+      });
+      expect(res.body.blockedByMe).toBe(true);
+    });
+  });
 });

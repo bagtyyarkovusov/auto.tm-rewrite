@@ -31,6 +31,10 @@ class FakeIdentityRead implements IdentityReadPort {
     return [];
   }
 
+  async findBlockedUserIds(): Promise<string[]> {
+    return [];
+  }
+
   async isUserBlockedBy(
     blockerId: string,
     blockedId: string,

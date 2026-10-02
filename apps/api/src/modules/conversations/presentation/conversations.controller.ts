@@ -90,6 +90,7 @@ export class ConversationsController {
       result.conversation,
       result.listing,
       userId,
+      { peer: result.peer, blockedByMe: result.blockedByMe },
     );
   }
 
@@ -122,6 +123,7 @@ export class ConversationsController {
           item.conversation,
           item.listing,
           userId,
+          { peer: item.peer, blockedByMe: item.blockedByMe },
           item.lastMessage,
           item.unreadCount,
           availabilityMap,
@@ -354,6 +356,7 @@ export class ConversationsController {
     conversation: Pick<Conversation, "id" | "buyerId" | "sellerId" | "updatedAt">,
     listing: ListingSummary | null,
     userId: string,
+    peerView: { peer: { id: string; displayName: string | null }; blockedByMe: boolean },
     lastMessage?: Message | null,
     unreadCount?: number,
     availabilityMap?: Map<string, boolean>,
@@ -369,6 +372,11 @@ export class ConversationsController {
         userId === conversation.buyerId
           ? ("buyer" as const)
           : ("seller" as const),
+      peer: {
+        id: peerView.peer.id,
+        displayName: peerView.peer.displayName,
+      },
+      blockedByMe: peerView.blockedByMe,
       updatedAt: conversation.updatedAt.toISOString(),
       listing: listing
         ? {

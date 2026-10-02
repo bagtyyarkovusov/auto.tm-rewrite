@@ -10,6 +10,8 @@ Other modules import identity only through [`identity.public.ts`](identity.publi
 
 The exported `SELLER_PROFILE_READ_PORT` gives other contexts a seller's display name and join date from `User.createdAt`. It exposes no Sign-in Method values or verification state.
 
+The identity read port answers lists in one read per question: `findUsersByIds` for display names and `findBlockedUserIds` for which of a set of Users a blocker has blocked. Callers use them instead of one `findUserById` or `isUserBlockedBy` call per row. Neither returns Sign-in Method values.
+
 Suspension blocks marketplace mutations while preserving permitted reads and account deletion. Deletion has a grace period followed by worker purge; inspect both sides and database history-retention rules before changing the lifecycle.
 
 ## Start here
