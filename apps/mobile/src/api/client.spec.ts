@@ -211,6 +211,99 @@ describe("apiClient", () => {
       expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
     });
 
+    it("keeps the session and sends the old bearer when the refresh answers 5xx", async () => {
+      mockedLoadAuthSession.mockResolvedValue(expired());
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "INTERNAL_ERROR" }, 503))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await expect(apiClient.get("/listings?limit=20")).resolves.toEqual({ items: [] });
+
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("/auth/refresh");
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
+    });
+
+    it("keeps the session and sends the old bearer when the refresh answers a non-401 4xx", async () => {
+      // Characterization: the guard already clears only on 401 (ADR-0077).
+      mockedLoadAuthSession.mockResolvedValue(expired());
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "RATE_LIMITED" }, 429))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await expect(apiClient.get("/listings?limit=20")).resolves.toEqual({ items: [] });
+
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
+    });
+
+    it("keeps the session when a 2xx refresh answer is not JSON", async () => {
+      mockedLoadAuthSession.mockResolvedValue(expired());
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(new Response("<html>bad gateway</html>", { status: 200 }))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await expect(apiClient.get("/listings?limit=20")).resolves.toEqual({ items: [] });
+
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      expect(mockedStoreAuthSession).not.toHaveBeenCalled();
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe(`Bearer ${jwt()}`);
+    });
+
+    it("clears the session when a 2xx JSON refresh answer fails the contract", async () => {
+      mockedLoadAuthSession
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValue(null);
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ unexpected: true }))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await expect(apiClient.get("/listings?limit=20")).resolves.toEqual({ items: [] });
+
+      expect(mockedClearAuthSession).toHaveBeenCalled();
+      const headers = (fetchSpy.mock.calls[1]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBeUndefined();
+    });
+
+    it("retries the refresh on the next request after a 5xx", async () => {
+      mockedLoadAuthSession
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValue({ accessToken: "fresh-token", refreshToken: "r2", user, storedAt: new Date().toISOString() });
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "INTERNAL_ERROR" }, 500))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }))
+        .mockResolvedValueOnce(jsonResponse({ accessToken: "fresh-token", refreshToken: "r2" }))
+        .mockResolvedValueOnce(jsonResponse({ items: [] }));
+
+      await apiClient.get("/listings?limit=20");
+      await apiClient.get("/listings?limit=20");
+
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      expect(String(fetchSpy.mock.calls[2]?.[0])).toContain("/auth/refresh");
+      expect(mockedStoreAuthSession).toHaveBeenCalledWith(
+        expect.objectContaining({ accessToken: "fresh-token", refreshToken: "r2" }),
+      );
+      const headers = (fetchSpy.mock.calls[3]?.[1] as RequestInit).headers as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer fresh-token");
+    });
+
     it("shares one refresh between concurrent requests with an expired token", async () => {
       let refreshed = false;
       mockedLoadAuthSession.mockImplementation(async () =>
@@ -366,6 +459,78 @@ describe("apiClient", () => {
         status: 401,
       });
       expect(mockedClearAuthSession).toHaveBeenCalled();
+    });
+  });
+
+  describe("refresh failure on the 401 path", () => {
+    const session = () => ({
+      accessToken: "old-token",
+      refreshToken: "refresh-123",
+      user: {
+        id: "u1",
+        phone: "+99361000000",
+        email: null,
+        displayName: null,
+        role: "buyer" as const,
+      },
+      storedAt: new Date().toISOString(),
+    });
+
+    it("keeps the session and does not report UNAUTHENTICATED when the refresh answers 5xx", async () => {
+      mockedLoadAuthSession.mockResolvedValue(session());
+
+      vi.spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "UNAUTHENTICATED" }, 401))
+        .mockResolvedValueOnce(jsonResponse({ code: "INTERNAL_ERROR" }, 503));
+
+      const error = await apiClient.get("/test").catch((e: ApiError) => e);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ code: "REFRESH_UNAVAILABLE", status: 503 });
+      expect((error as ApiError).code).not.toBe("UNAUTHENTICATED");
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+    });
+
+    it.each([400, 403, 404, 429])(
+      "reports a fixed 503 and keeps the session when the refresh answers %i",
+      async (refreshStatus) => {
+        mockedLoadAuthSession.mockResolvedValue(session());
+
+        vi.spyOn(globalThis, "fetch")
+          .mockResolvedValueOnce(jsonResponse({ code: "UNAUTHENTICATED" }, 401))
+          .mockResolvedValueOnce(jsonResponse({ code: "NOT_FOUND" }, refreshStatus));
+
+        const error = await apiClient.get("/test").catch((e: ApiError) => e);
+
+        expect(error).toMatchObject({ code: "REFRESH_UNAVAILABLE", status: 503 });
+        expect(mockedClearAuthSession).not.toHaveBeenCalled();
+      },
+    );
+
+    it("keeps the session when the refresh fails on the network", async () => {
+      mockedLoadAuthSession.mockResolvedValue(session());
+
+      vi.spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "UNAUTHENTICATED" }, 401))
+        .mockRejectedValueOnce(new TypeError("Network request failed"));
+
+      await expect(apiClient.get("/test")).rejects.toThrow("Network request failed");
+
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
+    });
+
+    it("keeps the session when a 2xx refresh answer is not JSON", async () => {
+      mockedLoadAuthSession.mockResolvedValue(session());
+
+      vi.spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(jsonResponse({ code: "UNAUTHENTICATED" }, 401))
+        .mockResolvedValueOnce(new Response("<html>bad gateway</html>", { status: 200 }));
+
+      const error = await apiClient.get("/test").catch((e: ApiError) => e);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ code: "REFRESH_UNAVAILABLE", status: 503 });
+      expect(mockedClearAuthSession).not.toHaveBeenCalled();
     });
   });
 
