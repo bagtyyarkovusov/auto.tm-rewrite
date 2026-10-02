@@ -51,6 +51,12 @@ function build(
     suspended?: string[];
     /** "<blocker>><blocked>" pairs. */
     blocks?: string[];
+    /**
+     * The viewer's block of the peer flips after every read of it, as a
+     * concurrent block or unblock would between two reads. The value is the
+     * state the first read sees.
+     */
+    racingViewerBlock?: boolean;
     users?: Array<{ id: string; displayName: string | null }>;
   } = {},
 ) {
@@ -98,9 +104,19 @@ function build(
     ),
   } as unknown as IdentityCheckPort;
   const blocks = overrides.blocks ?? [];
+  let racingBlock = overrides.racingViewerBlock;
+  const readViewerBlock = (): boolean => {
+    const seen = racingBlock === true;
+    racingBlock = !seen;
+    return seen;
+  };
   const identityRead = {
     isUserBlockedBy: vi.fn(async (blockerId: string, blockedId: string) =>
-      blocks.includes(`${blockerId}>${blockedId}`),
+      racingBlock !== undefined &&
+      blockerId === "buyer-1" &&
+      blockedId === "seller-1"
+        ? readViewerBlock()
+        : blocks.includes(`${blockerId}>${blockedId}`),
     ),
     findUsersByIds: vi
       .fn()
@@ -108,7 +124,11 @@ function build(
         overrides.users ?? [{ id: "seller-1", displayName: "Seller One" }],
       ),
     findBlockedUserIds: vi.fn(async (blockerId: string, ids: string[]) =>
-      ids.filter((id) => blocks.includes(`${blockerId}>${id}`)),
+      racingBlock !== undefined && blockerId === "buyer-1"
+        ? readViewerBlock()
+          ? ids
+          : []
+        : ids.filter((id) => blocks.includes(`${blockerId}>${id}`)),
     ),
   } as unknown as IdentityReadPort;
   const accessPolicy = new ConversationAccessPolicy(identityCheck, identityRead);
@@ -268,4 +288,20 @@ describe("GetConversation", () => {
     expect(result.blockedByMe).toBe(true);
     expect(result.sendRestriction).toBe("blocked_by_me");
   });
+
+  it.each([true, false])(
+    "keeps blockedByMe and sendRestriction in agreement when the block changes mid-read (first read sees blocked: %s)",
+    async (racingViewerBlock) => {
+      const { useCase } = build({ racingViewerBlock });
+
+      const result = await useCase.execute({
+        userId: "buyer-1",
+        conversationId: "conv-1",
+      });
+
+      expect(result.blockedByMe).toBe(
+        result.sendRestriction === "blocked_by_me",
+      );
+    },
+  );
 });
