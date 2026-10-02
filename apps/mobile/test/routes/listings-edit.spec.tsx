@@ -11,10 +11,11 @@ const fixture = vi.hoisted(() => {
   return {
     id, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
     retry: vi.fn().mockResolvedValue(true),
+    deleteDraftDir: vi.fn().mockResolvedValue(undefined),
     saveState: { status: "idle", error: null, opStates: {} } as {
       status: string; error: Error | null; opStates: Record<string, string>;
     },
-    listing: { id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
+    baseline: { id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
       year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
       displayPriceTmt: 100000, description: "Legacy listing", regionId: id, cityId: id,
       allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
@@ -22,13 +23,16 @@ const fixture = vi.hoisted(() => {
       createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
       seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
     },
+    listing: {} as Record<string, unknown>,
     photos: [{ photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 }],
   };
 });
+fixture.listing = { ...fixture.baseline };
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
   photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
 }) }));
+vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
   useSaveListingEdit: () => ({
     save: fixture.save, retry: fixture.retry, isPending: false, ...fixture.saveState,
@@ -66,8 +70,10 @@ beforeEach(() => {
   fixture.save.mockReset().mockResolvedValue(true);
   fixture.retry.mockReset().mockResolvedValue(true);
   fixture.show.mockClear();
+  fixture.deleteDraftDir.mockClear();
   routerMock.replace.mockClear();
   fixture.saveState = { status: "idle", error: null, opStates: {} };
+  fixture.listing = { ...fixture.baseline };
 });
 
 describe("legacy Listing edit", () => {
@@ -92,6 +98,20 @@ describe("legacy Listing edit", () => {
     await act(async () => fireEvent.press(save));
     expect(fixture.save).toHaveBeenCalledOnce();
     expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
+    // Saved photos are on the server; their staging files must not resurface on the next edit.
+    expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
+  });
+
+  it("clears this Listing's staged photos when the seller discards the edit", () => {
+    const screen = renderMobile(<EditListingScreen />);
+    fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }));
+    fireEvent.press(screen.getByRole("button", { name: "Discard" }));
+    expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
+    // The confirmation dialog's action, rendered after the header button's label.
+    const [confirm] = screen.getAllByText("Discard").slice(-1);
+    if (!confirm) throw new Error("No discard confirmation");
+    fireEvent.press(confirm);
+    expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
   });
 
   describe("after a partial save failure", () => {
@@ -158,6 +178,51 @@ describe("legacy Listing edit", () => {
       expect(fixture.show).not.toHaveBeenCalled();
       expect(routerMock.replace).not.toHaveBeenCalled();
       expect(screen.getByText("✗ reorder")).toBeTruthy();
+      // The failed save stays retryable in this session, so its staged photos stay too.
+      expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("during a background refetch", () => {
+    const damagedYes = { name: "Damaged / needs repair: Yes" } as const;
+
+    function refetch(changes: Record<string, unknown> = { favoriteCount: 1 }) {
+      fixture.listing = { ...fixture.listing, ...changes };
+    }
+
+    it("retains an unsaved Damaged choice when refetch returns a new Listing object", () => {
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", damagedYes));
+      expect(screen.getByRole("radio", { ...damagedYes, checked: true })).toBeTruthy();
+      refetch();
+      screen.rerender(<EditListingScreen />);
+      expect(screen.getByRole("radio", { ...damagedYes, checked: true })).toBeTruthy();
+    });
+
+    it("stays on the step the seller reached", () => {
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", damagedYes));
+      fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+      refetch({ favoriteCount: 2, updatedAt: "2026-10-02T12:00:00.000Z" });
+      screen.rerender(<EditListingScreen />);
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+      expect(screen.getByText("Damaged / needs repair: Yes")).toBeTruthy();
+    });
+
+    it("starts a different Listing from its own server baseline", () => {
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", damagedYes));
+      const otherId = "550e8400-e29b-41d4-a716-4466554400ff";
+      routeParams.id = otherId;
+      fixture.listing = {
+        ...fixture.baseline,
+        id: otherId,
+        conditionDisclosure: { damaged: false },
+      };
+      screen.rerender(<EditListingScreen />);
+      expect(screen.getByText("Damaged / needs repair: No")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
     });
   });
 });

@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getInfoAsync, readDirectoryAsync, uploadAsync } from "expo-file-system/legacy";
 
 import { compressPhoto } from "./compressor";
-import { ensureDraftDir, getStagingPath, listLocalPhotoIds } from "./stagingDir";
+import { deleteDraftDir, ensureDraftDir, getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import { useUploadQueue } from "./useUploadQueue";
 
 vi.mock("expo-file-system/legacy", () => ({
@@ -61,6 +61,7 @@ vi.mock("./stagingDir", () => ({
   getDraftDir: vi.fn((stagingKey: string) => `file:///doc/listing-staging/${stagingKey}/`),
   getStagingPath: vi.fn((stagingKey: string, photoId: string) => `file:///doc/listing-staging/${stagingKey}/${photoId}.jpg`),
   listLocalPhotoIds: vi.fn(() => Promise.resolve([])),
+  deleteDraftDir: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("./appStateResume", () => ({
@@ -74,6 +75,7 @@ const mockCompressPhoto = vi.mocked(compressPhoto);
 const mockEnsureDraftDir = vi.mocked(ensureDraftDir);
 const mockGetStagingPath = vi.mocked(getStagingPath);
 const mockListLocalPhotoIds = vi.mocked(listLocalPhotoIds);
+const mockDeleteDraftDir = vi.mocked(deleteDraftDir);
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({
@@ -366,5 +368,41 @@ describe("useUploadQueue — parallel batch compression", () => {
 
     await waitFor(() => expect(result.current.photos).toHaveLength(1));
     expect(result.current.photos[0]?.state).toBe("uploaded");
+  });
+
+  describe("local photos from an earlier session", () => {
+    const payload = { photos: [{ photoId: "server-1", key: "listings/l1/server-1/original.jpg", sortOrder: 0 }] };
+
+    it("restores them by default", async () => {
+      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
+      const { result } = renderHook(() => useUploadQueue("draft-9", payload), { wrapper });
+      await waitFor(() => expect(result.current.photos).toHaveLength(2));
+      expect(mockDeleteDraftDir).not.toHaveBeenCalled();
+    });
+
+    it("deletes them instead when told not to restore", async () => {
+      const { result } = renderHook(
+        () => useUploadQueue("edit-l1", payload, { restoreLocalPhotos: false }),
+        { wrapper },
+      );
+      await waitFor(() => expect(mockDeleteDraftDir).toHaveBeenCalledWith("edit-l1"));
+      await waitFor(() => expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]));
+      expect(mockListLocalPhotoIds).not.toHaveBeenCalled();
+    });
+
+    it("still seeds from the payload when the cleanup fails", async () => {
+      mockDeleteDraftDir.mockRejectedValueOnce(new Error("disk unavailable"));
+      const { result } = renderHook(
+        () => useUploadQueue("edit-l1", payload, { restoreLocalPhotos: false }),
+        { wrapper },
+      );
+      await waitFor(() => expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]));
+    });
+
+    it("never deletes staging before the session has a key", async () => {
+      renderHook(() => useUploadQueue("", {}, { restoreLocalPhotos: false }), { wrapper });
+      await act(async () => undefined);
+      expect(mockDeleteDraftDir).not.toHaveBeenCalled();
+    });
   });
 });

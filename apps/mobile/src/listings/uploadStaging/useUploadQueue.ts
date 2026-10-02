@@ -23,6 +23,7 @@ import {
   transitionUploadQueueToWaitingForNetwork,
 } from "./queueState";
 import {
+  deleteDraftDir,
   ensureDraftDir,
   getStagingPath,
   listLocalPhotoIds,
@@ -72,9 +73,20 @@ async function uploadFileToPresignedUrl(
   }
 }
 
+export interface UploadQueueOptions {
+  /**
+   * Restore local photos left in this staging directory by an earlier session
+   * (default). An edit session passes false: nothing outside the session can
+   * finish uploading or attaching those files, so they are deleted instead of
+   * coming back as photos that never upload.
+   */
+  restoreLocalPhotos?: boolean;
+}
+
 export function useUploadQueue(
   stagingKey: string,
   initialPayload: ListingsSchemas.ListingDraftPayload,
+  { restoreLocalPhotos = true }: UploadQueueOptions = {},
 ) {
   const { t } = useTranslation("common");
   const [queue, setQueue] = useState<UploadQueue>({ stagingKey, photos: [] });
@@ -100,7 +112,13 @@ export function useUploadQueue(
   useEffect(() => {
     if (initializedStagingKey.current === stagingKey) return;
     async function init() {
-      const localPhotoIds = await listLocalPhotoIds(stagingKey);
+      let localPhotoIds: string[] = [];
+      if (restoreLocalPhotos) {
+        localPhotoIds = await listLocalPhotoIds(stagingKey);
+      } else if (stagingKey) {
+        // Best effort: a failed cleanup must not keep the session from seeding.
+        await deleteDraftDir(stagingKey).catch(() => undefined);
+      }
       if (activeStagingKey.current !== stagingKey) return;
       const reconstructed = reconstructQueueFromDraft(
         stagingKey,
@@ -124,7 +142,7 @@ export function useUploadQueue(
       initializedStagingKey.current = stagingKey;
     }
     void init();
-  }, [stagingKey, initialPayload]);
+  }, [stagingKey, initialPayload, restoreLocalPhotos]);
 
   const processUploadQueue = useCallback(() => {
     while (
