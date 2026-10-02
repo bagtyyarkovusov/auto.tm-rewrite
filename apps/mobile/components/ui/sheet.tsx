@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@rn-primitives/dialog';
 import * as React from 'react';
-import { Platform, View, type ViewProps } from 'react-native';
+import { Platform, Pressable, View, type ViewProps } from 'react-native';
 import { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
 
@@ -38,6 +38,17 @@ function SheetOverlay({
         asChild={Platform.OS !== 'web'}>
         <NativeOnlyAnimatedView>
           <NativeOnlyAnimatedView className="w-full flex-1 justify-end">
+            {/* The overlay is `asChild`, so its press lands on an Animated.View that ignores it.
+                This backdrop sits behind the content and closes the sheet on a tap outside. */}
+            {Platform.OS === 'web' ? null : (
+              <DialogPrimitive.Close asChild>
+                <Pressable
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
+                  className="absolute bottom-0 left-0 right-0 top-0"
+                />
+              </DialogPrimitive.Close>
+            )}
             <>{children}</>
           </NativeOnlyAnimatedView>
         </NativeOnlyAnimatedView>
