@@ -255,7 +255,7 @@ describe("MessageList Message actions", () => {
 
   it.each([
     ["deleted", { deletedAt: at(2, 9, 5) }, "Message deleted, 09:00 AM"],
-    ["pending", { status: "pending" as const }, "peer-1, 09:00 AM, Sending…"],
+    ["pending", { status: "pending" as const }, "peer-1, 09:00 AM, Sending..."],
     ["failed", { status: "failed" as const }, "peer-1, 09:00 AM, Failed to send"],
   ])("opens no sheet for a %s Message", (_name, updates, label) => {
     const { screen } = renderList([message("peer-1", at(2, 9), { canDelete: true, ...updates })]);
