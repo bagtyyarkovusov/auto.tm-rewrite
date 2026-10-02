@@ -65,6 +65,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
   let request: ReturnType<typeof supertest>;
   let prisma: PrismaService;
   let tokens: Record<SuiteUser, string>;
+  let generationHook: ((key: string) => Promise<void>) | undefined;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -88,14 +89,15 @@ describe("Listing media upload ownership e2e (#536)", () => {
       .useValue(store)
       .overrideProvider(IMAGE_VARIANT_GENERATOR)
       .useValue({
-        generate: async (originalKey: string) => ({
-          variants: {
+        generate: async (originalKey: string) => {
+          await generationHook?.(originalKey);
+          return { variants: {
             thumbnail: `${originalKey}/thumbnail.jpg`,
             list: `${originalKey}/list.jpg`,
             detail: `${originalKey}/detail.jpg`,
             fullscreen: `${originalKey}/fullscreen.jpg`,
-          },
-        }),
+          } };
+        },
       })
       .overrideProvider(LISTING_EVENT_PUBLISHER)
       .useValue({ emit: async () => {} })
@@ -117,6 +119,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
   });
 
   beforeEach(async () => {
+    generationHook = undefined;
     store.objects.clear();
     store.deleted = [];
     await cleanSuiteFixtures(prisma, suite, { userAliases: SUITE_USERS });
@@ -339,6 +342,80 @@ describe("Listing media upload ownership e2e (#536)", () => {
       expect(await prisma.listingMedia.count({ where: { key: victimKey } })).toBe(1);
     },
   );
+
+  it("cannot clean a legacy chat sibling owned outside listing_media", async () => {
+    const listing = await createListing("user-a", "listing-a");
+    const directory = `chat-attachments/${suite.id("conversation")}/${suite.id("chat-upload")}/`;
+    const victimKey = `${directory}original.jpg`;
+    const attackerKey = `${directory}original.mp4`;
+    // The victim's chat object has no ListingMedia row. Only the legacy forged
+    // video key is backfilled, just as the applied migration would do.
+    store.put(victimKey);
+    const upload = await prisma.mediaUpload.create({ data: {
+      userId: suite.id("user-a"), key: attackerKey, kind: "video",
+      contentType: "video/mp4", sizeBytes: null,
+    } });
+    const attacker = await prisma.listingMedia.create({ data: {
+      listingId: listing.id, kind: "video", key: attackerKey, sortOrder: 0, uploadId: upload.id,
+    } });
+
+    await removeMedia("user-a", listing.id, attacker.id).expect(200);
+
+    expect(store.deleted).toEqual([]);
+    expect(store.objects.has(victimKey)).toBe(true);
+    expect(await prisma.listingMedia.findUnique({ where: { id: attacker.id } })).toBeNull();
+  });
+
+  it("returns 409 and rolls publication back when attachment adopts its authorized upload first", async () => {
+    const listing = await createListing("user-a", "listing-a");
+    const key = await presignAndPut("user-a");
+    const draft = await prisma.listingDraft.create({ data: {
+      userId: suite.id("user-a"), payload: {
+        brandId: suite.catalog.brandId, modelId: suite.catalog.modelId,
+        cityId: suite.catalog.cityId, regionId: suite.catalog.regionId,
+        priceAmount: 100000, priceCurrency: "TMT", year: 2020,
+        condition: "used", mileageKm: 50000, description: "Race evidence car",
+        allowCalls: true, allowChat: true, conditionDisclosure: { damaged: false },
+        photos: [{ photoId: suite.id("race-photo"), key, sortOrder: 0 }],
+      },
+    } });
+    let reached!: () => void;
+    let release!: () => void;
+    const authorized = new Promise<void>((resolve) => { reached = resolve; });
+    const resume = new Promise<void>((resolve) => { release = resolve; });
+    generationHook = async (originalKey) => {
+      if (originalKey !== key) return;
+      generationHook = undefined;
+      reached();
+      await resume;
+    };
+    const publishing = request.post(`/api/v1/listings/drafts/${draft.id}/publish`)
+      .set("Authorization", `Bearer ${tokens["user-a"]}`).send({}).then((response) => response);
+    try {
+      await authorized;
+      const winner = await attach("user-a", listing.id, key).expect(201);
+      // Also record the real PrismaPg shape, without a fabricated meta.target.
+      const constraintError = await prisma.listingMedia.create({ data: {
+        listingId: listing.id, kind: "image", key, sortOrder: 1,
+        uploadId: (await prisma.listingMedia.findUniqueOrThrow({ where: { id: winner.body.id } })).uploadId,
+      } }).catch((err: unknown) => err);
+      expect(constraintError).toMatchObject({ code: "P2002", meta: {
+        driverAdapterError: { cause: { kind: "UniqueConstraintViolation",
+          constraint: { fields: ['"uploadId"'] } } },
+      } });
+      release();
+      const rejected = await publishing;
+      expect(rejected.status).toBe(409);
+      expect(rejected.body.code).toBe("UPLOAD_ALREADY_ATTACHED");
+      expect(await prisma.listing.count({ where: { sellerId: suite.id("user-a") } })).toBe(1);
+      expect(await prisma.listingMedia.count({ where: { key } })).toBe(1);
+      expect(await prisma.listingDraft.findUnique({ where: { id: draft.id } })).not.toBeNull();
+    } finally {
+      release();
+      generationHook = undefined;
+      await publishing;
+    }
+  });
 
   describe("retry and races", () => {
     it("returns the same media when the attach is retried", async () => {

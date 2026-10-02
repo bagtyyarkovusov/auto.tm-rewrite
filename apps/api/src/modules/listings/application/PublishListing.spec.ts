@@ -572,7 +572,7 @@ describe("PublishListing", () => {
             uploadId: "upload-photo1.jpg",
           }),
         );
-        return Object.assign(new Error("Unique constraint failed"), { code: "P2002", meta: { target: ["uploadId"] } });
+        return Object.assign(new Error("Unique constraint failed"), { code: "P2002", meta: { driverAdapterError: { cause: { kind: "UniqueConstraintViolation", constraint: { fields: ['"uploadId"'] } } } } });
       };
 
       const err = await publishError();
@@ -587,7 +587,7 @@ describe("PublishListing", () => {
     it("rethrows another constraint failure even if a photo was concurrently adopted", async () => {
       seedDraft(draftRepo, photoDraft("photo1.jpg"));
       const failure = Object.assign(new Error("Unique constraint failed"), {
-        code: "P2002", meta: { target: ["publicNumber"] },
+        code: "P2002", meta: { driverAdapterError: { cause: { kind: "UniqueConstraintViolation", constraint: { fields: ['"publicNumber"'] } } } },
       });
       prisma.failTransaction = () => {
         world.media.push(ListingMedia.create({

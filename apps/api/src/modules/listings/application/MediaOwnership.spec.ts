@@ -334,6 +334,33 @@ describe("Listing media upload ownership (#536)", () => {
       expect(world.media.map((m) => m.id)).toContain(victimMediaId);
     });
 
+    it.each([
+      "chat-attachments/conversation/00000000-0000-4000-8000-000000000001/original.mp4",
+      "pending/original.mp4",
+      "pending/not-a-uuid/original.mp4",
+    ])("cannot clean another namespace or broad legacy key: %s", async (key) => {
+      world.seedAdoptedMedia({ userId: USER_A, listingId: LISTING_A,
+        mediaId: "legacy-outside-listings", key, kind: "video" });
+      const victimOriginal = key.replace(/original\.mp4$/, "original.jpg");
+      world.putObject(victimOriginal, { contentType: "image/jpeg", sizeBytes: 1024 });
+
+      await remove.execute({ listingId: LISTING_A, userId: USER_A, mediaId: "legacy-outside-listings" });
+
+      expect(world.deletedKeys).toEqual([]);
+      expect(world.objects.has(victimOriginal)).toBe(true);
+    });
+
+    it("cannot release a mismatched upload id and key", async () => {
+      const own = await uploadAndAttach(USER_A, LISTING_A);
+      world.uploads[0]!.key = "pending/00000000-0000-4000-8000-000000000001/original.jpg";
+
+      await remove.execute({ listingId: LISTING_A, userId: USER_A, mediaId: own.media.id });
+
+      expect(world.uploads).toHaveLength(1);
+      expect(world.deletedKeys).toEqual([]);
+      expect(world.objects.has(own.key)).toBe(true);
+    });
+
     it("keeps shared objects when the owning row is removed while a legacy duplicate still references them", async () => {
       world.media.push(
         ListingMedia.create({
