@@ -48,9 +48,14 @@ class FakeUserRepository implements UserRepository {
 
 class FakeListingsPort implements AccountDeletionListingsPort {
   republishedSellerId: string | null = null;
+  republishFailures = 0;
 
   async archiveActiveListingsBySeller(_sellerId: string): Promise<void> {}
   async republishArchivedByDeletionListingsBySeller(sellerId: string): Promise<void> {
+    if (this.republishFailures > 0) {
+      this.republishFailures -= 1;
+      throw new Error("listings unavailable");
+    }
     this.republishedSellerId = sellerId;
   }
 }
@@ -95,11 +100,40 @@ describe("RecoverAccount", () => {
     expect(listingsPort.republishedSellerId).toBe("user-1");
   });
 
-  it("does not throw when the user does not exist", async () => {
+  it("keeps the schedule when republishing fails, so a retry restores the Listings", async () => {
+    const user = makeUser();
+    userRepo.users.set(user.id, user);
+    listingsPort.republishFailures = 1;
     const uc = makeUseCase(userRepo, listingsPort);
 
-    await expect(
-      uc.execute({ userId: "nonexistent" }),
-    ).resolves.toBeUndefined();
+    await expect(uc.execute({ userId: "user-1" })).rejects.toThrow(
+      "listings unavailable",
+    );
+    expect(userRepo.users.get("user-1")?.deletionScheduledAt).not.toBeNull();
+
+    await uc.execute({ userId: "user-1" });
+
+    expect(listingsPort.republishedSellerId).toBe("user-1");
+    expect(userRepo.users.get("user-1")?.deletionScheduledAt).toBeNull();
+  });
+
+  it("changes nothing for a User with no scheduled deletion", async () => {
+    const user = makeUser({ deletionScheduledAt: null });
+    userRepo.users.set(user.id, user);
+
+    const uc = makeUseCase(userRepo, listingsPort);
+    await expect(uc.execute({ userId: "user-1" })).resolves.toBeUndefined();
+
+    expect(userRepo.clearedForUserId).toBeNull();
+    expect(listingsPort.republishedSellerId).toBeNull();
+  });
+
+  it("refuses an unknown User", async () => {
+    const uc = makeUseCase(userRepo, listingsPort);
+
+    await expect(uc.execute({ userId: "nonexistent" })).rejects.toThrow(
+      "User not found",
+    );
+    expect(listingsPort.republishedSellerId).toBeNull();
   });
 });
