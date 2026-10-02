@@ -191,6 +191,35 @@ describe("Sign-in code screen for a User whose deletion is scheduled", () => {
   });
 });
 
+describe("Leaving the prompt does not wait on the best-effort revoke", () => {
+  it.each([
+    ["Cancel", "Cancel"],
+    ["Sign in again", "Sign in again"],
+  ])("%s navigates back to sign-in while the revoke is still in flight", async (_name, label) => {
+    mocks.revoke.mockReturnValue(new Promise(() => {}));
+    if (label === "Sign in again") {
+      mocks.restore.mockRejectedValueOnce(
+        new ApiError("UNAUTHORIZED", 401, "Unauthorized"),
+      );
+    }
+    const screen = await signInWith(pendingSession);
+    if (label === "Sign in again") {
+      await act(async () => {
+        fireEvent.press(screen.getByRole("button", { name: "Restore" }));
+      });
+    }
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: label }));
+    });
+
+    expect(mocks.navigation.changeMethod).toHaveBeenCalledTimes(1);
+    expect(mocks.revoke).toHaveBeenCalledWith("pending-refresh");
+    expect(mocks.storeAuthSession).not.toHaveBeenCalled();
+    expect(screen.queryByText("Account restoration")).toBeNull();
+  });
+});
+
 describe("Sign-in code screen for a User with no scheduled deletion", () => {
   it("stores the session and finishes sign-in without a prompt", async () => {
     const session = {

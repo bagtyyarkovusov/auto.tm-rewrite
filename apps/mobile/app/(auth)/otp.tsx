@@ -14,6 +14,7 @@ import { useVerifyOtp } from "../../src/api/identity/useVerifyOtp";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { normalizeEmail } from "../../src/auth/email";
+import { formatDeletionDate } from "../../src/auth/formatDeletionDate";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
 import { useOtpAuthNavigation } from "../../src/auth/useOtpAuthNavigation";
@@ -72,11 +73,10 @@ export default function OtpScreen() {
   const restoreDate = useMemo(
     () =>
       pendingSession?.user.deletionScheduledAt
-        ? new Intl.DateTimeFormat(i18n.language ?? "ru", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }).format(new Date(pendingSession.user.deletionScheduledAt))
+        ? formatDeletionDate(
+            pendingSession.user.deletionScheduledAt,
+            i18n.language ?? "ru",
+          )
         : "",
     [pendingSession, i18n.language],
   );
@@ -163,18 +163,20 @@ export default function OtpScreen() {
     authNavigation.complete();
   }
 
-  async function handleRestoreCancel() {
+  function handleRestoreCancel() {
     if (!pendingSession || isRestoring) return;
 
-    await leavePendingSession(pendingSession.refreshToken);
+    leavePendingSession(pendingSession.refreshToken);
   }
 
-  async function leavePendingSession(refreshToken: string) {
+  function leavePendingSession(refreshToken: string) {
     setPendingSession(null);
     setRestoreFailed(false);
     setSessionExpired(false);
-    await revokePendingSessionMutate(refreshToken);
+    // Leave first. The revoke is best effort (the session was never stored and
+    // cannot change marketplace data), so nothing waits on the network.
     changeSignInMethod();
+    void revokePendingSessionMutate(refreshToken);
   }
 
   return (
@@ -235,7 +237,7 @@ export default function OtpScreen() {
           ) : null}
           <AlertDialogFooter>
             {sessionExpired ? (
-              <Button onPress={() => void handleRestoreCancel()}>
+              <Button onPress={handleRestoreCancel}>
                 <Text>{tAccount("restoreAccountSignInAgain")}</Text>
               </Button>
             ) : (
@@ -243,7 +245,7 @@ export default function OtpScreen() {
                 <Button
                   variant="outline"
                   disabled={isRestoring}
-                  onPress={() => void handleRestoreCancel()}
+                  onPress={handleRestoreCancel}
                 >
                   <Text>{tAccount("restoreAccountCancel")}</Text>
                 </Button>
