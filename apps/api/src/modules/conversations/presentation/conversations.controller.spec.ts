@@ -1,9 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  RequestMethod,
+} from "@nestjs/common";
+import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 
 import { ConversationsController } from "./conversations.controller";
 import type { OpenConversation } from "../application/OpenConversation";
 import type { ListMyConversations } from "../application/ListMyConversations";
+import type { GetConversation } from "../application/GetConversation";
 import type { ListMessages } from "../application/ListMessages";
 import type { SendTextMessage } from "../application/SendTextMessage";
 import type { SendMessage } from "../application/SendMessage";
@@ -19,6 +26,7 @@ import { Conversation } from "../domain/Conversation";
 function buildController(overrides: {
   openConversation?: OpenConversation;
   listMyConversations?: ListMyConversations;
+  getConversation?: GetConversation;
   listMessages?: ListMessages;
   sendTextMessage?: SendTextMessage;
   sendMessage?: SendMessage;
@@ -32,6 +40,7 @@ function buildController(overrides: {
   return new ConversationsController(
     overrides.openConversation ?? ({} as OpenConversation),
     overrides.listMyConversations ?? ({} as ListMyConversations),
+    overrides.getConversation ?? ({} as GetConversation),
     overrides.listMessages ?? ({} as ListMessages),
     overrides.sendTextMessage ?? ({} as SendTextMessage),
     overrides.sendMessage ?? ({} as SendMessage),
@@ -435,5 +444,142 @@ describe("ConversationsController open conversation", () => {
     expect(result.peer).toEqual({ id: "seller-1", displayName: null });
     expect(result.blockedByMe).toBe(true);
     expect(result.myRole).toBe("buyer");
+  });
+});
+
+describe("ConversationsController get conversation", () => {
+  const conversationId = "550e8400-e29b-41d4-a716-446655440001";
+  const conversation = Conversation.create({
+    id: conversationId,
+    listingId: "550e8400-e29b-41d4-a716-446655440007",
+    buyerId: "buyer-1",
+    sellerId: "seller-1",
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+  });
+  const lastMessage = Message.createText({
+    id: "msg-1",
+    conversationId,
+    senderId: "seller-1",
+    text: "Hello",
+  });
+  const parts = {
+    conversation,
+    listing: null,
+    lastMessage,
+    unreadCount: 2,
+    peerLastReadAt: new Date("2026-01-01T00:01:00Z"),
+    peerLastDeliveredAt: new Date("2026-01-01T00:02:00Z"),
+    mutedAt: new Date("2026-01-01T00:03:00Z"),
+    peer: { id: "seller-1", displayName: "Seller One" },
+    blockedByMe: true,
+  };
+
+  it("returns the same summary a list item has, plus sendRestriction", async () => {
+    const getConversation = {
+      execute: vi
+        .fn()
+        .mockResolvedValue({ ...parts, sendRestriction: "blocked_by_me" }),
+    } as unknown as GetConversation;
+    const listMyConversations = {
+      execute: vi
+        .fn()
+        .mockResolvedValue({ items: [parts], nextCursor: null }),
+    } as unknown as ListMyConversations;
+    const controller = buildController({ getConversation, listMyConversations });
+
+    const one = await controller.getConversation(
+      { id: conversationId },
+      authReq("buyer-1") as never,
+    );
+    const listed = await controller.listMyConversations(
+      {},
+      authReq("buyer-1") as never,
+    );
+
+    const { sendRestriction, ...summary } = one;
+    expect(sendRestriction).toBe("blocked_by_me");
+    expect(summary).toEqual(listed.items[0]);
+    expect(summary).toMatchObject({
+      myRole: "buyer",
+      peer: { id: "seller-1", displayName: "Seller One" },
+      blockedByMe: true,
+      unreadCount: 2,
+      mutedAt: "2026-01-01T00:03:00.000Z",
+      peerLastReadAt: "2026-01-01T00:01:00.000Z",
+      peerLastDeliveredAt: "2026-01-01T00:02:00.000Z",
+      listing: null,
+    });
+    expect(getConversation.execute).toHaveBeenCalledWith({
+      userId: "buyer-1",
+      conversationId,
+    });
+  });
+
+  it("states a null sendRestriction when a Message would be accepted", async () => {
+    const getConversation = {
+      execute: vi.fn().mockResolvedValue({
+        ...parts,
+        lastMessage: null,
+        blockedByMe: false,
+        sendRestriction: null,
+      }),
+    } as unknown as GetConversation;
+    const controller = buildController({ getConversation });
+
+    const result = await controller.getConversation(
+      { id: conversationId },
+      authReq("buyer-1") as never,
+    );
+
+    expect(result.sendRestriction).toBeNull();
+    expect(result.lastMessage).toBeUndefined();
+  });
+
+  it("answers a malformed ID with a validation error before reading", async () => {
+    const getConversation = { execute: vi.fn() } as unknown as GetConversation;
+    const controller = buildController({ getConversation });
+
+    await expect(
+      controller.getConversation({ id: "not-a-uuid" }, authReq("buyer-1") as never),
+    ).rejects.toThrow(BadRequestException);
+    expect(getConversation.execute).not.toHaveBeenCalled();
+  });
+
+  it("passes a missing Conversation and a non-participant through", async () => {
+    const getConversation = {
+      execute: vi
+        .fn()
+        .mockRejectedValueOnce(new NotFoundException("missing"))
+        .mockRejectedValueOnce(new ForbiddenException("nope")),
+    } as unknown as GetConversation;
+    const controller = buildController({ getConversation });
+
+    await expect(
+      controller.getConversation({ id: conversationId }, authReq("buyer-1") as never),
+    ).rejects.toThrow(NotFoundException);
+    await expect(
+      controller.getConversation({ id: conversationId }, authReq("buyer-1") as never),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("registers ping and the collection route before the :id route", () => {
+    const proto = ConversationsController.prototype as unknown as Record<
+      string,
+      unknown
+    >;
+    const gets = Object.getOwnPropertyNames(proto).flatMap((name) => {
+      const handler = proto[name];
+      if (typeof handler !== "function") return [];
+      if (Reflect.getMetadata(METHOD_METADATA, handler) !== RequestMethod.GET) {
+        return [];
+      }
+      return [Reflect.getMetadata(PATH_METADATA, handler) as string];
+    });
+
+    expect(gets).toContain("ping");
+    expect(gets).toContain(":id");
+    expect(gets.indexOf("ping")).toBeLessThan(gets.indexOf(":id"));
+    expect(gets.indexOf("/")).toBeLessThan(gets.indexOf(":id"));
+    expect(gets).toContain(":id/messages");
   });
 });

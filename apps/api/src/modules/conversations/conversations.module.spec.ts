@@ -9,6 +9,7 @@ import { ConversationsModule } from "./conversations.module";
 import { ConversationAccessPolicy } from "./application/ConversationAccessPolicy";
 import { ConversationMessageCommitter } from "./application/ConversationMessageCommitter";
 import { ConversationSendPolicy } from "./application/ConversationSendPolicy";
+import { GetConversation } from "./application/GetConversation";
 import { SendConversationMessage } from "./application/SendConversationMessage";
 import { SendRealtimeMessage } from "./application/SendRealtimeMessage";
 
@@ -33,5 +34,14 @@ describe("ConversationsModule", () => {
     expect(providers).toContain(ConversationSendPolicy);
     expect(providers).toContain(SendConversationMessage);
     expect(providers).toContain(SendRealtimeMessage);
+  });
+
+  it("registers the use-case that reads one Conversation", () => {
+    const providers = Reflect.getMetadata(
+      MODULE_METADATA.PROVIDERS,
+      ConversationsModule,
+    ) as unknown[];
+
+    expect(providers).toContain(GetConversation);
   });
 });

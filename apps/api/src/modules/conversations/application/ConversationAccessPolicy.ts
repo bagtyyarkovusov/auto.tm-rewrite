@@ -16,6 +16,15 @@ export interface AssertConversationParticipantAccessInput {
   otherParticipantSuspendedMessage?: string | undefined;
 }
 
+export interface ParticipantSafety {
+  viewerSuspended: boolean;
+  otherSuspended: boolean;
+  /** The other participant blocked the viewer. */
+  blockedByOther: boolean;
+  /** The viewer blocked the other participant. */
+  blockedByViewer: boolean;
+}
+
 @Injectable()
 export class ConversationAccessPolicy {
   constructor(
@@ -59,66 +68,61 @@ export class ConversationAccessPolicy {
       : conversation.buyerId;
   }
 
+  /**
+   * Reads every safety fact between two participants without throwing. The
+   * throwing path (`assertParticipantSafety`) and the non-throwing send
+   * restriction both read it here, so the two cannot drift apart.
+   */
+  async readParticipantSafety(
+    userId: string,
+    otherParticipantId: string,
+  ): Promise<ParticipantSafety> {
+    const [
+      viewerSuspended,
+      otherSuspended,
+      blockedByOther,
+      blockedByViewer,
+    ] = await Promise.all([
+      this.identityCheck.isSuspended(userId),
+      this.identityCheck.isSuspended(otherParticipantId),
+      this.identityRead.isUserBlockedBy(otherParticipantId, userId),
+      this.identityRead.isUserBlockedBy(userId, otherParticipantId),
+    ]);
+    return { viewerSuspended, otherSuspended, blockedByOther, blockedByViewer };
+  }
+
   async assertParticipantSafety(input: {
     userId: string;
     otherParticipantId: string;
     otherParticipantSuspendedMessage: string;
   }): Promise<void> {
-    await this.guardSuspended(
+    const safety = await this.readParticipantSafety(
       input.userId,
       input.otherParticipantId,
-      input.otherParticipantSuspendedMessage,
     );
-    await this.guardBlocked(input.userId, input.otherParticipantId);
-  }
 
-  private async guardSuspended(
-    userId: string,
-    otherParticipantId: string,
-    otherParticipantSuspendedMessage: string,
-  ): Promise<void> {
-    const userSuspended = await this.identityCheck.isSuspended(userId);
-    if (userSuspended) {
+    if (safety.viewerSuspended) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "User is suspended",
         details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
       });
     }
-
-    const otherSuspended = await this.identityCheck.isSuspended(
-      otherParticipantId,
-    );
-    if (otherSuspended) {
+    if (safety.otherSuspended) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
-        message: otherParticipantSuspendedMessage,
+        message: input.otherParticipantSuspendedMessage,
         details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
       });
     }
-  }
-
-  private async guardBlocked(
-    userId: string,
-    otherParticipantId: string,
-  ): Promise<void> {
-    const blockedByOther = await this.identityRead.isUserBlockedBy(
-      otherParticipantId,
-      userId,
-    );
-    if (blockedByOther) {
+    if (safety.blockedByOther) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "You are blocked by this user",
         details: { reason: CONVERSATION_ERROR_CODES.BLOCKED_BY_USER },
       });
     }
-
-    const blockedThem = await this.identityRead.isUserBlockedBy(
-      userId,
-      otherParticipantId,
-    );
-    if (blockedThem) {
+    if (safety.blockedByViewer) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "You have blocked this user",

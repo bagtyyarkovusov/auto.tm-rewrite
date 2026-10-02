@@ -243,6 +243,35 @@ export const ConversationSummarySchema = z.object({
 });
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 
+// ── One Conversation, with the viewer's send restriction ──
+
+export const ConversationIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+export type ConversationIdParam = z.infer<typeof ConversationIdParamSchema>;
+
+/**
+ * Why the viewer's next Message would be refused, or null when it would be
+ * accepted. Reported in this order when several apply: `blocked_by_me` first
+ * so the app can offer Unblock. `participant_unavailable` covers a suspended
+ * participant and the other participant having blocked the viewer; it does
+ * not say which. History stays readable in every case.
+ */
+export const SendRestrictionSchema = z.enum([
+  "blocked_by_me",
+  "listing_unavailable",
+  "chat_disabled",
+  "participant_unavailable",
+]);
+export type SendRestriction = z.infer<typeof SendRestrictionSchema>;
+
+export const GetConversationResponseSchema = ConversationSummarySchema.extend({
+  sendRestriction: SendRestrictionSchema.nullable(),
+});
+export type GetConversationResponse = z.infer<
+  typeof GetConversationResponseSchema
+>;
+
 // ── Pagination ──
 
 export const ListMessagesQuerySchema = z.object({
