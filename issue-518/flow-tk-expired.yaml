@@ -1,0 +1,14 @@
+appId: tm.auto.app
+---
+- openLink: "autotm:///otp?method=phone&destination=%2B99360000000&resendInSeconds=30"
+- tapOn:
+    point: "92%,93%"
+- tapOn:
+    point: "64%,12%"
+- tapOn:
+    point: "11%,45%"
+- inputText: "123456"
+- tapOn:
+    point: "92%,93%"
+- tapOn: "Dikelt"
+- takeScreenshot: /tmp/e518b/518-restore-expired-tk
