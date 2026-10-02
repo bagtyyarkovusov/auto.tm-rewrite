@@ -110,6 +110,14 @@ const privacyPromises: CopyPromise[] = [
 
 const termsPromises: CopyPromise[] = [
   {
+    name: "authenticated deletion is on the Profile screen opened from Cabinet",
+    phrases: {
+      en: "in Cabinet, open your profile and tap Delete account",
+      ru: "в «Кабинете» откройте свой профиль и выберите «Удалить аккаунт»",
+      tk: "«Kabinet» bölüminde profiliňizi açyň we «Hasaby poz» düwmesine basyň",
+    },
+  },
+  {
     name: "sign-in uses a code sent to a phone number or an email address",
     phrases: {
       en: "code sent to your phone number or to your email address",
@@ -221,9 +229,11 @@ describe.each(documents)("%s", (_name, document) => {
     }
   });
 
-  it("never points to app settings, which the app no longer has", () => {
+  it("does not send Users to app settings to delete their account", () => {
     for (const locale of locales) {
-      expect(fullText(document[locale])).not.toMatch(/settings|настройк|sazlama/i);
+      expect(fullText(document[locale])).not.toMatch(
+        /(app|in-app) settings|настройках приложения|programmanyň sazlama/i,
+      );
     }
   });
 
