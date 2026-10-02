@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { useViewer } from "../../src/auth/useViewer";
+import { useAuthIntentStore } from "../../src/auth/intentStore";
+import { ApiError } from "../../src/api/client";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import { useConversation } from "../../src/api/conversations/useConversation";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
@@ -24,6 +26,14 @@ import { useIsBlocked } from "../../src/api/identity/useIsBlocked";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { ConversationHeader } from "../../src/conversations/components/ConversationHeader";
 import { ConversationFooter } from "../../src/conversations/components/ConversationFooter";
+import {
+  ConversationNotFoundState,
+  ConversationSignedOutState,
+} from "../../src/conversations/components/ConversationEntryStates";
+import {
+  MESSAGES_HREF,
+  conversationHref,
+} from "../../src/conversations/conversationRoutes";
 import { useConversationCallPhone } from "../../src/conversations/useConversationCallPhone";
 import { MessageList } from "../../src/conversations/components/MessageList";
 import type { ComposerAttachment } from "../../src/conversations/components/MessageComposer";
@@ -73,6 +83,11 @@ interface LocalMessage {
   postRefModelName?: string;
 }
 
+/** The API refuses a Conversation that is gone (404) or not the viewer's (403). */
+function isUnavailable(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 404 || error.status === 403);
+}
+
 function generateClientMessageId(): string {
   return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -102,7 +117,11 @@ export default function ConversationDetailScreen() {
   const draft = typeof params.draft === "string" ? params.draft : undefined;
   const viewer = useViewer();
   const router = useRouter();
-  const goBack = useSafeBack("/(tabs)/chat");
+  const goBack = useSafeBack(MESSAGES_HREF);
+  // Nothing is read until a User is signed in; signed out, the screen offers
+  // sign-in and returns here (see src/conversations/CONTEXT.md).
+  const signedOut = viewer === null;
+  const readId = viewer?.userId ? conversationId : "";
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
   const readMarkedRef = useRef(false);
@@ -116,7 +135,7 @@ export default function ConversationDetailScreen() {
   );
   const [previewUri, setPreviewUri] = useState<string | null>(null);
 
-  const messagesQuery = useConversationMessages({ conversationId });
+  const messagesQuery = useConversationMessages({ conversationId: readId });
   const sendHttpMessage = useSendTextMessage();
   const sendHttpImageMessage = useSendImageMessage();
   const presignChatAttachment = usePresignChatAttachment();
@@ -138,8 +157,11 @@ export default function ConversationDetailScreen() {
   const muteConversation = useMuteConversation();
   const { show: showToast } = useToast();
 
-  const conversationQuery = useConversation(conversationId);
-  const conversation = conversationQuery.data;
+  const conversationQuery = useConversation(readId);
+  const notFound =
+    isUnavailable(conversationQuery.error) || isUnavailable(messagesQuery.error);
+  // A Conversation the API refuses shows nothing, even from cache.
+  const conversation = notFound ? undefined : conversationQuery.data;
   const listingCard = conversation?.listing ?? null;
   const callPhone = useConversationCallPhone(conversation);
 
@@ -709,6 +731,16 @@ export default function ConversationDetailScreen() {
     setReportedMessageIds((prev) => new Set(prev).add(messageId));
   }, []);
 
+  const handleSignIn = useCallback(() => {
+    useAuthIntentStore.getState().requireSignIn(router, {
+      returnTo: conversationHref(conversationId),
+    });
+  }, [router, conversationId]);
+
+  const goToMessages = useCallback(() => {
+    router.dismissTo(MESSAGES_HREF);
+  }, [router]);
+
   const isLoading = messagesQuery.isPending;
   const isError = messagesQuery.isError;
   // A Conversation that failed to load, with nothing cached to show instead.
@@ -733,7 +765,7 @@ export default function ConversationDetailScreen() {
     <SafeScreen>
       <ConversationHeader
         conversation={conversation}
-        loading={conversationQuery.isPending}
+        loading={conversationQuery.isPending && !signedOut && !notFound}
         presence={peerPresence}
         callPhone={callPhone}
         isMuted={isMuted}
@@ -751,13 +783,17 @@ export default function ConversationDetailScreen() {
           brandName={brandName}
           modelName={modelName}
         />
-      ) : conversationQuery.isPending ? (
+      ) : conversationQuery.isPending && !signedOut && !notFound ? (
         <ConversationListingCard loading />
       ) : null}
 
       {/* Messages */}
       <View className="flex-1">
-        {isLoading ? (
+        {signedOut ? (
+          <ConversationSignedOutState onPress={handleSignIn} />
+        ) : notFound ? (
+          <ConversationNotFoundState onPress={goToMessages} />
+        ) : isLoading ? (
           <View className="flex-1 px-4 py-4 gap-3">
             <View className="flex-row justify-end">
               <Skeleton className="h-10 w-2/3 rounded-2xl" />
@@ -790,22 +826,16 @@ export default function ConversationDetailScreen() {
               router.push(`/(public)/listings/${listingId}`)
             }
           />
-        ) : (
-          <View className="flex-1 items-center justify-center px-6">
-            <Text className="text-sm text-muted-foreground">
-              {t("signInToViewMessages")}
-            </Text>
-          </View>
-        )}
+        ) : null}
       </View>
 
       <ConversationFooter
         isBlocked={isBlocked}
         unblockPending={unblockUser.isPending}
         onUnblock={() => setConfirmAction("unblock")}
-        peerTyping={peerTyping}
+        peerTyping={peerTyping && !notFound}
         composer={
-          viewer?.userId
+          viewer?.userId && !notFound
             ? {
                 onSend: handleSend,
                 onSendImage: handleSendImage,

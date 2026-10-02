@@ -378,7 +378,8 @@ describe("Conversation not available", () => {
 
   it("shows nothing from a cached Conversation the API no longer returns", async () => {
     state.get.mockRejectedValue(new ApiError("NOT_FOUND", 404, "Conversation not found"));
-    const { sendRestriction: _restriction, ...summary } = conversation();
+    const { sendRestriction, ...summary } = conversation();
+    expect(sendRestriction).toBeNull();
     function Seeded({ children }: PropsWithChildren) {
       const queryClient = useQueryClient();
       useState(() => seedConversationDetail(queryClient, summary));

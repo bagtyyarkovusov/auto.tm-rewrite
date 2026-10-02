@@ -3,7 +3,7 @@ import "../global.css";
 // before any screen renders an <Image className="...">.
 import "../lib/expo-image-interop";
 
-import { Stack, router } from "expo-router";
+import { Stack, router, usePathname } from "expo-router";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
 import { StatusBar } from "expo-status-bar";
@@ -37,6 +37,7 @@ import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanClea
 import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
 import { useDirectMessagePushRouting } from "../src/notifications/useDirectMessagePushRouting";
+import { isConversationPath } from "../src/conversations/conversationRoutes";
 import { themeStore } from "../src/theme/themeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
@@ -162,6 +163,12 @@ export default function RootLayout() {
   // return so a cold-start response is never missed.
   useDirectMessagePushRouting();
 
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     "UberMove-Bold": require("../assets/fonts/UberMoveBold.otf"),
@@ -231,8 +238,11 @@ export default function RootLayout() {
         error instanceof ApiError &&
         error.code === "UNAUTHENTICATED"
       ) {
-        redirecting = true;
         void clearAuthSession();
+        // The Conversation screen offers sign-in itself and returns to the
+        // same Conversation, so an expired session there is not redirected.
+        if (isConversationPath(pathnameRef.current)) return;
+        redirecting = true;
         queueMicrotask(() => {
           router.replace("/(auth)/phone");
         });
