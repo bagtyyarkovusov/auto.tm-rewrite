@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 import { FlatList, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -37,6 +37,8 @@ interface MessageListProps {
   onReport?: (messageId: string) => void;
   onImagePress?: (uri: string) => void;
   onPostRefPress?: (listingId: string) => void;
+  /** Shown after the last Message (the list is inverted, so this is its header). */
+  afterLast?: ReactNode;
 }
 
 export function MessageList({
@@ -48,6 +50,7 @@ export function MessageList({
   onReport,
   onImagePress,
   onPostRefPress,
+  afterLast,
 }: MessageListProps) {
   const { t } = useTranslation();
   const reported = reportedMessageIds ?? new Set<string>();
@@ -93,6 +96,7 @@ export function MessageList({
       keyExtractor={keyExtractor}
       contentContainerStyle={{ paddingVertical: 8 }}
       inverted
+      ListHeaderComponent={afterLast ? <>{afterLast}</> : null}
       keyboardShouldPersistTaps="handled"
       ListEmptyComponent={
         <View

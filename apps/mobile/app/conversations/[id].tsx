@@ -12,6 +12,7 @@ import {
   patchConversationDetail,
   useConversation,
 } from "../../src/api/conversations/useConversation";
+import { ApiError } from "../../src/api/client";
 import { queryKeys } from "../../src/api/queryKeys";
 import { useConfig } from "../../src/api/admin/useConfig";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
@@ -29,6 +30,8 @@ import { useUnblockUser } from "../../src/api/identity/useUnblockUser";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { ConversationHeader } from "../../src/conversations/components/ConversationHeader";
 import { ConversationFooter } from "../../src/conversations/components/ConversationFooter";
+import { ListingClosedBanner } from "../../src/conversations/components/ListingClosedBanner";
+import { showQuickReplies } from "../../src/conversations/showQuickReplies";
 import { useConversationCallPhone } from "../../src/conversations/useConversationCallPhone";
 import { MessageList } from "../../src/conversations/components/MessageList";
 import type { ComposerAttachment } from "../../src/conversations/components/MessageComposer";
@@ -204,6 +207,23 @@ export default function ConversationDetailScreen() {
   const isBlocked =
     conversation?.blockedByMe === true ||
     conversation?.sendRestriction === "blocked_by_me";
+
+  // Closed to new Messages for a reason other than the viewer's own block:
+  // the composer is replaced by one line, so nothing can be sent (#352 Q3).
+  const sendRestriction = conversation?.sendRestriction ?? null;
+  const isClosed =
+    !isBlocked &&
+    sendRestriction !== null &&
+    sendRestriction !== "blocked_by_me";
+  const cannotSend = isBlocked || isClosed;
+
+  // A send the server still refuses means the state changed since loading:
+  // read the Conversation again so the footer follows it.
+  const reloadAfterRefusal = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.conversations.detail(conversationId),
+    });
+  }, [conversationId, queryClient]);
 
   // Block and Unblock patch the by-ID entry so the footer switches at once,
   // then refresh it and the list from the API.
@@ -442,13 +462,16 @@ export default function ConversationDetailScreen() {
           onSuccess: (data) => {
             markConfirmed(clientMessageId, data.id);
           },
-          onError: () => {
+          onError: (error) => {
             markFailed(clientMessageId);
+            if (error instanceof ApiError && error.status === 403) {
+              reloadAfterRefusal();
+            }
           },
         },
       );
     },
-    [conversationId, markConfirmed, markFailed, sendHttpMessage],
+    [conversationId, markConfirmed, markFailed, reloadAfterRefusal, sendHttpMessage],
   );
 
   const sendImageViaHttp = useCallback(
@@ -466,18 +489,21 @@ export default function ConversationDetailScreen() {
               () => {},
             );
           },
-          onError: () => {
+          onError: (error) => {
             markFailed(clientMessageId);
+            if (error instanceof ApiError && error.status === 403) {
+              reloadAfterRefusal();
+            }
           },
         },
       );
     },
-    [conversationId, markConfirmed, markFailed, sendHttpImageMessage],
+    [conversationId, markConfirmed, markFailed, reloadAfterRefusal, sendHttpImageMessage],
   );
 
   const handleSend = useCallback(
     async (text: string) => {
-      if (!viewer?.userId || !conversationId || isBlocked) return;
+      if (!viewer?.userId || !conversationId || cannotSend) return;
 
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
@@ -506,13 +532,15 @@ export default function ConversationDetailScreen() {
         sendViaHttp(clientMessageId, text);
       } else {
         markFailed(clientMessageId);
+        if (result.code === "FORBIDDEN") reloadAfterRefusal();
       }
     },
     [
       conversationId,
-      isBlocked,
+      cannotSend,
       markConfirmed,
       markFailed,
+      reloadAfterRefusal,
       sendViaHttp,
       sendTextMessage,
       viewer?.userId,
@@ -521,7 +549,7 @@ export default function ConversationDetailScreen() {
 
   const handleSendImage = useCallback(
     async (attachment: ComposerAttachment) => {
-      if (!viewer?.userId || !conversationId || isBlocked) return;
+      if (!viewer?.userId || !conversationId || cannotSend) return;
 
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
@@ -577,6 +605,7 @@ export default function ConversationDetailScreen() {
           sendImageViaHttp(clientMessageId, metadata, attachment.uri);
         } else {
           markFailed(clientMessageId);
+          if (result.code === "FORBIDDEN") reloadAfterRefusal();
         }
       } catch (err) {
         const uploadError =
@@ -593,10 +622,11 @@ export default function ConversationDetailScreen() {
     },
     [
       conversationId,
-      isBlocked,
+      cannotSend,
       markConfirmed,
       markFailed,
       presignChatAttachment,
+      reloadAfterRefusal,
       sendImageViaHttp,
       sendImageMessage,
       viewer?.userId,
@@ -605,7 +635,7 @@ export default function ConversationDetailScreen() {
 
   const handleRetry = useCallback(
     async (tempId: string) => {
-      if (!conversationId || isBlocked) return;
+      if (!conversationId || cannotSend) return;
       const msg = localMessages.find((m) => m.id === tempId);
       if (!msg || msg.status !== "failed") return;
 
@@ -659,6 +689,7 @@ export default function ConversationDetailScreen() {
             sendImageViaHttp(msg.clientMessageId, metadata, msg.localImageUri);
           } else {
             markFailed(msg.clientMessageId);
+            if (result.code === "FORBIDDEN") reloadAfterRefusal();
           }
         } catch {
           markFailed(msg.clientMessageId);
@@ -678,14 +709,16 @@ export default function ConversationDetailScreen() {
         sendViaHttp(msg.clientMessageId, msg.text);
       } else {
         markFailed(msg.clientMessageId);
+        if (result.code === "FORBIDDEN") reloadAfterRefusal();
       }
     }, [
       conversationId,
-      isBlocked,
+      cannotSend,
       localMessages,
       markConfirmed,
       markFailed,
       presignChatAttachment,
+      reloadAfterRefusal,
       sendImageMessage,
       sendImageViaHttp,
       sendTextMessage,
@@ -783,6 +816,7 @@ export default function ConversationDetailScreen() {
           listing={listingCard}
           brandName={brandName}
           modelName={modelName}
+          unavailable={sendRestriction === "listing_unavailable"}
         />
       ) : conversationQuery.isPending ? (
         <ConversationListingCard loading />
@@ -822,6 +856,15 @@ export default function ConversationDetailScreen() {
             onPostRefPress={(listingId) =>
               router.push(`/(public)/listings/${listingId}`)
             }
+            afterLast={
+              listingCard && (
+                <ListingClosedBanner
+                  listing={listingCard}
+                  brandName={brandName}
+                  modelName={modelName}
+                />
+              )
+            }
           />
         ) : (
           <View className="flex-1 items-center justify-center px-6">
@@ -834,6 +877,7 @@ export default function ConversationDetailScreen() {
 
       <ConversationFooter
         isBlocked={isBlocked}
+        sendRestriction={sendRestriction}
         unblockPending={unblockUser.isPending}
         onUnblock={() => setConfirmAction("unblock")}
         peerTyping={peerTyping}
@@ -843,12 +887,12 @@ export default function ConversationDetailScreen() {
                 onSend: handleSend,
                 onSendImage: handleSendImage,
                 disabled: blockUser.isPending || unblockUser.isPending,
-                showQuickReplies:
-                  !isLoading &&
-                  !isError &&
-                  !conversationFailed &&
-                  !isBlocked &&
-                  allMessages.length === 0,
+                showQuickReplies: showQuickReplies({
+                  ready: !isLoading && !isError && !conversationFailed,
+                  sendRestriction,
+                  listingStatus: listingCard?.status,
+                  messageCount: allMessages.length,
+                }),
                 onTyping: signalTyping,
                 onStopTyping: stopTyping,
                 conversationId,

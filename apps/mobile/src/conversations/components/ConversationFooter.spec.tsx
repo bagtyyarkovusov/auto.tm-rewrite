@@ -109,7 +109,7 @@ describe("ConversationFooter", () => {
       );
 
       expect(screen.getByText(line)).toBeTruthy();
-      expect(screen.queryByPlaceholderText("Write a message...")).toBeNull();
+      expect(screen.queryByPlaceholderText("Message")).toBeNull();
       expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
       expect(screen.queryByText("Is the car still available?")).toBeNull();

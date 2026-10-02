@@ -476,7 +476,7 @@ describe("Conversation about a closed Listing", () => {
   };
   const withListing = (status: "sold" | "archived") => {
     const base = conversation();
-    return conversation({ listing: { ...base.listing!, status } });
+    return conversation({ listing: base.listing && { ...base.listing, status } });
   };
 
   it("shows the Sold badge, the banner and the link after the last Message, with the composer on", async () => {
@@ -494,7 +494,7 @@ describe("Conversation about a closed Listing", () => {
       pathname: "/(tabs)/(search)/results",
       params: { brandId: "00000000-0000-4000-8000-0000000000d1", modelId: "00000000-0000-4000-8000-0000000000d2" },
     });
-    expect(screen.getByPlaceholderText("Write a message...")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Message")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
   });
 
@@ -504,7 +504,7 @@ describe("Conversation about a closed Listing", () => {
 
     expect(await screen.findByText("Sold")).toBeTruthy();
     expect(screen.queryByText("Is the car still available?")).toBeNull();
-    expect(screen.getByPlaceholderText("Write a message...")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Message")).toBeTruthy();
   });
 
   it("sends a Message on a sold Listing", async () => {
@@ -513,7 +513,7 @@ describe("Conversation about a closed Listing", () => {
     const screen = renderMobile(<ConversationDetailScreen />);
 
     await screen.findByText("Sold");
-    fireEvent.changeText(screen.getByPlaceholderText("Write a message..."), "Is the price final?");
+    fireEvent.changeText(screen.getByPlaceholderText("Message"), "Is the price final?");
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Send message" }));
     });
@@ -546,7 +546,7 @@ describe("Conversation about a closed Listing", () => {
 
     expect(await screen.findByText(line)).toBeTruthy();
     expect(screen.getByText("Thanks, already sold")).toBeTruthy();
-    expect(screen.queryByPlaceholderText("Write a message...")).toBeNull();
+    expect(screen.queryByPlaceholderText("Message")).toBeNull();
     expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
     expect(screen.queryByText("Is the car still available?")).toBeNull();
@@ -590,7 +590,7 @@ describe("Conversation about a closed Listing", () => {
     const screen = renderMobile(<ConversationDetailScreen />);
 
     await screen.findByText("Merdan");
-    fireEvent.changeText(screen.getByPlaceholderText("Write a message..."), "Hello");
+    fireEvent.changeText(screen.getByPlaceholderText("Message"), "Hello");
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Send message" }));
     });
