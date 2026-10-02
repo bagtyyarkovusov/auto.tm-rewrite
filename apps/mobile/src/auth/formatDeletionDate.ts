@@ -13,3 +13,13 @@ export function formatDeletionDate(iso: string, locale: string): string {
     .format(new Date(iso))
     .replace(/\.$/, "");
 }
+
+const GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * The date an account deleted now would be erased: today plus the 30-day grace
+ * period (ADR-0032). The API does not return it, so the app works it out.
+ */
+export function formatDeletionDateFromNow(locale: string): string {
+  return formatDeletionDate(new Date(Date.now() + GRACE_PERIOD_MS).toISOString(), locale);
+}
