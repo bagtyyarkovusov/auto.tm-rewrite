@@ -19,13 +19,14 @@ Fastify's `trustProxy` cannot express this. It reads only `X-Forwarded-*`, and i
 
 - **Trusted source.** The header named by `CLIENT_IP_HEADER`, default `x-real-ip`, which Railway's edge sets. A client-supplied `X-Forwarded-For` is not read under the default.
 - **Configurable header and hop.** `CLIENT_IP_HEADER=x-forwarded-for` reads that list and takes the entry `CLIENT_IP_TRUSTED_HOPS` places from the right (default 1), so a reverse proxy we run on the TM topology (ADR-0005) works without code. Any other header name is read as one address. `CLIENT_IP_HEADER=none` trusts no header and uses the peer address, for an API reachable directly. Both variables are validated at boot; an invalid value that reaches the helper trusts no header.
-- **Fail toward sharing, never toward the caller.** A missing header, a repeated header, a list where one address is expected, a port, a zone id or a non-address falls back to the peer address. The fallback shares a bucket instead of letting the caller choose one. IPv4-mapped IPv6 addresses count as the IPv4 address.
-- **Server-to-server calls.** A service that calls the API on the private network forwards the visitor's address in the trusted header, as web does with `X-Real-IP`. A caller on that network is trusted to set it; nothing outside Railway reaches the private origin.
-- **Other ingress.** Any ingress added in front of the API must set or overwrite the trusted header, or callers choose their own budget. The operator who adds one changes `CLIENT_IP_HEADER` and `CLIENT_IP_TRUSTED_HOPS` to match.
+- **Fail toward sharing, never toward the caller.** A missing header, a repeated header, a list where one address is expected, a port, a zone id or a non-address falls back to the peer address. The fallback shares a bucket instead of letting the caller choose one. `ClientIpThrottlerGuard` logs `client_ip.peer_fallback` at most once every ten minutes, so a missing edge header shows up in the logs before it shows up as locked-out callers. Each address is counted in one form: IPv6 in its RFC 5952 form, and an IPv4-mapped IPv6 address as the IPv4 address.
+- **Hop counts need a closed origin.** `CLIENT_IP_TRUSTED_HOPS` is safe only when the service cannot be reached except through the proxies it counts. A caller that reaches the origin directly writes the whole `X-Forwarded-For` list.
+- **Server-to-server calls.** A service that calls the API on the private network forwards the visitor's address in the header the API trusts. A caller on that network is trusted to set it; nothing outside Railway reaches the private origin. Web reads the visitor's address with the same rule and variables as the API, for the ingress in front of web, and never falls back to a visitor-written `X-Forwarded-For`; with no usable value it forwards nothing, and the API counts web's own address. It sends the address in `API_CLIENT_IP_HEADER`, default `x-real-ip`. Web must call the private origin (`API_BASE_URL`): through the public edge, the edge overwrites web's header and every web visitor shares one budget.
+- **Other ingress.** Any ingress added in front of the API or web must set or overwrite the trusted header, or callers choose their own budget. The operator who adds one changes `CLIENT_IP_HEADER` and `CLIENT_IP_TRUSTED_HOPS` on the services behind it, and `API_CLIENT_IP_HEADER` on web to match the API. The API applies one rule to every path, so web's private calls must arrive in the shape that rule reads: with `x-forwarded-for`, web sends one entry, which the API reads only with `CLIENT_IP_TRUSTED_HOPS=1`.
 
 ### Verification on Railway
 
-Whether the edge overwrites a client-supplied `X-Real-IP` and `X-Forwarded-For` is a property of Railway, not of this code. It must be shown on an agent PR environment (ADR-0075), never staging or production, before this ADR is accepted: send requests from one client with rotating `X-Real-IP` and `X-Forwarded-For` values and confirm the per-IP budget still counts one client. If a client can override the edge value, this rule does not hold on Railway and the decision returns to the founder.
+Whether the edge overwrites a client-supplied `X-Real-IP` and `X-Forwarded-For` is a property of Railway, not of this code. It must be shown on an agent PR environment (ADR-0075), never staging or production, before this ADR is accepted: send requests from one client with rotating `X-Real-IP` and `X-Forwarded-For` values and confirm the per-IP budget still counts one client. Then, within the same hour, send one request from a second network and confirm it is accepted, which shows clients are counted under their own addresses rather than one shared peer. If a client can override the edge value, this rule does not hold on Railway and the decision returns to the founder.
 
 ## Consequences
 
@@ -33,8 +34,8 @@ Whether the edge overwrites a client-supplied `X-Real-IP` and `X-Forwarded-For` 
 - The throttler's bucket is per handler and per address, as before; only the address changes.
 - A request that reaches the API without the trusted header (health probes from inside the platform, a misconfigured ingress) is counted against the peer address. That is the previous throttler behaviour.
 - An attacker with many real addresses, including a whole IPv6 prefix, still has many budgets. This rule fixes spoofing, not distribution.
-- The web server's `X-Forwarded-For` fallback for local development no longer reaches the API as `X-Forwarded-For`; web sends `X-Real-IP`.
-- Moving to TM hosting means setting two variables at the new ingress, not changing code.
+- Web no longer reads a visitor-written `X-Forwarded-For`. Locally no ingress sets `X-Real-IP`, so web forwards nothing and the API counts web's own address.
+- Moving to TM hosting means setting `CLIENT_IP_HEADER` and `CLIENT_IP_TRUSTED_HOPS` on the API and web, and `API_CLIENT_IP_HEADER` on web, not changing code, as long as the API keeps a single rule for every path.
 
 ## References
 

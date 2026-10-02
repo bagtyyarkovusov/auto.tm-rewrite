@@ -48,6 +48,7 @@ const ENDPOINTS: Array<[string, Call]> = [
         {} as never,
         recording(seen) as never,
         {} as never,
+        {} as never,
       ).requestMethodChange(req, { email: "buyer@example.com" }),
   ],
   [

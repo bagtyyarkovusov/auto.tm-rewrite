@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   readClientIpPolicy,
   resolveClientIp,
+  resolveClientIpDetails,
   type ClientIpPolicy,
 } from "./client-ip";
 
@@ -144,6 +145,42 @@ describe("resolveClientIp with another trusted header or hop", () => {
         policy,
       ),
     ).toBe(EDGE_HOP);
+  });
+});
+
+describe("resolveClientIp address forms", () => {
+  const policy = readClientIpPolicy({});
+
+  it("counts every spelling of one IPv6 address in one bucket", () => {
+    for (const spelling of ["2001:DB8:0:0:0:0:0:1", "2001:0db8::0001", "2001:db8::1"]) {
+      expect(resolveClientIp(request({ "x-real-ip": spelling }), policy)).toBe("2001:db8::1");
+    }
+  });
+
+  it("folds the hexadecimal IPv4-mapped form into the IPv4 address", () => {
+    expect(resolveClientIp(request({ "x-real-ip": "::ffff:cb00:7107" }), policy)).toBe(CLIENT);
+    expect(resolveClientIp(request({ "x-real-ip": "::FFFF:203.0.113.7" }), policy)).toBe(CLIENT);
+  });
+});
+
+describe("resolveClientIpDetails", () => {
+  it("marks a request without the configured header as the peer fallback", () => {
+    expect(resolveClientIpDetails(request({}), readClientIpPolicy({}))).toEqual({
+      ip: EDGE_HOP,
+      fellBackToPeer: true,
+    });
+    expect(
+      resolveClientIpDetails(request({ "x-real-ip": "not-an-ip" }), readClientIpPolicy({})),
+    ).toEqual({ ip: EDGE_HOP, fellBackToPeer: true });
+  });
+
+  it("does not mark the trusted header, or the peer under none, as a fallback", () => {
+    expect(
+      resolveClientIpDetails(request({ "x-real-ip": CLIENT }), readClientIpPolicy({})),
+    ).toEqual({ ip: CLIENT, fellBackToPeer: false });
+    expect(
+      resolveClientIpDetails(request({}), readClientIpPolicy({ CLIENT_IP_HEADER: "none" })),
+    ).toEqual({ ip: EDGE_HOP, fellBackToPeer: false });
   });
 });
 

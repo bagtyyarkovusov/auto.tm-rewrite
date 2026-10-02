@@ -1,4 +1,4 @@
-import { isIP, isIPv4 } from "node:net";
+import { isIP } from "node:net";
 
 import { z } from "zod";
 
@@ -39,6 +39,17 @@ const clientIpEnvSchema = z.object(clientIpEnvShape);
 /** Used when the configuration is invalid: trust nothing a caller can send. */
 const PEER_ONLY: ClientIpPolicy = { header: null, trustedHops: 1 };
 
+/**
+ * The policy from `process.env`, parsed once. `env.schema.ts` validates the
+ * same fields at boot, so this agrees with the running configuration.
+ */
+let processPolicy: ClientIpPolicy | undefined;
+
+function processClientIpPolicy(): ClientIpPolicy {
+  processPolicy ??= readClientIpPolicy();
+  return processPolicy;
+}
+
 export function readClientIpPolicy(
   env: Record<string, string | undefined> = process.env,
 ): ClientIpPolicy {
@@ -59,15 +70,33 @@ export interface ClientIpRequest {
 }
 
 const FORWARDED_FOR = "x-forwarded-for";
-const IPV4_MAPPED = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i;
+/** An IPv4-mapped IPv6 address after URL serialisation, e.g. `::ffff:cb00:7107`. */
+const IPV4_MAPPED = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/;
 
-/** A single IP address in canonical form, or null. Zone ids and ports are refused. */
+/**
+ * A single IP address in one form per address, or null, so equivalent
+ * spellings share a bucket. IPv6 is serialised as RFC 5952 (lowercase, zeros
+ * compressed) and an IPv4-mapped IPv6 address becomes the IPv4 address. Zone
+ * ids and ports are refused.
+ */
 function normalizeIp(value: string | undefined): string | null {
-  const candidate = value?.trim().toLowerCase();
-  if (!candidate || candidate.includes("%") || isIP(candidate) === 0) return null;
+  const candidate = value?.trim();
+  if (!candidate || candidate.includes("%")) return null;
 
-  const mapped = IPV4_MAPPED.exec(candidate)?.[1];
-  return mapped !== undefined && isIPv4(mapped) ? mapped : candidate;
+  const family = isIP(candidate);
+  if (family === 4) return candidate;
+  if (family !== 6) return null;
+
+  // The WHATWG URL serialiser writes the RFC 5952 form of an IPv6 host.
+  const canonical = new URL(`http://[${candidate}]/`).hostname.slice(1, -1);
+  const mapped = IPV4_MAPPED.exec(canonical);
+  if (!mapped) return canonical;
+
+  const [high, low] = [mapped[1], mapped[2]].map((group) => parseInt(group ?? "0", 16)) as [
+    number,
+    number,
+  ];
+  return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(".");
 }
 
 function trustedHeaderIp(
@@ -87,6 +116,36 @@ function trustedHeaderIp(
   return typeof raw === "string" ? normalizeIp(raw) : null;
 }
 
+/** The address `resolveClientIp` returns, and whether it is the fallback. */
+export interface ResolvedClientIp {
+  ip: string;
+  /**
+   * True when a trusted header is configured but was missing or unusable, so
+   * the request is counted against the peer (the proxy hop) instead.
+   */
+  fellBackToPeer: boolean;
+}
+
+/**
+ * The caller's IP address and whether it is the peer fallback. The throttler
+ * uses it to report a missing edge header; everything else needs only
+ * `resolveClientIp`.
+ */
+export function resolveClientIpDetails(
+  req: ClientIpRequest,
+  policy: ClientIpPolicy = processClientIpPolicy(),
+): ResolvedClientIp {
+  const peer = normalizeIp(req.ip) ?? "unknown";
+  if (policy.header === null) return { ip: peer, fellBackToPeer: false };
+
+  const trusted = req.headers
+    ? trustedHeaderIp(req.headers, { ...policy, header: policy.header })
+    : null;
+  return trusted === null
+    ? { ip: peer, fellBackToPeer: true }
+    : { ip: trusted, fellBackToPeer: false };
+}
+
 /**
  * The caller's IP address for rate limiting. The single source for the Sign-in
  * Code per-IP budgets and the global throttler, so a caller cannot pick its own
@@ -96,10 +155,7 @@ function trustedHeaderIp(
  */
 export function resolveClientIp(
   req: ClientIpRequest,
-  policy: ClientIpPolicy = readClientIpPolicy(),
+  policy: ClientIpPolicy = processClientIpPolicy(),
 ): string {
-  const peer = normalizeIp(req.ip) ?? "unknown";
-  if (policy.header === null || !req.headers) return peer;
-
-  return trustedHeaderIp(req.headers, { ...policy, header: policy.header }) ?? peer;
+  return resolveClientIpDetails(req, policy).ip;
 }

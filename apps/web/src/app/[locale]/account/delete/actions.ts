@@ -10,17 +10,17 @@ import type {
   DeletionChannel,
   RequestDeletionResult,
 } from "@/lib/account-deletion";
-import {
-  confirmAccountDeletion,
-  requestAccountDeletion,
-  visitorIp,
-} from "@/lib/account-deletion";
+import { confirmAccountDeletion, requestAccountDeletion } from "@/lib/account-deletion";
+import { readVisitorIpPolicy, visitorIp } from "@/lib/visitor-ip";
 
 // The API has no CORS, so the browser reaches it through these Server Functions.
 const API_BASE_URL =
   process.env["API_BASE_URL"] ||
   process.env["NEXT_PUBLIC_API_URL"] ||
   "http://localhost:3006/api/v1";
+
+// Read once; the environment does not change while the server runs.
+const VISITOR_IP_POLICY = readVisitorIpPolicy();
 
 // Server Function arguments come from the browser; accept only known values.
 function channelOf(value: unknown): DeletionChannel | null {
@@ -32,7 +32,8 @@ async function apiContext(locale: unknown): Promise<DeletionApiContext> {
   return {
     baseUrl: API_BASE_URL,
     locale: locales.includes(locale as Locale) ? (locale as Locale) : defaultLocale,
-    clientIp: visitorIp(requestHeaders),
+    clientIp: visitorIp(requestHeaders, VISITOR_IP_POLICY),
+    clientIpHeader: VISITOR_IP_POLICY.apiHeader,
   };
 }
 

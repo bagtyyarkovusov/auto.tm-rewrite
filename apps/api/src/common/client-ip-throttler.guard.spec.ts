@@ -4,7 +4,8 @@ import {
   ThrottlerException,
   ThrottlerStorageService,
 } from "@nestjs/throttler";
-import { afterEach, describe, expect, it } from "vitest";
+import { Logger } from "@nestjs/common";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ClientIpThrottlerGuard } from "./client-ip-throttler.guard";
 
@@ -29,6 +30,7 @@ describe("ClientIpThrottlerGuard", () => {
 
   afterEach(() => {
     for (const storage of storages.splice(0)) storage.onApplicationShutdown();
+    vi.restoreAllMocks();
   });
 
   async function guard(limit: number) {
@@ -67,5 +69,21 @@ describe("ClientIpThrottlerGuard", () => {
     await expect(
       throttler.canActivate(contextFor({ ...edge, "x-forwarded-for": "2.2.2.2" })),
     ).rejects.toBeInstanceOf(ThrottlerException);
+  });
+
+  it("warns, at most once per window, when requests arrive without the trusted header", async () => {
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const throttler = await guard(10);
+
+    await throttler.canActivate(contextFor({ "x-real-ip": "203.0.113.1" }));
+    expect(warn).not.toHaveBeenCalled();
+
+    await throttler.canActivate(contextFor({}));
+    await throttler.canActivate(contextFor({ "x-real-ip": "not-an-ip" }));
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toMatchObject({
+      event: "client_ip.peer_fallback",
+      peer: EDGE_HOP,
+    });
   });
 });

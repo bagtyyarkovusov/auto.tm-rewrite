@@ -31,10 +31,12 @@ export interface DeletionApiContext {
   locale: Locale;
   /**
    * The visitor's IP, from `visitorIp`. The API applies its per-IP code budget
-   * to the `X-Real-IP` it receives (ADR-0078), so without it every visitor
-   * would share the web server's budget.
+   * to the address in the header it trusts (ADR-0078), so without it every
+   * visitor would share the web server's budget.
    */
   clientIp: string | null;
+  /** The header the API trusts for `clientIp`; `x-real-ip` unless configured. */
+  clientIpHeader?: string;
   fetch?: typeof fetch;
 }
 
@@ -59,24 +61,6 @@ export function apiUrl(baseUrl: string, path: string): string {
   return `${origin}/api/v1${path}`;
 }
 
-export function firstForwardedIp(header: string | null): string | null {
-  const first = header?.split(",")[0]?.trim();
-  return first ? first : null;
-}
-
-/**
- * The visitor's IP from the incoming request. Railway's edge sets `X-Real-IP`
- * to the client's address, while `X-Forwarded-For` can arrive from the visitor
- * unchanged, so `X-Real-IP` wins and `X-Forwarded-For` is only a fallback
- * (local development, other proxies).
- */
-export function visitorIp(headers: { get(name: string): string | null }): string | null {
-  return (
-    firstForwardedIp(headers.get("x-real-ip")) ??
-    firstForwardedIp(headers.get("x-forwarded-for"))
-  );
-}
-
 /** Keeps a hung API from holding the Server Function and the pending form. */
 const API_TIMEOUT_MS = 10_000;
 
@@ -89,7 +73,7 @@ async function post(
     "Content-Type": "application/json",
     "Accept-Language": context.locale,
   };
-  if (context.clientIp) headers["X-Real-IP"] = context.clientIp;
+  if (context.clientIp) headers[context.clientIpHeader ?? "x-real-ip"] = context.clientIp;
 
   try {
     return await (context.fetch ?? fetch)(apiUrl(context.baseUrl, path), {
