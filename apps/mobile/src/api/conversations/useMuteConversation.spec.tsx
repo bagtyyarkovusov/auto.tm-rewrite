@@ -125,6 +125,29 @@ describe("useMuteConversation", () => {
     expect(readListItems(client)[0]?.mutedAt).not.toBeNull();
   });
 
+  it("patches the by-ID entry the Conversation screen reads, and rolls it back on failure", async () => {
+    let fail: (error: Error) => void = () => {};
+    mockPost.mockReturnValue(new Promise((_resolve, reject) => { fail = reject; }));
+
+    const client = makeClient();
+    const detailKey = queryKeys.conversations.detail(CONVERSATION_ID);
+    client.setQueryData(detailKey, { ...makeConversation(), sendRestriction: null });
+
+    const { result } = renderHook(() => useMuteConversation(), {
+      wrapper: makeWrapper(client),
+    });
+
+    result.current.mutate({ conversationId: CONVERSATION_ID, muted: true });
+
+    await waitFor(() =>
+      expect(client.getQueryData<{ mutedAt: string | null }>(detailKey)?.mutedAt).not.toBeNull(),
+    );
+
+    fail(new Error("NETWORK_ERROR"));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(client.getQueryData<{ mutedAt: string | null }>(detailKey)?.mutedAt).toBeNull();
+  });
+
   it("optimistically clears mutedAt when unmuting", async () => {
     mockPost.mockResolvedValue({
       conversationId: CONVERSATION_ID,

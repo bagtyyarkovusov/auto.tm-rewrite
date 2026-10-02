@@ -3,6 +3,7 @@ import type { Enums } from "@auto-tm/contracts";
 
 import type * as ClientModule from "../../api/client";
 import { useAuthIntentStore } from "../../auth/intentStore";
+import { queryKeys } from "../../api/queryKeys";
 import {
   act,
   fireEvent,
@@ -99,12 +100,12 @@ describe("Ask the seller", () => {
     );
     expect(routerMock.push).toHaveBeenCalledWith({
       pathname: "/conversations/[id]",
-      params: expect.objectContaining({
-        id: "conversation-1",
-        listingId: LISTING_ID,
-        draft: "Can I see the car?",
-      }),
+      params: { id: "conversation-1", draft: "Can I see the car?" },
     });
+    // The Conversation screen reads its header and strip from the seeded by-ID entry.
+    expect(
+      screen.queryClient.getQueryData(queryKeys.conversations.detail("conversation-1")),
+    ).toEqual(expect.objectContaining({ listing: conversation.listing }));
   });
 
   it("parks a signed-out question behind sign-in, then finishes it on return", async () => {
