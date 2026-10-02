@@ -277,6 +277,9 @@ describe("AccountDeletionController e2e", () => {
       .expect(400);
 
     expect(response.body.code).toBe("RATE_LIMITED");
+    expect(response.body.details.reason).toBe("backoff");
+    expect(response.body.details.retryInSeconds).toBeGreaterThan(0);
+    expect(response.body.details.retryInSeconds).toBeLessThanOrEqual(60);
   });
 
   it("shares the per-IP budget with sign-in codes", async () => {
@@ -295,7 +298,46 @@ describe("AccountDeletionController e2e", () => {
       .expect(400);
 
     expect(response.body.code).toBe("RATE_LIMITED");
+    expect(response.body.details).toEqual({ reason: "ip_limit", retryInSeconds: 0 });
     expect(queued).toHaveLength(0);
+  });
+
+  it("refuses a destination a User holds exactly as one nobody holds", async () => {
+    await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    for (const phone of ["+99361234567", "+99361234568"]) {
+      for (let index = 0; index < 5; index += 1) {
+        await prisma.otpRequest.create({
+          data: {
+            channel: "phone",
+            destination: phone,
+            phone,
+            codeHash: "test-hash",
+            expiresAt: new Date(Date.now() + 300_000),
+            ip: `10.0.0.${index}`,
+          },
+        });
+      }
+    }
+
+    const held = await request
+      .post("/api/v1/account-deletion/request")
+      .send({ phone: "+99361234567" })
+      .expect(400);
+    const unheld = await request
+      .post("/api/v1/account-deletion/request")
+      .send({ phone: "+99361234568" })
+      .expect(400);
+
+    expect(held.body.code).toBe("RATE_LIMITED");
+    expect(held.body.details).toEqual({
+      reason: "destination_limit",
+      retryInSeconds: 0,
+    });
+    expect(unheld.body.code).toBe(held.body.code);
+    expect(unheld.body.message).toBe(held.body.message);
+    expect(unheld.body.details).toEqual(held.body.details);
   });
 
   it("rejects a body carrying both a phone and an email", async () => {

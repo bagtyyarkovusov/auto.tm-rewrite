@@ -6,6 +6,7 @@ import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { ReviewerOtpBypassConfig } from "../domain/ports/ReviewerOtpBypassConfig";
 import type { ConstantTimeComparatorPort } from "../domain/ports/ConstantTimeComparatorPort";
+import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
 import { RequestOtp } from "./RequestOtp";
 
 const START = new Date("2026-09-23T12:00:00Z");
@@ -188,8 +189,15 @@ describe("RequestOtp", () => {
     const input = { email: "buyer@example.com", ip: "127.0.0.1" };
 
     await expect(useCase.execute(input)).resolves.toMatchObject({ resendInSeconds: 60 });
-    await expect(useCase.execute(input)).rejects.toThrow("Too many OTP requests");
-    clock.advance(60);
+    const refusal = await useCase.execute(input).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(SignInCodeRateLimitedError);
+    expect(refusal).toMatchObject({ reason: "BACKOFF", retryInSeconds: 60 });
+    clock.advance(20);
+    await expect(useCase.execute(input)).rejects.toMatchObject({
+      reason: "BACKOFF",
+      retryInSeconds: 40,
+    });
+    clock.advance(40);
     await expect(useCase.execute(input)).resolves.toMatchObject({ resendInSeconds: 120 });
   });
 
@@ -202,7 +210,24 @@ describe("RequestOtp", () => {
       await useCase.execute(input);
     }
     clock.advance(960);
-    await expect(useCase.execute(input)).rejects.toThrow("Too many OTP requests");
+    const refusal = await useCase.execute(input).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(SignInCodeRateLimitedError);
+    expect(refusal).toMatchObject({ reason: "DESTINATION_LIMIT", retryInSeconds: 0 });
+  });
+
+  it("reports the destination limit, not a timer, while a backoff is still running", async () => {
+    const { useCase, clock } = harness();
+    const input = { email: "buyer@example.com", ip: "127.0.0.1" };
+
+    for (const wait of [0, 60, 120, 240, 480]) {
+      if (wait > 0) clock.advance(wait);
+      await useCase.execute(input);
+    }
+    clock.advance(10);
+    await expect(useCase.execute(input)).rejects.toMatchObject({
+      reason: "DESTINATION_LIMIT",
+      retryInSeconds: 0,
+    });
   });
 
   it("shares the ten-request IP budget across phone and email", async () => {
@@ -220,7 +245,7 @@ describe("RequestOtp", () => {
 
     await expect(
       useCase.execute({ email: "eleventh@example.com", ip: "10.0.0.1" }),
-    ).rejects.toThrow("Too many OTP requests");
+    ).rejects.toMatchObject({ reason: "IP_LIMIT", retryInSeconds: 0 });
   });
 
   it("keeps reserved phones issuance-free and rate-limit exempt", async () => {
@@ -242,7 +267,10 @@ describe("RequestOtp", () => {
       await useCase.execute(input);
     }
     clock.advance(960);
-    await expect(useCase.execute(input)).rejects.toThrow("Too many OTP requests");
+    await expect(useCase.execute(input)).rejects.toMatchObject({
+      reason: "DESTINATION_LIMIT",
+      retryInSeconds: 0,
+    });
     expect(repo.records).toHaveLength(5);
     expect(email.jobs).toHaveLength(0);
   });

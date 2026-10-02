@@ -130,6 +130,10 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
       .expect(400);
 
     expect(res.body.code).toBe("RATE_LIMITED");
+    expect(res.body.details).toEqual({
+      reason: "destination_limit",
+      retryInSeconds: 0,
+    });
   });
 });
 

@@ -8,6 +8,7 @@ import type { OtpRequest } from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
 import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
+import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
 import { RequestSignInMethodChange } from "./RequestSignInMethodChange";
 
 const NOW = new Date("2026-09-24T00:00:00.000Z");
@@ -204,7 +205,53 @@ describe("RequestSignInMethodChange", () => {
       userId: "user-1",
       email: "new@example.com",
       ip: "10.0.0.1",
-    })).rejects.toThrow("Too many OTP requests");
+    })).rejects.toMatchObject({ reason: "IP_LIMIT", retryInSeconds: 0 });
+  });
+
+  it("refuses a repeat request inside the backoff with the remaining wait", async () => {
+    const { useCase } = harness(user({
+      phone: "+99361234567",
+      phoneVerifiedAt: NOW,
+      email: null,
+      emailVerifiedAt: null,
+    }));
+    const input = { userId: "user-1", email: "new@example.com", ip: "10.0.0.1" };
+    await useCase.execute(input);
+
+    const refusal = await useCase.execute(input).catch((error: unknown) => error);
+
+    expect(refusal).toBeInstanceOf(SignInCodeRateLimitedError);
+    expect(refusal).toMatchObject({ reason: "BACKOFF", retryInSeconds: 60 });
+  });
+
+  it("refuses a sixth request in 24 hours as the destination limit", async () => {
+    const { useCase, otpRepo } = harness(user({
+      phone: "+99361234567",
+      phoneVerifiedAt: NOW,
+      email: null,
+      emailVerifiedAt: null,
+    }));
+    for (let index = 0; index < 5; index++) {
+      otpRepo.records.push({
+        id: `existing-${index}`,
+        channel: "email",
+        destination: "new@example.com",
+        codeHash: "hash",
+        expiresAt: new Date(NOW.getTime() + 60_000),
+        verifiedAt: null,
+        attempts: 0,
+        userId: "user-1",
+        ip: `10.0.0.${index}`,
+        createdAt: new Date(NOW.getTime() - 3 * 60 * 60 * 1000),
+      });
+    }
+
+    const refusal = await useCase
+      .execute({ userId: "user-1", email: "new@example.com", ip: "10.0.1.1" })
+      .catch((error: unknown) => error);
+
+    expect(refusal).toBeInstanceOf(SignInCodeRateLimitedError);
+    expect(refusal).toMatchObject({ reason: "DESTINATION_LIMIT", retryInSeconds: 0 });
   });
 
   it("does not issue a code for a missing authenticated User", async () => {

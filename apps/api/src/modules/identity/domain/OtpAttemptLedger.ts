@@ -5,11 +5,21 @@ export interface RateLimitInput {
   now: Date;
 }
 
-export interface RateLimitResult {
-  allowed: boolean;
+export type RateLimitReason = "DESTINATION_LIMIT" | "IP_LIMIT" | "BACKOFF";
+
+export interface RateLimitAllowed {
+  allowed: true;
   resendInSeconds: number;
-  reason?: "DESTINATION_LIMIT" | "IP_LIMIT" | "BACKOFF";
+  reason?: undefined;
 }
+
+export interface RateLimitRefusal {
+  allowed: false;
+  resendInSeconds: number;
+  reason: RateLimitReason;
+}
+
+export type RateLimitResult = RateLimitAllowed | RateLimitRefusal;
 
 export const SIGN_IN_CODE_RATE_POLICY = {
   destinationLimit: 5,

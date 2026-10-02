@@ -8,6 +8,7 @@ import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
 import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
+import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
 import { RequestAccountDeletion } from "./RequestAccountDeletion";
 
 const NOW = new Date("2026-09-25T00:00:00.000Z");
@@ -189,7 +190,7 @@ describe("RequestAccountDeletion", () => {
 
     await expect(
       useCase.execute({ phone: "+99361234567", ip: "10.0.0.1" }),
-    ).rejects.toThrow("Too many OTP requests");
+    ).rejects.toMatchObject({ reason: "DESTINATION_LIMIT", retryInSeconds: 0 });
     expect(otpRepo.records).toHaveLength(0);
     expect(sms).toHaveLength(0);
   });
@@ -200,7 +201,7 @@ describe("RequestAccountDeletion", () => {
 
     await expect(
       useCase.execute({ email: "seller@example.com", ip: "10.0.0.9" }),
-    ).rejects.toThrow("Too many OTP requests");
+    ).rejects.toMatchObject({ reason: "IP_LIMIT", retryInSeconds: 0 });
     expect(otpRepo.countedIp).toBe("10.0.0.9");
     expect(emails).toHaveLength(0);
   });
@@ -219,6 +220,25 @@ describe("RequestAccountDeletion", () => {
 
     await expect(
       useCase.execute({ phone: "+99361234567", ip: "10.0.0.1" }),
-    ).rejects.toThrow("Too many OTP requests");
+    ).rejects.toMatchObject({ reason: "BACKOFF", retryInSeconds: 60 });
+  });
+
+  it("refuses with the same reason whether or not a User holds the destination", async () => {
+    const held = setup([makeUser({ phone: "+99361234567", email: null })]);
+    const unheld = setup([]);
+    held.otpRepo.destinationCount = 5;
+    unheld.otpRepo.destinationCount = 5;
+
+    const heldRefusal = await held.useCase
+      .execute({ phone: "+99361234567", ip: "10.0.0.1" })
+      .catch((error: unknown) => error);
+    const unheldRefusal = await unheld.useCase
+      .execute({ phone: "+99361234567", ip: "10.0.0.1" })
+      .catch((error: unknown) => error);
+
+    expect(heldRefusal).toBeInstanceOf(SignInCodeRateLimitedError);
+    expect(unheldRefusal).toBeInstanceOf(SignInCodeRateLimitedError);
+    expect(heldRefusal).toMatchObject({ reason: "DESTINATION_LIMIT", retryInSeconds: 0 });
+    expect(unheldRefusal).toMatchObject({ reason: "DESTINATION_LIMIT", retryInSeconds: 0 });
   });
 });
