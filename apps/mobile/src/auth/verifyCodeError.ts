@@ -52,3 +52,7 @@ export function getResendCodeErrorCopy(error: unknown, t: Translate): string {
   }
   return t("verifyFailed");
 }
+
+export function isSignInMethodTaken(_error: unknown): boolean {
+  return false;
+}

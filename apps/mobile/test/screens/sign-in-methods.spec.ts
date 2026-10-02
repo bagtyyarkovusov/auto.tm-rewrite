@@ -13,12 +13,10 @@ const addEmail = read("app/account/add-email.tsx");
 const verify = read("app/account/verify-sign-in-method.tsx");
 
 describe("Profile Sign-in Methods", () => {
-  it("shows masked phone and email rows that open the add/change flow", () => {
+  // Rendered behaviour lives in profile.spec.tsx and sign-in-method-change.spec.tsx.
+  it("masks the phone and email rows", () => {
     expect(profile).toContain("maskTmPhone(data.phone)");
     expect(profile).toContain("maskEmail(data.email)");
-    expect(profile).toContain('href="/account/add-phone"');
-    expect(profile).toContain('href="/account/add-email"');
-    expect(profile).toContain('value ? t("change") : t("add")');
   });
 
   it("requests the code through the signed-in Sign-in Method endpoint", () => {
