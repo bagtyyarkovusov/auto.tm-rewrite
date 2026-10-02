@@ -9,6 +9,7 @@ import { ConversationsController } from "./presentation/conversations.controller
 import { ConversationGateway } from "./presentation/gateways/ConversationGateway";
 import { OpenConversation } from "./application/OpenConversation";
 import { ListMyConversations } from "./application/ListMyConversations";
+import { GetConversation } from "./application/GetConversation";
 import { ListMessages } from "./application/ListMessages";
 import { SendTextMessage } from "./application/SendTextMessage";
 import { SendMessage } from "./application/SendMessage";
@@ -53,6 +54,7 @@ import { CONVERSATION_REPORT_CONTEXT_PORT } from "./domain/ports/ConversationRep
     },
     OpenConversation,
     ListMyConversations,
+    GetConversation,
     ListMessages,
     ConversationMessageCommitter,
     ConversationSendPolicy,

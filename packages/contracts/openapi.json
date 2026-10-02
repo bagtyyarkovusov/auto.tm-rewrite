@@ -5231,6 +5231,302 @@
           "mutedAt"
         ]
       },
+      "GetConversationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "listing": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "brandId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "modelId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "year": {
+                "type": "integer",
+                "minimum": 1900,
+                "maximum": 2100
+              },
+              "displayPriceTmt": {
+                "type": "number",
+                "minimum": 0
+              },
+              "priceCurrency": {
+                "type": "string",
+                "enum": [
+                  "TMT",
+                  "USD",
+                  "AED"
+                ]
+              },
+              "coverMediaKey": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending_review",
+                  "active",
+                  "sold",
+                  "archived",
+                  "rejected",
+                  "banned"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "brandId",
+              "modelId",
+              "displayPriceTmt",
+              "priceCurrency",
+              "status"
+            ]
+          },
+          "buyerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "myRole": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "seller"
+            ]
+          },
+          "peer": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "displayName"
+            ]
+          },
+          "blockedByMe": {
+            "type": "boolean"
+          },
+          "lastMessage": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "conversationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "senderId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "image",
+                  "post_ref",
+                  "system"
+                ],
+                "default": "text"
+              },
+              "text": {
+                "type": "string",
+                "nullable": true
+              },
+              "metadata": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "listingId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "brandId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "modelId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "year": {
+                        "type": "integer",
+                        "minimum": 1900,
+                        "maximum": 2100
+                      },
+                      "displayPriceTmt": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "priceCurrency": {
+                        "type": "string",
+                        "enum": [
+                          "TMT",
+                          "USD",
+                          "AED"
+                        ]
+                      },
+                      "coverMediaKey": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "draft",
+                          "pending_review",
+                          "active",
+                          "sold",
+                          "archived",
+                          "rejected",
+                          "banned"
+                        ]
+                      },
+                      "available": {
+                        "type": "boolean",
+                        "default": true
+                      }
+                    },
+                    "required": [
+                      "listingId",
+                      "brandId",
+                      "modelId",
+                      "displayPriceTmt",
+                      "priceCurrency",
+                      "status"
+                    ]
+                  }
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "deletedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "clientMessageId": {
+                "type": "string"
+              },
+              "deliveryStatus": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "sent",
+                  "failed"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "conversationId",
+              "senderId",
+              "text",
+              "createdAt"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unreadCount": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "peerLastReadAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "peerLastDeliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mutedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "sendRestriction": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "blocked_by_me",
+              "listing_unavailable",
+              "chat_disabled",
+              "participant_unavailable"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "listing",
+          "buyerId",
+          "sellerId",
+          "myRole",
+          "peer",
+          "blockedByMe",
+          "updatedAt",
+          "sendRestriction"
+        ]
+      },
+      "SendRestriction": {
+        "type": "string",
+        "enum": [
+          "blocked_by_me",
+          "listing_unavailable",
+          "chat_disabled",
+          "participant_unavailable"
+        ]
+      },
       "DeleteMessageResponse": {
         "type": "object",
         "properties": {
@@ -8028,6 +8324,431 @@
                   "required": [
                     "items",
                     "nextCursor"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/conversations/{id}": {
+      "get": {
+        "summary": "Read one conversation with the viewer's send restriction",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversation summary plus sendRestriction (null when a message would be accepted)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "listing": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "brandId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "modelId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "year": {
+                          "type": "integer",
+                          "minimum": 1900,
+                          "maximum": 2100
+                        },
+                        "displayPriceTmt": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "priceCurrency": {
+                          "type": "string",
+                          "enum": [
+                            "TMT",
+                            "USD",
+                            "AED"
+                          ]
+                        },
+                        "coverMediaKey": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "pending_review",
+                            "active",
+                            "sold",
+                            "archived",
+                            "rejected",
+                            "banned"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "brandId",
+                        "modelId",
+                        "displayPriceTmt",
+                        "priceCurrency",
+                        "status"
+                      ]
+                    },
+                    "buyerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "sellerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "myRole": {
+                      "type": "string",
+                      "enum": [
+                        "buyer",
+                        "seller"
+                      ]
+                    },
+                    "peer": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName"
+                      ]
+                    },
+                    "blockedByMe": {
+                      "type": "boolean"
+                    },
+                    "lastMessage": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "conversationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "senderId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "text",
+                            "image",
+                            "post_ref",
+                            "system"
+                          ],
+                          "default": "text"
+                        },
+                        "text": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "metadata": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "width": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "height": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "key"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "listingId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "brandId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "modelId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "year": {
+                                  "type": "integer",
+                                  "minimum": 1900,
+                                  "maximum": 2100
+                                },
+                                "displayPriceTmt": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "priceCurrency": {
+                                  "type": "string",
+                                  "enum": [
+                                    "TMT",
+                                    "USD",
+                                    "AED"
+                                  ]
+                                },
+                                "coverMediaKey": {
+                                  "type": "string"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "draft",
+                                    "pending_review",
+                                    "active",
+                                    "sold",
+                                    "archived",
+                                    "rejected",
+                                    "banned"
+                                  ]
+                                },
+                                "available": {
+                                  "type": "boolean",
+                                  "default": true
+                                }
+                              },
+                              "required": [
+                                "listingId",
+                                "brandId",
+                                "modelId",
+                                "displayPriceTmt",
+                                "priceCurrency",
+                                "status"
+                              ]
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "deletedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "clientMessageId": {
+                          "type": "string"
+                        },
+                        "deliveryStatus": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "sent",
+                            "failed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "conversationId",
+                        "senderId",
+                        "text",
+                        "createdAt"
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "unreadCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
+                    },
+                    "peerLastReadAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "peerLastDeliveredAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "mutedAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
+                    },
+                    "sendRestriction": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "blocked_by_me",
+                        "listing_unavailable",
+                        "chat_disabled",
+                        "participant_unavailable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "listing",
+                    "buyerId",
+                    "sellerId",
+                    "myRole",
+                    "peer",
+                    "blockedByMe",
+                    "updatedAt",
+                    "sendRestriction"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a participant (reason NOT_A_PARTICIPANT)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
                   ]
                 }
               }

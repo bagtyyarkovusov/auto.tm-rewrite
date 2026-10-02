@@ -22,6 +22,7 @@ import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort
 import { Public } from "../../../common/public.decorator";
 import { OpenConversation } from "../application/OpenConversation";
 import { ListMyConversations } from "../application/ListMyConversations";
+import { GetConversation } from "../application/GetConversation";
 import { ListMessages } from "../application/ListMessages";
 import { SendTextMessage } from "../application/SendTextMessage";
 import { SendMessage } from "../application/SendMessage";
@@ -44,6 +45,8 @@ export class ConversationsController {
     private readonly openConversationUC: OpenConversation,
     @Inject(ListMyConversations)
     private readonly listMyConversationsUC: ListMyConversations,
+    @Inject(GetConversation)
+    private readonly getConversationUC: GetConversation,
     @Inject(ListMessages)
     private readonly listMessagesUC: ListMessages,
     @Inject(SendTextMessage)
@@ -133,6 +136,44 @@ export class ConversationsController {
         ),
       ),
       nextCursor: result.nextCursor,
+    };
+  }
+
+  // Declared after `ping` and the collection routes: `:id` must never claim them.
+  @Get(":id")
+  async getConversation(
+    @Param() params: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    const userId = this.userId(req);
+    const { id } = this.parseOrThrow(
+      ConversationsSchemas.ConversationIdParamSchema,
+      params,
+    );
+
+    const result = await this.getConversationUC.execute({
+      userId,
+      conversationId: id,
+    });
+
+    const availabilityMap = await this.buildPostRefAvailabilityMap(
+      result.lastMessage ? [result.lastMessage] : [],
+    );
+
+    return {
+      ...this.toConversationSummaryResponse(
+        result.conversation,
+        result.listing,
+        userId,
+        { peer: result.peer, blockedByMe: result.blockedByMe },
+        result.lastMessage,
+        result.unreadCount,
+        availabilityMap,
+        result.peerLastReadAt,
+        result.peerLastDeliveredAt,
+        result.mutedAt,
+      ),
+      sendRestriction: result.sendRestriction,
     };
   }
 

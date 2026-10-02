@@ -127,6 +127,8 @@ import {
   PresignChatAttachmentRequestSchema,
   PresignChatAttachmentResponseSchema,
   ConversationSummarySchema,
+  GetConversationResponseSchema,
+  SendRestrictionSchema,
   MessageSummarySchema,
   ConversationListingCardSchema,
   ImageMessageMetadataSchema,
@@ -265,6 +267,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("UpdateWatermarkResponse", UpdateWatermarkResponseSchema);
   registry.register("MuteConversationRequest", MuteConversationRequestSchema);
   registry.register("MuteConversationResponse", MuteConversationResponseSchema);
+  registry.register("GetConversationResponse", GetConversationResponseSchema);
+  registry.register("SendRestriction", SendRestrictionSchema);
   registry.register("DeleteMessageResponse", DeleteMessageResponseSchema);
   registry.register("ChatMessageEvent", ChatMessageEventSchema);
   registry.register("MessageDeletedEvent", MessageDeletedEventSchema);
@@ -392,6 +396,33 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         content: {
           "application/json": { schema: S(ListConversationsResponseSchema) },
         },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/conversations/{id}",
+    summary: "Read one conversation with the viewer's send restriction",
+    tags: ["Conversations"],
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description:
+          "Conversation summary plus sendRestriction (null when a message would be accepted)",
+        content: {
+          "application/json": { schema: S(GetConversationResponseSchema) },
+        },
+      },
+      403: {
+        description: "Not a participant (reason NOT_A_PARTICIPANT)",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Conversation not found",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },
   });
