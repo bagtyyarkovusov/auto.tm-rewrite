@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import type { ListingSummary, ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
@@ -23,6 +24,18 @@ export type SendRestriction =
   | "listing_unavailable"
   | "chat_disabled"
   | "participant_unavailable";
+
+type MustBeTrue<T extends true> = T;
+type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+
+/**
+ * Compile-time tie to the wire contract: it stops compiling when a restriction
+ * exists on only one side of `SendRestriction` and the contract's
+ * `SendRestrictionSchema`.
+ */
+export type SendRestrictionMatchesContract = MustBeTrue<
+  SameMembers<SendRestriction, ConversationsSchemas.SendRestriction>
+>;
 
 export interface AuthorizedConversationSend {
   conversation: Conversation;
