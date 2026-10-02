@@ -43,6 +43,7 @@ function SheetOverlay({
             {Platform.OS === 'web' ? null : (
               <DialogPrimitive.Close asChild>
                 <Pressable
+                  testID="sheet-backdrop"
                   accessible={false}
                   importantForAccessibility="no-hide-descendants"
                   className="absolute bottom-0 left-0 right-0 top-0"

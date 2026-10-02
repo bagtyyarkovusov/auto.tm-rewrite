@@ -60,4 +60,9 @@ describe("OptionPickerSheet", () => {
     const { view } = renderSheet({ locale });
     expect(view.getByRole("button", { name: label })).toBeTruthy();
   });
+
+  it("asks the sheet to close on a tap outside (the shell mock passes the prop to a View)", () => {
+    const { view } = renderSheet();
+    expect(view.UNSAFE_getByProps({ closeOnBackdropPress: true })).toBeTruthy();
+  });
 });
