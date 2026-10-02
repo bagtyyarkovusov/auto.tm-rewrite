@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   navigation: {
     cancel: vi.fn(),
     changeMethod: vi.fn(),
+    usePhoneInstead: vi.fn(),
     complete: vi.fn(),
     invalidDestination: vi.fn(),
   },
