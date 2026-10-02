@@ -644,7 +644,7 @@ export const resources: Resource = {
     },
     onboarding: {
       chooseLanguage: "Выберите язык",
-      languageSubtitle: "Вы можете изменить язык позже в настройках",
+      languageSubtitle: "Вы можете изменить язык позже в Кабинете",
       valueProp1Title: "Найдите настоящие машины",
       valueProp1Body:
         "Смотрите объявления продавцов из Туркменистана и фильтруйте по марке, модели, цене и году.",
@@ -1275,7 +1275,7 @@ export const resources: Resource = {
     },
     onboarding: {
       chooseLanguage: "Dil saýlaň",
-      languageSubtitle: "Sazlamalarda soňrak üýtgedip bilersiňiz",
+      languageSubtitle: "Soňrak Kabinetde üýtgedip bilersiňiz",
       valueProp1Title: "Hakyky awtomobiller tapyň",
       valueProp1Body:
         "Türkmenistandaky satyjylaryň bildirişlerini görüň we marka, model, baha we ýyl boýunça süzüň.",
@@ -1904,7 +1904,7 @@ export const resources: Resource = {
     },
     onboarding: {
       chooseLanguage: "Choose language",
-      languageSubtitle: "You can change the language later in settings",
+      languageSubtitle: "You can change the language later in Cabinet",
       valueProp1Title: "Find real cars",
       valueProp1Body:
         "Browse listings from sellers in Turkmenistan and filter by make, model, price, and year.",

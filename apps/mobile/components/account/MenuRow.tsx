@@ -73,9 +73,9 @@ export function MenuRow({
   );
 }
 
-/** Hairline divider between rows, inset to the label when the rows have icons. */
-export function MenuDivider({ inset = true }: { inset?: boolean }) {
-  return <View className={cn("h-px bg-border", inset ? "ml-[54px]" : "ml-4")} />;
+/** Hairline divider between rows, inset to the label after the icon. */
+export function MenuDivider() {
+  return <View className="ml-[54px] h-px bg-border" />;
 }
 
 /** The thin gap between groups of rows. */

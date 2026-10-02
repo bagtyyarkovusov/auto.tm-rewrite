@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import CabinetScreen from "../../app/(tabs)/services";
@@ -63,6 +60,10 @@ describe("Cabinet signed out", () => {
     const view = renderMobile(<CabinetScreen />);
     expect(view.getByRole("button", { name: "Sign in, By phone or email" })).toBeTruthy();
     expectMenuRows(view);
+    // No profile row in any of its states.
+    expect(view.queryByLabelText(view.i18n.t("common:loading"))).toBeNull();
+    expect(view.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(view.queryByRole("button", { name: maskTmPhone(PHONE) })).toBeNull();
     expect(view.queryByRole("button", { name: /My listings/ })).toBeNull();
     expect(view.queryByRole("button", { name: /Log out/ })).toBeNull();
     expect(view.queryByRole("button", { name: /Delete account/ })).toBeNull();
@@ -101,6 +102,11 @@ describe("Cabinet signed in", () => {
     expect(view.getByRole("button", { name: `Aman, ${maskTmPhone(PHONE)}` })).toBeTruthy();
     expect(view.getByRole("button", { name: "My listings" })).toBeTruthy();
     expectMenuRows(view);
+    // Rendered order: the profile row, My listings, then the menu rows.
+    const text = JSON.stringify(view.toJSON());
+    expect(text.indexOf("Aman")).toBeLessThan(text.indexOf("My listings"));
+    expect(text.indexOf("My listings")).toBeLessThan(text.indexOf("Language"));
+    expect(text.indexOf("Language")).toBeLessThan(text.indexOf("Posting rules"));
     expect(view.queryByRole("button", { name: /Sign in/ })).toBeNull();
     expect(view.queryByRole("button", { name: /Log out/ })).toBeNull();
     expect(view.queryByRole("button", { name: /Delete account/ })).toBeNull();
@@ -141,13 +147,5 @@ describe("Cabinet signed in", () => {
     fireEvent.press(view.getByRole("button", { name: "Theme, System" }));
     fireEvent.press(view.getByRole("radio", { name: "Dark" }));
     expect(themeStore.getState().theme).toBe("dark");
-  });
-});
-
-describe("Settings is gone", () => {
-  const appDir = resolve(__dirname, "../../app");
-
-  it("has no settings route", () => {
-    expect(() => readFileSync(resolve(appDir, "settings.tsx"))).toThrow();
   });
 });
