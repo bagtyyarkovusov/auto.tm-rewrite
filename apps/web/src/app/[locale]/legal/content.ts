@@ -19,8 +19,8 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
     title: "Privacy Policy",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "September 23, 2026",
-    lastRevisedISO: "2026-09-23",
+    lastRevised: "October 2, 2026",
+    lastRevisedISO: "2026-10-02",
     sections: [
       {
         title: "1. What we collect",
@@ -65,7 +65,7 @@ Future collections (if features ship): push notification tokens, video uploads, 
         title: "6. Data retention & account deletion",
         body: `Your data is retained while your account is active.
 
-If you are signed in, you can request account deletion from the app settings. On the public [account deletion page](/en/account/delete) on our website, enter a phone number or email address on the account and confirm the request with a code sent to it.
+If you are signed in, you can delete your account in the app: open Cabinet, tap your profile, then tap Delete account at the bottom of the Profile screen. On the public [account deletion page](/en/account/delete) on our website, enter a phone number or email address on the account and confirm the request with a code sent to it.
 
 When you request account deletion:
 - Your account enters a **30-day grace period**.
@@ -105,8 +105,8 @@ When you request account deletion:
     title: "Политика конфиденциальности",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "23 сентября 2026 г.",
-    lastRevisedISO: "2026-09-23",
+    lastRevised: "2 октября 2026 г.",
+    lastRevisedISO: "2026-10-02",
     sections: [
       {
         title: "1. Какие данные мы собираем",
@@ -147,7 +147,7 @@ When you request account deletion:
         title: "6. Хранение данных и удаление аккаунта",
         body: `Данные хранятся, пока аккаунт активен.
 
-Если вы вошли в аккаунт, удалить его можно в настройках приложения. На общедоступной [странице удаления аккаунта](/ru/account/delete) на нашем сайте укажите номер телефона или адрес почты из аккаунта и подтвердите запрос кодом, отправленным на выбранный способ входа.
+Если вы вошли в аккаунт, удалить его можно в приложении: откройте «Кабинет», нажмите на свой профиль и выберите «Удалить аккаунт» внизу экрана «Профиль». На общедоступной [странице удаления аккаунта](/ru/account/delete) на нашем сайте укажите номер телефона или адрес почты из аккаунта и подтвердите запрос кодом, отправленным на выбранный способ входа.
 
 При удалении аккаунта:
 - Аккаунт переходит в **30-дневный льготный период**.
@@ -187,8 +187,8 @@ When you request account deletion:
     title: "Gizlinlik syýasaty",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "23-nji sentýabr 2026",
-    lastRevisedISO: "2026-09-23",
+    lastRevised: "2-nji oktýabr 2026",
+    lastRevisedISO: "2026-10-02",
     sections: [
       {
         title: "1. Haýsy maglumatlary ýygnaýarys",
@@ -229,7 +229,7 @@ When you request account deletion:
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
         body: `Maglumatlar akkaunt işjeň bolança saklanýar.
 
-Akkaunta giren bolsaňyz, ony programmanyň sazlamalarynda pozup bilersiňiz. Saýtymyzdaky köpçülige açyk [akkaunt pozmak sahypasynda](/tk/account/delete) akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
+Akkaunta giren bolsaňyz, ony programmada pozup bilersiňiz: «Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Hasaby poz» düwmesine basyň. Saýtymyzdaky köpçülige açyk [akkaunt pozmak sahypasynda](/tk/account/delete) akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
 
 Akkaunty pozan wagtyňyz:
 - **30 günlük lýgotly döwr** başlaýar.
@@ -272,8 +272,8 @@ export const termsOfService: Record<Locale, LegalDocument> = {
     title: "Terms of Service",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "September 23, 2026",
-    lastRevisedISO: "2026-09-23",
+    lastRevised: "October 2, 2026",
+    lastRevisedISO: "2026-10-02",
     sections: [
       {
         title: "1. Eligibility",
@@ -317,7 +317,7 @@ Every listing shows a contact phone that has been verified. Before you publish o
       },
       {
         title: "10. Termination & account deletion",
-        body: `You may delete your account at any time through the in-app settings, or by requesting deletion on our website with the phone number or email address on your account. Deletion initiates a 30-day grace period during which you may recover your account by signing in again with either your phone number or your email address. After 30 days, your personal data is removed, but your listings and messages are retained with anonymized attribution.
+        body: `You may delete your account at any time in the app (in Cabinet, open your profile and tap Delete account), or by requesting deletion on our website with the phone number or email address on your account. Deletion initiates a 30-day grace period during which you may recover your account by signing in again with either your phone number or your email address. After 30 days, your personal data is removed, but your listings and messages are retained with anonymized attribution.
 
 AutoTM may suspend accounts that violate these terms.`,
       },
@@ -339,8 +339,8 @@ AutoTM may suspend accounts that violate these terms.`,
     title: "Условия использования",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "23 сентября 2026 г.",
-    lastRevisedISO: "2026-09-23",
+    lastRevised: "2 октября 2026 г.",
+    lastRevisedISO: "2026-10-02",
     sections: [
       {
         title: "1. Допустимый возраст",
@@ -384,7 +384,7 @@ AutoTM may suspend accounts that violate these terms.`,
       },
       {
         title: "10. Расторжение и удаление аккаунта",
-        body: `Вы можете удалить аккаунт в настройках приложения или запросить удаление на нашем сайте, указав номер телефона или адрес почты из аккаунта. Удаление запускает 30-дневный льготный период, в течение которого аккаунт можно восстановить, войдя снова по номеру телефона или по адресу почты. Через 30 дней персональные данные удаляются, объявления и переписка сохраняются с анонимной атрибуцией.
+        body: `Вы можете удалить аккаунт в приложении (в «Кабинете» откройте свой профиль и выберите «Удалить аккаунт») или запросить удаление на нашем сайте, указав номер телефона или адрес почты из аккаунта. Удаление запускает 30-дневный льготный период, в течение которого аккаунт можно восстановить, войдя снова по номеру телефона или по адресу почты. Через 30 дней персональные данные удаляются, объявления и переписка сохраняются с анонимной атрибуцией.
 
 AutoTM может приостановить аккаунт за нарушения.`,
       },
@@ -406,8 +406,8 @@ AutoTM может приостановить аккаунт за нарушен�
     title: "Ulanyş şertleri",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "23-nji sentýabr 2026",
-    lastRevisedISO: "2026-09-23",
+    lastRevised: "2-nji oktýabr 2026",
+    lastRevisedISO: "2026-10-02",
     sections: [
       {
         title: "1. Ýaş çägi",
@@ -451,7 +451,7 @@ Her bildirişde tassyklanan habarlaşma belgisi görkezilýär. Bildirişi çap 
       },
       {
         title: "10. Yzyna çykma we akkaunty pozmak",
-        body: `Akkaunty programmanyň sazlamalaryndan pozup bilersiňiz ýa-da saýtymyzda akkauntyňyzdaky telefon belgisi ýa-da e-poçta salgysy bilen pozmagy sorap bilersiňiz. Pozmak 30 günlük lýgotly döwür başlaýar; şol döwürde telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bolýar. 30 günden soň şahsy maglumatlar aýrylýar, bildirişler we çat anonim atanama saklanýar.
+        body: `Akkaunty programmada pozup bilersiňiz («Kabinet» bölüminde profiliňizi açyň we «Hasaby poz» düwmesine basyň) ýa-da saýtymyzda akkauntyňyzdaky telefon belgisi ýa-da e-poçta salgysy bilen pozmagy sorap bilersiňiz. Pozmak 30 günlük lýgotly döwür başlaýar; şol döwürde telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bolýar. 30 günden soň şahsy maglumatlar aýrylýar, bildirişler we çat anonim atanama saklanýar.
 
 AutoTM düzgünleri bozýan akkaunty bloklap biler.`,
       },
