@@ -303,6 +303,43 @@ describe("Listing media upload ownership e2e (#536)", () => {
     });
   });
 
+  it.each(["same-key duplicate", "sibling video"])(
+    "preserves a victim's objects when removing the adopted row with a legacy %s",
+    async (scenario) => {
+      const listingA = await createListing("user-a", "listing-a");
+      const listingB = await createListing("user-b", "listing-b");
+      const victimKey = await presignAndPut("user-b");
+      const victim = await attach("user-b", listingB.id, victimKey).expect(201);
+      const siblingKey = victimKey.replace(/original\.jpg$/, "original.mp4");
+      let removedId = victim.body.id as string;
+      let removedUser: SuiteUser = "user-b";
+      let removedListing = listingB.id;
+      if (scenario === "sibling video") {
+        // The migration backfills each distinct key, including legacy forged siblings.
+        const upload = await prisma.mediaUpload.create({ data: {
+          userId: suite.id("user-a"), key: siblingKey, kind: "video",
+          contentType: "video/mp4", sizeBytes: null,
+        } });
+        const sibling = await prisma.listingMedia.create({ data: {
+          listingId: listingA.id, kind: "video", key: siblingKey, sortOrder: 0, uploadId: upload.id,
+        } });
+        removedId = sibling.id;
+        removedUser = "user-a";
+        removedListing = listingA.id;
+      } else {
+        await prisma.listingMedia.create({ data: {
+          listingId: listingA.id, kind: "image", key: victimKey, sortOrder: 0,
+        } });
+      }
+
+      await removeMedia(removedUser, removedListing, removedId).expect(200);
+
+      expect(store.deleted).toEqual([]);
+      expect(store.objects.has(victimKey)).toBe(true);
+      expect(await prisma.listingMedia.count({ where: { key: victimKey } })).toBe(1);
+    },
+  );
+
   describe("retry and races", () => {
     it("returns the same media when the attach is retried", async () => {
       const listing = await createListing("user-a", "listing-a");

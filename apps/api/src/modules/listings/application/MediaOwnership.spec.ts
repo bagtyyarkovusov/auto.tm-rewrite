@@ -321,6 +321,19 @@ describe("Listing media upload ownership (#536)", () => {
       expect(world.objects.has(victimKey)).toBe(true);
     });
 
+    it("keeps a victim's image when a backfilled attacker video uses its directory", async () => {
+      const siblingKey = victimKey.replace(/original\.jpg$/, "original.mp4");
+      world.seedAdoptedMedia({
+        userId: USER_A, listingId: LISTING_A, mediaId: "legacy-sibling", key: siblingKey,
+      });
+
+      await remove.execute({ listingId: LISTING_A, userId: USER_A, mediaId: "legacy-sibling" });
+
+      expect(world.deletedKeys).toEqual([]);
+      expect(world.objects.has(victimKey)).toBe(true);
+      expect(world.media.map((m) => m.id)).toContain(victimMediaId);
+    });
+
     it("keeps shared objects when the owning row is removed while a legacy duplicate still references them", async () => {
       world.media.push(
         ListingMedia.create({
