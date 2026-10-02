@@ -132,7 +132,7 @@ function ProfileRow() {
   );
 }
 
-function openLegalPage(locale: string, kind: "terms" | "privacy") {
+function openLegalPage(locale: string, kind: "terms" | "privacy" | "posting-rules") {
   void Linking.openURL(legalPageUrl(locale, kind));
 }
 
@@ -198,7 +198,7 @@ export default function CabinetScreen() {
         <MenuRow
           icon={ScrollText}
           label={t("account:postingRules")}
-          onPress={() => openLegalPage(i18n.language, "terms")}
+          onPress={() => openLegalPage(i18n.language, "posting-rules")}
         />
         <MenuDivider />
         <MenuRow
