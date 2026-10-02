@@ -77,6 +77,7 @@ import {
   ListingBrandCountQuerySchema,
   ListingBrandCountResponseSchema,
   FeedSortSchema,
+  MyListingCountsResponseSchema,
   MyListingsResponseSchema,
   MyDraftsResponseSchema,
   FavoriteListingSummarySchema,
@@ -218,6 +219,7 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("ListingBrandCountResponse", ListingBrandCountResponseSchema);
   registry.register("FeedSort", FeedSortSchema);
   registry.register("MyListingsResponse", MyListingsResponseSchema);
+  registry.register("MyListingCountsResponse", MyListingCountsResponseSchema);
   registry.register("MyDraftsResponse", MyDraftsResponseSchema);
   registry.register("FavoriteListingSummary", FavoriteListingSummarySchema);
   registry.register("MyFavoritesResponse", MyFavoritesResponseSchema);

@@ -515,6 +515,22 @@ export const MyListingsResponseSchema = z.object({
 });
 export type MyListingsResponse = z.infer<typeof MyListingsResponseSchema>;
 
+/**
+ * The signed-in User's Listing and draft counts. Each status field counts the
+ * User's non-deleted Listings in that status; `drafts` counts `ListingDraft`
+ * rows; `total` counts every non-deleted Listing in any status plus `drafts`,
+ * so it can exceed the sum of the five fields when a status has no field.
+ */
+export const MyListingCountsResponseSchema = z.object({
+  active: z.number().int().nonnegative(),
+  sold: z.number().int().nonnegative(),
+  archived: z.number().int().nonnegative(),
+  banned: z.number().int().nonnegative(),
+  drafts: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+});
+export type MyListingCountsResponse = z.infer<typeof MyListingCountsResponseSchema>;
+
 export const MyDraftsResponseSchema = z.object({
   items: z.array(ListingDraftSchema),
   nextCursor: z.string().nullable(),

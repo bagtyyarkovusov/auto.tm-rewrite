@@ -8,13 +8,21 @@ import {
 import type { FastifyRequest } from "fastify";
 import { ListingsSchemas } from "@auto-tm/contracts";
 
+import { CountMyListings } from "../application/CountMyListings";
 import { ListMyListings } from "../application/ListMyListings";
 
 @Controller()
 export class MyListingsController {
   constructor(
     @Inject(ListMyListings) private readonly listMyListingsUC: ListMyListings,
+    @Inject(CountMyListings) private readonly countMyListingsUC: CountMyListings,
   ) {}
+
+  @Get("api/v1/me/listings/counts")
+  async countMyListings(@Req() req: FastifyRequest) {
+    const userId = (req as { user?: { sub: string } }).user?.sub as string;
+    return this.countMyListingsUC.execute({ userId });
+  }
 
   @Get("api/v1/me/listings")
   async listMyListings(

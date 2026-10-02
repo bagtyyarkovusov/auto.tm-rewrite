@@ -31,6 +31,7 @@ import {
   ListingCountResponseSchema,
   ListingBrandCountQuerySchema,
   ListingBrandCountResponseSchema,
+  MyListingCountsResponseSchema,
   ListingsErrorCode,
   ConditionDisclosureSchema,
   DraftConditionDisclosureSchema,
@@ -714,6 +715,20 @@ describe("ListingBrandCountQuerySchema / ListingBrandCountResponseSchema", () =>
         items: [{ brandId: "550e8400-e29b-41d4-a716-446655440002", totalMatching: 4 }],
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("MyListingCountsResponseSchema", () => {
+  const counts = { active: 2, sold: 1, archived: 1, banned: 0, drafts: 1, total: 5 };
+
+  it("parses the six counts", () => {
+    expect(MyListingCountsResponseSchema.parse(counts)).toEqual(counts);
+  });
+
+  it("rejects a missing, negative, or fractional count", () => {
+    expect(MyListingCountsResponseSchema.safeParse({ ...counts, drafts: undefined }).success).toBe(false);
+    expect(MyListingCountsResponseSchema.safeParse({ ...counts, banned: -1 }).success).toBe(false);
+    expect(MyListingCountsResponseSchema.safeParse({ ...counts, total: 1.5 }).success).toBe(false);
   });
 });
 

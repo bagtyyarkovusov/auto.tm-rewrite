@@ -1649,4 +1649,136 @@ describe("ListingsController e2e", () => {
       expect(res.body.items[0].id).toBe(listingId);
     });
   });
+
+  describe("GET /api/v1/me/listings/counts", () => {
+    async function seedOwned(
+      alias: SuiteUser,
+      status: NonNullable<Prisma.ListingUncheckedCreateInput["status"]>,
+      overrides: Partial<Prisma.ListingUncheckedCreateInput> = {},
+    ) {
+      return prisma.listing.create({
+        data: {
+          sellerId: suite.id(alias),
+          status,
+          brandId: validPayload.brandId,
+          modelId: validPayload.modelId,
+          cityId: validPayload.cityId,
+          priceAmount: validPayload.priceAmount,
+          priceCurrency: "TMT",
+          publishedAt: new Date(),
+          ...overrides,
+        },
+      });
+    }
+
+    it("returns 401 without bearer token", async () => {
+      await request.get("/api/v1/me/listings/counts").expect(401);
+    });
+
+    it("returns all zeros for a User with nothing", async () => {
+      const token = await createUser("user-1");
+
+      const res = await request
+        .get("/api/v1/me/listings/counts")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(ListingsSchemas.MyListingCountsResponseSchema.parse(res.body)).toEqual({
+        active: 0,
+        sold: 0,
+        archived: 0,
+        banned: 0,
+        drafts: 0,
+        total: 0,
+      });
+    });
+
+    it("counts each status, drafts, and a total that includes statuses with no field", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      await seedOwned("user-1", "active");
+      await seedOwned("user-1", "active");
+      await seedOwned("user-1", "sold");
+      await seedOwned("user-1", "archived");
+      await seedOwned("user-1", "banned");
+      await seedOwned("user-1", "pending_review");
+      await seedOwned("user-1", "rejected");
+      await seedDraft("user-1", validPayload);
+
+      const res = await request
+        .get("/api/v1/me/listings/counts")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(ListingsSchemas.MyListingCountsResponseSchema.parse(res.body)).toEqual({
+        active: 2,
+        sold: 1,
+        archived: 1,
+        banned: 1,
+        drafts: 1,
+        total: 8,
+      });
+    });
+
+    it("never counts soft-deleted Listings, in any status or in total", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      await seedOwned("user-1", "active");
+      await seedOwned("user-1", "active", { deletedAt: new Date() });
+      await seedOwned("user-1", "banned", { deletedAt: new Date() });
+
+      const res = await request
+        .get("/api/v1/me/listings/counts")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body).toEqual({
+        active: 1,
+        sold: 0,
+        archived: 0,
+        banned: 0,
+        drafts: 0,
+        total: 1,
+      });
+    });
+
+    it("never counts another User's Listings or drafts", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      await createUser("user-2");
+      await seedOwned("user-1", "active");
+      await seedOwned("user-2", "active");
+      await seedOwned("user-2", "banned");
+      await seedDraft("user-2", validPayload);
+
+      const res = await request
+        .get("/api/v1/me/listings/counts")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body).toEqual({
+        active: 1,
+        sold: 0,
+        archived: 0,
+        banned: 0,
+        drafts: 0,
+        total: 1,
+      });
+    });
+
+    it("leaves GET /api/v1/me/listings and GET /api/v1/listings/:id routed to their own handlers", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const listing = await seedOwned("user-1", "active");
+
+      const mine = await request
+        .get("/api/v1/me/listings")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(mine.body.items).toHaveLength(1);
+
+      const detail = await request.get(`/api/v1/listings/${listing.id}`).expect(200);
+      expect(detail.body.id).toBe(listing.id);
+    });
+  });
 });
