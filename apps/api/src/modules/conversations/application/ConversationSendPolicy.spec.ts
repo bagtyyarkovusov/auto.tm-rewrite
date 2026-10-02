@@ -1,5 +1,5 @@
 import { ForbiddenException } from "@nestjs/common";
-import { AdminSchemas } from "@auto-tm/contracts";
+import { AdminSchemas, AuthSchemas } from "@auto-tm/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
@@ -61,6 +61,8 @@ interface World {
   sellerSuspended?: boolean;
   /** Who blocked whom, as "<blocker>><blocked>". */
   blocks?: string[];
+  /** The buyer's account deletion is scheduled. Not a send restriction. */
+  buyerDeletionScheduled?: boolean;
 }
 
 function buildPolicy(world: World) {
@@ -75,6 +77,10 @@ function buildPolicy(world: World) {
       async (id: string) =>
         (id === "buyer-1" && world.buyerSuspended === true) ||
         (id === "seller-1" && world.sellerSuspended === true),
+    ),
+    isDeletionScheduled: vi.fn(
+      async (id: string) =>
+        id === "buyer-1" && world.buyerDeletionScheduled === true,
     ),
   } as unknown as IdentityCheckPort;
   const identityRead = {
@@ -374,6 +380,24 @@ describe("ConversationSendPolicy.authorize by Listing status", () => {
         buildPolicy(world).authorize(conversation.id, "buyer-1"),
       ).rejects.toBeInstanceOf(ForbiddenException);
     }
+  });
+});
+
+describe("a viewer whose account deletion is scheduled", () => {
+  it("can read the restriction as null while the send is refused for the pending state", async () => {
+    // A pending session only reads (GET /conversations/:id stays allowed), and
+    // the app never stores one, so this is not a SendRestriction value. The
+    // send path refuses it through assertAccountNotPendingDeletion instead.
+    const world: World = { listing: activeListing, buyerDeletionScheduled: true };
+    const policy = buildPolicy(world);
+
+    await expect(
+      policy.restrictionFor(conversation, "buyer-1", activeListing),
+    ).resolves.toBeNull();
+    await expect(refusalReason(policy, "buyer-1")).resolves.toBe(
+      AuthSchemas.ACCOUNT_DELETION_PENDING_REASON,
+    );
+    await expect(refusalReason(policy, "seller-1")).resolves.toBeNull();
   });
 });
 
