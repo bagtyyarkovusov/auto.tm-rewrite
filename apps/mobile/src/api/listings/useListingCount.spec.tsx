@@ -123,6 +123,89 @@ describe("useListingCount", () => {
     expect(lastUrl).toContain("brandId=brand-c");
   });
 
+  describe("invalid draft becoming valid (stale invalid criteria)", () => {
+    const invalid = { yearMin: 2025, yearMax: 2020 } as ListingsSchemas.ListingFilter;
+    const valid = { yearMin: 2025, yearMax: 2026 } as ListingsSchemas.ListingFilter;
+    const requestedUrls = () => mockGet.mock.calls.map((call) => String(call[0]));
+
+    it("never requests the stale invalid criteria when the draft becomes valid", async () => {
+      mockGet.mockResolvedValue({ totalMatching: 7 });
+
+      const { result, rerender } = renderHook(
+        ({ filters, enabled }) => useListingCount({ filters, enabled }),
+        { wrapper, initialProps: { filters: invalid, enabled: false } },
+      );
+
+      vi.advanceTimersByTime(500);
+      expect(mockGet).not.toHaveBeenCalled();
+
+      rerender({ filters: valid, enabled: true });
+      await vi.advanceTimersByTimeAsync(300);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(requestedUrls().filter((url) => url.includes("yearMax=2020"))).toEqual([]);
+      expect(requestedUrls()).toEqual(["/listings/count?yearMin=2025&yearMax=2026"]);
+      expect(result.current.data?.totalMatching).toBe(7);
+    });
+
+    it("never requests the criteria that went invalid mid-edit after the draft recovers", async () => {
+      mockGet.mockResolvedValue({ totalMatching: 3 });
+      const earlier = { yearMin: 2018, yearMax: 2020 } as ListingsSchemas.ListingFilter;
+
+      const { result, rerender } = renderHook(
+        ({ filters, enabled }) => useListingCount({ filters, enabled }),
+        { wrapper, initialProps: { filters: earlier, enabled: true } },
+      );
+      await vi.advanceTimersByTimeAsync(300);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      mockGet.mockClear();
+
+      rerender({ filters: invalid, enabled: false });
+      await vi.advanceTimersByTimeAsync(500);
+      rerender({ filters: valid, enabled: true });
+      await vi.advanceTimersByTimeAsync(300);
+      await waitFor(() => expect(result.current.data?.totalMatching).toBe(3));
+
+      expect(requestedUrls().filter((url) => url.includes("yearMax=2020"))).toEqual([]);
+      expect(requestedUrls()).toEqual(["/listings/count?yearMin=2025&yearMax=2026"]);
+    });
+
+    it("keeps the loading state, without a request, until the valid criteria settle", async () => {
+      mockGet.mockResolvedValue({ totalMatching: 9 });
+
+      const { result, rerender } = renderHook(
+        ({ filters, enabled }) => useListingCount({ filters, enabled }),
+        { wrapper, initialProps: { filters: invalid, enabled: false } },
+      );
+      rerender({ filters: valid, enabled: true });
+
+      expect(result.current.isPending).toBe(true);
+      expect(result.current.isError).toBe(false);
+      expect(mockGet).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(300);
+      await waitFor(() => expect(result.current.data?.totalMatching).toBe(9));
+    });
+  });
+
+  it("surfaces a count error for the current criteria and retries them with refetch", async () => {
+    mockGet.mockRejectedValueOnce(new Error("count failed")).mockResolvedValue({ totalMatching: 4 });
+
+    const { result } = renderHook(
+      () => useListingCount({ filters: { brandId: "brand-1" } as ListingsSchemas.ListingFilter }),
+      { wrapper },
+    );
+
+    await vi.advanceTimersByTimeAsync(300);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+
+    await result.current.refetch();
+    await waitFor(() => expect(result.current.data?.totalMatching).toBe(4));
+    expect(mockGet).toHaveBeenCalledTimes(2);
+    expect(String(mockGet.mock.calls[1]?.[0])).toContain("brandId=brand-1");
+  });
+
   it("does not fetch when disabled", async () => {
     mockGet.mockResolvedValue({ totalMatching: 1 });
 

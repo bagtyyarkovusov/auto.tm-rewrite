@@ -38,13 +38,23 @@ function buildCountParams(
   return params;
 }
 
+/**
+ * Counts the listings matching `filters`, debounced. `enabled` is the caller's
+ * "these criteria are valid" gate: a draft the caller rejects is never copied
+ * into the debounced filters, and the request only goes out once the debounced
+ * filters equal the current ones. Otherwise a draft that turns valid would
+ * first request the last invalid criteria (and get HTTP 400) before the
+ * debounce caught up.
+ */
 export function useListingCount({ filters, enabled = true }: UseListingCountOptions) {
   const [debouncedFilters, setDebouncedFilters] =
     useState<ListingsSchemas.ListingCountQuery | undefined>(filters);
 
+  const settled =
+    buildCountParams(filters).toString() === buildCountParams(debouncedFilters).toString();
+
   useEffect(() => {
-    if (!enabled) {
-      setDebouncedFilters(filters);
+    if (!enabled || settled) {
       return;
     }
 
@@ -53,7 +63,7 @@ export function useListingCount({ filters, enabled = true }: UseListingCountOpti
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [filters, enabled]);
+  }, [filters, enabled, settled]);
 
   return useQuery({
     queryKey: queryKeys.listings.count(debouncedFilters),
@@ -63,7 +73,7 @@ export function useListingCount({ filters, enabled = true }: UseListingCountOpti
         ListingsSchemas.ListingCountResponseSchema,
         { auth: false },
       ),
-    enabled,
+    enabled: enabled && settled,
     staleTime: 30_000,
   });
 }
