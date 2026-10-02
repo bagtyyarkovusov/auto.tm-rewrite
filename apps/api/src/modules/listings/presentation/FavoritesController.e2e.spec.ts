@@ -23,8 +23,11 @@ import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
 import {
   cleanSuiteFixtures,
   defineE2eSuite,
+  fakeMediaObjectInspector,
+  seedPresignedPhotos,
   seedSuiteCatalog,
 } from "../../../../test/helpers/e2eSuite";
+import { MEDIA_OBJECT_INSPECTOR } from "../domain/ports/MediaObjectInspector";
 import { IMAGE_VARIANT_GENERATOR } from "../domain/ports/ImageVariantGenerator";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
 import {
@@ -57,6 +60,8 @@ describe("FavoritesController e2e", () => {
         }),
       ],
     })
+      .overrideProvider(MEDIA_OBJECT_INSPECTOR)
+      .useValue(fakeMediaObjectInspector)
       .overrideProvider(IMAGE_VARIANT_GENERATOR)
       .useValue({
         generate: async (originalKey: string) => ({
@@ -104,8 +109,9 @@ describe("FavoritesController e2e", () => {
   }
 
   async function seedDraft(alias: SuiteUser, payload: Record<string, unknown>) {
+    const seeded = await seedPresignedPhotos(prisma, suite.id(alias), payload);
     const draft = await prisma.listingDraft.create({
-      data: { userId: suite.id(alias), payload: payload as Prisma.InputJsonValue },
+      data: { userId: suite.id(alias), payload: seeded as Prisma.InputJsonValue },
     });
     return draft;
   }
@@ -398,11 +404,17 @@ describe("FavoritesController e2e", () => {
         .set("Authorization", `Bearer ${buyerToken}`)
         .expect(200);
       const parsed = ListingsSchemas.MyFavoritesResponseSchema.parse(res.body);
+      // Publication adopts server-recorded uploads, so the stored keys are the
+      // seeded upload keys, not the draft's placeholder names.
+      const stored = await prisma.listingMedia.findMany({
+        where: { listingId },
+        orderBy: { sortOrder: "asc" },
+      });
 
       expect(parsed.items).toHaveLength(1);
       expect(parsed.items[0]).toMatchObject({
         id: listingId,
-        photoKeys: ["a.jpg", "b.jpg"],
+        photoKeys: [stored[0]?.key, stored[1]?.key],
         photoCount: 3,
         mileageKm: 50000,
         condition: "used",
