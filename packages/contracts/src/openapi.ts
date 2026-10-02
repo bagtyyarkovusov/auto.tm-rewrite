@@ -416,6 +416,10 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
           "application/json": { schema: S(GetConversationResponseSchema) },
         },
       },
+      400: {
+        description: "Validation error (malformed conversation id)",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
       403: {
         description: "Not a participant (reason NOT_A_PARTICIPANT)",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
