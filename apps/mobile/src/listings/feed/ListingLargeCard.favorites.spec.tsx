@@ -24,7 +24,7 @@ function renderCard(listing: Partial<ListingsSchemas.FavoriteListingSummary> = {
   const onRemove = vi.fn();
   const view = renderMobile(
     <ListingLargeCard listing={{ ...favorite, ...listing }} brandName="Toyota" modelName="Camry" cityName="Ashgabat"
-      onPress={onPress} favorites={{ isOwn, onRemove }} />,
+      onPress={onPress} isOwn={isOwn} onRemoveFavorite={onRemove} />,
     { locale },
   );
   return { view, onPress, onRemove };

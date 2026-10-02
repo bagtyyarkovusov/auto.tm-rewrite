@@ -40,12 +40,14 @@ interface CardBaseProps {
 interface ResultsCardProps extends CardBaseProps {
   listing: ListingsSchemas.ListingSummary;
   isAuthenticated: boolean | null; returnTo: AuthHref;
-  favorites?: undefined;
+  onRemoveFavorite?: undefined;
 }
 /** Favorites: Call and Message on an active Listing, and a filled ♥ that removes it. */
 interface FavoritesCardProps extends CardBaseProps {
   listing: ListingsSchemas.FavoriteListingSummary;
-  favorites: { isOwn: boolean; onRemove: (listing: ListingsSchemas.FavoriteListingSummary) => void };
+  /** The User's own Listing gets no contact buttons. */
+  isOwn: boolean;
+  onRemoveFavorite: (listing: ListingsSchemas.FavoriteListingSummary) => void;
 }
 type ListingLargeCardProps = ResultsCardProps | FavoritesCardProps;
 
@@ -115,8 +117,8 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
   const title = [identity, listing.year].filter((value) => value != null && value !== "").join(", ");
   const specs = listingSpecLine({ mileageKm: listing.mileageKm, transmissionName, engineTypeName, locale: i18n.language, kmLabel: t("km") });
   const location = [cityName, formatListingDate(listing.publishedAt, i18n.language, t)].filter(Boolean).join(" · ");
-  const favoriteCard = props.favorites ? props : undefined;
-  const resultsCard = props.favorites ? undefined : props;
+  const favoriteCard = props.onRemoveFavorite ? props : undefined;
+  const resultsCard = props.onRemoveFavorite ? undefined : props;
   const closedLabel = listing.status === Enums.ListingStatus.Sold ? t("sold") : listing.status === Enums.ListingStatus.Archived ? t("removedFromSale") : null;
   return <View className="bg-card pb-2">
     <Pressable onPress={() => onPress(listing.id)} accessibilityRole="button" accessibilityLabel={[title, price, closedLabel].filter(Boolean).join(", ")} className="active:opacity-90">
@@ -141,10 +143,10 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
         {title ? <Text className="text-sm text-muted-foreground" numberOfLines={1}>{title}</Text> : null}
       </View>
     </Pressable>
-    {favoriteCard && !closedLabel && !favoriteCard.favorites.isOwn ? <ContactActions listing={favoriteCard.listing} /> : null}
+    {favoriteCard && !closedLabel && !favoriteCard.isOwn ? <ContactActions listing={favoriteCard.listing} /> : null}
     <View className="min-h-11 flex-row items-center gap-2 px-4">
       <Text className="min-w-0 flex-1 text-xs text-muted-foreground" numberOfLines={1}>{location}</Text>
-      {favoriteCard ? <RemoveFavoriteButton onPress={() => favoriteCard.favorites.onRemove(favoriteCard.listing)} /> : null}
+      {favoriteCard ? <RemoveFavoriteButton onPress={() => favoriteCard.onRemoveFavorite(favoriteCard.listing)} /> : null}
       {resultsCard ? <FeedFavoriteButton listingId={listing.id} isFavorited={listing.isFavorited ?? false}
         isAuthenticated={resultsCard.isAuthenticated} returnTo={resultsCard.returnTo} /> : null}
     </View>

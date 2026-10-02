@@ -69,7 +69,7 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
   const router = useRouter();
   const { t } = useTranslation();
   const viewer = useViewer();
-  const { state, hideSold, setHideSold, items, counts, remove, query } = view;
+  const { state, hideSold, setHideSold, showSwitch, items, counts, remove, query } = view;
 
   const handlePress = useCallback(
     (id: string) => {
@@ -86,16 +86,29 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
   const transmissionName = (id?: string) => transmissions.data?.items.find((item) => item.id === id)?.name;
   const engineTypeName = (id?: string) => engineTypes.data?.items.find((item) => item.id === id)?.name;
 
+  // Kept through loading and errors after a switch, so the User can switch back.
+  const toggle = showSwitch ? (
+    <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
+  ) : null;
+
   if (state === "loading") {
     return (
-      <View accessibilityLabel={t("loading")} className="gap-2">
-        {[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} withActions />)}
-      </View>
+      <>
+        {toggle}
+        <View accessibilityLabel={t("loading")} className="gap-2">
+          {[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} withActions />)}
+        </View>
+      </>
     );
   }
 
   if (state === "error") {
-    return <ErrorState error={query.error} onRetry={() => query.refetch()} />;
+    return (
+      <>
+        {toggle}
+        <ErrorState error={query.error} onRetry={() => query.refetch()} />
+      </>
+    );
   }
 
   if (state === "empty") {
@@ -120,13 +133,13 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
           cityName={catalogMaps.cityName(item.cityId)}
           transmissionName={transmissionName(item.transmissionId)}
           engineTypeName={engineTypeName(item.engineTypeId)}
-          favorites={{ isOwn: viewer != null && viewer.userId === item.sellerId, onRemove: remove }}
+          // Until the viewer is known, a card could be the User's own: no contact buttons yet.
+          isOwn={viewer === undefined || viewer?.userId === item.sellerId}
+          onRemoveFavorite={remove}
         />
       )}
       ItemSeparatorComponent={() => <View className="h-2 bg-background" />}
-      ListHeaderComponent={
-        <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
-      }
+      ListHeaderComponent={toggle}
       ListEmptyComponent={
         state === "noActive" ? (
           <CenteredMessage icon={false} title={t("favoritesNoActiveTitle")} hint={t("favoritesNoActiveHint")}>
@@ -165,7 +178,7 @@ function SignedInFavorites() {
   useFocusEffect(useCallback(() => () => flush.current(), []));
   return (
     <>
-      <Title count={view.state === "list" || view.state === "noActive" ? view.counts.total : undefined} />
+      <Title count={view.showSwitch ? view.counts.total : undefined} />
       <FavoritesContent view={view} />
     </>
   );

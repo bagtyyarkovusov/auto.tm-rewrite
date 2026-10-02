@@ -32,10 +32,10 @@ export function HideSoldToggle({ hideSold, onChange, hiddenCount }: HideSoldTogg
         <View
           className={cn(
             "h-6 w-10 flex-row items-center rounded-full px-0.5",
-            hideSold ? "justify-end bg-foreground" : "justify-start bg-input",
+            hideSold ? "justify-end bg-foreground" : "justify-start bg-input dark:bg-input/80",
           )}
         >
-          <View className={cn("size-5 rounded-full", hideSold ? "bg-background" : "bg-foreground")} />
+          <View className={cn("size-5 rounded-full", hideSold ? "bg-background" : "bg-background dark:bg-foreground")} />
         </View>
       </Pressable>
       {hideSold && hiddenCount > 0 ? (

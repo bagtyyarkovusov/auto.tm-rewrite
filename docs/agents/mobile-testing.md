@@ -103,6 +103,9 @@ not copy these stubs into a spec.
   children where it is declared and `PortalHost` renders nothing. A spec can wrap
   a screen in the real `ToastProvider` and query its toasts, as
   `test/screens/favorites.spec.tsx` does.
+- **Announcements.** `AccessibilityInfo.announceForAccessibility` records each
+  message in the adapter's `AccessibilityInfo.announcements` array and speaks
+  nothing; a spec empties the array before asserting, as `toast.spec.tsx` does.
 
 A `FlatList` ref records `scrollToIndex` and `scrollToOffset` calls into the
 `scrollRequests` export of `react-native`. Specs and `native-setup.ts` import

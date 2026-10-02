@@ -118,6 +118,43 @@ describe("Favorites screen", () => {
     expect(view.getAllByRole("button", { name: "Call" })).toHaveLength(2);
   });
 
+  it("turns Hide sold on when the app starts", () => {
+    expect(useHideSoldStore.getInitialState().hideSold).toBe(true);
+  });
+
+  it("gives the switch a target of at least 44 pt", async () => {
+    const view = await renderFavorites();
+    expect(view.getByRole("switch", { name: "Hide sold" }).props.className).toMatch(/min-h-11/);
+  });
+
+  it("shows no contact buttons on the User's own Listing", async () => {
+    server.active = [page([{ ...camry, sellerId: "me" }, rav4], { total: 2, inactive: 0 })];
+    const view = await renderFavorites();
+    expect(view.getAllByRole("button", { name: "Call" })).toHaveLength(1);
+    expect(view.getAllByRole("button", { name: "Message" })).toHaveLength(1);
+  });
+
+  it("keeps the switch and the count while the other position loads, and after it fails", async () => {
+    const view = await renderFavorites();
+    api.get.mockImplementation(() => new Promise(() => {}));
+    fireEvent.press(view.getByRole("switch", { name: "Hide sold" }));
+    await settle();
+    expect(view.getByRole("switch", { name: "Hide sold" }).props.accessibilityState).toEqual(expect.objectContaining({ checked: false }));
+    expect(view.getByTestId("favorites-count").props.children).toBe(4);
+    expect(view.getByLabelText("Please wait...")).toBeTruthy();
+  });
+
+  it("lets the User switch back after the other position fails to load", async () => {
+    const view = await renderFavorites();
+    api.get.mockRejectedValue(new Error("Network request failed"));
+    fireEvent.press(view.getByRole("switch", { name: "Hide sold" }));
+    await settle();
+    expect(view.getByText("Something went wrong")).toBeTruthy();
+    fireEvent.press(view.getByRole("switch", { name: "Hide sold" }));
+    await settle();
+    expect(cardTitles(view)).toEqual(["Toyota Camry, 2018", "Toyota RAV4, 2018"]);
+  });
+
   it("leaves out the hidden line when nothing is hidden", async () => {
     server.active = [page([camry], { total: 1, inactive: 0 })];
     const view = await renderFavorites();
@@ -225,9 +262,12 @@ describe("Favorites screen", () => {
     fireEvent.press(heart(view, 0));
     await act(async () => { await vi.advanceTimersByTimeAsync(2900); });
     expect(api.delete).not.toHaveBeenCalled();
-    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(view.getByText("Removed from Favorites")).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    // The delete and the toast end together, so Undo is never offered after the delete.
     expect(api.delete).toHaveBeenCalledWith("/listings/camry-1/favorite", expect.any(Object));
     expect(view.queryByText("Removed from Favorites")).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
     expect(cardTitles(view)).toEqual(["Toyota RAV4, 2018"]);
   });
 

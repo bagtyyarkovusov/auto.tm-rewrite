@@ -25,61 +25,70 @@ export type FavoritesViewState = "loading" | "error" | "empty" | "noActive" | "l
  */
 export function useFavoritesView() {
   const { t } = useTranslation();
-  const toast = useToast();
+  const { show: showToast, dismiss: dismissToast } = useToast();
   const hideSold = useHideSoldStore((state) => state.hideSold);
   const setHideSold = useCallback((value: boolean) => useHideSoldStore.setState({ hideSold: value }), []);
   const query = useMyFavorites({ activeOnly: hideSold });
   const toastId = useRef<string | null>(null);
 
   const closeToast = useCallback(() => {
-    if (toastId.current) toast.dismiss(toastId.current);
+    if (toastId.current) dismissToast(toastId.current);
     toastId.current = null;
-  }, [toast]);
+  }, [dismissToast]);
 
-  const removal = useFavoriteRemoval({
+  const { hidden, remove: hide, undo, flush: send } = useFavoriteRemoval({
+    // The delete timer is the one clock: the Undo toast closes when the delete is sent.
+    onSent: closeToast,
     onFailed: () => {
-      toast.show({ title: t("favoritesRemoveFailed"), variant: "destructive", placement: "aboveTabBar" });
+      showToast({ title: t("favoritesRemoveFailed"), variant: "destructive", placement: "aboveTabBar" });
     },
   });
 
   const remove = useCallback(
     (listing: Favorite) => {
       closeToast();
-      removal.remove(listing);
-      toastId.current = toast.show({
+      hide(listing);
+      toastId.current = showToast({
         title: t("favoritesRemoved"),
         placement: "aboveTabBar",
-        duration: FAVORITE_REMOVAL_DELAY_MS,
+        // Longer than the delay only as a fallback; `onSent` closes it first.
+        duration: FAVORITE_REMOVAL_DELAY_MS + 1000,
         action: {
           label: t("undo"),
           onPress: () => {
             toastId.current = null;
-            removal.undo();
+            undo();
           },
         },
       });
     },
-    [closeToast, removal, t, toast],
+    [closeToast, hide, showToast, t, undo],
   );
 
   /** Sends a removal still waiting for Undo; the screen calls it when it loses focus. */
   const flush = useCallback(() => {
     closeToast();
-    removal.flush();
-  }, [closeToast, removal]);
+    send();
+  }, [closeToast, send]);
 
   const loaded = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
-  const items = useMemo(() => loaded.filter((item) => !removal.hidden.has(item.id)), [loaded, removal.hidden]);
+  const items = useMemo(() => loaded.filter((item) => !hidden.has(item.id)), [loaded, hidden]);
+
+  // Counts are over every visible Favorite, so either position's last answer
+  // stands in while the other one loads.
+  const lastServerCounts = useRef<ListingsSchemas.MyFavoritesResponse["counts"] | null>(null);
+  const serverCounts = query.data?.pages[0]?.counts ?? lastServerCounts.current;
+  if (query.data?.pages[0]) lastServerCounts.current = query.data.pages[0].counts;
 
   // The server still counts a removal waiting for Undo or for its delete.
   const counts = useMemo(() => {
-    const server = query.data?.pages[0]?.counts ?? { total: 0, inactive: 0 };
-    const hidden = [...removal.hidden.values()];
+    const server = serverCounts ?? { total: 0, inactive: 0 };
+    const pending = [...hidden.values()];
     return {
-      total: Math.max(0, server.total - hidden.length),
-      inactive: Math.max(0, server.inactive - hidden.filter((item) => item.status !== Enums.ListingStatus.Active).length),
+      total: Math.max(0, server.total - pending.length),
+      inactive: Math.max(0, server.inactive - pending.filter((item) => item.status !== Enums.ListingStatus.Active).length),
     };
-  }, [query.data, removal.hidden]);
+  }, [serverCounts, hidden]);
 
   const state: FavoritesViewState = query.isPending
     ? "loading"
@@ -91,5 +100,11 @@ export function useFavoritesView() {
           ? "noActive"
           : "list";
 
-  return { state, hideSold, setHideSold, items, counts, remove, flush, query };
+  /**
+   * The switch shows once the User has Favorites, and stays while the other
+   * position loads or fails, so the User can always switch back.
+   */
+  const showSwitch = serverCounts != null && counts.total > 0;
+
+  return { state, hideSold, setHideSold, showSwitch, items, counts, remove, flush, query };
 }

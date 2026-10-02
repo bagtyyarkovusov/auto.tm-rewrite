@@ -33,6 +33,8 @@ function dropFromFavoriteLists(queryClient: QueryClient, removed: Favorite) {
 
 interface UseFavoriteRemovalOptions {
   delayMs?: number;
+  /** The delete was just sent, so Undo is no longer possible. */
+  onSent?: (listing: Favorite) => void;
   /** The server refused the delete; the card is already back. */
   onFailed?: (listing: Favorite) => void;
 }
@@ -45,6 +47,7 @@ interface UseFavoriteRemovalOptions {
  */
 export function useFavoriteRemoval({
   delayMs = FAVORITE_REMOVAL_DELAY_MS,
+  onSent,
   onFailed,
 }: UseFavoriteRemovalOptions = {}) {
   const queryClient = useQueryClient();
@@ -54,6 +57,8 @@ export function useFavoriteRemoval({
   const pending = useRef<{ listing: Favorite; timer: ReturnType<typeof setTimeout> } | null>(null);
   const onFailedRef = useRef(onFailed);
   onFailedRef.current = onFailed;
+  const onSentRef = useRef(onSent);
+  onSentRef.current = onSent;
 
   const show = useCallback((listingId: string) => {
     setHidden((current) => {
@@ -70,6 +75,7 @@ export function useFavoriteRemoval({
     pending.current = null;
     setPendingId(null);
     const { listing } = current;
+    onSentRef.current?.(listing);
     // `mutateAsync`, not `mutate` with callbacks: a later delete must not
     // swallow this one's outcome.
     mutateAsync(listing.id).then(

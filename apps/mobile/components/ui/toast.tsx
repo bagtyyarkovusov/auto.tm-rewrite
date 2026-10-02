@@ -1,6 +1,6 @@
 import { Portal } from '@rn-primitives/portal';
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { AccessibilityInfo, Platform, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, FadeOutDown, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -111,6 +111,11 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     return () => clearTimeout(timer);
   }, [duration]);
 
+  // Android reads the live region; iOS needs an explicit announcement.
+  React.useEffect(() => {
+    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(toast.title);
+  }, [toast.title]);
+
   const fromBottom = toast.placement === 'aboveTabBar';
 
   return (
@@ -118,7 +123,8 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       entering={(fromBottom ? FadeInDown : FadeInUp).duration(200)}
       exiting={(fromBottom ? FadeOutDown : FadeOutUp).duration(150)}
       className="pointer-events-auto w-full max-w-sm">
-      <Pressable onPress={onDismiss} accessibilityLiveRegion="polite">
+      {/* An accessible parent groups its children on iOS, which would hide the action from VoiceOver. */}
+      <Pressable onPress={onDismiss} accessible={!toast.action} accessibilityLiveRegion="polite">
         <View
           className={cn(
             'flex-row items-center gap-3 rounded-lg border px-4 py-3 shadow-lg shadow-black/5',

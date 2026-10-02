@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider, useToast } from "@/components/ui/toast";
@@ -29,6 +29,20 @@ describe("Toast", () => {
     const view = renderToasts();
     act(() => { toast.show({ title: "Removed", action: { label: "Undo", onPress: vi.fn() } }); });
     expect(view.getByRole("button", { name: "Undo" }).props.className).toMatch(/min-h-11/);
+  });
+
+  it("leaves the action reachable by a screen reader and announces the toast", () => {
+    const announcements = (AccessibilityInfo as unknown as { announcements: string[] }).announcements;
+    announcements.length = 0;
+    const view = renderToasts();
+    act(() => { toast.show({ title: "Removed from Favorites", action: { label: "Undo", onPress: vi.fn() } }); });
+    // An accessible ancestor groups its children into one element on iOS, hiding Undo.
+    let ancestor = view.getByRole("button", { name: "Undo" }).parent;
+    while (ancestor) {
+      expect(ancestor.props.accessible).not.toBe(true);
+      ancestor = ancestor.parent;
+    }
+    expect(announcements).toContain("Removed from Favorites");
   });
 
   it("sits above the tab bar when asked, and at the top otherwise", () => {

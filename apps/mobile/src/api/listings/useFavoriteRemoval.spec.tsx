@@ -108,6 +108,17 @@ describe("Favorites removal with Undo", () => {
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith("/listings/a/favorite", expect.any(Object)));
   });
 
+  it("tells the caller when the delete is sent, so Undo can close with it", async () => {
+    const onSent = vi.fn();
+    const { result } = renderHook(() => useFavoriteRemoval({ delayMs: DELAY, onSent }), { wrapper });
+    act(() => result.current.remove(favorite("a")));
+    expect(onSent).not.toHaveBeenCalled();
+    await waitFor(() => expect(onSent).toHaveBeenCalledWith(expect.objectContaining({ id: "a" })));
+    act(() => result.current.remove(favorite("b")));
+    act(() => { result.current.undo(); });
+    expect(onSent).toHaveBeenCalledTimes(1);
+  });
+
   it("deletes a pending removal when the screen unmounts", async () => {
     const { result, unmount } = renderHook(() => useFavoriteRemoval({ delayMs: 10_000 }), { wrapper });
     act(() => result.current.remove(favorite("a")));
