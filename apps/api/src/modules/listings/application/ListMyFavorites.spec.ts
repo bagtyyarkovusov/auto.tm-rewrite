@@ -74,8 +74,12 @@ class FakeFavoriteRepository implements FavoriteRepository {
     return favorite;
   }
 
-  async remove(_userId: string, _listingId: string): Promise<boolean> {
-    return true;
+  async remove(userId: string, listingId: string): Promise<boolean> {
+    const before = this.favorites.length;
+    this.favorites = this.favorites.filter(
+      (f) => !(f.userId === userId && f.listingId === listingId),
+    );
+    return this.favorites.length < before;
   }
 
   async exists(_userId: string, _listingId: string): Promise<boolean> {
@@ -335,6 +339,52 @@ describe("ListMyFavorites", () => {
       const page2 = await uc.execute({ userId: "user-1", limit: 2, cursor: page1.nextCursor! });
       expect(page2.items.map((i) => i.id)).toEqual(["active-1"]);
       expect(page2.nextCursor).toBeNull();
+    });
+  });
+
+  describe("paging when a Favorite changes between pages", () => {
+    it("does not skip a Favorite when the cursor Listing is sold before page 2 with activeOnly", async () => {
+      await favoriteListings("active", "active", 4);
+      const uc = makeUseCase(favorites, listingsRead);
+
+      const page1 = await uc.execute({ userId: "user-1", activeOnly: true, limit: 2 });
+      expect(page1.items.map((i) => i.id)).toEqual(["active-4", "active-3"]);
+
+      // The cursor Listing leaves the activeOnly set between the two requests.
+      favorites.statuses.set("active-3", "sold");
+
+      const page2 = await uc.execute({
+        userId: "user-1",
+        activeOnly: true,
+        limit: 2,
+        cursor: page1.nextCursor!,
+      });
+      expect(page2.items.map((i) => i.id)).toEqual(["active-2", "active-1"]);
+    });
+
+    it("does not skip a Favorite when the cursor Listing is banned or deleted before page 2", async () => {
+      await favoriteListings("active", "active", 4);
+      const uc = makeUseCase(favorites, listingsRead);
+
+      const page1 = await uc.execute({ userId: "user-1", limit: 2 });
+      favorites.statuses.set("active-3", "banned");
+
+      const page2 = await uc.execute({ userId: "user-1", limit: 2, cursor: page1.nextCursor! });
+      expect(page2.items.map((i) => i.id)).toEqual(["active-2", "active-1"]);
+    });
+
+    it("returns the next Favorites when the cursor Favorite is removed before page 2", async () => {
+      await favoriteListings("active", "active", 3);
+      const uc = makeUseCase(favorites, listingsRead);
+
+      const page1 = await uc.execute({ userId: "user-1", limit: 1 });
+      expect(page1.items.map((i) => i.id)).toEqual(["active-3"]);
+
+      await favorites.remove("user-1", "active-3");
+
+      const page2 = await uc.execute({ userId: "user-1", limit: 1, cursor: page1.nextCursor! });
+      expect(page2.items.map((i) => i.id)).toEqual(["active-2"]);
+      expect(page2.nextCursor).not.toBeNull();
     });
   });
 

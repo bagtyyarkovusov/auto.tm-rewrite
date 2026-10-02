@@ -683,6 +683,96 @@ describe("FavoritesController e2e", () => {
         expect(page2.body.nextCursor).toBeNull();
       });
 
+      it("does not skip a Favorite when the cursor Listing is sold before page 2 with activeOnly", async () => {
+        await seedCatalog();
+        const sellerToken = await createUser("seller-1");
+        const buyerToken = await createUser("buyer-1");
+        const ids = await favoriteListingsWithStatuses(sellerToken, buyerToken, [
+          "active",
+          "active",
+          "active",
+          "active",
+        ]);
+
+        const page1 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ activeOnly: "true", limit: 2 })
+          .expect(200);
+        expect(page1.body.items.map((i: { id: string }) => i.id)).toEqual([ids[3], ids[2]]);
+
+        // The Listing at the cursor leaves the activeOnly set before page 2.
+        await prisma.listing.update({ where: { id: ids[2]! }, data: { status: "sold" } });
+
+        const page2 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ activeOnly: "true", limit: 2, cursor: page1.body.nextCursor })
+          .expect(200);
+
+        expect(page2.body.items.map((i: { id: string }) => i.id)).toEqual([ids[1], ids[0]]);
+        expect(page2.body.nextCursor).toBeNull();
+      });
+
+      it("does not skip a Favorite when the cursor Listing is banned or deleted before page 2", async () => {
+        await seedCatalog();
+        const sellerToken = await createUser("seller-1");
+        const buyerToken = await createUser("buyer-1");
+        const ids = await favoriteListingsWithStatuses(sellerToken, buyerToken, [
+          "active",
+          "active",
+          "active",
+          "active",
+        ]);
+
+        const page1 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ limit: 2 })
+          .expect(200);
+        await prisma.listing.update({ where: { id: ids[2]! }, data: { deletedAt: new Date() } });
+
+        const page2 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ limit: 2, cursor: page1.body.nextCursor })
+          .expect(200);
+
+        expect(page2.body.items.map((i: { id: string }) => i.id)).toEqual([ids[1], ids[0]]);
+      });
+
+      it("returns the next Favorites when the cursor Favorite is removed before page 2", async () => {
+        await seedCatalog();
+        const sellerToken = await createUser("seller-1");
+        const buyerToken = await createUser("buyer-1");
+        const ids = await favoriteListingsWithStatuses(sellerToken, buyerToken, [
+          "active",
+          "active",
+          "active",
+        ]);
+
+        const page1 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ limit: 1 })
+          .expect(200);
+        expect(page1.body.items.map((i: { id: string }) => i.id)).toEqual([ids[2]]);
+
+        await request
+          .delete(`/api/v1/listings/${ids[2]}/favorite`)
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .expect(200);
+
+        const page2 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ limit: 1, cursor: page1.body.nextCursor })
+          .expect(200);
+
+        expect(page2.body.items.map((i: { id: string }) => i.id)).toEqual([ids[1]]);
+        expect(page2.body.nextCursor).not.toBeNull();
+      });
+
       it("returns zero counts when the User has no Favorites", async () => {
         const buyerToken = await createUser("buyer-1");
 

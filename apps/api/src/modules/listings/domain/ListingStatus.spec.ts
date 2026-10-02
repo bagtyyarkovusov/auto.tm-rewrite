@@ -6,6 +6,7 @@ import { describe, it, expect } from "vitest";
 import { Enums } from "@auto-tm/contracts";
 
 import {
+  ACTIVE_LISTING_STATUSES,
   canTransition,
   INACTIVE_VISIBLE_LISTING_STATUSES,
   VISIBLE_LISTING_STATUSES,
@@ -116,6 +117,10 @@ describe("Listing status parity", () => {
 describe("visible Listing statuses", () => {
   it("shows active, sold and archived Listings, never banned", () => {
     expect([...VISIBLE_LISTING_STATUSES]).toEqual(["active", "sold", "archived"]);
+  });
+
+  it("defines active-only as the active status alone", () => {
+    expect([...ACTIVE_LISTING_STATUSES]).toEqual(["active"]);
   });
 
   it("treats the visible statuses other than active as inactive", () => {
