@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Date**: 2026-10-02
-- **Deciders**: AutoTM founder, who chose option A for decision D12 on [#354](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354#issuecomment-5950697656) on 2026-10-02 (recorded by the queue orchestrator). The rules for edits, drafts and the API below are the author's design, to be confirmed in review.
+- **Deciders**: AutoTM founder, who chose option A for decision D12 on [#354](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354#issuecomment-5950697656) on 2026-10-02 (recorded by the queue orchestrator). The rules for edits, drafts and the API below were proposed in PR #565, and the founder approved them on the PR on 2026-10-02.
 - **Amends**: the "required to publish" rule for **Damaged / needs repair** in [ADR-0052](0052-seller-condition-disclosure-is-damaged-plus-known-issues.md). The rest of ADR-0052 stays in force.
 
 ## Context
