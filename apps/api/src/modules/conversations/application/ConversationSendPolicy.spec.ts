@@ -14,6 +14,7 @@ import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
 import {
   ConversationSendPolicy,
+  OPEN_CONVERSATION_LISTING_STATUSES,
   type SendRestriction,
 } from "./ConversationSendPolicy";
 
@@ -139,9 +140,11 @@ function applicableRestrictions(
   const active = new Set<SendRestriction>();
 
   if (blocks.includes(`${viewerId}>${peerId}`)) active.add("blocked_by_me");
-  if (!world.listing || world.listing.status !== "active") {
-    active.add("listing_unavailable");
-  } else if (!world.listing.allowChat) {
+  const listingOpen =
+    world.listing !== null &&
+    OPEN_CONVERSATION_LISTING_STATUSES.has(world.listing.status);
+  if (!listingOpen) active.add("listing_unavailable");
+  if (world.listing && listingOpen && !world.listing.allowChat) {
     active.add("chat_disabled");
   }
   if (suspended || blocks.includes(`${peerId}>${viewerId}`)) {

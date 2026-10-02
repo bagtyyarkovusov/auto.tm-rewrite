@@ -142,7 +142,7 @@ type ListingCheck =
  * Conversations (`OpenConversation`), but its participants may go on talking.
  * `banned` is refused; a deleted Listing has no summary at all.
  */
-const OPEN_CONVERSATION_LISTING_STATUSES: ReadonlySet<ListingSummary["status"]> =
+export const OPEN_CONVERSATION_LISTING_STATUSES: ReadonlySet<ListingSummary["status"]> =
   new Set(["active", "sold", "archived"]);
 
 /** The one place that decides whether a Listing accepts Messages. */

@@ -304,6 +304,27 @@ describe("GetConversation", () => {
     expect(result.sendRestriction).toBe("blocked_by_me");
   });
 
+  it.each([
+    ["banned", { ...listing, status: "banned" as const }],
+    ["missing", null],
+  ])(
+    "still reports blocked_by_me when the viewer blocked the peer and the Listing is %s",
+    async (_name, unavailableListing) => {
+      const { useCase } = build({
+        blocks: ["buyer-1>seller-1"],
+        listing: unavailableListing,
+      });
+
+      const result = await useCase.execute({
+        userId: "buyer-1",
+        conversationId: "conv-1",
+      });
+
+      expect(result.blockedByMe).toBe(true);
+      expect(result.sendRestriction).toBe("blocked_by_me");
+    },
+  );
+
   it.each([true, false])(
     "keeps blockedByMe and sendRestriction in agreement when the block changes mid-read (first read sees blocked: %s)",
     async (racingViewerBlock) => {
