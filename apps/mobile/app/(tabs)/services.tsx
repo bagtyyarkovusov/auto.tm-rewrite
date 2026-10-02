@@ -1,4 +1,5 @@
 import {
+  Bell,
   ChevronRight,
   List,
   Plus,
@@ -167,6 +168,30 @@ function MyListingsRow() {
   );
 }
 
+/** Signed-in only; the first of the menu rows. */
+function NotificationsRow() {
+  const { t } = useTranslation("account");
+
+  return (
+    <Pressable
+      onPress={() => router.push("/notifications")}
+      className="active:opacity-90"
+      accessibilityRole="button"
+      accessibilityLabel={t("notifications")}
+    >
+      <Card>
+        <CardContent className="flex-row items-center gap-3 py-4">
+          <Icon as={Bell} className="size-6 text-foreground" />
+          <Text className="flex-1 font-semibold text-foreground">
+            {t("notifications")}
+          </Text>
+          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+        </CardContent>
+      </Card>
+    </Pressable>
+  );
+}
+
 export default function CabinetScreen() {
   const { t } = useTranslation(["account", "common"]);
   const { isAuthenticated } = useAuth();
@@ -206,6 +231,8 @@ export default function CabinetScreen() {
             )}
 
             <MyListingsRow />
+
+            {isAuthenticated ? <NotificationsRow /> : null}
 
             <Separator className="bg-border" />
 
