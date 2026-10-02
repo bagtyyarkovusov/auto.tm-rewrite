@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { AuthSchemas } from "@auto-tm/contracts";
 import type { FastifyRequest } from "fastify";
+import { resolveClientIp } from "../../../common/client-ip";
 import { Public } from "../../../common/public.decorator";
 import { RequestOtp } from "../application/RequestOtp";
 import { VerifyOtp } from "../application/VerifyOtp";
@@ -48,9 +49,7 @@ export class AuthController {
     }
 
     try {
-      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-        ?? req.ip
-        ?? "127.0.0.1";
+      const ip = resolveClientIp(req);
 
       const result = await this.requestOtp.execute(
         "phone" in parsed.data

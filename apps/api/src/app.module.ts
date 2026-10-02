@@ -3,10 +3,11 @@ import { ConfigModule } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { JwtModule } from "@nestjs/jwt";
-import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { BullModule } from "@nestjs/bullmq";
 import { LoggerModule } from "nestjs-pino";
 
+import { ClientIpThrottlerGuard } from "./common/client-ip-throttler.guard";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
 import { GlobalErrorFilter } from "./common/error.filter";
 import { HealthController } from "./common/health.controller";
@@ -62,7 +63,7 @@ import { RealtimeModule } from "./modules/realtime/realtime.module";
     ReadinessService,
     { provide: APP_FILTER, useClass: GlobalErrorFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ClientIpThrottlerGuard },
   ],
 })
 export class AppModule {}

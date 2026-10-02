@@ -121,6 +121,7 @@ generated per environment.
 | `API_BASE_URL` | — | — | yes | yes | R: API private `*.railway.internal` origin for server-side admin calls and web's account deletion Server Functions; web falls back to `NEXT_PUBLIC_API_URL` when unset |
 | `ADMIN_ORIGIN` | — | — | yes | — | R: admin public origin |
 | `SIGNUPS_ENABLED` | yes | — | — | — | F: `false` in staging and production until public launch |
+| `CLIENT_IP_HEADER` / `CLIENT_IP_TRUSTED_HOPS` | optional | — | — | — | F: unset on Railway, where the defaults trust the edge's `X-Real-IP` (ADR-0078); set both for another ingress |
 
 Reviewer-era fail-closed flags (`SMS_DRIVER=test`, `OTP_TEST_MODE`,
 `OTP_TEST_CODE_RESPONSE`, `PUSH_TRANSPORT=test` in production, loopback or

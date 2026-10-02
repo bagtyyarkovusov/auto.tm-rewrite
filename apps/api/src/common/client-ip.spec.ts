@@ -47,6 +47,7 @@ describe("resolveClientIp with the default policy (trust X-Real-IP)", () => {
       `${SPOOFED}, ${CLIENT}`,
       `${CLIENT}:443`,
       "999.1.1.1",
+      "fe80::1%eth0",
     ]) {
       expect(resolveClientIp(request({ "x-real-ip": value }), policy)).toBe(EDGE_HOP);
     }

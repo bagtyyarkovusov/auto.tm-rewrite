@@ -286,20 +286,40 @@ describe("AccountDeletionController e2e", () => {
     for (let index = 0; index < 10; index += 1) {
       await request
         .post("/api/v1/auth/otp/request")
-        .set("X-Forwarded-For", "203.0.113.7")
+        .set("X-Real-IP", "203.0.113.7")
         .send({ phone: `+9936100000${index}` })
         .expect(201);
     }
 
     const response = await request
       .post("/api/v1/account-deletion/request")
-      .set("X-Forwarded-For", "203.0.113.7")
+      .set("X-Real-IP", "203.0.113.7")
       .send({ email: "seller@example.com" })
       .expect(400);
 
     expect(response.body.code).toBe("RATE_LIMITED");
     expect(response.body.details).toEqual({ reason: "ip_limit", retryInSeconds: 0 });
     expect(queued).toHaveLength(0);
+  });
+
+  it("keeps a caller that rotates X-Forwarded-For inside its per-IP budget", async () => {
+    for (let index = 0; index < 10; index += 1) {
+      await request
+        .post("/api/v1/auth/otp/request")
+        .set("X-Real-IP", "203.0.113.7")
+        .set("X-Forwarded-For", `198.51.100.${index}`)
+        .send({ phone: `+9936100000${index}` })
+        .expect(201);
+    }
+
+    const response = await request
+      .post("/api/v1/account-deletion/request")
+      .set("X-Real-IP", "203.0.113.7")
+      .set("X-Forwarded-For", "198.51.100.200")
+      .send({ email: "seller@example.com" })
+      .expect(400);
+
+    expect(response.body.details).toEqual({ reason: "ip_limit", retryInSeconds: 0 });
   });
 
   it("refuses a destination a User holds exactly as one nobody holds", async () => {

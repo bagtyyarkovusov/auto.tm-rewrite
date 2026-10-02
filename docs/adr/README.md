@@ -86,6 +86,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0074](0074-digest-pinned-chainguard-minio-images.md) | Digest-pinned Chainguard MinIO images, preserving the existing S3 and volume contract | Accepted | 2026-10-01 |
 | [0075](0075-railway-pr-backends-for-agent-native-sessions.md) | Railway PR backends for agent native sessions (amends ADR-0039's Railway shape and the coding-workflow local verification rule) | Accepted | 2026-10-01 |
 | [0076](0076-orchestrator-runs-the-worktree-cleanup-gate-after-every-merge.md) | The orchestrator runs the worktree cleanup gate after every merge (amends ADR-0069's and ADR-0071's cleanup rules) | Accepted | 2026-10-01 |
+| [0078](0078-the-api-trusts-one-configured-header-for-the-client-ip.md) | The API trusts one configured header for the client IP (amends ADR-0054's per-IP budget; preserves ADR-0039's hosting constraint) | Proposed | 2026-10-02 |
 
 ## Per-app ADRs
 

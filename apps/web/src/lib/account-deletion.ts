@@ -31,8 +31,8 @@ export interface DeletionApiContext {
   locale: Locale;
   /**
    * The visitor's IP, from `visitorIp`. The API applies its per-IP code budget
-   * to the first `X-Forwarded-For` entry, so without it every visitor would
-   * share the web server's budget.
+   * to the `X-Real-IP` it receives (ADR-0078), so without it every visitor
+   * would share the web server's budget.
    */
   clientIp: string | null;
   fetch?: typeof fetch;
@@ -89,7 +89,7 @@ async function post(
     "Content-Type": "application/json",
     "Accept-Language": context.locale,
   };
-  if (context.clientIp) headers["X-Forwarded-For"] = context.clientIp;
+  if (context.clientIp) headers["X-Real-IP"] = context.clientIp;
 
   try {
     return await (context.fetch ?? fetch)(apiUrl(context.baseUrl, path), {

@@ -77,7 +77,7 @@ describe("apiUrl", () => {
 });
 
 describe("firstForwardedIp", () => {
-  it("takes the first X-Forwarded-For entry, like the API", () => {
+  it("takes the first entry of a forwarded list", () => {
     expect(firstForwardedIp("203.0.113.7, 10.0.0.1")).toBe("203.0.113.7");
     expect(firstForwardedIp(null)).toBeNull();
     expect(firstForwardedIp("  ")).toBeNull();
