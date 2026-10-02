@@ -3,6 +3,7 @@ import { PrismaService } from "@auto-tm/db";
 
 import { Favorite } from "../domain/Favorite";
 import {
+  ACTIVE_LISTING_STATUSES,
   INACTIVE_VISIBLE_LISTING_STATUSES,
   VISIBLE_LISTING_STATUSES,
   type ListingStatus,
@@ -12,8 +13,6 @@ import type {
   VisibleFavoriteCounts,
   VisibleFavoriteOptions,
 } from "../domain/ports/FavoriteRepository";
-
-const ACTIVE_ONLY_STATUSES: readonly ListingStatus[] = ["active"];
 
 /** A Listing a User can see: not deleted and in one of `statuses`. */
 function visibleListing(statuses: readonly ListingStatus[]) {
@@ -85,18 +84,23 @@ export class PrismaFavoriteRepository implements FavoriteRepository {
     opts?: VisibleFavoriteOptions,
   ): Promise<{ items: Favorite[]; nextCursor?: { timestamp: string; id: string } }> {
     const take = (opts?.limit ?? 20) + 1;
-    const statuses = opts?.activeOnly ? ACTIVE_ONLY_STATUSES : VISIBLE_LISTING_STATUSES;
+    const statuses = opts?.activeOnly ? ACTIVE_LISTING_STATUSES : VISIBLE_LISTING_STATUSES;
+
+    // Keyset filter on the encoded position, not a Prisma `cursor`: the cursor Favorite
+    // may be gone, or its Listing may have left the filtered set, between two pages.
+    const after = opts?.cursor
+      ? {
+          OR: [
+            { createdAt: { lt: new Date(opts.cursor.timestamp) } },
+            { createdAt: new Date(opts.cursor.timestamp), id: { lt: opts.cursor.id } },
+          ],
+        }
+      : {};
 
     const rows = await this.prisma.favorite.findMany({
-      where: { userId, listing: visibleListing(statuses) },
+      where: { userId, listing: visibleListing(statuses), ...after },
       take,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      ...(opts?.cursor
-        ? {
-            skip: 1,
-            cursor: { id: opts.cursor.id },
-          }
-        : {}),
     });
 
     const hasMore = rows.length === take;

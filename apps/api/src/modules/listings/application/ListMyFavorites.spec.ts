@@ -4,6 +4,7 @@ import type { CardPhotos } from "../domain/CardPhotos";
 import { ListMyFavorites } from "./ListMyFavorites";
 import { Favorite } from "../domain/Favorite";
 import {
+  ACTIVE_LISTING_STATUSES,
   INACTIVE_VISIBLE_LISTING_STATUSES,
   VISIBLE_LISTING_STATUSES,
 } from "../domain/ListingStatus";
@@ -34,19 +35,28 @@ class FakeFavoriteRepository implements FavoriteRepository {
     userId: string,
     opts?: VisibleFavoriteOptions,
   ): Promise<{ items: Favorite[]; nextCursor?: { timestamp: string; id: string } }> {
-    const allowed: readonly string[] = opts?.activeOnly ? ["active"] : VISIBLE_LISTING_STATUSES;
+    const allowed: readonly string[] = opts?.activeOnly ? ACTIVE_LISTING_STATUSES : VISIBLE_LISTING_STATUSES;
     const sorted = this.newestFirst(userId).filter((f) =>
       allowed.includes(this.statuses.get(f.listingId) ?? "deleted"),
     );
 
     const limit = opts?.limit ?? 20;
-    const start = opts?.cursor ? sorted.findIndex((f) => f.id === opts.cursor!.id) + 1 : 0;
-    const page = sorted.slice(start, start + limit);
+    // Keyset position, like the real repository: the cursor Favorite need not still match.
+    const after = opts?.cursor
+      ? sorted.filter((f) => {
+          const cursorTime = new Date(opts.cursor!.timestamp).getTime();
+          return (
+            f.createdAt.getTime() < cursorTime ||
+            (f.createdAt.getTime() === cursorTime && f.id < opts.cursor!.id)
+          );
+        })
+      : sorted;
+    const page = after.slice(0, limit);
     const last = page[page.length - 1];
 
     return {
       items: page,
-      ...(start + limit < sorted.length && last
+      ...(limit < after.length && last
         ? { nextCursor: { timestamp: last.createdAt.toISOString(), id: last.id } }
         : {}),
     };

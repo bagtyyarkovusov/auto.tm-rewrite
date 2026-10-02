@@ -7,10 +7,11 @@ export type ListingStatus = "active" | "sold" | "archived" | "banned";
  */
 export const VISIBLE_LISTING_STATUSES = ["active", "sold", "archived"] as const;
 
+/** The only status for sale. Favorites with `activeOnly` filter to it. */
+export const ACTIVE_LISTING_STATUSES = ["active"] as const;
+
 /** Visible but no longer for sale: sold or archived. */
-export const INACTIVE_VISIBLE_LISTING_STATUSES = VISIBLE_LISTING_STATUSES.filter(
-  (status) => status !== "active",
-);
+export const INACTIVE_VISIBLE_LISTING_STATUSES = ["sold", "archived"] as const;
 
 const TRANSITIONS: Record<ListingStatus, ListingStatus[]> = {
   active: ["sold", "archived"],
