@@ -8,6 +8,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 
+// The row's `min-h-14` (14 * 4 pt), and the title bar, handle, gaps and padding above and below the rows.
+const ROW_HEIGHT = 56;
+const SHEET_CHROME_HEIGHT = 144;
+
 export interface PickerOption<T extends string> {
   value: T;
   label: string;
@@ -29,10 +33,10 @@ export function OptionPickerSheet<T extends string>({ open, onOpenChange, title,
 }) {
   const { t } = useTranslation();
   // The iOS full-window overlay gives an auto-height sheet no room, so this one sets a height.
-  const sheetHeight = Math.min(useWindowDimensions().height * 0.85, 120 + options.length * 56 + 24);
+  const sheetHeight = Math.min(useWindowDimensions().height * 0.85, SHEET_CHROME_HEIGHT + options.length * ROW_HEIGHT);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent style={{ height: sheetHeight }}>
+      <SheetContent closeOnBackdropPress style={{ height: sheetHeight }}>
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle className="text-xl font-bold">{title}</SheetTitle>
           <Button variant="ghost" size="icon" onPress={() => onOpenChange(false)} accessibilityLabel={t("close")}>

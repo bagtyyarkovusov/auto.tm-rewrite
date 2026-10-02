@@ -20,9 +20,11 @@ const FullWindowOverlay = Platform.OS === 'ios' ? RNFullWindowOverlay : React.Fr
 function SheetOverlay({
   className,
   children,
+  closeOnBackdropPress,
   ...props
 }: Omit<React.ComponentProps<typeof DialogPrimitive.Overlay>, 'asChild'> & {
   children?: React.ReactNode;
+  closeOnBackdropPress?: boolean;
 }) {
   return (
     <FullWindowOverlay>
@@ -39,8 +41,9 @@ function SheetOverlay({
         <NativeOnlyAnimatedView>
           <NativeOnlyAnimatedView className="w-full flex-1 justify-end">
             {/* The overlay is `asChild`, so its press lands on an Animated.View that ignores it.
-                This backdrop sits behind the content and closes the sheet on a tap outside. */}
-            {Platform.OS === 'web' ? null : (
+                Opt-in: this backdrop sits behind the content and closes the sheet on a tap outside.
+                Sheets that hold typed input leave it off, so a stray tap cannot discard a draft. */}
+            {Platform.OS === 'web' || !closeOnBackdropPress ? null : (
               <DialogPrimitive.Close asChild>
                 <Pressable
                   testID="sheet-backdrop"
@@ -63,14 +66,16 @@ function SheetContent({
   portalHost,
   children,
   compact,
+  closeOnBackdropPress,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   portalHost?: string;
   compact?: boolean;
+  closeOnBackdropPress?: boolean;
 }) {
   return (
     <SheetPortal hostName={portalHost}>
-      <SheetOverlay>
+      <SheetOverlay closeOnBackdropPress={closeOnBackdropPress}>
         <DialogPrimitive.Content
           className={cn(
             'z-50 w-full max-w-none self-stretch flex-col gap-4 overflow-hidden rounded-t-xl border border-x-0 border-b-0 border-border bg-card p-5 shadow-lg shadow-black/5',
