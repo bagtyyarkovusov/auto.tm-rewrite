@@ -36,7 +36,14 @@ vi.mock("expo-router", () => ({
     navigate: vi.fn(),
   },
   usePathname: () => nav.pathname,
-  useRootNavigationState: () => ({ index: 0, routes: [{ name: nav.rootName }] }),
+  // ExpoRoot.Content owns the outer generated Stack. The app Stack is nested.
+  useRootNavigationState: () => ({
+    index: 0,
+    routes: [{ name: "__root", state: {
+      index: 1,
+      routes: [{ name: "(onboarding)" }, { name: nav.rootName }],
+    } }],
+  }),
 }));
 
 const mockGetLast = vi.mocked(getLastNotificationResponse);

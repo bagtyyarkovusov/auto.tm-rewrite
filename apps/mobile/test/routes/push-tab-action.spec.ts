@@ -14,7 +14,7 @@ function expoRouting(rootState: unknown, dispatch: ReturnType<typeof vi.fn>) {
     redirects: [],
     linking: {
       config: {},
-      getStateFromPath: () => ({ routes: [{ name: "(tabs)", state: { routes: [{ name: "chat" }] } }] }),
+      getStateFromPath: () => ({ routes: [{ name: "__root", state: { routes: [{ name: "(tabs)", state: { routes: [{ name: "chat" }] } }] } }] }),
     },
   };
   const stubs = {
@@ -51,7 +51,8 @@ describe("Expo's action target from a bare Favorites tab", () => {
     const tabs = TabRouter({ initialRouteName: "favorites" });
     const options = { routeNames: ["favorites", "chat"], routeParamList: {}, routeGetIdList: {} };
     const tabState = tabs.getInitialState(options);
-    const rootState = { type: "stack", key: "root", index: 0, routes: [{ name: "(tabs)", state: tabState }] };
+    const appState = { type: "stack", key: "app", index: 0, routes: [{ name: "(tabs)", state: tabState }] };
+    const rootState = { type: "stack", key: "outer", index: 0, routes: [{ name: "__root", state: appState }] };
     const dispatch = vi.fn();
     const { routing, flush } = expoRouting(rootState, dispatch);
     routing.dismissTo("/(tabs)/chat");
