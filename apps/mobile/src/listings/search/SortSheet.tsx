@@ -16,7 +16,7 @@ export function SortSheet({ open, onOpenChange, value, onChange }: {
   // The iOS full-window overlay gives an auto-height sheet no room, so this one sets a height.
   const sheetHeight = Math.min(useWindowDimensions().height * 0.85, 480);
   return <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent style={{ height: sheetHeight }}>
+    <SheetContent closeOnBackdropPress style={{ height: sheetHeight }}>
       <SheetHeader className="flex-row items-center justify-between">
         <SheetTitle>{t("resultsSort")}</SheetTitle>
         <Button variant="ghost" size="icon" onPress={() => onOpenChange(false)} accessibilityLabel={t("close")}><Icon as={X} className="size-5 text-foreground" /></Button>

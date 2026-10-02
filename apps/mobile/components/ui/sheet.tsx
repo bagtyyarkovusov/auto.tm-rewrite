@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@rn-primitives/dialog';
 import * as React from 'react';
-import { Platform, View, type ViewProps } from 'react-native';
+import { Platform, Pressable, View, type ViewProps } from 'react-native';
 import { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
 
@@ -20,9 +20,11 @@ const FullWindowOverlay = Platform.OS === 'ios' ? RNFullWindowOverlay : React.Fr
 function SheetOverlay({
   className,
   children,
+  closeOnBackdropPress,
   ...props
 }: Omit<React.ComponentProps<typeof DialogPrimitive.Overlay>, 'asChild'> & {
   children?: React.ReactNode;
+  closeOnBackdropPress?: boolean;
 }) {
   return (
     <FullWindowOverlay>
@@ -38,6 +40,19 @@ function SheetOverlay({
         asChild={Platform.OS !== 'web'}>
         <NativeOnlyAnimatedView>
           <NativeOnlyAnimatedView className="w-full flex-1 justify-end">
+            {/* The overlay is `asChild`, so its press lands on an Animated.View that ignores it.
+                Opt-in: this backdrop sits behind the content and closes the sheet on a tap outside.
+                Sheets that hold typed input leave it off, so a stray tap cannot discard a draft. */}
+            {Platform.OS === 'web' || !closeOnBackdropPress ? null : (
+              <DialogPrimitive.Close asChild>
+                <Pressable
+                  testID="sheet-backdrop"
+                  accessible={false}
+                  importantForAccessibility="no-hide-descendants"
+                  className="absolute bottom-0 left-0 right-0 top-0"
+                />
+              </DialogPrimitive.Close>
+            )}
             <>{children}</>
           </NativeOnlyAnimatedView>
         </NativeOnlyAnimatedView>
@@ -51,14 +66,16 @@ function SheetContent({
   portalHost,
   children,
   compact,
+  closeOnBackdropPress,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   portalHost?: string;
   compact?: boolean;
+  closeOnBackdropPress?: boolean;
 }) {
   return (
     <SheetPortal hostName={portalHost}>
-      <SheetOverlay>
+      <SheetOverlay closeOnBackdropPress={closeOnBackdropPress}>
         <DialogPrimitive.Content
           className={cn(
             'z-50 w-full max-w-none self-stretch flex-col gap-4 overflow-hidden rounded-t-xl border border-x-0 border-b-0 border-border bg-card p-5 shadow-lg shadow-black/5',

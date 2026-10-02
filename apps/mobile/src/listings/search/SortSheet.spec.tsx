@@ -14,4 +14,9 @@ describe("Sort sheet", () => {
     fireEvent.press(view.getByRole("radio", { name: "Lowest mileage first" }));
     expect(onChange).toHaveBeenCalledWith("mileage_asc"); expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("asks the sheet to close on a tap outside (the shell mock passes the prop to a View)", () => {
+    const view = renderMobile(<SortSheet open value="year_asc" onChange={vi.fn()} onOpenChange={vi.fn()} />);
+    expect(view.UNSAFE_getByProps({ closeOnBackdropPress: true })).toBeTruthy();
+  });
 });

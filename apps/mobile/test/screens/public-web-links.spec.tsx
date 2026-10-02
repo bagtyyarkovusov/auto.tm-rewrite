@@ -10,7 +10,6 @@ import { fireEvent, renderMobile, routerMock } from "../render";
 
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: true }) }));
 vi.mock("../../src/auth/useLogout", () => ({ useLogout: () => ({ mutate: vi.fn() }) }));
-vi.mock("../../src/theme/ThemeSwitcher", () => ({ ThemeSwitcher: () => null }));
 
 const profiles = [
   ["staging", "https://staging.autotm.bagtyyar.dev"],
