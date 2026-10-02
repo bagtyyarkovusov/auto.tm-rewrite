@@ -78,6 +78,12 @@ export const queryKeys = {
       [...queryKeys.conversations.all(), "detail", id] as const,
     messages: (id: string) =>
       [...queryKeys.conversations.all(), "messages", id] as const,
+    /** Every viewer's total; invalidate this to refresh the Messages tab count. */
+    unreadCounts: () =>
+      [...queryKeys.conversations.all(), "unread-count"] as const,
+    /** Keyed by viewer, so another User never sees the previous User's count. */
+    unreadCount: (viewerId: string) =>
+      [...queryKeys.conversations.unreadCounts(), viewerId] as const,
   },
 
   reports: {
