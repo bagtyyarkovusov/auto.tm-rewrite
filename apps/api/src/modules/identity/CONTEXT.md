@@ -6,6 +6,8 @@ Refresh tokens are hashed on Session. Refresh rotates in place with a compare-an
 
 Phone and email code flows share ownership and one-time-consumption rules. Account-deletion codes bind to the holder at request time; do not replace that with an unbound sign-in lookup. Reviewer bypass is narrower than normal authentication and never authorizes deletion. Inspect the use-cases and integration tests before changing rate limits, verification, or enumeration protection.
 
+A refused Sign-in Code request throws `SignInCodeRateLimitedError`, which carries the `OtpAttemptLedger` reason. The three request endpoints (sign-in, Sign-in Method change, account deletion) answer `RATE_LIMITED` with `details: { reason, retryInSeconds }` (`destination_limit`, `ip_limit` or `backoff`; the wait is nonzero only for `backoff`) so the app can tell "wait a moment" from "no more codes today". The reason comes only from the destination and IP counts and the last attempt, never from whether a User holds the value, and controllers match the error class rather than a message. Keep it that way.
+
 Other modules import identity only through [`identity.public.ts`](identity.public.ts), plus `identity.module.ts` for Nest composition; `apps/api` lint rejects imports of identity internals or `identity.tokens`. It mirrors the providers `IdentityModule` exports: identity check, identity read, identity admin, seller profile read, session repository, and clock.
 
 The exported `SELLER_PROFILE_READ_PORT` gives other contexts a seller's display name and join date from `User.createdAt`. It exposes no Sign-in Method values or verification state.

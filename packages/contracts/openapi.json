@@ -60,6 +60,27 @@
           "requestId"
         ]
       },
+      "RateLimitedDetails": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "destination_limit",
+              "ip_limit",
+              "backoff"
+            ]
+          },
+          "retryInSeconds": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "reason",
+          "retryInSeconds"
+        ]
+      },
       "BrandSummary": {
         "type": "object",
         "properties": {
@@ -8533,7 +8554,7 @@
             }
           },
           "400": {
-            "description": "Validation error",
+            "description": "Validation error, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
             "content": {
               "application/json": {
                 "schema": {
@@ -8952,7 +8973,7 @@
             }
           },
           "400": {
-            "description": "Validation or rate-limit error",
+            "description": "Validation error, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
             "content": {
               "application/json": {
                 "schema": {
@@ -9539,7 +9560,7 @@
             }
           },
           "400": {
-            "description": "Validation or rate-limit error",
+            "description": "Validation error, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
             "content": {
               "application/json": {
                 "schema": {

@@ -17,6 +17,7 @@ import { VerifyOtp } from "../application/VerifyOtp";
 import { RefreshSession } from "../application/RefreshSession";
 import { Logout } from "../application/Logout";
 import { LogoutAll } from "../application/LogoutAll";
+import { signInCodeRateLimitedException } from "./signInCodeRateLimited";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 type LocalizedAuthRequest = FastifyRequest & { locale?: "ru" | "tk" | "en" };
@@ -63,12 +64,11 @@ export class AuthController {
         ...(result.testCode !== undefined ? { testCode: result.testCode } : {}),
       };
     } catch (err: unknown) {
-      if (err instanceof Error && err.message === "Too many OTP requests") {
-        throw new BadRequestException({
-          code: "RATE_LIMITED",
-          message: "Too many OTP requests. Please wait before trying again.",
-        });
-      }
+      const rateLimited = signInCodeRateLimitedException(
+        err,
+        "Too many OTP requests. Please wait before trying again.",
+      );
+      if (rateLimited !== null) throw rateLimited;
       if (
         err instanceof Error &&
         (err.message.startsWith("Phone must be") ||

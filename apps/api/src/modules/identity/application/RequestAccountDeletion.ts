@@ -8,6 +8,7 @@ import {
 } from "../domain/OtpAttemptLedger";
 import { OtpCode } from "../domain/OtpCode";
 import { signInCodeDestination } from "../domain/SignInCodeDestination";
+import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
 import { SIGN_IN_CODE_CHANNELS } from "../domain/types";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
@@ -96,7 +97,7 @@ export class RequestAccountDeletion {
       now,
     });
     if (!rateCheck.allowed) {
-      throw new Error("Too many OTP requests");
+      throw new SignInCodeRateLimitedError(rateCheck);
     }
 
     const holder = destination.channel === SIGN_IN_CODE_CHANNELS.PHONE

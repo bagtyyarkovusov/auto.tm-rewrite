@@ -178,6 +178,52 @@ describe("MeController e2e - Sign-in Method changes", () => {
       .resolves.toMatchObject({ attempts: 0, verifiedAt: null });
   });
 
+  it("says whether a refused code request is a backoff or the daily limit", async () => {
+    const user = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const authorization = bearer(user.id);
+
+    await request
+      .post("/api/v1/me/sign-in-methods/request")
+      .set("Authorization", authorization)
+      .send({ email: "new@example.com" })
+      .expect(201);
+    const backoff = await request
+      .post("/api/v1/me/sign-in-methods/request")
+      .set("Authorization", authorization)
+      .send({ email: "new@example.com" })
+      .expect(400);
+
+    expect(backoff.body.code).toBe("RATE_LIMITED");
+    expect(backoff.body.details.reason).toBe("backoff");
+    expect(backoff.body.details.retryInSeconds).toBeGreaterThan(0);
+    expect(backoff.body.details.retryInSeconds).toBeLessThanOrEqual(60);
+
+    for (let index = 0; index < 4; index += 1) {
+      await prisma.otpRequest.create({
+        data: {
+          channel: "email",
+          destination: "new@example.com",
+          codeHash: "test-hash",
+          expiresAt: new Date(Date.now() + 300_000),
+          ip: `10.0.0.${index}`,
+        },
+      });
+    }
+    const daily = await request
+      .post("/api/v1/me/sign-in-methods/request")
+      .set("Authorization", authorization)
+      .send({ email: "new@example.com" })
+      .expect(400);
+
+    expect(daily.body.code).toBe("RATE_LIMITED");
+    expect(daily.body.details).toEqual({
+      reason: "destination_limit",
+      retryInSeconds: 0,
+    });
+  });
+
   it("replaces either method and frees both old values immediately", async () => {
     const user = await prisma.user.create({
       data: {
