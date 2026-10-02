@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import type { ConversationsSchemas, ListingsSchemas } from "@auto-tm/contracts";
+import { waitFor } from "@testing-library/react-native";
 
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
-import { waitFor } from "@testing-library/react-native";
 import ConversationDetailScreen from "../../app/conversations/[id]";
 import { seedConversationDetail } from "../../src/api/conversations/useConversation";
 import { ApiError } from "../../src/api/client";
