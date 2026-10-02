@@ -8,7 +8,9 @@ import { describe, expect, it } from "vitest";
 // requires every such TestingModule to import bullTestRoot().
 
 const apiRoot = join(__dirname, "..");
-const srcRoot = join(apiRoot, "src");
+const scanRoots = [join(apiRoot, "src"), join(apiRoot, "test")];
+// Any BullModule registration that creates a queue-backed connection.
+const QUEUE_REGISTRATION = /BullModule\.register(Queue|QueueAsync|FlowProducer|FlowProducerAsync)\b/;
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
@@ -16,20 +18,34 @@ function walk(dir: string): string[] {
   );
 }
 
+const files = scanRoots.flatMap(walk);
+
+/** Body of the first `imports: [...]` list, bracket-balanced. */
+function importsList(source: string): string {
+  const start = /imports:\s*\[/.exec(source);
+  if (!start) return "";
+  let depth = 1;
+  const from = start.index + start[0].length;
+  for (let i = from; i < source.length; i += 1) {
+    if (source[i] === "[") depth += 1;
+    else if (source[i] === "]" && (depth -= 1) === 0) return source.slice(from, i);
+  }
+  return source.slice(from);
+}
+
 function importedModules(source: string): string[] {
-  const imports = /imports:\s*\[([\s\S]*?)\]/.exec(source)?.[1] ?? "";
-  return imports.match(/\b[A-Z]\w*Module\b/g) ?? [];
+  return importsList(source).match(/\b[A-Z]\w*Module\b/g) ?? [];
 }
 
 function queueModules(): Set<string> {
   const graph = new Map<string, { imports: string[]; registersQueue: boolean }>();
-  for (const file of walk(srcRoot).filter((f) => f.endsWith(".module.ts"))) {
+  for (const file of files.filter((f) => f.endsWith(".module.ts"))) {
     const source = readFileSync(file, "utf8");
     const name = /export class (\w+Module)\b/.exec(source)?.[1];
     if (!name || name === "AppModule") continue;
     graph.set(name, {
       imports: importedModules(source),
-      registersQueue: source.includes("BullModule.registerQueue"),
+      registersQueue: QUEUE_REGISTRATION.test(source),
     });
   }
   const reaches = (name: string, seen = new Set<string>()): boolean => {
@@ -49,15 +65,21 @@ describe("bullTestRoot guard", () => {
     expect(modules).toContain("NotificationsModule");
   });
 
+  it("reads a whole imports list past nested array arguments", () => {
+    const block = "{ imports: [ThrottlerModule.forRoot([{ ttl: 1 }]), IdentityModule, bullTestRoot()] }";
+    expect(importedModules(block)).toEqual(["ThrottlerModule", "IdentityModule"]);
+    expect(importsList(block)).toContain("bullTestRoot()");
+  });
+
   it("gives every TestingModule that reaches a queue a REDIS_URL root", () => {
-    const missing = walk(srcRoot)
-      .filter((file) => file.endsWith(".spec.ts"))
+    const missing = files
+      .filter((file) => file.endsWith(".spec.ts") && file !== __filename)
       .flatMap((file) => {
         const source = readFileSync(file, "utf8");
         const testingModules = source.split("createTestingModule(").slice(1);
         return testingModules
           .filter((block) => importedModules(block).some((m) => modules.has(m)))
-          .filter((block) => !/imports:\s*\[[^\]]*bullTestRoot\(\)/.test(block))
+          .filter((block) => !importsList(block).includes("bullTestRoot()"))
           .map(() => relative(apiRoot, file));
       });
     expect(missing).toEqual([]);
