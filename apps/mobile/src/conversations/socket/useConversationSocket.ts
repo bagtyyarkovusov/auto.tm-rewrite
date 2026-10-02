@@ -336,6 +336,9 @@ function handleMessageNew(
   void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.list(),
   });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.detail(conversationId),
+  });
 }
 
 function handleWatermark(
@@ -388,5 +391,8 @@ function handleMessageDeleted(
 
   void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.list(),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.detail(conversationId),
   });
 }

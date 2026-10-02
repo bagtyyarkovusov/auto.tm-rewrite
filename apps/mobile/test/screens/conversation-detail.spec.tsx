@@ -33,12 +33,10 @@ describe("ConversationDetailScreen", () => {
     );
   });
 
-  it("observes the conversation-list cache with its infinite-query hook", () => {
-    expect(source).toContain(
-      'import { useConversations } from "../../src/api/conversations/useConversations"',
-    );
-    expect(source).toContain("const { data: conversationsData } = useConversations()");
-    expect(source).not.toContain("useQuery({\n    queryKey: queryKeys.conversations.list()");
+  it("reads the Conversation by ID instead of from route params", () => {
+    expect(source).toContain("useConversation(conversationId)");
+    expect(source).not.toContain("params.listingId");
+    expect(source).not.toContain("params.buyerId");
   });
 
   it("uses useSendTextMessage for sending", () => {
@@ -88,16 +86,10 @@ describe("ConversationDetailScreen optimistic states", () => {
   });
 });
 
-describe("ConversationDetailScreen controls menu", () => {
-  it("renders native menu labels inside Text components", () => {
-    expect(source).toContain('<Text>{t("unblockUser")}</Text>');
-    expect(source).toContain('<Text>{t("blockUser")}</Text>');
-    expect(source).toContain(
-      '{isMuted ? t("unmuteConversation") : t("muteConversation")}',
-    );
+describe("ConversationDetailScreen confirmation dialogs", () => {
+  it("renders native dialog labels inside Text components", () => {
     expect(source).toContain('<Text>{t("cancel")}</Text>');
     expect(source).toContain("<Text>{confirmActionLabel}</Text>");
-    expect(source).toContain('<Text>{t("blockedStateUnblock")}</Text>');
   });
 });
 
@@ -140,8 +132,8 @@ describe("ConversationDetailScreen realtime text send", () => {
   });
 
   it("keeps the composer usable while socket connects", () => {
-    expect(source).toContain("<MessageComposer");
-    expect(source).toContain("disabled={");
-    expect(source).not.toContain("disabled={true}");
+    expect(source).toContain("<ConversationFooter");
+    expect(source).toContain("disabled: isBlocked || blockUser.isPending || unblockUser.isPending");
+    expect(source).not.toContain("disabled: true");
   });
 });

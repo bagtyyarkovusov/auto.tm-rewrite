@@ -41,7 +41,7 @@ function routeFromResponse(
  *
  * Notifications without a direct-message payload are ignored so future
  * notification categories keep their own routing. Wire once in the root
- * layout; conversation screens consume normal navigation params afterwards.
+ * layout; the Conversation screen loads everything else by ID.
  */
 export function useDirectMessagePushRouting(): void {
   const lastHandledIdentifier = useRef<string | null>(null);
