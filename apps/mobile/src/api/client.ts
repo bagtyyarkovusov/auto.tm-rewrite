@@ -101,12 +101,31 @@ async function refreshOnce(): Promise<void> {
       REFRESH_TIMEOUT_MS,
     );
 
-    if (!res.ok) {
+    // Only a 401 is the API rejecting the refresh token (the one rejection the
+    // contract defines). Any other answer says nothing about the token, so the
+    // session stays and the next request retries (ADR-0077).
+    if (res.status === 401) {
       await clearAuthSession();
       throw new ApiError("UNAUTHENTICATED", 401, "Refresh failed");
     }
+    if (!res.ok) {
+      throw new ApiError(
+        "REFRESH_UNAVAILABLE",
+        res.status,
+        "Refresh is temporarily unavailable",
+      );
+    }
 
-    const json = (await res.json()) as unknown;
+    let json: unknown;
+    try {
+      json = (await res.json()) as unknown;
+    } catch {
+      throw new ApiError(
+        "REFRESH_UNAVAILABLE",
+        502,
+        "Refresh answer was not readable",
+      );
+    }
     const parsed = AuthSchemas.RefreshResponseSchema.safeParse(json);
     if (!parsed.success) {
       await clearAuthSession();
@@ -151,10 +170,12 @@ async function rawRequest<TResponse>(
       try {
         await refreshOnce();
       } catch {
-        // A rejected refresh has cleared the session, so the request goes out
-        // anonymous. A refresh that failed on the network or timed out keeps
-        // the session, so the request goes out with the old bearer. Either
-        // way a protected route still reaches the 401 path below.
+        // A refresh the API rejected with 401, or whose 2xx JSON answer broke
+        // the contract, has cleared the session, so the request goes out
+        // anonymous. Any other failure (5xx, network, timeout, unreadable
+        // answer) keeps the session, so the request goes out with the old
+        // bearer. Either way a protected route still reaches the 401 path
+        // below.
       }
       session = await loadAuthSession();
     }
