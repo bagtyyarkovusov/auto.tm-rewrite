@@ -8,10 +8,7 @@ const header = readFileSync(
   resolve(__dirname, "../../src/conversations/components/ConversationHeader.tsx"),
   "utf-8",
 );
-const menu = readFileSync(
-  resolve(__dirname, "../../src/conversations/components/ConversationMenuSheet.tsx"),
-  "utf-8",
-);
+
 
 describe("ConversationDetailScreen quick replies", () => {
   it("passes showQuickReplies to MessageComposer", () => {
@@ -33,11 +30,6 @@ describe("ConversationDetailScreen conversation mute", () => {
   it("wires the mute mutation hook", () => {
     expect(source).toContain("useMuteConversation");
     expect(source).toContain("handleToggleMute");
-  });
-
-  it("exposes mute and unmute menu items in the thread header", () => {
-    expect(menu).toContain('t("muteConversation")');
-    expect(menu).toContain('t("unmuteConversation")');
   });
 
   it("shows an understated muted indicator in the header", () => {

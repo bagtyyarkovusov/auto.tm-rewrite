@@ -380,13 +380,13 @@ describe("Conversation menu", () => {
   });
 
   it("asks before blocking, then replaces the composer with the blocked banner", async () => {
-    let blockedByMe = false;
+    // The refresh after Block stays pending, so only the cache patch can switch the footer.
+    let refreshing = false;
     routeGet({
-      [`/conversations/${CONVERSATION_ID}`]: () =>
-        conversation(blockedByMe ? { blockedByMe, sendRestriction: "blocked_by_me" } : {}),
+      [`/conversations/${CONVERSATION_ID}`]: () => (refreshing ? new Promise(() => {}) : conversation()),
     });
     state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) => {
-      blockedByMe = true;
+      refreshing = true;
       options?.onSuccess?.();
     });
     const screen = renderMobile(<ConversationDetailScreen />);
@@ -438,10 +438,11 @@ describe("Conversation blocked by the viewer", () => {
   });
 
   it("asks before unblocking and brings the composer back without reloading", async () => {
-    let unblocked = false;
-    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => (unblocked ? conversation() : blocked()) });
+    // The refresh after Unblock stays pending, so only the cache patch can bring the composer back.
+    let refreshing = false;
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => (refreshing ? new Promise(() => {}) : blocked()) });
     state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) => {
-      unblocked = true;
+      refreshing = true;
       options?.onSuccess?.();
     });
     const screen = renderMobile(<ConversationDetailScreen />);
@@ -449,7 +450,6 @@ describe("Conversation blocked by the viewer", () => {
     fireEvent.press(await screen.findByRole("button", { name: "Unblock" }));
     expect(screen.getByText("Unblock this user?")).toBeTruthy();
     expect(screen.getByText("After unblocking, the user can message you again.")).toBeTruthy();
-    state.get.mockClear();
     await act(async () => {
       // The banner's Unblock, then the dialog's.
       const [, confirm] = screen.getAllByText("Unblock");
