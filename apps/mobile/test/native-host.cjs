@@ -57,5 +57,7 @@ module.exports = {
     absoluteFill: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 } },
   useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
   Share: { share: async () => ({ action: "sharedAction" }) },
+  // Announcements a spec can read; nothing is spoken.
+  AccessibilityInfo: { announcements: [], announceForAccessibility(message) { this.announcements.push(message); } },
   useColorScheme: () => "light",
 };

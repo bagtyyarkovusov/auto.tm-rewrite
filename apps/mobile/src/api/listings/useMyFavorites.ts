@@ -6,16 +6,22 @@ import { queryKeys } from "../queryKeys";
 
 interface UseMyFavoritesOptions {
   limit?: number;
+  /** Hide sold: only active Listings. Every page still carries the counts over all visible Favorites. */
+  activeOnly?: boolean;
+  /** False only watches the cache: no request, but the cached pages stay alive and reactive. */
+  enabled?: boolean;
 }
 
 export function useMyFavorites(opts?: UseMyFavoritesOptions) {
   const limit = opts?.limit ?? 20;
+  const activeOnly = opts?.activeOnly ?? false;
 
   return useInfiniteQuery({
-    queryKey: queryKeys.favorites.list(),
+    queryKey: queryKeys.favorites.list(activeOnly),
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams();
       params.set("limit", String(limit));
+      params.set("activeOnly", String(activeOnly));
       if (pageParam) {
         params.set("cursor", pageParam);
       }
@@ -27,5 +33,6 @@ export function useMyFavorites(opts?: UseMyFavoritesOptions) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     staleTime: 30_000,
+    enabled: opts?.enabled ?? true,
   });
 }

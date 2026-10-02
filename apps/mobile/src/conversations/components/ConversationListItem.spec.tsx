@@ -3,6 +3,11 @@ import { resolve } from "path";
 
 import { describe, it, expect } from "vitest";
 
+import { fireEvent, renderMobile, routerMock } from "../../../test/render";
+import { queryKeys } from "../../api/queryKeys";
+
+import { ConversationListItem } from "./ConversationListItem";
+
 const source = readFileSync(resolve(__dirname, "./ConversationListItem.tsx"), "utf-8");
 
 describe("ConversationListItem", () => {
@@ -28,7 +33,6 @@ describe("ConversationListItem", () => {
 
   it("shows listing price", () => {
     expect(source).toContain("displayPriceTmt");
-    expect(source).toContain("priceCurrency");
   });
 
   it("shows last message preview when available", () => {
@@ -50,14 +54,6 @@ describe("ConversationListItem", () => {
   it("shows listing label for post_ref-kind last message", () => {
     expect(source).toContain('Enums.MessageKind.PostRef');
     expect(source).toContain('t("listing")');
-  });
-
-  it("supports system-kind last message", () => {
-    expect(source).toContain('"system"');
-  });
-
-  it("accepts unread count in conversation prop", () => {
-    expect(source).toContain("unreadCount?: number");
   });
 
   it("renders an unread badge when unreadCount is greater than zero", () => {
@@ -87,16 +83,6 @@ describe("ConversationListItem", () => {
     expect(source).toContain("id: conversation.id");
   });
 
-  it("passes listing card params to detail route", () => {
-    expect(source).toContain("params.listingId");
-    expect(source).toContain("params.brandId");
-    expect(source).toContain("params.modelId");
-    expect(source).toContain("params.displayPriceTmt");
-    expect(source).toContain("params.priceCurrency");
-    expect(source).toContain("params.coverMediaKey");
-    expect(source).toContain("params.status");
-  });
-
   it("handles null listing gracefully", () => {
     expect(source).toContain('t("chat")');
     expect(source).toContain("listing");
@@ -105,5 +91,30 @@ describe("ConversationListItem", () => {
 
   it("has a minimum tap target size via Pressable", () => {
     expect(source).toContain("px-4 py-3");
+  });
+});
+
+describe("ConversationListItem press", () => {
+  it("opens the Conversation by ID and seeds the by-ID cache with the row's summary", () => {
+    const summary = {
+      id: "00000000-0000-4000-8000-0000000000c1",
+      listing: null,
+      buyerId: "00000000-0000-4000-8000-0000000000b1",
+      sellerId: "00000000-0000-4000-8000-0000000000b2",
+      myRole: "buyer" as const,
+      peer: { id: "00000000-0000-4000-8000-0000000000b2", displayName: "Merdan" },
+      blockedByMe: false,
+      updatedAt: "2026-10-01T10:00:00.000Z",
+      unreadCount: 0,
+    };
+    const screen = renderMobile(<ConversationListItem conversation={summary} />);
+
+    fireEvent.press(screen.getByRole("button"));
+
+    expect(routerMock.push).toHaveBeenCalledWith({
+      pathname: "/conversations/[id]",
+      params: { id: summary.id },
+    });
+    expect(screen.queryClient.getQueryData(queryKeys.conversations.detail(summary.id))).toEqual(summary);
   });
 });

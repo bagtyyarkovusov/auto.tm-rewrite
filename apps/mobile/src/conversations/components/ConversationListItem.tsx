@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 import { Image as ImageIcon, Trash2, Car } from "lucide-react-native";
+
+import {
+  seedConversationDetail,
+  type ConversationSummaryData,
+} from "../../api/conversations/useConversation";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -13,30 +19,7 @@ import { formatPrice } from "@/src/listings/formatPrice";
 import { listingStatusLabel } from "@/src/listings/listingStatusLabel";
 
 interface ConversationListItemProps {
-  conversation: {
-    id: string;
-    buyerId: string;
-    sellerId: string;
-    listing: {
-      id: string;
-      brandId: string;
-      modelId: string;
-      year?: number;
-      displayPriceTmt: number;
-      priceCurrency: string;
-      coverMediaKey?: string;
-      status: string;
-    } | null;
-    myRole: "buyer" | "seller";
-    lastMessage?: {
-      text: string | null;
-      createdAt: string;
-      kind?: "text" | "image" | "post_ref" | "system";
-      deletedAt?: string | null;
-    };
-    updatedAt: string;
-    unreadCount?: number;
-  };
+  conversation: ConversationSummaryData;
   brandName?: string;
   modelName?: string;
 }
@@ -117,6 +100,7 @@ export function ConversationListItem({
   modelName,
 }: ConversationListItemProps) {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const [imageFailed, setImageFailed] = useState(false);
   const listing = conversation.listing;
 
@@ -139,27 +123,10 @@ export function ConversationListItem({
     : null;
 
   const handlePress = () => {
-    const params: { id: string } & Record<string, string> = {
-      id: conversation.id,
-    };
-
-    if (listing) {
-      params.listingId = listing.id;
-      params.brandId = listing.brandId;
-      params.modelId = listing.modelId;
-      params.year = listing.year ? String(listing.year) : "";
-      params.displayPriceTmt = String(listing.displayPriceTmt);
-      params.priceCurrency = listing.priceCurrency;
-      params.coverMediaKey = listing.coverMediaKey ?? "";
-      params.status = listing.status;
-    }
-
-    params.buyerId = conversation.buyerId;
-    params.sellerId = conversation.sellerId;
-
+    seedConversationDetail(queryClient, conversation);
     router.push({
       pathname: "/conversations/[id]",
-      params,
+      params: { id: conversation.id },
     });
   };
 

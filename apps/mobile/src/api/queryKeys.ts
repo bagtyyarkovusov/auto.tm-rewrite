@@ -66,7 +66,10 @@ export const queryKeys = {
 
   favorites: {
     all: () => ["favorites"] as const,
-    list: () => [...queryKeys.favorites.all(), "list"] as const,
+    lists: () => [...queryKeys.favorites.all(), "list"] as const,
+    /** Hide sold on and off are separate lists, each with its own pages. */
+    list: (activeOnly: boolean) =>
+      [...queryKeys.favorites.lists(), { activeOnly }] as const,
   },
 
   conversations: {
