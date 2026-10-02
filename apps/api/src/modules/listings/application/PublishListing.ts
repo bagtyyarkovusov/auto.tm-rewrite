@@ -77,7 +77,7 @@ function isUploadUniqueViolation(err: unknown): boolean {
   };
   const fields = error.meta?.driverAdapterError?.cause?.constraint?.fields;
   return error.code === "P2002" && Array.isArray(fields) && fields.length === 1 &&
-    (fields[0] === "uploadId" || fields[0] === '\"uploadId\"');
+    (fields[0] === "uploadId" || fields[0] === '"uploadId"');
 }
 
 function isForeignKeyViolation(err: unknown): boolean {
