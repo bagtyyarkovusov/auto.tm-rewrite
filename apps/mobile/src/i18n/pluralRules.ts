@@ -8,7 +8,7 @@ interface LocaleRule {
 /** Whole numbers only take one/few/many; a fraction is "other" in every app locale. */
 const isWhole = (n: number) => Number.isInteger(n);
 
-const oneOrOther: LocaleRule = { categories: ["one", "other"], select: (n) => (n === 1 ? "one" : "other") };
+const oneOrOther: LocaleRule = { categories: ["one", "other"], select: (n) => (Math.abs(n) === 1 ? "one" : "other") };
 
 // CLDR cardinal rules for the app's locales, ordered as Intl reports their categories.
 const rules: Record<string, LocaleRule> = {
@@ -28,7 +28,12 @@ const rules: Record<string, LocaleRule> = {
   tk: oneOrOther,
 };
 
-/** The subset of Intl.PluralRules that i18next uses: cardinal rules for ru, en and tk. */
+/**
+ * The subset of Intl.PluralRules that i18next uses: cardinal rules for ru, en
+ * and tk. It has no supportedLocalesOf or selectRange, answers "other" for
+ * ordinals and ignores number-format options; a library that needs more than
+ * this on Hermes needs a real polyfill.
+ */
 class AppPluralRules {
   private readonly language: string;
   private readonly rule: LocaleRule;

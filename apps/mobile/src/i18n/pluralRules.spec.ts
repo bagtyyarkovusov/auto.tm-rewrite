@@ -51,11 +51,16 @@ describe("ensurePluralRules without the engine's Intl.PluralRules", () => {
     expect(translator("tk")(count)).toBe(expected);
   });
 
-  it.each(["ru", "en", "tk"])("agrees with the full Intl rules for %s on 0 to 200", (locale) => {
+  const samples = [
+    ...Array.from({ length: 201 }, (_, n) => n),
+    -1, -2, -5, -11, -21, 0.5, 1.5, 2.5, 5.5, 21.5,
+  ];
+
+  it.each(["ru", "en", "tk", "ru-RU", "en-US"])("agrees with the full Intl rules for %s", (locale) => {
     const shim = new Intl.PluralRules(locale);
     const full = new nativePluralRules(locale);
     expect(shim.resolvedOptions().pluralCategories).toEqual(full.resolvedOptions().pluralCategories);
-    for (let n = 0; n <= 200; n += 1) expect([n, shim.select(n)]).toEqual([n, full.select(n)]);
+    for (const n of samples) expect([n, shim.select(n)]).toEqual([n, full.select(n)]);
   });
 });
 
