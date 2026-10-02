@@ -1,0 +1,13 @@
+appId: tm.auto.app
+---
+- openLink: "autotm:///otp?method=phone&destination=%2B99360000000&resendInSeconds=30"
+- tapOn:
+    point: "92%,93%"
+- tapOn:
+    point: "76%,12%"
+- tapOn:
+    point: "11%,45%"
+- inputText: "123456"
+- tapOn:
+    point: "92%,93%"
+- takeScreenshot: /tmp/e518/518-restore-prompt-grace-ru

@@ -1,0 +1,17 @@
+appId: tm.auto.app
+---
+# Issue #518: restore prompt (grace) and the error state after a failed restore.
+- openLink: "autotm:///otp?method=phone&destination=%2B99360000000&resendInSeconds=30"
+- assertVisible: "Enter the code"
+- tapOn:
+    point: "92%,93%"
+- tapOn:
+    point: "11%,45%"
+- inputText: "123456"
+- assertVisible: "Account restoration"
+- tapOn:
+    point: "92%,93%"
+- takeScreenshot: /tmp/e518/518-restore-prompt-grace-en
+- tapOn: "Restore"
+- assertVisible: "We could not restore your account.*"
+- takeScreenshot: /tmp/e518/518-restore-failed-en

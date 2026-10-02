@@ -1,0 +1,23 @@
+appId: tm.auto.app
+---
+# Issue #518: sign in from the phone screen, the pending session has expired,
+# Restore answers 401, "Sign in again" returns to the phone screen.
+- tapOn:
+    point: "92%,93%"
+- tapOn:
+    point: "55%,54%"
+- inputText: "60000000"
+- tapOn: "Enter your phone number"
+- tapOn:
+    point: "50%,64%"
+- assertVisible: "Enter the code"
+- tapOn:
+    point: "11%,45%"
+- inputText: "123456"
+- assertVisible: "Account restoration"
+- tapOn: "Restore"
+- assertVisible: "Your sign-in has expired.*"
+- takeScreenshot: /tmp/e518/518-restore-expired-from-phone-en
+- tapOn: "Sign in again"
+- assertVisible: "Enter your phone number"
+- takeScreenshot: /tmp/e518/518-back-at-phone-sign-in-en
