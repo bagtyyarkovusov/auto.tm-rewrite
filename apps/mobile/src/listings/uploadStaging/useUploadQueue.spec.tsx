@@ -381,7 +381,6 @@ describe("useUploadQueue — parallel batch compression", () => {
     });
 
     it("deletes them instead when told not to restore", async () => {
-      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
       const { result } = renderHook(
         () => useUploadQueue("edit-l1", payload, { restoreLocalPhotos: false }),
         { wrapper },
