@@ -39,6 +39,12 @@ export class UploadAdoptionGuard {
     return (await this.uploads.findByKeys(keys)).some((upload) => upload.adopted);
   }
 
+  /** Whether a previously authorized upload disappeared before a failed write. */
+  async anyUnavailable(keys: string[]): Promise<boolean> {
+    const recorded = await this.uploads.findByKeys(keys);
+    return keys.some((key) => !recorded.some((upload) => upload.key === key));
+  }
+
   /** Returns the authorizing upload for each claim, in claim order. */
   async authorize(userId: string, claims: UploadClaim[]): Promise<MediaUpload[]> {
     const recorded = await this.uploads.findByKeys(claims.map((c) => c.key));

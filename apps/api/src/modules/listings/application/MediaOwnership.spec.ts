@@ -324,7 +324,7 @@ describe("Listing media upload ownership (#536)", () => {
     it("keeps a victim's image when a backfilled attacker video uses its directory", async () => {
       const siblingKey = victimKey.replace(/original\.jpg$/, "original.mp4");
       world.seedAdoptedMedia({
-        userId: USER_A, listingId: LISTING_A, mediaId: "legacy-sibling", key: siblingKey,
+        userId: USER_A, listingId: LISTING_A, mediaId: "legacy-sibling", key: siblingKey, kind: "video",
       });
 
       await remove.execute({ listingId: LISTING_A, userId: USER_A, mediaId: "legacy-sibling" });

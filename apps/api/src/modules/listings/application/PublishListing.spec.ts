@@ -611,7 +611,9 @@ describe("PublishListing", () => {
 
       expect(err).toBeInstanceOf(BadRequestException);
       expect((err as BadRequestException).getResponse()).toMatchObject({ code: "UPLOAD_NOT_AVAILABLE" });
-      expectNothingPublished();
+      expect(prisma.createdListings).toHaveLength(0);
+      expect(prisma.createdMedia).toHaveLength(0);
+      expect(prisma.deletedDrafts).toEqual([]);
     });
 
     it("rethrows an unrelated unique violation instead of blaming the upload", async () => {

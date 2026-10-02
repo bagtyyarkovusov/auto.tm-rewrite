@@ -68,9 +68,16 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   { message: "DAMAGED_REQUIRED", path: ["conditionDisclosure", "damaged"] },
 );
 
-/** Prisma reports a unique-constraint violation as a known request error, code P2002. */
-function isUniqueViolation(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: unknown }).code === "P2002";
+/** Match the upload link, rather than another unique constraint in publication. */
+function isUploadUniqueViolation(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const error = err as { code?: unknown; meta?: { target?: unknown } };
+  return error.code === "P2002" && Array.isArray(error.meta?.target) &&
+    error.meta.target.length === 1 && error.meta.target[0] === "uploadId";
+}
+
+function isForeignKeyViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: unknown }).code === "P2003";
 }
 
 export interface PublishListingInput {
@@ -296,12 +303,20 @@ export class PublishListing {
 
       return { listing };
     } catch (err) {
-      if (isUniqueViolation(err) && (await this.uploadGuard.anyAdopted(photoKeys))) {
+      if (isUploadUniqueViolation(err) && (await this.uploadGuard.anyAdopted(photoKeys))) {
         // A concurrent attach or publish adopted one of these uploads first. The
         // whole transaction rolled back, so nothing was published.
         throw new ConflictException({
           code: LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
           message: "A photo upload is already attached to a Listing",
+        });
+      }
+      if (isForeignKeyViolation(err) && (await this.uploadGuard.anyUnavailable(photoKeys))) {
+        // Adoption followed by removal can erase the upload after authorization.
+        // A different foreign-key failure retains its original error.
+        throw new BadRequestException({
+          code: LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE,
+          message: "A photo upload is no longer available",
         });
       }
       if (err instanceof DomainError) {

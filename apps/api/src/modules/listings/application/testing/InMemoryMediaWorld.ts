@@ -110,23 +110,26 @@ export class InMemoryMediaWorld {
     mediaId: string;
     key: string;
     uploadId?: string;
+    kind?: "image" | "video";
   }): void {
     const uploadId = input.uploadId ?? `upload-${input.mediaId}`;
+    const kind = input.kind ?? "image";
+    const contentType = kind === "image" ? "image/jpeg" : "video/mp4";
     this.uploads.push({
       id: uploadId,
       userId: input.userId,
       key: input.key,
-      kind: "image",
-      contentType: "image/jpeg",
+      kind,
+      contentType,
       sizeBytes: 1024,
       createdAt: new Date("2026-05-01T00:00:00Z"),
     });
-    this.putObject(input.key, { contentType: "image/jpeg", sizeBytes: 1024 });
+    this.putObject(input.key, { contentType, sizeBytes: 1024 });
     this.media.push(
       ListingMedia.create({
         id: input.mediaId,
         listingId: input.listingId,
-        kind: "image",
+        kind,
         key: input.key,
         sortOrder: 0,
         uploadId,
