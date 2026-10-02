@@ -77,6 +77,13 @@ async function fetchWithTimeout(
   }
 }
 
+// A fixed 503 for every non-rejection refresh failure. The refresh's own status
+// (a gateway 404, a throttler 429) would reach the screens' error copy and the
+// query layer's no-retry-on-4xx rule as if it described the user's request.
+function refreshUnavailable(message: string): ApiError {
+  return new ApiError("REFRESH_UNAVAILABLE", 503, message);
+}
+
 async function refreshOnce(): Promise<void> {
   if (refreshInFlight) {
     return refreshInFlight;
@@ -109,22 +116,14 @@ async function refreshOnce(): Promise<void> {
       throw new ApiError("UNAUTHENTICATED", 401, "Refresh failed");
     }
     if (!res.ok) {
-      throw new ApiError(
-        "REFRESH_UNAVAILABLE",
-        res.status,
-        "Refresh is temporarily unavailable",
-      );
+      throw refreshUnavailable("Refresh is temporarily unavailable");
     }
 
     let json: unknown;
     try {
       json = (await res.json()) as unknown;
     } catch {
-      throw new ApiError(
-        "REFRESH_UNAVAILABLE",
-        502,
-        "Refresh answer was not readable",
-      );
+      throw refreshUnavailable("Refresh answer was not readable");
     }
     const parsed = AuthSchemas.RefreshResponseSchema.safeParse(json);
     if (!parsed.success) {
