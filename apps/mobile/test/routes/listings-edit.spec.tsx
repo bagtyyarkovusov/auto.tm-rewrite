@@ -9,8 +9,8 @@ const fixture = vi.hoisted(() => {
     thumbnail: "t.jpg", list: "l.jpg", detail: "d.jpg", fullscreen: "f.jpg",
   }, sortOrder: 0 }];
   return {
-    id, save: vi.fn().mockResolvedValue(undefined), show: vi.fn(),
-    retry: vi.fn().mockResolvedValue(undefined),
+    id, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
+    retry: vi.fn().mockResolvedValue(true),
     saveState: { status: "idle", error: null, opStates: {} } as {
       status: string; error: Error | null; opStates: Record<string, string>;
     },
@@ -63,8 +63,8 @@ vi.mock("../../src/api/catalog/useCities", () => ({ useCities: () => ({ data: { 
 
 beforeEach(() => {
   routeParams.id = fixture.id;
-  fixture.save.mockClear();
-  fixture.retry.mockReset().mockResolvedValue(undefined);
+  fixture.save.mockReset().mockResolvedValue(true);
+  fixture.retry.mockReset().mockResolvedValue(true);
   fixture.show.mockClear();
   routerMock.replace.mockClear();
   fixture.saveState = { status: "idle", error: null, opStates: {} };
@@ -126,6 +126,28 @@ describe("legacy Listing edit", () => {
       expect(fixture.save).not.toHaveBeenCalled();
       expect(fixture.show).toHaveBeenCalledWith(expect.objectContaining({ variant: "success" }));
       expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
+    });
+
+    it.each([0, 1])("does not report success when Retry %i did not run", async (entry) => {
+      fixture.retry.mockResolvedValue(false);
+      const screen = renderFailedReview();
+      await act(async () => fireEvent.press(retryButton(screen, entry)));
+      expect(fixture.retry).toHaveBeenCalledOnce();
+      expect(fixture.show).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it("does not report success when Save did not run", async () => {
+      fixture.save.mockResolvedValue(false);
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: No" }));
+      fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+      await act(async () =>
+        fireEvent.press(screen.getByRole("button", { name: "Save changes", disabled: false })),
+      );
+      expect(fixture.save).toHaveBeenCalledOnce();
+      expect(fixture.show).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
     });
 
     it.each([0, 1])("stays on the edit screen when Retry %i fails again", async (entry) => {
