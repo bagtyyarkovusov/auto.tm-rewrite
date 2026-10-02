@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 
-function openLegalPage(locale: string, kind: "terms" | "privacy") {
+function openLegalPage(locale: string, kind: "terms" | "privacy" | "posting-rules") {
   void Linking.openURL(legalPageUrl(locale, kind));
 }
 
@@ -110,7 +110,7 @@ export default function SettingsScreen() {
             <Separator className="bg-border mx-4" />
             <LegalRow
               label={t("postingRules")}
-              onPress={() => openLegalPage(i18n.language, "terms")}
+              onPress={() => openLegalPage(i18n.language, "posting-rules")}
             />
           </View>
         </View>

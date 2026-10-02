@@ -287,7 +287,7 @@ const postingRulesPromises: CopyPromise[] = [
     phrases: {
       en: "JPEG or WebP, up to 5 MB each",
       ru: "JPEG или WebP, не больше 5 МБ каждая",
-      tk: "JPEG ýa-da WebP, her biri 5 MB-dan köp bolmaly däl",
+      tk: "JPEG ýa-da WebP görnüşinde, her biri 5 MB-dan köp bolmaly däl",
     },
   },
   {
@@ -301,9 +301,9 @@ const postingRulesPromises: CopyPromise[] = [
   {
     name: "at least one way to contact the seller stays on",
     phrases: {
-      en: "Keep calls, chat or both turned on",
-      ru: "Оставьте включёнными звонки, чат или и то и другое",
-      tk: "Jaňlary, çaty ýa-da ikisini hem açyk goýuň",
+      en: "keep calls, chat or both turned on",
+      ru: "оставьте включёнными звонки, чат или и то и другое",
+      tk: "jaňlary, çaty ýa-da ikisini hem açyk goýuň",
     },
   },
   {

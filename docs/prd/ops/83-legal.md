@@ -1,4 +1,4 @@
-# 83 — Legal documents (Privacy Policy + Terms of Service)
+# 83 — Legal documents (Privacy Policy, Terms of Service, Posting rules)
 
 ## Why this doc exists
 
@@ -11,12 +11,12 @@ Plus EU GDPR (if we ever serve EU users — relevant for TM diaspora) and TM dat
 
 ## Where they live
 
-- Reviewer-production URLs: `https://autotm.bagtyyar.dev/<lang>/legal/privacy` and `https://autotm.bagtyyar.dev/<lang>/legal/terms`
+- Reviewer-production URLs: `https://autotm.bagtyyar.dev/<lang>/legal/privacy`, `https://autotm.bagtyyar.dev/<lang>/legal/terms` and `https://autotm.bagtyyar.dev/<lang>/legal/posting-rules`
 - Staging uses `https://staging.autotm.bagtyyar.dev` with the same localized paths.
 - Mobile selects `EXPO_PUBLIC_WEB_URL` per EAS build profile. Web uses runtime `WEB_BASE_URL` for canonical links, set to the same public origin.
 - The founder must confirm Railway custom domains and external-network TLS/page loads before Play submission. #496 tracks this hosting evidence; recording these URLs does not establish availability.
 - Served by `apps/web` as static markdown rendered server-side
-- Linked from mobile app (Settings → About → Privacy / Terms)
+- Linked from mobile app (Settings → About → Privacy / Terms / Posting rules)
 - Linked from admin app (footer)
 - Required versions: RU + TK + EN (trilingual)
 
@@ -67,6 +67,19 @@ If explicit recorded acceptance is required later, record the accepted terms ver
 | **Modifications** | We may update terms; material changes communicated in-app or through the documented beta support channel |
 | **Governing law** | Turkmenistan |
 | **Contact** | Email + physical address |
+
+## Posting rules — required sections
+
+Every rule must map to something the product or its moderators enforce. Do not add policy that nothing enforces.
+
+| Section | Content and what enforces it |
+|---|---|
+| **What you may list** | A real vehicle the seller owns or may sell; one Listing per vehicle (moderators block duplicates); brand, model, year and VIN are locked after publish |
+| **Photos** | Photos of the actual vehicle (moderators act on misleading reports); 1 to 20 photos; JPEG or WebP up to 5 MB each, compressed by the app |
+| **Price, description and contact** | Price above zero in TMT, USD or AED; description required, up to 2,000 characters, damage question answered, mileage for a used vehicle; calls, chat or both enabled; a contact phone the seller is entitled to use. The page does not yet claim SMS verification of the contact phone: [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md) is decided but the publish check is not implemented |
+| **What is not allowed** | The Listing report reasons the app offers (spam, scam or fraud, misleading information, wrong category), plus the Terms' prohibited content |
+| **What happens when a Listing breaks the rules** | Listings go live on publish with no pre-review; moderators can block a Listing and suspend an account, with a recorded reason |
+| **Reporting and support** | How to report from Listing detail; support email and phone |
 
 ## Format
 
