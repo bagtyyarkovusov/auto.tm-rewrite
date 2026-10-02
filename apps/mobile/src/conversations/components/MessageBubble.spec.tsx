@@ -116,6 +116,14 @@ describe("MessageBubble kinds keep their look and gain the time", () => {
     expect(screen.getByTestId("message-tick-double", { includeHiddenElements: true })).toBeTruthy();
   });
 
+  it("reads the time and state of an own image Message", () => {
+    const screen = renderMobile(
+      bubble({ kind: "image", text: "", localImageUri: "file:///photo.jpg", status: "delivered" }),
+    );
+
+    expect(screen.getByLabelText("02:05 PM, Delivered")).toBeTruthy();
+  });
+
   it("shows the time on a Listing-reference Message", () => {
     const screen = renderMobile(
       bubble({
@@ -139,5 +147,35 @@ describe("MessageBubble kinds keep their look and gain the time", () => {
 
     expect(screen.getByText(/Toyota Camry/)).toBeTruthy();
     expect(screen.getByText("02:05 PM")).toBeTruthy();
+  });
+
+  it("reads the time and state of an own Listing-reference Message", () => {
+    const screen = renderMobile(
+      bubble({
+        kind: "post_ref",
+        text: "",
+        status: "read",
+        metadata: {
+          listingId: "00000000-0000-4000-8000-0000000000a1",
+          brandId: "00000000-0000-4000-8000-0000000000d1",
+          modelId: "00000000-0000-4000-8000-0000000000d2",
+          year: 2018,
+          displayPriceTmt: 285000,
+          priceCurrency: "TMT",
+          status: "active",
+          available: true,
+        },
+        postRefBrandName: "Toyota",
+        postRefModelName: "Camry",
+      }),
+    );
+
+    expect(screen.getByLabelText("02:05 PM, Read")).toBeTruthy();
+  });
+
+  it("reads Reported on a reported text Message", () => {
+    const screen = renderMobile(bubble({ isMine: false, reported: true }));
+
+    expect(screen.getByLabelText("Is the car still available?, 02:05 PM, Reported")).toBeTruthy();
   });
 });
