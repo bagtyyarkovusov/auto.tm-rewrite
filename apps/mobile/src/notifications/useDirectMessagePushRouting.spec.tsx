@@ -26,14 +26,16 @@ vi.mock("expo-notifications", () => ({
   DEFAULT_ACTION_IDENTIFIER: "expo.modules.notifications.actions.DEFAULT",
 }));
 
-const nav = vi.hoisted(() => ({ pathname: "/" }));
+const nav = vi.hoisted(() => ({ pathname: "/", rootName: "(onboarding)" }));
 
 vi.mock("expo-router", () => ({
   router: {
     push: vi.fn(),
     dismissTo: vi.fn(),
+    navigate: vi.fn(),
   },
   usePathname: () => nav.pathname,
+  useRootNavigationState: () => ({ index: 0, routes: [{ name: nav.rootName }] }),
 }));
 
 const mockGetLast = vi.mocked(getLastNotificationResponse);
@@ -41,6 +43,7 @@ const mockAddListener = vi.mocked(addNotificationResponseReceivedListener);
 const mockClearLast = vi.mocked(clearLastNotificationResponse);
 const mockPush = vi.mocked(router.push);
 const mockDismissTo = vi.mocked(router.dismissTo);
+const mockNavigate = vi.mocked(router.navigate);
 
 function makeResponse({
   identifier = "response-1",
@@ -71,6 +74,8 @@ describe("useDirectMessagePushRouting", () => {
     mockClearLast.mockReset();
     mockPush.mockReset();
     mockDismissTo.mockReset();
+    mockNavigate.mockReset();
+    nav.rootName = "(onboarding)";
     nav.pathname = "/";
   });
 
@@ -168,6 +173,7 @@ type StackRoute =
 
 function modelRootStack(initial: StackRoute[]) {
   const routes = [...initial];
+  nav.rootName = routes.at(-1)!.name;
   const toRoute = (href: unknown): StackRoute => {
     if (typeof href === "string" && href.startsWith("/(tabs)/")) {
       return { name: "(tabs)", tab: href.slice("/(tabs)/".length) };
@@ -181,7 +187,13 @@ function modelRootStack(initial: StackRoute[]) {
   mockPush.mockImplementation((href) => {
     routes.push(toRoute(href));
   });
+  mockNavigate.mockImplementation((href) => {
+    routes.splice(routes.length - 1, 1, toRoute(href));
+  });
   mockDismissTo.mockImplementation((href) => {
+    // Expo targets the tab navigator when (tabs) is focused. A targeted
+    // POP_TO is unhandled by TabRouter and becomes a silent no-op.
+    if (routes.at(-1)?.name === "(tabs)") return;
     const target = toRoute(href);
     const index = routes.map((route) => route.name).lastIndexOf(target.name);
     if (index === -1) {
@@ -209,6 +221,8 @@ describe("Back after a push tap", () => {
     mockGetLast.mockReturnValue(null);
     mockPush.mockReset();
     mockDismissTo.mockReset();
+    mockNavigate.mockReset();
+    nav.rootName = "(onboarding)";
     nav.pathname = "/";
   });
 
@@ -226,15 +240,18 @@ describe("Back after a push tap", () => {
     expect(stack.routes).not.toContainEqual(expect.objectContaining({ name: "conversation" }));
   });
 
-  it("goes to the Messages list when tapped from the background on another tab", () => {
+  it.each(["foreground", "background", "cold start"])("goes to Messages from a bare Favorites tab on %s", (entry) => {
     nav.pathname = "/favorites";
     const stack = modelRootStack([tabsOn("favorites")]);
+    const response = makeResponse({ data: { conversationId: "conv-bg" } });
+    if (entry === "cold start") mockGetLast.mockReturnValue(response as never);
     renderHook(() => useDirectMessagePushRouting());
-
-    responseListener?.(makeResponse({ data: { conversationId: "conv-bg" } }));
+    if (entry !== "cold start") responseListener?.(response);
 
     expect(stack.routes).toEqual([tabsOn("chat"), { name: "conversation", id: "conv-bg" }]);
     expect(stack.back()).toEqual(tabsOn("chat"));
+    expect(mockNavigate).toHaveBeenCalledWith("/(tabs)/chat");
+    expect(mockDismissTo).not.toHaveBeenCalled();
   });
 
   it("goes to the Messages list after a cold start", () => {
