@@ -66,7 +66,7 @@ const ENTRY_HREF = {
  */
 function SignInMethods({ phone, email }: { phone: string | null; email: string | null }) {
   const { t } = useTranslation("account");
-  const [confirming, setConfirming] = useState<SignInMethod | null>(null);
+  const [confirming, setConfirming] = useState(false);
   // Keeps the sheet's copy while it animates closed.
   const [sheetMethod, setSheetMethod] = useState<SignInMethod>("phone");
 
@@ -76,7 +76,7 @@ function SignInMethods({ phone, email }: { phone: string | null; email: string |
       return;
     }
     setSheetMethod(method);
-    setConfirming(method);
+    setConfirming(true);
   }
 
   return (
@@ -105,12 +105,12 @@ function SignInMethods({ phone, email }: { phone: string | null; email: string |
 
       <ChangeSignInMethodSheet
         method={sheetMethod}
-        open={confirming !== null}
+        open={confirming}
         onOpenChange={(next) => {
-          if (!next) setConfirming(null);
+          if (!next) setConfirming(false);
         }}
         onContinue={() => {
-          setConfirming(null);
+          setConfirming(false);
           router.push(ENTRY_HREF[sheetMethod]);
         }}
       />
@@ -134,16 +134,20 @@ function SignInMethodNoticeLine() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  if (!notice) return null;
-
+  // The line keeps its height when empty, so the rows below never jump.
   return (
-    <Text
-      accessibilityLiveRegion="polite"
-      accessibilityRole="alert"
-      className="px-4 pt-2 text-[13px] text-muted-foreground"
-    >
-      {t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })}
-    </Text>
+    <View className="min-h-7 justify-center px-4">
+      {notice ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+          className="text-[13px] text-muted-foreground"
+          numberOfLines={1}
+        >
+          {t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -207,8 +211,7 @@ export default function ProfileScreen() {
   const { data, isPending, isError, error, refetch } = useMe();
   const goBack = useSafeBack("/(tabs)/services");
 
-  // Only a real name yields a meaningful initial — the first character of a
-  // phone number is "+", which reads as an add-photo affordance.
+  // Without a name the avatar shows the person icon, never a method's first character.
   const avatarInitial = data?.displayName?.charAt(0).toUpperCase();
 
   return (

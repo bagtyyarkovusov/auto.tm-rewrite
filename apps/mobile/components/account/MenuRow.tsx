@@ -72,8 +72,9 @@ export function MenuRow({
       </View>
       {value ? (
         <Text
+          numberOfLines={1}
           className={cn(
-            "text-[15px]",
+            "shrink text-[15px]",
             valueTone === "link" ? "text-info-600 dark:text-info-400" : "text-muted-foreground",
           )}
         >

@@ -107,7 +107,7 @@ describe("Confirming a new Sign-in Method", () => {
     expect(routerMock.push).not.toHaveBeenCalled();
   });
 
-  it("shows Profile with the new value when the change lands after the User left", async () => {
+  it("keeps the User where they went when the change lands after they left", async () => {
     const pending = deferred<unknown>();
     state.verify.mockReturnValue(pending.promise);
     const { view, verify } = openVerify({ method: "phone", destination: "+99361000000", kind: "change" });
@@ -115,8 +115,8 @@ describe("Confirming a new Sign-in Method", () => {
     view.unmount();
     pending.resolve({});
     await act(() => result);
-    // The entry screen it was left on is stale now, so the User lands on Profile.
-    expect(routerMock.dismissTo).toHaveBeenCalledWith("/profile");
+    // Not pulled back to Profile; Profile says what changed when they reach it.
+    expect(routerMock.dismissTo).not.toHaveBeenCalled();
     expect(signInMethodNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
   });
 });

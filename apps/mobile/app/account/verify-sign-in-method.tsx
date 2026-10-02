@@ -90,13 +90,14 @@ export default function VerifySignInMethodScreen() {
       return;
     }
 
-    // The change is applied even if the User already pressed Back; the entry
-    // screen they returned to is stale, so they land on Profile either way.
+    // The change is applied even if the User already pressed Back. Profile
+    // still shows the line when they reach it, but a User who has moved on is
+    // not pulled back there.
     signInMethodNoticeStore.getState().show({
       kind,
       value: identifier.phone ? maskTmPhone(identifier.phone) : maskEmail(identifier.email ?? ""),
     });
-    router.dismissTo("/profile");
+    if (mounted.current) router.dismissTo("/profile");
   }
 
   async function resendCode() {

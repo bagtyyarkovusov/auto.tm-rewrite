@@ -7,8 +7,9 @@ import { Icon } from "@/components/ui/icon";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
 
-// Room for the handle, a two-line title, four lines of body and both buttons. The iOS
-// full-window overlay gives an auto-height sheet no room, so this one sets a height.
+// Room for the handle, a two-line title, four lines of body and both buttons at
+// the default text size; it grows with the system font scale. The iOS full-window
+// overlay gives an auto-height sheet no room, so this one sets a height.
 const SHEET_HEIGHT = 400;
 
 interface ChangeSignInMethodSheetProps {
@@ -25,7 +26,8 @@ interface ChangeSignInMethodSheetProps {
  */
 export function ChangeSignInMethodSheet({ method, open, onOpenChange, onContinue }: ChangeSignInMethodSheetProps) {
   const { t } = useTranslation("account");
-  const sheetHeight = Math.min(useWindowDimensions().height * 0.85, SHEET_HEIGHT);
+  const { height, fontScale } = useWindowDimensions();
+  const sheetHeight = Math.min(height * 0.85, SHEET_HEIGHT * Math.max(1, fontScale));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
