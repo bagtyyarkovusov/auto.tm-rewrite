@@ -1,10 +1,13 @@
 import {
   ChevronRight,
+  CircleHelp,
+  Info,
   List,
   Plus,
   Settings,
   User,
 } from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
@@ -167,8 +170,35 @@ function MyListingsRow() {
   );
 }
 
+function CabinetLinkRow({
+  icon,
+  label,
+  href,
+}: {
+  icon: LucideIcon;
+  label: string;
+  href: "/help" | "/about";
+}) {
+  return (
+    <Pressable
+      onPress={() => router.push(href)}
+      className="active:opacity-90"
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Card>
+        <CardContent className="flex-row items-center gap-3 py-4">
+          <Icon as={icon} className="size-6 text-foreground" />
+          <Text className="flex-1 font-semibold text-foreground">{label}</Text>
+          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+        </CardContent>
+      </Card>
+    </Pressable>
+  );
+}
+
 export default function CabinetScreen() {
-  const { t } = useTranslation(["account", "common"]);
+  const { t } = useTranslation(["account", "common", "support"]);
   const { isAuthenticated } = useAuth();
 
   return (
@@ -207,6 +237,8 @@ export default function CabinetScreen() {
 
             <MyListingsRow />
 
+            <CabinetLinkRow icon={CircleHelp} label={t("support:help")} href="/help" />
+
             <Separator className="bg-border" />
 
             <Button
@@ -218,6 +250,8 @@ export default function CabinetScreen() {
               <Icon as={Plus} className="size-5 text-primary-foreground mr-2" />
               <Text>{t("common:listACar")}</Text>
             </Button>
+
+            <CabinetLinkRow icon={Info} label={t("support:about")} href="/about" />
           </>
         )}
       </ScrollView>
