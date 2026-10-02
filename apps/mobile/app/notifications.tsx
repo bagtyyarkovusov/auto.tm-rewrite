@@ -1,11 +1,12 @@
 import * as Linking from "expo-linking";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
-import { Pressable, ScrollView, View } from "react-native";
+import { ChevronLeft } from "lucide-react-native";
+import { ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useNotificationPermissionState } from "../src/notifications/useNotificationPermissionState";
 
+import { MenuRow } from "@/components/account/MenuRow";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -58,17 +59,11 @@ export default function NotificationsScreen() {
           <Text className="text-base text-muted-foreground">{value}</Text>
         </View>
         <Separator className="bg-border ml-4" />
-        <Pressable
+        <MenuRow
+          label={t("openSystemSettings")}
+          chevron
           onPress={() => void Linking.openSettings()}
-          className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-accent"
-          accessibilityRole="button"
-          accessibilityLabel={t("openSystemSettings")}
-        >
-          <Text className="flex-1 text-base text-foreground">
-            {t("openSystemSettings")}
-          </Text>
-          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
-        </Pressable>
+        />
 
         <Text className="px-4 py-2.5 text-sm text-muted-foreground">
           {t("notificationsMuteHint")}

@@ -1,18 +1,7 @@
-import {
-  Bell,
-  ChevronRight,
-  List,
-  Plus,
-  Settings,
-  User,
-} from "lucide-react-native";
+import { Bell, FileText, List, ScrollText, ShieldCheck, User } from "lucide-react-native";
 import { router } from "expo-router";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import * as Linking from "expo-linking";
+import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
@@ -21,179 +10,126 @@ import { maskTmPhone } from "../../src/auth/phone";
 import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { useMe } from "../../src/api/identity/useMe";
+import { legalPageUrl } from "../../src/config/publicWebUrl";
 
+import { LanguageRow } from "@/components/account/LanguageRow";
+import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import { ThemeRow } from "@/components/account/ThemeRow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
-function AnonymousIdentityCard() {
-  const { t } = useTranslation(["account", "common"]);
-
-  const handleSignIn = () => {
-    useAuthIntentStore.getState().requireSignIn(router, {
-      returnTo: "/(tabs)/services",
-    });
-  };
-
+function RowAvatar({ name, url }: { name?: string | null; url?: string | null }) {
   return (
-    <Card>
-      <CardContent className="items-center gap-4 py-8">
-        <View className="items-center justify-center rounded-full bg-muted size-20">
-          <Icon as={User} className="size-10 text-muted-foreground" />
-        </View>
-        <View className="items-center gap-1">
-          <Text className="text-lg font-semibold text-foreground">
-            {t("common:signInToManage")}
+    <Avatar className="size-12" alt={name ?? ""}>
+      {url ? <AvatarImage source={{ uri: url }} /> : null}
+      <AvatarFallback>
+        {name ? (
+          <Text className="text-xl font-heading text-foreground">
+            {name.charAt(0).toUpperCase()}
           </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            {t("common:signInToManageDescription")}
-          </Text>
-        </View>
-        <Button variant="brand" size="pill" onPress={handleSignIn}>
-          <Text>{t("common:signIn")}</Text>
-        </Button>
-      </CardContent>
-    </Card>
+        ) : (
+          <Icon as={User} className="size-6 text-muted-foreground" />
+        )}
+      </AvatarFallback>
+    </Avatar>
   );
 }
 
-function AuthenticatedIdentityCard() {
+function SignInRow() {
   const { t } = useTranslation(["account", "common"]);
-  const { data, isPending, isError } = useMe({ enabled: true });
 
-  const handlePress = () => {
-    router.push("/profile");
-  };
+  return (
+    <MenuRow
+      size="large"
+      lead={<RowAvatar />}
+      label={t("common:signIn")}
+      sub={t("account:signInSub")}
+      chevron
+      onPress={() =>
+        useAuthIntentStore.getState().requireSignIn(router, {
+          returnTo: "/(tabs)/services",
+        })
+      }
+    />
+  );
+}
 
-  if (isPending) {
-    return (
-      <Card>
-        <CardContent className="items-center gap-3 py-8">
-          <ActivityIndicator />
-          <Text className="text-sm text-muted-foreground">
-            {t("common:loading")}
-          </Text>
-        </CardContent>
-      </Card>
-    );
-  }
+function ProfileRowSkeleton() {
+  const { t } = useTranslation("common");
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={t("loading")}
+      className="min-h-[76px] flex-row items-center gap-3.5 px-4 py-2"
+    >
+      <Skeleton className="size-12 rounded-full" />
+      <View className="flex-1 gap-2">
+        <Skeleton className="h-4 w-40 rounded" />
+        <Skeleton className="h-3 w-28 rounded" />
+      </View>
+    </View>
+  );
+}
+
+/** The large profile row. The only row that waits for `/me`. */
+function ProfileRow() {
+  const { t } = useTranslation("common");
+  const { data, isPending, isError, refetch } = useMe({ enabled: true });
+
+  if (isPending) return <ProfileRowSkeleton />;
 
   if (isError || !data) {
     return (
-      <Card>
-        <CardContent className="items-center gap-2 py-8">
-          <Text className="text-sm text-muted-foreground text-center">
-            {t("common:somethingWentWrong")}
-          </Text>
-        </CardContent>
-      </Card>
+      <View
+        accessibilityRole="alert"
+        className="min-h-[76px] flex-row items-center gap-3.5 px-4 py-2"
+      >
+        <RowAvatar />
+        <Text className="flex-1 text-base text-muted-foreground">
+          {t("somethingWentWrong")}
+        </Text>
+        <Button
+          variant="outline"
+          size="sm"
+          className="min-h-11"
+          onPress={() => void refetch()}
+          accessibilityLabel={t("retry")}
+        >
+          <Text>{t("retry")}</Text>
+        </Button>
+      </View>
     );
   }
 
-  const avatarInitial = data.displayName
-    ? data.displayName.charAt(0).toUpperCase()
-    : undefined;
   // Sign-in Methods are masked as on Profile.
-  const signInMethodLabel = data.phone
+  const method = data.phone
     ? maskTmPhone(data.phone)
     : data.email
       ? maskEmail(data.email)
       : "";
 
   return (
-    <Pressable onPress={handlePress} className="active:opacity-90">
-      <Card>
-        <CardContent className="flex-row items-center gap-4 py-5">
-          <Avatar className="size-16" alt={data.displayName ?? signInMethodLabel}>
-            {data.avatarUrl ? (
-              <AvatarImage source={{ uri: data.avatarUrl }} />
-            ) : null}
-            <AvatarFallback>
-              {avatarInitial ? (
-                <Text className="text-2xl font-heading text-foreground">
-                  {avatarInitial}
-                </Text>
-              ) : (
-                <Icon as={User} className="size-8 text-muted-foreground" />
-              )}
-            </AvatarFallback>
-          </Avatar>
-
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-foreground">
-              {data.displayName ?? signInMethodLabel}
-            </Text>
-            {data.displayName ? (
-              <Text className="text-sm text-muted-foreground">
-                {signInMethodLabel}
-              </Text>
-            ) : null}
-          </View>
-
-          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
-        </CardContent>
-      </Card>
-    </Pressable>
+    <MenuRow
+      size="large"
+      lead={<RowAvatar name={data.displayName} url={data.avatarUrl} />}
+      label={data.displayName ?? method}
+      sub={data.displayName ? method : undefined}
+      chevron
+      onPress={() => router.push("/profile")}
+    />
   );
 }
 
-function MyListingsRow() {
-  const { t } = useTranslation(["account", "common"]);
-
-  return (
-    <Pressable
-      onPress={() => router.push("/listings/manage")}
-      className="active:opacity-90"
-      accessibilityRole="button"
-      accessibilityLabel={t("common:myListingsAndDrafts")}
-    >
-      <Card>
-        <CardContent className="flex-row items-center gap-3 py-4">
-          <Icon as={List} className="size-6 text-foreground" />
-          <View className="flex-1">
-            <Text className="font-semibold text-foreground">
-              {t("common:myListingsAndDrafts")}
-            </Text>
-            <Text className="text-sm text-muted-foreground">
-              {t("common:manageYourListings")}
-            </Text>
-          </View>
-          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
-        </CardContent>
-      </Card>
-    </Pressable>
-  );
-}
-
-/** Signed-in only. */
-function NotificationsRow() {
-  const { t } = useTranslation("account");
-
-  return (
-    <Pressable
-      onPress={() => router.push("/notifications")}
-      className="active:opacity-90"
-      accessibilityRole="button"
-      accessibilityLabel={t("notifications")}
-    >
-      <Card>
-        <CardContent className="flex-row items-center gap-3 py-4">
-          <Icon as={Bell} className="size-6 text-foreground" />
-          <Text className="flex-1 font-semibold text-foreground">
-            {t("notifications")}
-          </Text>
-          <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
-        </CardContent>
-      </Card>
-    </Pressable>
-  );
+function openLegalPage(locale: string, kind: "terms" | "privacy" | "posting-rules") {
+  void Linking.openURL(legalPageUrl(locale, kind));
 }
 
 export default function CabinetScreen() {
-  const { t } = useTranslation(["account", "common"]);
+  const { t, i18n } = useTranslation(["account", "common"]);
   const { isAuthenticated } = useAuth();
 
   return (
@@ -201,52 +137,62 @@ export default function CabinetScreen() {
       className="flex-1 bg-background"
       edges={["top", "left", "right"]}
     >
-      {/* Header */}
-      <View className="px-4 pt-6 pb-3 flex-row items-center justify-between">
+      <View className="px-4 pt-6 pb-3">
         <Text className="text-2xl font-heading text-foreground">
           {t("common:cabinet")}
         </Text>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-11 w-11"
-          onPress={() => router.push("/settings")}
-          accessibilityLabel={t("account:settings")}
-        >
-          <Icon as={Settings} className="size-6 text-foreground" />
-        </Button>
       </View>
 
-      <ScrollView className="flex-1 px-4" contentContainerClassName="gap-4 pb-6">
+      <ScrollView className="flex-1" contentContainerClassName="pb-6">
         {isAuthenticated === null ? (
-          <View className="items-center justify-center py-12">
-            <ActivityIndicator />
-          </View>
+          <ProfileRowSkeleton />
+        ) : isAuthenticated ? (
+          <ProfileRow />
         ) : (
-          <>
-            {isAuthenticated ? (
-              <AuthenticatedIdentityCard />
-            ) : (
-              <AnonymousIdentityCard />
-            )}
-
-            <MyListingsRow />
-
-            {isAuthenticated ? <NotificationsRow /> : null}
-
-            <Separator className="bg-border" />
-
-            <Button
-              variant="brand"
-              size="pill"
-              onPress={() => router.push("/(tabs)/sell")}
-              accessibilityLabel={t("common:listACar")}
-            >
-              <Icon as={Plus} className="size-5 text-primary-foreground mr-2" />
-              <Text>{t("common:listACar")}</Text>
-            </Button>
-          </>
+          <SignInRow />
         )}
+
+        {isAuthenticated ? (
+          <>
+            <MenuGap />
+            <MenuRow
+              icon={Bell}
+              label={t("account:notifications")}
+              chevron
+              onPress={() => router.push("/notifications")}
+            />
+            <MenuDivider />
+            <MenuRow
+              icon={List}
+              label={t("account:myListings")}
+              chevron
+              onPress={() => router.push("/listings/manage")}
+            />
+          </>
+        ) : null}
+
+        <MenuGap />
+        <LanguageRow />
+        <MenuDivider />
+        <ThemeRow />
+        <MenuDivider />
+        <MenuRow
+          icon={ShieldCheck}
+          label={t("account:termsOfService")}
+          onPress={() => openLegalPage(i18n.language, "terms")}
+        />
+        <MenuDivider />
+        <MenuRow
+          icon={FileText}
+          label={t("account:privacyPolicy")}
+          onPress={() => openLegalPage(i18n.language, "privacy")}
+        />
+        <MenuDivider />
+        <MenuRow
+          icon={ScrollText}
+          label={t("account:postingRules")}
+          onPress={() => openLegalPage(i18n.language, "posting-rules")}
+        />
       </ScrollView>
     </SafeAreaView>
   );
