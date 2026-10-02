@@ -23,7 +23,7 @@ Repro: add local photo, save edit successfully, navigate to public detail, press
 
 The state3b offline screenshot is before the drop tap and proves header Retry on the non-review step. The drop and successful completion are evidenced by the DELETE317b9dfa operation and final2-row GET plus public detail screenshot. No post-drop pre-Retry screenshot was captured.
 
-State5 was re-captured after state4. The server retains3 saved rows while the edit screen again adds the orphan pending local photo. Reopen remains blocked.
+State5 was re-captured after state4. The server retains3 saved rows while the edit screen shows the3 saved photos plus2 orphan pending local photos (`2 Uploading...`). Reopen remains blocked.
 
 The sanitized-media-operations.json file contains successful listing mutation metadata only, stripped to media IDs/keys/order. It shows exactly3 successful attaches across all three distinct runs and no second attach on either Retry. Raw proxy logs stay private in /tmp.
 
