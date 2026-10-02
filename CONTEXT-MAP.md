@@ -34,6 +34,7 @@ Find the owning area, read its short overview, then inspect source and tests. Th
 | Module | File | Owns |
 |---|---|---|
 | listings | [`listings/CONTEXT.md`](apps/mobile/src/listings/CONTEXT.md) | Create `sell` reducer + staging queue vs edit-route shell; uploads, autosave, wizard documentation |
+| conversations | [`conversations/CONTEXT.md`](apps/mobile/src/conversations/CONTEXT.md) | Conversation screen loaded by ID, socket and HTTP caches, local pending Messages, push entry |
 
 ## Packages
 

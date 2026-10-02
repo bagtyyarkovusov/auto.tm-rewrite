@@ -2,13 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, BellOff, MoreVertical } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { useViewer } from "../../src/auth/useViewer";
 import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
-import { useConversations } from "../../src/api/conversations/useConversations";
+import { useConversation } from "../../src/api/conversations/useConversation";
 import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessage";
 import { useSendImageMessage } from "../../src/api/conversations/useSendImageMessage";
 import { usePresignChatAttachment } from "../../src/api/conversations/usePresignChatAttachment";
@@ -23,10 +22,11 @@ import { useBlockUser } from "../../src/api/identity/useBlockUser";
 import { useUnblockUser } from "../../src/api/identity/useUnblockUser";
 import { useIsBlocked } from "../../src/api/identity/useIsBlocked";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
+import { ConversationHeader } from "../../src/conversations/components/ConversationHeader";
+import { ConversationFooter } from "../../src/conversations/components/ConversationFooter";
+import { useConversationCallPhone } from "../../src/conversations/useConversationCallPhone";
 import { MessageList } from "../../src/conversations/components/MessageList";
-import { MessageComposer, type ComposerAttachment } from "../../src/conversations/components/MessageComposer";
-import { TypingIndicator } from "../../src/conversations/components/TypingIndicator";
-import { PeerPresenceLabel } from "../../src/conversations/components/PeerPresenceLabel";
+import type { ComposerAttachment } from "../../src/conversations/components/MessageComposer";
 import { ImagePreviewModal } from "../../src/conversations/components/ImagePreviewModal";
 import { useConversationCatalogMaps } from "../../src/conversations/components/useConversationCatalogMaps";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
@@ -36,19 +36,11 @@ import {
   ChatImageUploadError,
 } from "../../src/conversations/upload/chatImageUpload";
 
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { ErrorState } from "@/components/ErrorState";
 import { useToast } from "@/components/ui/toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,31 +77,6 @@ function generateClientMessageId(): string {
   return `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-type ConversationSummaryForDetail = Pick<
-  ConversationsSchemas.ConversationSummary,
-  | "id"
-  | "buyerId"
-  | "sellerId"
-  | "mutedAt"
-  | "peerLastReadAt"
-  | "peerLastDeliveredAt"
->;
-
-type ConversationListData = {
-  pages: Array<{
-    items: ConversationSummaryForDetail[];
-  }>;
-};
-
-function findConversationSummary(
-  data: ConversationListData | undefined,
-  conversationId: string,
-): ConversationSummaryForDetail | undefined {
-  return data?.pages
-    .flatMap((page) => page.items)
-    .find((item) => item.id === conversationId);
-}
-
 function computeOutgoingStatus(
   messageCreatedAt: string,
   peerLastReadAt?: string,
@@ -126,10 +93,13 @@ function computeOutgoingStatus(
 }
 
 export default function ConversationDetailScreen() {
-  const { t, i18n } = useTranslation();
-  const params = useLocalSearchParams();
+  const { t } = useTranslation();
+  // The route carries only the Conversation ID and an optional composer draft;
+  // everything else is read by ID (see src/conversations/CONTEXT.md).
+  const params = useLocalSearchParams<{ id?: string; draft?: string }>();
   const rawId = params.id;
   const conversationId = typeof rawId === "string" ? rawId : "";
+  const draft = typeof params.draft === "string" ? params.draft : undefined;
   const viewer = useViewer();
   const router = useRouter();
   const goBack = useSafeBack("/(tabs)/chat");
@@ -168,28 +138,10 @@ export default function ConversationDetailScreen() {
   const muteConversation = useMuteConversation();
   const { show: showToast } = useToast();
 
-  const listingCard = useMemo(() => {
-    const listingId =
-      typeof params.listingId === "string" ? params.listingId : undefined;
-    if (!listingId) return null;
-    return {
-      id: listingId,
-      brandId: typeof params.brandId === "string" ? params.brandId : "",
-      modelId: typeof params.modelId === "string" ? params.modelId : "",
-      year: typeof params.year === "string" ? Number(params.year) : undefined,
-      displayPriceTmt:
-        typeof params.displayPriceTmt === "string"
-          ? Number(params.displayPriceTmt)
-          : 0,
-      priceCurrency:
-        typeof params.priceCurrency === "string" ? params.priceCurrency : "TMT",
-      coverMediaKey:
-        typeof params.coverMediaKey === "string"
-          ? params.coverMediaKey
-          : undefined,
-      status: typeof params.status === "string" ? params.status : "active",
-    };
-  }, [params]);
+  const conversationQuery = useConversation(conversationId);
+  const conversation = conversationQuery.data;
+  const listingCard = conversation?.listing ?? null;
+  const callPhone = useConversationCallPhone(conversation);
 
   const { data: brandsData } = useBrands();
   const { data: modelsData } = useModels(listingCard?.brandId ?? "");
@@ -227,44 +179,17 @@ export default function ConversationDetailScreen() {
 
   const postRefCatalogMaps = useConversationCatalogMaps(postRefListings);
 
-  // Observe the list cache through the same infinite-query shape that owns it.
-  // A plain useQuery observer on this key can replace the infinite-query behavior
-  // while the tab screen remains mounted underneath this route.
-  const { data: conversationsData } = useConversations();
-
-  const conversationSummary = useMemo(
-    () => findConversationSummary(conversationsData, conversationId),
-    [conversationsData, conversationId],
-  );
-
   const peerWatermark = useMemo(
     () => ({
-      peerLastReadAt: conversationSummary?.peerLastReadAt,
-      peerLastDeliveredAt: conversationSummary?.peerLastDeliveredAt,
+      peerLastReadAt: conversation?.peerLastReadAt,
+      peerLastDeliveredAt: conversation?.peerLastDeliveredAt,
     }),
-    [conversationSummary],
+    [conversation?.peerLastReadAt, conversation?.peerLastDeliveredAt],
   );
 
-  const isMuted = conversationSummary?.mutedAt != null;
+  const isMuted = conversation?.mutedAt != null;
 
-  const otherUserId = useMemo(() => {
-    if (!viewer?.userId) return undefined;
-    const buyerId =
-      typeof params.buyerId === "string" && params.buyerId
-        ? params.buyerId
-        : (conversationSummary?.buyerId ?? "");
-    const sellerId =
-      typeof params.sellerId === "string" && params.sellerId
-        ? params.sellerId
-        : (conversationSummary?.sellerId ?? "");
-    if (!buyerId || !sellerId) return undefined;
-    return viewer.userId === buyerId ? sellerId : buyerId;
-  }, [
-    viewer?.userId,
-    params.buyerId,
-    params.sellerId,
-    conversationSummary,
-  ]);
+  const otherUserId = conversation?.peer.id;
 
   const isBlockedQuery = useIsBlocked(otherUserId ?? "", {
     enabled: !!otherUserId,
@@ -786,6 +711,8 @@ export default function ConversationDetailScreen() {
 
   const isLoading = messagesQuery.isPending;
   const isError = messagesQuery.isError;
+  // A Conversation that failed to load, with nothing cached to show instead.
+  const conversationFailed = conversationQuery.isError && !conversation;
 
   const confirmDialogOpen = confirmAction !== null;
   const confirmTitle =
@@ -804,84 +731,29 @@ export default function ConversationDetailScreen() {
 
   return (
     <SafeScreen>
-      {/* Header */}
-      <View className="flex-row items-center justify-between gap-2 px-4 py-3 border-b border-border">
-        <View className="flex-row items-center gap-2 flex-1">
-          <Button
-            variant="ghost"
-            className="h-11 w-11"
-            size="icon"
-            onPress={goBack}
-            accessibilityLabel={t("goBack")}
-          >
-            <Icon as={ArrowLeft} className="size-5 text-foreground" />
-          </Button>
-          <View className="flex-1">
-            <View className="flex-row items-center gap-1.5">
-              <Text
-                className="text-lg font-semibold text-foreground"
-                numberOfLines={1}
-              >
-                {t("messages")}
-              </Text>
-              {isMuted && (
-                <Icon
-                  as={BellOff}
-                  className="size-4 text-muted-foreground"
-                  accessibilityLabel={t("conversationMuted")}
-                />
-              )}
-            </View>
-            <PeerPresenceLabel
-              presence={peerPresence}
-              locale={i18n.language}
-            />
-          </View>
-        </View>
+      <ConversationHeader
+        conversation={conversation}
+        loading={conversationQuery.isPending}
+        presence={peerPresence}
+        callPhone={callPhone}
+        isMuted={isMuted}
+        isBlocked={isBlocked}
+        muteDisabled={muteConversation.isPending}
+        onBack={goBack}
+        onToggleMute={handleToggleMute}
+        onBlock={() => setConfirmAction("block")}
+        onUnblock={() => setConfirmAction("unblock")}
+      />
 
-        {otherUserId && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-11 w-11"
-                size="icon"
-                accessibilityLabel={t("details")}
-              >
-                <Icon as={MoreVertical} className="size-5 text-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem
-                onPress={handleToggleMute}
-                disabled={muteConversation.isPending}
-              >
-                <Text>
-                  {isMuted ? t("unmuteConversation") : t("muteConversation")}
-                </Text>
-              </DropdownMenuItem>
-              {isBlocked ? (
-                <DropdownMenuItem onPress={() => setConfirmAction("unblock")}>
-                  <Text>{t("unblockUser")}</Text>
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onPress={() => setConfirmAction("block")}>
-                  <Text>{t("blockUser")}</Text>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </View>
-
-      {/* Listing card */}
-      {listingCard && (
+      {conversation ? (
         <ConversationListingCard
           listing={listingCard}
           brandName={brandName}
           modelName={modelName}
         />
-      )}
+      ) : conversationQuery.isPending ? (
+        <ConversationListingCard loading />
+      ) : null}
 
       {/* Messages */}
       <View className="flex-1">
@@ -897,10 +769,13 @@ export default function ConversationDetailScreen() {
               <Skeleton className="h-10 w-3/5 rounded-2xl" />
             </View>
           </View>
-        ) : isError ? (
+        ) : conversationFailed || isError ? (
           <ErrorState
-            error={messagesQuery.error}
-            onRetry={() => messagesQuery.refetch()}
+            error={conversationFailed ? conversationQuery.error : messagesQuery.error}
+            onRetry={() => {
+              if (conversationQuery.isError) void conversationQuery.refetch();
+              if (messagesQuery.isError) void messagesQuery.refetch();
+            }}
           />
         ) : viewer?.userId ? (
           <MessageList
@@ -924,48 +799,27 @@ export default function ConversationDetailScreen() {
         )}
       </View>
 
-      {/* Blocked state banner */}
-      {isBlocked && (
-        <View className="px-4 py-3 border-t border-border bg-muted">
-          <View className="flex-row items-center justify-between gap-3">
-            <View className="flex-1">
-              <Text className="text-sm font-medium text-foreground">
-                {t("blockedStateTitle")}
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                {t("blockedStateDescription")}
-              </Text>
-            </View>
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={() => setConfirmAction("unblock")}
-              disabled={unblockUser.isPending}
-            >
-              <Text>{t("blockedStateUnblock")}</Text>
-            </Button>
-          </View>
-        </View>
-      )}
-
-      {/* Typing indicator */}
-      <TypingIndicator visible={peerTyping} />
-
-      {/* Composer */}
-      {viewer?.userId && (
-        <MessageComposer
-          onSend={handleSend}
-          onSendImage={handleSendImage}
-          disabled={isBlocked || blockUser.isPending || unblockUser.isPending}
-          showQuickReplies={
-            !isLoading && !isError && !isBlocked && allMessages.length === 0
-          }
-          onTyping={signalTyping}
-          onStopTyping={stopTyping}
-          conversationId={conversationId}
-          initialText={typeof params.draft === "string" ? params.draft : undefined}
-        />
-      )}
+      <ConversationFooter
+        isBlocked={isBlocked}
+        unblockPending={unblockUser.isPending}
+        onUnblock={() => setConfirmAction("unblock")}
+        peerTyping={peerTyping}
+        composer={
+          viewer?.userId
+            ? {
+                onSend: handleSend,
+                onSendImage: handleSendImage,
+                disabled: isBlocked || blockUser.isPending || unblockUser.isPending,
+                showQuickReplies:
+                  !isLoading && !isError && !isBlocked && allMessages.length === 0,
+                onTyping: signalTyping,
+                onStopTyping: stopTyping,
+                conversationId,
+                initialText: draft,
+              }
+            : undefined
+        }
+      />
 
       {/* Block / Unblock confirmation */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={() => setConfirmAction(null)}>
