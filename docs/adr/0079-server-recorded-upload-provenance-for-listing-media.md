@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Date**: 2026-10-02
-- **Deciders**: AutoTM founder, who chose the ownership model on [#536](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/536) on 2026-10-02 (recorded by the queue orchestrator). The migration, legacy rule and error contract below are the implementer's design, reviewed in PR #546.
+- **Deciders**: AutoTM founder, who chose the ownership model on [#536](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/536) on 2026-10-02 (recorded by the queue orchestrator). On 2026-10-02 the founder explicitly ratified User-at-presign and Listing-at-adoption, accepted re-adding pre-deploy draft photos, and required real-storage upload, attachment and publication evidence before merge. The migration, legacy rule and error contract below are the implementer's design, reviewed in PR #546.
 - **Amends**: [ADR-0008](0008-media.md)'s upload path (step 4, "client confirms upload"), which assumed a key the client sends is a key the client uploaded. The rest of ADR-0008 stays in force.
 - **Scope**: Listing photo and video uploads, publication, attachment and removal. Brand logos ([ADR-0072](0072-imported-logo-cleanup-coordination.md)) and chat attachments are separate flows and unchanged.
 
@@ -47,7 +47,7 @@ Publication writes the Listing, its media rows (with `uploadId`) and the draft d
 
 ### Removal
 
-Removing a media row deletes the row and its upload in one transaction. Only the caller whose transaction deleted an adopted upload receives a storage key to clean up, and only when no other media row still references that key. A row without an upload never yields a key. The cleanup deletes under that key's own directory, which presign created and only this upload ever used. Re-attaching a removed upload is impossible because its record is gone. Two concurrent removals delete storage objects once, and the second gets `404`.
+Removing a media row deletes the row and its upload in one transaction. Only the caller whose transaction deleted an adopted upload receives a storage key to clean up, and only when no other media row references any original, derivative or poster in its cleanup directory. A row without an upload never yields a key. The cleanup deletes under the recognized original key's directory. Presign creates a fresh directory, but legacy rows can share one using different original extensions. The release checks the whole directory, including poster references, so a backfilled sibling key cannot authorize deleting another row's objects. Unrecognized legacy keys never authorize directory cleanup. Re-attaching a removed upload is impossible because its record is gone. Two concurrent removals delete storage objects once, and the second gets `404`.
 
 Cleanup stays best effort after the commit, as before. A failed delete leaves orphaned objects, never someone else's deleted ones.
 
@@ -56,9 +56,15 @@ Cleanup stays best effort after the commit, as before. A failed delete leaves or
 Media that existed before this decision has no upload. The migration (`20261002120000_add_media_uploads`) backfills it:
 
 - For each distinct key, the **oldest** `listing_media` row (by `createdAt`, then `id`) becomes the owner. Its upload belongs to that Listing's seller, reuses the media row's id as the upload id, and takes its content type from the key extension. `sizeBytes` is null because it is unknown.
-- Any **later** row with the same key is a duplicate, which only the attack in Context could have produced. It keeps `uploadId = NULL`. Removing it deletes the row and no storage objects.
+- Any **later** row with the same key is a duplicate, which may come from the attack in Context, a same-owner attach retry, or duplicate photos in a draft. It keeps `uploadId = NULL`. Removing it deletes the row and no storage objects.
 
 So legitimate existing media keeps working and can be removed with cleanup, and removing a duplicate cannot delete the original owner's object. This is the safe legacy rule: a row without provenance never authorizes a storage delete. The migration does not delete or rewrite any media row and touches no storage. If the oldest owner of a duplicated key was the attacker, the victim's own row loses cleanup instead (a leaked object, not a deleted one). The migration cannot tell which side was legitimate, and the audit did not find production exposure. Repairing such rows is out of scope.
+
+### Deployment compatibility and merge evidence
+
+The founder accepted that photos presigned before deployment and held only in drafts or a client upload queue have no upload record. They must be removed and re-added before publication. The migration backfills persisted Listing media only; it does not infer provenance from draft key strings. Localized guidance for `UPLOAD_NOT_AVAILABLE` and `UPLOAD_OBJECT_INVALID` to remove and re-add photos, and separate copy for `UPLOAD_ALREADY_ATTACHED`, remains a follow-up.
+
+Before merge, the PR backend must demonstrate upload, attachment and publication against real storage. Fake-storage e2e and mocked `HEAD` unit tests do not satisfy this gate. Native upload/publication remains a pre-release check because transport is unchanged.
 
 ### Deliberately unchanged
 

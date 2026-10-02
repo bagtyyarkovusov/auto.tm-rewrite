@@ -13,6 +13,8 @@ import {
   type MediaStoragePort,
 } from "../domain/ports/MediaStoragePort";
 
+import { mediaCleanupPrefix } from "../domain/mediaCleanupPrefix";
+
 export interface RemoveMediaInput {
   listingId: string;
   mediaId: string;
@@ -51,7 +53,7 @@ export class RemoveMedia {
 
     // Deleting the row also releases the upload it adopted, atomically. Only the
     // caller that releases an adopted upload gets a key back; a row with no
-    // provenance, or whose key another row still references, never does, so a
+    // provenance, or whose directory another row still references, never does, so a
     // key copied from another Listing can never reach the storage deletes below
     // (ADR-0079).
     const { removed, ownedKey } = await this.mediaRepo.deleteReleasingUpload(input.mediaId);
@@ -66,7 +68,8 @@ export class RemoveMedia {
     }
 
     // Best-effort MinIO cleanup — errors are logged but don't fail the use-case
-    const base = ownedKey.replace(/\/original\.(jpg|webp|jpeg|mp4)$/, "");
+    const prefix = mediaCleanupPrefix(ownedKey);
+    if (prefix === null) return;
     const suffixes = [
       "original.jpg",
       "original.webp",
@@ -83,10 +86,10 @@ export class RemoveMedia {
     await Promise.all(
       suffixes.map(async (suffix) => {
         try {
-          await this.storage.deleteObject(`${base}/${suffix}`);
+          await this.storage.deleteObject(`${prefix}${suffix}`);
         } catch (err) {
           this.logger.warn(
-            `Failed to delete MinIO object ${base}/${suffix}: ${err instanceof Error ? err.message : String(err)}`,
+            `Failed to delete MinIO object ${prefix}${suffix}: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
       }),

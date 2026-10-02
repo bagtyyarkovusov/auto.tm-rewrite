@@ -1,3 +1,4 @@
+import { mediaCleanupPrefix } from "../../domain/mediaCleanupPrefix";
 import { ListingMedia } from "../../domain/ListingMedia";
 import type {
   MediaUpload,
@@ -92,7 +93,10 @@ export class InMemoryMediaWorld {
       if (!row) return { removed: false, ownedKey: null };
       this.media = this.media.filter((m) => m.id !== id);
       if (!row.uploadId) return { removed: true, ownedKey: null };
-      const stillReferenced = this.media.some((m) => m.key === row.key);
+      const prefix = mediaCleanupPrefix(row.key);
+      const stillReferenced = prefix === null || this.media.some(
+        (m) => m.key.startsWith(prefix) || m.posterKey?.startsWith(prefix),
+      );
       this.uploads = this.uploads.filter((u) => u.id !== row.uploadId);
       return { removed: true, ownedKey: stillReferenced ? null : row.key };
     },

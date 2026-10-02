@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
+import { mediaCleanupPrefix } from "../domain/mediaCleanupPrefix";
 import { ListingMedia } from "../domain/ListingMedia";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import type { ListingMediaRepository } from "../domain/ports/ListingMediaRepository";
@@ -42,7 +43,11 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
       }
       // A concurrent remove released the upload between the caller's check and
       // this insert; its row is gone, so the key can no longer be attached.
-      if (media.uploadId && errorCode(err) === "P2003") {
+      if (
+        media.uploadId &&
+        errorCode(err) === "P2003" &&
+        !(await this.prisma.mediaUpload.findUnique({ where: { id: media.uploadId } }))
+      ) {
         throw new DomainError(
           LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE,
           "Upload is no longer available",
@@ -82,9 +87,15 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
       if (!row.uploadId) return { removed: true, ownedKey: null };
 
       // Releasing the upload makes its key unusable for any later attach. Another
-      // row can still reference the key only for legacy duplicates made before
-      // ADR-0079, and their objects must survive this removal.
-      const stillReferenced = await tx.listingMedia.count({ where: { key: row.key } });
+      // legacy row may reference a different original or poster in the same
+      // directory. Authority must cover the whole directory cleanup will delete.
+      const prefix = mediaCleanupPrefix(row.key);
+      const stillReferenced = prefix === null ? 1 : await tx.listingMedia.count({
+        where: { OR: [
+          { key: { startsWith: prefix } },
+          { posterKey: { startsWith: prefix } },
+        ] },
+      });
       const released = await tx.mediaUpload.deleteMany({
         where: { id: row.uploadId, key: row.key },
       });

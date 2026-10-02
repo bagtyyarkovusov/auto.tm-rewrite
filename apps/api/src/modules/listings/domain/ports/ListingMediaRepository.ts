@@ -14,7 +14,8 @@ export interface ListingMediaRepository {
    * Atomically deletes the row and the upload it adopted. `removed` is false when
    * another caller already deleted it. `ownedKey` is the storage key the caller
    * may now delete, and is non-null only for the one caller that released an
-   * adopted upload while no other row still references that key. A row without
+   * adopted upload while no other row references any key or poster in its cleanup
+   * directory. A row without
    * provenance never yields a key.
    */
   deleteReleasingUpload(id: string): Promise<{ removed: boolean; ownedKey: string | null }>;
