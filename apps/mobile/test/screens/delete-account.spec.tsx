@@ -111,7 +111,8 @@ describe("Delete account screen", () => {
 
     await confirmDeletion(screen);
 
-    expect(screen.getByRole("alert")).toBeTruthy();
+    // TanStack Query notifies observers on a timer, so the error can land after act settles.
+    expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.getByText(screen.i18n.t("account:deleteAccountFailed"))).toBeTruthy();
     expect(session.clearAuthSession).not.toHaveBeenCalled();
     expect(routerMock.push).not.toHaveBeenCalled();
@@ -122,7 +123,7 @@ describe("Delete account screen", () => {
     api.delete.mockRejectedValue(new Error("network"));
     const first = renderMobile(<DeleteAccountScreen />);
     await confirmDeletion(first);
-    expect(first.getByRole("alert")).toBeTruthy();
+    expect(await first.findByRole("alert")).toBeTruthy();
     first.unmount();
 
     const again = renderMobile(<DeleteAccountScreen />);
