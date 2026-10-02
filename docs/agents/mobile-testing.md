@@ -95,9 +95,17 @@ not copy these stubs into a spec.
   error. A spec that needs one mocks the package itself and replaces the whole
   stub, as `useOtpAuthNavigation.spec.tsx` does.
 - **Reanimated.** The stub provides only `default.View`, `useSharedValue`,
-  `useAnimatedStyle`, `withTiming` and `withSpring`, and no gesture, shared-value
-  update or animation runs, so a component that uses `FadeIn` or `Animated.Text`
-  needs the stub extended.
+  `useAnimatedStyle`, `withTiming`, `withSpring` and the `FadeIn`/`FadeOut`
+  (plus `Up` and `Down`) layout animations, whose `.duration()` returns the same
+  object. No gesture, shared-value update or animation runs, so a component that
+  uses another animation or `Animated.Text` needs the stub extended.
+- **Portal.** `@rn-primitives/portal` cannot load in Node, so `Portal` renders its
+  children where it is declared and `PortalHost` renders nothing. A spec can wrap
+  a screen in the real `ToastProvider` and query its toasts, as
+  `test/screens/favorites.spec.tsx` does.
+- **Announcements.** `AccessibilityInfo.announceForAccessibility` records each
+  message in the adapter's `AccessibilityInfo.announcements` array and speaks
+  nothing; a spec empties the array before asserting, as `toast.spec.tsx` does.
 
 A `FlatList` ref records `scrollToIndex` and `scrollToOffset` calls into the
 `scrollRequests` export of `react-native`. Specs and `native-setup.ts` import

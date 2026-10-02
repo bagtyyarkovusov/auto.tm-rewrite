@@ -27,12 +27,14 @@ describe.each([
   ["signed out", false],
   ["signed in", true],
 ])("Cabinet %s", (_, signedIn) => {
-  it("lists Help and, last, About the app", () => {
+  it("lists Help right after Theme and, last, About the app", () => {
     auth.isAuthenticated = signedIn;
     const screen = renderMobile(<CabinetScreen />);
 
     const labels = screen.getAllByRole("button").map((b) => b.props.accessibilityLabel);
-    expect(labels).toContain("Help");
+    const theme = labels.findIndex((l) => String(l).startsWith(screen.i18n.t("account:theme")));
+    expect(theme).toBeGreaterThan(-1);
+    expect(labels[theme + 1]).toBe("Help");
     expect(labels.at(-1)).toBe("About the app");
   });
 

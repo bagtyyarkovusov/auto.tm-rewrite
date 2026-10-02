@@ -71,7 +71,7 @@ describe("useMyFavorites", () => {
     expect(result.current.data?.pages).toHaveLength(1);
     expect(result.current.data?.pages[0]?.items).toHaveLength(2);
     expect(mockGet).toHaveBeenCalledWith(
-      "/favorites?limit=20",
+      "/favorites?limit=20&activeOnly=false",
       expect.any(Object),
     );
   });
@@ -97,9 +97,35 @@ describe("useMyFavorites", () => {
 
     await waitFor(() => expect(result.current.data?.pages).toHaveLength(2));
     expect(mockGet).toHaveBeenLastCalledWith(
-      "/favorites?limit=20&cursor=cursor-1",
+      "/favorites?limit=20&activeOnly=false&cursor=cursor-1",
       expect.any(Object),
     );
+  });
+
+  it("asks for active Listings only when activeOnly is set, keeping each position in its own cache", async () => {
+    mockGet.mockImplementation(async (url: string) => ({
+      items: [makeFavoriteItem(url.includes("activeOnly=true") ? "active" : "any")],
+      nextCursor: url.includes("activeOnly=true") ? "next-active" : null,
+      counts: { total: 3, inactive: 2 },
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const shared = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const active = renderHook(() => useMyFavorites({ activeOnly: true }), { wrapper: shared });
+    await waitFor(() => expect(active.result.current.isSuccess).toBe(true));
+    expect(mockGet).toHaveBeenLastCalledWith("/favorites?limit=20&activeOnly=true", expect.any(Object));
+    expect(active.result.current.data?.pages[0]?.counts).toEqual({ total: 3, inactive: 2 });
+
+    active.result.current.fetchNextPage();
+    await waitFor(() => expect(active.result.current.data?.pages).toHaveLength(2));
+    expect(mockGet).toHaveBeenLastCalledWith("/favorites?limit=20&activeOnly=true&cursor=next-active", expect.any(Object));
+
+    const all = renderHook(() => useMyFavorites({ activeOnly: false }), { wrapper: shared });
+    await waitFor(() => expect(all.result.current.isSuccess).toBe(true));
+    expect(all.result.current.data?.pages[0]?.items[0]?.id).toBe("any");
+    expect(active.result.current.data?.pages[0]?.items[0]?.id).toBe("active");
   });
 
   it("handles empty favorites", async () => {
