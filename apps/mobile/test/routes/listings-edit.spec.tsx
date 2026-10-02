@@ -22,9 +22,11 @@ const fixture = vi.hoisted(() => {
       createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
       seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
     },
+    baseline: undefined as unknown as Record<string, unknown>,
     photos: [{ photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 }],
   };
 });
+fixture.baseline = { ...fixture.listing };
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
   photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
@@ -68,6 +70,7 @@ beforeEach(() => {
   fixture.show.mockClear();
   routerMock.replace.mockClear();
   fixture.saveState = { status: "idle", error: null, opStates: {} };
+  fixture.listing = { ...fixture.baseline, id: fixture.id };
 });
 
 describe("legacy Listing edit", () => {
@@ -158,6 +161,49 @@ describe("legacy Listing edit", () => {
       expect(fixture.show).not.toHaveBeenCalled();
       expect(routerMock.replace).not.toHaveBeenCalled();
       expect(screen.getByText("✗ reorder")).toBeTruthy();
+    });
+  });
+
+  describe("during a background refetch", () => {
+    const damagedYes = { name: "Damaged / needs repair: Yes" } as const;
+
+    function refetch(changes: Record<string, unknown> = { favoriteCount: 1 }) {
+      fixture.listing = { ...fixture.listing, ...changes };
+    }
+
+    it("retains an unsaved Damaged choice when refetch returns a new Listing object", () => {
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", damagedYes));
+      expect(screen.getByRole("radio", { ...damagedYes, checked: true })).toBeTruthy();
+      refetch();
+      screen.rerender(<EditListingScreen />);
+      expect(screen.getByRole("radio", { ...damagedYes, checked: true })).toBeTruthy();
+    });
+
+    it("stays on the step the seller reached", () => {
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", damagedYes));
+      fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+      refetch({ favoriteCount: 2, updatedAt: "2026-10-02T12:00:00.000Z" });
+      screen.rerender(<EditListingScreen />);
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+      expect(screen.getByText("Damaged / needs repair: Yes")).toBeTruthy();
+    });
+
+    it("starts a different Listing from its own server baseline", () => {
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", damagedYes));
+      const otherId = "550e8400-e29b-41d4-a716-4466554400ff";
+      routeParams.id = otherId;
+      fixture.listing = {
+        ...fixture.baseline,
+        id: otherId,
+        conditionDisclosure: { damaged: false },
+      };
+      screen.rerender(<EditListingScreen />);
+      expect(screen.getByText("Damaged / needs repair: No")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
     });
   });
 });
