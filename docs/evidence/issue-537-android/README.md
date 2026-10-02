@@ -12,7 +12,7 @@ Each *-server.json is an actual public GET /api/v1/listings/:id read-back, trimm
 - State2: native library selection, upload, drag new photo to cover, remove original front photo, Done and Save. Server new attachment a7ee93ad is order0, retained original f923ae09 order1, removed original02cf3d0f absent.
 - State3: session transport proxy forwarded successful attach317b9dfa and its complete response, then denied subsequent API calls and any in-flight GET response. The attach invalidation GET and reorder were blocked, keeping the seed stale. Banner shows succeeded fields/attach and failed order. Server new key occurs once.
 - State3b: still transport-offline, return to Photos step2, drop just-attached last photo. Restore API transport and press header Retry on step2. Server317b9dfa is gone, retained row IDs/order unchanged, no duplicate attachments.
-- State4 independent unchanged Retry: pending.
+- State4 independent unchanged Retry: pass. Fresh edit session after state3b, explicit native removal of the same leftover local orphan, then add one new photo. Fault after successful attach59f0765e. Restore API and press Retry without editing. Server retains exactly3 rows, same IDs and order before/after Retry. Successful transport operations show only reorder on Retry, no second fields PATCH or attachment.
 - State5 reopened saved order: blocked by the staging issue below.
 
 ## Reopen staging limitation
@@ -21,4 +21,10 @@ Unmodified reopen after state2 shows the correct two server photos plus one extr
 
 Repro: add local photo, save edit successfully, navigate to public detail, press Edit, open Photos. The previous staging file remains under files/listing-staging/edit-{listingId}/{localPhotoId}.jpg. `useUploadQueue.ts:100-127` reconstructs from local files; `queueState.ts:79-88` appends local IDs absent from the server payload as `selected`, with no localUri. `finishSave` in edit.tsx navigates without staging cleanup. Server IDs differ from local staging IDs after attach, so that saved local file is now an unmatched orphan. #538 criterion3 covers successful-save/session-baseline reconciliation. A fresh independent Spec review must judge the observed limitation.
 
-This checkpoint contains no secrets, application code changes, proxy logs or signing data. Retry proof is still in progress.
+The state3b offline screenshot is before the drop tap and proves header Retry on the non-review step. The drop and successful completion are evidenced by the DELETE317b9dfa operation and final2-row GET plus public detail screenshot. No post-drop pre-Retry screenshot was captured.
+
+State5 was re-captured after state4. The server retains3 saved rows while the edit screen again adds the orphan pending local photo. Reopen remains blocked.
+
+The sanitized-media-operations.json file contains successful listing mutation metadata only, stripped to media IDs/keys/order. It shows exactly3 successful attaches across all three distinct runs and no second attach on either Retry. Raw proxy logs stay private in /tmp.
+
+Context7 consulted /expo/expo/__branch__sdk-55 for Expo checks/env and /react/react-native-website for custom Metro host/port and adb reverse. No application source or signing data changed. Session complete; owned Metro/proxy stopped and worktree unlocked.
