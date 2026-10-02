@@ -16,6 +16,8 @@ export interface ListMyFavoritesInput {
   userId: string;
   cursor?: string;
   limit?: number;
+  /** Only Favorites whose Listing is active. Default false. */
+  activeOnly?: boolean;
 }
 
 export type MyFavoritesResponseDto = z.infer<
@@ -38,10 +40,16 @@ export class ListMyFavorites {
       ? ListingsSchemas.decodeCursor(input.cursor)
       : undefined;
 
-    const favoriteResult = await this.favorites.listByUserId(input.userId, {
-      ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
-      limit,
-    });
+    // Paging runs over Favorites whose Listing is visible, so a page is full whenever
+    // that many remain; the counts ignore paging and the activeOnly filter.
+    const [favoriteResult, counts] = await Promise.all([
+      this.favorites.listVisibleByUserId(input.userId, {
+        ...(decodedCursor !== undefined ? { cursor: decodedCursor } : {}),
+        limit,
+        activeOnly: input.activeOnly ?? false,
+      }),
+      this.favorites.countVisibleByUserId(input.userId),
+    ]);
 
     const listingIds = favoriteResult.items.map((f) => f.listingId);
     const cards = await this.cards.getVisibleCards(listingIds);
@@ -49,7 +57,8 @@ export class ListMyFavorites {
     // Build a map for stable ordering and deduplication
     const cardMap = new Map(cards.map((s) => [s.id, s]));
 
-    // Preserve favorite order (newest first), but only include visible listings
+    // Preserve favorite order (newest first). The repository already dropped
+    // Listings that are not visible; this guards a status change between the reads.
     const items = favoriteResult.items
       .map((f) => cardMap.get(f.listingId))
       .filter((s): s is NonNullable<typeof s> => s !== undefined);
@@ -81,6 +90,7 @@ export class ListMyFavorites {
       nextCursor: favoriteResult.nextCursor
         ? ListingsSchemas.encodeCursor(favoriteResult.nextCursor)
         : null,
+      counts,
     };
   }
 }

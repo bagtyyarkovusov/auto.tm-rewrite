@@ -552,9 +552,26 @@ export const RemoveFavoriteResponseSchema = z.object({
 });
 export type RemoveFavoriteResponse = z.infer<typeof RemoveFavoriteResponseSchema>;
 
+export const MyFavoritesQuerySchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  // Query strings carry text; only "true" and "false" are accepted, never coerced.
+  activeOnly: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+});
+export type MyFavoritesQuery = z.infer<typeof MyFavoritesQuerySchema>;
+
 export const MyFavoritesResponseSchema = z.object({
   items: z.array(FavoriteListingSummarySchema),
   nextCursor: z.string().nullable(),
+  // Over the User's visible Favorites, whatever activeOnly, cursor or limit is sent.
+  // `inactive` is how many of the `total` are sold or archived.
+  counts: z.object({
+    total: z.number().int().nonnegative(),
+    inactive: z.number().int().nonnegative(),
+  }),
 });
 export type MyFavoritesResponse = z.infer<typeof MyFavoritesResponseSchema>;
 

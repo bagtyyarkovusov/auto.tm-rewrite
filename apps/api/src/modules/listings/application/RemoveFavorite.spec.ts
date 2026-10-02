@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 
 import { RemoveFavorite } from "./RemoveFavorite";
 import { Favorite } from "../domain/Favorite";
-import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
+import type {
+  FavoriteRepository,
+  VisibleFavoriteOptions,
+} from "../domain/ports/FavoriteRepository";
 
 class FakeFavoriteRepository implements FavoriteRepository {
   favorites: Favorite[] = [];
@@ -40,11 +43,15 @@ class FakeFavoriteRepository implements FavoriteRepository {
     );
   }
 
-  async listByUserId(
+  async listVisibleByUserId(
     _userId: string,
-    _opts?: { cursor?: { timestamp: string; id: string }; limit?: number },
+    _opts?: VisibleFavoriteOptions,
   ): Promise<{ items: Favorite[]; nextCursor?: { timestamp: string; id: string } }> {
     return { items: [] };
+  }
+
+  async countVisibleByUserId(_userId: string): Promise<{ total: number; inactive: number }> {
+    return { total: 0, inactive: 0 };
   }
 }
 

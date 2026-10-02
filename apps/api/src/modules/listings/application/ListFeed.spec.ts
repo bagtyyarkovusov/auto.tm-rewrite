@@ -99,8 +99,12 @@ class FakeFavoriteRepository implements FavoriteRepository {
     return new Set(listingIds.filter((id) => this.favorites.has(`${userId}:${id}`)));
   }
 
-  async listByUserId() {
+  async listVisibleByUserId() {
     return { items: [] };
+  }
+
+  async countVisibleByUserId() {
+    return { total: 0, inactive: 0 };
   }
 }
 

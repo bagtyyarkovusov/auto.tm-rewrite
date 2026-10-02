@@ -4,7 +4,10 @@ import { NotFoundException } from "@nestjs/common";
 import { AddFavorite } from "./AddFavorite";
 import { Listing } from "../domain/Listing";
 import { Favorite } from "../domain/Favorite";
-import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
+import type {
+  FavoriteRepository,
+  VisibleFavoriteOptions,
+} from "../domain/ports/FavoriteRepository";
 import type { ListingRepository } from "../domain/ports/ListingRepository";
 
 class FakeFavoriteRepository implements FavoriteRepository {
@@ -44,11 +47,15 @@ class FakeFavoriteRepository implements FavoriteRepository {
     );
   }
 
-  async listByUserId(
+  async listVisibleByUserId(
     _userId: string,
-    _opts?: { cursor?: { timestamp: string; id: string }; limit?: number },
+    _opts?: VisibleFavoriteOptions,
   ): Promise<{ items: Favorite[]; nextCursor?: { timestamp: string; id: string } }> {
     return { items: [] };
+  }
+
+  async countVisibleByUserId(_userId: string): Promise<{ total: number; inactive: number }> {
+    return { total: 0, inactive: 0 };
   }
 }
 
