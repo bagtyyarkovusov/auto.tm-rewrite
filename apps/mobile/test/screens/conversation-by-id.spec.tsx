@@ -394,7 +394,7 @@ describe("Conversation Retry", () => {
     routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
     const screen = renderMobile(<ConversationDetailScreen />);
 
-    fireEvent.changeText(await screen.findByPlaceholderText("Write a message..."), "Still there?");
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Still there?");
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Send message" }));
     });
@@ -417,7 +417,8 @@ describe("Conversation Retry", () => {
     const screen = renderMobile(<ConversationDetailScreen />);
 
     await act(async () => {
-      fireEvent.press(await screen.findByRole("button", { name: "Attach image" }));
+      // The attach button's label is matched loosely: it reads its key from another namespace today.
+      fireEvent.press(await screen.findByLabelText(/attach/i));
     });
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Send message" }));

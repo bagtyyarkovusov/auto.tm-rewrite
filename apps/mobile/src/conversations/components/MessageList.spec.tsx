@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReactTestRendererJSON } from "react-test-renderer";
 
 import { renderMobile } from "../../../test/render";
 
@@ -16,10 +15,14 @@ function message(id: string, createdAt: string, updates: Partial<MessageItem> = 
   return { id, senderId: ME, text: id, createdAt, status: "sent", ...updates };
 }
 
+interface RenderedNode {
+  children: (RenderedNode | string)[] | null;
+}
+
 /** Every text in render order. Cells are in data order, newest first; the list draws them bottom-up. */
 function texts(json: ReturnType<ReturnType<typeof renderMobile>["toJSON"]>): string[] {
   const out: string[] = [];
-  const walk = (node: ReactTestRendererJSON | string | null) => {
+  const walk = (node: RenderedNode | string | null) => {
     if (node == null) return;
     if (typeof node === "string") {
       out.push(node);
@@ -27,7 +30,7 @@ function texts(json: ReturnType<ReturnType<typeof renderMobile>["toJSON"]>): str
     }
     node.children?.forEach(walk);
   };
-  (Array.isArray(json) ? json : [json]).forEach(walk);
+  (Array.isArray(json) ? json : [json]).forEach((node) => walk(node as RenderedNode | null));
   return out;
 }
 

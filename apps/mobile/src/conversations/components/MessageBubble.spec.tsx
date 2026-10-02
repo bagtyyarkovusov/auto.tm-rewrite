@@ -32,15 +32,22 @@ describe("MessageBubble time and ticks", () => {
   });
 
   it("shows two ticks in one style for delivered and read", () => {
+    const tickClasses = (screen: ReturnType<typeof renderMobile>) =>
+      screen
+        .getByTestId("message-tick-double", { includeHiddenElements: true })
+        .children.map((child: { props: { className?: string } } | string) =>
+          typeof child === "string" ? child : child.props.className,
+        );
+
     const delivered = renderMobile(bubble({ status: "delivered" }));
-    const deliveredTick = delivered.getByTestId("message-tick-double", { includeHiddenElements: true });
     expect(delivered.getByLabelText("Is the car still available?, 02:05 PM, Delivered")).toBeTruthy();
+    const deliveredClasses = tickClasses(delivered);
     delivered.unmount();
 
     const read = renderMobile(bubble({ status: "read" }));
-    const readTick = read.getByTestId("message-tick-double", { includeHiddenElements: true });
     expect(read.getByLabelText("Is the car still available?, 02:05 PM, Read")).toBeTruthy();
-    expect(readTick.props.className).toBe(deliveredTick.props.className);
+    expect(tickClasses(read)).toEqual(deliveredClasses);
+    expect(deliveredClasses[0]).toEqual(expect.stringContaining("size-3.5"));
   });
 
   it("shows the time without ticks on the other participant's Message", () => {
