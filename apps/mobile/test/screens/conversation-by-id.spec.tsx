@@ -459,5 +459,6 @@ describe("Conversation blocked by the viewer", () => {
     expect(state.mutation.mutate).toHaveBeenCalledWith({ userId: SELLER_ID }, expect.anything());
     expect(screen.queryByText("User blocked")).toBeNull();
     expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Attach photo", disabled: false })).toBeTruthy();
   });
 });

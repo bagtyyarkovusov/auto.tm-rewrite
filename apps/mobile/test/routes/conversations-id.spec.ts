@@ -9,7 +9,6 @@ const header = readFileSync(
   "utf-8",
 );
 
-
 describe("ConversationDetailScreen quick replies", () => {
   it("passes showQuickReplies to MessageComposer", () => {
     expect(source).toContain("showQuickReplies:");
