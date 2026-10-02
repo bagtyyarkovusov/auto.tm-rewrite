@@ -133,7 +133,7 @@ describe("ConversationDetailScreen realtime text send", () => {
 
   it("keeps the composer usable while socket connects", () => {
     expect(source).toContain("<ConversationFooter");
-    expect(source).toContain("disabled: isBlocked || blockUser.isPending || unblockUser.isPending");
+    expect(source).toContain("disabled: blockUser.isPending || unblockUser.isPending");
     expect(source).not.toContain("disabled: true");
   });
 });

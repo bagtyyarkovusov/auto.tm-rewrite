@@ -14,7 +14,9 @@ This area holds the Messages list, the Conversation screen's parts, the chat soc
 
 **Push entry.** `src/notifications/useDirectMessagePushRouting.ts` turns a direct-message notification tap into a push of `/conversations/[id]` with the ID alone. It is wired once in the root layout and holds no Conversation data.
 
-**Screen structure.** The route holds orchestration. `ConversationHeader` (Back, the participant, Call, the ⋯ menu), `ConversationListingCard` (the Listing strip) and `ConversationFooter` (blocked banner, typing indicator, composer) render from props and have their own rendered tests.
+**Blocked by the viewer.** Whether the viewer blocked the other participant comes from the loaded Conversation (`blockedByMe`, or `sendRestriction` of `blocked_by_me`), never from a separate block request. Block and Unblock patch the by-ID entry so the footer switches at once, then refresh it and the list. While blocked, the footer is only the banner with Unblock: no composer, attach, quick replies or typing indicator (#352 D3). Messages stay readable. That the other participant blocked the viewer is not shown.
+
+**Screen structure.** The route holds orchestration. `ConversationHeader` (Back, the participant, Call, the ⋯ button that opens `ConversationMenuSheet`), `ConversationListingCard` (the Listing strip) and `ConversationFooter` (blocked banner, or typing indicator and composer) render from props and have their own rendered tests. The menu holds Mute, Report and Block only (#352 D2); Report opens `ReportSheet` as a User report of the other participant and is hidden when `reportEntryEnabled` is false, as on Listing detail.
 
 ## Start here
 

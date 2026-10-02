@@ -380,10 +380,15 @@ describe("Conversation menu", () => {
   });
 
   it("asks before blocking, then replaces the composer with the blocked banner", async () => {
-    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
-    state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) =>
-      options?.onSuccess?.(),
-    );
+    let blockedByMe = false;
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () =>
+        conversation(blockedByMe ? { blockedByMe, sendRestriction: "blocked_by_me" } : {}),
+    });
+    state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) => {
+      blockedByMe = true;
+      options?.onSuccess?.();
+    });
     const screen = renderMobile(<ConversationDetailScreen />);
 
     fireEvent.press(await screen.findByRole("button", { name: "Conversation actions" }));
@@ -433,10 +438,12 @@ describe("Conversation blocked by the viewer", () => {
   });
 
   it("asks before unblocking and brings the composer back without reloading", async () => {
-    routeGet({ [`/conversations/${CONVERSATION_ID}`]: blocked });
-    state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) =>
-      options?.onSuccess?.(),
-    );
+    let unblocked = false;
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => (unblocked ? conversation() : blocked()) });
+    state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) => {
+      unblocked = true;
+      options?.onSuccess?.();
+    });
     const screen = renderMobile(<ConversationDetailScreen />);
 
     fireEvent.press(await screen.findByRole("button", { name: "Unblock" }));
@@ -444,7 +451,9 @@ describe("Conversation blocked by the viewer", () => {
     expect(screen.getByText("After unblocking, the user can message you again.")).toBeTruthy();
     state.get.mockClear();
     await act(async () => {
-      fireEvent.press(screen.getAllByText("Unblock").at(-1)!);
+      // The banner's Unblock, then the dialog's.
+      const [, confirm] = screen.getAllByText("Unblock");
+      fireEvent.press(confirm);
     });
 
     expect(state.mutation.mutate).toHaveBeenCalledWith({ userId: SELLER_ID }, expect.anything());
