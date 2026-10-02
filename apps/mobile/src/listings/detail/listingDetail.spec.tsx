@@ -3,7 +3,6 @@ import type { ListingsSchemas } from "@auto-tm/contracts";
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import * as Linking from "expo-linking";
-vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
 
 import { renderMobile, fireEvent, act, routeParams, routerMock } from "../../../test/render";
 import ListingDetailScreen from "../../../app/(public)/listings/[id]";

@@ -4,6 +4,8 @@
 
 Aman wants to send Maral a listing he just saw on AutoTM via WhatsApp. The MLP beta scope is the public listing URL and OG preview. In-chat post-card sharing is deferred with rich chat per [ADR-0027](../../adr/0027-mlp-beta-scope.md).
 
+> **Status:** this is the target flow. The mobile app currently hides Share and Copy link on Listing detail until a public web Listing page and App Links exist ([#495](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/495), decided in [#322](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/322)).
+
 ## Goal
 
 - The shared link "looks right" (rich preview with photo, title, price)

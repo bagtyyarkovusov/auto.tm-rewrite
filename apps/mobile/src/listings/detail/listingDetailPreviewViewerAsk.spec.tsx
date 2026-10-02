@@ -58,7 +58,6 @@ vi.mock("expo-linking", () => ({
   canOpenURL: vi.fn(async () => true),
   openURL: vi.fn(async () => {}),
 }));
-vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
 vi.mock("@/components/ui/skeleton", async () => ({
   Skeleton: (await import("react-native")).View,
 }));

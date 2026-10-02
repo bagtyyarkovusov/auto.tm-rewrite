@@ -29,7 +29,7 @@ it("keeps Edit and Mark sold in the sticky bar and navigates Edit", () => {
   expect(screen.queryByRole("button", { name: "Mark as sold" })).toBeNull();
 });
 it.each(["active", "sold", "archived"] as const)(
-  "puts status-aware lifecycle actions and Share in overflow for %s",
+  "puts status-aware lifecycle actions, and no Share, in overflow for %s",
   (status) => {
     const screen = renderMobile(
       <OwnerActions listingId="listing-373" status={status} mode="menu" />,
@@ -37,7 +37,7 @@ it.each(["active", "sold", "archived"] as const)(
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
     fireEvent.press(screen.getByRole("button", { name: "More options" }));
     expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Share" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     expect(
       screen.getByRole("button", {
         name: status === "archived" ? "Republish listing" : "Archive listing",

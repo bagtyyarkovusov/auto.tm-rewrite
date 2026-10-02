@@ -14,7 +14,6 @@ import { useArchiveListing } from "../../api/listings/useArchiveListing";
 import { useDeleteListing } from "../../api/listings/useDeleteListing";
 import { useMarkSold } from "../../api/listings/useMarkSold";
 import { useRepublishListing } from "../../api/listings/useRepublishListing";
-import { shareListing } from "../detail/shareListing";
 
 import {
   AlertDialog,
@@ -186,12 +185,6 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
                 <Text>{t("republishListing")}</Text>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem
-              accessibilityRole="button"
-              onPress={() => void shareListing(listingId, t("shareMessage"))}
-            >
-              <Text>{t("share")}</Text>
-            </DropdownMenuItem>
             <DropdownMenuItem
               accessibilityRole="button"
               variant="destructive"

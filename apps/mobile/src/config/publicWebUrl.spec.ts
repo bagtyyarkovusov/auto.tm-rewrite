@@ -3,8 +3,6 @@ import { resolve } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { listingPublicUrl } from "../listings/detail/shareListing";
-
 import { legalPageUrl } from "./publicWebUrl";
 
 const eas = JSON.parse(readFileSync(resolve(__dirname, "../../eas.json"), "utf8"));
@@ -21,10 +19,5 @@ describe.each(profiles)("%s public URLs", (profile, baseUrl) => {
     expect(legalPageUrl(locale, "privacy")).toBe(`${baseUrl}/${locale}/legal/privacy`);
     expect(legalPageUrl(locale, "terms")).toBe(`${baseUrl}/${locale}/legal/terms`);
     expect(legalPageUrl(locale, "deletion")).toBe(`${baseUrl}/${locale}/account/delete`);
-  });
-
-  it("uses the configured web host for listing links", () => {
-    vi.stubEnv("EXPO_PUBLIC_WEB_URL", baseUrl);
-    expect(listingPublicUrl("listing-id")).toBe(`${baseUrl}/listings/listing-id`);
   });
 });
