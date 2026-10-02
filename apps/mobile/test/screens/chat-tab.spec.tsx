@@ -122,6 +122,10 @@ describe("Messages tab", () => {
     const focusEffects: (() => void)[] = [];
     vi.mocked(useFocusEffect).mockImplementation((effect) => { focusEffects.push(effect); });
     const view = await renderScreen();
+    // The first focus is the mount, which the initial load already covers.
+    await act(async () => { focusEffects.at(-1)?.(); });
+    await settle();
+    expect(api.get).toHaveBeenCalledTimes(1);
     expect(view.getByText("2")).toBeTruthy();
 
     api.get.mockResolvedValue(page([conversation(first, 0)]));

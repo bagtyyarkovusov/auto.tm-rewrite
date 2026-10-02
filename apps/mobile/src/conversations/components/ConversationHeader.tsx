@@ -36,7 +36,7 @@ interface ConversationHeaderProps {
 }
 
 /** The name shown for the other participant, with the role fallback when they have none. */
-function usePeerName(conversation: ConversationDetail | undefined) {
+export function usePeerName(conversation: ConversationDetail | undefined) {
   const { t } = useTranslation();
   const { t: tConv } = useTranslation("conversations");
   if (!conversation) return undefined;
