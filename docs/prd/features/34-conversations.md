@@ -9,7 +9,7 @@ Buyer-to-seller contact scoped to a Listing. The release ships the Messages tab 
 Phone calls don't leave a trail. Telegram conversations get lost across channels. Scams are easier when there's no audit. A native, Listing-scoped chat:
 
 - Keeps the conversation about the car (pinned listing card at top)
-- Surfaces seller credibility (response time, tenure, PRO badge)
+- Surfaces seller credibility (tenure, PRO badge; a response-time hint is a post-release candidate, see [Out of scope](#out-of-scope))
 - Allows post-card sharing (Aman sends Maral "this car too?")
 - Provides scam protection (admins can review reported conversations)
 - Lets us measure: how many buyers contact sellers? how fast does the seller respond?
@@ -22,7 +22,7 @@ Phone calls don't leave a trail. Telegram conversations get lost across channels
 2. (If not authed) Login modal triggers; resume after OTP
 3. Buyer enters first message OR taps a quick-reply chip
 4. Conversation created in DB; `ConversationStarted` event fires
-5. Both buyer and seller now see this thread in their Messages tab
+5. Both buyer and seller now see this Conversation in their Messages tab
 
 Starting a **new** Conversation about a sold Listing stays closed (see [Closed and sold Listings](#closed-and-sold-listings)).
 
@@ -31,12 +31,12 @@ Starting a **new** Conversation about a sold Listing stays closed (see [Closed a
 - **Row:** thumbnail of the Listing, the other participant's name, the Listing title and price, a preview of the last Message, the time and a tick for the last own Message.
 - **Marks:** an unread badge, a Sold label when the Listing is sold, and muted and blocked marks.
 - **Other participant:** shown by display name, with their avatar where a surface has room for one. Every account has a display name and a profile photo or library avatar ([#353](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353)); this document does not design them.
-- **Order:** by `lastMessageAt`, newest first. Muted Conversations are dimmed.
+- **Order:** by `lastMessageAt`, newest first. Muted Conversations show a 🔕 mark next to the name and are not dimmed.
 - **Not on the list:** no Support row and no ads (D8).
 - **Messages tab badge:** the tab shows the unread count (founder answer Q1 on #352).
 - **States:** loading, empty, error with Retry, signed out (see [Screens / states](#screens--states)).
 
-### Inside a chat thread
+### Inside a Conversation
 
 - **Pinned listing card** at the top of the thread (Brand Model, Year, Price, thumb) — tapping it opens the listing. A sold Listing shows a Sold badge on it.
 - **Header:** the other participant's name and presence, the Conversation menu (⋯), and **Call**. Call is for buyers only, while the Listing is active and allows calls; a buyer's phone number is never shown (Q2).
@@ -46,7 +46,6 @@ Starting a **new** Conversation about a sold Listing stays closed (see [Closed a
 - Typing indicator: "Илья is typing…" below messages
 - **Read state (D6):** ticks under your own sent Messages (sent / delivered / read), and a "Read" label under the last own Message once it is read.
 - Last-seen: "был(а) в 14:32" under seller's name in header
-- "Seller usually responds within 1 hour" hint shown if the seller has 5+ past conversations
 - **Back (D9):** from a Conversation opened by a push notification, Back goes to the Messages list, not out of the app or to a previous tab.
 
 ### Conversation menu (⋯)
@@ -95,6 +94,7 @@ Four system-defined intents, localized, shared with Ask the seller on Listing de
 Behaviour (D7, Q4):
 
 - Shown to the **buyer** above the composer until the seller replies. Once the seller has sent a Message, they disappear.
+- Not shown when the Conversation is blocked, or when the Listing is sold or removed from sale. The composer stays on in the Listing cases, but the chips do not return. They are also absent wherever a notice or the blocked banner replaces the composer.
 - Tapping a chip fills the composer; the buyer edits it and presses Send. It is never sent by the tap alone.
 
 ### Closed and sold Listings
@@ -112,7 +112,7 @@ The Conversation stays readable in every case. What changes is whether the compo
 
 Rules:
 
-- **New contact stays closed:** a Listing that is sold, removed from sale, banned or deleted accepts no new Conversation. The Message button and Ask the seller are hidden or disabled on those Listings ([32 — Listings](32-listings.md#listing-states)).
+- **New contact stays closed:** a Listing that is sold, removed from sale, banned or deleted accepts no new Conversation. The Message button and Ask the seller are hidden on those Listings ([32 — Listings](32-listings.md#listing-states)).
 - **Existing Conversations** are the only place a sold or removed Listing keeps accepting Messages. A Listing status of `sold` or `archived` no longer refuses a Message; blocking, suspension, the chat switch and a banned or deleted Listing still do.
 - **Notice wording:** one short line per case, set with the implementing slice and localized in RU, EN and TK. Turkmen drafts ship and are corrected during the device proof (Q5).
 - **A sold or removed Listing never produces a notice on its own.** Only the cases in the table above replace the composer.
@@ -149,22 +149,22 @@ Support is reached from **Cabinet → Help**, which shows the AutoTM email addre
 |---|---|---|
 | Messages list | Loading | Skeleton rows of the same shape |
 | Messages list | Empty | "No conversations yet"; Browse listings button |
-| Messages list | Has threads | Sorted by `lastMessageAt` desc; unread badge; muted threads dimmed; Sold label on rows for sold Listings |
+| Messages list | Has Conversations | Sorted by `lastMessageAt` desc; unread badge; muted Conversations show 🔕 next to the name, not dimmed; Sold label on rows for sold Listings |
 | Messages list | Error | "Could not load" with Retry; no support link |
 | Messages list | Signed out | Sign in prompt; no support contact block |
-| Chat thread | New (0 messages) | Quick-reply chips above composer |
-| Chat thread | Buyer, seller not yet replied | Quick-reply chips stay above the composer |
-| Chat thread | Many messages | Infinite scroll up to load history |
-| Chat thread | Other side typing | Dots animation under last message |
-| Chat thread | Network offline | Yellow banner; new sends disabled; already-pending outbox items retry on reconnect |
-| Chat thread | Loading, error, signed out | Skeleton; error with Retry; Sign in prompt |
-| Chat thread | Listing sold or removed from sale | Badge on the Listing card and inline banner linking to other cars of the same model; composer on |
-| Chat thread | Listing banned or deleted | One-line notice replaces the composer. Existing history remains readable. |
-| Chat thread | Chat switched off | One-line notice replaces the composer |
-| Chat thread | Participant suspended | Generic unavailable/account-restricted notice replaces the composer. Existing history remains readable. |
-| Chat thread | Blocked by the other participant | One-line notice replaces the composer |
-| Chat thread | You blocked this user | Banner replaces the composer: "User blocked" + Unblock button |
-| Chat thread | Reported | Owner side: "Reported" under the reported Message |
+| Conversation | New (0 messages) | Quick-reply chips above composer |
+| Conversation | Buyer, seller not yet replied | Quick-reply chips stay above the composer until the seller replies; not shown when blocked or when the Listing is sold or removed from sale |
+| Conversation | Many messages | Infinite scroll up to load history |
+| Conversation | Other side typing | Dots animation under last message |
+| Conversation | Network offline | Yellow banner; new sends disabled; already-pending outbox items retry on reconnect |
+| Conversation | Loading, error, signed out | Skeleton; error with Retry; Sign in prompt |
+| Conversation | Listing sold or removed from sale | Badge on the Listing card and inline banner linking to other cars of the same model; composer on |
+| Conversation | Listing banned or deleted | One-line notice replaces the composer. Existing history remains readable. |
+| Conversation | Chat switched off | One-line notice replaces the composer |
+| Conversation | Participant suspended | Generic unavailable/account-restricted notice replaces the composer. Existing history remains readable. |
+| Conversation | Blocked by the other participant | One-line notice replaces the composer |
+| Conversation | You blocked this user | Banner replaces the composer: "User blocked" + Unblock button |
+| Conversation | Reported | Reporter side: "Reported" under the reported Message |
 | Message | Long-press | Sheet: Copy / Report (peer Message); Copy / Delete within 5 min (own Message) |
 | Message | Read | Ticks, plus "Read" under the last own Message |
 | Composer | Image attached | Preview thumbnail + remove × |
@@ -206,8 +206,9 @@ Support is reached from **Cabinet → Help**, which shows the AutoTM email addre
 - Delete conversation — rejected (D2)
 - Support row, support links and in-app support chat in the release (see [Support](#support))
 - Ads and promoted rows in the Messages list (D8)
+- Post-release candidate, not in the release: a "Seller usually responds within 1 hour" hint in the Conversation header, shown once the seller has 5+ past conversations. It exists in neither the app nor the approved prototype.
 
 ## Open questions
 
 - Listing-card preview rendering in the WhatsApp share — handled via OG meta in public web (Feature 38)
-- Response time SLA shown on seller profile — what threshold gets the "fast responder" badge?
+- Post-release: response time SLA shown on seller profile — what threshold gets the "fast responder" badge?
