@@ -387,8 +387,21 @@ export class PrismaConversationRepository
     });
   }
 
-  async countAllUnreadMessages(_userId: string): Promise<number> {
-    return 0;
+  async countAllUnreadMessages(userId: string): Promise<number> {
+    // One query for every Conversation. A Message is unread when another
+    // participant sent it, it is not deleted, and it is newer than this User's
+    // read watermark (none yet counts from the start), as in `countUnreadMessages`.
+    const rows = await this.prisma.$queryRaw<{ count: number }[]>`
+      SELECT COUNT(*)::int AS "count"
+      FROM "messages" m
+      JOIN "conversations" c ON c."id" = m."conversationId"
+      LEFT JOIN "conversation_participants" p
+        ON p."conversationId" = c."id" AND p."userId" = ${userId}
+      WHERE (c."buyerId" = ${userId} OR c."sellerId" = ${userId})
+        AND m."senderId" <> ${userId}
+        AND m."deletedAt" IS NULL
+        AND (p."lastReadAt" IS NULL OR m."createdAt" > p."lastReadAt")`;
+    return rows[0]?.count ?? 0;
   }
 
   async getMessageReportContext(input: {

@@ -21,8 +21,9 @@ export class CountMyUnreadMessages {
   ) {}
 
   async execute(
-    _input: CountMyUnreadMessagesInput,
+    input: CountMyUnreadMessagesInput,
   ): Promise<CountMyUnreadMessagesResult> {
-    return { count: 0 };
+    const count = await this.conversations.countAllUnreadMessages(input.userId);
+    return { count };
   }
 }
