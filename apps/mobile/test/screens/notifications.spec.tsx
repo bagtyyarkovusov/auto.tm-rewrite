@@ -48,7 +48,6 @@ beforeEach(() => {
   vi.mocked(Linking.openSettings).mockClear();
   // Run the focus callback as a mount effect, as the screen gaining focus.
   vi.mocked(useFocusEffect).mockImplementation((callback) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
     useEffect(() => callback(), [callback]);
   });
 });
