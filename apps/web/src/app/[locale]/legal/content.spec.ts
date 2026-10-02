@@ -67,11 +67,11 @@ const privacyPromises: CopyPromise[] = [
     },
   },
   {
-    name: "authenticated deletion is available in the app settings",
+    name: "authenticated deletion is on the Profile screen opened from Cabinet",
     phrases: {
-      en: "request account deletion from the app settings",
-      ru: "удалить его можно в настройках приложения",
-      tk: "ony programmanyň sazlamalarynda pozup bilersiňiz",
+      en: "open Cabinet, tap your profile, then tap Delete account at the bottom of the Profile screen",
+      ru: "откройте «Кабинет», нажмите на свой профиль и выберите «Удалить аккаунт» внизу экрана «Профиль»",
+      tk: "«Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Hasaby poz» düwmesine basyň",
     },
   },
   {
@@ -218,6 +218,12 @@ describe.each(documents)("%s", (_name, document) => {
         expect(section.title.trim()).not.toBe("");
         expect(section.body.trim()).not.toBe("");
       }
+    }
+  });
+
+  it("never points to app settings, which the app no longer has", () => {
+    for (const locale of locales) {
+      expect(fullText(document[locale])).not.toMatch(/settings|настройк|sazlama/i);
     }
   });
 
