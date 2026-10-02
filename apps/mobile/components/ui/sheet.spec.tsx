@@ -1,8 +1,9 @@
 import { Text } from "react-native";
 import { describe, expect, it, vi } from "vitest";
 
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { fireEvent, renderMobile } from "../../test/render";
+
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 // The shared native shell replaces the Sheet in every other spec, so this one loads the real file.
 vi.unmock("@/components/ui/sheet");
@@ -14,9 +15,9 @@ vi.mock("@rn-primitives/dialog", async () => {
   const { View } = await import("react-native");
   const Open = React.createContext<(open: boolean) => void>(() => {});
   const Box = ({ children }: React.PropsWithChildren) => <View>{children}</View>;
-  const Close = ({ children }: { children: React.ReactElement }) => {
+  const Close = ({ children }: { children: React.ReactNode }) => {
     const onOpenChange = React.useContext(Open);
-    return React.cloneElement(children, { onPress: () => onOpenChange(false) });
+    return React.cloneElement(children as React.ReactElement<{ onPress: () => void }>, { onPress: () => onOpenChange(false) });
   };
   const Root = ({ onOpenChange, children }: React.PropsWithChildren<{ onOpenChange: (open: boolean) => void }>) =>
     <Open.Provider value={onOpenChange}>{children}</Open.Provider>;
