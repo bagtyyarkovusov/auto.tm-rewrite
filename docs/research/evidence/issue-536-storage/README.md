@@ -27,3 +27,11 @@ Context7 `/websites/aws_amazon_awsjavascriptsdk_v3` confirmed `HeadObjectCommand
 For expected absent objects, anonymous HEAD accepts and records 403 or 404. A 403 alone cannot distinguish missing data from access denial. Original and variant reads before removal, surviving foreign/fresh originals after removal, and the authenticated API missing-object rejection provide the surrounding evidence.
 
 Results, deployment metadata and remaining limitations are in `evidence.json` after execution. No readiness-only or mocked-storage result is counted as successful adoption.
+
+## Result at 152befd
+
+The live run passed all 81 recorded checks on 2026-10-02, from 13:42:08 to 13:45:07 UTC. Original HEAD returned `image/jpeg` and 709 bytes. The missing original and removed original plus four JPEG derivatives returned 404, so the permitted 403 ambiguity was not encountered in this run.
+
+Publication before and after attachment, same-Listing retry, foreign attachment and publication rejection, forged and missing keys, cross-Listing reuse, owner removal and surviving unrelated originals passed. The API deployment was `f9dd9f9b-a48e-48de-b6df-30cba07ce50b`; worker deployment was `82bc4485-6eb6-4589-9479-f06d57acd9a0`. Exact timestamps are authoritative in `evidence.json`.
+
+Cloud Standards found new defects during this run in [comment 5953656322](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/546#issuecomment-5953656322). This transport evidence does not test the legacy chat namespace cleanup case or concurrent publication with PrismaPg driver-adapter constraint metadata. It does not establish a passing review or permission to merge. Repeat against the final application SHA after source fixes.
