@@ -352,11 +352,13 @@ describe("Listing media upload ownership (#536)", () => {
 
     it("cannot release a mismatched upload id and key", async () => {
       const own = await uploadAndAttach(USER_A, LISTING_A);
-      world.uploads[0]!.key = "pending/00000000-0000-4000-8000-000000000001/original.jpg";
+      const ownUpload = world.uploads.find((upload) => upload.id === own.media.uploadId)!;
+      ownUpload.key = "pending/00000000-0000-4000-8000-000000000001/original.jpg";
+      const uploadCount = world.uploads.length;
 
       await remove.execute({ listingId: LISTING_A, userId: USER_A, mediaId: own.media.id });
 
-      expect(world.uploads).toHaveLength(1);
+      expect(world.uploads).toHaveLength(uploadCount);
       expect(world.deletedKeys).toEqual([]);
       expect(world.objects.has(own.key)).toBe(true);
     });

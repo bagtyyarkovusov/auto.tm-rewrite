@@ -168,7 +168,7 @@ describe("RemoveMedia", () => {
         id: "media-1",
         listingId: "listing-1",
         kind: "image",
-        key: "pending/abc/original.jpg",
+        key: "pending/00000000-0000-4000-8000-000000000001/original.jpg",
         sortOrder: 0,
         uploadId: "upload-1",
       }),
@@ -179,10 +179,10 @@ describe("RemoveMedia", () => {
 
     expect(mediaRepo.media).toHaveLength(0);
     expect(storage.deletedKeys.length).toBe(10); // original.jpg/webp + 4 variants × 2 formats
-    expect(storage.deletedKeys).toContain("pending/abc/original.jpg");
-    expect(storage.deletedKeys).toContain("pending/abc/thumbnail.jpg");
-    expect(storage.deletedKeys).toContain("pending/abc/thumbnail.webp");
-    expect(storage.deletedKeys).toContain("pending/abc/fullscreen.webp");
+    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/original.jpg");
+    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/thumbnail.jpg");
+    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/thumbnail.webp");
+    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/fullscreen.webp");
   });
 
   it("succeeds even when MinIO delete throws (best-effort)", async () => {
@@ -192,7 +192,7 @@ describe("RemoveMedia", () => {
         id: "media-1",
         listingId: "listing-1",
         kind: "image",
-        key: "pending/abc/original.jpg",
+        key: "pending/00000000-0000-4000-8000-000000000001/original.jpg",
         sortOrder: 0,
         uploadId: "upload-1",
       }),
@@ -213,7 +213,7 @@ describe("RemoveMedia", () => {
         id: "media-1",
         listingId: "listing-1",
         kind: "image",
-        key: "pending/abc/original.jpg",
+        key: "pending/00000000-0000-4000-8000-000000000001/original.jpg",
         sortOrder: 0,
       }),
     );
@@ -232,7 +232,7 @@ describe("RemoveMedia", () => {
         id: "media-1",
         listingId: "listing-1",
         kind: "image",
-        key: "pending/abc/original.jpg",
+        key: "pending/00000000-0000-4000-8000-000000000001/original.jpg",
         sortOrder: 0,
         uploadId: "upload-1",
       }),
@@ -265,7 +265,7 @@ describe("RemoveMedia", () => {
         id: "media-1",
         listingId: "listing-2",
         kind: "image",
-        key: "pending/abc/original.jpg",
+        key: "pending/00000000-0000-4000-8000-000000000001/original.jpg",
         sortOrder: 0,
       }),
     );

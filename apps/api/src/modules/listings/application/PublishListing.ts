@@ -68,12 +68,16 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   { message: "DAMAGED_REQUIRED", path: ["conditionDisclosure", "damaged"] },
 );
 
-/** Match the upload link, rather than another unique constraint in publication. */
+/** PrismaPg 7 reports constraint fields under its driver-adapter cause. */
 function isUploadUniqueViolation(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false;
-  const error = err as { code?: unknown; meta?: { target?: unknown } };
-  return error.code === "P2002" && Array.isArray(error.meta?.target) &&
-    error.meta.target.length === 1 && error.meta.target[0] === "uploadId";
+  const error = err as {
+    code?: unknown;
+    meta?: { driverAdapterError?: { cause?: { constraint?: { fields?: unknown } } } };
+  };
+  const fields = error.meta?.driverAdapterError?.cause?.constraint?.fields;
+  return error.code === "P2002" && Array.isArray(fields) && fields.length === 1 &&
+    (fields[0] === "uploadId" || fields[0] === '\"uploadId\"');
 }
 
 function isForeignKeyViolation(err: unknown): boolean {

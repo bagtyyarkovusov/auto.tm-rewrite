@@ -97,8 +97,10 @@ export class InMemoryMediaWorld {
       const stillReferenced = prefix === null || this.media.some(
         (m) => m.key.startsWith(prefix) || m.posterKey?.startsWith(prefix),
       );
-      this.uploads = this.uploads.filter((u) => u.id !== row.uploadId);
-      return { removed: true, ownedKey: stillReferenced ? null : row.key };
+      const beforeRelease = this.uploads.length;
+      this.uploads = this.uploads.filter((u) => !(u.id === row.uploadId && u.key === row.key));
+      const released = beforeRelease - this.uploads.length;
+      return { removed: true, ownedKey: released === 1 && !stillReferenced ? row.key : null };
     },
     updateSortOrder: async () => {},
   };

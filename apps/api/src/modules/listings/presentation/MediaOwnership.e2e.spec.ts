@@ -392,7 +392,12 @@ describe("Listing media upload ownership e2e (#536)", () => {
     const publishing = request.post(`/api/v1/listings/drafts/${draft.id}/publish`)
       .set("Authorization", `Bearer ${tokens["user-a"]}`).send({}).then((response) => response);
     try {
-      await authorized;
+      await Promise.race([
+        authorized,
+        publishing.then((response) => {
+          throw new Error(`Publication completed before the race barrier: ${response.status}`);
+        }),
+      ]);
       const winner = await attach("user-a", listing.id, key).expect(201);
       // Also record the real PrismaPg shape, without a fabricated meta.target.
       const constraintError = await prisma.listingMedia.create({ data: {
