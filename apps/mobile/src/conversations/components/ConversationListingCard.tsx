@@ -1,41 +1,61 @@
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
-import { Enums } from "@auto-tm/contracts";
+import { Enums, type ConversationsSchemas } from "@auto-tm/contracts";
 
+import { Icon } from "@/components/ui/icon";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { buildVariantUrl } from "@/src/listings/detail/buildVariantUrl";
 import { formatPrice } from "@/src/listings/formatPrice";
 import { listingStatusLabel } from "@/src/listings/listingStatusLabel";
 
-interface ConversationListingCardProps {
-  listing: {
-    id: string;
-    brandId: string;
-    modelId: string;
-    year?: number;
-    displayPriceTmt: number;
-    priceCurrency: string;
-    coverMediaKey?: string;
-    status: string;
-  };
-  brandName?: string;
-  modelName?: string;
-}
+type ConversationListingCardProps =
+  | { loading: true; listing?: undefined; brandName?: undefined; modelName?: undefined }
+  | {
+      loading?: false;
+      /** Null when the Listing is banned or deleted. */
+      listing: ConversationsSchemas.ConversationListingCard | null;
+      brandName?: string;
+      modelName?: string;
+    };
 
-export function ConversationListingCard({
-  listing,
-  brandName,
-  modelName,
-}: ConversationListingCardProps) {
+/** The Listing strip pinned under the Conversation header. */
+export function ConversationListingCard(props: ConversationListingCardProps) {
   const { t, i18n } = useTranslation();
+  const { t: tConv } = useTranslation("conversations");
 
-  const title = [
-    listing.year ? String(listing.year) : null,
-    brandName ?? listing.brandId,
-    modelName ?? listing.modelId,
-  ]
+  if (props.loading) {
+    return (
+      <View
+        className="flex-row items-center gap-3 px-4 py-2.5 border-b border-border"
+        testID="conversation-listing-skeleton"
+      >
+        <Skeleton className="h-14 w-14 rounded-lg" />
+        <View className="flex-1 gap-1.5">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-24" />
+        </View>
+      </View>
+    );
+  }
+
+  const { listing, brandName, modelName } = props;
+
+  if (!listing) {
+    return (
+      <View className="flex-row items-center gap-3 px-4 py-2.5 border-b border-border">
+        <View className="h-14 w-14 rounded-lg bg-muted" />
+        <Text className="flex-1 text-sm text-muted-foreground">
+          {tConv("listingUnavailable")}
+        </Text>
+      </View>
+    );
+  }
+
+  const title = [listing.year ? String(listing.year) : null, brandName, modelName]
     .filter(Boolean)
     .join(" ");
 
@@ -48,11 +68,14 @@ export function ConversationListingCard({
   return (
     <Pressable
       onPress={() => router.push(`/(public)/listings/${listing.id}`)}
-      className="flex-row items-center gap-3 px-4 py-3 border-b border-border active:bg-muted/50"
+      className="flex-row items-center gap-3 px-4 py-2.5 border-b border-border active:bg-muted/50"
       accessibilityRole="button"
-      accessibilityLabel={`${t("open")}: ${title}`}
+      accessibilityLabel={`${t("open")}: ${[title, priceText].filter(Boolean).join(", ")}`}
     >
-      <View className="w-16 h-16 rounded-lg bg-muted overflow-hidden">
+      <View
+        className="h-14 w-14 rounded-lg bg-muted overflow-hidden"
+        testID="conversation-listing-thumbnail"
+      >
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
@@ -67,7 +90,7 @@ export function ConversationListingCard({
       </View>
 
       <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+        <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
           {title}
         </Text>
         <Text className="text-sm text-muted-foreground">{priceText}</Text>
@@ -76,6 +99,10 @@ export function ConversationListingCard({
             {listingStatusLabel(listing.status, t)}
           </Text>
         )}
+      </View>
+
+      <View testID="conversation-listing-chevron">
+        <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
       </View>
     </Pressable>
   );

@@ -2,7 +2,9 @@ import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 
+import { seedConversationDetail } from "../../src/api/conversations/useConversation";
 import { useOpenConversation } from "../../src/api/conversations/useOpenConversation";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
@@ -15,6 +17,7 @@ export default function OpenListingConversationScreen() {
   const { t } = useTranslation();
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const goBack = useSafeBack("/(tabs)/chat");
   const { mutate, isSuccess, isError, data, error } = useOpenConversation();
 
@@ -34,27 +37,13 @@ export default function OpenListingConversationScreen() {
 
   useEffect(() => {
     if (isSuccess && data) {
-      const listing = data.listing;
+      seedConversationDetail(queryClient, data);
       router.replace({
         pathname: "/conversations/[id]",
-        params: {
-          id: data.id,
-          buyerId: data.buyerId,
-          sellerId: data.sellerId,
-          listingId: listing?.id ?? "",
-          brandId: listing?.brandId ?? "",
-          modelId: listing?.modelId ?? "",
-          year: listing?.year ? String(listing.year) : "",
-          displayPriceTmt: listing?.displayPriceTmt
-            ? String(listing.displayPriceTmt)
-            : "",
-          priceCurrency: listing?.priceCurrency ?? "",
-          coverMediaKey: listing?.coverMediaKey ?? "",
-          status: listing?.status ?? "",
-        },
+        params: { id: data.id },
       });
     }
-  }, [isSuccess, data, router]);
+  }, [isSuccess, data, router, queryClient]);
 
   if (!listingId) {
     return (

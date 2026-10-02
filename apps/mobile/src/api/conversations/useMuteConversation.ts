@@ -8,6 +8,8 @@ import { ConversationsSchemas } from "@auto-tm/contracts";
 import { apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
+import type { ConversationDetail } from "./useConversation";
+
 type ConversationListCache = InfiniteData<
   ConversationsSchemas.ListConversationsResponse
 >;
@@ -49,25 +51,31 @@ export function useMuteConversation() {
       ),
 
     onMutate: async (input) => {
+      const detailKey = queryKeys.conversations.detail(input.conversationId);
       await queryClient.cancelQueries({
         queryKey: queryKeys.conversations.list(),
       });
+      await queryClient.cancelQueries({ queryKey: detailKey });
 
       const previous = queryClient.getQueryData<ConversationListCache>(
         queryKeys.conversations.list(),
       );
+      const previousDetail =
+        queryClient.getQueryData<ConversationDetail>(detailKey);
+      const mutedAt = input.muted ? new Date().toISOString() : null;
 
       queryClient.setQueryData<ConversationListCache>(
         queryKeys.conversations.list(),
-        (old) =>
-          patchMutedAt(
-            old,
-            input.conversationId,
-            input.muted ? new Date().toISOString() : null,
-          ),
+        (old) => patchMutedAt(old, input.conversationId, mutedAt),
       );
+      if (previousDetail) {
+        queryClient.setQueryData<ConversationDetail>(detailKey, {
+          ...previousDetail,
+          mutedAt,
+        });
+      }
 
-      return { previous };
+      return { previous, previousDetail };
     },
 
     onError: (_error, input, context) => {
@@ -75,6 +83,12 @@ export function useMuteConversation() {
         queryClient.setQueryData(
           queryKeys.conversations.list(),
           context.previous,
+        );
+      }
+      if (context?.previousDetail !== undefined) {
+        queryClient.setQueryData(
+          queryKeys.conversations.detail(input.conversationId),
+          context.previousDetail,
         );
       }
     },

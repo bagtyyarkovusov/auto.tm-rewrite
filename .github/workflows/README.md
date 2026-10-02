@@ -41,7 +41,7 @@ PR Checks and CI each start `infra/compose/docker-compose.ci.yml` through `scrip
 
 `docker compose up --wait` waits for Postgres, Redis, and MinIO health checks. After `pnpm install` and Prisma client generation, `pnpm db:migrate:deploy` applies this checkout's committed migrations to the empty CI database. `pnpm minio:bootstrap` creates its media buckets before tests. The last step uses `if: always()` and `docker compose down --volumes --remove-orphans`, including when an earlier step fails. The CI Compose file uses disposable volumes, never the development Compose project's volumes or fixed ports.
 
-All test credentials and flags are public, nonproduction placeholders written by `scripts/ci-services.sh`: the MinIO keys and region, JWT secrets, TOTP key, and report/moderation flags. The `pnpm test` step sets `NODE_ENV` and `APP_ENV` to `test` and includes the reviewer-flow smoke's pure helper tests; the deployed smoke remains an operator command. The CI build keeps its normal production mode. Production values never belong in CI (ADR-0005).
+All test credentials and flags are public, nonproduction placeholders written by `scripts/ci-services.sh`: the MinIO keys and region, JWT secrets, TOTP key, and report/moderation flags. The `pnpm test` step sets `NODE_ENV` and `APP_ENV` to `test`, and sets `TESTCONTAINERS_RYUK_DISABLED` because the hosted runner is discarded after the job and a fresh test worker reconnecting to the previous worker's Ryuk reaper can fail with "Failed to connect to Reaper". It includes the reviewer-flow smoke's pure helper tests; the deployed smoke remains an operator command. The CI build keeps its normal production mode. Production values never belong in CI (ADR-0005).
 
 ### MinIO image
 

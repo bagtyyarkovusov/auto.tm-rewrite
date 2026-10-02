@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { clientIpEnvShape } from "./common/client-ip";
+
 const booleanFlag = z
   .string()
   .transform((v) => v === "true")
@@ -42,6 +44,7 @@ const BaseSchema = z.object({
   RATE_LIMIT_GENERAL: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_OTP_PHONE_DAILY: z.coerce.number().int().positive().default(5),
   RATE_LIMIT_OTP_IP_HOURLY: z.coerce.number().int().positive().default(10),
+  ...clientIpEnvShape,
 
   TOTP_SECRET_ENCRYPTION_KEY: z.string().refine(
     (val) => {

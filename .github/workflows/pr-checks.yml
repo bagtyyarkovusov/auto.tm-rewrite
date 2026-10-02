@@ -89,6 +89,11 @@ jobs:
         env:
           NODE_ENV: test
           APP_ENV: test
+          # The runner is discarded after the job, so Ryuk adds no cleanup.
+          # Spec files run in fresh workers and reconnect to the previous
+          # file's Ryuk, which can stop between files: "Failed to connect
+          # to Reaper".
+          TESTCONTAINERS_RYUK_DISABLED: "true"
 
       - name: Show test service logs on failure
         if: ${{ failure() && steps.lane.outputs.lane != 'docs' }}

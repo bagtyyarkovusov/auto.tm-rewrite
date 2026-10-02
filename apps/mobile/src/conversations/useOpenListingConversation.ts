@@ -1,10 +1,13 @@
 import { useRef } from "react";
 import { useRouter } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useOpenConversation } from "../api/conversations/useOpenConversation";
+import { seedConversationDetail } from "../api/conversations/useConversation";
 
 /**
- * Opens (or creates) the Conversation about a Listing and pushes it. An
+ * Opens (or creates) the Conversation about a Listing and pushes it by ID,
+ * seeding the by-ID cache with the summary the open returned. An
  * optional `draft` rides along as a route param for the composer to show; it is
  * never sent. Contact bar Message and Ask the seller share this, so a signed-in
  * tap and a replayed pending action run the same code. Callers own the sign-in
@@ -13,6 +16,7 @@ import { useOpenConversation } from "../api/conversations/useOpenConversation";
  */
 export function useOpenListingConversation(listingId: string) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const openConversation = useOpenConversation();
   const lastDraft = useRef<string | undefined>(undefined);
 
@@ -22,23 +26,10 @@ export function useOpenListingConversation(listingId: string) {
       { listingId },
       {
         onSuccess: (data) => {
-          const listing = data.listing;
+          seedConversationDetail(queryClient, data);
           router.push({
             pathname: "/conversations/[id]",
-            params: {
-              id: data.id,
-              listingId: listing?.id ?? "",
-              brandId: listing?.brandId ?? "",
-              modelId: listing?.modelId ?? "",
-              year: listing?.year ? String(listing.year) : "",
-              displayPriceTmt: listing?.displayPriceTmt
-                ? String(listing.displayPriceTmt)
-                : "",
-              priceCurrency: listing?.priceCurrency ?? "",
-              coverMediaKey: listing?.coverMediaKey ?? "",
-              status: listing?.status ?? "",
-              ...(draft ? { draft } : {}),
-            },
+            params: { id: data.id, ...(draft ? { draft } : {}) },
           });
         },
       },

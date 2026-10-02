@@ -10,6 +10,7 @@ import {
 import type { FastifyRequest } from "fastify";
 import { AuthSchemas } from "@auto-tm/contracts";
 
+import { resolveClientIp } from "../../../common/client-ip";
 import { Public } from "../../../common/public.decorator";
 import { RequestAccountDeletion } from "../application/RequestAccountDeletion";
 import { ConfirmAccountDeletion } from "../application/ConfirmAccountDeletion";
@@ -52,9 +53,7 @@ export class AccountDeletionController {
       });
     }
 
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      ?? req.ip
-      ?? "127.0.0.1";
+    const ip = resolveClientIp(req);
     const locale = req.locale ?? "ru";
 
     try {
