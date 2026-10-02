@@ -5,15 +5,14 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
-import { BellOff, Car, Check, CheckCheck, Image as ImageIcon, Trash2 } from "lucide-react-native";
+import { BellOff, Car, Check, CheckCheck, Image as ImageIcon, Trash2, type LucideIcon } from "lucide-react-native";
 
 import {
   seedConversationDetail,
   type ConversationSummaryData,
 } from "../../api/conversations/useConversation";
 import { outgoingStatus } from "../outgoingStatus";
-
-import { usePeerName } from "./ConversationHeader";
+import { usePeerName } from "../usePeerName";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -29,27 +28,17 @@ interface ConversationListItemProps {
 
 type LastMessage = NonNullable<ConversationSummaryData["lastMessage"]>;
 
-/** The preview's words, also read out in the row's accessibility label. */
-function usePreviewText(conversation: ConversationSummaryData): string {
+/** The preview's words, also read out in the row's accessibility label, and its leading icon. */
+function usePreview(conversation: ConversationSummaryData): { text: string; icon: LucideIcon | null } {
   const { t } = useTranslation();
   const { t: tConv } = useTranslation("conversations");
   const lastMessage = conversation.lastMessage;
-  if (conversation.blockedByMe) return t("blockedStateTitle");
-  if (!lastMessage) return t("noMessagesYet");
-  if (lastMessage.deletedAt) return tConv("messageDeleted");
-  if (lastMessage.kind === Enums.MessageKind.Image) return t("photo");
-  if (lastMessage.kind === Enums.MessageKind.PostRef) return t("listing");
-  return lastMessage.text ?? "";
-}
-
-/** The icon in front of a deleted, photo or Listing preview. */
-function previewIcon(conversation: ConversationSummaryData) {
-  const lastMessage = conversation.lastMessage;
-  if (conversation.blockedByMe || !lastMessage) return null;
-  if (lastMessage.deletedAt) return Trash2;
-  if (lastMessage.kind === Enums.MessageKind.Image) return ImageIcon;
-  if (lastMessage.kind === Enums.MessageKind.PostRef) return Car;
-  return null;
+  if (conversation.blockedByMe) return { text: t("blockedStateTitle"), icon: null };
+  if (!lastMessage) return { text: t("noMessagesYet"), icon: null };
+  if (lastMessage.deletedAt) return { text: tConv("messageDeleted"), icon: Trash2 };
+  if (lastMessage.kind === Enums.MessageKind.Image) return { text: t("photo"), icon: ImageIcon };
+  if (lastMessage.kind === Enums.MessageKind.PostRef) return { text: t("listing"), icon: Car };
+  return { text: lastMessage.text ?? "", icon: null };
 }
 
 /** The viewer's own last Message gets a tick; a deleted one does not. */
@@ -88,8 +77,7 @@ export function ConversationListItem({
   const [imageFailed, setImageFailed] = useState(false);
   const listing = conversation.listing;
   const peerName = usePeerName(conversation) ?? "";
-  const previewText = usePreviewText(conversation);
-  const PreviewIcon = previewIcon(conversation);
+  const { text: previewText, icon: PreviewIcon } = usePreview(conversation);
   const tick = lastMessageTick(conversation, conversation.lastMessage);
   const unreadCount = conversation.unreadCount ?? 0;
   const isUnread = unreadCount > 0;
@@ -108,12 +96,16 @@ export function ConversationListItem({
     : tConv("listingUnavailable");
 
   const isClosed = !!listing && listing.status !== Enums.ListingStatus.Active;
-  const closedLabel =
-    listing?.status === Enums.ListingStatus.Sold
+  const isSold = listing?.status === Enums.ListingStatus.Sold;
+  // Sold and Removed from sale are the approved badges; any other closed status
+  // (in review, rejected, banned) reads Unavailable rather than dimming silently.
+  const closedLabel = !isClosed
+    ? null
+    : isSold
       ? t("sold")
       : listing?.status === Enums.ListingStatus.Archived
         ? t("removedFromSale")
-        : null;
+        : t("unavailable");
 
   const imageUrl = listing?.coverMediaKey
     ? buildVariantUrl(listing.coverMediaKey, "thumbnail")
@@ -219,15 +211,13 @@ export function ConversationListItem({
             <View
               className={cn(
                 "rounded-full border px-2 py-0.5",
-                listing?.status === Enums.ListingStatus.Sold
-                  ? "border-foreground bg-foreground"
-                  : "border-border bg-background",
+                isSold ? "border-foreground bg-foreground" : "border-transparent bg-secondary",
               )}
             >
               <Text
                 className={cn(
                   "text-xs font-medium",
-                  listing?.status === Enums.ListingStatus.Sold ? "text-background" : "text-foreground",
+                  isSold ? "text-background" : "text-secondary-foreground",
                 )}
               >
                 {closedLabel}

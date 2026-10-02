@@ -132,6 +132,14 @@ describe("ConversationListItem", () => {
     expect(row.getByTestId("conversation-row-thumbnail").props.className).toContain("opacity-60");
   });
 
+  it("dims the thumbnail and reads Unavailable for any other closed Listing", () => {
+    for (const status of ["pending_review", "rejected", "banned"] as const) {
+      const row = renderRow(summary({ listing: { ...listing, status } }));
+      expect(row.getByText("Unavailable")).toBeTruthy();
+      expect(row.getByTestId("conversation-row-thumbnail").props.className).toContain("opacity-60");
+    }
+  });
+
   it("replaces the preview with User blocked when the viewer blocked the other participant", () => {
     const row = renderRow(summary({ blockedByMe: true }));
     expect(row.getByText("User blocked")).toBeTruthy();

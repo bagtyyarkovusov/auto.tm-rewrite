@@ -101,6 +101,19 @@ describe("Messages tab", () => {
     expect(routerMock.navigate).toHaveBeenCalledWith(HOME_HREF);
   });
 
+  it("shows the empty state in Russian and Turkmen", async () => {
+    api.get.mockReset().mockResolvedValue(page([]));
+    const ru = await renderScreen("ru");
+    expect(ru.getByText("Пока нет переписок")).toBeTruthy();
+    expect(ru.getByText("Откройте объявление и напишите продавцу — переписка появится здесь.")).toBeTruthy();
+    expect(ru.getByText("Смотреть объявления")).toBeTruthy();
+
+    const tk = await renderScreen("tk");
+    expect(tk.getByText("Habarlaşma ýok")).toBeTruthy();
+    expect(tk.getByText("Bildirişi açyp satyjyny ýazyň — gepleşik şu ýerde peýda bolar.")).toBeTruthy();
+    expect(tk.getByText("Bildirişlere seret")).toBeTruthy();
+  });
+
   it("asks a signed-out visitor to sign in and returns them to Messages", async () => {
     state.auth = false;
     const requireSignIn = vi.spyOn(useAuthIntentStore.getState(), "requireSignIn");
@@ -128,8 +141,12 @@ describe("Messages tab", () => {
     expect(api.get).toHaveBeenCalledTimes(1);
     expect(view.getByText("2")).toBeTruthy();
 
-    api.get.mockResolvedValue(page([conversation(first, 0)]));
+    let answer: (value: Response) => void = () => {};
+    api.get.mockReturnValue(new Promise<Response>((resolve) => { answer = resolve; }));
     await act(async () => { focusEffects.at(-1)?.(); });
+    // A focus refetch keeps the pull spinner off.
+    expect(view.getByTestId("conversation-list").props.refreshControl.props.refreshing).toBe(false);
+    await act(async () => { answer(page([conversation(first, 0)])); });
     await settle();
 
     expect(view.queryByText("2")).toBeNull();
@@ -137,13 +154,34 @@ describe("Messages tab", () => {
 
   it("refetches on pull to refresh", async () => {
     const view = await renderScreen();
-    api.get.mockClear().mockResolvedValue(page([conversation(first, 0)]));
+    const refreshing = () => view.getByTestId("conversation-list").props.refreshControl.props.refreshing as boolean;
+    let answer: (value: Response) => void = () => {};
+    api.get.mockClear().mockReturnValue(new Promise<Response>((resolve) => { answer = resolve; }));
 
     await act(async () => { view.getByTestId("conversation-list").props.refreshControl.props.onRefresh(); });
+    expect(refreshing()).toBe(true);
+    await act(async () => { answer(page([conversation(first, 0)])); });
     await settle();
 
     expect(api.get).toHaveBeenCalledTimes(1);
+    expect(refreshing()).toBe(false);
     expect(view.queryByText("2")).toBeNull();
+  });
+
+  it("loads the next page when the list reaches its end", async () => {
+    const second = "00000000-0000-4000-8000-0000000000c2";
+    api.get.mockReset().mockImplementation((url: string) => Promise.resolve(
+      url.includes("cursor=") ? page([{ ...conversation(second, 0), peer: { id: PEER, displayName: "Aman" } }])
+        : { ...page([conversation(first, 0)]), nextCursor: "next" },
+    ));
+    const view = await renderScreen();
+    expect(view.queryByText("Aman")).toBeNull();
+
+    await act(async () => { view.getByTestId("conversation-list").props.onEndReached(); });
+    await settle();
+
+    expect(api.get).toHaveBeenLastCalledWith("/conversations?limit=20&cursor=next", expect.anything());
+    expect(view.getByText("Aman")).toBeTruthy();
   });
 
   it("has no Support row, help link or Help icon", async () => {
