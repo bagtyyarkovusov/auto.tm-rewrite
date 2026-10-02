@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  ConversationIdParamSchema,
   ConversationSummarySchema,
+  GetConversationResponseSchema,
+  SendRestrictionSchema,
   PostRefMessageMetadataSchema,
   SendPostRefMessageRequestSchema,
   SendMessageRequestSchema,
@@ -248,5 +251,72 @@ describe("ConversationSummarySchema", () => {
       ConversationSummarySchema.safeParse({ ...baseSummary, blockedByMe: "yes" })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("GetConversationResponseSchema", () => {
+  const summary = {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    listing: null,
+    buyerId: "550e8400-e29b-41d4-a716-4466554400b1",
+    sellerId: "550e8400-e29b-41d4-a716-4466554400b2",
+    myRole: "buyer" as const,
+    updatedAt: "2026-07-01T10:00:00.000Z",
+    peer: {
+      id: "550e8400-e29b-41d4-a716-4466554400b2",
+      displayName: "Aman",
+    },
+    blockedByMe: false,
+  };
+
+  it("is a list summary plus the send restriction", () => {
+    const parsed = GetConversationResponseSchema.parse({
+      ...summary,
+      sendRestriction: null,
+    });
+
+    expect(parsed.sendRestriction).toBeNull();
+    expect(parsed.peer).toEqual(summary.peer);
+    expect(parsed.unreadCount).toBe(0);
+  });
+
+  it("requires sendRestriction to be stated, null when a send would be accepted", () => {
+    expect(GetConversationResponseSchema.safeParse(summary).success).toBe(
+      false,
+    );
+  });
+
+  it.each([
+    "blocked_by_me",
+    "listing_unavailable",
+    "chat_disabled",
+    "participant_unavailable",
+  ] as const)("accepts the %s restriction", (sendRestriction) => {
+    expect(
+      GetConversationResponseSchema.parse({ ...summary, sendRestriction })
+        .sendRestriction,
+    ).toBe(sendRestriction);
+  });
+
+  it("rejects a restriction that names which participant is unavailable", () => {
+    expect(SendRestrictionSchema.safeParse("peer_suspended").success).toBe(
+      false,
+    );
+    expect(SendRestrictionSchema.safeParse("blocked_by_peer").success).toBe(
+      false,
+    );
+  });
+});
+
+describe("ConversationIdParamSchema", () => {
+  it("accepts a UUID and rejects a malformed ID", () => {
+    expect(
+      ConversationIdParamSchema.safeParse({
+        id: "550e8400-e29b-41d4-a716-446655440001",
+      }).success,
+    ).toBe(true);
+    expect(ConversationIdParamSchema.safeParse({ id: "not-a-uuid" }).success).toBe(
+      false,
+    );
   });
 });
