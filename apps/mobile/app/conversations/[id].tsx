@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessa
 import { useSendImageMessage } from "../../src/api/conversations/useSendImageMessage";
 import { usePresignChatAttachment } from "../../src/api/conversations/usePresignChatAttachment";
 import { useUpdateWatermark } from "../../src/api/conversations/useUpdateWatermark";
+import { useConfig } from "../../src/api/admin/useConfig";
 import { useDeleteMessage } from "../../src/api/conversations/useDeleteMessage";
 import { useMuteConversation } from "../../src/api/conversations/useMuteConversation";
 import { useBrands } from "../../src/api/catalog/useBrands";
@@ -138,6 +140,7 @@ export default function ConversationDetailScreen() {
   const unblockUser = useUnblockUser();
   const muteConversation = useMuteConversation();
   const { show: showToast } = useToast();
+  const { data: config } = useConfig();
 
   const conversationQuery = useConversation(conversationId);
   const conversation = conversationQuery.data;
@@ -698,6 +701,14 @@ export default function ConversationDetailScreen() {
     setMessageToDelete(null);
   }, []);
 
+  const copyMessage = useCallback(
+    async (text: string) => {
+      await Clipboard.setStringAsync(text);
+      showToast({ title: t("conversations:messageCopied") });
+    },
+    [showToast, t],
+  );
+
   const confirmReportMessage = useCallback((messageId: string) => {
     setMessageToReport(messageId);
   }, []);
@@ -795,6 +806,8 @@ export default function ConversationDetailScreen() {
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}
             onReport={confirmReportMessage}
+            onCopy={copyMessage}
+            reportEnabled={config?.reportEntryEnabled !== false}
             onImagePress={(uri) => setPreviewUri(uri)}
             onPostRefPress={(listingId) =>
               router.push(`/(public)/listings/${listingId}`)
@@ -866,9 +879,9 @@ export default function ConversationDetailScreen() {
       <AlertDialog open={!!messageToDelete} onOpenChange={cancelDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteMessageTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("conversations:deleteMessageTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("deleteMessageDescription")}
+              {t("conversations:deleteMessageDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
