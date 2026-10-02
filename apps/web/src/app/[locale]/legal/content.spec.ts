@@ -255,7 +255,7 @@ describe("terms of service promises", () => {
 
 /**
  * Every Posting rule maps to something the product or its moderators enforce today.
- * The mapping is in the PR for #527; these phrases pin the rules that carry it.
+ * docs/prd/ops/83-legal.md ("Posting rules") records the mapping; these phrases pin the rules that carry it.
  */
 const postingRulesPromises: CopyPromise[] = [
   {
@@ -357,7 +357,7 @@ describe("posting rules promises", () => {
 });
 
 describe("posting rules report reasons", () => {
-  // The reasons the Listing report sheet offers (apps/mobile ReportSheet), in plain words.
+  // The Listing report sheet's labels (apps/mobile ReportSheet, `common` i18n namespace).
   const reasons: Record<Locale, string[]> = {
     en: ["**Spam**", "**Scam or fraud**", "**Misleading information**", "**Wrong category**"],
     ru: ["**Спам**", "**Мошенничество**", "**Вводящая в заблуждение информация**", "**Неверная категория**"],

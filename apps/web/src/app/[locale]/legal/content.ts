@@ -518,7 +518,7 @@ The [Terms of Service](/en/legal/terms) also forbid stolen vehicles, vehicles wi
         title: "5. What happens when a listing breaks the rules",
         body: `A listing appears as soon as you publish it; there is no review before that. Moderators review the listings that people report.
 
-- If a listing breaks these rules, moderators can block the listing. A blocked listing disappears from search and from its page, and you can no longer edit it.
+- If a listing breaks these rules, moderators can block the listing. A blocked listing disappears from search, other people can no longer open it, and you can no longer edit it.
 - For serious or repeated breaches, moderators can suspend the account. While an account is suspended, it cannot publish, edit or republish listings, start chats, or send reports.
 
 Moderators record a reason for every decision. If you think a decision is wrong, contact support.`,
@@ -574,8 +574,8 @@ To contact support:
         title: "5. Что происходит при нарушении правил",
         body: `Объявление появляется сразу после публикации; предварительной проверки нет. Модераторы рассматривают объявления, на которые пожаловались.
 
-- Если объявление нарушает эти правила, модераторы могут заблокировать объявление. Заблокированное объявление пропадает из поиска и со своей страницы, и редактировать его больше нельзя.
-- При серьёзных или повторных нарушениях модераторы могут приостановить аккаунт. Пока аккаунт приостановлен, с него нельзя публиковать, редактировать и переопубликовывать объявления, начинать чаты и отправлять жалобы.
+- Если объявление нарушает эти правила, модераторы могут заблокировать объявление. Заблокированное объявление пропадает из поиска, другие пользователи больше не могут его открыть, а редактировать его больше нельзя.
+- При серьёзных или повторных нарушениях модераторы могут приостановить аккаунт. Пока аккаунт приостановлен, с него нельзя публиковать, редактировать и повторно публиковать объявления, начинать чаты и отправлять жалобы.
 
 Модераторы указывают причину каждого решения. Если вы считаете решение ошибочным, свяжитесь с поддержкой.`,
       },
@@ -612,7 +612,7 @@ To contact support:
       {
         title: "3. Baha, düşündiriş we habarlaşmak",
         body: `- **Baha:** hakyky satuw bahasyny TMT, USD ýa-da AED-de görkeziň. Baha noldan uly bolmaly. Şertli baha ýalňyş maglumat hasaplanýar.
-- **Düşündiriş:** dogry we doly düşündiriş ýazyň, 2000 nyşana çenli. Ulagyň zeper ýetip-ýetmändigini görkeziň; programma muny çap etmezden öň soraýar. Ulanylan ulag üçin geçen ýoluny görkeziň.
+- **Düşündiriş:** dogry we doly düşündiriş ýazyň, 2000 nyşana çenli. Ulaga zeper ýetip-ýetmändigini görkeziň; programma muny çap etmezden öň soraýar. Ulanylan ulag üçin geçen ýoluny görkeziň.
 - **Habarlaşmak:** jaňlary, çaty ýa-da ikisini hem açyk goýuň, alyjylar siz bilen habarlaşyp bilsinler. Diňe ulanmaga hakyňyz bolan we size ýa-da ulagy satýan adama ýetýän telefon belgisini görkeziň.`,
       },
       {
@@ -620,8 +620,8 @@ To contact support:
         body: `Alyjylar bildiriş barada şikaýat edenlerinde şu sebäpleri saýlap bilýärler:
 
 - **Spam**: şol bir ulagyň gaýtadan ýerleşdirilmegi ýa-da ulagdan başga zady mahabatlandyrýan bildiriş.
-- **Galplyk**: ýok ýa-da satyp bilmeýän ulagyňyz hakda bildiriş, ýa-da hakyky satuwsyz alyjydan pul almaga synanyşyk.
-- **Ýalňyş maglumat**: nädogry baha, ýyl, geçen ýoly ýa-da ýagdaýy, gizlenen zeper ýa-da başga ulagyň suratlary.
+- **Galplyk**: bar bolmadyk ýa-da satyp bilmeýän ulagyňyz hakda bildiriş, ýa-da hakyky satuwsyz alyjydan pul almaga synanyşyk.
+- **Ýalňyş maglumat**: nädogry baha, ýyl, geçen ýol ýa-da ýagdaý, gizlenen zeper ýa-da başga ulagyň suratlary.
 - **Nädogry kategoriýa**: ulag satmak hakda däl bildiriş ýa-da nädogry markaly ýa-da modelli bildiriş.
 
 [Ulanyş şertleri](/tk/legal/terms) mundan başga-da ogurlanan ulaglary, aýdylmadyk girewdäki ulaglary we kanunsyz üýtgedilen ulaglary gadagan edýär.`,
@@ -630,7 +630,7 @@ To contact support:
         title: "5. Düzgünler bozulanda näme bolýar",
         body: `Bildiriş çap edilen badyna görünýär; öňünden barlag ýok. Moderatorlar şikaýat edilen bildirişlere seredýärler.
 
-- Bildiriş bu düzgünleri bozýan bolsa, moderatorlar bildirişi bloklap bilerler. Bloklanan bildiriş gözlegden we öz sahypasyndan aýrylýar we ony indi redaktirläp bolmaýar.
+- Bildiriş bu düzgünleri bozýan bolsa, moderatorlar bildirişi bloklap bilerler. Bloklanan bildiriş gözlegden aýrylýar, beýleki ulanyjylar ony indi açyp bilmeýärler we ony indi redaktirläp bolmaýar.
 - Çynlakaý ýa-da gaýtalanýan bozulmalarda moderatorlar akkaunty togtadyp bilerler. Akkaunt togtadylan wagty ondan bildiriş çap edip, redaktirläp ýa-da gaýtadan çap edip, çat başlap we şikaýat iberip bolmaýar.
 
 Moderatorlar her karar üçin sebäbini ýazýarlar. Karar nädogry diýip pikir edýän bolsaňyz, goldaw bilen habarlaşyň.`,
