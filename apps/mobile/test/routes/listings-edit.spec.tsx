@@ -9,7 +9,11 @@ const fixture = vi.hoisted(() => {
     thumbnail: "t.jpg", list: "l.jpg", detail: "d.jpg", fullscreen: "f.jpg",
   }, sortOrder: 0 }];
   return {
-    id, save: vi.fn().mockResolvedValue(undefined), show: vi.fn(),
+    id, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
+    retry: vi.fn().mockResolvedValue(true),
+    saveState: { status: "idle", error: null, opStates: {} } as {
+      status: string; error: Error | null; opStates: Record<string, string>;
+    },
     listing: { id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
       year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
       displayPriceTmt: 100000, description: "Legacy listing", regionId: id, cityId: id,
@@ -26,7 +30,9 @@ vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQue
   photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
 }) }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
-  useSaveListingEdit: () => ({ save: fixture.save, retry: vi.fn(), status: "idle", isPending: false, error: null }),
+  useSaveListingEdit: () => ({
+    save: fixture.save, retry: fixture.retry, isPending: false, ...fixture.saveState,
+  }),
   opLabel: (id: string) => id,
 }));
 vi.mock("lucide-react-native", async () => {
@@ -55,7 +61,14 @@ vi.mock("../../src/api/catalog/useEngineTypes", () => ({ useEngineTypes: () => (
 vi.mock("../../src/api/catalog/useRegions", () => ({ useRegions: () => ({ data: { items: [] } }) }));
 vi.mock("../../src/api/catalog/useCities", () => ({ useCities: () => ({ data: { items: [] } }) }));
 
-beforeEach(() => { routeParams.id = fixture.id; fixture.save.mockClear(); });
+beforeEach(() => {
+  routeParams.id = fixture.id;
+  fixture.save.mockReset().mockResolvedValue(true);
+  fixture.retry.mockReset().mockResolvedValue(true);
+  fixture.show.mockClear();
+  routerMock.replace.mockClear();
+  fixture.saveState = { status: "idle", error: null, opStates: {} };
+});
 
 describe("legacy Listing edit", () => {
   it.each(["Yes", "No"])("asks for Damaged before saving and accepts %s", async (answer) => {
@@ -79,5 +92,72 @@ describe("legacy Listing edit", () => {
     await act(async () => fireEvent.press(save));
     expect(fixture.save).toHaveBeenCalledOnce();
     expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
+  });
+
+  describe("after a partial save failure", () => {
+    function renderFailedReview() {
+      fixture.saveState = {
+        status: "failed",
+        error: new Error("Edit session failed at operation reorder"),
+        opStates: { fields: "succeeded", [`attach:local`]: "succeeded", reorder: "failed" },
+      };
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: No" }));
+      fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+      return screen;
+    }
+
+    function retryButton(screen: ReturnType<typeof renderMobile>, index: number) {
+      const button = screen.getAllByRole("button", { name: "Retry" }).at(index);
+      if (!button) throw new Error(`No Retry button at ${index}`);
+      return button;
+    }
+
+    it("shows which operations succeeded and failed", () => {
+      const screen = renderFailedReview();
+      expect(screen.getByText("✓ attach:local")).toBeTruthy();
+      expect(screen.getByText("✗ reorder")).toBeTruthy();
+    });
+
+    it.each([0, 1])("leaves the edit screen once Retry %i completes the remaining operations", async (entry) => {
+      const screen = renderFailedReview();
+      await act(async () => fireEvent.press(retryButton(screen, entry)));
+      expect(fixture.retry).toHaveBeenCalledOnce();
+      expect(fixture.save).not.toHaveBeenCalled();
+      expect(fixture.show).toHaveBeenCalledWith(expect.objectContaining({ variant: "success" }));
+      expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
+    });
+
+    it.each([0, 1])("does not report success when Retry %i did not run", async (entry) => {
+      fixture.retry.mockResolvedValue(false);
+      const screen = renderFailedReview();
+      await act(async () => fireEvent.press(retryButton(screen, entry)));
+      expect(fixture.retry).toHaveBeenCalledOnce();
+      expect(fixture.show).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it("does not report success when Save did not run", async () => {
+      fixture.save.mockResolvedValue(false);
+      const screen = renderMobile(<EditListingScreen />);
+      fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: No" }));
+      fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+      await act(async () =>
+        fireEvent.press(screen.getByRole("button", { name: "Save changes", disabled: false })),
+      );
+      expect(fixture.save).toHaveBeenCalledOnce();
+      expect(fixture.show).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it.each([0, 1])("stays on the edit screen when Retry %i fails again", async (entry) => {
+      fixture.retry.mockRejectedValue(new Error("still failing"));
+      const screen = renderFailedReview();
+      await act(async () => fireEvent.press(retryButton(screen, entry)));
+      expect(fixture.retry).toHaveBeenCalledOnce();
+      expect(fixture.show).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+      expect(screen.getByText("✗ reorder")).toBeTruthy();
+    });
   });
 });

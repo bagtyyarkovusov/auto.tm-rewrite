@@ -1,4 +1,4 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useReducer, useRef } from "react";
 import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 
 import { useEditListing } from "../../api/listings/useEditListing";
@@ -150,49 +150,131 @@ export interface SaveListingEditOp {
   label: string;
 }
 
+/**
+ * What this edit session has already done to the server, in the server's own
+ * terms. Attach mints a server media ID that differs from the local staging
+ * UUID; later operations (reorder, a repeated save) must use it.
+ */
+interface MediaLedger {
+  /** Local staging photoId to the server media ID attach returned. */
+  attached: Map<string, string>;
+  /** Server media IDs already deleted, so a stale seed cannot re-queue them. */
+  removed: Set<string>;
+}
+
+function createLedger(): MediaLedger {
+  return { attached: new Map(), removed: new Set() };
+}
+
+interface PlannedAttachment {
+  photoId: string;
+  key: string;
+  sortOrder: number;
+  width?: number;
+  height?: number;
+}
+
+/** Operations for one save, fixed when it starts so retry replays the same intent. */
+interface EditPlan {
+  /** What the seller had on screen when the plan was fixed; see `editInputKey`. */
+  inputKey: string;
+  fieldsPatch: ListingsSchemas.EditListingRequest;
+  attachments: PlannedAttachment[];
+  removedMediaIds: string[];
+  /** Final display order, cover first. Local IDs resolve through the ledger at reorder time. */
+  orderedPhotoIds: string[];
+}
+
+/**
+ * The seller's intent as a plan sees it: the fields they would send and the
+ * photos in display order. Compared by content, so a re-render or a refetch
+ * that hands the hook fresh objects with the same content is not a change.
+ */
+function editInputKey(
+  payload: WizardSchemas.WizardDraftPayload,
+  photos: StagedPhoto[],
+): string {
+  return JSON.stringify({
+    fields: buildFieldsPatch(payload),
+    photos: photos.map((p) => [p.photoId, p.key ?? null, p.sortOrder]),
+  });
+}
+
+function buildEditPlan(
+  payload: WizardSchemas.WizardDraftPayload,
+  photos: StagedPhoto[],
+  seedMedia: ListingsSchemas.ListingMedia[],
+  ledger: MediaLedger,
+): EditPlan {
+  const seedMediaIds = new Set(seedMedia.map((m) => m.id));
+  const isServerMedia = (photoId: string) =>
+    seedMediaIds.has(photoId) || ledger.attached.has(photoId);
+  const serverId = (photoId: string) => ledger.attached.get(photoId) ?? photoId;
+
+  const attachments: PlannedAttachment[] = [];
+  for (const photo of photos) {
+    if (!hasUploadKey(photo) || isServerMedia(photo.photoId)) continue;
+    attachments.push({
+      photoId: photo.photoId,
+      key: photo.key,
+      sortOrder: photo.sortOrder,
+      width: photo.width,
+      height: photo.height,
+    });
+  }
+
+  const keptMediaIds = new Set(photos.map((p) => serverId(p.photoId)));
+  const removedMediaIds = new Set<string>();
+  const planRemoval = (mediaId: string) => {
+    if (!keptMediaIds.has(mediaId) && !ledger.removed.has(mediaId)) {
+      removedMediaIds.add(mediaId);
+    }
+  };
+  seedMedia.forEach((m) => planRemoval(m.id));
+  // A photo attached earlier in this session and dropped since is on the
+  // server even while the seed is still the pre-attach snapshot.
+  ledger.attached.forEach((mediaId) => planRemoval(mediaId));
+
+  // A photo with no object key and no server row has no server ID to order.
+  const orderedPhotoIds = photos
+    .filter((p) => hasUploadKey(p) || isServerMedia(p.photoId))
+    .map((p) => p.photoId);
+
+  return {
+    inputKey: editInputKey(payload, photos),
+    fieldsPatch: buildFieldsPatch(payload),
+    attachments,
+    removedMediaIds: [...removedMediaIds],
+    orderedPhotoIds,
+  };
+}
+
+function planOps(plan: EditPlan): SaveListingEditOp[] {
+  const ops: SaveListingEditOp[] = [];
+  if (Object.keys(plan.fieldsPatch).length > 0) {
+    ops.push({ id: "fields", label: "Save field changes" });
+  }
+  for (const attachment of plan.attachments) {
+    ops.push({
+      id: `attach:${attachment.photoId}`,
+      label: `Attach photo ${attachment.sortOrder + 1}`,
+    });
+  }
+  for (const mediaId of plan.removedMediaIds) {
+    ops.push({ id: `remove:${mediaId}`, label: "Remove photo" });
+  }
+  if (plan.orderedPhotoIds.length > 0) {
+    ops.push({ id: "reorder", label: "Update photo order" });
+  }
+  return ops;
+}
+
 export function computeOps(
   payload: WizardSchemas.WizardDraftPayload,
   photos: StagedPhoto[],
   seedMedia: ListingsSchemas.ListingMedia[],
 ): SaveListingEditOp[] {
-  const ops: SaveListingEditOp[] = [];
-  const seedMediaIds = new Set(seedMedia.map((m) => m.id));
-
-  // 1. Fields
-  const fieldsPatch = buildFieldsPatch(payload);
-  if (Object.keys(fieldsPatch).length > 0) {
-    ops.push({ id: "fields", label: "Save field changes" });
-  }
-
-  // 2. Attach new photos
-  const newPhotos = photos.filter(
-    (p) => p.key && !seedMediaIds.has(p.photoId),
-  );
-  for (const photo of newPhotos) {
-    ops.push({
-      id: `attach:${photo.photoId}`,
-      label: `Attach photo ${photo.sortOrder + 1}`,
-    });
-  }
-
-  // 3. Remove deleted photos
-  const queuePhotoIds = new Set(photos.map((p) => p.photoId));
-  const removedMediaIds = seedMedia
-    .filter((m) => !queuePhotoIds.has(m.id))
-    .map((m) => m.id);
-  for (const mediaId of removedMediaIds) {
-    ops.push({
-      id: `remove:${mediaId}`,
-      label: "Remove photo",
-    });
-  }
-
-  // 4. Reorder
-  if (photos.length > 0) {
-    ops.push({ id: "reorder", label: "Update photo order" });
-  }
-
-  return ops;
+  return planOps(buildEditPlan(payload, photos, seedMedia, createLedger()));
 }
 
 export function opLabel(opId: string): string {
@@ -224,10 +306,25 @@ export function useSaveListingEdit(
   const removeMedia = useRemoveMedia(listingId);
   const reorderMedia = useReorderMedia(listingId);
 
+  // Survives refetches and re-renders: what the server accepted and the plan
+  // the current save is working through. Never derived from the live seed.
+  const ledgerRef = useRef<{ listingId: string; ledger: MediaLedger }>({
+    listingId,
+    ledger: createLedger(),
+  });
+  const planRef = useRef<EditPlan | null>(null);
+
+  const currentLedger = useCallback((): MediaLedger => {
+    if (ledgerRef.current.listingId !== listingId) {
+      ledgerRef.current = { listingId, ledger: createLedger() };
+      planRef.current = null;
+    }
+    return ledgerRef.current.ledger;
+  }, [listingId]);
+
   const runOps = useCallback(
-    async (initialOpStates: Record<string, OpState>) => {
-      const seedMediaIds = new Set(seedMedia.map((m) => m.id));
-      const queuePhotoIds = new Set(photos.map((p) => p.photoId));
+    async (plan: EditPlan, initialOpStates: Record<string, OpState>) => {
+      const ledger = currentLedger();
       const opStates: Record<string, OpState> = { ...initialOpStates };
 
       const runOp = async (opId: string, fn: () => Promise<unknown>) => {
@@ -245,44 +342,38 @@ export function useSaveListingEdit(
         }
       };
 
-      const fieldsPatch = buildFieldsPatch(payload);
-      if (Object.keys(fieldsPatch).length > 0) {
+      if (Object.keys(plan.fieldsPatch).length > 0) {
         await runOp("fields", () =>
-          editListing.mutateAsync({ listingId, patch: fieldsPatch }),
+          editListing.mutateAsync({ listingId, patch: plan.fieldsPatch }),
         );
       }
 
-      const newPhotos = photos.filter(
-        (p): p is StagedPhoto & { key: string } =>
-          hasUploadKey(p) && !seedMediaIds.has(p.photoId),
-      );
-      for (const photo of newPhotos) {
-        await runOp(`attach:${photo.photoId}`, () =>
-          attachMedia.mutateAsync({
-            key: photo.key,
+      for (const attachment of plan.attachments) {
+        await runOp(`attach:${attachment.photoId}`, async () => {
+          const attached = await attachMedia.mutateAsync({
+            key: attachment.key,
             kind: "image",
-            sortOrder: photo.sortOrder,
-            width: photo.width,
-            height: photo.height,
-          }),
-        );
+            sortOrder: attachment.sortOrder,
+            width: attachment.width,
+            height: attachment.height,
+          });
+          ledger.attached.set(attachment.photoId, attached.id);
+        });
       }
 
-      const removedMediaIds = seedMedia
-        .filter((m) => !queuePhotoIds.has(m.id))
-        .map((m) => m.id);
-      for (const mediaId of removedMediaIds) {
-        await runOp(`remove:${mediaId}`, () =>
-          removeMedia.mutateAsync(mediaId),
-        );
+      for (const mediaId of plan.removedMediaIds) {
+        await runOp(`remove:${mediaId}`, async () => {
+          await removeMedia.mutateAsync(mediaId);
+          ledger.removed.add(mediaId);
+        });
       }
 
-      if (photos.length > 0) {
+      if (plan.orderedPhotoIds.length > 0) {
         await runOp("reorder", () =>
           reorderMedia.mutateAsync({
-            ordering: photos.map((p, i) => ({
-              mediaId: p.photoId,
-              sortOrder: i,
+            ordering: plan.orderedPhotoIds.map((photoId, sortOrder) => ({
+              mediaId: ledger.attached.get(photoId) ?? photoId,
+              sortOrder,
             })),
           }),
         );
@@ -291,10 +382,8 @@ export function useSaveListingEdit(
       dispatch({ type: "ALL_SUCCEEDED" });
     },
     [
-      payload,
-      photos,
-      seedMedia,
       listingId,
+      currentLedger,
       editListing,
       attachMedia,
       removeMedia,
@@ -302,17 +391,71 @@ export function useSaveListingEdit(
     ],
   );
 
-  const save = useCallback(async () => {
-    const opIds = computeOps(payload, photos, seedMedia).map((o) => o.id);
-    dispatch({ type: "INIT_OPS", opIds });
-    await runOps({});
-  }, [payload, photos, seedMedia, runOps]);
+  // Two presses in the same render would both run the plan and attach a photo twice.
+  const inFlightRef = useRef(false);
+  const runExclusive = useCallback(async (work: () => Promise<boolean>) => {
+    if (inFlightRef.current) return false;
+    inFlightRef.current = true;
+    try {
+      return await work();
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, []);
 
-  const retry = useCallback(async () => {
-    if (state.status !== "failed") return;
-    dispatch({ type: "RETRY" });
-    await runOps(state.opStates);
-  }, [state.status, state.opStates, runOps]);
+  const runFreshPlan = useCallback(
+    async (plan: EditPlan) => {
+      planRef.current = plan;
+      dispatch({
+        type: "INIT_OPS",
+        opIds: planOps(plan).map((o) => o.id),
+      });
+      await runOps(plan, {});
+      return true;
+    },
+    [runOps],
+  );
+
+  /** Resolves true when every operation succeeded, false when another save was already running. */
+  const save = useCallback(
+    () =>
+      runExclusive(() =>
+        runFreshPlan(buildEditPlan(payload, photos, seedMedia, currentLedger())),
+      ),
+    [payload, photos, seedMedia, currentLedger, runExclusive, runFreshPlan],
+  );
+
+  /**
+   * Resolves true when every operation succeeded and false when nothing ran
+   * (no failed save to retry, or another save is running). An undiverged
+   * retry replays the plan fixed at Save; edits made since then are saved by
+   * re-planning from the current state against the ledger, as a fresh Save would.
+   */
+  const retry = useCallback(
+    () =>
+      runExclusive(async () => {
+        const ledger = currentLedger();
+        const plan = planRef.current;
+        if (state.status !== "failed" || !plan) return false;
+        if (plan.inputKey !== editInputKey(payload, photos)) {
+          return runFreshPlan(buildEditPlan(payload, photos, seedMedia, ledger));
+        }
+        dispatch({ type: "RETRY" });
+        await runOps(plan, state.opStates);
+        return true;
+      }),
+    [
+      state.status,
+      state.opStates,
+      payload,
+      photos,
+      seedMedia,
+      currentLedger,
+      runExclusive,
+      runFreshPlan,
+      runOps,
+    ],
+  );
 
   return {
     save,

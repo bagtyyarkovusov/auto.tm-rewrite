@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { AuthSchemas } from "@auto-tm/contracts";
 import type { FastifyRequest } from "fastify";
+import { AllowPendingDeletion } from "../../../common/allow-pending-deletion.decorator";
 import { resolveClientIp } from "../../../common/client-ip";
 import { Public } from "../../../common/public.decorator";
 import { RequestOtp } from "../application/RequestOtp";
@@ -218,6 +219,7 @@ export class AuthController {
     }
   }
 
+  @AllowPendingDeletion()
   @HttpCode(204)
   @Post("logout-all")
   async logoutAll(@Req() req: FastifyRequest) {

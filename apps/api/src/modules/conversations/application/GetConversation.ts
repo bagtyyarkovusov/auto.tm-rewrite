@@ -17,11 +17,7 @@ import {
 } from "../domain/ports/ConversationRepository";
 
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
-import {
-  peerIdOf,
-  readConversationPeers,
-  type ConversationPeer,
-} from "./ConversationPeers";
+import type { ConversationPeer } from "./ConversationPeers";
 import {
   ConversationSendPolicy,
   type SendRestriction,
@@ -81,9 +77,9 @@ export class GetConversation {
     const listing = await this.listings.getListingSummary(
       conversation.listingId,
     );
-    const [peers, states, unreadCount, lastMessage, sendRestriction] =
+    const [peerUsers, states, unreadCount, lastMessage, sendRestriction] =
       await Promise.all([
-        readConversationPeers(this.identityRead, input.userId, [conversation]),
+        this.identityRead.findUsersByIds([peerId]),
         this.conversations.getParticipantStatesForConversations([
           conversation.id,
         ]),
@@ -97,7 +93,7 @@ export class GetConversation {
     const participantStates = states.get(conversation.id) ?? [];
     const peerState = participantStates.find((s) => s.userId !== input.userId);
     const ownState = participantStates.find((s) => s.userId === input.userId);
-    const peerView = peers.get(peerIdOf(conversation, input.userId));
+    const peerUser = peerUsers.find((u) => u.id === peerId);
 
     return {
       conversation,
@@ -107,8 +103,12 @@ export class GetConversation {
       peerLastReadAt: peerState?.lastReadAt ?? null,
       peerLastDeliveredAt: peerState?.lastDeliveredAt ?? null,
       mutedAt: ownState?.mutedAt ?? null,
-      peer: peerView?.peer ?? { id: peerId, displayName: null },
-      blockedByMe: peerView?.blockedByMe ?? false,
+      peer: { id: peerId, displayName: peerUser?.displayName ?? null },
+      // The viewer's block is read once, inside the restriction, and
+      // `blocked_by_me` outranks every other restriction. Deriving the flag
+      // from it keeps both fields from one read, so a concurrent block or
+      // unblock cannot make them disagree.
+      blockedByMe: sendRestriction === "blocked_by_me",
       sendRestriction,
     };
   }

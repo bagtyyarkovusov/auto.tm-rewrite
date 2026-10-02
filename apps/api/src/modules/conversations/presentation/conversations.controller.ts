@@ -160,6 +160,11 @@ export class ConversationsController {
       result.lastMessage ? [result.lastMessage] : [],
     );
 
+    // Typed against the contract so a restriction the wire does not know about
+    // cannot be returned.
+    const sendRestriction: ConversationsSchemas.GetConversationResponse["sendRestriction"] =
+      result.sendRestriction;
+
     return {
       ...this.toConversationSummaryResponse(
         result.conversation,
@@ -173,7 +178,7 @@ export class ConversationsController {
         result.peerLastDeliveredAt,
         result.mutedAt,
       ),
-      sendRestriction: result.sendRestriction,
+      sendRestriction,
     };
   }
 

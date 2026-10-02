@@ -72,7 +72,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0060](0060-source-first-agent-context-and-task-scoped-guidance.md) | Source-first agent context and task-scoped guidance | Accepted direction; #417 implementation/review | 2026-09-28 |
 | [0061](0061-stored-tmt-listing-price-for-feed-sort-and-range.md) | Stored TMT listing price for feed sort and range filtering (amends ADR-0021 stored-column rejection) | Accepted | 2026-09-28 |
 | [0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) | The human in the loop may assign both review axes to Kimi per pull request (amends ADR-0059 high-risk review-provider rule) | Superseded by ADR-0064 | 2026-09-28 |
-| [0063](0063-mobile-refreshes-an-expired-access-token-before-sending.md) | Mobile refreshes an expired access token before sending (extends ADR-0015 refresh contract) | Accepted | 2026-09-28 |
+| [0063](0063-mobile-refreshes-an-expired-access-token-before-sending.md) | Mobile refreshes an expired access token before sending (extends ADR-0015 refresh contract) | Accepted; refresh-failure rule amended by ADR-0077 | 2026-09-28 |
 | [0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md) | Any supported client may review either axis, and issues have no concurrency limit (supersedes ADR-0062 and the review-provider and in-flight rules of ADR-0058/0059) | Accepted | 2026-09-28 |
 | [0065](0065-small-changes-skip-the-issue-ceremony.md) | Small changes skip the issue ceremony (amends ADR-0058 re-review and separate-axes rules, ADR-0064's both-verdicts rule, and one-branch-per-issue for batch PRs; extends ADR-0058 with no-issue PRs) | Accepted | 2026-09-28 |
 | [0066](0066-retire-sandcastle-queue-agents-replace-unattended-dispatch.md) | Retire Sandcastle; queue agents replace unattended dispatch (supersedes ADR-0028 and ADR-0033; amends ADR-0041's `.sandcastle/` retention and ADR-0058's Sandcastle boundaries) | Accepted | 2026-09-29 |
@@ -86,6 +86,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0074](0074-digest-pinned-chainguard-minio-images.md) | Digest-pinned Chainguard MinIO images, preserving the existing S3 and volume contract | Accepted | 2026-10-01 |
 | [0075](0075-railway-pr-backends-for-agent-native-sessions.md) | Railway PR backends for agent native sessions (amends ADR-0039's Railway shape and the coding-workflow local verification rule) | Accepted | 2026-10-01 |
 | [0076](0076-orchestrator-runs-the-worktree-cleanup-gate-after-every-merge.md) | The orchestrator runs the worktree cleanup gate after every merge (amends ADR-0069's and ADR-0071's cleanup rules) | Accepted | 2026-10-01 |
+| [0077](0077-mobile-keeps-the-session-when-a-token-refresh-fails-without-a-rejection.md) | Mobile keeps the session when a token refresh fails without a rejection (amends ADR-0063's refresh-failure rule and accepted cost) | Accepted | 2026-10-02 |
 | [0078](0078-the-api-trusts-one-configured-header-for-the-client-ip.md) | The API trusts one configured header for the client IP (amends ADR-0054's per-IP budget; preserves ADR-0039's hosting constraint) | Proposed | 2026-10-02 |
 
 ## Per-app ADRs

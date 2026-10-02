@@ -1,3 +1,5 @@
+import { ForbiddenException } from "@nestjs/common";
+import { AdminSchemas, AuthSchemas } from "@auto-tm/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
@@ -7,10 +9,12 @@ import type {
 } from "../../listings/domain/ports/ListingsReadPort";
 import { Conversation } from "../domain/Conversation";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
+import { CONVERSATION_ERROR_CODES } from "../domain/types";
 
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
 import {
   ConversationSendPolicy,
+  OPEN_CONVERSATION_LISTING_STATUSES,
   type SendRestriction,
 } from "./ConversationSendPolicy";
 
@@ -37,14 +41,18 @@ const activeListing: ListingSummary = {
 
 const soldListing: ListingSummary = { ...activeListing, status: "sold" };
 const archivedListing: ListingSummary = { ...activeListing, status: "archived" };
+const bannedListing: ListingSummary = { ...activeListing, status: "banned" };
 const chatOffListing: ListingSummary = { ...activeListing, allowChat: false };
+const soldChatOffListing: ListingSummary = { ...soldListing, allowChat: false };
 
 const LISTINGS: Record<string, ListingSummary | null> = {
   active: activeListing,
   "banned or deleted": null,
   sold: soldListing,
   archived: archivedListing,
+  "banned status": bannedListing,
   "chat off": chatOffListing,
+  "sold with chat off": soldChatOffListing,
 };
 
 interface World {
@@ -53,6 +61,8 @@ interface World {
   sellerSuspended?: boolean;
   /** Who blocked whom, as "<blocker>><blocked>". */
   blocks?: string[];
+  /** The buyer's account deletion is scheduled. Not a send restriction. */
+  buyerDeletionScheduled?: boolean;
 }
 
 function buildPolicy(world: World) {
@@ -68,6 +78,10 @@ function buildPolicy(world: World) {
         (id === "buyer-1" && world.buyerSuspended === true) ||
         (id === "seller-1" && world.sellerSuspended === true),
     ),
+    isDeletionScheduled: vi.fn(
+      async (id: string) =>
+        id === "buyer-1" && world.buyerDeletionScheduled === true,
+    ),
   } as unknown as IdentityCheckPort;
   const identityRead = {
     isUserBlockedBy: vi.fn(async (blockerId: string, blockedId: string) =>
@@ -82,13 +96,67 @@ function buildPolicy(world: World) {
   );
 }
 
-async function accepted(policy: ConversationSendPolicy, viewerId: string) {
+/**
+ * The refusal reason `authorize` throws, or null when it accepts. Any error
+ * that is not a ForbiddenException with a reason is rethrown, so an unrelated
+ * failure cannot pass as a refusal.
+ */
+async function refusalReason(
+  policy: ConversationSendPolicy,
+  viewerId: string,
+): Promise<string | null> {
   try {
     await policy.authorize(conversation.id, viewerId);
-    return true;
-  } catch {
-    return false;
+    return null;
+  } catch (error) {
+    if (!(error instanceof ForbiddenException)) throw error;
+    const response = error.getResponse() as { details?: { reason?: string } };
+    const reason = response.details?.reason;
+    if (typeof reason !== "string") throw error;
+    return reason;
   }
+}
+
+/** The refusal reasons `authorize` uses for each restriction. */
+const REFUSAL_REASONS: Record<SendRestriction, string[]> = {
+  blocked_by_me: [CONVERSATION_ERROR_CODES.USER_BLOCKED],
+  listing_unavailable: [CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE],
+  chat_disabled: [CONVERSATION_ERROR_CODES.CHAT_DISABLED],
+  participant_unavailable: [
+    AdminSchemas.AdminErrorReason.UserSuspended,
+    CONVERSATION_ERROR_CODES.BLOCKED_BY_USER,
+  ],
+};
+
+/**
+ * Every restriction the world satisfies, worked out from its facts alone. The
+ * send path refuses with one of these reasons, but not always the one
+ * `restrictionFor` reports first: it checks the Listing before the safety
+ * facts, and `restrictionFor` puts `blocked_by_me` first.
+ */
+function applicableRestrictions(
+  world: World,
+  viewerId: string,
+): Set<SendRestriction> {
+  const viewerIsBuyer = viewerId === "buyer-1";
+  const peerId = viewerIsBuyer ? "seller-1" : "buyer-1";
+  const blocks = world.blocks ?? [];
+  const suspended =
+    world.buyerSuspended === true || world.sellerSuspended === true;
+  const active = new Set<SendRestriction>();
+
+  if (blocks.includes(`${viewerId}>${peerId}`)) active.add("blocked_by_me");
+  const listingOpen =
+    world.listing !== null &&
+    OPEN_CONVERSATION_LISTING_STATUSES.has(world.listing.status);
+  if (!listingOpen) active.add("listing_unavailable");
+  if (world.listing && listingOpen && !world.listing.allowChat) {
+    active.add("chat_disabled");
+  }
+  if (suspended || blocks.includes(`${peerId}>${viewerId}`)) {
+    active.add("participant_unavailable");
+  }
+  return active;
 }
 
 describe("ConversationSendPolicy.restrictionFor", () => {
@@ -105,14 +173,39 @@ describe("ConversationSendPolicy.restrictionFor", () => {
       "listing_unavailable",
     ],
     [
-      "the Listing is sold",
+      "the Listing is sold, so an existing Conversation stays open",
       { listing: soldListing },
+      null,
+    ],
+    [
+      "the Listing is archived, so an existing Conversation stays open",
+      { listing: archivedListing },
+      null,
+    ],
+    [
+      "the Listing status is banned",
+      { listing: bannedListing },
       "listing_unavailable",
     ],
     [
-      "the Listing is archived",
-      { listing: archivedListing },
-      "listing_unavailable",
+      "the Listing is sold and chat is switched off",
+      { listing: soldChatOffListing },
+      "chat_disabled",
+    ],
+    [
+      "the Listing is sold and the viewer blocked the other participant",
+      { listing: soldListing, blocks: ["buyer-1>seller-1"] },
+      "blocked_by_me",
+    ],
+    [
+      "the Listing is sold and the other participant blocked the viewer",
+      { listing: soldListing, blocks: ["seller-1>buyer-1"] },
+      "participant_unavailable",
+    ],
+    [
+      "the Listing is archived and the other participant is suspended",
+      { listing: archivedListing, sellerSuspended: true },
+      "participant_unavailable",
     ],
     [
       "the seller switched chat off",
@@ -210,6 +303,104 @@ describe("ConversationSendPolicy.restrictionFor", () => {
   });
 });
 
+describe("ConversationSendPolicy.authorize by Listing status", () => {
+  it.each([
+    ["active", activeListing],
+    ["sold", soldListing],
+    ["archived", archivedListing],
+  ])("lets both participants send when the Listing is %s", async (_name, listing) => {
+    const policy = buildPolicy({ listing });
+
+    for (const senderId of ["buyer-1", "seller-1"]) {
+      const authorized = await policy.authorize(conversation.id, senderId);
+
+      expect(authorized.listing).toBe(listing);
+      expect(authorized.recipientId).toBe(
+        senderId === "buyer-1" ? "seller-1" : "buyer-1",
+      );
+    }
+  });
+
+  it.each<[string, ListingSummary | null, string, string]>([
+    [
+      "banned or deleted (no summary)",
+      null,
+      "LISTING_NOT_CONTACTABLE",
+      "Listing is no longer available for contact",
+    ],
+    [
+      "banned (status)",
+      bannedListing,
+      "LISTING_NOT_CONTACTABLE",
+      "Listing is not available for contact",
+    ],
+    [
+      "chat switched off",
+      chatOffListing,
+      "CHAT_DISABLED",
+      "Chat is disabled for this listing",
+    ],
+    [
+      "sold with chat switched off",
+      soldChatOffListing,
+      "CHAT_DISABLED",
+      "Chat is disabled for this listing",
+    ],
+  ])(
+    "refuses with the same reason when the Listing is %s",
+    async (_name, listing, reason, message) => {
+      const policy = buildPolicy({ listing });
+
+      await expect(
+        policy.authorize(conversation.id, "buyer-1"),
+      ).rejects.toMatchObject({
+        response: { message, details: { reason } },
+      });
+    },
+  );
+
+  it("still refuses a non-participant when the Listing is sold", async () => {
+    const policy = buildPolicy({ listing: soldListing });
+
+    await expect(
+      policy.authorize(conversation.id, "stranger-1"),
+    ).rejects.toMatchObject({
+      response: { details: { reason: "NOT_A_PARTICIPANT" } },
+    });
+  });
+
+  it("still refuses a suspended participant or a block when the Listing is sold", async () => {
+    for (const world of [
+      { listing: soldListing, buyerSuspended: true },
+      { listing: soldListing, sellerSuspended: true },
+      { listing: soldListing, blocks: ["buyer-1>seller-1"] },
+      { listing: soldListing, blocks: ["seller-1>buyer-1"] },
+    ] satisfies World[]) {
+      await expect(
+        buildPolicy(world).authorize(conversation.id, "buyer-1"),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    }
+  });
+});
+
+describe("a viewer whose account deletion is scheduled", () => {
+  it("can read the restriction as null while the send is refused for the pending state", async () => {
+    // A pending session only reads (GET /conversations/:id stays allowed), and
+    // the app never stores one, so this is not a SendRestriction value. The
+    // send path refuses it through assertAccountNotPendingDeletion instead.
+    const world: World = { listing: activeListing, buyerDeletionScheduled: true };
+    const policy = buildPolicy(world);
+
+    await expect(
+      policy.restrictionFor(conversation, "buyer-1", activeListing),
+    ).resolves.toBeNull();
+    await expect(refusalReason(policy, "buyer-1")).resolves.toBe(
+      AuthSchemas.ACCOUNT_DELETION_PENDING_REASON,
+    );
+    await expect(refusalReason(policy, "seller-1")).resolves.toBeNull();
+  });
+});
+
 describe("sendRestriction and the send path", () => {
   const listingStates = Object.entries(LISTINGS);
   const flags = [false, true];
@@ -244,7 +435,7 @@ describe("sendRestriction and the send path", () => {
   );
 
   it.each(cases)(
-    "agree for $name: null exactly when a send is accepted",
+    "agree for $name: null exactly when a send is accepted, and a refusal carries a matching reason",
     async ({ world }) => {
       const policy = buildPolicy(world);
 
@@ -254,8 +445,21 @@ describe("sendRestriction and the send path", () => {
           viewerId,
           world.listing,
         );
+        const reason = await refusalReason(policy, viewerId);
 
-        expect(restriction === null).toBe(await accepted(policy, viewerId));
+        if (restriction === null) {
+          expect(reason).toBeNull();
+          continue;
+        }
+
+        const applicable = applicableRestrictions(world, viewerId);
+        expect(applicable).toContain(restriction);
+        expect(
+          [...applicable].flatMap((r) => REFUSAL_REASONS[r]),
+        ).toContain(reason);
+        if (applicable.size === 1) {
+          expect(REFUSAL_REASONS[restriction]).toContain(reason);
+        }
       }
     },
   );
