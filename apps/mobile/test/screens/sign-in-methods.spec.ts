@@ -15,8 +15,8 @@ const verify = read("app/account/verify-sign-in-method.tsx");
 describe("Profile Sign-in Methods", () => {
   // Rendered behaviour lives in profile.spec.tsx and sign-in-method-change.spec.tsx.
   it("masks the phone and email rows", () => {
-    expect(profile).toContain("maskTmPhone(data.phone)");
-    expect(profile).toContain("maskEmail(data.email)");
+    expect(profile).toContain("maskTmPhone(phone)");
+    expect(profile).toContain("maskEmail(email)");
   });
 
   it("requests the code through the signed-in Sign-in Method endpoint", () => {

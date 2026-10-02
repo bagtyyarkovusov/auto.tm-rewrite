@@ -53,6 +53,10 @@ export function getResendCodeErrorCopy(error: unknown, t: Translate): string {
   return t("verifyFailed");
 }
 
-export function isSignInMethodTaken(_error: unknown): boolean {
-  return false;
+/**
+ * The confirmed value belongs to another User. Adding or changing a Sign-in
+ * Method shows this as a state of its own; sign-in keeps the inline copy above.
+ */
+export function isSignInMethodTaken(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "SIGN_IN_METHOD_TAKEN";
 }

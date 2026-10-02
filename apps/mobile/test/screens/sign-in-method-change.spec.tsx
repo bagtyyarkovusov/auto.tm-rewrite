@@ -12,6 +12,9 @@ import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render
 
 type CodeEntryProps = ComponentProps<typeof CodeEntryForm>;
 
+// Metro defines it in the app; the entry screens read it for the dev code.
+vi.stubGlobal("__DEV__", false);
+
 const state = vi.hoisted(() => ({
   me: { phone: "+99365123456" as string | null, email: "aman@example.com" as string | null },
   verify: vi.fn(),

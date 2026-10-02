@@ -9,7 +9,7 @@ import { ChangeSignInMethodSheet } from "./ChangeSignInMethodSheet";
 vi.unmock("@/components/ui/sheet");
 vi.mock("@rn-primitives/dialog", async () => {
   const React = await import("react");
-  const { View } = await import("react-native");
+  const { Text, View } = await import("react-native");
   const Open = React.createContext<(open: boolean) => void>(() => {});
   const Box = ({ children }: React.PropsWithChildren) => <View>{children}</View>;
   const Close = ({ children }: { children: React.ReactNode }) => {
@@ -18,7 +18,7 @@ vi.mock("@rn-primitives/dialog", async () => {
   };
   const Root = ({ open, onOpenChange, children }: React.PropsWithChildren<{ open: boolean; onOpenChange: (open: boolean) => void }>) =>
     open ? <Open.Provider value={onOpenChange}>{children}</Open.Provider> : null;
-  return { Root, Close, Portal: Box, Overlay: Box, Content: Box, Trigger: Box, Title: Box, Description: Box };
+  return { Root, Close, Portal: Box, Overlay: Box, Content: Box, Trigger: Box, Title: Text, Description: Text };
 });
 vi.mock("react-native-reanimated", () => ({ SlideInDown: { duration: () => ({}) }, SlideOutDown: { duration: () => ({}) } }));
 vi.mock("react-native-screens", async () => ({ FullWindowOverlay: (await import("react-native")).View }));

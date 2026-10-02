@@ -16,7 +16,7 @@ vi.mock("../../src/api/identity/useMe", () => ({
   useMe: () => ({ ...state.me, error: new Error("Network request failed"), refetch: vi.fn() }),
 }));
 
-const me = {
+const me: { id: string; displayName: string | null; phone: string | null; email: string | null; avatarUrl: string | null; role: string; createdAt: string } = {
   id: "user-1", displayName: "Aman", phone: "+99365123456", email: null, avatarUrl: null,
   role: "seller", createdAt: "2026-01-15T00:00:00.000Z",
 };
