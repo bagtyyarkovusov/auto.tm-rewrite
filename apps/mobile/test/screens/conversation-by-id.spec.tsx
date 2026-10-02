@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
   viewerId: "",
   get: vi.fn(),
   post: vi.fn(),
+  sendText: vi.fn(),
   messages: {
     data: { pages: [{ items: [] as unknown[] }] } as unknown,
     isPending: false,
@@ -59,7 +60,7 @@ vi.mock("../../src/conversations/socket/useConversationSocket", () => ({
     peerPresence: { online: true },
     signalTyping: vi.fn(),
     stopTyping: vi.fn(),
-    sendTextMessage: vi.fn(),
+    sendTextMessage: state.sendText,
     sendImageMessage: vi.fn(),
     markRead: vi.fn(async () => ({ ok: true })),
     deleteMessage: vi.fn(),
@@ -137,6 +138,7 @@ beforeEach(() => {
   state.viewerId = BUYER_ID;
   state.get.mockReset();
   state.post.mockReset();
+  state.sendText.mockReset();
   state.mutation.mutate.mockReset();
   state.messages.isPending = false;
   state.messages.isError = false;
@@ -460,5 +462,140 @@ describe("Conversation blocked by the viewer", () => {
     expect(screen.queryByText("User blocked")).toBeNull();
     expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Attach photo", disabled: false })).toBeTruthy();
+  });
+});
+
+describe("Conversation about a closed Listing", () => {
+  const SELLER_MESSAGE = {
+    id: "00000000-0000-4000-8000-0000000000f1",
+    conversationId: CONVERSATION_ID,
+    senderId: SELLER_ID,
+    kind: "text",
+    text: "Thanks, already sold",
+    createdAt: "2026-10-01T09:00:00.000Z",
+  };
+  const withListing = (status: "sold" | "archived") => {
+    const base = conversation();
+    return conversation({ listing: { ...base.listing!, status } });
+  };
+
+  it("shows the Sold badge, the banner and the link after the last Message, with the composer on", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => withListing("sold") });
+    state.messages.data = { pages: [{ items: [SELLER_MESSAGE] }] };
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Sold")).toBeTruthy();
+    expect(screen.getByText("Thanks, already sold")).toBeTruthy();
+    expect(
+      screen.getByText("This car is sold. You can keep talking, but the Listing is no longer available."),
+    ).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "See other Toyota Camry" }));
+    expect(routerMock.push).toHaveBeenCalledWith({
+      pathname: "/(tabs)/(search)/results",
+      params: { brandId: "00000000-0000-4000-8000-0000000000d1", modelId: "00000000-0000-4000-8000-0000000000d2" },
+    });
+    expect(screen.getByPlaceholderText("Write a message...")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
+  });
+
+  it("shows no quick replies on a sold Listing, even with no Messages yet", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => withListing("sold") });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Sold")).toBeTruthy();
+    expect(screen.queryByText("Is the car still available?")).toBeNull();
+    expect(screen.getByPlaceholderText("Write a message...")).toBeTruthy();
+  });
+
+  it("sends a Message on a sold Listing", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => withListing("sold") });
+    state.sendText.mockResolvedValue({ ok: true, message: { id: "server-1" } });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    await screen.findByText("Sold");
+    fireEvent.changeText(screen.getByPlaceholderText("Write a message..."), "Is the price final?");
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Send message" }));
+    });
+    expect(state.sendText).toHaveBeenCalledWith(expect.objectContaining({ text: "Is the price final?" }));
+  });
+
+  it("shows the Removed from sale badge and its banner for an archived Listing", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => withListing("archived") });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Removed from sale")).toBeTruthy();
+    expect(
+      screen.getByText("This car was removed from sale. You can keep talking, but the Listing is no longer available."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "See other Toyota Camry" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
+  });
+
+  it.each([
+    ["listing_unavailable", "This Listing is no longer available"],
+    ["chat_disabled", "The seller has turned off messages for this Listing"],
+    ["participant_unavailable", "You can't send messages in this Conversation"],
+  ] as const)("replaces the composer with one line for %s and keeps History readable", async (restriction, line) => {
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () =>
+        conversation({ listing: restriction === "listing_unavailable" ? null : conversation().listing, sendRestriction: restriction }),
+    });
+    state.messages.data = { pages: [{ items: [SELLER_MESSAGE] }] };
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText(line)).toBeTruthy();
+    expect(screen.getByText("Thanks, already sold")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("Write a message...")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
+    expect(screen.queryByText("Is the car still available?")).toBeNull();
+    expect(screen.queryByText("typing...")).toBeNull();
+    expect(state.sendText).not.toHaveBeenCalled();
+  });
+
+  it("does not make the strip tappable when the Listing is no longer available", async () => {
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () => conversation({ sendRestriction: "listing_unavailable" }),
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("This Listing is no longer available")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Open:/ })).toBeNull();
+  });
+
+  it("lets the blocked banner with Unblock win over a closed Listing line", async () => {
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () =>
+        conversation({ blockedByMe: true, sendRestriction: "blocked_by_me", listing: withListing("sold").listing }),
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByRole("button", { name: "Unblock" })).toBeTruthy();
+    expect(screen.getByText("User blocked")).toBeTruthy();
+    expect(screen.queryByText("This Listing is no longer available")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  });
+
+  it("reloads the Conversation and updates the footer when a send is refused after the state changed", async () => {
+    let restricted = false;
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () =>
+        conversation({ sendRestriction: restricted ? "chat_disabled" : null }),
+    });
+    state.sendText.mockImplementation(async () => {
+      restricted = true;
+      return { ok: false, code: "FORBIDDEN", message: "Forbidden" };
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    await screen.findByText("Merdan");
+    fireEvent.changeText(screen.getByPlaceholderText("Write a message..."), "Hello");
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Send message" }));
+    });
+
+    expect(await screen.findByText("The seller has turned off messages for this Listing")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
   });
 });
