@@ -37,11 +37,16 @@ export default function DeleteAccountScreen() {
 
   const locale = localeTag(i18n.language);
   const deletionDate = useMemo(() => formatDeletionDateFromNow(locale), [locale]);
+  // Russian opens this line with the date, so it keeps its "г." period.
+  const erasedOnDate = useMemo(
+    () => formatDeletionDateFromNow(locale, { midSentence: true }),
+    [locale],
+  );
   const consequences = [
     t("deleteAccountSignedOut"),
     t("deleteAccountListingsArchived"),
     t("deleteAccountChatsStay"),
-    t("deleteAccountErasedOn", { date: deletionDate }),
+    t("deleteAccountErasedOn", { date: erasedOnDate }),
     t("deleteAccountRestoreBefore"),
   ];
 
@@ -103,7 +108,7 @@ export default function DeleteAccountScreen() {
           accessibilityRole="checkbox"
           accessibilityState={{ checked: understood }}
           accessibilityLabel={t("deleteAccountUnderstand")}
-          className="min-h-11 flex-row items-center gap-3"
+          className="min-h-11 flex-row items-center gap-3 rounded-md active:bg-muted/60"
         >
           <Checkbox checked={understood} pointerEvents="none" accessible={false} />
           <Text className="flex-1 text-base text-foreground">
@@ -119,7 +124,7 @@ export default function DeleteAccountScreen() {
             onPress={() => setShowConfirm(true)}
             accessibilityLabel={t("deleteAccount")}
           >
-            <Icon as={Trash2} className="size-5 text-destructive-foreground mr-2" />
+            <Icon as={Trash2} className="size-5 mr-2" />
             <Text>{t("deleteAccount")}</Text>
           </Button>
         </View>

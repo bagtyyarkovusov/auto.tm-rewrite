@@ -13,6 +13,8 @@ vi.mock("../../src/auth/session", () => session);
 // 2 October 2026 at noon UTC; the deletion lands 30 days later, on 1 November.
 const NOW = new Date("2026-10-02T12:00:00.000Z");
 const DATES = { en: "November 1, 2026", ru: "1 ноября 2026 г", tk: "1 noýabr 2026" } as const;
+// Where the date opens a sentence, Russian keeps the period of "г.".
+const ERASED_ON_DATES = { ...DATES, ru: "1 ноября 2026 г." } as const;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -50,7 +52,7 @@ describe("Delete account screen", () => {
     expect(screen.getByText(t("account:deleteAccountSignedOut"))).toBeTruthy();
     expect(screen.getByText(t("account:deleteAccountListingsArchived"))).toBeTruthy();
     expect(screen.getByText(t("account:deleteAccountChatsStay"))).toBeTruthy();
-    expect(screen.getByText(t("account:deleteAccountErasedOn", { date: DATES[locale] }))).toBeTruthy();
+    expect(screen.getByText(t("account:deleteAccountErasedOn", { date: ERASED_ON_DATES[locale] }))).toBeTruthy();
     expect(screen.getByText(t("account:deleteAccountRestoreBefore"))).toBeTruthy();
   });
 
@@ -97,6 +99,8 @@ describe("Delete account screen", () => {
     expect(screen.queryClient.getQueryData(["me"])).toBeUndefined();
     expect(routerMock.dismissTo).toHaveBeenCalledWith("/(tabs)/services");
     expect(routerMock.push).toHaveBeenCalledWith("/account/deletion-scheduled");
+    expect(session.clearAuthSession.mock.invocationCallOrder[0])
+      .toBeLessThan(routerMock.dismissTo.mock.invocationCallOrder[0] ?? 0);
     expect(routerMock.dismissTo.mock.invocationCallOrder[0])
       .toBeLessThan(routerMock.push.mock.invocationCallOrder[0] ?? 0);
   });

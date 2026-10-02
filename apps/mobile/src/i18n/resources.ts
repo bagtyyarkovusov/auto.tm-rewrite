@@ -1877,7 +1877,7 @@ export const resources: Resource = {
       deleteAccountDescription: "Your account will be deleted in 30 days. You can recover it by signing in again.",
       deleteAccountWhatHappens: "What happens",
       deleteAccountSignedOut: "You are signed out on every device",
-      deleteAccountListingsArchived: "Your active Listings are archived",
+      deleteAccountListingsArchived: "Your active listings are archived",
       deleteAccountChatsStay: "Your chats stay for the other person, shown as “Deleted user”",
       deleteAccountErasedOn: "On {{date}} your phone, email and profile are erased",
       deleteAccountRestoreBefore: "Sign in with your phone or email before then to restore everything",
