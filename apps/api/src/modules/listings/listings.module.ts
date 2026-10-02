@@ -20,6 +20,7 @@ import { PrismaListingMediaRepository } from "./infrastructure/PrismaListingMedi
 import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRateRepository";
 import { PrismaListingsReadRepository } from "./infrastructure/PrismaListingsReadRepository";
 import { PrismaListingsAdminRepository } from "./infrastructure/PrismaListingsAdminRepository";
+import { PrismaOwnerListingCountsRepository } from "./infrastructure/PrismaOwnerListingCountsRepository";
 import { PrismaFavoriteRepository } from "./infrastructure/PrismaFavoriteRepository";
 import { IdentitySellerProfileAdapter } from "./infrastructure/IdentitySellerProfileAdapter";
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
@@ -46,6 +47,7 @@ import { ReorderMedia } from "./application/ReorderMedia";
 import { GetListingDetail } from "./application/GetListingDetail";
 import { ListFeed } from "./application/ListFeed";
 import { ListMyListings } from "./application/ListMyListings";
+import { CountMyListings } from "./application/CountMyListings";
 import { GetExchangeRates } from "./application/GetExchangeRates";
 import { AddFavorite } from "./application/AddFavorite";
 import { RemoveFavorite } from "./application/RemoveFavorite";
@@ -63,6 +65,7 @@ import { MEDIA_STORAGE_PORT } from "./domain/ports/MediaStoragePort";
 import { LISTINGS_READ_PORT } from "./domain/ports/ListingsReadPort";
 import { LISTING_CARD_READ_PORT } from "./domain/ports/ListingCardReadPort";
 import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
+import { OWNER_LISTING_COUNTS_PORT } from "./domain/ports/OwnerListingCountsPort";
 import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
 import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
 
@@ -81,6 +84,7 @@ import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
     PrismaExchangeRateRepository,
     PrismaListingsReadRepository,
     PrismaListingsAdminRepository,
+    PrismaOwnerListingCountsRepository,
     PrismaFavoriteRepository,
     IdentitySellerProfileAdapter,
     MinioMediaStorageAdapter,
@@ -140,6 +144,10 @@ import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
       useClass: PrismaListingsAdminRepository,
     },
     {
+      provide: OWNER_LISTING_COUNTS_PORT,
+      useExisting: PrismaOwnerListingCountsRepository,
+    },
+    {
       provide: FAVORITE_REPOSITORY,
       useClass: PrismaFavoriteRepository,
     },
@@ -171,6 +179,7 @@ import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
     GetListingDetail,
     ListFeed,
     ListMyListings,
+    CountMyListings,
     GetExchangeRates,
     AddFavorite,
     RemoveFavorite,
