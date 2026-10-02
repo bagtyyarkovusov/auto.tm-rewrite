@@ -205,9 +205,10 @@ export default function EditListingScreen() {
   }, [ctx.canContinue, machineState.currentStep]);
 
   const finishSave = useCallback(
-    async (run: () => Promise<void>) => {
+    async (run: () => Promise<boolean>) => {
       try {
-        await run();
+        // false: nothing ran (a save was already running, or there was nothing to retry).
+        if (!(await run())) return;
         show({ title: t("changesSaved"), variant: "success" });
         // Navigate to public detail; may 404 until downstream route ships
         router.replace(`/(public)/listings/${listingId}`);

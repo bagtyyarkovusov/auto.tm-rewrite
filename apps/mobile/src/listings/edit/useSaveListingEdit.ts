@@ -155,7 +155,7 @@ export interface SaveListingEditOp {
  * terms. Attach mints a server media ID that differs from the local staging
  * UUID; later operations (reorder, a repeated save) must use it.
  */
-export interface MediaLedger {
+interface MediaLedger {
   /** Local staging photoId to the server media ID attach returned. */
   attached: Map<string, string>;
   /** Server media IDs already deleted, so a stale seed cannot re-queue them. */
@@ -166,7 +166,7 @@ function createLedger(): MediaLedger {
   return { attached: new Map(), removed: new Set() };
 }
 
-export interface PlannedAttachment {
+interface PlannedAttachment {
   photoId: string;
   key: string;
   sortOrder: number;
@@ -175,7 +175,9 @@ export interface PlannedAttachment {
 }
 
 /** Operations for one save, fixed when it starts so retry replays the same intent. */
-export interface EditPlan {
+interface EditPlan {
+  /** What the seller had on screen when the plan was fixed; see `editInputKey`. */
+  inputKey: string;
   fieldsPatch: ListingsSchemas.EditListingRequest;
   attachments: PlannedAttachment[];
   removedMediaIds: string[];
@@ -183,11 +185,26 @@ export interface EditPlan {
   orderedPhotoIds: string[];
 }
 
-export function buildEditPlan(
+/**
+ * The seller's intent as a plan sees it: the fields they would send and the
+ * photos in display order. Compared by content, so a re-render or a refetch
+ * that hands the hook fresh objects with the same content is not a change.
+ */
+function editInputKey(
+  payload: WizardSchemas.WizardDraftPayload,
+  photos: StagedPhoto[],
+): string {
+  return JSON.stringify({
+    fields: buildFieldsPatch(payload),
+    photos: photos.map((p) => [p.photoId, p.key ?? null, p.sortOrder]),
+  });
+}
+
+function buildEditPlan(
   payload: WizardSchemas.WizardDraftPayload,
   photos: StagedPhoto[],
   seedMedia: ListingsSchemas.ListingMedia[],
-  ledger: MediaLedger = createLedger(),
+  ledger: MediaLedger,
 ): EditPlan {
   const seedMediaIds = new Set(seedMedia.map((m) => m.id));
   const isServerMedia = (photoId: string) =>
@@ -207,9 +224,16 @@ export function buildEditPlan(
   }
 
   const keptMediaIds = new Set(photos.map((p) => serverId(p.photoId)));
-  const removedMediaIds = seedMedia
-    .filter((m) => !keptMediaIds.has(m.id) && !ledger.removed.has(m.id))
-    .map((m) => m.id);
+  const removedMediaIds = new Set<string>();
+  const planRemoval = (mediaId: string) => {
+    if (!keptMediaIds.has(mediaId) && !ledger.removed.has(mediaId)) {
+      removedMediaIds.add(mediaId);
+    }
+  };
+  seedMedia.forEach((m) => planRemoval(m.id));
+  // A photo attached earlier in this session and dropped since is on the
+  // server even while the seed is still the pre-attach snapshot.
+  ledger.attached.forEach((mediaId) => planRemoval(mediaId));
 
   // A photo with no object key and no server row has no server ID to order.
   const orderedPhotoIds = photos
@@ -217,9 +241,10 @@ export function buildEditPlan(
     .map((p) => p.photoId);
 
   return {
+    inputKey: editInputKey(payload, photos),
     fieldsPatch: buildFieldsPatch(payload),
     attachments,
-    removedMediaIds,
+    removedMediaIds: [...removedMediaIds],
     orderedPhotoIds,
   };
 }
@@ -248,9 +273,8 @@ export function computeOps(
   payload: WizardSchemas.WizardDraftPayload,
   photos: StagedPhoto[],
   seedMedia: ListingsSchemas.ListingMedia[],
-  ledger?: MediaLedger,
 ): SaveListingEditOp[] {
-  return planOps(buildEditPlan(payload, photos, seedMedia, ledger));
+  return planOps(buildEditPlan(payload, photos, seedMedia, createLedger()));
 }
 
 export function opLabel(opId: string): string {
@@ -367,22 +391,71 @@ export function useSaveListingEdit(
     ],
   );
 
-  const save = useCallback(async () => {
-    const plan = buildEditPlan(payload, photos, seedMedia, currentLedger());
-    planRef.current = plan;
-    dispatch({
-      type: "INIT_OPS",
-      opIds: planOps(plan).map((o) => o.id),
-    });
-    await runOps(plan, {});
-  }, [payload, photos, seedMedia, currentLedger, runOps]);
+  // Two presses in the same render would both run the plan and attach a photo twice.
+  const inFlightRef = useRef(false);
+  const runExclusive = useCallback(async (work: () => Promise<boolean>) => {
+    if (inFlightRef.current) return false;
+    inFlightRef.current = true;
+    try {
+      return await work();
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, []);
 
-  const retry = useCallback(async () => {
-    const plan = planRef.current;
-    if (state.status !== "failed" || !plan) return;
-    dispatch({ type: "RETRY" });
-    await runOps(plan, state.opStates);
-  }, [state.status, state.opStates, runOps]);
+  const runFreshPlan = useCallback(
+    async (plan: EditPlan) => {
+      planRef.current = plan;
+      dispatch({
+        type: "INIT_OPS",
+        opIds: planOps(plan).map((o) => o.id),
+      });
+      await runOps(plan, {});
+      return true;
+    },
+    [runOps],
+  );
+
+  /** Resolves true when every operation succeeded, false when another save was already running. */
+  const save = useCallback(
+    () =>
+      runExclusive(() =>
+        runFreshPlan(buildEditPlan(payload, photos, seedMedia, currentLedger())),
+      ),
+    [payload, photos, seedMedia, currentLedger, runExclusive, runFreshPlan],
+  );
+
+  /**
+   * Resolves true when every operation succeeded and false when nothing ran
+   * (no failed save to retry, or another save is running). An undiverged
+   * retry replays the plan fixed at Save; edits made since then are saved by
+   * re-planning from the current state against the ledger, as a fresh Save would.
+   */
+  const retry = useCallback(
+    () =>
+      runExclusive(async () => {
+        const ledger = currentLedger();
+        const plan = planRef.current;
+        if (state.status !== "failed" || !plan) return false;
+        if (plan.inputKey !== editInputKey(payload, photos)) {
+          return runFreshPlan(buildEditPlan(payload, photos, seedMedia, ledger));
+        }
+        dispatch({ type: "RETRY" });
+        await runOps(plan, state.opStates);
+        return true;
+      }),
+    [
+      state.status,
+      state.opStates,
+      payload,
+      photos,
+      seedMedia,
+      currentLedger,
+      runExclusive,
+      runFreshPlan,
+      runOps,
+    ],
+  );
 
   return {
     save,
