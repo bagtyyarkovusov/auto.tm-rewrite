@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { ChevronLeft, Mail, Phone } from "lucide-react-native";
 import * as Linking from "expo-linking";
@@ -22,7 +22,7 @@ interface ContactRowProps {
   onPress: () => void;
 }
 
-/** A row that opens a contact. The value stays selectable for copying. */
+/** A row that opens a contact. */
 function ContactRow({ icon, label, value, onPress }: ContactRowProps) {
   return (
     <Pressable
@@ -34,9 +34,7 @@ function ContactRow({ icon, label, value, onPress }: ContactRowProps) {
       <Icon as={icon} className="size-6 text-muted-foreground" />
       <View className="min-w-0 flex-1">
         <Text className="text-base text-foreground">{label}</Text>
-        <Text selectable className="text-[13px] text-muted-foreground">
-          {value}
-        </Text>
+        <Text className="text-[13px] text-muted-foreground">{value}</Text>
       </View>
     </Pressable>
   );
@@ -52,7 +50,7 @@ export default function HelpScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      // No mail app or dialer on this device. The value stays on screen.
+      // No mail app or dialer on this device. The value is shown for copying.
       setFailed(channel);
     }
   };
@@ -72,27 +70,39 @@ export default function HelpScreen() {
         <Text className="text-2xl font-heading text-foreground">{t("help")}</Text>
       </View>
 
-      <ContactRow
-        icon={Mail}
-        label={t("emailUs")}
-        value={supportContacts.email}
-        onPress={() => void open("email", `mailto:${supportContacts.email}`)}
-      />
-      <View className="ml-[54px] h-px bg-border" />
-      <ContactRow
-        icon={Phone}
-        label={t("callUs")}
-        value={supportContacts.phoneShown}
-        onPress={() => void open("phone", `tel:${supportContacts.phoneDialled}`)}
-      />
+      <ScrollView className="flex-1" contentContainerClassName="pb-6">
+        <ContactRow
+          icon={Mail}
+          label={t("emailUs")}
+          value={supportContacts.email}
+          onPress={() => void open("email", `mailto:${supportContacts.email}`)}
+        />
+        <View className="ml-[54px] h-px bg-border" />
+        <ContactRow
+          icon={Phone}
+          label={t("callUs")}
+          value={supportContacts.phoneShown}
+          onPress={() => void open("phone", `tel:${supportContacts.phoneDialled}`)}
+        />
 
-      {failed ? (
-        <Text accessibilityRole="alert" className="px-4 pt-3 text-sm text-destructive">
-          {t(failed === "email" ? "noMailApp" : "noDialer")}
-        </Text>
-      ) : null}
+        {failed ? (
+          // Outside the pressable rows, so a long press selects the value.
+          <View className="gap-1 px-4 pt-3">
+            <Text
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              className="text-sm text-destructive"
+            >
+              {t(failed === "email" ? "noMailApp" : "noDialer")}
+            </Text>
+            <Text selectable className="text-base text-foreground">
+              {failed === "email" ? supportContacts.email : supportContacts.phoneShown}
+            </Text>
+          </View>
+        ) : null}
 
-      <Text className="px-4 py-2.5 text-[13px] text-muted-foreground">{t("includeV")}</Text>
+        <Text className="px-4 py-2.5 text-[13px] text-muted-foreground">{t("includeV")}</Text>
+      </ScrollView>
     </SafeScreen>
   );
 }

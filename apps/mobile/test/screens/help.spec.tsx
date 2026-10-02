@@ -32,8 +32,8 @@ describe("Help", () => {
   });
 
   it.each([
-    ["Email us", email, "No mail app opened. Copy the address above."],
-    ["Call us", shownPhone, "No dialer opened. Copy the number above."],
+    ["Email us", email, "Couldn't open a mail app. Copy the address:"],
+    ["Call us", shownPhone, "Couldn't open the dialer. Copy the number:"],
   ])("explains when %s cannot open and keeps the contact selectable", async (label, value, message) => {
     vi.mocked(Linking.openURL).mockRejectedValueOnce(new Error("No activity found"));
     const screen = renderMobile(<HelpScreen />);
@@ -43,7 +43,10 @@ describe("Help", () => {
     });
 
     expect(screen.getByRole("alert").props.children).toBe(message);
-    expect(screen.getByText(value).props.selectable).toBe(true);
+    // The row still reads the value; a selectable copy sits outside any pressable.
+    const copies = screen.getAllByText(value);
+    expect(copies).toHaveLength(2);
+    expect(copies.filter((copy) => copy.props.selectable)).toHaveLength(1);
   });
 
   it("offers nothing but Back, Email us and Call us", () => {
@@ -79,7 +82,7 @@ describe("Help", () => {
 
 describe("support contacts", () => {
   // Structural check: the values live in one file so a change cannot miss a copy.
-  it("exist only in src/config/supportContacts.ts", () => {
+  it("exist only in src/config/supportContacts.ts, and only Cabinet opens Help", () => {
     const root = resolve(__dirname, "../..");
     const skip = new Set(["node_modules", ".expo", "dist", "ios", "android"]);
     const files: string[] = [];
@@ -102,5 +105,12 @@ describe("support contacts", () => {
       .map((file) => relative(root, file));
 
     expect(holders).toEqual(["src/config/supportContacts.ts"]);
+
+    // Only Cabinet opens Help. The approved Sign-in Code limit entry (#526) joins this list.
+    const linkers = files
+      .filter((file) => !/\.spec\.tsx?$/.test(file))
+      .filter((file) => /["'`]\/help["'`]/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(root, file));
+    expect(linkers).toEqual(["app/(tabs)/services.tsx"]);
   });
 });
