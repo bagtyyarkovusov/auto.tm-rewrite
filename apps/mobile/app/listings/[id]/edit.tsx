@@ -6,6 +6,7 @@ import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
 import { useUploadQueue } from "../../../src/listings/uploadStaging/useUploadQueue";
+import { deleteDraftDir } from "../../../src/listings/uploadStaging/stagingDir";
 import {
   useSaveListingEdit,
   opLabel,
@@ -130,12 +131,18 @@ function EditSaveErrorBanner({
 }
 
 export default function EditListingScreen() {
-  const { t } = useTranslation();
   const { id } = useLocalSearchParams();
-  const { show } = useToast();
   const listingId = id as string;
+  // One edit session per Listing: another Listing starts from nothing of this one's.
+  return <EditListingSession key={listingId} listingId={listingId} />;
+}
+
+function EditListingSession({ listingId }: { listingId: string }) {
+  const { t } = useTranslation();
+  const { show } = useToast();
 
   const { data: listing } = useListingDetail(listingId);
+  const stagingKey = `edit-${listingId}`;
   const [machineState, dispatch] = useReducer(
     wizardMachineReducer,
     createInitialState(),
@@ -144,13 +151,18 @@ export default function EditListingScreen() {
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
 
+  // The server seeds an edit session once. A refetch, including the ones the
+  // save's own mutations trigger, must not overwrite what the seller changed.
+  const [sessionListing, setSessionListing] = useState(listing);
+  if (listing && !sessionListing) setSessionListing(listing);
+
   const editPayload = useMemo(() => {
-    if (!listing) return EMPTY_PAYLOAD;
-    return listingToPayload(listing);
-  }, [listing]);
+    if (!sessionListing) return EMPTY_PAYLOAD;
+    return listingToPayload(sessionListing);
+  }, [sessionListing]);
 
   const uploadQueue = useUploadQueue(
-    listing ? `edit-${listingId}` : "",
+    sessionListing ? stagingKey : "",
     editPayload,
   );
 
@@ -162,17 +174,17 @@ export default function EditListingScreen() {
   );
 
   useEffect(() => {
-    if (listing) {
+    if (sessionListing) {
       dispatch({
         type: "INIT",
         draftId: null,
-        listingId: listing.id,
+        listingId: sessionListing.id,
         mode: "edit",
         entryStep: "review",
-        payload: listingToPayload(listing),
+        payload: listingToPayload(sessionListing),
       });
     }
-  }, [listing]);
+  }, [sessionListing]);
 
   // Sync upload queue photos into payload so wizard validation and review see changes
   useEffect(() => {
@@ -209,6 +221,9 @@ export default function EditListingScreen() {
       try {
         // false: nothing ran (a save was already running, or there was nothing to retry).
         if (!(await run())) return;
+        // The server holds every staged photo now; left on disk they would
+        // reappear as unsent photos the next time this Listing is edited.
+        void deleteDraftDir(stagingKey);
         show({ title: t("changesSaved"), variant: "success" });
         // Navigate to public detail; may 404 until downstream route ships
         router.replace(`/(public)/listings/${listingId}`);
@@ -216,7 +231,7 @@ export default function EditListingScreen() {
         // Error state surfaced by saveEdit.error + per-op banner below
       }
     },
-    [show, listingId],
+    [show, listingId, stagingKey],
   );
 
   const handleSave = useCallback(async () => {
@@ -230,14 +245,15 @@ export default function EditListingScreen() {
   );
 
   const handleDiscard = useCallback(() => {
+    void deleteDraftDir(stagingKey);
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace(`/(public)/listings/${listingId}`);
     }
-  }, [router, listingId]);
+  }, [listingId, stagingKey]);
 
-  if (!listing) {
+  if (!sessionListing) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <Text className="text-muted-foreground">{t("loadingEllipsis")}</Text>
@@ -359,7 +375,7 @@ export default function EditListingScreen() {
           payload={machineState.payload}
           onChange={handlePayloadChange}
           fieldErrors={fieldErrors}
-          defaultPhone={listing.contactPhone ?? ""}
+          defaultPhone={sessionListing.contactPhone ?? ""}
         />
       )}
       {currentStep === "review" && (

@@ -11,6 +11,7 @@ const fixture = vi.hoisted(() => {
   return {
     id, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
     retry: vi.fn().mockResolvedValue(true),
+    deleteDraftDir: vi.fn().mockResolvedValue(undefined),
     saveState: { status: "idle", error: null, opStates: {} } as {
       status: string; error: Error | null; opStates: Record<string, string>;
     },
@@ -31,6 +32,7 @@ vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: ()
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
   photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
 }) }));
+vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
   useSaveListingEdit: () => ({
     save: fixture.save, retry: fixture.retry, isPending: false, ...fixture.saveState,
@@ -68,6 +70,7 @@ beforeEach(() => {
   fixture.save.mockReset().mockResolvedValue(true);
   fixture.retry.mockReset().mockResolvedValue(true);
   fixture.show.mockClear();
+  fixture.deleteDraftDir.mockClear();
   routerMock.replace.mockClear();
   fixture.saveState = { status: "idle", error: null, opStates: {} };
   fixture.listing = { ...fixture.baseline, id: fixture.id };
@@ -95,6 +98,17 @@ describe("legacy Listing edit", () => {
     await act(async () => fireEvent.press(save));
     expect(fixture.save).toHaveBeenCalledOnce();
     expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
+    // Saved photos are on the server; their staging files must not resurface on the next edit.
+    expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
+  });
+
+  it("clears this Listing's staged photos when the seller discards the edit", () => {
+    const screen = renderMobile(<EditListingScreen />);
+    fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }));
+    fireEvent.press(screen.getByRole("button", { name: "Discard" }));
+    expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
+    fireEvent.press(screen.getAllByText("Discard").at(-1)!);
+    expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
   });
 
   describe("after a partial save failure", () => {
@@ -161,6 +175,8 @@ describe("legacy Listing edit", () => {
       expect(fixture.show).not.toHaveBeenCalled();
       expect(routerMock.replace).not.toHaveBeenCalled();
       expect(screen.getByText("✗ reorder")).toBeTruthy();
+      // The failed save's staged photos are the recovery state Retry needs.
+      expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
     });
   });
 
