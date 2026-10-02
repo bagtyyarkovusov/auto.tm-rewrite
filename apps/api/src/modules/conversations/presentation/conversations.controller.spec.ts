@@ -10,6 +10,8 @@ import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { ConversationsController } from "./conversations.controller";
 import type { OpenConversation } from "../application/OpenConversation";
 import type { ListMyConversations } from "../application/ListMyConversations";
+import type { CountMyUnreadMessages } from "../application/CountMyUnreadMessages";
+import { IS_PUBLIC_KEY } from "../../../common/public.decorator";
 import type { GetConversation } from "../application/GetConversation";
 import type { ListMessages } from "../application/ListMessages";
 import type { SendTextMessage } from "../application/SendTextMessage";
@@ -36,6 +38,7 @@ function buildController(overrides: {
   muteConversation?: MuteConversation;
   deleteMessage?: DeleteMessage;
   listings?: ListingsReadPort;
+  countMyUnreadMessages?: CountMyUnreadMessages;
 } = {}) {
   return new ConversationsController(
     overrides.openConversation ?? ({} as OpenConversation),
@@ -50,6 +53,7 @@ function buildController(overrides: {
     overrides.muteConversation ?? ({} as MuteConversation),
     overrides.deleteMessage ?? ({} as DeleteMessage),
     overrides.listings ?? ({ getListingSummaries: vi.fn().mockResolvedValue([]) } as unknown as ListingsReadPort),
+    overrides.countMyUnreadMessages ?? ({} as CountMyUnreadMessages),
   );
 }
 
@@ -581,5 +585,46 @@ describe("ConversationsController get conversation", () => {
     expect(gets.indexOf("ping")).toBeLessThan(gets.indexOf(":id"));
     expect(gets.indexOf("/")).toBeLessThan(gets.indexOf(":id"));
     expect(gets).toContain(":id/messages");
+  });
+});
+
+describe("ConversationsController unread count", () => {
+  it("returns the total for the signed-in User", async () => {
+    const execute = vi.fn().mockResolvedValue({ count: 4 });
+    const controller = buildController({
+      countMyUnreadMessages: { execute } as unknown as CountMyUnreadMessages,
+    });
+
+    const result = await controller.unreadCount(authReq("seller-1") as never);
+
+    expect(result).toEqual({ count: 4 });
+    expect(execute).toHaveBeenCalledWith({ userId: "seller-1" });
+  });
+
+  it("is not public, so a signed-out request is refused by the auth guard", () => {
+    const handler = ConversationsController.prototype.unreadCount;
+
+    expect(Reflect.getMetadata(IS_PUBLIC_KEY, handler)).toBeUndefined();
+    expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(
+      RequestMethod.GET,
+    );
+  });
+
+  it("is registered before the :id route, so :id never claims it", () => {
+    const proto = ConversationsController.prototype as unknown as Record<
+      string,
+      unknown
+    >;
+    const gets = Object.getOwnPropertyNames(proto).flatMap((name) => {
+      const handler = proto[name];
+      if (typeof handler !== "function") return [];
+      if (Reflect.getMetadata(METHOD_METADATA, handler) !== RequestMethod.GET) {
+        return [];
+      }
+      return [Reflect.getMetadata(PATH_METADATA, handler) as string];
+    });
+
+    expect(gets).toContain("unread-count");
+    expect(gets.indexOf("unread-count")).toBeLessThan(gets.indexOf(":id"));
   });
 });

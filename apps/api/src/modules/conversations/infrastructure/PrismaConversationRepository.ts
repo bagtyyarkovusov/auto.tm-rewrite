@@ -387,6 +387,10 @@ export class PrismaConversationRepository
     });
   }
 
+  async countAllUnreadMessages(_userId: string): Promise<number> {
+    return 0;
+  }
+
   async getMessageReportContext(input: {
     conversationId: string;
     messageId: string;
