@@ -178,7 +178,7 @@ describe("legacy Listing edit", () => {
       expect(fixture.show).not.toHaveBeenCalled();
       expect(routerMock.replace).not.toHaveBeenCalled();
       expect(screen.getByText("✗ reorder")).toBeTruthy();
-      // The failed save's staged photos are the recovery state Retry needs.
+      // The failed save stays retryable in this session, so its staged photos stay too.
       expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
     });
   });

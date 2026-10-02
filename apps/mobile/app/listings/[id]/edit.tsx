@@ -161,9 +161,11 @@ function EditListingSession({ listingId }: { listingId: string }) {
     return listingToPayload(sessionListing);
   }, [sessionListing]);
 
+  // Photos staged by an earlier session cannot be attached by this one.
   const uploadQueue = useUploadQueue(
     sessionListing ? stagingKey : "",
     editPayload,
+    { restoreLocalPhotos: false },
   );
 
   const saveEdit = useSaveListingEdit(

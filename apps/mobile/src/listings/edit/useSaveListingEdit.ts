@@ -201,7 +201,7 @@ function editInputKey(
 }
 
 function buildEditPlan(
-  payload: WizardSchemas.WizardDraftPayload,
+  fieldsPatch: ListingsSchemas.EditListingRequest,
   photos: StagedPhoto[],
   seedMedia: ListingsSchemas.ListingMedia[],
   ledger: MediaLedger,
@@ -240,7 +240,6 @@ function buildEditPlan(
     .filter((p) => hasUploadKey(p) || isServerMedia(p.photoId))
     .map((p) => p.photoId);
 
-  const fieldsPatch = buildFieldsPatch(payload);
   return {
     inputKey: editInputKey(fieldsPatch, photos),
     fieldsPatch,
@@ -413,7 +412,9 @@ export function useSaveListingEdit(
   const save = useCallback(
     () =>
       runExclusive(() =>
-        runFreshPlan(buildEditPlan(payload, photos, seedMedia, currentLedger())),
+        runFreshPlan(
+          buildEditPlan(buildFieldsPatch(payload), photos, seedMedia, currentLedger()),
+        ),
       ),
     [payload, photos, seedMedia, currentLedger, runExclusive, runFreshPlan],
   );
@@ -430,8 +431,9 @@ export function useSaveListingEdit(
         const ledger = currentLedger();
         const plan = planRef.current;
         if (state.status !== "failed" || !plan) return false;
-        if (plan.inputKey !== editInputKey(buildFieldsPatch(payload), photos)) {
-          return runFreshPlan(buildEditPlan(payload, photos, seedMedia, ledger));
+        const fieldsPatch = buildFieldsPatch(payload);
+        if (plan.inputKey !== editInputKey(fieldsPatch, photos)) {
+          return runFreshPlan(buildEditPlan(fieldsPatch, photos, seedMedia, ledger));
         }
         dispatch({ type: "RETRY" });
         await runOps(plan, state.opStates);
