@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fireEvent, renderMobile } from "../../../test/render";
@@ -152,54 +153,169 @@ describe("MessageList older pages", () => {
 });
 
 describe("MessageList Message actions", () => {
-  it("asks to delete an own Message on long press", () => {
-    const onDelete = vi.fn();
-    const onReport = vi.fn();
+  function renderList(messages: MessageItem[], props: Partial<ComponentProps<typeof MessageList>> = {}) {
+    const handlers = { onCopy: vi.fn(), onDelete: vi.fn(), onReport: vi.fn() };
     const screen = renderMobile(
-      <MessageList
-        currentUserId={ME}
-        messages={[message("own-1", at(2, 9), { canDelete: true })]}
-        onDelete={onDelete}
-        onReport={onReport}
-      />,
+      <MessageList currentUserId={ME} messages={messages} {...handlers} {...props} />,
     );
+    return { screen, ...handlers };
+  }
 
-    fireEvent(screen.getByLabelText("own-1, 09:00 AM, Sent"), "longPress");
-    expect(onDelete).toHaveBeenCalledWith("own-1");
+  const longPressText = (screen: ReturnType<typeof renderMobile>, label: string) =>
+    fireEvent(screen.getByLabelText(label), "longPress");
+  const longPressPhoto = (screen: ReturnType<typeof renderMobile>) =>
+    fireEvent(screen.getByRole("imagebutton", { name: "Photo" }), "longPress");
+  const sheetOpen = (screen: ReturnType<typeof renderMobile>) => screen.queryByText("Cancel") !== null;
+
+  it("offers Copy, Report message and Cancel for the other participant's text Message", () => {
+    const { screen } = renderList([message("peer-1", at(2, 9), { senderId: PEER })]);
+
+    expect(sheetOpen(screen)).toBe(false);
+    longPressText(screen, "peer-1, 09:00 AM");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Report message" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it("opens the sheet through the TalkBack long-press accessibility action", () => {
+    const { screen } = renderList([message("peer-1", at(2, 9), { senderId: PEER })]);
+
+    const target = screen.getByLabelText("peer-1, 09:00 AM");
+    expect(target.props.accessibilityActions).toEqual([{ name: "longpress", label: "Message actions" }]);
+    fireEvent(target, "accessibilityAction", { nativeEvent: { actionName: "longpress" } });
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+  });
+
+  it("copies the text, closes the sheet and reports the Message to the screen", () => {
+    const { screen, onCopy } = renderList([message("peer-1", at(2, 9), { senderId: PEER, text: "Call me" })]);
+
+    longPressText(screen, "Call me, 09:00 AM");
+    fireEvent.press(screen.getByRole("button", { name: "Copy" }));
+    expect(onCopy).toHaveBeenCalledWith("Call me");
+    expect(sheetOpen(screen)).toBe(false);
+  });
+
+  it("hands the Message to the report reasons and closes the sheet", () => {
+    const { screen, onReport } = renderList([message("peer-1", at(2, 9), { senderId: PEER })]);
+
+    longPressText(screen, "peer-1, 09:00 AM");
+    fireEvent.press(screen.getByRole("button", { name: "Report message" }));
+    expect(onReport).toHaveBeenCalledWith("peer-1");
+    expect(sheetOpen(screen)).toBe(false);
+  });
+
+  it("closes on Cancel without acting", () => {
+    const { screen, onCopy, onReport } = renderList([message("peer-1", at(2, 9), { senderId: PEER })]);
+
+    longPressText(screen, "peer-1, 09:00 AM");
+    fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+    expect(sheetOpen(screen)).toBe(false);
+    expect(onCopy).not.toHaveBeenCalled();
     expect(onReport).not.toHaveBeenCalled();
   });
 
-  it("asks to report the other participant's Message on long press", () => {
-    const onDelete = vi.fn();
-    const onReport = vi.fn();
-    const screen = renderMobile(
-      <MessageList
-        currentUserId={ME}
-        messages={[message("peer-1", at(2, 9), { senderId: PEER })]}
-        onDelete={onDelete}
-        onReport={onReport}
-      />,
-    );
+  it("hides Report message when reporting is switched off", () => {
+    const { screen } = renderList([message("peer-1", at(2, 9), { senderId: PEER })], { reportEnabled: false });
 
-    fireEvent(screen.getByLabelText("peer-1, 09:00 AM"), "longPress");
-    expect(onReport).toHaveBeenCalledWith("peer-1");
-    expect(onDelete).not.toHaveBeenCalled();
+    longPressText(screen, "peer-1, 09:00 AM");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Report message" })).toBeNull();
   });
 
-  it("does nothing on long press of a Message already reported", () => {
-    const onReport = vi.fn();
-    const screen = renderMobile(
-      <MessageList
-        currentUserId={ME}
-        messages={[message("peer-1", at(2, 9), { senderId: PEER })]}
-        reportedMessageIds={new Set(["peer-1"])}
-        onReport={onReport}
-      />,
-    );
+  it("offers Copy only for a Message already reported, which shows Reported", () => {
+    const { screen } = renderList([message("peer-1", at(2, 9), { senderId: PEER })], {
+      reportedMessageIds: new Set(["peer-1"]),
+    });
 
     expect(screen.getByText("Reported")).toBeTruthy();
-    fireEvent(screen.getByLabelText("peer-1, 09:00 AM, Reported"), "longPress");
-    expect(onReport).not.toHaveBeenCalled();
+    longPressText(screen, "peer-1, 09:00 AM, Reported");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Report message" })).toBeNull();
+  });
+
+  it("offers Copy and Delete for an own Message inside the delete window", () => {
+    const { screen, onDelete } = renderList([message("own-1", at(2, 9), { canDelete: true })]);
+
+    longPressText(screen, "own-1, 09:00 AM, Sent");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Report message" })).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Delete" }));
+    expect(onDelete).toHaveBeenCalledWith("own-1");
+    expect(sheetOpen(screen)).toBe(false);
+  });
+
+  it("offers Copy only for an own Message past the delete window", () => {
+    const { screen } = renderList([message("own-1", at(2, 9), { canDelete: false })]);
+
+    longPressText(screen, "own-1, 09:00 AM, Sent");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it.each([
+    ["deleted", { deletedAt: at(2, 9, 5) }, "Message deleted, 09:00 AM"],
+    ["pending", { status: "pending" as const }, "peer-1, 09:00 AM, Sending…"],
+    ["failed", { status: "failed" as const }, "peer-1, 09:00 AM, Failed to send"],
+  ])("opens no sheet for a %s Message", (_name, updates, label) => {
+    const { screen } = renderList([message("peer-1", at(2, 9), { canDelete: true, ...updates })]);
+
+    longPressText(screen, label);
+    expect(sheetOpen(screen)).toBe(false);
+  });
+
+  it("offers Report message only for the other participant's image Message", () => {
+    const { screen } = renderList([
+      message("img-1", at(2, 9), { senderId: PEER, kind: "image", text: "", localImageUri: "file:///photo.jpg" }),
+    ]);
+
+    longPressPhoto(screen);
+    expect(screen.getByRole("button", { name: "Report message" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
+  });
+
+  it("offers Delete only for an own image Message inside the delete window", () => {
+    const { screen } = renderList([
+      message("img-1", at(2, 9), { kind: "image", text: "", localImageUri: "file:///photo.jpg", canDelete: true }),
+    ]);
+
+    longPressPhoto(screen);
+    expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
+  });
+
+  it("opens no sheet for a reported image Message or an own one past the window", () => {
+    const { screen } = renderList(
+      [message("img-1", at(2, 9), { senderId: PEER, kind: "image", text: "", localImageUri: "file:///photo.jpg" })],
+      { reportedMessageIds: new Set(["img-1"]) },
+    );
+
+    longPressPhoto(screen);
+    expect(sheetOpen(screen)).toBe(false);
+  });
+
+  it("offers Report message only for the other participant's Listing Message", () => {
+    const { screen } = renderList([
+      message("ref-1", at(2, 9), {
+        senderId: PEER,
+        kind: "post_ref",
+        text: "",
+        metadata: {
+          listingId: "00000000-0000-4000-8000-0000000000a1",
+          brandId: "00000000-0000-4000-8000-0000000000d1",
+          modelId: "00000000-0000-4000-8000-0000000000d2",
+          year: 2018,
+          displayPriceTmt: 285000,
+          priceCurrency: "TMT",
+          status: "active",
+          available: true,
+        },
+      }),
+    ]);
+
+    fireEvent(screen.getByRole("button", { name: /^Open/ }), "longPress");
+    expect(screen.getByRole("button", { name: "Report message" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
   });
 
   it("opens the photo of an image Message", () => {
