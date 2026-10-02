@@ -534,5 +534,176 @@ describe("FavoritesController e2e", () => {
       expect(page2.body.items).toHaveLength(1);
       expect(page2.body.nextCursor).toBeNull();
     });
+
+    describe("activeOnly and counts", () => {
+      /** Publishes one Listing per status and Favorites them, oldest first. */
+      async function favoriteListingsWithStatuses(
+        sellerToken: string,
+        buyerToken: string,
+        statuses: Array<"active" | "sold" | "archived" | "banned" | "deleted">,
+      ): Promise<string[]> {
+        const ids: string[] = [];
+        for (const [i, status] of statuses.entries()) {
+          const draft = await seedDraft("seller-1", {
+            ...validPayload,
+            photos: [{ photoId: suite.id(`photo-s${i}`), key: `s${i}.jpg`, sortOrder: 0 }],
+          });
+          const publishRes = await request
+            .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+            .set("Authorization", `Bearer ${sellerToken}`)
+            .send({})
+            .expect(201);
+          const listingId: string = publishRes.body.id;
+          await request
+            .post(`/api/v1/listings/${listingId}/favorite`)
+            .set("Authorization", `Bearer ${buyerToken}`)
+            .send({})
+            .expect(201);
+          // Cross-context fixture: status changes are owned by listing lifecycle and
+          // moderation; short-circuiting via prisma is allowed here (test/helpers/e2eSuite.ts).
+          if (status === "deleted") {
+            await prisma.listing.update({
+              where: { id: listingId },
+              data: { deletedAt: new Date() },
+            });
+          } else if (status !== "active") {
+            await prisma.listing.update({ where: { id: listingId }, data: { status } });
+          }
+          ids.push(listingId);
+        }
+        return ids;
+      }
+
+      it("returns counts and every visible Favorite when activeOnly is not sent", async () => {
+        await seedCatalog();
+        const sellerToken = await createUser("seller-1");
+        const buyerToken = await createUser("buyer-1");
+        const ids = await favoriteListingsWithStatuses(sellerToken, buyerToken, [
+          "active",
+          "sold",
+          "archived",
+          "banned",
+          "deleted",
+        ]);
+
+        const res = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .expect(200);
+        const parsed = ListingsSchemas.MyFavoritesResponseSchema.parse(res.body);
+
+        expect(parsed.items.map((i) => i.id)).toEqual([ids[2], ids[1], ids[0]]);
+        expect(parsed.counts).toEqual({ total: 3, inactive: 2 });
+      });
+
+      it("returns only active Favorites with activeOnly=true and the same counts", async () => {
+        await seedCatalog();
+        const sellerToken = await createUser("seller-1");
+        const buyerToken = await createUser("buyer-1");
+        const ids = await favoriteListingsWithStatuses(sellerToken, buyerToken, [
+          "active",
+          "sold",
+          "archived",
+          "active",
+        ]);
+
+        const res = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ activeOnly: "true" })
+          .expect(200);
+        const parsed = ListingsSchemas.MyFavoritesResponseSchema.parse(res.body);
+
+        expect(parsed.items.map((i) => i.id)).toEqual([ids[3], ids[0]]);
+        expect(parsed.items.every((i) => i.status === "active")).toBe(true);
+        expect(parsed.counts).toEqual({ total: 4, inactive: 2 });
+      });
+
+      it("fills the first activeOnly page when newer Favorites are sold", async () => {
+        await seedCatalog();
+        const sellerToken = await createUser("seller-1");
+        const buyerToken = await createUser("buyer-1");
+        const ids = await favoriteListingsWithStatuses(sellerToken, buyerToken, [
+          "active",
+          "active",
+          "sold",
+          "sold",
+          "sold",
+        ]);
+
+        const page1 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ activeOnly: "true", limit: 1 })
+          .expect(200);
+
+        expect(page1.body.items.map((i: { id: string }) => i.id)).toEqual([ids[1]]);
+        expect(page1.body.nextCursor).not.toBeNull();
+        expect(page1.body.counts).toEqual({ total: 5, inactive: 3 });
+
+        const page2 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ activeOnly: "true", limit: 1, cursor: page1.body.nextCursor })
+          .expect(200);
+
+        expect(page2.body.items.map((i: { id: string }) => i.id)).toEqual([ids[0]]);
+        expect(page2.body.nextCursor).toBeNull();
+        expect(page2.body.counts).toEqual({ total: 5, inactive: 3 });
+      });
+
+      it("pages over visible Listings when newer Favorites are banned or deleted", async () => {
+        await seedCatalog();
+        const sellerToken = await createUser("seller-1");
+        const buyerToken = await createUser("buyer-1");
+        const ids = await favoriteListingsWithStatuses(sellerToken, buyerToken, [
+          "active",
+          "sold",
+          "active",
+          "banned",
+          "deleted",
+        ]);
+
+        const page1 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ limit: 2 })
+          .expect(200);
+
+        expect(page1.body.items.map((i: { id: string }) => i.id)).toEqual([ids[2], ids[1]]);
+        expect(page1.body.nextCursor).not.toBeNull();
+
+        const page2 = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ limit: 2, cursor: page1.body.nextCursor })
+          .expect(200);
+
+        expect(page2.body.items.map((i: { id: string }) => i.id)).toEqual([ids[0]]);
+        expect(page2.body.nextCursor).toBeNull();
+      });
+
+      it("returns zero counts when the User has no Favorites", async () => {
+        const buyerToken = await createUser("buyer-1");
+
+        const res = await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .expect(200);
+
+        expect(res.body.items).toEqual([]);
+        expect(res.body.counts).toEqual({ total: 0, inactive: 0 });
+      });
+
+      it("rejects an activeOnly value other than true or false", async () => {
+        const buyerToken = await createUser("buyer-1");
+
+        await request
+          .get("/api/v1/favorites")
+          .set("Authorization", `Bearer ${buyerToken}`)
+          .query({ activeOnly: "yes" })
+          .expect(400);
+      });
+    });
   });
 });
