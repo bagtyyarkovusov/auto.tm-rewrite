@@ -51,9 +51,10 @@ export const queryKeys = {
     myDrafts: () => [...queryKeys.listings.all(), "my-drafts"] as const,
     myDraftsInfinite: () =>
       [...queryKeys.listings.all(), "my-drafts-infinite"] as const,
+    myCountsAll: () => [...queryKeys.listings.all(), "my-counts"] as const,
     /** Per User, so a cached total never shows after another User signs in. */
     myCounts: (userId: string | null) =>
-      [...queryKeys.listings.all(), "my-counts", userId] as const,
+      [...queryKeys.listings.myCountsAll(), userId] as const,
     /** Shared by every owner lifecycle mutation so pending state spans screens. */
     lifecycleMutation: () => ["listing-lifecycle"] as const,
   },

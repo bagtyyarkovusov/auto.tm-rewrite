@@ -1,4 +1,4 @@
-import { FileText, List, ScrollText, ShieldCheck, User } from "lucide-react-native";
+import { FileText, ScrollText, ShieldCheck, User } from "lucide-react-native";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { ScrollView, View } from "react-native";
@@ -14,6 +14,7 @@ import { legalPageUrl } from "../../src/config/publicWebUrl";
 
 import { LanguageRow } from "@/components/account/LanguageRow";
 import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import { MyListingsRow } from "@/components/account/MyListingsRow";
 import { ThemeRow } from "@/components/account/ThemeRow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -155,12 +156,7 @@ export default function CabinetScreen() {
         {isAuthenticated ? (
           <>
             <MenuGap />
-            <MenuRow
-              icon={List}
-              label={t("account:myListings")}
-              chevron
-              onPress={() => router.push("/listings/manage")}
-            />
+            <MyListingsRow />
           </>
         ) : null}
 
