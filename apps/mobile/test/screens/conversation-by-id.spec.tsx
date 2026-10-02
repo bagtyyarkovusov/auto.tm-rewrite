@@ -7,6 +7,8 @@ import type { ConversationsSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 import ConversationDetailScreen from "../../app/conversations/[id]";
 import { seedConversationDetail } from "../../src/api/conversations/useConversation";
+import { ApiError } from "../../src/api/client";
+import { useAuthIntentStore } from "../../src/auth/intentStore";
 import type * as ClientModule from "../../src/api/client";
 
 const CONVERSATION_ID = "00000000-0000-4000-8000-0000000000c1";
@@ -28,7 +30,9 @@ const state = vi.hoisted(() => ({
   mutation: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false },
 }));
 
-vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: state.viewerId }) }));
+vi.mock("../../src/auth/useViewer", () => ({
+  useViewer: () => (state.viewerId ? { userId: state.viewerId } : null),
+}));
 vi.mock("../../src/api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
   apiClient: { get: state.get, post: vi.fn(), delete: vi.fn() },
@@ -142,6 +146,7 @@ beforeEach(() => {
   state.messages.refetch.mockReset();
   vi.mocked(Linking.openURL).mockClear();
   routeParams.id = CONVERSATION_ID;
+  useAuthIntentStore.setState({ intent: null, replayAction: null, replayReturnTo: null });
 });
 
 describe("Conversation opened with only its ID", () => {
@@ -300,5 +305,100 @@ describe("Conversation header Call", () => {
     expect(screen.getByText("Listing unavailable")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Open:/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Call the seller" })).toBeNull();
+  });
+});
+
+describe("Conversation while signed out", () => {
+  const conversationHref = { pathname: "/conversations/[id]", params: { id: CONVERSATION_ID } };
+
+  beforeEach(() => {
+    state.viewerId = "";
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () => conversation(),
+      [`/listings/${LISTING_ID}`]: () => listingDetail(),
+    });
+  });
+
+  it("asks to sign in and reads nothing", async () => {
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(screen.getByText("Sign in to view messages")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Go back" })).toBeTruthy();
+    await act(async () => {});
+    expect(state.get).not.toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
+    expect(screen.queryByText("Merdan")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("signs in and returns to the same Conversation, which then loads", async () => {
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    expect(routerMock.push).toHaveBeenCalledWith({
+      pathname: "/(auth)/phone",
+      params: { authRoot: "1" },
+    });
+    expect(useAuthIntentStore.getState().intent).toEqual({ returnTo: conversationHref });
+
+    useAuthIntentStore.getState().completeSignIn(routerMock);
+    expect(routerMock.dismissTo).toHaveBeenCalledWith(conversationHref);
+
+    state.viewerId = BUYER_ID;
+    screen.rerender(<ConversationDetailScreen />);
+    expect(await screen.findByText("Merdan")).toBeTruthy();
+    expect(screen.queryByText("Sign in to view messages")).toBeNull();
+  });
+
+  it("returns to the signed-out state when sign-in is cancelled", () => {
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    useAuthIntentStore.getState().cancelSignIn(routerMock);
+
+    expect(routerMock.dismissTo).toHaveBeenCalledWith(conversationHref);
+    expect(screen.getByText("Sign in to view messages")).toBeTruthy();
+  });
+});
+
+describe("Conversation not available", () => {
+  it.each([
+    ["does not exist", new ApiError("NOT_FOUND", 404, "Conversation not found")],
+    ["is not the User's", new ApiError("FORBIDDEN", 403, "Not a participant", { reason: "NOT_A_PARTICIPANT" })],
+  ])("shows Conversation not found when it %s", async (_case, error) => {
+    state.get.mockRejectedValue(error);
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Conversation not found")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Retry|Try again/ })).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Go to Messages" }));
+    expect(routerMock.dismissTo).toHaveBeenCalledWith("/(tabs)/chat");
+  });
+
+  it("shows nothing from a cached Conversation the API no longer returns", async () => {
+    state.get.mockRejectedValue(new ApiError("NOT_FOUND", 404, "Conversation not found"));
+    const { sendRestriction: _restriction, ...summary } = conversation();
+    function Seeded({ children }: PropsWithChildren) {
+      const queryClient = useQueryClient();
+      useState(() => seedConversationDetail(queryClient, summary));
+      return children;
+    }
+    const screen = renderMobile(<Seeded><ConversationDetailScreen /></Seeded>);
+
+    expect(await screen.findByText("Conversation not found")).toBeTruthy();
+    expect(screen.queryByText("Merdan")).toBeNull();
+    expect(screen.queryByText("2018 Toyota Camry")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Conversation actions" })).toBeNull();
+  });
+
+  it("shows Conversation not found when the Messages read is refused", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    state.messages.isError = true;
+    state.messages.error = new ApiError("FORBIDDEN", 403, "Not a participant");
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Conversation not found")).toBeTruthy();
+    expect(screen.queryByText("Merdan")).toBeNull();
   });
 });
