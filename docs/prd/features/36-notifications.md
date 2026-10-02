@@ -25,7 +25,11 @@ A marketplace chat without push notifications is dead — by the time Maral chec
 
 ### Preferences screen
 
-- `Profile → Notifications`
+**Release screen.** `Cabinet → Notifications`, for signed-in Users ([20 — Information architecture](../20-information-architecture.md#tab-5--cabinet-menu)). It shows whether message notifications are on for this device and opens the system settings. It has no category switches.
+
+**After the release.** The target design below returns once per-category preferences ship:
+
+- `Cabinet → Notifications`
 - Toggle per category
 - For Direct messages: explainer "Mute per conversation in chat header"
 - For Saved searches: tap to manage individual searches' notify settings

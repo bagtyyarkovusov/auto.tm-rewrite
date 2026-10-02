@@ -47,12 +47,18 @@ Per [ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md):
 
 ### Profile screens
 
-- View own profile: avatar, name, phone and/or email (masked), tenure, listings count
-- Edit profile: name, avatar upload, language preference, theme preference (system / light / dark)
-- View other user: avatar, name, tenure, public listings
-- Block user from a chat → recorded in `BlockedUser` table
+Cabinet is a menu, and Profile is one screen below it ([20 — Information architecture](../20-information-architecture.md#tab-5--cabinet-menu)). There is no Settings screen.
 
-Post-MLP profile additions: notification preferences, public Garage entries, blog posts, richer trust stats.
+- **Cabinet** holds the profile row that opens Profile, plus Language and Theme (system / light / dark, as bottom-sheet pickers). Language and theme are not edited on Profile.
+- **Profile (own)** shows the avatar, the display name, and the two Sign-in Methods (a masked value, or Add). It also holds **Log out** and **Delete account** at the bottom.
+- **Display name and profile photo.** Every User gets a randomly assigned display name, and the User can edit it on Profile. The User can set a profile photo; until then the User shows a car-themed avatar from a small library that AutoTM assigns. Profile shows and edits both, including a saving state. Their screens (name format, editor, photo picker and upload, avatar library) follow the #353 profile identity update, which is still being prototyped; this PRD does not design them.
+- **Sign-in Methods** are added or changed on Profile. Changing one asks for confirmation in a sheet first, because the old value stops working. A value already used by another User is refused, and Users are never merged ([ADR-0054](../../adr/0054-phone-or-email-sign-in-share-one-user.md)).
+- **Log out** lands on Cabinet, signed out.
+- The release Profile has no tenure ("member since") and no Listings count. The My listings row on Cabinet carries the total.
+- **View other user:** avatar, name, tenure, public listings
+- **Block user** from a Conversation is recorded in the `BlockedUser` table.
+
+Post-MLP profile additions: public Garage entries, blog posts, richer trust stats, and per-category notification preferences ([36 — Notifications](36-notifications.md#preferences-screen)).
 
 ### Dealership (post-MLP bet)
 
@@ -65,10 +71,10 @@ Post-MLP profile additions: notification preferences, public Garage entries, blo
 
 Apple App Store policy requires every app with account creation to offer in-app account deletion. This is non-negotiable.
 
-- Profile → Settings → "Delete my account" (with a warning screen)
-- Confirmation step: re-enter the phone number or email on the account to confirm
-- Soft-delete: `User.deletedAt` set; all listings → `archived`; conversations → closed system message; refresh tokens revoked
-- 30-day grace period: user can recover by signing back in with either Sign-in Method (clears `deletedAt`)
+- Cabinet → Profile → Delete account. The screen states the 30-day grace period instead of "This can't be undone": what happens to the User, Listings and Conversations, then an "I understand" tick, a confirmation dialog, and a scheduled screen. Deleting from the app uses the signed-in session and asks for no code and no re-entered phone or email.
+- Finishing deletion signs the User out everywhere and lands on Cabinet, signed out.
+- Soft-delete: `User.deletionScheduledAt` set; all listings → `archived`; conversations → closed system message; refresh tokens revoked
+- 30-day grace period: signing back in with either Sign-in Method asks whether to restore the User. Only confirming the restore prompt clears `deletionScheduledAt` and republishes the Listings that the deletion archived, to their pre-deletion active state; Listings the User had archived earlier stay archived ([ADR-0032](../../adr/0032-account-deletion-grace-period.md)). Cancelling leaves the deletion pending and the User signed out. An unrelated sign-in gets no prompt and does not touch the deleted User.
 - After 30 days: hard-delete personally identifiable data, including nulling `phone`, `email` and both verified-at times; preserve listings, messages, moderation reports, and audit rows as "Deleted user" / historical attribution for audit trail
 - API endpoint: `DELETE /api/v1/me`
 - Web deletion page (Google Play requirement): the person enters a phone or email, confirms a code sent to it, and the same 30-day grace period starts. Backed by public `POST /api/v1/account-deletion/request` and `/confirm`, and served at `https://auto.tm/<locale>/account/delete` (linked from the privacy policy). The page's wording is the same whether or not a User holds the value.
@@ -89,8 +95,17 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 | OTP entry | Expired | "Code expired. Request a new one." |
 | OTP entry | Dev test mode | Non-production only: show "Dev code: 123456" if API returns `testCode` |
 | OTP entry | Locked | Inline countdown / request-new-code state; no separate error route |
+| OTP entry | Daily limit | The person has used up the day's codes and cannot reach Cabinet → Help. The code screen shows a Contact support link that opens Help (email and phone). This is the only support link on the code screen (founder decision, [#353](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5947334041), answer 1). |
 | Sell contact step | Email-only or different phone | Verify the Listing contact phone in the Sell wizard; no account phone is required |
-| Profile (own) | New user | Prompt to add avatar + name |
+| Profile (own) | Loading | Profile is being fetched |
+| Profile (own) | Error | Profile failed to load; Retry |
+| Profile (own) | Phone only | Masked phone, Add email |
+| Profile (own) | Email only | Masked email, Add phone |
+| Profile (own) | Both | Masked phone and masked email |
+| Profile (own) | Confirm sheet | Changing a Sign-in Method asks for confirmation first, because the old value stops working |
+| Profile (own) | Value refused | The value is already used by another User; Users are never merged |
+| Profile (own) | New user | Randomly assigned display name and a car-themed library avatar, each editable (design follows the #353 profile identity update) |
+| Profile (own) | Saving | Display name or photo save in progress (design follows the #353 profile identity update) |
 | Profile (own) | Suspended | Banner: "Your account is suspended. Contact support." Auth/session/account-deletion still work; marketplace mutations are blocked. |
 | Profile (other) | Default | Show public info only |
 | Profile (other) | Blocked | "You blocked this user. Unblock?" |
@@ -146,7 +161,7 @@ MLP beta decision: keep the 30-day grace period. The S2 hard-delete endpoint is 
 - Biometric (Face ID / Touch ID) — could add in Phase 1.5 as a session-unlock convenience
 - Device management UI for revoking a specific other device — multi-device sessions are allowed per ADR-0012
 - Magic links, merging Users, and removing a Sign-in Method
-- OTP "Having trouble?" support/help link — revisit after real delivery data; S2 keeps the flow minimal
+- An OTP "Having trouble?" support/help link on every code screen — revisit after real delivery data; S2 keeps the flow minimal. The one exception is the Contact support link at the daily limit (see the OTP entry "Daily limit" state).
 - Printable backup-code PDF / download, backup-code regeneration UI, and self-service admin recovery
 - Admin deprovision, role hierarchy, read-only support accounts, and emergency admin lockout UI
 

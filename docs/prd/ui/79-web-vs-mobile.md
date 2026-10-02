@@ -39,7 +39,8 @@
 | Blog post view | ✓ | ✓ (OG, anonymous) | ✓ |
 | Blog post create | ✓ | ✗ | ✗ |
 | User profile | ✓ | ✗ | ✓ (admin view) |
-| Settings | ✓ | ✗ | ✓ |
+| Cabinet menu (language, theme, Notifications, Help, About; no Settings screen) | ✓ | ✗ | ✗ |
+| Admin settings (own profile, TOTP re-enroll; post-MLP) | ✗ | ✗ | ✓ |
 | Notifications | ✓ | ✗ | ✓ (send broadcast) |
 | Login | ✓ (OTP) | ✗ | ✓ (OTP + TOTP) |
 | Admin moderation | ✗ | ✗ | ✓ |
