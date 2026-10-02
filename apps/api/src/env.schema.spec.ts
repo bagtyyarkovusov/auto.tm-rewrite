@@ -330,6 +330,41 @@ describe("EnvSchema deployed-environment endpoint rules", () => {
   });
 });
 
+describe("EnvSchema client IP trust", () => {
+  it("trusts X-Real-IP with one hop by default", () => {
+    const env = EnvSchema.parse(baseEnv);
+
+    expect(env.CLIENT_IP_HEADER).toBe("x-real-ip");
+    expect(env.CLIENT_IP_TRUSTED_HOPS).toBe(1);
+  });
+
+  it("normalizes a configured header and hop count", () => {
+    const env = EnvSchema.parse({
+      ...baseEnv,
+      CLIENT_IP_HEADER: " X-Forwarded-For ",
+      CLIENT_IP_TRUSTED_HOPS: "2",
+    });
+
+    expect(env.CLIENT_IP_HEADER).toBe("x-forwarded-for");
+    expect(env.CLIENT_IP_TRUSTED_HOPS).toBe(2);
+  });
+
+  it("accepts none to trust no header", () => {
+    expect(EnvSchema.parse({ ...baseEnv, CLIENT_IP_HEADER: "none" }).CLIENT_IP_HEADER).toBe(
+      "none",
+    );
+  });
+
+  it("rejects a header that is not an HTTP header name and a bad hop count", () => {
+    expect(() => EnvSchema.parse({ ...baseEnv, CLIENT_IP_HEADER: "x real ip" })).toThrow(
+      /CLIENT_IP_HEADER/,
+    );
+    expect(() => EnvSchema.parse({ ...baseEnv, CLIENT_IP_TRUSTED_HOPS: "0" })).toThrow(
+      /CLIENT_IP_TRUSTED_HOPS/,
+    );
+  });
+});
+
 describe("EnvSchema deploy metadata", () => {
   it("defaults APP_ENV to development and AUTOTM_COMMIT_SHA to unknown", () => {
     const env = EnvSchema.parse(baseEnv);

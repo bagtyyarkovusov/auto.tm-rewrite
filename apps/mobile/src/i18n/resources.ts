@@ -651,6 +651,10 @@ export const resources: Resource = {
       lastSeenYesterday: "был(а) вчера",
       lastSeenDate: "был(а) {{date}}",
       attachImage: "Прикрепить фото",
+      peerBuyer: "Покупатель",
+      callSeller: "Позвонить продавцу",
+      conversationMenu: "Действия с перепиской",
+      listingUnavailable: "Объявление недоступно",
     },
     onboarding: {
       chooseLanguage: "Выберите язык",
@@ -1292,6 +1296,10 @@ export const resources: Resource = {
       lastSeenYesterday: "düýn",
       lastSeenDate: "{{date}}",
       attachImage: "Surat goş",
+      peerBuyer: "Alyjy",
+      callSeller: "Satyja jaň et",
+      conversationMenu: "Ýazyşyk boýunça hereketler",
+      listingUnavailable: "Bildiriş elýeterli däl",
     },
     onboarding: {
       chooseLanguage: "Dil saýlaň",
@@ -1931,6 +1939,10 @@ export const resources: Resource = {
       lastSeenYesterday: "last seen yesterday",
       lastSeenDate: "last seen {{date}}",
       attachImage: "Attach photo",
+      peerBuyer: "Buyer",
+      callSeller: "Call the seller",
+      conversationMenu: "Conversation actions",
+      listingUnavailable: "Listing unavailable",
     },
     onboarding: {
       chooseLanguage: "Choose language",

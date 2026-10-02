@@ -5,7 +5,19 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+import { act, renderMobile, routeParams, routerMock } from "../render";
+import OpenListingRoute from "../../app/conversations/open-listing";
+import { queryKeys } from "../../src/api/queryKeys";
+import type * as ClientModule from "../../src/api/client";
+
+const post = vi.hoisted(() => vi.fn());
+vi.mock("../../src/api/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof ClientModule>()),
+  apiClient: { post, get: vi.fn(), delete: vi.fn() },
+}));
+vi.mock("../../src/navigation/useSafeBack", () => ({ useSafeBack: () => vi.fn() }));
 
 const source = readFileSync(
   resolve(__dirname, "../../app/conversations/open-listing.tsx"),
@@ -37,13 +49,6 @@ describe("OpenListingConversationScreen", () => {
     expect(source).toContain("/conversations/");
   });
 
-  it("passes listing card params to conversation detail", () => {
-    expect(source).toContain("listingId:");
-    expect(source).toContain("brandId:");
-    expect(source).toContain("modelId:");
-    expect(source).toContain("displayPriceTmt:");
-  });
-
   it("shows loading state while opening", () => {
     expect(source).toContain("ActivityIndicator");
     expect(source).toContain('t("openingConversation")');
@@ -53,5 +58,32 @@ describe("OpenListingConversationScreen", () => {
     expect(source).toContain("isError");
     expect(source).toContain("<ErrorState");
     expect(source).toContain("error={error}");
+  });
+});
+
+describe("OpenListingConversationScreen behaviour", () => {
+  it("replaces itself with the Conversation by ID and seeds the by-ID cache", async () => {
+    const summary = {
+      id: "00000000-0000-4000-8000-0000000000c1",
+      listing: null,
+      buyerId: "00000000-0000-4000-8000-0000000000b1",
+      sellerId: "00000000-0000-4000-8000-0000000000b2",
+      myRole: "buyer",
+      peer: { id: "00000000-0000-4000-8000-0000000000b2", displayName: null },
+      blockedByMe: false,
+      updatedAt: "2026-10-01T10:00:00.000Z",
+      unreadCount: 0,
+    };
+    post.mockResolvedValue(summary);
+    routeParams.listingId = "00000000-0000-4000-8000-0000000000a1";
+
+    const screen = renderMobile(<OpenListingRoute />);
+    await act(async () => {});
+
+    expect(routerMock.replace).toHaveBeenCalledWith({
+      pathname: "/conversations/[id]",
+      params: { id: summary.id },
+    });
+    expect(screen.queryClient.getQueryData(queryKeys.conversations.detail(summary.id))).toEqual(summary);
   });
 });

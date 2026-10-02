@@ -4,10 +4,8 @@ import type { DeletionApiContext } from "./account-deletion";
 import {
   apiUrl,
   confirmAccountDeletion,
-  firstForwardedIp,
   normalizePhoneInput,
   requestAccountDeletion,
-  visitorIp,
 } from "./account-deletion";
 
 const BASE_URL = "https://api.test/api/v1";
@@ -76,31 +74,6 @@ describe("apiUrl", () => {
   });
 });
 
-describe("firstForwardedIp", () => {
-  it("takes the first X-Forwarded-For entry, like the API", () => {
-    expect(firstForwardedIp("203.0.113.7, 10.0.0.1")).toBe("203.0.113.7");
-    expect(firstForwardedIp(null)).toBeNull();
-    expect(firstForwardedIp("  ")).toBeNull();
-  });
-});
-
-describe("visitorIp", () => {
-  const from = (values: Record<string, string>) => ({
-    get: (name: string) => values[name] ?? null,
-  });
-
-  it("prefers X-Real-IP, which the Railway edge sets, over a visitor-supplied X-Forwarded-For", () => {
-    expect(visitorIp(from({ "x-real-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1" }))).toBe(
-      "203.0.113.7",
-    );
-  });
-
-  it("falls back to the first X-Forwarded-For entry, then to nothing", () => {
-    expect(visitorIp(from({ "x-forwarded-for": "198.51.100.1, 10.0.0.1" }))).toBe("198.51.100.1");
-    expect(visitorIp(from({}))).toBeNull();
-  });
-});
-
 describe("requestAccountDeletion", () => {
   it("posts the normalized phone with the visitor's IP and locale", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(codeSent());
@@ -114,8 +87,9 @@ describe("requestAccountDeletion", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ phone: "+99361234567" });
     expect(init?.headers).toMatchObject({
       "Accept-Language": "tk",
-      "X-Forwarded-For": "203.0.113.7",
+      "x-real-ip": "203.0.113.7",
     });
+    expect(init?.headers).not.toHaveProperty("X-Forwarded-For");
   });
 
   it("posts a trimmed, lowercased email", async () => {
@@ -129,12 +103,25 @@ describe("requestAccountDeletion", () => {
     });
   });
 
-  it("omits X-Forwarded-For when the visitor's IP is unknown", async () => {
+  it("forwards the address in the header the API is configured to trust", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(codeSent());
+
+    await requestAccountDeletion(
+      "phone",
+      "61234567",
+      { ...context(fetchMock), clientIpHeader: "x-client-ip" },
+    );
+
+    expect(firstCall(fetchMock)[1]?.headers).toMatchObject({ "x-client-ip": "203.0.113.7" });
+    expect(firstCall(fetchMock)[1]?.headers).not.toHaveProperty("x-real-ip");
+  });
+
+  it("omits X-Real-IP when the visitor's IP is unknown", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(codeSent());
 
     await requestAccountDeletion("phone", "61234567", context(fetchMock, { clientIp: null }));
 
-    expect(firstCall(fetchMock)[1]?.headers).not.toHaveProperty("X-Forwarded-For");
+    expect(firstCall(fetchMock)[1]?.headers).not.toHaveProperty("x-real-ip");
   });
 
   it("never exposes a test code from the response", async () => {
