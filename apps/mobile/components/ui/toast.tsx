@@ -1,6 +1,6 @@
 import { Portal } from '@rn-primitives/portal';
 import * as React from 'react';
-import { AccessibilityInfo, Platform, Pressable, View } from 'react-native';
+import { AccessibilityInfo, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, FadeOutDown, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -111,10 +111,13 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     return () => clearTimeout(timer);
   }, [duration]);
 
-  // Android reads the live region; iOS needs an explicit announcement.
+  // Announced on both platforms: iOS has no live regions, and Android may not
+  // read one that has just been mounted. Naming the action tells a screen-reader
+  // user that Undo is there.
+  const announcement = toast.action ? `${toast.title}. ${toast.action.label}` : toast.title;
   React.useEffect(() => {
-    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(toast.title);
-  }, [toast.title]);
+    AccessibilityInfo.announceForAccessibility(announcement);
+  }, [announcement]);
 
   const fromBottom = toast.placement === 'aboveTabBar';
 

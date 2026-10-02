@@ -42,7 +42,8 @@ describe("Toast", () => {
       expect(ancestor.props.accessible).not.toBe(true);
       ancestor = ancestor.parent;
     }
-    expect(announcements).toContain("Removed from Favorites");
+    // The announcement names the action, so a screen-reader user knows Undo is there.
+    expect(announcements).toEqual(["Removed from Favorites. Undo"]);
   });
 
   it("sits above the tab bar when asked, and at the top otherwise", () => {

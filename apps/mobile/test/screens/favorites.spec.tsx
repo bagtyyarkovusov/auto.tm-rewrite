@@ -14,7 +14,7 @@ type Favorite = ListingsSchemas.FavoriteListingSummary;
 type Response = ListingsSchemas.MyFavoritesResponse;
 
 const api = vi.hoisted(() => ({ get: vi.fn(), delete: vi.fn() }));
-const state = vi.hoisted(() => ({ auth: true as boolean | null }));
+const state = vi.hoisted(() => ({ auth: true as boolean | null, viewer: { userId: "me" } as { userId: string } | null | undefined }));
 vi.mock("../../src/api/client", () => ({
   apiClient: { get: api.get, delete: api.delete, post: vi.fn() },
   ApiError: class ApiError extends Error { constructor(public code: string, public status: number) { super(code); } },
@@ -24,7 +24,7 @@ vi.mock("react-native-safe-area-context", async () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.auth, phone: "" }) }));
-vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: "me" }) }));
+vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => state.viewer }));
 vi.mock("../../src/conversations/useOpenListingConversation", () => ({
   useOpenListingConversation: () => ({ open: vi.fn(), retry: vi.fn(), isPending: false, error: null }),
 }));
@@ -94,6 +94,7 @@ const lastUrl = () => api.get.mock.calls.at(-1)?.[0] as string;
 
 beforeEach(() => {
   state.auth = true;
+  state.viewer = { userId: "me" };
   useHideSoldStore.setState({ hideSold: true });
   useAuthIntentStore.setState({ intent: null, replayAction: null, replayReturnTo: null });
   server = {
@@ -134,7 +135,28 @@ describe("Favorites screen", () => {
     expect(view.getAllByRole("button", { name: "Message" })).toHaveLength(1);
   });
 
-  it("keeps the switch and the count while the other position loads, and after it fails", async () => {
+  it("shows no contact buttons until the signed-in User is known", async () => {
+    state.viewer = undefined;
+    const view = await renderFavorites();
+    expect(view.queryByRole("button", { name: "Call" })).toBeNull();
+    expect(view.queryByRole("button", { name: "Message" })).toBeNull();
+  });
+
+  it("does not show the pull-to-refresh spinner when a confirmed removal reloads the list", async () => {
+    const view = await renderFavorites();
+    let release: () => void = () => {};
+    api.get.mockImplementation((url: string) => new Promise((resolve) => { release = () => resolve(serve(url)); }));
+    fireEvent.press(heart(view, 0));
+    const effect = vi.mocked(useFocusEffect).mock.calls.at(-1)?.[0];
+    const blur = effect?.();
+    act(() => { if (typeof blur === "function") blur(); });
+    await settle();
+    expect(api.get).toHaveBeenCalled();
+    expect(view.getByTestId("favorites-list").props.refreshControl.props.refreshing).toBe(false);
+    await act(async () => { release(); });
+  });
+
+  it("keeps the switch and the count while the other position loads", async () => {
     const view = await renderFavorites();
     api.get.mockImplementation(() => new Promise(() => {}));
     fireEvent.press(view.getByRole("switch", { name: "Hide sold" }));
@@ -289,6 +311,7 @@ describe("Favorites screen", () => {
     act(() => { if (typeof blur === "function") blur(); });
     await settle();
     expect(api.delete).toHaveBeenCalledWith("/listings/camry-1/favorite", expect.any(Object));
+    expect(view.queryByText("Removed from Favorites")).toBeNull();
   });
 
   it("brings the card back and shows an error toast when the delete fails", async () => {

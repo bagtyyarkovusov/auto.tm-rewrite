@@ -1,4 +1,4 @@
-import { useCallback, useRef, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -86,6 +86,13 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
   const transmissionName = (id?: string) => transmissions.data?.items.find((item) => item.id === id)?.name;
   const engineTypeName = (id?: string) => engineTypes.data?.items.find((item) => item.id === id)?.name;
 
+  // The spinner answers a pull only, not the reload after a confirmed removal.
+  const [pulling, setPulling] = useState(false);
+  const refresh = () => {
+    setPulling(true);
+    void query.refetch().finally(() => setPulling(false));
+  };
+
   // Kept through loading and errors after a switch, so the User can switch back.
   const toggle = showSwitch ? (
     <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
@@ -148,10 +155,7 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
         ) : null
       }
       refreshControl={
-        <RefreshControl
-          refreshing={query.isRefetching && !query.isFetchingNextPage}
-          onRefresh={() => query.refetch()}
-        />
+        <RefreshControl refreshing={pulling} onRefresh={refresh} />
       }
       onEndReached={() => {
         if (query.hasNextPage && !query.isFetchingNextPage) {
