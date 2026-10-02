@@ -25,13 +25,15 @@ describe.each(profiles)("%s public web links", (profile, baseUrl) => {
     expect(eas.build[profile].env.EXPO_PUBLIC_WEB_URL).toBe(baseUrl);
   });
 
-  it.each(["en", "ru", "tk"])("opens localized privacy and terms from settings and sign-in in %s", (locale) => {
+  it.each(["en", "ru", "tk"])("opens localized privacy, terms and posting rules from settings and sign-in in %s", (locale) => {
     vi.stubEnv("EXPO_PUBLIC_WEB_URL", baseUrl);
     const settings = renderMobile(<SettingsScreen />, { locale });
     fireEvent.press(settings.getByRole("button", { name: settings.i18n.t("account:privacyPolicy") }));
     expect(Linking.openURL).toHaveBeenLastCalledWith(`${baseUrl}/${locale}/legal/privacy`);
     fireEvent.press(settings.getByRole("button", { name: settings.i18n.t("account:termsOfService") }));
     expect(Linking.openURL).toHaveBeenLastCalledWith(`${baseUrl}/${locale}/legal/terms`);
+    fireEvent.press(settings.getByRole("button", { name: settings.i18n.t("account:postingRules") }));
+    expect(Linking.openURL).toHaveBeenLastCalledWith(`${baseUrl}/${locale}/legal/posting-rules`);
     fireEvent.press(settings.getByRole("button", { name: settings.i18n.t("account:deleteAccount") }));
     expect(routerMock.push).toHaveBeenCalledWith("/account/delete");
     settings.unmount();
