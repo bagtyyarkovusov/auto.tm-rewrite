@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
 import { toCardPhotos, type CardPhotos } from "../domain/CardPhotos";
+import { VISIBLE_LISTING_STATUSES } from "../domain/ListingStatus";
 import type {
   Currency,
   TimestampCursor,
@@ -31,8 +32,6 @@ const CARD_INCLUDE = {
     select: { key: true, kind: true },
   },
 };
-
-const VISIBLE_STATUSES = ["active", "sold", "archived"] as const;
 
 type CardRow = {
   id: string;
@@ -73,7 +72,7 @@ export class PrismaListingsReadRepository
 
     if (!row) return null;
     if (row.deletedAt) return null;
-    if (row.status !== "active" && row.status !== "sold" && row.status !== "archived") {
+    if (!(VISIBLE_LISTING_STATUSES as readonly string[]).includes(row.status)) {
       return null;
     }
 
@@ -113,7 +112,7 @@ export class PrismaListingsReadRepository
       where: {
         id: { in: ids },
         deletedAt: null,
-        status: { in: [...VISIBLE_STATUSES] },
+        status: { in: [...VISIBLE_LISTING_STATUSES] },
       },
       include: CARD_INCLUDE,
     });
