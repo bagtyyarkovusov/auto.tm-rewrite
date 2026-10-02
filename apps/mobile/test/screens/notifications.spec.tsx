@@ -1,4 +1,5 @@
 import { useFocusEffect } from "expo-router";
+import type { EffectCallback } from "react";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
@@ -42,12 +43,17 @@ async function renderScreen(locale = "en") {
   return view;
 }
 
+// The latest focus callback, so a spec can focus the screen again.
+const focus = vi.hoisted(() => ({ callback: null as null | (() => void) }));
+
 beforeEach(() => {
   appState.listeners.clear();
+  focus.callback = null;
   vi.mocked(Notifications.requestPermissionsAsync).mockClear();
   vi.mocked(Linking.openSettings).mockClear();
   // Run the focus callback as a mount effect, as the screen gaining focus.
-  vi.mocked(useFocusEffect).mockImplementation((callback) => {
+  vi.mocked(useFocusEffect).mockImplementation((callback: EffectCallback) => {
+    focus.callback = callback;
     useEffect(() => callback(), [callback]);
   });
 });
@@ -80,6 +86,43 @@ describe("Notifications screen", () => {
     expect(view.getByLabelText("Message notifications, On")).toBeTruthy();
   });
 
+  it("re-reads the permission when the screen is focused again", async () => {
+    devicePermission("granted");
+    const view = await renderScreen();
+    expect(view.getByLabelText("Message notifications, On")).toBeTruthy();
+
+    devicePermission("denied");
+    await act(async () => {
+      focus.callback?.();
+    });
+    expect(view.getByLabelText("Message notifications, Off")).toBeTruthy();
+  });
+
+  it("shows no state until the first read finishes", async () => {
+    vi.mocked(Notifications.getPermissionsAsync).mockImplementation(() => new Promise(() => {}));
+    const view = await renderScreen();
+    expect(view.getByLabelText("Message notifications")).toBeTruthy();
+    expect(view.queryByText("On")).toBeNull();
+    expect(view.queryByText("Off")).toBeNull();
+  });
+
+  it("keeps the newest read when an older one resolves last", async () => {
+    let resolveOlder: (value: unknown) => void = () => {};
+    vi.mocked(Notifications.getPermissionsAsync)
+      .mockImplementationOnce(() => new Promise<never>((resolve) => { resolveOlder = resolve as (value: unknown) => void; }))
+      .mockImplementationOnce(async () => ({ granted: true, status: "granted" }) as never);
+    const view = renderMobile(<NotificationsScreen />);
+    await act(async () => {
+      appState.listeners.forEach((listener) => listener("active"));
+    });
+    expect(view.getByLabelText("Message notifications, On")).toBeTruthy();
+
+    await act(async () => {
+      resolveOlder({ granted: false, status: "denied" });
+    });
+    expect(view.getByLabelText("Message notifications, On")).toBeTruthy();
+  });
+
   it("opens the app's page in system settings", async () => {
     devicePermission("denied");
     const view = await renderScreen();
@@ -106,6 +149,14 @@ describe("Notifications screen", () => {
     const view = await renderScreen();
     fireEvent.press(view.getByRole("button", { name: "Back" }));
     expect(routerMock.back).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes to Cabinet when there is no screen to go back to", async () => {
+    devicePermission("granted");
+    routerMock.canGoBack.mockReturnValueOnce(false);
+    const view = await renderScreen();
+    fireEvent.press(view.getByRole("button", { name: "Back" }));
+    expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/services");
   });
 
   it.each([

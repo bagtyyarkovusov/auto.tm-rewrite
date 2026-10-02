@@ -14,6 +14,9 @@ import type { NotificationPermissionState } from "./types";
 export function useNotificationPermissionState(): NotificationPermissionState | null {
   const [state, setState] = useState<NotificationPermissionState | null>(null);
   const mounted = useRef(true);
+  // Only the newest read may set state, so an older read that resolves late
+  // cannot overwrite a newer one.
+  const latest = useRef(0);
 
   useEffect(() => {
     mounted.current = true;
@@ -23,8 +26,9 @@ export function useNotificationPermissionState(): NotificationPermissionState | 
   }, []);
 
   const refresh = useCallback(() => {
+    const read = ++latest.current;
     void getNotificationPermissionState().then((next) => {
-      if (mounted.current) setState(next);
+      if (mounted.current && read === latest.current) setState(next);
     });
   }, []);
 

@@ -168,7 +168,7 @@ function MyListingsRow() {
   );
 }
 
-/** Signed-in only; the first of the menu rows. */
+/** Signed-in only. */
 function NotificationsRow() {
   const { t } = useTranslation("account");
 
