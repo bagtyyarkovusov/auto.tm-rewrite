@@ -19,8 +19,8 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
     title: "Privacy Policy",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "October 2, 2026",
-    lastRevisedISO: "2026-10-02",
+    lastRevised: "October 3, 2026",
+    lastRevisedISO: "2026-10-03",
     sections: [
       {
         title: "1. What we collect",
@@ -105,8 +105,8 @@ When you request account deletion:
     title: "Политика конфиденциальности",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "2 октября 2026 г.",
-    lastRevisedISO: "2026-10-02",
+    lastRevised: "3 октября 2026 г.",
+    lastRevisedISO: "2026-10-03",
     sections: [
       {
         title: "1. Какие данные мы собираем",
@@ -187,8 +187,8 @@ When you request account deletion:
     title: "Gizlinlik syýasaty",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "2-nji oktýabr 2026",
-    lastRevisedISO: "2026-10-02",
+    lastRevised: "3-nji oktýabr 2026",
+    lastRevisedISO: "2026-10-03",
     sections: [
       {
         title: "1. Haýsy maglumatlary ýygnaýarys",
@@ -272,8 +272,8 @@ export const termsOfService: Record<Locale, LegalDocument> = {
     title: "Terms of Service",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "October 2, 2026",
-    lastRevisedISO: "2026-10-02",
+    lastRevised: "October 3, 2026",
+    lastRevisedISO: "2026-10-03",
     sections: [
       {
         title: "1. Eligibility",
@@ -339,8 +339,8 @@ AutoTM may suspend accounts that violate these terms.`,
     title: "Условия использования",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "2 октября 2026 г.",
-    lastRevisedISO: "2026-10-02",
+    lastRevised: "3 октября 2026 г.",
+    lastRevisedISO: "2026-10-03",
     sections: [
       {
         title: "1. Допустимый возраст",
@@ -406,8 +406,8 @@ AutoTM может приостановить аккаунт за нарушен�
     title: "Ulanyş şertleri",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "2-nji oktýabr 2026",
-    lastRevisedISO: "2026-10-02",
+    lastRevised: "3-nji oktýabr 2026",
+    lastRevisedISO: "2026-10-03",
     sections: [
       {
         title: "1. Ýaş çägi",
