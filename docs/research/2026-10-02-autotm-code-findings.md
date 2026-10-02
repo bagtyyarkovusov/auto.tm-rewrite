@@ -70,8 +70,8 @@ The clean isolated run contains exactly three new tests. All three fail the expe
 - Media-ID test: `docs/research/evidence/workflow-review-2026-10-02/edit-id-mapping.spec.tsx`
 - Refetch test: `docs/research/evidence/workflow-review-2026-10-02/edit-refresh-state.spec.tsx`
 - Fake-port ownership test: `docs/research/evidence/workflow-review-2026-10-02/media-ownership.spec.tsx`
-- Machine-readable result: `docs/research/evidence/workflow-review-2026-10-02/results.json`
-- Clean human-readable result: `docs/research/evidence/workflow-review-2026-10-02/results.txt`
+- Machine-readable result: `docs/research/evidence/workflow-review-2026-10-02/archived-results.json`
+- Clean human-readable result: `docs/research/evidence/workflow-review-2026-10-02/archived-results.txt`
 
 Run the preserved fixtures using the relative command in [their README](evidence/workflow-review-2026-10-02/README.md). The archived run predates relocation; portable-form verification is recorded separately in the PR.
 

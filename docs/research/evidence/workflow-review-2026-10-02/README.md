@@ -2,7 +2,7 @@
 
 These three fixtures reproduced missing guarantees at source baseline `8ed5dcbdd2ecbca3e494f4e18e17edd91f3c0edb`. They use fake API/storage ports or the mobile rendered adapter. No network, live API, database or object storage was used.
 
-They are intentionally outside the repository test suite. The archived run contains exactly three tests, all failing the expected business assertions. This is evidence of the reported defects, not a claim that existing repository tests fail.
+They are intentionally outside the repository test suite. The [archived text result](archived-results.txt) and [sanitized runner JSON](archived-results.json) contain exactly three tests, all failing the expected business assertions. This is evidence of the reported defects, not a claim that existing repository tests fail.
 
 After installing this checkout's dependencies and building its shared workspace prerequisites, run from `apps/mobile`:
 
