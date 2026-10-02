@@ -22,6 +22,11 @@ import {
 import { Conversation } from "../domain/Conversation";
 import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import {
+  peerIdOf,
+  readConversationPeers,
+  type ConversationPeer,
+} from "./ConversationPeers";
+import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
@@ -34,6 +39,8 @@ export interface OpenConversationInput {
 export interface OpenConversationResult {
   conversation: Conversation;
   listing: ListingSummary;
+  peer: ConversationPeer;
+  blockedByMe: boolean;
 }
 
 @Injectable()
@@ -73,7 +80,7 @@ export class OpenConversation {
     );
 
     if (existing) {
-      return { conversation: existing, listing };
+      return this.withPeer(existing, listing, input.buyerId);
     }
 
     if (listing.status !== "active") {
@@ -145,6 +152,24 @@ export class OpenConversation {
 
     await this.conversations.save(conversation);
 
-    return { conversation, listing };
+    return this.withPeer(conversation, listing, input.buyerId);
+  }
+
+  private async withPeer(
+    conversation: Conversation,
+    listing: ListingSummary,
+    viewerId: string,
+  ): Promise<OpenConversationResult> {
+    const peers = await readConversationPeers(this.identityRead, viewerId, [
+      conversation,
+    ]);
+    const peerId = peerIdOf(conversation, viewerId);
+    const view = peers.get(peerId);
+    return {
+      conversation,
+      listing,
+      peer: view?.peer ?? { id: peerId, displayName: null },
+      blockedByMe: view?.blockedByMe ?? false,
+    };
   }
 }

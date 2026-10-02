@@ -63,6 +63,19 @@ export class PrismaIdentityReadAdapter implements IdentityReadPort {
     }));
   }
 
+  async findBlockedUserIds(
+    blockerId: string,
+    blockedIds: string[],
+  ): Promise<string[]> {
+    if (blockedIds.length === 0) return [];
+
+    const rows = await this.prisma.blockedUser.findMany({
+      where: { blockerId, blockedId: { in: blockedIds } },
+      select: { blockedId: true },
+    });
+    return rows.map((row) => row.blockedId);
+  }
+
   async isUserBlockedBy(
     blockerId: string,
     blockedId: string,

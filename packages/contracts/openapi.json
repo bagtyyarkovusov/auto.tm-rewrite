@@ -3355,6 +3355,26 @@
               "seller"
             ]
           },
+          "peer": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "displayName"
+            ]
+          },
+          "blockedByMe": {
+            "type": "boolean"
+          },
           "lastMessage": {
             "type": "object",
             "properties": {
@@ -3526,6 +3546,8 @@
           "buyerId",
           "sellerId",
           "myRole",
+          "peer",
+          "blockedByMe",
           "updatedAt"
         ]
       },
@@ -3613,6 +3635,26 @@
                     "buyer",
                     "seller"
                   ]
+                },
+                "peer": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName"
+                  ]
+                },
+                "blockedByMe": {
+                  "type": "boolean"
                 },
                 "lastMessage": {
                   "type": "object",
@@ -3785,6 +3827,8 @@
                 "buyerId",
                 "sellerId",
                 "myRole",
+                "peer",
+                "blockedByMe",
                 "updatedAt"
               ]
             }
@@ -4488,6 +4532,26 @@
               "seller"
             ]
           },
+          "peer": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "displayName"
+            ]
+          },
+          "blockedByMe": {
+            "type": "boolean"
+          },
           "lastMessage": {
             "type": "object",
             "properties": {
@@ -4659,6 +4723,8 @@
           "buyerId",
           "sellerId",
           "myRole",
+          "peer",
+          "blockedByMe",
           "updatedAt"
         ]
       },
@@ -7254,6 +7320,26 @@
                         "seller"
                       ]
                     },
+                    "peer": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName"
+                      ]
+                    },
+                    "blockedByMe": {
+                      "type": "boolean"
+                    },
                     "lastMessage": {
                       "type": "object",
                       "properties": {
@@ -7425,6 +7511,8 @@
                     "buyerId",
                     "sellerId",
                     "myRole",
+                    "peer",
+                    "blockedByMe",
                     "updatedAt"
                   ]
                 }
@@ -7659,6 +7747,26 @@
                               "seller"
                             ]
                           },
+                          "peer": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "displayName": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "displayName"
+                            ]
+                          },
+                          "blockedByMe": {
+                            "type": "boolean"
+                          },
                           "lastMessage": {
                             "type": "object",
                             "properties": {
@@ -7830,6 +7938,8 @@
                           "buyerId",
                           "sellerId",
                           "myRole",
+                          "peer",
+                          "blockedByMe",
                           "updatedAt"
                         ]
                       }

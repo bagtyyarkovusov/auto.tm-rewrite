@@ -380,6 +380,8 @@ describe("ConversationsController list conversations", () => {
             listing: null,
             lastMessage,
             unreadCount: 3,
+            peer: { id: "seller-1", displayName: "Seller One" },
+            blockedByMe: true,
           },
         ],
         nextCursor: null,
@@ -395,5 +397,43 @@ describe("ConversationsController list conversations", () => {
     expect(result.items[0]!.unreadCount).toBe(3);
     expect(result.items[0]!.lastMessage).toBeDefined();
     expect(result.items[0]!.lastMessage!.text).toBe("Hello");
+    expect(result.items[0]!.peer).toEqual({
+      id: "seller-1",
+      displayName: "Seller One",
+    });
+    expect(result.items[0]!.blockedByMe).toBe(true);
+    expect(result.items[0]!.buyerId).toBe("buyer-1");
+    expect(result.items[0]!.sellerId).toBe("seller-1");
+    expect(result.items[0]!.myRole).toBe("buyer");
+  });
+});
+
+describe("ConversationsController open conversation", () => {
+  it("returns the other participant and the viewer's block state", async () => {
+    const conversation = Conversation.create({
+      id: "conv-1",
+      listingId: "550e8400-e29b-41d4-a716-446655440007",
+      buyerId: "buyer-1",
+      sellerId: "seller-1",
+      updatedAt: new Date("2026-01-01T00:00:00Z"),
+    });
+    const openConversation = {
+      execute: vi.fn().mockResolvedValue({
+        conversation,
+        listing: { id: "listing-1" },
+        peer: { id: "seller-1", displayName: null },
+        blockedByMe: true,
+      }),
+    } as unknown as OpenConversation;
+    const controller = buildController({ openConversation });
+
+    const result = await controller.openConversation(
+      { listingId: "550e8400-e29b-41d4-a716-446655440007" },
+      authReq("buyer-1") as never,
+    );
+
+    expect(result.peer).toEqual({ id: "seller-1", displayName: null });
+    expect(result.blockedByMe).toBe(true);
+    expect(result.myRole).toBe("buyer");
   });
 });

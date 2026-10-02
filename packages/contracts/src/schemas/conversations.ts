@@ -218,12 +218,22 @@ export type MuteConversationResponse = z.infer<
 export const ParticipantRoleSchema = z.enum(["buyer", "seller"]);
 export type ParticipantRole = z.infer<typeof ParticipantRoleSchema>;
 
+/** The other participant. Id and display name only; no Sign-in Method data. */
+export const ConversationPeerSchema = z.object({
+  id: z.string().uuid(),
+  displayName: z.string().nullable(),
+});
+export type ConversationPeer = z.infer<typeof ConversationPeerSchema>;
+
 export const ConversationSummarySchema = z.object({
   id: z.string().uuid(),
   listing: ConversationListingCardSchema.nullable(),
   buyerId: z.string().uuid(),
   sellerId: z.string().uuid(),
   myRole: ParticipantRoleSchema,
+  peer: ConversationPeerSchema,
+  /** True when the viewer blocked the other participant. The reverse is not exposed. */
+  blockedByMe: z.boolean(),
   lastMessage: MessageSummarySchema.optional(),
   updatedAt: z.string().datetime(),
   unreadCount: z.number().int().nonnegative().default(0),

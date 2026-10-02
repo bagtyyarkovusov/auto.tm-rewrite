@@ -76,6 +76,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     return ids.map((id) => this.users[id]).filter((x): x is { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } => !!x);
   }
 
+  async findBlockedUserIds(): Promise<string[]> {
+    return [];
+  }
+
   async isUserBlockedBy(): Promise<boolean> {
     return false;
   }

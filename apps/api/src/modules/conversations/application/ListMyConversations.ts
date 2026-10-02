@@ -5,12 +5,21 @@ import type {
   ListingSummary,
 } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
+import {
+  IDENTITY_READ_PORT,
+  type IdentityReadPort,
+} from "../../identity/identity.public";
 import type { Message } from "../domain/Message";
 import type { Conversation } from "../domain/Conversation";
 import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
+import {
+  peerIdOf,
+  readConversationPeers,
+  type ConversationPeer,
+} from "./ConversationPeers";
 
 export interface ListMyConversationsInput {
   userId: string;
@@ -27,6 +36,8 @@ export interface ListMyConversationsResult {
     peerLastReadAt: Date | null;
     peerLastDeliveredAt: Date | null;
     mutedAt: Date | null;
+    peer: ConversationPeer;
+    blockedByMe: boolean;
   }>;
   nextCursor: string | null;
 }
@@ -38,6 +49,8 @@ export class ListMyConversations {
     private readonly conversations: ConversationRepository,
     @Inject(LISTINGS_READ_PORT)
     private readonly listings: ListingsReadPort,
+    @Inject(IDENTITY_READ_PORT)
+    private readonly identityRead: IdentityReadPort,
   ) {}
 
   async execute(
@@ -62,6 +75,12 @@ export class ListMyConversations {
         conversationIds,
       );
 
+    const peers = await readConversationPeers(
+      this.identityRead,
+      input.userId,
+      items.map((item) => item.conversation),
+    );
+
     const enriched = await Promise.all(
       items.map(async (item) => {
         const unreadCount = await this.conversations.countUnreadMessages(
@@ -75,6 +94,8 @@ export class ListMyConversations {
         const ownState = states.find(
           (state) => state.userId === input.userId,
         );
+        const peerId = peerIdOf(item.conversation, input.userId);
+        const peerView = peers.get(peerId);
         return {
           conversation: item.conversation,
           listing: listingMap.get(item.conversation.listingId) ?? null,
@@ -83,6 +104,8 @@ export class ListMyConversations {
           peerLastReadAt: peerState?.lastReadAt ?? null,
           peerLastDeliveredAt: peerState?.lastDeliveredAt ?? null,
           mutedAt: ownState?.mutedAt ?? null,
+          peer: peerView?.peer ?? { id: peerId, displayName: null },
+          blockedByMe: peerView?.blockedByMe ?? false,
         };
       }),
     );

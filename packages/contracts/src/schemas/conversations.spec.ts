@@ -218,11 +218,16 @@ describe("ConversationSummarySchema", () => {
   });
 
   it("requires the peer and the viewer's block state", () => {
-    const { peer: _peer, ...withoutPeer } = baseSummary;
-    const { blockedByMe: _blocked, ...withoutBlock } = baseSummary;
-
-    expect(ConversationSummarySchema.safeParse(withoutPeer).success).toBe(false);
-    expect(ConversationSummarySchema.safeParse(withoutBlock).success).toBe(false);
+    expect(
+      ConversationSummarySchema.safeParse({ ...baseSummary, peer: undefined })
+        .success,
+    ).toBe(false);
+    expect(
+      ConversationSummarySchema.safeParse({
+        ...baseSummary,
+        blockedByMe: undefined,
+      }).success,
+    ).toBe(false);
   });
 
   it("keeps contact data off the peer even when a server sends it", () => {

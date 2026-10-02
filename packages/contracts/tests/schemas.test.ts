@@ -1525,6 +1525,11 @@ const validConversationSummary = {
   buyerId: "550e8400-e29b-41d4-a716-446655440005",
   sellerId: "550e8400-e29b-41d4-a716-446655440006",
   myRole: "buyer" as const,
+  peer: {
+    id: "550e8400-e29b-41d4-a716-446655440006",
+    displayName: "Aman",
+  },
+  blockedByMe: false,
   lastMessage: validMessageSummary,
   updatedAt: "2026-05-17T14:32:01Z",
 };
