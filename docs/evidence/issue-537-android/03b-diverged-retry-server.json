@@ -1,0 +1,15 @@
+{
+  "id": "f1000000-0000-4000-8000-000000000105",
+  "media": [
+    {
+      "id": "a7ee93ad-226d-4848-bbd4-5901978e1e0e",
+      "key": "pending/6ddd0f95-ac43-439e-9112-9a705a1ccb3e/original.jpg",
+      "sortOrder": 0
+    },
+    {
+      "id": "f923ae09-1c92-49f8-b03a-3e3a421ae25f",
+      "key": "fixture/sportage-silver-1/original.jpg",
+      "sortOrder": 1
+    }
+  ]
+}
