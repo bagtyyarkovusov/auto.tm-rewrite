@@ -18,6 +18,11 @@ describe("LanguageRow", () => {
     expect(view.getByText(name)).toBeTruthy();
   });
 
+  it("makes the row at least 44 pt tall and reads as a button", () => {
+    const view = renderMobile(<LanguageRow />);
+    expect(String(view.getByRole("button", { name: "Language, Русский" }).props.className)).toContain("min-h-14");
+  });
+
   it("opens a sheet with the three languages and marks the current one", () => {
     const view = renderMobile(<LanguageRow />);
     expect(view.queryAllByRole("radio")).toHaveLength(0);

@@ -7,11 +7,11 @@ import { useTranslation } from "react-i18next";
 
 import { legalPageUrl } from "../src/config/publicWebUrl";
 import { useSafeBack } from "../src/navigation/useSafeBack";
-import { LocaleSwitcher } from "../src/auth/LocaleSwitcher";
 import { useAuth } from "../src/auth/useAuth";
 import { useLogout } from "../src/auth/useLogout";
-import { ThemeSwitcher } from "../src/theme/ThemeSwitcher";
 
+import { LanguageRow } from "@/components/account/LanguageRow";
+import { ThemeRow } from "@/components/account/ThemeRow";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -83,22 +83,11 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView className="flex-1 px-4">
-        {/* Language */}
-        <View className="gap-2 py-4">
-          <Text className="text-sm font-medium text-muted-foreground">
-            {t("language")}
-          </Text>
-          <LocaleSwitcher />
-        </View>
-
-        <Separator className="bg-border" />
-
-        {/* Theme */}
-        <View className="gap-2 py-4">
-          <Text className="text-sm font-medium text-muted-foreground">
-            {t("theme")}
-          </Text>
-          <ThemeSwitcher />
+        {/* Language and Theme: rows that open bottom-sheet pickers */}
+        <View className="py-2">
+          <LanguageRow />
+          <Separator className="bg-border" />
+          <ThemeRow />
         </View>
 
         <Separator className="bg-border" />

@@ -32,7 +32,7 @@ describe("OptionPickerSheet", () => {
 
   it("gives every option a touch target of at least 44 pt", () => {
     const { view } = renderSheet();
-    for (const radio of view.getAllByRole("radio")) expect(String(radio.props.className)).toContain("min-h-12");
+    for (const radio of view.getAllByRole("radio")) expect(String(radio.props.className)).toContain("min-h-14");
     expect(String(view.getByRole("button", { name: "Close" }).props.className)).toContain("h-11");
   });
 

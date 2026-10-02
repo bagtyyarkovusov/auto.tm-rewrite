@@ -7,6 +7,13 @@ export function resolveLocale(value: unknown): Locale {
   return locales.includes(value as Locale) ? (value as Locale) : "ru";
 }
 
+/** Each language written in itself, so it reads the same whatever the app language is. Not translated. */
+export const localeNames: Record<Locale, string> = {
+  en: "English",
+  ru: "Русский",
+  tk: "Türkmençe",
+};
+
 /**
  * Maps an AutoTM locale code to a BCP 47 tag suitable for Intl formatting APIs.
  * Using full tags (e.g. "tk-TM") is more reliable on React Native/Hermes than
