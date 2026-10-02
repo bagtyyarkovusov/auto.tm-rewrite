@@ -1,0 +1,14 @@
+appId: tm.auto.app
+---
+# Tap outside closes the opt-in Language sheet; a tap on blank space inside it does not.
+- tapOn: "Language, .*"
+- assertVisible: "Türkmençe"
+- tapOn:
+    point: "55%,71%"
+- takeScreenshot: /tmp/519-inside-tap-sheet-stays-open
+- assertVisible: "Türkmençe"
+- tapOn:
+    point: "50%,35%"
+- takeScreenshot: /tmp/519-outside-tap-sheet-closed
+- assertNotVisible: "Türkmençe"
+- assertVisible: "Theme, .*"
