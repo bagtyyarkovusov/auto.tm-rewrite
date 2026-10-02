@@ -31,7 +31,13 @@ export function readVisitorIpPolicy(
   const apiHeader = headerName(env["API_CLIENT_IP_HEADER"], "x-real-ip");
   const hopsText = (env["CLIENT_IP_TRUSTED_HOPS"] ?? "1").trim();
   const trustedHops = /^\d+$/.test(hopsText) ? Number(hopsText) : Number.NaN;
-  if (header === null || apiHeader === null || !(trustedHops >= 1 && trustedHops <= 10)) {
+  // `none` turns off reading a header; there is no header named none to send.
+  if (
+    header === null ||
+    apiHeader === null ||
+    apiHeader === "none" ||
+    !(trustedHops >= 1 && trustedHops <= 10)
+  ) {
     return TRUST_NOTHING;
   }
 

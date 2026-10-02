@@ -75,6 +75,7 @@ describe("readVisitorIpPolicy", () => {
       { CLIENT_IP_TRUSTED_HOPS: "11" },
       { CLIENT_IP_TRUSTED_HOPS: "1.5" },
       { API_CLIENT_IP_HEADER: "" },
+      { API_CLIENT_IP_HEADER: "none" },
     ]) {
       expect(readVisitorIpPolicy(env).header).toBeNull();
     }

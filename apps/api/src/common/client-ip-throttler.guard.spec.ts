@@ -16,7 +16,7 @@ class Probe {
 }
 
 function contextFor(headers: Record<string, string>): ExecutionContext {
-  const req = { headers, ip: EDGE_HOP };
+  const req = { headers, ip: EDGE_HOP, url: "/api/v1/auth/otp/request?x=1" };
   const res = { header: () => res };
   return {
     switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
@@ -84,6 +84,7 @@ describe("ClientIpThrottlerGuard", () => {
     expect(warn.mock.calls[0]?.[0]).toMatchObject({
       event: "client_ip.peer_fallback",
       peer: EDGE_HOP,
+      path: "/api/v1/auth/otp/request",
     });
   });
 });

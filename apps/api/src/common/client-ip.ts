@@ -63,7 +63,7 @@ export function readClientIpPolicy(
   return { header: header === "none" ? null : header, trustedHops };
 }
 
-/** The parts of a Fastify request (or a socket.io handshake) that carry the address. */
+/** The parts of a Fastify request that carry the address. */
 export interface ClientIpRequest {
   headers?: Record<string, string | string[] | undefined>;
   ip?: string;
