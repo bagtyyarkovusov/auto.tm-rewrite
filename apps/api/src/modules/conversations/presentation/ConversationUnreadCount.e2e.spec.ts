@@ -88,8 +88,7 @@ describe("Conversation unread count e2e", () => {
       new JwtAuthGuard(app.get(Reflector), app.get(JwtService)),
     );
     app.useGlobalFilters(new GlobalErrorFilter());
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
     request = supertest(app.getHttpServer());
     prisma = app.get(PrismaService);
   }, 60_000);
