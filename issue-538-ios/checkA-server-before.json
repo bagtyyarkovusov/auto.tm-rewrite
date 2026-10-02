@@ -1,0 +1,19 @@
+{
+  "id": "f1000000-0000-4000-8000-000000000105",
+  "conditionDisclosure": {
+    "damaged": true,
+    "knownIssuesText": "Переднее левое крыло и бампер в покраске после ДТП 2021 года. Требуется замена стоек стабилизатора — стучат на неровностях."
+  },
+  "media": [
+    {
+      "id": "eb3df7d6-b13b-49ca-9400-c152bdeb88b4",
+      "key": "fixture/sportage-silver-0/original.jpg",
+      "sortOrder": 0
+    },
+    {
+      "id": "f148a295-c000-4494-b5c7-a12a646a0fb9",
+      "key": "fixture/sportage-silver-1/original.jpg",
+      "sortOrder": 1
+    }
+  ]
+}
