@@ -7,7 +7,7 @@ import { z } from "zod";
 
 extendZodWithOpenApi(z);
 
-import { ErrorResponseSchema } from "./errors";
+import { ErrorResponseSchema, RateLimitedDetailsSchema } from "./errors";
 import { AdminTablePaginationRequestSchema } from "./pagination";
 import {
   OtpRequestRequestSchema,
@@ -167,6 +167,7 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   const registry = new OpenAPIRegistry();
 
   registry.register("ErrorResponse", ErrorResponseSchema);
+  registry.register("RateLimitedDetails", RateLimitedDetailsSchema);
 
   // Catalog read schemas
   registry.register("BrandSummary", BrandSummarySchema);
@@ -469,7 +470,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         },
       },
       400: {
-        description: "Validation error",
+        description:
+          "Validation error, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },
@@ -539,7 +541,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         },
       },
       400: {
-        description: "Validation or rate-limit error",
+        description:
+          "Validation error, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
       401: {
@@ -617,7 +620,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         },
       },
       400: {
-        description: "Validation or rate-limit error",
+        description:
+          "Validation error, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },

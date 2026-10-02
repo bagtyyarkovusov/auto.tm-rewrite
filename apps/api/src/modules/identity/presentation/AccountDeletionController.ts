@@ -13,6 +13,7 @@ import { AuthSchemas } from "@auto-tm/contracts";
 import { Public } from "../../../common/public.decorator";
 import { RequestAccountDeletion } from "../application/RequestAccountDeletion";
 import { ConfirmAccountDeletion } from "../application/ConfirmAccountDeletion";
+import { signInCodeRateLimitedException } from "./signInCodeRateLimited";
 
 type LocalizedRequest = FastifyRequest & { locale?: "ru" | "tk" | "en" };
 
@@ -92,12 +93,11 @@ export class AccountDeletionController {
   }
 
   private throwCodeError(error: unknown): never {
-    if (error instanceof Error && error.message === "Too many OTP requests") {
-      throw new BadRequestException({
-        code: "RATE_LIMITED",
-        message: "Too many code requests. Please wait before trying again.",
-      });
-    }
+    const rateLimited = signInCodeRateLimitedException(
+      error,
+      "Too many code requests. Please wait before trying again.",
+    );
+    if (rateLimited !== null) throw rateLimited;
     if (
       error instanceof Error &&
       (error.message.startsWith("Phone must be") ||

@@ -28,6 +28,7 @@ import {
   IDENTITY_ERROR_CODES,
   IdentityDomainError,
 } from "../domain/types";
+import { signInCodeRateLimitedException } from "./signInCodeRateLimited";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -217,12 +218,11 @@ export class MeController {
         message: "User not found.",
       });
     }
-    if (error instanceof Error && error.message === "Too many OTP requests") {
-      throw new BadRequestException({
-        code: "RATE_LIMITED",
-        message: "Too many code requests. Please wait before trying again.",
-      });
-    }
+    const rateLimited = signInCodeRateLimitedException(
+      error,
+      "Too many code requests. Please wait before trying again.",
+    );
+    if (rateLimited !== null) throw rateLimited;
     if (
       error instanceof Error &&
       (error.message.startsWith("Phone must be") ||
