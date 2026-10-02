@@ -572,7 +572,7 @@ describe("PublishListing", () => {
             uploadId: "upload-photo1.jpg",
           }),
         );
-        return Object.assign(new Error("Unique constraint failed"), { code: "P2002" });
+        return Object.assign(new Error("Unique constraint failed"), { code: "P2002", meta: { target: ["uploadId"] } });
       };
 
       const err = await publishError();
@@ -582,6 +582,36 @@ describe("PublishListing", () => {
         code: "UPLOAD_ALREADY_ATTACHED",
       });
       expect(prisma.createdListings).toHaveLength(0);
+    });
+
+    it("rethrows another constraint failure even if a photo was concurrently adopted", async () => {
+      seedDraft(draftRepo, photoDraft("photo1.jpg"));
+      const failure = Object.assign(new Error("Unique constraint failed"), {
+        code: "P2002", meta: { target: ["publicNumber"] },
+      });
+      prisma.failTransaction = () => {
+        world.media.push(ListingMedia.create({
+          id: "winner", listingId: "listing-winner", kind: "image", key: "photo1.jpg",
+          sortOrder: 0, uploadId: "upload-photo1.jpg",
+        }));
+        return failure;
+      };
+
+      await expect(publishError()).resolves.toBe(failure);
+    });
+
+    it("reports an unavailable upload if adoption and removal race publication", async () => {
+      seedDraft(draftRepo, photoDraft("photo1.jpg"));
+      prisma.failTransaction = () => {
+        world.uploads = [];
+        return Object.assign(new Error("Foreign key constraint failed"), { code: "P2003" });
+      };
+
+      const err = await publishError();
+
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).getResponse()).toMatchObject({ code: "UPLOAD_NOT_AVAILABLE" });
+      expectNothingPublished();
     });
 
     it("rethrows an unrelated unique violation instead of blaming the upload", async () => {
