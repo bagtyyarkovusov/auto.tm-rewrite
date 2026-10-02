@@ -1,3 +1,5 @@
+import { ForbiddenException } from "@nestjs/common";
+import { AdminSchemas } from "@auto-tm/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
@@ -7,6 +9,7 @@ import type {
 } from "../../listings/domain/ports/ListingsReadPort";
 import { Conversation } from "../domain/Conversation";
 import type { ConversationRepository } from "../domain/ports/ConversationRepository";
+import { CONVERSATION_ERROR_CODES } from "../domain/types";
 
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
 import {
@@ -82,13 +85,65 @@ function buildPolicy(world: World) {
   );
 }
 
-async function accepted(policy: ConversationSendPolicy, viewerId: string) {
+/**
+ * The refusal reason `authorize` throws, or null when it accepts. Any error
+ * that is not a ForbiddenException with a reason is rethrown, so an unrelated
+ * failure cannot pass as a refusal.
+ */
+async function refusalReason(
+  policy: ConversationSendPolicy,
+  viewerId: string,
+): Promise<string | null> {
   try {
     await policy.authorize(conversation.id, viewerId);
-    return true;
-  } catch {
-    return false;
+    return null;
+  } catch (error) {
+    if (!(error instanceof ForbiddenException)) throw error;
+    const response = error.getResponse() as { details?: { reason?: string } };
+    const reason = response.details?.reason;
+    if (typeof reason !== "string") throw error;
+    return reason;
   }
+}
+
+/** The refusal reasons `authorize` uses for each restriction. */
+const REFUSAL_REASONS: Record<SendRestriction, string[]> = {
+  blocked_by_me: [CONVERSATION_ERROR_CODES.USER_BLOCKED],
+  listing_unavailable: [CONVERSATION_ERROR_CODES.LISTING_NOT_CONTACTABLE],
+  chat_disabled: [CONVERSATION_ERROR_CODES.CHAT_DISABLED],
+  participant_unavailable: [
+    AdminSchemas.AdminErrorReason.UserSuspended,
+    CONVERSATION_ERROR_CODES.BLOCKED_BY_USER,
+  ],
+};
+
+/**
+ * Every restriction the world satisfies, worked out from its facts alone. The
+ * send path refuses with one of these reasons, but not always the one
+ * `restrictionFor` reports first: it checks the Listing before the safety
+ * facts, and `restrictionFor` puts `blocked_by_me` first.
+ */
+function applicableRestrictions(
+  world: World,
+  viewerId: string,
+): Set<SendRestriction> {
+  const viewerIsBuyer = viewerId === "buyer-1";
+  const peerId = viewerIsBuyer ? "seller-1" : "buyer-1";
+  const blocks = world.blocks ?? [];
+  const suspended =
+    world.buyerSuspended === true || world.sellerSuspended === true;
+  const active = new Set<SendRestriction>();
+
+  if (blocks.includes(`${viewerId}>${peerId}`)) active.add("blocked_by_me");
+  if (!world.listing || world.listing.status !== "active") {
+    active.add("listing_unavailable");
+  } else if (!world.listing.allowChat) {
+    active.add("chat_disabled");
+  }
+  if (suspended || blocks.includes(`${peerId}>${viewerId}`)) {
+    active.add("participant_unavailable");
+  }
+  return active;
 }
 
 describe("ConversationSendPolicy.restrictionFor", () => {
@@ -244,7 +299,7 @@ describe("sendRestriction and the send path", () => {
   );
 
   it.each(cases)(
-    "agree for $name: null exactly when a send is accepted",
+    "agree for $name: null exactly when a send is accepted, and a refusal carries a matching reason",
     async ({ world }) => {
       const policy = buildPolicy(world);
 
@@ -254,8 +309,21 @@ describe("sendRestriction and the send path", () => {
           viewerId,
           world.listing,
         );
+        const reason = await refusalReason(policy, viewerId);
 
-        expect(restriction === null).toBe(await accepted(policy, viewerId));
+        if (restriction === null) {
+          expect(reason).toBeNull();
+          continue;
+        }
+
+        const applicable = applicableRestrictions(world, viewerId);
+        expect(applicable).toContain(restriction);
+        expect(
+          [...applicable].flatMap((r) => REFUSAL_REASONS[r]),
+        ).toContain(reason);
+        if (applicable.size === 1) {
+          expect(REFUSAL_REASONS[restriction]).toContain(reason);
+        }
       }
     },
   );
