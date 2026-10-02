@@ -1,11 +1,11 @@
 {
-  "appCommit": "152befd62451d11ad9dee7c620107f15e48a7351",
+  "appCommit": "b7ce7568b9a447cb9b109e6bf5b0063dfbf303b2",
   "api": "https://api-autotm-rewrite-pr-546.up.railway.app/api/v1",
   "media": "https://minio-autotm-rewrite-pr-546.up.railway.app",
   "environmentId": "6f951120-4ee3-4b03-8520-b64e12e8b354",
-  "apiDeploymentId": "f9dd9f9b-a48e-48de-b6df-30cba07ce50b",
-  "workerDeploymentId": "82bc4485-6eb6-4589-9479-f06d57acd9a0",
-  "startedAt": "2026-10-02T13:42:08.605338+00:00",
+  "apiDeploymentId": "1f81f0df-8a3d-4307-90b6-ca2dea1129f3",
+  "workerDeploymentId": "3d763955-afaa-4d4e-a5a6-f56019de3472",
+  "startedAt": "2026-10-02T15:35:01.716541+00:00",
   "fixture": {
     "bytes": 709,
     "sha256": "cceb22139684ef5639fd2a66e9634c41073a0deccfac6f4a2f7a28b09d133575",
@@ -24,7 +24,7 @@
           "redis": "ok",
           "minio": "ok"
         },
-        "commitSha": "152befd62451d11ad9dee7c620107f15e48a7351",
+        "commitSha": "b7ce7568b9a447cb9b109e6bf5b0063dfbf303b2",
         "environment": "auto.tm-rewrite-pr-546"
       }
     },
@@ -79,18 +79,18 @@
     {
       "state": "bootstrap presign media host",
       "result": "pass",
-      "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/original.jpg"
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/original.jpg"
     },
     {
       "state": "bootstrap actual PUT",
       "result": "pass",
       "status": 200,
-      "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/original.jpg"
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/original.jpg"
     },
     {
       "state": "bootstrap original HEAD",
       "result": "pass",
-      "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/original.jpg",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/original.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 709,
@@ -108,7 +108,7 @@
     {
       "state": "bootstrap draft ownership",
       "result": "pass",
-      "draftId": "189fc0e2-ff9a-40e8-99d7-fb6c6fa22c8e",
+      "draftId": "02bd739d-4c6e-4757-bdaf-c0f21c644af3",
       "userId": "f1000000-0000-4000-8000-000000000003"
     },
     {
@@ -130,13 +130,13 @@
     {
       "state": "bootstrap published adoption",
       "result": "pass",
-      "listingId": "3b335180-a69f-4a3f-8ced-5c37422d04bb",
+      "listingId": "5d44f7a9-3368-4734-aa18-b01e63623761",
       "sellerId": "f1000000-0000-4000-8000-000000000003",
       "status": "active",
       "media": [
         {
-          "id": "828c62d1-93c9-4c5c-adcb-08e65a925347",
-          "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/original.jpg",
+          "id": "4242ed91-7f5a-4e32-b7e0-19e6fca0a604",
+          "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/original.jpg",
           "sortOrder": 0
         }
       ]
@@ -144,7 +144,7 @@
     {
       "state": "bootstrap generated thumbnail",
       "result": "pass",
-      "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/thumbnail.jpg",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/thumbnail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -154,7 +154,7 @@
     {
       "state": "bootstrap generated list",
       "result": "pass",
-      "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/list.jpg",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/list.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -164,7 +164,7 @@
     {
       "state": "bootstrap generated detail",
       "result": "pass",
-      "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/detail.jpg",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/detail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 6562,
@@ -174,7 +174,7 @@
     {
       "state": "bootstrap generated fullscreen",
       "result": "pass",
-      "key": "pending/891eb261-a85f-4166-9b4f-1f6032e1b642/fullscreen.jpg",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/fullscreen.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 23529,
@@ -192,18 +192,18 @@
     {
       "state": "attach presign media host",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/original.jpg"
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg"
     },
     {
       "state": "attach actual PUT",
       "result": "pass",
       "status": 200,
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/original.jpg"
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg"
     },
     {
       "state": "attach original HEAD",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/original.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 709,
@@ -229,10 +229,10 @@
     {
       "state": "same Listing retry media ID",
       "result": "pass",
-      "mediaId": "4cd9f075-6c14-4516-8408-a4a26734c8ce",
-      "retryMediaId": "4cd9f075-6c14-4516-8408-a4a26734c8ce",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/original.jpg",
-      "listingId": "3b335180-a69f-4a3f-8ced-5c37422d04bb"
+      "mediaId": "2a9172fc-1b35-4e5a-a5ef-5da9991697e8",
+      "retryMediaId": "2a9172fc-1b35-4e5a-a5ef-5da9991697e8",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg",
+      "listingId": "5d44f7a9-3368-4734-aa18-b01e63623761"
     },
     {
       "state": "attach readback",
@@ -245,14 +245,14 @@
     {
       "state": "attached row readback",
       "result": "pass",
-      "listingId": "3b335180-a69f-4a3f-8ced-5c37422d04bb",
-      "mediaId": "4cd9f075-6c14-4516-8408-a4a26734c8ce",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/original.jpg"
+      "listingId": "5d44f7a9-3368-4734-aa18-b01e63623761",
+      "mediaId": "2a9172fc-1b35-4e5a-a5ef-5da9991697e8",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg"
     },
     {
       "state": "attach variant thumbnail",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/thumbnail.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/thumbnail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -262,7 +262,7 @@
     {
       "state": "attach variant list",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/list.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/list.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -272,7 +272,7 @@
     {
       "state": "attach variant detail",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/detail.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/detail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 6562,
@@ -282,7 +282,7 @@
     {
       "state": "attach variant fullscreen",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/fullscreen.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/fullscreen.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 23529,
@@ -300,12 +300,12 @@
     {
       "state": "missing object presign media host",
       "result": "pass",
-      "key": "pending/2f0643c0-a71c-4516-a581-32ee49296f43/original.jpg"
+      "key": "pending/63695345-ab57-4f3a-9526-6d23a31db718/original.jpg"
     },
     {
       "state": "no PUT public HEAD",
       "result": "pass",
-      "key": "pending/2f0643c0-a71c-4516-a581-32ee49296f43/original.jpg",
+      "key": "pending/63695345-ab57-4f3a-9526-6d23a31db718/original.jpg",
       "status": 404,
       "contentType": null,
       "contentLength": 0,
@@ -342,18 +342,18 @@
     {
       "state": "foreign owned image presign media host",
       "result": "pass",
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/original.jpg"
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/original.jpg"
     },
     {
       "state": "foreign owned image actual PUT",
       "result": "pass",
       "status": 200,
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/original.jpg"
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/original.jpg"
     },
     {
       "state": "foreign owned image original HEAD",
       "result": "pass",
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/original.jpg",
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/original.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 709,
@@ -371,7 +371,7 @@
     {
       "state": "foreign proof Listing draft ownership",
       "result": "pass",
-      "draftId": "f16ec463-5cd6-48c4-b379-4ac5839ef9bc",
+      "draftId": "b988dd0e-0c13-4ccb-a7c8-ed02ba1876ff",
       "userId": "f1000000-0000-4000-8000-000000000010"
     },
     {
@@ -393,13 +393,13 @@
     {
       "state": "foreign proof Listing published adoption",
       "result": "pass",
-      "listingId": "e82af630-1d93-47e7-8c44-83ecec6b92e5",
+      "listingId": "f9f1be9f-9407-434c-b6ca-ed621bd92b1d",
       "sellerId": "f1000000-0000-4000-8000-000000000010",
       "status": "active",
       "media": [
         {
-          "id": "f2fe6422-3635-4e17-87d6-5a3fe429ebac",
-          "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/original.jpg",
+          "id": "38af719e-c1ac-4511-88c3-7619174f77a2",
+          "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/original.jpg",
           "sortOrder": 0
         }
       ]
@@ -407,7 +407,7 @@
     {
       "state": "foreign proof Listing generated thumbnail",
       "result": "pass",
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/thumbnail.jpg",
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/thumbnail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -417,7 +417,7 @@
     {
       "state": "foreign proof Listing generated list",
       "result": "pass",
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/list.jpg",
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/list.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -427,7 +427,7 @@
     {
       "state": "foreign proof Listing generated detail",
       "result": "pass",
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/detail.jpg",
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/detail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 6562,
@@ -437,7 +437,7 @@
     {
       "state": "foreign proof Listing generated fullscreen",
       "result": "pass",
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/fullscreen.jpg",
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/fullscreen.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 23529,
@@ -463,7 +463,7 @@
     {
       "state": "owner original survives attack",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/original.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 709,
@@ -481,18 +481,18 @@
     {
       "state": "fresh publication presign media host",
       "result": "pass",
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/original.jpg"
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/original.jpg"
     },
     {
       "state": "fresh publication actual PUT",
       "result": "pass",
       "status": 200,
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/original.jpg"
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/original.jpg"
     },
     {
       "state": "fresh publication original HEAD",
       "result": "pass",
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/original.jpg",
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/original.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 709,
@@ -510,7 +510,7 @@
     {
       "state": "foreign publication attempt draft ownership",
       "result": "pass",
-      "draftId": "804234a8-11f5-4a2e-8774-a438723c03a6",
+      "draftId": "deb692fb-49b1-4bfb-8c30-bc5718cb57bd",
       "userId": "f1000000-0000-4000-8000-000000000010"
     },
     {
@@ -532,7 +532,7 @@
     {
       "state": "fresh publication after attach draft ownership",
       "result": "pass",
-      "draftId": "6132b2a6-0c7f-4f7c-9964-1e44a53eeaaa",
+      "draftId": "f9ec99d7-de5c-4dc6-a0cf-5bfd7e9c349f",
       "userId": "f1000000-0000-4000-8000-000000000003"
     },
     {
@@ -554,13 +554,13 @@
     {
       "state": "fresh publication after attach published adoption",
       "result": "pass",
-      "listingId": "d216966c-fcc4-49ec-94d4-4890f384d74a",
+      "listingId": "2fdac14b-e192-4d39-8391-15f45724f028",
       "sellerId": "f1000000-0000-4000-8000-000000000003",
       "status": "active",
       "media": [
         {
-          "id": "83d95f19-8d4f-4823-9edb-a6fda0560118",
-          "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/original.jpg",
+          "id": "18114ef1-638d-4bb3-acb7-c08ec68b0fc3",
+          "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/original.jpg",
           "sortOrder": 0
         }
       ]
@@ -568,7 +568,7 @@
     {
       "state": "fresh publication after attach generated thumbnail",
       "result": "pass",
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/thumbnail.jpg",
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/thumbnail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -578,7 +578,7 @@
     {
       "state": "fresh publication after attach generated list",
       "result": "pass",
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/list.jpg",
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/list.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 532,
@@ -588,7 +588,7 @@
     {
       "state": "fresh publication after attach generated detail",
       "result": "pass",
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/detail.jpg",
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/detail.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 6562,
@@ -598,7 +598,7 @@
     {
       "state": "fresh publication after attach generated fullscreen",
       "result": "pass",
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/fullscreen.jpg",
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/fullscreen.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 23529,
@@ -632,13 +632,13 @@
     {
       "state": "media row removed",
       "result": "pass",
-      "listingId": "3b335180-a69f-4a3f-8ced-5c37422d04bb",
-      "mediaId": "4cd9f075-6c14-4516-8408-a4a26734c8ce"
+      "listingId": "5d44f7a9-3368-4734-aa18-b01e63623761",
+      "mediaId": "2a9172fc-1b35-4e5a-a5ef-5da9991697e8"
     },
     {
       "state": "removed original HEAD",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/original.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg",
       "status": 404,
       "contentType": null,
       "contentLength": 0,
@@ -651,7 +651,7 @@
     {
       "state": "removed variant thumbnail",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/thumbnail.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/thumbnail.jpg",
       "status": 404,
       "contentType": null,
       "contentLength": 0,
@@ -664,7 +664,7 @@
     {
       "state": "removed variant list",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/list.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/list.jpg",
       "status": 404,
       "contentType": null,
       "contentLength": 0,
@@ -677,7 +677,7 @@
     {
       "state": "removed variant detail",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/detail.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/detail.jpg",
       "status": 404,
       "contentType": null,
       "contentLength": 0,
@@ -690,7 +690,7 @@
     {
       "state": "removed variant fullscreen",
       "result": "pass",
-      "key": "pending/b14467c5-8f2c-413c-9dd2-ea55931ab621/fullscreen.jpg",
+      "key": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/fullscreen.jpg",
       "status": 404,
       "contentType": null,
       "contentLength": 0,
@@ -703,7 +703,7 @@
     {
       "state": "foreign original survives owner removal",
       "result": "pass",
-      "key": "pending/42851470-9018-4d0d-b377-bc59d045030d/original.jpg",
+      "key": "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/original.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 709,
@@ -713,10 +713,76 @@
     {
       "state": "fresh published original survives owner removal",
       "result": "pass",
-      "key": "pending/d817ef3b-0649-48d9-8981-0ef7b69a6f26/original.jpg",
+      "key": "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/original.jpg",
       "status": 200,
       "contentType": "image/jpeg",
       "contentLength": 709,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "proof keys have the exact cleanup shape",
+      "result": "pass",
+      "keys": [
+        "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d/original.jpg",
+        "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/original.jpg",
+        "pending/5219f5b2-f31f-4050-9ce8-241fe45f820a/original.jpg",
+        "pending/07f0bd37-e89f-447a-8a88-a5cd7426c221/original.jpg"
+      ]
+    },
+    {
+      "state": "removed original and bootstrap original are in different directories",
+      "result": "pass",
+      "removedDirectory": "pending/c5eb3da8-6fcc-4505-9199-f3deb4ef8b4d",
+      "bootstrapDirectory": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c"
+    },
+    {
+      "state": "same Listing sibling original survives owner removal",
+      "result": "pass",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/original.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 709,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "sibling variant survives owner removal thumbnail",
+      "result": "pass",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/thumbnail.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 532,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "sibling variant survives owner removal list",
+      "result": "pass",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/list.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 532,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "sibling variant survives owner removal detail",
+      "result": "pass",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/detail.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 6562,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "sibling variant survives owner removal fullscreen",
+      "result": "pass",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/fullscreen.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 23529,
       "expectedStatus": 200,
       "absenceStatusAllowed": null
     },
@@ -727,17 +793,309 @@
       "expectedStatus": 200,
       "code": null,
       "expectedCode": null
+    },
+    {
+      "state": "race 1 presign",
+      "result": "pass",
+      "status": 201,
+      "expectedStatus": 201,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 1 presign media host",
+      "result": "pass",
+      "key": "pending/dfd1d5b5-47bd-4ff7-aa19-2dae25192b3c/original.jpg"
+    },
+    {
+      "state": "race 1 actual PUT",
+      "result": "pass",
+      "status": 200,
+      "key": "pending/dfd1d5b5-47bd-4ff7-aa19-2dae25192b3c/original.jpg"
+    },
+    {
+      "state": "race 1 original HEAD",
+      "result": "pass",
+      "key": "pending/dfd1d5b5-47bd-4ff7-aa19-2dae25192b3c/original.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 709,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "race 1 create draft",
+      "result": "pass",
+      "status": 201,
+      "expectedStatus": 201,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 1 draft ownership",
+      "result": "pass",
+      "draftId": "f430fe64-0d13-4baf-9c7c-508a4c4f9ca3",
+      "userId": "f1000000-0000-4000-8000-000000000003"
+    },
+    {
+      "state": "race 1 exactly one adopts and the loser gets the mapped conflict, not a 5xx",
+      "result": "pass",
+      "key": "pending/dfd1d5b5-47bd-4ff7-aa19-2dae25192b3c/original.jpg",
+      "attachDelaySeconds": 0.0,
+      "publishStatus": 409,
+      "publishCode": "UPLOAD_ALREADY_ATTACHED",
+      "attachStatus": 201,
+      "attachCode": null,
+      "winner": "attach",
+      "loserCode": "UPLOAD_ALREADY_ATTACHED"
+    },
+    {
+      "state": "race 1 loser draft cleanup",
+      "result": "pass",
+      "status": 200,
+      "expectedStatus": 200,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 2 presign",
+      "result": "pass",
+      "status": 201,
+      "expectedStatus": 201,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 2 presign media host",
+      "result": "pass",
+      "key": "pending/67bd79e2-d63c-4345-baee-cb97cca87756/original.jpg"
+    },
+    {
+      "state": "race 2 actual PUT",
+      "result": "pass",
+      "status": 200,
+      "key": "pending/67bd79e2-d63c-4345-baee-cb97cca87756/original.jpg"
+    },
+    {
+      "state": "race 2 original HEAD",
+      "result": "pass",
+      "key": "pending/67bd79e2-d63c-4345-baee-cb97cca87756/original.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 709,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "race 2 create draft",
+      "result": "pass",
+      "status": 201,
+      "expectedStatus": 201,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 2 draft ownership",
+      "result": "pass",
+      "draftId": "54df6fc9-983b-4622-89c9-7c5bd8409b9c",
+      "userId": "f1000000-0000-4000-8000-000000000003"
+    },
+    {
+      "state": "race 2 exactly one adopts and the loser gets the mapped conflict, not a 5xx",
+      "result": "pass",
+      "key": "pending/67bd79e2-d63c-4345-baee-cb97cca87756/original.jpg",
+      "attachDelaySeconds": 0.25,
+      "publishStatus": 201,
+      "publishCode": null,
+      "attachStatus": 409,
+      "attachCode": "UPLOAD_ALREADY_ATTACHED",
+      "winner": "publish",
+      "loserCode": "UPLOAD_ALREADY_ATTACHED"
+    },
+    {
+      "state": "race 2 publish winner readback",
+      "result": "pass",
+      "status": 200,
+      "expectedStatus": 200,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 2 publish winner owns exactly one media row for the key",
+      "result": "pass",
+      "listingId": "c440ec46-4ec0-4f82-93b7-2d6ff8a876ab",
+      "key": "pending/67bd79e2-d63c-4345-baee-cb97cca87756/original.jpg"
+    },
+    {
+      "state": "race 3 presign",
+      "result": "pass",
+      "status": 201,
+      "expectedStatus": 201,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 3 presign media host",
+      "result": "pass",
+      "key": "pending/127b8b20-018d-4491-bc43-890ba1abd637/original.jpg"
+    },
+    {
+      "state": "race 3 actual PUT",
+      "result": "pass",
+      "status": 200,
+      "key": "pending/127b8b20-018d-4491-bc43-890ba1abd637/original.jpg"
+    },
+    {
+      "state": "race 3 original HEAD",
+      "result": "pass",
+      "key": "pending/127b8b20-018d-4491-bc43-890ba1abd637/original.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 709,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "race 3 create draft",
+      "result": "pass",
+      "status": 201,
+      "expectedStatus": 201,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 3 draft ownership",
+      "result": "pass",
+      "draftId": "7a4bcca7-f4cb-4b3e-bf48-6a485a5ea1e8",
+      "userId": "f1000000-0000-4000-8000-000000000003"
+    },
+    {
+      "state": "race 3 exactly one adopts and the loser gets the mapped conflict, not a 5xx",
+      "result": "pass",
+      "key": "pending/127b8b20-018d-4491-bc43-890ba1abd637/original.jpg",
+      "attachDelaySeconds": 0.6,
+      "publishStatus": 201,
+      "publishCode": null,
+      "attachStatus": 409,
+      "attachCode": "UPLOAD_ALREADY_ATTACHED",
+      "winner": "publish",
+      "loserCode": "UPLOAD_ALREADY_ATTACHED"
+    },
+    {
+      "state": "race 3 publish winner readback",
+      "result": "pass",
+      "status": 200,
+      "expectedStatus": 200,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race 3 publish winner owns exactly one media row for the key",
+      "result": "pass",
+      "listingId": "f2323138-f07b-4945-9b1e-273d4e4f7f9a",
+      "key": "pending/127b8b20-018d-4491-bc43-890ba1abd637/original.jpg"
+    },
+    {
+      "state": "race attach winner removal",
+      "result": "pass",
+      "status": 200,
+      "expectedStatus": 200,
+      "code": null,
+      "expectedCode": null
+    },
+    {
+      "state": "race attach winner original deleted",
+      "result": "pass",
+      "key": "pending/dfd1d5b5-47bd-4ff7-aa19-2dae25192b3c/original.jpg",
+      "status": 404,
+      "contentType": null,
+      "contentLength": 0,
+      "expectedStatus": 404,
+      "absenceStatusAllowed": [
+        403,
+        404
+      ]
+    },
+    {
+      "state": "bootstrap original survives race cleanup",
+      "result": "pass",
+      "key": "pending/da7cc74f-a465-4d3c-bdbd-bac04357cb7c/original.jpg",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "contentLength": 709,
+      "expectedStatus": 200,
+      "absenceStatusAllowed": null
+    },
+    {
+      "state": "exact PR readyz after run",
+      "result": "pass",
+      "status": 200,
+      "readyz": {
+        "status": "ready",
+        "service": "api",
+        "checks": {
+          "postgres": "ok",
+          "redis": "ok",
+          "minio": "ok"
+        },
+        "commitSha": "b7ce7568b9a447cb9b109e6bf5b0063dfbf303b2",
+        "environment": "auto.tm-rewrite-pr-546"
+      }
+    }
+  ],
+  "notExercised": [
+    {
+      "state": "legacy chat-namespace cleanup",
+      "reason": "Needs a legacy ListingMedia row whose key is chat-attachments/<conversation>/<upload>/original.mp4 with a backfilled upload. Attach now requires Listing presign provenance (forged keys return UPLOAD_NOT_AVAILABLE above), so plain HTTP cannot create it without a database fixture mutation. Covered by hosted pr run 37017439151 (MediaOwnership.e2e.spec.ts and mediaCleanupPrefix.spec.ts)."
+    },
+    {
+      "state": "which branch the publish loser took",
+      "reason": "Publication pre-checks adoption and also maps a PrismaPg P2002 constraint at commit; both return 409 UPLOAD_ALREADY_ATTACHED, so HTTP cannot tell the branches apart. The deterministic real-Postgres race that reaches the P2002 branch is in hosted pr run 37017439151."
+    },
+    {
+      "state": "mp4 original cleanup",
+      "reason": "Video attach needs a real video fixture and poster; not uploaded to avoid fabricating video bytes. Exact-key mp4 matching is covered by mediaCleanupPrefix.spec.ts in the hosted run."
     }
   ],
   "result": "pass",
+  "readyzBefore": {
+    "at": "2026-10-02T15:35:04.781353+00:00",
+    "status": 200,
+    "body": {
+      "status": "ready",
+      "service": "api",
+      "checks": {
+        "postgres": "ok",
+        "redis": "ok",
+        "minio": "ok"
+      },
+      "commitSha": "b7ce7568b9a447cb9b109e6bf5b0063dfbf303b2",
+      "environment": "auto.tm-rewrite-pr-546"
+    }
+  },
   "users": {
     "owner": "f1000000-0000-4000-8000-000000000003",
     "foreign": "f1000000-0000-4000-8000-000000000010"
   },
-  "finishedAt": "2026-10-02T13:45:07.714650+00:00",
-  "limitations": [
-    "Direct HTTP storage proof; no native UI or real concurrent publication race exercised.",
-    "Does not validate legacy chat-attachment namespace cleanup or PrismaPg driverAdapterError constraint mapping identified by cloud Standards comment 5953656322.",
-    "This exact-SHA result needs repeating after those source fixes; it does not satisfy the final merge gate for a later head."
-  ]
+  "readyzAfter": {
+    "at": "2026-10-02T15:41:34.745814+00:00",
+    "status": 200,
+    "body": {
+      "status": "ready",
+      "service": "api",
+      "checks": {
+        "postgres": "ok",
+        "redis": "ok",
+        "minio": "ok"
+      },
+      "commitSha": "b7ce7568b9a447cb9b109e6bf5b0063dfbf303b2",
+      "environment": "auto.tm-rewrite-pr-546"
+    }
+  },
+  "finishedAt": "2026-10-02T15:41:34.745841+00:00",
+  "counts": {
+    "passed": 118,
+    "failed": 0,
+    "notExercised": 3
+  }
 }
