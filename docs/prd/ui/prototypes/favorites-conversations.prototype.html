@@ -10,6 +10,10 @@
   The Favorites card and Hide sold behaviour are SETTLED input from #351 (AR-36-001/002), not variants.
   Founder choices are switchable DECISIONS in the floating bar. D1-D10 were APPROVED on 2026-10-02 (all recommended options, shown by default, marked approved).
   D10 (contact support) APPROVED 2026-10-02, variant A (pinned Support row). Contact support shows phone +993 63 98 94 04 and email bagtyyarkowusow.dev@gmail.com, in the #500 info-sheet design. Support hours and response time are not supplied, so they are not shown.
+  SUPPORT ENTRY (prototype-only switch, added after approval, NOT a recorded decision): the founder asked not to overuse
+  the contact-support button. The side panel switch "Support entry" compares A (D10 as approved), B (minimal, shown by default,
+  recommended) and C (middle). B and C reach support through Cabinet → Help (#353). A started support thread (#500, after the
+  reviewer release) is a separate panel toggle. See favorites-conversations.support-entry.md.
   Colours are AutoTM tokens from apps/mobile/global.css (light and dark).
   Copy: RU primary, EN, TK. TK keys copied from apps/mobile/src/i18n/resources.ts where they exist;
   new TK strings are drafts. No third-party screenshots are embedded. No prepayment warnings.
@@ -31,7 +35,7 @@
   .seg button{border:0;background:none;padding:6px 10px;font-size:12.5px;cursor:pointer;border-right:1px solid #e7e6e3}
   .seg button:last-child{border-right:0}.seg button.on{background:#171717;color:#fff}
   .note{background:#fff;border-left:3px solid #E60000;padding:8px 10px;font-size:13px;margin:6px 0}
-  .lbl{display:inline-block;min-width:80px;font-size:12px;color:#737170}
+  .lbl{display:inline-block;min-width:80px;padding-right:8px;font-size:12px;color:#737170}
   table{border-collapse:collapse;width:100%;font-size:12px;background:#fff}td,th{border:1px solid #e7e6e3;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f4f4f2}
   .mute{color:var(--mfg)}.xs{font-size:11.5px}.sm{font-size:12.5px}.price{font-weight:800}
   .appbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg);flex:none}
@@ -86,6 +90,9 @@
   .help{color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;margin-top:2px}
   .ph-x{background:#fff3b0;color:#5c4a00;border-radius:4px;padding:0 4px;font-weight:600}
   .act{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--card);cursor:pointer;color:var(--fg);text-decoration:none}
+  .badge.sup{color:var(--ver);border-color:var(--ver);background:none;font-weight:600}
+  .crowp{display:flex;gap:14px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+  .crowp .gi{width:22px;text-align:center;color:var(--mfg);font-size:16px;flex:none}
   .notif{background:rgba(255,255,255,.16);border-radius:16px;padding:10px 12px;cursor:pointer}
 </style>
 </head>
@@ -168,6 +175,14 @@ const I={
  official:{ru:"Официальный",en:"Official",tk:"Resmi",n:1},phoneL:{ru:"Телефон",en:"Phone",tk:"Telefon",n:1},
  includeT:{ru:"Что указать в обращении",en:"What to include",tk:"Habarda nämeleri ýazmaly",n:1},
  includeV:{ru:"Номер объявления (например, № 123456) и что произошло.",en:"The Listing number (for example, No. 123456) and what happened.",tk:"Bildiriş belgisi (mysal üçin, № 123456) we näme bolandygy.",n:1},
+ supLabel:{ru:"Поддержка",en:"Support",tk:"Goldaw",n:1},
+ supTeam:{ru:"команда AutoTM",en:"AutoTM team",tk:"AutoTM topary",n:1},
+ supContacts:{ru:"Контакты поддержки",en:"Support contacts",tk:"Goldaw aragatnaşygy",n:1},
+ supWelcome:{ru:"Здравствуйте! Это официальная поддержка AutoTM. Опишите вопрос. AutoTM никогда не просит код входа и пароли.",en:"Hello! This is official AutoTM support. Describe your question. AutoTM never asks for your sign-in code or passwords.",tk:"Salam! Bu AutoTM-iň resmi goldawy. Soragyňyzy ýazyň. AutoTM hiç haçan giriş koduny we paroly soramaýar.",n:1},
+ supU1:{ru:"Не могу опубликовать объявление",en:"I cannot publish my Listing",tk:"Bildirişi çap edip bilemok",n:1},
+ supS1:{ru:"Спасибо! Напишите номер объявления, мы проверим.",en:"Thanks! Send us the Listing number and we will check.",tk:"Sag boluň! Bildiriş belgisini ýazyň, barlarys.",n:1},
+ supS2:{ru:"Проверили: объявление снова опубликовано.",en:"We checked: your Listing is published again.",tk:"Barladyk: bildirişiňiz täzeden çap edildi.",n:1},
+ language:{ru:"Язык",en:"Language",tk:"Dil",n:1},theme:{ru:"Тема",en:"Theme",tk:"Tema",n:1},about:{ru:"О приложении",en:"About the app",tk:"Programma hakda",n:1},
  pushSigned:{ru:"Войдите, чтобы открыть сообщение. После входа вы окажетесь в этой переписке.",en:"Sign in to open the message. After sign-in you land in this Conversation.",tk:"Habary açmak üçin giriň. Girenden soň şu gepleşige gaýdarsyňyz.",n:1}
 };
 let LANG="ru";const t=k=>{const o=I[k];return o?(o[LANG]||o.en):k};
@@ -183,7 +198,9 @@ const FAV=[
 let favs=FAV.map(x=>({...x}));
 const S={surface:"fav",tab:"fav",dark:false,fav:"list",hideSold:true,msgs:"list",thread:"active",
  sheet:null,dialog:null,toast:null,reportReason:null,reported:{},blocked:false,muted:false,
- net:"ok",supFrom:"msgs",from:"tab",pushSigned:true,pushStage:"lock",lastRemoved:null,draft:"",sel:null};
+ net:"ok",supFrom:"msgs",from:"tab",pushSigned:true,pushStage:"lock",lastRemoved:null,draft:"",sel:null,
+ /* prototype-only: Support entry variant (A approved D10, B minimal, C middle) and the post-release (#500) support thread */
+ se:"B",supThread:"none",supReply:false,supUnread:false};
 const V={sold:"B",menu:"C",row:"A",qr:"B",fail:"A",rep:"B",blk:"B",read:"B",push:"A",sup:"A"};
 const APPROVED="2026-10-02";
 const D=[
@@ -213,14 +230,24 @@ function initThread(){
 }
 function openThread(sc,from,blocked){S.thread=sc;S.from=from;S.blocked=!!blocked;S.sheet=null;S.dialog=null;S.surface="thread";S.tab="msgs";initThread();render()}
 function openSupport(from){S.supFrom=from;S.sheet=null;S.dialog=null;S.surface="support";render()}
-function closeSupport(){const f=S.supFrom;set(f==="fav"?{surface:"fav",tab:"fav"}:f==="thread"?{surface:"thread",tab:"msgs"}:{surface:"msgs",tab:"msgs"})}
+function closeSupport(){const f=S.supFrom;set(f==="fav"?{surface:"fav",tab:"fav"}:f==="thread"?{surface:"thread",tab:"msgs"}:f==="cab"?{surface:"cab",tab:"cab"}:f==="supthread"?{surface:"supthread",tab:"msgs"}:{surface:"msgs",tab:"msgs"})}
+/* ───────── Support entry (prototype-only switch) ───────── */
+const SE_INFO={
+ A:["As approved (D10)","Pinned Support row at the top of Messages, “Need help? Contact support” links in the Favorites and Messages empty and error states, and Contact support in the Conversation ⋯ menu. Unchanged from the approved prototype."],
+ B:["Minimal","No pinned Support row, no “Need help?” links and no ⋯ menu item in Favorites or Messages. Support is reached only from Cabinet → Help (#353). Empty and error states keep Browse and Retry."],
+ C:["Middle","No pinned Support row. One “Need help? Contact support” link, only on the Messages failed-to-load state; it opens the same screen as Cabinet → Help. Everything else as in B."]};
+function supFromList(){return S.se==="A"?[["msgs","Messages"],["fav","Favorites"],["thread","Conversation ⋯"],["cab","Cabinet → Help"],["supthread","Support thread ⓘ"]]:S.se==="C"?[["msgs","Messages error link"],["cab","Cabinet → Help"],["supthread","Support thread ⓘ"]]:[["cab","Cabinet → Help"],["supthread","Support thread ⓘ"]]}
+function setSE(v){S.se=v;S.sheet=null;if(!supFromList().some(([k])=>k===S.supFrom))S.supFrom="cab";render()}
+function setSupThread(v){Object.assign(S,v==="none"?{supThread:"none",supReply:false,supUnread:false}:v==="reply"?{supThread:"started",supReply:true,supUnread:true}:{supThread:"started",supReply:false,supUnread:false});if(S.supThread==="none"&&S.surface==="supthread"){S.surface="msgs";S.tab="msgs"}render()}
+function openSupThread(){S.supThread="started";S.supUnread=false;S.sheet=null;S.dialog=null;S.surface="supthread";S.tab="msgs";render()}
+function goCab(){set({surface:"cab",tab:"cab",sheet:null,dialog:null})}
 function scen(sc){S.thread=sc;S.blocked=false;S.sheet=null;initThread();render()}
 
 /* ───────── shared pieces ───────── */
 const ph=(c,h,l)=>`<div class="ph ${c}" style="height:${h}px">${l||""}</div>`;
 function tabbar(){const T=[["search","🔍","search"],["fav","♡","favorites"],["sell","＋","sell"],["msgs","💬","messages"],["cab","👤","cabinet"]];
- return `<div class="tabbar">${T.map(([k,i,n])=>`<div class="${S.tab===k?'on':''}" onclick="${k==='fav'?"set({surface:'fav',tab:'fav'})":k==='msgs'?"set({surface:'msgs',tab:'msgs'})":"toast('Out of scope for this prototype')"}"><i>${i}</i>${t(n)}${k==='msgs'&&S.msgs==='list'?'<i class="dot">2</i>':''}</div>`).join("")}</div>`}
-function helpLink(from){return `<div class="help" onclick="openSupport('${from}')">${t("needHelp")}</div>`}
+ return `<div class="tabbar">${T.map(([k,i,n])=>`<div class="${S.tab===k?'on':''}" onclick="${k==='fav'?"set({surface:'fav',tab:'fav'})":k==='msgs'?"set({surface:'msgs',tab:'msgs'})":k==='cab'?"goCab()":"toast('Out of scope for this prototype')"}"><i>${i}</i>${t(n)}${k==='msgs'&&S.msgs==='list'?`<i class="dot">${2+(S.supUnread?1:0)}</i>`:''}</div>`).join("")}</div>`}
+function helpLink(from){if(!(S.se==="A"||(S.se==="C"&&from==="msgs-error")))return "";if(from==="msgs-error")from="msgs";return `<div class="help" data-k="needhelp" onclick="openSupport('${from}')">${t("needHelp")}</div>`}
 function errorState(retryJs,from){return `<div class="center"><div class="circle">⚠</div><b>${t("loadErr")}</b><div class="sm mute">${t("errSub")}</div><button class="btn brand sm" onclick="${retryJs}">${t("retry")}</button>${from?helpLink(from):''}</div>`}
 function signedOut(kind){return `<div class="center"><div class="circle">${kind==='fav'?'♡':'💬'}</div><b>${t(kind==='fav'?'favSignedOut':'msgSignedOut')}</b>${kind==='fav'?`<div class="sm mute">${t('favSignedOutSub')}</div>`:''}<button class="btn brand" onclick="toast('Sign in, then you return here and the pending action finishes')">${t("signIn")}</button></div>`}
 function toastEl(){return S.toast?`<div class="toast"><span>${S.toast.m}</span>${S.toast.undo?`<b onclick="undoFav()">${t('undo')}</b>`:''}</div>`:""}
@@ -270,28 +297,57 @@ function msgRow(r){
  return `<div class="row" onclick="${go}">${thumb}<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.lst}</b><span class="xs mute">${r.tm}</span></div><div class="sm mute">${r.p}</div>
   <div style="display:flex;gap:6px;align-items:center"><span class="sm mute" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pre}</span>${r.un?`<span class="unread">${r.un}</span>`:''}</div>
   <div class="xs mute">${t(r.role)}${r.st==='sold'?' · '+t('sold'):''}${r.muted?' · 🔕':''}</div></div></div>`}
-function supRow(){return V.sup!=="A"?"":`<div class="row suprow" onclick="openSupport('msgs')"><div class="mark">A<small>TM</small></div><div style="flex:1;min-width:0"><b>${t("supTitle")}</b><div class="sm mute">${t("supRowSub")}</div></div><span class="mute">›</span></div>`}
+const SUP_MARK=(sz,r,f)=>`<div class="mark" style="position:relative;width:${sz}px;height:${sz}px;border-radius:${r}px;font-size:${f}px">A<small style="font-size:${Math.max(7,Math.round(f*.53))}px;margin-bottom:${Math.round(sz*.23)}px">TM</small><span class="vchk"${sz<40?' style="width:14px;height:14px;font-size:9px"':''}>✓</span></div>`;
+function supPreview(){return {pre:t(S.supReply?"supS2":"supS1"),tm:S.supReply?"19:02":"17:10",un:S.supUnread?1:0}}
+/* B and C: a started support thread is an ordinary row (not pinned, no tinted background), told apart by the AutoTM mark and a small Support label. */
+function supThreadRow(){
+ const p=supPreview(),sz=V.row==='A'?64:56;
+ return `<div class="row" data-k="supthread-row" onclick="openSupThread()">${SUP_MARK(sz,12,Math.round(sz*.34))}<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:6px"><b>AutoTM</b><span class="xs mute">${p.tm}</span></div>
+  <div style="margin:1px 0"><span class="badge sup">${t("supLabel")}</span></div>
+  <div style="display:flex;gap:6px;align-items:center"><span class="sm mute" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${p.un?'color:var(--fg);font-weight:600':''}">${p.pre}</span>${p.un?`<span class="unread">${p.un}</span>`:''}</div></div></div>`}
+/* A with a started thread: the pinned row becomes the #500 thread row (time, Official, preview, unread). */
+function supRowThread(){
+ const p=supPreview();
+ return `<div class="row suprow" data-k="supthread-row" onclick="openSupThread()">${SUP_MARK(48,14,17)}<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:6px"><b>${t("supTitle")}</b><span class="xs mute">${p.tm}</span></div>
+  <div style="margin:1px 0"><span class="badge sup">✓ ${t("official")}</span></div>
+  <div style="display:flex;gap:6px;align-items:center"><span class="sm mute" style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${p.un?'color:var(--fg);font-weight:600':''}">${p.pre}</span>${p.un?`<span class="unread">${p.un}</span>`:''}</div></div></div>`}
+function supRow(){if(S.se!=="A"||V.sup!=="A")return "";if(S.supThread==="started"&&(S.msgs==="list"||S.msgs==="empty"))return supRowThread();return `<div class="row suprow" data-k="suprow" onclick="openSupport('msgs')"><div class="mark">A<small>TM</small></div><div style="flex:1;min-width:0"><b>${t("supTitle")}</b><div class="sm mute">${t("supRowSub")}</div></div><span class="mute">›</span></div>`}
 function msgsScreen(){
  const st=S.msgs;let body;
  if(st==="signedout")body=signedOut("msgs");
  else if(st==="loading")body=Array(6).fill(`<div class="row"><div class="skel" style="width:56px;height:56px"></div><div style="flex:1"><div class="skel" style="height:14px;width:70%"></div><div class="skel" style="height:11px;width:50%;margin-top:8px"></div></div></div>`).join("");
- else if(st==="error")body=errorState("set({msgs:'list'})","msgs");
+ else if(st==="error")body=errorState("set({msgs:'list'})","msgs-error");
  else if(st==="empty")body=`<div class="center"><div class="circle">💬</div><b>${t("noConv")}</b><div class="sm mute">${t("noConvSub")}</div><button class="btn out" onclick="toast('Opens Home')">${t("browse")}</button>${helpLink("msgs")}</div>`;
  else body=ROWS.map(msgRow).join("");
- const helpBtn=V.sup==="B"?`<button class="ib" aria-label="${t("helpIcon")}" title="${t("helpIcon")}" onclick="openSupport('msgs')"><span style="width:26px;height:26px;border-radius:50%;border:2px solid var(--fg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px">?</span></button>`:"";
+ /* B and C: the started support thread sorts by time with the other rows; in the empty state it is the only row. */
+ if(S.se!=="A"&&S.supThread==="started"){
+  if(st==="list"){const L=ROWS.map((r,i)=>({o:[4,2,1,0][i],h:msgRow(r)}));L.push({o:S.supReply?5:3,h:supThreadRow()});body=L.sort((a,b)=>b.o-a.o).map(x=>x.h).join("")}
+  else if(st==="empty")body=supThreadRow()+body}
+ const helpBtn=S.se==="A"&&V.sup==="B"?`<button class="ib" aria-label="${t("helpIcon")}" title="${t("helpIcon")}" onclick="openSupport('msgs')"><span style="width:26px;height:26px;border-radius:50%;border:2px solid var(--fg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px">?</span></button>`:"";
  return `<div class="appbar"><span class="t" style="font-size:22px">${t("messages")}</span>${helpBtn}</div><div class="body"><div class="col">${supRow()}${body}</div></div>${tabbar()}`}
 
 /* ───────── Contact support (D10) ───────── */
 const SUP_MAIL="bagtyyarkowusow.dev@gmail.com",SUP_TEL_SHOW="+993 63 98 94 04",SUP_TEL_URI="tel:+99363989404";
 function supportScreen(){
  /* Layout, iconography and hierarchy follow the ⓘ contact sheet of the #500 prototype (infoBlock). */
- return `<div class="appbar"><button class="ib" aria-label="Back" onclick="closeSupport()">←</button><span class="t">${t("contactSupport")}</span></div>
+ return `<div class="appbar"><button class="ib" aria-label="Back" onclick="closeSupport()">←</button><span class="t">${t(S.supFrom==="cab"?"helpIcon":S.supFrom==="supthread"?"supContacts":"contactSupport")}</span></div>
  <div class="body" style="padding:18px 16px">
   <div style="display:flex;gap:12px;align-items:center"><div class="mark" style="position:relative;width:56px;height:56px;border-radius:16px;font-size:20px">A<small style="font-size:10px;margin-bottom:12px">TM</small><span class="vchk">✓</span></div><div><b style="font-size:17px">${t("supTitle")}</b><div class="sm mute">✓ ${t("official")}</div></div></div>
   <div class="crow" style="gap:10px;padding:11px 10px;margin-top:14px"><div class="ic">✉</div><div style="flex:1;min-width:0"><div class="xs mute">Email</div><div class="sm" style="word-break:break-all"><b>${SUP_MAIL}</b></div></div><a class="btn out sm" href="mailto:${SUP_MAIL}" style="text-decoration:none;white-space:nowrap;padding:8px 10px;font-size:12.5px">${t("emailUs")}</a></div>
   <div class="crow" style="gap:10px;padding:11px 10px"><div class="ic">☎</div><div style="flex:1;min-width:0"><div class="xs mute">${t("phoneL")}</div><div class="sm" style="white-space:nowrap"><b>${SUP_TEL_SHOW}</b></div></div><a class="btn out sm" href="${SUP_TEL_URI}" style="text-decoration:none;white-space:nowrap;padding:8px 10px;font-size:12.5px">${t("callUs")}</a></div>
   <div class="xs mute" style="margin-top:10px"><b>${t("includeT")}:</b> ${t("includeV")}</div>
  </div>`}
+
+/* ───────── Cabinet stub (#353) and support thread stub (#500) ───────── */
+function cabScreen(){
+ const r=(k,i,l,fn)=>`<div class="crowp" data-k="cab-${k}" onclick="${fn}"><span class="gi">${i}</span><span>${l}</span></div>`;
+ const stub="toast('Stub. The full Cabinet is in the #353 prototype')";
+ return `<div class="appbar"><span class="t" style="font-size:22px">${t("cabinet")}</span></div><div class="body">${r("language","🌐",t("language"),stub)}${r("theme","◐",t("theme"),stub)}${r("help","?",t("helpIcon"),"openSupport('cab')")}${r("about","ⓘ",t("about"),stub)}</div>${tabbar()}`}
+function supThreadScreen(){
+ const head=`<div class="appbar"><button class="ib" aria-label="Back" onclick="set({surface:'msgs',tab:'msgs'})">←</button>${SUP_MARK(36,10,13)}<div style="flex:1;min-width:0;cursor:pointer" onclick="openSupport('supthread')"><b>${t("supTitle")}</b><div class="xs mute" style="line-height:1.25"><span style="color:var(--ver);font-weight:700">✓ ${t("official")}</span> · ${t("supTeam")}</div></div><button class="ib" data-k="sup-info" aria-label="${t("supContacts")}" title="${t("supContacts")}" onclick="openSupport('supthread')">ⓘ</button></div>`;
+ const b=(me,txt,tm)=>`<div style="display:flex;padding:2px 14px;flex-direction:column;align-items:${me?'flex-end':'flex-start'}"><div class="bub ${me?'me':'peer'}" style="cursor:default">${txt}<div class="meta"${me?'':' style="justify-content:flex-start;color:var(--mfg)"'}>${tm}${me?' ✓✓':''}</div></div></div>`;
+ const stub="toast('Stub. Sending, images and all thread states are in the #500 prototype')";
+ return `${head}<div class="body" id="tb"><div class="dsep">${t("today")}</div>${b(0,t("supWelcome"),"17:02")}${b(1,t("supU1"),"17:05")}${b(0,t("supS1"),"17:10")}${S.supReply?b(0,t("supS2"),"19:02"):""}</div><div class="composer"><span class="mute">📎</span><input id="supinp" placeholder="${t("msgPh")}" onkeydown="if(event.key==='Enter')${stub}"><button class="ib" style="color:var(--primary)" aria-label="Send" onclick="${stub}">➤</button></div>`}
 
 /* ───────── Conversation ───────── */
 function tick(st){return st==="sent"?"✓":V.read==="A"&&st==="read"?"<b>✓✓</b>":"✓✓"}
@@ -357,7 +413,8 @@ function overlays(){
   const bl=it("⛔",S.blocked?t("unblock"):t("block"),S.blocked?"set({sheet:null,dialog:'unblock'})":"set({sheet:null,dialog:'block'})",1);
   const sp=it("🛟",t("contactSupport"),"openSupport('thread')");
   const dl=it("🗑",t("delConv"),"set({sheet:null});toast('Conversation deleted for you')",1);
-  h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet">${V.menu==="A"?mu+bl+sp:V.menu==="B"?mu+rp+bl+dl+sp:mu+rp+bl+sp}</div>`}
+  const spx=S.se==="A"?sp:"";
+  h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet">${V.menu==="A"?mu+bl+spx:V.menu==="B"?mu+rp+bl+dl+spx:mu+rp+bl+spx}</div>`}
  if(S.sheet==="msg")h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet"><div class="it" onclick="set({sheet:null});toast('Copied')"><span>⧉</span>${t("copy")}</div><div class="it" style="color:var(--destructive)" onclick="set({sheet:'report',reportReason:null})"><span>⚑</span>${t("reportMsg")}</div><div class="it" onclick="set({sheet:null})"><span>✕</span>${t("cancel")}</div></div>`;
  if(S.sheet==="failed")h+=`<div class="dim" onclick="set({sheet:null})"></div><div class="sheet"><div class="it" onclick="set({sheet:null});retryMsg(S.sel)"><span>↻</span>${t("retryDel")}</div><div class="it" style="color:var(--destructive)" onclick="thread.splice(S.sel,1);set({sheet:null})"><span>🗑</span>${t("delMsg")}</div></div>`;
  if(S.sheet==="report"){
@@ -372,33 +429,41 @@ const seg=(label,items)=>`<div><span class="lbl">${label}</span><span class="seg
 function panel(){
  const s=S.surface;
  let h=`<h1>Favorites and Conversations · prototype (#352)</h1><div class="xs" style="color:#737170">Throwaway. Tokens from apps/mobile/global.css. D1-D10 are founder-APPROVED (2026-10-02, all recommended options, shown by default; ✓ marks the approved option, the other toggles are kept only for comparison).</div>`;
- h+=`<h2>Global</h2>`+seg("Surface",[["fav","fav"],["msgs","msgs"],["thread","thread"],["push","push"],["support","support"]].map(([v])=>[s===v,v==="thread"?"openThread(S.thread,'tab',S.blocked)":v==="support"?"openSupport(S.supFrom)":v==="push"?"set({surface:'push',pushStage:'lock',tab:'msgs'})":`set({surface:'${v}',tab:'${v}'})`,{fav:"Favorites",msgs:"Messages list",thread:"Conversation",push:"Push entry",support:"Contact support"}[v]]))+
+ h+=`<h2>Global</h2>`+seg("Surface",[["fav","fav"],["msgs","msgs"],["thread","thread"],["push","push"],["support","support"],["cab","cab"],["supthread","supthread"]].map(([v])=>[s===v,v==="thread"?"openThread(S.thread,'tab',S.blocked)":v==="support"?"openSupport(S.supFrom)":v==="push"?"set({surface:'push',pushStage:'lock',tab:'msgs'})":v==="cab"?"goCab()":v==="supthread"?"openSupThread()":`set({surface:'${v}',tab:'${v}'})`,{fav:"Favorites",msgs:"Messages list",thread:"Conversation",push:"Push entry",support:"Contact support",cab:"Cabinet (stub)",supthread:"Support thread (stub)"}[v]]))+
   seg("Theme",[[!S.dark,"set({dark:false})","Light"],[S.dark,"set({dark:true})","Dark"]])+
   seg("Language",["ru","en","tk"].map(l=>[LANG===l,`LANG='${l}';initThread();render()`,l.toUpperCase()]));
+ h+=`<h2>Support entry · prototype-only switch for the release</h2>`+seg("Support entry",[["A","A · As approved (D10)"],["B","B ★ · Minimal"],["C","C · Middle"]].map(([v,n])=>[S.se===v,`setSE('${v}')`,n]))+
+  seg("Support thread",[["none","None (release)"],["started","Started"],["reply","New reply (unread)"]].map(([v,n])=>[v==="none"?S.supThread==="none":v==="reply"?S.supThread==="started"&&S.supReply:S.supThread==="started"&&!S.supReply,`setSupThread('${v}')`,n]))+
+  `<div class="note" id="se-note"><b>${S.se} · ${SE_INFO[S.se][0]}${S.se==="B"?" (recommended, shown by default)":""}.</b> ${SE_INFO[S.se][1]}<br><span class="xs" style="color:#737170">Not a recorded decision: D10 stays approved as A until the founder picks. “Support thread” shows the in-app support chat from #500, which comes after the reviewer release; the release itself is always “None”. ${S.se==="A"?"Started in A: the pinned row becomes the #500 thread row.":"Started in "+S.se+": the thread is an ordinary row with a small Support label, sorted by time, never pinned; it is first started from Cabinet → Help."}</span></div>`;
  if(s==="fav")h+=`<h2>Favorites state</h2>`+seg("State",[["list","List"],["loading","Loading"],["error","Error"],["empty","Empty"],["signedout","Signed out"]].map(([v,n])=>[S.fav===v,`set({fav:'${v}'})`,n]))+
   `<div class="note">Settled in #351 (AR-36-001/002): large card with Call and Message, filled ♥ removes with Undo, <b>Hide sold</b> on by default with a hidden count. Switch Hide sold off on the phone to see Sold and Removed from sale dimmed, without contact buttons. Tap ♥ on both active cards that remain to reach “No active listings”. The Niva has no Message button (allowChat off). Deleted and banned Listings never appear. No recommendations block.</div>
   <button class="btn out sm" onclick="favs=FAV.map(x=>({...x}));S.fav='list';S.hideSold=true;render()">Reset list</button>`;
- if(s==="msgs")h+=`<h2>Messages list state</h2>`+seg("State",[["list","List"],["loading","Loading"],["error","Error"],["empty","Empty"],["signedout","Signed out"]].map(([v,n])=>[S.msgs===v,`set({msgs:'${v}'})`,n]))+`<div class="note">Rows show: unread badge with bold preview, muted bell, own last Message with tick, a Conversation about a sold Listing (badge), a blocked user (preview replaced). Tap a row to open it. The Auto.ru support-chat card (AR-37-005) and ads (KZ-49-002) are left out on purpose (D8). The pinned <b>Support</b> row (D10) is different: it has the AutoTM mark, no unread badge, and opens contact details, not a chat. Use the floating bar D10 to compare it with a header Help icon. Empty and Error states show a “Need help? Contact support” link; the Signed-out state keeps the Support row.</div>`;
+ if(s==="msgs")h+=`<h2>Messages list state</h2>`+seg("State",[["list","List"],["loading","Loading"],["error","Error"],["empty","Empty"],["signedout","Signed out"]].map(([v,n])=>[S.msgs===v,`set({msgs:'${v}'})`,n]))+`<div class="note">Rows show: unread badge with bold preview, muted bell, own last Message with tick, a Conversation about a sold Listing (badge), a blocked user (preview replaced). Tap a row to open it. The Auto.ru support-chat card (AR-37-005) and ads (KZ-49-002) are left out on purpose (D8). ${S.se==="A"?"The pinned <b>Support</b> row (D10) is different: it has the AutoTM mark, no unread badge, and opens contact details, not a chat. Use the floating bar D10 to compare it with a header Help icon. Empty and Error states show a “Need help? Contact support” link; the Signed-out state keeps the Support row.":S.se==="B"?"<b>Support entry B:</b> no Support row and no “Need help?” link in any state. Support is in Cabinet → Help (tap the Cabinet tab).":"<b>Support entry C:</b> no Support row. Only the Error state shows “Need help? Contact support”; it opens the same screen as Cabinet → Help."}</div>`;
+ if(s==="cab")h+=`<h2>Cabinet (stub)</h2><div class="note">Stub of the #353 Cabinet menu, only to show where Help lives. The real Cabinet, its rows and the signed-out state are in the cabinet-profile prototype. <b>Help</b> opens the email and phone screen.</div>`;
+ if(s==="supthread")h+=`<h2>Support thread (stub)</h2><div class="note"><b>After the reviewer release (#500).</b> Stub of the #500 thread: AutoTM mark with the Official tick, staff shown only as AutoTM, ⓘ opens the support contacts. Sending, images, closed and restricted states are in the support-conversations prototype, not here.</div>`;
  if(s==="thread")h+=`<h2>Conversation state</h2>`+seg("Scenario",[["new","New (empty)"],["active","Active"],["sold","Sold Listing"],["loading","Loading"],["error","Error"],["signedout","Signed out"]].map(([v,n])=>[S.thread===v,`scen('${v}')`,n]))+
   seg("Network",[[S.net==="ok","set({net:'ok'})","Online"],[S.net==="off","set({net:'off'})","Offline: sends fail"]])+
   seg("Blocked",[[!S.blocked,"set({blocked:false})","No"],[S.blocked,"set({blocked:true})","Blocked banner"]])+
   `<div class="note">Try it: type and Send (Sending, ✓, ✓✓, Read). Go Offline and send for a failed Message, then go Online and Retry. Click a seller Message to Report it. ⋯ opens the menu. Quick replies show in the New scenario. No prepayment warnings.</div>`;
  if(s==="push")h+=`<h2>Push entry</h2>`+seg("Signed in",[[S.pushSigned,"set({pushSigned:true,pushStage:'lock'})","Yes"],[!S.pushSigned,"set({pushSigned:false,pushStage:'lock'})","No (session expired)"]])+`<div class="note">Tap the notification. Signed in: opens the Conversation. Signed out: sign-in, then the same Conversation. Back behaviour is decision D9.</div>`;
- if(s==="support")h+=`<h2>Contact support (D10)</h2>`+seg("Opened from",[["msgs","Messages"],["fav","Favorites"],["thread","Conversation ⋯"]].map(([v,n])=>[S.supFrom===v,`S.supFrom='${v}';render()`,n]))+`<div class="note"><b>Approved (founder, 2026-10-02):</b> phone +993 63 98 94 04 and email bagtyyarkowusow.dev@gmail.com. Hours and response time are not supplied, so they are left out. Layout follows the ⓘ contact sheet from the #500 prototype; the in-app support chat (#500) comes after the reviewer release. Email opens <code>mailto:</code>, Call opens <code>tel:</code>. Entry points: pinned Support row, Messages and Favorites empty and error links, Conversation ⋯ menu.</div>`;
- h+=`<h2>Exists today vs new</h2>`+status();
+ if(s==="support")h+=`<h2>Contact support (D10)</h2>`+seg("Opened from",supFromList().map(([v,n])=>[S.supFrom===v,`S.supFrom='${v}';render()`,n]))+`<div class="note"><b>Approved (founder, 2026-10-02):</b> phone +993 63 98 94 04 and email bagtyyarkowusow.dev@gmail.com. Hours and response time are not supplied, so they are left out. Layout follows the ⓘ contact sheet from the #500 prototype; the in-app support chat (#500) comes after the reviewer release. Email opens <code>mailto:</code>, Call opens <code>tel:</code>. Entry points with Support entry ${S.se}: ${S.se==="A"?"pinned Support row, Messages and Favorites empty and error links, Conversation ⋯ menu, Cabinet → Help":S.se==="B"?"Cabinet → Help only":"Cabinet → Help, plus the link on the Messages error state"}. Opened from Cabinet the title is “Help”, as in #353.</div>`;
+ h+=`<h2>Exists today vs new</h2>`+statusTable();
  document.getElementById("panel").innerHTML=h}
-function status(){
- const rows={fav:[["Large card, Call + Message, ♥ with Undo, Hide sold, Sold / Removed labels","New (today a plain ListingCard, no actions, no switch)"],["Signed-out, empty, skeleton, error","Exist in app/(tabs)/favorites.tsx; copy changes"],["“Need help? Contact support” link in empty and error states","New"]],
+function statusTable(){
+ const se=S.se,gone="Not built with Support entry "+se+" (support is in Cabinet → Help, #353)";
+ const rows={fav:[["Large card, Call + Message, ♥ with Undo, Hide sold, Sold / Removed labels","New (today a plain ListingCard, no actions, no switch)"],["Signed-out, empty, skeleton, error","Exist in app/(tabs)/favorites.tsx; copy changes"],["“Need help? Contact support” link in empty and error states",se==="A"?"New":gone]],
  support:[["Contact support screen (#500 info-sheet design): AutoTM mark with Official tick, Email (mailto:), Phone (tel:), what to include","New (no support contact anywhere in the mobile app today; web Trust page shows trust@auto.tm)"],["Support email and phone","Supplied by the founder (hours and response time not supplied, not shown)"],["RU/EN/TK copy","New; TK is a draft"]],
- msgs:[["List, unread badge, role label, sold label, empty, skeleton, error, signed-out","Exist (ConversationList.tsx, ConversationListItem.tsx, app/(tabs)/chat.tsx)"],["Seller name, tick, muted and blocked marks on the row","New"],["Pinned Support row (AutoTM mark, no badge; signed-in, empty, signed-out) or header Help icon (D10)","New"],["“Need help? Contact support” link in Messages empty and error states","New"]],
- thread:[["Pinned Listing strip, quick replies, Sending/Failed/Retry, ticks, Report message, Block/Unblock, blocked banner, Mute","Exist (app/conversations/[id].tsx, MessageBubble.tsx, QuickReplies.tsx, ConversationListingCard.tsx, MessageReportSheet.tsx)"],["Sold banner, Report user, Read label, Copy (no Delete conversation: D2 approved)","New"],["“Contact support” item in the ⋯ menu, after Mute, Report, Block","New"]],
- push:[["Tap routes to the Conversation (cold, background, foreground)","Exists (src/notifications/useDirectMessagePushRouting.ts)"],["Messages list under the Conversation, signed-out return","New, unverified"]]}[S.surface];
+ msgs:[["List, unread badge, role label, sold label, empty, skeleton, error, signed-out","Exist (ConversationList.tsx, ConversationListItem.tsx, app/(tabs)/chat.tsx)"],["Seller name, tick, muted and blocked marks on the row","New"],["Pinned Support row (AutoTM mark, no badge; signed-in, empty, signed-out) or header Help icon (D10)",se==="A"?"New":gone],["“Need help? Contact support” link in Messages empty and error states",se==="A"?"New":se==="C"?"New, error state only":gone],["Started support thread row with a Support label","After the reviewer release (#500); nothing to build for the release"]],
+ thread:[["Pinned Listing strip, quick replies, Sending/Failed/Retry, ticks, Report message, Block/Unblock, blocked banner, Mute","Exist (app/conversations/[id].tsx, MessageBubble.tsx, QuickReplies.tsx, ConversationListingCard.tsx, MessageReportSheet.tsx)"],["Sold banner, Report user, Read label, Copy (no Delete conversation: D2 approved)","New"],["“Contact support” item in the ⋯ menu, after Mute, Report, Block",se==="A"?"New":gone]],
+ push:[["Tap routes to the Conversation (cold, background, foreground)","Exists (src/notifications/useDirectMessagePushRouting.ts)"],["Messages list under the Conversation, signed-out return","New, unverified"]],
+ cab:[["Cabinet menu with one Help row","Owned by #353 (cabinet-profile prototype); stub here"]],
+ supthread:[["Support thread: header, bubbles, composer, ⓘ contacts","After the reviewer release (#500); stub here"]]}[S.surface];
  return `<table><tr><th>State</th><th>Today</th></tr>${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table><div class="xs" style="color:#737170;margin-top:6px">${Object.keys(I).filter(k=>I[k].n).length} strings are new; their TK text is a draft to be checked.</div>`}
 
 /* ───────── floating bar ───────── */
 function bar(){
  const d=D[di];
- document.getElementById("switcher").innerHTML=`<div class="top"><button onclick="cycle(-1)">←</button><span>${d.n}${d.ap?` <span style="color:#7ee2a0;font-size:11.5px">✓ approved ${APPROVED}</span>`:' <span style="color:#ffd27a;font-size:11.5px">proposal</span>'}</span><button onclick="cycle(1)">→</button><button style="padding:0 12px" onclick="jump()">show</button></div><div class="opts">${d.o.map(([k,n,rec])=>`<button class="${V[d.k]===k?'on':''}" onclick="setV('${d.k}','${k}')">${k}${rec?(d.ap?' ✓':' ★'):''} · ${n}</button>`).join("")}</div>`}
+ document.getElementById("switcher").innerHTML=`<div class="top"><button onclick="cycle(-1)">←</button><span>${d.n}${d.ap?` <span style="color:#7ee2a0;font-size:11.5px">✓ approved ${APPROVED}</span>`:' <span style="color:#ffd27a;font-size:11.5px">proposal</span>'}</span><button onclick="cycle(1)">→</button><button style="padding:0 12px" onclick="jump()">show</button></div>${d.k==="sup"&&S.se!=="A"?`<div style="color:#ffd27a;font-size:11.5px">Hidden now: the panel switch “Support entry” is ${S.se}. Set it to A to compare these.</div>`:""}<div class="opts">${d.o.map(([k,n,rec])=>`<button class="${V[d.k]===k?'on':''}" onclick="setV('${d.k}','${k}')">${k}${rec?(d.ap?' ✓':' ★'):''} · ${n}</button>`).join("")}</div>`}
 function cycle(n){di=(di+n+D.length)%D.length;jump()}
 function jump(){
  const p=D[di].go();
@@ -408,12 +473,14 @@ function jump(){
  set(Object.assign({sheet:null},p))}
 function render(){
  document.getElementById("phone").className="phone"+(S.dark?" dark":"");
- const scr={fav:favScreen,msgs:msgsScreen,thread:threadScreen,push:pushScreen,support:supportScreen}[S.surface]();
+ const scr={fav:favScreen,msgs:msgsScreen,thread:threadScreen,push:pushScreen,support:supportScreen,cab:cabScreen,supthread:supThreadScreen}[S.surface]();
  document.getElementById("screen").innerHTML=`<div class="screen">${scr}${overlays()}${toastEl()}</div>`;
  const tb=document.getElementById("tb");if(tb)tb.scrollTop=tb.scrollHeight;
  const inp=document.getElementById("inp");if(inp&&document.activeElement===document.body&&S.draft){inp.focus();inp.setSelectionRange(S.draft.length,S.draft.length)}
  panel();bar()}
-{const q=new URLSearchParams(location.search);if(q.get("lang"))LANG=q.get("lang");if(q.get("dark"))S.dark=q.get("dark")==="1";if(q.get("surface")){S.surface=q.get("surface");S.tab=S.surface==="support"?"msgs":S.surface}}
+{const q=new URLSearchParams(location.search);if(q.get("lang"))LANG=q.get("lang");if(q.get("dark"))S.dark=q.get("dark")==="1";if(q.get("surface")){S.surface=q.get("surface");S.tab=S.surface==="support"||S.surface==="supthread"?"msgs":S.surface}
+ if(["A","B","C"].includes(q.get("se")))S.se=q.get("se");if(q.get("sup")==="started"||q.get("sup")==="reply"){S.supThread="started";S.supReply=S.supUnread=q.get("sup")==="reply"}
+ if(!supFromList().some(([k])=>k===S.supFrom))S.supFrom="cab";if(S.surface==="supthread")S.supThread="started"}
 initThread();render();
 </script>
 </body>
