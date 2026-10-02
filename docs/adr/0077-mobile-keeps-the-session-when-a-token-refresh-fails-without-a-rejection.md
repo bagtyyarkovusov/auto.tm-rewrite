@@ -22,7 +22,7 @@ The same issue records a wording error in ADR-0063. It says an unreadable body c
 - **Clears the session.** A 401 from `/auth/refresh`, and a 2xx JSON body that fails `RefreshResponseSchema` (a contract violation).
 - **Keeps the session.** A 5xx or any other non-2xx status that is not 401, a network failure, a timeout, and a 2xx answer whose body is not JSON.
 - **Pre-send refresh.** After a kept-session failure the request goes out with the old bearer, so a public route answers as before and a protected route still reaches the 401 path. The next request retries the refresh, because the token still reads as expired.
-- **401 path.** When a protected request answered 401 and the refresh then fails without a rejection, the client cannot replay the request. It throws an `ApiError` whose code is `REFRESH_UNAVAILABLE`, with the refresh's status, or 502 for a non-JSON 2xx answer. It does not throw `UNAUTHENTICATED`, which the root layout treats as a sign-out signal. Network failures and timeouts keep their existing errors. The query layer's normal retry and pull-to-refresh try again, and the next request refreshes again.
+- **401 path.** When a protected request answered 401 and the refresh then fails without a rejection, the client cannot replay the request. It throws an `ApiError` whose code is `REFRESH_UNAVAILABLE` with a fixed status of 503, whatever the refresh answered (a 404 or 429 from a gateway must not read as a missing listing or a rate limit on the User's request). It does not throw `UNAUTHENTICATED`, which the root layout treats as a sign-out signal. Network failures and timeouts keep their existing errors. Because 503 is not a 4xx, the query layer's normal single retry applies, pull-to-refresh tries again, and the next request refreshes again. Mutations do not retry.
 - Hooks still never read tokens or refresh on their own. Refresh stays single-flight in `apps/mobile/src/api/client.ts`.
 
 ## Consequences
@@ -34,7 +34,7 @@ The same issue records a wording error in ADR-0063. It says an unreadable body c
 
 ### Negative / accepted costs
 
-- While `/auth/refresh` keeps failing without a 401, every request after the token lapses pays one more failed round trip before it is sent, up to the 15-second refresh timeout.
+- While `/auth/refresh` keeps failing without a 401, a protected request after the token lapses pays two failed refreshes: one before it is sent and one on the 401 path. A query adds two more with its single retry, so up to four, each bounded by the 15-second refresh timeout. A public read pays only the first.
 - A session the server has revoked stays on the device until the API next answers `/auth/refresh` with a 401. A long outage that coincides with a revoked session delays the sign-out for that period.
 - A non-401 `4xx` from `/auth/refresh` (for example a 400 or 429) also keeps the session. The contract defines none of them as a rejection, so a future rejection status needs the contract and this rule updated together.
 
