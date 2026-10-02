@@ -467,7 +467,7 @@ function seed(){
 }
 const titleOf=d=>d.brand&&d.model?`${d.brand} ${d.model}${d.year?", "+d.year:""}`:(d.brand||"");
 const priceOf=d=>d.price!==""&&d.price!=null?fmtNum(d.price)+" "+d.cur:"";
-const isEmptyDraft=d=>!d.brand&&!d.vin&&!d.photos.length&&!d.video&&d.price===""&&!d.desc&&!d.city&&d.km===""&&d.dmg==null;
+const isEmptyDraft=d=>!d.brand&&!d.vin&&!d.photos.length&&!d.video&&d.price===""&&!d.desc&&!d.city&&d.km===""&&(d.dmg==null||d.cond==="new");
 
 /* ───────────── navigation ───────────── */
 function render(){renderPhone();panel();switcher();}
@@ -495,7 +495,7 @@ const phoneNeeded=d=>S.v.phreq==="A"||d.calls;
 function blockErrs(b,d){
   const e={};
   if(b==="vehicle"){if(!d.brand)e.brand="eBrand";if(!d.model)e.model="eModel";if(!d.year)e.year="eYear";}
-  if(b==="specs"){if(d.cond==="used"&&d.km==="")e.km="eKm";if(d.dmg==null)e.dmg="eDmg";}
+  if(b==="specs"){if(d.cond==="used"&&d.km==="")e.km="eKm";if(d.cond==="used"&&d.dmg==null)e.dmg="eDmg";}
   if(b==="photos"){if(!d.photos.length)e.photos="ePhotos";}
   if(b==="price"){if(d.price===""||d.price===0)e.price="ePrice";else if(d.price>999999999)e.price="ePriceBig";}
   if(b==="desc"){if(!d.desc||!d.desc.trim())e.desc="eDesc";}
@@ -584,7 +584,7 @@ function setF(k,el){
   if(k==="desc"){const c=document.getElementById("dcount");if(c)c.textContent=v.length+"/2000";}
   touch();
 }
-function setC(k,v){const d=S.w.d;d[k]=v;if(k==="cur"){d.price="";}if(k==="cond"&&v==="new"){d.km="";}touch();render();}
+function setC(k,v){const d=S.w.d;const was=d[k];d[k]=v;if(k==="cur"){d.price="";}if(k==="cond"&&v==="new"){d.km="";d.dmg=false;}if(k==="cond"&&v==="used"&&was==="new"){d.dmg=null;}touch();render();}
 function tog(k){const d=S.w.d;d[k]=!d[k];touch();render();}
 const approxLine=d=>d.cur!=="TMT"&&d.price!==""?t("approxTmt",{n:fmtNum(Math.round(d.price*CAT.fx[d.cur]))}):"";
 function nextStep(){
@@ -899,7 +899,7 @@ function bVin(d,e,lock,alone){
 function bSpecs(d,e){
   let h=`<div class="sect" style="padding-top:4px">${t("condition")}</div>`+chips("cond",[["used",t("cUsed")],["new",t("cNew")]],d.cond);
   if(d.cond==="used")h+=fin({k:"km",label:t("mileage"),value:d.km,num:true,ph:"0",sfx:t("km"),err:e.km});
-  h+=`<div class="sect${e.dmg?" errtx":""}" style="${e.dmg?"margin:0;":""}">${t("damaged")}</div>`+chips("dmg",[[false,t("no")],[true,t("yes")]],d.dmg)+(e.dmg?`<div class="errtx pad">${t(e.dmg)}</div>`:"");
+  if(d.cond==="used")h+=`<div class="sect${e.dmg?" errtx":""}" style="${e.dmg?"margin:0;":""}">${t("damaged")}</div>`+chips("dmg",[[false,t("no")],[true,t("yes")]],d.dmg)+(e.dmg?`<div class="errtx pad">${t(e.dmg)}</div>`:"");
   h+=`<div class="pad" style="padding-top:10px"><div class="fl mute s13" style="padding-bottom:6px">${t("knownIssues")} · ${t("optional").toLowerCase()}</div><textarea class="ta shrt" data-k="in-issues" maxlength="1000" placeholder="${t("knownIssuesPh")}" oninput="setF('issues',this)">${d.issues}</textarea></div>`;
   h+=`<div class="gap" style="margin-top:14px"></div><div class="sect">${t("moreDetails")}</div>`;
   const o=(k,lab)=>frow({k,label:t(lab),value:d[k]?t(d[k]):"",ph:t("select"),fn:`openPk('${k}')`,pre:k==="color"&&d.color?`<span class="dot" style="background:${colorHex(d.color)}"></span>`:""});
@@ -958,7 +958,7 @@ function bContact(d,e,joined){
 function blockSummary(b,d){
   if(b==="vehicle")return [titleOf(d),d.gen].filter(Boolean).join(" · ");
   if(b==="vin")return d.vin?"VIN "+d.vin:"";
-  if(b==="specs")return [d.cond==="new"?t("cNew"):d.km!==""?`${fmtNum(d.km)} ${t("km")}`:"",d.gear?t(d.gear):"",d.eng?t(d.eng):"",d.dmg==null?"":`${t("damaged")}: ${t(d.dmg?"yes":"no").toLowerCase()}`].filter(Boolean).join(" · ");
+  if(b==="specs")return [d.cond==="new"?t("cNew"):d.km!==""?`${fmtNum(d.km)} ${t("km")}`:"",d.gear?t(d.gear):"",d.eng?t(d.eng):"",d.cond==="new"||d.dmg==null?"":`${t("damaged")}: ${t(d.dmg?"yes":"no").toLowerCase()}`].filter(Boolean).join(" · ");
   if(b==="photos")return d.photos.length?t("photoN",{n:d.photos.length})+(d.video?" · "+t("video"):""):"";
   if(b==="price")return [priceOf(d),d.exch?t("exchange"):"",d.inst?t("installment"):""].filter(Boolean).join(" · ");
   if(b==="desc")return d.desc?(d.desc.length>44?d.desc.slice(0,44)+"…":d.desc):"";
@@ -1308,6 +1308,7 @@ jp("Details: empty",()=>{base();openWz(partCar(),"specs");});
 jp("Details: errors",()=>{base();openWz(partCar(),"specs");nextStep();});
 jp("Details: filled",()=>{base();openWz(fullCar({photos:[]}),"specs");});
 jp("Details: new car",()=>{base();openWz(partCar({cond:"new",dmg:false}),"specs");});
+jp("Details: new then used",()=>{base();openWz(partCar({cond:"new",dmg:false}),"specs");setC("cond","used");});
 jp("Colour picker",()=>{base();openWz(partCar({km:86000,dmg:false}),"specs");openPk("color");});
 jp("Body picker",()=>{base();openWz(partCar({km:86000,dmg:false}),"specs");openPk("body");});
 grp("Wizard: Photos");
@@ -1422,7 +1423,7 @@ jp("Cabinet: signed out",()=>{base({acct:"out"});switchTab("cabinet");});jp("Sea
 const KCD=[
  ["Step 1, VIN as its own first step","drop","VIN becomes an optional field at the bottom of Car. Nothing decodes it (ADR-0053) and today's helper promises auto-fill."],
  ["Brand, Model, Generation, Year","change","Stays, now first. Pickers chain; Year is a list instead of a typed number (both references use a list)."],
- ["Condition, mileage, Damaged, Known issues, optional specs","keep","Same fields and rules (ADR-0052). Optional specs move under a quiet “More details” heading."],
+ ["Condition, mileage, Damaged, Known issues, optional specs","change","Same fields and rules (ADR-0052), except a New car is not asked Damaged and stores “not damaged” (D12, ADR-0080). Optional specs move under a quiet “More details” heading."],
  ["Photos: 1 to 20, compress to ≤5 MB, cover, reorder, retry, remove","keep","Moves from 2nd to 3rd. Every queue state has a visible tile; errors also list under the grid with Retry or Remove."],
  ["Continue on Photos needs one uploaded photo","change","Continue needs one photo picked. Uploads carry on in the background, as PRD 32 says; Publish still waits for them."],
  ["Price, currency, Exchange, Installment","keep","Currency becomes three inline buttons instead of a picker sheet. Switching currency still clears the amount."],

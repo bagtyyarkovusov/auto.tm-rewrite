@@ -110,7 +110,7 @@ Not in the captures: drafts, an archive, status tabs, a blocked Listing, phone v
 |---|---|---|---|
 | Step 1 is VIN alone | drop as a step | VIN is an optional field at the bottom of Car | Nothing decodes it; both references ask for the car first; the helper text promised auto-fill |
 | Brand, Model, Generation, Year | change | First step. Pickers chain; Year is a list | Auto.ru and Kolesa both do this; fewer taps and no typing |
-| Condition, Mileage, Damaged, Known issues, optional specs | keep | Same fields and rules; optional specs under "More details" | ADR-0052 is recent and tested |
+| Condition, Mileage, Damaged, Known issues, optional specs | change | Same fields and rules, except a New car is not asked Damaged and stores *not damaged* (D12, [ADR-0080](../../../adr/0080-a-new-car-skips-the-damaged-question.md)); optional specs under "More details" | ADR-0052 is recent and tested; the founder found the Damaged question odd for a New car |
 | Photos: 1 to 20, compression, cover, reorder, retry, remove | keep, moved | Third step; every queue state has a tile, and errors also list under the grid with Retry or Remove | Both references ask for photos mid-flow |
 | Continue on Photos needs an uploaded photo | change | Continue needs one photo picked; Publish waits for uploads | PRD 32 says the seller can continue while photos upload |
 | Price, currency, Exchange, Installment | keep | Currency is three inline buttons | Three options do not need a sheet |
@@ -133,6 +133,7 @@ Recommended steps: **Car → Details and condition → Photos → Price → Desc
 ## 5. How the prototype behaves
 
 - **Sell tab.** Signed out: one "Sign in" button. No drafts: "List a car" and a "My listings" row. With drafts: the latest draft with Continue, New listing, "All drafts" when there are several, "My listings". At five drafts New listing explains the limit and opens Drafts.
+- **Details (D12).** Condition Used shows Mileage and the required Damaged question. Condition New hides both and stores *not damaged*. Switching New → Used clears that stored answer and asks the question again, so a Used car is never published on an answer the seller did not give. Known issues stays optional for both. The Check step shows "Damaged: no/yes" only for Used.
 - **Wizard.** The tab bar is hidden. Header: back, "New listing", "Step N of 7", ✕. Continue is always enabled; tapping it with gaps shows the errors under the fields. An upload chip in the header follows the seller to later steps and opens Photos.
 - **Leaving.** ✕ saves and closes with "Saved to Drafts". An untouched new Listing leaves no draft. If the last save failed, a dialog offers Retry, Leave anyway, Keep editing. Resuming opens the step the seller left.
 - **Photos.** Add opens a Camera or Gallery sheet. Tiles show Compressing, In queue, Uploading with a bar, Waiting for network, Retry, Failed, Lost. Tapping a tile offers Set as cover, Move earlier, Move later, Remove, and Retry when it can help. At 20 the Add tile is disabled. A photo still over 5 MB after compression fails with Remove only. With D6 option B, a video over 60 s is refused before a tile appears, and one over 10 MB after compression fails with Remove only.
@@ -157,6 +158,7 @@ Recommended steps: **Car → Details and condition → Photos → Price → Desc
 | D9 | Actions on a My listings row | A: ⋯ opens a bottom sheet. B: two buttons on the row, the rest under ⋯ | A |
 | D10 | Taking a Listing off the market | A: two actions, Mark as sold and Remove from sale. B: one "Remove from sale" with a reason sheet | A |
 | D11 | Location fields | A: one City picker grouped by region. B: Region, then City | A |
+| D12 | Damaged question for a New car | A: hide it for New and store *not damaged*; any seller may choose New. B: New for dealers only, as Auto.ru appears to. C: keep asking (ADR-0052 as written) | A |
 
 Reasons, in the same order:
 
@@ -171,6 +173,9 @@ Reasons, in the same order:
 9. Plain rows, as the founder asked for Cabinet.
 10. Both actions exist in the API and in the Cabinet stub, and "Mark as sold" is the result most sellers want. Option B is tidier with Sold inside Archive but needs an API field and a wording change in the Cabinet stub.
 11. One tap fewer; the region follows from the city.
+12. A New car has only one honest answer. Storing *not damaged* keeps the value on every Listing, so the buyer signal and a later filter need no special case.
+
+**Founder decisions (2026-10-02):** D1–D11 option A ([#354 comment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354#issuecomment-5947666654)); D12 option A ([#354 comment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354#issuecomment-5950697656)), recorded as [ADR-0080](../../../adr/0080-a-new-car-skips-the-damaged-question.md), which amends ADR-0052.
 
 ## 7. Changes to other prototypes
 
@@ -217,5 +222,7 @@ Headless Chrome over loopback HTTP, driven through CDP. Screenshots are phone-si
 | Flow script | 304 of 304 checks pass, 0 page errors |
 | Full cartesian render sweep | 3072 combinations, 132 jump states, about 2.43 million phone renders (2,433,885), 861 panel renders; 0 bad renders, 0 page errors |
 | Screenshot run | 67 screenshots, 0 page or console errors |
+
+**D12 update (2026-10-03).** In-page checks over loopback HTTP: New hides the question and stores `false`; Continue on New with no answer shows no error; New → Used clears the answer, shows the question, and Continue shows the required error; Used "Yes" → New stores `false`; an answered Used draft stays answered; 0 page errors. New jump state "Details: new then used". The full flow script, render sweep and screenshot set above were not re-run for this update.
 
 Not verified: repository unit, typecheck and lint gates (the prototype touches no application code); any native Android behaviour; real uploads, SMS delivery or timing; RU and TK wording.
