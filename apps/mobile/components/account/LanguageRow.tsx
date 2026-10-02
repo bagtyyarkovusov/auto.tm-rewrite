@@ -6,7 +6,7 @@ import { localeNames, type Locale } from "../../src/i18n/resources";
 import { localeStore } from "../../src/locale/localeStore";
 
 import { OptionPickerSheet } from "./OptionPickerSheet";
-import { PickerRow } from "./PickerRow";
+import { MenuRow } from "./MenuRow";
 
 // English first, as the approved prototype lists them.
 const LOCALE_ORDER: readonly Locale[] = ["en", "ru", "tk"];
@@ -21,7 +21,7 @@ export function LanguageRow() {
 
   return (
     <>
-      <PickerRow icon={Globe} label={t("language")} value={localeNames[locale]} onPress={() => setOpen(true)} />
+      <MenuRow icon={Globe} label={t("language")} value={localeNames[locale]} onPress={() => setOpen(true)} />
       <OptionPickerSheet
         open={open}
         onOpenChange={setOpen}

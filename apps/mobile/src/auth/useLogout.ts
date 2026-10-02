@@ -1,13 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { apiClient } from "../api/client";
-import { HOME_HREF } from "../navigation/homeHref";
 
 import { loadAuthSession, clearAuthSession } from "./session";
 
+import { useToast } from "@/components/ui/toast";
+
+/** Logging out lands on Cabinet, signed out, with a short "Signed out" message. */
 export function useLogout() {
   const queryClient = useQueryClient();
+  const { show } = useToast();
+  const { t } = useTranslation("account");
 
   return useMutation({
     mutationFn: async () => {
@@ -29,7 +34,8 @@ export function useLogout() {
     },
     onSuccess: () => {
       queryClient.clear();
-      router.replace(HOME_HREF);
+      router.dismissTo("/(tabs)/services");
+      show({ title: t("signedOut") });
     },
   });
 }
