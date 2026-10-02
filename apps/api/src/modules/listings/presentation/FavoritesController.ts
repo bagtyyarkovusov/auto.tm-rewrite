@@ -11,7 +11,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-import { ZodError } from "zod";
+import type { ZodError } from "zod";
 import { ListingsSchemas, AdminSchemas } from "@auto-tm/contracts";
 
 import { IDENTITY_CHECK_PORT, type IdentityCheckPort } from "../../identity/identity.public";
@@ -50,13 +50,16 @@ export class FavoritesController {
     try {
       return schema.parse(data);
     } catch (err) {
-      if (err instanceof ZodError) {
+      // Duck-typed: the schema's ZodError can come from another copy of zod, which
+      // fails `instanceof` and would turn a bad query into a 500.
+      if (err && typeof err === "object" && "issues" in err) {
+        const zodError = err as ZodError;
         // eslint-disable-next-line no-console
-        console.error("[Zod validation failed]", err.flatten(), "data:", JSON.stringify(data));
+        console.error("[Zod validation failed]", zodError.flatten(), "data:", JSON.stringify(data));
         throw new BadRequestException({
           code: "VALIDATION_ERROR",
           message: "Request validation failed",
-          details: err.flatten(),
+          details: zodError.flatten(),
         });
       }
       throw err;
