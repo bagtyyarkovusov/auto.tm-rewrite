@@ -111,8 +111,8 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     return () => clearTimeout(timer);
   }, [duration]);
 
-  // Announced on both platforms: iOS has no live regions, and Android may not
-  // read one that has just been mounted. Naming the action tells a screen-reader
+  // Announced on both platforms, with no live region to read it twice: iOS has
+  // no live regions, and Android may not read one that has just been mounted. Naming the action tells a screen-reader
   // user that Undo is there.
   const announcement = toast.action ? `${toast.title}. ${toast.action.label}` : toast.title;
   React.useEffect(() => {
@@ -127,7 +127,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       exiting={(fromBottom ? FadeOutDown : FadeOutUp).duration(150)}
       className="pointer-events-auto w-full max-w-sm">
       {/* An accessible parent groups its children on iOS, which would hide the action from VoiceOver. */}
-      <Pressable onPress={onDismiss} accessible={!toast.action} accessibilityLiveRegion="polite">
+      <Pressable onPress={onDismiss} accessible={!toast.action}>
         <View
           className={cn(
             'flex-row items-center gap-3 rounded-lg border px-4 py-3 shadow-lg shadow-black/5',

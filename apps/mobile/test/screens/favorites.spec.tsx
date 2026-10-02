@@ -145,15 +145,30 @@ describe("Favorites screen", () => {
   it("does not show the pull-to-refresh spinner when a confirmed removal reloads the list", async () => {
     const view = await renderFavorites();
     let release: () => void = () => {};
+    api.get.mockClear();
     api.get.mockImplementation((url: string) => new Promise((resolve) => { release = () => resolve(serve(url)); }));
     fireEvent.press(heart(view, 0));
     const effect = vi.mocked(useFocusEffect).mock.calls.at(-1)?.[0];
     const blur = effect?.();
     act(() => { if (typeof blur === "function") blur(); });
     await settle();
-    expect(api.get).toHaveBeenCalled();
+    expect(api.get).toHaveBeenCalledWith("/favorites?limit=20&activeOnly=true", expect.any(Object));
     expect(view.getByTestId("favorites-list").props.refreshControl.props.refreshing).toBe(false);
     await act(async () => { release(); });
+  });
+
+  it.each([["succeeds", false], ["fails", true]])("shows the spinner during a pull and stops it when the refresh %s", async (_, fails) => {
+    const view = await renderFavorites();
+    let finish: () => void = () => {};
+    api.get.mockImplementation((url: string) => new Promise((resolve, reject) => {
+      finish = () => (fails ? reject(new Error("Network request failed")) : resolve(serve(url)));
+    }));
+    const refreshing = () => view.getByTestId("favorites-list").props.refreshControl.props.refreshing;
+    act(() => { view.getByTestId("favorites-list").props.refreshControl.props.onRefresh(); });
+    expect(refreshing()).toBe(true);
+    await act(async () => { finish(); });
+    await settle();
+    expect(refreshing()).toBe(false);
   });
 
   it("keeps the switch and the count while the other position loads", async () => {
@@ -172,6 +187,7 @@ describe("Favorites screen", () => {
     fireEvent.press(view.getByRole("switch", { name: "Hide sold" }));
     await settle();
     expect(view.getByText("Something went wrong")).toBeTruthy();
+    expect(view.getByTestId("favorites-count").props.children).toBe(4);
     fireEvent.press(view.getByRole("switch", { name: "Hide sold" }));
     await settle();
     expect(cardTitles(view)).toEqual(["Toyota Camry, 2018", "Toyota RAV4, 2018"]);

@@ -8,6 +8,8 @@ interface UseMyFavoritesOptions {
   limit?: number;
   /** Hide sold: only active Listings. Every page still carries the counts over all visible Favorites. */
   activeOnly?: boolean;
+  /** False only watches the cache: no request, but the cached pages stay alive and reactive. */
+  enabled?: boolean;
 }
 
 export function useMyFavorites(opts?: UseMyFavoritesOptions) {
@@ -31,5 +33,6 @@ export function useMyFavorites(opts?: UseMyFavoritesOptions) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     staleTime: 30_000,
+    enabled: opts?.enabled ?? true,
   });
 }

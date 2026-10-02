@@ -1,12 +1,10 @@
 import { useCallback, useMemo, useRef } from "react";
-import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { Enums, type ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
 
 import { useFavoriteRemoval, FAVORITE_REMOVAL_DELAY_MS } from "../../api/listings/useFavoriteRemoval";
 import { useMyFavorites } from "../../api/listings/useMyFavorites";
-import { queryKeys } from "../../api/queryKeys";
 
 import { useToast } from "@/components/ui/toast";
 
@@ -77,12 +75,10 @@ export function useFavoritesView() {
   const items = useMemo(() => loaded.filter((item) => !hidden.has(item.id)), [loaded, hidden]);
 
   // Counts are over every visible Favorite, so the other position's cached
-  // answer stands in while this one loads or after it fails.
-  const queryClient = useQueryClient();
-  const serverCounts =
-    query.data?.pages[0]?.counts ??
-    queryClient.getQueryData<InfiniteData<ListingsSchemas.MyFavoritesResponse>>(queryKeys.favorites.list(!hideSold))?.pages[0]?.counts ??
-    null;
+  // answer stands in while this one loads or after it fails. Watching it (with
+  // no request) keeps that cache alive and the fallback reactive.
+  const other = useMyFavorites({ activeOnly: !hideSold, enabled: false });
+  const serverCounts = query.data?.pages[0]?.counts ?? other.data?.pages[0]?.counts ?? null;
 
   // The server still counts a removal waiting for Undo or for its delete.
   const counts = useMemo(() => {
