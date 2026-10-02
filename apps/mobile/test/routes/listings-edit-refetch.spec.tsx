@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-
 import { waitFor } from "@testing-library/react-native";
 
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
@@ -119,7 +118,10 @@ function createListingApi() {
       if (body.ordering.some((o) => !rows.has(o.mediaId))) {
         return HttpResponse.json({ message: "Media not found" }, { status: 404 });
       }
-      for (const o of body.ordering) rows.get(o.mediaId)!.sortOrder = o.sortOrder;
+      for (const o of body.ordering) {
+        const row = rows.get(o.mediaId);
+        if (row) row.sortOrder = o.sortOrder;
+      }
       return HttpResponse.json({ success: true });
     }),
   );
@@ -164,7 +166,9 @@ describe("Listing edit save across a background refetch", () => {
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: true })).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
 
-    await act(async () => fireEvent.press(screen.getAllByRole("button", { name: "Retry" }).at(-1)!));
+    const [retry] = screen.getAllByRole("button", { name: "Retry" }).slice(-1);
+    if (!retry) throw new Error("No Retry button");
+    await act(async () => fireEvent.press(retry));
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`));
 
     expect(api.fields.conditionDisclosure).toEqual(expect.objectContaining({ damaged: false }));

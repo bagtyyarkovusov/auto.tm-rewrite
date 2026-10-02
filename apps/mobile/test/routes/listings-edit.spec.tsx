@@ -15,7 +15,7 @@ const fixture = vi.hoisted(() => {
     saveState: { status: "idle", error: null, opStates: {} } as {
       status: string; error: Error | null; opStates: Record<string, string>;
     },
-    listing: { id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
+    baseline: { id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
       year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
       displayPriceTmt: 100000, description: "Legacy listing", regionId: id, cityId: id,
       allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
@@ -23,11 +23,11 @@ const fixture = vi.hoisted(() => {
       createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
       seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
     },
-    baseline: undefined as unknown as Record<string, unknown>,
+    listing: {} as Record<string, unknown>,
     photos: [{ photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 }],
   };
 });
-fixture.baseline = { ...fixture.listing };
+fixture.listing = { ...fixture.baseline };
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
   photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
@@ -73,7 +73,7 @@ beforeEach(() => {
   fixture.deleteDraftDir.mockClear();
   routerMock.replace.mockClear();
   fixture.saveState = { status: "idle", error: null, opStates: {} };
-  fixture.listing = { ...fixture.baseline, id: fixture.id };
+  fixture.listing = { ...fixture.baseline };
 });
 
 describe("legacy Listing edit", () => {
@@ -107,7 +107,10 @@ describe("legacy Listing edit", () => {
     fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }));
     fireEvent.press(screen.getByRole("button", { name: "Discard" }));
     expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
-    fireEvent.press(screen.getAllByText("Discard").at(-1)!);
+    // The confirmation dialog's action, rendered after the header button's label.
+    const [confirm] = screen.getAllByText("Discard").slice(-1);
+    if (!confirm) throw new Error("No discard confirmation");
+    fireEvent.press(confirm);
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
   });
 

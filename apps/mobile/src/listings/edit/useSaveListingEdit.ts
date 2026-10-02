@@ -191,11 +191,11 @@ interface EditPlan {
  * that hands the hook fresh objects with the same content is not a change.
  */
 function editInputKey(
-  payload: WizardSchemas.WizardDraftPayload,
+  fieldsPatch: ListingsSchemas.EditListingRequest,
   photos: StagedPhoto[],
 ): string {
   return JSON.stringify({
-    fields: buildFieldsPatch(payload),
+    fields: fieldsPatch,
     photos: photos.map((p) => [p.photoId, p.key ?? null, p.sortOrder]),
   });
 }
@@ -240,9 +240,10 @@ function buildEditPlan(
     .filter((p) => hasUploadKey(p) || isServerMedia(p.photoId))
     .map((p) => p.photoId);
 
+  const fieldsPatch = buildFieldsPatch(payload);
   return {
-    inputKey: editInputKey(payload, photos),
-    fieldsPatch: buildFieldsPatch(payload),
+    inputKey: editInputKey(fieldsPatch, photos),
+    fieldsPatch,
     attachments,
     removedMediaIds: [...removedMediaIds],
     orderedPhotoIds,
@@ -267,14 +268,6 @@ function planOps(plan: EditPlan): SaveListingEditOp[] {
     ops.push({ id: "reorder", label: "Update photo order" });
   }
   return ops;
-}
-
-export function computeOps(
-  payload: WizardSchemas.WizardDraftPayload,
-  photos: StagedPhoto[],
-  seedMedia: ListingsSchemas.ListingMedia[],
-): SaveListingEditOp[] {
-  return planOps(buildEditPlan(payload, photos, seedMedia, createLedger()));
 }
 
 export function opLabel(opId: string): string {
@@ -437,7 +430,7 @@ export function useSaveListingEdit(
         const ledger = currentLedger();
         const plan = planRef.current;
         if (state.status !== "failed" || !plan) return false;
-        if (plan.inputKey !== editInputKey(payload, photos)) {
+        if (plan.inputKey !== editInputKey(buildFieldsPatch(payload), photos)) {
           return runFreshPlan(buildEditPlan(payload, photos, seedMedia, ledger));
         }
         dispatch({ type: "RETRY" });
