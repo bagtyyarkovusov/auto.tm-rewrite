@@ -19,7 +19,7 @@ Switching between related views or sections. Two distinct concepts here:
 - Filter results: All / Photos only / Videos only
 - Favorites screen: Listings / Saved Searches / Comparisons (Phase 3)
 - Results condition switch: All / New / Used
-- Settings profile: Account / Notifications / Privacy
+- My listings: Active / Drafts / Archive
 
 ## When NOT to use
 
