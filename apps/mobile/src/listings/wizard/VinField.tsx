@@ -20,7 +20,7 @@ interface VinFieldProps {
  */
 export function VinField({ payload, onChange, error, disabled }: VinFieldProps) {
   const { t } = useTranslation();
-  const helper = t(disabled ? "vinLockedHelper" : "vinHelper");
+  const helper = t(disabled ? "thisFieldCannotBeChanged" : "vinHelper");
 
   return (
     <View className="gap-1.5">
