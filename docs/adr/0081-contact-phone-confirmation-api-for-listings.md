@@ -8,7 +8,7 @@
 
 ## Context
 
-ADR-0056 decided that every Listing contact phone is verified. A seller may use their account phone without a code, or confirm another `+993` number by SMS code and then reuse it for 7 days. Contact-phone codes are 6 digits, SHA-256 hashed, expire after 5 minutes, allow 5 wrong attempts, share ADR-0054's per-destination and per-IP budgets, and are bound to their purpose. The server checks the contact phone on publish, republish and edit. ADR-0056 named no endpoint, error code, record or SMS text. The prototype note for [#354](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354) (`docs/prd/ui/prototypes/sell-wizard.md` at `21a3ae2`, sections 5 and 9) assumes one "send code" call and one "confirm code" call. When a publish fails on the contact phone, the app sends the seller back to the Contact step. Founder decision D7 makes the contact phone required even when calls are off.
+ADR-0056 decided that every Listing contact phone is verified. A seller may use their account phone without a code, or confirm another `+993` number by SMS code and then reuse it for 7 days. Contact-phone codes are 6 digits, SHA-256 hashed, expire after 5 minutes, allow 5 wrong attempts, share ADR-0054's per-destination and per-IP budgets, and are bound to their purpose. The server checks the contact phone on publish, republish and edit. ADR-0056 named no endpoint, error code, record or SMS text. The prototype note for [#354](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354) (`docs/prd/ui/prototypes/sell-wizard.md` on the evidence branch `prototype/sell-wizard` at `21a3ae2`, sections 5 and 9; it is not on `main`) assumes one "send code" call and one "confirm code" call. When a publish fails on the contact phone, the app sends the seller back to the Contact step. Founder decision D7 makes the contact phone required even when calls are off.
 
 What the code does today (`origin/main` at `e61b8b22`):
 
@@ -50,7 +50,7 @@ VerifiedContactPhoneSchema = z.object({
 
 ### Purpose binding
 
-- `otp_requests` gains a required `purpose` column. It is a Prisma enum `CodePurpose` with the values `sign_in`, `sign_in_method`, `account_deletion` and `listing_contact_phone`. Every code-creating use-case sets it. The migration backfills existing rows as `sign_in`. Every existing row is already past its 5-minute expiry.
+- `otp_requests` gains a required `purpose` column. It is a Prisma enum `CodePurpose` with the values `sign_in`, `sign_in_method`, `account_deletion` and `listing_contact_phone`. Every code-creating use-case sets it. `CodePurpose` is the storage form of the existing `SignInCodePurpose` enum in `@auto-tm/contracts` (`sign-in`, `sign-in-method`, `account-deletion`, already used by the email code job), which gains a `listing-contact-phone` value. Identity infrastructure holds the one mapping between the two, so there is a single purpose vocabulary. The migration backfills existing rows as `sign_in`. A phone code lives 5 minutes and an email code 10, so a method-change or deletion code that is still in flight when the migration runs is backfilled as `sign_in`, fails closed under strict binding, and must be requested again.
 - Verification looks up the newest record for the channel, destination **and purpose**. Contact-phone verification also matches the requesting User. `VerifyOtp` (sign-in) never accepts a `listing_contact_phone` record. Contact-phone verification accepts only `listing_contact_phone` records that the same seller requested.
 - Budgets stay shared. The per-destination count, the per-IP count and the backoff's "latest request" all read every purpose, as they do today.
 - The reviewer bypass (ADR-0030, as amended by ADR-0054) covers sign-in only. Contact-phone codes are always real codes. A reviewer User uses their reserved account phone, which needs no code.
@@ -92,7 +92,7 @@ All errors use the existing `ErrorResponse` envelope. As today, they all return 
 
 - `CONTACT_PHONE_REQUIRED` and `CONTACT_PHONE_NOT_CONFIRMED` are added to `ListingsErrorCode` in contracts and to `LISTING_ERROR_CODES` in the API. `InvalidOtpDetailsSchema` is added next to `RateLimitedDetailsSchema`. It is additive and also safe for the sign-in verify endpoint, which may adopt it later.
 - `expired` lets the app say "confirm this number again" instead of treating it as a new number. Either reason sends the seller to the Contact step.
-- **Decided (founder, 2026-10-03):** the daily-limit copy. **Chosen: keep `retryInSeconds: 0` for `destination_limit` and say "No more codes to this number today. Try again tomorrow or use another number".** This matches the existing sign-in contract and needs no new field. Showing the exact time would reveal when someone, possibly the number's owner signing in, last asked for a code.
+- **Decided (founder, 2026-10-03):** the daily-limit copy. **Chosen: keep `retryInSeconds: 0` for `destination_limit` and say "No more codes to this number today. Try again tomorrow or use another number".** This matches the existing sign-in contract and needs no new field. The backoff and resend timers already reveal recent requests for a number, as the public sign-in endpoint does today; leaving the daily limit without a time adds no further signal about when the number's owner last asked for a code.
 - **Decided (founder, 2026-10-03):** no per-seller limit on top of the shared ones. **Chosen: not for this release.** ADR-0056 sets only the shared budgets, and the per-number and per-IP limits already bound the SMS cost.
 
 ### SMS text
@@ -133,6 +133,7 @@ All errors use the existing `ErrorResponse` envelope. As today, they all return 
 - `OtpSenderPort` changes shape for every caller, even though only the contact-phone text is set here.
 - SMS delivery is still synchronous inside the API request, and the gateway is still a mock. Real delivery depends on the gateway work under ADR-0006 and ADR-0039.
 - The RU text uses all 70 characters, so any wording change must be counted again.
+- Because an edit is checked only when it changes the contact phone, ADR-0056's accepted cost widens: a seller can keep advertising a number after its owner withdraws consent until the contact phone is changed or the Listing is republished or archived, not "until the Listing is edited".
 
 ### Neutral
 
@@ -155,7 +156,7 @@ All errors use the existing `ErrorResponse` envelope. As today, they all return 
 
 - [ADR-0056](0056-listing-contact-phones-are-verified.md), [ADR-0054](0054-phone-or-email-sign-in-share-one-user.md), [ADR-0006](0006-auth.md), [ADR-0030](0030-reviewer-demo-account-otp-bypass.md), [ADR-0032](0032-account-deletion-grace-period.md), [ADR-0055](0055-resend-sends-sign-in-codes-from-the-worker.md), [ADR-0078](0078-the-api-trusts-one-configured-header-for-the-client-ip.md), [ADR-0039](0039-phased-cloud-first-hosting.md), [ADR-0042](0042-domain-glossary-authority-and-mutability.md), [ADR-0060](0060-source-first-agent-context-and-task-scoped-guidance.md)
 - [#354 founder slicing answers, Q7](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354#issuecomment-5961320337) and decision D7 on [#354](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354)
-- Sell wizard prototype note, `docs/prd/ui/prototypes/sell-wizard.md` at `21a3ae2`, sections 5 and 9
+- Sell wizard prototype note, `docs/prd/ui/prototypes/sell-wizard.md` on the evidence branch `prototype/sell-wizard` at `21a3ae2` (not on `main`), sections 5 and 9
 - [Listings PRD](../prd/features/32-listings.md), "Listing contact phone policy"
 - [Domain glossary](../domain/GLOSSARY.md), Verified Contact Phone
 - [Identity overview](../../apps/api/src/modules/identity/CONTEXT.md) and [Listings overview](../../apps/api/src/modules/listings/CONTEXT.md)
