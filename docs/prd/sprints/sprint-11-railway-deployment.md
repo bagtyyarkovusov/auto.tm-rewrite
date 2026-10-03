@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| **Status** | ⚪ Approved 2026-07-22, not started — batch grill complete; pending issue creation; mutable until roadmap → 🟡 |
+| **Status** | 🟡 In progress — approved and started 2026-07-22 |
 | **Phase** | Pre-launch deployment track (ADR-0039) |
 | **Milestone** | M10 — Store-reviewable cloud production |
 | **Demo audience** | Founder, internal operators, and App Store / Google Play reviewers using seeded demo accounts |
 | **Appetite** | One deployment sprint; slice vertically and stop at a repeatable reviewer-ready production proof |
-| **Issues** | Approved 13-slice dependency map below; GitHub issues not yet created |
+| **Issues** | GitHub parent [#270](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/270) + children [#271](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/271)–[#283](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/283), created from the approved 13-slice dependency map below |
 
 > **Why this sprint exists.** S10 closed the remote product loop, but the product is not reachable by store reviewers and production native push is still a shell. [ADR-0039](../../adr/0039-phased-cloud-first-hosting.md) moves the first deployment to Railway so store verification can proceed without waiting for TM presence or hardware. S11 makes that temporary cloud phase operable and reviewable. It does not open the marketplace to real users.
 

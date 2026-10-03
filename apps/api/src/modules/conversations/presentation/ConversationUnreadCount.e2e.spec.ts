@@ -136,6 +136,7 @@ describe("Conversation unread count e2e", () => {
       condition: "used",
       mileageKm: 50000,
       description: "Unread count test car",
+      contactPhone: suite.phone("seller-1"),
       allowCalls: true,
       allowChat: true,
       conditionDisclosure: { damaged: false },

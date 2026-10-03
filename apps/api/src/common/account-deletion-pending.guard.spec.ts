@@ -10,6 +10,9 @@ import { Public } from "./public.decorator";
 import type { IdentityCheckPort } from "../modules/identity/identity.public";
 
 class FakeIdentityCheckPort implements IdentityCheckPort {
+  async holdsSignInPhone(): Promise<boolean> {
+    return false;
+  }
   pending = new Set<string>();
   lookups = 0;
 

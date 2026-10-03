@@ -40,4 +40,12 @@ export class PrismaIdentityCheckAdapter implements IdentityCheckPort {
     });
     return row?.deletionScheduledAt != null;
   }
+
+  async holdsSignInPhone(userId: string, phone: string): Promise<boolean> {
+    const row = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { phone: true },
+    });
+    return row?.phone != null && row.phone === phone;
+  }
 }

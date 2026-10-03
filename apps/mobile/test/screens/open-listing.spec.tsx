@@ -6,8 +6,9 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 
 import { describe, it, expect, vi } from "vitest";
+import { waitFor } from "@testing-library/react-native";
 
-import { act, renderMobile, routeParams, routerMock } from "../render";
+import { renderMobile, routeParams, routerMock } from "../render";
 import OpenListingRoute from "../../app/conversations/open-listing";
 import { queryKeys } from "../../src/api/queryKeys";
 import type * as ClientModule from "../../src/api/client";
@@ -78,12 +79,14 @@ describe("OpenListingConversationScreen behaviour", () => {
     routeParams.listingId = "00000000-0000-4000-8000-0000000000a1";
 
     const screen = renderMobile(<OpenListingRoute />);
-    await act(async () => {});
 
-    expect(routerMock.replace).toHaveBeenCalledWith({
-      pathname: "/conversations/[id]",
-      params: { id: summary.id },
-    });
+    // The mutation's success reaches the screen on a later timer tick, not within one act().
+    await waitFor(() =>
+      expect(routerMock.replace).toHaveBeenCalledWith({
+        pathname: "/conversations/[id]",
+        params: { id: summary.id },
+      }),
+    );
     expect(screen.queryClient.getQueryData(queryKeys.conversations.detail(summary.id))).toEqual(summary);
   });
 });
