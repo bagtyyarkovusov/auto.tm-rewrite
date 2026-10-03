@@ -5,6 +5,8 @@ import type { Prisma } from "@auto-tm/db";
 import { ListingDraft } from "../domain/ListingDraft";
 import type { ListingDraftRepository } from "../domain/ports/ListingDraftRepository";
 
+const DRAFT_LIMIT_TRANSACTION = { maxWait: 5_000, timeout: 5_000 } as const;
+
 @Injectable()
 export class PrismaListingDraftRepository implements ListingDraftRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -20,6 +22,29 @@ export class PrismaListingDraftRepository implements ListingDraftRepository {
       },
     });
     return this.toDomain(row);
+  }
+
+  async saveWithinLimit(draft: ListingDraft, limit: number): Promise<ListingDraft | null> {
+    return this.prisma.$transaction(async (tx) => {
+      // Prisma cannot finish rollback while adapter-pg has an in-flight lock wait.
+      // PostgreSQL cancels the statement before the five-second transaction deadline.
+      await tx.$executeRaw`SET LOCAL statement_timeout = '4s'`;
+      // Locking the owner row serializes this User's creates, so two requests
+      // cannot both count four drafts and each add a fifth.
+      await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${draft.userId} FOR UPDATE`;
+      const owned = await tx.listingDraft.count({ where: { userId: draft.userId } });
+      if (owned >= limit) return null;
+      const row = await tx.listingDraft.create({
+        data: {
+          id: draft.id,
+          userId: draft.userId,
+          payload: draft.payload as Prisma.InputJsonValue,
+          createdAt: draft.createdAt,
+          updatedAt: draft.updatedAt,
+        },
+      });
+      return this.toDomain(row);
+    }, DRAFT_LIMIT_TRANSACTION);
   }
 
   async findById(id: string): Promise<ListingDraft | null> {

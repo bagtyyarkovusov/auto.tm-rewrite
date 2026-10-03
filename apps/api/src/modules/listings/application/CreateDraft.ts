@@ -1,7 +1,9 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { ConflictException, Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { ListingsSchemas } from "@auto-tm/contracts";
 
 import { ListingDraft } from "../domain/ListingDraft";
+import { LISTING_ERROR_CODES } from "../domain/types";
 import {
   LISTING_DRAFT_REPOSITORY,
   type ListingDraftRepository,
@@ -30,7 +32,14 @@ export class CreateDraft {
       payload: input.initialPayload ?? {},
     });
 
-    const saved = await this.drafts.save(draft);
+    const saved = await this.drafts.saveWithinLimit(draft, ListingsSchemas.MAX_DRAFTS_PER_USER);
+    if (!saved) {
+      throw new ConflictException({
+        code: LISTING_ERROR_CODES.DRAFT_LIMIT_REACHED,
+        message: `A User can keep at most ${ListingsSchemas.MAX_DRAFTS_PER_USER} drafts`,
+        details: { limit: ListingsSchemas.MAX_DRAFTS_PER_USER },
+      });
+    }
     return { draft: saved };
   }
 }

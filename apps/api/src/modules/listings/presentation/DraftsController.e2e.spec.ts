@@ -107,7 +107,7 @@ describe("DraftsController e2e", () => {
       expect(res.body.payload).toEqual({ vin: "WBA123" });
     });
 
-    async function postDraft(token: string) {
+    function postDraft(token: string) {
       return request
         .post("/api/v1/listings/drafts")
         .set("Authorization", `Bearer ${token}`)
@@ -120,7 +120,7 @@ describe("DraftsController e2e", () => {
 
     it("refuses a sixth draft with 409 DRAFT_LIMIT_REACHED and creates nothing", async () => {
       const token = await createUser("user-1");
-      for (let i = 0; i < 5; i += 1) await (await postDraft(token)).expect(201);
+      for (let i = 0; i < 5; i += 1) await postDraft(token).expect(201);
 
       const res = await postDraft(token);
 
@@ -132,20 +132,20 @@ describe("DraftsController e2e", () => {
     it("lets a User create a draft again after discarding one", async () => {
       const token = await createUser("user-1");
       const ids: string[] = [];
-      for (let i = 0; i < 5; i += 1) ids.push((await (await postDraft(token)).expect(201)).body.id);
+      for (let i = 0; i < 5; i += 1) ids.push((await postDraft(token).expect(201)).body.id);
 
       await request
         .delete(`/api/v1/listings/drafts/${ids[0]}`)
         .set("Authorization", `Bearer ${token}`)
         .expect(200);
 
-      await (await postDraft(token)).expect(201);
+      await postDraft(token).expect(201);
       expect(await draftCount("user-1")).toBe(5);
     });
 
     it("never leaves a User with six drafts under concurrent creates", async () => {
       const token = await createUser("user-1");
-      for (let i = 0; i < 4; i += 1) await (await postDraft(token)).expect(201);
+      for (let i = 0; i < 4; i += 1) await postDraft(token).expect(201);
 
       const results = await Promise.all(Array.from({ length: 4 }, () => postDraft(token)));
 
