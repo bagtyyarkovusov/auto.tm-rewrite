@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
+import type {
+  OtpRequest,
+  SignInCodeChannel,
+  SignInCodePurpose,
+} from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
@@ -7,7 +11,11 @@ import type { ClockPort } from "../domain/ports/ClockPort";
 import type { ReviewerOtpBypassConfig } from "../domain/ports/ReviewerOtpBypassConfig";
 import type { ConstantTimeComparatorPort } from "../domain/ports/ConstantTimeComparatorPort";
 import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
+import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
+import type { User } from "../domain/User";
+import { RequestAccountDeletion } from "./RequestAccountDeletion";
 import { RequestOtp } from "./RequestOtp";
+import { RequestSignInMethodChange } from "./RequestSignInMethodChange";
 
 const START = new Date("2026-09-23T12:00:00Z");
 
@@ -25,6 +33,7 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
   constructor(private readonly clock: ClockPort) {}
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -56,18 +65,7 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
   }
 
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
-    return this.records
-      .filter((record) =>
-        record.channel === channel &&
-        record.destination === destination &&
-        record.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
-  }
+  async findLatestForPurpose(): Promise<OtpRequest | null> { throw new Error("unused"); }
 
   async countByDestinationSince(
     channel: SignInCodeChannel,
@@ -150,6 +148,34 @@ function reviewerConfig(): ReviewerOtpBypassConfig {
   };
 }
 
+/** The three code-requesting flows over one store, as in production. */
+function allFlows() {
+  const { clock, repo, sms, email, useCase: signIn } = harness();
+  const holder: User = {
+    id: "user-1",
+    phone: "+99361234567",
+    phoneVerifiedAt: START,
+    email: null,
+    emailVerifiedAt: null,
+    displayName: null,
+    avatarUrl: null,
+    locale: "ru",
+    role: "buyer",
+    createdAt: START,
+    updatedAt: START,
+    deletionScheduledAt: null,
+  };
+  const users: SignInMethodRepository = {
+    findById: async (id) => (id === holder.id ? holder : null),
+    findByPhone: async (phone) => (phone === holder.phone ? holder : null),
+    findByEmail: async () => null,
+    replaceSignInMethod: async () => { throw new Error("unused"); },
+  };
+  const deletion = new RequestAccountDeletion(repo, users, sms, clock, false, email);
+  const methodChange = new RequestSignInMethodChange(repo, users, sms, clock, false, email);
+  return { clock, repo, signIn, deletion, methodChange };
+}
+
 describe("RequestOtp", () => {
   it("preserves the phone request path and five-minute expiry", async () => {
     const { useCase, repo, sms, email } = harness();
@@ -157,6 +183,7 @@ describe("RequestOtp", () => {
 
     expect(result.resendInSeconds).toBe(60);
     expect(repo.records[0]).toMatchObject({
+      purpose: "sign-in",
       channel: "phone",
       destination: "+99361234567",
     });
@@ -170,7 +197,11 @@ describe("RequestOtp", () => {
     const { useCase, repo, sms, email } = harness();
     await useCase.execute({ email: "  Buyer@Example.COM ", ip: "127.0.0.1" });
 
-    expect(repo.records[0]).toMatchObject({ channel: "email", destination: "buyer@example.com" });
+    expect(repo.records[0]).toMatchObject({
+      purpose: "sign-in",
+      channel: "email",
+      destination: "buyer@example.com",
+    });
     expect(repo.records[0]!.expiresAt).toEqual(new Date(START.getTime() + 10 * 60_000));
     expect(repo.records[0]!.codeHash).toMatch(/^[a-f0-9]{64}$/);
     expect(repo.records[0]!.codeHash).not.toBe(email.jobs[0]!.code);
@@ -246,6 +277,66 @@ describe("RequestOtp", () => {
     await expect(
       useCase.execute({ email: "eleventh@example.com", ip: "10.0.0.1" }),
     ).rejects.toMatchObject({ reason: "IP_LIMIT", retryInSeconds: 0 });
+  });
+
+  describe("limits shared with the other code purposes (ADR-0081)", () => {
+    const phone = "+99362345678";
+
+    it("counts deletion and method-change codes against the sign-in budget for the number", async () => {
+      const { clock, repo, signIn, deletion, methodChange } = allFlows();
+
+      await deletion.execute({ phone, ip: "10.0.0.1" });
+      clock.advance(60);
+      await methodChange.execute({ userId: "user-1", phone, ip: "10.0.0.2" });
+      clock.advance(120);
+      await deletion.execute({ phone, ip: "10.0.0.3" });
+      clock.advance(240);
+      await methodChange.execute({ userId: "user-1", phone, ip: "10.0.0.4" });
+      clock.advance(480);
+      await deletion.execute({ phone, ip: "10.0.0.5" });
+      clock.advance(960);
+
+      const refusal = await signIn
+        .execute({ phone, ip: "10.0.0.6" })
+        .catch((error: unknown) => error);
+      expect(refusal).toBeInstanceOf(SignInCodeRateLimitedError);
+      expect(refusal).toMatchObject({ reason: "DESTINATION_LIMIT", retryInSeconds: 0 });
+      expect(repo.records.map((record) => record.purpose)).toEqual([
+        "account-deletion",
+        "sign-in-method",
+        "account-deletion",
+        "sign-in-method",
+        "account-deletion",
+      ]);
+    });
+
+    it("applies the backoff after a code of another purpose", async () => {
+      const { clock, signIn, methodChange } = allFlows();
+
+      await methodChange.execute({ userId: "user-1", phone, ip: "10.0.0.1" });
+      clock.advance(15);
+
+      await expect(signIn.execute({ phone, ip: "10.0.0.2" })).rejects.toMatchObject({
+        reason: "BACKOFF",
+        retryInSeconds: 45,
+      });
+    });
+
+    it("counts every purpose against the per-IP budget", async () => {
+      const { signIn, deletion, methodChange } = allFlows();
+      for (let index = 0; index < 10; index++) {
+        const target = `+9936${String(3000000 + index).slice(-7)}`;
+        if (index % 2 === 0) {
+          await deletion.execute({ phone: target, ip: "10.0.0.9" });
+        } else {
+          await methodChange.execute({ userId: "user-1", phone: target, ip: "10.0.0.9" });
+        }
+      }
+
+      await expect(
+        signIn.execute({ phone: "+99364999999", ip: "10.0.0.9" }),
+      ).rejects.toMatchObject({ reason: "IP_LIMIT", retryInSeconds: 0 });
+    });
   });
 
   it("keeps reserved phones issuance-free and rate-limit exempt", async () => {

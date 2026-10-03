@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
+import { Enums } from "@auto-tm/contracts";
 
 import {
   OtpAttemptLedger,
@@ -101,6 +102,7 @@ export class RequestSignInMethodChange {
 
     const code = OtpCode.generate();
     const record = await this.otpRequestRepo.create({
+      purpose: Enums.SignInCodePurpose.SignInMethod,
       channel: destination.channel,
       destination: destination.value,
       codeHash: createHash("sha256").update(code.value).digest("hex"),
@@ -117,7 +119,7 @@ export class RequestSignInMethodChange {
         email: destination.value,
         code: code.value,
         locale: input.locale ?? "ru",
-        purpose: "sign-in-method",
+        purpose: Enums.SignInCodePurpose.SignInMethod,
       });
     }
 
