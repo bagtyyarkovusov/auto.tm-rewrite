@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 
+import { InvalidSignInCodeError } from "../domain/InvalidSignInCodeError";
 import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { SignInCodeDestination } from "../domain/SignInCodeDestination";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
@@ -54,6 +55,6 @@ export class VerifySignInCode {
     if (request.attempts + 1 >= MAX_ATTEMPTS) {
       throw new Error("Too many attempts");
     }
-    throw new Error("Invalid OTP code");
+    throw new InvalidSignInCodeError(MAX_ATTEMPTS - (request.attempts + 1));
   }
 }

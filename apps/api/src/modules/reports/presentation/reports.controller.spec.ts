@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
 
 import { ReportsController } from "./reports.controller";
@@ -123,4 +123,34 @@ describe("ReportsController", () => {
       expect(result.items[0]?.willingnessToPayTmtAvg).toBe(5000);
     });
   });
+
+  describe("invalid request", () => {
+    it("POST /listings/:id/inspection-interest answers 400 VALIDATION_FAILED, not 500", async () => {
+      const { controller, createInterestUC } = makeController({
+        inspectionInterestEnabled: true,
+      });
+      const req = { user: { sub: "user-1" } } as unknown as Parameters<
+        typeof controller.createInspectionInterest
+      >[2];
+      const res = { status: vi.fn() } as unknown as Parameters<
+        typeof controller.createInspectionInterest
+      >[3];
+
+      const error = await controller
+        .createInspectionInterest(
+          "listing-1",
+          { willingnessToPayTmt: "a lot" },
+          req,
+          res,
+        )
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "VALIDATION_FAILED",
+      });
+      expect(createInterestUC.execute).not.toHaveBeenCalled();
+    });
+  });
 });
+
