@@ -10,6 +10,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CommonActions } from "@react-navigation/native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { useUnreadCount } from "../../src/api/conversations/useUnreadCount";
+import { queryKeys } from "../../src/api/queryKeys";
+import { useRefreshUnreadOnPush } from "../../src/notifications/useRefreshUnreadOnPush";
 
 import { TAB_BAR_HEIGHT } from "./tabBarHeight";
 
@@ -35,6 +41,21 @@ export function AutoTmTabBar({
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const TAB_CONFIG = useTabConfig();
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const unreadCount = useUnreadCount();
+  useRefreshUnreadOnPush();
+
+  const messagesFocused = state.routes[state.index]?.name === "chat";
+  // The count also refreshes on foreground and push (see their hooks) and after
+  // a Conversation is read; here, each time the Messages tab gains focus.
+  useEffect(() => {
+    if (messagesFocused) {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.unreadCounts(),
+      });
+    }
+  }, [messagesFocused, queryClient]);
 
   const currentRoute = state.routes[state.index];
   const currentDescriptor = currentRoute ? descriptors[currentRoute.key] : undefined;
@@ -87,15 +108,18 @@ export function AutoTmTabBar({
         };
 
         const isSell = tab.name === "sell";
+        const badgeCount = tab.name === "chat" ? unreadCount : 0;
+        const accessibilityLabel =
+          badgeCount > 0
+            ? t("messagesTabUnread", { count: badgeCount })
+            : (descriptor?.options.tabBarAccessibilityLabel ?? tab.label);
 
         return (
           <Pressable
             key={tab.name}
             accessibilityRole="tab"
             accessibilityState={{ selected: isFocused }}
-            accessibilityLabel={
-              descriptor?.options.tabBarAccessibilityLabel ?? tab.label
-            }
+            accessibilityLabel={accessibilityLabel}
             testID={descriptor?.options.tabBarButtonTestID}
             className="flex-1 items-center justify-center"
             onPress={onPress}
@@ -125,12 +149,25 @@ export function AutoTmTabBar({
               </View>
             ) : (
               <View className="items-center justify-center gap-[3px]">
-                <Icon
-                  as={tab.icon}
-                  size={24}
-                  strokeWidth={1.8}
-                  className={isFocused ? "text-foreground" : "text-muted-foreground"}
-                />
+                <View>
+                  <Icon
+                    as={tab.icon}
+                    size={24}
+                    strokeWidth={1.8}
+                    className={isFocused ? "text-foreground" : "text-muted-foreground"}
+                  />
+                  {badgeCount > 0 ? (
+                    // Absolute, so the badge never changes the tab's size.
+                    <View
+                      testID="messages-tab-badge"
+                      className="absolute -right-3 -top-1.5 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1"
+                    >
+                      <Text className="text-[11px] font-medium leading-[14px] text-primary-foreground">
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
                 <Text
                   className={cn(
                     "text-[11px] font-medium",

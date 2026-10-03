@@ -289,6 +289,18 @@ export const ListMessagesResponseSchema = z.object({
 });
 export type ListMessagesResponse = z.infer<typeof ListMessagesResponseSchema>;
 
+// ── Total unread Messages ──
+
+/**
+ * Messages from other participants that are not deleted and are newer than
+ * the viewer's read watermark, summed over all the viewer's Conversations.
+ * Muted Conversations count, so the Messages tab and the list rows agree.
+ */
+export const UnreadCountResponseSchema = z.object({
+  count: z.number().int().nonnegative(),
+});
+export type UnreadCountResponse = z.infer<typeof UnreadCountResponseSchema>;
+
 // ── Conversation list response ──
 
 export const ListConversationsResponseSchema = z.object({
