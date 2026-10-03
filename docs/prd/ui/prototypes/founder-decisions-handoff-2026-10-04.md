@@ -1,6 +1,6 @@
 # AutoTM admin release scope audit and decision tree
 
-Founder session checkpoint, 2026-10-04. Q46–Q51 were explicitly accepted. Q40–Q45 remain pending. This records planning choices and source evidence, not an approved governing PRD, ADR, implementation instruction or release claim. The founder requested a handoff while usage was low, then resumed after the limit reset.
+Founder session checkpoint, 2026-10-04. Q46–Q51 and Q52–Q56 were explicitly accepted. Q40–Q45 remain pending. This records planning choices and source evidence, not an approved governing PRD, ADR, implementation instruction or release claim. The founder requested a handoff while usage was low, then resumed after the limit reset.
 
 ## Evidence boundary
 
@@ -93,9 +93,9 @@ Source entry points: apps/api/src/modules/listings/application/RemoveMedia.ts; R
 
 ## Portable resume instructions
 
-Read this record and issue checkpoints before asking new questions. Continue with Q52 onward in dependency-aware batches. Put a question in the next batch only when its prerequisites are settled. State recommendations clearly and wait for the founder's decision. Preserve previously accepted choices; do not silently treat the analytics prototype as approved.
+Read this record and issue checkpoints before asking new questions. Continue with Q57 onward in dependency-aware batches. Put a question in the next batch only when its prerequisites are settled. State recommendations clearly and wait for the founder's decision. Preserve previously accepted choices; do not silently treat the analytics prototype as approved.
 
-Start with last-photo visibility, a private correction path for moderated Listings, suspension/public visibility policy and photo reupload handling. Then resolve notices, appeals, review cadence, Message evidence, staff permissions and release phase boundaries. Review a Trust & Safety/Support prototype before production work. Governing documentation and any superseding ADR must be approved through the repository shaping workflow.
+Last-photo visibility, a private correction path for moderated Listings, suspension/public visibility policy, owner notices and initial review cadence were accepted in Q52–Q56. Continue with public reason categories, repeat abuse, appeal handling, restoration checks, report priority and related report disposition. Then resolve Message evidence, staff permissions, detailed evidence lifecycle and release phase boundaries. Review a Trust & Safety/Support prototype before production work. Governing documentation and any superseding ADR must be approved through the repository shaping workflow.
 
 ## Earlier decisions to preserve
 
@@ -149,7 +149,7 @@ This checkpoint branch is codex/prototype-decisions-2026-10-04. It is not intend
 
 Source paths: apps/mobile/src/admin/components/ReportSheet.tsx:124; docs/prd/flows/65-admin-moderation.md:97 and106; apps/api/src/modules/identity/application/GetMe.ts:10; apps/mobile/app/profile.tsx:236; apps/mobile/app/listings/manage.tsx:45; apps/mobile/src/listings/components/ListingDetail.tsx; apps/mobile/app/help.tsx:73; apps/api/src/modules/identity/infrastructure/PrismaIdentityAdminRepository.ts:25. Governing intended behavior and shipped UI differ as described. No tests were run in this audit.
 
-## Next proposed batch Q52–Q56, not accepted
+## Accepted dependent batch Q52–Q56
 
 - Q52: Public Listings require at least one usable photo. Staff removal must be permitted even for the final photo; hide a zero-photo Listing until correction. Prevent owner last-photo removal while public unless replaced in the same saved change.
 - Q53: Permit private correction submissions for a moderated Listing, with an operator approving restoration after checking the correction. Keep ordinary publication immediate. Uncorrectable fraud/unsafe offers use appeal, not automatic restoration.
@@ -157,4 +157,9 @@ Source paths: apps/mobile/src/admin/components/ReportSheet.tsx:124; docs/prd/flo
 - Q55: Provide an owner-visible moderation notice with a safe public reason category, affected Listing/photo, required next step and Help/appeal entry. Keep reporter identity, private evidence and internal notes hidden. Delivery channel and exact copy follow later.
 - Q56: Founder checks urgent reports promptly during staffed hours and performs one daily ordinary-report/new-or-edited-Listing review during the small Ashgabat pilot. No mandatory prepublication approval or overnight response promise; later staffing thresholds remain pending.
 
-These are recommendations to present to the founder, not settled behavior. Exact restoration state, appeal timing, repeat abuse, evidence lifecycle and phase admission depend on the answers.
+The founder explicitly answered "okay accpeted" to all five recommendations. These are accepted planning decisions, not implemented behavior. Exact restoration state, appeal handling, repeat abuse, evidence lifecycle and phase admission remain to be decided. Q40–Q45 are still pending.
+
+
+## Decision log continuation
+
+2026-10-04: Q52–Q56 accepted as a complete batch. Preserve private correction and operator approval without introducing general prepublication moderation. Explicitly hiding risky seller Listings is a separately audited action; unsuspension does not imply republication. Production state representation and governing documentation are unresolved. No production files changed.
