@@ -160,7 +160,8 @@ export function wizardMachineReducer(
 
       // Resume at the first incomplete step up to the entry step; with no
       // entry step, at the first incomplete step or at review when all are done.
-      // `currentStep` in the payload is never a real position (S6 owns that).
+      // `currentStep` in the payload is not a real position yet; a later slice
+      // saves the step the seller left.
       const target: WizardMachineStep = action.entryStep ?? "review";
       const resumeStep =
         WIZARD_STEPS.slice(0, stepIndex(target)).find(

@@ -9,7 +9,6 @@ import { useCities } from "../../api/catalog/useCities";
 
 import { DescriptionField } from "./DescriptionField";
 
-
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Input } from "@/components/ui/input";
