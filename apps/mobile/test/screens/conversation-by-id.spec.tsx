@@ -933,6 +933,81 @@ describe("Conversation about a closed Listing", () => {
     expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
   });
 
+  it("reloads the Conversation when initial image presigning is refused", async () => {
+    let restricted = false;
+    const readConversation = vi.fn(() =>
+      conversation({ sendRestriction: restricted ? "participant_unavailable" : null }),
+    );
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: readConversation });
+    state.mutation.mutateAsync.mockImplementationOnce(async () => {
+      restricted = true;
+      throw new ApiError("FORBIDDEN", 403, "Forbidden");
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    await screen.findByText("Merdan");
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Attach photo" }));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Send message" }));
+    });
+
+    expect(state.mutation.mutateAsync).toHaveBeenCalledWith({
+      conversationId: CONVERSATION_ID,
+      request: { contentType: "image/jpeg", sizeBytes: 1000 },
+    });
+    expect(state.socket.sendImageMessage).not.toHaveBeenCalled();
+    expect(await screen.findByText("You can't send messages in this Conversation")).toBeTruthy();
+    expect(readConversation).toHaveBeenCalledTimes(2);
+    expect(screen.queryByPlaceholderText("Message")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
+  });
+
+  it("reloads the Conversation when image Retry presigning is refused", async () => {
+    let restricted = false;
+    const readConversation = vi.fn(() =>
+      conversation({ sendRestriction: restricted ? "participant_unavailable" : null }),
+    );
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: readConversation });
+    state.mutation.mutateAsync
+      .mockResolvedValueOnce({ uploadUrl: "https://upload", key: "chat-attachments/k.jpg" })
+      .mockImplementationOnce(async () => {
+        restricted = true;
+        throw new ApiError("FORBIDDEN", 403, "Forbidden");
+      });
+    state.socket.sendImageMessage.mockResolvedValueOnce({ ok: false, code: "INTERNAL" });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    await screen.findByText("Merdan");
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Attach photo" }));
+    });
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Send message" }));
+    });
+    expect(await screen.findByText("Failed to send")).toBeTruthy();
+    expect(readConversation).toHaveBeenCalledTimes(1);
+    expect(screen.getByPlaceholderText("Message")).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Retry" }));
+    });
+
+    expect(state.mutation.mutateAsync).toHaveBeenCalledTimes(2);
+    expect(state.mutation.mutateAsync).toHaveBeenLastCalledWith({
+      conversationId: CONVERSATION_ID,
+      request: { contentType: "image/jpeg", sizeBytes: 1000 },
+    });
+    expect(state.socket.sendImageMessage).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("You can't send messages in this Conversation")).toBeTruthy();
+    expect(readConversation).toHaveBeenCalledTimes(2);
+    expect(screen.queryByPlaceholderText("Message")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
+  });
+
   it.each([
     ["chat is off", { sendRestriction: "chat_disabled" as const }],
     ["the viewer blocked the participant", { sendRestriction: "blocked_by_me" as const, blockedByMe: true }],
