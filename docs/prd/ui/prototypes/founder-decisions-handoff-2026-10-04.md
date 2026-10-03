@@ -214,3 +214,57 @@ Read-only source inspection only; no tests or production/device delivery checks 
 - Q67: Reporters retain submission acknowledgement and may receive a generic reviewed state after disposition, without reporter counts, private action reasons, owner appeal details or full case access. A report history/product inbox remains separately scoped.
 
 All six are recommendations only. Exact role grant lifecycle, evidence retention/deletion, Message enforcement, notice copy/translations and launch phase admission are unresolved.
+
+
+## Founder release, application scope and UI constraint, 2026-10-04
+
+Founder steering: "make sure to keep this in mind with our release scope and overall scope of the application our ui and impact of these changes". This requires explicit cross-application impact and phase admission for every decision. It does not accept Q62–Q67 or approve new production UI. Highest accepted question is Q61; Q40–Q45 and Q62–Q67 remain pending.
+
+### Release boundaries rechecked
+
+Sources re-read: live #320 and #608 on2026-10-04; docs/prd/03-roadmap.md; locked docs/prd/sprints/sprint-11-railway-deployment.md; ADR0051; ADR0037; app overviews and affected PRDs. No release map, locked sprint or governing ADR was edited.
+
+| Delivery boundary | Settled scope | Treatment of current admin decisions |
+|---|---|---|
+| First reviewer-only Android submission | Railway, seeded reviewer accounts, public signup disabled, approved whole-app redesign/core journey and physical Android evidence; existing report/block/moderation/enforcement proof | Preserve existing proof. Analytics, GlitchTip, TM VPS and Support chat stay deferred as already accepted. New admin scope does not automatically expand the reviewer gate. Defects affecting admitted flows still need safety/correctness triage; do not blanket-defer them as new features. |
+| First real-user Ashgabat pilot |20 invitees after accepted monitoring/disclosure/delivery/incident/recovery and phase-specific readiness gates | Decide the minimum safe operator and user correction/appeal experience explicitly. Six console areas are a requirements map, not six completed apps or automatic blockers. Exact admission of each proposed capability remains pending. |
+| Ashgabat50, Mary and later growth | Evidence-based expansion and manageable Support; later cities retain their accepted entry rules | Add staff/grant tooling, broader workflows or automation when admitted by need/capacity. Verify aggregate-only and private-evidence boundaries before granting those accesses, regardless of whether a full staff-management UI exists. |
+
+The scope ledger must distinguish existing defect repair, accepted new behavior, pending recommendation and later bet. Proposed pilot/later placement is not a founder-approved gate until explicitly settled. No delivery date or reliable cost estimate can be derived from this planning record alone.
+
+### Product and UI impact map
+
+| Application area | Required impact analysis before shaping/implementation |
+|---|---|
+| Internal admin | Actual media/evidence detail, report disposition, selected-photo removal, safe action confirmation, current versus reviewed version, restoration checks, public reason versus internal notes, audit and separately granted access. Console scope is wider than the improvement mock; its approved screen plan remains unfinished. |
+| Seller My listings and Listing detail | Sellers must find restricted Listings and understand affected content, visibility, next step and correction/appeal state. Keep hidden corrections private; preserve sold/archived intent; reconcile counts/status and stale actions. Current active/sold/archived filters omit banned items. |
+| Sell/photo editor | Maintain at least one usable public photo; coordinate replacement and final Save with existing staged-upload/editor behavior. Failure, retry and concurrent staff enforcement must not reveal an unapproved correction or undo a ban. Ordinary publication remains immediate. |
+| Buyer discovery, Favorites and Listing/contact views | Apply public hiding consistently to feed/search/detail, media presentation, Favorites and contact eligibility. Reconcile loaded/cached screens after unavailable/changed state; fresh backend enforcement does not prove cached UI safety. Preserve results/filter/scroll behavior. |
+| Conversations | Existing history/readability, listing preview/gallery, Call/new Message eligibility, reported Message image/context and moderation status must agree with Listing/User restrictions. Product chat and future Support stay distinct. |
+| Profile, Cabinet and Help | Show meaningful restriction guidance and the appropriate existing Help or future appeal route while retaining sign-in/account-deletion access. Cabinet stays a menu; no new Settings screen, sixth tab or automatic broad notification center. |
+| Public web/share | Legal/deletion pages may need truthful policy updates. Public Listing pages and App Links are not shipped in this baseline; Share/Copy remain hidden in reviewer scope. Do not add a public web marketplace as an incidental admin dependency. Future shared pages must enforce the same visibility policy. |
+| Product analytics and diagnostics | Hiding changes publicly eligible inventory and contact denominators. Distinguish ordinary publish, correction submission and restoration in approved metric contracts. Private report text/photos/Message evidence/internal reasons remain case content, not product telemetry or diagnostics. |
+| API, storage and worker | Cross-context policy, immutable/reviewed revisions, atomic target/report/audit changes, restricted evidence reads, cleanup/retention/deletion/recovery and optional notice delivery are real work behind the UI. Do not assume existing public-photo storage or direct-message push decisions already implement private evidence and durable notices. |
+
+Preserve cars-first scope, five-tab navigation, anonymous browsing/auth-on-action, Auto.ru structural discovery, AutoTM tokens, supported RU/TK/EN mobile copy, accessibility/theme/loading/error states, and the accepted Turkmen "akkaunt" terminology. Exact initial admin language Q45 is still pending. Moderation approval does not establish vehicle inspection/verification or a trust badge. The assigned name/avatar/Profile verdict remains separate from the future restricted-account UI design.
+
+### Overall-product conflict that must be resolved
+
+ADR0037 explicitly makes the first real-world test a trust/inspection pilot replacing a generic10–50 beta, with5–10 manual concierge inspections and an on-ground requirement. The later accepted20-user Ashgabat marketplace pilot has not yet specified its relationship to that test. Preserve both recorded intentions, flag their sequencing conflict, and settle whether the app pilot is a controlled operational stage supporting a separate inspection test or a changed launch strategy. A TM equipment/connectivity handler is not automatically a qualified mechanic/inspector. Existing immutable ADR text cannot be silently rewritten; a changed governing decision needs approved supersession. Inspection-demand capture is not inspection booking, completed inspections, payments or a new inspector app.
+
+### Design and acceptance procedure
+
+For each remaining decision record purpose, actor/permission, affected screens/APIs, existing/new behavior, reviewer/pilot/later disposition, dependencies, privacy/data lifecycle, failure/stale/offline states, operational burden, and concrete acceptance evidence. If a change alters approved UI, show its before/after journey and revise the owning design through review. Prototype the integrated report→evidence→action→seller notice/correction→appeal→restoration flow before production implementation. The English improvement mock and accepted Profile interaction prototype do not approve the full admin or mobile moderation design.
+
+Canonical destinations remain the owning mutable Listing, Identity, Conversation, Admin, notification and Support specifications/flows, approved UI designs and required new/superseding ADRs. The checkpoint is not a second governing specification. Reviewed shaping must precede executable feature slices. Reproduced defects affecting current release scope follow the existing coding workflow. Preserve other chat ownership; do not duplicate its implementation queue or send it messages without founder authorization.
+
+
+### Additional source evidence for UI impact
+
+Read-only UI audit completed, with no tests or device reproduction. Current Edit Save applies field update, attachment, removal and reorder sequentially; replacements attach before removals, but the sequence does not atomically enforce public minimum-photo or an operator-approved revision. See apps/mobile/src/listings/edit/useSaveListingEdit.ts:337.
+
+Gallery removal affects cover/count/order and the full-screen viewer's selected item. Changes must reconcile buyer cards, Favorites, detail, Conversation preview and owner management. Existing buyer404 UI supplies unavailable/Home/Back, while owner moderation/correction states need design. See apps/mobile/app/(public)/listings/[id].tsx:64; apps/mobile/src/listings/components/ListingDetail.tsx:173; apps/mobile/app/listings/manage.tsx:34.
+
+Source-inferred cache/contact risks: detail inherits30-second freshness and lacks route-focus refresh; Call uses a cached phone locally. Conversation Call checks cached active status but does not check detail.error, so old active data alongside failed refetch can still provide Call. Backend hiding cannot revoke a phone already delivered to a person/device. Verify fresh public eligibility and reconcile cached UI/action availability; do not promise that server enforcement erases previously viewed content. See apps/mobile/app/_layout.tsx:55; apps/mobile/src/api/listings/useListingDetail.ts:7; apps/mobile/src/listings/components/ContactCtaBar.tsx:57; apps/mobile/src/conversations/useConversationCallPhone.ts:18. Reproduction and release-admission triage remain pending.
+
+The audit confirmed that current backend Message report context is not rendered by the admin detail UI and that Listing action pages lack a gallery. Protected evidence, owner correction and notices therefore affect both internal and public product journeys. Exact hidden-zero-photo Conversation behavior remains unresolved and must not be inferred from existing banned/sold/archived rules.
