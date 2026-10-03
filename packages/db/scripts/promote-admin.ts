@@ -4,7 +4,8 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { PrismaClient } from "../generated/prisma/client/client";
+import { PrismaClient, type Prisma } from "../generated/prisma/client/client";
+import type { UserRole } from "../generated/prisma/client/enums";
 import { runPromoteAdmin } from "../src/promote-admin";
 
 function parseArgs(argv: string[]) {
@@ -43,18 +44,21 @@ async function main(): Promise<number> {
       {
         findUserByPhone: (phone) =>
           prisma.user.findUnique({ where: { phone } }).then((u) => u ?? null),
-        updateUserRole: (userId, role) =>
-          prisma.user.update({ where: { id: userId }, data: { role } }),
-        createAuditLog: (data) =>
-          prisma.auditLog.create({
+        updateUserRole: async (userId, role) => {
+          // runPromoteAdmin only passes its ADMIN_ROLE constant.
+          await prisma.user.update({ where: { id: userId }, data: { role: role as UserRole } });
+        },
+        createAuditLog: async (data) => {
+          await prisma.auditLog.create({
             data: {
               actorId: data.actorId,
               action: data.action,
               targetType: data.targetType,
               targetId: data.targetId,
-              details: data.details,
+              details: data.details as Prisma.InputJsonValue,
             },
-          }),
+          });
+        },
       },
       { phone: args.phone, reason: args.reason, dryRun: args.dryRun },
     );
