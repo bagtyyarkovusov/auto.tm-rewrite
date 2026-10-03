@@ -23,6 +23,8 @@ vi.mock("react-native-safe-area-context", async () => ({
 }));
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.auth, phone: "" }) }));
 vi.mock("../../src/notifications/useChatPushTokenRegistration", () => ({ useChatPushTokenRegistration: vi.fn() }));
+vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => null }));
+vi.mock("expo-notifications", () => ({ addNotificationReceivedListener: () => ({ remove: vi.fn() }) }));
 vi.mock("../../src/conversations/components/useConversationCatalogMaps", () => ({
   useConversationCatalogMaps: () => ({ brandName: () => "Toyota", modelName: () => "Camry" }),
 }));
