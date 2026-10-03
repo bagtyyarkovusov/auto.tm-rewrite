@@ -807,6 +807,19 @@ describe("Conversation Message actions", () => {
     expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
   });
 
+  it("shows an error instead of Copied when the clipboard write fails", async () => {
+    state.clipboard.mockRejectedValueOnce(new Error("clipboard unavailable"));
+    const screen = await openPeerSheet();
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Copy" }));
+    });
+    expect(state.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Something went wrong", variant: "destructive" }),
+    );
+    expect(state.toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: "Copied" }));
+  });
+
   it("opens the report reasons for the Message, then shows Reported and offers Copy only", async () => {
     const screen = await openPeerSheet();
 

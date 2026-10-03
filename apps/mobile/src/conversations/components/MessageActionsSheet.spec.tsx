@@ -36,7 +36,7 @@ describe("MessageActionsSheet", () => {
     const { screen } = renderSheet();
 
     for (const node of screen.getAllByRole("button")) {
-      expect(node.props.style).toMatchObject({ minHeight: 44 });
+      expect(node.props.className).toContain("min-h-11");
     }
   });
 
@@ -67,11 +67,21 @@ describe("MessageActionsSheet", () => {
       <MessageActionsSheet open canCopy canReport canDelete onOpenChange={vi.fn()} onCopy={vi.fn()} onReport={vi.fn()} onDelete={vi.fn()} />,
       { locale: "ru" },
     );
-    expect(ru.getAllByRole("button").map((node) => node.props.accessibilityLabel)).not.toContain("Copy");
+    expect(ru.getAllByRole("button").map((node) => node.props.accessibilityLabel)).toEqual([
+      "Копировать",
+      "Пожаловаться на сообщение",
+      "Удалить",
+      "Отмена",
+    ]);
     const tk = renderMobile(
       <MessageActionsSheet open canCopy canReport canDelete onOpenChange={vi.fn()} onCopy={vi.fn()} onReport={vi.fn()} onDelete={vi.fn()} />,
       { locale: "tk" },
     );
-    expect(tk.getAllByRole("button").map((node) => node.props.accessibilityLabel)).not.toContain("Copy");
+    expect(tk.getAllByRole("button").map((node) => node.props.accessibilityLabel)).toEqual([
+      "Göçür",
+      "Habar barada şikaýat et",
+      "Poz",
+      "Ýatyr",
+    ]);
   });
 });
