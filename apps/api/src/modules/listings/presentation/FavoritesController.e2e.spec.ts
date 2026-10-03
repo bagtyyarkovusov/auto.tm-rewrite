@@ -34,6 +34,7 @@ import {
   LISTINGS_READ_PORT,
   type ListingsReadPort,
 } from "../domain/ports/ListingsReadPort";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("favorites-controller");
 type SuiteUser = "seller-1" | "buyer-1";
@@ -47,6 +48,7 @@ describe("FavoritesController e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({
           isGlobal: true,
           validate: (cfg) => EnvSchema.parse(cfg),

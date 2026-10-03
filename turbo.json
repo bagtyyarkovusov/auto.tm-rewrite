@@ -22,6 +22,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "build/**"]
     },
+    "@auto-tm/db#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "generated/**"]
+    },
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
@@ -41,6 +45,22 @@
     },
     "test:unit": {
       "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@auto-tm/db#lint": {
+      "dependsOn": ["^build", "build"],
+      "outputs": []
+    },
+    "@auto-tm/db#typecheck": {
+      "dependsOn": ["^build", "build"],
+      "outputs": []
+    },
+    "@auto-tm/db#test": {
+      "dependsOn": ["^build", "build"],
+      "outputs": ["coverage/**"]
+    },
+    "@auto-tm/db#test:unit": {
+      "dependsOn": ["^build", "build"],
       "outputs": []
     },
     "clean": {

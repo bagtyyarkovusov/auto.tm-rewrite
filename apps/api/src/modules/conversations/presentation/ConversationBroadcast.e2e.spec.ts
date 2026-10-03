@@ -35,6 +35,7 @@ import {
   seedSuiteCatalog,
 } from "../../../../test/helpers/e2eSuite";
 import { MEDIA_OBJECT_INSPECTOR } from "../../listings/domain/ports/MediaObjectInspector";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("conversation-broadcast");
 type SuiteUser = "seller-1" | "buyer-1" | "buyer-2";
@@ -56,6 +57,7 @@ describe("Conversation message broadcast e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({
           isGlobal: true,
           validate: (cfg) => EnvSchema.parse(cfg),

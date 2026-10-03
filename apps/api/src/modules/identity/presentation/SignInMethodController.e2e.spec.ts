@@ -22,6 +22,7 @@ import {
 } from "../domain/types";
 import { IdentityModule } from "../identity.module";
 import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 describe("MeController e2e - Sign-in Method changes", () => {
   let app: NestFastifyApplication;
@@ -34,6 +35,7 @@ describe("MeController e2e - Sign-in Method changes", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
