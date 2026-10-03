@@ -21,7 +21,6 @@ import { useSendTextMessage } from "../../src/api/conversations/useSendTextMessa
 import { useSendImageMessage } from "../../src/api/conversations/useSendImageMessage";
 import { usePresignChatAttachment } from "../../src/api/conversations/usePresignChatAttachment";
 import { useUpdateWatermark } from "../../src/api/conversations/useUpdateWatermark";
-import { useConfig } from "../../src/api/admin/useConfig";
 import { useDeleteMessage } from "../../src/api/conversations/useDeleteMessage";
 import { useMuteConversation } from "../../src/api/conversations/useMuteConversation";
 import { useBrands } from "../../src/api/catalog/useBrands";
@@ -154,7 +153,6 @@ export default function ConversationDetailScreen() {
   const unblockUser = useUnblockUser();
   const muteConversation = useMuteConversation();
   const { show: showToast } = useToast();
-  const { data: config } = useConfig();
 
   const conversationQuery = useConversation(readId);
   const notFound =
