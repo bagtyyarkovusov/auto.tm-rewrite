@@ -111,7 +111,11 @@ describe("FavoritesController e2e", () => {
   }
 
   async function seedDraft(alias: SuiteUser, payload: Record<string, unknown>) {
-    const seeded = await seedPresignedPhotos(prisma, suite.id(alias), payload);
+    // The owner's own sign-in phone needs no code (ADR-0081); a payload may override it.
+    const seeded = await seedPresignedPhotos(prisma, suite.id(alias), {
+      contactPhone: suite.phone(alias),
+      ...payload,
+    });
     const draft = await prisma.listingDraft.create({
       data: { userId: suite.id(alias), payload: seeded as Prisma.InputJsonValue },
     });
@@ -389,7 +393,7 @@ describe("FavoritesController e2e", () => {
         .send({})
         .expect(201);
       const listingId = publishRes.body.id;
-      // contactPhone stays free text until the contact-phone slice (ADR-0056).
+      // A direct write stands in for an edit to a number the seller confirmed.
       await prisma.listing.update({
         where: { id: listingId },
         data: { contactPhone: "+99365000000", allowCalls: false, allowChat: true },
