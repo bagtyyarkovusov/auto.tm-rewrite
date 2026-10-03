@@ -1,6 +1,6 @@
 # AutoTM admin release scope audit and decision tree
 
-Founder session checkpoint, 2026-10-04. Q46–Q51 and Q52–Q56 were explicitly accepted. Q40–Q45 remain pending. This records planning choices and source evidence, not an approved governing PRD, ADR, implementation instruction or release claim. The founder requested a handoff while usage was low, then resumed after the limit reset.
+Founder session checkpoint, 2026-10-04. Q46–Q61 were explicitly accepted. Q40–Q45 remain pending. Q40–Q45 remain pending. This records planning choices and source evidence, not an approved governing PRD, ADR, implementation instruction or release claim. The founder requested a handoff while usage was low, then resumed after the limit reset.
 
 ## Evidence boundary
 
@@ -93,7 +93,7 @@ Source entry points: apps/api/src/modules/listings/application/RemoveMedia.ts; R
 
 ## Portable resume instructions
 
-Read this record and issue checkpoints before asking new questions. Continue with Q57 onward in dependency-aware batches. Put a question in the next batch only when its prerequisites are settled. State recommendations clearly and wait for the founder's decision. Preserve previously accepted choices; do not silently treat the analytics prototype as approved.
+Read this record and issue checkpoints before asking new questions. Continue with Q62 onward in dependency-aware batches. Put a question in the next batch only when its prerequisites are settled. State recommendations clearly and wait for the founder's decision. Preserve previously accepted choices; do not silently treat the analytics prototype as approved.
 
 Last-photo visibility, a private correction path for moderated Listings, suspension/public visibility policy, owner notices and initial review cadence were accepted in Q52–Q56. Continue with public reason categories, repeat abuse, appeal handling, restoration checks, report priority and related report disposition. Then resolve Message evidence, staff permissions, detailed evidence lifecycle and release phase boundaries. Review a Trust & Safety/Support prototype before production work. Governing documentation and any superseding ADR must be approved through the repository shaping workflow.
 
@@ -163,3 +163,31 @@ The founder explicitly answered "okay accpeted" to all five recommendations. The
 ## Decision log continuation
 
 2026-10-04: Q52–Q56 accepted as a complete batch. Preserve private correction and operator approval without introducing general prepublication moderation. Explicitly hiding risky seller Listings is a separately audited action; unsuspension does not imply republication. Production state representation and governing documentation are unresolved. No production files changed.
+
+
+## Accepted dependent batch Q57–Q61
+
+The founder answered "okay agreed" to all five recommendations. This checkpoint records planning decisions, not implementation or completed governing documentation approval.
+
+- Q57: Public owner reasons cover photo/content problems, incorrect information/category, spam/duplicates, scam/safety concerns, harassment and other issues with an approved safe explanation. Each notice states the required next step. Internal notes remain separate.
+- Q58: Ordinary correctable violations receive content removal and correction guidance. Deliberate reposting of removed content triggers staff review for stronger restrictions. Serious fraud/safety concerns allow immediate enforcement. Pilot escalation stays manual and reasoned.
+- Q59: Link one Support case to each moderation decision; subsequent messages stay in that case. Suspended users retain appeal access. The accepted four staffed-hour target applies to first meaningful human response, not final resolution. The solo founder may review their own decisions; another moderator should review disputed decisions when staffing permits. Reviewer releases retain email/phone Help.
+- Q60: An operator approves the exact correction version reviewed. Later edits require a new check before restoration. Require usable photo and valid Listing information, preserve sold/archived status, and check other publication restrictions.
+- Q61: Prioritize credible safety threats/ongoing fraud, then account access/appeals, then ordinary content problems. Work oldest first within each group. Multiple reports draw attention but never by count alone automatically hide content or suspend someone.
+
+The older PRD65 absolute action-time expectations and report-volume alert suggestions need reconciliation with staffed coverage and the accepted priority rules during canonical shaping. No existing ADR or PRD was changed by this checkpoint.
+
+## Completed report-resolution and freshness source audit
+
+Read-only source/test inspection after continuation, no tests run and no live reproduction:
+
+- CreateReport pending dedupe is per reporter/target, not reason or content revision. Other reporters can submit separate reports. Schema lacks a pending-report uniqueness constraint, so concurrent duplicate creation is possible by source inference. Source: apps/api/src/modules/admin/application/CreateReport.ts:138; apps/api/src/modules/admin/infrastructure/PrismaContentReportRepository.ts:43; packages/db/prisma/schema.prisma:750.
+- BanListing resolves only the explicitly supplied report. Direct ban resolves none; sibling pending reports remain. Unban does not touch them. Old sibling reports can become actionable after restoration, by source inference. Source: BanListing.ts:129; DismissReport.ts:63; UnbanListing.ts:68 under apps/api/src/modules/admin/application.
+- Listing reports have no reported-content/photo snapshot or revision marker. GetReportDetail reads the current target summary. Message reports have a separate messageContext snapshot. Source: apps/api/src/modules/admin/domain/ContentReport.ts:36; application/CreateReport.ts:157 and GetReportDetail.ts:108 in the same module.
+- Ban/unban write adapters guard target status but not reviewed content revision. Unban does not validate photo count, contact or owner restrictions. Report resolution checks pending before the transaction and writes by ID alone, lacking an atomic pending predicate. Source: apps/api/src/modules/listings/infrastructure/PrismaListingsAdminRepository.ts:10; apps/api/src/modules/admin/infrastructure/PrismaContentReportRepository.ts:111.
+- A stale owner EditListing can overwrite a newer banned status, by source inference: it reads and reconstructs observed status then its repository writes by ID alone. Attach/remove likewise check banned status before separate media mutation. This is a safety concern to reproduce and fix through issue/shaping workflow, not a verified incident. Source: apps/api/src/modules/listings/application/EditListing.ts:58 and146; apps/api/src/modules/listings/infrastructure/PrismaListingRepository.ts:94.
+- Ordinary RemoveMedia deletes its row/adopted upload and attempts owned-object cleanup. It writes no moderation audit or retained evidence. Old deleted upload keys cannot be reused, but a newly uploaded copy of the same image bytes is not blocked by image hashing. Source: apps/api/src/modules/listings/application/RemoveMedia.ts:59; infrastructure/PrismaListingMediaRepository.ts:77; presentation/MediaOwnership.e2e.spec.ts:484 in the same module.
+
+Earlier statements about stale/conflicting failure safeguards should be read narrowly: target status guards exist, but atomic report resolution and owner-edit races are unresolved source findings. Do not claim complete concurrency safety.
+
+Next frontier concerns related report disposition, reported-versus-current evidence, private Message scope and reporter feedback. Staff grants/revocation and notice delivery source facts are being gathered separately. Evidence retention/deletion, exact phase admission and prototype review remain pending.
