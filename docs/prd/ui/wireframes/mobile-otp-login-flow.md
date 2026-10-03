@@ -210,6 +210,7 @@ Verify the six-digit SMS code, support paste/autofill, and return to the deferre
 8. **Inline error area** - Wrong, expired, locked, network, and server errors.
 9. **Resend action** - Secondary helper/action text. Disabled until countdown ends.
 10. **Dev-only code** - Visible only in non-production builds when API returns `testCode`.
+11. **Contact support** - Shown only after a resend hits the daily Sign-in Code limit, in place of Resend. Opens Help. This is the code screen's only support link ([#353 founder answer 1](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5947334041)).
 
 ## Interactions
 
@@ -220,6 +221,8 @@ Verify the six-digit SMS code, support paste/autofill, and return to the deferre
 - Wrong code -> shake cells, clear all cells, refocus first cell, keep phone/request context.
 - Expired code -> show inline expired message and enable resend if backend allows.
 - Tapping block 9 after countdown -> requests a fresh code for the same phone.
+- Block 9 refused at the daily Sign-in Code limit -> show the daily-limit message, stop code entry, hide Resend, and show block 11.
+- Tapping block 11 -> opens Help.
 - Success with deferred action -> close auth and replay the action. Success without deferred action -> route to tab app and show a small "Signed in" toast.
 
 ## Customization preview
@@ -234,6 +237,7 @@ Verify the six-digit SMS code, support paste/autofill, and return to the deferre
 - **Offline**: Inline warning; keep entered code in memory only while screen stays mounted.
 - **Locked**: Clear code, show lockout message/countdown, keep Change number available.
 - **Expired**: Show expired message, allow requesting a new code when permitted.
+- **Daily limit**: Show the daily-limit message; code entry and Resend stop; Contact support (block 11) is the one way forward.
 
 ## Content / copy
 
@@ -246,10 +250,8 @@ Verify the six-digit SMS code, support paste/autofill, and return to the deferre
 - Expired: "Code expired. Request a new one."
 - Locked: "Too many attempts. Request a new code."
 - Dev-only: "Dev code: 123456"
-
-## Open questions for hi-fi
-
-- Decide later whether an OTP "Having trouble?" support link is needed after beta delivery data. S2 stays minimal.
+- Daily limit: "Too many codes requested for this destination in 24 hours. Try again later."
+- Daily-limit action: "Contact support"
 
 ==============================================
 WIREFRAME - Notification permission handoff
