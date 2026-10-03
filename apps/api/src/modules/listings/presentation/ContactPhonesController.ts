@@ -10,7 +10,7 @@ import {
   Req,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-import { ZodError } from "zod";
+import type { z } from "zod";
 import { AdminSchemas, ErrorCode, ListingsSchemas } from "@auto-tm/contracts";
 
 import { resolveClientIp } from "../../../common/client-ip";
@@ -126,11 +126,13 @@ export class ContactPhonesController {
     try {
       return schema.parse(data);
     } catch (err) {
-      if (err instanceof ZodError) {
+      // Match by shape: the contracts package may load its own copy of Zod,
+      // so `instanceof ZodError` is not reliable here (as in MeController).
+      if (err && typeof err === "object" && "issues" in err) {
         throw new BadRequestException({
           code: ErrorCode.ValidationFailed,
           message: "Invalid request",
-          details: err.flatten(),
+          details: (err as z.ZodError).flatten(),
         });
       }
       throw err;
