@@ -2,8 +2,9 @@ import { StyleSheet } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SellScreen from "../../app/(tabs)/sell";
-import { ToastProvider } from "@/components/ui/toast";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
+
+import { ToastProvider } from "@/components/ui/toast";
 
 const fixture = vi.hoisted(() => {
   const id = "550e8400-e29b-41d4-a716-446655440000";
@@ -61,7 +62,8 @@ function renderWizard() {
   let header = screen.getByText("Review").parent;
   while (header && !header.props.className?.includes("border-b")) header = header.parent;
   if (!header) throw new Error("Wizard header missing");
-  const measure = (height: number) => fireEvent(header!, "layout", {
+  const measuredHeader = header;
+  const measure = (height: number) => fireEvent(measuredHeader, "layout", {
     nativeEvent: { layout: { height, width: 390, x: 0, y: 0 } },
   });
   const top = () => StyleSheet.flatten(screen.getByTestId("toast-viewport-top").props.style).top;

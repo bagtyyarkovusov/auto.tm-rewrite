@@ -24,6 +24,8 @@ interface Toast {
   variant?: ToastVariant;
   duration?: number;
   placement?: ToastPlacement;
+  /** Measured header height below the safe area, for a taller active screen. */
+  topClearance?: number;
   /** One button on the toast, such as Undo. Pressing it also closes the toast. */
   action?: ToastAction;
 }
@@ -32,6 +34,7 @@ interface ToastContextValue {
   toasts: Toast[];
   show: (toast: Omit<Toast, 'id'>) => string;
   dismiss: (id: string) => void;
+  setTopClearance: (id: string, height: number) => void;
 }
 
 const ToastContext = React.createContext<ToastContextValue | undefined>(undefined);
@@ -57,7 +60,13 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const value = React.useMemo(() => ({ toasts, show, dismiss }), [toasts, show, dismiss]);
+  const setTopClearance = React.useCallback((id: string, height: number) => {
+    setToasts((prev) => prev.map((toast) =>
+      toast.id === id ? { ...toast, topClearance: height } : toast
+    ));
+  }, []);
+
+  const value = React.useMemo(() => ({ toasts, show, dismiss, setTopClearance }), [toasts, show, dismiss, setTopClearance]);
 
   return (
     <ToastContext.Provider value={value}>
@@ -74,14 +83,15 @@ function ToastViewport() {
 
   const top = ctx.toasts.filter((toast) => toast.placement !== 'aboveTabBar');
   const aboveTabBar = ctx.toasts.filter((toast) => toast.placement === 'aboveTabBar');
+  const topClearance = Math.max(64, ...top.map((toast) => toast.topClearance ?? 64));
 
   return (
     <Portal name="toast-viewport">
       {top.length > 0 && (
         <View
           testID="toast-viewport-top"
-          // Clear the safe area and standard headers (44 pt controls plus padding).
-          style={{ top: insets.top + 64 + 8 }}
+          // Taller callers supply their measured header height; ordinary headers retain 64 pt.
+          style={{ top: insets.top + topClearance + 8 }}
           className="absolute left-0 right-0 z-[100] flex-col items-center gap-2 px-4 pointer-events-none">
           {top.map((toast) => (
             <ToastItem key={toast.id} toast={toast} onDismiss={() => ctx.dismiss(toast.id)} />

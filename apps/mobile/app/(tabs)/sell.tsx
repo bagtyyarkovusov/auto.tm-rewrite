@@ -72,7 +72,15 @@ export default function SellScreen() {
   // `phone` follows the live auth session, so signing in from this tab's own
   // sign-in sheet fills the Step 7 contact placeholder without a remount.
   const { isAuthenticated, phone: defaultPhone } = useAuth();
-  const { show } = useToast();
+  const { show, setTopClearance } = useToast();
+  const wizardHeaderHeight = useRef(0);
+  const publishErrorToastId = useRef<string | null>(null);
+  const handleHeaderHeightChange = useCallback((height: number) => {
+    wizardHeaderHeight.current = height;
+    if (publishErrorToastId.current) {
+      setTopClearance(publishErrorToastId.current, height);
+    }
+  }, [setTopClearance]);
   const navigation = useContext(NavigationContext);
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
   const [showSignIn, setShowSignIn] = useState(false);
@@ -309,7 +317,9 @@ export default function SellScreen() {
       const message =
         err instanceof Error ? err.message : t("failedToPublish");
       dispatch({ type: "PUBLISH_ERROR", error: message });
-      show({ title: message, variant: "destructive" });
+      publishErrorToastId.current = show({
+        title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
+      });
     }
   }, [machineState, uploadQueue.photos, forceSave, publishDraft, show]);
 
@@ -389,6 +399,7 @@ export default function SellScreen() {
 
     return (
       <WizardLayout
+        onHeaderHeightChange={handleHeaderHeightChange}
         routeTitle={t("sellCar")}
         stepTitle={t(STEP_KEY_MAP[currentStep] ?? currentStep)}
         stepNumber={ctx.stepNumber}
