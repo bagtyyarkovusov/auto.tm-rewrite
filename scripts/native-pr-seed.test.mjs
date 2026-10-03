@@ -251,3 +251,16 @@ test('every bare import the seed steps load is declared by the db workspace', ()
   // The packaged image does not hoist undeclared packages, so each must be declared where the steps run.
   assert.deepEqual([...missing], []);
 });
+
+test('the db typecheck covers every TypeScript file the seed scripts directory holds', () => {
+  const db = path.join(root, 'packages/db');
+  const tsc = path.join(db, 'node_modules/typescript/bin/tsc');
+  const result = spawnSync(process.execPath, [tsc, '--noEmit', '-p', 'tsconfig.json', '--listFilesOnly'], { cwd: db, encoding: 'utf8', timeout: 60_000 });
+  assert.equal(result.status, 0, result.stderr);
+  const checked = new Set(result.stdout.split('\n').map(line => path.resolve(db, line.trim())));
+  const scripts = readdirSync(path.join(db, 'scripts'), { recursive: true })
+    .filter(name => /\.(ts|d\.cts)$/.test(name))
+    .map(name => path.join(db, 'scripts', name));
+  assert.ok(scripts.length > 0, 'the scripts directory must hold TypeScript files');
+  assert.deepEqual(scripts.filter(file => !checked.has(file)), []);
+});
