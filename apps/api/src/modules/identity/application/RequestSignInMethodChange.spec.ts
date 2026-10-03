@@ -4,9 +4,9 @@ import type { User } from "../domain/User";
 import type { SignInCodeChannel } from "../domain/types";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
-import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
+import type { OtpSenderPort, OtpSms } from "../domain/ports/OtpSenderPort";
 import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
 import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
 import { RequestSignInMethodChange } from "./RequestSignInMethodChange";
@@ -31,6 +31,7 @@ class FakeOtpRepo implements OtpRequestRepository {
   records: OtpRequest[] = [];
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -62,18 +63,7 @@ class FakeOtpRepo implements OtpRequestRepository {
     ) ?? null;
   }
 
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
-    return this.records.findLast(
-      (record) =>
-        record.channel === channel &&
-        record.destination === destination &&
-        record.userId === userId,
-    ) ?? null;
-  }
+  async findLatestForPurpose(): Promise<OtpRequest | null> { throw new Error("unused"); }
 
   async countByDestinationSince(
     channel: SignInCodeChannel,
@@ -110,10 +100,10 @@ class FakeUsers implements SignInMethodRepository {
 
 function harness(current: User | null) {
   const otpRepo = new FakeOtpRepo();
-  const sms: Array<{ phone: string; code: string }> = [];
+  const sms: OtpSms[] = [];
   const email: Array<Parameters<EmailCodeSenderPort["enqueue"]>[0]> = [];
   const smsSender: OtpSenderPort = {
-    send: async (phone, code) => { sms.push({ phone, code }); },
+    send: async (message) => { sms.push(message); },
   };
   const emailSender: EmailCodeSenderPort = {
     enqueue: async (input) => { email.push(input); },
@@ -147,11 +137,18 @@ describe("RequestSignInMethodChange", () => {
 
     expect(result.testCode).toMatch(/^\d{6}$/);
     expect(otpRepo.records[0]).toMatchObject({
+      purpose: "sign-in-method",
       channel: "phone",
       destination: "+99361234567",
       userId: "user-1",
     });
-    expect(sms).toEqual([{ phone: "+99361234567", code: result.testCode }]);
+    expect(sms).toEqual([{
+      phone: "+99361234567",
+      code: result.testCode,
+      purpose: "sign-in-method",
+      locale: "ru",
+      requestId: result.requestId,
+    }]);
     expect(email).toEqual([]);
   });
 
@@ -189,6 +186,7 @@ describe("RequestSignInMethodChange", () => {
     for (let index = 0; index < 10; index++) {
       otpRepo.records.push({
         id: `existing-${index}`,
+        purpose: "sign-in",
         channel: index % 2 === 0 ? "phone" : "email",
         destination: `destination-${index}`,
         codeHash: "hash",
@@ -234,6 +232,7 @@ describe("RequestSignInMethodChange", () => {
     for (let index = 0; index < 5; index++) {
       otpRepo.records.push({
         id: `existing-${index}`,
+        purpose: "sign-in-method",
         channel: "email",
         destination: "new@example.com",
         codeHash: "hash",

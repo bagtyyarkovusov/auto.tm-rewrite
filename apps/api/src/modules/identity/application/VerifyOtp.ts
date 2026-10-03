@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { Enums } from "@auto-tm/contracts";
 import type { User } from "../domain/User";
 import { matchesReviewerCredential } from "../domain/ReviewerSignIn";
 import { SIGN_IN_CODE_CHANNELS, type SignInCodeChannel } from "../domain/types";
@@ -85,7 +86,11 @@ export class VerifyOtp {
       return reviewerBypassResult;
     }
 
-    const otpRequest = await this.verifySignInCode.execute(destination, input.code);
+    const otpRequest = await this.verifySignInCode.execute({
+      purpose: Enums.SignInCodePurpose.SignIn,
+      destination,
+      code: input.code,
+    });
 
     const existingUser = destination.channel === SIGN_IN_CODE_CHANNELS.PHONE
       ? await this.userRepo.findByPhone(destination.value)
@@ -114,8 +119,8 @@ export class VerifyOtp {
       throw err;
     }
 
-    // Claim the code before any side effect, so a code accepted by another
-    // flow (such as web deletion) cannot also be used here concurrently.
+    // Claim the code before any side effect, so two concurrent sign-ins with
+    // the same code create one session.
     if (!(await this.otpRequestRepo.consumeIfUnused(otpRequest.id))) {
       throw new Error("OTP code has already been used");
     }

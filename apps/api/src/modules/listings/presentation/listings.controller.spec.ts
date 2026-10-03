@@ -30,6 +30,7 @@ function buildController(overrides: {
     isAdmin: vi.fn().mockResolvedValue(false),
     isInDealership: vi.fn().mockResolvedValue(false),
     isDeletionScheduled: vi.fn().mockResolvedValue(false),
+    holdsSignInPhone: vi.fn().mockResolvedValue(false),
   };
 
   return new ListingsController(

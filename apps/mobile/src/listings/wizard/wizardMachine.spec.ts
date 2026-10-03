@@ -22,6 +22,7 @@ const completePayload = {
   regionId: validUuid,
   cityId: validUuid,
   description: "Great car",
+  contactPhone: "+99361234567",
   allowCalls: true,
   allowChat: true,
 };
@@ -247,6 +248,7 @@ describe("NEXT", () => {
         regionId: validUuid,
         cityId: validUuid,
         description: "Great car",
+        contactPhone: "+99361234567",
         allowCalls: true,
         allowChat: true,
       },

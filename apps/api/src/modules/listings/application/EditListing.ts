@@ -1,6 +1,11 @@
 import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
+import {
+  IDENTITY_CLOCK_PORT,
+  type ClockPort,
+} from "../../identity/identity.public";
+import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
 import { resolveDamagedAnswer } from "../domain/damagedAnswer";
@@ -19,6 +24,8 @@ import {
   LISTING_EVENT_PUBLISHER,
   type ListingEventPublisher,
 } from "../domain/ports/ListingEventPublisher";
+
+import { contactPhoneRejection } from "./contactPhoneRejection";
 
 export interface EditListingInput {
   listingId: string;
@@ -41,6 +48,10 @@ export class EditListing {
     private readonly exchangeRates: ExchangeRatePort,
     @Inject(LISTING_EVENT_PUBLISHER)
     private readonly events: ListingEventPublisher,
+    @Inject(ContactPhonePolicy)
+    private readonly contactPhones: ContactPhonePolicy,
+    @Inject(IDENTITY_CLOCK_PORT)
+    private readonly clock: ClockPort,
   ) {}
 
   async execute(input: EditListingInput): Promise<EditListingResult> {
@@ -56,6 +67,7 @@ export class EditListing {
     }
 
     const patch = input.patch;
+    const now = this.clock.now();
 
     // Defense-in-depth: reject locked fields
     for (const field of Object.keys(patch)) {
@@ -82,6 +94,16 @@ export class EditListing {
         code: LISTING_ERROR_CODES.CONTACT_METHOD_REQUIRED,
         message: "At least one contact method must be enabled",
       });
+    }
+
+    // ADR-0081: only a new number is checked. Other edits, calls and chat
+    // included, keep the stored number after its 7 days, or none if it was
+    // cleared.
+    if (patch.contactPhone !== undefined && patch.contactPhone !== existing.contactPhone) {
+      const rejection = contactPhoneRejection(
+        await this.contactPhones.standing(existing.sellerId, patch.contactPhone, now),
+      );
+      if (rejection) throw rejection;
     }
 
     // The saved price needs a current rate to TMT: it re-derives priceTmt.
@@ -133,7 +155,7 @@ export class EditListing {
       viewCount: existing.viewCount,
       favoriteCount: existing.favoriteCount,
       createdAt: existing.createdAt,
-      updatedAt: new Date(),
+      updatedAt: now,
       ...(existing.generationId !== undefined && { generationId: existing.generationId }),
       ...(existing.year !== undefined && { year: existing.year }),
       ...(existing.vin !== undefined && { vin: existing.vin }),

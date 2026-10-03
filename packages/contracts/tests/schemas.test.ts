@@ -9,7 +9,9 @@ import {
   AccountDeletionRequestSchema,
   AccountDeletionRequestResponseSchema,
   AccountDeletionConfirmRequestSchema,
+  EmailCodeJobSchema,
 } from "../src/schemas/auth";
+import { SignInCodePurpose } from "../src/enums";
 import {
   ListingSummarySchema,
   ListingDetailSchema,
@@ -36,6 +38,13 @@ import {
   ListingsErrorCode,
   ConditionDisclosureSchema,
   DraftConditionDisclosureSchema,
+  VerifiedContactPhoneSchema,
+  ContactPhoneCodeRequestSchema,
+  ContactPhoneCodeRequestResponseSchema,
+  ContactPhoneVerifyRequestSchema,
+  ContactPhoneVerifyResponseSchema,
+  MyContactPhonesResponseSchema,
+  ContactPhoneNotConfirmedDetailsSchema,
 } from "../src/schemas/listings";
 import {
   PresignRequestSchema,
@@ -56,7 +65,7 @@ import {
   ListMessagesResponseSchema,
   ListConversationsResponseSchema,
 } from "../src/schemas/conversations";
-import { ErrorResponseSchema } from "../src/errors";
+import { ErrorResponseSchema, InvalidOtpDetailsSchema } from "../src/errors";
 import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
@@ -1214,6 +1223,7 @@ describe("StepContactSchema", () => {
     expect(
       StepContactSchema.safeParse({
         description: "Great car",
+        contactPhone: "+99361234567",
         allowCalls: true,
         allowChat: true,
       }).success,
@@ -1224,6 +1234,7 @@ describe("StepContactSchema", () => {
     expect(
       StepContactSchema.safeParse({
         description: "Great car",
+        contactPhone: "+99361234567",
         allowCalls: false,
         allowChat: true,
       }).success,
@@ -1500,6 +1511,28 @@ describe("Account deletion schemas", () => {
       requestId: "550e8400-e29b-41d4-a716-446655440000",
       resendInSeconds: 60,
     }).success).toBe(true);
+  });
+});
+
+describe("Sign-in Code purposes", () => {
+  it("names the four flows that issue a code (ADR-0081)", () => {
+    expect(Object.values(SignInCodePurpose).sort()).toEqual([
+      "account-deletion",
+      "listing-contact-phone",
+      "sign-in",
+      "sign-in-method",
+    ]);
+  });
+
+  it("queues email codes only for the three email flows", () => {
+    const job = { to: "seller@example.com", code: "123456", locale: "ru" };
+    for (const purpose of ["sign-in", "sign-in-method", "account-deletion"]) {
+      expect(EmailCodeJobSchema.safeParse({ ...job, purpose }).success).toBe(true);
+    }
+    expect(EmailCodeJobSchema.safeParse({
+      ...job,
+      purpose: "listing-contact-phone",
+    }).success).toBe(false);
   });
 });
 
@@ -1807,5 +1840,139 @@ describe("Listings error codes", () => {
       "DamagedNotAllowedForNew",
       "DAMAGED_NOT_ALLOWED_FOR_NEW",
     );
+  });
+});
+
+describe("Contact phone confirmation (ADR-0081)", () => {
+  const confirmed = {
+    phone: "+99365123456",
+    source: "confirmed",
+    confirmedAt: "2026-10-03T10:00:00.000Z",
+    reusableUntil: "2026-10-10T10:00:00.000Z",
+  };
+
+  it("describes an account phone with null dates and a confirmed number with both", () => {
+    expect(
+      VerifiedContactPhoneSchema.safeParse({
+        phone: "+99361234567",
+        source: "account",
+        confirmedAt: null,
+        reusableUntil: null,
+      }).success,
+    ).toBe(true);
+    expect(VerifiedContactPhoneSchema.safeParse(confirmed).success).toBe(true);
+    expect(
+      VerifiedContactPhoneSchema.safeParse({ ...confirmed, phone: "+79161234567" }).success,
+    ).toBe(false);
+  });
+
+  it("takes a strict TM mobile number to request a code", () => {
+    expect(ContactPhoneCodeRequestSchema.safeParse({ phone: "+99365123456" }).success).toBe(true);
+    expect(ContactPhoneCodeRequestSchema.safeParse({ phone: "+99312123456" }).success).toBe(false);
+    expect(
+      ContactPhoneCodeRequestSchema.safeParse({ phone: "+99365123456", purpose: "sign-in" }).success,
+    ).toBe(false);
+  });
+
+  it("answers confirmed or code_sent to a request", () => {
+    expect(
+      ContactPhoneCodeRequestResponseSchema.safeParse({
+        status: "confirmed",
+        contactPhone: confirmed,
+      }).success,
+    ).toBe(true);
+    expect(
+      ContactPhoneCodeRequestResponseSchema.safeParse({
+        status: "code_sent",
+        requestId: "550e8400-e29b-41d4-a716-446655440000",
+        resendInSeconds: 60,
+        testCode: "123456",
+      }).success,
+    ).toBe(true);
+    expect(
+      ContactPhoneCodeRequestResponseSchema.safeParse({ status: "code_sent" }).success,
+    ).toBe(false);
+  });
+
+  it("takes a strict number and six-digit code to verify", () => {
+    expect(
+      ContactPhoneVerifyRequestSchema.safeParse({ phone: "+99365123456", code: "123456" }).success,
+    ).toBe(true);
+    expect(
+      ContactPhoneVerifyRequestSchema.safeParse({ phone: "+99365123456", code: "12345" }).success,
+    ).toBe(false);
+    expect(
+      ContactPhoneVerifyRequestSchema.safeParse({
+        phone: "+99365123456",
+        code: "123456",
+        userId: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("answers verify with a confirmed number and lists items", () => {
+    expect(ContactPhoneVerifyResponseSchema.safeParse({ contactPhone: confirmed }).success).toBe(true);
+    expect(
+      ContactPhoneVerifyResponseSchema.safeParse({
+        contactPhone: { ...confirmed, source: "account" },
+      }).success,
+    ).toBe(false);
+    expect(MyContactPhonesResponseSchema.safeParse({ items: [confirmed] }).success).toBe(true);
+  });
+
+  it("publishes the new listing error codes and their details", () => {
+    expect(ListingsErrorCode).toHaveProperty("ContactPhoneRequired", "CONTACT_PHONE_REQUIRED");
+    expect(ListingsErrorCode).toHaveProperty(
+      "ContactPhoneNotConfirmed",
+      "CONTACT_PHONE_NOT_CONFIRMED",
+    );
+    expect(ContactPhoneNotConfirmedDetailsSchema.safeParse({ reason: "expired" }).success).toBe(true);
+    expect(
+      ContactPhoneNotConfirmedDetailsSchema.safeParse({ reason: "not_confirmed" }).success,
+    ).toBe(true);
+    expect(ContactPhoneNotConfirmedDetailsSchema.safeParse({ reason: "missing" }).success).toBe(false);
+  });
+
+  it("reports attempts left from 4 down to 1 on INVALID_OTP", () => {
+    for (const attemptsLeft of [1, 2, 3, 4]) {
+      expect(InvalidOtpDetailsSchema.safeParse({ attemptsLeft }).success).toBe(true);
+    }
+    expect(InvalidOtpDetailsSchema.safeParse({ attemptsLeft: 0 }).success).toBe(false);
+    expect(InvalidOtpDetailsSchema.safeParse({ attemptsLeft: 5 }).success).toBe(false);
+  });
+
+  it("requires a TM mobile contact phone on the Contact step and on edit", () => {
+    const base = { description: "Great car", allowCalls: true, allowChat: true };
+    expect(StepContactSchema.safeParse(base).success).toBe(false);
+    expect(StepContactSchema.safeParse({ ...base, contactPhone: "8 800 555" }).success).toBe(false);
+    expect(StepContactSchema.safeParse({ ...base, contactPhone: "+99365123456" }).success).toBe(true);
+
+    expect(EditListingRequestSchema.safeParse({ contactPhone: "+99365123456" }).success).toBe(true);
+    expect(EditListingRequestSchema.safeParse({ contactPhone: "8 800 555" }).success).toBe(false);
+    expect(EditListingRequestSchema.safeParse({ priceAmount: 1 }).success).toBe(true);
+  });
+
+  it("emits translatable keys when the Contact step phone is missing or malformed", () => {
+    const base = { description: "Great car", allowCalls: true, allowChat: true };
+    for (const payload of [base, { ...base, contactPhone: "123" }]) {
+      const result = validateStep("contact", payload);
+      expect(result.valid).toBe(false);
+      for (const message of [...result.errors, ...Object.values(result.fieldErrors)]) {
+        expect(isWizardErrorKey(message), message).toBe(true);
+      }
+    }
+  });
+
+  it("documents the three contact-phone endpoints", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, Record<string, { responses?: Record<string, unknown> }>>;
+      components: { schemas: Record<string, unknown> };
+    };
+    expect(doc.paths["/api/v1/me/contact-phones/request"]?.["post"]?.responses).toHaveProperty("400");
+    expect(doc.paths["/api/v1/me/contact-phones/verify"]?.["post"]?.responses).toHaveProperty("400");
+    expect(doc.paths["/api/v1/me/contact-phones"]?.["get"]?.responses).toHaveProperty("200");
+    for (const name of ["VerifiedContactPhone", "InvalidOtpDetails", "ContactPhoneNotConfirmedDetails"]) {
+      expect(doc.components.schemas).toHaveProperty(name);
+    }
   });
 });

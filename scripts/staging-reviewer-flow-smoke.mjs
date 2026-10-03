@@ -177,6 +177,31 @@ async function signIn(apiUrl, account) {
     refreshToken: body.refreshToken,
     userId: body.user.id,
     role: body.user.role,
+    // Kept for the Listing contact phone, never printed.
+    phone: account.phone,
+  };
+}
+
+/**
+ * A complete draft for the seller's smoke listing. The contact phone is the
+ * seller's own sign-in phone, which publish accepts without a code (ADR-0081).
+ */
+export function smokeDraftBody({ catalogue, photoKey, sellerPhone, now }) {
+  return {
+    ...catalogue,
+    year: 2019,
+    condition: "used",
+    mileageKm: 84000,
+    priceAmount: 155000,
+    priceCurrency: "TMT",
+    description: `Reviewer smoke listing ${now.toISOString()}`,
+    contactPhone: sellerPhone,
+    allowCalls: true,
+    allowChat: true,
+    conditionDisclosure: { damaged: false },
+    acceptsExchange: false,
+    installmentAvailable: false,
+    photos: [{ photoId: randomUUID(), key: photoKey, sortOrder: 0 }],
   };
 }
 
@@ -381,21 +406,12 @@ async function main() {
       expectStatus(
         await request(apiUrl, "PATCH", `/api/v1/listings/drafts/${draft.id}`, {
           token: seller.accessToken,
-          body: {
-            ...catalogue,
-            year: 2019,
-            condition: "used",
-            mileageKm: 84000,
-            priceAmount: 155000,
-            priceCurrency: "TMT",
-            description: `Reviewer smoke listing ${new Date().toISOString()}`,
-            allowCalls: true,
-            allowChat: true,
-            conditionDisclosure: { damaged: false },
-            acceptsExchange: false,
-            installmentAvailable: false,
-            photos: [{ photoId: randomUUID(), key, sortOrder: 0 }],
-          },
+          body: smokeDraftBody({
+            catalogue,
+            photoKey: key,
+            sellerPhone: seller.phone,
+            now: new Date(),
+          }),
         }),
         200,
         "update draft",

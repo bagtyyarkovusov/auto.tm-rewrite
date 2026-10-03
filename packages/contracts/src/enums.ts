@@ -66,11 +66,16 @@ export const Locale = {
 } as const;
 export type Locale = (typeof Locale)[keyof typeof Locale];
 
-/** Why a Sign-in Code was issued (ADR-0054). Selects the email wording. */
+/**
+ * Why a Sign-in Code was issued (ADR-0054, ADR-0081). Each verify accepts only
+ * codes of its own purpose. The three email flows also select the email
+ * wording; a Listing contact phone is confirmed only by SMS.
+ */
 export const SignInCodePurpose = {
   SignIn: "sign-in",
   SignInMethod: "sign-in-method",
   AccountDeletion: "account-deletion",
+  ListingContactPhone: "listing-contact-phone",
 } as const;
 export type SignInCodePurpose =
   (typeof SignInCodePurpose)[keyof typeof SignInCodePurpose];

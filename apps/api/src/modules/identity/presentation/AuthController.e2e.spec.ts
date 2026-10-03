@@ -22,6 +22,7 @@ import {
   EMAIL_CODE_SENDER_PORT,
   type EmailCodeSenderPort,
 } from "../domain/ports/EmailCodeSenderPort";
+import { toCodePurpose } from "../infrastructure/codePurpose";
 import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 function reviewerDemoAccount(index: number): { phone: string; email: string; code: string } {
@@ -116,12 +117,42 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
     for (let i = 0; i < 5; i++) {
       await prisma.otpRequest.create({
         data: {
+          purpose: toCodePurpose("sign-in"),
           channel: "phone",
           destination: phone,
           phone,
           codeHash: "test-hash",
           expiresAt: new Date(Date.now() + 300_000),
           ip: `10.0.0.${i}`,
+        },
+      });
+    }
+
+    const res = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ phone })
+      .expect(400);
+
+    expect(res.body.code).toBe("RATE_LIMITED");
+    expect(res.body.details).toEqual({
+      reason: "destination_limit",
+      retryInSeconds: 0,
+    });
+  });
+
+  it("counts codes of every purpose against the daily limit for a number", async () => {
+    const phone = "+99363335555";
+    const purposes = ["account-deletion", "sign-in-method"] as const;
+    for (let i = 0; i < 5; i++) {
+      await prisma.otpRequest.create({
+        data: {
+          purpose: toCodePurpose(purposes[i % 2]!),
+          channel: "phone",
+          destination: phone,
+          phone,
+          codeHash: "test-hash",
+          expiresAt: new Date(Date.now() + 300_000),
+          ip: `10.0.1.${i}`,
         },
       });
     }
