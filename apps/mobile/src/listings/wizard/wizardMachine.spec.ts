@@ -286,7 +286,7 @@ describe("NEXT", () => {
       payload: {},
     });
     const visited = [state.currentStep];
-    const fill = [car, details, { photos: [validPhoto] }, price, { ...place, description: "Great car" }, { allowCalls: true, allowChat: false }];
+    const fill = [car, details, { photos: [validPhoto] }, price, { ...place, description: "Great car" }, { contactPhone: "+99361234567", allowCalls: true, allowChat: false }];
     for (const updates of fill) {
       state = wizardMachineReducer(state, { type: "UPDATE_FIELDS", updates });
       state = wizardMachineReducer(state, { type: "NEXT" });
