@@ -1,4 +1,5 @@
 import {
+  Bell,
   CircleHelp,
   FileText,
   Info,
@@ -163,6 +164,13 @@ export default function CabinetScreen() {
         {isAuthenticated ? (
           <>
             <MenuGap />
+            <MenuRow
+              icon={Bell}
+              label={t("account:notifications")}
+              chevron
+              onPress={() => router.push("/notifications")}
+            />
+            <MenuDivider />
             <MenuRow
               icon={List}
               label={t("account:myListings")}
