@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
 import type { FastifyRequest } from "fastify";
 
@@ -92,6 +92,25 @@ describe("AdminModerationController", () => {
       const { controller } = makeController({ moderationActionsEnabled: true });
       const result = await controller.banListing("l1", { reason: "Spam" }, adminReq());
       expect(result.targetId).toBe("l1");
+    });
+  });
+
+  describe("invalid request", () => {
+    it.each([
+      ["dismissReport", "r1"],
+      ["banListing", "l1"],
+      ["unbanListing", "l1"],
+      ["suspendUser", "u1"],
+      ["unsuspendUser", "u1"],
+    ] as const)("%s answers 400 VALIDATION_FAILED, not 500", async (action, targetId) => {
+      const { controller, ...useCases } = makeController({ moderationActionsEnabled: true });
+      const useCase = useCases[`${action}UC`];
+
+      const error = await controller[action](targetId, { reason: 42 }, adminReq()).catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({ code: "VALIDATION_FAILED" });
+      expect(useCase.execute).not.toHaveBeenCalled();
     });
   });
 });
