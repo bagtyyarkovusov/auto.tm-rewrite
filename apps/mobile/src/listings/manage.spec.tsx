@@ -377,7 +377,7 @@ describe("My listings states", () => {
   it("shows the error state with Retry, and Retry loads the Listings", async () => {
     api.get.mockImplementation((url: string) => (url.startsWith("/me/listings?") ? Promise.reject(new Error("offline")) : serve(url)));
     const view = await renderScreen();
-    expect(view.getByRole("alert")).toBeTruthy();
+    expect(view.getByText("Something went wrong")).toBeTruthy();
     api.get.mockImplementation(serve);
     fireEvent.press(view.getByRole("button", { name: "Retry" }));
     await settle();
@@ -392,7 +392,8 @@ describe("My listings states", () => {
     loading.unmount();
     api.get.mockImplementation((url: string) => (url.startsWith("/me/drafts?") ? Promise.reject(new Error("offline")) : serve(url)));
     const failed = await renderScreen();
-    expect(failed.getByRole("alert")).toBeTruthy();
+    expect(failed.getByText("Something went wrong")).toBeTruthy();
+    expect(failed.getByRole("button", { name: "Retry" })).toBeTruthy();
   });
 
   it.each([
