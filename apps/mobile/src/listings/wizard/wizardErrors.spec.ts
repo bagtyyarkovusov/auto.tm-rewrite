@@ -13,6 +13,7 @@ const INVALID_PAYLOADS: [WizardSchemas.WizardStep, unknown][] = [
   ["vehicle", {}],
   ["specs", {}],
   ["specs", { condition: "used" }],
+  ["specs", { condition: "new", conditionDisclosure: { damaged: true } }],
   ["price", {}],
   ["price", { priceAmount: -1, priceCurrency: "TMT" }],
   ["location", {}],
@@ -85,6 +86,14 @@ describe("wizard validation messages", () => {
       expect(translated, `${key} has an unfilled placeholder in ${locale}`)
         .not.toMatch(/\{\{/);
     }
+  });
+
+  it.each([
+    ["en", "A new car can't be damaged. Choose Used."],
+    ["ru", "Новый автомобиль не может быть битым. Выберите «Б/у»."],
+    ["tk", "Täze awtoulag zeperli bolup bilmez. «Ulanylan» saýlaň."],
+  ])("explains in %s that a New car cannot be damaged", (locale, text) => {
+    expect(translateWizardError(translator(locale), "wizardErrors.damagedNotForNew")).toBe(text);
   });
 
   it("interpolates the limits from the contract", () => {

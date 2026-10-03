@@ -1107,9 +1107,10 @@ describe("StepSpecsSchema", () => {
     ).toBe(true);
   });
 
-  it("requires the Damaged answer", () => {
+  it("requires the Damaged answer for a Used car", () => {
     const result = StepSpecsSchema.safeParse({
-      condition: "new",
+      condition: "used",
+      mileageKm: 1000,
       conditionDisclosure: { knownIssuesText: "Rust" },
     });
     expect(result.success).toBe(false);
@@ -1119,12 +1120,45 @@ describe("StepSpecsSchema", () => {
     });
   });
 
-  it("accepts either Damaged answer", () => {
+  it("accepts either Damaged answer for a Used car", () => {
     for (const damaged of [true, false]) {
       expect(
-        StepSpecsSchema.safeParse({ condition: "new", conditionDisclosure: { damaged } }).success,
+        StepSpecsSchema.safeParse({ condition: "used", mileageKm: 1000, conditionDisclosure: { damaged } })
+          .success,
       ).toBe(true);
     }
+  });
+
+  // ADR-0080: a New car is not asked Damaged.
+  it.each([
+    ["no disclosure", undefined],
+    ["Known issues only", { knownIssuesText: "Rust" }],
+    ["Damaged: no", { damaged: false }],
+  ])("accepts a New car with %s", (_name, conditionDisclosure) => {
+    expect(StepSpecsSchema.safeParse({ condition: "new", conditionDisclosure }).success).toBe(true);
+  });
+
+  it("rejects a damaged New car", () => {
+    const result = StepSpecsSchema.safeParse({
+      condition: "new",
+      conditionDisclosure: { damaged: true },
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      message: "wizardErrors.damagedNotForNew",
+      path: ["conditionDisclosure", "damaged"],
+    });
+  });
+
+  it("validates the specs step the same way", () => {
+    expect(validateStep("specs", { condition: "new" })).toEqual({
+      valid: true,
+      errors: [],
+      fieldErrors: {},
+    });
+    expect(
+      validateStep("specs", { condition: "new", conditionDisclosure: { damaged: true } }).fieldErrors,
+    ).toEqual({ conditionDisclosure: "wizardErrors.damagedNotForNew" });
   });
 
   it("rejects used vehicle without mileage", () => {
@@ -1832,6 +1866,13 @@ describe("ListConversationsResponseSchema", () => {
 describe("Listings error codes", () => {
   it("publishes the required Damaged answer code returned by edit", () => {
     expect(ListingsErrorCode).toHaveProperty("DamagedRequired", "DAMAGED_REQUIRED");
+  });
+
+  it("publishes the code for a damaged New Listing", () => {
+    expect(ListingsErrorCode).toHaveProperty(
+      "DamagedNotAllowedForNew",
+      "DAMAGED_NOT_ALLOWED_FOR_NEW",
+    );
   });
 });
 

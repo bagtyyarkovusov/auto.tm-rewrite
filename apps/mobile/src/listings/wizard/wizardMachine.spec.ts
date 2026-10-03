@@ -101,7 +101,8 @@ describe("INIT", () => {
       entryStep: "specs",
       payload: {
         ...car,
-        condition: "new",
+        condition: "used",
+        mileageKm: 50000,
         conditionDisclosure: { knownIssuesText: "Rust" },
       },
     });
@@ -623,6 +624,17 @@ describe("legacy Listing edit disclosure", () => {
     });
     expect(buildMachineContext(state).canContinue).toBe(true);
     state = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "review" });
+    expect(buildMachineContext(state).canPublish).toBe(true);
+  });
+});
+
+describe("New Listing edit entry (ADR-0080)", () => {
+  it("opens a New Listing without a stored answer at review", () => {
+    const state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: null, listingId: "listing-1", mode: "edit", entryStep: "review",
+      payload: { ...completePayload, condition: "new", mileageKm: undefined, conditionDisclosure: undefined },
+    });
+    expect(state.currentStep).toBe("review");
     expect(buildMachineContext(state).canPublish).toBe(true);
   });
 });

@@ -138,6 +138,10 @@ export function wizardMachineReducer(
           ? {
               ...action.payload,
               condition: action.payload.condition ?? Enums.ListingCondition.Used,
+              ...(action.payload.condition === Enums.ListingCondition.New &&
+                action.payload.conditionDisclosure?.damaged === undefined && {
+                  conditionDisclosure: { ...action.payload.conditionDisclosure, damaged: false },
+                }),
             }
           : action.payload;
       const validatedSteps = completedSteps(payload);
@@ -152,7 +156,12 @@ export function wizardMachineReducer(
           editEntryAtReview: true,
           payload,
           validatedSteps: DATA_STEPS,
-          currentStep: payload.conditionDisclosure?.damaged === undefined ? "specs" : "review",
+          // ADR-0080: a New Listing is not asked Damaged, so it needs no answer here.
+          currentStep:
+            payload.condition !== Enums.ListingCondition.New &&
+            payload.conditionDisclosure?.damaged === undefined
+              ? "specs"
+              : "review",
           saveError: null,
           publishError: null,
         };

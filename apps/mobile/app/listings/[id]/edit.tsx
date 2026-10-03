@@ -195,6 +195,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
   );
 
   const handleReturnToReview = useCallback(() => {
+    if (saveEdit.isPending) return;
     if (!ctx.canContinue) {
       setAttemptedSteps((current) =>
         current[machineState.currentStep]
@@ -204,7 +205,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
       return;
     }
     dispatch({ type: "GO_TO_STEP", step: "review" });
-  }, [ctx.canContinue, machineState.currentStep]);
+  }, [ctx.canContinue, machineState.currentStep, saveEdit.isPending]);
 
   const finishSave = useCallback(
     async (run: () => Promise<boolean>) => {
@@ -294,7 +295,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
       onDiscard={handleDiscard}
       mode={machineState.mode}
       editDetourActive={ctx.editDetourActive}
-      canContinue={ctx.canContinue && !saveEdit.isPending}
+      canContinue={(ctx.canContinue || currentStep === "specs") && !saveEdit.isPending}
       canPublish={uploadQueue.publishGate.canPublish && !saveEdit.isPending}
       canGoBack={ctx.canGoBack}
       isLastStep={ctx.isLastStep}
@@ -336,6 +337,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
           payload={machineState.payload}
           onChange={handlePayloadChange}
           fieldErrors={fieldErrors}
+          showErrors={attemptedSteps.specs === true}
         />
       )}
       {currentStep === "price" && (
