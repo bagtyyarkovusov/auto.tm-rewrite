@@ -142,9 +142,10 @@ export class PublishListing {
             message: "At least one contact method must be enabled",
           });
         }
-        if (zodError.issues.some((i) => i.path[0] === "contactPhone")) {
-          // Missing or blank answers CONTACT_PHONE_REQUIRED; free text left in
-          // an older draft is a number nobody confirmed.
+        if (zodError.issues.every((i) => i.path[0] === "contactPhone")) {
+          // When the phone is the only gap: missing or blank answers
+          // CONTACT_PHONE_REQUIRED; free text left in an older draft is a
+          // number nobody confirmed. Otherwise every missing field is listed.
           const raw = (draft.payload as { contactPhone?: unknown }).contactPhone;
           const standing = await this.contactPhones.standing(
             input.userId,

@@ -325,6 +325,22 @@ describe("PublishListing", () => {
       expectDraftKept();
     });
 
+    it("answers INVALID_DRAFT_PAYLOAD with every missing field when the phone is not the only one", async () => {
+      const { contactPhone: _, year: __, ...rest } = validPayload;
+
+      const error = await publishError(rest);
+
+      const response = (error as BadRequestException).getResponse() as {
+        code: string;
+        details: { fieldErrors: Record<string, unknown> };
+      };
+      expect(response.code).toBe("INVALID_DRAFT_PAYLOAD");
+      expect(Object.keys(response.details.fieldErrors)).toEqual(
+        expect.arrayContaining(["year", "contactPhone"]),
+      );
+      expectDraftKept();
+    });
+
     it("answers CONTACT_PHONE_NOT_CONFIRMED / not_confirmed for a number nobody confirmed", async () => {
       const error = await publishError({ ...validPayload, contactPhone: "+99365123456" });
 
