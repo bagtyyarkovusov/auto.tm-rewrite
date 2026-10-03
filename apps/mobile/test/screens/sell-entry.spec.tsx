@@ -279,7 +279,8 @@ describe("loading and errors", () => {
     fx.get.mockRejectedValueOnce(new fx.ApiError("NETWORK_ERROR", 0));
     const screen = await renderSell();
 
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getByText("No internet connection. Try again when you are online.")).toBeTruthy();
+    expect(screen.queryByText("Sell your car")).toBeNull();
     serverDrafts = [draft("d1")];
     fireEvent.press(screen.getByRole("button", { name: "Retry" }));
     await settle();
