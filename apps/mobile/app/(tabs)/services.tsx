@@ -3,7 +3,6 @@ import {
   CircleHelp,
   FileText,
   Info,
-  List,
   ScrollText,
   ShieldCheck,
   User,
@@ -23,6 +22,7 @@ import { legalPageUrl } from "../../src/config/publicWebUrl";
 
 import { LanguageRow } from "@/components/account/LanguageRow";
 import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import { MyListingsRow } from "@/components/account/MyListingsRow";
 import { ThemeRow } from "@/components/account/ThemeRow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -171,12 +171,7 @@ export default function CabinetScreen() {
               onPress={() => router.push("/notifications")}
             />
             <MenuDivider />
-            <MenuRow
-              icon={List}
-              label={t("account:myListings")}
-              chevron
-              onPress={() => router.push("/listings/manage")}
-            />
+            <MyListingsRow />
           </>
         ) : null}
 

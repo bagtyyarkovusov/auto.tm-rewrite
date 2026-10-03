@@ -6,6 +6,7 @@ export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   // Empty string, not null, so consumers can pass it straight to a TextInput.
   const [phone, setPhone] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -15,6 +16,7 @@ export function useAuth() {
       if (!cancelled) {
         setIsAuthenticated(session !== null);
         setPhone(session?.user.phone ?? "");
+        setUserId(session?.user.id ?? null);
       }
     }
 
@@ -29,5 +31,5 @@ export function useAuth() {
     };
   }, []);
 
-  return { isAuthenticated, phone };
+  return { isAuthenticated, phone, userId };
 }
