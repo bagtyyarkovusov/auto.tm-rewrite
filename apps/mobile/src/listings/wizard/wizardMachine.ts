@@ -140,6 +140,10 @@ export function wizardMachineReducer(
           ? {
               ...action.payload,
               condition: action.payload.condition ?? Enums.ListingCondition.Used,
+              ...(action.payload.condition === Enums.ListingCondition.New &&
+                action.payload.conditionDisclosure?.damaged === undefined && {
+                  conditionDisclosure: { ...action.payload.conditionDisclosure, damaged: false },
+                }),
             }
           : action.payload;
       const legacyStep = mapLegacyStep(action.payload.currentStep);

@@ -260,6 +260,7 @@ export default function SellScreen() {
   }, [machineState.payload, machineState.validatedSteps, uploadQueue.photos, forceSave]);
 
   const handleContinue = useCallback(() => {
+    if (discardDraft.isPending || publishDraft.isPending) return;
     if (!ctx.canContinue) {
       setAttemptedSteps((current) =>
         current[machineState.currentStep]
@@ -277,7 +278,7 @@ export default function SellScreen() {
       validatedSteps: machineState.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave]);
+  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave, discardDraft.isPending, publishDraft.isPending]);
 
   const handleSkipVin = useCallback(() => {
     dispatch({ type: "UPDATE_FIELDS", updates: { vin: undefined } });
@@ -399,7 +400,10 @@ export default function SellScreen() {
         onDiscard={handleDiscard}
         mode={machineState.mode}
         editDetourActive={ctx.editDetourActive}
-        canContinue={ctx.canContinue}
+        canContinue={
+          (ctx.canContinue || currentStep === "specs") &&
+          !discardDraft.isPending && !publishDraft.isPending
+        }
         canPublish={ctx.canPublish && uploadQueue.publishGate.canPublish}
         canGoBack={ctx.canGoBack}
         isLastStep={ctx.isLastStep}
