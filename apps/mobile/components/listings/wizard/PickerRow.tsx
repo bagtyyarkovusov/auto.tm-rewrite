@@ -7,6 +7,8 @@ import { Text } from "@/components/ui/text";
 interface PickerRowProps {
   label: string;
   value?: string;
+  /** Muted text after the value, such as a city's region. */
+  detail?: string;
   placeholder: string;
   disabled?: boolean;
   required?: boolean;
@@ -19,6 +21,7 @@ interface PickerRowProps {
 export function PickerRow({
   label,
   value,
+  detail,
   placeholder,
   disabled,
   required,
@@ -28,6 +31,7 @@ export function PickerRow({
   locked,
 }: PickerRowProps) {
   const isDisabled = disabled || locked;
+  const shownDetail = value ? detail : undefined;
 
   return (
     <View className="gap-1.5">
@@ -40,17 +44,24 @@ export function PickerRow({
         disabled={isDisabled}
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled }}
-        accessibilityLabel={`${label}: ${value ?? placeholder}`}
+        accessibilityLabel={`${label}: ${value ?? placeholder}${shownDetail ? `, ${shownDetail}` : ""}`}
         className={`flex-row items-center justify-between border border-border rounded-lg bg-card px-4 h-[52px] active:bg-muted/60 ${isDisabled ? " opacity-50" : ""}`}
       >
-        <Text
-          className={
-            value ? "text-base text-foreground font-medium" : "text-base text-muted-foreground"
-          }
-          numberOfLines={1}
-        >
-          {value ?? placeholder}
-        </Text>
+        <View className="flex-1 flex-row items-baseline gap-2 pr-2">
+          <Text
+            className={
+              value ? "shrink text-base text-foreground font-medium" : "shrink text-base text-muted-foreground"
+            }
+            numberOfLines={1}
+          >
+            {value ?? placeholder}
+          </Text>
+          {shownDetail && (
+            <Text className="shrink text-sm text-muted-foreground" numberOfLines={1}>
+              {shownDetail}
+            </Text>
+          )}
+        </View>
         <Icon
           as={locked ? Lock : ChevronRight}
           className={
