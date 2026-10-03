@@ -106,6 +106,53 @@ describe("DraftsController e2e", () => {
 
       expect(res.body.payload).toEqual({ vin: "WBA123" });
     });
+
+    function postDraft(token: string) {
+      return request
+        .post("/api/v1/listings/drafts")
+        .set("Authorization", `Bearer ${token}`)
+        .send({});
+    }
+
+    async function draftCount(alias: SuiteUser): Promise<number> {
+      return prisma.listingDraft.count({ where: { userId: suite.id(alias) } });
+    }
+
+    it("refuses a sixth draft with 409 DRAFT_LIMIT_REACHED and creates nothing", async () => {
+      const token = await createUser("user-1");
+      for (let i = 0; i < 5; i += 1) await postDraft(token).expect(201);
+
+      const res = await postDraft(token);
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("DRAFT_LIMIT_REACHED");
+      expect(await draftCount("user-1")).toBe(5);
+    });
+
+    it("lets a User create a draft again after discarding one", async () => {
+      const token = await createUser("user-1");
+      const ids: string[] = [];
+      for (let i = 0; i < 5; i += 1) ids.push((await postDraft(token).expect(201)).body.id);
+
+      await request
+        .delete(`/api/v1/listings/drafts/${ids[0]}`)
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      await postDraft(token).expect(201);
+      expect(await draftCount("user-1")).toBe(5);
+    });
+
+    it("never leaves a User with six drafts under concurrent creates", async () => {
+      const token = await createUser("user-1");
+      for (let i = 0; i < 4; i += 1) await postDraft(token).expect(201);
+
+      const results = await Promise.all(Array.from({ length: 4 }, () => postDraft(token)));
+
+      expect(results.filter((r) => r.status === 201)).toHaveLength(1);
+      expect(results.filter((r) => r.status === 409)).toHaveLength(3);
+      expect(await draftCount("user-1")).toBe(5);
+    });
   });
 
   describe("PATCH /api/v1/listings/drafts/:id", () => {
@@ -287,8 +334,23 @@ describe("DraftsController e2e", () => {
       await request
         .post(`/api/v1/listings/drafts/${created.body.id}/validate-step`)
         .set("Authorization", `Bearer ${token2}`)
-        .send({ step: "vin", payload: {} })
+        .send({ step: "vehicle", payload: {} })
         .expect(404);
+    });
+
+    it("rejects the eight-step wizard's removed vin step", async () => {
+      const token = await createUser("user-1");
+      const created = await request
+        .post("/api/v1/listings/drafts")
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      await request
+        .post(`/api/v1/listings/drafts/${created.body.id}/validate-step`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ step: "vin", payload: {} })
+        .expect(400);
     });
   });
 

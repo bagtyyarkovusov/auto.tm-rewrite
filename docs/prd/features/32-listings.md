@@ -12,15 +12,17 @@ A marketplace without listings is empty. This is the central feature; everything
 
 ### Create wizard (7 steps for MVP)
 
-1. **VIN entry** — optional manual text only in Sprint 4; no OCR, decoder, checking, or auto-fill promise in the mobile wizard. Skip button is prominent. VIN decoding is deferred until a real decoder exists ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)).
-2. **Photo capture** — pick from library OR camera; min 1, max 20; freeform photo set with lightweight guidance only; client-side compress + reorder UI; first photo = cover and gets a Cover badge; drag-reorder changes cover; failed uploads expose Retry + Remove
-3. **Brand → Model → Generation → Year** — input-like rows open searchable picker sheets; Brand first, Model disabled until Brand, Generation optional/skippable when no catalog data exists, Year required
-4. **Condition** (`used` default / `new`) + **Mileage** (visible and required for used cars; optional/hidden for new cars) + optional completeness fields: **Color**, **Body type**, **Transmission**, **Drive type**, **Engine type**, **Engine power**. These completeness fields do not block publish in Sprint 4. The seller condition disclosure also lives in this step ([ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md)): **Damaged / needs repair** (yes/no, required to publish and kept on edit) and optional **Known issues** free text (up to 1000 characters).
-5. **Price + Currency** (TMT default / USD / AED) + **Seller terms**. Switching currency clears the amount instead of auto-converting; non-TMT shows approximate TMT using admin FX; missing non-TMT FX blocks publish with an inline helper. Optional terms: Exchange possible and Installment possible. No separate negotiable toggle in Sprint 4. Price is always the full asking price, never a down payment.
-6. **Car location** — Region + City + optional area/landmark text ("Aşgabat, 30 mkr"). This is the physical location where the car can be inspected, not the seller's current GPS location.
-7. **Description + Verified Contact Phone + Contact preferences** — description is required but has no minimum word count beyond non-empty, max 2000 chars. Store seller text exactly as written; no auto-translation or language selector in Sprint 4. The contact phone defaults to the seller's verified account phone when one exists; a different `+993` number, or any number for an email-only User, must be confirmed with a purpose-bound SMS code before Continue / Publish. Calls/chat switches have at-least-one validation; chat can be enabled now with honest helper text that messaging launches later. No separate Preview route in Sprint 4; show a compact Review summary above Publish.
+1. **Car: Brand → Model → Generation → Year, then VIN** — input-like rows open searchable picker sheets; Brand first, Model disabled until Brand, Generation optional/skippable when no catalog data exists, Year required. An optional **VIN** field (17 characters at most) sits at the bottom of the step with no Skip button: manual text only, with no OCR, decoder, checking, or auto-fill promise. VIN decoding is deferred until a real decoder exists ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)).
+2. **Details and condition: Condition** (`used` default / `new`) + **Mileage** (visible and required for used cars; optional/hidden for new cars) + optional completeness fields: **Color**, **Body type**, **Transmission**, **Drive type**, **Engine type**, **Engine power**. These completeness fields do not block publish in Sprint 4. The seller condition disclosure also lives in this step ([ADR-0052](../../adr/0052-seller-condition-disclosure-is-damaged-plus-known-issues.md)): **Damaged / needs repair** (yes/no, required to publish and kept on edit) and optional **Known issues** free text (up to 1000 characters).
+3. **Photos** — pick from library OR camera; min 1, max 20; freeform photo set with lightweight guidance only; client-side compress + reorder UI; first photo = cover and gets a Cover badge; drag-reorder changes cover; failed uploads expose Retry + Remove
+4. **Price + Currency** (TMT default / USD / AED) + **Seller terms**. Switching currency clears the amount instead of auto-converting; non-TMT shows approximate TMT using admin FX; missing non-TMT FX blocks publish with an inline helper. Optional terms: Exchange possible and Installment possible. No separate negotiable toggle in Sprint 4. Price is always the full asking price, never a down payment.
+5. **Description and place** — **Description** first: required, no minimum word count beyond non-empty, max 2000 chars. Store seller text exactly as written; no auto-translation or language selector in Sprint 4. Then the car location: Region + City + optional area/landmark text ("Aşgabat, 30 mkr"). This is the physical location where the car can be inspected, not the seller's current GPS location.
+6. **Contact: Verified Contact Phone + Contact preferences** — the contact phone defaults to the seller's verified account phone when one exists; a different `+993` number, or any number for an email-only User, must be confirmed with a purpose-bound SMS code before Continue / Publish. Calls/chat switches have at-least-one validation; chat can be enabled now with honest helper text that messaging launches later.
+7. **Check and publish** — no separate Preview route in Sprint 4; a compact Review summary lists the six steps above Publish.
 
-Navigation is linear Next/Back in Sprint 4. The compact Review summary can link back to completed steps for corrections; do not build arbitrary step-jump navigation. Drafts auto-save to the server while editing and force-save on step transition. Do not promise offline draft persistence in Sprint 4. Resume on next visit. If drafts exist, Sell opens a lightweight entry with latest draft as the primary Continue action and New listing as secondary; full draft management belongs in My Listings. Discard draft lives in the wizard header overflow menu and requires destructive confirmation.
+Navigation is linear Next/Back in Sprint 4. The compact Review summary can link back to completed steps for corrections; do not build arbitrary step-jump navigation. Drafts auto-save to the server while editing and force-save on step transition. Do not promise offline draft persistence in Sprint 4. Resume on next visit at the first step whose required fields are incomplete, judged from the saved fields; this also places drafts saved by the earlier eight-step wizard (VIN first) in the new order without losing a field. If drafts exist, Sell opens a lightweight entry with latest draft as the primary Continue action and New listing as secondary; full draft management belongs in My Listings. Discard draft lives in the wizard header overflow menu and requires destructive confirmation.
+
+A User keeps at most five drafts, and drafts never expire or get deleted automatically. Creating a sixth fails with `409 DRAFT_LIMIT_REACHED` and creates nothing; publishing or deleting a draft frees a place. The Sell tab shows the latest draft as one row (cover, "Brand Model, year" or "Draft without a car yet", steps filled and last update) with Continue as the main button, New listing below it, "All drafts" with the count when there are two or more, and My listings. With no drafts it shows "Sell your car", one "List a car" button and My listings. At five drafts, or when the API refuses with the limit code, New listing opens a sheet whose "Open drafts" opens My listings on Drafts.
 
 ### Listing location policy
 
@@ -110,7 +112,7 @@ That is the whole screen. Video is added below the photos only when the video me
 - **Owner viewing their own Listing:** no Call or Message bar.
   - A status card with views and saves. Only owners see these counts; buyers never see view counts.
   - The original currency under the price.
-  - Edit and Mark sold in the bottom bar; Archive and Delete in ⋯ (Republish for archived Listings). Share is hidden, as above.
+  - Edit and Mark as sold in the bottom bar; Remove from sale and Delete in ⋯ (Relist and Delete for a removed Listing, Delete alone for a sold one), named as in My listings. Share is hidden, as above.
 - **Sold / Removed from sale (`sold`, `archived`):** closed for new contact.
   - A banner on the photo and a greyed price.
   - ♡, the contact bar, Ask the seller and Report listing are hidden.
@@ -139,9 +141,9 @@ That is the whole screen. Video is added below the photos only when the video me
 
 ### Mark sold
 
-- Button in My Listings: "Mark as sold"
-- Confirm modal: "This car is sold. Is the buyer from AutoTM?" (yes / no — analytics signal)
-- Listing transitions to `sold` state and is auto-archived after 14 days. Buyers see it labelled Sold on detail and in Favorites, then Removed from sale once archived; it never appears in Home or Results.
+- "Mark as sold" in My listings' ⋯ sheet and in Listing detail's owner bar.
+- Confirm: "Mark as sold?" / "Buyers will see it as Sold. A sold Listing cannot be put back on sale." It asks nothing about where the buyer came from.
+- The Listing transitions to `sold` and stays there; nothing archives it automatically. Buyers see it labelled Sold on detail and in Favorites; it never appears in Home or Results. The owner can only delete it.
 - Garage entry (if linked) auto-updates to `status=sold`
 
 ### Listing states
@@ -151,7 +153,7 @@ That is the whole screen. Video is added below the photos only when the video me
 | `draft` | Owner only | Continue / discard |
 | `active` | Public | Favorite, Message, owner-edit |
 | `sold` | Detail and Favorites only, labelled Sold; never in Home or Results | Closed for new contact: no Call, Message, Ask the seller, ♡ or Report, and no new Conversation. An existing Conversation stays open for Messages, with a Sold badge and a banner linking to other cars of the same model |
-| `archived` | Owner + admin; a buyer reaching it from Favorites or a link sees it closed, labelled Removed from sale; never in Home or Results | Closed for new contact, as `sold`; an existing Conversation behaves as for `sold` (badge, banner, composer on); owner can republish |
+| `archived` | Owner + admin; a buyer reaching it from Favorites or a link sees it closed, labelled Removed from sale; never in Home or Results | Closed for new contact, as `sold`; an existing Conversation behaves as for `sold` (badge, banner, composer on); owner can relist |
 | `banned` | Owner sees a generic ban notice; not in feed/search/favorites or non-owner detail | New contact and Messages disabled; existing Conversations stay readable, with a one-line notice in place of the composer; owner edit/mark-sold/archive/republish/delete blocked until admin unban |
 | deleted (soft-deleted) | Not shown on any buyer surface; a buyer reaching it gets "This listing is no longer available" | No contact; existing Conversations stay readable, with a one-line notice in place of the composer |
 
@@ -161,24 +163,27 @@ Chat switched off on a Listing (`allowChat` off) also leaves an existing Convers
 
 | Screen | State | Notes |
 |---|---|---|
-| Wizard step 1 (VIN) | Empty | Optional, skip button prominent |
-| Wizard step 2 (photos) | <1 photo | Submit disabled; helper text |
-| Wizard step 3 (vehicle identity) | Missing year | Continue disabled; year is required for marketplace-quality listings |
-| Wizard step 4 (specs) | Used car missing mileage | Continue disabled; mileage is required for used-car listings |
-| Wizard step 7 (contact) | Different phone or email-only seller | Send contact-phone code, block Continue / Publish until confirmed, then offer the number as a quick pick for 7 days |
+| Wizard step 1 (Car) | VIN empty | Optional field at the bottom of Car; no Skip button |
+| Wizard step 1 (Car) | Missing year | Continue disabled; year is required for marketplace-quality listings |
+| Wizard step 2 (details and condition) | Used car missing mileage | Continue disabled; mileage is required for used-car listings |
+| Wizard step 3 (photos) | <1 photo | Submit disabled; helper text |
+| Wizard step 6 (contact) | Different phone or email-only seller | Send contact-phone code, block Continue / Publish until confirmed, then offer the number as a quick pick for 7 days |
 | Wizard | Upload failed | Retry button per failed photo |
 | Wizard | Network slow | Show progress + "Slow connection" badge |
 | Listing detail | Loading | Card fields from the tapped card's cache; the rest behind skeletons; contact bar disabled until loaded |
 | Listing detail | Signed out | Call works; ♡, Message, Ask the seller and Report listing lead to sign-in, then finish the action here |
-| Listing detail | Owner viewing own | No contact bar; status card with views and saves; Edit / Mark sold in the bar; Archive / Delete in ⋯ |
+| Listing detail | Owner viewing own | No contact bar; status card with views and saves; Edit / Mark as sold in the bar; Remove from sale / Delete in ⋯ |
 | Listing detail | Sold / Removed from sale | Banner on the photo, greyed price; contact, ♡, Ask and Report hidden; "See other Brand Model" link |
 | Listing detail | Deleted, or banned for a buyer | "This listing is no longer available", with Go to Home and Back |
 | Listing detail | Banned, owner | Generic ban notice; admin reasons stay internal |
 | Listing detail | Opened from a report (admin view) | All actions + moderation toolbar |
 | Conversation | Listing sold / Removed from sale | Badge on the Listing card and an inline banner linking to other cars of the same model; composer on ([34](34-conversations.md#closed-and-sold-listings)) |
 | Conversation | Listing banned or deleted, or chat switched off | One-line notice in place of the composer; history readable |
-| My listings | Empty | "List your first car" CTA |
-| My listings | Has drafts | "Continue draft" pinned at top |
+| My listings | Tabs | Active · Drafts · Archive, each with its count: Active counts active and blocked Listings, Archive sold and removed ones. No number while the counts load, after a failure or at zero. Opens on the tab its route names, Active by default |
+| My listings | Rows | Archive rows are labelled Sold or Removed from sale. A Listing row opens the Listing in owner view; a draft row resumes the wizard |
+| My listings | Row actions | ⋯ opens a sheet with what the state allows: active — Edit, Mark as sold, Remove from sale, Delete; removed — Relist, Edit, Delete; sold — Delete; draft — Continue, Delete draft. Every action except Edit and Continue asks first. Success moves the row, updates the counts and shows a toast; failure keeps the row and says "Action failed. Try again." |
+| My listings | Blocked Listing | In Active, labelled Blocked with "Blocked by moderation. Buyers do not see it."; no ⋯, no tap, no reason and no appeal |
+| My listings | Loading / error / empty | Skeleton rows; the shared error state with Retry; per tab "No active listings" (with List a car), "No drafts" (with Start listing) or "Archive is empty" |
 
 ## Data references
 

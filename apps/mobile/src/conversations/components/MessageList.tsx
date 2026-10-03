@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -6,6 +6,7 @@ import { buildChatImageUrl } from "../upload/buildChatImageUrl";
 import { buildMessageRows, type MessageRow } from "../messageRows";
 import { formatMessageDay } from "../messageTime";
 
+import { MessageActionsSheet } from "./MessageActionsSheet";
 import {
   MessageBubble,
   type MessageStatus,
@@ -35,6 +36,9 @@ interface MessageListProps {
   messages: MessageItem[];
   currentUserId: string;
   reportedMessageIds?: Set<string>;
+  /** Report message is offered only while reporting is switched on for the environment. */
+  reportEnabled?: boolean;
+  onCopy?: (text: string) => void;
   onRetry?: (tempId: string) => void;
   onDelete?: (messageId: string) => void;
   onReport?: (messageId: string) => void;
@@ -47,6 +51,8 @@ interface MessageListProps {
   /** An older page failed; the loaded Messages stay and the top offers Retry. */
   olderFailed?: boolean;
   onRetryOlder?: () => void;
+  /** Shown after the last Message (the list is inverted, so this is its header). */
+  afterLast?: ReactNode;
 }
 
 function OlderMessagesRow({
@@ -107,6 +113,8 @@ export function MessageList({
   messages,
   currentUserId,
   reportedMessageIds,
+  reportEnabled = true,
+  onCopy,
   onRetry,
   onDelete,
   onReport,
@@ -116,12 +124,29 @@ export function MessageList({
   loadingOlder = false,
   olderFailed = false,
   onRetryOlder,
+  afterLast,
 }: MessageListProps) {
   const { t, i18n } = useTranslation();
   const reported = reportedMessageIds ?? new Set<string>();
+  const [actionTarget, setActionTarget] = useState<MessageItem | null>(null);
   const rows = useMemo(
     () => buildMessageRows(messages, currentUserId),
     [messages, currentUserId],
+  );
+
+  /** What a long press offers on a Message (D4); none means no sheet. */
+  const actionsFor = useCallback(
+    (item: MessageItem) => {
+      const isMine = item.senderId === currentUserId;
+      const live = !item.deletedAt && item.status !== "pending" && item.status !== "failed";
+      const kind = item.kind ?? "text";
+      return {
+        copy: live && kind === "text",
+        report: live && !isMine && reportEnabled && !reported.has(item.id),
+        delete: live && isMine && !!item.canDelete,
+      };
+    },
+    [currentUserId, reportEnabled, reported],
   );
 
   const renderItem = useCallback(
@@ -140,15 +165,14 @@ export function MessageList({
           status={item.status}
           createdAt={item.createdAt}
           deletedAt={item.deletedAt}
-          canDelete={item.canDelete}
-          canReport={item.senderId !== currentUserId && !item.deletedAt}
           reported={reported.has(item.id)}
           showReadLabel={showReadLabel}
           postRefBrandName={item.postRefBrandName}
           postRefModelName={item.postRefModelName}
           onRetry={item.status === "failed" ? () => onRetry?.(item.id) : undefined}
-          onDelete={item.canDelete && !item.deletedAt ? () => onDelete?.(item.id) : undefined}
-          onReport={item.senderId !== currentUserId && !item.deletedAt ? () => onReport?.(item.id) : undefined}
+          onOpenActions={
+            Object.values(actionsFor(item)).some(Boolean) ? () => setActionTarget(item) : undefined
+          }
           onImagePress={item.kind === "image" && !item.deletedAt ? () => {
             const uri = item.localImageUri ?? (item.metadata && "key" in item.metadata && item.metadata.key
               ? buildChatImageUrl(item.metadata.key)
@@ -159,18 +183,22 @@ export function MessageList({
         />
       </>
     ),
-    [currentUserId, reported, onRetry, onDelete, onReport, onImagePress, onPostRefPress, i18n.language, t],
+    [currentUserId, reported, actionsFor, onRetry, onImagePress, onPostRefPress, i18n.language, t],
   );
 
   const keyExtractor = useCallback((row: MessageRow<MessageItem>) => row.message.id, []);
 
+  const targetActions = actionTarget ? actionsFor(actionTarget) : null;
+
   return (
+    <>
     <FlatList
       data={rows}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       contentContainerStyle={{ paddingVertical: 8 }}
       inverted
+      ListHeaderComponent={afterLast ? <>{afterLast}</> : null}
       onEndReached={onLoadOlder}
       onEndReachedThreshold={0.5}
       keyboardShouldPersistTaps="handled"
@@ -189,5 +217,18 @@ export function MessageList({
         </View>
       }
     />
+    <MessageActionsSheet
+      open={actionTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setActionTarget(null);
+      }}
+      canCopy={targetActions?.copy ?? false}
+      canReport={targetActions?.report ?? false}
+      canDelete={targetActions?.delete ?? false}
+      onCopy={() => actionTarget && onCopy?.(actionTarget.text)}
+      onReport={() => actionTarget && onReport?.(actionTarget.id)}
+      onDelete={() => actionTarget && onDelete?.(actionTarget.id)}
+    />
+    </>
   );
 }

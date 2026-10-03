@@ -531,6 +531,9 @@ export const MyListingCountsResponseSchema = z.object({
 });
 export type MyListingCountsResponse = z.infer<typeof MyListingCountsResponseSchema>;
 
+/** A User may keep this many ListingDrafts at once. Drafts never expire. */
+export const MAX_DRAFTS_PER_USER = 5;
+
 export const MyDraftsResponseSchema = z.object({
   items: z.array(ListingDraftSchema),
   nextCursor: z.string().nullable(),
@@ -582,9 +585,13 @@ export const ListingsErrorCode = {
   ExchangeRateMissing: "EXCHANGE_RATE_MISSING",
   ContactMethodRequired: "CONTACT_METHOD_REQUIRED",
   DamagedRequired: "DAMAGED_REQUIRED",
+  /** A New Listing cannot be damaged (ADR-0080). */
+  DamagedNotAllowedForNew: "DAMAGED_NOT_ALLOWED_FOR_NEW",
   ListingDeleted: "LISTING_DELETED",
   ListingNotFound: "LISTING_NOT_FOUND",
   MediaLimitExceeded: "MEDIA_LIMIT_EXCEEDED",
+  /** The User already has `MAX_DRAFTS_PER_USER` drafts; creating another is refused with 409. */
+  DraftLimitReached: "DRAFT_LIMIT_REACHED",
   /** The media key was not presigned for this User, or its kind does not match. */
   UploadNotAvailable: "UPLOAD_NOT_AVAILABLE",
   /** The upload already belongs to a Listing. Retrying the same attach is not an error. */
