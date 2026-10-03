@@ -1,4 +1,5 @@
 import { Check, X } from "lucide-react-native";
+import type { ReactNode } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +33,10 @@ interface CatalogPickerSheetProps {
   isLoading: boolean;
   isError: boolean;
   onSelect: (id: string) => void;
+  /** False for short fixed lists such as years, which need no keyboard. */
+  searchable?: boolean;
+  /** A last row under the list, such as "I don't know, skip". */
+  footer?: ReactNode;
 }
 
 export function CatalogPickerSheet({
@@ -47,6 +52,8 @@ export function CatalogPickerSheet({
   isLoading,
   isError,
   onSelect,
+  searchable = true,
+  footer,
 }: CatalogPickerSheetProps) {
   const { t } = useTranslation();
   return (
@@ -63,12 +70,14 @@ export function CatalogPickerSheet({
             <Icon as={X} className="size-5 text-foreground" />
           </Button>
         </SheetHeader>
-        <Input
-          placeholder={searchPlaceholder}
-          value={search}
-          onChangeText={onSearchChange}
-          className="mb-2"
-        />
+        {searchable && (
+          <Input
+            placeholder={searchPlaceholder}
+            value={search}
+            onChangeText={onSearchChange}
+            className="mb-2"
+          />
+        )}
         {isLoading ? (
           <View className="gap-3 py-2">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -111,6 +120,7 @@ export function CatalogPickerSheet({
             )}
           />
         )}
+        {!isLoading && !isError && items.length > 0 && footer}
       </SheetContent>
     </Sheet>
   );
