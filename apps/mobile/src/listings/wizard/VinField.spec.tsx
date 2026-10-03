@@ -7,7 +7,7 @@ import { VinField } from "./VinField";
 const lockedHelper = {
   en: "This field cannot be changed after publishing.",
   ru: "Это поле нельзя изменить после публикации.",
-  tk: "Bu meýdan çap edilenden soň üýtgedip bolmaz.",
+  tk: "Bu meýdan neşir edilenden soň üýtgedilip bilmez.",
 } as const;
 
 const vinHelper = {
