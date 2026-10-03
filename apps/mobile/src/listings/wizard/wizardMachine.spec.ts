@@ -614,3 +614,15 @@ describe("legacy Listing edit disclosure", () => {
     expect(buildMachineContext(state).canPublish).toBe(true);
   });
 });
+
+describe("New Listing edit entry (ADR-0080)", () => {
+  it("opens a New Listing without a stored answer at review", () => {
+    const { mileageKm: _mileage, ...rest } = completePayload;
+    const state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: null, listingId: "listing-1", mode: "edit", entryStep: "review",
+      payload: { ...rest, condition: "new", conditionDisclosure: undefined },
+    });
+    expect(state.currentStep).toBe("review");
+    expect(buildMachineContext(state).canPublish).toBe(true);
+  });
+});
