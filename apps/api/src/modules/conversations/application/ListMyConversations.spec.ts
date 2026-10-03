@@ -130,6 +130,10 @@ class FakeConversationRepository implements ConversationRepository {
     return 0;
   }
 
+  async countAllUnreadMessages(): Promise<number> {
+    return 0;
+  }
+
   async getParticipantStatesForConversations(
     conversationIds: string[],
   ): Promise<
