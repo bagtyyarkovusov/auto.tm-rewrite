@@ -121,7 +121,7 @@ describe("legacy Listing edit", () => {
     fireEvent.press(screen.getByRole("button", { name: "Done" }));
     expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
     expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
-    expect(screen.getByText("Specifications")).toBeTruthy();
+    expect(screen.getByText("Details and condition")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
     expect(fixture.save).not.toHaveBeenCalled();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
@@ -143,7 +143,7 @@ describe("legacy Listing edit", () => {
     expect(screen.queryByText("Engine power must be greater than zero")).toBeNull();
     fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
     expect(screen.getByText("Engine power must be greater than zero")).toBeTruthy();
-    expect(screen.getByText("Specifications")).toBeTruthy();
+    expect(screen.getByText("Details and condition")).toBeTruthy();
     expect(screen.getByDisplayValue("0")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
     expect(fixture.save).not.toHaveBeenCalled();
@@ -154,7 +154,7 @@ describe("legacy Listing edit", () => {
   it("opens a New Listing without disclosure directly at Check with Save changes", () => {
     fixture.listing = { ...fixture.baseline, condition: "new", conditionDisclosure: undefined };
     const screen = renderMobile(<EditListingScreen />);
-    expect(screen.getByText("Review")).toBeTruthy();
+    expect(screen.getByText("Check and publish")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
     expect(screen.queryByPlaceholderText("e.g. 150")).toBeNull();

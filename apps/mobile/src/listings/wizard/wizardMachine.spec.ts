@@ -638,3 +638,34 @@ describe("New Listing edit entry (ADR-0080)", () => {
     expect(buildMachineContext(state).canPublish).toBe(true);
   });
 });
+
+describe("New draft resume with field-derived completion (ADR-0080)", () => {
+  const newCar = { ...car, condition: "new" as const };
+
+  it("counts Details complete for a New draft without a Damaged answer and resumes past it", () => {
+    const state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: "draft-1", payload: newCar,
+    });
+    expect(state.validatedSteps).toEqual(["vehicle", "specs"]);
+    expect(state.currentStep).toBe("photos");
+    expect(state.payload.conditionDisclosure).toEqual({ damaged: false });
+  });
+
+  it("does the same for a draft saved by the eight-step wizard", () => {
+    const state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: "draft-1",
+      payload: { ...newCar, vin: "WBA1234567890ABCD", validatedSteps: oldStepNames("vin", "photos", "vehicle") },
+    });
+    expect(state.currentStep).toBe("photos");
+    expect(state.payload.vin).toBe("WBA1234567890ABCD");
+  });
+
+  it("keeps a damaged New draft on Details", () => {
+    const state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: "draft-1",
+      payload: { ...newCar, conditionDisclosure: { damaged: true } },
+    });
+    expect(state.validatedSteps).toEqual(["vehicle"]);
+    expect(state.currentStep).toBe("specs");
+  });
+});
