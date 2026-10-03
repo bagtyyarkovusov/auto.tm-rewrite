@@ -11,6 +11,8 @@ import { CommonActions } from "@react-navigation/native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
 
+import { TAB_BAR_HEIGHT } from "./tabBarHeight";
+
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
@@ -21,7 +23,7 @@ function useTabConfig() {
     { name: "(search)", label: t("search"), icon: Search },
     { name: "favorites", label: t("favorites"), icon: Heart },
     { name: "sell", label: t("sell"), icon: Plus },
-    { name: "chat", label: t("chat"), icon: MessageSquare },
+    { name: "chat", label: t("messages"), icon: MessageSquare },
     { name: "services", label: t("cabinet"), icon: User },
   ] as const;
 }
@@ -52,7 +54,7 @@ export function AutoTmTabBar({
       className="flex-row items-stretch border-t border-border bg-background/90"
       style={{
         paddingBottom: insets.bottom,
-        height: 64 + insets.bottom,
+        height: TAB_BAR_HEIGHT + insets.bottom,
       }}
     >
       {TAB_CONFIG.map((tab) => {

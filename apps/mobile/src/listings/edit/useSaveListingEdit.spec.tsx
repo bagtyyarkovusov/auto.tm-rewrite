@@ -5,14 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
-import type { ListingsSchemas } from "@auto-tm/contracts";
+import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
 import { server } from "../../../test/msw";
 import type { StagedPhoto } from "../uploadStaging/types";
 
 import {
   useSaveListingEdit,
-  computeOps,
   buildFieldsPatch,
   EditSessionError,
 } from "./useSaveListingEdit";
@@ -94,42 +93,109 @@ function photo(p: Partial<StagedPhoto> & { photoId: string }): StagedPhoto {
   };
 }
 
-describe("computeOps", () => {
-  it("includes fields op when editable fields are present", () => {
-    const ops = computeOps(basePayload, [], []);
-    expect(ops.some((o) => o.id === "fields")).toBe(true);
+/** Runs a real save against a recording API and returns the requests it made, in order. */
+async function savedRequests(
+  payload: WizardSchemas.WizardDraftPayload,
+  photos: StagedPhoto[],
+  seed: ListingsSchemas.ListingMedia[],
+): Promise<string[]> {
+  const log: string[] = [];
+  server.use(
+    http.patch("*/listings/:id", () => {
+      log.push("fields");
+      return HttpResponse.json({
+        id: LISTING_ID,
+        sellerId: "550e8400-e29b-41d4-a716-446655440003",
+        status: "active",
+        brandId: "550e8400-e29b-41d4-a716-446655440004",
+        modelId: "550e8400-e29b-41d4-a716-446655440005",
+        year: 2020,
+        priceAmount: 15000,
+        priceCurrency: "USD",
+        displayPriceTmt: 52500,
+        description: "Great car",
+        regionId: "550e8400-e29b-41d4-a716-446655440006",
+        cityId: "550e8400-e29b-41d4-a716-446655440007",
+        allowCalls: true,
+        allowChat: true,
+        acceptsExchange: false,
+        installmentAvailable: false,
+        media: seed,
+        viewCount: 0,
+        favoriteCount: 0,
+        publishedAt: "2026-05-21T12:00:00.000Z",
+        createdAt: "2026-05-21T12:00:00.000Z",
+        updatedAt: "2026-05-21T12:00:00.000Z",
+        publicNumber: 10482,
+        seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
+      });
+    }),
+    http.post("*/listings/:id/media/attach", async ({ request }) => {
+      const body = (await request.json()) as ListingsSchemas.AttachMediaRequest;
+      log.push(`attach:${body.key}`);
+      return HttpResponse.json({
+        id: crypto.randomUUID(),
+        listingId: LISTING_ID,
+        kind: "image",
+        key: body.key,
+        sortOrder: body.sortOrder,
+        createdAt: "2026-05-21T12:00:00.000Z",
+      });
+    }),
+    http.delete("*/listings/:id/media/:mediaId", ({ params }) => {
+      log.push(`remove:${String(params.mediaId)}`);
+      return HttpResponse.json({ success: true });
+    }),
+    http.put("*/listings/:id/media/order", () => {
+      log.push("reorder");
+      return HttpResponse.json({ success: true });
+    }),
+  );
+  const { result } = renderHook(
+    () => useSaveListingEdit(LISTING_ID, payload, photos, seed),
+    { wrapper },
+  );
+  await result.current.save();
+  return log;
+}
+
+describe("useSaveListingEdit planned requests", () => {
+  beforeEach(() => {
+    server.resetHandlers();
   });
 
-  it("excludes fields op when payload has no editable fields", () => {
-    const ops = computeOps({}, [], []);
-    expect(ops.some((o) => o.id === "fields")).toBe(false);
+  it("saves fields when editable fields are present", async () => {
+    expect(await savedRequests(basePayload, [], [])).toContain("fields");
   });
 
-  it("identifies new photos to attach", () => {
+  it("skips the fields request when the payload has no editable fields", async () => {
+    expect(await savedRequests({}, [], [])).toEqual([]);
+  });
+
+  it("attaches only photos that are not already server media", async () => {
     const photos = [
       photo({ photoId: "550e8400-e29b-41d4-a716-446655440001", key: "k1" }),
-      photo({ photoId: "new1", key: "k2" }),
+      photo({ photoId: "new1", key: "k2", sortOrder: 1 }),
     ];
-    const ops = computeOps(basePayload, photos, seedMedia);
-    expect(ops.some((o) => o.id === "attach:new1")).toBe(true);
-    expect(ops.some((o) => o.id === "attach:550e8400-e29b-41d4-a716-446655440001")).toBe(false);
+    const requests = await savedRequests(basePayload, photos, seedMedia);
+    expect(requests.filter((r) => r.startsWith("attach:"))).toEqual(["attach:k2"]);
   });
 
-  it("identifies removed photos", () => {
+  it("removes server media the seller dropped and keeps the rest", async () => {
     const photos = [photo({ photoId: "550e8400-e29b-41d4-a716-446655440001", key: "k1" })];
-    const ops = computeOps(basePayload, photos, seedMedia);
-    expect(ops.some((o) => o.id === "remove:550e8400-e29b-41d4-a716-446655440002")).toBe(true);
-    expect(ops.some((o) => o.id === "remove:550e8400-e29b-41d4-a716-446655440001")).toBe(false);
+    const requests = await savedRequests(basePayload, photos, seedMedia);
+    expect(requests.filter((r) => r.startsWith("remove:"))).toEqual([
+      "remove:550e8400-e29b-41d4-a716-446655440002",
+    ]);
   });
 
-  it("includes reorder when photos exist", () => {
-    const ops = computeOps(basePayload, [photo({ photoId: "550e8400-e29b-41d4-a716-446655440001", key: "k1" })], seedMedia);
-    expect(ops.some((o) => o.id === "reorder")).toBe(true);
+  it("reorders when photos remain", async () => {
+    const photos = [photo({ photoId: "550e8400-e29b-41d4-a716-446655440001", key: "k1" })];
+    expect(await savedRequests(basePayload, photos, seedMedia)).toContain("reorder");
   });
 
-  it("excludes reorder when no photos exist", () => {
-    const ops = computeOps(basePayload, [], seedMedia);
-    expect(ops.some((o) => o.id === "reorder")).toBe(false);
+  it("does not reorder when no photos remain", async () => {
+    expect(await savedRequests(basePayload, [], seedMedia)).not.toContain("reorder");
   });
 });
 

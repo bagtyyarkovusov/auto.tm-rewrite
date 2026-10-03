@@ -34,6 +34,7 @@ import {
   seedSuiteCatalog,
 } from "../../../../test/helpers/e2eSuite";
 import { MEDIA_OBJECT_INSPECTOR } from "../../listings/domain/ports/MediaObjectInspector";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("mlp-afk-smoke");
 
@@ -47,6 +48,7 @@ describe("MLP AFK e2e smoke", () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({ isGlobal: true, validate: (cfg) => EnvSchema.parse(cfg) }),
         EventEmitterModule.forRoot(),
         IdentityModule,

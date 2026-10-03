@@ -1,15 +1,35 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
-import { CheckCircle2, ChevronLeft, ChevronRight, User } from "lucide-react-native";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Trash2,
+  User,
+} from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useMe } from "../src/api/identity/useMe";
+import { useAuth } from "../src/auth/useAuth";
+import { useLogout } from "../src/auth/useLogout";
 import { maskEmail } from "../src/auth/email";
 import { maskTmPhone } from "../src/auth/phone";
 import { localeTag } from "../src/i18n/resources";
 
+import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +98,61 @@ function SignInMethodRow({ label, value, href }: SignInMethodRowProps) {
   );
 }
 
+/**
+ * Log out and Delete account, at the bottom of Profile for signed-in Users.
+ * Log out asks first; Delete account opens its own screen.
+ */
+function AccountActions() {
+  const { t } = useTranslation("account");
+  const { isAuthenticated } = useAuth();
+  const logout = useLogout();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  if (isAuthenticated !== true) return null;
+
+  return (
+    <>
+      <MenuGap />
+      <MenuRow
+        icon={LogOut}
+        label={t("logout")}
+        onPress={() => setConfirmOpen(true)}
+      />
+      <MenuDivider />
+      <MenuRow
+        icon={Trash2}
+        label={t("deleteAccount")}
+        variant="danger"
+        onPress={() => router.push("/account/delete")}
+      />
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("logoutConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("logoutConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onPress={() => setConfirmOpen(false)}>
+              <Text>{t("logoutConfirmCancel")}</Text>
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onPress={() => {
+                setConfirmOpen(false);
+                logout.mutate();
+              }}
+            >
+              <Text>{t("logoutConfirmAction")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function formatMemberSince(isoDate: string, locale: string): string {
   const d = new Date(isoDate);
   const tag = localeTag(locale);
@@ -142,79 +217,86 @@ export default function ProfileScreen() {
       {isPending ? (
         <LoadingState />
       ) : isError ? (
-        <ErrorState error={error} onRetry={() => refetch()} />
+        <>
+          <ErrorState error={error} onRetry={() => refetch()} />
+          <AccountActions />
+        </>
       ) : data ? (
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+          contentContainerClassName="pb-6"
         >
-          {/* Identity card */}
-          <View className="items-center gap-3 py-6">
-            <Avatar
-              className="size-24"
-              alt={data.displayName ?? fallbackName}
-            >
-              {data.avatarUrl ? (
-                <AvatarImage source={{ uri: data.avatarUrl }} />
-              ) : null}
-              <AvatarFallback>
-                {avatarInitial ? (
-                  <Text className="text-3xl font-heading text-foreground">
-                    {avatarInitial}
-                  </Text>
-                ) : (
-                  <Icon as={User} className="size-10 text-muted-foreground" />
-                )}
-              </AvatarFallback>
-            </Avatar>
+          <View className="px-4 pt-4 pb-4 gap-4">
+            {/* Identity card */}
+            <View className="items-center gap-3 py-6">
+              <Avatar
+                className="size-24"
+                alt={data.displayName ?? fallbackName}
+              >
+                {data.avatarUrl ? (
+                  <AvatarImage source={{ uri: data.avatarUrl }} />
+                ) : null}
+                <AvatarFallback>
+                  {avatarInitial ? (
+                    <Text className="text-3xl font-heading text-foreground">
+                      {avatarInitial}
+                    </Text>
+                  ) : (
+                    <Icon as={User} className="size-10 text-muted-foreground" />
+                  )}
+                </AvatarFallback>
+              </Avatar>
 
-            <Text className="text-xl font-heading text-foreground">
-              {data.displayName ?? fallbackName}
-            </Text>
-
-            <Badge variant="secondary">
-              <Text>{roleLabel}</Text>
-            </Badge>
-          </View>
-
-          <View className="gap-2">
-            <View className="gap-0.5 px-1">
-              <Text className="text-base font-semibold text-foreground">
-                {t("account:signInMethods")}
+              <Text className="text-xl font-heading text-foreground">
+                {data.displayName ?? fallbackName}
               </Text>
-              <Text className="text-sm text-muted-foreground">
-                {t("account:signInMethodsHelper")}
-              </Text>
+
+              <Badge variant="secondary">
+                <Text>{roleLabel}</Text>
+              </Badge>
             </View>
+
+            <View className="gap-2">
+              <View className="gap-0.5 px-1">
+                <Text className="text-base font-semibold text-foreground">
+                  {t("account:signInMethods")}
+                </Text>
+                <Text className="text-sm text-muted-foreground">
+                  {t("account:signInMethodsHelper")}
+                </Text>
+              </View>
+              <Card>
+                <CardContent className="gap-1">
+                  <SignInMethodRow
+                    label={t("account:phone")}
+                    value={data.phone ? maskTmPhone(data.phone) : null}
+                    href="/account/add-phone"
+                  />
+                  <Separator />
+                  <SignInMethodRow
+                    label={t("account:email")}
+                    value={data.email ? maskEmail(data.email) : null}
+                    href="/account/add-email"
+                  />
+                </CardContent>
+              </Card>
+            </View>
+
             <Card>
               <CardContent className="gap-1">
-                <SignInMethodRow
-                  label={t("account:phone")}
-                  value={data.phone ? maskTmPhone(data.phone) : null}
-                  href="/account/add-phone"
-                />
-                <Separator />
-                <SignInMethodRow
-                  label={t("account:email")}
-                  value={data.email ? maskEmail(data.email) : null}
-                  href="/account/add-email"
-                />
+                <View className="flex-row items-center justify-between py-2">
+                  <Text className="text-sm text-muted-foreground">
+                    {t("account:memberSince")}
+                  </Text>
+                  <Text className="text-base text-foreground font-medium">
+                    {formatMemberSince(data.createdAt, i18n.language)}
+                  </Text>
+                </View>
               </CardContent>
             </Card>
           </View>
 
-          <Card>
-            <CardContent className="gap-1">
-              <View className="flex-row items-center justify-between py-2">
-                <Text className="text-sm text-muted-foreground">
-                  {t("account:memberSince")}
-                </Text>
-                <Text className="text-base text-foreground font-medium">
-                  {formatMemberSince(data.createdAt, i18n.language)}
-                </Text>
-              </View>
-            </CardContent>
-          </Card>
+          <AccountActions />
         </ScrollView>
       ) : null}
     </SafeScreen>
