@@ -19,6 +19,7 @@ import {
 import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
+import { resolveDamagedAnswer } from "../domain/damagedAnswer";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import {
   LISTING_DRAFT_REPOSITORY,
@@ -73,10 +74,17 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
     return true;
   },
   { message: "MILEAGE_REQUIRED_FOR_USED" },
-).refine(
-  (data) => data.conditionDisclosure?.damaged !== undefined,
-  { message: "DAMAGED_REQUIRED", path: ["conditionDisclosure", "damaged"] },
-);
+).superRefine((data, ctx) => {
+  const answer = resolveDamagedAnswer(data.condition, data.conditionDisclosure?.damaged);
+  if (!answer.ok) {
+    ctx.addIssue({
+      code: "custom",
+      message: answer.code,
+      path: ["conditionDisclosure", "damaged"],
+      params: { message: answer.message },
+    });
+  }
+});
 
 /** PrismaPg 7 reports constraint fields under its driver-adapter cause. */
 function isUploadUniqueViolation(err: unknown): boolean {
@@ -149,6 +157,18 @@ export class PublishListing {
             message: "At least one contact method must be enabled",
           });
         }
+        // ADR-0080: a damaged New car gets its own code so the seller can be
+        // told to choose Used. A missing answer stays a payload field error.
+        const damagedIssue = zodError.issues.find(
+          (i) => i.message === LISTING_ERROR_CODES.DAMAGED_NOT_ALLOWED_FOR_NEW,
+        );
+        if (damagedIssue?.code === "custom") {
+          throw new BadRequestException({
+            code: LISTING_ERROR_CODES.DAMAGED_NOT_ALLOWED_FOR_NEW,
+            message: damagedIssue.params?.["message"],
+            details: { field: "conditionDisclosure.damaged" },
+          });
+        }
         if (zodError.issues.every((i) => i.path[0] === "contactPhone")) {
           // When the phone is the only gap: missing or blank answers
           // CONTACT_PHONE_REQUIRED; free text left in an older draft is a
@@ -170,6 +190,9 @@ export class PublishListing {
       throw err;
     }
 
+    // The schema above refused every Damaged answer this rule rejects.
+    const damagedAnswer = resolveDamagedAnswer(payload.condition, payload.conditionDisclosure?.damaged);
+    const damaged = damagedAnswer.ok ? damagedAnswer.damaged : null;
     const rejection = contactPhoneRejection(
       await this.contactPhones.standing(input.userId, payload.contactPhone, now),
     );
@@ -254,7 +277,7 @@ export class PublishListing {
             description: payload.description,
             acceptsExchange: payload.acceptsExchange ?? false,
             installmentAvailable: payload.installmentAvailable ?? false,
-            damaged: payload.conditionDisclosure?.damaged ?? null,
+            damaged,
             knownIssuesText: payload.conditionDisclosure?.knownIssuesText ?? null,
           },
         }),

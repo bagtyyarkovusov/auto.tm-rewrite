@@ -72,7 +72,15 @@ export default function SellScreen() {
   // `phone` follows the live auth session, so signing in from this tab's own
   // sign-in sheet fills the Step 7 contact placeholder without a remount.
   const { isAuthenticated, phone: defaultPhone } = useAuth();
-  const { show } = useToast();
+  const { show, setTopClearance } = useToast();
+  const wizardHeaderHeight = useRef(0);
+  const publishErrorToastId = useRef<string | null>(null);
+  const handleHeaderHeightChange = useCallback((height: number) => {
+    wizardHeaderHeight.current = height;
+    if (publishErrorToastId.current) {
+      setTopClearance(publishErrorToastId.current, height);
+    }
+  }, [setTopClearance]);
   const navigation = useContext(NavigationContext);
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
   const [showSignIn, setShowSignIn] = useState(false);
@@ -260,6 +268,7 @@ export default function SellScreen() {
   }, [machineState.payload, machineState.validatedSteps, uploadQueue.photos, forceSave]);
 
   const handleContinue = useCallback(() => {
+    if (discardDraft.isPending || publishDraft.isPending) return;
     if (!ctx.canContinue) {
       setAttemptedSteps((current) =>
         current[machineState.currentStep]
@@ -277,7 +286,7 @@ export default function SellScreen() {
       validatedSteps: machineState.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave]);
+  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave, discardDraft.isPending, publishDraft.isPending]);
 
   const handleSkipVin = useCallback(() => {
     dispatch({ type: "UPDATE_FIELDS", updates: { vin: undefined } });
@@ -309,7 +318,9 @@ export default function SellScreen() {
       const message =
         err instanceof Error ? err.message : t("failedToPublish");
       dispatch({ type: "PUBLISH_ERROR", error: message });
-      show({ title: message, variant: "destructive" });
+      publishErrorToastId.current = show({
+        title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
+      });
     }
   }, [machineState, uploadQueue.photos, forceSave, publishDraft, show]);
 
@@ -389,6 +400,7 @@ export default function SellScreen() {
 
     return (
       <WizardLayout
+        onHeaderHeightChange={handleHeaderHeightChange}
         routeTitle={t("sellCar")}
         stepTitle={t(STEP_KEY_MAP[currentStep] ?? currentStep)}
         stepNumber={ctx.stepNumber}
@@ -399,7 +411,10 @@ export default function SellScreen() {
         onDiscard={handleDiscard}
         mode={machineState.mode}
         editDetourActive={ctx.editDetourActive}
-        canContinue={ctx.canContinue}
+        canContinue={
+          (ctx.canContinue || currentStep === "specs") &&
+          !discardDraft.isPending && !publishDraft.isPending
+        }
         canPublish={ctx.canPublish && uploadQueue.publishGate.canPublish}
         canGoBack={ctx.canGoBack}
         isLastStep={ctx.isLastStep}
@@ -445,6 +460,7 @@ export default function SellScreen() {
             payload={machineState.payload}
             onChange={handlePayloadChange}
             fieldErrors={fieldErrors}
+            showErrors={attemptedSteps.specs === true}
           />
         )}
         {currentStep === "price" && (

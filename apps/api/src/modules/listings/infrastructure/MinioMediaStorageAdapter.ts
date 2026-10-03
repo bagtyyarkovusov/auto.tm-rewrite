@@ -72,14 +72,9 @@ export class MinioMediaStorageAdapter implements MediaStoragePort, MediaObjectIn
   }
 
   resolvePublicUrl(key: string): string {
+    if (/^https?:\/\//i.test(key)) return key;
     const bucket = this.inferBucket(key);
-    // Keys that already include the bucket prefix (e.g. "chat-attachments/...")
-    // must not get the bucket prepended again; otherwise Caddy would serve
-    // /<bucket>/<bucket>/<key>. Listing keys omit the bucket prefix, so the
-    // bucket is prepended to form the path-style S3 URL.
-    if (key.startsWith(`${bucket}/`)) {
-      return `${this.publicUrl}/${key}`;
-    }
+    // Match presignUpload: Key retains its namespace inside the bucket.
     return `${this.publicUrl}/${bucket}/${key}`;
   }
 
