@@ -151,7 +151,13 @@ export default function ConversationDetailScreen() {
   const blockUser = useBlockUser();
   const unblockUser = useUnblockUser();
   const muteConversation = useMuteConversation();
-  const { show: showToast } = useToast();
+  const { show } = useToast();
+  // A toast at the top clears the header at the size it is drawn, not a fixed 64 pt.
+  const headerHeight = useRef(0);
+  const showToast = useCallback(
+    (toast: Parameters<typeof show>[0]) => show({ ...toast, topClearance: headerHeight.current }),
+    [show],
+  );
 
   const conversationQuery = useConversation(readId);
   const notFound =
@@ -797,6 +803,7 @@ export default function ConversationDetailScreen() {
         isMuted={isMuted}
         isBlocked={isBlocked}
         muteDisabled={muteConversation.isPending}
+        onHeightChange={(height) => { headerHeight.current = height; }}
         onBack={goBack}
         onToggleMute={handleToggleMute}
         onReport={
