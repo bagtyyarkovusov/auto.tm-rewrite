@@ -15,7 +15,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { ZodError } from "zod";
+import type { ZodError } from "zod";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 import { AdminGuard } from "../../../common/admin.guard";
@@ -214,11 +214,13 @@ export class ReportsController {
     try {
       return schema.parse(data);
     } catch (err) {
-      if (err instanceof ZodError) {
+      // Duck-typed: the schema's ZodError can come from another copy of zod, which
+      // fails `instanceof` and would turn a bad request into a 500.
+      if (err && typeof err === "object" && "issues" in err) {
         throw new BadRequestException({
           code: "VALIDATION_FAILED",
           message: "Invalid request",
-          details: err.flatten(),
+          details: (err as ZodError).flatten(),
         });
       }
       throw err;

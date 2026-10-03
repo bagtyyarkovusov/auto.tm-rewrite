@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { base32Decode, formatDetail, totp } from "./staging-reviewer-flow-smoke.mjs";
+import { base32Decode, formatDetail, smokeDraftBody, totp } from "./staging-reviewer-flow-smoke.mjs";
 
 // RFC 4648 §10 base32 test vectors.
 test("base32Decode matches the RFC 4648 vectors", () => {
@@ -34,4 +34,22 @@ test("formatDetail keeps the timing when there is no detail", () => {
   assert.equal(formatDetail("listingId=abc", 120), "listingId=abc, 120ms");
   assert.equal(formatDetail(undefined, 120), "120ms");
   assert.equal(formatDetail("", 120), "120ms");
+});
+
+// ADR-0081: publish needs a usable contact phone even with calls off. The
+// seller's own sign-in phone is usable without a code.
+test("the smoke draft is publishable with the seller's own sign-in phone", () => {
+  const catalogue = { brandId: "b", modelId: "m", regionId: "r", cityId: "c" };
+  const body = smokeDraftBody({
+    catalogue,
+    photoKey: "uploads/key.jpg",
+    sellerPhone: "+99361234567",
+    now: new Date("2026-10-03T00:00:00Z"),
+  });
+
+  assert.equal(body.contactPhone, "+99361234567");
+  assert.equal(body.allowCalls, true);
+  assert.deepEqual(body.conditionDisclosure, { damaged: false });
+  assert.equal(body.photos[0].key, "uploads/key.jpg");
+  assert.equal(body.brandId, "b");
 });

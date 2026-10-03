@@ -119,6 +119,10 @@ rotating refresh token. It is never committed and never printed.
 The harness leaves the environment as it found it: the block it asserts is
 released, and the listing it publishes ends the run banned (or archived, if the
 run fails before moderation), so the reviewer feed keeps only the seeded content.
+Its contact phone is the seller reviewer's own sign-in phone from the credentials
+file, which publish accepts without a code
+([ADR-0081](../../adr/0081-contact-phone-confirmation-api-for-listings.md)), so
+the run requests no contact-phone SMS.
 
 Step 6's signup assertion is a two-step operator probe because the mock SMS
 driver delivers the code to the API log rather than to the caller:

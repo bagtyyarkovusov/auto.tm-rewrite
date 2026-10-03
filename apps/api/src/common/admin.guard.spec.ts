@@ -13,6 +13,9 @@ import { randomUUID } from "node:crypto";
 const NOW = new Date("2026-05-14T12:00:00Z");
 
 class FakeIdentityCheckPort implements IdentityCheckPort {
+  async holdsSignInPhone(): Promise<boolean> {
+    return false;
+  }
   private users = new Map<string, boolean>();
 
   setAdmin(userId: string, isAdmin: boolean): void {
