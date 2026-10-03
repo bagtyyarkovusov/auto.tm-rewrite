@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { ForbiddenException, BadRequestException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { ReportsController } from "./ReportsController";
 import type { CreateReport, CreateReportResult } from "../application/CreateReport";
@@ -122,4 +123,34 @@ describe("ReportsController", () => {
       expect(result.reportId).toBe("report-1");
     });
   });
+
+  describe("invalid request", () => {
+    const req = { user: { sub: "user-1" } } as unknown as FastifyRequest;
+    const res = { status: vi.fn() } as unknown as FastifyReply;
+
+    async function expectValidationFailed(promise: Promise<unknown>) {
+      const error = await promise.catch((err: unknown) => err);
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({ code: "VALIDATION_FAILED" });
+    }
+
+    it("POST /listings/:id/report answers 400 VALIDATION_FAILED, not 500", async () => {
+      const { controller, createReportUC } = makeController({ reportEntryEnabled: true });
+      await expectValidationFailed(controller.reportListing("listing-1", { reason: "not-a-reason" }, req, res));
+      expect(createReportUC.execute).not.toHaveBeenCalled();
+    });
+
+    it("POST /users/:id/report answers 400 VALIDATION_FAILED, not 500", async () => {
+      const { controller, createReportUC } = makeController({ reportEntryEnabled: true });
+      await expectValidationFailed(controller.reportUser("user-2", {}, req, res));
+      expect(createReportUC.execute).not.toHaveBeenCalled();
+    });
+
+    it("POST /conversations/:id/messages/:id/report answers 400 VALIDATION_FAILED, not 500", async () => {
+      const { controller, createMessageReportUC } = makeController({ reportEntryEnabled: true });
+      await expectValidationFailed(controller.reportMessage("conversation-1", "message-1", { reason: 42 }, req, res));
+      expect(createMessageReportUC.execute).not.toHaveBeenCalled();
+    });
+  });
 });
+
