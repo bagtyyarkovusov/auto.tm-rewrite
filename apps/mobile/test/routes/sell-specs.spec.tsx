@@ -59,7 +59,8 @@ beforeEach(() => {
 // resumes past it, so the seller returns to Details with Back.
 function backToDetails(screen: ReturnType<typeof renderMobile>) {
   expect(screen.getByText("Photos")).toBeTruthy();
-  fireEvent.press(screen.getAllByRole("button", { name: "Back" })[0]!);
+  const [back] = screen.getAllByRole("button", { name: "Back" });
+  fireEvent.press(back);
   fixture.forceSave.mockClear();
   expect(screen.getByText("Details and condition")).toBeTruthy();
 }
