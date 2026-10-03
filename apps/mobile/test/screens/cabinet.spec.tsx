@@ -246,8 +246,8 @@ describe("Cabinet My listings total", () => {
     await waitFor(() => expect(view.queryClient.getQueryState(queryKeys.listings.myCounts(USER_ID))?.status).toBe("error"));
     expect(state.get).toHaveBeenCalledTimes(2);
     expect(view.queryClient.getQueryData(queryKeys.listings.myCounts(USER_ID))).toEqual(counts(5));
-    const row = await view.findByRole("button", { name: /^My listings$/ });
-    expect(row.props.accessibilityLabel).toBe("My listings");
+    await waitFor(() => expect(view.getByRole("button", { name: /^My listings$/ }).props.accessibilityLabel).toBe("My listings"));
+    const row = view.getByRole("button", { name: /^My listings$/ });
     expect(view.queryByText("5")).toBeNull();
     fireEvent.press(row);
     expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
@@ -266,8 +266,8 @@ describe("Cabinet My listings total", () => {
     });
     await waitFor(() => expect(view.queryClient.getQueryState(queryKeys.listings.myCounts(USER_ID))?.fetchStatus).toBe("fetching"));
     expect(state.get).toHaveBeenCalledTimes(2);
-    const row = await view.findByRole("button", { name: /^My listings$/ });
-    expect(row.props.accessibilityLabel).toBe("My listings");
+    await waitFor(() => expect(view.getByRole("button", { name: /^My listings$/ }).props.accessibilityLabel).toBe("My listings"));
+    const row = view.getByRole("button", { name: /^My listings$/ });
     expect(view.queryByText("5")).toBeNull();
     fireEvent.press(row);
     expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
