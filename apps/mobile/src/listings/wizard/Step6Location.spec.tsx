@@ -117,7 +117,8 @@ describe("Description and place step", () => {
     const screen = renderMobile(<ValidatedPlace />);
     await openCitySheet(screen);
 
-    expect(screen.getByText("Select city")).toBeTruthy();
+    // The sheet title, besides the City row's placeholder.
+    expect(screen.getAllByText("Select city")).toHaveLength(2);
     const json = JSON.stringify(screen.toJSON());
     const order = ["Ashgabat", "Mary region", "Mary", "Bayramaly", "Lebap", "Turkmenabat"].map((name) =>
       json.indexOf(`"${name}"`),

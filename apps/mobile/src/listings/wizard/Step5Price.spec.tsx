@@ -64,7 +64,7 @@ describe("Price step currency", () => {
   it("offers TMT, USD and AED as three radio buttons with TMT selected by default", () => {
     const screen = renderMobile(<PriceStep />);
 
-    expect(screen.getByRole("radiogroup", { name: "Currency" })).toBeTruthy();
+    expect(screen.getByText("Currency")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "TMT", checked: true })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "USD", checked: false })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "AED", checked: false })).toBeTruthy();

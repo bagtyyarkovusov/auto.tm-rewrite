@@ -13,8 +13,8 @@ The Sell wizard has seven steps in the order of `WizardSchemas.WIZARD_STEPS` (fo
 | 1 | `vehicle` | Car | `Step3VehicleId` with `VinField` | Brand, Model, Generation, Year, then optional VIN (17 characters at most, no Skip, no auto-fill) |
 | 2 | `specs` | Details and condition | `Step4Specs` | Condition, Mileage, Damaged / needs repair, Known issues, optional specs |
 | 3 | `photos` | Photos | `Step2Photos` | 1 to 20 photos |
-| 4 | `price` | Price | `Step5Price` | Amount, currency, Exchange, Installment |
-| 5 | `location` | Description and place | `Step6Location` with `DescriptionField` | Description (required, up to 2000), then Region, City, Area |
+| 4 | `price` | Price | `Step5Price` | Amount, then TMT, USD and AED as inline radio buttons (TMT by default; another currency clears the amount), Exchange, Installment |
+| 5 | `location` | Description and place | `Step6Location` with `DescriptionField` | Description (required, up to 2000), then "Where the car can be seen": one City picker grouped by region (`useCityGroups` loads each region's cities; picking a city saves its `regionId` too, so there is no Region row or Region error), and Area (optional, up to 200) |
 | 6 | `contact` | Contact | `Step7DescContact` | Contact phone (today's free text), calls and chat switches (at least one on) |
 | 7 | `review` | Check and publish | `Step8Review` | Sections in the same order, each with Edit |
 
