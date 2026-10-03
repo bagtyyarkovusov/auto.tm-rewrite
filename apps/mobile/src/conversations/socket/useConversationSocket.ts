@@ -337,6 +337,9 @@ function handleMessageNew(
     queryKey: queryKeys.conversations.list(),
   });
   void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.unreadCounts(),
+  });
+  void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.detail(conversationId),
   });
 }
@@ -349,6 +352,9 @@ function handleWatermark(
   // so unread counts and last-seen state reflect the change.
   void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.list(),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.unreadCounts(),
   });
   void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.detail(event.conversationId),
@@ -391,6 +397,9 @@ function handleMessageDeleted(
 
   void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.list(),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.conversations.unreadCounts(),
   });
   void queryClient.invalidateQueries({
     queryKey: queryKeys.conversations.detail(conversationId),
