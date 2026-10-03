@@ -10,6 +10,8 @@ import { InMemoryContactPhones } from "./testing/InMemoryContactPhones";
 
 /** Sign-in and confirmed phones the next `makeUseCase()` checks the stored number against. */
 let contactPhones = new InMemoryContactPhones();
+/** The use-case clock; real time unless a test fixes it. */
+let clock = { now: () => new Date() };
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -89,6 +91,7 @@ function makeUseCase(
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof RepublishListing>[1],
     exchangeRates ?? new FakeExchangeRatePort(),
     contactPhones.policy,
+    clock,
   );
 }
 
@@ -126,6 +129,7 @@ describe("RepublishListing", () => {
     repo = new FakeListingRepository();
     prisma = new FakePrisma();
     contactPhones = new InMemoryContactPhones();
+    clock = { now: () => new Date() };
   });
 
   describe("stored contact phone (ADR-0081)", () => {
@@ -155,6 +159,15 @@ describe("RepublishListing", () => {
       });
 
       expect(result.listing.status).toBe("active");
+    });
+
+    it("judges the 7 days by the injected clock", async () => {
+      const confirmedAt = new Date("2026-01-01T00:00:00Z");
+      contactPhones.confirm("user-1", "+99365123456", confirmedAt);
+      clock = { now: () => new Date(confirmedAt.getTime() + 7 * DAY - 1) };
+
+      expect(await republishError("+99365123456")).not.toBeInstanceOf(Error);
+      expect(repo.listings[0]?.status).toBe("active");
     });
 
     it("answers CONTACT_PHONE_REQUIRED when the Listing stores no number", async () => {

@@ -95,6 +95,8 @@ class FakeExchangeRatePort implements ExchangeRatePort {
 
 /** Sign-in and confirmed phones the next `makeUseCase()` checks a new number against. */
 let contactPhones = new InMemoryContactPhones();
+/** The use-case clock; real time unless a test fixes it. */
+let clock = { now: () => new Date() };
 
 function makeUseCase(
   repo?: FakeListingRepository,
@@ -108,6 +110,7 @@ function makeUseCase(
     exchangeRates ?? new FakeExchangeRatePort(),
     events ?? new FakeEventPublisher(),
     contactPhones.policy,
+    clock,
   );
 }
 
@@ -149,6 +152,7 @@ describe("EditListing", () => {
     events = new FakeEventPublisher();
     exchangeRates = new FakeExchangeRatePort();
     contactPhones = new InMemoryContactPhones();
+    clock = { now: () => new Date() };
   });
 
   describe("contact phone (ADR-0081)", () => {
@@ -194,6 +198,22 @@ describe("EditListing", () => {
       expect(repo.listings[0]?.contactPhone).toBe("+99361234567");
       expect(repo.listings[0]?.priceAmount).toBe(100000);
       expect(events.events).toEqual([]);
+    });
+
+    it("judges the 7 days by the injected clock", async () => {
+      seedActiveListing(repo);
+      const confirmedAt = new Date("2026-01-01T00:00:00Z");
+      contactPhones.confirm("user-1", "+99365123456", confirmedAt);
+      clock = { now: () => new Date(confirmedAt.getTime() + 7 * DAY - 1) };
+
+      const { listing } = await makeUseCase(repo, prisma, events, exchangeRates).execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { contactPhone: "+99365123456" },
+      });
+
+      expect(listing.contactPhone).toBe("+99365123456");
+      expect(listing.updatedAt).toEqual(clock.now());
     });
 
     it("keeps a stored number past its 7 days when the edit leaves it out or resends it", async () => {

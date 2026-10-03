@@ -7,6 +7,10 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
+import {
+  IDENTITY_CLOCK_PORT,
+  type ClockPort,
+} from "../../identity/identity.public";
 import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import type { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
@@ -42,6 +46,8 @@ export class RepublishListing {
     private readonly exchangeRates: ExchangeRatePort,
     @Inject(ContactPhonePolicy)
     private readonly contactPhones: ContactPhonePolicy,
+    @Inject(IDENTITY_CLOCK_PORT)
+    private readonly clock: ClockPort,
   ) {}
 
   async execute(input: RepublishListingInput): Promise<RepublishListingResult> {
@@ -62,7 +68,7 @@ export class RepublishListing {
       });
     }
 
-    const now = new Date();
+    const now = this.clock.now();
     const previousArchivedAt = existing.status === "archived" ? existing.updatedAt : undefined;
     const updated = existing.republish(now);
 

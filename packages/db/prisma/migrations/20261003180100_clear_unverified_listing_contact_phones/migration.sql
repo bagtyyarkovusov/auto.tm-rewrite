@@ -4,9 +4,11 @@
 -- phone that is neither its seller's sign-in phone nor a number the seller
 -- holds a verified_contact_phones row for.
 --
--- * Safe to run twice: a second run finds nothing to clear.
--- * A Listing keeps its status and updatedAt. A cleared Listing still shows and
---   takes chat if enabled; republish or a contact change answers
+-- * Idempotent at deploy time: a second run straight after the first finds
+--   nothing to clear. Prisma applies it once; re-running it later could clear a
+--   seller's former sign-in phone, which a Listing keeps under ADR-0081.
+-- * A Listing keeps its status and updatedAt. A cleared Listing still shows,
+--   takes chat if enabled and takes edits; republish answers
 --   CONTACT_PHONE_REQUIRED until the seller sets a number.
 -- * Draft payloads are not touched; a draft is checked when it is published.
 UPDATE "listings" l

@@ -12,6 +12,10 @@ import { PrismaService } from "@auto-tm/db";
 import { AuthSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
+import {
+  IDENTITY_CLOCK_PORT,
+  type ClockPort,
+} from "../../identity/identity.public";
 import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
@@ -116,6 +120,8 @@ export class PublishListing {
     private readonly uploadGuard: UploadAdoptionGuard,
     @Inject(ContactPhonePolicy)
     private readonly contactPhones: ContactPhonePolicy,
+    @Inject(IDENTITY_CLOCK_PORT)
+    private readonly clock: ClockPort,
   ) {}
 
   async execute(input: PublishListingInput): Promise<PublishListingResult> {
@@ -126,6 +132,7 @@ export class PublishListing {
     if (draft.userId !== input.userId) {
       throw new ForbiddenException("Not the owner of this draft");
     }
+    const now = this.clock.now();
 
     let payload: z.infer<typeof PublishablePayloadSchema>;
     try {
@@ -150,7 +157,7 @@ export class PublishListing {
           const standing = await this.contactPhones.standing(
             input.userId,
             typeof raw === "string" ? raw : null,
-            new Date(),
+            now,
           );
           throw contactPhoneRejection(standing) ?? contactPhoneRejection({ kind: "not_confirmed" });
         }
@@ -164,7 +171,7 @@ export class PublishListing {
     }
 
     const rejection = contactPhoneRejection(
-      await this.contactPhones.standing(input.userId, payload.contactPhone, new Date()),
+      await this.contactPhones.standing(input.userId, payload.contactPhone, now),
     );
     if (rejection) throw rejection;
 
@@ -180,7 +187,6 @@ export class PublishListing {
     }
     const priceTmt = toPriceTmt(payload.priceAmount, payload.priceCurrency, rateToTmt);
 
-    const now = new Date();
     const listingId = randomUUID();
 
     const photos = payload.photos;
@@ -294,7 +300,7 @@ export class PublishListing {
         priceCurrency: listingRow.priceCurrency as "TMT" | "USD" | "AED",
         allowCalls: listingRow.allowCalls,
         allowChat: listingRow.allowChat,
-        publishedAt: listingRow.publishedAt ?? new Date(),
+        publishedAt: listingRow.publishedAt ?? now,
         createdAt: listingRow.createdAt,
         updatedAt: listingRow.updatedAt,
         ...(listingRow.generationId ? { generationId: listingRow.generationId } : {}),

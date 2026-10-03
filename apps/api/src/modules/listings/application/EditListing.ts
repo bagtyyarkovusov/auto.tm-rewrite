@@ -1,6 +1,10 @@
 import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
+import {
+  IDENTITY_CLOCK_PORT,
+  type ClockPort,
+} from "../../identity/identity.public";
 import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
@@ -45,6 +49,8 @@ export class EditListing {
     private readonly events: ListingEventPublisher,
     @Inject(ContactPhonePolicy)
     private readonly contactPhones: ContactPhonePolicy,
+    @Inject(IDENTITY_CLOCK_PORT)
+    private readonly clock: ClockPort,
   ) {}
 
   async execute(input: EditListingInput): Promise<EditListingResult> {
@@ -60,6 +66,7 @@ export class EditListing {
     }
 
     const patch = input.patch;
+    const now = this.clock.now();
 
     // Defense-in-depth: reject locked fields
     for (const field of Object.keys(patch)) {
@@ -93,7 +100,7 @@ export class EditListing {
     // cleared.
     if (patch.contactPhone !== undefined && patch.contactPhone !== existing.contactPhone) {
       const rejection = contactPhoneRejection(
-        await this.contactPhones.standing(existing.sellerId, patch.contactPhone, new Date()),
+        await this.contactPhones.standing(existing.sellerId, patch.contactPhone, now),
       );
       if (rejection) throw rejection;
     }
@@ -142,7 +149,7 @@ export class EditListing {
       viewCount: existing.viewCount,
       favoriteCount: existing.favoriteCount,
       createdAt: existing.createdAt,
-      updatedAt: new Date(),
+      updatedAt: now,
       ...(existing.generationId !== undefined && { generationId: existing.generationId }),
       ...(existing.year !== undefined && { year: existing.year }),
       ...(existing.vin !== undefined && { vin: existing.vin }),

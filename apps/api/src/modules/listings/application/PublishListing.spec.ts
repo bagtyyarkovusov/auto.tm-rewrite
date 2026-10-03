@@ -22,6 +22,8 @@ import { InMemoryMediaWorld } from "./testing/InMemoryMediaWorld";
 let world = new InMemoryMediaWorld();
 /** Sign-in and confirmed phones the next `makeUseCase()` checks the contact phone against. */
 let contactPhones = new InMemoryContactPhones();
+/** The use-case clock; real time unless a test fixes it. */
+let clock = { now: () => new Date() };
 
 /** A presigned upload by `userId` whose file has reached storage. */
 function presignedUpload(key: string, userId = "user-1"): void {
@@ -212,6 +214,7 @@ function makeUseCase(
     variantGenerator ?? new FakeImageVariantGenerator(),
     new UploadAdoptionGuard(world.uploadRepo, world.inspector),
     contactPhones.policy,
+    clock,
   );
 }
 
@@ -239,6 +242,7 @@ describe("PublishListing", () => {
   beforeEach(() => {
     world = new InMemoryMediaWorld();
     contactPhones = new InMemoryContactPhones();
+    clock = { now: () => new Date() };
     presignedUpload("photo1.jpg");
     presignedUpload("p1.jpg");
     presignedUpload("p2.jpg");
@@ -359,6 +363,19 @@ describe("PublishListing", () => {
         details: { reason: "not_confirmed" },
       });
       expectDraftKept();
+    });
+
+    it("judges the 7 days by the injected clock", async () => {
+      const confirmedAt = new Date("2026-01-01T00:00:00Z");
+      contactPhones.confirm("user-1", "+99365123456", confirmedAt);
+      clock = { now: () => new Date(confirmedAt.getTime() + 7 * DAY - 1) };
+      seedDraft(draftRepo, { ...validPayload, contactPhone: "+99365123456" });
+
+      const { listing } = await makeUseCase(
+        draftRepo, prisma, exchangeRates, events, variantGenerator,
+      ).execute({ draftId: "draft-1", userId: "user-1" });
+
+      expect(listing.contactPhone).toBe("+99365123456");
     });
 
     it("answers CONTACT_PHONE_NOT_CONFIRMED / expired once the 7 days have ended", async () => {
