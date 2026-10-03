@@ -10,13 +10,15 @@ The Sell wizard has seven steps in the order of `WizardSchemas.WIZARD_STEPS` (fo
 
 | # | Step name | Title | Component | Fields |
 |---|---|---|---|---|
-| 1 | `vehicle` | Car | `Step3VehicleId` with `VinField` | Brand, Model, Generation, Year, then optional VIN (17 characters at most, no Skip, no auto-fill) |
+| 1 | `vehicle` | Car | `Step3VehicleId` with `VinField` | Brand, Model, Year, Generation, then optional VIN (17 characters at most, no Skip, no auto-fill) |
 | 2 | `specs` | Details and condition | `Step4Specs` | Condition, Mileage, Damaged / needs repair, Known issues, optional specs |
 | 3 | `photos` | Photos | `Step2Photos` | 1 to 20 photos |
 | 4 | `price` | Price | `Step5Price` | Amount, currency, Exchange, Installment |
 | 5 | `location` | Description and place | `Step6Location` with `DescriptionField` | Description (required, up to 2000), then Region, City, Area |
 | 6 | `contact` | Contact | `Step7DescContact` | Contact phone (today's free text), calls and chat switches (at least one on) |
 | 7 | `review` | Check and publish | `Step8Review` | Sections in the same order, each with Edit |
+
+The Car pickers chain in one `CatalogPickerSheet` (founder decision D3 on #354): a Brand opens Model, a Model opens Year when none is set or else Generation, and a Year opens Generation when the model has generations and none is chosen. Generation opened by the chain closes itself if the model's generations load empty; closing the sheet ends the chain and keeps every pick. A new Brand clears Model and Generation, a new Model clears Generation, and Year stays. Year is a list from `WIZARD_LIMITS.yearMax` down to 1900 with no search field; the Generation sheet lists all of a model's generations, not filtered by year, and ends with a skip row that clears the generation. The Generation row shows only when the model has generations or one is set.
 
 Each step depends on all earlier ones, and a changed field invalidates its owning step and every later step (`getInvalidatedSteps`; `vin` belongs to `vehicle`, `description` to `location`). The header reads "Step N of 7" and announces the step title with that position when a step opens. Edit uses the same seven steps and locks the whole Car step, VIN included.
 
