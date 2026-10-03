@@ -15,10 +15,13 @@ import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerato
 
 import { PublishListing } from "./PublishListing";
 import { UploadAdoptionGuard } from "./UploadAdoptionGuard";
+import { InMemoryContactPhones } from "./testing/InMemoryContactPhones";
 import { InMemoryMediaWorld } from "./testing/InMemoryMediaWorld";
 
 /** The media world the next `makeUseCase()` reads uploads and storage from. */
 let world = new InMemoryMediaWorld();
+/** Sign-in and confirmed phones the next `makeUseCase()` checks the contact phone against. */
+let contactPhones = new InMemoryContactPhones();
 
 /** A presigned upload by `userId` whose file has reached storage. */
 function presignedUpload(key: string, userId = "user-1"): void {
@@ -208,6 +211,7 @@ function makeUseCase(
     events ?? new FakeEventPublisher(),
     variantGenerator ?? new FakeImageVariantGenerator(),
     new UploadAdoptionGuard(world.uploadRepo, world.inspector),
+    contactPhones.policy,
   );
 }
 
@@ -234,6 +238,7 @@ describe("PublishListing", () => {
 
   beforeEach(() => {
     world = new InMemoryMediaWorld();
+    contactPhones = new InMemoryContactPhones();
     presignedUpload("photo1.jpg");
     presignedUpload("p1.jpg");
     presignedUpload("p2.jpg");
@@ -255,6 +260,7 @@ describe("PublishListing", () => {
     condition: "used",
     mileageKm: 50000,
     description: "Great car",
+    contactPhone: "+99361234567",
     allowCalls: true,
     allowChat: true,
     photos: [{ photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 }],
@@ -263,6 +269,94 @@ describe("PublishListing", () => {
       knownIssuesText: "Small scratch on rear bumper",
     },
   };
+
+  describe("contact phone (ADR-0081)", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    async function publishError(payload: Record<string, unknown>): Promise<unknown> {
+      seedDraft(draftRepo, payload);
+      return makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator)
+        .execute({ draftId: "draft-1", userId: "user-1" })
+        .catch((err: unknown) => err);
+    }
+
+    function expectDraftKept(): void {
+      expect(prisma.createdListings).toHaveLength(0);
+      expect(prisma.deletedDrafts).toHaveLength(0);
+      expect(draftRepo.drafts.map((d) => d.id)).toEqual(["draft-1"]);
+      expect(variantGenerator.generated).toEqual([]);
+    }
+
+    it("publishes with the seller's sign-in phone and stores it", async () => {
+      seedDraft(draftRepo, validPayload);
+
+      await makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator).execute({
+        draftId: "draft-1",
+        userId: "user-1",
+      });
+
+      expect(prisma.createdListings[0]).toMatchObject({ contactPhone: "+99361234567" });
+    });
+
+    it("publishes with a number the seller confirmed in the last 7 days", async () => {
+      contactPhones.confirm("user-1", "+99365123456", new Date(Date.now() - 6 * DAY));
+      seedDraft(draftRepo, { ...validPayload, contactPhone: "+99365123456" });
+
+      await makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator).execute({
+        draftId: "draft-1",
+        userId: "user-1",
+      });
+
+      expect(prisma.createdListings[0]).toMatchObject({ contactPhone: "+99365123456" });
+    });
+
+    it.each([
+      ["calls on", true],
+      ["calls off", false],
+    ])("answers CONTACT_PHONE_REQUIRED without a contact phone (%s)", async (_name, allowCalls) => {
+      const { contactPhone: _, ...rest } = validPayload;
+
+      const error = await publishError({ ...rest, allowCalls, allowChat: true });
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_REQUIRED",
+      });
+      expectDraftKept();
+    });
+
+    it("answers CONTACT_PHONE_NOT_CONFIRMED / not_confirmed for a number nobody confirmed", async () => {
+      const error = await publishError({ ...validPayload, contactPhone: "+99365123456" });
+
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason: "not_confirmed" },
+      });
+      expectDraftKept();
+    });
+
+    it("answers CONTACT_PHONE_NOT_CONFIRMED / not_confirmed for free text from an old draft", async () => {
+      const error = await publishError({ ...validPayload, contactPhone: "8 800 555 35 35" });
+
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason: "not_confirmed" },
+      });
+      expectDraftKept();
+    });
+
+    it("answers CONTACT_PHONE_NOT_CONFIRMED / expired once the 7 days have ended", async () => {
+      contactPhones.confirm("user-1", "+99365123456", new Date(Date.now() - 7 * DAY - 1000));
+
+      const error = await publishError({ ...validPayload, contactPhone: "+99365123456" });
+
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason: "expired" },
+      });
+      expectDraftKept();
+    });
+  });
 
   it("publishes a valid draft", async () => {
     seedDraft(draftRepo, validPayload);

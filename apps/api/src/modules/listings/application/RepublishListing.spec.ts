@@ -6,6 +6,10 @@ import type { ListingRepository } from "../domain/ports/ListingRepository";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 
 import { RepublishListing } from "./RepublishListing";
+import { InMemoryContactPhones } from "./testing/InMemoryContactPhones";
+
+/** Sign-in and confirmed phones the next `makeUseCase()` checks the stored number against. */
+let contactPhones = new InMemoryContactPhones();
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -84,6 +88,7 @@ function makeUseCase(
     repo ?? new FakeListingRepository(),
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof RepublishListing>[1],
     exchangeRates ?? new FakeExchangeRatePort(),
+    contactPhones.policy,
   );
 }
 
@@ -102,6 +107,7 @@ function seedListing(
     cityId: "city-1",
     priceAmount: 100000,
     priceCurrency: "TMT",
+    contactPhone: "+99361234567",
     allowCalls: true,
     allowChat: true,
     publishedAt: new Date("2026-05-01T00:00:00Z"),
@@ -118,6 +124,68 @@ describe("RepublishListing", () => {
   beforeEach(() => {
     repo = new FakeListingRepository();
     prisma = new FakePrisma();
+    contactPhones = new InMemoryContactPhones();
+  });
+
+  describe("stored contact phone (ADR-0081)", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    async function republishError(contactPhone: string | undefined): Promise<unknown> {
+      seedListing(repo, "archived", contactPhone === undefined ? { contactPhone: undefined } : { contactPhone });
+      return makeUseCase(repo, prisma)
+        .execute({ listingId: "listing-1", userId: "user-1" })
+        .catch((err: unknown) => err);
+    }
+
+    function expectUnchanged(): void {
+      expect(repo.listings[0]?.status).toBe("archived");
+      expect(repo.priceTmtWrites).toEqual([]);
+      expect(prisma.auditLogs).toEqual([]);
+    }
+
+    it("republishes with a number the seller confirmed in the last 7 days", async () => {
+      contactPhones.confirm("user-1", "+99365123456", new Date(Date.now() - DAY));
+      seedListing(repo, "archived", { contactPhone: "+99365123456" });
+
+      const result = await makeUseCase(repo, prisma).execute({
+        listingId: "listing-1",
+        userId: "user-1",
+      });
+
+      expect(result.listing.status).toBe("active");
+    });
+
+    it("answers CONTACT_PHONE_REQUIRED when the Listing stores no number", async () => {
+      const error = await republishError(undefined);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_REQUIRED",
+      });
+      expectUnchanged();
+    });
+
+    it("answers CONTACT_PHONE_NOT_CONFIRMED / expired after the number's 7 days", async () => {
+      contactPhones.confirm("user-1", "+99365123456", new Date(Date.now() - 8 * DAY));
+
+      const error = await republishError("+99365123456");
+
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason: "expired" },
+      });
+      expectUnchanged();
+    });
+
+    it("answers CONTACT_PHONE_NOT_CONFIRMED / not_confirmed for a number never confirmed", async () => {
+      const error = await republishError("+99365123456");
+
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason: "not_confirmed" },
+      });
+      expectUnchanged();
+    });
   });
 
   it("republishes an archived listing", async () => {
