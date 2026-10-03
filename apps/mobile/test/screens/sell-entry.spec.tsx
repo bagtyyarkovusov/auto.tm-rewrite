@@ -141,7 +141,7 @@ describe("Sell tab with drafts", () => {
     const screen = await renderSell();
 
     expect(screen.getByText("Latest draft")).toBeTruthy();
-    const row = screen.getByLabelText(new RegExp(`^Toyota Camry, 2018, 2 of ${DATA_STEPS} steps filled · Updated `));
+    const row = screen.getByLabelText(new RegExp(`^Toyota Camry, 2018, 0 of ${DATA_STEPS} steps filled · Updated `));
     expect(row).toBeTruthy();
     expect(screen.getByRole("button", { name: "Continue" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "New listing" })).toBeTruthy();
@@ -159,12 +159,12 @@ describe("Sell tab with drafts", () => {
   it("is localized in RU and TK", async () => {
     serverDrafts = [draft("d1", { brandId: undefined, modelId: undefined, year: undefined }), draft("d2")];
     const ru = await renderSell("ru");
-    expect(ru.getByLabelText(new RegExp(`^Черновик без автомобиля, Заполнено шагов: 2 из ${DATA_STEPS} · Обновлено `))).toBeTruthy();
+    expect(ru.getByLabelText(new RegExp(`^Черновик без автомобиля, Заполнено шагов: 0 из ${DATA_STEPS} · Обновлено `))).toBeTruthy();
     expect(ru.getByRole("button", { name: /^Все черновики/ })).toBeTruthy();
     ru.unmount();
 
     const tk = await renderSell("tk");
-    expect(tk.getByLabelText(new RegExp(`^Awtoulagsyz garalama, ${DATA_STEPS} tapgyrdan 2 sanysy doldurylan · Täzelendi: `))).toBeTruthy();
+    expect(tk.getByLabelText(new RegExp(`^Awtoulagsyz garalama, ${DATA_STEPS} tapgyrdan 0 sanysy doldurylan · Täzelendi: `))).toBeTruthy();
     expect(tk.getByRole("button", { name: /^Ähli garalamalar/ })).toBeTruthy();
   });
 

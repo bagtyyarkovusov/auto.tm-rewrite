@@ -7,6 +7,7 @@ import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { MenuDivider, MenuGap, MenuRow } from "../../../components/account/MenuRow";
+import { completedSteps } from "../wizard/wizardMachine";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
@@ -162,7 +163,8 @@ export function SellEntry({
     );
   }
 
-  const filled = DATA_STEPS.filter((step) => latest.payload.validatedSteps?.includes(step)).length;
+  // Counted from the saved fields, as the wizard resumes, so drafts saved under older step names count right.
+  const filled = completedSteps(latest.payload as WizardSchemas.WizardDraftPayload).length;
   const updated = new Date(latest.updatedAt).toLocaleDateString(localeTag(i18n.language), {
     day: "numeric",
     month: "short",

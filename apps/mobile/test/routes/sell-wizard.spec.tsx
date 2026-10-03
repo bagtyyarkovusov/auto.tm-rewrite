@@ -50,7 +50,7 @@ vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ show: vi.fn() }) })
 vi.mock("lucide-react-native", async () => {
   const Icon = (await import("react-native")).View;
   return {
-    PlusCircle: Icon, List: Icon, Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon,
+    PlusCircle: Icon, Plus: Icon, Car: Icon, List: Icon, Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon,
     ChevronLeft: Icon, RefreshCw: Icon, ChevronDown: Icon, ChevronRight: Icon, Lock: Icon,
     MapPin: Icon, Phone: Icon, MessageSquare: Icon,
   };
