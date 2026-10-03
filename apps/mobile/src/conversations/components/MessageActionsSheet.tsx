@@ -29,8 +29,7 @@ function ActionItem({
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={{ minHeight: 44 }}
-      className="justify-center rounded-lg px-4 active:bg-muted"
+      className="min-h-11 justify-center rounded-lg px-4 active:bg-muted"
     >
       <Text className={`text-base ${destructive ? "text-destructive" : "text-foreground"}`}>
         {label}

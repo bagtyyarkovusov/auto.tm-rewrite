@@ -737,7 +737,12 @@ export default function ConversationDetailScreen() {
 
   const copyMessage = useCallback(
     async (text: string) => {
-      await Clipboard.setStringAsync(text);
+      try {
+        await Clipboard.setStringAsync(text);
+      } catch {
+        showToast({ title: t("somethingWentWrong"), variant: "destructive" });
+        return;
+      }
       showToast({ title: t("conversations:messageCopied") });
     },
     [showToast, t],
