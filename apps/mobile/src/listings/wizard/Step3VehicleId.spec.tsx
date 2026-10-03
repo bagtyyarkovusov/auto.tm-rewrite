@@ -2,7 +2,7 @@ import { useState } from "react";
 import { WizardSchemas } from "@auto-tm/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fireEvent, renderMobile, within } from "../../../test/render";
+import { fireEvent, first, renderMobile, within } from "../../../test/render";
 
 import Step3VehicleId from "./Step3VehicleId";
 
@@ -146,7 +146,7 @@ const row = (screen: ReturnType<typeof renderMobile>, name: string | RegExp) =>
   screen.getByRole("button", { name });
 /** A sheet row; sheets render after the Car rows, whose value text can share its name. */
 const option = (screen: ReturnType<typeof renderMobile>, name: string) =>
-  screen.getAllByRole("button", { name }).at(-1)!;
+  first(screen.getAllByRole("button", { name }).reverse());
 const sheetOpen = (screen: ReturnType<typeof renderMobile>) =>
   screen.queryByRole("button", { name: "Close" }) !== null;
 
@@ -175,7 +175,7 @@ describe("Car step pickers chain", () => {
     fireEvent.press(row(screen, "Model: Select model"));
     fireEvent.press(option(screen, "Camry"));
 
-    expect(screen.queryByRole("button", { name: "2018" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "1999" })).toBeNull();
     expect(screen.getByRole("button", { name: "XV70 (2017–2024)" })).toBeTruthy();
   });
 
@@ -321,9 +321,8 @@ describe("Car step Generation", () => {
       { locale },
     );
 
-    fireEvent.press(screen.getAllByRole("button").find((b) =>
-      String(b.props.accessibilityLabel).startsWith(locale === "en" ? "Generation" : locale === "ru" ? "Поколение" : "Nesil"),
-    )!);
+    const generation = { en: "Generation", ru: "Поколение", tk: "Nesil" }[locale];
+    fireEvent.press(screen.getByRole("button", { name: new RegExp(`^${generation}:`) }));
 
     const labels = JSON.stringify(screen.toJSON());
     expect(labels.indexOf(skip)).toBeGreaterThan(labels.indexOf("XV50 (2011–2017)"));
