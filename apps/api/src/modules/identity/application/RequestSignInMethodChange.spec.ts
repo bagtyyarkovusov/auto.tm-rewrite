@@ -4,7 +4,7 @@ import type { User } from "../domain/User";
 import type { SignInCodeChannel } from "../domain/types";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
 import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
@@ -31,6 +31,7 @@ class FakeOtpRepo implements OtpRequestRepository {
   records: OtpRequest[] = [];
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -62,18 +63,7 @@ class FakeOtpRepo implements OtpRequestRepository {
     ) ?? null;
   }
 
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
-    return this.records.findLast(
-      (record) =>
-        record.channel === channel &&
-        record.destination === destination &&
-        record.userId === userId,
-    ) ?? null;
-  }
+  async findLatestForPurpose(): Promise<OtpRequest | null> { throw new Error("unused"); }
 
   async countByDestinationSince(
     channel: SignInCodeChannel,
@@ -190,6 +180,7 @@ describe("RequestSignInMethodChange", () => {
     for (let index = 0; index < 10; index++) {
       otpRepo.records.push({
         id: `existing-${index}`,
+        purpose: "sign-in",
         channel: index % 2 === 0 ? "phone" : "email",
         destination: `destination-${index}`,
         codeHash: "hash",
@@ -235,6 +226,7 @@ describe("RequestSignInMethodChange", () => {
     for (let index = 0; index < 5; index++) {
       otpRepo.records.push({
         id: `existing-${index}`,
+        purpose: "sign-in-method",
         channel: "email",
         destination: "new@example.com",
         codeHash: "hash",

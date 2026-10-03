@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import { Enums } from "@auto-tm/contracts";
 
+import { fromCodePurpose, toCodePurpose } from "./codePurpose";
+
 describe("Sign-in Code purpose storage (ADR-0081)", () => {
   // Reading the schema text needs no generated client, so this runs in the
   // unit lane.
@@ -33,5 +35,15 @@ describe("Sign-in Code purpose storage (ADR-0081)", () => {
   it("requires a purpose on every otp_requests row, with no default", () => {
     const purpose = block("model", "OtpRequest").find((line) => line.startsWith("purpose "));
     expect(purpose?.split(/\s+/)).toEqual(["purpose", "CodePurpose"]);
+  });
+});
+
+describe("toCodePurpose / fromCodePurpose", () => {
+  it("round-trips every contract purpose through one distinct stored value", () => {
+    const purposes = Object.values(Enums.SignInCodePurpose);
+    const stored = purposes.map(toCodePurpose);
+
+    expect(new Set(stored).size).toBe(purposes.length);
+    expect(stored.map(fromCodePurpose)).toEqual(purposes);
   });
 });

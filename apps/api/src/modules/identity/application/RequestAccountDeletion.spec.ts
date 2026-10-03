@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { User } from "../domain/User";
 import type { SignInCodeChannel } from "../domain/types";
 import type { ClockPort } from "../domain/ports/ClockPort";
@@ -37,6 +37,7 @@ class FakeOtpRepo implements OtpRequestRepository {
   countedIp: string | null = null;
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -74,7 +75,7 @@ class FakeOtpRepo implements OtpRequestRepository {
   }
 
   async findById(): Promise<OtpRequest | null> { return null; }
-  async findLatestByDestinationAndUser(): Promise<OtpRequest | null> { return null; }
+  async findLatestForPurpose(): Promise<OtpRequest | null> { return null; }
   async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
   async markVerified(): Promise<OtpRequest> { throw new Error("unused"); }
   async incrementAttempts(): Promise<OtpRequest> { throw new Error("unused"); }
@@ -211,6 +212,7 @@ describe("RequestAccountDeletion", () => {
     const { useCase, otpRepo } = setup();
     otpRepo.destinationCount = 1;
     await otpRepo.create({
+      purpose: "sign-in",
       channel: "phone",
       destination: "+99361234567",
       codeHash: "earlier-sign-in-code",

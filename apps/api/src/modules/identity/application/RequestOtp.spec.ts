@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
+import type {
+  OtpRequest,
+  SignInCodeChannel,
+  SignInCodePurpose,
+} from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
@@ -29,6 +33,7 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
   constructor(private readonly clock: ClockPort) {}
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -60,18 +65,7 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
   }
 
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
-    return this.records
-      .filter((record) =>
-        record.channel === channel &&
-        record.destination === destination &&
-        record.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null;
-  }
+  async findLatestForPurpose(): Promise<OtpRequest | null> { throw new Error("unused"); }
 
   async countByDestinationSince(
     channel: SignInCodeChannel,

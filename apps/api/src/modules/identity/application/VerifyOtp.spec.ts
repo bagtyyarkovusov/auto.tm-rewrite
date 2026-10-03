@@ -91,6 +91,7 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
   records: OtpRequest[] = [];
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -119,20 +120,6 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
   ): Promise<OtpRequest | null> {
     const sorted = this.records
       .filter((r) => r.channel === channel && r.destination === destination)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    return sorted[0] ?? null;
-  }
-
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
-    const sorted = this.records
-      .filter((r) =>
-        r.channel === channel &&
-        r.destination === destination &&
-        r.userId === userId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return sorted[0] ?? null;
   }
