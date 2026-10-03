@@ -39,6 +39,13 @@ export const RateLimitedDetailsSchema = z.object({
 });
 export type RateLimitedDetails = z.infer<typeof RateLimitedDetailsSchema>;
 
+// Sent as `details` on INVALID_OTP while the code still has tries (ADR-0081).
+// The fifth wrong code answers OTP_LOCKED instead, so the count is 1 to 4.
+export const InvalidOtpDetailsSchema = z.object({
+  attemptsLeft: z.number().int().min(1).max(4),
+});
+export type InvalidOtpDetails = z.infer<typeof InvalidOtpDetailsSchema>;
+
 export const ErrorResponseSchema = z.object({
   statusCode: z.number().int(),
   code: z.nativeEnum(ErrorCode),

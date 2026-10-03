@@ -5,7 +5,7 @@ import type {
   SignInCodePurpose,
 } from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
-import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
+import type { OtpSenderPort, OtpSms } from "../domain/ports/OtpSenderPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { ReviewerOtpBypassConfig } from "../domain/ports/ReviewerOtpBypassConfig";
@@ -93,9 +93,9 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
 }
 
 class FakeOtpSender implements OtpSenderPort {
-  sent: Array<{ phone: string; code: string }> = [];
-  async send(phone: string, code: string): Promise<void> {
-    this.sent.push({ phone, code });
+  sent: OtpSms[] = [];
+  async send(sms: OtpSms): Promise<void> {
+    this.sent.push(sms);
   }
 }
 
@@ -179,7 +179,7 @@ function allFlows() {
 describe("RequestOtp", () => {
   it("preserves the phone request path and five-minute expiry", async () => {
     const { useCase, repo, sms, email } = harness();
-    const result = await useCase.execute({ phone: "+99361234567", ip: "127.0.0.1" });
+    const result = await useCase.execute({ phone: "+99361234567", ip: "127.0.0.1", locale: "tk" });
 
     expect(result.resendInSeconds).toBe(60);
     expect(repo.records[0]).toMatchObject({
@@ -189,7 +189,13 @@ describe("RequestOtp", () => {
     });
     expect(repo.records[0]!.expiresAt).toEqual(new Date(START.getTime() + 5 * 60_000));
     expect(repo.records[0]!.codeHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(sms.sent).toHaveLength(1);
+    expect(sms.sent).toEqual([{
+      phone: "+99361234567",
+      code: expect.stringMatching(/^\d{6}$/),
+      purpose: "sign-in",
+      locale: "tk",
+      requestId: result.requestId,
+    }]);
     expect(email.jobs).toHaveLength(0);
   });
 

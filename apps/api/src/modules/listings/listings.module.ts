@@ -3,6 +3,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
 
 import { PrismaModule } from "../../common/prisma.module";
 import { IdentityModule } from "../identity/identity.module";
+import { IDENTITY_CHECK_PORT } from "../identity/identity.public";
 
 import { ListingsController } from "./presentation/listings.controller";
 import { DraftsController } from "./presentation/DraftsController";
@@ -10,6 +11,7 @@ import { UploadsController } from "./presentation/UploadsController";
 import { MyListingsController } from "./presentation/MyListingsController";
 import { ExchangeRatesController } from "./presentation/ExchangeRatesController";
 import { FavoritesController } from "./presentation/FavoritesController";
+import { ContactPhonesController } from "./presentation/ContactPhonesController";
 import { NullVinDecoder } from "./infrastructure/NullVinDecoder";
 import { NullContentClassifier } from "./infrastructure/NullContentClassifier";
 import { SortedFeedRankingAdapter } from "./infrastructure/SortedFeedRankingAdapter";
@@ -24,6 +26,7 @@ import { PrismaListingsAdminRepository } from "./infrastructure/PrismaListingsAd
 import { PrismaOwnerListingCountsRepository } from "./infrastructure/PrismaOwnerListingCountsRepository";
 import { PrismaFavoriteRepository } from "./infrastructure/PrismaFavoriteRepository";
 import { IdentitySellerProfileAdapter } from "./infrastructure/IdentitySellerProfileAdapter";
+import { PrismaVerifiedContactPhoneRepository } from "./infrastructure/PrismaVerifiedContactPhoneRepository";
 import { MinioMediaStorageAdapter } from "./infrastructure/MinioMediaStorageAdapter";
 import { SharpImageVariantGenerator } from "./infrastructure/SharpImageVariantGenerator";
 import { CreateDraft } from "./application/CreateDraft";
@@ -54,6 +57,10 @@ import { GetExchangeRates } from "./application/GetExchangeRates";
 import { AddFavorite } from "./application/AddFavorite";
 import { RemoveFavorite } from "./application/RemoveFavorite";
 import { ListMyFavorites } from "./application/ListMyFavorites";
+import { RequestContactPhoneCode } from "./application/RequestContactPhoneCode";
+import { ConfirmContactPhone } from "./application/ConfirmContactPhone";
+import { ListMyContactPhones } from "./application/ListMyContactPhones";
+import { ContactPhonePolicy } from "./domain/ContactPhonePolicy";
 import { VIN_DECODER_PORT } from "./domain/ports/VinDecoderPort";
 import { MEDIA_CONTENT_CLASSIFIER_PORT } from "./domain/ports/MediaContentClassifierPort";
 import { FEED_RANKING_PORT } from "./domain/ports/FeedRankingPort";
@@ -72,10 +79,15 @@ import { LISTINGS_ADMIN_PORT } from "./domain/ports/ListingsAdminPort";
 import { OWNER_LISTING_COUNTS_PORT } from "./domain/ports/OwnerListingCountsPort";
 import { FAVORITE_REPOSITORY } from "./domain/ports/FavoriteRepository";
 import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
+import {
+  VERIFIED_CONTACT_PHONE_REPOSITORY,
+  type VerifiedContactPhoneRepository,
+} from "./domain/ports/VerifiedContactPhoneRepository";
+import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/AccountPhonePort";
 
 @Module({
   imports: [PrismaModule, EventEmitterModule, IdentityModule],
-  controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController, FavoritesController],
+  controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController, FavoritesController, ContactPhonesController],
   providers: [
     // Infrastructure adapters
     NullVinDecoder,
@@ -168,6 +180,23 @@ import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
       provide: SELLER_PROFILE_PORT,
       useExisting: IdentitySellerProfileAdapter,
     },
+    {
+      provide: VERIFIED_CONTACT_PHONE_REPOSITORY,
+      useClass: PrismaVerifiedContactPhoneRepository,
+    },
+    {
+      // Identity's yes/no `holdsSignInPhone`; Listings never reads the value.
+      provide: ACCOUNT_PHONE_PORT,
+      useExisting: IDENTITY_CHECK_PORT,
+    },
+    {
+      provide: ContactPhonePolicy,
+      useFactory: (
+        accountPhones: AccountPhonePort,
+        confirmations: VerifiedContactPhoneRepository,
+      ) => new ContactPhonePolicy(accountPhones, confirmations),
+      inject: [ACCOUNT_PHONE_PORT, VERIFIED_CONTACT_PHONE_REPOSITORY],
+    },
 
     // Application use-cases
     CreateDraft,
@@ -198,6 +227,9 @@ import { SELLER_PROFILE_PORT } from "./domain/ports/SellerProfilePort";
     AddFavorite,
     RemoveFavorite,
     ListMyFavorites,
+    RequestContactPhoneCode,
+    ConfirmContactPhone,
+    ListMyContactPhones,
   ],
   exports: [
     VIN_DECODER_PORT,

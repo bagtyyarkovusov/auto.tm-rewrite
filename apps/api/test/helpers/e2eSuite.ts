@@ -68,7 +68,7 @@ export interface E2eSuite {
   readonly slug: string;
   /** Deterministic UUID for a suite-local alias ("seller-1", "brand-2", …). */
   id(alias: string): string;
-  /** Deterministic digits-only phone (+9936XXXXXXXX) for a suite-local alias. */
+  /** Deterministic TM mobile number (+9936XXXXXXX) for a suite-local alias. */
   phone(alias: string): string;
   /** Suite-unique catalog/entity slug ("<suite>-<alias>"). */
   slugFor(alias: string): string;
@@ -82,7 +82,9 @@ export function defineE2eSuite(slug: string): E2eSuite {
   return {
     slug,
     id,
-    phone: (alias) => `+9936${digitsFromKey(`e2e:${slug}:phone:${alias}`, 8)}`,
+    // A valid TM mobile number (`+993[67]` + 7 digits), so it passes `PhoneTm`
+    // wherever a suite uses it, for example as a Listing contact phone.
+    phone: (alias) => `+9936${digitsFromKey(`e2e:${slug}:phone:${alias}`, 7)}`,
     slugFor,
     catalog: {
       brandId: id("brand"),

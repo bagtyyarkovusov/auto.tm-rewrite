@@ -206,6 +206,8 @@ describe("Listing media upload ownership e2e (#536)", () => {
       condition: "used",
       mileageKm: 50000,
       description: "Great car",
+      // User A's own sign-in phone needs no code (ADR-0081).
+      contactPhone: suite.phone("user-a"),
       allowCalls: true,
       allowChat: true,
       conditionDisclosure: { damaged: false },
@@ -221,7 +223,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
     });
     // User B holds the same key in their own draft: known, but never presigned for B.
     const strangerDraft = await prisma.listingDraft.create({
-      data: { userId: suite.id("user-b"), payload },
+      data: { userId: suite.id("user-b"), payload: { ...payload, contactPhone: suite.phone("user-b") } },
     });
 
     const rejected = await request
@@ -377,7 +379,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
         cityId: suite.catalog.cityId, regionId: suite.catalog.regionId,
         priceAmount: 100000, priceCurrency: "TMT", year: 2020,
         condition: "used", mileageKm: 50000, description: "Race evidence car",
-        allowCalls: true, allowChat: true, conditionDisclosure: { damaged: false },
+        contactPhone: suite.phone("user-a"), allowCalls: true, allowChat: true, conditionDisclosure: { damaged: false },
         photos: [{ photoId: suite.id("race-photo"), key, sortOrder: 0 }],
       },
     } });

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { Currency, ListingCondition, ListingStatus } from "../enums";
 
+import { PhoneTm } from "./auth";
+
 // ── Shared enums as Zod schemas ──
 
 export const ListingStatusSchema = z.nativeEnum(ListingStatus);
@@ -235,7 +237,8 @@ export const EditListingRequestSchema = z
     regionId: z.string().uuid().optional(),
     cityId: z.string().uuid().optional(),
     locationText: z.string().optional(),
-    contactPhone: z.string().optional(),
+    // Checked only when it changes the stored number (ADR-0081).
+    contactPhone: PhoneTm.optional(),
     allowCalls: z.boolean().optional(),
     allowChat: z.boolean().optional(),
     acceptsExchange: z.boolean().optional(),
@@ -575,12 +578,80 @@ export const MyFavoritesResponseSchema = z.object({
 });
 export type MyFavoritesResponse = z.infer<typeof MyFavoritesResponseSchema>;
 
+// ── Contact phones (ADR-0081) ──
+
+/** One number the seller may put on a Listing now. */
+export const VerifiedContactPhoneSchema = z.object({
+  phone: PhoneTm,
+  source: z.enum(["account", "confirmed"]),
+  /** Null for the account phone. */
+  confirmedAt: z.string().datetime().nullable(),
+  /** `confirmedAt` + 7 days; null for the account phone. */
+  reusableUntil: z.string().datetime().nullable(),
+});
+export type VerifiedContactPhone = z.infer<typeof VerifiedContactPhoneSchema>;
+
+const ConfirmedContactPhoneSchema = VerifiedContactPhoneSchema.extend({
+  source: z.literal("confirmed"),
+  confirmedAt: z.string().datetime(),
+  reusableUntil: z.string().datetime(),
+});
+
+export const ContactPhoneCodeRequestSchema = z.object({ phone: PhoneTm }).strict();
+export type ContactPhoneCodeRequest = z.infer<typeof ContactPhoneCodeRequestSchema>;
+
+/** `confirmed` when the number needs no code; otherwise a code was sent. */
+export const ContactPhoneCodeRequestResponseSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("confirmed"),
+    contactPhone: VerifiedContactPhoneSchema,
+  }),
+  z.object({
+    status: z.literal("code_sent"),
+    requestId: z.string().uuid(),
+    resendInSeconds: z.number().int(),
+    /** Only under OTP_TEST_MODE, which is allowed only in CI. */
+    testCode: z.string().optional(),
+  }),
+]);
+export type ContactPhoneCodeRequestResponse = z.infer<
+  typeof ContactPhoneCodeRequestResponseSchema
+>;
+
+export const ContactPhoneVerifyRequestSchema = z
+  .object({ phone: PhoneTm, code: z.string().regex(/^\d{6}$/) })
+  .strict();
+export type ContactPhoneVerifyRequest = z.infer<typeof ContactPhoneVerifyRequestSchema>;
+
+export const ContactPhoneVerifyResponseSchema = z.object({
+  contactPhone: ConfirmedContactPhoneSchema,
+});
+export type ContactPhoneVerifyResponse = z.infer<typeof ContactPhoneVerifyResponseSchema>;
+
+/** The seller's reusable confirmed numbers, newest first, without the account phone. */
+export const MyContactPhonesResponseSchema = z.object({
+  items: z.array(VerifiedContactPhoneSchema),
+});
+export type MyContactPhonesResponse = z.infer<typeof MyContactPhonesResponseSchema>;
+
+/** `details` of CONTACT_PHONE_NOT_CONFIRMED. Either reason sends the seller to the Contact step. */
+export const ContactPhoneNotConfirmedDetailsSchema = z.object({
+  reason: z.enum(["not_confirmed", "expired"]),
+});
+export type ContactPhoneNotConfirmedDetails = z.infer<
+  typeof ContactPhoneNotConfirmedDetailsSchema
+>;
+
 // ── Error codes ──
 
 export const ListingsErrorCode = {
   ListingFieldLocked: "LISTING_FIELD_LOCKED",
   ExchangeRateMissing: "EXCHANGE_RATE_MISSING",
   ContactMethodRequired: "CONTACT_METHOD_REQUIRED",
+  /** Publish or republish without a contact phone (D7: required even when calls are off). */
+  ContactPhoneRequired: "CONTACT_PHONE_REQUIRED",
+  /** Neither the seller's account phone nor confirmed in the last 7 days. */
+  ContactPhoneNotConfirmed: "CONTACT_PHONE_NOT_CONFIRMED",
   DamagedRequired: "DAMAGED_REQUIRED",
   ListingDeleted: "LISTING_DELETED",
   ListingNotFound: "LISTING_NOT_FOUND",
