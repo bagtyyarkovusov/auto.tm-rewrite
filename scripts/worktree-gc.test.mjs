@@ -907,6 +907,13 @@ test("a missing claude binary is reported as not checked, never as an empty sess
   assert.deepEqual(missing, { status: "missing", sessions: [], withoutCwd: 0 });
 });
 
+test("a claude run that exits non-zero, times out or prints nothing is an unreadable scan", () => {
+  assert.equal(scanClaudeSessions(() => ({ status: 1, stdout: "[]" })), null);
+  assert.equal(scanClaudeSessions(() => ({ error: Object.assign(new Error("spawnSync claude ETIMEDOUT"), { code: "ETIMEDOUT" }), status: null, stdout: "" })), null);
+  assert.equal(scanClaudeSessions(() => ({ status: 0, stdout: "" })), null);
+  assert.deepEqual(scanClaudeSessions(() => ({ status: 0, stdout: "[]" })), { status: "ok", sessions: [], withoutCwd: 0 });
+});
+
 test("a missing claude binary warns, and the report says Claude sessions were not checked", (t) => {
   const repo = fixtureRepo(t);
   const missing = () => ({ status: "missing", sessions: [], withoutCwd: 0 });
