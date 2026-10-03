@@ -28,6 +28,9 @@ import { RequestSignInMethodChange } from "./application/RequestSignInMethodChan
 import { ConfirmSignInMethodChange } from "./application/ConfirmSignInMethodChange";
 import { RequestAccountDeletion } from "./application/RequestAccountDeletion";
 import { ConfirmAccountDeletion } from "./application/ConfirmAccountDeletion";
+import { IssueContactPhoneCode } from "./application/IssueContactPhoneCode";
+import { ConfirmContactPhoneCode } from "./application/ConfirmContactPhoneCode";
+import type { ContactPhoneCodePort } from "./domain/ports/ContactPhoneCodePort";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -200,10 +203,25 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     ConfirmSignInMethodChange,
     RequestAccountDeletion,
     ConfirmAccountDeletion,
+    IssueContactPhoneCode,
+    ConfirmContactPhoneCode,
+    {
+      // The purpose is fixed by the two use-cases; callers cannot choose it.
+      provide: IDENTITY_TOKENS.ContactPhoneCodePort,
+      useFactory: (
+        issue: IssueContactPhoneCode,
+        confirm: ConfirmContactPhoneCode,
+      ): ContactPhoneCodePort => ({
+        requestCode: (input) => issue.execute(input),
+        confirmCode: (input) => confirm.execute(input),
+      }),
+      inject: [IssueContactPhoneCode, ConfirmContactPhoneCode],
+    },
   ],
   exports: [
     SELLER_PROFILE_READ_PORT,
     IDENTITY_TOKENS.IdentityCheckPort,
+    IDENTITY_TOKENS.ContactPhoneCodePort,
     IDENTITY_READ_PORT,
     IDENTITY_TOKENS.SessionRepository,
     IDENTITY_TOKENS.ClockPort,

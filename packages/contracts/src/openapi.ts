@@ -7,7 +7,11 @@ import { z } from "zod";
 
 extendZodWithOpenApi(z);
 
-import { ErrorResponseSchema, RateLimitedDetailsSchema } from "./errors";
+import {
+  ErrorResponseSchema,
+  InvalidOtpDetailsSchema,
+  RateLimitedDetailsSchema,
+} from "./errors";
 import { AdminTablePaginationRequestSchema } from "./pagination";
 import {
   OtpRequestRequestSchema,
@@ -82,6 +86,13 @@ import {
   MyDraftsResponseSchema,
   FavoriteListingSummarySchema,
   MyFavoritesResponseSchema,
+  VerifiedContactPhoneSchema,
+  ContactPhoneCodeRequestSchema,
+  ContactPhoneCodeRequestResponseSchema,
+  ContactPhoneVerifyRequestSchema,
+  ContactPhoneVerifyResponseSchema,
+  MyContactPhonesResponseSchema,
+  ContactPhoneNotConfirmedDetailsSchema,
 } from "./schemas/listings";
 import {
   PresignRequestSchema,
@@ -170,6 +181,7 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
 
   registry.register("ErrorResponse", ErrorResponseSchema);
   registry.register("RateLimitedDetails", RateLimitedDetailsSchema);
+  registry.register("InvalidOtpDetails", InvalidOtpDetailsSchema);
 
   // Catalog read schemas
   registry.register("BrandSummary", BrandSummarySchema);
@@ -628,6 +640,103 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         description: "Sign-in Method belongs to another User",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
+    },
+  });
+
+  // Contact phones for Listings (ADR-0081)
+  registry.register("VerifiedContactPhone", VerifiedContactPhoneSchema);
+  registry.register(
+    "ContactPhoneNotConfirmedDetails",
+    ContactPhoneNotConfirmedDetailsSchema,
+  );
+
+  const contactPhoneRefusals = {
+    401: {
+      description: "Authentication required",
+      content: { "application/json": { schema: S(ErrorResponseSchema) } },
+    },
+    403: {
+      description:
+        "FORBIDDEN: details.reason USER_SUSPENDED, or the account deletion is scheduled",
+      content: { "application/json": { schema: S(ErrorResponseSchema) } },
+    },
+  };
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/me/contact-phones/request",
+    summary: "Request a code to confirm a Listing contact phone",
+    description:
+      "Answers confirmed, and sends nothing, for the seller's sign-in phone or a number the seller confirmed in the last 7 days. Otherwise sends one SMS code. Counts against the same per-number and per-IP budgets as sign-in.",
+    tags: ["Listings"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: S(ContactPhoneCodeRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Number already usable, or code sent",
+        content: {
+          "application/json": { schema: S(ContactPhoneCodeRequestResponseSchema) },
+        },
+      },
+      400: {
+        description:
+          "VALIDATION_FAILED, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      ...contactPhoneRefusals,
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/me/contact-phones/verify",
+    summary: "Confirm a Listing contact phone with its code",
+    description:
+      "Checks the newest contact-phone code this seller requested for the number. A confirmation restarts the 7 days.",
+    tags: ["Listings"],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: S(ContactPhoneVerifyRequestSchema) },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "Number confirmed for 7 days",
+        content: {
+          "application/json": { schema: S(ContactPhoneVerifyResponseSchema) },
+        },
+      },
+      400: {
+        description:
+          "VALIDATION_FAILED, INVALID_OTP with details (InvalidOtpDetails), OTP_LOCKED, OTP_EXPIRED, OTP_ALREADY_USED or OTP_NOT_FOUND",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      ...contactPhoneRefusals,
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/v1/me/contact-phones",
+    summary: "List the seller's reusable confirmed contact phones",
+    description:
+      "Newest confirmation first. Leaves out the sign-in phone, which the app reads from GET /api/v1/me.",
+    tags: ["Listings"],
+    responses: {
+      200: {
+        description: "Reusable confirmed numbers",
+        content: {
+          "application/json": { schema: S(MyContactPhonesResponseSchema) },
+        },
+      },
+      ...contactPhoneRefusals,
     },
   });
 

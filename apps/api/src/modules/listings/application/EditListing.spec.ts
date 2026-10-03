@@ -8,6 +8,7 @@ import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import { ListingsSchemas } from "@auto-tm/contracts";
 
 import { EditListing } from "./EditListing";
+import { InMemoryContactPhones } from "./testing/InMemoryContactPhones";
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -92,6 +93,11 @@ class FakeExchangeRatePort implements ExchangeRatePort {
   }
 }
 
+/** Sign-in and confirmed phones the next `makeUseCase()` checks a new number against. */
+let contactPhones = new InMemoryContactPhones();
+/** The use-case clock; real time unless a test fixes it. */
+let clock = { now: () => new Date() };
+
 function makeUseCase(
   repo?: FakeListingRepository,
   prisma?: FakePrisma,
@@ -103,13 +109,15 @@ function makeUseCase(
     (prisma ?? new FakePrisma()) as unknown as ConstructorParameters<typeof EditListing>[1],
     exchangeRates ?? new FakeExchangeRatePort(),
     events ?? new FakeEventPublisher(),
+    contactPhones.policy,
+    clock,
   );
 }
 
 function seedActiveListing(
   repo: FakeListingRepository,
   overrides?: Partial<Parameters<typeof Listing.create>[0]>,
-  { answered = true }: { answered?: boolean } = {},
+  { answered = true, phone = true }: { answered?: boolean; phone?: boolean } = {},
 ) {
   const listing = Listing.create({
     id: "listing-1",
@@ -121,6 +129,7 @@ function seedActiveListing(
     cityId: "city-1",
     priceAmount: 100000,
     priceCurrency: "TMT",
+    ...(phone && { contactPhone: "+99361234567" }),
     allowCalls: true,
     allowChat: true,
     publishedAt: new Date("2026-05-01T00:00:00Z"),
@@ -142,6 +151,132 @@ describe("EditListing", () => {
     prisma = new FakePrisma();
     events = new FakeEventPublisher();
     exchangeRates = new FakeExchangeRatePort();
+    contactPhones = new InMemoryContactPhones();
+    clock = { now: () => new Date() };
+  });
+
+  describe("contact phone (ADR-0081)", () => {
+    const DAY = 24 * 60 * 60 * 1000;
+
+    async function editError(
+      patch: Parameters<EditListing["execute"]>[0]["patch"],
+    ): Promise<unknown> {
+      return makeUseCase(repo, prisma, events, exchangeRates)
+        .execute({ listingId: "listing-1", userId: "user-1", patch })
+        .catch((err: unknown) => err);
+    }
+
+    it("changes the number to one the seller confirmed in the last 7 days", async () => {
+      seedActiveListing(repo);
+      contactPhones.confirm("user-1", "+99365123456", new Date(Date.now() - DAY));
+
+      const { listing } = await makeUseCase(repo, prisma, events, exchangeRates).execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { contactPhone: "+99365123456" },
+      });
+
+      expect(listing.contactPhone).toBe("+99365123456");
+    });
+
+    it.each([
+      ["never confirmed", undefined, "not_confirmed"],
+      ["past its 7 days", 7 * DAY + 1000, "expired"],
+    ])("refuses a change to a number %s and changes nothing", async (_name, age, reason) => {
+      seedActiveListing(repo);
+      if (age !== undefined) {
+        contactPhones.confirm("user-1", "+99365123456", new Date(Date.now() - age));
+      }
+
+      const error = await editError({ contactPhone: "+99365123456", priceAmount: 1 });
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason },
+      });
+      expect(repo.listings[0]?.contactPhone).toBe("+99361234567");
+      expect(repo.listings[0]?.priceAmount).toBe(100000);
+      expect(events.events).toEqual([]);
+    });
+
+    it("judges the 7 days by the injected clock", async () => {
+      seedActiveListing(repo);
+      const confirmedAt = new Date("2026-01-01T00:00:00Z");
+      contactPhones.confirm("user-1", "+99365123456", confirmedAt);
+      clock = { now: () => new Date(confirmedAt.getTime() + 7 * DAY - 1) };
+
+      const { listing } = await makeUseCase(repo, prisma, events, exchangeRates).execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { contactPhone: "+99365123456" },
+      });
+
+      expect(listing.contactPhone).toBe("+99365123456");
+      expect(listing.updatedAt).toEqual(clock.now());
+    });
+
+    it("keeps a stored number past its 7 days when the edit leaves it out or resends it", async () => {
+      seedActiveListing(repo, { contactPhone: "+99365123456" });
+      contactPhones.confirm("user-1", "+99365123456", new Date(Date.now() - 30 * DAY));
+      const uc = makeUseCase(repo, prisma, events, exchangeRates);
+
+      await uc.execute({ listingId: "listing-1", userId: "user-1", patch: { description: "New" } });
+      await uc.execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { contactPhone: "+99365123456", description: "Newer" },
+      });
+
+      expect(repo.listings[0]?.contactPhone).toBe("+99365123456");
+      expect(repo.listings[0]?.description).toBe("Newer");
+    });
+
+    it.each([
+      ["turns calls off", { allowCalls: false, allowChat: true }],
+      ["turns chat off", { allowCalls: true, allowChat: false }],
+      ["resends both unchanged", { allowCalls: true, allowChat: true, priceAmount: 90000 }],
+    ])("lets a Listing whose number was cleared take an edit that %s", async (_name, patch) => {
+      seedActiveListing(repo, {}, { phone: false });
+
+      const { listing } = await makeUseCase(repo, prisma, events, exchangeRates).execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch,
+      });
+
+      expect(listing.allowCalls).toBe(patch.allowCalls);
+      expect(listing.allowChat).toBe(patch.allowChat);
+      expect(listing.contactPhone).toBeUndefined();
+    });
+
+    it("checks a number set on a Listing whose number was cleared", async () => {
+      seedActiveListing(repo, {}, { phone: false });
+
+      const error = await editError({ contactPhone: "+99365123456", allowCalls: false });
+
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason: "not_confirmed" },
+      });
+      expect(repo.listings[0]?.contactPhone).toBeUndefined();
+      expect(repo.listings[0]?.allowCalls).toBe(true);
+    });
+
+    it("lets a Listing whose number was cleared take other edits and a confirmed number", async () => {
+      seedActiveListing(repo, {}, { phone: false });
+      const uc = makeUseCase(repo, prisma, events, exchangeRates);
+
+      await uc.execute({ listingId: "listing-1", userId: "user-1", patch: { description: "New" } });
+      await uc.execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { contactPhone: "+99361234567", allowCalls: false },
+      });
+
+      expect(repo.listings[0]?.contactPhone).toBe("+99361234567");
+      expect(repo.listings[0]?.allowCalls).toBe(false);
+    });
   });
 
   it("edits description successfully without writing AuditLog", async () => {
