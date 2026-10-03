@@ -1,3 +1,4 @@
+import { useFocusEffect } from "expo-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import CabinetScreen from "../../app/(tabs)/services";
@@ -6,13 +7,16 @@ import { maskEmail } from "../../src/auth/email";
 import { maskTmPhone } from "../../src/auth/phone";
 import { localeStore } from "../../src/locale/localeStore";
 import { themeStore } from "../../src/theme/themeStore";
-import { fireEvent, renderMobile, routerMock } from "../render";
+import { queryKeys } from "../../src/api/queryKeys";
+import { act, fireEvent, renderMobile, routerMock } from "../render";
 
 type Me = { displayName: string | null; phone: string | null; email: string | null; avatarUrl: string | null };
 const state = vi.hoisted(() => ({
   isAuthenticated: false as boolean | null,
   me: { isPending: false, isError: false, data: undefined as Me | undefined },
   refetch: vi.fn(),
+  userId: null as string | null,
+  get: vi.fn(),
 }));
 
 vi.mock("react-native-safe-area-context", async () => ({
@@ -22,16 +26,22 @@ vi.mock("react-native-safe-area-context", async () => ({
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => undefined), removeItem: vi.fn(async () => undefined) },
 }));
-vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.isAuthenticated, phone: "" }) }));
+vi.mock("../../src/auth/useAuth", () => ({
+  useAuth: () => ({ isAuthenticated: state.isAuthenticated, phone: "", userId: state.userId }),
+}));
+vi.mock("../../src/api/client", () => ({ apiClient: { get: state.get, post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock("../../src/api/identity/useMe", () => ({
   useMe: () => ({ ...state.me, error: new Error("Network request failed"), refetch: state.refetch }),
 }));
 
 const PHONE = "+99365123456";
 const EMAIL = "aman@example.com";
+const USER_ID = "00000000-0000-4000-8000-00000000000a";
+const counts = (total: number) => ({ active: 0, sold: 0, archived: 0, banned: 0, drafts: 0, total });
 
 function signedIn(me: Partial<Me> | "pending" | "error" = {}) {
   state.isAuthenticated = true;
+  state.userId = USER_ID;
   if (me === "pending") state.me = { isPending: true, isError: false, data: undefined };
   else if (me === "error") state.me = { isPending: false, isError: true, data: undefined };
   else state.me = { isPending: false, isError: false, data: { displayName: null, phone: PHONE, email: null, avatarUrl: null, ...me } };
@@ -39,6 +49,8 @@ function signedIn(me: Partial<Me> | "pending" | "error" = {}) {
 
 beforeEach(() => {
   state.isAuthenticated = false;
+  state.userId = null;
+  state.get.mockReset().mockReturnValue(new Promise(() => {}));
   state.me = { isPending: false, isError: false, data: undefined };
   state.refetch.mockClear();
   localeStore.setState({ locale: "en" });
@@ -68,6 +80,7 @@ describe("Cabinet signed out", () => {
     expect(view.queryByRole("button", { name: "Notifications" })).toBeNull();
     expect(view.queryByRole("button", { name: /Log out/ })).toBeNull();
     expect(view.queryByRole("button", { name: /Delete account/ })).toBeNull();
+    expect(state.get).not.toHaveBeenCalled();
   });
 
   it("has no gear and no List a car action", () => {
@@ -173,5 +186,60 @@ describe("Cabinet signed in", () => {
     fireEvent.press(view.getByRole("button", { name: "Theme, System" }));
     fireEvent.press(view.getByRole("radio", { name: "Dark" }));
     expect(themeStore.getState().theme).toBe("dark");
+  });
+});
+
+describe("Cabinet My listings total", () => {
+  /** Settles the counts request the row made on mount. */
+  async function settle() {
+    await act(async () => { await Promise.resolve(); });
+  }
+
+  it("shows the total on the row and reads it with the row label", async () => {
+    signedIn({ displayName: "Aman" });
+    state.get.mockResolvedValue(counts(5));
+    const view = renderMobile(<CabinetScreen />);
+    expect(await view.findByRole("button", { name: "My listings, 5" })).toBeTruthy();
+    expect(view.getByText("5")).toBeTruthy();
+    expect(state.get).toHaveBeenCalledWith("/me/listings/counts", expect.anything());
+    fireEvent.press(view.getByRole("button", { name: "My listings, 5" }));
+    expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
+  });
+
+  it.each([
+    ["the total is zero", () => state.get.mockResolvedValue(counts(0))],
+    ["the request is pending", () => state.get.mockReturnValue(new Promise(() => {}))],
+    ["the request fails", () => state.get.mockRejectedValue(new Error("Network request failed"))],
+  ])("shows the row without a number when %s, and it still opens My listings", async (_name, arrange) => {
+    signedIn({ displayName: "Aman" });
+    arrange();
+    const view = renderMobile(<CabinetScreen />);
+    await settle();
+    await settle();
+    expect(state.get).toHaveBeenCalledOnce();
+    const row = view.getByRole("button", { name: "My listings" });
+    expect(view.queryByText("0")).toBeNull();
+    fireEvent.press(row);
+    expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
+  });
+
+  it("updates the number when a mutation invalidates the counts", async () => {
+    signedIn({ displayName: "Aman" });
+    state.get.mockResolvedValueOnce(counts(5)).mockResolvedValueOnce(counts(4));
+    const view = renderMobile(<CabinetScreen />);
+    await view.findByRole("button", { name: "My listings, 5" });
+    await act(async () => { await view.queryClient.invalidateQueries({ queryKey: queryKeys.listings.all() }); });
+    expect(await view.findByRole("button", { name: "My listings, 4" })).toBeTruthy();
+  });
+
+  it("refreshes the number when Cabinet comes back into view", async () => {
+    signedIn({ displayName: "Aman" });
+    state.get.mockResolvedValueOnce(counts(5)).mockResolvedValueOnce(counts(7));
+    const view = renderMobile(<CabinetScreen />);
+    await view.findByRole("button", { name: "My listings, 5" });
+    const onFocus = vi.mocked(useFocusEffect).mock.lastCall?.[0];
+    expect(onFocus).toBeTypeOf("function");
+    await act(async () => { onFocus?.(); });
+    expect(await view.findByRole("button", { name: "My listings, 7" })).toBeTruthy();
   });
 });
