@@ -6,7 +6,7 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { ChevronLeft, List } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
@@ -362,6 +362,19 @@ export default function ManageListingsScreen() {
     }
   }, [currentQuery]);
 
+  // Tabs filter /me/listings on the client, so a tab with no row on the loaded pages
+  // keeps paging until it finds one or runs out, before it may show its empty state.
+  const isSeekingRows =
+    isListingsTab &&
+    filteredListings.length === 0 &&
+    listingsQuery.hasNextPage &&
+    !listingsQuery.isError;
+  const { fetchNextPage: fetchNextListings, isFetchingNextPage: isFetchingNextListings } =
+    listingsQuery;
+  useEffect(() => {
+    if (isSeekingRows && !isFetchingNextListings) void fetchNextListings();
+  }, [isSeekingRows, isFetchingNextListings, fetchNextListings]);
+
   // Auth-on-action: anonymous users see a sign-in prompt instead of an API error.
   if (isAuthenticated === false) {
     return (
@@ -406,7 +419,7 @@ export default function ManageListingsScreen() {
     );
   }
 
-  const isPending = isAuthenticated === null || currentQuery.isPending;
+  const isPending = isAuthenticated === null || currentQuery.isPending || isSeekingRows;
   const isEmpty = isListingsTab ? filteredListings.length === 0 : allDrafts.length === 0;
   const confirmCopy = confirm ? OWNER_ACTION_CONFIRM[confirm.action] : null;
   const confirmDestructive = confirm ? isDestructiveAction(confirm.action) : false;

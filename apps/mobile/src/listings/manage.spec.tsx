@@ -208,6 +208,20 @@ describe("My listings rows", () => {
     expect(tk.getByText("Satuwdan aýryldy")).toBeTruthy();
   });
 
+  it("loads further pages before saying a tab is empty", async () => {
+    server.listings = [listing("camry-1", "camry", "active"), listing("prado-1", "prado", "sold")];
+    api.get.mockImplementation((url: string) => {
+      if (!url.startsWith("/me/listings?")) return serve(url);
+      return url.includes("cursor=page-2")
+        ? Promise.resolve({ items: [server.listings[1]], nextCursor: null })
+        : Promise.resolve({ items: [server.listings[0]], nextCursor: "page-2" });
+    });
+    routeParams.tab = "archive";
+    const view = await renderScreen();
+    expect(view.queryByText("Archive is empty")).toBeNull();
+    expect(view.getByText("2018 Toyota Prado")).toBeTruthy();
+  });
+
   it("resumes the wizard from a draft row", async () => {
     const view = await renderScreen();
     await openTab(view, /^Drafts/);
@@ -426,6 +440,7 @@ describe("My listings states", () => {
     state.auth = false;
     const view = await renderScreen();
     expect(view.getByText("Sign in to manage your listings")).toBeTruthy();
+    expect(view.getByText("Manage your active Listings, drafts and archive")).toBeTruthy();
     expect(view.queryByRole("tab")).toBeNull();
   });
 });
