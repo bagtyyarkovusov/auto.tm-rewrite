@@ -80,7 +80,9 @@ function ToastViewport() {
       {top.length > 0 && (
         <View
           testID="toast-viewport-top"
-          className="absolute left-0 right-0 top-0 z-[100] flex-col items-center gap-2 px-4 pt-12 pointer-events-none">
+          // Clear the safe area and standard headers (44 pt controls plus padding).
+          style={{ top: insets.top + 64 + 8 }}
+          className="absolute left-0 right-0 z-[100] flex-col items-center gap-2 px-4 pointer-events-none">
           {top.map((toast) => (
             <ToastItem key={toast.id} toast={toast} onDismiss={() => ctx.dismiss(toast.id)} />
           ))}
@@ -130,14 +132,14 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       <Pressable onPress={onDismiss} accessible={!toast.action}>
         <View
           className={cn(
-            'flex-row items-center gap-3 rounded-lg border px-4 py-3 shadow-lg shadow-black/5',
+            'flex-row items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg shadow-black/5',
             toast.variant === 'destructive' &&
-              'border-destructive/20 bg-destructive/10',
-            toast.variant === 'success' && 'border-success-500/20 bg-success-500/10',
-            toast.variant === 'warning' && 'border-warning-500/20 bg-warning-500/10',
-            toast.variant === 'info' && 'border-info-500/20 bg-info-500/10',
+              'border-destructive/20',
+            toast.variant === 'success' && 'border-success-500/20',
+            toast.variant === 'warning' && 'border-warning-500/20',
+            toast.variant === 'info' && 'border-info-500/20',
             (!toast.variant || toast.variant === 'default') &&
-              'bg-card border-border',
+              'border-border',
             toast.action && 'py-1'
           )}>
           <View className="flex-1">
