@@ -24,6 +24,15 @@ enum SignInCodeChannel {
   email
 }
 
+/// Storage form of `SignInCodePurpose` in @auto-tm/contracts (ADR-0081).
+/// Identity infrastructure holds the one mapping between the two.
+enum CodePurpose {
+  sign_in
+  sign_in_method
+  account_deletion
+  listing_contact_phone
+}
+
 model User {
   id          String   @id @default(uuid())
   /// Sign-in Methods (ADR-0054). Each value is stored only with its verified-at
@@ -76,6 +85,8 @@ model User {
 
 model OtpRequest {
   id         String    @id @default(uuid())
+  /// Why the code was issued; each verify accepts only its own purpose (ADR-0081).
+  purpose    CodePurpose
   channel    SignInCodeChannel
   destination String
   /// Temporary deployment compatibility alias. New code reads channel + destination.

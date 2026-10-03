@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { SignInMethods } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { SignInCodeChannel } from "../domain/types";
@@ -52,9 +52,11 @@ class FakeOtpRepo implements OtpRequestRepository {
     userId: string | null;
     code?: string;
     expiresAt?: Date;
+    purpose?: SignInCodePurpose;
   }): OtpRequest {
     const record: OtpRequest = {
       id: `request-${this.records.length + 1}`,
+      purpose: input.purpose ?? "account-deletion",
       channel: input.destination.startsWith("+") ? "phone" : "email",
       destination: input.destination,
       codeHash: hash(input.code ?? CODE),
@@ -78,16 +80,18 @@ class FakeOtpRepo implements OtpRequestRepository {
     ) ?? null;
   }
 
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
+  async findLatestForPurpose(input: {
+    purpose: SignInCodePurpose;
+    channel: SignInCodeChannel;
+    destination: string;
+    userId?: string;
+  }): Promise<OtpRequest | null> {
     return this.records.findLast(
       (record) =>
-        record.channel === channel &&
-        record.destination === destination &&
-        record.userId === userId,
+        record.purpose === input.purpose &&
+        record.channel === input.channel &&
+        record.destination === input.destination &&
+        (input.userId === undefined || record.userId === input.userId),
     ) ?? null;
   }
 
@@ -298,6 +302,7 @@ describe("ConfirmAccountDeletion", () => {
       destination: "reviewer@review.auto.tm",
       userId: null,
       code: REVIEWER_CODE,
+      purpose: "sign-in",
     });
 
     await expect(
@@ -351,5 +356,70 @@ describe("ConfirmAccountDeletion", () => {
 
     expect(sessions.revokedFor).toEqual(["user-1"]);
     expect(listings.archivedFor).toEqual(["user-1"]);
+  });
+
+  describe("purpose binding (ADR-0081)", () => {
+    it.each([
+      { purpose: "sign-in", destination: "+99361234567" },
+      { purpose: "sign-in", destination: "seller@example.com" },
+      { purpose: "sign-in-method", destination: "+99361234567" },
+      { purpose: "sign-in-method", destination: "seller@example.com" },
+      { purpose: "listing-contact-phone", destination: "+99361234567" },
+    ] as const)(
+      "accepts no $purpose code bound to the holder of $destination",
+      async ({ purpose, destination }) => {
+        const { useCase, otpRepo, userRepo, sessions } = setup([
+          makeUser({ email: "seller@example.com", emailVerifiedAt: NOW }),
+        ]);
+        otpRepo.add({ destination, userId: "user-1", purpose });
+        const input = destination.startsWith("+")
+          ? { phone: destination, code: CODE }
+          : { email: destination, code: CODE };
+
+        await expect(useCase.execute(input)).rejects.toThrow("No Sign-in Code request found");
+        expect(userRepo.scheduled.size).toBe(0);
+        expect(sessions.revokedFor).toEqual([]);
+        expect(otpRepo.records[0]).toMatchObject({ verifiedAt: null, attempts: 0 });
+      },
+    );
+
+    it("refuses a reviewer's fixed sign-in code (ADR-0030)", async () => {
+      const reviewer = makeUser({
+        phone: null,
+        phoneVerifiedAt: null,
+        email: "reviewer@review.auto.tm",
+        emailVerifiedAt: NOW,
+      });
+      const { useCase, otpRepo, userRepo } = setup([reviewer]);
+      otpRepo.add({
+        destination: "reviewer@review.auto.tm",
+        userId: null,
+        code: REVIEWER_CODE,
+        purpose: "sign-in",
+      });
+
+      await expect(
+        useCase.execute({ email: "reviewer@review.auto.tm", code: REVIEWER_CODE }),
+      ).rejects.toThrow("No Sign-in Code request found");
+      expect(userRepo.scheduled.size).toBe(0);
+      expect(otpRepo.consumed).toEqual([]);
+    });
+
+    it("checks the newest deletion code even when a newer sign-in code exists", async () => {
+      const { useCase, otpRepo, userRepo } = setup([makeUser()]);
+      otpRepo.add({ destination: "+99361234567", userId: "user-1" });
+      otpRepo.add({
+        destination: "+99361234567",
+        userId: "user-1",
+        code: "999999",
+        purpose: "sign-in",
+      });
+
+      await useCase.execute({ phone: "+99361234567", code: CODE });
+
+      expect(userRepo.scheduled.get("user-1")).toEqual(GRACE_END);
+      expect(otpRepo.consumed).toEqual(["request-1"]);
+      expect(otpRepo.records[1]).toMatchObject({ verifiedAt: null, attempts: 0 });
+    });
   });
 });

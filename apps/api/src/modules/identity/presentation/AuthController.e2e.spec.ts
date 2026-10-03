@@ -22,6 +22,8 @@ import {
   EMAIL_CODE_SENDER_PORT,
   type EmailCodeSenderPort,
 } from "../domain/ports/EmailCodeSenderPort";
+import { toCodePurpose } from "../infrastructure/codePurpose";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 function reviewerDemoAccount(index: number): { phone: string; email: string; code: string } {
   return {
@@ -39,6 +41,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -114,12 +117,42 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
     for (let i = 0; i < 5; i++) {
       await prisma.otpRequest.create({
         data: {
+          purpose: toCodePurpose("sign-in"),
           channel: "phone",
           destination: phone,
           phone,
           codeHash: "test-hash",
           expiresAt: new Date(Date.now() + 300_000),
           ip: `10.0.0.${i}`,
+        },
+      });
+    }
+
+    const res = await request
+      .post("/api/v1/auth/otp/request")
+      .send({ phone })
+      .expect(400);
+
+    expect(res.body.code).toBe("RATE_LIMITED");
+    expect(res.body.details).toEqual({
+      reason: "destination_limit",
+      retryInSeconds: 0,
+    });
+  });
+
+  it("counts codes of every purpose against the daily limit for a number", async () => {
+    const phone = "+99363335555";
+    const purposes = ["account-deletion", "sign-in-method"] as const;
+    for (let i = 0; i < 5; i++) {
+      await prisma.otpRequest.create({
+        data: {
+          purpose: toCodePurpose(purposes[i % 2]!),
+          channel: "phone",
+          destination: phone,
+          phone,
+          codeHash: "test-hash",
+          expiresAt: new Date(Date.now() + 300_000),
+          ip: `10.0.1.${i}`,
         },
       });
     }
@@ -150,6 +183,7 @@ describe("AuthController e2e — email Sign-in Method", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -264,6 +298,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -459,6 +494,7 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         EventEmitterModule.forRoot(),
         IdentityModule,
         JwtModule.register({
@@ -553,6 +589,7 @@ describe("AuthController e2e — POST /api/v1/auth/logout", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -658,6 +695,7 @@ describe("AuthController e2e — POST /api/v1/auth/logout-all", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -759,6 +797,7 @@ describe("MeController e2e — GET /api/v1/me", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -854,6 +893,7 @@ describe("MeController e2e — DELETE /api/v1/me", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,

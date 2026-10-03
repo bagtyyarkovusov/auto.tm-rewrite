@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { Enums } from "@auto-tm/contracts";
 
 import { signInCodeDestination } from "../domain/SignInCodeDestination";
 import { SIGN_IN_CODE_CHANNELS } from "../domain/types";
@@ -39,15 +40,18 @@ export class ConfirmAccountDeletion {
 
     // The latest request is checked the same way whether or not a User holds
     // the value, so wrong-code attempts cannot reveal ownership.
-    const request = await this.verifySignInCode.execute(destination, input.code);
+    const request = await this.verifySignInCode.execute({
+      purpose: Enums.SignInCodePurpose.AccountDeletion,
+      destination,
+      code: input.code,
+    });
 
     const holder = destination.channel === SIGN_IN_CODE_CHANNELS.PHONE
       ? await this.userRepo.findByPhone(destination.value)
       : await this.userRepo.findByEmail(destination.value);
 
-    // Only a code issued for this holder counts. This rejects unbound sign-in
-    // requests, such as a reviewer's fixed email code, and codes issued while
-    // another User held the value.
+    // Only a code issued for this holder counts. This rejects codes issued
+    // while another User held the value, or while nobody did.
     if (request.userId !== (holder?.id ?? null)) {
       throw new Error("Invalid OTP code");
     }

@@ -32,7 +32,10 @@ export const EMAIL_LOCALE = {
 } as const;
 export type EmailLocale = (typeof EMAIL_LOCALE)[keyof typeof EMAIL_LOCALE];
 
-/** Mirrors `SignInCodePurpose` in `@auto-tm/contracts`. */
+/**
+ * The email flows of `SignInCodePurpose` in `@auto-tm/contracts`, as accepted
+ * by `EmailCodeJobSchema`. `listing-contact-phone` codes go by SMS (ADR-0081).
+ */
 export const SIGN_IN_CODE_PURPOSE = {
   SignIn: "sign-in",
   SignInMethod: "sign-in-method",

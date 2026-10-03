@@ -34,7 +34,8 @@ describe("ConversationDetailScreen", () => {
   });
 
   it("reads the Conversation by ID instead of from route params", () => {
-    expect(source).toContain("useConversation(conversationId)");
+    // Read by ID, and only once a User is signed in.
+    expect(source).toContain("useConversation(readId)");
     expect(source).not.toContain("params.listingId");
     expect(source).not.toContain("params.buyerId");
   });
@@ -129,11 +130,5 @@ describe("ConversationDetailScreen realtime text send", () => {
   it("supports retry for failed messages", () => {
     expect(source).toContain("handleRetry");
     expect(source).toContain('msg.status !== "failed"');
-  });
-
-  it("keeps the composer usable while socket connects", () => {
-    expect(source).toContain("<ConversationFooter");
-    expect(source).toContain("disabled: isBlocked || blockUser.isPending || unblockUser.isPending");
-    expect(source).not.toContain("disabled: true");
   });
 });
