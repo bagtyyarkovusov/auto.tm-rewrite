@@ -68,6 +68,7 @@ describe("ValidateDraftStep", () => {
     expect(result.invalidatedSteps).toEqual([
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
       "contact",
@@ -118,11 +119,61 @@ describe("ValidateDraftStep", () => {
     expect(result.invalidatedSteps).toEqual([
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
       "contact",
       "review",
     ]);
+  });
+
+  it("checks the optional VIN on the Car step", async () => {
+    repo.drafts.push(ListingDraft.create({ id: "draft-1", userId: "user-1" }));
+
+    const result = await makeUseCase(repo).execute({
+      draftId: "draft-1",
+      userId: "user-1",
+      step: "vehicle",
+      payload: {
+        brandId: "550e8400-e29b-41d4-a716-446655440000",
+        modelId: "550e8400-e29b-41d4-a716-446655440001",
+        year: 2020,
+        vin: "A".repeat(18),
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual(["wizardErrors.vinTooLong"]);
+  });
+
+  it("requires the description on the Description and place step", async () => {
+    repo.drafts.push(ListingDraft.create({ id: "draft-1", userId: "user-1" }));
+
+    const result = await makeUseCase(repo).execute({
+      draftId: "draft-1",
+      userId: "user-1",
+      step: "location",
+      payload: {
+        regionId: "550e8400-e29b-41d4-a716-446655440000",
+        cityId: "550e8400-e29b-41d4-a716-446655440001",
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual(["wizardErrors.descriptionRequired"]);
+  });
+
+  it("accepts the Contact step without a description", async () => {
+    repo.drafts.push(ListingDraft.create({ id: "draft-1", userId: "user-1" }));
+
+    const result = await makeUseCase(repo).execute({
+      draftId: "draft-1",
+      userId: "user-1",
+      step: "contact",
+      payload: { allowCalls: false, allowChat: true },
+    });
+
+    expect(result.valid).toBe(true);
   });
 
   it("throws NotFoundException for non-existent draft", async () => {
@@ -131,7 +182,7 @@ describe("ValidateDraftStep", () => {
       uc.execute({
         draftId: "missing",
         userId: "user-1",
-        step: "vin",
+        step: "vehicle",
         payload: {},
       }),
     ).rejects.toThrow(NotFoundException);
@@ -146,7 +197,7 @@ describe("ValidateDraftStep", () => {
       uc.execute({
         draftId: "draft-1",
         userId: "user-2",
-        step: "vin",
+        step: "vehicle",
         payload: {},
       }),
     ).rejects.toThrow(NotFoundException);

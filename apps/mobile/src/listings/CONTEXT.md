@@ -6,6 +6,22 @@ This area contains create-wizard state, draft persistence, upload staging, edit-
 
 Create flow uses the wizard machine and autosave; edit flow computes and sequences changes against an existing listing. `useSaveListingEdit` runs the sequential best-effort save of [ADR-0025](../../../../docs/adr/0025-edit-save-atomicity.md): it fixes an edit plan when Save starts and keeps a session ledger of the server media IDs attach returned and the media it removed. Reorder, retry and a repeated Save use those server IDs, never a photo's local staging ID, and neither a refetched Listing nor a retry attaches or removes the same photo twice. Retry replays the fixed plan only while the fields and photos are unchanged; edits made after a failure re-plan from the ledger like a fresh Save. Save and Retry return whether they ran, and one runs at a time. Shared contract schemas own validation. Do not make the UI's visual step number a second validation model. Photo UI receives its actual props from the live component interface; old Step2Photos warnings and historical refactor plans are not current requirements.
 
+The Sell wizard has seven steps in the order of `WizardSchemas.WIZARD_STEPS` (founder decision D2 on #354). The step name is the identifier that the mobile machine, `validate-step` and draft saving share; titles come from `wizardSteps.<name>` in the i18n resources. Component file names keep their eight-step numbers, so do not read a position from them.
+
+| # | Step name | Title | Component | Fields |
+|---|---|---|---|---|
+| 1 | `vehicle` | Car | `Step3VehicleId` with `VinField` | Brand, Model, Generation, Year, then optional VIN (17 characters at most, no Skip, no auto-fill) |
+| 2 | `specs` | Details and condition | `Step4Specs` | Condition, Mileage, Damaged / needs repair, Known issues, optional specs |
+| 3 | `photos` | Photos | `Step2Photos` | 1 to 20 photos |
+| 4 | `price` | Price | `Step5Price` | Amount, currency, Exchange, Installment |
+| 5 | `location` | Description and place | `Step6Location` with `DescriptionField` | Description (required, up to 2000), then Region, City, Area |
+| 6 | `contact` | Contact | `Step7DescContact` | Contact phone (today's free text), calls and chat switches (at least one on) |
+| 7 | `review` | Check and publish | `Step8Review` | Sections in the same order, each with Edit |
+
+Each step depends on all earlier ones, and a changed field invalidates its owning step and every later step (`getInvalidatedSteps`; `vin` belongs to `vehicle`, `description` to `location`). The header reads "Step N of 7" and announces the step title with that position when a step opens. Edit uses the same seven steps and locks the whole Car step, VIN included.
+
+Resume derives completion from the saved fields, never from stored step names. On `INIT` the machine runs every data step's schema against the payload; a create draft opens at the first incomplete step, or at Check and publish when all six pass. A draft saved by the eight-step wizard (names `vin, photos, vehicle, specs, price, location, contact`, VIN first, description on Contact) therefore lands on the right step, and its VIN stays in the payload under Car. The API's draft saving drops step names that no longer exist. The payload's `currentStep` is still written as 1 and not read; remembering the step the seller left belongs to a later slice.
+
 Publishing depends on required fields, contact verification, and successful media attachment. A file appearing in a preview does not prove it was uploaded or attached. Preserve retry state and draft reconstruction, and inspect the queue, publish-gate code, and tests when changing navigation or autosave timing.
 
 The signed-in Sell tab entry is `SellEntry` (`src/listings/sell`); the signed-out entry stays in the route. It reads `useMyDrafts` (newest first) and shows a skeleton, the shared `ErrorState` with Retry, a first-listing entry, or the latest draft row with Continue, New listing, "All drafts" (two or more) and My listings. Steps filled counts the draft's `validatedSteps` among `WIZARD_STEPS` without Review. New listing at `MAX_DRAFTS_PER_USER` drafts, or an API `DRAFT_LIMIT_REACHED` refusal, opens the limit sheet instead of creating a draft. "All drafts" and the sheet open My listings with `tab=drafts`; `manage.tsx` opens on any known tab named by that parameter.
