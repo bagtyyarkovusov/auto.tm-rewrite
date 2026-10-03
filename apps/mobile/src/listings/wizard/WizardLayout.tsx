@@ -132,7 +132,8 @@ function WizardHeader({
         )}
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
-          <Text className="text-xs text-muted-foreground">
+          {/* The heading below already reads the position, so this row reads only the route. */}
+          <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
             {routeTitle} · {stepPosition}
           </Text>
           {saveStatusText && (

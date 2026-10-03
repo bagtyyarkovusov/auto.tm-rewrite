@@ -350,6 +350,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
           payload={machineState.payload}
           onChange={handlePayloadChange}
           fieldErrors={fieldErrors}
+          showErrors={attemptedSteps.location === true}
         />
       )}
       {currentStep === "contact" && (

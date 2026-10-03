@@ -35,6 +35,7 @@ export function VinField({ payload, onChange, error, disabled }: VinFieldProps) 
           autoCapitalize="characters"
           maxLength={17}
           accessibilityLabel={t("vin")}
+          accessibilityHint={t("vinHelper")}
         />
       </View>
       <Text className="text-xs text-muted-foreground">{t("vinHelper")}</Text>

@@ -59,6 +59,15 @@ describe("Description and place step", () => {
     expect(screen.getByText("22/2000")).toBeTruthy();
   });
 
+  it("shows the required Description error once the seller leaves it empty, before Continue", () => {
+    const screen = renderMobile(<ValidatedPlace />);
+
+    fireEvent(screen.getByLabelText("Description"), "blur");
+
+    expect(screen.getByText("Description is required")).toBeTruthy();
+    expect(screen.queryByText("Region is required")).toBeNull();
+  });
+
   it("keeps the Description read-only when the step is disabled", () => {
     const screen = renderMobile(
       <Step6Location payload={{ description: "Kept" }} onChange={() => {}} disabled />,

@@ -95,14 +95,16 @@ describe("Sell wizard", () => {
     expect(screen.queryByText(/skip/i)).toBeNull();
   });
 
-  it("shows the Description and place errors only after the first Continue tap", () => {
+  it("opens Description and place without errors and shows Description's once the seller leaves it empty", () => {
     resume("atPlace");
     const screen = renderMobile(<SellScreen />);
 
     expect(screen.getByRole("header", { name: "Description and place, Step 5 of 7" })).toBeTruthy();
     expect(screen.queryByText("Description is required")).toBeNull();
+    expect(screen.queryByText("Region is required")).toBeNull();
+    expect(screen.getByRole("button", { name: "Continue" }).props.accessibilityState).toMatchObject({ disabled: true });
 
-    fireEvent.press(screen.getByRole("button", { name: "Continue" }));
+    fireEvent(screen.getByLabelText("Description"), "blur");
 
     expect(screen.getByText("Description is required")).toBeTruthy();
   });

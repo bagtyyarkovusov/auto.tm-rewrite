@@ -10,6 +10,7 @@ interface DescriptionFieldProps {
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   error?: string;
   disabled?: boolean;
+  onBlur?: () => void;
 }
 
 /** The required Description at the top of the Description and place step. */
@@ -18,6 +19,7 @@ export function DescriptionField({
   onChange,
   error,
   disabled = false,
+  onBlur,
 }: DescriptionFieldProps) {
   const { t } = useTranslation();
   const descriptionLength = payload.description?.length ?? 0;
@@ -38,6 +40,7 @@ export function DescriptionField({
           onChangeText={(text) =>
             onChange({ description: text || undefined })
           }
+          onBlur={onBlur}
           placeholder={t("descriptionPlaceholder")}
           multiline
           numberOfLines={4}
