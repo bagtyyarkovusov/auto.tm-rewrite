@@ -2,7 +2,7 @@
 
 > Maps to: `apps/mobile/app/(tabs)/services.tsx` (Tab 5; the route keeps its `services` name)
 > Derived from wireframe: `docs/prd/ui/wireframes/mobile-tabs-services.md`
-> Governed by: [20 — Information architecture, Tab 5 — Cabinet menu](../../20-information-architecture.md#tab-5--cabinet-menu), the founder's [screen map amendment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5947347989) and the [#353 decisions](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5946561929). Where this page and the information architecture differ, the information architecture wins.
+> Governed by: [20 — Information architecture, Tab 5 — Cabinet menu](../../20-information-architecture.md#tab-5--cabinet-menu), the founder's [screen map amendment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5947347989) and the [#353 decisions](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5946561929). This page describes what the app does on `main`; the information architecture's Tab 5 lists My listings first, and the app lists Notifications first.
 > History: this page first specified a "Services" list with Profile, Settings, Bortzhurnal and Help & Support rows (#124, design archive `app-shell.html`). The 2026-10-02 amendment removed the Settings screen; that design is retired and not kept here.
 
 ==============================================
@@ -13,7 +13,7 @@ Mode: light + dark
 
 ## Purpose
 
-Cabinet is a plain menu in Auto.ru's manner. Rows never wait for the network, except the profile row, which waits for `/me`, and the My listings total once it ships (see [Current app differs](#current-app-differs)). There is no Settings screen, no gear and no "List a car" row.
+Cabinet is a plain menu in Auto.ru's manner. Rows never wait for the network, except the profile row, which waits for `/me`. There is no Settings screen, no gear and no "List a car" row.
 
 ## Layout
 
@@ -25,9 +25,9 @@ Cabinet is a plain menu in Auto.ru's manner. Rows never wait for the network, ex
 │ (A)  Display name                     >    │  large row, 76px
 │      +993 6X XX-XX-42                      │
 │░░░░░░░░░░░░░░░░ gap 8px ░░░░░░░░░░░░░░░░░░░│
-│ ▣  My listings                    5   >    │  signed in only
-│ ── divider ──────────────────────────────  │
 │ ▣  Notifications                      >    │  signed in only
+│ ── divider ──────────────────────────────  │
+│ ▣  My listings                        >    │  signed in only
 │░░░░░░░░░░░░░░░░ gap 8px ░░░░░░░░░░░░░░░░░░░│
 │ ▣  Language                    English     │
 │ ── divider ──────────────────────────────  │
@@ -47,14 +47,7 @@ Cabinet is a plain menu in Auto.ru's manner. Rows never wait for the network, ex
 
 Every row within a group is separated by a divider; groups are separated by a gap.
 
-Signed out, the large row reads "Sign in" / "By phone or email" with an empty avatar, and the My listings and Notifications group is absent.
-
-## Current app differs
-
-This page specifies the target set by the information architecture. As of `main` at `8cc467a`, `apps/mobile/app/(tabs)/services.tsx` differs in two ways:
-
-- **Row order:** the app lists Notifications before My listings. The information architecture puts My listings first. The app has not yet been changed to match.
-- **My listings total:** the app shows the row without a number. The total comes from [#524](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/524) (open PR #576); until it merges, the row has no value.
+Signed out, the large row reads "Sign in" / "By phone or email" with an empty avatar, and the Notifications and My listings group is absent.
 
 ## Token map
 
@@ -71,7 +64,7 @@ This page specifies the target set by the information architecture. As of `main`
 - Row label: `text-base text-foreground`
 - Large-row label: `text-lg font-semibold text-foreground`
 - Large-row second line: `text-[13px] text-muted-foreground`, one line
-- Row value (Language, Theme, My listings total): `text-[15px] text-muted-foreground`
+- Row value (Language, Theme): `text-[15px] text-muted-foreground`
 
 ### Spacing
 - Title: `px-4 pt-6 pb-3`
@@ -79,9 +72,9 @@ This page specifies the target set by the information architecture. As of `main`
 - Scroll bottom padding: `pb-6`
 
 ### Icons
-- Row icon: Lucide, `size-6 text-muted-foreground` — `List` (My listings), `Bell` (Notifications), `Globe` (Language), `Contrast` (Theme), `CircleHelp` (Help), `ShieldCheck` (Terms of Service), `FileText` (Privacy Policy), `ScrollText` (Posting rules), `Info` (About the app)
+- Row icon: Lucide, `size-6 text-muted-foreground` — `Bell` (Notifications), `List` (My listings), `Globe` (Language), `Contrast` (Theme), `CircleHelp` (Help), `ShieldCheck` (Terms of Service), `FileText` (Privacy Policy), `ScrollText` (Posting rules), `Info` (About the app)
 - Large row: `Avatar` `size-12`; fallback is the name's initial or a `User` icon
-- Chevron: `ChevronRight`, `size-[18px] text-muted-foreground opacity-60`, on the large row, My listings and Notifications only. Language, Theme, Help, the legal rows and About have none
+- Chevron: `ChevronRight`, `size-[18px] text-muted-foreground opacity-60`, on the large row, Notifications and My listings only. Language, Theme, Help, the legal rows and About have none, including Help and About, which also open app screens
 
 ## Component shape
 
@@ -104,9 +97,6 @@ Only the large row loads: a `size-12 rounded-full` skeleton with two text bars (
 ### Error
 Only the large row fails: avatar, "Something went wrong" in `text-muted-foreground`, and an outline `Button` `size="sm"` `min-h-11` reading Retry. Every other row stays visible and usable.
 
-### My listings total
-The value shows the total of the User's Listings and drafts when it is known and above zero; otherwise the row has no value. Not built yet: see [Current app differs](#current-app-differs).
-
 ### Empty
 N/A — the menu is static.
 
@@ -128,7 +118,7 @@ Reduced motion: the sheet follows the system setting.
 - **Screen reader**: each row is a button whose label reads the label, then the second line, then the value (for example "Language, English").
 - **Loading**: the large-row skeleton is one element labelled with `common:loading`.
 - **Error**: the failed large row has the `alert` role.
-- **Reading order**: title → large row → My listings → Notifications → Language → Theme → Help → Terms of Service → Privacy Policy → Posting rules → About the app.
+- **Reading order**: title → large row → Notifications → My listings → Language → Theme → Help → Terms of Service → Privacy Policy → Posting rules → About the app.
 
 ## Trilingual copy
 
@@ -137,8 +127,8 @@ Reduced motion: the sheet follows the system setting.
 | `common:cabinet` | Кабинет | Kabinet | Cabinet |
 | `common:signIn` | Войти | Giriş | Sign in |
 | `account:signInSub` | По телефону или почте | Telefon ýa-da e-poçta bilen | By phone or email |
-| `account:myListings` | Мои объявления | Bildirişlerim | My listings |
 | `account:notifications` | Уведомления | Habarnamalar | Notifications |
+| `account:myListings` | Мои объявления | Bildirişlerim | My listings |
 | `account:language` | Язык | Dil | Language |
 | `account:theme` | Тема | Tema | Theme |
 | `support:help` | Помощь | Kömek | Help |
