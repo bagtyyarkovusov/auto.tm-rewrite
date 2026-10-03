@@ -536,8 +536,11 @@ function ConditionToggle({
             }
             // Clear the answer New stored, so a Used car is never published
             // on an answer the seller did not give (ADR-0080).
-            const { damaged: _damaged, ...rest } = disclosure ?? {};
-            onChange({ condition: Enums.ListingCondition.Used, conditionDisclosure: rest });
+            const knownIssuesText = disclosure?.knownIssuesText;
+            onChange({
+              condition: Enums.ListingCondition.Used,
+              conditionDisclosure: knownIssuesText === undefined ? {} : { knownIssuesText },
+            });
           }}
           disabled={disabled}
           accessibilityRole="button"
