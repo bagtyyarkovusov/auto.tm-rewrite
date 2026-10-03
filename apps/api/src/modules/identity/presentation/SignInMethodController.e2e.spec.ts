@@ -200,7 +200,8 @@ describe("MeController e2e - Sign-in Method changes", () => {
     const signIn = await request.post("/api/v1/auth/otp/verify").send(body).expect(400);
     const deletion = await request.post("/api/v1/account-deletion/confirm").send(body).expect(400);
 
-    expect([signIn.body.code, deletion.body.code]).toEqual(["OTP_NOT_FOUND", "OTP_NOT_FOUND"]);
+    // Web deletion answers every code failure as INVALID_OTP (no enumeration).
+    expect([signIn.body.code, deletion.body.code]).toEqual(["OTP_NOT_FOUND", "INVALID_OTP"]);
     await expect(prisma.user.count()).resolves.toBe(1);
     await expect(
       prisma.otpRequest.findUniqueOrThrow({ where: { id: codeResponse.body.requestId } }),

@@ -182,7 +182,7 @@ describe("AccountDeletionController e2e", () => {
       .send({ phone: "+99361234567", code: signIn.body.testCode })
       .expect(400);
 
-    expect(response.body.code).toBe("OTP_NOT_FOUND");
+    expect(response.body.code).toBe("INVALID_OTP");
     const unchanged = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     expect(unchanged.deletionScheduledAt).toBeNull();
     await expect(prisma.otpRequest.findUniqueOrThrow({ where: { id: signIn.body.requestId } }))
