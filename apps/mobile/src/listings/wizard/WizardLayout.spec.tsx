@@ -25,6 +25,7 @@ function layout(stepTitle: string, stepNumber: number) {
       onPublish={() => {}}
       onDiscard={() => {}}
       mode="create"
+      editDetourActive={false}
       canContinue
       canPublish={false}
       canGoBack={stepNumber > 1}

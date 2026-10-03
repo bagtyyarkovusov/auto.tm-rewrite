@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { useRegions } from "../../api/catalog/useRegions";
 import { useCities } from "../../api/catalog/useCities";
 
+import { DescriptionField } from "./DescriptionField";
+
 
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
@@ -162,6 +164,13 @@ export default function Step6Location({
 
   return (
     <View className="gap-5 py-5">
+      <DescriptionField
+        payload={payload}
+        onChange={onChange}
+        error={fieldErrors?.description}
+        disabled={disabled}
+      />
+
       <PickerRow
         label={t("region")}
         required

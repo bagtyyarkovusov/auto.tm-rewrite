@@ -1,3 +1,4 @@
+import type { WizardSchemas } from "@auto-tm/contracts";
 import { describe, it, expect } from "vitest";
 
 import {
@@ -29,6 +30,10 @@ const car = { brandId: validUuid, modelId: validUuid, year: 2020 };
 const details = { condition: "used" as const, mileageKm: 10000, conditionDisclosure: { damaged: false } };
 const price = { priceAmount: 100000, priceCurrency: "TMT" as const };
 const place = { regionId: validUuid, cityId: validUuid };
+// Step names as the eight-step wizard saved them; `vin` is no longer a step.
+function oldStepNames(...names: string[]) {
+  return names as WizardSchemas.WizardStep[];
+}
 
 describe("createInitialState", () => {
   it("returns idle state with empty payload", () => {
@@ -187,7 +192,7 @@ describe("INIT", () => {
           ...car,
           // The old wizard validated vin, photos and vehicle; the new order puts
           // Details second and it is still empty.
-          validatedSteps: ["vin", "photos", "vehicle"],
+          validatedSteps: oldStepNames("vin", "photos", "vehicle"),
         },
       });
 
@@ -209,7 +214,7 @@ describe("INIT", () => {
           ...place,
           allowCalls: true,
           allowChat: true,
-          validatedSteps: ["vin", "photos", "vehicle", "specs", "price", "location"],
+          validatedSteps: oldStepNames("vin", "photos", "vehicle", "specs", "price", "location"),
         },
       });
 
@@ -225,7 +230,7 @@ describe("INIT", () => {
         draftId: "draft-1",
         payload: {
           brandId: validUuid,
-          validatedSteps: ["vin", "photos", "vehicle", "specs"],
+          validatedSteps: oldStepNames("vin", "photos", "vehicle", "specs"),
         },
       });
 
@@ -238,7 +243,7 @@ describe("INIT", () => {
       const next = wizardMachineReducer(createInitialState(), {
         type: "INIT",
         draftId: "draft-1",
-        payload: { ...saved, currentStep: 1, validatedSteps: ["vin", "photos"] },
+        payload: { ...saved, currentStep: 1, validatedSteps: oldStepNames("vin", "photos") },
       });
 
       expect(next.currentStep).toBe("review");
@@ -292,7 +297,7 @@ describe("NEXT", () => {
   });
 
   it("advances through all steps to review", () => {
-    let state = wizardMachineReducer(createInitialState(), {
+    const state = wizardMachineReducer(createInitialState(), {
       type: "INIT",
       draftId: "draft-1",
       payload: {
@@ -415,7 +420,7 @@ describe("UPDATE_FIELDS", () => {
 
 describe("GO_TO_STEP", () => {
   it("allows going backward to any step", () => {
-    let state = wizardMachineReducer(createInitialState(), {
+    const state = wizardMachineReducer(createInitialState(), {
       type: "INIT",
       draftId: "draft-1",
       payload: { ...car, ...details },
@@ -521,7 +526,9 @@ describe("buildMachineContext", () => {
       payload: car,
     });
 
-    const ctx = buildMachineContext(state);
+    const ctx = buildMachineContext(
+      wizardMachineReducer(state, { type: "GO_TO_STEP", step: "vehicle" }),
+    );
     expect(ctx.state.currentStep).toBe("vehicle");
     expect(ctx.canContinue).toBe(true); // VIN is optional
     expect(ctx.canGoBack).toBe(false);

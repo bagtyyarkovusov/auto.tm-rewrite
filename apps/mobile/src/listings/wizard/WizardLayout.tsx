@@ -1,6 +1,6 @@
 import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react-native";
-import { useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { AccessibilityInfo, ActivityIndicator, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
@@ -87,6 +87,13 @@ function WizardHeader({
   onRetrySave: () => void;
 }) {
   const { t } = useTranslation();
+  const stepPosition = t("stepOf", { step: stepNumber, total: stepCount });
+  // A screen reader hears the step title with its position each time a step opens.
+  const stepAnnouncement = `${stepTitle}, ${stepPosition}`;
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(stepAnnouncement);
+  }, [stepAnnouncement]);
+
   const saveStatusText =
     saveStatus === "saving"
       ? t("savingEllipsis")
@@ -126,7 +133,7 @@ function WizardHeader({
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
           <Text className="text-xs text-muted-foreground">
-            {routeTitle} · {t("stepOf", { step: stepNumber, total: stepCount })}
+            {routeTitle} · {stepPosition}
           </Text>
           {saveStatusText && (
             <Text className={cn("text-xs", saveStatusClass)}>
@@ -157,7 +164,11 @@ function WizardHeader({
       </View>
 
       {/* Row 2: the prominent step title — the ONE title */}
-      <Text className="text-2xl font-heading text-foreground">
+      <Text
+        className="text-2xl font-heading text-foreground"
+        accessibilityRole="header"
+        accessibilityLabel={stepAnnouncement}
+      >
         {stepTitle}
       </Text>
 
