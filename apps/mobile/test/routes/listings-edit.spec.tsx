@@ -9,7 +9,7 @@ const fixture = vi.hoisted(() => {
     thumbnail: "t.jpg", list: "l.jpg", detail: "d.jpg", fullscreen: "f.jpg",
   }, sortOrder: 0 }];
   return {
-    id, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
+    id, pending: false, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
     retry: vi.fn().mockResolvedValue(true),
     deleteDraftDir: vi.fn().mockResolvedValue(undefined),
     saveState: { status: "idle", error: null, opStates: {} } as {
@@ -35,7 +35,7 @@ vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQue
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
   useSaveListingEdit: () => ({
-    save: fixture.save, retry: fixture.retry, isPending: false, ...fixture.saveState,
+    save: fixture.save, retry: fixture.retry, isPending: fixture.pending, ...fixture.saveState,
   }),
   opLabel: (id: string) => id,
 }));
@@ -73,6 +73,7 @@ beforeEach(() => {
   fixture.deleteDraftDir.mockClear();
   routerMock.replace.mockClear();
   fixture.saveState = { status: "idle", error: null, opStates: {} };
+  fixture.pending = false;
   fixture.listing = { ...fixture.baseline };
 });
 
@@ -82,10 +83,11 @@ describe("legacy Listing edit", () => {
     expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: Yes", checked: false })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
-    const done = screen.getByRole("button", { name: "Done", disabled: true });
+    const done = screen.getByRole("button", { name: "Done", disabled: false });
     expect.soft(done.props.className.split(" ")).toContain("w-full");
     expect.soft(done.props.className.split(" ")).not.toContain("flex-1");
     fireEvent.press(done);
+    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
     expect(fixture.save).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
     fireEvent.press(screen.getByRole("radio", { name: `Damaged / needs repair: ${answer}` }));
@@ -102,13 +104,12 @@ describe("legacy Listing edit", () => {
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
   });
 
-  it("keeps missing Mileage and Damaged quiet on entry without enabling Done", () => {
+  it("keeps missing Mileage and Damaged quiet until Done, and stays on Details while invalid", () => {
     fixture.listing = { ...fixture.baseline, mileageKm: undefined };
     const screen = renderMobile(<EditListingScreen />);
     expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
     expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
-    fireEvent.press(screen.getByRole("button", { name: "Done", disabled: true }));
-    expect(fixture.save).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Done", disabled: false })).toBeTruthy();
     fireEvent(screen.getByPlaceholderText("e.g. 50000"), "blur");
     expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
     expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
@@ -118,8 +119,21 @@ describe("legacy Listing edit", () => {
     fireEvent.press(screen.getByRole("button", { name: "Used" }));
     expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
     expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
-    expect(screen.getByRole("button", { name: "Done", disabled: true })).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
+    expect(screen.getByText("Specifications")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
+  });
+
+  it("keeps Done disabled during a pending save even on invalid Details", () => {
+    fixture.pending = true;
+    const screen = renderMobile(<EditListingScreen />);
+    fireEvent.press(screen.getByRole("button", { name: "Done", disabled: true }));
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
   });
 
   it("clears this Listing's staged photos when the seller discards the edit", () => {
