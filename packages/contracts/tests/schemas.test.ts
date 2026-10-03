@@ -9,7 +9,9 @@ import {
   AccountDeletionRequestSchema,
   AccountDeletionRequestResponseSchema,
   AccountDeletionConfirmRequestSchema,
+  EmailCodeJobSchema,
 } from "../src/schemas/auth";
+import { SignInCodePurpose } from "../src/enums";
 import {
   ListingSummarySchema,
   ListingDetailSchema,
@@ -1466,6 +1468,28 @@ describe("Account deletion schemas", () => {
       requestId: "550e8400-e29b-41d4-a716-446655440000",
       resendInSeconds: 60,
     }).success).toBe(true);
+  });
+});
+
+describe("Sign-in Code purposes", () => {
+  it("names the four flows that issue a code (ADR-0081)", () => {
+    expect(Object.values(SignInCodePurpose).sort()).toEqual([
+      "account-deletion",
+      "listing-contact-phone",
+      "sign-in",
+      "sign-in-method",
+    ]);
+  });
+
+  it("queues email codes only for the three email flows", () => {
+    const job = { to: "seller@example.com", code: "123456", locale: "ru" };
+    for (const purpose of ["sign-in", "sign-in-method", "account-deletion"]) {
+      expect(EmailCodeJobSchema.safeParse({ ...job, purpose }).success).toBe(true);
+    }
+    expect(EmailCodeJobSchema.safeParse({
+      ...job,
+      purpose: "listing-contact-phone",
+    }).success).toBe(false);
   });
 });
 

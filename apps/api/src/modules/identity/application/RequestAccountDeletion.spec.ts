@@ -127,6 +127,7 @@ describe("RequestAccountDeletion", () => {
 
     expect(otpRepo.records).toHaveLength(1);
     expect(otpRepo.records[0]).toMatchObject({
+      purpose: "account-deletion",
       channel: "phone",
       destination: "+99361234567",
       userId: "user-1",

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { User } from "../domain/User";
 import {
   IDENTITY_ERROR_CODES,
@@ -42,9 +42,14 @@ function makeUser(input: {
 class FakeOtpRepo implements OtpRequestRepository {
   request: OtpRequest;
 
-  constructor(userId = "user-1", destination = "new@example.com") {
+  constructor(
+    userId = "user-1",
+    destination = "new@example.com",
+    purpose: SignInCodePurpose = "sign-in-method",
+  ) {
     this.request = {
       id: "request-1",
+      purpose,
       channel: destination.startsWith("+") ? "phone" : "email",
       destination,
       codeHash: createHash("sha256").update(CODE).digest("hex"),
@@ -74,6 +79,20 @@ class FakeOtpRepo implements OtpRequestRepository {
     return this.request.channel === channel &&
       this.request.destination === destination &&
       this.request.userId === userId
+      ? this.request
+      : null;
+  }
+
+  async findLatestForPurpose(input: {
+    purpose: SignInCodePurpose;
+    channel: SignInCodeChannel;
+    destination: string;
+    userId?: string;
+  }): Promise<OtpRequest | null> {
+    return this.request.purpose === input.purpose &&
+      this.request.channel === input.channel &&
+      this.request.destination === input.destination &&
+      (input.userId === undefined || this.request.userId === input.userId)
       ? this.request
       : null;
   }
@@ -140,7 +159,16 @@ class FakeUsers implements SignInMethodRepository {
 }
 
 function harness(current: User, destination: string, ...otherUsers: User[]) {
-  const otpRepo = new FakeOtpRepo(current.id, destination);
+  return harnessFor("sign-in-method", current, destination, ...otherUsers);
+}
+
+function harnessFor(
+  purpose: SignInCodePurpose,
+  current: User,
+  destination: string,
+  ...otherUsers: User[]
+) {
+  const otpRepo = new FakeOtpRepo(current.id, destination, purpose);
   const users = new FakeUsers(current, ...otherUsers);
   const clock: ClockPort = { now: () => NOW };
   const verifyCode = new VerifySignInCode(otpRepo, clock);
@@ -255,4 +283,26 @@ describe("ConfirmSignInMethodChange", () => {
     })).rejects.toThrow("OTP code has already been used");
     expect(users.users).toEqual([current]);
   });
+
+  it.each([
+    { purpose: "sign-in", destination: "new@example.com" },
+    { purpose: "sign-in", destination: "+99362234567" },
+    { purpose: "account-deletion", destination: "new@example.com" },
+    { purpose: "account-deletion", destination: "+99362234567" },
+    { purpose: "listing-contact-phone", destination: "+99362234567" },
+  ] as const)(
+    "accepts no $purpose code bound to the same User for $destination (ADR-0081)",
+    async ({ purpose, destination }) => {
+      const current = makeUser({ id: "user-1", phone: "+99361234567", email: "old@example.com" });
+      const { useCase, users, otpRepo } = harnessFor(purpose, current, destination);
+      const input = destination.startsWith("+")
+        ? { phone: destination, code: CODE }
+        : { email: destination, code: CODE };
+
+      await expect(useCase.execute({ userId: current.id, ...input }))
+        .rejects.toThrow("No Sign-in Code request found");
+      expect(users.users).toEqual([current]);
+      expect(otpRepo.request).toMatchObject({ verifiedAt: null, attempts: 0 });
+    },
+  );
 });

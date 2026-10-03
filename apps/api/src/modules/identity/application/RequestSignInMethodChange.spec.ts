@@ -147,6 +147,7 @@ describe("RequestSignInMethodChange", () => {
 
     expect(result.testCode).toMatch(/^\d{6}$/);
     expect(otpRepo.records[0]).toMatchObject({
+      purpose: "sign-in-method",
       channel: "phone",
       destination: "+99361234567",
       userId: "user-1",
