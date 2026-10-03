@@ -210,7 +210,7 @@ describe("MessageBubble reported dimming", () => {
     modelId: "00000000-0000-4000-8000-0000000000d2",
     year: 2018,
     displayPriceTmt: 285000,
-    priceCurrency: "TMT",
+    priceCurrency: "TMT" as const,
     status: "active" as const,
     available: true,
   };
