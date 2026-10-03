@@ -48,6 +48,12 @@ it.each([
     }
   },
 );
+it("shows no overflow for a blocked Listing, which allows no owner action", () => {
+  const screen = renderMobile(
+    <OwnerActions listingId="listing-373" status="banned" mode="menu" />,
+  );
+  expect(screen.queryByRole("button", { name: "More options" })).toBeNull();
+});
 it("asks with the shared copy, without the buyer question", () => {
   const screen = renderMobile(
     <OwnerActions listingId="listing-373" status="active" mode="bar" />,

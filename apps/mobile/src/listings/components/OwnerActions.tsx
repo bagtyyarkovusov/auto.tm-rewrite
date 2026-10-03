@@ -144,7 +144,8 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
           )}
         </View>
       )}
-      {mode === "menu" && (
+      {/* No ⋯ when the status allows nothing, as for a blocked Listing. */}
+      {mode === "menu" && menuActions.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
