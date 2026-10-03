@@ -5,6 +5,7 @@
 import { IDENTITY_TOKENS } from "./identity.tokens";
 
 export { accountDeletionPendingException } from "./application/accountDeletionPendingException";
+export { contactPhoneCodeException } from "./presentation/contactPhoneCodeException";
 export type { ClockPort } from "./domain/ports/ClockPort";
 export type { IdentityCheckPort } from "./domain/ports/IdentityCheckPort";
 export type {

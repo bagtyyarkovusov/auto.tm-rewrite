@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
+import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import type { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
 import { LISTING_ERROR_CODES } from "../domain/types";
@@ -18,6 +19,8 @@ import {
   EXCHANGE_RATE_PORT,
   type ExchangeRatePort,
 } from "../domain/ports/ExchangeRatePort";
+
+import { contactPhoneRejection } from "./contactPhoneRejection";
 
 export interface RepublishListingInput {
   listingId: string;
@@ -37,6 +40,8 @@ export class RepublishListing {
     private readonly prisma: PrismaService,
     @Inject(EXCHANGE_RATE_PORT)
     private readonly exchangeRates: ExchangeRatePort,
+    @Inject(ContactPhonePolicy)
+    private readonly contactPhones: ContactPhonePolicy,
   ) {}
 
   async execute(input: RepublishListingInput): Promise<RepublishListingResult> {
@@ -57,8 +62,16 @@ export class RepublishListing {
       });
     }
 
+    const now = new Date();
     const previousArchivedAt = existing.status === "archived" ? existing.updatedAt : undefined;
-    const updated = existing.republish(new Date());
+    const updated = existing.republish(now);
+
+    // The stored number must still be usable; to relist with another number
+    // the seller edits first (ADR-0081).
+    const rejection = contactPhoneRejection(
+      await this.contactPhones.standing(existing.sellerId, existing.contactPhone, now),
+    );
+    if (rejection) throw rejection;
 
     // Back in the feed at today's rate, so price sort and range stay current.
     const rateToTmt =

@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
+import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
 import { DomainError, LISTING_ERROR_CODES, LOCKED_FIELDS } from "../domain/types";
@@ -18,6 +19,8 @@ import {
   LISTING_EVENT_PUBLISHER,
   type ListingEventPublisher,
 } from "../domain/ports/ListingEventPublisher";
+
+import { contactPhoneRejection } from "./contactPhoneRejection";
 
 export interface EditListingInput {
   listingId: string;
@@ -40,6 +43,8 @@ export class EditListing {
     private readonly exchangeRates: ExchangeRatePort,
     @Inject(LISTING_EVENT_PUBLISHER)
     private readonly events: ListingEventPublisher,
+    @Inject(ContactPhonePolicy)
+    private readonly contactPhones: ContactPhonePolicy,
   ) {}
 
   async execute(input: EditListingInput): Promise<EditListingResult> {
@@ -81,6 +86,21 @@ export class EditListing {
         code: LISTING_ERROR_CODES.CONTACT_METHOD_REQUIRED,
         message: "At least one contact method must be enabled",
       });
+    }
+
+    // ADR-0081: only a new number is checked, so other edits keep a stored
+    // number after its 7 days. A Listing whose number was cleared takes no
+    // contact change until the seller sets one.
+    if (patch.contactPhone !== undefined && patch.contactPhone !== existing.contactPhone) {
+      const rejection = contactPhoneRejection(
+        await this.contactPhones.standing(existing.sellerId, patch.contactPhone, new Date()),
+      );
+      if (rejection) throw rejection;
+    } else if (
+      (patch.allowCalls !== undefined || patch.allowChat !== undefined) &&
+      !existing.contactPhone
+    ) {
+      throw contactPhoneRejection({ kind: "missing" });
     }
 
     // The saved price needs a current rate to TMT: it re-derives priceTmt.

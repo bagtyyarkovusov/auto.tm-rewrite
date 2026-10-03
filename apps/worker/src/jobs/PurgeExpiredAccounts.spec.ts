@@ -283,7 +283,7 @@ describe("PurgeExpiredAccounts", () => {
     expect(fake.verifiedContactPhones).toEqual([{ id: "v3", sellerId: "someone-else" }]);
     expect(fake.transactions).toHaveLength(1);
     expect(fake.transactions[0]).toContain("verifiedContactPhone.deleteMany");
-    expect(fake.transactions[0]!.length).toBeGreaterThan(1);
+    expect(fake.transactions[0]?.length).toBeGreaterThan(1);
   });
 
   it("keeps verified contact phones during the grace period", async () => {

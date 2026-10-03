@@ -96,6 +96,7 @@ function seedListing(
   repo: FakeListingRepository,
   status: "active" | "sold" | "archived",
   overrides?: Partial<Parameters<typeof Listing.create>[0]>,
+  { phone = true }: { phone?: boolean } = {},
 ) {
   const listing = Listing.create({
     id: "listing-1",
@@ -107,7 +108,7 @@ function seedListing(
     cityId: "city-1",
     priceAmount: 100000,
     priceCurrency: "TMT",
-    contactPhone: "+99361234567",
+    ...(phone && { contactPhone: "+99361234567" }),
     allowCalls: true,
     allowChat: true,
     publishedAt: new Date("2026-05-01T00:00:00Z"),
@@ -131,7 +132,8 @@ describe("RepublishListing", () => {
     const DAY = 24 * 60 * 60 * 1000;
 
     async function republishError(contactPhone: string | undefined): Promise<unknown> {
-      seedListing(repo, "archived", contactPhone === undefined ? { contactPhone: undefined } : { contactPhone });
+      if (contactPhone === undefined) seedListing(repo, "archived", {}, { phone: false });
+      else seedListing(repo, "archived", { contactPhone });
       return makeUseCase(repo, prisma)
         .execute({ listingId: "listing-1", userId: "user-1" })
         .catch((err: unknown) => err);

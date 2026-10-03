@@ -12,8 +12,12 @@ import {
   VERIFIED_CONTACT_PHONE_REPOSITORY,
   type VerifiedContactPhoneRepository,
 } from "../domain/ports/VerifiedContactPhoneRepository";
-import type { UsableContactPhone } from "./UsableContactPhone";
+import { confirmedContactPhone, type UsableContactPhone } from "./UsableContactPhone";
 
+/**
+ * The seller's numbers whose 7 days have not ended, newest confirmation first.
+ * Leaves out the sign-in phone: the app reads it from `GET /api/v1/me`.
+ */
 @Injectable()
 export class ListMyContactPhones {
   constructor(
@@ -25,7 +29,18 @@ export class ListMyContactPhones {
     private readonly clock: ClockPort,
   ) {}
 
-  async execute(_input: { userId: string }): Promise<{ items: UsableContactPhone[] }> {
-    throw new Error("not implemented");
+  async execute(input: { userId: string }): Promise<{ items: UsableContactPhone[] }> {
+    const now = this.clock.now();
+    const reusable = (await this.confirmations.listBySeller(input.userId)).filter(
+      (confirmation) => confirmation.isReusableAt(now),
+    );
+    const isSignInPhone = await Promise.all(
+      reusable.map((c) => this.accountPhones.holdsSignInPhone(input.userId, c.phone)),
+    );
+    return {
+      items: reusable
+        .filter((_, index) => !isSignInPhone[index])
+        .map(confirmedContactPhone),
+    };
   }
 }

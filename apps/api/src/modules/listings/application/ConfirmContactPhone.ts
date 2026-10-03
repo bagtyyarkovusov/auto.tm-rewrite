@@ -10,7 +10,8 @@ import {
   VERIFIED_CONTACT_PHONE_REPOSITORY,
   type VerifiedContactPhoneRepository,
 } from "../domain/ports/VerifiedContactPhoneRepository";
-import type { UsableContactPhone } from "./UsableContactPhone";
+import { VerifiedContactPhone } from "../domain/VerifiedContactPhone";
+import { confirmedContactPhone, type UsableContactPhone } from "./UsableContactPhone";
 
 export interface ConfirmContactPhoneInput {
   userId: string;
@@ -18,6 +19,11 @@ export interface ConfirmContactPhoneInput {
   code: string;
 }
 
+/**
+ * Confirms a number with the seller's code and lets the seller reuse it for 7
+ * days. Confirming again restarts the 7 days. Never changes the seller's
+ * sign-in phone (ADR-0081).
+ */
 @Injectable()
 export class ConfirmContactPhone {
   constructor(
@@ -29,7 +35,17 @@ export class ConfirmContactPhone {
     private readonly clock: ClockPort,
   ) {}
 
-  async execute(_input: ConfirmContactPhoneInput): Promise<UsableContactPhone> {
-    throw new Error("not implemented");
+  async execute(
+    input: ConfirmContactPhoneInput,
+  ): Promise<UsableContactPhone & { source: "confirmed" }> {
+    await this.codes.confirmCode(input);
+    const saved = await this.confirmations.record(
+      VerifiedContactPhone.create({
+        sellerId: input.userId,
+        phone: input.phone,
+        confirmedAt: this.clock.now(),
+      }),
+    );
+    return confirmedContactPhone(saved);
   }
 }

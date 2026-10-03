@@ -114,7 +114,7 @@ function makeUseCase(
 function seedActiveListing(
   repo: FakeListingRepository,
   overrides?: Partial<Parameters<typeof Listing.create>[0]>,
-  { answered = true }: { answered?: boolean } = {},
+  { answered = true, phone = true }: { answered?: boolean; phone?: boolean } = {},
 ) {
   const listing = Listing.create({
     id: "listing-1",
@@ -126,7 +126,7 @@ function seedActiveListing(
     cityId: "city-1",
     priceAmount: 100000,
     priceCurrency: "TMT",
-    contactPhone: "+99361234567",
+    ...(phone && { contactPhone: "+99361234567" }),
     allowCalls: true,
     allowChat: true,
     publishedAt: new Date("2026-05-01T00:00:00Z"),
@@ -213,7 +213,7 @@ describe("EditListing", () => {
     });
 
     it("refuses a contact change on a Listing whose number was cleared until a number is set", async () => {
-      seedActiveListing(repo, { contactPhone: undefined });
+      seedActiveListing(repo, {}, { phone: false });
 
       const error = await editError({ allowCalls: false, allowChat: true });
 
@@ -224,7 +224,7 @@ describe("EditListing", () => {
     });
 
     it("lets a Listing whose number was cleared take other edits and a confirmed number", async () => {
-      seedActiveListing(repo, { contactPhone: undefined });
+      seedActiveListing(repo, {}, { phone: false });
       const uc = makeUseCase(repo, prisma, events, exchangeRates);
 
       await uc.execute({ listingId: "listing-1", userId: "user-1", patch: { description: "New" } });

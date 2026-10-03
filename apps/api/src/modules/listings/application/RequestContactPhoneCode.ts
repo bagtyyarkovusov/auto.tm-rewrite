@@ -7,7 +7,11 @@ import {
   type ContactPhoneCodePort,
 } from "../../identity/identity.public";
 import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
-import type { UsableContactPhone } from "./UsableContactPhone";
+import {
+  accountContactPhone,
+  confirmedContactPhone,
+  type UsableContactPhone,
+} from "./UsableContactPhone";
 
 export interface RequestContactPhoneCodeInput {
   userId: string;
@@ -20,6 +24,10 @@ export type RequestContactPhoneCodeResult =
   | { status: "confirmed"; contactPhone: UsableContactPhone }
   | { status: "code_sent"; requestId: string; resendInSeconds: number; testCode?: string };
 
+/**
+ * Sends a code for a number the seller wants on a Listing, or answers that the
+ * number is already usable and sends nothing (ADR-0081).
+ */
 @Injectable()
 export class RequestContactPhoneCode {
   constructor(
@@ -31,7 +39,19 @@ export class RequestContactPhoneCode {
     private readonly clock: ClockPort,
   ) {}
 
-  async execute(_input: RequestContactPhoneCodeInput): Promise<RequestContactPhoneCodeResult> {
-    throw new Error("not implemented");
+  async execute(input: RequestContactPhoneCodeInput): Promise<RequestContactPhoneCodeResult> {
+    const standing = await this.policy.standing(input.userId, input.phone, this.clock.now());
+    if (standing.kind === "account") {
+      return { status: "confirmed", contactPhone: accountContactPhone(input.phone) };
+    }
+    if (standing.kind === "confirmed") {
+      return {
+        status: "confirmed",
+        contactPhone: confirmedContactPhone(standing.confirmation),
+      };
+    }
+
+    const sent = await this.codes.requestCode(input);
+    return { status: "code_sent", ...sent };
   }
 }

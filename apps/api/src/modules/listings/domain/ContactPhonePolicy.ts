@@ -10,6 +10,11 @@ export type ContactPhoneStanding =
   | { kind: "not_confirmed" }
   | { kind: "expired" };
 
+/**
+ * The one rule publish, republish, edit and the code request use to decide
+ * whether a number may go on a Listing now (ADR-0081): the seller's own
+ * sign-in phone, or a number the seller confirmed in the last 7 days.
+ */
 export class ContactPhonePolicy {
   constructor(
     private readonly accountPhones: AccountPhonePort,
@@ -17,10 +22,18 @@ export class ContactPhonePolicy {
   ) {}
 
   async standing(
-    _sellerId: string,
-    _phone: string | null | undefined,
-    _now: Date,
+    sellerId: string,
+    phone: string | null | undefined,
+    now: Date,
   ): Promise<ContactPhoneStanding> {
-    throw new Error("not implemented");
+    if (phone == null || phone.trim() === "") return { kind: "missing" };
+    if (await this.accountPhones.holdsSignInPhone(sellerId, phone)) {
+      return { kind: "account" };
+    }
+    const confirmation = await this.confirmations.find(sellerId, phone);
+    if (confirmation === null) return { kind: "not_confirmed" };
+    return confirmation.isReusableAt(now)
+      ? { kind: "confirmed", confirmation }
+      : { kind: "expired" };
   }
 }
