@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { themeStore, type ThemePreference } from "../../src/theme/themeStore";
 
 import { OptionPickerSheet } from "./OptionPickerSheet";
-import { PickerRow } from "./PickerRow";
+import { MenuRow } from "./MenuRow";
 
 const labelKeys = {
   light: "themeLight",
@@ -24,7 +24,7 @@ export function ThemeRow() {
 
   return (
     <>
-      <PickerRow icon={Contrast} label={t("theme")} value={t(labelKeys[theme])} onPress={() => setOpen(true)} />
+      <MenuRow icon={Contrast} label={t("theme")} value={t(labelKeys[theme])} onPress={() => setOpen(true)} />
       <OptionPickerSheet
         open={open}
         onOpenChange={setOpen}

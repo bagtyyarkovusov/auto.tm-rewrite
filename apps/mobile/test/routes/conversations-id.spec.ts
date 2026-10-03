@@ -9,20 +9,6 @@ const header = readFileSync(
   "utf-8",
 );
 
-describe("ConversationDetailScreen quick replies", () => {
-  it("passes showQuickReplies to MessageComposer", () => {
-    expect(source).toContain("showQuickReplies:");
-  });
-
-  // The rule (loaded, empty, open, Listing not closed) is behaviour-tested in
-  // src/conversations/showQuickReplies.spec.ts and the Conversation screen spec.
-  it("decides quick replies with showQuickReplies from the loaded state", () => {
-    expect(source).toContain("showQuickReplies({");
-    expect(source).toContain("ready: !isLoading && !isError && !conversationFailed");
-    expect(source).toContain("messageCount: allMessages.length");
-  });
-});
-
 describe("ConversationDetailScreen conversation mute", () => {
   it("wires the mute mutation hook", () => {
     expect(source).toContain("useMuteConversation");

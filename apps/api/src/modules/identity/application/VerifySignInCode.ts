@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { SignInCodeDestination } from "../domain/SignInCodeDestination";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { ClockPort } from "../domain/ports/ClockPort";
@@ -18,21 +18,24 @@ export class VerifySignInCode {
     private readonly clock: ClockPort,
   ) {}
 
-  async execute(
-    destination: SignInCodeDestination,
-    code: string,
-    userId?: string,
-  ): Promise<OtpRequest> {
-    const request = userId === undefined
-      ? await this.otpRequestRepo.findLatestByDestination(
-          destination.channel,
-          destination.value,
-        )
-      : await this.otpRequestRepo.findLatestByDestinationAndUser(
-          destination.channel,
-          destination.value,
-          userId,
-        );
+  /**
+   * Checks the newest code issued for `purpose` (ADR-0081). A code of another
+   * purpose is invisible here, so it answers as if no code had been requested
+   * and keeps its attempts.
+   */
+  async execute(input: {
+    purpose: SignInCodePurpose;
+    destination: SignInCodeDestination;
+    code: string;
+    userId?: string;
+  }): Promise<OtpRequest> {
+    const { destination, code } = input;
+    const request = await this.otpRequestRepo.findLatestForPurpose({
+      purpose: input.purpose,
+      channel: destination.channel,
+      destination: destination.value,
+      ...(input.userId === undefined ? {} : { userId: input.userId }),
+    });
     if (!request) throw new Error("No Sign-in Code request found");
     if (request.verifiedAt !== null) {
       throw new Error("OTP code has already been used");

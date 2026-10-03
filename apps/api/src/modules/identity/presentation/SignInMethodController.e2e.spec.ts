@@ -21,7 +21,9 @@ import {
   IdentityDomainError,
 } from "../domain/types";
 import { IdentityModule } from "../identity.module";
+import { toCodePurpose } from "../infrastructure/codePurpose";
 import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 describe("MeController e2e - Sign-in Method changes", () => {
   let app: NestFastifyApplication;
@@ -34,6 +36,7 @@ describe("MeController e2e - Sign-in Method changes", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -158,6 +161,7 @@ describe("MeController e2e - Sign-in Method changes", () => {
       : null;
     const shadow = await prisma.otpRequest.create({
       data: {
+        purpose: toCodePurpose(owner === "public" ? "sign-in" : "sign-in-method"),
         channel: "email",
         destination,
         codeHash: createHash("sha256").update("654321").digest("hex"),
@@ -176,6 +180,59 @@ describe("MeController e2e - Sign-in Method changes", () => {
 
     await expect(prisma.otpRequest.findUnique({ where: { id: shadow.id } }))
       .resolves.toMatchObject({ attempts: 0, verifiedAt: null });
+  });
+
+  it.each([
+    { phone: "+99362234567" },
+    { email: "new@example.com" },
+  ])("never signs in or deletes with a change code for %o, which stays usable", async (destination) => {
+    const current = "phone" in destination
+      ? await prisma.user.create({ data: { email: "old@example.com", emailVerifiedAt: new Date() } })
+      : await prisma.user.create({ data: { phone: "+99361234567", phoneVerifiedAt: new Date() } });
+    const authorization = bearer(current.id);
+    const codeResponse = await request
+      .post("/api/v1/me/sign-in-methods/request")
+      .set("Authorization", authorization)
+      .send(destination)
+      .expect(201);
+    const body = { ...destination, code: codeResponse.body.testCode };
+
+    const signIn = await request.post("/api/v1/auth/otp/verify").send(body).expect(400);
+    const deletion = await request.post("/api/v1/account-deletion/confirm").send(body).expect(400);
+
+    // Web deletion answers every code failure as INVALID_OTP (no enumeration).
+    expect([signIn.body.code, deletion.body.code]).toEqual(["OTP_NOT_FOUND", "INVALID_OTP"]);
+    await expect(prisma.user.count()).resolves.toBe(1);
+    await expect(
+      prisma.otpRequest.findUniqueOrThrow({ where: { id: codeResponse.body.requestId } }),
+    ).resolves.toMatchObject({ verifiedAt: null, attempts: 0 });
+
+    await request
+      .post("/api/v1/me/sign-in-methods/verify")
+      .set("Authorization", authorization)
+      .send(body)
+      .expect(201);
+  });
+
+  it.each([
+    { name: "sign-in", path: "/api/v1/auth/otp/request" },
+    { name: "web deletion", path: "/api/v1/account-deletion/request" },
+  ])("does not change a Sign-in Method with a $name code", async ({ path }) => {
+    const current = await prisma.user.create({
+      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+    });
+    const authorization = bearer(current.id);
+    const codeResponse = await request.post(path).send({ email: "new@example.com" }).expect(201);
+
+    const response = await request
+      .post("/api/v1/me/sign-in-methods/verify")
+      .set("Authorization", authorization)
+      .send({ email: "new@example.com", code: codeResponse.body.testCode })
+      .expect(400);
+
+    expect(response.body.code).toBe("OTP_NOT_FOUND");
+    await expect(prisma.user.findUniqueOrThrow({ where: { id: current.id } }))
+      .resolves.toMatchObject({ email: null });
   });
 
   it("says whether a refused code request is a backoff or the daily limit", async () => {
@@ -203,6 +260,7 @@ describe("MeController e2e - Sign-in Method changes", () => {
     for (let index = 0; index < 4; index += 1) {
       await prisma.otpRequest.create({
         data: {
+          purpose: toCodePurpose("sign-in"),
           channel: "email",
           destination: "new@example.com",
           codeHash: "test-hash",

@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { Enums } from "@auto-tm/contracts";
 import { createHash, randomUUID } from "node:crypto";
 
 import { OtpCode } from "../domain/OtpCode";
@@ -110,6 +111,7 @@ export class RequestOtp {
     const codeHash = createHash("sha256").update(code.value).digest("hex");
 
     const record = await this.otpRequestRepo.create({
+      purpose: Enums.SignInCodePurpose.SignIn,
       channel: destination.channel,
       destination: destination.value,
       codeHash,
@@ -126,7 +128,7 @@ export class RequestOtp {
         email: destination.value,
         code: code.value,
         locale: input.locale ?? "ru",
-        purpose: "sign-in",
+        purpose: Enums.SignInCodePurpose.SignIn,
       });
     }
 

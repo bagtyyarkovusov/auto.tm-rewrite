@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { JwtService } from "@nestjs/jwt";
-import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
+import type {
+  OtpRequest,
+  SignInCodeChannel,
+  SignInCodePurpose,
+} from "../domain/OtpRequest";
 import type { SignInMethods } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { Session } from "../domain/Session";
@@ -36,6 +40,7 @@ function hashCode(code: string): string {
 function makeOtpRequest(overrides: Partial<OtpRequest> = {}): OtpRequest {
   return {
     id: randomUUID(),
+    purpose: "sign-in",
     channel: "phone",
     destination: "+99361234567",
     codeHash: hashCode("123456"),
@@ -86,6 +91,7 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
   records: OtpRequest[] = [];
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -118,16 +124,18 @@ class FakeOtpRequestRepository implements OtpRequestRepository {
     return sorted[0] ?? null;
   }
 
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
+  async findLatestForPurpose(input: {
+    purpose: SignInCodePurpose;
+    channel: SignInCodeChannel;
+    destination: string;
+    userId?: string;
+  }): Promise<OtpRequest | null> {
     const sorted = this.records
       .filter((r) =>
-        r.channel === channel &&
-        r.destination === destination &&
-        r.userId === userId)
+        r.purpose === input.purpose &&
+        r.channel === input.channel &&
+        r.destination === input.destination &&
+        (input.userId === undefined || r.userId === input.userId))
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return sorted[0] ?? null;
   }
@@ -869,6 +877,59 @@ describe("VerifyOtp", () => {
         code: "000000",
       })).rejects.toThrow("Too many attempts");
       expect((await otpRepo.findById(request.id))!.attempts).toBe(5);
+    });
+  });
+
+  describe("purpose binding (ADR-0081)", () => {
+    it.each([
+      { purpose: "account-deletion", channel: "phone", destination: "+99361234567" },
+      { purpose: "account-deletion", channel: "email", destination: "seller@example.com" },
+      { purpose: "sign-in-method", channel: "phone", destination: "+99361234567" },
+      { purpose: "sign-in-method", channel: "email", destination: "seller@example.com" },
+      { purpose: "listing-contact-phone", channel: "phone", destination: "+99361234567" },
+    ] as const)(
+      "finds no sign-in code for a $channel whose only code is for $purpose",
+      async ({ purpose, channel, destination }) => {
+        const existing = makeUser(
+          channel === "phone"
+            ? { phone: destination }
+            : { phone: null, phoneVerifiedAt: null, email: destination, emailVerifiedAt: NOW },
+        );
+        userRepo.users.push(existing);
+        const record = makeOtpRequest({ purpose, channel, destination, userId: existing.id });
+        otpRepo.addRecord(record);
+
+        const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+        await expect(
+          uc.execute(
+            channel === "phone"
+              ? { phone: destination, code: "123456" }
+              : { email: destination, code: "123456" },
+          ),
+        ).rejects.toThrow("No Sign-in Code request found");
+
+        expect(await otpRepo.findById(record.id)).toMatchObject({
+          verifiedAt: null,
+          attempts: 0,
+        });
+        expect(sessionRepo.sessions).toHaveLength(0);
+      },
+    );
+
+    it("checks the newest sign-in code even when a newer code of another purpose exists", async () => {
+      const signIn = makeOtpRequest({ createdAt: new Date(NOW.getTime() - 60_000) });
+      const deletion = makeOtpRequest({ purpose: "account-deletion", codeHash: hashCode("999999") });
+      otpRepo.addRecord(signIn);
+      otpRepo.addRecord(deletion);
+
+      const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, hasher, clock, eventBus });
+      await uc.execute({ phone: "+99361234567", code: "123456" });
+
+      expect((await otpRepo.findById(signIn.id))!.verifiedAt).toEqual(NOW);
+      expect(await otpRepo.findById(deletion.id)).toMatchObject({
+        verifiedAt: null,
+        attempts: 0,
+      });
     });
   });
 
