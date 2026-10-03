@@ -212,14 +212,34 @@ describe("EditListing", () => {
       expect(repo.listings[0]?.description).toBe("Newer");
     });
 
-    it("refuses a contact change on a Listing whose number was cleared until a number is set", async () => {
+    it.each([
+      ["turns calls off", { allowCalls: false, allowChat: true }],
+      ["turns chat off", { allowCalls: true, allowChat: false }],
+      ["resends both unchanged", { allowCalls: true, allowChat: true, priceAmount: 90000 }],
+    ])("lets a Listing whose number was cleared take an edit that %s", async (_name, patch) => {
       seedActiveListing(repo, {}, { phone: false });
 
-      const error = await editError({ allowCalls: false, allowChat: true });
+      const { listing } = await makeUseCase(repo, prisma, events, exchangeRates).execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch,
+      });
+
+      expect(listing.allowCalls).toBe(patch.allowCalls);
+      expect(listing.allowChat).toBe(patch.allowChat);
+      expect(listing.contactPhone).toBeUndefined();
+    });
+
+    it("checks a number set on a Listing whose number was cleared", async () => {
+      seedActiveListing(repo, {}, { phone: false });
+
+      const error = await editError({ contactPhone: "+99365123456", allowCalls: false });
 
       expect((error as BadRequestException).getResponse()).toMatchObject({
-        code: "CONTACT_PHONE_REQUIRED",
+        code: "CONTACT_PHONE_NOT_CONFIRMED",
+        details: { reason: "not_confirmed" },
       });
+      expect(repo.listings[0]?.contactPhone).toBeUndefined();
       expect(repo.listings[0]?.allowCalls).toBe(true);
     });
 

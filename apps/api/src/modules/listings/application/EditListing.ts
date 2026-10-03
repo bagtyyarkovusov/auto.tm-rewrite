@@ -88,19 +88,14 @@ export class EditListing {
       });
     }
 
-    // ADR-0081: only a new number is checked, so other edits keep a stored
-    // number after its 7 days. A Listing whose number was cleared takes no
-    // contact change until the seller sets one.
+    // ADR-0081: only a new number is checked. Other edits, calls and chat
+    // included, keep the stored number after its 7 days, or none if it was
+    // cleared.
     if (patch.contactPhone !== undefined && patch.contactPhone !== existing.contactPhone) {
       const rejection = contactPhoneRejection(
         await this.contactPhones.standing(existing.sellerId, patch.contactPhone, new Date()),
       );
       if (rejection) throw rejection;
-    } else if (
-      (patch.allowCalls !== undefined || patch.allowChat !== undefined) &&
-      !existing.contactPhone
-    ) {
-      throw contactPhoneRejection({ kind: "missing" });
     }
 
     // The saved price needs a current rate to TMT: it re-derives priceTmt.
