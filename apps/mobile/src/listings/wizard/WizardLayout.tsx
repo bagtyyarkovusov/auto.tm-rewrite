@@ -33,6 +33,7 @@ interface UploadStatusChip {
 }
 
 interface WizardLayoutProps {
+  onHeaderHeightChange?: (height: number) => void;
   routeTitle: string;
   stepTitle: string;
   stepNumber: number;
@@ -64,6 +65,7 @@ interface WizardLayoutProps {
 }
 
 function WizardHeader({
+  onHeaderHeightChange,
   routeTitle,
   stepTitle,
   stepNumber,
@@ -75,6 +77,7 @@ function WizardHeader({
   saveStatus,
   onRetrySave,
 }: {
+  onHeaderHeightChange?: (height: number) => void;
   routeTitle: string;
   stepTitle: string;
   stepNumber: number;
@@ -111,7 +114,9 @@ function WizardHeader({
         : "text-muted-foreground";
 
   return (
-    <View className="border-b border-border px-5 py-3 gap-2">
+    <View
+      onLayout={(event) => onHeaderHeightChange?.(event.nativeEvent.layout.height)}
+      className="border-b border-border px-5 py-3 gap-2">
       {/* Row 1: nav + position marker + inline save status + cancel */}
       <View className="flex-row items-center justify-between">
         {canGoBack ? (
@@ -406,6 +411,7 @@ function DiscardConfirmationDialog({
 }
 
 export function WizardLayout({
+  onHeaderHeightChange,
   routeTitle,
   stepTitle,
   stepNumber,
@@ -441,6 +447,7 @@ export function WizardLayout({
   return (
     <SafeAreaView className="flex-1 bg-background">
       <WizardHeader
+        onHeaderHeightChange={onHeaderHeightChange}
         routeTitle={routeTitle}
         stepTitle={stepTitle}
         stepNumber={stepNumber}

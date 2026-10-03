@@ -2,9 +2,11 @@ import { useState, type PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
+import { Image } from "expo-image";
+import { Modal } from "react-native";
 import type { ConversationsSchemas, ListingsSchemas } from "@auto-tm/contracts";
 
-import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
+import { act, fireEvent, renderMobile, routeParams, routerMock, within } from "../render";
 import ConversationDetailScreen from "../../app/conversations/[id]";
 import { seedConversationDetail } from "../../src/api/conversations/useConversation";
 import { ApiError } from "../../src/api/client";
@@ -81,7 +83,6 @@ vi.mock("../../src/conversations/socket/useConversationSocket", () => ({
 vi.mock("../../src/conversations/components/useConversationCatalogMaps", () => ({
   useConversationCatalogMaps: () => ({ brandName: () => undefined, modelName: () => undefined }),
 }));
-vi.mock("../../src/conversations/components/ImagePreviewModal", () => ({ ImagePreviewModal: () => null }));
 vi.mock("../../src/admin/components/MessageReportSheet", () => ({ MessageReportSheet: () => null }));
 vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ show: vi.fn() }) }));
 vi.mock("../../lib/theme", () => ({
@@ -445,6 +446,59 @@ describe("Conversation history", () => {
     expect(state.messages.fetchNextPage).not.toHaveBeenCalled();
     fireEvent.press(screen.getByRole("button", { name: "Retry" }));
     expect(state.messages.fetchNextPage).toHaveBeenCalledOnce();
+  });
+});
+
+describe("Conversation persisted image addressing", () => {
+  const storedKey = `chat-attachments/${CONVERSATION_ID}/00000000-0000-4000-8000-0000000000e1/original.jpg`;
+  const expectedUri = `https://media.autotm.tm/chat-attachments/${storedKey}`;
+
+  async function openStoredImage() {
+    // A history response has a storage key, with no local staging URI or ready-made URL.
+    const persistedImage: ConversationsSchemas.MessageSummary = {
+      id: "00000000-0000-4000-8000-0000000000e2",
+      conversationId: CONVERSATION_ID,
+      senderId: SELLER_ID,
+      kind: "image",
+      text: null,
+      metadata: { key: storedKey, width: 800, height: 600 },
+      createdAt: "2026-10-01T09:00:00.000Z",
+    };
+    state.messages.data = { pages: [{ items: [persistedImage], nextCursor: null }] };
+    // Keep this regression's network boundary finite, including unexpected requests.
+    state.get.mockImplementation(async (path: string) => {
+      if (path === `/conversations/${CONVERSATION_ID}`) return conversation();
+      if (path === `/listings/${LISTING_ID}`) return listingDetail();
+      if (path === "/config") {
+        return { reportEntryEnabled: false, adminModerationActionsEnabled: false, inspectionInterestEnabled: false };
+      }
+      throw new Error(`Unexpected image-history read: ${path}`);
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    const photo = await screen.findByRole("imagebutton", { name: "Photo" });
+    return { screen, photo };
+  }
+
+  it("renders the full persisted object key after the bucket in the Message bubble", async () => {
+    const { screen, photo } = await openStoredImage();
+
+    expect(state.readMessages).toHaveBeenLastCalledWith({ conversationId: CONVERSATION_ID });
+    expect(within(photo).UNSAFE_getByType(Image).props.source).toEqual({ uri: expectedUri });
+    expect(screen.queryByLabelText("Close")).toBeNull();
+  });
+
+  it("opens the same persisted object in the real fullscreen viewer and closes it", async () => {
+    const { screen, photo } = await openStoredImage();
+
+    fireEvent.press(photo);
+    const viewer = screen.UNSAFE_getByType(Modal);
+    expect(viewer.props.visible).toBe(true);
+    expect(within(viewer).UNSAFE_getByType(Image).props.source).toEqual({ uri: expectedUri });
+
+    fireEvent.press(within(viewer).getByLabelText("Close"));
+    expect(screen.queryByLabelText("Close")).toBeNull();
+    expect(within(screen.getByRole("imagebutton", { name: "Photo" })).UNSAFE_getByType(Image).props.source)
+      .toEqual({ uri: expectedUri });
   });
 });
 
