@@ -87,7 +87,7 @@ Q40–Q45 remain unanswered:
 - EditListing, AttachMedia, RemoveMedia and other owner mutations reject banned Listings. Sellers cannot currently correct a banned Listing through those paths.
 - BanListing accepts active only; UnbanListing restores banned to active. They do not preserve and restore a previous sold/archived status.
 - User suspension does not automatically ban or hide their Listings. Current restrictions on new contact/messages and marketplace mutations are distinct from public visibility.
-- Notice/appeal evidence gathering was interrupted at the handoff request and restarted after continuation. Do not treat it as a completed audit until the new findings are recorded.
+- Notice/appeal source audit was completed after continuation; findings are recorded below. No runtime verification was performed.
 
 Source entry points: apps/api/src/modules/listings/application/RemoveMedia.ts; RepublishListing.ts; EditListing.ts; apps/api/src/modules/admin/application/BanListing.ts; UnbanListing.ts; SuspendUser.ts. These findings describe inspected source, not live runtime verification.
 
@@ -137,3 +137,24 @@ The detailed acceptance records are in the linked issues. This abbreviated index
 Both prototypes are self-contained HTML under docs/prd/ui/prototypes. profile-identity-2026-10-04.prototype.html has an accepted interaction verdict on commit4fbd8db5; art/translations/native/accessibility remain unproven. admin-improvement-2026-10-04.prototype.html is a draft mock with sample data only. Browser walkthrough checks were performed, not production telemetry or authorization verification. Preserve the older prototype/cabinet-profile branch as separate broader coverage.
 
 This checkpoint branch is codex/prototype-decisions-2026-10-04. It is not intended to merge mock artifacts into production. No production code, deployment, invitations, purchase, automation or other Codex chat was changed. Two earlier agents were stopped when requested; one narrow read-only notices audit was started after the founder resumed. Another Codex chat owns implementation/native evidence. Do not message it without founder authorization.
+
+
+## Completed notice/appeal source audit after continuation
+
+- Reports show submission acknowledgement only. Public report history/resolution notification is explicitly outside current PRD65 scope. Admin action reasons remain internal and action use-cases have no notification delivery dependency.
+- PRD30 promises a generic account-suspension banner, but GetMe currently returns no suspension state and mobile Profile does not render it. Failed restricted actions provide generic error copy referring users to Support.
+- Owner detail can read a banned Listing; non-owner gets404. Mobile listing management has only active/sold/archived status filters and omits banned Listings. Direct detail has no dedicated ban/help notice or banned translation. Delete remains exposed and fails through the API ban guard.
+- Help currently provides email/phone only. No moderation-specific appeal case, prefilled decision reference, status tracking or response promise ships. Appeals via future Support remain planning scope.
+- Suspension changes User suspension fields only. Public feed/detail/seller reads do not hide the seller's active Listings, photos, price or phone. Listing Call has no suspension signal. Existing private messaging restrictions do not prevent someone using a visible phone outside the app.
+
+Source paths: apps/mobile/src/admin/components/ReportSheet.tsx:124; docs/prd/flows/65-admin-moderation.md:97 and106; apps/api/src/modules/identity/application/GetMe.ts:10; apps/mobile/app/profile.tsx:236; apps/mobile/app/listings/manage.tsx:45; apps/mobile/src/listings/components/ListingDetail.tsx; apps/mobile/app/help.tsx:73; apps/api/src/modules/identity/infrastructure/PrismaIdentityAdminRepository.ts:25. Governing intended behavior and shipped UI differ as described. No tests were run in this audit.
+
+## Next proposed batch Q52–Q56, not accepted
+
+- Q52: Public Listings require at least one usable photo. Staff removal must be permitted even for the final photo; hide a zero-photo Listing until correction. Prevent owner last-photo removal while public unless replaced in the same saved change.
+- Q53: Permit private correction submissions for a moderated Listing, with an operator approving restoration after checking the correction. Keep ordinary publication immediate. Uncorrectable fraud/unsafe offers use appeal, not automatic restoration.
+- Q54: Keep ordinary User suspension separate from Listing visibility, but give staff an explicit separately audited action to hide all currently public Listings when the seller poses a fraud/safety risk. Lifting suspension must not automatically republish hidden Listings.
+- Q55: Provide an owner-visible moderation notice with a safe public reason category, affected Listing/photo, required next step and Help/appeal entry. Keep reporter identity, private evidence and internal notes hidden. Delivery channel and exact copy follow later.
+- Q56: Founder checks urgent reports promptly during staffed hours and performs one daily ordinary-report/new-or-edited-Listing review during the small Ashgabat pilot. No mandatory prepublication approval or overnight response promise; later staffing thresholds remain pending.
+
+These are recommendations to present to the founder, not settled behavior. Exact restoration state, appeal timing, repeat abuse, evidence lifecycle and phase admission depend on the answers.
