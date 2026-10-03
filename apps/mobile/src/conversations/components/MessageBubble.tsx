@@ -291,7 +291,7 @@ export function MessageBubble({
             : isMine
               ? "bg-primary rounded-br-md"
               : "bg-muted rounded-bl-md"
-        } ${isPending ? "opacity-70" : ""}`}
+        } ${isPending ? "opacity-70" : isReported && !isDeleted ? "opacity-60" : ""}`}
       >
         <Pressable
           onLongPress={longPressAction}
