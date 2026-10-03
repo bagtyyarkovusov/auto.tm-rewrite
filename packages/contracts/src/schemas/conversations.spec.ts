@@ -10,6 +10,7 @@ import {
   SendMessageRequestSchema,
   PresignChatAttachmentRequestSchema,
   PresignChatAttachmentResponseSchema,
+  UnreadCountResponseSchema,
 } from "./conversations";
 
 describe("PostRefMessageMetadataSchema", () => {
@@ -319,4 +320,20 @@ describe("ConversationIdParamSchema", () => {
       false,
     );
   });
+});
+
+describe("UnreadCountResponseSchema", () => {
+  it("accepts a whole, non-negative count", () => {
+    expect(UnreadCountResponseSchema.parse({ count: 0 })).toEqual({ count: 0 });
+    expect(UnreadCountResponseSchema.parse({ count: 120 })).toEqual({
+      count: 120,
+    });
+  });
+
+  it.each([{ count: -1 }, { count: 1.5 }, { count: "3" }, {}])(
+    "rejects %j",
+    (body) => {
+      expect(UnreadCountResponseSchema.safeParse(body).success).toBe(false);
+    },
+  );
 });

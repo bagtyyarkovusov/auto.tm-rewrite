@@ -87,6 +87,13 @@ export interface ConversationRepository {
     userId: string,
     conversationId: string,
   ): Promise<number>;
+
+  /**
+   * Unread Messages across every Conversation the User is in, in one query.
+   * Counts what `countUnreadMessages` counts for each Conversation, muted ones
+   * included, so the total equals the sum of the list's `unreadCount`.
+   */
+  countAllUnreadMessages(userId: string): Promise<number>;
 }
 
 export const CONVERSATION_REPOSITORY = Symbol("ConversationRepository");
