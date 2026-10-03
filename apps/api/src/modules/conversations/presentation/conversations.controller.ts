@@ -22,6 +22,7 @@ import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort
 import { Public } from "../../../common/public.decorator";
 import { OpenConversation } from "../application/OpenConversation";
 import { ListMyConversations } from "../application/ListMyConversations";
+import { CountMyUnreadMessages } from "../application/CountMyUnreadMessages";
 import { GetConversation } from "../application/GetConversation";
 import { ListMessages } from "../application/ListMessages";
 import { SendTextMessage } from "../application/SendTextMessage";
@@ -65,6 +66,8 @@ export class ConversationsController {
     private readonly deleteMessageUC: DeleteMessage,
     @Inject(LISTINGS_READ_PORT)
     private readonly listings: ListingsReadPort,
+    @Inject(CountMyUnreadMessages)
+    private readonly countMyUnreadMessagesUC: CountMyUnreadMessages,
   ) {}
 
   @Public()
@@ -137,6 +140,13 @@ export class ConversationsController {
       ),
       nextCursor: result.nextCursor,
     };
+  }
+
+  @Get("unread-count")
+  async unreadCount(
+    @Req() req: FastifyRequest,
+  ): Promise<ConversationsSchemas.UnreadCountResponse> {
+    return this.countMyUnreadMessagesUC.execute({ userId: this.userId(req) });
   }
 
   // Declared after `ping` and the collection routes: `:id` must never claim them.
