@@ -31,6 +31,7 @@ import {
   seedPresignedPhotos,
   seedSuiteCatalog,
 } from "../../../../test/helpers/e2eSuite";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("conversation-unread-count");
 type SuiteUser = "seller-1" | "buyer-1" | "buyer-2" | "loner";
@@ -54,6 +55,7 @@ describe("Conversation unread count e2e", () => {
           validate: (cfg) => EnvSchema.parse(cfg),
         }),
         EventEmitterModule.forRoot(),
+        bullTestRoot(),
         IdentityModule,
         ListingsModule,
         ConversationsModule,
