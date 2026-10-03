@@ -44,6 +44,7 @@ import { MessageList } from "../../src/conversations/components/MessageList";
 import type { ComposerAttachment } from "../../src/conversations/components/MessageComposer";
 import { ImagePreviewModal } from "../../src/conversations/components/ImagePreviewModal";
 import { useConversationCatalogMaps } from "../../src/conversations/components/useConversationCatalogMaps";
+import { showQuickReplies } from "../../src/conversations/showQuickReplies";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
 import { outgoingStatus } from "../../src/conversations/outgoingStatus";
 import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
@@ -745,6 +746,16 @@ export default function ConversationDetailScreen() {
     setReportedMessageIds((prev) => new Set(prev).add(messageId));
   }, []);
 
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = messagesQuery;
+  const loadOlderMessages = useCallback(() => {
+    // After a failure the inline row changes the list height and re-fires onEndReached near
+    // the top; only Retry may fetch again, or a failing page loops.
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+  const retryOlderMessages = useCallback(() => {
+    void fetchNextPage();
+  }, [fetchNextPage]);
+
   const handleSignIn = useCallback(() => {
     useAuthIntentStore.getState().requireSignIn(router, {
       returnTo: conversationHref(conversationId),
@@ -756,7 +767,8 @@ export default function ConversationDetailScreen() {
   }, [router]);
 
   const isLoading = messagesQuery.isPending;
-  const isError = messagesQuery.isError;
+  // A failed older page keeps the loaded pages; only fail the screen with nothing to show.
+  const isError = messagesQuery.isError && !messagesQuery.data;
   // A Conversation that failed to load, with nothing cached to show instead.
   const conversationFailed = conversationQuery.isError && !conversation;
 
@@ -844,6 +856,10 @@ export default function ConversationDetailScreen() {
             onPostRefPress={(listingId) =>
               router.push(`/(public)/listings/${listingId}`)
             }
+            onLoadOlder={loadOlderMessages}
+            loadingOlder={isFetchingNextPage}
+            olderFailed={isFetchNextPageError && !isFetchingNextPage}
+            onRetryOlder={retryOlderMessages}
           />
         ) : null}
       </View>
@@ -859,12 +875,14 @@ export default function ConversationDetailScreen() {
                 onSend: handleSend,
                 onSendImage: handleSendImage,
                 disabled: blockUser.isPending || unblockUser.isPending,
-                showQuickReplies:
-                  !isLoading &&
-                  !isError &&
-                  !conversationFailed &&
-                  !isBlocked &&
-                  allMessages.length === 0,
+                showQuickReplies: showQuickReplies({
+                  conversation,
+                  messages: allMessages,
+                  hasOlderMessages: messagesQuery.hasNextPage,
+                  loading: isLoading,
+                  failed: isError || conversationFailed,
+                  blocked: isBlocked,
+                }),
                 onTyping: signalTyping,
                 onStopTyping: stopTyping,
                 conversationId,
