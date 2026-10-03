@@ -10,7 +10,7 @@ const fixture = vi.hoisted(() => {
   const photos = { photos: [{ photoId: id, key: "photo.jpg", sortOrder: 0 }] };
   const price = { priceAmount: 100000, priceCurrency: "TMT" };
   const place = { description: "One owner", regionId: id, cityId: id };
-  const contact = { allowCalls: true, allowChat: true };
+  const contact = { contactPhone: "+99365000000", allowCalls: true, allowChat: true };
   return {
     id,
     payloads: {

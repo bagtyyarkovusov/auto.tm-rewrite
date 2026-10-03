@@ -166,7 +166,7 @@ describe("ValidateDraftStep", () => {
       draftId: "draft-1",
       userId: "user-1",
       step: "contact",
-      payload: { allowCalls: false, allowChat: true },
+      payload: { contactPhone: "+99361234567", allowCalls: false, allowChat: true },
     });
 
     expect(result.valid).toBe(true);

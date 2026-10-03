@@ -34,7 +34,7 @@ describe("VIN field", () => {
       expect(input.props.accessibilityState).toEqual({ disabled: true });
       expect(input.props.editable).toBe(false);
       expect(input.props.value).toBe(vin);
-      expect(screen.root.findAll((node) => node.type === "Icon" && node.props.name === "Lock"))
+      expect(screen.root.findAll((node: { type: unknown; props: { name?: string } }) => node.type === "Icon" && node.props.name === "Lock"))
         .toHaveLength(1);
       expect(screen.queryByText(vinHelper[locale])).toBeNull();
 
@@ -55,7 +55,7 @@ describe("VIN field", () => {
       expect(screen.getByText(vinHelper[locale])).toBeTruthy();
       expect(screen.getByHintText(vinHelper[locale])).toBe(input);
       expect(screen.queryByText(lockedHelper[locale])).toBeNull();
-      expect(screen.root.findAll((node) => node.type === "Icon" && node.props.name === "Lock"))
+      expect(screen.root.findAll((node: { type: unknown; props: { name?: string } }) => node.type === "Icon" && node.props.name === "Lock"))
         .toHaveLength(0);
 
       fireEvent.changeText(input, vin);
