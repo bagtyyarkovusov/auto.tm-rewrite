@@ -884,8 +884,9 @@ export default function ConversationDetailScreen() {
             onPostRefPress={(listingId) =>
               router.push(`/(public)/listings/${listingId}`)
             }
+            // "You can keep talking" only holds while the viewer can send.
             afterLast={
-              listingCard && (
+              listingCard && !cannotSend && (
                 <ListingClosedBanner
                   listing={listingCard}
                   brandName={brandName}

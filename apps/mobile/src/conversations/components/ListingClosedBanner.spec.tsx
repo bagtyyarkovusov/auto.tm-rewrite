@@ -16,9 +16,9 @@ describe("ListingClosedBanner", () => {
       screen.getByText("This car is sold. You can keep talking, but the Listing is no longer available."),
     ).toBeTruthy();
     const link = screen.getByRole("button", { name: "See other Toyota Camry" });
-    expect(link.props.className).toContain("min-h-11");
+    expect(link.props.className).toMatch(/\bh-11\b/);
     fireEvent.press(link);
-    expect(routerMock.push).toHaveBeenCalledWith({
+    expect(routerMock.navigate).toHaveBeenCalledWith({
       pathname: "/(tabs)/(search)/results",
       params: { brandId: BRAND_ID, modelId: MODEL_ID },
     });

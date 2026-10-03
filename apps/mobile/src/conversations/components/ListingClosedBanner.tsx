@@ -1,9 +1,10 @@
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { router } from "expo-router";
-import { Info } from "lucide-react-native";
+import { ChevronRight, Info } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { Enums } from "@auto-tm/contracts";
 
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import {
@@ -50,14 +51,15 @@ export function ListingClosedBanner({
         </Text>
       </View>
       {linkLabel && (
-        <Pressable
-          onPress={() => router.push(similarListingsHref(listing))}
-          className="min-h-11 justify-center active:opacity-70"
-          accessibilityRole="button"
+        <Button
+          variant="link"
+          onPress={() => router.navigate(similarListingsHref(listing))}
+          className="h-11 self-start px-0"
           accessibilityLabel={linkLabel}
         >
-          <Text className="text-sm font-medium text-primary">{linkLabel}</Text>
-        </Pressable>
+          <Text>{linkLabel}</Text>
+          <Icon as={ChevronRight} className="size-4 text-info-600 dark:text-info-400" />
+        </Button>
       )}
     </View>
   );

@@ -44,7 +44,8 @@ describe("ConversationListingCard", () => {
     expect(screen.getByText("Sold")).toBeTruthy();
     expect(screen.getByTestId("conversation-listing-thumbnail").props.className).toContain("opacity-60");
     expect(screen.getByText("285,000 TMT").props.className).toContain("text-muted-foreground");
-    fireEvent.press(screen.getByRole("button", { name: /^Open:/ }));
+    // The label replaces the children for screen readers, so it carries the badge.
+    fireEvent.press(screen.getByRole("button", { name: "Open: 2018 Toyota Camry, 285,000 TMT, Sold" }));
     expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${listing.id}`);
   });
 
@@ -53,6 +54,7 @@ describe("ConversationListingCard", () => {
       <ConversationListingCard listing={{ ...listing, status: "archived" }} brandName="Toyota" modelName="Camry" />,
     );
     expect(screen.getByText("Removed from sale")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open: 2018 Toyota Camry, 285,000 TMT, Removed from sale" })).toBeTruthy();
     expect(screen.getByTestId("conversation-listing-thumbnail").props.className).toContain("opacity-60");
   });
 

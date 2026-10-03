@@ -85,7 +85,7 @@ export function ConversationListingCard(props: ConversationListingCardProps) {
         : {
             onPress: () => router.push(`/(public)/listings/${listing.id}`),
             accessibilityRole: "button" as const,
-            accessibilityLabel: `${t("open")}: ${[title, priceText].filter(Boolean).join(", ")}`,
+            accessibilityLabel: `${t("open")}: ${[title, priceText, closedKey && t(closedKey)].filter(Boolean).join(", ")}`,
           })}
       className={`flex-row items-center gap-3 px-4 py-2.5 border-b border-border${unavailable ? "" : " active:bg-muted/50"}`}
     >

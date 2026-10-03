@@ -74,6 +74,7 @@ export function ConversationFooter({
       <View
         className="px-4 py-3.5 border-t border-border bg-muted"
         testID="conversation-closed-footer"
+        accessibilityLiveRegion="polite"
       >
         <Text className="text-center text-sm text-muted-foreground">
           {tConv(CLOSED_LINE_KEYS[sendRestriction])}

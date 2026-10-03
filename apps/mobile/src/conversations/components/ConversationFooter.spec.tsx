@@ -109,6 +109,8 @@ describe("ConversationFooter", () => {
       );
 
       expect(screen.getByText(line)).toBeTruthy();
+      // Announced when a refused send swaps the composer for this line.
+      expect(screen.getByTestId("conversation-closed-footer").props.accessibilityLiveRegion).toBe("polite");
       expect(screen.queryByPlaceholderText("Message")).toBeNull();
       expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();

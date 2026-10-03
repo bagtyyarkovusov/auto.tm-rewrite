@@ -797,7 +797,7 @@ describe("Conversation about a closed Listing", () => {
       screen.getByText("This car is sold. You can keep talking, but the Listing is no longer available."),
     ).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "See other Toyota Camry" }));
-    expect(routerMock.push).toHaveBeenCalledWith({
+    expect(routerMock.navigate).toHaveBeenCalledWith({
       pathname: "/(tabs)/(search)/results",
       params: { brandId: "00000000-0000-4000-8000-0000000000d1", modelId: "00000000-0000-4000-8000-0000000000d2" },
     });
@@ -904,5 +904,46 @@ describe("Conversation about a closed Listing", () => {
 
     expect(await screen.findByText("The seller has turned off messages for this Listing")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  });
+
+  it("reloads the Conversation when the HTTP fallback send is refused", async () => {
+    let restricted = false;
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () =>
+        conversation({ sendRestriction: restricted ? "participant_unavailable" : null }),
+    });
+    state.socket.sendTextMessage.mockResolvedValue({ ok: false, code: "NOT_CONNECTED", message: "Offline" });
+    state.mutation.mutate.mockImplementation((_input, options?: { onError?: (error: unknown) => void }) => {
+      restricted = true;
+      options?.onError?.(new ApiError("FORBIDDEN", 403, "Forbidden"));
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    await screen.findByText("Merdan");
+    fireEvent.changeText(screen.getByPlaceholderText("Message"), "Hello");
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Send message" }));
+    });
+
+    expect(state.mutation.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Hello" }),
+      expect.anything(),
+    );
+    expect(await screen.findByText("You can't send messages in this Conversation")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  });
+
+  it.each([
+    ["chat is off", { sendRestriction: "chat_disabled" as const }],
+    ["the viewer blocked the participant", { sendRestriction: "blocked_by_me" as const, blockedByMe: true }],
+  ])("drops the keep-talking banner on a sold Listing when %s", async (_why, change) => {
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () => ({ ...withListing("sold"), ...change }),
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Sold")).toBeTruthy();
+    expect(screen.queryByText(/You can keep talking/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "See other Toyota Camry" })).toBeNull();
   });
 });
