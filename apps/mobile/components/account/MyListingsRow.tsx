@@ -16,7 +16,7 @@ import { MenuRow } from "@/components/account/MenuRow";
 export function MyListingsRow() {
   const { t } = useTranslation("account");
   const { userId } = useAuth();
-  const { data, refetch } = useMyListingCounts(userId);
+  const { data, isError, isFetching, refetch } = useMyListingCounts(userId);
 
   // Cabinet is a tab and stays mounted, so refresh when it comes back into
   // view. `cancelRefetch: false` joins the mount request instead of repeating it.
@@ -30,7 +30,7 @@ export function MyListingsRow() {
     <MenuRow
       icon={List}
       label={t("myListings")}
-      value={data?.total ? String(data.total) : undefined}
+      value={userId && !isError && !isFetching && data?.total ? String(data.total) : undefined}
       chevron
       onPress={() => router.push("/listings/manage")}
     />
