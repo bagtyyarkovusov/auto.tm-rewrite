@@ -82,7 +82,7 @@ describe("Help", () => {
 
 describe("support contacts", () => {
   // Structural check: the values live in one file so a change cannot miss a copy.
-  it("exist only in src/config/supportContacts.ts, and only Cabinet opens Help", () => {
+  it("exist only in src/config/supportContacts.ts, and only Cabinet and the code limit entry open Help", () => {
     const root = resolve(__dirname, "../..");
     const skip = new Set(["node_modules", ".expo", "dist", "ios", "android"]);
     const files: string[] = [];
@@ -106,11 +106,11 @@ describe("support contacts", () => {
 
     expect(holders).toEqual(["src/config/supportContacts.ts"]);
 
-    // Only Cabinet opens Help. The approved Sign-in Code limit entry (#526) joins this list.
+    // Cabinet opens Help, and so does the approved Sign-in Code limit entry (#526) through HELP_HREF.
     const linkers = files
       .filter((file) => !/\.spec\.tsx?$/.test(file))
       .filter((file) => /["'`]\/help["'`]/.test(readFileSync(file, "utf8")))
       .map((file) => relative(root, file));
-    expect(linkers).toEqual(["app/(tabs)/services.tsx"]);
+    expect(linkers).toEqual(["app/(tabs)/services.tsx", "src/navigation/helpHref.ts"]);
   });
 });
