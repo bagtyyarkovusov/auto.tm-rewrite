@@ -13,7 +13,7 @@ Mode: light + dark
 
 ## Purpose
 
-Cabinet is a plain menu in Auto.ru's manner. Rows never wait for the network, except the profile row, which waits for `/me`, and the My listings total. There is no Settings screen, no gear and no "List a car" row.
+Cabinet is a plain menu in Auto.ru's manner. Rows never wait for the network, except the profile row, which waits for `/me`, and the My listings total once it ships (see [Current app differs](#current-app-differs)). There is no Settings screen, no gear and no "List a car" row.
 
 ## Layout
 
@@ -30,16 +30,31 @@ Cabinet is a plain menu in Auto.ru's manner. Rows never wait for the network, ex
 │ ▣  Notifications                      >    │  signed in only
 │░░░░░░░░░░░░░░░░ gap 8px ░░░░░░░░░░░░░░░░░░░│
 │ ▣  Language                    English     │
+│ ── divider ──────────────────────────────  │
 │ ▣  Theme                        System     │
+│ ── divider ──────────────────────────────  │
 │ ▣  Help                                    │
+│ ── divider ──────────────────────────────  │
 │ ▣  Terms of Service                        │
+│ ── divider ──────────────────────────────  │
 │ ▣  Privacy Policy                          │
+│ ── divider ──────────────────────────────  │
 │ ▣  Posting rules                           │
+│ ── divider ──────────────────────────────  │
 │ ▣  About the app                           │
 └────────────────────────────────────────────┘
 ```
 
+Every row within a group is separated by a divider; groups are separated by a gap.
+
 Signed out, the large row reads "Sign in" / "By phone or email" with an empty avatar, and the My listings and Notifications group is absent.
+
+## Current app differs
+
+This page specifies the target set by the information architecture. As of `main` at `8cc467a`, `apps/mobile/app/(tabs)/services.tsx` differs in two ways:
+
+- **Row order:** the app lists Notifications before My listings. The information architecture puts My listings first. The app has not yet been changed to match.
+- **My listings total:** the app shows the row without a number. The total comes from [#524](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/524) (open PR #576); until it merges, the row has no value.
 
 ## Token map
 
@@ -66,7 +81,7 @@ Signed out, the large row reads "Sign in" / "By phone or email" with an empty av
 ### Icons
 - Row icon: Lucide, `size-6 text-muted-foreground` — `List` (My listings), `Bell` (Notifications), `Globe` (Language), `Contrast` (Theme), `CircleHelp` (Help), `ShieldCheck` (Terms of Service), `FileText` (Privacy Policy), `ScrollText` (Posting rules), `Info` (About the app)
 - Large row: `Avatar` `size-12`; fallback is the name's initial or a `User` icon
-- Chevron: `ChevronRight`, `size-[18px] text-muted-foreground opacity-60`, on rows that open an app screen
+- Chevron: `ChevronRight`, `size-[18px] text-muted-foreground opacity-60`, on the large row, My listings and Notifications only. Language, Theme, Help, the legal rows and About have none
 
 ## Component shape
 
@@ -90,7 +105,7 @@ Only the large row loads: a `size-12 rounded-full` skeleton with two text bars (
 Only the large row fails: avatar, "Something went wrong" in `text-muted-foreground`, and an outline `Button` `size="sm"` `min-h-11` reading Retry. Every other row stays visible and usable.
 
 ### My listings total
-The value shows the total of the User's Listings and drafts when it is known and above zero; otherwise the row has no value.
+The value shows the total of the User's Listings and drafts when it is known and above zero; otherwise the row has no value. Not built yet: see [Current app differs](#current-app-differs).
 
 ### Empty
 N/A — the menu is static.

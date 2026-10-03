@@ -54,14 +54,21 @@ Signed in:
 └────────────────────────────────────────────┘
 ```
 
+## Current app differs
+
+This page specifies the target set by the information architecture. As of `main` at `8cc467a`, `apps/mobile/app/(tabs)/services.tsx` differs in two ways:
+
+- **Row order:** the app lists Notifications before My listings. The information architecture puts My listings first. The app has not yet been changed to match.
+- **My listings total:** the app shows the row without a number. The total comes from [#524](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/524) (open PR #576); until it merges, the row has no value.
+
 ## Numbered content blocks
 
 1. **Screen title** — "Cabinet".
 2. **Sign in row** (signed out) — large row with an empty avatar, "Sign in" and "By phone or email". Opens the sign-in flow and returns to Cabinet.
 3. **Profile row** (signed in) — large row with the avatar, the display name and the masked Sign-in Method. Opens Profile. Sign-in Methods, Log out and Delete account live on Profile, not on Cabinet ([30 — Identity](../../features/30-identity.md#profile-screens)).
-4. **My listings** (signed in) — one row with the total of the User's Listings and drafts, or no number when the total is unknown or zero. Opens My listings (Active, Drafts, Archive).
+4. **My listings** (signed in) — one row with the total of the User's Listings and drafts, or no number when the total is unknown or zero. Opens My listings (Active, Drafts, Archive). The total is not built yet; see [Current app differs](#current-app-differs).
 5. **Notifications** (signed in) — opens the release notification screen ([36 — Notifications](../../features/36-notifications.md#preferences-screen)).
-6. **Language** — shows the current language; opens a bottom-sheet picker (RU, TK, EN).
+6. **Language** — shows the current language; opens a bottom-sheet picker (English, Русский, Türkmençe).
 7. **Theme** — shows the current theme; opens a bottom-sheet picker (Light, Dark, System).
 8. **Help** — opens Help: an email address and a phone number, signed in or out. No support chat.
 9. **Terms of Service**, **Privacy Policy**, **Posting rules** — open the localized web legal pages ([83 — Legal](../../ops/83-legal.md#where-they-live)).
@@ -82,7 +89,7 @@ Signed in:
 
 - **Profile loading**: the profile row shows a skeleton; every other row stays visible and usable.
 - **Profile failed**: the profile row shows an error and Retry; every other row stays visible and usable.
-- **My listings with a number / without one**: the row shows the total when it is known and above zero.
+- **My listings with a number / without one**: the row shows the total when it is known and above zero (target; see [Current app differs](#current-app-differs)).
 - **Signed out**: blocks 2 and 6–10 only.
 - **Offline**: rows stay visible; the screens they open handle offline.
 
