@@ -861,6 +861,16 @@ describe("Conversation Message actions", () => {
     expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
   });
 
+  it("shows Copied below the Conversation header at the height it is drawn", async () => {
+    const screen = await openPeerSheet();
+    fireEvent(screen.getByRole("button", { name: "Go back" }), "layout", { nativeEvent: { layout: { height: 96 } } });
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Copy" }));
+    });
+    expect(state.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "Copied", topClearance: 96 }));
+  });
+
   it("opens the report reasons for the Message, then shows Reported and offers Copy only", async () => {
     const screen = await openPeerSheet();
 
