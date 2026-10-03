@@ -340,7 +340,7 @@ describe("PublishListing", () => {
 
   it("accepts missing mileageKm when condition is new", async () => {
     const { mileageKm: _, ...payloadNew } = validPayload;
-    seedDraft(draftRepo, { ...payloadNew, condition: "new" });
+    seedDraft(draftRepo, { ...payloadNew, condition: "new", conditionDisclosure: { damaged: false } });
 
     const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
     const result = await uc.execute({ draftId: "draft-1", userId: "user-1" });

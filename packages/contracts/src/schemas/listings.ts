@@ -582,6 +582,8 @@ export const ListingsErrorCode = {
   ExchangeRateMissing: "EXCHANGE_RATE_MISSING",
   ContactMethodRequired: "CONTACT_METHOD_REQUIRED",
   DamagedRequired: "DAMAGED_REQUIRED",
+  /** A New Listing cannot be damaged (ADR-0080). */
+  DamagedNotAllowedForNew: "DAMAGED_NOT_ALLOWED_FOR_NEW",
   ListingDeleted: "LISTING_DELETED",
   ListingNotFound: "LISTING_NOT_FOUND",
   MediaLimitExceeded: "MEDIA_LIMIT_EXCEEDED",

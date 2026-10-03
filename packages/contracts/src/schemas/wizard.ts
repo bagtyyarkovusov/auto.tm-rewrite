@@ -69,6 +69,7 @@ const WIZARD_ERROR_NAMES = [
   "enginePowerNotPositive",
   "mileageRequiredForUsed",
   "damagedRequired",
+  "damagedNotForNew",
   "priceRequired",
   "priceNotPositive",
   "priceTooLarge",
@@ -151,8 +152,13 @@ export const StepSpecsSchema = z
     },
     { message: KEY.mileageRequiredForUsed, path: ["mileageKm"] },
   )
-  .refine((data) => data.conditionDisclosure?.damaged !== undefined, {
+  // ADR-0080: only a Used car is asked Damaged; a New car is never damaged.
+  .refine((data) => data.condition === "new" || data.conditionDisclosure?.damaged !== undefined, {
     message: KEY.damagedRequired,
+    path: ["conditionDisclosure", "damaged"],
+  })
+  .refine((data) => data.condition !== "new" || data.conditionDisclosure?.damaged !== true, {
+    message: KEY.damagedNotForNew,
     path: ["conditionDisclosure", "damaged"],
   });
 export type StepSpecsInput = z.infer<typeof StepSpecsSchema>;

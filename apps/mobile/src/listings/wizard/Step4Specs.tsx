@@ -11,7 +11,10 @@ import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 
-import { conditionDisclosureFieldErrors } from "./conditionDisclosureErrors";
+import {
+  conditionDisclosureFieldErrors,
+  type ConditionDisclosureFieldErrors,
+} from "./conditionDisclosureErrors";
 
 import { cn } from "@/lib/utils";
 import {
@@ -392,11 +395,18 @@ export default function Step4Specs({
 }: Step4SpecsProps) {
   const { t } = useTranslation();
   const specs = useSpecsStep(payload);
+  const disclosureErrors = conditionDisclosureFieldErrors(
+    fieldErrors,
+    payload.conditionDisclosure,
+    specs.condition,
+  );
 
   return (
     <View className="gap-5 py-5">
       <ConditionToggle
         condition={specs.condition}
+        disclosure={payload.conditionDisclosure}
+        error={specs.condition === Enums.ListingCondition.New ? disclosureErrors.damaged : undefined}
         disabled={disabled}
         onChange={onChange}
       />
@@ -459,8 +469,9 @@ export default function Step4Specs({
       {/* Condition disclosure group */}
       <ConditionDisclosureSection
         payload={payload}
+        condition={specs.condition}
+        errors={disclosureErrors}
         onChange={onChange}
-        fieldErrors={fieldErrors}
         disabled={disabled}
       />
 
@@ -471,10 +482,14 @@ export default function Step4Specs({
 
 function ConditionToggle({
   condition,
+  disclosure,
+  error,
   disabled,
   onChange,
 }: {
   condition: Enums.ListingCondition;
+  disclosure: ListingsSchemas.DraftConditionDisclosure | undefined;
+  error?: string;
   disabled: boolean;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
 }) {
@@ -485,9 +500,11 @@ function ConditionToggle({
       <View className="flex-row rounded-lg bg-muted p-1">
         <Pressable
           onPress={() => {
+            // ADR-0080: a New car is not asked Damaged and stores not damaged.
             onChange({
               condition: Enums.ListingCondition.New,
               mileageKm: undefined,
+              conditionDisclosure: { ...disclosure, damaged: false },
             });
           }}
           disabled={disabled}
@@ -513,7 +530,14 @@ function ConditionToggle({
         </Pressable>
         <Pressable
           onPress={() => {
-            onChange({ condition: Enums.ListingCondition.Used });
+            if (condition !== Enums.ListingCondition.New) {
+              onChange({ condition: Enums.ListingCondition.Used });
+              return;
+            }
+            // Clear the answer New stored, so a Used car is never published
+            // on an answer the seller did not give (ADR-0080).
+            const { damaged: _damaged, ...rest } = disclosure ?? {};
+            onChange({ condition: Enums.ListingCondition.Used, conditionDisclosure: rest });
           }}
           disabled={disabled}
           accessibilityRole="button"
@@ -537,6 +561,11 @@ function ConditionToggle({
           </Text>
         </Pressable>
       </View>
+      {error && (
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -798,24 +827,28 @@ function EnginePowerInput({
 
 function ConditionDisclosureSection({
   payload,
+  condition,
+  errors,
   onChange,
-  fieldErrors,
   disabled,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
+  condition: Enums.ListingCondition;
+  errors: ConditionDisclosureFieldErrors;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
-  fieldErrors?: Record<string, string>;
   disabled: boolean;
 }) {
   const { t } = useTranslation();
   const disclosure = payload.conditionDisclosure;
-  const errors = conditionDisclosureFieldErrors(fieldErrors, disclosure);
+  const isNew = condition === Enums.ListingCondition.New;
 
   const updateDisclosure = useCallback(
     (patch: Partial<ListingsSchemas.DraftConditionDisclosure>) => {
-      onChange({ conditionDisclosure: { ...disclosure, ...patch } });
+      onChange({
+        conditionDisclosure: { ...disclosure, ...(isNew && { damaged: false }), ...patch },
+      });
     },
-    [disclosure, onChange],
+    [disclosure, isNew, onChange],
   );
 
   return (
@@ -824,43 +857,45 @@ function ConditionDisclosureSection({
         {t("conditionDisclosure")}
       </Text>
 
-      <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">{t("damaged")}</Text>
-        <View className="flex-row rounded-lg bg-muted p-1" accessibilityRole="radiogroup">
-          {([true, false] as const).map((answer) => {
-            const selected = disclosure?.damaged === answer;
-            return (
-              <Pressable
-                key={String(answer)}
-                onPress={() => updateDisclosure({ damaged: answer })}
-                disabled={disabled}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                accessibilityLabel={`${t("damaged")}: ${answer ? t("yes") : t("no")}`}
-                className={cn(
-                  "flex-1 items-center justify-center rounded-md py-2.5",
-                  selected && "bg-card",
-                  disabled && "opacity-50",
-                )}
-              >
-                <Text
+      {!isNew && (
+        <View className="gap-1.5">
+          <Text className="text-sm font-medium text-foreground">{t("damaged")}</Text>
+          <View className="flex-row rounded-lg bg-muted p-1" accessibilityRole="radiogroup">
+            {([true, false] as const).map((answer) => {
+              const selected = disclosure?.damaged === answer;
+              return (
+                <Pressable
+                  key={String(answer)}
+                  onPress={() => updateDisclosure({ damaged: answer })}
+                  disabled={disabled}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  accessibilityLabel={`${t("damaged")}: ${answer ? t("yes") : t("no")}`}
                   className={cn(
-                    "text-sm font-medium",
-                    selected ? "text-foreground" : "text-muted-foreground",
+                    "flex-1 items-center justify-center rounded-md py-2.5",
+                    selected && "bg-card",
+                    disabled && "opacity-50",
                   )}
                 >
-                  {answer ? t("yes") : t("no")}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    className={cn(
+                      "text-sm font-medium",
+                      selected ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {answer ? t("yes") : t("no")}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {errors.damaged && (
+            <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+              {errors.damaged}
+            </Text>
+          )}
         </View>
-        {errors.damaged && (
-          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-            {errors.damaged}
-          </Text>
-        )}
-      </View>
+      )}
 
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">

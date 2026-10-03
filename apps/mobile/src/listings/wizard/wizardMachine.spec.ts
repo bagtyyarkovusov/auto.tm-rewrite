@@ -115,7 +115,8 @@ describe("INIT", () => {
       entryStep: "specs",
       payload: {
         validatedSteps: ["vin", "photos", "vehicle"],
-        condition: "new",
+        condition: "used",
+        mileageKm: 50000,
         conditionDisclosure: { knownIssuesText: "Rust" },
       },
     });
