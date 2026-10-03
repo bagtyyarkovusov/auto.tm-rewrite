@@ -5,7 +5,7 @@ import {
   Pressable,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ChevronLeft, List } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
@@ -32,6 +32,12 @@ import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { ErrorState } from "@/components/ErrorState";
 
 type ManageTab = "active" | "sold" | "archived" | "drafts";
+
+const MANAGE_TABS: readonly ManageTab[] = ["active", "sold", "archived", "drafts"];
+
+function isManageTab(value: unknown): value is ManageTab {
+  return MANAGE_TABS.includes(value as ManageTab);
+}
 
 function useManageTabs(t: (key: string) => string): { key: ManageTab; label: string }[] {
   return [
@@ -157,7 +163,9 @@ function SegmentedTabs({
 export default function ManageListingsScreen() {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState<ManageTab>("active");
+  // `tab` opens a given tab, such as Drafts from the Sell tab.
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<ManageTab>(isManageTab(tab) ? tab : "active");
   const [showSignIn, setShowSignIn] = useState(false);
   const goBack = useSafeBack("/(tabs)/sell");
 
