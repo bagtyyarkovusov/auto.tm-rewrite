@@ -1,4 +1,4 @@
-import type { ListingsSchemas } from "@auto-tm/contracts";
+import type { Enums, ListingsSchemas } from "@auto-tm/contracts";
 
 export interface ConditionDisclosureFieldErrors {
   damaged?: string;
@@ -11,8 +11,9 @@ export interface ConditionDisclosureFieldErrors {
  *
  * `validateStep` keys errors by the top-level field only, so both questions
  * report under `conditionDisclosure`. While Damaged is unanswered, the missing
- * answer is the error to show, under the question. Once it is answered, any
- * remaining disclosure error can only come from Known issues.
+ * answer is the error to show, under the question. A New car answered Yes
+ * breaks the Damaged rule too (ADR-0080). Otherwise any remaining disclosure
+ * error can only come from Known issues.
  *
  * Assumes Known issues is at most 1000 characters, enforced by the input's
  * maxLength and server schemas. Otherwise Zod may report too_big before the
@@ -21,8 +22,11 @@ export interface ConditionDisclosureFieldErrors {
 export function conditionDisclosureFieldErrors(
   fieldErrors: Record<string, string> | undefined,
   disclosure: ListingsSchemas.DraftConditionDisclosure | undefined,
+  condition: Enums.ListingCondition,
 ): ConditionDisclosureFieldErrors {
   const error = fieldErrors?.conditionDisclosure;
   if (!error) return {};
-  return disclosure?.damaged === undefined ? { damaged: error } : { knownIssuesText: error };
+  const damagedError =
+    disclosure?.damaged === undefined || (condition === "new" && disclosure.damaged);
+  return damagedError ? { damaged: error } : { knownIssuesText: error };
 }

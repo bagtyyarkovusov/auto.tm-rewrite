@@ -8,6 +8,7 @@ import {
 import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
+import { resolveDamagedAnswer } from "../domain/damagedAnswer";
 import { DomainError, LISTING_ERROR_CODES, LOCKED_FIELDS } from "../domain/types";
 import type { ConditionDisclosure } from "../domain/types";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -123,11 +124,16 @@ export class EditListing {
       existing.conditionDisclosure,
       patch.conditionDisclosure,
     );
-    // ADR-0052: a Listing keeps a Damaged answer through every edit.
-    if (nextConditionDisclosure?.damaged === undefined) {
+    // ADR-0052 and ADR-0080: a Used Listing keeps a Damaged answer through
+    // every edit; a New Listing stores not damaged.
+    const damagedAnswer = resolveDamagedAnswer(
+      patch.condition ?? existing.condition,
+      nextConditionDisclosure?.damaged,
+    );
+    if (!damagedAnswer.ok) {
       throw new BadRequestException({
-        code: LISTING_ERROR_CODES.DAMAGED_REQUIRED,
-        message: "Answer whether the car is damaged or needs repair.",
+        code: damagedAnswer.code,
+        message: damagedAnswer.message,
         details: { field: "conditionDisclosure.damaged" },
       });
     }
@@ -187,8 +193,8 @@ export class EditListing {
       ...(patch.acceptsExchange !== undefined && { acceptsExchange: patch.acceptsExchange }),
       ...(patch.installmentAvailable !== undefined && { installmentAvailable: patch.installmentAvailable }),
       conditionDisclosure: {
-        damaged: nextConditionDisclosure.damaged,
-        ...(nextConditionDisclosure.knownIssuesText !== undefined && {
+        damaged: damagedAnswer.damaged,
+        ...(nextConditionDisclosure?.knownIssuesText !== undefined && {
           knownIssuesText: nextConditionDisclosure.knownIssuesText,
         }),
       },
