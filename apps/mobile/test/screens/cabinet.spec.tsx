@@ -1,4 +1,5 @@
 import { useFocusEffect } from "expo-router";
+import { waitFor } from "@testing-library/react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import CabinetScreen from "../../app/(tabs)/services";
@@ -230,6 +231,49 @@ describe("Cabinet My listings total", () => {
     await view.findByRole("button", { name: "My listings, 5" });
     await act(async () => { await view.queryClient.invalidateQueries({ queryKey: queryKeys.listings.all() }); });
     expect(await view.findByRole("button", { name: "My listings, 4" })).toBeTruthy();
+  });
+
+  it.each(["focus", "invalidation"])("hides the cached number after a failed %s refetch and still opens My listings", async (trigger) => {
+    signedIn();
+    state.get.mockResolvedValueOnce(counts(5)).mockRejectedValueOnce(new Error("Network request failed"));
+    const view = renderMobile(<CabinetScreen />);
+    await view.findByRole("button", { name: "My listings, 5" });
+
+    await act(async () => {
+      if (trigger === "focus") vi.mocked(useFocusEffect).mock.lastCall?.[0]();
+      else await view.queryClient.invalidateQueries({ queryKey: queryKeys.listings.myCountsAll() });
+    });
+    await waitFor(() => expect(view.queryClient.getQueryState(queryKeys.listings.myCounts(USER_ID))?.status).toBe("error"));
+    expect(state.get).toHaveBeenCalledTimes(2);
+    expect(view.queryClient.getQueryData(queryKeys.listings.myCounts(USER_ID))).toEqual(counts(5));
+    const row = await view.findByRole("button", { name: /^My listings$/ });
+    expect(row.props.accessibilityLabel).toBe("My listings");
+    expect(view.queryByText("5")).toBeNull();
+    fireEvent.press(row);
+    expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
+  });
+
+  it.each(["focus", "invalidation"])("hides the cached number during a pending %s refetch, keeps navigation and shows the next total", async (trigger) => {
+    signedIn();
+    let resolveCounts: (value: ReturnType<typeof counts>) => void = () => {};
+    state.get.mockResolvedValueOnce(counts(5)).mockReturnValueOnce(new Promise((resolve) => { resolveCounts = resolve; }));
+    const view = renderMobile(<CabinetScreen />);
+    await view.findByRole("button", { name: "My listings, 5" });
+
+    await act(async () => {
+      if (trigger === "focus") vi.mocked(useFocusEffect).mock.lastCall?.[0]();
+      else void view.queryClient.invalidateQueries({ queryKey: queryKeys.listings.myCountsAll() });
+    });
+    await waitFor(() => expect(view.queryClient.getQueryState(queryKeys.listings.myCounts(USER_ID))?.fetchStatus).toBe("fetching"));
+    expect(state.get).toHaveBeenCalledTimes(2);
+    const row = await view.findByRole("button", { name: /^My listings$/ });
+    expect(row.props.accessibilityLabel).toBe("My listings");
+    expect(view.queryByText("5")).toBeNull();
+    fireEvent.press(row);
+    expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
+
+    await act(async () => { resolveCounts(counts(7)); });
+    expect(await view.findByRole("button", { name: "My listings, 7" })).toBeTruthy();
   });
 
   it("refreshes the number when Cabinet comes back into view", async () => {
