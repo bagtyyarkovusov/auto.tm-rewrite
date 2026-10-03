@@ -22,6 +22,8 @@ A marketplace without listings is empty. This is the central feature; everything
 
 Navigation is linear Next/Back in Sprint 4. The compact Review summary can link back to completed steps for corrections; do not build arbitrary step-jump navigation. Drafts auto-save to the server while editing and force-save on step transition. Do not promise offline draft persistence in Sprint 4. Resume on next visit. If drafts exist, Sell opens a lightweight entry with latest draft as the primary Continue action and New listing as secondary; full draft management belongs in My Listings. Discard draft lives in the wizard header overflow menu and requires destructive confirmation.
 
+A User keeps at most five drafts, and drafts never expire or get deleted automatically. Creating a sixth fails with `409 DRAFT_LIMIT_REACHED` and creates nothing; publishing or deleting a draft frees a place. The Sell tab shows the latest draft as one row (cover, "Brand Model, year" or "Draft without a car yet", steps filled and last update) with Continue as the main button, New listing below it, "All drafts" with the count when there are two or more, and My listings. With no drafts it shows "Sell your car", one "List a car" button and My listings. At five drafts, or when the API refuses with the limit code, New listing opens a sheet whose "Open drafts" opens My listings on Drafts.
+
 ### Listing location policy
 
 Per [ADR-0022](../../adr/0022-city-first-listing-location.md), listing location means **car location**:
