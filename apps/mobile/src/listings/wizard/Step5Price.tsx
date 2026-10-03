@@ -1,14 +1,12 @@
-import { useState } from "react";
-import { View } from "react-native";
+import { useRef } from "react";
+import { Pressable, View } from "react-native";
+import type { TextInput } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 import { useExchangeRates } from "../../api/exchange-rates/useExchangeRates";
 
-
-import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
@@ -27,7 +25,6 @@ const CURRENCIES: { value: Enums.Currency; label: string }[] = [
 ];
 
 function usePriceStep(payload: WizardSchemas.WizardDraftPayload) {
-  const [currencyOpen, setCurrencyOpen] = useState(false);
   const { data: ratesData } = useExchangeRates();
 
   const rate = ratesData?.rates.find(
@@ -39,15 +36,7 @@ function usePriceStep(payload: WizardSchemas.WizardDraftPayload) {
       ? Math.round(payload.priceAmount * rate.rate)
       : null;
 
-  const selectedCurrencyLabel =
-    CURRENCIES.find((c) => c.value === payload.priceCurrency)?.label ?? "TMT";
-
-  return {
-    currencyOpen,
-    setCurrencyOpen,
-    tmtEquivalent,
-    selectedCurrencyLabel,
-  };
+  return { tmtEquivalent };
 }
 
 function wrapDisabled(children: React.ReactNode, disabled: boolean) {
@@ -60,18 +49,21 @@ function PriceInput({
   onChange,
   fieldErrors,
   disabled,
+  inputRef,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   fieldErrors?: Record<string, string>;
   disabled: boolean;
+  inputRef: React.RefObject<TextInput | null>;
 }) {
   const { t } = useTranslation();
   return (
-    <View className="gap-1.5 flex-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">{t("amount")} *</Text>
       {wrapDisabled(
         <Input
+          ref={inputRef}
           value={payload.priceAmount?.toString() ?? ""}
           onChangeText={(text) => {
             const num = parseInt(text, 10);
@@ -98,54 +90,59 @@ function PriceInput({
   );
 }
 
-function CurrencyPicker({
+/** TMT, USD and AED in one row. Another currency clears the amount, which the seller types again. */
+function CurrencyButtons({
   payload,
   onChange,
   disabled,
+  onSwitched,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
+  onSwitched: () => void;
 }) {
   const { t } = useTranslation();
-  const { currencyOpen, setCurrencyOpen, selectedCurrencyLabel } =
-    usePriceStep(payload);
+  const selected = payload.priceCurrency ?? Enums.Currency.TMT;
 
   return (
-    <>
-      <View className="gap-1.5 w-[120px]">
-        <Text className="text-sm font-medium text-foreground">{t("currency")}</Text>
-        {wrapDisabled(
-          <Button
-            variant="outline"
-            onPress={() => setCurrencyOpen(true)}
-            disabled={disabled}
-            className="justify-center h-[52px]"
-          >
-            <Text className="text-foreground font-medium">{selectedCurrencyLabel}</Text>
-          </Button>,
-          disabled,
-        )}
+    <View className="gap-1.5">
+      <Text className="text-sm font-medium text-foreground">{t("currency")}</Text>
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={t("currency")}
+        className={`flex-row rounded-xl bg-secondary p-[3px] ${disabled ? "opacity-50" : ""}`}
+      >
+        {CURRENCIES.map((currency) => {
+          const isSelected = currency.value === selected;
+          return (
+            <Pressable
+              key={currency.value}
+              accessibilityRole="radio"
+              accessibilityLabel={currency.label}
+              accessibilityState={{ checked: isSelected, disabled }}
+              disabled={disabled}
+              onPress={() => {
+                if (isSelected) return;
+                onChange({ priceCurrency: currency.value, priceAmount: undefined });
+                onSwitched();
+              }}
+              className={`min-h-10 flex-1 items-center justify-center rounded-[9px] ${
+                isSelected ? "bg-background shadow-sm" : ""
+              }`}
+            >
+              <Text
+                className={
+                  isSelected ? "text-base font-semibold text-foreground" : "text-base text-muted-foreground"
+                }
+              >
+                {currency.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
-
-      <CatalogPickerSheet
-        open={currencyOpen}
-        onOpenChange={setCurrencyOpen}
-        title={t("selectCurrency")}
-        searchPlaceholder={t("searchPlaceholder")}
-        search=""
-        onSearchChange={() => {}}
-        items={CURRENCIES.map((c) => ({ id: c.value, name: c.label }))}
-        selectedId={payload.priceCurrency}
-        emptyMessage={t("noOptionsAvailable")}
-        isLoading={false}
-        isError={false}
-        onSelect={(id) => {
-          onChange({ priceCurrency: id as Enums.Currency });
-          setCurrencyOpen(false);
-        }}
-      />
-    </>
+    </View>
   );
 }
 
@@ -208,26 +205,27 @@ export default function Step5Price({
 }: Step5PriceProps) {
   const { t } = useTranslation();
   const { tmtEquivalent } = usePriceStep(payload);
+  const amountRef = useRef<TextInput>(null);
 
   return (
     <View className="gap-5 py-5">
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">{t("price")} *</Text>
-        <View className="flex-row gap-3 items-start">
-          <PriceInput
-            payload={payload}
-            onChange={onChange}
-            fieldErrors={fieldErrors}
-            disabled={disabled}
-          />
-          <CurrencyPicker
-            payload={payload}
-            onChange={onChange}
-            disabled={disabled}
-          />
-        </View>
+        <PriceInput
+          payload={payload}
+          onChange={onChange}
+          fieldErrors={fieldErrors}
+          disabled={disabled}
+          inputRef={amountRef}
+        />
         <TmtEquivalent amount={tmtEquivalent} />
       </View>
+      <CurrencyButtons
+        payload={payload}
+        onChange={onChange}
+        disabled={disabled}
+        onSwitched={() => amountRef.current?.focus()}
+      />
       <SellerTerms payload={payload} onChange={onChange} disabled={disabled} />
     </View>
   );
