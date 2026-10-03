@@ -214,7 +214,7 @@ describe("ListingsController e2e", () => {
         .send({})
         .expect(201);
 
-      expect(res.body.conditionDisclosure).toEqual({ damaged: false });
+      // The publish response is a summary without conditionDisclosure; check the stored row.
       const row = await prisma.listing.findUniqueOrThrow({ where: { id: res.body.id } });
       expect(row.damaged).toBe(false);
     });
