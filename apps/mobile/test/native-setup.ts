@@ -87,6 +87,12 @@ vi.mock("@react-navigation/native", () => ({
   DarkTheme: { dark: true, colors: {} },
 }));
 vi.mock("@rn-primitives/separator", async () => ({ Root: (await import("react-native")).View }));
+// The installed avatar distribution imports an extensionless path Node cannot
+// resolve. The shell always renders the fallback beside any image.
+vi.mock("@rn-primitives/avatar", async () => {
+  const native = await import("react-native");
+  return { Root: native.View, Image: native.Image, Fallback: native.View };
+});
 
 // Expo modules that load `expo-modules-core`, which needs the native runtime.
 // A spec that exercises one of them mocks it itself and wins over these stubs.

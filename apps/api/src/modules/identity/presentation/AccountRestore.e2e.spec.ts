@@ -22,6 +22,7 @@ import {
   defineE2eSuite,
   seedSuiteCatalog,
 } from "../../../../test/helpers/e2eSuite";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("account-restore");
 const SUITE_USERS = ["member"] as const;
@@ -39,6 +40,7 @@ describe("Account restore e2e", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,

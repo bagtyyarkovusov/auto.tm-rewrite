@@ -22,6 +22,7 @@ import {
   cleanSuiteFixtures,
   defineE2eSuite,
 } from "../../../../test/helpers/e2eSuite";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("drafts-controller");
 type SuiteUser = "user-1" | "user-2";
@@ -35,6 +36,7 @@ describe("DraftsController e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({
           isGlobal: true,
           validate: (cfg) => EnvSchema.parse(cfg),

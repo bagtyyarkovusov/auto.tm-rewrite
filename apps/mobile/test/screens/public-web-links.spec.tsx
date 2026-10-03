@@ -5,11 +5,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as Linking from "expo-linking";
 
 import { AuthEntryScreen } from "../../components/auth/AuthEntryScreen";
-import SettingsScreen from "../../app/settings";
-import { fireEvent, renderMobile, routerMock } from "../render";
+import CabinetScreen from "../../app/(tabs)/services";
+import { fireEvent, renderMobile } from "../render";
 
-vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: true }) }));
-vi.mock("../../src/auth/useLogout", () => ({ useLogout: () => ({ mutate: vi.fn() }) }));
+vi.mock("react-native-safe-area-context", async () => ({
+  SafeAreaView: (await import("react-native")).View,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
+vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: false }) }));
 
 const profiles = [
   ["staging", "https://staging.autotm.bagtyyar.dev"],
@@ -25,16 +28,16 @@ describe.each(profiles)("%s public web links", (profile, baseUrl) => {
     expect(eas.build[profile].env.EXPO_PUBLIC_WEB_URL).toBe(baseUrl);
   });
 
-  it.each(["en", "ru", "tk"])("opens localized privacy and terms from settings and sign-in in %s", (locale) => {
+  it.each(["en", "ru", "tk"])("opens localized privacy, terms and posting rules from Cabinet and sign-in in %s", (locale) => {
     vi.stubEnv("EXPO_PUBLIC_WEB_URL", baseUrl);
-    const settings = renderMobile(<SettingsScreen />, { locale });
-    fireEvent.press(settings.getByRole("button", { name: settings.i18n.t("account:privacyPolicy") }));
+    const cabinet = renderMobile(<CabinetScreen />, { locale });
+    fireEvent.press(cabinet.getByRole("button", { name: cabinet.i18n.t("account:privacyPolicy") }));
     expect(Linking.openURL).toHaveBeenLastCalledWith(`${baseUrl}/${locale}/legal/privacy`);
-    fireEvent.press(settings.getByRole("button", { name: settings.i18n.t("account:termsOfService") }));
+    fireEvent.press(cabinet.getByRole("button", { name: cabinet.i18n.t("account:termsOfService") }));
     expect(Linking.openURL).toHaveBeenLastCalledWith(`${baseUrl}/${locale}/legal/terms`);
-    fireEvent.press(settings.getByRole("button", { name: settings.i18n.t("account:deleteAccount") }));
-    expect(routerMock.push).toHaveBeenCalledWith("/account/delete");
-    settings.unmount();
+    fireEvent.press(cabinet.getByRole("button", { name: cabinet.i18n.t("account:postingRules") }));
+    expect(Linking.openURL).toHaveBeenLastCalledWith(`${baseUrl}/${locale}/legal/posting-rules`);
+    cabinet.unmount();
 
     const auth = renderMobile(<AuthEntryScreen method="email" title="Sign in" helper="Email" canSubmit={false} isSubmitting={false} onSubmit={async () => {}}>{null}</AuthEntryScreen>, { locale });
     fireEvent.press(auth.getByText(auth.i18n.t("auth:privacy")));
