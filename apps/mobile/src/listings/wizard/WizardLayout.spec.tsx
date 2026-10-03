@@ -58,6 +58,13 @@ describe("WizardLayout step header", () => {
     expect(announcements).toEqual(["Car, Step 1 of 7", "Details and condition, Step 2 of 7"]);
   });
 
+  it("reads the step position once, in the heading, not again in the top row", () => {
+    const screen = renderMobile(layout("Car", 1));
+
+    expect(screen.getByText("Sell car · Step 1 of 7").props.accessibilityLabel).toBe("Sell car");
+    expect(screen.getByRole("header", { name: "Car, Step 1 of 7" })).toBeTruthy();
+  });
+
   it("does not announce again when the same step re-renders", () => {
     const screen = renderMobile(layout("Car", 1));
     screen.rerender(layout("Car", 1));

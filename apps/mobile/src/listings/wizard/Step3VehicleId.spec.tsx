@@ -30,6 +30,7 @@ describe("Car step", () => {
 
     const vin = screen.getByLabelText("VIN");
     expect(vin.props.maxLength).toBe(17);
+    expect(vin.props.accessibilityHint).toBe(vinHelper.en);
     expect(screen.getByText(vinHelper.en)).toBeTruthy();
     expect(screen.queryByText(/auto-fill/i)).toBeNull();
     expect(screen.queryByRole("button", { name: "Skip" })).toBeNull();
@@ -38,6 +39,7 @@ describe("Car step", () => {
   it.each(["ru", "tk"] as const)("shows the VIN helper in %s", (locale) => {
     const screen = renderMobile(<Step3VehicleId payload={{}} onChange={() => {}} />, { locale });
     expect(screen.getByText(vinHelper[locale])).toBeTruthy();
+    expect(screen.getByHintText(vinHelper[locale])).toBeTruthy();
   });
 
   it("saves the typed VIN and clears it when emptied", () => {

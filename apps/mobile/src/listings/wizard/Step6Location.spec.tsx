@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { WizardSchemas } from "@auto-tm/contracts";
+import { Pressable, Text } from "react-native";
 import { useTranslation } from "react-i18next";
 import { describe, expect, it, vi } from "vitest";
 
@@ -14,13 +15,20 @@ vi.mock("../../api/catalog/useCities", () => ({ useCities: () => ({ data: { item
 function ValidatedPlace({ initial = {} }: { initial?: WizardSchemas.WizardDraftPayload }) {
   const { t } = useTranslation();
   const [payload, setPayload] = useState(initial);
+  const [attempted, setAttempted] = useState(false);
   const { fieldErrors } = WizardSchemas.validateStep("location", payload);
   return (
-    <Step6Location
-      payload={payload}
-      onChange={(updates) => setPayload((previous) => ({ ...previous, ...updates }))}
-      fieldErrors={translateWizardFieldErrors(t, fieldErrors)}
-    />
+    <>
+      <Step6Location
+        payload={payload}
+        onChange={(updates) => setPayload((previous) => ({ ...previous, ...updates }))}
+        fieldErrors={translateWizardFieldErrors(t, fieldErrors)}
+        showErrors={attempted}
+      />
+      <Pressable accessibilityRole="button" onPress={() => setAttempted(true)}>
+        <Text>Continue</Text>
+      </Pressable>
+    </>
   );
 }
 
@@ -38,8 +46,11 @@ describe("Description and place step", () => {
     expect(screen.getByText("0/2000")).toBeTruthy();
   });
 
-  it("shows the required Description error under the field and clears it once typed", () => {
+  it("shows the required Description error under the field after the first Continue tap and clears it once typed", () => {
     const screen = renderMobile(<ValidatedPlace />);
+    expect(screen.queryByText("Description is required")).toBeNull();
+
+    fireEvent.press(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByText("Description is required")).toBeTruthy();
 
     fireEvent.changeText(screen.getByLabelText("Description"), "One owner, garage kept");
