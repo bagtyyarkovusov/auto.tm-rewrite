@@ -164,10 +164,13 @@ describe("useListingCount", () => {
       await vi.advanceTimersByTimeAsync(500);
       rerender({ filters: valid, enabled: true });
       await vi.advanceTimersByTimeAsync(300);
+      // The earlier criteria's cached count is also 3, so wait for the request itself.
+      await waitFor(() =>
+        expect(requestedUrls()).toEqual(["/listings/count?yearMin=2025&yearMax=2026"]),
+      );
       await waitFor(() => expect(result.current.data?.totalMatching).toBe(3));
 
       expect(requestedUrls().filter((url) => url.includes("yearMax=2020"))).toEqual([]);
-      expect(requestedUrls()).toEqual(["/listings/count?yearMin=2025&yearMax=2026"]);
     });
 
     it("keeps the loading state, without a request, until the valid criteria settle", async () => {

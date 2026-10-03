@@ -18,7 +18,7 @@ const fixture = vi.hoisted(() => {
     baseline: { id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
       year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
       displayPriceTmt: 100000, description: "Legacy listing", regionId: id, cityId: id,
-      allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
+      contactPhone: "+99361234567", allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
       media, viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
       createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
       seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },

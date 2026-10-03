@@ -72,7 +72,7 @@ function createListingApi() {
     sellerId: fixture.id, publicNumber: 458, status: "active", brandId: fixture.id, modelId: fixture.id,
     year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
     displayPriceTmt: 100000, description: "Legacy listing", regionId: fixture.id, cityId: fixture.id,
-    allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
+    contactPhone: "+99361234567", allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
     viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
     createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
     seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
