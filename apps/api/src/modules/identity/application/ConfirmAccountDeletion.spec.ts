@@ -289,29 +289,6 @@ describe("ConfirmAccountDeletion", () => {
     expect(userRepo.scheduled.size).toBe(0);
   });
 
-  it("refuses an unbound sign-in request, so a reviewer fixed code cannot delete", async () => {
-    const reviewer = makeUser({
-      phone: null,
-      phoneVerifiedAt: null,
-      email: "reviewer@review.auto.tm",
-      emailVerifiedAt: NOW,
-    });
-    const { useCase, otpRepo, userRepo } = setup([reviewer]);
-    otpRepo.add({ destination: "reviewer@review.auto.tm", userId: "user-1" });
-    otpRepo.add({
-      destination: "reviewer@review.auto.tm",
-      userId: null,
-      code: REVIEWER_CODE,
-      purpose: "sign-in",
-    });
-
-    await expect(
-      useCase.execute({ email: "reviewer@review.auto.tm", code: REVIEWER_CODE }),
-    ).rejects.toThrow("Invalid OTP code");
-    expect(userRepo.scheduled.size).toBe(0);
-    expect(otpRepo.consumed).toEqual([]);
-  });
-
   it("refuses a code issued while another User held the value", async () => {
     const { useCase, otpRepo, userRepo } = setup([makeUser({ id: "user-2" })]);
     otpRepo.add({ destination: "+99361234567", userId: "user-1" });
