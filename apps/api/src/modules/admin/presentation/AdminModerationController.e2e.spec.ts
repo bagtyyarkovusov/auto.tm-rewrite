@@ -27,6 +27,7 @@ import {
   defineE2eSuite,
   seedSuiteCatalog,
 } from "../../../../test/helpers/e2eSuite";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("admin-moderation-controller");
 type SuiteUser =
@@ -60,6 +61,7 @@ describe("AdminModerationController e2e smoke", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({ isGlobal: true, validate: (cfg) => EnvSchema.parse(cfg) }),
         EventEmitterModule.forRoot(),
         AdminModule,

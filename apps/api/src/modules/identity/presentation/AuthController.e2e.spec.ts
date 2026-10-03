@@ -22,6 +22,7 @@ import {
   EMAIL_CODE_SENDER_PORT,
   type EmailCodeSenderPort,
 } from "../domain/ports/EmailCodeSenderPort";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 function reviewerDemoAccount(index: number): { phone: string; email: string; code: string } {
   return {
@@ -39,6 +40,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/request", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -150,6 +152,7 @@ describe("AuthController e2e — email Sign-in Method", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -264,6 +267,7 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -459,6 +463,7 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         EventEmitterModule.forRoot(),
         IdentityModule,
         JwtModule.register({
@@ -553,6 +558,7 @@ describe("AuthController e2e — POST /api/v1/auth/logout", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -658,6 +664,7 @@ describe("AuthController e2e — POST /api/v1/auth/logout-all", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -759,6 +766,7 @@ describe("MeController e2e — GET /api/v1/me", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -854,6 +862,7 @@ describe("MeController e2e — DELETE /api/v1/me", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,

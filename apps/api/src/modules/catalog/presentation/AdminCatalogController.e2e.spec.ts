@@ -21,6 +21,7 @@ import { GlobalErrorFilter } from "../../../common/error.filter";
 import { EnvSchema } from "../../../env.schema";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintAdminJwt } from "../../../../test/helpers/mintAdminJwt";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 describe("AdminCatalogController e2e", () => {
   let app: NestFastifyApplication;
@@ -30,6 +31,7 @@ describe("AdminCatalogController e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({
           isGlobal: true,
           validate: (cfg) => EnvSchema.parse(cfg),

@@ -19,6 +19,7 @@ import { IdentityModule } from "../../identity/identity.module";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { mintUserJwt } from "../../../../test/helpers/mintUserJwt";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 class FakeMediaStorage {
   async presignUpload(data: {
@@ -58,6 +59,7 @@ describe("UploadsController e2e", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
