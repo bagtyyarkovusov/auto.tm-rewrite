@@ -34,6 +34,7 @@ import {
   seedSuiteCatalog,
 } from "../../../../test/helpers/e2eSuite";
 import { MEDIA_OBJECT_INSPECTOR } from "../../listings/domain/ports/MediaObjectInspector";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const suite = defineE2eSuite("reports-controller");
 type SuiteUser = "seller-1" | "buyer-1" | "admin-1";
@@ -50,6 +51,7 @@ describe("ReportsController e2e", () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({
           isGlobal: true,
           validate: (cfg) => EnvSchema.parse(cfg),

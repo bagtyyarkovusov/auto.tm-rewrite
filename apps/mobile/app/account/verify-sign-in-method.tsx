@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { useEffect, useMemo } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { CodeEntryForm } from "../../components/auth/CodeEntryForm";
@@ -9,6 +9,7 @@ import { useRequestSignInMethodChange } from "../../src/api/identity/useRequestS
 import { useVerifySignInMethodChange } from "../../src/api/identity/useVerifySignInMethodChange";
 import { normalizeEmail } from "../../src/auth/email";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
+import { HELP_HREF } from "../../src/navigation/helpHref";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
@@ -92,7 +93,11 @@ export default function VerifySignInMethodScreen() {
           </Button>
         </View>
 
-        <View className="flex-1 px-4 pt-4">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-4 pb-6 pt-4"
+          keyboardShouldPersistTaps="handled"
+        >
           <CodeEntryForm
             method={method}
             displayedDestination={displayedDestination}
@@ -103,8 +108,9 @@ export default function VerifySignInMethodScreen() {
             verify={verifyCode}
             resend={resendCode}
             onChangeDestination={goBack}
+            onContactSupport={() => router.push(HELP_HREF)}
           />
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeScreen>
   );

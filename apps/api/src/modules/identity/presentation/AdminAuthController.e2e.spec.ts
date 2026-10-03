@@ -15,6 +15,7 @@ import { PrismaService } from "@auto-tm/db";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { IdentityModule } from "../identity.module";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const ADMIN_PHONE = "+99365000001";
 
@@ -30,6 +31,7 @@ describe("AdminAuthController e2e — admin TOTP", () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,

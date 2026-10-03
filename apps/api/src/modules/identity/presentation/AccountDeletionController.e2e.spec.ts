@@ -15,6 +15,7 @@ import {
   type EmailCodeSenderPort,
 } from "../domain/ports/EmailCodeSenderPort";
 import { IdentityModule } from "../identity.module";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -28,6 +29,7 @@ describe("AccountDeletionController e2e", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,

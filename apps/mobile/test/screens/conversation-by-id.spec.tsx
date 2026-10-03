@@ -7,6 +7,8 @@ import type { ConversationsSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 import ConversationDetailScreen from "../../app/conversations/[id]";
 import { seedConversationDetail } from "../../src/api/conversations/useConversation";
+import { ApiError } from "../../src/api/client";
+import { useAuthIntentStore } from "../../src/auth/intentStore";
 import type * as ClientModule from "../../src/api/client";
 
 const CONVERSATION_ID = "00000000-0000-4000-8000-0000000000c1";
@@ -17,7 +19,10 @@ const SELLER_PHONE = "+99361000000";
 
 const state = vi.hoisted(() => ({
   viewerId: "",
+  viewerLoading: false,
   get: vi.fn(),
+  post: vi.fn(),
+  readMessages: vi.fn(),
   messages: {
     data: { pages: [{ items: [] as unknown[] }] } as unknown,
     isPending: false,
@@ -28,13 +33,18 @@ const state = vi.hoisted(() => ({
   mutation: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false },
 }));
 
-vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: state.viewerId }) }));
+vi.mock("../../src/auth/useViewer", () => ({
+  useViewer: () => state.viewerLoading ? undefined : (state.viewerId ? { userId: state.viewerId } : null),
+}));
 vi.mock("../../src/api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
-  apiClient: { get: state.get, post: vi.fn(), delete: vi.fn() },
+  apiClient: { get: state.get, post: state.post, delete: vi.fn() },
 }));
 vi.mock("../../src/api/conversations/useConversationMessages", () => ({
-  useConversationMessages: () => state.messages,
+  useConversationMessages: (options: { conversationId: string }) => {
+    state.readMessages(options);
+    return state.messages;
+  },
 }));
 vi.mock("../../src/api/conversations/useSendTextMessage", () => ({ useSendTextMessage: () => state.mutation }));
 vi.mock("../../src/api/conversations/useSendImageMessage", () => ({ useSendImageMessage: () => state.mutation }));
@@ -44,14 +54,13 @@ vi.mock("../../src/api/conversations/useDeleteMessage", () => ({ useDeleteMessag
 vi.mock("../../src/api/conversations/useMuteConversation", () => ({ useMuteConversation: () => state.mutation }));
 vi.mock("../../src/api/identity/useBlockUser", () => ({ useBlockUser: () => state.mutation }));
 vi.mock("../../src/api/identity/useUnblockUser", () => ({ useUnblockUser: () => state.mutation }));
-vi.mock("../../src/api/identity/useIsBlocked", () => ({ useIsBlocked: () => ({ data: { blocked: false } }) }));
+vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: true, phone: "" }) }));
 vi.mock("../../src/api/catalog/useBrands", () => ({
   useBrands: () => ({ data: { items: [{ id: "00000000-0000-4000-8000-0000000000d1", name: "Toyota" }] } }),
 }));
 vi.mock("../../src/api/catalog/useModels", () => ({
   useModels: () => ({ data: { items: [{ id: "00000000-0000-4000-8000-0000000000d2", name: "Camry" }] } }),
 }));
-vi.mock("../../src/navigation/useSafeBack", () => ({ useSafeBack: () => vi.fn() }));
 vi.mock("../../src/conversations/socket/useConversationSocket", () => ({
   useConversationSocket: () => ({
     peerTyping: false,
@@ -135,6 +144,8 @@ function routeGet(routes: Record<string, () => unknown>) {
 beforeEach(() => {
   state.viewerId = BUYER_ID;
   state.get.mockReset();
+  state.post.mockReset();
+  state.mutation.mutate.mockReset();
   state.messages.isPending = false;
   state.messages.isError = false;
   state.messages.error = null;
@@ -142,6 +153,7 @@ beforeEach(() => {
   state.messages.refetch.mockReset();
   vi.mocked(Linking.openURL).mockClear();
   routeParams.id = CONVERSATION_ID;
+  useAuthIntentStore.setState({ intent: null, replayAction: null, replayReturnTo: null });
 });
 
 describe("Conversation opened with only its ID", () => {
@@ -300,5 +312,281 @@ describe("Conversation header Call", () => {
     expect(screen.getByText("Listing unavailable")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Open:/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Call the seller" })).toBeNull();
+  });
+});
+
+describe("Conversation menu", () => {
+  it("reports the other participant as a User and ends on the thanks screen", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    state.post.mockResolvedValue({
+      reportId: "00000000-0000-4000-8000-0000000000e1",
+      status: "pending",
+      createdAt: "2026-10-02T10:00:00.000Z",
+      reusedExisting: false,
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(await screen.findByRole("button", { name: "Conversation actions" }));
+    fireEvent.press(screen.getByRole("button", { name: "Report" }));
+
+    // The reasons the API accepts for a User report.
+    for (const reason of ["Spam", "Scam or fraud", "Misleading information", "Harassment", "Other"]) {
+      expect(screen.getByRole("radio", { name: reason })).toBeTruthy();
+    }
+    expect(screen.queryByRole("radio", { name: "Wrong category" })).toBeNull();
+
+    fireEvent.press(screen.getByRole("radio", { name: "Other" }));
+    fireEvent.changeText(screen.getByPlaceholderText("Describe the issue..."), "Asks for prepayment");
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Submit report" }));
+    });
+
+    expect(state.post).toHaveBeenCalledWith(
+      `/users/${SELLER_ID}/report`,
+      { reason: "other", details: "Asks for prepayment" },
+      expect.anything(),
+    );
+    expect(await screen.findByRole("button", { name: "Done" })).toBeTruthy();
+  });
+
+  it("ends on the thanks screen when a pending report of the same User is reused", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    state.post.mockResolvedValue({
+      reportId: "00000000-0000-4000-8000-0000000000e1",
+      status: "pending",
+      createdAt: "2026-10-01T10:00:00.000Z",
+      reusedExisting: true,
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(await screen.findByRole("button", { name: "Conversation actions" }));
+    fireEvent.press(screen.getByRole("button", { name: "Report" }));
+    fireEvent.press(screen.getByRole("radio", { name: "Spam" }));
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Submit report" }));
+    });
+
+    expect(state.post).toHaveBeenCalledWith(`/users/${SELLER_ID}/report`, { reason: "spam" }, expect.anything());
+    expect(await screen.findByRole("button", { name: "Done" })).toBeTruthy();
+  });
+
+  it("hides Report when reporting is switched off for the environment", async () => {
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () => conversation(),
+      "/config": () => ({
+        reportEntryEnabled: false,
+        adminModerationActionsEnabled: false,
+        inspectionInterestEnabled: false,
+      }),
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    await vi.waitFor(() => expect(state.get).toHaveBeenCalledWith("/config", expect.anything()));
+    await act(async () => {});
+    fireEvent.press(await screen.findByRole("button", { name: "Conversation actions" }));
+    expect(screen.getByRole("button", { name: "Block user" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Report" })).toBeNull();
+  });
+
+  it("asks before blocking, then replaces the composer with the blocked banner", async () => {
+    // The refresh after Block stays pending, so only the cache patch can switch the footer.
+    let refreshing = false;
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () => (refreshing ? new Promise(() => {}) : conversation()),
+    });
+    state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) => {
+      refreshing = true;
+      options?.onSuccess?.();
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(await screen.findByRole("button", { name: "Conversation actions" }));
+    fireEvent.press(screen.getByRole("button", { name: "Block user" }));
+    expect(screen.getByText("Block this user?")).toBeTruthy();
+    expect(
+      screen.getByText("You will stop receiving messages and notifications from this user. The history stays."),
+    ).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(screen.getByText("Block"));
+    });
+
+    expect(state.mutation.mutate).toHaveBeenCalledWith({ userId: SELLER_ID }, expect.anything());
+    expect(screen.getByText("User blocked")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  });
+});
+
+describe("Conversation blocked by the viewer", () => {
+  const blocked = () => conversation({ blockedByMe: true, sendRestriction: "blocked_by_me" });
+
+  it("shows only the banner under readable Messages, from the loaded Conversation", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: blocked });
+    state.messages.data = {
+      pages: [
+        {
+          items: [
+            {
+              id: "00000000-0000-4000-8000-0000000000f1",
+              conversationId: CONVERSATION_ID,
+              senderId: SELLER_ID,
+              kind: "text",
+              text: "Yes, it is available",
+              createdAt: "2026-10-01T09:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    };
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("User blocked")).toBeTruthy();
+    expect(screen.getByText("Yes, it is available")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
+    expect(state.get).not.toHaveBeenCalledWith(`/me/blocked-users/${SELLER_ID}`, expect.anything());
+  });
+
+  it("asks before unblocking and brings the composer back without reloading", async () => {
+    // The refresh after Unblock stays pending, so only the cache patch can bring the composer back.
+    let refreshing = false;
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => (refreshing ? new Promise(() => {}) : blocked()) });
+    state.mutation.mutate.mockImplementation((_input: unknown, options?: { onSuccess?: () => void }) => {
+      refreshing = true;
+      options?.onSuccess?.();
+    });
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(await screen.findByRole("button", { name: "Unblock" }));
+    expect(screen.getByText("Unblock this user?")).toBeTruthy();
+    expect(screen.getByText("After unblocking, the user can message you again.")).toBeTruthy();
+    await act(async () => {
+      // The banner's Unblock, then the dialog's.
+      const [, confirm] = screen.getAllByText("Unblock");
+      fireEvent.press(confirm);
+    });
+
+    expect(state.mutation.mutate).toHaveBeenCalledWith({ userId: SELLER_ID }, expect.anything());
+    expect(screen.queryByText("User blocked")).toBeNull();
+    expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Attach photo", disabled: false })).toBeTruthy();
+  });
+});
+
+describe("Conversation while signed out", () => {
+  const conversationHref = { pathname: "/conversations/[id]", params: { id: CONVERSATION_ID } };
+
+  beforeEach(() => {
+    state.viewerLoading = false;
+    state.viewerId = "";
+    routeGet({
+      [`/conversations/${CONVERSATION_ID}`]: () => conversation(),
+      [`/listings/${LISTING_ID}`]: () => listingDetail(),
+    });
+  });
+
+  it("asks to sign in and reads nothing", async () => {
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(screen.getByText("Sign in to view messages")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Go back" })).toBeTruthy();
+    await act(async () => {});
+    expect(state.get).not.toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
+    expect(state.readMessages).toHaveBeenLastCalledWith({ conversationId: "" });
+    expect(screen.queryByText("Merdan")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("waits for auth hydration before painting a seeded Conversation", async () => {
+    state.viewerLoading = true;
+    const { sendRestriction, ...summary } = conversation();
+    expect(sendRestriction).toBeNull();
+    function Seeded({ children }: PropsWithChildren) {
+      const queryClient = useQueryClient();
+      useState(() => seedConversationDetail(queryClient, summary));
+      return children;
+    }
+    const screen = renderMobile(<Seeded><ConversationDetailScreen /></Seeded>);
+    expect(screen.queryByText("Merdan")).toBeNull();
+    expect(state.readMessages).toHaveBeenLastCalledWith({ conversationId: "" });
+    expect(state.get).not.toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
+    state.viewerLoading = false;
+    state.viewerId = BUYER_ID;
+    screen.rerender(<Seeded><ConversationDetailScreen /></Seeded>);
+    expect(await screen.findByText("Merdan")).toBeTruthy();
+  });
+
+  it("signs in and returns to the same Conversation, which then loads", async () => {
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    expect(routerMock.push).toHaveBeenCalledWith({
+      pathname: "/(auth)/phone",
+      params: { authRoot: "1" },
+    });
+    expect(useAuthIntentStore.getState().intent).toEqual({ returnTo: conversationHref });
+
+    useAuthIntentStore.getState().completeSignIn(routerMock);
+    expect(routerMock.dismissTo).toHaveBeenCalledWith(conversationHref);
+
+    state.viewerId = BUYER_ID;
+    screen.rerender(<ConversationDetailScreen />);
+    expect(await screen.findByText("Merdan")).toBeTruthy();
+    expect(screen.queryByText("Sign in to view messages")).toBeNull();
+  });
+
+  it("returns to the signed-out state when sign-in is cancelled", () => {
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    useAuthIntentStore.getState().cancelSignIn(routerMock);
+
+    expect(routerMock.dismissTo).toHaveBeenCalledWith(conversationHref);
+    expect(screen.getByText("Sign in to view messages")).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Go back" }));
+    expect(routerMock.back).toHaveBeenCalledOnce();
+  });
+});
+
+describe("Conversation not available", () => {
+  it.each([
+    ["does not exist", new ApiError("NOT_FOUND", 404, "Conversation not found")],
+    ["is not the User's", new ApiError("FORBIDDEN", 403, "Not a participant", { reason: "NOT_A_PARTICIPANT" })],
+  ])("shows Conversation not found when it %s", async (_case, error) => {
+    state.get.mockRejectedValue(error);
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Conversation not found")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Retry|Try again/ })).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Go to Messages" }));
+    expect(routerMock.dismissTo).toHaveBeenCalledWith("/(tabs)/chat");
+  });
+
+  it("shows nothing from a cached Conversation the API no longer returns", async () => {
+    state.get.mockRejectedValue(new ApiError("NOT_FOUND", 404, "Conversation not found"));
+    const { sendRestriction, ...summary } = conversation();
+    expect(sendRestriction).toBeNull();
+    function Seeded({ children }: PropsWithChildren) {
+      const queryClient = useQueryClient();
+      useState(() => seedConversationDetail(queryClient, summary));
+      return children;
+    }
+    const screen = renderMobile(<Seeded><ConversationDetailScreen /></Seeded>);
+
+    expect(await screen.findByText("Conversation not found")).toBeTruthy();
+    expect(screen.queryByText("Merdan")).toBeNull();
+    expect(screen.queryByText("2018 Toyota Camry")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Conversation actions" })).toBeNull();
+  });
+
+  it("shows Conversation not found when the Messages read is refused", async () => {
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    state.messages.isError = true;
+    state.messages.error = new ApiError("FORBIDDEN", 403, "Not a participant");
+    const screen = renderMobile(<ConversationDetailScreen />);
+
+    expect(await screen.findByText("Conversation not found")).toBeTruthy();
+    expect(screen.queryByText("Merdan")).toBeNull();
   });
 });
