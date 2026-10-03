@@ -114,3 +114,17 @@ Pinned main `ecf95306c6f108b102a0c763e7d4071ce023d75a`:
 - `docs/adr/0025-edit-save-atomicity.md`, `0080-a-new-car-skips-the-damaged-question.md`, `0081-contact-phone-confirmation-api-for-listings.md`, `0057-defer-the-in-app-inspection-demand-signal.md`.
 
 Individual PR source is pinned to the head table above, not inferred from current main or historical integration screenshots. All runtime/concurrency concerns in this audit remain source findings or inferences unless their owning issue already records a reproduction.
+
+
+## Founder acceptance of revised Q62-Q67, 2026-10-04
+
+The founder replied "okay agreed what do we do next are there reaming decisons" after the live issue/PR/mobile alignment review. This accepts the revised Q62-Q67 recommendations as planning decisions. Earlier pending labels above describe the state at their checkpoint; this verdict supersedes those labels for Q62-Q67 only. Q40-Q45 remain pending.
+
+- Q62: group related reports for the same reviewed issue/version, explicitly select and audit dispositions, recheck content changes and concurrent actions, and leave unrelated reports pending. Restoration does not automatically close reports or blindly reapply old complaints.
+- Q63: bind Listing/photo evidence to server media ID and the reported fields/media revision. Distinguish Reported, Current and private submitted Correction. Capture protected evidence before ordinary cleanup, with authorized access. Local previews and public URLs do not establish retained evidence. Retention/deletion durations remain undecided.
+- Q64: support reported text, image and Listing-reference Messages, with necessary authorized/audited attachment/reference evidence and the existing bounds of up to 10 preceding and 10 following Messages. Public Listing lookup grants no private Message/correction access. Wider context expansion remains undecided.
+- Q65: separate grants for public enforcement, private correction reads, exact-version restoration approval, retained photo/Message evidence and related report resolution. Support needs an enforcement grant to enforce. Aggregate viewers receive aggregates only; diagnostic investigators receive pseudonymous diagnostics without private chat/contact content. Founder access/recovery remains distinct. Backend grants must enforce UI boundaries; grant lifecycle remains undecided.
+- Q66: design the later owner restriction/correction/appeal journey within Active/Drafts/Archive, with affected content, safe reason and next step. Notices must persist independently of push. Optional generic push does not establish a new notification center. Keep reviewer neutral blocked-row and Help behavior until explicit phase admission and approved UI amendment.
+- Q67: preserve generic report acknowledgement; later reviewed feedback may confirm disposition generically without exposing internal reasons, grouped private content, correction, appeal or restoration details. A full report-history feature is not automatically admitted.
+
+This acceptance changes no production behavior, current issue acceptance criteria, canonical UI/PRD, immutable ADR, locked sprint or native evidence. Future phase admission, documentation approval and implementation shaping remain required.
