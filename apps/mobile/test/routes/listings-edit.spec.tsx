@@ -79,7 +79,7 @@ beforeEach(() => {
 describe("legacy Listing edit", () => {
   it.each(["Yes", "No"])("asks for Damaged before saving and accepts %s", async (answer) => {
     const screen = renderMobile(<EditListingScreen />);
-    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: Yes", checked: false })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
     const done = screen.getByRole("button", { name: "Done", disabled: true });
@@ -100,6 +100,26 @@ describe("legacy Listing edit", () => {
     expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
     // Saved photos are on the server; their staging files must not resurface on the next edit.
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
+  });
+
+  it("keeps missing Mileage and Damaged quiet on entry without enabling Done", () => {
+    fixture.listing = { ...fixture.baseline, mileageKm: undefined };
+    const screen = renderMobile(<EditListingScreen />);
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Done", disabled: true }));
+    expect(fixture.save).not.toHaveBeenCalled();
+    fireEvent(screen.getByPlaceholderText("e.g. 50000"), "blur");
+    expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "New" }));
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.getByRole("button", { name: "Done", disabled: false })).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Used" }));
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(screen.getByRole("button", { name: "Done", disabled: true })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
   });
 
   it("clears this Listing's staged photos when the seller discards the edit", () => {

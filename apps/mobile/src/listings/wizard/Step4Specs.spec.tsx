@@ -14,23 +14,31 @@ vi.mock("../../api/catalog/useTransmissions", () => ({ useTransmissions: () => (
 vi.mock("../../api/catalog/useDriveTypes", () => ({ useDriveTypes: () => ({ data: { items: [] } }) }));
 vi.mock("../../api/catalog/useEngineTypes", () => ({ useEngineTypes: () => ({ data: { items: [] } }) }));
 
-function ValidatedSpecs({ initial = { condition: "used", mileageKm: 1000 }, disabled = false, onPayload }: {
-  initial?: WizardSchemas.WizardDraftPayload; disabled?: boolean;
+function ValidatedSpecs({ initial = { condition: "used", mileageKm: 1000 }, disabled = false, showErrors = false, onPayload }: {
+  initial?: WizardSchemas.WizardDraftPayload; disabled?: boolean; showErrors?: boolean;
   onPayload?: (payload: WizardSchemas.WizardDraftPayload) => void;
 }) {
   const { t } = useTranslation();
   const [payload, setPayload] = useState(initial);
   onPayload?.(payload);
   const { fieldErrors } = WizardSchemas.validateStep("specs", payload);
-  return <Step4Specs payload={payload} disabled={disabled}
+  return <Step4Specs payload={payload} disabled={disabled} showErrors={showErrors}
     onChange={(updates) => setPayload((previous) => ({ ...previous, ...updates }))}
     fieldErrors={translateWizardFieldErrors(t, fieldErrors)} />;
 }
 
 describe("Step4Specs condition disclosure", () => {
-  it("shows the required Damaged error even without a disclosure object and neither radio is checked", () => {
-    const screen = renderMobile(<ValidatedSpecs />);
+  it("keeps untouched required errors quiet, then shows only the touched field error", () => {
+    const screen = renderMobile(<ValidatedSpecs initial={{ condition: "used" }} />);
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    fireEvent(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }), "blur");
     expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    fireEvent(screen.getByPlaceholderText("e.g. 50000"), "blur");
+    expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText("e.g. 50000"), "1000");
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: Yes", checked: false })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
   });
@@ -46,6 +54,8 @@ describe("Step4Specs condition disclosure", () => {
 
   it("shows Known issues validation after Damaged is answered", () => {
     const screen = renderMobile(<ValidatedSpecs initial={{ condition: "used", mileageKm: 1000, conditionDisclosure: { damaged: true, knownIssuesText: "x".repeat(1001) } }} />);
+    expect(screen.queryByText("Invalid value")).toBeNull();
+    fireEvent(screen.getByDisplayValue("x".repeat(1001)), "blur");
     expect(screen.getByText("Invalid value")).toBeTruthy();
     expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
     const input = screen.getByDisplayValue("x".repeat(1001));
@@ -53,6 +63,35 @@ describe("Step4Specs condition disclosure", () => {
     fireEvent.changeText(input, "Rust");
     expect(screen.queryByText("Invalid value")).toBeNull();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: Yes", checked: true })).toBeTruthy();
+  });
+
+  it("shows both required errors only when this step is attempted", () => {
+    const initial: WizardSchemas.WizardDraftPayload = { condition: "used" };
+    const screen = renderMobile(<ValidatedSpecs initial={initial} />);
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    screen.rerender(<ValidatedSpecs initial={initial} showErrors />);
+    expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
+    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "New" }));
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Used" }));
+    expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
+    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
+  });
+
+  it("resets field touch when New hides the Used questions", () => {
+    const screen = renderMobile(<ValidatedSpecs initial={{ condition: "used" }} />);
+    fireEvent(screen.getByPlaceholderText("e.g. 50000"), "blur");
+    fireEvent(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }), "blur");
+    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "New" }));
+    fireEvent.press(screen.getByRole("button", { name: "Used" }));
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
   });
 
   it("does not change a disabled answer", () => {
@@ -109,7 +148,9 @@ describe("Step4Specs for a New car", () => {
     expect(payload().conditionDisclosure).toEqual({ knownIssuesText: "Dent" });
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: Yes", checked: false })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
-    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(WizardSchemas.validateStep("specs", payload()).valid).toBe(false);
     expect(screen.getByDisplayValue("Dent")).toBeTruthy();
   });
 
