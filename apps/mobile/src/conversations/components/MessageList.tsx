@@ -125,7 +125,7 @@ export function MessageList({
 }: MessageListProps) {
   const { t, i18n } = useTranslation();
   const reported = reportedMessageIds ?? new Set<string>();
-  const [actionTarget, setActionTarget] = useState<MessageItem | null>(null);
+  const [actionTargetId, setActionTargetId] = useState<string | null>(null);
   const rows = useMemo(
     () => buildMessageRows(messages, currentUserId),
     [messages, currentUserId],
@@ -168,7 +168,7 @@ export function MessageList({
           postRefModelName={item.postRefModelName}
           onRetry={item.status === "failed" ? () => onRetry?.(item.id) : undefined}
           onOpenActions={
-            Object.values(actionsFor(item)).some(Boolean) ? () => setActionTarget(item) : undefined
+            Object.values(actionsFor(item)).some(Boolean) ? () => setActionTargetId(item.id) : undefined
           }
           onImagePress={item.kind === "image" && !item.deletedAt ? () => {
             const uri = item.localImageUri ?? (item.metadata && "key" in item.metadata && item.metadata.key
@@ -185,7 +185,9 @@ export function MessageList({
 
   const keyExtractor = useCallback((row: MessageRow<MessageItem>) => row.message.id, []);
 
+  const actionTarget = messages.find((item) => item.id === actionTargetId);
   const targetActions = actionTarget ? actionsFor(actionTarget) : null;
+  const actionsOpen = targetActions !== null && Object.values(targetActions).some(Boolean);
 
   return (
     <>
@@ -214,16 +216,16 @@ export function MessageList({
       }
     />
     <MessageActionsSheet
-      open={actionTarget !== null}
+      open={actionsOpen}
       onOpenChange={(open) => {
-        if (!open) setActionTarget(null);
+        if (!open) setActionTargetId(null);
       }}
       canCopy={targetActions?.copy ?? false}
       canReport={targetActions?.report ?? false}
       canDelete={targetActions?.delete ?? false}
-      onCopy={() => actionTarget && onCopy?.(actionTarget.text)}
-      onReport={() => actionTarget && onReport?.(actionTarget.id)}
-      onDelete={() => actionTarget && onDelete?.(actionTarget.id)}
+      onCopy={() => targetActions?.copy && actionTarget && onCopy?.(actionTarget.text)}
+      onReport={() => targetActions?.report && actionTarget && onReport?.(actionTarget.id)}
+      onDelete={() => targetActions?.delete && actionTarget && onDelete?.(actionTarget.id)}
     />
     </>
   );
