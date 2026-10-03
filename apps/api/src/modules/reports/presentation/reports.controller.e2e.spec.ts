@@ -148,7 +148,11 @@ describe("ReportsController e2e", () => {
   }
 
   async function seedDraft(alias: SuiteUser, payload: Record<string, unknown>) {
-    const seeded = await seedPresignedPhotos(prisma, suite.id(alias), payload);
+    // The owner's own sign-in phone needs no code (ADR-0081); a payload may override it.
+    const seeded = await seedPresignedPhotos(prisma, suite.id(alias), {
+      contactPhone: suite.phone(alias),
+      ...payload,
+    });
     return prisma.listingDraft.create({
       data: { userId: suite.id(alias), payload: seeded as Prisma.InputJsonValue },
     });

@@ -9,9 +9,14 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
-import { ListingsSchemas } from "@auto-tm/contracts";
+import { AuthSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
+import {
+  IDENTITY_CLOCK_PORT,
+  type ClockPort,
+} from "../../identity/identity.public";
+import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
@@ -32,6 +37,7 @@ import {
   type ImageVariantGenerator,
 } from "../domain/ports/ImageVariantGenerator";
 
+import { contactPhoneRejection } from "./contactPhoneRejection";
 import { UploadAdoptionGuard } from "./UploadAdoptionGuard";
 
 const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.required({
@@ -46,6 +52,10 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   description: true,
   allowCalls: true,
   allowChat: true,
+}).extend({
+  // Required even when calls are off (D7); whether it is confirmed is the
+  // policy check after parsing (ADR-0081).
+  contactPhone: AuthSchemas.PhoneTm,
 }).refine(
   (data) => data.allowCalls || data.allowChat,
   { message: "CONTACT_METHOD_REQUIRED" },
@@ -108,6 +118,10 @@ export class PublishListing {
     private readonly variantGenerator: ImageVariantGenerator,
     @Inject(UploadAdoptionGuard)
     private readonly uploadGuard: UploadAdoptionGuard,
+    @Inject(ContactPhonePolicy)
+    private readonly contactPhones: ContactPhonePolicy,
+    @Inject(IDENTITY_CLOCK_PORT)
+    private readonly clock: ClockPort,
   ) {}
 
   async execute(input: PublishListingInput): Promise<PublishListingResult> {
@@ -118,6 +132,7 @@ export class PublishListing {
     if (draft.userId !== input.userId) {
       throw new ForbiddenException("Not the owner of this draft");
     }
+    const now = this.clock.now();
 
     let payload: z.infer<typeof PublishablePayloadSchema>;
     try {
@@ -134,6 +149,18 @@ export class PublishListing {
             message: "At least one contact method must be enabled",
           });
         }
+        if (zodError.issues.every((i) => i.path[0] === "contactPhone")) {
+          // When the phone is the only gap: missing or blank answers
+          // CONTACT_PHONE_REQUIRED; free text left in an older draft is a
+          // number nobody confirmed. Otherwise every missing field is listed.
+          const raw = (draft.payload as { contactPhone?: unknown }).contactPhone;
+          const standing = await this.contactPhones.standing(
+            input.userId,
+            typeof raw === "string" ? raw : null,
+            now,
+          );
+          throw contactPhoneRejection(standing) ?? contactPhoneRejection({ kind: "not_confirmed" });
+        }
         throw new BadRequestException({
           code: "INVALID_DRAFT_PAYLOAD",
           message: "Draft is missing required fields",
@@ -142,6 +169,11 @@ export class PublishListing {
       }
       throw err;
     }
+
+    const rejection = contactPhoneRejection(
+      await this.contactPhones.standing(input.userId, payload.contactPhone, now),
+    );
+    if (rejection) throw rejection;
 
     const rateToTmt =
       payload.priceCurrency === "TMT"
@@ -155,7 +187,6 @@ export class PublishListing {
     }
     const priceTmt = toPriceTmt(payload.priceAmount, payload.priceCurrency, rateToTmt);
 
-    const now = new Date();
     const listingId = randomUUID();
 
     const photos = payload.photos;
@@ -207,7 +238,7 @@ export class PublishListing {
             priceAmount: payload.priceAmount,
             priceCurrency: payload.priceCurrency,
             priceTmt,
-            contactPhone: payload.contactPhone ?? null,
+            contactPhone: payload.contactPhone,
             allowCalls: payload.allowCalls,
             allowChat: payload.allowChat,
             publishedAt: now,
@@ -269,7 +300,7 @@ export class PublishListing {
         priceCurrency: listingRow.priceCurrency as "TMT" | "USD" | "AED",
         allowCalls: listingRow.allowCalls,
         allowChat: listingRow.allowChat,
-        publishedAt: listingRow.publishedAt ?? new Date(),
+        publishedAt: listingRow.publishedAt ?? now,
         createdAt: listingRow.createdAt,
         updatedAt: listingRow.updatedAt,
         ...(listingRow.generationId ? { generationId: listingRow.generationId } : {}),

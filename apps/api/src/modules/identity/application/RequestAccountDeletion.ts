@@ -117,7 +117,13 @@ export class RequestAccountDeletion {
     });
 
     if (destination.channel === SIGN_IN_CODE_CHANNELS.PHONE) {
-      await this.otpSender.send(destination.value, code.value);
+      await this.otpSender.send({
+        phone: destination.value,
+        code: code.value,
+        purpose: Enums.SignInCodePurpose.AccountDeletion,
+        locale: input.locale ?? "ru",
+        requestId: record.id,
+      });
     } else {
       await this.emailCodeSender.enqueue({
         requestId: record.id,

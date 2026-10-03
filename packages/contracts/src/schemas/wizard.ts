@@ -7,6 +7,7 @@ import {
   DraftPhotoSchema,
   DraftConditionDisclosureSchema,
 } from "./listings";
+import { PHONE_TM_PATTERN } from "./auth";
 
 // ── Wizard step enum ──
 
@@ -184,7 +185,12 @@ export const StepContactSchema = z
       .string({ required_error: KEY.descriptionRequired })
       .min(1, KEY.descriptionRequired)
       .max(WIZARD_LIMITS.descriptionMaxLength, KEY.descriptionTooLong),
-    contactPhone: z.string().optional(),
+    // Required even when calls are off (D7). The same rule as `PhoneTm`, with
+    // translatable keys; whether the number is confirmed is the server's check
+    // on publish, not this schema's (ADR-0081).
+    contactPhone: z
+      .string({ required_error: KEY.required, invalid_type_error: KEY.required })
+      .regex(PHONE_TM_PATTERN, KEY.invalidValue),
     allowCalls: z.boolean(),
     allowChat: z.boolean(),
   })
