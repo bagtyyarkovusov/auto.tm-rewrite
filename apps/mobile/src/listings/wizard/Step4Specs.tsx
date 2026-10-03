@@ -32,6 +32,7 @@ interface Step4SpecsProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   fieldErrors?: Record<string, string>;
+  showErrors?: boolean;
   disabled?: boolean;
 }
 
@@ -391,6 +392,7 @@ export default function Step4Specs({
   payload,
   onChange,
   fieldErrors,
+  showErrors = false,
   disabled = false,
 }: Step4SpecsProps) {
   const { t } = useTranslation();
@@ -416,6 +418,7 @@ export default function Step4Specs({
           payload={payload}
           onChange={onChange}
           fieldErrors={fieldErrors}
+          showErrors={showErrors}
           disabled={disabled}
         />
       )}
@@ -468,6 +471,8 @@ export default function Step4Specs({
 
       {/* Condition disclosure group */}
       <ConditionDisclosureSection
+        key={specs.condition}
+        showErrors={showErrors}
         payload={payload}
         condition={specs.condition}
         errors={disclosureErrors}
@@ -577,14 +582,17 @@ function MileageInput({
   payload,
   onChange,
   fieldErrors,
+  showErrors,
   disabled,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   fieldErrors?: Record<string, string>;
+  showErrors: boolean;
   disabled: boolean;
 }) {
   const { t } = useTranslation();
+  const [touched, setTouched] = useState(false);
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
@@ -593,7 +601,9 @@ function MileageInput({
       {wrapDisabled(
         <Input
           value={payload.mileageKm?.toString() ?? ""}
+          onBlur={() => setTouched(true)}
           onChangeText={(text) => {
+            setTouched(true);
             const num = parseInt(text, 10);
             onChange({
               mileageKm: Number.isNaN(num) ? undefined : num,
@@ -605,7 +615,7 @@ function MileageInput({
         />,
         disabled,
       )}
-      {fieldErrors?.mileageKm && (
+      {(showErrors || touched) && fieldErrors?.mileageKm && (
         <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
           {fieldErrors.mileageKm}
         </Text>
@@ -832,16 +842,20 @@ function ConditionDisclosureSection({
   payload,
   condition,
   errors,
+  showErrors,
   onChange,
   disabled,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   condition: Enums.ListingCondition;
   errors: ConditionDisclosureFieldErrors;
+  showErrors: boolean;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
 }) {
   const { t } = useTranslation();
+  const [damagedTouched, setDamagedTouched] = useState(false);
+  const [knownIssuesTouched, setKnownIssuesTouched] = useState(false);
   const disclosure = payload.conditionDisclosure;
   const isNew = condition === Enums.ListingCondition.New;
 
@@ -869,7 +883,11 @@ function ConditionDisclosureSection({
               return (
                 <Pressable
                   key={String(answer)}
-                  onPress={() => updateDisclosure({ damaged: answer })}
+                  onBlur={() => setDamagedTouched(true)}
+                  onPress={() => {
+                    setDamagedTouched(true);
+                    updateDisclosure({ damaged: answer });
+                  }}
                   disabled={disabled}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: selected }}
@@ -892,7 +910,7 @@ function ConditionDisclosureSection({
               );
             })}
           </View>
-          {errors.damaged && (
+          {(showErrors || damagedTouched) && errors.damaged && (
             <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
               {errors.damaged}
             </Text>
@@ -907,7 +925,9 @@ function ConditionDisclosureSection({
         {wrapDisabled(
           <Input
             value={disclosure?.knownIssuesText ?? ""}
+            onBlur={() => setKnownIssuesTouched(true)}
             onChangeText={(text) => {
+              setKnownIssuesTouched(true);
               updateDisclosure({ knownIssuesText: text || undefined });
             }}
             placeholder={t("knownIssuesPlaceholder")}
@@ -920,7 +940,7 @@ function ConditionDisclosureSection({
           />,
           disabled,
         )}
-        {errors.knownIssuesText && (
+        {(showErrors || knownIssuesTouched) && errors.knownIssuesText && (
           <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
             {errors.knownIssuesText}
           </Text>
