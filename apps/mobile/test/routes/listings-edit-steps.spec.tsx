@@ -87,5 +87,7 @@ describe("editing a published Listing", () => {
     const vin = screen.getByLabelText("VIN");
     expect(vin.props.value).toBe("WBA1234567890ABCD");
     expect(vin.props.editable).toBe(false);
+    expect(vin.props.accessibilityHint).toBe("This field cannot be changed after publishing.");
+    expect(vin.props.accessibilityState).toEqual({ disabled: true });
   });
 });
