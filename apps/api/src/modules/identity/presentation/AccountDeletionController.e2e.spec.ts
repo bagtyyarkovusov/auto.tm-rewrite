@@ -15,6 +15,8 @@ import {
   type EmailCodeSenderPort,
 } from "../domain/ports/EmailCodeSenderPort";
 import { IdentityModule } from "../identity.module";
+import { toCodePurpose } from "../infrastructure/codePurpose";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -28,6 +30,7 @@ describe("AccountDeletionController e2e", () => {
     process.env["OTP_TEST_MODE"] = "true";
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         IdentityModule,
         JwtModule.register({
           global: true,
@@ -182,6 +185,8 @@ describe("AccountDeletionController e2e", () => {
     expect(response.body.code).toBe("INVALID_OTP");
     const unchanged = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     expect(unchanged.deletionScheduledAt).toBeNull();
+    await expect(prisma.otpRequest.findUniqueOrThrow({ where: { id: signIn.body.requestId } }))
+      .resolves.toMatchObject({ verifiedAt: null, attempts: 0 });
   });
 
   it("fails a confirmation identically for held and unheld values", async () => {
@@ -237,32 +242,32 @@ describe("AccountDeletionController e2e", () => {
     ).resolves.toBe(1);
   });
 
-  it("lets a deletion code succeed at most once across deletion and sign-in", async () => {
+  it.each([
+    { phone: "+99361234567" },
+    { email: "seller@example.com" },
+  ])("never signs in with a web deletion code for %o, which stays usable", async (destination) => {
     const user = await prisma.user.create({
-      data: { phone: "+99361234567", phoneVerifiedAt: new Date() },
+      data: "phone" in destination
+        ? { phone: destination.phone, phoneVerifiedAt: new Date() }
+        : { email: destination.email, emailVerifiedAt: new Date() },
     });
     const codeResponse = await request
       .post("/api/v1/account-deletion/request")
-      .send({ phone: "+99361234567" })
+      .send(destination)
       .expect(201);
+    const body = { ...destination, code: codeResponse.body.testCode };
 
-    const body = { phone: "+99361234567", code: codeResponse.body.testCode };
-    const [signIn, deletion] = await Promise.all([
-      request.post("/api/v1/auth/otp/verify").send(body),
-      request.post("/api/v1/account-deletion/confirm").send(body),
-    ]);
+    const signIn = await request.post("/api/v1/auth/otp/verify").send(body).expect(400);
 
-    const successes = [signIn.status === 201, deletion.status === 204].filter(Boolean);
-    expect(successes).toHaveLength(1);
-    const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
-    const sessions = await prisma.session.count({ where: { userId: user.id } });
-    if (deletion.status === 204) {
-      expect(after.deletionScheduledAt).not.toBeNull();
-      expect(sessions).toBe(0);
-    } else {
-      expect(after.deletionScheduledAt).toBeNull();
-      expect(sessions).toBe(1);
-    }
+    expect(signIn.body.code).toBe("OTP_NOT_FOUND");
+    await expect(prisma.session.count({ where: { userId: user.id } })).resolves.toBe(0);
+    await expect(
+      prisma.otpRequest.findUniqueOrThrow({ where: { id: codeResponse.body.requestId } }),
+    ).resolves.toMatchObject({ verifiedAt: null, attempts: 0 });
+
+    await request.post("/api/v1/account-deletion/confirm").send(body).expect(204);
+    const deleted = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(deleted.deletionScheduledAt).not.toBeNull();
   });
 
   it("shares the destination cooldown with sign-in codes", async () => {
@@ -330,6 +335,7 @@ describe("AccountDeletionController e2e", () => {
       for (let index = 0; index < 5; index += 1) {
         await prisma.otpRequest.create({
           data: {
+            purpose: toCodePurpose("sign-in"),
             channel: "phone",
             destination: phone,
             phone,

@@ -65,7 +65,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0053](0053-defer-vin-decoding-until-a-real-decoder-exists.md) | Defer VIN decoding until a real decoder exists (amends ADR-0037 VIN history signal) | Accepted | 2026-09-22 |
 | [0054](0054-phone-or-email-sign-in-share-one-user.md) | Phone or email sign-in share one User (supersedes ADR-0006 phone-only sign-in; amends ADR-0030 reviewer entries) | Accepted | 2026-09-22 |
 | [0055](0055-resend-sends-sign-in-codes-from-the-worker.md) | Resend sends sign-in codes by email from the worker (complements ADR-0054) | Accepted | 2026-09-22 |
-| [0056](0056-listing-contact-phones-are-verified.md) | Listing contact phones are verified (supersedes ADR-0054 publishing and seller-trust parts) | Accepted | 2026-09-22 |
+| [0056](0056-listing-contact-phones-are-verified.md) | Listing contact phones are verified (supersedes ADR-0054 publishing and seller-trust parts) | Accepted; editing rule amended by ADR-0081 | 2026-09-22 |
 | [0057](0057-defer-the-in-app-inspection-demand-signal.md) | Defer the in-app inspection demand signal (amends ADR-0037 demand instrumentation) | Accepted | 2026-09-22 |
 | [0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) | Portable coding-agent issue execution and pull-request gates | Accepted; high-risk review-provider rule and two-issue pilot limit superseded by ADR-0064; Sandcastle boundaries superseded by ADR-0066 | 2026-09-23 |
 | [0059](0059-kimi-code-as-a-third-interactive-coding-agent.md) | Kimi Code as a third interactive coding agent (amends ADR-0058 supported agents and review-provider rules) | Accepted; high-risk review-provider rule and restated pilot limit superseded by ADR-0064 | 2026-09-28 |
@@ -90,6 +90,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0078](0078-the-api-trusts-one-configured-header-for-the-client-ip.md) | The API trusts one configured header for the client IP (amends ADR-0054's per-IP budget; preserves ADR-0039's hosting constraint) | Accepted | 2026-10-02 |
 | [0079](0079-server-recorded-upload-provenance-for-listing-media.md) | Server-recorded upload provenance for Listing media (amends ADR-0008's upload path) | Accepted | 2026-10-02 |
 | [0080](0080-a-new-car-skips-the-damaged-question.md) | A New car skips the "Damaged / needs repair" question (amends ADR-0052's required-to-publish rule) | Accepted | 2026-10-02 |
+| [0081](0081-contact-phone-confirmation-api-for-listings.md) | Contact phone confirmation API for Listings (complements ADR-0056 under ADR-0054's code budgets; amends ADR-0056's editing rule) | Accepted | 2026-10-03 |
 
 ## Per-app ADRs
 

@@ -189,6 +189,11 @@ export const EmailCodeJobSchema = z.object({
   to: z.string().email(),
   code: z.string().regex(/^\d{6}$/),
   locale: z.nativeEnum(Locale),
-  purpose: z.nativeEnum(SignInCodePurpose),
+  // Only the three flows with email wording; contact-phone codes go by SMS.
+  purpose: z.enum([
+    SignInCodePurpose.SignIn,
+    SignInCodePurpose.SignInMethod,
+    SignInCodePurpose.AccountDeletion,
+  ]),
 });
 export type EmailCodeJob = z.infer<typeof EmailCodeJobSchema>;

@@ -27,6 +27,7 @@ import { IMAGE_VARIANT_GENERATOR } from "../domain/ports/ImageVariantGenerator";
 import { LISTING_EVENT_PUBLISHER } from "../domain/ports/ListingEventPublisher";
 import { MEDIA_OBJECT_INSPECTOR } from "../domain/ports/MediaObjectInspector";
 import { MEDIA_STORAGE_PORT } from "../domain/ports/MediaStoragePort";
+import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 
 // Issue #536 / ADR-0079 against real Postgres: the unique upload link, the
 // atomic release and the cleanup guard are database behavior, not fakes.
@@ -70,6 +71,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        bullTestRoot(),
         ConfigModule.forRoot({
           isGlobal: true,
           validate: (cfg) => EnvSchema.parse(cfg),
