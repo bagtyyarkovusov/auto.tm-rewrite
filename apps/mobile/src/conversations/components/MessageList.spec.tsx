@@ -205,6 +205,27 @@ describe("MessageList Message actions", () => {
     expect(sheetOpen(screen)).toBe(false);
   });
 
+  it.each(["Copy", "Report message"])("removes %s when the open sheet's Message is deleted and redacted", (action) => {
+    const incoming = message("peer-recent", at(2, 17, 59), { senderId: PEER, text: "Private original text" });
+    const handlers = { onCopy: vi.fn(), onReport: vi.fn() };
+    const screen = renderMobile(<MessageList currentUserId={ME} messages={[incoming]} {...handlers} />);
+    longPressText(screen, "Private original text, 05:59 PM");
+    expect(screen.getByRole("button", { name: action })).toBeTruthy();
+
+    // The websocket deletion replaces the cached item and clears its text.
+    screen.rerender(
+      <MessageList currentUserId={ME} messages={[{ ...incoming, text: "", deletedAt: at(2, 18) }]} {...handlers} />,
+    );
+    expect(screen.getByText("Message deleted")).toBeTruthy();
+    const staleAction = screen.queryByRole("button", { name: action });
+    if (staleAction) fireEvent.press(staleAction);
+
+    expect(handlers.onCopy).not.toHaveBeenCalled();
+    expect(handlers.onReport).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Report message" })).toBeNull();
+  });
+
   it("closes on Cancel without acting", () => {
     const { screen, onCopy, onReport } = renderList([message("peer-1", at(2, 9), { senderId: PEER })]);
 
