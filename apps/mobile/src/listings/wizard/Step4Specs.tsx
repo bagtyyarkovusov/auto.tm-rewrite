@@ -466,6 +466,8 @@ export default function Step4Specs({
           payload={payload}
           onChange={onChange}
           disabled={disabled}
+          fieldErrors={fieldErrors}
+          showErrors={showErrors}
         />
       </View>
 
@@ -808,12 +810,17 @@ function EnginePowerInput({
   payload,
   onChange,
   disabled,
+  fieldErrors,
+  showErrors,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
+  fieldErrors?: Record<string, string>;
+  showErrors: boolean;
 }) {
   const { t } = useTranslation();
+  const [touched, setTouched] = useState(false);
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
@@ -822,7 +829,9 @@ function EnginePowerInput({
       {wrapDisabled(
         <Input
           value={payload.enginePower?.toString() ?? ""}
+          onBlur={() => setTouched(true)}
           onChangeText={(text) => {
+            setTouched(true);
             const num = parseInt(text, 10);
             onChange({
               enginePower: Number.isNaN(num) ? undefined : num,
@@ -833,6 +842,11 @@ function EnginePowerInput({
           editable={!disabled}
         />,
         disabled,
+      )}
+      {(showErrors || touched) && fieldErrors?.enginePower && (
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          {fieldErrors.enginePower}
+        </Text>
       )}
     </View>
   );
