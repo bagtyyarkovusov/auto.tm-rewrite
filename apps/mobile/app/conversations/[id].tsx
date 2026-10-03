@@ -620,6 +620,9 @@ export default function ConversationDetailScreen() {
                 true,
               );
         markFailed(clientMessageId);
+        if (err instanceof ApiError && err.status === 403) {
+          reloadAfterRefusal();
+        }
         console.warn("Image message send failed", uploadError);
       }
     },
@@ -694,8 +697,11 @@ export default function ConversationDetailScreen() {
             markFailed(msg.clientMessageId);
             if (result.code === "FORBIDDEN") reloadAfterRefusal();
           }
-        } catch {
+        } catch (err) {
           markFailed(msg.clientMessageId);
+          if (err instanceof ApiError && err.status === 403) {
+            reloadAfterRefusal();
+          }
         }
         return;
       }
