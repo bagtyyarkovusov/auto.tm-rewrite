@@ -191,3 +191,26 @@ Read-only source/test inspection after continuation, no tests run and no live re
 Earlier statements about stale/conflicting failure safeguards should be read narrowly: target status guards exist, but atomic report resolution and owner-edit races are unresolved source findings. Do not claim complete concurrency safety.
 
 Next frontier concerns related report disposition, reported-versus-current evidence, private Message scope and reporter feedback. Staff grants/revocation and notice delivery source facts are being gathered separately. Evidence retention/deletion, exact phase admission and prototype review remain pending.
+
+
+## Completed staff access and notice delivery source audit
+
+- Current User.role is a single enum; the moderator enum alone does not grant AdminGuard access. All guarded admin moderation, report details, audit and inspection-interest aggregates require current admin role plus matching live elevated session. No per-person scoped staff grants or founder-only grant management ship. Source: packages/db/prisma/schema.prisma:15 and47; apps/api/src/common/admin.guard.ts:46; apps/admin/src/app/actions.ts:86.
+- Every elevated admin can currently receive private Message report context. There is no separate private-evidence permission. Aggregate-only viewers cannot safely be onboarded by assigning the existing admin role. Source: apps/api/src/modules/admin/application/GetReportDetail.ts:140; ReportsController.ts:182 in that module.
+- TOTP elevation lasts12 hours; backup-code consumption/elevation is transactional. Demotion/session deletion/expiry/elevation expiry blocks the next guarded admin request, but does not cancel in-flight actions. Ordinary JWT routes do not reread sessions. Admin TOTP endpoints check JWT role rather than current role, leaving a narrower stale-role concern. Source: apps/api/src/modules/identity/application/VerifyAdminTotp.ts:18; apps/api/src/common/admin.guard.ts:46 and61; common/jwt-auth.guard.ts:54; identity/presentation/AdminAuthController.ts:108.
+- Manual operator recovery is required when both TOTP device and backup codes are lost. No founder grant UI, last-founder protection or self-service recovery exists. Source: docs/prd/ops/86-admin-bootstrap-runbook.md:23; packages/db/src/promote-admin.ts:71.
+- No shipped in-app notification inbox exists. The mobile notifications screen manages device permission/settings; notification endpoints manage device tokens. NotificationHistory/readAt/schema/contracts are not proof of a history/read-state UI. Source: apps/mobile/app/notifications.tsx:16; apps/api/src/modules/notifications/presentation/notifications.controller.ts:42; packages/db/prisma/schema.prisma:691.
+- Direct Message push has queue/worker transport, but its decision use-case suppresses online/muted recipients before writing history. Reusing that decision logic would lose required durable moderation notices. Moderation needs a distinct notice producer/job and durable owner-visible decision record; transport reuse alone is not full delivery proof. Source: apps/api/src/modules/notifications/application/DecideDirectMessageNotification.ts:54 and72; apps/worker/src/queues/notification-fanout.processor.ts:24.
+
+Read-only source inspection only; no tests or production/device delivery checks were run. These facts do not change accepted governing ADRs.
+
+## Next proposed frontier Q62–Q67, not accepted
+
+- Q62: Group related reports for review, permit explicit audited resolution of selected reports concerning the same reviewed issue, keep unrelated issues pending, and recheck current content before enforcing an old report. Restoration does not automatically close reports.
+- Q63: Capture a minimal reported Listing version and selected relevant photo as protected case evidence; show current content separately and label changed/deleted/unavailable evidence. Evidence is not telemetry; retention/deletion policy follows after capture scope is settled.
+- Q64: Limit private Message inspection to the reported Message plus up to20 nearby Messages in the same conversation. Display attachments only when relevant; audit private-evidence access. Further context comes through a reasoned case process, not arbitrary inbox browsing. Exact expansion rules remain later scope.
+- Q65: Founder controls grants/recovery; moderators handle public-content enforcement; private Message evidence requires an additional grant; Support handles cases and requires a moderation grant for enforcement; aggregate viewers see aggregates only; diagnostic investigators see authorized pseudonymous diagnostics without private chats/contact content.
+- Q66: Persist owner moderation decisions on account/Listing surfaces regardless of push availability; use optional generic push as a hint/deep link with no sensitive detail. Build no broad notification center as an automatic requirement. Reviewer Help and later Support remain phase-separated.
+- Q67: Reporters retain submission acknowledgement and may receive a generic reviewed state after disposition, without reporter counts, private action reasons, owner appeal details or full case access. A report history/product inbox remains separately scoped.
+
+All six are recommendations only. Exact role grant lifecycle, evidence retention/deletion, Message enforcement, notice copy/translations and launch phase admission are unresolved.
