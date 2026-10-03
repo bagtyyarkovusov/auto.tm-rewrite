@@ -318,6 +318,48 @@ describe("MessageList Message actions", () => {
     expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
   });
 
+  it("opens the Listing of a Listing-reference Message on a press", () => {
+    const onPostRefPress = vi.fn();
+    const screen = renderMobile(
+      <MessageList
+        currentUserId={ME}
+        messages={[
+          message("ref-1", at(2, 9), {
+            senderId: PEER,
+            kind: "post_ref",
+            text: "",
+            metadata: {
+              listingId: "00000000-0000-4000-8000-0000000000a1",
+              brandId: "00000000-0000-4000-8000-0000000000d1",
+              modelId: "00000000-0000-4000-8000-0000000000d2",
+              year: 2018,
+              displayPriceTmt: 285000,
+              priceCurrency: "TMT",
+              status: "active",
+              available: true,
+            },
+          }),
+        ]}
+        onPostRefPress={onPostRefPress}
+      />,
+    );
+
+    fireEvent.press(screen.getByRole("button", { name: /^Open/ }));
+    expect(onPostRefPress).toHaveBeenCalledWith("00000000-0000-4000-8000-0000000000a1");
+  });
+
+  it("dims a reported Message in the list", () => {
+    const { screen } = renderList([message("peer-1", at(2, 9), { senderId: PEER })], {
+      reportedMessageIds: new Set(["peer-1"]),
+    });
+
+    let node = screen.getByText("Reported") as { parent: unknown; props?: { className?: string } } | null;
+    while (node && !node.props?.className?.includes("max-w-[80%]")) {
+      node = node.parent as typeof node;
+    }
+    expect(node?.props?.className).toContain("opacity-60");
+  });
+
   it("opens the photo of an image Message", () => {
     const onImagePress = vi.fn();
     const screen = renderMobile(
