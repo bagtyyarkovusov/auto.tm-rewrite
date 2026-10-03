@@ -226,6 +226,22 @@ describe("MessageList Message actions", () => {
     expect(screen.queryByRole("button", { name: "Report message" })).toBeNull();
   });
 
+  it.each(["pending", "failed", "absent"] as const)("closes an open sheet when its Message becomes %s", (status) => {
+    const incoming = message("peer-recent", at(2, 17, 59), { senderId: PEER });
+    const { screen, onCopy, onReport } = renderList([incoming]);
+    longPressText(screen, "peer-recent, 05:59 PM");
+    expect(sheetOpen(screen)).toBe(true);
+
+    screen.rerender(
+      <MessageList currentUserId={ME} messages={status === "absent" ? [] : [{ ...incoming, status }]} onCopy={onCopy} onReport={onReport} />,
+    );
+    expect(sheetOpen(screen)).toBe(false);
+    expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Report message" })).toBeNull();
+    expect(onCopy).not.toHaveBeenCalled();
+    expect(onReport).not.toHaveBeenCalled();
+  });
+
   it("closes on Cancel without acting", () => {
     const { screen, onCopy, onReport } = renderList([message("peer-1", at(2, 9), { senderId: PEER })]);
 
@@ -337,6 +353,41 @@ describe("MessageList Message actions", () => {
     fireEvent(screen.getByRole("button", { name: /^Open/ }), "longPress");
     expect(screen.getByRole("button", { name: "Report message" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
+  });
+
+  it.each([true, false])("own Listing-reference Message actions follow canDelete=%s", (canDelete) => {
+    const ownListing = message("own-ref", at(2, canDelete ? 17 : 9, canDelete ? 59 : 0), {
+      kind: "post_ref",
+      text: "",
+      canDelete,
+      metadata: {
+        listingId: "00000000-0000-4000-8000-0000000000a1",
+        brandId: "00000000-0000-4000-8000-0000000000d1",
+        modelId: "00000000-0000-4000-8000-0000000000d2",
+        year: 2018,
+        displayPriceTmt: 285000,
+        priceCurrency: "TMT",
+        status: "active",
+        available: true,
+      },
+    });
+    const { screen, onDelete, onCopy, onReport } = renderList([ownListing]);
+    fireEvent(screen.getByRole("button", { name: /^Open/ }), "longPress");
+
+    if (canDelete) {
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Copy" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Report message" })).toBeNull();
+      fireEvent.press(screen.getByRole("button", { name: "Delete" }));
+      expect(onDelete.mock.calls).toEqual([["own-ref"]]);
+      expect(sheetOpen(screen)).toBe(false);
+    } else {
+      expect(sheetOpen(screen)).toBe(false);
+      expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+      expect(onDelete).not.toHaveBeenCalled();
+    }
+    expect(onCopy).not.toHaveBeenCalled();
+    expect(onReport).not.toHaveBeenCalled();
   });
 
   it("opens the Listing of a Listing-reference Message on a press", () => {
