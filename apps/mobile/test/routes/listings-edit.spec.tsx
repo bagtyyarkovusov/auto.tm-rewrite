@@ -136,6 +136,33 @@ describe("legacy Listing edit", () => {
     expect(fixture.save).not.toHaveBeenCalled();
   });
 
+  it("Done explains untouched invalid Engine power and stays on Details", () => {
+    fixture.listing = { ...fixture.baseline, enginePower: 0 };
+    const screen = renderMobile(<EditListingScreen />);
+    fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: No" }));
+    expect(screen.getByText("Power")).toBeTruthy();
+    expect(screen.queryByText("Engine power must be greater than zero")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+    expect(screen.getByText("Engine power must be greater than zero")).toBeTruthy();
+    expect(screen.getByText("Specifications")).toBeTruthy();
+    expect(screen.getByDisplayValue("0")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+  });
+
+  it("opens a New Listing without disclosure directly at Check with Save changes", () => {
+    fixture.listing = { ...fixture.baseline, condition: "new", conditionDisclosure: undefined };
+    const screen = renderMobile(<EditListingScreen />);
+    expect(screen.getByText("Review")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    expect(screen.queryByPlaceholderText("e.g. 150")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
+  });
+
   it("clears this Listing's staged photos when the seller discards the edit", () => {
     const screen = renderMobile(<EditListingScreen />);
     fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }));

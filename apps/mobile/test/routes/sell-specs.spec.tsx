@@ -86,6 +86,21 @@ describe("Sell Details footer and resumed New persistence", () => {
     expect(screen.getByRole("button", { name: "Continue", disabled: true })).toBeTruthy();
   });
 
+  it("Continue explains untouched invalid Engine power and stays on Details", () => {
+    fixture.payload = { ...fixture.payload, condition: "used", mileageKm: 1000,
+      conditionDisclosure: { damaged: false }, enginePower: 0 };
+    const screen = renderMobile(<SellScreen />);
+    expect(screen.getByText("Power")).toBeTruthy();
+    expect(screen.queryByText("Engine power must be greater than zero")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Continue", disabled: false }));
+    expect(screen.getByText("Engine power must be greater than zero")).toBeTruthy();
+    expect(screen.getByText("Specifications")).toBeTruthy();
+    expect(screen.getByDisplayValue("0")).toBeTruthy();
+    expect(fixture.forceSave).not.toHaveBeenCalled();
+    expect(screen.queryByText(required)).toBeNull();
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+  });
+
   it("preserves and rejects a legacy explicit damaged New answer on Continue", () => {
     fixture.payload.conditionDisclosure = { damaged: true };
     const screen = renderMobile(<SellScreen />);

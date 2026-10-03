@@ -179,3 +179,33 @@ describe("Step4Specs for a New car", () => {
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
   });
 });
+
+describe("Step4Specs Engine power feedback", () => {
+  const error = "Engine power must be greater than zero";
+  const initial: WizardSchemas.WizardDraftPayload = {
+    condition: "used", mileageKm: 1000, conditionDisclosure: { damaged: false }, enginePower: 0,
+  };
+
+  it("keeps an untouched invalid value quiet, reveals it on blur, and clears it on correction", () => {
+    let latest = initial;
+    const screen = renderMobile(<ValidatedSpecs initial={initial} onPayload={(p) => { latest = p; }} />);
+    expect(screen.getByText("Power")).toBeTruthy();
+    expect(screen.queryByText(error)).toBeNull();
+    fireEvent(screen.getByPlaceholderText("e.g. 150"), "blur");
+    expect(screen.getByText(error)).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText("e.g. 150"), "150.9");
+    expect(latest.enginePower).toBe(150);
+    expect(screen.queryByText(error)).toBeNull();
+    fireEvent.changeText(screen.getByPlaceholderText("e.g. 150"), "");
+    expect(latest.enginePower).toBeUndefined();
+    expect(WizardSchemas.validateStep("specs", latest).valid).toBe(true);
+    expect(screen.queryByText(error)).toBeNull();
+  });
+
+  it("shows the error as soon as the seller enters zero", () => {
+    const screen = renderMobile(<ValidatedSpecs initial={{ ...initial, enginePower: undefined }} />);
+    expect(screen.queryByText(error)).toBeNull();
+    fireEvent.changeText(screen.getByPlaceholderText("e.g. 150"), "0");
+    expect(screen.getByText(error)).toBeTruthy();
+  });
+});
