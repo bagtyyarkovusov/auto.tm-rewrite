@@ -1,8 +1,8 @@
 # ADR-0081: Contact phone confirmation API for Listings
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-03
-- **Deciders**: AutoTM founder, who asked on 2026-10-03 for a short design ADR before the contact phone API and Contact step slices are ticketed ([#354, Q7](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354#issuecomment-5961320337)); drafted by the orchestrator. The founder chose the six open points on 2026-10-03, all as recommended
+- **Deciders**: AutoTM founder, who asked on 2026-10-03 for a short design ADR before the contact phone API and Contact step slices are ticketed ([#354, Q7](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/354#issuecomment-5961320337)); drafted by the orchestrator. The founder chose the six open points on 2026-10-03, all as recommended, and accepted ADR-0081 on 2026-10-03 in Claude Code desktop, [recorded on PR #590](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/590)
 - **Amends**: the editing rule of [ADR-0056](0056-listing-contact-phones-are-verified.md): an edit is checked only when it changes the contact phone (see Edit below). The rest of ADR-0056 stays in force.
 - **Complements**: [ADR-0056](0056-listing-contact-phones-are-verified.md), by naming the endpoints, records, error codes, SMS text and ownership it left to implementation. It works within the code limits of [ADR-0054](0054-phone-or-email-sign-in-share-one-user.md) and the client-IP rule of [ADR-0078](0078-the-api-trusts-one-configured-header-for-the-client-ip.md).
 
