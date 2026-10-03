@@ -59,7 +59,7 @@ function PriceInput({
 }) {
   const { t } = useTranslation();
   return (
-    <View className="gap-1.5 flex-1">
+    <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">{t("amount")} *</Text>
       {wrapDisabled(
         <Input
