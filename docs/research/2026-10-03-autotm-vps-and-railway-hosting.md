@@ -1,0 +1,62 @@
+# AutoTM: TurkmenTelecom VPS, Railway and local monitoring
+
+> Noncanonical research for [Compare TurkmenTelecom VPS and Railway launch hosting](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/612), accessed 2026-10-03. No VPS has been purchased. The founder is considering a published TurkmenTelecom plan plus a custom storage quote if needed. This note approves no purchase, deployment, hosting policy or launch gate.
+
+Source inspected at `6d951f5c8054bbce5bf51b436fb4d08057899963`; application source baseline is `8af7428301d72ac8e252db06448d7812f838499d`. The Railway observations below were recorded by the parent session at approximately 07:35–07:37 UTC on 2026-10-03. No TM runtime was accessed and no provider contract was reviewed. Context7 had no relevant TurkmenTelecom documentation; official provider and government publications were used. Railway documentation was resolved and queried through `/railwayapp/docs`, including research mode. Vendor capabilities are distinct from AutoTM runtime proof.
+
+## TurkmenTelecom: a candidate requiring a quote and trial
+
+The [current hosting page](https://telecom.tm/en/hosting/) lists **Power L: 8 cores, 16GB RAM, 80GB SSD, 900 TMT/month** and **Storage L: 2 cores, 2GB RAM, 200GB SSD, 698.40 TMT/month**. It advertises Debian, Ubuntu and other Linux images. Power L plus separately quoted SSD is a candidate for the primary server; it has not been load-tested. Storage L supplies more disk with less compute and memory, so its name alone does not establish suitability for databases or monitoring.
+
+[ADR-0005](../adr/0005-hosting.md#L30) targets Server A at 8 vCPU, 16–32GB RAM and 500GB SSD, and Server B at 4 vCPU, 16GB RAM and 500GB SSD. These are planning targets, not measured minimum requirements. Published 80GB storage does not reject the provider: establish media growth, database size, backup retention and release-image headroom, then request the appropriate custom capacity.
+
+An official [2021 announcement](https://telecom.tm/en/news/11229?offset=3244) identifies KVM virtualization. An official [2025 hosting announcement](https://telecom.tm/ru/news/9102?offset=1768) describes full administrative control. Neither establishes the current VPS-specific root, Docker, network or recovery terms. A [2021 colocation announcement](https://telecom.tm/en/news/7253?offset=3252) lists SSH, a dedicated IP and separate external/domestic links; those terms must not be transferred to VPS plans.
+
+The [official VM backup announcement](https://armenia.tmembassy.gov.tm/en/news/157013) describes panel-managed backups, restoration and cloning into new VMs. Published hourly brackets are 0–60GB: 0.58 TMT; 61–120GB: 1.16; 121–200GB: 1.93; 201GB+: 2.89. If an 80GB backup is continuously billed at 1.16 TMT/hour, 30 days would cost **835.20 TMT**. That is conditional arithmetic, not a quote: charging duration, compressed versus allocated size and multiple-copy billing remain unknown. The announcement also requires an owner's official letter and ownership confirmation to link a domain to the panel; it does not establish whether ordinary DNS A records require that process.
+
+Request one written quote covering:
+
+- Power L plus specified SSD, independent disk expansion, storage type/IOPS, resize downtime, taxes and setup charges.
+- Domestic and international bandwidth separately, traffic caps/overages and inbound versus outbound restrictions.
+- Included static public IPv4, root/sudo and SSH keys, supported Linux, Docker, console/rescue access and firewall/port control.
+- Private inter-VM networking, its pricing, and whether primary, replica and backups can occupy different physical failure domains.
+- Backup scheduling, retention, billing basis, consistency, independent copies, export and measured restoration procedure.
+- Support hours, response/recovery commitments, host failure handling and any contractual SLA.
+- SSH and panel access from abroad; DNS/domain administration; port 80/443 and TLS renewal; exact reachability of Resend, FCM/APNS, time services and any proposed telemetry/alert destinations.
+
+These details were not established by the inspected public sources. The application DOCX and VDS panel could not be inspected with available fetches; this does not prove foreign access is blocked.
+
+## Railway: what the live snapshot establishes
+
+Project `auto-tm` is `176ddec0-dd65-4087-b82c-798599fc2ebe`. Provider status and HTTP reads in this session found:
+
+| Environment | Evidence at observation time |
+|---|---|
+| Staging `652abc79-fdb0-48b0-9f6c-ad0ff572d7b2` | All seven services exist. API, worker, Postgres, Redis and MinIO report `SUCCESS`; admin and web report `SLEEPING`, consistent with staging policy. API `/readyz` returned HTTP 200 with Postgres/Redis/MinIO checks passing; reported SHA `1d4fdb1a3d6a1a264d946079fd7981d8c6174f1f`. |
+| Production `c628b9bf-08ef-45f6-976f-3d646e0ebfbd` | API and admin have `latestDeployment: null` and no active deployments. Postgres, Redis, MinIO, worker and web report `SUCCESS`. The [privacy page](https://autotm.bagtyyar.dev/en/legal/privacy) returned HTTP 200. This does not establish a working real-user production API. |
+
+Postgres, Redis and MinIO each have a 5000MB volume in each environment. No GlitchTip, Sentry or PostHog service was present. Staging tracing and automatic instrumentation were disabled for all seven services. The `metrics --all --since 1d` result was a **current summary totaling approximately 618MB** across the seven staging services. It is not a peak, mean, load-test result or monthly bill and cannot size a VPS. No current backup configuration or backup restoration was verified in these reads; that is missing evidence, not a finding that backups do not exist.
+
+Railway [usage rates](https://docs.railway.com/pricing/plans) are RAM $10/GB/month, CPU $20/vCPU/month, service egress $0.05/GB and volumes $0.15/GB/month. The [Pro plan](https://railway.com/pricing) has a $20 monthly minimum including $20 of usage and unlimited team members. Resource rates are usage-based; allocated VPS specifications cannot be compared directly with the low-load Railway memory snapshot.
+
+[Volume documentation](https://docs.railway.com/volumes/reference) lists Hobby's 5GB limit and Pro's 50GB default, expandable to 1TB. A service has one volume, volume-backed services cannot use replicas, and redeploys can briefly interrupt them. [Postgres recovery documentation](https://docs.railway.com/guides/postgres-backups-restores) describes scheduled volume backups retained daily for six days, weekly for one month and monthly for three months; PITR requires enabling. Portable logical dumps remain a separate recovery path. [Postgres templates](https://docs.railway.com/databases/postgresql) are unmanaged: the customer retains database maintenance responsibility.
+
+Railway's [Compose workflow](https://docs.railway.com/guides/docker-compose) translates configuration into Railway services; it does not run Docker Compose directly. [Private S3 buckets](https://docs.railway.com/storage-buckets/uploading-serving) have free bucket egress and [storage pricing](https://railway.com/pricing) of $0.015/GB/month. They are not a demonstrated replacement for AutoTM's MinIO anonymous-read policies and stable media URLs; any migration needs review and runtime evidence. Railway's [region list](https://docs.railway.com/deployments/regions) contains no Turkmenistan region. Actual domestic app, media, WebSocket, push, email and telemetry delivery remains untested.
+
+## Monitoring and product measurement
+
+Current code has [API readiness probes](../../apps/api/src/common/readiness.service.ts#L30), structured logs and a [mobile error boundary](../../apps/mobile/components/ErrorBoundary.tsx#L30) that writes to the console. There is no implemented remote crash-reporting pipeline or first-party product-event collector. [Server B Compose](../../infra/compose/docker-compose.serverb.yml) declares monitoring services; this is not deployed-service evidence. See the [earlier observability research](2026-10-03-autotm-observability-options.md) for SDK, native crash, symbolication, quota and privacy limits.
+
+[GlitchTip installation](https://glitchtip.com/documentation/install/) explicitly supports Railway deployment using its all-in-one service with Postgres/Redis. Its recommended 512MB applies to the application service, not the whole deployment. [Sentry self-hosting requirements](https://github.com/getsentry/sentry-docs/blob/master/develop-docs/self-hosted/index.mdx) are at least four cores, 16GB RAM plus 16GB swap and 20GB disk, recommending 32GB RAM; minimum Docker is 19.03.6 and Compose is 2.32.2. Sentry [maintains only its Docker Compose deployment](https://github.com/getsentry/sentry-docs/blob/master/develop-docs/self-hosted/support.mdx). Translating it into separate Railway services would be custom work outside that maintained path, not a verified turnkey deployment. [PostHog's hobby deployment](https://posthog.com/docs/self-host) requires four vCPU, 16GB RAM and more than 30GB storage; self-hosting is unsupported, without paid support plans, and paid-plan features are Cloud-only. No turnkey AutoTM Railway deployment of its full stack was verified. One 16GB Power L cannot be justified as sufficient for both tools alongside AutoTM from these requirements; avoid either custom heavy-stack deployment for the first launch.
+
+## Launch implications and next proof
+
+Approved [hosting policy](../adr/0039-phased-cloud-first-hosting.md#L21) keeps Railway reviewer-only until TM cutover and still requires trusted TM presence. [ADR-0010](../adr/0010-testing-obs.md#L48) plans local GlitchTip and monitoring; [ADR-0023](../adr/0023-first-party-product-analytics.md#L21) plans first-party analytics. These decisions remain current until explicitly amended. Full Railway production for real users is an option to investigate through measured TM connectivity and a policy decision; an old ADR alone is not empirical evidence that it cannot work.
+
+Authentication supports **phone or email** under [ADR-0054](../adr/0054-phone-or-email-sign-in-share-one-user.md#L21). Phone delivery is still unimplemented: the [API adapter](../../apps/api/src/modules/identity/infrastructure/HttpOtpSenderAdapter.ts#L19) only logs gateway dispatch, and the [gateway fleet selection](../../apps/sms-gateway/src/server.ts#L20) constructs its mock. Real phone delivery is needed for approved phone sign-in and contact-phone flows, not for every authentication method. [ADR-0056](../adr/0056-listing-contact-phones-are-verified.md#L18) and [ADR-0081](../adr/0081-contact-phone-confirmation-api-for-listings.md) require verified Listing Contact Phones, with implementation separate from the decision. Email-only sellers can verify a contact phone without adding a phone Sign-in Method.
+
+A VPS replaces server compute, not the [approved physical SIM-phone fleet](../adr/0006-auth.md#L50), local operation or phone-delivery implementation. [ADR-0005](../adr/0005-hosting.md#L71) routes restricted foreign egress and TLS provisioning through a Proxy PC. [Resend's TM policy](../adr/0055-resend-sends-sign-in-codes-from-the-worker.md#L72) permits direct access only after a recorded VM-provider probe. Purchasing a VPS proves neither delivery nor permission to add direct telemetry egress.
+
+**Scoped recommendation, as an inference:** keep Railway for reviewer/staging work and pilot GlitchTip there. Evaluate Power L with a custom SSD quote, local GlitchTip and a small first-party scorecard for TM users. Compare a full Railway real-user option only after domestic measurements and an explicit hosting decision. Vendor choice, budget, privacy, retention, egress and release gates remain human-owned.
+
+Prioritize launch evidence: (1) real phone and email delivery and required contact-phone behavior; (2) foreign operator access plus domestic API/media/WebSocket checks on the proposed host; (3) release JS/native crash symbolication and a delivered alert, including collector outage behavior; (4) isolated database/media restore and rollback with recorded recovery time; (5) representative load and disk-growth measurements. Start product measurement with decisions the founder will act on, such as successful sign-in, listing publication and contact starts; event definitions and allowed data must be explicit. Neither VPS specifications nor idle Railway metrics supply these proofs.
