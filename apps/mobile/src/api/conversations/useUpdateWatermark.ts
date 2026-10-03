@@ -30,6 +30,9 @@ export function useUpdateWatermark() {
         queryKey: queryKeys.conversations.list(),
       });
       void queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations.unreadCounts(),
+      });
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.conversations.detail(variables.conversationId),
       });
     },
