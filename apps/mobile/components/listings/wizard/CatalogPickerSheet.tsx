@@ -20,6 +20,24 @@ interface CatalogItem {
   name: string;
 }
 
+interface CatalogSection {
+  id: string;
+  title: string;
+  items: CatalogItem[];
+}
+
+type SheetRow =
+  | { kind: "header"; key: string; title: string }
+  | { kind: "item"; key: string; item: CatalogItem };
+
+function sheetRows(items: CatalogItem[] = [], sections?: CatalogSection[]): SheetRow[] {
+  if (!sections) return items.map((item) => ({ kind: "item", key: item.id, item }));
+  return sections.flatMap((section): SheetRow[] => [
+    { kind: "header", key: `header-${section.id}`, title: section.title },
+    ...section.items.map((item): SheetRow => ({ kind: "item", key: item.id, item })),
+  ]);
+}
+
 interface CatalogPickerSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,7 +45,10 @@ interface CatalogPickerSheetProps {
   searchPlaceholder: string;
   search: string;
   onSearchChange: (text: string) => void;
-  items: CatalogItem[];
+  /** The flat list. Leave it out when `sections` is given. */
+  items?: CatalogItem[];
+  /** Groups the items under headers; when given, it replaces `items`. A section should not be empty. */
+  sections?: CatalogSection[];
   selectedId?: string;
   emptyMessage: string;
   isLoading: boolean;
@@ -47,6 +68,7 @@ export function CatalogPickerSheet({
   search,
   onSearchChange,
   items,
+  sections,
   selectedId,
   emptyMessage,
   isLoading,
@@ -56,6 +78,8 @@ export function CatalogPickerSheet({
   footer,
 }: CatalogPickerSheetProps) {
   const { t } = useTranslation();
+  const rows = sheetRows(items, sections);
+  const isEmpty = !rows.some((row) => row.kind === "item");
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="max-h-[85%]" style={{ height: "85%" }}>
@@ -88,7 +112,7 @@ export function CatalogPickerSheet({
           <Text className="py-4 text-center text-sm text-destructive">
             {t("actionFailed")}
           </Text>
-        ) : items.length === 0 ? (
+        ) : isEmpty ? (
           <Text className="py-4 text-center text-sm text-muted-foreground">
             {emptyMessage}
           </Text>
@@ -96,30 +120,43 @@ export function CatalogPickerSheet({
           <FlatList
             // One sheet serves several pickers; a new list per title starts at the top.
             key={title}
-            data={items}
-            keyExtractor={(item) => item.id}
+            data={rows}
+            keyExtractor={(row) => row.key}
             keyboardShouldPersistTaps="handled"
             className="min-h-0 flex-1"
             contentContainerClassName="pb-2"
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => onSelect(item.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: item.id === selectedId }}
-                className={`min-h-12 flex-row items-center justify-between rounded-md px-2 py-3 ${
-                  item.id === selectedId ? "bg-muted" : ""
-                }`}
-              >
-                <Text
-                  className={`text-base ${item.id === selectedId ? "font-medium text-foreground" : "text-foreground"}`}
+            renderItem={({ item: row }) => {
+              if (row.kind === "header") {
+                return (
+                  <Text
+                    accessibilityRole="header"
+                    className="px-2 pb-1 pt-4 text-sm font-medium text-muted-foreground"
+                  >
+                    {row.title}
+                  </Text>
+                );
+              }
+              const { item } = row;
+              return (
+                <Pressable
+                  onPress={() => onSelect(item.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: item.id === selectedId }}
+                  className={`min-h-12 flex-row items-center justify-between rounded-md px-2 py-3 ${
+                    item.id === selectedId ? "bg-muted" : ""
+                  }`}
                 >
-                  {item.name}
-                </Text>
-                {item.id === selectedId && (
-                  <Icon as={Check} className="size-4 text-primary" />
-                )}
-              </Pressable>
-            )}
+                  <Text
+                    className={`text-base ${item.id === selectedId ? "font-medium text-foreground" : "text-foreground"}`}
+                  >
+                    {item.name}
+                  </Text>
+                  {item.id === selectedId && (
+                    <Icon as={Check} className="size-4 text-primary" />
+                  )}
+                </Pressable>
+              );
+            }}
           />
         )}
         {!isLoading && footer}
