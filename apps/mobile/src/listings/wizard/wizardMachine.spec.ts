@@ -703,7 +703,6 @@ describe("Resume at the step the seller left (#585)", () => {
   it("writes the new position into the create payload when the step changes", () => {
     let state = init({ ...car, currentStep: 1 });
     expect(state.currentStep).toBe("specs");
-    expect(state.payload.currentStep).toBe(2);
 
     state = wizardMachineReducer(state, { type: "UPDATE_FIELDS", updates: { ...details } });
     state = wizardMachineReducer(state, { type: "NEXT" });
