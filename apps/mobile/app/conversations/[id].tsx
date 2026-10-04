@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -152,7 +153,13 @@ export default function ConversationDetailScreen() {
   const blockUser = useBlockUser();
   const unblockUser = useUnblockUser();
   const muteConversation = useMuteConversation();
-  const { show: showToast } = useToast();
+  const { show } = useToast();
+  // A toast at the top clears the header at the size it is drawn, not a fixed 64 pt.
+  const headerHeight = useRef(0);
+  const showToast = useCallback(
+    (toast: Parameters<typeof show>[0]) => show({ ...toast, topClearance: headerHeight.current }),
+    [show],
+  );
 
   const conversationQuery = useConversation(readId);
   const notFound =
@@ -767,6 +774,14 @@ export default function ConversationDetailScreen() {
     setMessageToDelete(null);
   }, []);
 
+  const copyMessage = useCallback(
+    async (text: string) => {
+      await Clipboard.setStringAsync(text);
+      showToast({ title: t("conversations:messageCopied") });
+    },
+    [showToast, t],
+  );
+
   const confirmReportMessage = useCallback((messageId: string) => {
     setMessageToReport(messageId);
   }, []);
@@ -830,6 +845,7 @@ export default function ConversationDetailScreen() {
         isMuted={isMuted}
         isBlocked={isBlocked}
         muteDisabled={muteConversation.isPending}
+        onHeightChange={(height) => { headerHeight.current = height; }}
         onBack={goBack}
         onToggleMute={handleToggleMute}
         onReport={
@@ -886,6 +902,8 @@ export default function ConversationDetailScreen() {
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}
             onReport={confirmReportMessage}
+            onCopy={copyMessage}
+            reportEnabled={config?.reportEntryEnabled !== false}
             onImagePress={(uri) => setPreviewUri(uri)}
             onPostRefPress={(listingId) =>
               router.push(`/(public)/listings/${listingId}`)
@@ -962,9 +980,9 @@ export default function ConversationDetailScreen() {
       <AlertDialog open={!!messageToDelete} onOpenChange={cancelDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteMessageTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("conversations:deleteMessageTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("deleteMessageDescription")}
+              {t("conversations:deleteMessageDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
