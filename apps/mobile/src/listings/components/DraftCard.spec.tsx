@@ -16,9 +16,9 @@ describe("DraftCard", () => {
   it("resumes on tap and hands ⋯ its title", () => {
     const onResume = vi.fn();
     const onMore = vi.fn();
-    const item = draft({ brandId: "lexus", modelId: "rx", year: 2012, currentStep: 3 });
+    const item = draft({ brandId: "lexus", modelId: "rx", year: 2012, currentStep: 3, contactPhone: "+99361234567", allowCalls: true, allowChat: true });
     const view = renderMobile(<DraftCard draft={item} brandName="Lexus" modelName="RX" onResume={onResume} onMore={onMore} />);
-    expect(view.getByText("Step 3 of 7")).toBeTruthy();
+    expect(view.getByText("1 of 6 steps filled")).toBeTruthy();
     fireEvent.press(view.getByRole("button", { name: "Continue listing 2012 Lexus RX" }));
     expect(onResume).toHaveBeenCalledWith(item);
     fireEvent.press(view.getByRole("button", { name: "Actions for 2012 Lexus RX" }));

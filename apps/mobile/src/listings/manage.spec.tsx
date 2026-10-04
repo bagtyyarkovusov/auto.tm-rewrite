@@ -46,7 +46,8 @@ function listing(id: string, modelId: string, status: Summary["status"]): Summar
 function draft(id: string): Draft {
   return {
     id, userId: "me", createdAt: "2026-09-29T04:00:00.000Z", updatedAt: "2026-09-30T04:00:00.000Z",
-    payload: { brandId: "lexus", modelId: "rx", year: 2012, currentStep: 3 },
+    // Only Contact is complete in the saved fields; the stored step number must not show.
+    payload: { brandId: "lexus", modelId: "rx", year: 2012, currentStep: 3, contactPhone: "+99361234567", allowCalls: true, allowChat: true },
   } as Draft;
 }
 
@@ -227,6 +228,14 @@ describe("My listings rows", () => {
     await openTab(view, /^Drafts/);
     fireEvent.press(view.getByText("2012 Lexus RX"));
     expect(routerMock.push).toHaveBeenCalledWith({ pathname: "/(tabs)/sell", params: { resumeDraftId: "draft-1" } });
+  });
+
+  it("shows a draft row's progress as steps filled, from the saved fields", async () => {
+    const view = await renderScreen();
+    await openTab(view, /^Drafts/);
+    expect(view.getByText("1 of 6 steps filled")).toBeTruthy();
+    expect(view.getByText("17%")).toBeTruthy();
+    expect(view.queryByText("Step 3 of 7")).toBeNull();
   });
 });
 
