@@ -17,7 +17,8 @@ export interface DraftProgress {
  * whose saved fields validate counts, regardless of stored step metadata.
  */
 export function draftProgress(payload: ListingsSchemas.ListingDraft["payload"]): DraftProgress {
-  const filled = completedSteps(payload).length;
+  // The stored step names are free strings in the draft contract; completion ignores them.
+  const filled = completedSteps(payload as WizardSchemas.WizardDraftPayload).length;
   const total = DATA_STEPS.length;
   return { filled, total, percent: Math.round((filled / total) * 100) };
 }
