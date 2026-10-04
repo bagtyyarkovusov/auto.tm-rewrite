@@ -28,7 +28,6 @@ import {
   translateWizardFieldErrors,
 } from "../../src/listings/wizard/wizardErrors";
 import { SignInDialog } from "../../components/auth/SignInDialog";
-import Step1Vin from "../../src/listings/wizard/Step1Vin";
 import Step2Photos from "../../src/listings/wizard/Step2Photos";
 import Step3VehicleId from "../../src/listings/wizard/Step3VehicleId";
 import Step4Specs from "../../src/listings/wizard/Step4Specs";
@@ -43,17 +42,6 @@ import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { localeTag } from "@/src/i18n/resources";
-
-const STEP_KEY_MAP: Record<WizardSchemas.WizardStep, string> = {
-  vin: "vin",
-  photos: "photos",
-  vehicle: "vehicle",
-  specs: "specs",
-  price: "price",
-  location: "location",
-  contact: "contact",
-  review: "review",
-};
 
 function buildPayloadPhotos(
   photos: ReturnType<typeof useUploadQueue>["photos"],
@@ -72,7 +60,15 @@ export default function SellScreen() {
   // `phone` follows the live auth session, so signing in from this tab's own
   // sign-in sheet fills the Step 7 contact placeholder without a remount.
   const { isAuthenticated, phone: defaultPhone } = useAuth();
-  const { show } = useToast();
+  const { show, setTopClearance } = useToast();
+  const wizardHeaderHeight = useRef(0);
+  const publishErrorToastId = useRef<string | null>(null);
+  const handleHeaderHeightChange = useCallback((height: number) => {
+    wizardHeaderHeight.current = height;
+    if (publishErrorToastId.current) {
+      setTopClearance(publishErrorToastId.current, height);
+    }
+  }, [setTopClearance]);
   const navigation = useContext(NavigationContext);
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
   const [showSignIn, setShowSignIn] = useState(false);
@@ -260,6 +256,7 @@ export default function SellScreen() {
   }, [machineState.payload, machineState.validatedSteps, uploadQueue.photos, forceSave]);
 
   const handleContinue = useCallback(() => {
+    if (discardDraft.isPending || publishDraft.isPending) return;
     if (!ctx.canContinue) {
       setAttemptedSteps((current) =>
         current[machineState.currentStep]
@@ -277,12 +274,7 @@ export default function SellScreen() {
       validatedSteps: machineState.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave]);
-
-  const handleSkipVin = useCallback(() => {
-    dispatch({ type: "UPDATE_FIELDS", updates: { vin: undefined } });
-    dispatch({ type: "NEXT" });
-  }, []);
+  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave, discardDraft.isPending, publishDraft.isPending]);
 
   const handlePublish = useCallback(async () => {
     if (!machineState.draftId) return;
@@ -309,7 +301,9 @@ export default function SellScreen() {
       const message =
         err instanceof Error ? err.message : t("failedToPublish");
       dispatch({ type: "PUBLISH_ERROR", error: message });
-      show({ title: message, variant: "destructive" });
+      publishErrorToastId.current = show({
+        title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
+      });
     }
   }, [machineState, uploadQueue.photos, forceSave, publishDraft, show]);
 
@@ -382,15 +376,11 @@ export default function SellScreen() {
       disabledReason = translateWizardError(t, ctx.stepErrors[0]);
     }
 
-    const secondaryAction =
-      currentStep === "vin" && !ctx.canGoBack
-        ? { label: t("skip"), onPress: handleSkipVin }
-        : undefined;
-
     return (
       <WizardLayout
+        onHeaderHeightChange={handleHeaderHeightChange}
         routeTitle={t("sellCar")}
-        stepTitle={t(STEP_KEY_MAP[currentStep] ?? currentStep)}
+        stepTitle={t(`wizardSteps.${currentStep}`)}
         stepNumber={ctx.stepNumber}
         stepCount={ctx.stepCount}
         onBack={handleBack}
@@ -399,7 +389,10 @@ export default function SellScreen() {
         onDiscard={handleDiscard}
         mode={machineState.mode}
         editDetourActive={ctx.editDetourActive}
-        canContinue={ctx.canContinue}
+        canContinue={
+          (ctx.canContinue || currentStep === "specs") &&
+          !discardDraft.isPending && !publishDraft.isPending
+        }
         canPublish={ctx.canPublish && uploadQueue.publishGate.canPublish}
         canGoBack={ctx.canGoBack}
         isLastStep={ctx.isLastStep}
@@ -409,17 +402,9 @@ export default function SellScreen() {
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
         uploadStatus={uploadStatus}
-        secondaryAction={secondaryAction}
         isDiscarding={discardDraft.isPending}
         discardError={discardDraft.error?.message ?? null}
       >
-        {currentStep === "vin" && (
-          <Step1Vin
-            payload={machineState.payload}
-            onChange={handlePayloadChange}
-            fieldErrors={fieldErrors}
-          />
-        )}
         {currentStep === "photos" && (
           <Step2Photos
             photos={uploadQueue.photos}
@@ -445,6 +430,7 @@ export default function SellScreen() {
             payload={machineState.payload}
             onChange={handlePayloadChange}
             fieldErrors={fieldErrors}
+            showErrors={attemptedSteps.specs === true}
           />
         )}
         {currentStep === "price" && (
@@ -459,13 +445,13 @@ export default function SellScreen() {
             payload={machineState.payload}
             onChange={handlePayloadChange}
             fieldErrors={fieldErrors}
+            showErrors={attemptedSteps.location === true}
           />
         )}
         {currentStep === "contact" && (
           <Step7DescContact
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            fieldErrors={fieldErrors}
             defaultPhone={defaultPhone}
           />
         )}

@@ -6,6 +6,7 @@ import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
+import { draftProgress } from "../wizard/draftProgress";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -68,9 +69,7 @@ export function DraftCard({
       ? t("unnamedDraft")
       : t("untitledDraft");
 
-  // Approximate progress using the last completed numeric step (1-7).
-  const lastStep = payload.currentStep ?? 0;
-  const progressPercent = Math.min(100, Math.round((lastStep / 7) * 100));
+  const { filled, total, percent: progressPercent } = draftProgress(payload);
 
   // ⋯ sits beside the tappable row, not inside it, so a screen reader reaches
   // it on its own instead of folding it into the row's label.
@@ -118,7 +117,7 @@ export function DraftCard({
             <View className="gap-1.5">
               <View className="flex-row items-center justify-between">
                 <Text className="text-xs text-muted-foreground">
-                  {t("stepCount", { step: lastStep })}
+                  {t("draftStepsFilled", { filled, total })}
                 </Text>
                 <Text className="text-xs text-muted-foreground">
                   {progressPercent}%

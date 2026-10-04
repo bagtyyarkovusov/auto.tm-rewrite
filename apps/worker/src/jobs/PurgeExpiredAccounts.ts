@@ -76,6 +76,9 @@ export class PurgeExpiredAccounts {
 
       // Prune listing drafts
       this.prisma.listingDraft.deleteMany({ where: { userId } }),
+
+      // Prune confirmed Listing contact phones (ADR-0081)
+      this.prisma.verifiedContactPhone.deleteMany({ where: { sellerId: userId } }),
     ]);
   }
 }

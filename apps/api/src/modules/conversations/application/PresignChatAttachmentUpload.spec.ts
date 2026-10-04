@@ -84,6 +84,10 @@ class FakeConversationRepository implements ConversationRepository {
   async countUnreadMessages(): Promise<number> {
     return 0;
   }
+
+  async countAllUnreadMessages(): Promise<number> {
+    return 0;
+  }
 }
 
 class FakeMediaStorage implements MediaStoragePort {
@@ -107,6 +111,9 @@ class FakeMediaStorage implements MediaStoragePort {
 }
 
 class FakeIdentityCheckPort implements IdentityCheckPort {
+  async holdsSignInPhone(): Promise<boolean> {
+    return false;
+  }
   suspendedUsers = new Set<string>();
 
   async isAdmin(): Promise<boolean> {

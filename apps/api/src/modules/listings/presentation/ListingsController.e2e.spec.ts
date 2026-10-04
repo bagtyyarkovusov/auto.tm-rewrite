@@ -121,7 +121,11 @@ describe("ListingsController e2e", () => {
   }
 
   async function seedDraft(alias: SuiteUser, payload: Record<string, unknown>) {
-    const seeded = await seedPresignedPhotos(prisma, suite.id(alias), payload);
+    // The owner's own sign-in phone needs no code (ADR-0081); a payload may override it.
+    const seeded = await seedPresignedPhotos(prisma, suite.id(alias), {
+      contactPhone: suite.phone(alias),
+      ...payload,
+    });
     const draft = await prisma.listingDraft.create({
       data: { userId: suite.id(alias), payload: seeded as Prisma.InputJsonValue },
     });
@@ -200,6 +204,43 @@ describe("ListingsController e2e", () => {
         where: { action: "listing.published", targetId: res.body.id },
       });
       expect(audit).not.toBeNull();
+    });
+
+    it("publishes a New car without a Damaged answer as not damaged (ADR-0080)", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const { mileageKm: _mileage, conditionDisclosure: _disclosure, ...base } = validPayload;
+      const draft = await seedDraft("user-1", { ...base, condition: "new" });
+
+      const res = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      // The publish response is a summary without conditionDisclosure; check the stored row.
+      const row = await prisma.listing.findUniqueOrThrow({ where: { id: res.body.id } });
+      expect(row.damaged).toBe(false);
+    });
+
+    it("refuses to publish a damaged New car (ADR-0080)", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", {
+        ...validPayload,
+        condition: "new",
+        conditionDisclosure: { damaged: true },
+      });
+
+      const res = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(400);
+
+      expect(res.body.code).toBe("DAMAGED_NOT_ALLOWED_FOR_NEW");
+      expect(res.body.message).toBe("A New car cannot be damaged. Choose Used for a damaged car.");
+      expect(await prisma.listingDraft.findUnique({ where: { id: draft.id } })).not.toBeNull();
     });
 
     it("rejects with EXCHANGE_RATE_MISSING for USD without rate", async () => {
@@ -522,6 +563,37 @@ describe("ListingsController e2e", () => {
       const row = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
       expect(row.damaged).toBeNull();
       expect(row.description).not.toBe("Updated description");
+    });
+
+    it("refuses to change a damaged Listing to New without clearing Damaged (ADR-0080)", async () => {
+      await seedCatalog();
+      const token = await createUser("user-1");
+      const draft = await seedDraft("user-1", validPayload);
+
+      const publishRes = await request
+        .post(`/api/v1/listings/drafts/${draft.id}/publish`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const listingId = publishRes.body.id;
+
+      const res = await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ condition: "new" })
+        .expect(400);
+
+      expect(res.body.code).toBe("DAMAGED_NOT_ALLOWED_FOR_NEW");
+      expect(res.body.message).toBe("A New car cannot be damaged. Choose Used for a damaged car.");
+      const row = await prisma.listing.findUniqueOrThrow({ where: { id: listingId } });
+      expect(row.condition).toBe("used");
+
+      const fixed = await request
+        .patch(`/api/v1/listings/${listingId}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ condition: "new", conditionDisclosure: { damaged: false } })
+        .expect(200);
+      expect(fixed.body.conditionDisclosure).toEqual({ damaged: false });
     });
 
     it("rejects conditionDisclosure with knownIssuesText over 1000 chars", async () => {

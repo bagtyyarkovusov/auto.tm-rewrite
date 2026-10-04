@@ -1,14 +1,20 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
-import type { OtpRequest, SignInCodeChannel } from "../domain/OtpRequest";
+import type {
+  OtpRequest,
+  SignInCodeChannel,
+  SignInCodePurpose,
+} from "../domain/OtpRequest";
 import { SIGN_IN_CODE_CHANNELS } from "../domain/types";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
+import { fromCodePurpose, toCodePurpose } from "./codePurpose";
 
 @Injectable()
 export class PrismaOtpRequestRepository implements OtpRequestRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -18,6 +24,7 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
   }): Promise<OtpRequest> {
     const row = await this.prisma.otpRequest.create({
       data: {
+        purpose: toCodePurpose(input.purpose),
         channel: input.channel,
         destination: input.destination,
         phone: input.channel === SIGN_IN_CODE_CHANNELS.PHONE ? input.destination : null,
@@ -62,13 +69,19 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findLatestByDestinationAndUser(
-    channel: SignInCodeChannel,
-    destination: string,
-    userId: string,
-  ): Promise<OtpRequest | null> {
+  async findLatestForPurpose(input: {
+    purpose: SignInCodePurpose;
+    channel: SignInCodeChannel;
+    destination: string;
+    userId?: string;
+  }): Promise<OtpRequest | null> {
     const row = await this.prisma.otpRequest.findFirst({
-      where: { channel, destination, userId },
+      where: {
+        purpose: toCodePurpose(input.purpose),
+        channel: input.channel,
+        destination: input.destination,
+        ...(input.userId === undefined ? {} : { userId: input.userId }),
+      },
       orderBy: { createdAt: "desc" },
     });
     return row ? this.toDomain(row) : null;
@@ -103,6 +116,7 @@ export class PrismaOtpRequestRepository implements OtpRequestRepository {
   ): OtpRequest {
     return {
       id: row.id,
+      purpose: fromCodePurpose(row.purpose),
       channel: row.channel,
       destination: row.destination,
       codeHash: row.codeHash,

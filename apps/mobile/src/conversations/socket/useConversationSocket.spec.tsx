@@ -413,6 +413,66 @@ describe("useConversationSocket", () => {
     );
   });
 
+  it("refreshes the Messages tab count on new, deleted and watermark events", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const customWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const invalidateQueriesSpy = vi.spyOn(client, "invalidateQueries");
+
+    let messageHandler: (event: unknown) => void = () => {};
+    let deletedHandler: (event: unknown) => void = () => {};
+    let watermarkHandler: (event: unknown) => void = () => {};
+    mockSocket.subscribeMessage.mockImplementation((handler) => {
+      messageHandler = handler;
+      return () => {};
+    });
+    mockSocket.subscribeDeletedMessage.mockImplementation((handler) => {
+      deletedHandler = handler;
+      return () => {};
+    });
+    mockSocket.subscribeWatermark.mockImplementation((handler) => {
+      watermarkHandler = handler;
+      return () => {};
+    });
+
+    renderHook(() => useConversationSocket(CONV_ID, USER_ID), {
+      wrapper: customWrapper,
+    });
+
+    const unreadCounts = { queryKey: queryKeys.conversations.unreadCounts() };
+
+    messageHandler({
+      message: {
+        id: MSG_ID,
+        conversationId: CONV_ID,
+        senderId: "peer-user",
+        kind: "text",
+        text: "Hi",
+        createdAt: "2026-06-01T12:00:00.000Z",
+      },
+    });
+    await waitFor(() => expect(invalidateQueriesSpy).toHaveBeenCalledWith(unreadCounts));
+
+    invalidateQueriesSpy.mockClear();
+    deletedHandler({
+      messageId: MSG_ID,
+      conversationId: CONV_ID,
+      deletedAt: "2026-06-01T12:05:00.000Z",
+    });
+    await waitFor(() => expect(invalidateQueriesSpy).toHaveBeenCalledWith(unreadCounts));
+
+    invalidateQueriesSpy.mockClear();
+    watermarkHandler({
+      conversationId: CONV_ID,
+      userId: USER_ID,
+      lastReadAt: "2026-06-01T12:06:00.000Z",
+    });
+    await waitFor(() => expect(invalidateQueriesSpy).toHaveBeenCalledWith(unreadCounts));
+  });
+
   it("provides a deleteMessage function that delegates to the socket", async () => {
     mockSocket.deleteMessage.mockResolvedValue({
       ok: true,

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { OtpRequest } from "../domain/OtpRequest";
+import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { User } from "../domain/User";
 import type { SignInCodeChannel } from "../domain/types";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
-import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
+import type { OtpSenderPort, OtpSms } from "../domain/ports/OtpSenderPort";
 import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
 import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
 import { RequestAccountDeletion } from "./RequestAccountDeletion";
@@ -37,6 +37,7 @@ class FakeOtpRepo implements OtpRequestRepository {
   countedIp: string | null = null;
 
   async create(input: {
+    purpose: SignInCodePurpose;
     channel: SignInCodeChannel;
     destination: string;
     codeHash: string;
@@ -74,7 +75,7 @@ class FakeOtpRepo implements OtpRequestRepository {
   }
 
   async findById(): Promise<OtpRequest | null> { return null; }
-  async findLatestByDestinationAndUser(): Promise<OtpRequest | null> { return null; }
+  async findLatestForPurpose(): Promise<OtpRequest | null> { return null; }
   async consumeIfUnused(): Promise<boolean> { throw new Error("unused"); }
   async markVerified(): Promise<OtpRequest> { throw new Error("unused"); }
   async incrementAttempts(): Promise<OtpRequest> { throw new Error("unused"); }
@@ -97,10 +98,10 @@ class FakeUsers implements SignInMethodRepository {
 
 function setup(users: User[] = [], testMode = true) {
   const otpRepo = new FakeOtpRepo();
-  const sms: Array<{ phone: string; code: string }> = [];
+  const sms: OtpSms[] = [];
   const emails: Array<Parameters<EmailCodeSenderPort["enqueue"]>[0]> = [];
   const otpSender: OtpSenderPort = {
-    send: async (phone, code) => { sms.push({ phone, code }); },
+    send: async (message) => { sms.push(message); },
   };
   const emailSender: EmailCodeSenderPort = {
     enqueue: async (input) => { emails.push(input); },
@@ -123,17 +124,24 @@ describe("RequestAccountDeletion", () => {
       makeUser({ phone: "+99361234567", email: null }),
     ]);
 
-    const result = await useCase.execute({ phone: "+99361234567", ip: "10.0.0.1" });
+    const result = await useCase.execute({ phone: "+99361234567", ip: "10.0.0.1", locale: "en" });
 
     expect(otpRepo.records).toHaveLength(1);
     expect(otpRepo.records[0]).toMatchObject({
+      purpose: "account-deletion",
       channel: "phone",
       destination: "+99361234567",
       userId: "user-1",
       ip: "10.0.0.1",
       expiresAt: new Date(NOW.getTime() + 5 * 60_000),
     });
-    expect(sms).toEqual([{ phone: "+99361234567", code: result.testCode }]);
+    expect(sms).toEqual([{
+      phone: "+99361234567",
+      code: result.testCode,
+      purpose: "account-deletion",
+      locale: "en",
+      requestId: result.requestId,
+    }]);
     expect(otpRepo.records[0]?.codeHash).not.toBe(result.testCode);
   });
 
@@ -210,6 +218,7 @@ describe("RequestAccountDeletion", () => {
     const { useCase, otpRepo } = setup();
     otpRepo.destinationCount = 1;
     await otpRepo.create({
+      purpose: "sign-in",
       channel: "phone",
       destination: "+99361234567",
       codeHash: "earlier-sign-in-code",

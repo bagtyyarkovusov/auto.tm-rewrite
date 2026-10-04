@@ -116,7 +116,7 @@ describe("MinioMediaStorageAdapter", () => {
     );
   });
 
-  it("resolves public URL for chat-attachment keys without doubling the bucket", () => {
+  it("resolves the full chat object key inside the chat bucket", () => {
     const adapter = makeAdapter("https://media.auto.tm");
 
     const url = adapter.resolvePublicUrl(
@@ -124,7 +124,26 @@ describe("MinioMediaStorageAdapter", () => {
     );
 
     expect(url).toBe(
-      "https://media.auto.tm/chat-attachments/conv-1/uuid/original.jpg",
+      "https://media.auto.tm/chat-attachments/chat-attachments/conv-1/uuid/original.jpg",
+    );
+  });
+
+  it.each(["http://media.example.com/photo.jpg", "https://cdn.example.com/photo.jpg"])(
+    "preserves an already-public URL %s",
+    (url) => {
+      expect(makeAdapter("https://media.auto.tm").resolvePublicUrl(url)).toBe(url);
+    },
+  );
+
+  it("addresses the same bucket and full key used by chat upload", async () => {
+    const adapter = makeAdapter("https://media.auto.tm");
+    const key = "chat-attachments/conv-1/uuid/original.jpg";
+    const result = await adapter.presignUpload({ key, contentType: "image/jpeg", sizeBytes: 1024 });
+
+    expect(result.key).toBe(key);
+    expect(awsMocks.signedCommand?.input).toMatchObject({ Bucket: "chat-attachments", Key: key });
+    expect(adapter.resolvePublicUrl(result.key)).toBe(
+      `https://media.auto.tm/${awsMocks.signedCommand?.input["Bucket"]}/${awsMocks.signedCommand?.input["Key"]}`,
     );
   });
 
