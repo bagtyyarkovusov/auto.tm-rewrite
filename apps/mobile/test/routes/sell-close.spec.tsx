@@ -2,7 +2,7 @@ import * as RN from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SellScreen from "../../app/(tabs)/sell";
-import { act, fireEvent, renderMobile, routeParams } from "../render";
+import { act, fireEvent, renderMobile, routeParams, screenFocus } from "../render";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -367,6 +367,30 @@ describe("Sell wizard resume and system back (#585)", () => {
     expect(screen.getByRole("header", { name: "Car, Step 1 of 7" })).toBeTruthy();
     expect(wizardIsOpen(screen)).toBe(true);
     expect(screen.queryByText("Saved to Drafts")).toBeNull();
+  });
+
+  it("leaves system back to the screen on top while another screen covers the wizard", async () => {
+    const screen = resumeDraft({ ...car, currentStep: 2 });
+    expect(screen.getByRole("header", { name: "Details and condition, Step 2 of 7" })).toBeTruthy();
+
+    // A push notification opened a Conversation over the tabs.
+    screenFocus.focused = false;
+    screen.rerender(<ToastProvider><SellScreen /></ToastProvider>);
+    let handled = true;
+    await act(async () => { handled = pressHardwareBack(); });
+
+    expect(handled).toBe(false);
+    expect(screen.getByRole("header", { name: "Details and condition, Step 2 of 7" })).toBeTruthy();
+    expect(fixture.autosave.flush).not.toHaveBeenCalled();
+    expect(fixture.discard).not.toHaveBeenCalled();
+
+    // Back on the Sell tab, system back belongs to the wizard again.
+    screenFocus.focused = true;
+    screen.rerender(<ToastProvider><SellScreen /></ToastProvider>);
+    await act(async () => { handled = pressHardwareBack(); });
+
+    expect(handled).toBe(true);
+    expect(screen.getByRole("header", { name: "Car, Step 1 of 7" })).toBeTruthy();
   });
 
   it("leaves system back alone on the Sell tab", () => {
