@@ -82,6 +82,31 @@ describe("computePublishGate", () => {
     expect(result.canPublish).toBe(false);
     expect(result.blockers).toContain("wizardErrors.uploadsInProgress");
   });
+
+  // A photo waiting for the network has no key yet and would be dropped silently
+  // from the published Listing, so it still counts as an upload in progress.
+  it("blocks publishing while another photo waits for the network", () => {
+    const result = computePublishGate(
+      makeQueue([
+        makePhoto({ photoId: "p1", state: "attached" }),
+        makePhoto({ photoId: "p2", state: "waiting_for_network" }),
+      ]),
+    );
+    expect(result.canPublish).toBe(false);
+    expect(result.blockers).toContain("wizardErrors.uploadsInProgress");
+  });
+
+  // A lost photo can never upload; the seller has to remove it, like a failed one.
+  it("blocks publishing while another photo is lost", () => {
+    const result = computePublishGate(
+      makeQueue([
+        makePhoto({ photoId: "p1", state: "attached" }),
+        makePhoto({ photoId: "p2", state: "lost" }),
+      ]),
+    );
+    expect(result.canPublish).toBe(false);
+    expect(result.blockers).toContain("wizardErrors.uploadsFailed");
+  });
 });
 
 describe("reconstructQueueFromDraft", () => {

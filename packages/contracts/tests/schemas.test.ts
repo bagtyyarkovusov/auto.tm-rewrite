@@ -991,6 +991,7 @@ describe("ExchangeRatesResponseSchema", () => {
 // ── Wizard schemas ──
 
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
+const otherUuid = "550e8400-e29b-41d4-a716-446655440001";
 const validPhoto = { photoId: validUuid, key: "uploads/abc.jpg", sortOrder: 0 };
 
 describe("WizardStepSchema", () => {
@@ -1024,20 +1025,34 @@ describe("WizardStepSchema", () => {
 });
 
 describe("StepPhotosSchema", () => {
+  // Continue needs one picked photo, not one uploaded photo (#584): uploads keep
+  // running while the seller fills in the later steps, and Publish waits for them.
+  const picked = { photoId: validUuid, sortOrder: 0 };
+
   it("accepts photos with at least one key", () => {
     expect(StepPhotosSchema.safeParse({ photos: [validPhoto] }).success).toBe(
       true,
     );
   });
 
+  it("accepts one picked photo that has no upload key yet", () => {
+    expect(StepPhotosSchema.safeParse({ photos: [picked] }).success).toBe(true);
+  });
+
+  it("accepts a mix of picked and uploaded photos", () => {
+    expect(
+      StepPhotosSchema.safeParse({
+        photos: [validPhoto, { ...picked, photoId: otherUuid, sortOrder: 1 }],
+      }).success,
+    ).toBe(true);
+  });
+
   it("rejects empty photos array", () => {
     expect(StepPhotosSchema.safeParse({ photos: [] }).success).toBe(false);
   });
 
-  it("rejects photos with no uploaded keys", () => {
-    expect(
-      StepPhotosSchema.safeParse({ photos: [{ photoId: validUuid, sortOrder: 0 }] }).success,
-    ).toBe(false);
+  it("rejects a missing photos field", () => {
+    expect(StepPhotosSchema.safeParse({}).success).toBe(false);
   });
 });
 
@@ -1332,12 +1347,13 @@ describe("validateStep", () => {
     expect(result.fieldErrors).toEqual({});
   });
 
-  it("returns errors for photos without key", () => {
+  it("returns valid for a picked photo that has no key yet", () => {
     const result = validateStep("photos", {
       photos: [{ photoId: validUuid, sortOrder: 0 }],
     });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("wizardErrors.photosUploading");
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.fieldErrors).toEqual({});
   });
 
   it("returns per-field error map for vehicle step", () => {
