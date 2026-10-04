@@ -96,6 +96,7 @@ export function useUploadQueue(
   const { increment: startUpload, decrement: endUpload, isActive: isUploading } = useAsyncCounter();
 
   const initializedStagingKey = useRef<string | null>(null);
+  const initializingStagingKeys = useRef(new Set<string>());
   const activeStagingKey = useRef(stagingKey);
   const presignMutation = usePresignUpload();
   const queueRef = useRef(queue);
@@ -128,6 +129,11 @@ export function useUploadQueue(
   // Initialize queue from draft + local files
   useEffect(() => {
     if (initializedStagingKey.current === stagingKey) return;
+    // One init per staging key. A second one, started when the payload changes
+    // while the first is still reading the device, would rebuild the queue from
+    // that later payload and replace the keyed photos the first one restored.
+    if (initializingStagingKeys.current.has(stagingKey)) return;
+    initializingStagingKeys.current.add(stagingKey);
     async function init() {
       let localPhotoIds: string[] = [];
       if (restoreLocalPhotos) {
@@ -167,7 +173,9 @@ export function useUploadQueue(
         processUploadQueue();
       }
     }
-    void init();
+    void init().finally(() => {
+      initializingStagingKeys.current.delete(stagingKey);
+    });
   }, [stagingKey, initialPayload, restoreLocalPhotos, processUploadQueue]);
 
   const transitionToFailed = useCallback((photoId: string, error: UploadError) => {

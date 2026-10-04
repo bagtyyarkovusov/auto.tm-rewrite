@@ -101,7 +101,8 @@ const continueButton = (screen: ReturnType<typeof renderMobile>) => screen.getBy
 beforeEach(() => {
   fixture.payload = {};
   fixture.queuePhotos = [];
-  fixture.queueReady = false;
+  // The mocked queue already holds the open draft's photos, unless a test says not.
+  fixture.queueReady = true;
   fixture.gate = { canPublish: true, blockers: [] };
   fixture.save.mockReset();
   fixture.forceSave.mockReset().mockResolvedValue(undefined);

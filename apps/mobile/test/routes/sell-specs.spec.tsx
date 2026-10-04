@@ -20,7 +20,7 @@ vi.mock("../../src/api/listings/useDiscardDraft", () => ({ useDiscardDraft: () =
 vi.mock("../../src/api/listings/usePublishDraft", () => ({ usePublishDraft: () => ({ isPending: false }) }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: vi.fn() }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
-  photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
+  photos: fixture.photos, publishGate: { canPublish: true, blockers: [] }, isReady: true,
 }) }));
 vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({ useWizardAutosave: () => ({
   save: fixture.save, forceSave: fixture.forceSave, retrySave: vi.fn(), saveStatus: "idle", saveError: null,

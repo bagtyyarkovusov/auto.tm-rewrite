@@ -97,8 +97,8 @@ export default function SellScreen() {
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
   const resumedRef = useRef<string | null>(null);
-  // The draft whose staged photos have already been synced into the payload.
-  const restoredPhotosFor = useRef<string | null>(null);
+  // Whether the upload queue held the open draft's photos at the last sync.
+  const queueWasReady = useRef(false);
 
   // Hide the bottom tab bar while the wizard is open — the wizard is a focused
   // flow that should not advertise navigation to other tabs.
@@ -153,13 +153,13 @@ export default function SellScreen() {
   // the Photos step checks, so it must not reset the steps after it. Nor does the
   // first sync of a resumed draft: a photo that was still uploading when the app
   // closed comes back from staging, and that is not a change the seller made.
+  // Until the queue holds the open draft's photos it is empty, or holds the last
+  // draft's, and says nothing about this one: the saved photos stay as they are.
+  const queueReady = uploadQueue.isReady === true && machineState.draftId !== null;
   useEffect(() => {
-    const draftId = machineState.draftId;
-    const restoring =
-      uploadQueue.isReady === true &&
-      draftId !== null &&
-      restoredPhotosFor.current !== draftId;
-    if (restoring) restoredPhotosFor.current = draftId;
+    const restoring = queueReady && !queueWasReady.current;
+    queueWasReady.current = queueReady;
+    if (!queueReady) return;
     const picked = buildPickedPhotos(uploadQueue.photos);
     const current = machineState.payload.photos ?? [];
     const sameOrder =
@@ -174,7 +174,7 @@ export default function SellScreen() {
         keepValidSteps: restoring,
       });
     }
-  }, [uploadQueue.photos, uploadQueue.isReady]);
+  }, [uploadQueue.photos, queueReady]);
 
   // Stable key for autosave trigger — avoids 25+ individual deps and reference churn
   const payloadKey = useMemo(
@@ -187,16 +187,17 @@ export default function SellScreen() {
     [machineState.payload, machineState.validatedSteps, uploadQueue.photos],
   );
 
-  // Autosave when payload changes
+  // Autosave when payload changes. Not before the queue holds this draft's photos:
+  // a save built from the queue until then would write the draft without them.
   useEffect(() => {
-    if (!machineState.draftId || machineState.status !== "step") return;
+    if (!queueReady || machineState.status !== "step") return;
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
       photos: buildPayloadPhotos(uploadQueue.photos),
       validatedSteps: machineState.validatedSteps,
     };
     save(fullPayload);
-  }, [machineState.draftId, machineState.status, payloadKey, save]);
+  }, [machineState.draftId, queueReady, machineState.status, payloadKey, save]);
 
   const handleStartListing = useCallback(() => {
     if (!isAuthenticated) {
