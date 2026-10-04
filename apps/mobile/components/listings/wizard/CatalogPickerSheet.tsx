@@ -29,7 +29,7 @@ type SheetRow =
   | { kind: "header"; key: string; title: string }
   | { kind: "item"; key: string; item: CatalogItem };
 
-function sheetRows(items: CatalogItem[], sections?: CatalogSection[]): SheetRow[] {
+function sheetRows(items: CatalogItem[] = [], sections?: CatalogSection[]): SheetRow[] {
   if (!sections) return items.map((item) => ({ kind: "item", key: item.id, item }));
   return sections.flatMap((section): SheetRow[] => [
     { kind: "header", key: `header-${section.id}`, title: section.title },
@@ -44,7 +44,8 @@ interface CatalogPickerSheetProps {
   searchPlaceholder: string;
   search: string;
   onSearchChange: (text: string) => void;
-  items: CatalogItem[];
+  /** The flat list. Leave it out when `sections` is given. */
+  items?: CatalogItem[];
   /** Groups the items under headers; when given, it replaces `items`. A section should not be empty. */
   sections?: CatalogSection[];
   selectedId?: string;

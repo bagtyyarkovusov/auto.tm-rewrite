@@ -4,7 +4,11 @@ import { MapPin } from "lucide-react-native";
 import type { CatalogSchemas, WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
-import { useCityGroups, type CityGroup } from "../../api/catalog/useCityGroups";
+import {
+  findCityInGroups,
+  useCityGroups,
+  type CityGroup,
+} from "../../api/catalog/useCityGroups";
 
 import { DescriptionField } from "./DescriptionField";
 
@@ -36,15 +40,6 @@ function filterGroups(groups: CityGroup[], search: string): CityGroup[] {
     .filter((group) => group.cities.length > 0);
 }
 
-function findCity(groups: CityGroup[], cityId?: string) {
-  if (!cityId) return undefined;
-  for (const group of groups) {
-    const city = group.cities.find((c) => c.id === cityId);
-    if (city) return { city, region: group.region };
-  }
-  return undefined;
-}
-
 function wrapDisabled(children: React.ReactNode, disabled: boolean) {
   if (!disabled) return <>{children}</>;
   return <View className="opacity-50">{children}</View>;
@@ -68,7 +63,7 @@ function CityPicker({
   const [search, setSearch] = useState("");
   const { groups, isPending, isError } = useCityGroups();
 
-  const selected = findCity(groups, payload.cityId);
+  const selected = findCityInGroups(groups, payload.cityId);
   const regionName =
     selected && selected.region.name !== selected.city.name ? selected.region.name : undefined;
 
@@ -106,7 +101,6 @@ function CityPicker({
         searchPlaceholder={t("searchPlaceholder")}
         search={search}
         onSearchChange={setSearch}
-        items={[]}
         sections={filterGroups(groups, search).map((group) => ({
           id: group.region.id,
           title: group.region.name,
@@ -117,7 +111,7 @@ function CityPicker({
         isLoading={isPending}
         isError={isError}
         onSelect={(cityId) => {
-          const match = findCity(groups, cityId);
+          const match = findCityInGroups(groups, cityId);
           if (match) handleSelect(match.city);
         }}
       />
