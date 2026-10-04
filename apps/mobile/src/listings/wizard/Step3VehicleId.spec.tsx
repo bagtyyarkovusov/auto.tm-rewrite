@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { Profiler, useState, type ReactElement } from "react";
+import { FlatList } from "react-native";
 import { WizardSchemas } from "@auto-tm/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -150,6 +151,30 @@ const option = (screen: ReturnType<typeof renderMobile>, name: string) =>
 const sheetOpen = (screen: ReturnType<typeof renderMobile>) =>
   screen.queryByRole("button", { name: "Close" }) !== null;
 
+/**
+ * Records, for every commit after the first render, whether the empty
+ * Generation sheet was on screen. A sheet that opens and closes inside one
+ * press leaves no trace in the final tree, so the commits are the evidence.
+ */
+function renderWatchingCommits(ui: ReactElement) {
+  const emptySheetCommits: boolean[] = [];
+  let screen: ReturnType<typeof renderMobile> | undefined;
+  const rendered = renderMobile(
+    <Profiler
+      id="car"
+      onRender={() => {
+        if (screen) {
+          emptySheetCommits.push(screen.queryByText("No generations available") !== null);
+        }
+      }}
+    >
+      {ui}
+    </Profiler>,
+  );
+  screen = rendered;
+  return { screen: rendered, emptySheetCommits };
+}
+
 describe("Car step pickers chain", () => {
   it("opens Model after a Brand, Year after a Model and Generation after a Year", () => {
     const screen = renderMobile(<CarStep />);
@@ -211,6 +236,49 @@ describe("Car step pickers chain", () => {
     screen.rerender(<CarStep initial={{ brandId: "toyota", year: 2018 }} />);
 
     expect(sheetOpen(screen)).toBe(false);
+  });
+
+  it("never shows the Generation sheet after a Year when the model is known to have none", () => {
+    const { screen, emptySheetCommits } = renderWatchingCommits(
+      <CarStep initial={{ brandId: "toyota", modelId: "corolla" }} />,
+    );
+
+    fireEvent.press(row(screen, "Year: Select year"));
+    fireEvent.press(option(screen, "2018"));
+
+    expect(emptySheetCommits).not.toContain(true);
+    expect(emptySheetCommits.length).toBeGreaterThan(0);
+    expect(sheetOpen(screen)).toBe(false);
+    expect(row(screen, "Year: 2018")).toBeTruthy();
+  });
+
+  it("never shows the Generation sheet when a model known to have none is picked again", () => {
+    const { screen, emptySheetCommits } = renderWatchingCommits(
+      <CarStep initial={{ brandId: "toyota", modelId: "corolla", year: 2018 }} />,
+    );
+
+    fireEvent.press(row(screen, "Model: Corolla"));
+    fireEvent.press(option(screen, "Corolla"));
+
+    expect(emptySheetCommits).not.toContain(true);
+    expect(emptySheetCommits.length).toBeGreaterThan(0);
+    expect(sheetOpen(screen)).toBe(false);
+  });
+
+  it("starts each picker's list from the top instead of keeping the last list's scroll", () => {
+    const screen = renderMobile(<CarStep />);
+
+    fireEvent.press(row(screen, "Brand: Select brand"));
+    const brandList = screen.UNSAFE_getByType(FlatList);
+    fireEvent.press(option(screen, "Toyota"));
+    const modelList = screen.UNSAFE_getByType(FlatList);
+    fireEvent.press(option(screen, "Camry"));
+    const yearList = screen.UNSAFE_getByType(FlatList);
+
+    // A list that is mounted anew has no scroll offset to carry over. Compared
+    // as booleans: printing two test instances on failure exhausts the heap.
+    expect(modelList === brandList).toBe(false);
+    expect(yearList === modelList).toBe(false);
   });
 
   it("keeps what was picked and opens nothing more when a sheet is closed", () => {
@@ -359,6 +427,24 @@ describe("Car step Generation", () => {
       <CarStep initial={{ brandId: "toyota", modelId: "corolla", generationId: "xv70" }} />,
     );
     expect(screen.getByRole("button", { name: /^Generation:/ })).toBeTruthy();
+  });
+
+  it("lets the seller clear a generation the model no longer has", () => {
+    const onChange = vi.fn();
+    const screen = renderMobile(
+      <CarStep
+        initial={{ brandId: "toyota", modelId: "corolla", generationId: "xv70" }}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.press(screen.getByRole("button", { name: /^Generation:/ }));
+    expect(screen.getByText("No generations available")).toBeTruthy();
+    fireEvent.press(option(screen, "I don't know, skip"));
+
+    expect(onChange).toHaveBeenLastCalledWith({ generationId: undefined });
+    expect(sheetOpen(screen)).toBe(false);
+    expect(screen.queryByRole("button", { name: /^Generation:/ })).toBeNull();
   });
 });
 
