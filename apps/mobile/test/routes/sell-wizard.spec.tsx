@@ -52,7 +52,7 @@ vi.mock("lucide-react-native", async () => {
   return {
     PlusCircle: Icon, List: Icon, Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon,
     ChevronLeft: Icon, RefreshCw: Icon, ChevronDown: Icon, ChevronRight: Icon, Lock: Icon,
-    MapPin: Icon, Phone: Icon, MessageSquare: Icon,
+    MapPin: Icon, Phone: Icon, MessageSquare: Icon, Car: Icon, FileText: Icon, Plus: Icon,
   };
 });
 vi.mock("react-native-safe-area-context", async () => ({
