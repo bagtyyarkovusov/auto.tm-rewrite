@@ -1,12 +1,13 @@
-import { PlusCircle, List } from "lucide-react-native";
+import { PlusCircle } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { NavigationContext } from "@react-navigation/native";
 import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { WizardSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
+import { ApiError } from "../../src/api/client";
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
 import { useDiscardDraft } from "../../src/api/listings/useDiscardDraft";
 import { useMyDrafts } from "../../src/api/listings/useMyDrafts";
@@ -28,6 +29,7 @@ import {
   translateWizardFieldErrors,
 } from "../../src/listings/wizard/wizardErrors";
 import { SignInDialog } from "../../components/auth/SignInDialog";
+import { SellEntry } from "../../src/listings/sell/SellEntry";
 import Step2Photos from "../../src/listings/wizard/Step2Photos";
 import Step3VehicleId from "../../src/listings/wizard/Step3VehicleId";
 import Step4Specs from "../../src/listings/wizard/Step4Specs";
@@ -41,7 +43,6 @@ import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { localeTag } from "@/src/i18n/resources";
 
 function buildPayloadPhotos(
   photos: ReturnType<typeof useUploadQueue>["photos"],
@@ -56,7 +57,7 @@ function buildPayloadPhotos(
 }
 
 export default function SellScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // `phone` follows the live auth session, so signing in from this tab's own
   // sign-in sheet fills the Step 7 contact placeholder without a remount.
   const { isAuthenticated, phone: defaultPhone } = useAuth();
@@ -72,6 +73,7 @@ export default function SellScreen() {
   const navigation = useContext(NavigationContext);
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [draftLimitOpen, setDraftLimitOpen] = useState(false);
   const [machineState, dispatch] = useReducer(
     wizardMachineReducer,
     createInitialState(),
@@ -96,7 +98,12 @@ export default function SellScreen() {
 
   // 50 is the API's FeedQuerySchema max — anything higher 400s and breaks
   // draft resume entirely.
-  const { data: draftsData, isPending: draftsLoading } = useMyDrafts({
+  const {
+    data: draftsData,
+    isPending: draftsLoading,
+    error: draftsError,
+    refetch: refetchDrafts,
+  } = useMyDrafts({
     enabled: !!isAuthenticated,
     limit: params.resumeDraftId ? 50 : 20,
   });
@@ -195,12 +202,17 @@ export default function SellScreen() {
         });
       },
       onError: (err) => {
+        if (err instanceof ApiError && err.code === ListingsSchemas.ListingsErrorCode.DraftLimitReached) {
+          setDraftLimitOpen(true);
+          void refetchDrafts();
+          return;
+        }
         const message =
           err instanceof Error ? err.message : t("failedToCreateDraft");
         show({ title: message, variant: "destructive" });
       },
     });
-  }, [isAuthenticated, createDraft, show]);
+  }, [isAuthenticated, createDraft, show, refetchDrafts]);
 
   const handleContinueDraft = useCallback(
     (draft: NonNullable<typeof draftsData>["items"][number]) => {
@@ -468,93 +480,48 @@ export default function SellScreen() {
   }
 
   // ── Entry screen ──
-  const existingDraft = draftsData?.items?.[0];
-  const hasDrafts = !!existingDraft;
-
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-      <View className="flex-1 px-5 pt-3">
+      <View className="px-5 pt-3">
         <Text className="text-3xl font-heading leading-tight tracking-tight text-foreground">
           {t("sell")}
         </Text>
-
-        {hasDrafts && isAuthenticated && !draftsLoading ? (
-          <View className="mt-6 w-full gap-4">
-            <View className="gap-3 rounded-xl border border-border p-4">
-              <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                {t("latestDraft")}
-              </Text>
-              <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
-                {draftBrandName && draftModelName
-                  ? `${existingDraft.payload.year ?? ""} ${draftBrandName} ${draftModelName}`
-                  : existingDraft.payload.brandId && existingDraft.payload.modelId
-                    ? `${existingDraft.payload.year ?? ""} ${existingDraft.payload.brandId} ${existingDraft.payload.modelId}`
-                    : t("continueListing")}
-              </Text>
-              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                {existingDraft.payload.photos?.length
-                  ? t("photoCount", { count: existingDraft.payload.photos.length })
-                  : t("noPhotos")}
-                {" · "}
-                {existingDraft.payload.priceAmount
-                  ? `${existingDraft.payload.priceAmount.toLocaleString(localeTag(i18n.language))} ${existingDraft.payload.priceCurrency ?? "TMT"}`
-                  : t("priceMissing")}
-              </Text>
-              <Button
-                variant="default"
-                size="pill"
-                onPress={() => handleContinueDraft(existingDraft)}
-              >
-                <Text>{t("continueListing")}</Text>
-              </Button>
-            </View>
-            <Button
-              variant="outline"
-              size="pill"
-              onPress={handleCreateNewDraft}
-            >
-              <Text>{t("newListing")}</Text>
-            </Button>
-            <Button
-              variant="ghost"
-              size="pill"
-              onPress={() => router.push("/listings/manage")}
-            >
-              <Icon as={List} className="size-4 text-foreground" />
-              <Text>{t("myListingsAndDrafts")}</Text>
-            </Button>
-          </View>
-        ) : (
-          <View className="flex-1 items-center justify-center px-4">
-            <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
-            <Text className="mt-4 text-lg font-semibold text-foreground">
-              {t("sellYourCar")}
-            </Text>
-            <Text className="mt-1 text-center text-sm text-muted-foreground">
-              {t("listYourVehicle")}
-            </Text>
-            <Button
-              variant="default"
-              size="pill"
-              className="mt-6 self-stretch"
-              onPress={handleStartListing}
-            >
-              <Text>{t("startListing")}</Text>
-            </Button>
-            {isAuthenticated && (
-              <Button
-                variant="ghost"
-                size="pill"
-                className="mt-2"
-                onPress={() => router.push("/listings/manage")}
-              >
-                <Icon as={List} className="size-4 text-foreground" />
-                <Text>{t("myListingsAndDrafts")}</Text>
-              </Button>
-            )}
-          </View>
-        )}
       </View>
+
+      {isAuthenticated ? (
+        <SellEntry
+          drafts={draftsData?.items}
+          isPending={draftsLoading}
+          error={draftsError}
+          onRetry={() => void refetchDrafts()}
+          brandName={draftBrandName}
+          modelName={draftModelName}
+          isCreating={createDraft.isPending}
+          onContinue={handleContinueDraft}
+          onCreate={handleCreateNewDraft}
+          onNavigate={(href) => router.push(href)}
+          limitSheetOpen={draftLimitOpen}
+          onLimitSheetOpenChange={setDraftLimitOpen}
+        />
+      ) : (
+        <View className="flex-1 items-center justify-center px-9">
+          <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
+          <Text className="mt-4 text-lg font-semibold text-foreground">
+            {t("sellYourCar")}
+          </Text>
+          <Text className="mt-1 text-center text-sm text-muted-foreground">
+            {t("listYourVehicle")}
+          </Text>
+          <Button
+            variant="default"
+            size="pill"
+            className="mt-6 self-stretch"
+            onPress={handleStartListing}
+          >
+            <Text>{t("startListing")}</Text>
+          </Button>
+        </View>
+      )}
 
       <SignInDialog
         description={t("signInToSellDescription")}
