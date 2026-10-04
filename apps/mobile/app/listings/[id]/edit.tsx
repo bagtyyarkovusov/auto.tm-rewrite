@@ -316,6 +316,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
           isCompressing={uploadQueue.isCompressing}
           isUploading={uploadQueue.isUploading}
           fieldErrors={fieldErrors}
+          continuesWhileUploading={false}
         />
       )}
       {currentStep === "vehicle" && (

@@ -41,6 +41,11 @@ interface Step2PhotosProps {
   isUploading: boolean;
   disabled?: boolean;
   fieldErrors?: Record<string, string>;
+  /**
+   * Whether the seller can move on while photos upload (default). Edit passes
+   * false: Done there still waits for an uploaded photo, so it must not say so.
+   */
+  continuesWhileUploading?: boolean;
 }
 
 function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
@@ -382,6 +387,7 @@ export default function Step2Photos({
   isUploading,
   disabled,
   fieldErrors,
+  continuesWhileUploading = true,
 }: Step2PhotosProps) {
   const { t } = useTranslation();
   const { pickFromLibrary, takePhoto } = usePhotoPicker(onAddPhoto);
@@ -438,7 +444,7 @@ export default function Step2Photos({
             onRetry={onRetryPhoto}
             onRemove={onRemovePhoto}
           />
-          {stillUploading && (
+          {stillUploading && continuesWhileUploading && (
             <Text className="text-sm text-muted-foreground">
               {t("photosKeepUploading")}
             </Text>

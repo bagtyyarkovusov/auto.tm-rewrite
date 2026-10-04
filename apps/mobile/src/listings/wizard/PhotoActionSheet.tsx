@@ -48,7 +48,8 @@ interface PhotoActionSheetProps {
 /**
  * What the seller can do with one photo: Retry for a retryable failure, Set as
  * cover and Move earlier unless it is already first, Move later unless it is
- * last, and Remove. A failed or lost photo cannot become the cover.
+ * last, and Remove. Set as cover is not offered for a failed or lost photo;
+ * Move earlier and dragging can still put one first.
  */
 export function PhotoActionSheet({
   open,
@@ -98,7 +99,8 @@ export function PhotoActionSheet({
       <SheetContent closeOnBackdropPress style={{ height: sheetHeight }}>
         <View testID="photo-actions-sheet" className="gap-4">
           <SheetHeader>
-            <SheetTitle numberOfLines={1}>{photoPosition(t, index, total)}</SheetTitle>
+            {/* No photo while the sheet closes: a position then would read "Photo 0 of N". */}
+            <SheetTitle numberOfLines={1}>{photo ? photoPosition(t, index, total) : ""}</SheetTitle>
             {photo && needsAttention ? (
               <Text className="text-sm text-destructive">{photoFailureReason(t, photo)}</Text>
             ) : null}

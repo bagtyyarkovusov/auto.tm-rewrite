@@ -47,7 +47,7 @@ describe("Step2Photos", () => {
   it("removes a selected photo and renders the in-progress state", () => {
     const props = { ...defaults(), photos: [photo("a", 0)], isCompressing: true };
     const screen = renderMobile(<Step2Photos {...props} />);
-    fireEvent.press(screen.getByLabelText("Remove"));
+    fireEvent.press(screen.getByLabelText("Remove: Photo 1 of 1"));
     expect(props.onRemovePhoto).toHaveBeenCalledWith("a");
     expect(screen.getByText("Compressing...")).toBeTruthy();
   });
@@ -265,6 +265,14 @@ describe("Step2Photos while photos upload", () => {
   it("says nothing of the kind once every photo is uploaded or failed", () => {
     const screen = renderMobile(
       <Step2Photos {...defaults()} photos={[photo("a", 0), failedWith("b", 1, NETWORK, true)]} />,
+    );
+
+    expect(screen.queryByText(KEEP_UPLOADING)).toBeNull();
+  });
+
+  it("does not say it where the next step still waits for an uploaded photo", () => {
+    const screen = renderMobile(
+      <Step2Photos {...defaults()} photos={[inState("a", 0, "uploading")]} continuesWhileUploading={false} />,
     );
 
     expect(screen.queryByText(KEEP_UPLOADING)).toBeNull();

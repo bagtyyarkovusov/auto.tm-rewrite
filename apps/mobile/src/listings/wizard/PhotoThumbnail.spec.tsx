@@ -25,7 +25,7 @@ describe("PhotoThumbnail", () => {
   it("removes the photo by its id", () => {
     const callbacks = props();
     const screen = renderMobile(<PhotoThumbnail {...callbacks} />);
-    fireEvent.press(screen.getByLabelText("Remove"));
+    fireEvent.press(screen.getByLabelText("Remove: Photo 1 of 2"));
     expect(callbacks.onRemove).toHaveBeenCalledWith("photo-a");
   });
   it("forwards long-press, move and end coordinates", () => {

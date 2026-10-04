@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import type { StagedPhoto } from "../uploadStaging/types";
 import { getPhotoUri } from "../uploadStaging/photoUri";
 
-import { photoTileDescription } from "./photoLabels";
+import { photoPosition, photoTileDescription } from "./photoLabels";
 import { PhotoStateOverlay } from "./PhotoStateOverlay";
 
 import { Text } from "@/components/ui/text";
@@ -131,7 +131,7 @@ export function PhotoThumbnail({
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={t("remove")}
+        accessibilityLabel={`${t("remove")}: ${photoPosition(t, index, total)}`}
         className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-black/60"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         onPress={() => onRemove(photo.photoId)}
