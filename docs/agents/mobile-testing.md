@@ -107,6 +107,13 @@ not copy these stubs into a spec.
   message in the adapter's `AccessibilityInfo.announcements` array and speaks
   nothing; a spec empties the array before asserting, as `toast.spec.tsx` does.
 
+`BackHandler` is a recording stub: `addEventListener` registers the handler and
+returns `{ remove }`, and the adapter's `pressHardwareBack()` calls them newest
+first until one returns true, like Android's back button. A spec reads it from the
+aliased module, as it does `scrollRequests`, and wraps the press in `act`
+(`test/routes/sell-close.spec.tsx`). Listeners from a spec's unmounted screens are
+removed by their own cleanup. Nothing exits the app.
+
 A `FlatList` ref records `scrollToIndex` and `scrollToOffset` calls into the
 `scrollRequests` export of `react-native`. Specs and `native-setup.ts` import
 `react-native` through the Vite alias, which Vite inlines as one module instance,
