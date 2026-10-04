@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { BadRequestException } from "@nestjs/common";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { CardPhotos } from "../domain/CardPhotos";
 import { ListMyListings } from "./ListMyListings";
 import type { ListingCard, ListingCardReadPort } from "../domain/ports/ListingCardReadPort";
@@ -105,5 +106,28 @@ describe("ListMyListings", () => {
     const result = await uc.execute({ userId: "user-1" });
 
     expect(result.nextCursor).toBeNull();
+  });
+
+  it("rejects a malformed or forged cursor with a 400 and never reads", async () => {
+    const forgedTimestamp = Buffer.from(
+      JSON.stringify({
+        timestamp: "not-a-date",
+        id: "00000000-0000-0000-0000-000000000001",
+      }),
+      "utf8",
+    ).toString("base64url");
+    const readSpy = vi.spyOn(port, "getOwnerCards");
+
+    const uc = makeUseCase(port);
+
+    for (const cursor of ["not-a-cursor", forgedTimestamp]) {
+      await expect(uc.execute({ userId: "user-1", cursor })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await expect(uc.execute({ userId: "user-1", cursor })).rejects.toMatchObject({
+        response: { code: "VALIDATION_ERROR" },
+      });
+    }
+    expect(readSpy).not.toHaveBeenCalled();
   });
 });

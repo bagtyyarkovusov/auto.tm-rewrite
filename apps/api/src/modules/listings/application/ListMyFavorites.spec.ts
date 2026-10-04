@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { BadRequestException } from "@nestjs/common";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { CardPhotos } from "../domain/CardPhotos";
 
 import { ListMyFavorites } from "./ListMyFavorites";
@@ -238,6 +239,29 @@ describe("ListMyFavorites", () => {
     expect(page2.items).toHaveLength(1);
     expect(page2.items[0]!.id).toBe("listing-1");
     expect(page2.nextCursor).toBeNull();
+  });
+
+  it("rejects a malformed or forged cursor with a 400 and never reads", async () => {
+    const forgedTimestamp = Buffer.from(
+      JSON.stringify({
+        timestamp: "not-a-date",
+        id: "00000000-0000-0000-0000-000000000001",
+      }),
+      "utf8",
+    ).toString("base64url");
+    const listSpy = vi.spyOn(favorites, "listVisibleByUserId");
+
+    const uc = makeUseCase(favorites, listingsRead);
+
+    for (const cursor of ["not-a-cursor", forgedTimestamp]) {
+      await expect(uc.execute({ userId: "user-1", cursor })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await expect(uc.execute({ userId: "user-1", cursor })).rejects.toMatchObject({
+        response: { code: "VALIDATION_ERROR" },
+      });
+    }
+    expect(listSpy).not.toHaveBeenCalled();
   });
 
   it("returns null nextCursor when no more pages", async () => {

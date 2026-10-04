@@ -33,3 +33,38 @@ describe("DraftsController validate-step", () => {
     expect(validateStep).not.toHaveBeenCalled();
   });
 });
+
+describe("DraftsController listMyDrafts", () => {
+  function controllerWithList(listMyDrafts = vi.fn()) {
+    const unused = {} as never;
+    return new DraftsController(
+      unused,
+      unused,
+      unused,
+      { execute: listMyDrafts } as never,
+      unused,
+      unused,
+    );
+  }
+
+  it("rejects a malformed or forged cursor with a 400 and never calls the use case", async () => {
+    const forgedTimestamp = Buffer.from(
+      JSON.stringify({
+        timestamp: "not-a-date",
+        id: "00000000-0000-0000-0000-000000000001",
+      }),
+      "utf8",
+    ).toString("base64url");
+
+    for (const cursor of ["not-a-cursor", forgedTimestamp]) {
+      const listMyDrafts = vi.fn();
+      const call = controllerWithList(listMyDrafts).listMyDrafts({ cursor }, req);
+
+      await expect(call).rejects.toBeInstanceOf(BadRequestException);
+      await expect(call).rejects.toMatchObject({
+        response: { code: "VALIDATION_ERROR" },
+      });
+      expect(listMyDrafts).not.toHaveBeenCalled();
+    }
+  });
+});
