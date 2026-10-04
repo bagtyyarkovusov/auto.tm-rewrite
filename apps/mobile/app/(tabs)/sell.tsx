@@ -1,5 +1,5 @@
 import { PlusCircle } from "lucide-react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { NavigationContext } from "@react-navigation/native";
 import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
 import { BackHandler, View } from "react-native";
@@ -73,6 +73,7 @@ export default function SellScreen() {
     }
   }, [setTopClearance]);
   const navigation = useContext(NavigationContext);
+  const isFocused = useIsFocused();
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
   const [showSignIn, setShowSignIn] = useState(false);
   const [draftLimitOpen, setDraftLimitOpen] = useState(false);
@@ -402,8 +403,15 @@ export default function SellScreen() {
 
   // Android system back: on the first step it behaves as ✕, on later steps it goes
   // back one step. The create wizard hides the tab bar, so nothing else would handle it.
+  // Only while the Sell tab is the focused screen and the wizard can be left: a
+  // screen opened over the tabs keeps its own back, and so does a published Listing.
+  const backIsWizards =
+    isFocused &&
+    inWizard &&
+    machineState.mode === "create" &&
+    (machineState.status === "step" || machineState.status === "publishError");
   useEffect(() => {
-    if (!inWizard || machineState.mode !== "create") return;
+    if (!backIsWizards) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (isClosing) return true;
       if (ctx.canGoBack) handleBack();
@@ -411,7 +419,7 @@ export default function SellScreen() {
       return true;
     });
     return () => subscription.remove();
-  }, [inWizard, machineState.mode, ctx.canGoBack, isClosing, handleBack, handleClose]);
+  }, [backIsWizards, ctx.canGoBack, isClosing, handleBack, handleClose]);
 
   const handlePayloadChange = useCallback(
     (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
