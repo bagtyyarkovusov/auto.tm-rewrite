@@ -182,8 +182,12 @@ describe("WizardLayout save status under the progress bar (#585)", () => {
   });
 
   it("is a polite live region and announces each status change once", () => {
-    const screen = renderMobile(layout("Car", 1, { saveStatus: "saving" }));
-    expect(screen.getByText("Saving...").parent?.props.accessibilityLiveRegion).toBe("polite");
+    const screen = renderMobile(layout("Car", 1, { saveStatus: "idle" }));
+
+    screen.rerender(layout("Car", 1, { saveStatus: "saving" }));
+    let region = screen.getByText("Saving...").parent;
+    while (region && region.props.accessibilityLiveRegion === undefined) region = region.parent;
+    expect(region?.props.accessibilityLiveRegion).toBe("polite");
 
     screen.rerender(layout("Car", 1, { saveStatus: "saving" }));
     screen.rerender(layout("Car", 1, { saveStatus: "saved" }));

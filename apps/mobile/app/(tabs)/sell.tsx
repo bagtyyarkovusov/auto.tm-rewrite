@@ -2,7 +2,7 @@ import { PlusCircle } from "lucide-react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { NavigationContext } from "@react-navigation/native";
 import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
-import { View } from "react-native";
+import { BackHandler, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
@@ -20,7 +20,9 @@ import {
   wizardMachineReducer,
   createInitialState,
   buildMachineContext,
+  isUntouchedPayload,
 } from "../../src/listings/wizard/wizardMachine";
+import { LeaveUnsavedDialog } from "../../src/listings/wizard/LeaveUnsavedDialog";
 import { WizardLayout } from "../../src/listings/wizard/WizardLayout";
 import { useWizardAutosave } from "../../src/listings/wizard/useWizardAutosave";
 import { useAuth } from "../../src/auth/useAuth";
@@ -74,6 +76,13 @@ export default function SellScreen() {
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
   const [showSignIn, setShowSignIn] = useState(false);
   const [draftLimitOpen, setDraftLimitOpen] = useState(false);
+  const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const closingRef = useRef(false);
+  // The draft that tapping New listing created in this session. Only that draft is
+  // removed when the seller closes it untouched; a draft reopened from the Sell tab
+  // or My listings is never deleted by ✕.
+  const newDraftIdRef = useRef<string | null>(null);
   const [machineState, dispatch] = useReducer(
     wizardMachineReducer,
     createInitialState(),
@@ -122,7 +131,7 @@ export default function SellScreen() {
     (m) => m.id === draftsData?.items?.[0]?.payload.modelId,
   )?.name;
 
-  const { save, forceSave, retrySave, saveStatus, saveError } =
+  const { save, forceSave, flush, discardPending, retrySave, saveStatus, saveError } =
     useWizardAutosave(machineState.draftId ?? undefined);
   const uploadQueue = useUploadQueue(
     machineState.draftId ? `draft-${machineState.draftId}` : "",
@@ -190,6 +199,7 @@ export default function SellScreen() {
 
     createDraft.mutate(undefined, {
       onSuccess: (draft) => {
+        newDraftIdRef.current = draft.id;
         dispatch({
           type: "INIT",
           draftId: draft.id,
@@ -319,24 +329,89 @@ export default function SellScreen() {
     }
   }, [machineState, uploadQueue.photos, forceSave, publishDraft, show]);
 
-  const handleDiscard = useCallback(() => {
-    const id = machineState.draftId;
-    if (!id) return;
-
-    // Always clear local state immediately so the user can escape a broken
-    // draft (e.g., orphaned draftId after a server restart / DB reset).
-    void deleteDraftDir(`draft-${id}`);
+  const closeWizard = useCallback(() => {
+    newDraftIdRef.current = null;
+    setUnsavedDialogOpen(false);
     dispatch({ type: "DISCARD" });
+  }, []);
 
-    // Best-effort server-side delete. If the draft is already gone (404) or
-    // the request fails for any other reason, we don't block the user.
-    discardDraft.mutate(id, {
-      onError: (err) => {
-        const message = err instanceof Error ? err.message : t("failedToDiscard");
-        show({ title: message, variant: "destructive" });
-      },
+  // ✕: the draft is already on the server, so closing saves the pending change and
+  // leaves. A new Listing the seller never touched is deleted instead, so it neither
+  // lingers as an empty draft nor counts toward the five-draft limit. A failed save
+  // asks before anything is lost. `retry` skips the "last save failed" shortcut so
+  // the dialog's Retry really tries again.
+  const handleClose = useCallback(
+    async (retry = false) => {
+      const id = machineState.draftId;
+      if (!id || closingRef.current) return;
+      if (machineState.status !== "step" && machineState.status !== "publishError") return;
+
+      const payload: WizardSchemas.WizardDraftPayload = {
+        ...machineState.payload,
+        photos: buildPayloadPhotos(uploadQueue.photos),
+        validatedSteps: machineState.validatedSteps,
+      };
+
+      closingRef.current = true;
+      setIsClosing(true);
+      try {
+        if (id === newDraftIdRef.current && isUntouchedPayload(payload)) {
+          discardPending();
+          try {
+            // Wait, so a New listing tapped right after counts the drafts without this one.
+            await discardDraft.mutateAsync(id);
+          } catch {
+            // Nothing was typed, so nothing is lost; the empty draft stays and can be
+            // deleted from My listings.
+          }
+          void deleteDraftDir(`draft-${id}`);
+          closeWizard();
+          return;
+        }
+
+        if (!retry && saveStatus === "error") {
+          setUnsavedDialogOpen(true);
+          return;
+        }
+        if (!(await flush(payload))) {
+          setUnsavedDialogOpen(true);
+          return;
+        }
+        closeWizard();
+        show({ title: t("savedToDrafts"), variant: "success" });
+      } finally {
+        closingRef.current = false;
+        setIsClosing(false);
+      }
+    },
+    [
+      machineState.draftId,
+      machineState.status,
+      machineState.payload,
+      machineState.validatedSteps,
+      uploadQueue.photos,
+      saveStatus,
+      flush,
+      discardPending,
+      discardDraft,
+      closeWizard,
+      show,
+      t,
+    ],
+  );
+
+  // Android system back: on the first step it behaves as ✕, on later steps it goes
+  // back one step. The create wizard hides the tab bar, so nothing else would handle it.
+  useEffect(() => {
+    if (!inWizard || machineState.mode !== "create") return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (isClosing) return true;
+      if (ctx.canGoBack) handleBack();
+      else void handleClose();
+      return true;
     });
-  }, [machineState.draftId, discardDraft, show]);
+    return () => subscription.remove();
+  }, [inWizard, machineState.mode, ctx.canGoBack, isClosing, handleBack, handleClose]);
 
   const handlePayloadChange = useCallback(
     (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
@@ -389,6 +464,7 @@ export default function SellScreen() {
     }
 
     return (
+      <>
       <WizardLayout
         onHeaderHeightChange={handleHeaderHeightChange}
         routeTitle={t("sellCar")}
@@ -398,7 +474,8 @@ export default function SellScreen() {
         onBack={handleBack}
         onContinue={handleContinue}
         onPublish={handlePublish}
-        onDiscard={handleDiscard}
+        onClose={() => void handleClose()}
+        isClosing={isClosing}
         mode={machineState.mode}
         editDetourActive={ctx.editDetourActive}
         canContinue={
@@ -414,8 +491,6 @@ export default function SellScreen() {
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
         uploadStatus={uploadStatus}
-        isDiscarding={discardDraft.isPending}
-        discardError={discardDraft.error?.message ?? null}
       >
         {currentStep === "photos" && (
           <Step2Photos
@@ -476,6 +551,13 @@ export default function SellScreen() {
           />
         )}
       </WizardLayout>
+      <LeaveUnsavedDialog
+        open={unsavedDialogOpen}
+        onOpenChange={setUnsavedDialogOpen}
+        onRetry={() => void handleClose(true)}
+        onLeave={closeWizard}
+      />
+      </>
     );
   }
 

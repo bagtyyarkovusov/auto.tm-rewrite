@@ -1,6 +1,13 @@
-import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react-native";
+import { ChevronLeft, AlertCircle, RefreshCw, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { AccessibilityInfo, ActivityIndicator, ScrollView, View } from "react-native";
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
@@ -42,7 +49,12 @@ interface WizardLayoutProps {
   onContinue: () => void;
   onPublish: () => void;
   onReturnToReview?: () => void;
-  onDiscard: () => void;
+  /** Create flow: ✕ saves the draft and closes. The screen owns the save and the unsaved dialog. */
+  onClose?: () => void;
+  /** ✕ is disabled while a close is in progress. */
+  isClosing?: boolean;
+  /** Edit flow: Cancel opens "Leave edit mode?" and this runs when the seller confirms. */
+  onDiscard?: () => void;
   mode: "create" | "edit";
   editDetourActive: boolean;
   canContinue: boolean;
@@ -64,6 +76,55 @@ interface WizardLayoutProps {
   uploadStatus?: UploadStatusChip;
 }
 
+/** "Saved", "Saving..." or "Not saved. Retry", read politely by a screen reader. */
+function SaveStatusLine({
+  saveStatus,
+  onRetrySave,
+}: {
+  saveStatus: WizardLayoutProps["saveStatus"];
+  onRetrySave: () => void;
+}) {
+  const { t } = useTranslation();
+  const text =
+    saveStatus === "saving"
+      ? t("savingEllipsis")
+      : saveStatus === "saved"
+        ? t("saved")
+        : saveStatus === "error"
+          ? t("notSavedRetry")
+          : null;
+
+  // `accessibilityLiveRegion` covers Android; iOS has no live regions, so it is announced.
+  useEffect(() => {
+    if (text && Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(text);
+  }, [text]);
+
+  return (
+    <View accessibilityLiveRegion="polite" className="min-h-4">
+      {saveStatus === "error" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={text ?? undefined}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          className="self-start"
+          onPress={onRetrySave}
+        >
+          <Text className="text-xs text-destructive">{text}</Text>
+        </Pressable>
+      ) : text ? (
+        <Text
+          className={cn(
+            "text-xs",
+            saveStatus === "saved" ? "text-success-500" : "text-muted-foreground",
+          )}
+        >
+          {text}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 function WizardHeader({
   onHeaderHeightChange,
   routeTitle,
@@ -72,6 +133,9 @@ function WizardHeader({
   stepCount,
   canGoBack,
   onBack,
+  mode,
+  onClose,
+  isClosing,
   onOpenDiscard,
   progressPercent,
   saveStatus,
@@ -84,6 +148,9 @@ function WizardHeader({
   stepCount: number;
   canGoBack: boolean;
   onBack: () => void;
+  mode: WizardLayoutProps["mode"];
+  onClose?: (() => void) | undefined;
+  isClosing: boolean;
   onOpenDiscard: () => void;
   progressPercent: number;
   saveStatus: WizardLayoutProps["saveStatus"];
@@ -97,27 +164,11 @@ function WizardHeader({
     AccessibilityInfo.announceForAccessibility(stepAnnouncement);
   }, [stepAnnouncement]);
 
-  const saveStatusText =
-    saveStatus === "saving"
-      ? t("savingEllipsis")
-      : saveStatus === "error"
-        ? t("couldNotSave")
-        : saveStatus === "saved"
-          ? t("saved")
-          : null;
-
-  const saveStatusClass =
-    saveStatus === "error"
-      ? "text-destructive"
-      : saveStatus === "saved"
-        ? "text-success-500"
-        : "text-muted-foreground";
-
   return (
     <View
       onLayout={(event) => onHeaderHeightChange?.(event.nativeEvent.layout.height)}
       className="border-b border-border px-5 py-3 gap-2">
-      {/* Row 1: nav + position marker + inline save status + cancel */}
+      {/* Row 1: nav + position marker + close */}
       <View className="flex-row items-center justify-between">
         {canGoBack ? (
           <Button
@@ -141,32 +192,30 @@ function WizardHeader({
           <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
             {routeTitle} · {stepPosition}
           </Text>
-          {saveStatusText && (
-            <Text className={cn("text-xs", saveStatusClass)}>
-              {" · "}{saveStatusText}
-            </Text>
-          )}
-          {saveStatus === "error" && (
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto px-0 py-0"
-              onPress={onRetrySave}
-            >
-              <Text className="text-xs text-destructive">{t("retry")}</Text>
-            </Button>
-          )}
         </View>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-10 px-0 -mr-1"
-          onPress={onOpenDiscard}
-          accessibilityLabel={t("discard")}
-        >
-          <Text className="text-sm font-medium text-muted-foreground">{t("cancel")}</Text>
-        </Button>
+        {mode === "create" ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="-mr-3"
+            onPress={onClose}
+            disabled={isClosing}
+            accessibilityLabel={t("close")}
+          >
+            <Icon as={X} className="size-5 text-foreground" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-10 px-0 -mr-1"
+            onPress={onOpenDiscard}
+            accessibilityLabel={t("discard")}
+          >
+            <Text className="text-sm font-medium text-muted-foreground">{t("cancel")}</Text>
+          </Button>
+        )}
       </View>
 
       {/* Row 2: the prominent step title — the ONE title */}
@@ -184,6 +233,9 @@ function WizardHeader({
         className="bg-muted h-1"
         indicatorClassName="bg-foreground"
       />
+
+      {/* Row 4: where the draft stands; the line's height is kept so nothing jumps */}
+      <SaveStatusLine saveStatus={saveStatus} onRetrySave={onRetrySave} />
     </View>
   );
 }
@@ -420,6 +472,8 @@ export function WizardLayout({
   onContinue,
   onPublish,
   onReturnToReview,
+  onClose,
+  isClosing = false,
   onDiscard,
   mode,
   editDetourActive,
@@ -454,6 +508,9 @@ export function WizardLayout({
         stepCount={stepCount}
         canGoBack={canGoBack}
         onBack={onBack}
+        mode={mode}
+        onClose={onClose}
+        isClosing={isClosing}
         onOpenDiscard={() => setShowDiscardDialog(true)}
         progressPercent={progressPercent}
         saveStatus={saveStatus}
@@ -513,15 +570,18 @@ export function WizardLayout({
         </View>
       </View>
 
-      <DiscardConfirmationDialog
-        open={showDiscardDialog}
-        onOpenChange={setShowDiscardDialog}
-        onDiscard={onDiscard}
-        discardTitle={discardTitle ?? t("discardListingTitle")}
-        discardDescription={discardDescription ?? t("discardListingDescription")}
-        isDiscarding={isDiscarding}
-        discardError={discardError}
-      />
+      {/* Only the edit flow confirms before leaving; the create wizard has ✕ and no discard. */}
+      {mode === "edit" && onDiscard && discardTitle && discardDescription ? (
+        <DiscardConfirmationDialog
+          open={showDiscardDialog}
+          onOpenChange={setShowDiscardDialog}
+          onDiscard={onDiscard}
+          discardTitle={discardTitle}
+          discardDescription={discardDescription}
+          isDiscarding={isDiscarding}
+          discardError={discardError}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

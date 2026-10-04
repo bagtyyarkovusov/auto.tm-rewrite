@@ -342,10 +342,11 @@ describe("Sell wizard resume and system back (#585)", () => {
 
   it("system back on the first step behaves as ✕", async () => {
     const screen = resumeDraft({ ...car, currentStep: 1 });
-    // Car is complete, so the first incomplete step is Details; go back to Car.
+    // Car is complete, so the first incomplete step is Details; system back goes to Car.
     expect(screen.getByRole("header", { name: "Details and condition, Step 2 of 7" })).toBeTruthy();
-    await act(async () => { fireEvent.press(screen.getAllByRole("button", { name: "Back" })[0]!); });
+    await act(async () => { pressHardwareBack(); });
     expect(screen.getByRole("header", { name: "Car, Step 1 of 7" })).toBeTruthy();
+    expect(screen.queryByText("Saved to Drafts")).toBeNull();
 
     let handled = false;
     await act(async () => { handled = pressHardwareBack(); });
