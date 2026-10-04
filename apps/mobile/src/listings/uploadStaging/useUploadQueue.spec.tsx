@@ -370,6 +370,53 @@ describe("useUploadQueue — parallel batch compression", () => {
     expect(result.current.photos[0]?.state).toBe("uploaded");
   });
 
+  describe("when the wizard moves to another draft", () => {
+    const empty = { photos: [] };
+
+    async function openDraftWithOnePhoto() {
+      mockCompressPhoto.mockResolvedValue({
+        uri: "file:///doc/listing-staging/draft-a/photo-id.jpg",
+        width: 100,
+        height: 100,
+        fileSize: 1024,
+      });
+      const hook = renderHook(
+        ({ stagingKey }) => useUploadQueue(stagingKey, empty),
+        { wrapper, initialProps: { stagingKey: "draft-a" } },
+      );
+      await waitFor(() => expect(mockListLocalPhotoIds).toHaveBeenCalledWith("draft-a"));
+      await act(async () => {
+        await hook.result.current.addPhoto("file:///picker/photo.jpg");
+      });
+      await waitFor(() => expect(hook.result.current.photos[0]?.state).toBe("uploaded"));
+      return hook;
+    }
+
+    it("drops the closed draft's photos, so the next draft opened starts with its own", async () => {
+      const { result, rerender } = await openDraftWithOnePhoto();
+
+      // ✕ closes the wizard: no draft is open.
+      rerender({ stagingKey: "" });
+      await waitFor(() => expect(result.current.photos).toEqual([]));
+
+      rerender({ stagingKey: "draft-b" });
+      await waitFor(() => expect(mockListLocalPhotoIds).toHaveBeenCalledWith("draft-b"));
+      await act(async () => undefined);
+
+      expect(result.current.photos).toEqual([]);
+    });
+
+    it("does not carry photos straight from one draft into another", async () => {
+      const { result, rerender } = await openDraftWithOnePhoto();
+
+      rerender({ stagingKey: "draft-b" });
+      await waitFor(() => expect(mockListLocalPhotoIds).toHaveBeenCalledWith("draft-b"));
+      await act(async () => undefined);
+
+      expect(result.current.photos).toEqual([]);
+    });
+  });
+
   describe("local photos from an earlier session", () => {
     const payload = { photos: [{ photoId: "server-1", key: "listings/l1/server-1/original.jpg", sortOrder: 0 }] };
 
