@@ -47,6 +47,10 @@ class FakeListingDraftRepository implements ListingDraftRepository {
     return draft;
   }
 
+  async saveWithinLimit(draft: ListingDraft): Promise<ListingDraft | null> {
+    return this.save(draft);
+  }
+
   async findById(id: string): Promise<ListingDraft | null> {
     return this.drafts.find((d) => d.id === id) ?? null;
   }
