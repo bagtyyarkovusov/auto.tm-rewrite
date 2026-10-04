@@ -127,8 +127,13 @@ function CurrencyButtons({
                 onChange({ priceCurrency: currency.value, priceAmount: undefined });
                 onSwitched();
               }}
-              className={`min-h-10 flex-1 items-center justify-center rounded-[9px] ${
-                isSelected ? "bg-background shadow-sm" : ""
+              // Keep the class shape stable between states: toggling a CSS-var
+              // class (e.g. shadow-sm) onto a mounted component triggers a
+              // css-interop upgrade that crashes the app in dev.
+              className={`min-h-10 flex-1 items-center justify-center rounded-[9px] border ${
+                isSelected
+                  ? "border-border bg-background"
+                  : "border-transparent bg-transparent"
               }`}
             >
               <Text
