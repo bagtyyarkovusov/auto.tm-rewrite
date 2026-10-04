@@ -30,11 +30,15 @@ const CITIES: Record<string, { id: string; name: string }[]> = {
   [LEBAP_REGION]: [{ id: TURKMENABAT, name: "Turkmenabat" }],
 };
 
+let cityRequestLimits: (string | null)[] = [];
+
 beforeEach(() => {
+  cityRequestLimits = [];
   server.resetHandlers();
   server.use(
     http.get("*/catalog/regions", () => HttpResponse.json({ items: REGIONS })),
-    http.get("*/catalog/regions/:id/cities", ({ params }) => {
+    http.get("*/catalog/regions/:id/cities", ({ params, request }) => {
+      cityRequestLimits.push(new URL(request.url).searchParams.get("limit"));
       const regionId = params["id"] as string;
       const items = (CITIES[regionId] ?? []).map((c) => ({ ...c, slug: c.name.toLowerCase(), regionId }));
       return HttpResponse.json({ items, nextCursor: null, hasMore: false });
@@ -130,6 +134,40 @@ describe("Description and place step", () => {
       "Mary region",
       "Lebap",
     ]);
+    // One request per region, each asking for the whole region.
+    expect(cityRequestLimits).toEqual(["500", "500", "500"]);
+  });
+
+  it.each([
+    ["ru", "Город", "Выберите город"],
+    ["tk", "Şäher", "Şäher saýlaň"],
+  ] as const)("titles the City sheet in %s", async (locale, city, title) => {
+    const screen = renderMobile(<ValidatedPlace />, { locale });
+    // Only the City row's placeholder before the sheet opens.
+    expect(screen.getAllByText(title)).toHaveLength(1);
+
+    fireEvent.press(screen.getByRole("button", { name: `${city}: ${title}` }));
+    await screen.findByRole("header", { name: "Lebap" });
+
+    expect(screen.getAllByText(title)).toHaveLength(2);
+  });
+
+  it("says the City sheet failed when a region's cities cannot be loaded", async () => {
+    server.use(
+      http.get(`*/catalog/regions/${MARY_REGION}/cities`, () =>
+        HttpResponse.json({ message: "Unavailable" }, { status: 503 }),
+      ),
+    );
+    const screen = renderMobile(<ValidatedPlace />);
+
+    fireEvent.press(screen.getByRole("button", { name: "City: Select city" }));
+
+    expect(
+      await screen.findByText("Action failed. Pull down to refresh or try again."),
+    ).toBeTruthy();
+    expect(screen.queryAllByRole("header")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Ashgabat" })).toBeNull();
+    expect(screen.queryByText("No cities available")).toBeNull();
   });
 
   it("filters cities across every region and keeps only the headers that still match", async () => {

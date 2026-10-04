@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { server } from "../../../test/msw";
-import { fireEvent, renderMobile } from "../../../test/render";
+import { fireEvent, renderMobile, within } from "../../../test/render";
 
 import Step5Price from "./Step5Price";
 
@@ -65,6 +65,15 @@ describe("Price step currency", () => {
     const screen = renderMobile(<PriceStep />);
 
     expect(screen.getByText("Currency")).toBeTruthy();
+    // getByRole only matches accessibility elements, and the group is a plain
+    // View: marking it `accessible` would make iOS read it as one element and
+    // hide its three radios. So the role and name are read from its props.
+    const group = screen.UNSAFE_getByProps({
+      accessibilityRole: "radiogroup",
+      accessibilityLabel: "Currency",
+    });
+    expect(group.props.accessible).toBeUndefined();
+    expect(within(group).getAllByRole("radio")).toHaveLength(3);
     expect(screen.getByRole("radio", { name: "TMT", checked: true })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "USD", checked: false })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "AED", checked: false })).toBeTruthy();
@@ -113,6 +122,28 @@ describe("Price step currency", () => {
 
     expect(screen.queryByText(/≈/)).toBeNull();
     expect(screen.queryByText(/rate/i)).toBeNull();
+  });
+
+  it("keeps each currency button's class shape the same whether or not it is selected", () => {
+    const screen = renderMobile(<PriceStep />);
+    // A class that sets a CSS variable (shadow-sm) and appears only when
+    // selected crashes the dev app when it lands on a mounted Pressable.
+    const shape = (name: string) =>
+      String(screen.getByRole("radio", { name }).props.className)
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((utility) => utility.replace(/-(border|background|transparent)$/, ""))
+        .sort();
+
+    expect(shape("TMT")).toEqual(shape("USD"));
+    expect(shape("TMT")).toContain("border");
+    expect(String(screen.getByRole("radio", { name: "TMT" }).props.className)).not.toMatch(/shadow/);
+
+    fireEvent.press(screen.getByRole("radio", { name: "USD" }));
+
+    expect(shape("USD")).toEqual(shape("TMT"));
+    expect(String(screen.getByRole("radio", { name: "USD" }).props.className)).toContain("bg-background");
+    expect(String(screen.getByRole("radio", { name: "TMT" }).props.className)).toContain("bg-transparent");
   });
 
   it("disables every currency when the step is read-only", () => {
