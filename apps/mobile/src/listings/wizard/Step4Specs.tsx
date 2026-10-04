@@ -423,55 +423,7 @@ export default function Step4Specs({
         />
       )}
 
-      <ColorPicker
-        selectedColor={specs.selectedColor}
-        disabled={disabled}
-        onPress={() => specs.colorPicker.setOpen(true)}
-      />
-
-      <BodyTypePicker
-        selectedBodyType={specs.selectedBodyType}
-        disabled={disabled}
-        onPress={() => specs.bodyPicker.setOpen(true)}
-      />
-
-      {/* Drivetrain group */}
-      <View className="gap-5 rounded-xl border border-border p-4">
-        <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          {t("drivetrain")}
-        </Text>
-        <TransmissionPicker
-          selectedTransmission={specs.selectedTransmission}
-          disabled={disabled}
-          onPress={() => specs.transmissionPicker.setOpen(true)}
-        />
-        <DriveTypePicker
-          selectedDriveType={specs.selectedDriveType}
-          disabled={disabled}
-          onPress={() => specs.drivePicker.setOpen(true)}
-        />
-      </View>
-
-      {/* Engine group */}
-      <View className="gap-5 rounded-xl border border-border p-4">
-        <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          {t("engine")}
-        </Text>
-        <EngineTypePicker
-          selectedEngineType={specs.selectedEngineType}
-          disabled={disabled}
-          onPress={() => specs.enginePicker.setOpen(true)}
-        />
-        <EnginePowerInput
-          payload={payload}
-          onChange={onChange}
-          disabled={disabled}
-          fieldErrors={fieldErrors}
-          showErrors={showErrors}
-        />
-      </View>
-
-      {/* Condition disclosure group */}
+      {/* Damaged (Used only), then Known issues, so a New car reaches Known issues right after Condition. */}
       <ConditionDisclosureSection
         key={specs.condition}
         showErrors={showErrors}
@@ -481,6 +433,48 @@ export default function Step4Specs({
         onChange={onChange}
         disabled={disabled}
       />
+
+      {/* Optional specs, in the prototype's order (bSpecs). */}
+      <View className="gap-5 rounded-xl border border-border p-4">
+        <Text
+          accessibilityRole="header"
+          className="text-xs font-medium uppercase tracking-widest text-muted-foreground"
+        >
+          {t("moreDetails")}
+        </Text>
+        <BodyTypePicker
+          selectedBodyType={specs.selectedBodyType}
+          disabled={disabled}
+          onPress={() => specs.bodyPicker.setOpen(true)}
+        />
+        <TransmissionPicker
+          selectedTransmission={specs.selectedTransmission}
+          disabled={disabled}
+          onPress={() => specs.transmissionPicker.setOpen(true)}
+        />
+        <EngineTypePicker
+          selectedEngineType={specs.selectedEngineType}
+          disabled={disabled}
+          onPress={() => specs.enginePicker.setOpen(true)}
+        />
+        <DriveTypePicker
+          selectedDriveType={specs.selectedDriveType}
+          disabled={disabled}
+          onPress={() => specs.drivePicker.setOpen(true)}
+        />
+        <ColorPicker
+          selectedColor={specs.selectedColor}
+          disabled={disabled}
+          onPress={() => specs.colorPicker.setOpen(true)}
+        />
+        <EnginePowerInput
+          payload={payload}
+          onChange={onChange}
+          disabled={disabled}
+          fieldErrors={fieldErrors}
+          showErrors={showErrors}
+        />
+      </View>
 
       <SpecSheets payload={payload} onChange={onChange} specs={specs} />
     </View>
