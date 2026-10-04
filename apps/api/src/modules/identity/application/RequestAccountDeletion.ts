@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
+import { Enums } from "@auto-tm/contracts";
 
 import {
   OtpAttemptLedger,
@@ -106,6 +107,7 @@ export class RequestAccountDeletion {
 
     const code = OtpCode.generate();
     const record = await this.otpRequestRepo.create({
+      purpose: Enums.SignInCodePurpose.AccountDeletion,
       channel: destination.channel,
       destination: destination.value,
       codeHash: createHash("sha256").update(code.value).digest("hex"),
@@ -115,14 +117,20 @@ export class RequestAccountDeletion {
     });
 
     if (destination.channel === SIGN_IN_CODE_CHANNELS.PHONE) {
-      await this.otpSender.send(destination.value, code.value);
+      await this.otpSender.send({
+        phone: destination.value,
+        code: code.value,
+        purpose: Enums.SignInCodePurpose.AccountDeletion,
+        locale: input.locale ?? "ru",
+        requestId: record.id,
+      });
     } else {
       await this.emailCodeSender.enqueue({
         requestId: record.id,
         email: destination.value,
         code: code.value,
         locale: input.locale ?? "ru",
-        purpose: "account-deletion",
+        purpose: Enums.SignInCodePurpose.AccountDeletion,
       });
     }
 

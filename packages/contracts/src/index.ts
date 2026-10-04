@@ -2,11 +2,12 @@ export * as Enums from "./enums";
 export {
   ErrorCode,
   ErrorResponseSchema,
+  InvalidOtpDetailsSchema,
   RateLimitReason,
   RateLimitReasonSchema,
   RateLimitedDetailsSchema,
 } from "./errors";
-export type { ErrorResponse, RateLimitedDetails } from "./errors";
+export type { ErrorResponse, InvalidOtpDetails, RateLimitedDetails } from "./errors";
 export {
   CursorPaginationRequestSchema,
   CursorPaginationResponseSchema,

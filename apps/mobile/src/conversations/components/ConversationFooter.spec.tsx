@@ -37,21 +37,38 @@ describe("ConversationFooter", () => {
     expect(screen.queryByText("typing...")).toBeNull();
   });
 
-  it("shows the blocked banner with Unblock, and a disabled composer", () => {
+  it("replaces the composer with the blocked banner when the viewer blocked the other participant", () => {
     const onUnblock = vi.fn();
     const screen = renderMobile(
       <ConversationFooter
         isBlocked
         unblockPending={false}
         onUnblock={onUnblock}
-        peerTyping={false}
-        composer={{ ...composer, disabled: true }}
+        peerTyping
+        composer={{ ...composer, initialText: "Is it available?", showQuickReplies: true }}
       />,
     );
 
-    fireEvent.press(screen.getByRole("button", { name: "Unblock" }));
+    expect(screen.getByText("User blocked")).toBeTruthy();
+    expect(screen.getByText("You cannot send messages to this user.")).toBeTruthy();
+    const unblock = screen.getByRole("button", { name: "Unblock" });
+    expect(unblock.props.className).toContain("h-11");
+    fireEvent.press(unblock);
     expect(onUnblock).toHaveBeenCalledOnce();
-    expect(screen.getByRole("button", { name: "Send message", disabled: true })).toBeTruthy();
+
+    // No composer, attach button, quick replies or typing indicator.
+    expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
+    expect(screen.queryByDisplayValue("Is it available?")).toBeNull();
+    expect(screen.queryByText("Is the car still available?")).toBeNull();
+    expect(screen.queryByText("typing...")).toBeNull();
+  });
+
+  it("disables Unblock while an unblock is in flight", () => {
+    const screen = renderMobile(
+      <ConversationFooter isBlocked unblockPending onUnblock={vi.fn()} peerTyping={false} composer={composer} />,
+    );
+    expect(screen.getByRole("button", { name: "Unblock", disabled: true })).toBeTruthy();
   });
 
   it("shows the typing indicator while the other participant types", () => {
@@ -72,5 +89,78 @@ describe("ConversationFooter", () => {
       <ConversationFooter isBlocked={false} unblockPending={false} onUnblock={vi.fn()} peerTyping={false} />,
     );
     expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  });
+
+  describe("when the Conversation is closed to new Messages", () => {
+    it.each([
+      ["listing_unavailable", "This Listing is no longer available"],
+      ["chat_disabled", "The seller has turned off messages for this Listing"],
+      ["participant_unavailable", "You can't send messages in this Conversation"],
+    ] as const)("replaces the composer with one line for %s", (sendRestriction, line) => {
+      const screen = renderMobile(
+        <ConversationFooter
+          isBlocked={false}
+          sendRestriction={sendRestriction}
+          unblockPending={false}
+          onUnblock={vi.fn()}
+          peerTyping
+          composer={{ ...composer, showQuickReplies: true }}
+        />,
+      );
+
+      expect(screen.getByText(line)).toBeTruthy();
+      // Announced when a refused send swaps the composer for this line.
+      expect(screen.getByTestId("conversation-closed-footer").props.accessibilityLiveRegion).toBe("polite");
+      expect(screen.queryByPlaceholderText("Message")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Attach photo" })).toBeNull();
+      expect(screen.queryByText("Is the car still available?")).toBeNull();
+      expect(screen.queryByText("typing...")).toBeNull();
+      expect(screen.queryByText("Unblock")).toBeNull();
+    });
+
+    it("does not say who blocked whom or who is restricted", () => {
+      const screen = renderMobile(
+        <ConversationFooter
+          isBlocked={false}
+          sendRestriction="participant_unavailable"
+          unblockPending={false}
+          onUnblock={vi.fn()}
+          peerTyping={false}
+          composer={composer}
+        />,
+      );
+      expect(screen.queryByText(/block|suspend|restrict/i)).toBeNull();
+    });
+
+    it("lets the blocked banner win over a closed line", () => {
+      const screen = renderMobile(
+        <ConversationFooter
+          isBlocked
+          sendRestriction="listing_unavailable"
+          unblockPending={false}
+          onUnblock={vi.fn()}
+          peerTyping={false}
+          composer={composer}
+        />,
+      );
+      expect(screen.getByText("User blocked")).toBeTruthy();
+      expect(screen.queryByText("This Listing is no longer available")).toBeNull();
+    });
+
+    it("is localized", () => {
+      const screen = renderMobile(
+        <ConversationFooter
+          isBlocked={false}
+          sendRestriction="chat_disabled"
+          unblockPending={false}
+          onUnblock={vi.fn()}
+          peerTyping={false}
+          composer={composer}
+        />,
+        { locale: "tk" },
+      );
+      expect(screen.getByText("Satyjy bu bildiriş üçin habarlary öçürdi")).toBeTruthy();
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { Enums } from "@auto-tm/contracts";
 
 import type { User } from "../domain/User";
 import { signInCodeDestination } from "../domain/SignInCodeDestination";
@@ -42,15 +43,16 @@ export class ConfirmSignInMethodChange {
     }
 
     const destination = signInCodeDestination(input);
-    const request = await this.verifySignInCode.execute(
+    const request = await this.verifySignInCode.execute({
+      purpose: Enums.SignInCodePurpose.SignInMethod,
       destination,
-      input.code,
-      input.userId,
-    );
+      code: input.code,
+      userId: input.userId,
+    });
 
-    // Claim the code before any side effect, so a code accepted by another
-    // flow (sign-in or deletion) cannot also change a Sign-in Method. The
-    // request is already bound to this User, so the claim is the only write.
+    // Claim the code before any side effect, so concurrent confirmations
+    // change the Sign-in Method once. The request is already bound to this
+    // User, so the claim is the only write.
     if (!(await this.otpRequestRepo.consumeIfUnused(request.id))) {
       throw new Error("OTP code has already been used");
     }

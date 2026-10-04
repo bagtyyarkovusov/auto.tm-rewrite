@@ -12,6 +12,7 @@ export function useDiscardDraft() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDrafts() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDraftsInfinite() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myCountsAll() });
     },
   });
 }

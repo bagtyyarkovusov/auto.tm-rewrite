@@ -157,6 +157,7 @@ describe("Conversation message broadcast e2e", () => {
           condition: "used",
           mileageKm: 50000,
           description: "Broadcast test car",
+          contactPhone: suite.phone("seller-1"),
           allowCalls: true,
           allowChat: true,
           conditionDisclosure: { damaged: false },

@@ -9,7 +9,9 @@ import {
   AccountDeletionRequestSchema,
   AccountDeletionRequestResponseSchema,
   AccountDeletionConfirmRequestSchema,
+  EmailCodeJobSchema,
 } from "../src/schemas/auth";
+import { SignInCodePurpose } from "../src/enums";
 import {
   ListingSummarySchema,
   ListingDetailSchema,
@@ -36,6 +38,13 @@ import {
   ListingsErrorCode,
   ConditionDisclosureSchema,
   DraftConditionDisclosureSchema,
+  VerifiedContactPhoneSchema,
+  ContactPhoneCodeRequestSchema,
+  ContactPhoneCodeRequestResponseSchema,
+  ContactPhoneVerifyRequestSchema,
+  ContactPhoneVerifyResponseSchema,
+  MyContactPhonesResponseSchema,
+  ContactPhoneNotConfirmedDetailsSchema,
 } from "../src/schemas/listings";
 import {
   PresignRequestSchema,
@@ -56,7 +65,7 @@ import {
   ListMessagesResponseSchema,
   ListConversationsResponseSchema,
 } from "../src/schemas/conversations";
-import { ErrorResponseSchema } from "../src/errors";
+import { ErrorResponseSchema, InvalidOtpDetailsSchema } from "../src/errors";
 import { generateOpenApiDocument } from "../src/openapi";
 import {
   WizardStepSchema,
@@ -64,7 +73,7 @@ import {
   isWizardErrorKey,
   getStepDependencies,
   getInvalidatedSteps,
-  StepVinSchema,
+  WIZARD_STEPS,
   StepPhotosSchema,
   StepVehicleSchema,
   StepSpecsSchema,
@@ -985,8 +994,24 @@ const validUuid = "550e8400-e29b-41d4-a716-446655440000";
 const validPhoto = { photoId: validUuid, key: "uploads/abc.jpg", sortOrder: 0 };
 
 describe("WizardStepSchema", () => {
+  it("lists the seven steps in the Sell wizard order", () => {
+    expect(WIZARD_STEPS).toEqual([
+      "vehicle",
+      "specs",
+      "photos",
+      "price",
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("no longer has a VIN step", () => {
+    expect(WizardStepSchema.safeParse("vin").success).toBe(false);
+  });
+
   it("accepts valid steps", () => {
-    expect(WizardStepSchema.safeParse("vin").success).toBe(true);
+    expect(WizardStepSchema.safeParse("vehicle").success).toBe(true);
     expect(WizardStepSchema.safeParse("photos").success).toBe(true);
     expect(WizardStepSchema.safeParse("contact").success).toBe(true);
     expect(WizardStepSchema.safeParse("review").success).toBe(true);
@@ -995,24 +1020,6 @@ describe("WizardStepSchema", () => {
   it("rejects invalid step", () => {
     expect(WizardStepSchema.safeParse("publish").success).toBe(false);
     expect(WizardStepSchema.safeParse("unknown").success).toBe(false);
-  });
-});
-
-describe("StepVinSchema", () => {
-  it("accepts empty payload", () => {
-    expect(StepVinSchema.safeParse({}).success).toBe(true);
-  });
-
-  it("accepts valid VIN", () => {
-    expect(StepVinSchema.safeParse({ vin: "WBA1234567890ABCD" }).success).toBe(
-      true,
-    );
-  });
-
-  it("rejects VIN over 17 chars", () => {
-    expect(StepVinSchema.safeParse({ vin: "A".repeat(18) }).success).toBe(
-      false,
-    );
   });
 });
 
@@ -1070,6 +1077,25 @@ describe("StepVehicleSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts an optional VIN of up to 17 characters", () => {
+    const car = { brandId: validUuid, modelId: validUuid, year: 2020 };
+    expect(StepVehicleSchema.safeParse(car).success).toBe(true);
+    expect(
+      StepVehicleSchema.safeParse({ ...car, vin: "WBA1234567890ABCD" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a VIN over 17 characters with vinTooLong under the field", () => {
+    const result = validateStep("vehicle", {
+      brandId: validUuid,
+      modelId: validUuid,
+      year: 2020,
+      vin: "A".repeat(18),
+    });
+    expect(result.valid).toBe(false);
+    expect(result.fieldErrors["vin"]).toBe("wizardErrors.vinTooLong");
+  });
 });
 
 describe("StepSpecsSchema", () => {
@@ -1081,9 +1107,10 @@ describe("StepSpecsSchema", () => {
     ).toBe(true);
   });
 
-  it("requires the Damaged answer", () => {
+  it("requires the Damaged answer for a Used car", () => {
     const result = StepSpecsSchema.safeParse({
-      condition: "new",
+      condition: "used",
+      mileageKm: 1000,
       conditionDisclosure: { knownIssuesText: "Rust" },
     });
     expect(result.success).toBe(false);
@@ -1093,12 +1120,45 @@ describe("StepSpecsSchema", () => {
     });
   });
 
-  it("accepts either Damaged answer", () => {
+  it("accepts either Damaged answer for a Used car", () => {
     for (const damaged of [true, false]) {
       expect(
-        StepSpecsSchema.safeParse({ condition: "new", conditionDisclosure: { damaged } }).success,
+        StepSpecsSchema.safeParse({ condition: "used", mileageKm: 1000, conditionDisclosure: { damaged } })
+          .success,
       ).toBe(true);
     }
+  });
+
+  // ADR-0080: a New car is not asked Damaged.
+  it.each([
+    ["no disclosure", undefined],
+    ["Known issues only", { knownIssuesText: "Rust" }],
+    ["Damaged: no", { damaged: false }],
+  ])("accepts a New car with %s", (_name, conditionDisclosure) => {
+    expect(StepSpecsSchema.safeParse({ condition: "new", conditionDisclosure }).success).toBe(true);
+  });
+
+  it("rejects a damaged New car", () => {
+    const result = StepSpecsSchema.safeParse({
+      condition: "new",
+      conditionDisclosure: { damaged: true },
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      message: "wizardErrors.damagedNotForNew",
+      path: ["conditionDisclosure", "damaged"],
+    });
+  });
+
+  it("validates the specs step the same way", () => {
+    expect(validateStep("specs", { condition: "new" })).toEqual({
+      valid: true,
+      errors: [],
+      fieldErrors: {},
+    });
+    expect(
+      validateStep("specs", { condition: "new", conditionDisclosure: { damaged: true } }).fieldErrors,
+    ).toEqual({ conditionDisclosure: "wizardErrors.damagedNotForNew" });
   });
 
   it("rejects used vehicle without mileage", () => {
@@ -1149,24 +1209,59 @@ describe("StepPriceSchema", () => {
 });
 
 describe("StepLocationSchema", () => {
-  it("accepts valid location", () => {
+  it("accepts a description with a valid place", () => {
     expect(
       StepLocationSchema.safeParse({
+        description: "Great car",
         regionId: validUuid,
         cityId: validUuid,
       }).success,
     ).toBe(true);
   });
 
+  it("requires the description", () => {
+    const result = validateStep("location", {
+      regionId: validUuid,
+      cityId: validUuid,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.fieldErrors["description"]).toBe(
+      "wizardErrors.descriptionRequired",
+    );
+  });
+
+  it("rejects an empty description", () => {
+    expect(
+      StepLocationSchema.safeParse({
+        description: "",
+        regionId: validUuid,
+        cityId: validUuid,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a description over 2000 chars", () => {
+    const result = validateStep("location", {
+      description: "a".repeat(2001),
+      regionId: validUuid,
+      cityId: validUuid,
+    });
+    expect(result.fieldErrors["description"]).toBe(
+      "wizardErrors.descriptionTooLong",
+    );
+  });
+
   it("rejects missing regionId", () => {
     expect(
-      StepLocationSchema.safeParse({ cityId: validUuid }).success,
+      StepLocationSchema.safeParse({ description: "Great car", cityId: validUuid })
+        .success,
     ).toBe(false);
   });
 
   it("rejects location text over 200 chars", () => {
     expect(
       StepLocationSchema.safeParse({
+        description: "Great car",
         regionId: validUuid,
         cityId: validUuid,
         locationText: "a".repeat(201),
@@ -1176,54 +1271,32 @@ describe("StepLocationSchema", () => {
 });
 
 describe("StepContactSchema", () => {
-  it("accepts valid contact with both methods", () => {
+  it("accepts both contact methods without a description", () => {
     expect(
       StepContactSchema.safeParse({
-        description: "Great car",
+        contactPhone: "+99361234567",
         allowCalls: true,
         allowChat: true,
       }).success,
     ).toBe(true);
   });
 
-  it("accepts valid contact with one method", () => {
+  it("accepts one contact method and today's contact phone", () => {
     expect(
       StepContactSchema.safeParse({
-        description: "Great car",
+        contactPhone: "+99361234567",
         allowCalls: false,
         allowChat: true,
       }).success,
     ).toBe(true);
-  });
-
-  it("rejects empty description", () => {
-    expect(
-      StepContactSchema.safeParse({
-        description: "",
-        allowCalls: true,
-        allowChat: true,
-      }).success,
-    ).toBe(false);
-  });
-
-  it("rejects description over 2000 chars", () => {
-    expect(
-      StepContactSchema.safeParse({
-        description: "a".repeat(2001),
-        allowCalls: true,
-        allowChat: true,
-      }).success,
-    ).toBe(false);
   });
 
   it("rejects when both contact methods disabled", () => {
-    expect(
-      StepContactSchema.safeParse({
-        description: "Great car",
-        allowCalls: false,
-        allowChat: false,
-      }).success,
-    ).toBe(false);
+    const result = validateStep("contact", { contactPhone: "+99361234567", allowCalls: false, allowChat: false });
+    expect(result.valid).toBe(false);
+    expect(result.fieldErrors["allowCalls"]).toBe(
+      "wizardErrors.contactChannelRequired",
+    );
   });
 });
 
@@ -1284,7 +1357,7 @@ describe("validateStep", () => {
   // Messages cross the API boundary and land in a Turkmen or Russian UI, so
   // none of them may be English prose — clients translate the keys (ADR-0050).
   it.each([
-    ["vin", { vin: "x".repeat(18) }],
+    ["vehicle", { vin: "x".repeat(18) }],
     ["photos", {}],
     ["vehicle", {}],
     ["specs", { condition: "used" }],
@@ -1293,7 +1366,8 @@ describe("validateStep", () => {
     ["price", { priceAmount: -1, priceCurrency: "TMT" }],
     ["location", {}],
     ["contact", {}],
-    ["contact", { description: "ok", allowCalls: false, allowChat: false }],
+    ["contact", { allowCalls: false, allowChat: false }],
+    ["location", { regionId: "", cityId: "", description: "x".repeat(2001) }],
     // Zod built-ins the schemas never spell out a message for.
     ["vehicle", { brandId: null, modelId: "no", year: 2020 }],
     ["specs", { condition: "used", mileageKm: 12.5, enginePower: 1.5 }],
@@ -1335,20 +1409,19 @@ describe("validateStep", () => {
 });
 
 describe("getStepDependencies", () => {
-  it("vin has no dependencies", () => {
-    expect(getStepDependencies("vin")).toEqual([]);
+  it("Car has no dependencies", () => {
+    expect(getStepDependencies("vehicle")).toEqual([]);
   });
 
-  it("vehicle depends on vin and photos", () => {
-    expect(getStepDependencies("vehicle")).toEqual(["vin", "photos"]);
+  it("photos depends on Car and Details", () => {
+    expect(getStepDependencies("photos")).toEqual(["vehicle", "specs"]);
   });
 
   it("contact depends on all previous steps", () => {
     expect(getStepDependencies("contact")).toEqual([
-      "vin",
-      "photos",
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
     ]);
@@ -1356,11 +1429,11 @@ describe("getStepDependencies", () => {
 });
 
 describe("getInvalidatedSteps", () => {
-  it("changing brandId invalidates vehicle and downstream", () => {
-    const result = getInvalidatedSteps(["brandId"]);
-    expect(result).toEqual([
+  it("changing brandId invalidates Car and every later step", () => {
+    expect(getInvalidatedSteps(["brandId"])).toEqual([
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
       "contact",
@@ -1368,22 +1441,11 @@ describe("getInvalidatedSteps", () => {
     ]);
   });
 
-  it("changing condition invalidates specs and downstream", () => {
-    const result = getInvalidatedSteps(["condition"]);
-    expect(result).toEqual([
-      "specs",
-      "price",
-      "location",
-      "contact",
-      "review",
-    ]);
-  });
-
-  it("changing multiple fields invalidates union of affected steps", () => {
-    const result = getInvalidatedSteps(["brandId", "priceAmount"]);
-    expect(result).toEqual([
+  it("changing the VIN invalidates Car, which now owns it", () => {
+    expect(getInvalidatedSteps(["vin"])).toEqual([
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
       "contact",
@@ -1391,14 +1453,30 @@ describe("getInvalidatedSteps", () => {
     ]);
   });
 
-  it("changing description only invalidates contact and review", () => {
-    const result = getInvalidatedSteps(["description"]);
-    expect(result).toEqual(["contact", "review"]);
+  it("changing photos invalidates photos and the steps after it", () => {
+    expect(getInvalidatedSteps(["photos"])).toEqual([
+      "photos",
+      "price",
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("changing description invalidates Description and place and the steps after it", () => {
+    expect(getInvalidatedSteps(["description"])).toEqual([
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("changing a contact switch only invalidates contact and review", () => {
+    expect(getInvalidatedSteps(["allowChat"])).toEqual(["contact", "review"]);
   });
 
   it("unknown fields are ignored", () => {
-    const result = getInvalidatedSteps(["unknownField"]);
-    expect(result).toEqual([]);
+    expect(getInvalidatedSteps(["unknownField"])).toEqual([]);
   });
 });
 
@@ -1466,6 +1544,28 @@ describe("Account deletion schemas", () => {
       requestId: "550e8400-e29b-41d4-a716-446655440000",
       resendInSeconds: 60,
     }).success).toBe(true);
+  });
+});
+
+describe("Sign-in Code purposes", () => {
+  it("names the four flows that issue a code (ADR-0081)", () => {
+    expect(Object.values(SignInCodePurpose).sort()).toEqual([
+      "account-deletion",
+      "listing-contact-phone",
+      "sign-in",
+      "sign-in-method",
+    ]);
+  });
+
+  it("queues email codes only for the three email flows", () => {
+    const job = { to: "seller@example.com", code: "123456", locale: "ru" };
+    for (const purpose of ["sign-in", "sign-in-method", "account-deletion"]) {
+      expect(EmailCodeJobSchema.safeParse({ ...job, purpose }).success).toBe(true);
+    }
+    expect(EmailCodeJobSchema.safeParse({
+      ...job,
+      purpose: "listing-contact-phone",
+    }).success).toBe(false);
   });
 });
 
@@ -1766,5 +1866,146 @@ describe("ListConversationsResponseSchema", () => {
 describe("Listings error codes", () => {
   it("publishes the required Damaged answer code returned by edit", () => {
     expect(ListingsErrorCode).toHaveProperty("DamagedRequired", "DAMAGED_REQUIRED");
+  });
+
+  it("publishes the code for a damaged New Listing", () => {
+    expect(ListingsErrorCode).toHaveProperty(
+      "DamagedNotAllowedForNew",
+      "DAMAGED_NOT_ALLOWED_FOR_NEW",
+    );
+  });
+});
+
+describe("Contact phone confirmation (ADR-0081)", () => {
+  const confirmed = {
+    phone: "+99365123456",
+    source: "confirmed",
+    confirmedAt: "2026-10-03T10:00:00.000Z",
+    reusableUntil: "2026-10-10T10:00:00.000Z",
+  };
+
+  it("describes an account phone with null dates and a confirmed number with both", () => {
+    expect(
+      VerifiedContactPhoneSchema.safeParse({
+        phone: "+99361234567",
+        source: "account",
+        confirmedAt: null,
+        reusableUntil: null,
+      }).success,
+    ).toBe(true);
+    expect(VerifiedContactPhoneSchema.safeParse(confirmed).success).toBe(true);
+    expect(
+      VerifiedContactPhoneSchema.safeParse({ ...confirmed, phone: "+79161234567" }).success,
+    ).toBe(false);
+  });
+
+  it("takes a strict TM mobile number to request a code", () => {
+    expect(ContactPhoneCodeRequestSchema.safeParse({ phone: "+99365123456" }).success).toBe(true);
+    expect(ContactPhoneCodeRequestSchema.safeParse({ phone: "+99312123456" }).success).toBe(false);
+    expect(
+      ContactPhoneCodeRequestSchema.safeParse({ phone: "+99365123456", purpose: "sign-in" }).success,
+    ).toBe(false);
+  });
+
+  it("answers confirmed or code_sent to a request", () => {
+    expect(
+      ContactPhoneCodeRequestResponseSchema.safeParse({
+        status: "confirmed",
+        contactPhone: confirmed,
+      }).success,
+    ).toBe(true);
+    expect(
+      ContactPhoneCodeRequestResponseSchema.safeParse({
+        status: "code_sent",
+        requestId: "550e8400-e29b-41d4-a716-446655440000",
+        resendInSeconds: 60,
+        testCode: "123456",
+      }).success,
+    ).toBe(true);
+    expect(
+      ContactPhoneCodeRequestResponseSchema.safeParse({ status: "code_sent" }).success,
+    ).toBe(false);
+  });
+
+  it("takes a strict number and six-digit code to verify", () => {
+    expect(
+      ContactPhoneVerifyRequestSchema.safeParse({ phone: "+99365123456", code: "123456" }).success,
+    ).toBe(true);
+    expect(
+      ContactPhoneVerifyRequestSchema.safeParse({ phone: "+99365123456", code: "12345" }).success,
+    ).toBe(false);
+    expect(
+      ContactPhoneVerifyRequestSchema.safeParse({
+        phone: "+99365123456",
+        code: "123456",
+        userId: "x",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("answers verify with a confirmed number and lists items", () => {
+    expect(ContactPhoneVerifyResponseSchema.safeParse({ contactPhone: confirmed }).success).toBe(true);
+    expect(
+      ContactPhoneVerifyResponseSchema.safeParse({
+        contactPhone: { ...confirmed, source: "account" },
+      }).success,
+    ).toBe(false);
+    expect(MyContactPhonesResponseSchema.safeParse({ items: [confirmed] }).success).toBe(true);
+  });
+
+  it("publishes the new listing error codes and their details", () => {
+    expect(ListingsErrorCode).toHaveProperty("ContactPhoneRequired", "CONTACT_PHONE_REQUIRED");
+    expect(ListingsErrorCode).toHaveProperty(
+      "ContactPhoneNotConfirmed",
+      "CONTACT_PHONE_NOT_CONFIRMED",
+    );
+    expect(ContactPhoneNotConfirmedDetailsSchema.safeParse({ reason: "expired" }).success).toBe(true);
+    expect(
+      ContactPhoneNotConfirmedDetailsSchema.safeParse({ reason: "not_confirmed" }).success,
+    ).toBe(true);
+    expect(ContactPhoneNotConfirmedDetailsSchema.safeParse({ reason: "missing" }).success).toBe(false);
+  });
+
+  it("reports attempts left from 4 down to 1 on INVALID_OTP", () => {
+    for (const attemptsLeft of [1, 2, 3, 4]) {
+      expect(InvalidOtpDetailsSchema.safeParse({ attemptsLeft }).success).toBe(true);
+    }
+    expect(InvalidOtpDetailsSchema.safeParse({ attemptsLeft: 0 }).success).toBe(false);
+    expect(InvalidOtpDetailsSchema.safeParse({ attemptsLeft: 5 }).success).toBe(false);
+  });
+
+  it("requires a TM mobile contact phone on the Contact step and on edit", () => {
+    const base = { description: "Great car", allowCalls: true, allowChat: true };
+    expect(StepContactSchema.safeParse(base).success).toBe(false);
+    expect(StepContactSchema.safeParse({ ...base, contactPhone: "8 800 555" }).success).toBe(false);
+    expect(StepContactSchema.safeParse({ ...base, contactPhone: "+99365123456" }).success).toBe(true);
+
+    expect(EditListingRequestSchema.safeParse({ contactPhone: "+99365123456" }).success).toBe(true);
+    expect(EditListingRequestSchema.safeParse({ contactPhone: "8 800 555" }).success).toBe(false);
+    expect(EditListingRequestSchema.safeParse({ priceAmount: 1 }).success).toBe(true);
+  });
+
+  it("emits translatable keys when the Contact step phone is missing or malformed", () => {
+    const base = { description: "Great car", allowCalls: true, allowChat: true };
+    for (const payload of [base, { ...base, contactPhone: "123" }]) {
+      const result = validateStep("contact", payload);
+      expect(result.valid).toBe(false);
+      for (const message of [...result.errors, ...Object.values(result.fieldErrors)]) {
+        expect(isWizardErrorKey(message), message).toBe(true);
+      }
+    }
+  });
+
+  it("documents the three contact-phone endpoints", () => {
+    const doc = generateOpenApiDocument() as {
+      paths: Record<string, Record<string, { responses?: Record<string, unknown> }>>;
+      components: { schemas: Record<string, unknown> };
+    };
+    expect(doc.paths["/api/v1/me/contact-phones/request"]?.["post"]?.responses).toHaveProperty("400");
+    expect(doc.paths["/api/v1/me/contact-phones/verify"]?.["post"]?.responses).toHaveProperty("400");
+    expect(doc.paths["/api/v1/me/contact-phones"]?.["get"]?.responses).toHaveProperty("200");
+    for (const name of ["VerifiedContactPhone", "InvalidOtpDetails", "ContactPhoneNotConfirmedDetails"]) {
+      expect(doc.components.schemas).toHaveProperty(name);
+    }
   });
 });

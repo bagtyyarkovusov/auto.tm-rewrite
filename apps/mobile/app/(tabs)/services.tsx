@@ -1,4 +1,12 @@
-import { FileText, List, ScrollText, ShieldCheck, User } from "lucide-react-native";
+import {
+  Bell,
+  CircleHelp,
+  FileText,
+  Info,
+  ScrollText,
+  ShieldCheck,
+  User,
+} from "lucide-react-native";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { ScrollView, View } from "react-native";
@@ -14,6 +22,7 @@ import { legalPageUrl } from "../../src/config/publicWebUrl";
 
 import { LanguageRow } from "@/components/account/LanguageRow";
 import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import { MyListingsRow } from "@/components/account/MyListingsRow";
 import { ThemeRow } from "@/components/account/ThemeRow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -129,7 +138,7 @@ function openLegalPage(locale: string, kind: "terms" | "privacy" | "posting-rule
 }
 
 export default function CabinetScreen() {
-  const { t, i18n } = useTranslation(["account", "common"]);
+  const { t, i18n } = useTranslation(["account", "common", "support"]);
   const { isAuthenticated } = useAuth();
 
   return (
@@ -156,11 +165,13 @@ export default function CabinetScreen() {
           <>
             <MenuGap />
             <MenuRow
-              icon={List}
-              label={t("account:myListings")}
+              icon={Bell}
+              label={t("account:notifications")}
               chevron
-              onPress={() => router.push("/listings/manage")}
+              onPress={() => router.push("/notifications")}
             />
+            <MenuDivider />
+            <MyListingsRow />
           </>
         ) : null}
 
@@ -168,6 +179,12 @@ export default function CabinetScreen() {
         <LanguageRow />
         <MenuDivider />
         <ThemeRow />
+        <MenuDivider />
+        <MenuRow
+          icon={CircleHelp}
+          label={t("support:help")}
+          onPress={() => router.push("/help")}
+        />
         <MenuDivider />
         <MenuRow
           icon={ShieldCheck}
@@ -185,6 +202,12 @@ export default function CabinetScreen() {
           icon={ScrollText}
           label={t("account:postingRules")}
           onPress={() => openLegalPage(i18n.language, "posting-rules")}
+        />
+        <MenuDivider />
+        <MenuRow
+          icon={Info}
+          label={t("support:about")}
+          onPress={() => router.push("/about")}
         />
       </ScrollView>
     </SafeAreaView>

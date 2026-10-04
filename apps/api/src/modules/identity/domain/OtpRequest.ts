@@ -1,5 +1,13 @@
+import type { Enums } from "@auto-tm/contracts";
+
+import type { SignInCodeChannel } from "./types";
+
+/** Why a code was issued (ADR-0081). Each verify accepts only its own purpose. */
+export type SignInCodePurpose = Enums.SignInCodePurpose;
+
 export interface OtpRequest {
   readonly id: string;
+  readonly purpose: SignInCodePurpose;
   readonly channel: SignInCodeChannel;
   readonly destination: string;
   readonly codeHash: string;
@@ -12,5 +20,3 @@ export interface OtpRequest {
 }
 
 export type { SignInCodeChannel } from "./types";
-
-import type { SignInCodeChannel } from "./types";

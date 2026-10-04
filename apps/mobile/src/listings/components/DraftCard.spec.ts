@@ -22,6 +22,12 @@ describe("DraftCard structure", () => {
     expect(source).toContain("progressPercent");
   });
 
+  it("reads progress from the filled steps, not the payload's currentStep", () => {
+    expect(source).toContain("draftProgress(payload)");
+    expect(source).toContain('t("draftStepsFilled", { filled, total })');
+    expect(source).not.toContain("currentStep");
+  });
+
   it("has Resume and Discard actions", () => {
     expect(source).toContain('t("continueListing")');
     expect(source).toContain('t("discard")');

@@ -24,20 +24,29 @@ enum SignInCodeChannel {
   email
 }
 
+/// Storage form of `SignInCodePurpose` in @auto-tm/contracts (ADR-0081).
+/// Identity infrastructure holds the one mapping between the two.
+enum CodePurpose {
+  sign_in
+  sign_in_method
+  account_deletion
+  listing_contact_phone
+}
+
 model User {
-  id          String   @id @default(uuid())
+  id              String    @id @default(uuid())
   /// Sign-in Methods (ADR-0054). Each value is stored only with its verified-at
   /// time; the migration adds `users_phone_verified_check` / `users_email_verified_check`.
   phone           String?   @unique
   phoneVerifiedAt DateTime?
   email           String?   @unique
   emailVerifiedAt DateTime?
-  displayName String?
-  avatarUrl   String?
-  locale      String   @default("ru")
-  role        UserRole @default(buyer)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  displayName     String?
+  avatarUrl       String?
+  locale          String    @default("ru")
+  role            UserRole  @default(buyer)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   suspendedAt         DateTime?
   suspendedById       String?
@@ -63,6 +72,7 @@ model User {
   conversationsAsBuyer         Conversation[]            @relation("Buyer")
   conversationsAsSeller        Conversation[]            @relation("Seller")
   listingDrafts                ListingDraft[]
+  verifiedContactPhones        VerifiedContactPhone[]
   mediaUploads                 MediaUpload[]
   totpEnrollment               TotpEnrollment?
   reportsSubmitted             ContentReport[]           @relation("Reporter")
@@ -75,20 +85,22 @@ model User {
 }
 
 model OtpRequest {
-  id         String    @id @default(uuid())
-  channel    SignInCodeChannel
+  id          String            @id @default(uuid())
+  /// Why the code was issued; each verify accepts only its own purpose (ADR-0081).
+  purpose     CodePurpose
+  channel     SignInCodeChannel
   destination String
   /// Temporary deployment compatibility alias. New code reads channel + destination.
-  phone      String?
-  codeHash   String
-  expiresAt  DateTime
-  verifiedAt DateTime?
-  attempts   Int       @default(0)
-  userId     String?
-  user       User?     @relation(fields: [userId], references: [id])
-  ip         String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  phone       String?
+  codeHash    String
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  attempts    Int               @default(0)
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+  ip          String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@index([channel, destination, createdAt])
   @@index([phone, createdAt])
@@ -486,6 +498,22 @@ model MediaUpload {
   @@map("media_uploads")
 }
 
+/// A number a seller confirmed by SMS code for their Listings (ADR-0081). Owned
+/// by Listings; never a Sign-in Method and never touches `User.phone`. Reusable
+/// while now < confirmedAt + 7 days. Several sellers may confirm one number.
+model VerifiedContactPhone {
+  id          String   @id @default(uuid())
+  sellerId    String
+  seller      User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  phone       String
+  confirmedAt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sellerId, phone])
+  @@map("verified_contact_phones")
+}
+
 model Favorite {
   id        String   @id @default(uuid())
   userId    String
@@ -602,8 +630,8 @@ model Message {
   deletedAt       DateTime?
   clientMessageId String?
 
-  @@index([conversationId, createdAt])
   @@unique([conversationId, senderId, clientMessageId])
+  @@index([conversationId, createdAt])
   @@map("messages")
 }
 
