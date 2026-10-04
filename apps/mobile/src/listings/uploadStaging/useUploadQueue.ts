@@ -90,6 +90,8 @@ export function useUploadQueue(
 ) {
   const { t } = useTranslation("common");
   const [queue, setQueue] = useState<UploadQueue>({ stagingKey, photos: [] });
+  // The staging key whose saved and staged photos are in the queue.
+  const [readyKey, setReadyKey] = useState<string | null>(null);
   const { increment: startCompression, decrement: endCompression, isActive: isCompressing } = useAsyncCounter();
   const { increment: startUpload, decrement: endUpload, isActive: isUploading } = useAsyncCounter();
 
@@ -107,6 +109,21 @@ export function useUploadQueue(
   const uploadPhotoRef = useRef<(photoId: string) => Promise<void>>(
     async () => {},
   );
+
+  const processUploadQueue = useCallback(() => {
+    while (
+      runningUploads.current < MAX_CONCURRENT &&
+      uploadQueue.current.length > 0
+    ) {
+      const nextId = uploadQueue.current.shift();
+      if (!nextId) continue;
+      runningUploads.current += 1;
+      uploadPhotoRef.current(nextId).finally(() => {
+        runningUploads.current -= 1;
+        processUploadQueue();
+      });
+    }
+  }, []);
 
   // Initialize queue from draft + local files
   useEffect(() => {
@@ -140,24 +157,18 @@ export function useUploadQueue(
       queueRef.current = { stagingKey, photos: merged };
       setQueue(queueRef.current);
       initializedStagingKey.current = stagingKey;
+      setReadyKey(stagingKey);
+
+      // Photos an earlier session staged but did not finish uploading resume
+      // now; nothing else would start them until the app or network returns.
+      const unfinished = collectPhotosToResume(reconstructed);
+      if (unfinished.length > 0) {
+        uploadQueue.current.push(...unfinished.map((p) => p.photoId));
+        processUploadQueue();
+      }
     }
     void init();
-  }, [stagingKey, initialPayload, restoreLocalPhotos]);
-
-  const processUploadQueue = useCallback(() => {
-    while (
-      runningUploads.current < MAX_CONCURRENT &&
-      uploadQueue.current.length > 0
-    ) {
-      const nextId = uploadQueue.current.shift();
-      if (!nextId) continue;
-      runningUploads.current += 1;
-      uploadPhotoRef.current(nextId).finally(() => {
-        runningUploads.current -= 1;
-        processUploadQueue();
-      });
-    }
-  }, []);
+  }, [stagingKey, initialPayload, restoreLocalPhotos, processUploadQueue]);
 
   const transitionToFailed = useCallback((photoId: string, error: UploadError) => {
     queueRef.current = transitionPhotoToFailed(queueRef.current, photoId, error);
@@ -203,8 +214,8 @@ export function useUploadQueue(
         return;
       }
 
-      const fileExists = await verifyStagingFileExists(photo.localUri);
-      if (!fileExists) {
+      const fileInfo = await FileSystem.getInfoAsync(photo.localUri);
+      if (!fileInfo.exists) {
         transitionToFailed(photoId, {
           code: "LOCAL_FILE_MISSING",
           message: t("uploadErrorLocalFileMissing"),
@@ -220,7 +231,8 @@ export function useUploadQueue(
         const presignResult = await presignMutation.mutateAsync({
           kind: "image",
           contentType: "image/jpeg",
-          sizeBytes: photo.fileSize ?? 0,
+          // A photo restored from staging has no recorded size; its file does.
+          sizeBytes: photo.fileSize ?? fileInfo.size,
         });
 
         if (!networkAvailable.current) {
@@ -357,5 +369,7 @@ export function useUploadQueue(
     publishGate,
     isCompressing,
     isUploading,
+    /** True once this staging key's saved and staged photos are in `photos`. */
+    isReady: readyKey === stagingKey,
   };
 }

@@ -74,14 +74,16 @@ export function reconstructQueueFromDraft(
     });
   }
 
-  // Include local photos not yet in payload
+  // A staged file the draft never saved was compressed but not uploaded when the
+  // app closed. It comes back ready to upload, with its file, so it can resume.
   for (const localId of localPhotoIds) {
     if (!photos.some((p) => p.photoId === localId)) {
       photos.push({
         photoId: localId,
-        state: "selected",
+        state: "compressed",
         sortOrder: photos.length,
         retryCount: 0,
+        localUri: getStagingPath(stagingKey, localId),
       });
     }
   }

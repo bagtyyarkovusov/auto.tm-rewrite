@@ -97,6 +97,8 @@ export default function SellScreen() {
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
   const resumedRef = useRef<string | null>(null);
+  // The draft whose staged photos have already been synced into the payload.
+  const restoredPhotosFor = useRef<string | null>(null);
 
   // Hide the bottom tab bar while the wizard is open — the wizard is a focused
   // flow that should not advertise navigation to other tabs.
@@ -148,8 +150,16 @@ export default function SellScreen() {
 
   // Sync the picked photos into the payload the steps validate. Only which photos
   // there are, and their order, count: a photo's key arriving later changes nothing
-  // the Photos step checks, so it must not reset the steps after it.
+  // the Photos step checks, so it must not reset the steps after it. Nor does the
+  // first sync of a resumed draft: a photo that was still uploading when the app
+  // closed comes back from staging, and that is not a change the seller made.
   useEffect(() => {
+    const draftId = machineState.draftId;
+    const restoring =
+      uploadQueue.isReady === true &&
+      draftId !== null &&
+      restoredPhotosFor.current !== draftId;
+    if (restoring) restoredPhotosFor.current = draftId;
     const picked = buildPickedPhotos(uploadQueue.photos);
     const current = machineState.payload.photos ?? [];
     const sameOrder =
@@ -161,9 +171,10 @@ export default function SellScreen() {
         updates: {
           photos: picked,
         },
+        keepValidSteps: restoring,
       });
     }
-  }, [uploadQueue.photos]);
+  }, [uploadQueue.photos, uploadQueue.isReady]);
 
   // Stable key for autosave trigger — avoids 25+ individual deps and reference churn
   const payloadKey = useMemo(
