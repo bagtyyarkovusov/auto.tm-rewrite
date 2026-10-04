@@ -11,7 +11,10 @@ import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 
-import { conditionDisclosureFieldErrors } from "./conditionDisclosureErrors";
+import {
+  conditionDisclosureFieldErrors,
+  type ConditionDisclosureFieldErrors,
+} from "./conditionDisclosureErrors";
 
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +32,7 @@ interface Step4SpecsProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   fieldErrors?: Record<string, string>;
+  showErrors?: boolean;
   disabled?: boolean;
 }
 
@@ -388,15 +392,23 @@ export default function Step4Specs({
   payload,
   onChange,
   fieldErrors,
+  showErrors = false,
   disabled = false,
 }: Step4SpecsProps) {
   const { t } = useTranslation();
   const specs = useSpecsStep(payload);
+  const disclosureErrors = conditionDisclosureFieldErrors(
+    fieldErrors,
+    payload.conditionDisclosure,
+    specs.condition,
+  );
 
   return (
     <View className="gap-5 py-5">
       <ConditionToggle
         condition={specs.condition}
+        disclosure={payload.conditionDisclosure}
+        error={specs.condition === Enums.ListingCondition.New ? disclosureErrors.damaged : undefined}
         disabled={disabled}
         onChange={onChange}
       />
@@ -406,6 +418,7 @@ export default function Step4Specs({
           payload={payload}
           onChange={onChange}
           fieldErrors={fieldErrors}
+          showErrors={showErrors}
           disabled={disabled}
         />
       )}
@@ -453,14 +466,19 @@ export default function Step4Specs({
           payload={payload}
           onChange={onChange}
           disabled={disabled}
+          fieldErrors={fieldErrors}
+          showErrors={showErrors}
         />
       </View>
 
       {/* Condition disclosure group */}
       <ConditionDisclosureSection
+        key={specs.condition}
+        showErrors={showErrors}
         payload={payload}
+        condition={specs.condition}
+        errors={disclosureErrors}
         onChange={onChange}
-        fieldErrors={fieldErrors}
         disabled={disabled}
       />
 
@@ -471,10 +489,14 @@ export default function Step4Specs({
 
 function ConditionToggle({
   condition,
+  disclosure,
+  error,
   disabled,
   onChange,
 }: {
   condition: Enums.ListingCondition;
+  disclosure: ListingsSchemas.DraftConditionDisclosure | undefined;
+  error?: string;
   disabled: boolean;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
 }) {
@@ -485,9 +507,11 @@ function ConditionToggle({
       <View className="flex-row rounded-lg bg-muted p-1">
         <Pressable
           onPress={() => {
+            // ADR-0080: a New car is not asked Damaged and stores not damaged.
             onChange({
               condition: Enums.ListingCondition.New,
               mileageKm: undefined,
+              conditionDisclosure: { ...disclosure, damaged: false },
             });
           }}
           disabled={disabled}
@@ -513,7 +537,17 @@ function ConditionToggle({
         </Pressable>
         <Pressable
           onPress={() => {
-            onChange({ condition: Enums.ListingCondition.Used });
+            if (condition !== Enums.ListingCondition.New) {
+              onChange({ condition: Enums.ListingCondition.Used });
+              return;
+            }
+            // Clear the answer New stored, so a Used car is never published
+            // on an answer the seller did not give (ADR-0080).
+            const knownIssuesText = disclosure?.knownIssuesText;
+            onChange({
+              condition: Enums.ListingCondition.Used,
+              conditionDisclosure: knownIssuesText === undefined ? {} : { knownIssuesText },
+            });
           }}
           disabled={disabled}
           accessibilityRole="button"
@@ -537,6 +571,11 @@ function ConditionToggle({
           </Text>
         </Pressable>
       </View>
+      {error && (
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -545,14 +584,17 @@ function MileageInput({
   payload,
   onChange,
   fieldErrors,
+  showErrors,
   disabled,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   fieldErrors?: Record<string, string>;
+  showErrors: boolean;
   disabled: boolean;
 }) {
   const { t } = useTranslation();
+  const [touched, setTouched] = useState(false);
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
@@ -561,7 +603,9 @@ function MileageInput({
       {wrapDisabled(
         <Input
           value={payload.mileageKm?.toString() ?? ""}
+          onBlur={() => setTouched(true)}
           onChangeText={(text) => {
+            setTouched(true);
             const num = parseInt(text, 10);
             onChange({
               mileageKm: Number.isNaN(num) ? undefined : num,
@@ -573,7 +617,7 @@ function MileageInput({
         />,
         disabled,
       )}
-      {fieldErrors?.mileageKm && (
+      {(showErrors || touched) && fieldErrors?.mileageKm && (
         <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
           {fieldErrors.mileageKm}
         </Text>
@@ -766,12 +810,17 @@ function EnginePowerInput({
   payload,
   onChange,
   disabled,
+  fieldErrors,
+  showErrors,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled: boolean;
+  fieldErrors?: Record<string, string>;
+  showErrors: boolean;
 }) {
   const { t } = useTranslation();
+  const [touched, setTouched] = useState(false);
   return (
     <View className="gap-1.5">
       <Text className="text-sm font-medium text-foreground">
@@ -780,7 +829,9 @@ function EnginePowerInput({
       {wrapDisabled(
         <Input
           value={payload.enginePower?.toString() ?? ""}
+          onBlur={() => setTouched(true)}
           onChangeText={(text) => {
+            setTouched(true);
             const num = parseInt(text, 10);
             onChange({
               enginePower: Number.isNaN(num) ? undefined : num,
@@ -792,30 +843,43 @@ function EnginePowerInput({
         />,
         disabled,
       )}
+      {(showErrors || touched) && fieldErrors?.enginePower && (
+        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          {fieldErrors.enginePower}
+        </Text>
+      )}
     </View>
   );
 }
 
 function ConditionDisclosureSection({
   payload,
+  condition,
+  errors,
+  showErrors,
   onChange,
-  fieldErrors,
   disabled,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
+  condition: Enums.ListingCondition;
+  errors: ConditionDisclosureFieldErrors;
+  showErrors: boolean;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
-  fieldErrors?: Record<string, string>;
   disabled: boolean;
 }) {
   const { t } = useTranslation();
+  const [damagedTouched, setDamagedTouched] = useState(false);
+  const [knownIssuesTouched, setKnownIssuesTouched] = useState(false);
   const disclosure = payload.conditionDisclosure;
-  const errors = conditionDisclosureFieldErrors(fieldErrors, disclosure);
+  const isNew = condition === Enums.ListingCondition.New;
 
   const updateDisclosure = useCallback(
     (patch: Partial<ListingsSchemas.DraftConditionDisclosure>) => {
-      onChange({ conditionDisclosure: { ...disclosure, ...patch } });
+      onChange({
+        conditionDisclosure: { ...disclosure, ...(isNew && { damaged: false }), ...patch },
+      });
     },
-    [disclosure, onChange],
+    [disclosure, isNew, onChange],
   );
 
   return (
@@ -824,43 +888,49 @@ function ConditionDisclosureSection({
         {t("conditionDisclosure")}
       </Text>
 
-      <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">{t("damaged")}</Text>
-        <View className="flex-row rounded-lg bg-muted p-1" accessibilityRole="radiogroup">
-          {([true, false] as const).map((answer) => {
-            const selected = disclosure?.damaged === answer;
-            return (
-              <Pressable
-                key={String(answer)}
-                onPress={() => updateDisclosure({ damaged: answer })}
-                disabled={disabled}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                accessibilityLabel={`${t("damaged")}: ${answer ? t("yes") : t("no")}`}
-                className={cn(
-                  "flex-1 items-center justify-center rounded-md py-2.5",
-                  selected && "bg-card",
-                  disabled && "opacity-50",
-                )}
-              >
-                <Text
+      {!isNew && (
+        <View className="gap-1.5">
+          <Text className="text-sm font-medium text-foreground">{t("damaged")}</Text>
+          <View className="flex-row rounded-lg bg-muted p-1" accessibilityRole="radiogroup">
+            {([true, false] as const).map((answer) => {
+              const selected = disclosure?.damaged === answer;
+              return (
+                <Pressable
+                  key={String(answer)}
+                  onBlur={() => setDamagedTouched(true)}
+                  onPress={() => {
+                    setDamagedTouched(true);
+                    updateDisclosure({ damaged: answer });
+                  }}
+                  disabled={disabled}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  accessibilityLabel={`${t("damaged")}: ${answer ? t("yes") : t("no")}`}
                   className={cn(
-                    "text-sm font-medium",
-                    selected ? "text-foreground" : "text-muted-foreground",
+                    "flex-1 items-center justify-center rounded-md py-2.5",
+                    selected && "bg-card",
+                    disabled && "opacity-50",
                   )}
                 >
-                  {answer ? t("yes") : t("no")}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    className={cn(
+                      "text-sm font-medium",
+                      selected ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {answer ? t("yes") : t("no")}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {(showErrors || damagedTouched) && errors.damaged && (
+            <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+              {errors.damaged}
+            </Text>
+          )}
         </View>
-        {errors.damaged && (
-          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-            {errors.damaged}
-          </Text>
-        )}
-      </View>
+      )}
 
       <View className="gap-1.5">
         <Text className="text-sm font-medium text-foreground">
@@ -869,7 +939,9 @@ function ConditionDisclosureSection({
         {wrapDisabled(
           <Input
             value={disclosure?.knownIssuesText ?? ""}
+            onBlur={() => setKnownIssuesTouched(true)}
             onChangeText={(text) => {
+              setKnownIssuesTouched(true);
               updateDisclosure({ knownIssuesText: text || undefined });
             }}
             placeholder={t("knownIssuesPlaceholder")}
@@ -882,7 +954,7 @@ function ConditionDisclosureSection({
           />,
           disabled,
         )}
-        {errors.knownIssuesText && (
+        {(showErrors || knownIssuesTouched) && errors.knownIssuesText && (
           <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
             {errors.knownIssuesText}
           </Text>

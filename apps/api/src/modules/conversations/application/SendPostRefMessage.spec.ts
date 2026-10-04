@@ -108,6 +108,10 @@ class FakeConversationRepository implements ConversationRepository {
   async countUnreadMessages(): Promise<number> {
     return 0;
   }
+
+  async countAllUnreadMessages(): Promise<number> {
+    return 0;
+  }
 }
 
 class FakeListingsReadPort implements ListingsReadPort {

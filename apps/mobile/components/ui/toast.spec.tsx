@@ -1,8 +1,12 @@
 import { AccessibilityInfo, StyleSheet } from "react-native";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider, useToast } from "@/components/ui/toast";
 import { renderMobile, act, fireEvent } from "@/test/render";
+
+const insets = vi.hoisted(() => ({ top: 0, right: 0, bottom: 0, left: 0 }));
+vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => insets }));
+beforeEach(() => { insets.top = 0; insets.bottom = 0; });
 
 let toast: ReturnType<typeof useToast>;
 function Capture() {
@@ -53,6 +57,59 @@ describe("Toast", () => {
     const bottom = view.getByTestId("toast-viewport-above-tab-bar");
     expect(StyleSheet.flatten(bottom.props.style).bottom).toBe(72);
     expect(view.getByTestId("toast-viewport-top")).toBeTruthy();
+  });
+
+  it.each([0, 24, 59])("clears the screen header with a %i pt top safe area", (top) => {
+    insets.top = top;
+    const view = renderToasts();
+    act(() => { toast.show({ title: "Скопировано" }); });
+    const viewport = view.getByTestId("toast-viewport-top");
+    // Reserve 64 pt for the standard header, plus an 8 pt gap below it.
+    expect(StyleSheet.flatten(viewport.props.style)?.top).toBe(top + 64 + 8);
+    expect(viewport.props.className).not.toMatch(/\b(?:top-0|pt-12)\b/);
+    expect(view.getByText("Скопировано")).toBeTruthy();
+  });
+
+  it("updates top clearance when safe-area insets change without moving bottom toasts", () => {
+    insets.bottom = 34;
+    const view = renderToasts();
+    act(() => {
+      toast.show({ title: "Copied" });
+      toast.show({ title: "Removed", placement: "aboveTabBar" });
+    });
+    insets.top = 59;
+    view.rerender(<ToastProvider><Capture /></ToastProvider>);
+    expect(StyleSheet.flatten(view.getByTestId("toast-viewport-top").props.style)?.top).toBe(131);
+    expect(StyleSheet.flatten(view.getByTestId("toast-viewport-above-tab-bar").props.style).bottom).toBe(106);
+  });
+
+  it.each([
+    ["default", "border-border", "text-foreground"],
+    ["success", "border-success-500/20", "text-success-500"],
+    ["destructive", "border-destructive/20", "text-destructive"],
+    ["warning", "border-warning-500/20", "text-warning-500"],
+    ["info", "border-info-500/20", "text-info-500"],
+  ] as const)("renders an opaque themed %s toast with its semantic accent", (variant, border, text) => {
+    const view = renderToasts();
+    act(() => { toast.show({ title: "Отмечено как проданное", description: "Saved", variant }); });
+    const title = view.getByText("Отмечено как проданное");
+    // The native host passes utilities through; actual theme/layout needs native proof.
+    let card = title.parent;
+    while (card && !card.props.className?.split(" ").includes("border")) {
+      card = card.parent;
+    }
+    expect(card?.props.className.split(" ")).toContain("bg-card");
+    expect(card?.props.className).not.toMatch(/\bbg-\S+\/\d+/);
+    expect(card?.props.className).toContain(border);
+    expect(title.props.className).toContain(text);
+    expect(view.getByText("Saved")).toBeTruthy();
+  });
+
+  it("dismisses a status toast when tapped", () => {
+    const view = renderToasts();
+    act(() => { toast.show({ title: "Saved", variant: "success" }); });
+    fireEvent.press(view.getByText("Saved"));
+    expect(view.queryByText("Saved")).toBeNull();
   });
 
   it("closes each toast after its own duration", () => {

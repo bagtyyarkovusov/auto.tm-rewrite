@@ -682,4 +682,77 @@ describe("EditListing", () => {
     });
     expect(repo.listings[0]!.conditionDisclosure).toBeUndefined();
   });
+
+  describe("a New Listing (ADR-0080)", () => {
+    it("stores not damaged when a New Listing has no answer", async () => {
+      seedActiveListing(repo, { condition: "new" }, { answered: false });
+
+      const uc = makeUseCase(repo, prisma, events, exchangeRates);
+      const result = await uc.execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { description: "Updated" },
+      });
+
+      expect(result.listing.description).toBe("Updated");
+      expect(result.listing.conditionDisclosure).toEqual({ damaged: false });
+    });
+
+    it("keeps Known issues on a New Listing", async () => {
+      seedActiveListing(repo, { condition: "new" });
+
+      const uc = makeUseCase(repo, prisma, events, exchangeRates);
+      const result = await uc.execute({
+        listingId: "listing-1",
+        userId: "user-1",
+        patch: { conditionDisclosure: { damaged: false, knownIssuesText: "Paint chip" } },
+      });
+
+      expect(result.listing.conditionDisclosure).toEqual({
+        damaged: false,
+        knownIssuesText: "Paint chip",
+      });
+    });
+
+    it.each([
+      [
+        "sends damaged: true for a New Listing",
+        { condition: "new" as const },
+        { conditionDisclosure: { damaged: true } },
+      ],
+      [
+        "changes Condition to New on a damaged Listing",
+        { condition: "used" as const, mileageKm: 1000, conditionDisclosure: { damaged: true } },
+        { condition: "new" as const },
+      ],
+    ])("refuses an edit that %s", async (_name, stored, patch) => {
+      seedActiveListing(repo, stored);
+
+      const uc = makeUseCase(repo, prisma, events, exchangeRates);
+      const error = await uc
+        .execute({ listingId: "listing-1", userId: "user-1", patch })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "DAMAGED_NOT_ALLOWED_FOR_NEW",
+        message: "A New car cannot be damaged. Choose Used for a damaged car.",
+        details: { field: "conditionDisclosure.damaged" },
+      });
+      expect(repo.listings[0]!.condition).toBe(stored.condition);
+    });
+
+    it("still requires the answer for a Used Listing", async () => {
+      seedActiveListing(repo, { condition: "used", mileageKm: 1000 }, { answered: false });
+
+      const uc = makeUseCase(repo, prisma, events, exchangeRates);
+      const error = await uc
+        .execute({ listingId: "listing-1", userId: "user-1", patch: { description: "Updated" } })
+        .catch((err: unknown) => err);
+
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "DAMAGED_REQUIRED",
+      });
+    });
+  });
 });

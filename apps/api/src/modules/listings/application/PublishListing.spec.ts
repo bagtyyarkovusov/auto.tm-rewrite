@@ -467,7 +467,7 @@ describe("PublishListing", () => {
 
   it("accepts missing mileageKm when condition is new", async () => {
     const { mileageKm: _, ...payloadNew } = validPayload;
-    seedDraft(draftRepo, { ...payloadNew, condition: "new" });
+    seedDraft(draftRepo, { ...payloadNew, condition: "new", conditionDisclosure: { damaged: false } });
 
     const uc = makeUseCase(draftRepo, prisma, exchangeRates, events);
     const result = await uc.execute({ draftId: "draft-1", userId: "user-1" });
@@ -780,6 +780,41 @@ describe("PublishListing", () => {
       details: { fieldErrors: { conditionDisclosure: ["DAMAGED_REQUIRED"] } },
     });
     expect(prisma.createdListings).toHaveLength(0);
+  });
+
+  describe("a New car (ADR-0080)", () => {
+    const { mileageKm: _mileage, conditionDisclosure: _disclosure, ...base } = validPayload;
+    const newPayload = { ...base, condition: "new" };
+
+    it.each([
+      ["no disclosure", undefined, null],
+      ["Known issues only", { knownIssuesText: "Paint chip" }, "Paint chip"],
+    ])("publishes with %s as not damaged", async (_name, conditionDisclosure, knownIssuesText) => {
+      seedDraft(draftRepo, conditionDisclosure ? { ...newPayload, conditionDisclosure } : newPayload);
+
+      const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
+      const result = await uc.execute({ draftId: "draft-1", userId: "user-1" });
+
+      expect(result.listing.conditionDisclosure?.damaged).toBe(false);
+      expect(prisma.createdListings[0]).toMatchObject({ damaged: false, knownIssuesText });
+    });
+
+    it("refuses a damaged New car and tells the seller to choose Used", async () => {
+      seedDraft(draftRepo, { ...newPayload, conditionDisclosure: { damaged: true } });
+
+      const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
+      const error = await uc
+        .execute({ draftId: "draft-1", userId: "user-1" })
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "DAMAGED_NOT_ALLOWED_FOR_NEW",
+        message: "A New car cannot be damaged. Choose Used for a damaged car.",
+        details: { field: "conditionDisclosure.damaged" },
+      });
+      expect(prisma.createdListings).toHaveLength(0);
+    });
   });
 
   it("throws BadRequestException when knownIssuesText exceeds 1000 characters", async () => {

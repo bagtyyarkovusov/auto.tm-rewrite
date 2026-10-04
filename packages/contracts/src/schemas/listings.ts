@@ -653,6 +653,8 @@ export const ListingsErrorCode = {
   /** Neither the seller's account phone nor confirmed in the last 7 days. */
   ContactPhoneNotConfirmed: "CONTACT_PHONE_NOT_CONFIRMED",
   DamagedRequired: "DAMAGED_REQUIRED",
+  /** A New Listing cannot be damaged (ADR-0080). */
+  DamagedNotAllowedForNew: "DAMAGED_NOT_ALLOWED_FOR_NEW",
   ListingDeleted: "LISTING_DELETED",
   ListingNotFound: "LISTING_NOT_FOUND",
   MediaLimitExceeded: "MEDIA_LIMIT_EXCEEDED",
