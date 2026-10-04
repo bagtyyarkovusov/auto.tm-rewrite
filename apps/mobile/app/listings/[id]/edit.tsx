@@ -7,6 +7,7 @@ import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
 import { useUploadQueue } from "../../../src/listings/uploadStaging/useUploadQueue";
 import { deleteDraftDir } from "../../../src/listings/uploadStaging/stagingDir";
+import { countUploads } from "../../../src/listings/uploadStaging/uploadCounts";
 import {
   useSaveListingEdit,
   opLabel,
@@ -256,13 +257,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
   const fieldErrors = translateWizardFieldErrors(t, ctx.fieldErrors);
 
   // Compute upload status counts for chip + publishGate reason
-  const uploadStatus = {
-    inflight: uploadQueue.photos.filter((p) =>
-      ["selected", "compressed", "presigned", "uploading"].includes(p.state),
-    ).length,
-    failed: uploadQueue.photos.filter((p) => p.state === "failed").length,
-    total: uploadQueue.photos.length,
-  };
+  const uploadStatus = countUploads(uploadQueue.photos);
 
   const disabledReason =
     ctx.isLastStep && !uploadQueue.publishGate.canPublish
