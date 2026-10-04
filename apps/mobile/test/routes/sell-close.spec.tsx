@@ -17,6 +17,7 @@ const fixture = vi.hoisted(() => {
     drafts: [] as { id: string; payload: Record<string, unknown> }[],
     discard: vi.fn(),
     deleteDraftDir: vi.fn(),
+    queuePhotos: [] as Record<string, unknown>[],
     autosave: {
       save: vi.fn(),
       forceSave: vi.fn(),
@@ -54,7 +55,7 @@ vi.mock("../../src/api/listings/usePublishDraft", () => ({
 }));
 vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({ useWizardAutosave: () => fixture.autosave }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({
-  useUploadQueue: () => ({ photos: [], publishGate: { canPublish: true, blockers: [] } }),
+  useUploadQueue: () => ({ photos: fixture.queuePhotos, publishGate: { canPublish: true, blockers: [] } }),
 }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../components/auth/SignInDialog", () => ({ SignInDialog: () => null }));
@@ -84,6 +85,7 @@ const photos = { photos: [{ photoId: fixture.id, key: "photo.jpg", sortOrder: 0 
 
 beforeEach(() => {
   fixture.drafts = [];
+  fixture.queuePhotos = [];
   fixture.discard.mockReset().mockResolvedValue(undefined);
   fixture.deleteDraftDir.mockReset();
   Object.assign(fixture.autosave, { saveStatus: "saved", saveError: null });
@@ -177,6 +179,19 @@ describe("✕ saves the draft and closes the Sell wizard (#585)", () => {
 
     expect(fixture.discard).not.toHaveBeenCalled();
     expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
+  });
+
+  it("does not delete a new Listing that has a picked photo still uploading", async () => {
+    // The photo has no key yet, so the payload alone still looks untouched.
+    fixture.queuePhotos = [{ photoId: fixture.id, state: "uploading", sortOrder: 0, retryCount: 0 }];
+    const screen = openNewListing();
+
+    await pressClose(screen);
+
+    expect(fixture.discard).not.toHaveBeenCalled();
+    expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
+    expect(fixture.autosave.flush).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Saved to Drafts")).toBeTruthy();
   });
 
   it("waits for the delete before closing, so the five-draft count is right when New listing is tapped again", async () => {
@@ -367,6 +382,33 @@ describe("Sell wizard resume and system back (#585)", () => {
     expect(screen.getByRole("header", { name: "Car, Step 1 of 7" })).toBeTruthy();
     expect(wizardIsOpen(screen)).toBe(true);
     expect(screen.queryByText("Saved to Drafts")).toBeNull();
+  });
+
+  it("saves the step it moves to, not the one it left", async () => {
+    const screen = resumeDraft({ ...car, currentStep: 1 });
+    expect(screen.getByRole("header", { name: "Details and condition, Step 2 of 7" })).toBeTruthy();
+    // The draft opened on Details, and that position is what the autosave sends.
+    expect(fixture.autosave.save).toHaveBeenLastCalledWith(expect.objectContaining({ currentStep: 2 }));
+
+    await act(async () => { pressHardwareBack(); });
+
+    expect(screen.getByRole("header", { name: "Car, Step 1 of 7" })).toBeTruthy();
+    expect(fixture.autosave.forceSave).toHaveBeenLastCalledWith(expect.objectContaining({ currentStep: 1 }));
+  });
+
+  it("system back with the unsaved dialog open closes the dialog and stays on the step", async () => {
+    Object.assign(fixture.autosave, { saveStatus: "error", saveError: "No internet" });
+    const screen = resumeDraft({ ...car, currentStep: 2 });
+    await pressClose(screen);
+    expect(screen.getByText("Latest changes are not saved")).toBeTruthy();
+
+    let handled = false;
+    await act(async () => { handled = pressHardwareBack(); });
+
+    expect(handled).toBe(true);
+    expect(screen.queryByText("Latest changes are not saved")).toBeNull();
+    expect(screen.getByRole("header", { name: "Details and condition, Step 2 of 7" })).toBeTruthy();
+    expect(fixture.autosave.forceSave).not.toHaveBeenCalled();
   });
 
   it("leaves system back to the screen on top while another screen covers the wizard", async () => {

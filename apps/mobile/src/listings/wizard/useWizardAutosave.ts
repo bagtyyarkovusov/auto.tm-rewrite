@@ -178,7 +178,7 @@ export function useWizardAutosave(draftId: string | undefined) {
         return false;
       }
     },
-    [draftId, updateDraft, clearSaveTimeout],
+    [draftId, updateDraft, clearSaveTimeout, t],
   );
 
   // Use a ref so the debounce closure always calls the current performSave

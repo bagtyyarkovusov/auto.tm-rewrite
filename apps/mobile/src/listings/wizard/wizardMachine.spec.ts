@@ -62,7 +62,7 @@ describe("INIT", () => {
     expect(next.status).toBe("step");
     expect(next.draftId).toBe("draft-1");
     expect(next.mode).toBe("create");
-    expect(next.payload).toEqual({ vin: "WBA123", condition: "used" });
+    expect(next.payload).toEqual({ vin: "WBA123", condition: "used", currentStep: 1 });
     expect(next.currentStep).toBe("vehicle");
   });
 
@@ -682,6 +682,13 @@ describe("Resume at the step the seller left (#585)", () => {
     // The seller went back to Details and left there.
     expect(init({ ...upToPrice, currentStep: 2 }).currentStep).toBe("specs");
     expect(init({ ...upToPrice, currentStep: 3 }).currentStep).toBe("photos");
+  });
+
+  it("records the step it opens, so the next save holds the position", () => {
+    // Saved as 1 by an earlier wizard; it opens on Price and now says so.
+    expect(init({ ...upToPrice, currentStep: 1 }).payload.currentStep).toBe(4);
+    expect(init({ ...car, currentStep: 6 }).payload.currentStep).toBe(2);
+    expect(init({ currentStep: 1 }).payload.currentStep).toBe(1);
   });
 
   it("never opens a step whose earlier steps are incomplete", () => {

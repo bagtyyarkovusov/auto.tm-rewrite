@@ -269,14 +269,16 @@ export default function SellScreen() {
 
   const handleBack = useCallback(() => {
     dispatch({ type: "BACK" });
-    // Force save on navigation
+    // Force save on navigation, with the step it moves to: the payload in hand
+    // still names the step being left.
+    const moved = wizardMachineReducer(machineState, { type: "BACK" });
     const fullPayload: WizardSchemas.WizardDraftPayload = {
-      ...machineState.payload,
+      ...moved.payload,
       photos: buildPayloadPhotos(uploadQueue.photos),
-      validatedSteps: machineState.validatedSteps,
+      validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [machineState.payload, machineState.validatedSteps, uploadQueue.photos, forceSave]);
+  }, [machineState, uploadQueue.photos, forceSave]);
 
   const handleContinue = useCallback(() => {
     if (discardDraft.isPending || publishDraft.isPending) return;
@@ -290,11 +292,12 @@ export default function SellScreen() {
     }
 
     dispatch({ type: "NEXT" });
-    // Force save on navigation
+    // Force save on navigation, with the step it moves to.
+    const moved = wizardMachineReducer(machineState, { type: "NEXT" });
     const fullPayload: WizardSchemas.WizardDraftPayload = {
-      ...machineState.payload,
+      ...moved.payload,
       photos: buildPayloadPhotos(uploadQueue.photos),
-      validatedSteps: machineState.validatedSteps,
+      validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
   }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave, discardDraft.isPending, publishDraft.isPending]);
@@ -356,7 +359,12 @@ export default function SellScreen() {
       closingRef.current = true;
       setIsClosing(true);
       try {
-        if (id === newDraftIdRef.current && isUntouchedPayload(payload)) {
+        // A picked photo without a key is not in the payload yet, but it is a change.
+        if (
+          id === newDraftIdRef.current &&
+          uploadQueue.photos.length === 0 &&
+          isUntouchedPayload(payload)
+        ) {
           discardPending();
           try {
             // Wait, so a New listing tapped right after counts the drafts without this one.
@@ -414,12 +422,17 @@ export default function SellScreen() {
     if (!backIsWizards) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (isClosing) return true;
+      // The dialog is on top: back dismisses it, like Keep editing.
+      if (unsavedDialogOpen) {
+        setUnsavedDialogOpen(false);
+        return true;
+      }
       if (ctx.canGoBack) handleBack();
       else void handleClose();
       return true;
     });
     return () => subscription.remove();
-  }, [backIsWizards, ctx.canGoBack, isClosing, handleBack, handleClose]);
+  }, [backIsWizards, ctx.canGoBack, isClosing, unsavedDialogOpen, handleBack, handleClose]);
 
   const handlePayloadChange = useCallback(
     (updates: Partial<WizardSchemas.WizardDraftPayload>) => {

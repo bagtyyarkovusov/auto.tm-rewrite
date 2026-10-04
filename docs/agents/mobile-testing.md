@@ -49,7 +49,9 @@ component's supplied dimensions, but cannot prove native layout.
 `routerMock` records `push`, `navigate`, `replace`, `back` and `setParams` calls.
 Set `routeParams.id` and other string parameters before rendering a screen.
 Router calls and route parameters reset before each test. `canGoBack` defaults
-to true; reset any changed return implementation in your spec. Data, auth and
+to true; reset any changed return implementation in your spec. `useIsFocused`
+returns `screenFocus.focused`, true before each test; set it to false and
+rerender for a screen that another screen covers. Data, auth and
 native services still need explicit fixtures or MSW handlers. Prefer mocking
 the external service or hook boundary while rendering the actual screen and
 feature components. See `listingDetail.spec.tsx` for ownership, contact, retry,

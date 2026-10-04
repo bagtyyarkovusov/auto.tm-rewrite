@@ -247,7 +247,11 @@ export function wizardMachineReducer(
         listingId: action.listingId ?? null,
         mode,
         editEntryAtReview: false,
-        payload,
+        // A create draft records the step it opens at, like every later move.
+        payload:
+          mode === "create"
+            ? { ...payload, currentStep: stepIndex(resumeStep) + 1 }
+            : payload,
         validatedSteps,
         currentStep: resumeStep,
         saveError: null,
