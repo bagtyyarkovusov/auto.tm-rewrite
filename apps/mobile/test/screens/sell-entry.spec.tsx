@@ -163,8 +163,9 @@ describe("Sell tab with drafts", () => {
   });
 
   it("counts the steps the Drafts card counts, from the saved fields", async () => {
-    serverDrafts = [draft("d1")];
-    const { filled, total } = draftProgress(serverDrafts[0]!.payload);
+    const saved = draft("d1");
+    serverDrafts = [saved];
+    const { filled, total } = draftProgress(saved.payload);
     expect({ filled, total }).toEqual({ filled: 2, total: DATA_STEPS });
     const screen = await renderSell();
 
