@@ -94,6 +94,8 @@ export function CatalogPickerSheet({
           </Text>
         ) : (
           <FlatList
+            // One sheet serves several pickers; a new list per title starts at the top.
+            key={title}
             data={items}
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="handled"
@@ -120,7 +122,7 @@ export function CatalogPickerSheet({
             )}
           />
         )}
-        {!isLoading && !isError && items.length > 0 && footer}
+        {!isLoading && footer}
       </SheetContent>
     </Sheet>
   );

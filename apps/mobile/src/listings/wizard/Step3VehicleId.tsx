@@ -99,15 +99,19 @@ function useCarPickers(
     const changed = modelId !== payload.modelId;
     if (changed) onChange({ modelId, generationId: undefined });
     if (payload.year === undefined) open("year");
-    else if (changed || !payload.generationId) open("generation", true);
-    else open(null);
+    // A changed model's generations are not loaded yet; the effect above
+    // closes the sheet if there turn out to be none.
+    else if (changed || (!payload.generationId && !modelHasNoGenerations)) {
+      open("generation", true);
+    } else open(null);
   }
 
   function selectYear(id: string) {
     markTouched("year");
     onChange({ year: Number(id) });
-    if (payload.modelId && !payload.generationId) open("generation", true);
-    else open(null);
+    if (payload.modelId && !payload.generationId && !modelHasNoGenerations) {
+      open("generation", true);
+    } else open(null);
   }
 
   function selectGeneration(generationId: string | undefined) {
