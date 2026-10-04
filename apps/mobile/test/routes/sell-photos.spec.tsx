@@ -28,6 +28,7 @@ const fixture = vi.hoisted(() => {
     } as Record<string, Record<string, unknown>>,
     payload: {} as Record<string, unknown>,
     queuePhotos: [] as StagedPhoto[],
+    queueReady: false,
     gate: { canPublish: true, blockers: [] as string[] },
     save: vi.fn(),
     forceSave: vi.fn(),
@@ -63,7 +64,7 @@ vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({
   useUploadQueue: () => ({
     photos: [...fixture.queuePhotos], publishGate: fixture.gate,
     addPhoto: vi.fn(), removePhoto: vi.fn(), reorderPhotos: vi.fn(), retryPhoto: vi.fn(),
-    isCompressing: false, isUploading: false,
+    isCompressing: false, isUploading: false, isReady: fixture.queueReady,
   }),
 }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: vi.fn() }));
@@ -100,6 +101,7 @@ const continueButton = (screen: ReturnType<typeof renderMobile>) => screen.getBy
 beforeEach(() => {
   fixture.payload = {};
   fixture.queuePhotos = [];
+  fixture.queueReady = false;
   fixture.gate = { canPublish: true, blockers: [] };
   fixture.save.mockReset();
   fixture.forceSave.mockReset().mockResolvedValue(undefined);
@@ -261,6 +263,22 @@ describe("Sell wizard, upload status on later steps", () => {
     screen.rerender(<SellScreen />);
 
     expect(screen.getByRole("button", { name: "Publish" }).props.accessibilityState).toMatchObject({ disabled: false });
+  });
+
+  it("keeps the later steps done when a resumed draft brings back a photo it had not saved", () => {
+    // The app closed while the second photo was uploading: only the first is in the draft.
+    fixture.queuePhotos = [keyed(ids.a, 0), staged(ids.b, 1, "compressed")];
+    fixture.queueReady = true;
+    resume("complete");
+    const screen = renderMobile(<SellScreen />);
+
+    expect(screen.getByRole("header", { name: "Check and publish, Step 7 of 7" })).toBeTruthy();
+    expect(screen.queryByText(/Complete \d+ step\(s\) before publishing/)).toBeNull();
+
+    // A photo the seller adds afterwards is a change of theirs, and is checked again.
+    fixture.queuePhotos = [keyed(ids.a, 0), staged(ids.b, 1, "compressed"), staged(ids.c, 2, "selected")];
+    screen.rerender(<SellScreen />);
+    expect(screen.getByText(/Complete \d+ step\(s\) before publishing/)).toBeTruthy();
   });
 
   it("can publish once every photo is attached", () => {

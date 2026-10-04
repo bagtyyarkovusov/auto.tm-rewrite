@@ -380,6 +380,44 @@ describe("useUploadQueue — parallel batch compression", () => {
       expect(mockDeleteDraftDir).not.toHaveBeenCalled();
     });
 
+    it("uploads a photo that was still uploading when the app closed", async () => {
+      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
+      const { result } = renderHook(() => useUploadQueue("draft-9", payload), { wrapper });
+
+      await waitFor(() =>
+        expect(result.current.photos.find((p) => p.photoId === "left-behind")).toMatchObject({
+          state: "uploaded",
+          key: "test-key",
+        }),
+      );
+      // The size is read from the staged file: the earlier session's figure is gone.
+      expect(mockPresignMutateAsync).toHaveBeenCalledWith(expect.objectContaining({ sizeBytes: 1024 }));
+      expect(mockUploadAsync).toHaveBeenCalledWith(
+        "http://localhost/presigned",
+        "file:///doc/listing-staging/draft-9/left-behind.jpg",
+        expect.anything(),
+      );
+    });
+
+    it("says when the photos of the open draft are restored", async () => {
+      const { result, rerender } = renderHook(
+        ({ stagingKey }) => useUploadQueue(stagingKey, payload),
+        { wrapper, initialProps: { stagingKey: "draft-9" } },
+      );
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+
+      let releaseInit: ((ids: string[]) => void) | undefined;
+      mockListLocalPhotoIds.mockImplementationOnce(
+        () => new Promise<string[]>((resolve) => { releaseInit = resolve; }),
+      );
+      rerender({ stagingKey: "draft-10" });
+      expect(result.current.isReady).toBe(false);
+
+      await waitFor(() => expect(releaseInit).toBeDefined());
+      act(() => releaseInit?.([]));
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+    });
+
     it("deletes them instead when told not to restore", async () => {
       const { result } = renderHook(
         () => useUploadQueue("edit-l1", payload, { restoreLocalPhotos: false }),

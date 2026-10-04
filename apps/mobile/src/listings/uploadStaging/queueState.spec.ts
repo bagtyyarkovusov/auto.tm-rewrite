@@ -21,6 +21,7 @@ import {
   collectPhotosToResume,
   transitionUploadQueueToWaitingForNetwork,
 } from "./queueState";
+import { getStagingPath } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, UploadError } from "./types";
 
 function makeQueue(photos: StagedPhoto[]): UploadQueue {
@@ -135,6 +136,21 @@ describe("reconstructQueueFromDraft", () => {
       [],
     );
     expect(result.photos[0]?.state).toBe("lost");
+  });
+
+  it("brings back a staged file the draft never saved as ready to upload", () => {
+    const result = reconstructQueueFromDraft(
+      "draft-1",
+      { photos: [{ photoId: "p1", key: "k1", sortOrder: 0 }] },
+      ["p2"],
+    );
+    expect(result.photos[1]).toMatchObject({
+      photoId: "p2",
+      state: "compressed",
+      sortOrder: 1,
+      localUri: getStagingPath("draft-1", "p2"),
+    });
+    expect(collectPhotosToResume(result).map((p) => p.photoId)).toEqual(["p2"]);
   });
 });
 
