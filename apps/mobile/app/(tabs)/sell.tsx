@@ -15,6 +15,7 @@ import { usePublishDraft } from "../../src/api/listings/usePublishDraft";
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { deleteDraftDir } from "../../src/listings/uploadStaging/stagingDir";
+import { countUploads } from "../../src/listings/uploadStaging/uploadCounts";
 import { useUploadQueue } from "../../src/listings/uploadStaging/useUploadQueue";
 import {
   wizardMachineReducer,
@@ -44,6 +45,8 @@ import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 
+// What is saved and published: only photos that have a key, since the API treats
+// a draft photo as attached and Publish needs a keyed one.
 function buildPayloadPhotos(
   photos: ReturnType<typeof useUploadQueue>["photos"],
 ): NonNullable<WizardSchemas.WizardDraftPayload["photos"]> {
@@ -54,6 +57,18 @@ function buildPayloadPhotos(
       key: p.key,
       sortOrder: p.sortOrder,
     }));
+}
+
+// What the Photos step validates: every picked photo, key or not, so Continue
+// does not wait for an upload. Never saved; see buildPayloadPhotos.
+function buildPickedPhotos(
+  photos: ReturnType<typeof useUploadQueue>["photos"],
+): NonNullable<WizardSchemas.WizardDraftPayload["photos"]> {
+  return photos.map((p) => ({
+    photoId: p.photoId,
+    ...(p.key ? { key: p.key } : {}),
+    sortOrder: p.sortOrder,
+  }));
 }
 
 export default function SellScreen() {
@@ -131,16 +146,20 @@ export default function SellScreen() {
 
   const ctx = buildMachineContext(machineState);
 
-  // Sync upload queue photos into payload
+  // Sync the picked photos into the payload the steps validate. Only which photos
+  // there are, and their order, count: a photo's key arriving later changes nothing
+  // the Photos step checks, so it must not reset the steps after it.
   useEffect(() => {
-    const photosFromQueue = buildPayloadPhotos(uploadQueue.photos);
-    const currentPhotos = JSON.stringify(machineState.payload.photos ?? []);
-    const newPhotos = JSON.stringify(photosFromQueue);
-    if (currentPhotos !== newPhotos) {
+    const picked = buildPickedPhotos(uploadQueue.photos);
+    const current = machineState.payload.photos ?? [];
+    const sameOrder =
+      current.length === picked.length &&
+      current.every((photo, index) => photo.photoId === picked[index]?.photoId);
+    if (!sameOrder) {
       dispatch({
         type: "UPDATE_FIELDS",
         updates: {
-          photos: photosFromQueue,
+          photos: picked,
         },
       });
     }
@@ -351,21 +370,15 @@ export default function SellScreen() {
     const fieldErrors = translateWizardFieldErrors(t, ctx.fieldErrors);
 
     // Compute upload status counts for chip + publishGate reason
-    const uploadStatus = {
-      inflight: uploadQueue.photos.filter((p) =>
-        ["selected", "compressed", "presigned", "uploading"].includes(p.state),
-      ).length,
-      failed: uploadQueue.photos.filter((p) => p.state === "failed").length,
-      total: uploadQueue.photos.length,
-    };
+    const uploadStatus = countUploads(uploadQueue.photos);
 
     // Compose a clear reason text when Publish/Continue is disabled.
     let disabledReason: string | undefined;
     if (ctx.isLastStep && !uploadQueue.publishGate.canPublish) {
       if (uploadStatus.failed > 0) {
-        disabledReason = t("failed");
+        disabledReason = t("photosGateFailed", { count: uploadStatus.failed });
       } else if (uploadStatus.inflight > 0) {
-        disabledReason = t("waitForPhotos", { count: uploadStatus.inflight });
+        disabledReason = t("photosGateUploading", { count: uploadStatus.inflight });
       } else {
         disabledReason =
           translateWizardError(t, uploadQueue.publishGate.blockers[0]) ??
@@ -414,6 +427,7 @@ export default function SellScreen() {
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
         uploadStatus={uploadStatus}
+        onUploadStatusPress={() => dispatch({ type: "GO_TO_STEP", step: "photos" })}
         isDiscarding={discardDraft.isPending}
         discardError={discardDraft.error?.message ?? null}
       >

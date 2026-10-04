@@ -15,7 +15,9 @@ const props = () => ({ photo: { photoId: "photo-a", sortOrder: 0, state: "attach
 describe("PhotoThumbnail", () => {
   it("supplies square dimensions and a cover label for the first tile", () => {
     const screen = renderMobile(<PhotoThumbnail {...props()} />);
-    expect(screen.getByText("Cover")).toBeTruthy();
+    // The badge is for the eye; a screen reader gets "Cover" in the tile's own label.
+    expect(screen.getByText("Cover", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByLabelText("Photo 1 of 2, Cover, Uploaded")).toBeTruthy();
     const tile = screen.UNSAFE_getAllByType(View).find((node) => StyleSheet.flatten(node.props.style)?.width === 111);
     expect(StyleSheet.flatten(tile?.props.style)).toMatchObject({ width: 111, height: 111 });
     expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: "file:///photo-a.jpg" });
@@ -54,7 +56,8 @@ describe("PhotoThumbnail", () => {
     const callbacks = props();
     const failed = { ...callbacks.photo, state: "failed" as const, error: { code: "NETWORK_ERROR" as const, message: "Offline", retryable: true } };
     const screen = renderMobile(<PhotoThumbnail {...callbacks} photo={failed} />);
-    expect(screen.getByText("Offline")).toBeTruthy();
+    // The overlay is for the eye and never takes the tap; the label above carries the state.
+    expect(screen.getByText("Offline", { includeHiddenElements: true })).toBeTruthy();
     fireEvent.press(screen.getByLabelText("Photo 1 of 2, Cover, Failed"));
     expect(callbacks.onOpenActions).toHaveBeenCalledWith("photo-a");
   });

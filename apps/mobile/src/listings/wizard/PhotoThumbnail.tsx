@@ -7,34 +7,26 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 import { Image } from "expo-image";
-import { ImageIcon, MoreVertical, X } from "lucide-react-native";
+import { ImageIcon, X } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { StagedPhoto } from "../uploadStaging/types";
 import { getPhotoUri } from "../uploadStaging/photoUri";
 
+import { photoTileDescription } from "./photoLabels";
 import { PhotoStateOverlay } from "./PhotoStateOverlay";
 
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 
 interface PhotoThumbnailProps {
   photo: StagedPhoto;
   index: number;
   total: number;
-  onRetry: (photoId: string) => void;
   onRemove: (photoId: string) => void;
-  onMoveUp: (index: number) => void;
-  onMoveDown: (index: number) => void;
-  onSetAsCover: (index: number) => void;
+  /** A tap on the tile: open the photo's action sheet. */
+  onOpenActions: (photoId: string) => void;
   onDragStart: (index: number, pageX: number, pageY: number) => void;
   onDragMove: (pageX: number, pageY: number) => void;
   onDragEnd: () => void;
@@ -46,11 +38,8 @@ export function PhotoThumbnail({
   photo,
   index,
   total,
-  onRetry,
   onRemove,
-  onMoveUp,
-  onMoveDown,
-  onSetAsCover,
+  onOpenActions,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -94,8 +83,12 @@ export function PhotoThumbnail({
           : null,
       ]}
     >
+      {/* A tap opens the sheet; a long press starts the drag, and RN skips onPress then. */}
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={photoTileDescription(t, photo, index, total)}
         delayLongPress={250}
+        onPress={() => onOpenActions(photo.photoId)}
         onLongPress={handleLongPress}
         onTouchMove={handleTouchMove}
         onPressOut={onDragEnd}
@@ -116,14 +109,28 @@ export function PhotoThumbnail({
       </Pressable>
 
       {index === 0 && (
-        <View className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5">
+        <View
+          className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5"
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
           <Text className="text-[10px] font-medium text-white">{t("cover")}</Text>
         </View>
       )}
 
-      <PhotoStateOverlay photo={photo} onRetry={onRetry} />
+      {/* The tile's label already says the state, so the overlay is for the eye only. */}
+      <View
+        className="absolute inset-0"
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <PhotoStateOverlay photo={photo} />
+      </View>
 
       <Pressable
+        accessibilityRole="button"
         accessibilityLabel={t("remove")}
         className="absolute right-1 top-1 h-7 w-7 items-center justify-center rounded-full bg-black/60"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -131,41 +138,6 @@ export function PhotoThumbnail({
       >
         <Icon as={X} className="size-4 text-white" />
       </Pressable>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger>
-          <View className="absolute bottom-1.5 right-1.5 h-11 w-11 items-center justify-center rounded-full bg-black/40">
-            <Icon as={MoreVertical} className="size-3.5 text-white" />
-          </View>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem
-            disabled={index === 0}
-            onPress={() => onMoveUp(index)}
-          >
-            <Text>{t("moveUp")}</Text>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={index === total - 1}
-            onPress={() => onMoveDown(index)}
-          >
-            <Text>{t("moveDown")}</Text>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={index === 0}
-            onPress={() => onSetAsCover(index)}
-          >
-            <Text>{t("setAsCover")}</Text>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            onPress={() => onRemove(photo.photoId)}
-          >
-            <Text>{t("remove")}</Text>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </View>
   );
 }
