@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { act, fireEvent, renderMobile, routerMock } from "../render";
 import SellScreen from "../../app/(tabs)/sell";
+import { draftProgress } from "../../src/listings/wizard/draftProgress";
 
 type Draft = ListingsSchemas.ListingDraft;
 
@@ -53,7 +54,6 @@ vi.mock("../../src/listings/wizard/WizardLayout", async () => {
   const { Text } = await import("react-native");
   return { WizardLayout: ({ routeTitle }: { routeTitle: string }) => <Text>{`wizard:${routeTitle}`}</Text> };
 });
-vi.mock("../../src/listings/wizard/Step1Vin", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step2Photos", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step3VehicleId", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step4Specs", () => ({ default: () => null }));
@@ -62,17 +62,30 @@ vi.mock("../../src/listings/wizard/Step6Location", () => ({ default: () => null 
 vi.mock("../../src/listings/wizard/Step7DescContact", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step8Review", () => ({ default: () => null }));
 vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("react-native")).View }));
-vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "toyota", name: "Toyota" }] } }) }));
-vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [{ id: "camry", name: "Camry" }] } }) }));
+vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "550e8400-e29b-41d4-a716-446655440001", name: "Toyota" }] } }) }));
+vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [{ id: "550e8400-e29b-41d4-a716-446655440002", name: "Camry" }] } }) }));
 
 const DATA_STEPS = WizardSchemas.WIZARD_STEPS.filter((s) => s !== "review").length;
+
+// Saved fields that complete Car and Contact only.
+const CAR_AND_CONTACT = {
+  brandId: "550e8400-e29b-41d4-a716-446655440001",
+  modelId: "550e8400-e29b-41d4-a716-446655440002",
+  year: 2018,
+  contactPhone: "+99361234567",
+  allowCalls: true,
+  allowChat: true,
+};
+// Stored step names that disagree with the saved fields; progress must ignore them.
+const STALE_STEP_NAMES = ["photos", "price", "location"];
 
 function draft(id: string, overrides: Partial<Draft["payload"]> = {}, updatedAt = "2026-09-28T10:00:00.000Z"): Draft {
   return {
     id, userId: "me", createdAt: "2026-09-20T10:00:00.000Z", updatedAt,
-    payload: { brandId: "toyota", modelId: "camry", year: 2018, validatedSteps: ["vin", "photos"], ...overrides },
+    payload: { ...CAR_AND_CONTACT, validatedSteps: STALE_STEP_NAMES, ...overrides },
   };
 }
+const NO_CAR = { brandId: undefined, modelId: undefined, year: undefined };
 function drafts(count: number): Draft[] {
   return Array.from({ length: count }, (_, i) => draft(`d${i + 1}`));
 }
@@ -149,22 +162,32 @@ describe("Sell tab with drafts", () => {
     expect(screen.queryByText("All drafts")).toBeNull();
   });
 
+  it("counts the steps the Drafts card counts, from the saved fields", async () => {
+    serverDrafts = [draft("d1")];
+    const { filled, total } = draftProgress(serverDrafts[0]!.payload);
+    expect({ filled, total }).toEqual({ filled: 2, total: DATA_STEPS });
+    const screen = await renderSell();
+
+    expect(screen.getByLabelText(new RegExp(`, ${filled} of ${total} steps filled · Updated `))).toBeTruthy();
+    expect(screen.queryByLabelText(new RegExp(`, ${STALE_STEP_NAMES.length} of ${total} steps filled`))).toBeNull();
+  });
+
   it("names a draft without a car", async () => {
-    serverDrafts = [draft("d1", { brandId: undefined, modelId: undefined, year: undefined, validatedSteps: [] })];
+    serverDrafts = [draft("d1", { ...NO_CAR, allowCalls: false, allowChat: false })];
     const screen = await renderSell();
 
     expect(screen.getByLabelText(new RegExp(`^Draft without a car yet, 0 of ${DATA_STEPS} steps filled`))).toBeTruthy();
   });
 
   it("is localized in RU and TK", async () => {
-    serverDrafts = [draft("d1", { brandId: undefined, modelId: undefined, year: undefined }), draft("d2")];
+    serverDrafts = [draft("d1", NO_CAR), draft("d2")];
     const ru = await renderSell("ru");
-    expect(ru.getByLabelText(new RegExp(`^Черновик без автомобиля, Заполнено шагов: 2 из ${DATA_STEPS} · Обновлено `))).toBeTruthy();
+    expect(ru.getByLabelText(new RegExp(`^Черновик без автомобиля, Заполнено шагов: 1 из ${DATA_STEPS} · Обновлено `))).toBeTruthy();
     expect(ru.getByRole("button", { name: /^Все черновики/ })).toBeTruthy();
     ru.unmount();
 
     const tk = await renderSell("tk");
-    expect(tk.getByLabelText(new RegExp(`^Awtoulagsyz garalama, ${DATA_STEPS} tapgyrdan 2 sanysy doldurylan · Täzelendi: `))).toBeTruthy();
+    expect(tk.getByLabelText(new RegExp(`^Awtoulagsyz garalama, ${DATA_STEPS} tapgyrdan 1 sanysy doldurylan · Täzelendi: `))).toBeTruthy();
     expect(tk.getByRole("button", { name: /^Ähli garalamalar/ })).toBeTruthy();
   });
 
