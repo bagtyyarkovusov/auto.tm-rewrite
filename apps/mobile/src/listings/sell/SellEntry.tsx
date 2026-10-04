@@ -3,9 +3,10 @@ import { View } from "react-native";
 import { Image } from "expo-image";
 import { Car, FileText, List, Plus } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
-import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas } from "@auto-tm/contracts";
 
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
+import { draftProgress } from "../wizard/draftProgress";
 import { MenuDivider, MenuGap, MenuRow } from "../../../components/account/MenuRow";
 
 import { ErrorState } from "@/components/ErrorState";
@@ -23,9 +24,6 @@ import {
 import { localeTag } from "@/src/i18n/resources";
 
 type ListingDraft = ListingsSchemas.ListingDraft;
-
-/** The wizard's data steps; Review only checks them. */
-const DATA_STEPS = WizardSchemas.WIZARD_STEPS.filter((step) => step !== "review");
 
 export const DRAFTS_HREF = { pathname: "/listings/manage", params: { tab: "drafts" } } as const;
 export const MY_LISTINGS_HREF = "/listings/manage";
@@ -162,7 +160,7 @@ export function SellEntry({
     );
   }
 
-  const filled = DATA_STEPS.filter((step) => latest.payload.validatedSteps?.includes(step)).length;
+  const { filled, total } = draftProgress(latest.payload);
   const updated = new Date(latest.updatedAt).toLocaleDateString(localeTag(i18n.language), {
     day: "numeric",
     month: "short",
@@ -178,7 +176,7 @@ export function SellEntry({
         size="large"
         lead={<DraftCover draft={latest} />}
         label={draftTitle(latest, brandName, modelName) ?? t("draftWithoutCar")}
-        sub={`${t("draftStepsFilled", { filled, total: DATA_STEPS.length })} · ${t("draftUpdatedOn", { date: updated })}`}
+        sub={`${t("draftStepsFilled", { filled, total })} · ${t("draftUpdatedOn", { date: updated })}`}
         chevron
         onPress={() => onContinue(latest)}
       />
