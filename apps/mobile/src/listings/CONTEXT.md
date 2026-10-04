@@ -11,12 +11,14 @@ The Sell wizard has seven steps in the order of `WizardSchemas.WIZARD_STEPS` (fo
 | # | Step name | Title | Component | Fields |
 |---|---|---|---|---|
 | 1 | `vehicle` | Car | `Step3VehicleId` with `VinField` | Brand, Model, Generation, Year, then optional VIN (17 characters at most, no Skip, no auto-fill) |
-| 2 | `specs` | Details and condition | `Step4Specs` | Condition, Mileage, Damaged / needs repair, Known issues, optional specs |
+| 2 | `specs` | Details and condition | `Step4Specs` | Condition, then for Used only Mileage and Damaged / needs repair, then Known issues, then a "More details (optional)" group: Body type, Transmission, Engine, Drive, Color, Power |
 | 3 | `photos` | Photos | `Step2Photos` | 1 to 20 photos |
 | 4 | `price` | Price | `Step5Price` | Amount, currency, Exchange, Installment |
 | 5 | `location` | Description and place | `Step6Location` with `DescriptionField` | Description (required, up to 2000), then Region, City, Area |
 | 6 | `contact` | Contact | `Step7DescContact` | Contact phone (today's free text), calls and chat switches (at least one on) |
 | 7 | `review` | Check and publish | `Step8Review` | Sections in the same order, each with Edit |
+
+`Step4Specs` renders in the prototype's order (#609), so the screen-reader order is the visual order and a New car's next control after Condition is Known issues. The optional specs share one "More details (optional)" group with a header-role label; only their order and grouping differ from before, not their fields, rules or stored values. `Step4Specs.order.spec.tsx` pins the New and Used orders.
 
 Each step depends on all earlier ones, and a changed field invalidates its owning step and every later step (`getInvalidatedSteps`; `vin` belongs to `vehicle`, `description` to `location`). The header reads "Step N of 7" and announces the step title with that position when a step opens. Edit uses the same seven steps and locks the whole Car step, VIN included.
 
