@@ -1,5 +1,6 @@
 import { ChevronRight, Lock } from "lucide-react-native";
 import { Pressable, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -27,6 +28,7 @@ export function PickerRow({
   onPress,
   locked,
 }: PickerRowProps) {
+  const { t } = useTranslation();
   const isDisabled = disabled || locked;
 
   return (
@@ -60,7 +62,7 @@ export function PickerRow({
       </Pressable>
       {locked && (
         <Text className="text-sm text-muted-foreground">
-          This field cannot be changed after publishing.
+          {t("thisFieldCannotBeChanged")}
         </Text>
       )}
       {!locked && helper && !error && (
