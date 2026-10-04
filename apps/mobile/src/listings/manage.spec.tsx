@@ -163,6 +163,13 @@ describe("My listings tabs", () => {
     expect(tab(view, /^Archive/).props.accessibilityState).toEqual(expect.objectContaining({ selected: true }));
     expect(view.getByText("2018 Toyota Prado")).toBeTruthy();
   });
+
+  it("opens on Active when the route names an unknown tab", async () => {
+    routeParams.tab = "nope";
+    const view = await renderScreen();
+    expect(tab(view, /^Active/).props.accessibilityState).toEqual(expect.objectContaining({ selected: true }));
+    expect(tab(view, /^Archive/).props.accessibilityState).toEqual(expect.objectContaining({ selected: false }));
+  });
 });
 
 describe("My listings rows", () => {
