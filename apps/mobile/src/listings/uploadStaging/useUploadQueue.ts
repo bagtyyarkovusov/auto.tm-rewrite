@@ -111,6 +111,13 @@ export function useUploadQueue(
   // Initialize queue from draft + local files
   useEffect(() => {
     if (initializedStagingKey.current === stagingKey) return;
+    // The hook outlives each wizard session. Photos still in the queue belong to
+    // the draft that was open before, and must not be merged into this one.
+    if (queueRef.current.stagingKey !== stagingKey) {
+      uploadQueue.current = [];
+      queueRef.current = { stagingKey, photos: [] };
+      setQueue(queueRef.current);
+    }
     async function init() {
       let localPhotoIds: string[] = [];
       if (restoreLocalPhotos) {
