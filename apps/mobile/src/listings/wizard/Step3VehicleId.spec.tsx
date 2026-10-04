@@ -158,21 +158,24 @@ const sheetOpen = (screen: ReturnType<typeof renderMobile>) =>
  */
 function renderWatchingCommits(ui: ReactElement) {
   const emptySheetCommits: boolean[] = [];
-  let screen: ReturnType<typeof renderMobile> | undefined;
-  const rendered = renderMobile(
+  // Empty during the first render, which happens before renderMobile returns.
+  const mounted: { screen?: ReturnType<typeof renderMobile> } = {};
+  const screen = renderMobile(
     <Profiler
       id="car"
       onRender={() => {
-        if (screen) {
-          emptySheetCommits.push(screen.queryByText("No generations available") !== null);
+        if (mounted.screen) {
+          emptySheetCommits.push(
+            mounted.screen.queryByText("No generations available") !== null,
+          );
         }
       }}
     >
       {ui}
     </Profiler>,
   );
-  screen = rendered;
-  return { screen: rendered, emptySheetCommits };
+  mounted.screen = screen;
+  return { screen, emptySheetCommits };
 }
 
 describe("Car step pickers chain", () => {
