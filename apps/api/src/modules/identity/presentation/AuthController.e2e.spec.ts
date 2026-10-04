@@ -8,6 +8,7 @@ import {
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
 import { PrismaService } from "@auto-tm/db";
+import { Injectable } from "@nestjs/common";
 import { APP_GUARD, Reflector } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { JwtModule, JwtService } from "@nestjs/jwt";
@@ -472,6 +473,22 @@ describe("AuthController e2e — POST /api/v1/auth/otp/verify", () => {
   });
 });
 
+// The audit row is written by an async @OnEvent handler after VerifyOtp
+// emits ReviewerOtpBypassAuthenticated, so under CI event-loop load the
+// write can land after the HTTP response (hosted run 36890441753 attempt 1
+// failed on exactly that timing). Delaying the write past any plausible
+// response latency makes that race deterministic: if the test below ever
+// stops waiting for the row, it fails on every run instead of flaking.
+@Injectable()
+class DelayedPrismaAuditLogRepository extends PrismaAuditLogRepository {
+  override async create(
+    ...args: Parameters<PrismaAuditLogRepository["create"]>
+  ): ReturnType<PrismaAuditLogRepository["create"]> {
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    return super.create(...args);
+  }
+}
+
 describe("AuthController e2e — reviewer OTP bypass audit", () => {
   let app: NestFastifyApplication;
   let request: ReturnType<typeof supertest>;
@@ -507,7 +524,7 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
         PrismaAuditLogRepository,
         {
           provide: AUDIT_LOG_REPOSITORY,
-          useClass: PrismaAuditLogRepository,
+          useClass: DelayedPrismaAuditLogRepository,
         },
         RecordReviewerAuthBypassAudit,
       ],
