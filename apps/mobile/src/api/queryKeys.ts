@@ -23,6 +23,9 @@ export const queryKeys = {
       [...queryKeys.catalog.all(), "regions", locale] as const,
     cities: (regionId: string, locale: string = "ru") =>
       [...queryKeys.catalog.all(), "cities", regionId, locale] as const,
+    /** A region's whole city list, apart from the first page `cities` holds. */
+    citiesAll: (regionId: string, locale: string = "ru") =>
+      [...queryKeys.catalog.cities(regionId, locale), "all"] as const,
     search: (query: string, locale: string) =>
       [...queryKeys.catalog.all(), "search", query, locale] as const,
   },
