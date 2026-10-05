@@ -72,7 +72,7 @@ describe("useConversation", () => {
     mockGet.mockReturnValue(new Promise(() => {}));
     const { client, wrapper } = setup();
     client.setQueryData(queryKeys.conversations.list(), {
-      pages: [{ items: [summary({ peer: { id: "p", displayName: "From list" } })], nextCursor: null }],
+      pages: [{ items: [summary({ peer: { id: "p", displayName: "From list", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false } })], nextCursor: null }],
       pageParams: [null],
     });
 
