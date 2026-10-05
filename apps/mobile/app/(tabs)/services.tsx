@@ -124,6 +124,7 @@ function ProfileRow() {
   return (
     <MenuRow
       size="large"
+      singleLineLabel
       // The row's label names the User, so the avatar carries no label of its own.
       lead={
         <UserAvatar

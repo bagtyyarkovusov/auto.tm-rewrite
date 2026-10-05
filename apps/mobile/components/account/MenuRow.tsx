@@ -22,6 +22,8 @@ interface MenuRowProps {
   valueTone?: "default" | "link";
   chevron?: boolean;
   size?: "default" | "large";
+  /** Ends a long label in "…" instead of wrapping, as on the Cabinet profile row. */
+  singleLineLabel?: boolean;
   variant?: "default" | "danger";
 }
 
@@ -40,6 +42,7 @@ export function MenuRow({
   valueTone = "default",
   chevron = false,
   size = "default",
+  singleLineLabel = false,
   variant = "default",
 }: MenuRowProps) {
   const large = size === "large";
@@ -57,8 +60,7 @@ export function MenuRow({
       {lead ?? (icon ? <Icon as={icon} className="size-6 text-muted-foreground" /> : null)}
       <View className="min-w-0 flex-1">
         <Text
-          // A long name on the large profile row ends in "…" instead of wrapping.
-          numberOfLines={large ? 1 : undefined}
+          numberOfLines={singleLineLabel ? 1 : undefined}
           className={cn(
             large ? "text-lg font-semibold" : "text-base",
             variant === "danger" ? "text-destructive" : "text-foreground",
