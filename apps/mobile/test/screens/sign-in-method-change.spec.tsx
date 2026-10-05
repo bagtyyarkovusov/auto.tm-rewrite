@@ -7,7 +7,7 @@ import SignInMethodTakenScreen from "../../app/account/sign-in-method-taken";
 import VerifySignInMethodScreen from "../../app/account/verify-sign-in-method";
 import type { CodeEntryForm } from "../../components/auth/CodeEntryForm";
 import { ApiError } from "../../src/api/client";
-import { signInMethodNoticeStore } from "../../src/auth/signInMethodNotice";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 
 type CodeEntryProps = ComponentProps<typeof CodeEntryForm>;
@@ -42,7 +42,7 @@ beforeEach(() => {
   state.verify.mockReset();
   state.requestCode.mockReset().mockResolvedValue({ resendInSeconds: 60 });
   state.codeEntry = null;
-  signInMethodNoticeStore.setState({ notice: null });
+  profileNoticeStore.setState({ notice: null });
 });
 
 function deferred<T>() {
@@ -68,14 +68,14 @@ describe("Confirming a new Sign-in Method", () => {
     const { verify } = openVerify({ method: "phone", destination: "+99361000000", kind: "change" });
     await act(() => verify("123456"));
     expect(routerMock.dismissTo).toHaveBeenCalledWith("/profile");
-    expect(signInMethodNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
+    expect(profileNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
   });
 
   it("says an email was added", async () => {
     state.verify.mockResolvedValue({});
     const { verify } = openVerify({ method: "email", destination: "new@example.com", kind: "add" });
     await act(() => verify("123456"));
-    expect(signInMethodNoticeStore.getState().notice).toEqual({ kind: "added", value: "n•••@example.com" });
+    expect(profileNoticeStore.getState().notice).toEqual({ kind: "added", value: "n•••@example.com" });
   });
 
   it("opens the refused state on SIGN_IN_METHOD_TAKEN instead of an inline error", async () => {
@@ -85,7 +85,7 @@ describe("Confirming a new Sign-in Method", () => {
     await act(() => verify("123456"));
     expect(routerMock.dismissTo).toHaveBeenCalledWith("/profile");
     expect(routerMock.push).toHaveBeenCalledWith({ pathname: "/account/sign-in-method-taken", params: { method: "email" } });
-    expect(signInMethodNoticeStore.getState().notice).toBeNull();
+    expect(profileNoticeStore.getState().notice).toBeNull();
   });
 
   it("leaves other errors to the code form", async () => {
@@ -117,7 +117,7 @@ describe("Confirming a new Sign-in Method", () => {
     await act(() => result);
     // Not pulled back to Profile; Profile says what changed when they reach it.
     expect(routerMock.dismissTo).not.toHaveBeenCalled();
-    expect(signInMethodNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
+    expect(profileNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
   });
 });
 

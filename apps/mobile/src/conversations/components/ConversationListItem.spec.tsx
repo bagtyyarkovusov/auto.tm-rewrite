@@ -202,15 +202,15 @@ describe("ConversationListItem", () => {
     expect(renderRow(summary({ peer: peer(SELLER, { displayName: null }) }), locale).getByText(name)).toBeTruthy();
   });
 
-  it("keeps Private seller and Buyer for a deleted User, with the person icon and no car", () => {
+  it("names a deleted seller or buyer Deleted user, with the person icon and no car", () => {
     const seller = renderRow(summary({ peer: peer(SELLER, { displayName: null, deleted: true }) }));
-    expect(seller.getByText("Private seller")).toBeTruthy();
+    expect(seller.getByText("Deleted user")).toBeTruthy();
     expect(seller.queryByText("Driver 2057")).toBeNull();
     expect(personIcons(seller)).toHaveLength(1);
     expect(hosts(seller, "Svg")).toHaveLength(0);
 
     const buyer = renderRow(summary({ myRole: "seller", peer: peer(BUYER, { displayName: null, deleted: true }) }));
-    expect(buyer.getByText("Buyer")).toBeTruthy();
+    expect(buyer.getByText("Deleted user")).toBeTruthy();
     expect(personIcons(buyer)).toHaveLength(1);
     expect(hosts(buyer, "Svg")).toHaveLength(0);
   });
@@ -253,7 +253,7 @@ describe("ConversationListItem", () => {
     expect(ru.getByText("Пользователь заблокирован")).toBeTruthy();
 
     const tk = renderRow(summary({ listing: null, peer: peer(SELLER, { displayName: null, deleted: true }) }), "tk");
-    expect(tk.getByText("Şahsy satyjy")).toBeTruthy();
+    expect(tk.getByText("Pozulan ulanyjy")).toBeTruthy();
     expect(tk.getByText("Bildiriş elýeterli däl")).toBeTruthy();
   });
 });

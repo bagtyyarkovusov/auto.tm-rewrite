@@ -181,19 +181,21 @@ describe("ConversationHeader", () => {
     expect(screen.queryByText("Buyer")).toBeNull();
   });
 
-  it("keeps Private seller for a deleted seller, with the person icon and no car", () => {
+  it("names a deleted seller Deleted user, with the person icon and no car", () => {
     const screen = header({ conversation: conversation({ peer: peer(SELLER, { displayName: null, deleted: true }) }) });
-    expect(screen.getByText("Private seller")).toBeTruthy();
+    expect(screen.getByText("Deleted user")).toBeTruthy();
+    expect(screen.queryByText("Private seller")).toBeNull();
     expect(screen.queryByText("Driver 2057")).toBeNull();
     expect(personIcons(screen)).toHaveLength(1);
     expect(hosts(screen, "Svg")).toHaveLength(0);
   });
 
-  it("keeps Buyer for a deleted buyer, with the person icon and no car", () => {
+  it("names a deleted buyer Deleted user, with the person icon and no car", () => {
     const screen = header({
       conversation: conversation({ myRole: "seller", peer: peer(BUYER, { displayName: null, deleted: true }) }),
     });
-    expect(screen.getByText("Buyer")).toBeTruthy();
+    expect(screen.getByText("Deleted user")).toBeTruthy();
+    expect(screen.queryByText("Buyer")).toBeNull();
     expect(personIcons(screen)).toHaveLength(1);
     expect(hosts(screen, "Svg")).toHaveLength(0);
   });
@@ -273,7 +275,7 @@ describe("ConversationHeader", () => {
     if (call) expect(screen.getByRole("button", { name: call })).toBeTruthy();
   });
 
-  it("keeps the role word for a deleted User in Russian", () => {
+  it("names a deleted User in Russian as the account deletion screen does", () => {
     const screen = renderMobile(
       <ConversationHeader
         conversation={conversation({ peer: peer(SELLER, { displayName: null, deleted: true }) })}
@@ -285,6 +287,6 @@ describe("ConversationHeader", () => {
       />,
       { locale: "ru" },
     );
-    expect(screen.getByText("Частный продавец")).toBeTruthy();
+    expect(screen.getByText("Удалённый пользователь")).toBeTruthy();
   });
 });

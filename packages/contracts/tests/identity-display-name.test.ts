@@ -4,7 +4,9 @@ import { MeResponseSchema } from "../src/schemas/auth";
 import {
   AVATAR_COUNT,
   GENERATED_NAME_PREFIX,
+  displayNameProblem,
   formatDisplayName,
+  normalizeDisplayName,
 } from "../src/schemas/identity";
 
 describe("formatDisplayName", () => {
@@ -35,6 +37,26 @@ describe("formatDisplayName", () => {
   it("has a prefix for each app locale and twelve car avatars", () => {
     expect(GENERATED_NAME_PREFIX).toEqual({ en: "Driver", ru: "Водитель", tk: "Sürüji" });
     expect(AVATAR_COUNT).toBe(12);
+  });
+});
+
+describe("normalizeDisplayName and displayNameProblem", () => {
+  it("drops NUL and other control characters, which PostgreSQL text cannot always hold", () => {
+    expect(normalizeDisplayName("Am\u0000an")).toBe("Aman");
+    expect(normalizeDisplayName("\u0007Aman\u001b\u007f\u0085")).toBe("Aman");
+  });
+
+  it("still turns tabs and line breaks into one space", () => {
+    expect(normalizeDisplayName("Aman\t\n Durdy")).toBe("Aman Durdy");
+  });
+
+  it("keeps emoji joined by a zero-width joiner", () => {
+    expect(normalizeDisplayName("Aman 👨‍👩‍👧")).toBe("Aman 👨‍👩‍👧");
+  });
+
+  it("counts a name of control characters only as empty", () => {
+    expect(displayNameProblem("\u0000\u0000\u0000")).toBe("empty");
+    expect(displayNameProblem("A\u0000")).toBe("too_short");
   });
 });
 

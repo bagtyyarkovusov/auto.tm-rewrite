@@ -161,14 +161,14 @@ describe("Conversation header from GET /conversations/:id", () => {
     });
   });
 
-  it("keeps Private seller and the person icon for a deleted seller", async () => {
+  it("names a deleted seller Deleted user, with the person icon", async () => {
     serve(`/conversations/${CONVERSATION_ID}`, {
       ...conversationJson(CONVERSATION_ID, identityJson({ deleted: true })),
       sendRestriction: null,
     });
     const view = renderMobile(<OpenConversationHeader />);
 
-    expect(await view.findByText("Private seller")).toBeTruthy();
+    expect(await view.findByText("Deleted user")).toBeTruthy();
     expect(personIcons(view)).toHaveLength(1);
     expect(hosts(view, "Svg")).toHaveLength(0);
   });
@@ -191,7 +191,7 @@ describe("Messages rows from GET /conversations", () => {
 
     expect(await view.findByText("Driver 2057")).toBeTruthy();
     expect(view.getByText("Aman")).toBeTruthy();
-    expect(view.getByText("Private seller")).toBeTruthy();
+    expect(view.getByText("Deleted user")).toBeTruthy();
     expect(marks(view)[0]).toBe(KEY_MARK);
     const photo = first(view.UNSAFE_getAllByType(Image));
     expect(photo.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/avatars/u2/thumbnail.jpg" });

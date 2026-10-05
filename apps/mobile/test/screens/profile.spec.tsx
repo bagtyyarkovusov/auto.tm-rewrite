@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfileScreen from "../../app/profile";
-import { signInMethodNoticeStore } from "../../src/auth/signInMethodNotice";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import { act, fireEvent, first, renderMobile, routerMock } from "../render";
 
 const state = vi.hoisted(() => ({
@@ -25,7 +25,7 @@ beforeEach(() => {
   state.isAuthenticated = true;
   state.me = { isPending: false, isError: false, data: me };
   state.logout.mockClear();
-  signInMethodNoticeStore.setState({ notice: null });
+  profileNoticeStore.setState({ notice: null });
 });
 
 function withMe(overrides: Partial<typeof me>) {
@@ -107,12 +107,12 @@ describe("Profile Sign-in Methods", () => {
   ] as const)("says the method was %s, in the page and not over it", (kind, text) => {
     vi.useFakeTimers();
     try {
-      signInMethodNoticeStore.getState().show({ kind, value: "+993 65 XX-XX-56" });
+      profileNoticeStore.getState().show({ kind, value: "+993 65 XX-XX-56" });
       const view = renderMobile(<ProfileScreen />);
       expect(view.getByText(text)).toBeTruthy();
       act(() => { vi.advanceTimersByTime(5000); });
       expect(view.queryByText(text)).toBeNull();
-      expect(signInMethodNoticeStore.getState().notice).toBeNull();
+      expect(profileNoticeStore.getState().notice).toBeNull();
     } finally {
       vi.useRealTimers();
     }
