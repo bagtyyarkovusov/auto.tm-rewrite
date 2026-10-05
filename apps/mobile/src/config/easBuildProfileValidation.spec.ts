@@ -72,6 +72,33 @@ describe("validateEasBuildProfile", () => {
     ).toEqual(["EXPO_PUBLIC_API_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production"]);
   });
 
+  it("rejects a foreign websocket or media host for production, not only a foreign API host", () => {
+    expect(
+      validateEasBuildProfile({
+        profile: "production",
+        apiUrl: "https://api.autotm.bagtyyar.dev/api/v1",
+        wsUrl: "wss://api.bagtyyar.dev/ws/chat",
+        mediaUrl: "https://media.autotm.bagtyyar.dev.evil.example",
+      }),
+    ).toEqual([
+      "EXPO_PUBLIC_WS_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production",
+      "EXPO_PUBLIC_MEDIA_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production",
+    ]);
+  });
+
+  it.each([
+    "https://user:password@api.autotm.bagtyyar.dev/api/v1",
+    "https://api.autotm.bagtyyar.dev:8443/api/v1",
+  ])("rejects credentials or a custom port in a production URL without echoing it (%s)", (apiUrl) => {
+    const errors = validateEasBuildProfile({
+      profile: "production",
+      apiUrl,
+      wsUrl: "wss://api.autotm.bagtyyar.dev/ws/chat",
+      mediaUrl: "https://media.autotm.bagtyyar.dev",
+    });
+    expect(errors).toEqual(["EXPO_PUBLIC_API_URL must not carry credentials or a custom port in production"]);
+  });
+
   it("rejects Railway hosts for production", () => {
     expect(
       validateEasBuildProfile({

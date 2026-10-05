@@ -81,6 +81,13 @@ function rejectUnsafeProductionHost(name: string, url: ParsedUrl | null, errors:
 
   if (!isAutoTmOwnedHost(hostname)) {
     errors.push(`${name} must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production`);
+    return;
+  }
+
+  // The URL is compiled into the store build, so it carries no credentials
+  // and no port a custom domain does not serve.
+  if (url.parsed.username || url.parsed.password || url.parsed.port) {
+    errors.push(`${name} must not carry credentials or a custom port in production`);
   }
 }
 
