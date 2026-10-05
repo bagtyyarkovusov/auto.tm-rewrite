@@ -27,6 +27,8 @@ const fixture = vi.hoisted(() => {
     payload: complete,
     // File names by staging directory, as the device would list them.
     staged: {} as Record<string, string[]>,
+    // While set, reading the staging directory waits for it.
+    stagingRead: null as Promise<void> | null,
     patch: vi.fn(),
     presign: vi.fn(),
     upload: vi.fn(),
@@ -43,6 +45,7 @@ vi.mock("expo-file-system/legacy", () => ({
   FileSystemUploadType: { BINARY_CONTENT: "BINARY_CONTENT" },
   getInfoAsync: vi.fn(async () => ({ exists: true, size: 1024 })),
   readDirectoryAsync: vi.fn(async (dir: string) => {
+    if (fixture.stagingRead) await fixture.stagingRead;
     const key = dir.replace("file:///documents/listing-staging/", "").replace(/\/$/, "");
     return fixture.staged[key] ?? [];
   }),
@@ -125,6 +128,7 @@ async function openCheck() {
 beforeEach(() => {
   fixture.payload = fixture.complete;
   fixture.staged = { [`draft-${id}`]: [`${photoId}.jpg`] };
+  fixture.stagingRead = null;
   fixture.patch.mockReset().mockResolvedValue({});
   fixture.presign.mockReset().mockResolvedValue({ uploadUrl: "http://localhost/put", key: "uploaded-again.jpg" });
   fixture.upload.mockReset().mockResolvedValue({ status: 200 });
@@ -366,6 +370,21 @@ describe("Check and publish: what blocks publishing (#588)", () => {
 
     expect(disabled(screen)).toBe(false);
     expect(screen.queryByTestId("publish-blockers")).toBeNull();
+  });
+
+  it("says why Publish waits while the draft's photos are still being read from the device", async () => {
+    let finishRead = () => {};
+    fixture.stagingRead = new Promise((resolve) => { finishRead = resolve; });
+    const screen = await openCheck();
+
+    expect(disabled(screen)).toBe(true);
+    expect(screen.getByText("Loading...")).toBeTruthy();
+
+    await act(async () => { finishRead(); });
+    await pause(20);
+
+    expect(screen.queryByText("Loading...")).toBeNull();
+    expect(disabled(screen)).toBe(false);
   });
 
   it("names the step left incomplete and disables Publish", async () => {
