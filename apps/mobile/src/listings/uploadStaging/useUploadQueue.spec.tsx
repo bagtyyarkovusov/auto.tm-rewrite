@@ -6,6 +6,7 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getInfoAsync, readDirectoryAsync, uploadAsync } from "expo-file-system/legacy";
 
+import { setupUploadResume } from "./appStateResume";
 import { compressPhoto } from "./compressor";
 import { deleteDraftDir, ensureDraftDir, getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import { useUploadQueue } from "./useUploadQueue";
@@ -76,6 +77,7 @@ const mockEnsureDraftDir = vi.mocked(ensureDraftDir);
 const mockGetStagingPath = vi.mocked(getStagingPath);
 const mockListLocalPhotoIds = vi.mocked(listLocalPhotoIds);
 const mockDeleteDraftDir = vi.mocked(deleteDraftDir);
+const mockSetupUploadResume = vi.mocked(setupUploadResume);
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({
@@ -397,6 +399,76 @@ describe("useUploadQueue — parallel batch compression", () => {
         "file:///doc/listing-staging/draft-9/left-behind.jpg",
         expect.anything(),
       );
+    });
+
+    it("uploads that photo once when the app or network resumes while it is starting", async () => {
+      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
+      // The upload's first step, reading the staged file, is held open.
+      let releaseFileInfo = () => {};
+      mockGetInfoAsync.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFileInfo = () =>
+              resolve({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
+          }),
+      );
+      const { result } = renderHook(() => useUploadQueue("draft-9", payload), { wrapper });
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      await waitFor(() => expect(mockGetInfoAsync).toHaveBeenCalledTimes(1));
+
+      // The app comes to the foreground, or the network reports itself, right then.
+      const resume = mockSetupUploadResume.mock.calls.at(-1)?.[0].resumePendingUploads;
+      act(() => resume?.());
+      act(() => resume?.());
+      await act(async () => { releaseFileInfo(); });
+
+      await waitFor(() =>
+        expect(result.current.photos.find((p) => p.photoId === "left-behind")?.state).toBe("uploaded"),
+      );
+      await act(async () => undefined);
+      expect(mockPresignMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockUploadAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it("can retry a photo after its upload failed", async () => {
+      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
+      mockUploadAsync.mockRejectedValueOnce(new Error("connection lost"));
+      const { result } = renderHook(() => useUploadQueue("draft-9", payload), { wrapper });
+      await waitFor(() =>
+        expect(result.current.photos.find((p) => p.photoId === "left-behind")?.state).toBe("failed"),
+      );
+
+      act(() => result.current.retryPhoto("left-behind"));
+
+      await waitFor(() =>
+        expect(result.current.photos.find((p) => p.photoId === "left-behind")?.state).toBe("uploaded"),
+      );
+      expect(mockUploadAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it("reads the device once for a draft, even if its payload changes meanwhile", async () => {
+      let releaseInit: ((ids: string[]) => void) | undefined;
+      mockListLocalPhotoIds.mockImplementation(
+        () => new Promise<string[]>((resolve) => { releaseInit = resolve; }),
+      );
+      const { result, rerender } = renderHook(
+        ({ draft }) => useUploadQueue("draft-9", draft),
+        { wrapper, initialProps: { draft: payload as { photos: typeof payload.photos } } },
+      );
+      await waitFor(() => expect(releaseInit).toBeDefined());
+
+      // The screen clears the payload's photos before the device has answered.
+      rerender({ draft: { photos: [] } });
+      await act(async () => undefined);
+      act(() => releaseInit?.(["server-1"]));
+
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      await act(async () => undefined);
+      expect(mockListLocalPhotoIds).toHaveBeenCalledTimes(1);
+      expect(result.current.photos).toHaveLength(1);
+      expect(result.current.photos[0]).toMatchObject({ photoId: "server-1", key: payload.photos[0]?.key });
+      expect(mockPresignMutateAsync).not.toHaveBeenCalled();
+      mockListLocalPhotoIds.mockImplementation(() => Promise.resolve([]));
     });
 
     it("says when the photos of the open draft are restored", async () => {
