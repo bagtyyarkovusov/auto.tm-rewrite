@@ -56,8 +56,7 @@ describe("API request logging", () => {
     app.getHttpAdapter().getInstance().addHook("onSend", async (_req, reply) => {
       reply.header("set-cookie", "refresh=secret-refresh-cookie");
     });
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
+    await app.listen(0, "127.0.0.1");
 
     await supertest(app.getHttpServer()).get(path).set(headers).expect(200);
     return lines.join("");
