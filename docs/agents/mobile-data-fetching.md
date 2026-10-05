@@ -23,6 +23,7 @@ The wrapper already exists. Do not paste a new client or QueryClient provider fr
 3. Use key factories and include every value that changes returned data, including locale or filters where relevant. Distinguish user-owned cache data from public data and verify identity changes cannot expose the previous User's cache.
 4. Keep forms, modal state, filters under edit, typing, and connection state in their appropriate local stores. Query cache owns server JSON, not image bytes, upload files, or an offline database.
 5. For optimistic mutations, inspect all affected list/detail keys. Cancel conflicting queries, snapshot and patch, roll back on failure, then reconcile with server state. Test failure and concurrent/refetch paths, not only the happy path.
+   Log out and Delete account clear the cache themselves. A session the API ended (a refused token refresh) does not: `AppNavigationEffects` clears the cache when `subscribeAuthUserChange` reports that a different User signed in. Do not clear it at the moment the session ends. `QueryClient.clear()` silently cancels the request whose 401 ended the session, so its `UNAUTHENTICATED` error never reaches the listener that offers sign-in.
 6. Use the shared error mapping and screen ErrorState. A surfaced authentication failure has already passed the wrapper's retry path; follow the existing auth transition instead of looping another refresh.
 
 ## Refresh and realtime
