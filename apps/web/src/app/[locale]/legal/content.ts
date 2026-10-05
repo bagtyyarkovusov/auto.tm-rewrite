@@ -229,7 +229,7 @@ When you request account deletion:
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
         body: `Maglumatlar akkaunt işjeň bolança saklanýar.
 
-Akkaunta giren bolsaňyz, ony programmada pozup bilersiňiz: «Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Hasaby poz» düwmesine basyň. Saýtymyzdaky köpçülige açyk [akkaunt pozmak sahypasynda](/tk/account/delete) akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
+Akkaunta giren bolsaňyz, ony programmada pozup bilersiňiz: «Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Akkaunty poz» düwmesine basyň. Saýtymyzdaky köpçülige açyk [akkaunt pozmak sahypasynda](/tk/account/delete) akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
 
 Akkaunty pozan wagtyňyz:
 - **30 günlük lýgotly döwr** başlaýar.
@@ -451,7 +451,7 @@ Her bildirişde tassyklanan habarlaşma belgisi görkezilýär. Bildirişi çap 
       },
       {
         title: "10. Yzyna çykma we akkaunty pozmak",
-        body: `Akkaunty programmada pozup bilersiňiz («Kabinet» bölüminde profiliňizi açyň we «Hasaby poz» düwmesine basyň) ýa-da saýtymyzda akkauntyňyzdaky telefon belgisi ýa-da e-poçta salgysy bilen pozmagy sorap bilersiňiz. Pozmak 30 günlük lýgotly döwür başlaýar; şol döwürde telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bolýar. 30 günden soň şahsy maglumatlar aýrylýar, bildirişler we çat anonim atanama saklanýar.
+        body: `Akkaunty programmada pozup bilersiňiz («Kabinet» bölüminde profiliňizi açyň we «Akkaunty poz» düwmesine basyň) ýa-da saýtymyzda akkauntyňyzdaky telefon belgisi ýa-da e-poçta salgysy bilen pozmagy sorap bilersiňiz. Pozmak 30 günlük lýgotly döwür başlaýar; şol döwürde telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bolýar. 30 günden soň şahsy maglumatlar aýrylýar, bildirişler we çat anonim atanama saklanýar.
 
 AutoTM düzgünleri bozýan akkaunty bloklap biler.`,
       },
