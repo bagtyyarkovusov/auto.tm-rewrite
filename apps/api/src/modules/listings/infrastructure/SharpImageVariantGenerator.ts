@@ -76,7 +76,23 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
       throw new Error(`Empty body for ${originalKey}`);
     }
 
-    const buffer = Buffer.from(await original.Body.transformToByteArray());
+    // The original stays readable at a key derived from every variant URL,
+    // so it is re-encoded upright with no metadata (EXIF, GPS, XMP, ICC
+    // dropped; sharp keeps none unless asked) and written back in place.
+    const isWebp = originalKey.endsWith(".webp");
+    const upright = sharp(Buffer.from(await original.Body.transformToByteArray())).autoOrient();
+    const buffer = await (isWebp
+      ? upright.webp({ quality: 90 })
+      : upright.jpeg({ quality: 90, progressive: true })
+    ).toBuffer();
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: originalKey,
+        Body: buffer,
+        ContentType: isWebp ? "image/webp" : "image/jpeg",
+      }),
+    );
     const base = originalKey.replace(/\/original\.(jpg|webp|jpeg)$/, "");
 
     const variantKeys: Partial<Record<VariantSpec["name"], string>> = {};
