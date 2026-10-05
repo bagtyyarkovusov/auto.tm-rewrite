@@ -1,4 +1,4 @@
-import { router, useIsFocused, useLocalSearchParams } from "expo-router";
+import { router, Stack, useIsFocused, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { AccessibilityInfo, BackHandler, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -400,6 +400,8 @@ function EditListingSession({ listingId }: { listingId: string }) {
 
   return (
     <>
+      {/* The iOS swipe back cannot ask first, so it only closes an edit with nothing to lose. */}
+      <Stack.Screen options={{ gestureEnabled: !hasChanges }} />
       <WizardLayout
         routeTitle={t("editListing")}
         // The section list is headed by the route's own title, not by a step's.
