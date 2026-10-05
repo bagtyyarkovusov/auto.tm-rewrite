@@ -262,13 +262,17 @@ export default function ContactPhoneCodeScreen() {
             <Text className="text-sm leading-normal text-muted-foreground">
               {t("codePurposeListing")}
             </Text>
-            <Button
-              variant="link"
-              className="self-start px-0"
-              onPress={goBack}
-            >
-              <Text>{t("changeNumber")}</Text>
-            </Button>
+            {/* A relist confirms the Listing's own number only (ADR-0081),
+                and its sheet opens this screen directly: no number to change. */}
+            {purpose === "relist" ? null : (
+              <Button
+                variant="link"
+                className="self-start px-0"
+                onPress={goBack}
+              >
+                <Text>{t("changeNumber")}</Text>
+              </Button>
+            )}
           </View>
 
           <OtpCells

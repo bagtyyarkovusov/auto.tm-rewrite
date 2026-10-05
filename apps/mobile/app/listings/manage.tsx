@@ -567,6 +567,9 @@ export default function ManageListingsScreen() {
         onOpenChange={(open) => {
           if (!open) setRelistPhoneSheet(null);
         }}
+        onRelisted={() =>
+          toast.show({ title: t("ownerDoneRelist"), variant: "success" })
+        }
       />
 
       <AlertDialog open={confirm !== null} onOpenChange={closeConfirm}>

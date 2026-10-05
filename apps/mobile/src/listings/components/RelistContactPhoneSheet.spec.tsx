@@ -11,7 +11,6 @@ const detail = vi.hoisted(
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   republish: vi.fn(),
-  toast: vi.fn(),
 }));
 vi.mock("../../api/listings/useListingDetail", () => ({
   useListingDetail: () => ({ data: detail.data }),
@@ -21,9 +20,6 @@ vi.mock("../../api/listings/useRequestContactPhoneCode", () => ({
 }));
 vi.mock("../../api/listings/useRepublishListing", () => ({
   useRepublishListing: () => ({ mutateAsync: mocks.republish, isPending: false }),
-}));
-vi.mock("@/components/ui/toast", () => ({
-  useToast: () => ({ show: mocks.toast, setTopClearance: vi.fn() }),
 }));
 
 const CODE_SENT = {
@@ -42,15 +38,17 @@ const CONFIRMED = {
 };
 
 function renderSheet(open = true, onOpenChange = vi.fn()) {
+  const onRelisted = vi.fn();
   const screen = renderMobile(
     <RelistContactPhoneSheet
       open={open}
       listingId="listing-1"
       returnPathname="/listings/manage"
       onOpenChange={onOpenChange}
+      onRelisted={onRelisted}
     />,
   );
-  return { screen, onOpenChange };
+  return { screen, onOpenChange, onRelisted };
 }
 
 async function pressSendCode(screen: ReturnType<typeof renderMobile>) {
@@ -65,7 +63,6 @@ describe("RelistContactPhoneSheet", () => {
     detail.data = { contactPhone: "+99362000002" };
     mocks.request.mockReset();
     mocks.republish.mockReset().mockResolvedValue({});
-    mocks.toast.mockClear();
   });
 
   it("offers Send code and Cancel for the Listing's own number, and no other number", () => {
@@ -105,31 +102,28 @@ describe("RelistContactPhoneSheet", () => {
 
   it("relists without a code when the number is already confirmed", async () => {
     mocks.request.mockResolvedValue(CONFIRMED);
-    const { screen, onOpenChange } = renderSheet();
+    const { screen, onOpenChange, onRelisted } = renderSheet();
 
     await pressSendCode(screen);
 
     expect(mocks.republish).toHaveBeenCalledWith("listing-1");
-    expect(mocks.toast).toHaveBeenCalledWith({
-      title: "Back on sale",
-      variant: "success",
-    });
+    expect(onRelisted).toHaveBeenCalledOnce();
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(routerMock.push).not.toHaveBeenCalled();
   });
 
-  it("says so when the relist after an already confirmed number fails", async () => {
+  it("says so in the sheet when the relist after an already confirmed number fails", async () => {
     mocks.request.mockResolvedValue(CONFIRMED);
     mocks.republish.mockRejectedValue(new ApiError("INTERNAL", 500));
-    const { screen, onOpenChange } = renderSheet();
+    const { screen, onOpenChange, onRelisted } = renderSheet();
 
     await pressSendCode(screen);
 
-    expect(mocks.toast).toHaveBeenCalledWith({
-      title: "Action failed. Pull down to refresh or try again.",
-      variant: "destructive",
-    });
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(
+      screen.getByText("Action failed. Pull down to refresh or try again."),
+    ).toBeTruthy();
+    expect(onRelisted).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   it("shows the daily limit with the one Help link and stays open", async () => {

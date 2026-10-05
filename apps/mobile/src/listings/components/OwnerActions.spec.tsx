@@ -11,13 +11,8 @@ vi.mock("../../api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
   apiClient: api,
 }));
-const toastShow = vi.hoisted(() => vi.fn());
-vi.mock("@/components/ui/toast", () => ({
-  useToast: () => ({ show: toastShow, setTopClearance: vi.fn() }),
-}));
 beforeEach(() => {
   vi.stubGlobal("__DEV__", false);
-  toastShow.mockClear();
   api.get.mockReset();
   api.post.mockReset();
   api.delete.mockReset();
