@@ -26,7 +26,7 @@ describe("SendSignInCodeEmail", () => {
 
     expect(await useCase.execute(input, now)).toEqual({ status: SEND_SIGN_IN_CODE_OUTCOME.Sent });
     expect(sender.sends[0]?.options).toEqual({ idempotencyKey: "req-1" });
-    expect(sender.sends[0]?.email.text).toContain("hasabyňyzy pozmagy");
+    expect(sender.sends[0]?.email.text).toContain("akkauntyňyzy pozmagy");
   });
 
   it("maps provider failures to rejected or retryable", async () => {
