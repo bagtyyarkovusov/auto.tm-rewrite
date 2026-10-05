@@ -307,6 +307,45 @@ describe("Check and publish: a publish that fails (#588)", () => {
   });
 });
 
+describe("Check and publish: a save before publishing that fails (#588)", () => {
+  const publish = (screen: Screen) => screen.getByRole("button", { name: "Publish" });
+
+  // The save is made to fail before Check opens. Failing it after a save of the
+  // same payload succeeded would not reach the server: autosave skips a payload
+  // it already saved.
+  it.each([
+    ["offline", new ApiError("NETWORK_ERROR", 0, "Network request failed")],
+    ["a server error", new ApiError("INTERNAL_ERROR", 500, "Internal server error")],
+  ])("%s sends no publish and keeps the wizard on Check with the save failure", async (_name, error) => {
+    fixture.patch.mockRejectedValue(error);
+    const screen = await openCheck();
+
+    await act(async () => { fireEvent.press(publish(screen)); });
+
+    expect(fixture.patch).toHaveBeenCalled();
+    expect(fixture.mutation.mutateAsync).not.toHaveBeenCalled();
+    header(screen, "Check and publish, Step 7 of 7");
+    expect(screen.queryByText(/Your draft is saved/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Not saved. Retry" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Publishing..." })).toBeNull();
+    expect(publish(screen).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(routerMock.replace).not.toHaveBeenCalled();
+    expect(fixture.show).not.toHaveBeenCalled();
+  });
+
+  it("publishes on the next tap once the save goes through", async () => {
+    fixture.patch.mockRejectedValue(new ApiError("NETWORK_ERROR", 0, "Network request failed"));
+    const screen = await openCheck();
+    await act(async () => { fireEvent.press(publish(screen)); });
+
+    fixture.patch.mockReset().mockResolvedValue({});
+    await act(async () => { fireEvent.press(publish(screen)); });
+
+    expect(fixture.mutation.mutateAsync.mock.calls).toEqual([[id]]);
+    expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`);
+  });
+});
+
 describe("Check and publish: what blocks publishing (#588)", () => {
   const publish = (screen: Screen) => screen.getByRole("button", { name: "Publish" });
   const disabled = (screen: Screen) => publish(screen).props.accessibilityState?.disabled === true;
