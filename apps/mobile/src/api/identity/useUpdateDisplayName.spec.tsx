@@ -1,8 +1,8 @@
 import type { PropsWithChildren } from "react";
 import { http, HttpResponse } from "msw";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react-native";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { server } from "../../../test/msw";
 import { storeAuthSession } from "../../auth/session";
@@ -47,6 +47,8 @@ beforeEach(async () => {
   });
 });
 
+afterEach(() => onlineManager.setOnline(true));
+
 describe("useUpdateDisplayName", () => {
   it("sends the name with PATCH /me and puts the answer in the cached /me", async () => {
     let sent: { method: string; body: unknown; auth: string | null } | null = null;
@@ -80,5 +82,25 @@ describe("useUpdateDisplayName", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ code: "INVALID_DISPLAY_NAME", details: { reason: "too_long" } });
     expect(client.getQueryData(queryKeys.me())).toMatchObject({ displayName: null });
+  });
+
+  // The root layout tells TanStack Query when the device is offline. In the
+  // default network mode the save would pause, and the editor would read
+  // "Saving..." with a locked field until the network came back.
+  it("fails at once when the device is offline, instead of waiting for the network", async () => {
+    server.use(http.patch("*/me", () => HttpResponse.error()));
+    onlineManager.setOnline(false);
+    const { result } = setup();
+
+    let outcome: unknown = "paused";
+    act(() => {
+      result.current.mutateAsync("Aman").then(
+        () => { outcome = "saved"; },
+        (error: { code?: string }) => { outcome = error.code; },
+      );
+    });
+    await vi.waitFor(() => expect(outcome).not.toBe("paused"), { timeout: 500 });
+
+    expect(outcome).toBe("NETWORK_ERROR");
   });
 });
