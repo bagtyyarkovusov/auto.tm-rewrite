@@ -3,7 +3,7 @@ import { NotFoundException, BadRequestException, ForbiddenException } from "@nes
 
 import { ContentReport } from "../domain/ContentReport";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
-import type { IdentityReadPort } from "../../identity/identity.public";
+import type { IdentityUserSummary, IdentityReadPort } from "../../identity/identity.public";
 import type {
   ConversationReportContextPort,
   MessageReportContext,
@@ -58,9 +58,9 @@ class FakeContentReportRepository implements ContentReportRepository {
 }
 
 class FakeIdentityReadPort implements IdentityReadPort {
-  users: Record<string, { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null }> = {};
+  users: Record<string, IdentityUserSummary> = {};
 
-  async findUserById(id: string): Promise<{ id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | null> {
+  async findUserById(id: string): Promise<IdentityUserSummary | null> {
     return this.users[id] ?? null;
   }
 
@@ -80,6 +80,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     this.users[id] = {
       id,
       displayName: user.displayName ?? null,
+      nameNumber: 1000,
+      avatarIndex: 0,
+      avatarKey: null,
+      deleted: false,
       role: user.role ?? "buyer",
       suspendedAt: user.suspendedAt ?? null,
       suspendedById: null,

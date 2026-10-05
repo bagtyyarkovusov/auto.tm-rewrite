@@ -23,6 +23,7 @@ import { Public } from "../../../common/public.decorator";
 import { OpenConversation } from "../application/OpenConversation";
 import { ListMyConversations } from "../application/ListMyConversations";
 import { CountMyUnreadMessages } from "../application/CountMyUnreadMessages";
+import type { ConversationPeer } from "../application/ConversationPeers";
 import { GetConversation } from "../application/GetConversation";
 import { ListMessages } from "../application/ListMessages";
 import { SendTextMessage } from "../application/SendTextMessage";
@@ -412,7 +413,7 @@ export class ConversationsController {
     conversation: Pick<Conversation, "id" | "buyerId" | "sellerId" | "updatedAt">,
     listing: ListingSummary | null,
     userId: string,
-    peerView: { peer: { id: string; displayName: string | null }; blockedByMe: boolean },
+    peerView: { peer: ConversationPeer; blockedByMe: boolean },
     lastMessage?: Message | null,
     unreadCount?: number,
     availabilityMap?: Map<string, boolean>,
@@ -431,6 +432,10 @@ export class ConversationsController {
       peer: {
         id: peerView.peer.id,
         displayName: peerView.peer.displayName,
+        nameNumber: peerView.peer.nameNumber,
+        avatarIndex: peerView.peer.avatarIndex,
+        avatarKey: peerView.peer.avatarKey,
+        deleted: peerView.peer.deleted,
       },
       blockedByMe: peerView.blockedByMe,
       updatedAt: conversation.updatedAt.toISOString(),

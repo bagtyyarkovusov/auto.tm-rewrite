@@ -31,6 +31,10 @@ class FakeIdentityRead implements IdentityReadPort {
     return {
       id: "user-b",
       displayName: null,
+      nameNumber: 1000,
+      avatarIndex: 0,
+      avatarKey: null,
+      deleted: false,
       role: "buyer",
       locale: this.locale,
       suspendedAt: null,

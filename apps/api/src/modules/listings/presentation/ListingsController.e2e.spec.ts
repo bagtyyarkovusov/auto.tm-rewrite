@@ -666,7 +666,7 @@ describe("ListingsController e2e", () => {
       const memberSince = new Date("2024-06-10T12:00:00.000Z");
       await prisma.user.update({
         where: { id: suite.id("user-1") },
-        data: { displayName: "Aýgül", createdAt: memberSince },
+        data: { displayName: "Aýgül", nameNumber: 2057, avatarIndex: 7, createdAt: memberSince },
       });
       const draft = await seedDraft("user-1", validPayload);
 
@@ -687,6 +687,10 @@ describe("ListingsController e2e", () => {
       expect(res.body.publicNumber).toBeGreaterThan(0);
       expect(res.body.seller).toEqual({
         displayName: "Aýgül",
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
         memberSince: memberSince.toISOString(),
       });
       expect(res.body).not.toHaveProperty("sellerTrust");
