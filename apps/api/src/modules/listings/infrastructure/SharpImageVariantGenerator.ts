@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
+import { UPLOAD_CAPS } from "../domain/MediaUpload";
 import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
 import type { Env } from "../../../env.schema";
 
@@ -59,6 +60,25 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     });
   }
 
+  /**
+   * Upright, without metadata, and within the upload cap: the adoption guard
+   * re-checks the stored size on a retried publish, so the cleaned original
+   * must still fit. Quality steps down from the mobile app's own 80.
+   */
+  private async cleanOriginal(input: Buffer, isWebp: boolean): Promise<Buffer> {
+    const cap = UPLOAD_CAPS.image.maxSizeBytes;
+    let encoded = input;
+    for (const quality of [80, 70, 60, 50]) {
+      const upright = sharp(input).autoOrient();
+      encoded = await (isWebp
+        ? upright.webp({ quality })
+        : upright.jpeg({ quality, progressive: true })
+      ).toBuffer();
+      if (encoded.length <= cap) return encoded;
+    }
+    return encoded;
+  }
+
   async generate(originalKey: string): Promise<{
     variants: {
       thumbnail: string;
@@ -77,22 +97,29 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     }
 
     // The original stays readable at a key derived from every variant URL,
-    // so it is re-encoded upright with no metadata (EXIF, GPS, XMP, ICC
-    // dropped; sharp keeps none unless asked) and written back in place.
+    // so one that carries metadata (EXIF, GPS, XMP, IPTC) or an orientation
+    // tag is re-encoded upright with none and written back in place. A clean
+    // original is left alone, so a retried publish neither re-encodes it
+    // again nor changes its size.
     const isWebp = originalKey.endsWith(".webp");
-    const upright = sharp(Buffer.from(await original.Body.transformToByteArray())).autoOrient();
-    const buffer = await (isWebp
-      ? upright.webp({ quality: 90 })
-      : upright.jpeg({ quality: 90, progressive: true })
-    ).toBuffer();
-    await this.s3.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: originalKey,
-        Body: buffer,
-        ContentType: isWebp ? "image/webp" : "image/jpeg",
-      }),
-    );
+    const input = Buffer.from(await original.Body.transformToByteArray());
+    const meta = await sharp(input).metadata();
+    const needsCleaning =
+      meta.exif !== undefined ||
+      meta.xmp !== undefined ||
+      meta.iptc !== undefined ||
+      (meta.orientation !== undefined && meta.orientation !== 1);
+    const buffer = needsCleaning ? await this.cleanOriginal(input, isWebp) : input;
+    if (needsCleaning) {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: originalKey,
+          Body: buffer,
+          ContentType: isWebp ? "image/webp" : "image/jpeg",
+        }),
+      );
+    }
     const base = originalKey.replace(/\/original\.(jpg|webp|jpeg)$/, "");
 
     const variantKeys: Partial<Record<VariantSpec["name"], string>> = {};

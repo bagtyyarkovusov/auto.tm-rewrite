@@ -79,4 +79,18 @@ describe("SharpImageVariantGenerator", () => {
     const original = await sharp(bucket.objects.get(key)!).metadata();
     expect({ width: original.width, height: original.height }).toEqual({ width: 200, height: 300 });
   });
+  it("leaves an original without metadata untouched, so a retried publish keeps its size", async () => {
+    const key = "pending/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/original.jpg";
+    const input = await sharp({
+      create: { width: 300, height: 200, channels: 3, background: { r: 10, g: 120, b: 200 } },
+    })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+    expect((await sharp(input).metadata()).exif).toBeUndefined();
+
+    const bucket = fakeBucket({ [key]: input });
+    await generatorWith(bucket).generate(key);
+
+    expect(Buffer.compare(bucket.objects.get(key)!, input)).toBe(0);
+  });
 });
